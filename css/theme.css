@@ -1,0 +1,962 @@
+:root{
+    --bg:#0b0e11;
+    --panel:#12161b;
+    --panel-2:#171c22;
+    --border:#232b33;
+    --text:#e8ecef;
+    --muted:#8a97a3;
+    --accent:#3d4b58;
+    --accent-soft:#1c242c;
+    --gold:#c9a227;
+    --gold-rgb:201,162,39;
+    --info:#3d8bd6;
+    --info-rgb:61,139,214;
+    --profit:#34c77b;
+    --loss:#e5484d;
+    --warn:#e5a93f;
+    --radius:10px;
+    --on-accent-soft:#fff;
+    --mono:'JetBrains Mono',monospace;
+    --disp:'Space Grotesk',sans-serif;
+    --body:'Inter',sans-serif;
+  }
+  :root[data-theme="light"]{
+    --bg:#eef0f3;
+    --panel:#ffffff;
+    --panel-2:#f4f5f7;
+    --border:#dde1e6;
+    --text:#1b2027;
+    --muted:#667085;
+    --accent:#33414d;
+    --accent-soft:#e7ebee;
+    --gold:#a9790a;
+    --gold-rgb:169,121,10;
+    --info:#1c64c9;
+    --info-rgb:28,100,201;
+    --profit:#18874a;
+    --loss:#c8302f;
+    --warn:#a9790a;
+    --on-accent-soft:var(--accent);
+  }
+  :root[data-theme="light"] input[type=text],
+  :root[data-theme="light"] input[type=number],
+  :root[data-theme="light"] input[type=date],
+  :root[data-theme="light"] select{ background:#f7f8fa; }
+
+  /* ---------- Color themes — only the accent (buttons, active nav, chart
+     bars) changes; gold/blue highlight semantics and profit/loss colors
+     stay fixed so "break-even = gold" and "shares = blue" always read the
+     same regardless of theme. ---------- */
+  html[data-color="ocean"]{ --accent:#1f6fb2; --accent-soft:#173044; }
+  html[data-color="ocean"][data-theme="light"]{ --accent-soft:#e2eefb; }
+  html[data-color="forest"]{ --accent:#1f8a5c; --accent-soft:#123423; }
+  html[data-color="forest"][data-theme="light"]{ --accent-soft:#e1f3ea; }
+  html[data-color="violet"]{ --accent:#6d4fc9; --accent-soft:#241b3f; }
+  html[data-color="violet"][data-theme="light"]{ --accent-soft:#ece6fa; }
+  html[data-color="sunset"]{ --accent:#c9611f; --accent-soft:#3a2312; }
+  html[data-color="sunset"][data-theme="light"]{ --accent-soft:#fbe9db; }
+
+  /* ---------- Theme reach beyond the nav — Material-style "tonal" look ----------
+     Classic (wine — the original look) intentionally stays exactly as
+     designed, hard borders and all. Every other color theme instead uses
+     soft, filled "tonal" surfaces (a light accent-tinted fill + accent
+     text, Material Design's filled/tonal button & card pattern) and
+     gentle elevation shadows — no hard accent-colored outlines anywhere.
+     Buttons and cards still clearly change per theme, just softly. */
+  html:not([data-color="wine"]) .card{
+    box-shadow:0 1px 2px rgba(0,0,0,.16), 0 3px 10px rgba(0,0,0,.10);
+  }
+  html:not([data-color="wine"]) .card.stat-card,
+  html:not([data-color="wine"]) .card.chart-card{
+    background: linear-gradient(180deg, var(--accent-soft), var(--panel) 70px);
+    border-left:4px solid var(--accent);
+  }
+  html:not([data-color="wine"]) .btn.secondary{
+    background: var(--accent-soft);
+    border:1px solid transparent;
+    color: var(--accent);
+  }
+  html:not([data-color="wine"]) .btn.ghost{
+    color: var(--accent);
+  }
+  html:not([data-color="wine"]) .btn.ghost:hover{
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  html:not([data-color="wine"]) thead th{
+    color: var(--accent);
+  }
+  html:not([data-color="wine"]) .chip{
+    background: var(--accent-soft);
+    border-color: transparent;
+    color: var(--accent);
+  }
+  html:not([data-color="wine"]) .section-title .tag{
+    border-color: var(--accent); color: var(--accent);
+  }
+  html:not([data-color="wine"]) tr.group-row td{
+    border-left:3px solid var(--accent);
+  }
+
+  /* ---------- Material Design theme family --------------------------------
+     Each theme's identity lives in --accent/--accent-soft only. Surfaces
+     (bg/panel/panel-2) are shared neutral values, not tinted per theme:
+     tinting every surface with the accent hue made things unreadable —
+     "everything is a shade of the same color" — and in dark mode it also
+     meant the panels weren't actually dark, just a dim version of the hue.
+     Light mode surfaces stay near-white/neutral gray; dark mode surfaces are
+     true low-luminance neutrals with a clear step between bg → panel →
+     panel-2, so cards actually read as distinct elevated surfaces. */
+  html[data-color^="material-"]{
+    --bg:#FAFAFA; --panel:#FFFFFF; --panel-2:#F1F1F2; --border:#E3E3E5; --text:#1B1B1D; --muted:#6B6B6F;
+  }
+  html[data-color="material-blue"]{ --accent:#6750A4; --accent-soft:#E8DEF8; }
+  html[data-color="material-green"]{ --accent:#386A20; --accent-soft:#D9EAD0; }
+  html[data-color="material-purple"]{ --accent:#7D5260; --accent-soft:#FFD8E4; }
+  html[data-color="material-teal"]{ --accent:#006A6A; --accent-soft:#CDE8E8; }
+  html[data-color="material-amber"]{ --accent:#8A5000; --accent-soft:#FFDCB5; }
+  html[data-color="material-crimson"]{ --accent:#B3261E; --accent-soft:#FFDAD4; }
+  html[data-color="material-slate"]{ --accent:#455A70; --accent-soft:#D6E3F7; }
+
+  html[data-color^="material-"][data-theme="dark"]{
+    --bg:#0B0C0D; --panel:#18181A; --panel-2:#232325; --border:#333335; --text:#ECECEE; --muted:#A6A6AA;
+  }
+  html[data-color="material-blue"][data-theme="dark"]{ --accent:#D0BCFF; --accent-soft:#4F378B; }
+  html[data-color="material-green"][data-theme="dark"]{ --accent:#B0D49A; --accent-soft:#315724; }
+  html[data-color="material-purple"][data-theme="dark"]{ --accent:#FFB1C6; --accent-soft:#633B49; }
+  html[data-color="material-teal"][data-theme="dark"]{ --accent:#4FDADA; --accent-soft:#004F50; }
+  html[data-color="material-amber"][data-theme="dark"]{ --accent:#FFB96B; --accent-soft:#5F3B00; }
+  html[data-color="material-crimson"][data-theme="dark"]{ --accent:#FFB4A9; --accent-soft:#73342B; }
+  html[data-color="material-slate"][data-theme="dark"]{ --accent:#AAC7E8; --accent-soft:#2C4256; }
+
+  /* Soft, Material-like surfaces for every non-wine theme. */
+  html:not([data-color="wine"]) .card{
+    border:0;
+    box-shadow:0 1px 2px rgba(0,0,0,.10), 0 4px 12px rgba(0,0,0,.08);
+  }
+  html:not([data-color="wine"]) .card.stat-card,
+  html:not([data-color="wine"]) .card.chart-card{
+    border-left:0;
+    background:linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 52%, var(--panel)), var(--panel) 86px);
+  }
+  html:not([data-color="wine"]) .btn.secondary,
+  html:not([data-color="wine"]) .btn.ghost{
+    border:0;
+    box-shadow:none;
+  }
+  html:not([data-color="wine"]) .chip{
+    border:0;
+    box-shadow:none;
+  }
+  html:not([data-color="wine"]) .section-title .tag{ border:0; background:var(--accent-soft); padding:3px 9px; }
+  html:not([data-color="wine"]) tr.group-row td{ border-left:0; }
+
+  /* Material Design family: deliberately borderless, tonal and elevated. */
+  html[data-color^="material-"] body{ background:var(--bg); color:var(--text); }
+  html[data-color^="material-"] .card{
+    border-radius:16px;
+    background:var(--panel);
+    box-shadow:0 1px 2px rgba(0,0,0,.12), 0 6px 18px rgba(0,0,0,.10);
+  }
+  html[data-color^="material-"] .btn{
+    border:0 !important;
+    border-radius:999px;
+    box-shadow:none;
+    transition:transform .12s ease, box-shadow .12s ease, filter .12s ease;
+  }
+  html[data-color^="material-"] .btn.secondary{
+    background:var(--accent-soft);
+    color:var(--accent);
+  }
+  html[data-color^="material-"] .btn.ghost{
+    background:transparent;
+    color:var(--accent);
+  }
+  html[data-color^="material-"] .btn:hover{ filter:none; box-shadow:0 2px 6px rgba(0,0,0,.14); transform:translateY(-1px); }
+  html[data-color^="material-"] .chip{
+    border:0;
+    border-radius:999px;
+    background:var(--accent-soft);
+    color:var(--accent);
+  }
+  a.navbtn{text-decoration: none;}
+  html[data-color^="material-"] .navbtn.active{
+    box-shadow:none;
+    background:var(--accent-soft);
+    color:var(--accent);
+  }
+  html[data-color^="material-"] .navbtn:hover{ background:color-mix(in srgb, var(--accent-soft) 55%, var(--panel-2)); }
+  html[data-color^="material-"] .section-title .tag{
+    border:0;
+    border-radius:999px;
+    background:var(--accent-soft);
+    color:var(--accent);
+  }
+  html[data-color^="material-"] thead th{ border-bottom:0; color:var(--accent); }
+  html[data-color^="material-"] tbody td{ border-bottom:1px solid color-mix(in srgb, var(--border) 55%, transparent); }
+  html[data-color^="material-"] tbody tr:hover{ background:color-mix(in srgb, var(--accent-soft) 32%, var(--panel)); }
+  html[data-color^="material-"] input[type=text],
+  html[data-color^="material-"] input[type=number],
+  html[data-color^="material-"] input[type=date],
+  html[data-color^="material-"] select{
+    border:1px solid color-mix(in srgb, var(--border) 75%, transparent);
+    border-radius:12px;
+    box-shadow:none;
+  }
+  html[data-color^="material-"] input:focus,
+  html[data-color^="material-"] select:focus{
+    border-color:var(--accent);
+    outline:3px solid color-mix(in srgb, var(--accent-soft) 75%, transparent);
+  }
+  html[data-color^="material-"] .pill{ border:0; }
+
+  /* ---------- Font style presets — all typography already routes through
+     var(--body)/--disp/--mono, so swapping these three variables re-skins
+     the whole app instantly. ---------- */
+  html[data-font="system"]{
+    --body:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    --disp:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    --mono:ui-monospace,'SF Mono','Cascadia Code',Consolas,monospace;
+  }
+  html[data-font="legible"]{
+    --body:'Atkinson Hyperlegible',sans-serif;
+    --disp:'Atkinson Hyperlegible',sans-serif;
+    --mono:'JetBrains Mono',monospace;
+  }
+  html[data-font="serif"]{
+    --body:'Source Serif 4',Georgia,serif;
+    --disp:'Source Serif 4',Georgia,serif;
+    --mono:'JetBrains Mono',monospace;
+  }
+  html[data-font="rounded"]{
+    --body:'Lexend',sans-serif;
+    --disp:'Lexend',sans-serif;
+    --mono:'JetBrains Mono',monospace;
+  }
+  html[data-font="arial"]{
+    --body:Arial,Helvetica,sans-serif;
+    --disp:Arial,Helvetica,sans-serif;
+    --mono:'Courier New',Courier,monospace;
+  }
+  html[data-font="arial-narrow"]{
+    --body:'Arial Narrow',Arial,sans-serif;
+    --disp:'Arial Narrow',Arial,sans-serif;
+    --mono:'Courier New',Courier,monospace;
+  }
+  /* ---------- Text size — scales the whole rendered page, including the
+     modal, so it isn't a per-selector patchwork. ---------- */
+  html[data-fontsize="small"] body{zoom:0.9;}
+  html[data-fontsize="large"] body{zoom:1.15;}
+  html[data-fontsize="xl"] body{zoom:1.3;}
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--body);font-size:15px;line-height:1.5;overflow-x:clip;}
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+  a{color:inherit;}
+  button, input, select{font-family:var(--body);}
+  input:focus-visible, select:focus-visible, button:focus-visible{outline:2px solid var(--gold); outline-offset:1px;}
+
+  /* ---------- Shell ---------- */
+  .shell{display:flex; min-height:100vh;}
+  .sidebar{
+    width:220px; flex-shrink:0;
+    position:fixed; top:0; left:0; height:100vh; overflow-y:auto;
+    background:var(--panel);
+    border-right:1px solid var(--border);
+    padding:18px 10px;
+  }
+  nav.navlist{display:flex; flex-direction:column; gap:2px;}
+  .navbtn{
+    display:flex; align-items:center; gap:10px;
+    background:transparent; border:none; color:var(--muted);
+    text-align:left; padding:10px 12px; border-radius:8px;
+    font-size:13.5px; font-weight:500; cursor:pointer; width:100%;
+    transition:background .12s, color .12s;
+  }
+  .navbtn:hover{background:var(--panel-2); color:var(--text);}
+  .navbtn.active{background:var(--accent-soft); color:var(--on-accent-soft); box-shadow:inset 3px 0 0 var(--accent);}
+  .navbtn .num{font-family:var(--mono); color:var(--gold); font-size:11px; width:16px; flex-shrink:0;}
+
+  .main{flex:1; margin-left:220px; padding:26px 30px 60px 30px; max-width:1180px;}
+  @media(max-width:700px){ .main{padding:18px 14px 50px 14px;} }
+  .page{display:none;}
+  .page.active{display:block; animation:fadein .18s ease;}
+  @keyframes fadein{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;}}
+
+  h1.pagetitle{
+    font-family:var(--disp); font-size:22px; font-weight:600; margin:0 0 4px 0;
+  }
+  .pagesub{color:var(--muted); font-size:14.5px; margin:0 0 22px 0; line-height:1.5;}
+
+  .grid{display:grid; gap:12px;}
+  .grid-4{grid-template-columns:repeat(4,1fr);}
+  .grid-3{grid-template-columns:repeat(3,1fr);}
+  .grid-2{grid-template-columns:repeat(2,1fr);}
+  @media(max-width:1000px){.grid-4{grid-template-columns:repeat(2,1fr);} .grid-3{grid-template-columns:repeat(2,1fr);}}
+
+  .card{
+    background:var(--panel); border:1px solid var(--border); border-radius:var(--radius);
+    padding:18px;
+    box-shadow:0 1px 2px rgba(0,0,0,.08), 0 4px 14px rgba(0,0,0,.10);
+  }
+  :root[data-theme="light"] .card{ box-shadow:0 1px 2px rgba(20,20,30,.05), 0 4px 14px rgba(20,20,30,.06); }
+  .stat-card{padding:11px 13px; background:color-mix(in srgb, var(--card-hue, var(--panel)) 16%, var(--panel)); border-left:3px solid color-mix(in srgb, var(--card-hue, var(--border)) 65%, var(--border));}
+  .stat-card .label{color:var(--muted); font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; line-height:1.25;}
+  .stat-card .value{font-family:var(--mono); font-size:17px; font-weight:700; line-height:1.2;}
+  .stat-card .sub{font-size:10.5px; margin-top:3px; color:var(--muted); line-height:1.3;}
+
+  /* ---------- Density: Compact — an even tighter pass for people who want
+     to see as much data as possible with minimal scrolling. Comfortable
+     (default) is the sizing above; Compact shrinks it all further. ---------- */
+  html[data-density="compact"] .grid{gap:8px;}
+  html[data-density="compact"] .card{padding:10px 12px;}
+  html[data-density="compact"] .stat-card{padding:8px 10px;}
+  html[data-density="compact"] .stat-card .label{font-size:9px; margin-bottom:2px;}
+  html[data-density="compact"] .stat-card .value{font-size:14px;}
+  html[data-density="compact"] .stat-card .sub{font-size:9px; margin-top:2px;}
+  html[data-density="compact"] .section-title{margin:12px 0 6px 0; font-size:13px;}
+  html[data-density="compact"] .mgrid{gap:4px;}
+  html[data-density="compact"] .mcard{padding:6px 8px;}
+  html[data-density="compact"] .mcard .mvalue{font-size:13px;}
+  html[data-density="compact"] .mcard .mlabel{font-size:9.5px; margin-bottom:2px;}
+  html[data-density="compact"] .ticker-card{padding:8px 10px;}
+  html[data-density="compact"] .portfolio-grid{grid-template-columns:repeat(auto-fill, minmax(190px,1fr)); gap:8px;}
+  html[data-density="compact"] .pagesub{margin-bottom:12px;}
+  html[data-density="compact"] table, html[data-density="compact"] thead th, html[data-density="compact"] tbody td{font-size:12.5px;}
+  html[data-density="compact"] tbody td{padding:7px 8px;}
+
+  /* ---------- Compact / Terminal layout — a dense, table-driven look
+     instead of card tiles, styled after real broker terminals: one thin
+     stat bar up top, a plain data table for holdings (qty pill, colored
+     price cell, one action button), no card chrome anywhere.
+     Each stat is its own small elevated chip (border + shadow) rather than
+     one shared bordered strip with internal divider lines — a shared strip
+     looks broken wherever flex-wrap sends an item to a new row (the wrap
+     boundary gets a stray border and square corners against the container's
+     rounded ones). Individual chips avoid that entirely, at the cost of a
+     little more visual weight than a plain divider — traded deliberately
+     for a cleaner wrap. ---------- */
+  .stat-bar{
+    display:flex; flex-wrap:wrap; gap:8px;
+    margin-bottom:14px;
+  }
+  .stat-bar-item{
+    display:flex; align-items:baseline; gap:7px; padding:8px 14px;
+    background:color-mix(in srgb, var(--card-hue, var(--panel)) 13%, var(--panel));
+    border:1px solid color-mix(in srgb, var(--card-hue, var(--border)) 45%, var(--border));
+    border-radius:8px;
+    box-shadow:0 1px 3px rgba(0,0,0,.14);
+    white-space:nowrap;
+  }
+  .stat-bar-item .k{font-size:11.5px; color:var(--muted);}
+  .stat-bar-item .v{font-family:var(--mono); font-weight:700; font-size:14px;}
+  .stat-bar-item .v.pos{color:var(--profit);} .stat-bar-item .v.neg{color:var(--loss);}
+
+  .holdings-table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  .holdings-table thead th{
+    text-align:left; padding:8px 10px; font-size:10.5px; text-transform:uppercase;
+    letter-spacing:.04em; color:var(--muted); border-bottom:1px solid var(--border);
+  }
+  .holdings-table tbody tr{cursor:pointer; transition:background .1s;}
+  .holdings-table tbody tr:hover{background:var(--panel-2);}
+  .holdings-table tbody td{padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:middle;}
+  .holdings-table .hd-name{display:flex; align-items:center; gap:8px; font-weight:600; max-width:210px; min-width:0;}
+  .holdings-table .hd-name > div{min-width:0;}
+  .holdings-table .hd-name > div > div:first-child{white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .holdings-table .hd-company{color:var(--muted); font-weight:400; font-size:11.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .qty-pill{
+    display:inline-block; min-width:52px; text-align:center; padding:4px 10px;
+    border-radius:6px; background:color-mix(in srgb, var(--accent) 70%, #000); color:#fff;
+    font-family:var(--mono); font-weight:700; font-size:13px;
+  }
+  .price-cell{
+    display:inline-block; padding:4px 10px; border-radius:6px;
+    font-family:var(--mono); font-weight:700; font-size:13px;
+    background:color-mix(in srgb, var(--muted) 16%, transparent);
+  }
+  .price-cell.pos{background:color-mix(in srgb, var(--profit) 22%, transparent); color:var(--profit);}
+  .price-cell.neg{background:color-mix(in srgb, var(--loss) 22%, transparent); color:var(--loss);}
+  .price-input-compact{
+    width:88px; padding:4px 8px; border-radius:6px; border:1px solid transparent;
+    font-family:var(--mono); font-weight:700; font-size:13px; color:var(--text);
+    background:color-mix(in srgb, var(--muted) 16%, transparent);
+  }
+  .price-input-compact.pos{background:color-mix(in srgb, var(--profit) 22%, transparent); color:var(--profit);}
+  .price-input-compact.neg{background:color-mix(in srgb, var(--loss) 22%, transparent); color:var(--loss);}
+  .price-input-compact:focus{outline:none; border-color:var(--gold);}
+  .pl-pill{display:inline-block; padding:4px 10px; border-radius:6px; font-family:var(--mono); font-weight:700; font-size:12.5px; text-align:center; line-height:1.35;}
+  .pl-pill.pos{background:color-mix(in srgb, var(--profit) 22%, transparent); color:var(--profit);}
+  .pl-pill.neg{background:color-mix(in srgb, var(--loss) 22%, transparent); color:var(--loss);}
+  .holdings-table .hd-action-btn{padding:5px 12px; font-size:11.5px;}
+
+  .section-title{font-family:var(--disp); font-size:15px; font-weight:600; margin:20px 0 10px 0; display:flex; align-items:center; gap:8px;}
+  .section-title .tag{font-family:var(--mono); font-size:10.5px; color:var(--gold); border:1px solid var(--gold); border-radius:20px; padding:1px 8px; background:color-mix(in srgb, currentColor 14%, transparent);}
+
+  table{width:100%; border-collapse:collapse; font-size:14px;}
+  thead th{
+    text-align:left; color:var(--muted); font-weight:600; text-transform:uppercase;
+    font-size:11.5px; letter-spacing:.04em; padding:10px 10px; border-bottom:1px solid var(--border);
+    position:sticky; top:0; background:var(--panel);
+  }
+  tbody td{padding:11px 10px; border-bottom:1px solid var(--border); font-family:var(--mono); white-space:nowrap; font-size:14px;}
+  tbody tr:hover{background:var(--panel-2);}
+  .num-cell{text-align:right;}
+  .pos{color:var(--profit);}
+  .neg{color:var(--loss);}
+  .neutral{color:var(--warn);}
+
+  .pill{display:inline-block; padding:3px 9px; border-radius:20px; font-size:11.5px; font-family:var(--mono); font-weight:700;}
+  .pill-buy{background:color-mix(in srgb, var(--profit) 16%, var(--panel)); color:var(--profit);}
+  .pill-sell{background:color-mix(in srgb, var(--loss) 16%, var(--panel)); color:var(--loss);}
+
+  label{display:block; font-size:12.5px; color:var(--muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:.03em;}
+  input[type=text], input[type=number], input[type=date], select{
+    width:100%; background:#0d1115; border:1px solid var(--border); color:var(--text);
+    padding:10px 11px; border-radius:7px; font-family:var(--mono); font-size:14.5px;
+  }
+  .field{margin-bottom:14px;}
+  .row{display:flex; gap:12px;}
+  .row > *{flex:1;}
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; width:auto;
+    background:color-mix(in srgb, var(--accent) 65%, #000); color:#fff; border:none; padding:11px 17px; border-radius:7px;
+    font-weight:600; font-size:14px; cursor:pointer; font-family:var(--body);
+  }
+  .btn:hover{filter:brightness(1.1);}
+  .btn.secondary{background:var(--panel-2); border:1px solid var(--border); color:var(--text);}
+  .btn.ghost{background:transparent; border:1px solid var(--border); color:var(--muted);}
+  .btn.small{padding:6px 11px; font-size:12.5px;}
+  .btn.danger{background:color-mix(in srgb, var(--loss) 16%, var(--panel)); color:var(--loss); border:1px solid color-mix(in srgb, var(--loss) 45%, var(--panel));}
+
+  .result-line{display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px dashed var(--border); font-family:var(--mono); font-size:14.5px; line-height:1.4;}
+  .result-line:last-child{border-bottom:none;}
+  .result-line .k{color:var(--muted);}
+  .result-line .v{font-weight:700;}
+
+  .settings-list .result-line{cursor:default;}
+  .badge-dot{width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px;}
+
+  .empty{
+    padding:40px 20px; text-align:center; color:var(--muted); border:1px dashed var(--border); border-radius:var(--radius);
+  }
+  .toolbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:10px; flex-wrap:wrap;}
+  .toolbar .right{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+  th.sortable{cursor:pointer; user-select:none; white-space:nowrap;}
+  th.sortable:hover{color:var(--text);}
+  th.sortable .arrow{color:var(--gold); font-size:10px; margin-left:3px;}
+  tr.group-row td{background:var(--panel-2); font-size:12px; padding:8px 12px; border-top:1px solid var(--border); border-bottom:1px solid var(--border);}
+  tr.group-row .g-stats{color:var(--muted); font-weight:400; margin-left:8px;}
+
+  .chip-tabs{display:flex; gap:6px; margin-bottom:18px; margin-left:4px; flex-wrap:wrap;}
+  .chip{
+    background:var(--panel-2); border:1px solid var(--border); color:var(--muted);
+    padding:7px 13px; border-radius:20px; font-size:12.5px; cursor:pointer; font-weight:500;
+  }
+  .chip.active{background:var(--accent-soft); color:var(--on-accent-soft); border-color:var(--accent);}
+
+  .subpage{display:none;}
+  .subpage.active{display:block;}
+
+  .footer-note{color:var(--muted); font-size:11.5px; margin-top:30px; border-top:1px solid var(--border); padding-top:14px;}
+  canvas{max-width:100%;}
+  .charts-row{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:16px;}
+  @media(max-width:1100px){.charts-row{grid-template-columns:repeat(2,1fr);}}
+  @media(max-width:640px){.charts-row{grid-template-columns:1fr;}}
+  .chart-card{padding:16px 16px 12px 16px;}
+  .chart-card .section-title{margin:0 0 10px 0; font-size:13px;}
+  .chart-box{position:relative; height:220px; width:100%;}
+  .chart-box canvas{max-height:220px;}
+  /* ---------- Info tooltip — compact "what is this / how is it computed"
+     explainer. Pure CSS (no JS), so it's cheap to sprinkle everywhere a
+     paragraph of explanation used to sit permanently under a heading. ---------- */
+  .info-tip{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:15px; height:15px; border-radius:50%; margin-left:6px;
+    background:var(--panel-2); border:1px solid var(--border); color:var(--muted);
+    font-size:10.5px; font-weight:700; font-style:italic; font-family:Georgia,'Times New Roman',serif;
+    cursor:help; position:relative; vertical-align:middle; flex-shrink:0;
+  }
+  .info-tip:hover{color:var(--accent); border-color:var(--accent);}
+  /* The tooltip itself is a single shared element appended directly to
+     <body> and positioned via JS on hover/focus (see initSharedTooltip).
+     A per-element CSS ::after popup would get clipped by any ancestor with
+     overflow set (e.g. the compact holdings table's scrollable wrapper) —
+     same class of bug as the appearance panel, same fix: escape to <body>
+     so nothing can clip it, matching the existing pattern in this file. */
+  .shared-tooltip{
+    position:fixed; z-index:2000; width:250px; max-width:64vw;
+    background:var(--panel); color:var(--text);
+    border:1px solid var(--border); border-radius:8px; padding:9px 11px;
+    font-size:11.5px; font-weight:400; line-height:1.45; text-align:left;
+    box-shadow:0 8px 24px rgba(0,0,0,.4);
+    opacity:0; pointer-events:none; transition:opacity .12s ease;
+  }
+  .shared-tooltip.show{opacity:1;}
+  .toast{
+    position:fixed; bottom:20px; right:20px; background:var(--panel); border:1px solid var(--accent);
+    padding:12px 18px; border-radius:8px; font-size:13px; box-shadow:0 6px 24px rgba(0,0,0,.4);
+    opacity:0; transform:translateY(10px); transition:.2s; z-index:50; pointer-events:none;
+  }
+  .toast.show{opacity:1; transform:none;}
+
+  /* ---------- Back to top ---------- */
+  .back-to-top{
+    position:fixed; bottom:76px; right:20px; z-index:45;
+    width:38px; height:38px; border-radius:50%;
+    background:var(--panel); border:1px solid var(--border); color:var(--text);
+    font-size:16px; line-height:1; cursor:pointer;
+    box-shadow:0 4px 14px rgba(0,0,0,.25);
+    opacity:0; visibility:hidden; transform:translateY(8px);
+    transition:opacity .15s ease, transform .15s ease, visibility .15s;
+  }
+  .back-to-top.show{opacity:1; visibility:visible; transform:none;}
+  .back-to-top:hover{border-color:var(--accent); color:var(--accent);}
+
+  /* ---------- Modal ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.55); display:none;
+    align-items:flex-start; justify-content:center; padding:4vh 16px 40px 16px; z-index:100;
+    overflow-y:auto;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal-box{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:26px 30px; width:100%; max-width:920px; box-shadow:0 20px 60px rgba(0,0,0,.5);
+    animation:fadein .16s ease; max-height:92vh; overflow-y:auto;
+  }
+  .modal-box .modal-head{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;}
+  .modal-box .modal-title{font-family:var(--disp); font-size:20px; font-weight:700;}
+  .modal-box .modal-close{background:transparent; border:none; color:var(--muted); font-size:20px; cursor:pointer; line-height:1; padding:2px 6px;}
+  .modal-box .modal-close:hover{color:var(--text);}
+  @media(max-width:700px){ .modal-box{padding:18px;} }
+
+  /* ---------- Portfolio summary (dashboard) ---------- */
+  .psum-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:11px 4px; border-bottom:1px solid var(--border); cursor:pointer;
+    background:transparent; border-left:none; border-right:none; border-top:none; width:100%; text-align:left;
+    font-family:var(--body); transition:background .12s;
+  }
+  .psum-row:last-child{border-bottom:none;}
+  .psum-row:hover{background:var(--panel-2);}
+  .psum-row .psum-name{display:flex; flex-direction:column; gap:2px;}
+  .psum-row .psum-ticker{font-family:var(--mono); font-weight:700; font-size:13.5px;}
+  .psum-row .psum-company{font-size:11px; color:var(--muted);}
+  .psum-row .psum-shares{font-family:var(--mono); font-size:13px; color:var(--muted); flex-shrink:0;}
+  .psum-row .psum-nums{text-align:right; display:flex; flex-direction:column; gap:2px;}
+  .psum-row .psum-invested{font-family:var(--mono); font-size:13px;}
+  .psum-row .psum-be{font-family:var(--mono); font-size:11px; color:var(--muted);}
+  .table-scroll{overflow-x:auto; max-height:480px; overflow-y:auto;}
+  .table-scroll table thead th{position:sticky; top:0; background:var(--panel); z-index:1;}
+  .rule-note{
+    font-size:12px; color:var(--muted); background:var(--panel-2); border:1px solid var(--border);
+    border-radius:8px; padding:10px 12px; margin-bottom:16px; line-height:1.5;
+  }
+  .rule-note b{color:var(--text);}
+
+  /* ---------- Modal info cards (grouped, side-by-side, quick glance) ---------- */
+  .mgroups{display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:20px; align-items:start;}
+  .mgroup-title{
+    font-family:var(--disp); font-size:13px; font-weight:700; text-transform:uppercase;
+    letter-spacing:.04em; color:var(--gold); margin:0 0 8px 0;
+  }
+  .mgrid{display:grid; grid-template-columns:repeat(auto-fit, minmax(110px,1fr)); gap:6px;}
+  .price-history-list{display:flex; flex-direction:column; gap:2px; max-height:170px; overflow-y:auto;}
+  .ph-row{display:grid; grid-template-columns:1fr auto auto; gap:12px; padding:6px 8px; font-family:var(--mono); font-size:12.5px; border-bottom:1px solid var(--border);}
+  .ph-row:last-child{border-bottom:none;}
+  .ph-date{color:var(--muted);}
+  .ph-price{font-weight:700; text-align:right;}
+  .ph-delta{text-align:right; min-width:56px;}
+  .ph-delta.pos{color:var(--profit);} .ph-delta.neg{color:var(--loss);}
+  .mcard{
+    background:var(--panel-2); border:1px solid var(--border); border-radius:8px;
+    padding:8px 10px;
+  }
+  .mcard.wide{grid-column:1 / -1;}
+  .mcard .mlabel{font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:3px;}
+  .mcard .mlabel .info-tip{width:12px; height:12px; font-size:9px; margin-left:4px; vertical-align:text-top;}
+  .stat-card .label .info-tip{vertical-align:text-top;}
+  .mcard .mvalue{font-family:var(--mono); font-size:14.5px; font-weight:700; line-height:1.25;}
+  .mcard .mvalue.pos{color:var(--profit);}
+  .mcard .mvalue.neg{color:var(--loss);}
+  .mcard .msub{font-size:10.5px; color:var(--muted); margin-top:2px;}
+  /* Semantic highlight variants — break-even is always the "important
+     reference number" (gold), share count is always the "how much do I
+     hold" number (blue). Gentle gradient, not a flat fill, so it reads as
+     an accent rather than a warning/alert block. */
+  .mcard.mc-gold{
+    background:linear-gradient(135deg, rgba(var(--gold-rgb),.20), rgba(var(--gold-rgb),.04));
+    border-color:rgba(var(--gold-rgb),.45);
+  }
+  .mcard.mc-gold .mlabel{color:rgba(var(--gold-rgb),.85);}
+  .mcard.mc-gold .mvalue{color:var(--gold);}
+  .mcard.mc-blue{
+    background:linear-gradient(135deg, rgba(var(--info-rgb),.20), rgba(var(--info-rgb),.04));
+    border-color:rgba(var(--info-rgb),.45);
+  }
+  .mcard.mc-blue .mlabel{color:rgba(var(--info-rgb),.85);}
+  .mcard.mc-blue .mvalue{color:var(--info);}
+
+  /* ---------- Dashboard ticker cards ----------
+     These are the highest-priority items on the page, so they get a
+     noticeably stronger shadow than a regular .card (not just the ambient
+     baseline one) plus a hover lift — and tighter internal spacing so more
+     of them fit on screen without scrolling. */
+  .ticker-card{
+    cursor:pointer; padding:12px 14px;
+    background:color-mix(in srgb, var(--card-hue, var(--panel)) 8%, var(--panel));
+    box-shadow:0 2px 5px rgba(0,0,0,.20), 0 10px 26px rgba(0,0,0,.24);
+    transition:border-color .12s, transform .12s, box-shadow .12s;
+  }
+  .ticker-card:hover{
+    border-color:var(--gold); transform:translateY(-2px);
+    box-shadow:0 4px 10px rgba(0,0,0,.26), 0 14px 34px rgba(0,0,0,.30);
+  }
+  :root[data-theme="light"] .ticker-card{ box-shadow:0 2px 5px rgba(20,20,30,.10), 0 10px 24px rgba(20,20,30,.12); }
+  :root[data-theme="light"] .ticker-card:hover{ box-shadow:0 4px 10px rgba(20,20,30,.14), 0 14px 30px rgba(20,20,30,.16); }
+  .ticker-card-head{display:flex; justify-content:space-between; align-items:flex-start;}
+  .tc-ticker{font-family:var(--mono); font-weight:700; font-size:14px; line-height:1.2;}
+  .tc-company{font-size:10.5px; color:var(--muted); margin-top:1px;}
+  .tc-price-input{width:100%; background:transparent; border:none; padding:0; font-family:var(--mono); font-size:14.5px; font-weight:700; color:var(--text);}
+  .tc-price-input:focus-visible{outline:none;}
+  .mcard.tc-price-card{cursor:default;}
+  .tc-pl-inline{font-family:var(--mono); font-size:12px; font-weight:700; margin-top:5px; color:var(--muted);}
+  .tc-pl-inline.pos{color:var(--profit);}
+  .tc-pl-inline.neg{color:var(--loss);}
+  /* Inline info rows — same figures the old boxed .mcard grid showed, but as
+     plain label/value lines (no per-field border/background), so a card
+     fits noticeably more information in the same footprint. */
+  .tc-info{margin-top:9px; cursor:default;}
+  .tc-row{display:flex; align-items:baseline; justify-content:space-between; gap:8px; padding:3px 0; font-size:12.5px;}
+  .tc-row .tc-k{color:var(--muted); flex-shrink:0; white-space:nowrap;}
+  .tc-row .tc-v{font-family:var(--mono); font-weight:700; text-align:right; min-width:0; flex-shrink:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .tc-row .tc-v.blue{color:var(--info);}
+  .tc-row .tc-v.gold{color:var(--gold);}
+  .tc-row .tc-v.pos{color:var(--profit);}
+  .tc-row .tc-v.neg{color:var(--loss);}
+  .tc-row .tc-v-stack{display:flex; flex-direction:column; align-items:flex-end; gap:1px; white-space:nowrap; overflow:hidden;}
+  .tc-row .tc-v-stack .tc-v-sub{font-size:10.5px; font-weight:600; opacity:.85;}
+  .tc-row-pair{display:grid; grid-template-columns:1fr 1fr; gap:8px; align-items:stretch;}
+  .tc-row-pair .tc-pair{
+    display:flex; flex-direction:column; gap:3px; min-width:0;
+    background:var(--panel-2); border:1px solid var(--border); border-radius:7px; padding:6px 8px;
+  }
+  .tc-row-pair .tc-pair.gold-bg{background:color-mix(in srgb, var(--gold) 14%, var(--panel-2)); border-color:color-mix(in srgb, var(--gold) 40%, var(--border));}
+  .tc-row-pair .tc-k{font-size:10px; text-transform:uppercase; letter-spacing:.03em; text-align:left;}
+  .tc-row-pair .tc-v{font-size:13px; text-align:left;}
+  .tc-row-pair .tc-price-input{font-size:13px; font-weight:700; width:100%; padding:1px 0; border-bottom:1px dashed var(--border);}
+  .tc-row-pair .tc-price-input:focus-visible{outline:none; border-bottom-color:var(--gold);}
+  .tc-qc-toggle{width:100%; margin-top:8px; cursor:pointer;}
+  .tc-qc-panel{margin-top:8px; padding-top:8px; border-top:1px dashed var(--border); cursor:default;}
+  .portfolio-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(226px,1fr)); gap:12px;}
+  .ticker-logo{width:20px; height:20px; border-radius:5px; object-fit:contain; vertical-align:middle; margin-right:7px; background:#fff; padding:2px; flex-shrink:0;}
+  .ticker-logo.lg{width:26px; height:26px; border-radius:6px; padding:3px; margin-right:8px;}
+  .ticker-logo.sm{width:14px; height:14px; border-radius:3px; padding:1px; margin-right:5px;}
+   .ticker-logo-fallback{
+     display:inline-flex; align-items:center; justify-content:center;
+     box-sizing:border-box; overflow:hidden; flex:0 0 auto;
+     background:color-mix(in srgb, var(--ticker-accent) 18%, var(--panel));
+     color:var(--ticker-accent); border:1px solid color-mix(in srgb, var(--ticker-accent) 42%, transparent);
+     font-family:var(--mono); font-size:9px; font-weight:800; letter-spacing:-.2px;
+     line-height:1; user-select:none;
+   }
+   .ticker-logo-fallback.lg{font-size:12px;}
+   .ticker-logo-fallback.sm{font-size:7px;}
+  .hybrid-board{display:grid;gap:10px;}
+  .hybrid-status{font-size:10px;font-weight:800;padding:4px 7px;border-radius:999px;display:inline-block;background:var(--panel);border:1px solid var(--border);}
+  .hybrid-status.pos{color:var(--profit);}
+  .hybrid-status.neg{color:var(--loss);}
+  .hybrid-status.watch{color:var(--accent);}
+  /* Exit Board's compact/table view: bigger, bolder, more colored than a
+     standard dense table — this is a "should I act on this" scan, not a
+     data dump, so legibility matters more than density here even in
+     compact mode. */
+  .hybrid-table{font-size:14.5px;}
+  .hybrid-table tbody td{padding:11px 12px;}
+  .hybrid-table .num-cell{font-family:var(--mono); font-weight:700;}
+  .hybrid-table .hybrid-status{font-size:12px; padding:5px 10px;}
+  .hybrid-table .price-pos{color:var(--profit);}
+  .hybrid-table .price-neg{color:var(--loss);}
+  html[data-density="compact"] .hybrid-status{font-size:9px; padding:3px 6px;}
+  html[data-density="compact"] .tc-current-grid{padding:8px 10px; gap:6px; margin:10px 0;}
+  html[data-density="compact"] .tc-current-grid .v{font-size:13px;}
+  html[data-density="compact"] .tc-explore-box{padding:8px 10px; margin-top:10px;}
+  .trade-cycle-grid{display:grid;grid-template-columns:1.15fr repeat(6,minmax(120px,1fr));gap:10px;align-items:end}
+  .trade-cycle-grid .field{min-width:0}
+  .trade-cycle-grid .field label{font-size:10px}.trade-cycle-grid input,.trade-cycle-grid select{width:100%;box-sizing:border-box}.trade-cycle-hint{font-size:11px;color:var(--muted);line-height:1.45;margin-top:10px}
+  .trade-cycle-result{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:8px;margin-top:12px}
+  .trade-cycle-card{padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--panel-2)}
+  .trade-cycle-card .k{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .trade-cycle-card .v{font-family:var(--mono);font-size:14px;font-weight:750;margin-top:3px}
+  .trade-cycle-note{font-size:11px;color:var(--muted);line-height:1.45;margin-top:10px}
+  .tc-layout{display:grid; grid-template-columns:230px 1fr; gap:20px; align-items:start;}
+  .tc-col-inputs .trade-cycle-grid{grid-template-columns:1fr;}
+  @media(max-width:800px){ .tc-layout{grid-template-columns:1fr;} }
+  .tc-current-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(100px,1fr));gap:10px;padding:12px 14px;background:var(--panel-2);border:1px solid var(--border);border-radius:10px;margin:14px 0;}
+  .tc-current-grid .k{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .tc-current-grid .v{font-family:var(--mono);font-size:15px;font-weight:750;margin-top:3px}
+  .tc-explore-result{display:flex; justify-content:space-between; font-family:var(--mono); font-size:13.5px; font-weight:700; margin-top:6px; padding:8px 10px; background:var(--panel-2); border-radius:8px;}
+  .tc-explore-result .pos{color:var(--profit);} .tc-explore-result .neg{color:var(--loss);}
+  /* Visually separates the "what-if" price slider from the Current position
+     stats above it — it's a scratchpad for exploring any price, not a step
+     in the Plan/Result flow, so it gets its own bordered, tinted box rather
+     than sitting flush against the grid it's exploring. */
+  .tc-explore-box{margin-top:14px; padding:12px 14px; border:1px dashed var(--border); border-radius:10px; background:var(--panel-2);}
+  .tc-explore-box .tc-explore-label{font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin-bottom:10px; display:flex; align-items:center; gap:8px;}
+  @media(max-width:1050px){.trade-cycle-grid{grid-template-columns:repeat(3,minmax(150px,1fr));}}@media(max-width:700px){.trade-cycle-grid{grid-template-columns:repeat(2,minmax(140px,1fr));}.trade-cycle-result{grid-template-columns:repeat(2,minmax(120px,1fr));}}
+
+
+   @supports not (color: color-mix(in srgb, red 20%, white)){
+     .ticker-logo-fallback{background:var(--panel-2); border-color:var(--ticker-accent);}
+   }
+
+  /* ---------- Collapsible sections ---------- */
+  .section-title.collapsible{cursor:pointer; user-select:none;}
+  .section-title.collapsible:hover{color:var(--gold);}
+  .section-title.collapsible:hover .collapse-arrow{color:var(--gold);}
+  .section-title .collapse-arrow{
+    color:var(--muted); font-size:20px; line-height:1; margin-left:6px; font-weight:700;
+    display:inline-flex; align-items:center; justify-content:center;
+    width:22px; height:22px; border-radius:6px; background:var(--panel-2);
+    transition:transform .15s ease, color .12s ease, background .12s ease;
+  }
+  .section-title.collapsed .collapse-arrow{transform:rotate(-90deg);}
+
+  /* ---------- Sub-nav chip row (reuses .chip-tabs / .chip) ---------- */
+  .subnav{margin-bottom:20px; margin-top:-6px;}
+  /* Always visible while scrolling a page — sticks to the top of the
+     viewport instead of scrolling away with the content above it, so the
+     jump-to-section chips stay reachable no matter how far down the page
+     you are. Solid page-matching background so content scrolling
+     underneath doesn't show through, plus a hairline + shadow once it's
+     actually pinned so it doesn't blend invisibly into the page. */
+.chip-tabs.subnav {
+	position: sticky;
+	top: 0;
+	z-index: 30;
+	background: var(--bg);
+	padding: 14px 0 12px 12px;
+	margin: -14px -5px 20px -5px;
+	margin-top: -14px;
+	border-bottom: 1px solid var(--border);
+	box-shadow: 0 4px 10px rgba(0,0,0,.06);
+}
+  /* Readability pass: keep semantic colors restrained and text high-contrast. */
+  .mgroup-title{color:var(--text);font-weight:800;border-bottom:1px solid var(--border);padding-bottom:7px;}
+  .mcard{background:var(--panel-2);border-color:var(--border);}
+  .mcard .mlabel{color:var(--muted);}
+  .mcard .msub{color:var(--muted);}
+  .mcard.mc-gold,.mcard.mc-blue{background:var(--panel-2);border-color:var(--border);}
+  .mcard.mc-gold .mlabel,.mcard.mc-blue .mlabel{color:var(--muted);}
+  .mcard.mc-gold .mvalue{color:var(--gold);text-shadow:0 0 0 transparent;}
+  .mcard.mc-blue .mvalue{color:var(--info);}
+  .hybrid-table tbody td{color:var(--text);}
+  html[data-color^="material-"] .mgroup-title{color:var(--accent);}
+  html[data-color^="material-"] .mcard.mc-gold .mvalue{color:var(--accent);}
+  html[data-color^="material-"] .mcard.mc-blue .mvalue{color:var(--accent);}
+  html[data-color^="material-"] .hybrid-status{background:var(--accent-soft);border:0;}
+  html[data-color^="material-"] .hybrid-status.pos{color:var(--profit);}
+  html[data-color^="material-"] .hybrid-status.neg{color:var(--loss);}
+  html[data-color^="material-"] .hybrid-status.watch{color:var(--accent);}
+    /* Final Material palette guard: ensures component backgrounds/text follow
+     the selected Material palette instead of the generic root palette. */
+  html[data-color^="material-"] body{background:var(--bg);color:var(--text);}
+  html[data-color^="material-"] .sidebar,
+  html[data-color^="material-"] .card,
+  html[data-color^="material-"] .modal,
+  html[data-color^="material-"] .table-wrap{background-color:var(--panel);color:var(--text);border-color:var(--border);}
+  html[data-color^="material-"] .card.stat-card,
+  html[data-color^="material-"] .card.chart-card{background:linear-gradient(180deg,var(--accent-soft),var(--panel) 86px);}
+  html[data-color^="material-"] input[type=text],
+  html[data-color^="material-"] input[type=number],
+  html[data-color^="material-"] input[type=date],
+  html[data-color^="material-"] select,
+  html[data-color^="material-"] textarea{background:var(--panel-2);color:var(--text);border-color:var(--border);}
+  html[data-color^="material-"] .navbtn{color:var(--muted);}
+  html[data-color^="material-"] .navbtn.active{background:var(--accent-soft);color:var(--accent);}
+  html[data-color^="material-"] .section-title .tag,
+  html[data-color^="material-"] .chip{background:var(--accent-soft);color:var(--accent);}
+  html[data-color^="material-"] .btn.primary{background:color-mix(in srgb, var(--accent) 65%, #000);color:#fff;}
+
+  /* ================================================================
+     MATERIAL PALETTE OVERRIDE — FINAL SPECIFICITY FIX
+     The original light-mode rule is :root[data-theme="light"], which
+     outranks html[data-color="material-*"]. These selectors intentionally
+     include BOTH attributes so the selected Material palette wins.
+     ================================================================ */
+  /* ================================================================
+     MATERIAL PALETTE OVERRIDE — FINAL SPECIFICITY FIX
+     The original light-mode rule is :root[data-theme="light"], which
+     outranks html[data-color="material-*"]. These selectors intentionally
+     include BOTH attributes so the selected Material palette wins.
+     Surfaces are shared neutrals (see the base Material block above for why:
+     tinting every surface with the theme hue hurt readability) — only
+     --accent/--accent-soft vary per theme here.
+     ================================================================ */
+  html[data-color^="material-"][data-theme="light"] {
+    --bg:#FAFAFA; --panel:#FFFFFF; --panel-2:#F1F1F2; --border:#E3E3E5; --text:#1B1B1D; --muted:#6B6B6F;
+    --accent: var(--material-accent, #6750A4);
+    --accent-soft: var(--material-accent-soft, #E8DEF8);
+  }
+  html[data-color="material-blue"][data-theme="light"] { --material-accent:#6750A4; --material-accent-soft:#E8DEF8; }
+  html[data-color="material-green"][data-theme="light"] { --material-accent:#386A20; --material-accent-soft:#D9EAD0; }
+  html[data-color="material-purple"][data-theme="light"] { --material-accent:#7D5260; --material-accent-soft:#FFD8E4; }
+  html[data-color="material-teal"][data-theme="light"] { --material-accent:#006A6A; --material-accent-soft:#CDE8E8; }
+  html[data-color="material-amber"][data-theme="light"] { --material-accent:#8A5000; --material-accent-soft:#FFDCB5; }
+  html[data-color="material-crimson"][data-theme="light"] { --material-accent:#B3261E; --material-accent-soft:#FFDAD4; }
+  html[data-color="material-slate"][data-theme="light"] { --material-accent:#455A70; --material-accent-soft:#D6E3F7; }
+
+  html[data-color^="material-"][data-theme="dark"] {
+    --bg:#0B0C0D; --panel:#18181A; --panel-2:#232325; --border:#333335; --text:#ECECEE; --muted:#A6A6AA;
+  }
+  html[data-color="material-blue"][data-theme="dark"] { --accent:#D0BCFF; --accent-soft:#4F378B; }
+  html[data-color="material-green"][data-theme="dark"] { --accent:#B0D49A; --accent-soft:#315724; }
+  html[data-color="material-purple"][data-theme="dark"] { --accent:#FFB1C6; --accent-soft:#633B49; }
+  html[data-color="material-teal"][data-theme="dark"] { --accent:#4FDADA; --accent-soft:#004F50; }
+  html[data-color="material-amber"][data-theme="dark"] { --accent:#FFB96B; --accent-soft:#5F3B00; }
+  html[data-color="material-crimson"][data-theme="dark"] { --accent:#FFB4A9; --accent-soft:#73342B; }
+  html[data-color="material-slate"][data-theme="dark"] { --accent:#AAC7E8; --accent-soft:#2C4256; }
+
+  /* Material components must also outrank the original light/dark component rules. */
+  html[data-color^="material-"][data-theme="light"] body,
+  html[data-color^="material-"][data-theme="dark"] body { background:var(--bg); color:var(--text); }
+  html[data-color^="material-"][data-theme="light"] .sidebar,
+  html[data-color^="material-"][data-theme="dark"] .sidebar,
+  html[data-color^="material-"][data-theme="light"] .card,
+  html[data-color^="material-"][data-theme="dark"] .card,
+  html[data-color^="material-"][data-theme="light"] .modal,
+  html[data-color^="material-"][data-theme="dark"] .modal,
+  html[data-color^="material-"][data-theme="light"] .table-wrap,
+  html[data-color^="material-"][data-theme="dark"] .table-wrap {
+    background-color:var(--panel); color:var(--text); border-color:var(--border);
+  }
+  html[data-color^="material-"][data-theme="light"] input[type=text],
+  html[data-color^="material-"][data-theme="dark"] input[type=text],
+  html[data-color^="material-"][data-theme="light"] input[type=number],
+  html[data-color^="material-"][data-theme="dark"] input[type=number],
+  html[data-color^="material-"][data-theme="light"] input[type=date],
+  html[data-color^="material-"][data-theme="dark"] input[type=date],
+  html[data-color^="material-"][data-theme="light"] input[type=email],
+  html[data-color^="material-"][data-theme="dark"] input[type=email],
+  html[data-color^="material-"][data-theme="light"] input[type=password],
+  html[data-color^="material-"][data-theme="dark"] input[type=password],
+  html[data-color^="material-"][data-theme="light"] input[type=tel],
+  html[data-color^="material-"][data-theme="dark"] input[type=tel],
+  html[data-color^="material-"][data-theme="light"] select,
+  html[data-color^="material-"][data-theme="dark"] select,
+  html[data-color^="material-"][data-theme="light"] textarea,
+  html[data-color^="material-"][data-theme="dark"] textarea {
+    background:var(--panel-2); color:var(--text); border-color:var(--border);
+  }
+  html[data-color^="material-"][data-theme="light"] .navbtn,
+  html[data-color^="material-"][data-theme="dark"] .navbtn { color:var(--muted); }
+  html[data-color^="material-"][data-theme="light"] .navbtn:hover,
+  html[data-color^="material-"][data-theme="dark"] .navbtn:hover { background:var(--panel-2); color:var(--text); }
+  html[data-color^="material-"][data-theme="light"] .navbtn.active,
+  html[data-color^="material-"][data-theme="dark"] .navbtn.active { background:var(--accent-soft); color:var(--accent); box-shadow:none; }
+  html[data-color^="material-"][data-theme="light"] .btn.primary,
+  html[data-color^="material-"][data-theme="dark"] .btn.primary,
+  html[data-color^="material-"][data-theme="light"] .btn:not(.secondary):not(.ghost):not(.danger),
+  html[data-color^="material-"][data-theme="dark"] .btn:not(.secondary):not(.ghost):not(.danger) { background:color-mix(in srgb, var(--accent) 65%, #000); color:#fff; border-color:transparent; }
+  html[data-color^="material-"][data-theme="light"] .btn.secondary,
+  html[data-color^="material-"][data-theme="dark"] .btn.secondary { background:var(--accent-soft); color:var(--accent); border-color:transparent; }
+  html[data-color^="material-"][data-theme="light"] .btn.ghost,
+  html[data-color^="material-"][data-theme="dark"] .btn.ghost { background:transparent; color:var(--accent); border-color:transparent; }
+  html[data-color^="material-"][data-theme="light"] .chip,
+  html[data-color^="material-"][data-theme="dark"] .chip,
+  html[data-color^="material-"][data-theme="light"] .section-title .tag,
+  html[data-color^="material-"][data-theme="dark"] .section-title .tag { background:var(--accent-soft); color:var(--accent); border-color:transparent; }
+  html[data-color^="material-"][data-theme="light"] thead th,
+  html[data-color^="material-"][data-theme="dark"] thead th { background:var(--panel); color:var(--accent); border-bottom-color:var(--border); }
+  html[data-color^="material-"][data-theme="light"] tbody td,
+  html[data-color^="material-"][data-theme="dark"] tbody td { border-bottom-color:var(--border); color:var(--text); }
+  html[data-color^="material-"][data-theme="light"] tbody tr:hover,
+  html[data-color^="material-"][data-theme="dark"] tbody tr:hover { background:var(--accent-soft); }
+  html[data-color^="material-"][data-theme="light"] .card.stat-card,
+  html[data-color^="material-"][data-theme="dark"] .card.stat-card,
+  html[data-color^="material-"][data-theme="light"] .card.chart-card,
+  html[data-color^="material-"][data-theme="dark"] .card.chart-card { background:linear-gradient(180deg,var(--accent-soft),var(--panel) 86px); border-left:0; }
+  html[data-color^="material-"][data-theme="light"] .section-title,
+  html[data-color^="material-"][data-theme="dark"] .section-title { color:var(--text); }
+  html[data-color^="material-"][data-theme="light"] .pagetitle,
+  html[data-color^="material-"][data-theme="dark"] .pagetitle { color:var(--text); }
+  html[data-color^="material-"][data-theme="light"] .pagesub,
+  html[data-color^="material-"][data-theme="dark"] .pagesub { color:var(--muted); }
+  html[data-color^="material-"][data-theme="light"] input:focus,
+  html[data-color^="material-"][data-theme="dark"] input:focus,
+  html[data-color^="material-"][data-theme="light"] select:focus,
+  html[data-color^="material-"][data-theme="dark"] select:focus { border-color:var(--accent); outline:3px solid var(--accent-soft); }
+
+/* ---------- Card & field accents — minimal gradient, shadows not borders ---
+   1) The gradient on stat/chart cards is now barely-there: the top edge is
+      only ~6–8% shifted toward --accent-soft before settling back into
+      plain --panel — a hint of color, not a wash. Same tiny ratio for
+      every color theme, material included, so nothing goes pale/white.
+   2) No hard card borders — a soft two-layer shadow gives lift and
+      definition instead.
+   3) Colour only touches .card surfaces and input/select fields. The page
+      background, topbar, and sidebar are untouched by any of this and
+      stay their theme's plain white/off-white/grey (or dark) panel — no
+      accent tint leaks into them.
+   Placed last so it wins over the earlier, more saturated definitions
+   above regardless of theme. */
+html:not([data-color="wine"]) .card.stat-card,
+html:not([data-color="wine"]) .card.chart-card{
+  border:0;
+  box-shadow:0 1px 2px rgba(0,0,0,.10), 0 6px 18px rgba(0,0,0,.14);
+  background:linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 8%, var(--panel)), var(--panel) 60px);
+}
+html[data-color^="material-"][data-theme="light"] .card.stat-card,
+html[data-color^="material-"][data-theme="dark"] .card.stat-card,
+html[data-color^="material-"][data-theme="light"] .card.chart-card,
+html[data-color^="material-"][data-theme="dark"] .card.chart-card{
+  border:0;
+  box-shadow:0 1px 2px rgba(0,0,0,.10), 0 6px 18px rgba(0,0,0,.14);
+  background:linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 6%, var(--panel)), var(--panel) 60px);
+}
+
+/* Fields get the same whisper of color the cards get — background only,
+   border stays the plain theme border, no accent bleeding into it. */
+html:not([data-color="wine"]) input[type=text],
+html:not([data-color="wine"]) input[type=number],
+html:not([data-color="wine"]) input[type=date],
+html:not([data-color="wine"]) select{
+  background: color-mix(in srgb, var(--accent-soft) 6%, var(--panel-2));
+}
+html[data-color^="material-"][data-theme="light"] input[type=text],
+html[data-color^="material-"][data-theme="dark"] input[type=text],
+html[data-color^="material-"][data-theme="light"] input[type=number],
+html[data-color^="material-"][data-theme="dark"] input[type=number],
+html[data-color^="material-"][data-theme="light"] input[type=date],
+html[data-color^="material-"][data-theme="dark"] input[type=date],
+html[data-color^="material-"][data-theme="light"] select,
+html[data-color^="material-"][data-theme="dark"] select{
+  background: color-mix(in srgb, var(--accent-soft) 6%, var(--panel-2));
+}
+
+/* Authentication UI guard: only one state is visible. */
+html.auth-signed-in #cloudSignedOutBox{display:none !important;}
+html.auth-signed-out #cloudSignedInBox{display:none !important;}
+
+/* FINAL surgical Appearance popover */
+.appearance-popover{position:relative;display:inline-flex;align-items:center; width:100%; margin-top:10px;}
+.appearance-trigger{min-width:108px;}
+.appearance-panel{
+  /* position:fixed (not absolute) on purpose — the sidebar now has its own
+     overflow-y:auto for the scrollable-nav fix, and an absolutely-positioned
+     descendant that flies outside its parent's box gets clipped by that
+     overflow. Fixed positioning is placed relative to the viewport instead,
+     so it's immune to that clipping; JS sets its exact top/left on open. */
+  position:fixed; z-index:1000;
+  display:none;width:255px;padding:10px;
+  background:var(--panel);border:1px solid var(--border);border-radius:10px;
+  box-shadow:0 14px 35px rgba(0,0,0,.28);
+}
+.appearance-panel.open{display:grid;gap:8px;}
+.appearance-panel-title{
+  font-family:var(--disp);font-weight:700;font-size:13px;
+  color:var(--text);padding:2px 2px 3px;
+}
+.appearance-panel select{width:100%;padding:7px 9px;font-size:12px;}
+.appearance-panel .btn{width:100%;padding:7px 10px;font-size:12px;}
+.sidebar-popover .appearance-trigger{width:100%; justify-content:flex-start; text-align:left;}

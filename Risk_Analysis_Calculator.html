@@ -1,0 +1,968 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>QSE Advanced Risk Analysis Calculator</title><style>
+  :root{
+    --bg:#0b0e11;
+    --panel:#12161b;
+    --panel-2:#171c22;
+    --border:#232b33;
+    --text:#e8ecef;
+    --muted:#8a97a3;
+    --accent:#3d4b58;
+    --accent-soft:#1c242c;
+    --gold:#c9a227;
+    --gold-rgb:201,162,39;
+    --info:#3d8bd6;
+    --info-rgb:61,139,214;
+    --profit:#34c77b;
+    --loss:#e5484d;
+    --warn:#e5a93f;
+    --radius:10px;
+    --on-accent-soft:#fff;
+    --mono:'JetBrains Mono',monospace;
+    --disp:'Space Grotesk',sans-serif;
+    --body:'Inter',sans-serif;
+  }
+  :root[data-theme="light"]{
+    --bg:#eef0f3;
+    --panel:#ffffff;
+    --panel-2:#f4f5f7;
+    --border:#dde1e6;
+    --text:#1b2027;
+    --muted:#667085;
+    --accent:#33414d;
+    --accent-soft:#e7ebee;
+    --gold:#a9790a;
+    --gold-rgb:169,121,10;
+    --info:#1c64c9;
+    --info-rgb:28,100,201;
+    --profit:#18874a;
+    --loss:#c8302f;
+    --warn:#a9790a;
+    --on-accent-soft:var(--accent);
+  }
+  :root[data-theme="light"] input[type=text],
+  :root[data-theme="light"] input[type=number],
+  :root[data-theme="light"] input[type=date],
+  :root[data-theme="light"] select{ background:#f7f8fa; }
+
+  /* ---------- Color themes — only the accent (buttons, active nav, chart
+     bars) changes; gold/blue highlight semantics and profit/loss colors
+     stay fixed so "break-even = gold" and "shares = blue" always read the
+     same regardless of theme. ---------- */
+  html[data-color="ocean"]{ --accent:#1f6fb2; --accent-soft:#173044; }
+  html[data-color="ocean"][data-theme="light"]{ --accent-soft:#e2eefb; }
+  html[data-color="forest"]{ --accent:#1f8a5c; --accent-soft:#123423; }
+  html[data-color="forest"][data-theme="light"]{ --accent-soft:#e1f3ea; }
+  html[data-color="violet"]{ --accent:#6d4fc9; --accent-soft:#241b3f; }
+  html[data-color="violet"][data-theme="light"]{ --accent-soft:#ece6fa; }
+  html[data-color="sunset"]{ --accent:#c9611f; --accent-soft:#3a2312; }
+  html[data-color="sunset"][data-theme="light"]{ --accent-soft:#fbe9db; }
+
+  /* ---------- Theme reach beyond the nav — Material-style "tonal" look ----------
+     Classic (wine — the original look) intentionally stays exactly as
+     designed, hard borders and all. Every other color theme instead uses
+     soft, filled "tonal" surfaces (a light accent-tinted fill + accent
+     text, Material Design's filled/tonal button & card pattern) and
+     gentle elevation shadows — no hard accent-colored outlines anywhere.
+     Buttons and cards still clearly change per theme, just softly. */
+  html:not([data-color="wine"]) .card{
+    box-shadow:0 1px 2px rgba(0,0,0,.16), 0 3px 10px rgba(0,0,0,.10);
+  }
+  html:not([data-color="wine"]) .card.stat-card,
+  html:not([data-color="wine"]) .card.chart-card{
+    background: linear-gradient(180deg, var(--accent-soft), var(--panel) 70px);
+    border-left:4px solid var(--accent);
+  }
+  html:not([data-color="wine"]) .btn.secondary{
+    background: var(--accent-soft);
+    border:1px solid transparent;
+    color: var(--accent);
+  }
+  html:not([data-color="wine"]) .btn.ghost{
+    color: var(--accent);
+  }
+  html:not([data-color="wine"]) .btn.ghost:hover{
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  html:not([data-color="wine"]) thead th{
+    color: var(--accent);
+  }
+  html:not([data-color="wine"]) .chip{
+    background: var(--accent-soft);
+    border-color: transparent;
+    color: var(--accent);
+  }
+  html:not([data-color="wine"]) .section-title .tag{
+    border-color: var(--accent); color: var(--accent);
+  }
+  html:not([data-color="wine"]) tr.group-row td{
+    border-left:3px solid var(--accent);
+  }
+
+  /* ---------- Material Design theme family --------------------------------
+     Each Material theme owns a complete tonal palette, not just --accent.
+     This makes the five Material themes visibly distinct in both light and
+     dark mode while preserving the app's semantic colors (profit/loss/etc.). */
+  html[data-color="material-blue"]{
+    --accent:#6750A4; --accent-soft:#E8DEF8;
+    --bg:#F7F5FA; --panel:#FFFBFE; --panel-2:#F3EDF7; --border:#E6E0E9; --text:#1D1B20; --muted:#6F6875;
+  }
+  html[data-color="material-green"]{
+    --accent:#386A20; --accent-soft:#D9EAD0;
+    --bg:#F5F8F2; --panel:#FBFDF8; --panel-2:#EFF5EA; --border:#DCE6D6; --text:#1A1C18; --muted:#687064;
+  }
+  html[data-color="material-purple"]{
+    --accent:#7D5260; --accent-soft:#FFD8E4;
+    --bg:#FBF5F7; --panel:#FFF8F9; --panel-2:#FCEEF2; --border:#EEDDE3; --text:#201A1B; --muted:#74676B;
+  }
+  html[data-color="material-teal"]{
+    --accent:#006A6A; --accent-soft:#CDE8E8;
+    --bg:#F3F9F9; --panel:#F8FAFA; --panel-2:#E8F2F2; --border:#D6E5E5; --text:#191C1C; --muted:#647171;
+  }
+  html[data-color="material-amber"]{
+    --accent:#8A5000; --accent-soft:#FFDCB5;
+    --bg:#FFF8F1; --panel:#FFFBF8; --panel-2:#FFF1E4; --border:#EFDFD0; --text:#211A13; --muted:#776A5D;
+  }
+
+  html[data-color="material-blue"][data-theme="dark"]{
+    --accent:#D0BCFF; --accent-soft:#4F378B; --bg:#141218; --panel:#211F26; --panel-2:#2B2930; --border:#39363F; --text:#E6E1E9; --muted:#CAC4D0;
+  }
+  html[data-color="material-green"][data-theme="dark"]{
+    --accent:#B0D49A; --accent-soft:#315724; --bg:#10140E; --panel:#1C2119; --panel-2:#252C21; --border:#394334; --text:#E4E9DE; --muted:#BDC6B6;
+  }
+  html[data-color="material-purple"][data-theme="dark"]{
+    --accent:#FFB1C6; --accent-soft:#633B49; --bg:#181113; --panel:#251B1E; --panel-2:#302327; --border:#49383D; --text:#F2DFE3; --muted:#D0BFC3;
+  }
+  html[data-color="material-teal"][data-theme="dark"]{
+    --accent:#4FDADA; --accent-soft:#004F50; --bg:#0C1414; --panel:#162020; --panel-2:#202B2B; --border:#334141; --text:#E0F2F2; --muted:#B8CCCC;
+  }
+  html[data-color="material-amber"][data-theme="dark"]{
+    --accent:#FFB96B; --accent-soft:#5F3B00; --bg:#17120D; --panel:#241C14; --panel-2:#30251A; --border:#493B2C; --text:#F4E4D1; --muted:#D0BCA4;
+  }
+
+  /* Soft, Material-like surfaces for every non-wine theme. */
+  html:not([data-color="wine"]) .card{
+    border:0;
+    box-shadow:0 1px 2px rgba(0,0,0,.10), 0 4px 12px rgba(0,0,0,.08);
+  }
+  html:not([data-color="wine"]) .card.stat-card,
+  html:not([data-color="wine"]) .card.chart-card{
+    border-left:0;
+    background:linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 52%, var(--panel)), var(--panel) 86px);
+  }
+  html:not([data-color="wine"]) .btn.secondary,
+  html:not([data-color="wine"]) .btn.ghost{
+    border:0;
+    box-shadow:none;
+  }
+  html:not([data-color="wine"]) .chip{
+    border:0;
+    box-shadow:none;
+  }
+  html:not([data-color="wine"]) .section-title .tag{ border:0; background:var(--accent-soft); padding:3px 9px; }
+  html:not([data-color="wine"]) tr.group-row td{ border-left:0; }
+
+  /* Material Design family: deliberately borderless, tonal and elevated. */
+  html[data-color^="material-"] body{ background:var(--bg); color:var(--text); }
+  html[data-color^="material-"] .card{
+    border-radius:16px;
+    background:var(--panel);
+    box-shadow:0 1px 2px rgba(0,0,0,.12), 0 6px 18px rgba(0,0,0,.10);
+  }
+  html[data-color^="material-"] .btn{
+    border:0 !important;
+    border-radius:999px;
+    box-shadow:none;
+    transition:transform .12s ease, box-shadow .12s ease, filter .12s ease;
+  }
+  html[data-color^="material-"] .btn.secondary{
+    background:var(--accent-soft);
+    color:var(--accent);
+  }
+  html[data-color^="material-"] .btn.ghost{
+    background:transparent;
+    color:var(--accent);
+  }
+  html[data-color^="material-"] .btn:hover{ filter:none; box-shadow:0 2px 6px rgba(0,0,0,.14); transform:translateY(-1px); }
+  html[data-color^="material-"] .chip{
+    border:0;
+    border-radius:999px;
+    background:var(--accent-soft);
+    color:var(--accent);
+  }
+  html[data-color^="material-"] .navbtn.active{
+    box-shadow:none;
+    background:var(--accent-soft);
+    color:var(--accent);
+  }
+  html[data-color^="material-"] .navbtn:hover{ background:color-mix(in srgb, var(--accent-soft) 55%, var(--panel-2)); }
+  html[data-color^="material-"] .section-title .tag{
+    border:0;
+    border-radius:999px;
+    background:var(--accent-soft);
+    color:var(--accent);
+  }
+  html[data-color^="material-"] thead th{ border-bottom:0; color:var(--accent); }
+  html[data-color^="material-"] tbody td{ border-bottom:1px solid color-mix(in srgb, var(--border) 55%, transparent); }
+  html[data-color^="material-"] tbody tr:hover{ background:color-mix(in srgb, var(--accent-soft) 32%, var(--panel)); }
+  html[data-color^="material-"] input[type=text],
+  html[data-color^="material-"] input[type=number],
+  html[data-color^="material-"] input[type=date],
+  html[data-color^="material-"] select{
+    border:1px solid color-mix(in srgb, var(--border) 75%, transparent);
+    border-radius:12px;
+    box-shadow:none;
+  }
+  html[data-color^="material-"] input:focus,
+  html[data-color^="material-"] select:focus{
+    border-color:var(--accent);
+    outline:3px solid color-mix(in srgb, var(--accent-soft) 75%, transparent);
+  }
+  html[data-color^="material-"] .pill{ border:0; }
+
+  /* ---------- Font style presets — all typography already routes through
+     var(--body)/--disp/--mono, so swapping these three variables re-skins
+     the whole app instantly. ---------- */
+  html[data-font="system"]{
+    --body:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    --disp:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    --mono:ui-monospace,'SF Mono','Cascadia Code',Consolas,monospace;
+  }
+  html[data-font="legible"]{
+    --body:'Atkinson Hyperlegible',sans-serif;
+    --disp:'Atkinson Hyperlegible',sans-serif;
+    --mono:'JetBrains Mono',monospace;
+  }
+  html[data-font="serif"]{
+    --body:'Source Serif 4',Georgia,serif;
+    --disp:'Source Serif 4',Georgia,serif;
+    --mono:'JetBrains Mono',monospace;
+  }
+  html[data-font="rounded"]{
+    --body:'Lexend',sans-serif;
+    --disp:'Lexend',sans-serif;
+    --mono:'JetBrains Mono',monospace;
+  }
+  html[data-font="arial"]{
+    --body:Arial,Helvetica,sans-serif;
+    --disp:Arial,Helvetica,sans-serif;
+    --mono:'Courier New',Courier,monospace;
+  }
+  html[data-font="arial-narrow"]{
+    --body:'Arial Narrow',Arial,sans-serif;
+    --disp:'Arial Narrow',Arial,sans-serif;
+    --mono:'Courier New',Courier,monospace;
+  }
+  /* ---------- Text size — scales the whole rendered page, including the
+     modal, so it isn't a per-selector patchwork. ---------- */
+  html[data-fontsize="small"] body{zoom:0.9;}
+  html[data-fontsize="large"] body{zoom:1.15;}
+  html[data-fontsize="xl"] body{zoom:1.3;}
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--body);font-size:15px;line-height:1.5;overflow-x:hidden;}
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+  a{color:inherit;}
+  button, input, select{font-family:var(--body);}
+  input:focus-visible, select:focus-visible, button:focus-visible{outline:2px solid var(--gold); outline-offset:1px;}
+
+  /* ---------- Ticker Tape ---------- */
+  .topbar{
+    display:flex; align-items:center; justify-content:flex-end; gap:8px; flex-wrap:wrap;
+    padding:8px 16px; background:var(--panel); border-bottom:1px solid var(--border);
+  }
+  .topbar select{
+    width:auto; padding:6px 9px; font-size:12px; border-radius:6px;
+    background:var(--panel-2); border:1px solid var(--border); color:var(--text);
+  }
+  .topbar .btn{padding:6px 12px; font-size:12px;}
+  @media(max-width:700px){ .topbar{justify-content:center; padding:8px 10px;} }
+  .tape-wrap{
+    background:linear-gradient(180deg, #0a0a0c, #000000);
+    border-bottom:1px solid var(--border);
+    overflow:hidden;
+    white-space:nowrap;
+    position:relative;
+    height:38px;
+    display:flex;
+    align-items:center;
+  }
+  .tape-wrap::before{
+    content:"QSE •";
+    position:absolute;left:0;top:0;bottom:0;
+    display:flex;align-items:center;
+    padding:0 14px;
+    background:color-mix(in srgb, var(--accent) 60%, #000);
+    color:#fff;
+    font-family:var(--mono);
+    font-weight:700;
+    font-size:12px;
+    letter-spacing:.06em;
+    z-index:2;
+  }
+  .tape-track{
+    display:inline-flex;
+    padding-left:100%;
+    animation:tape-scroll 30s linear infinite;
+    font-family:var(--mono);
+    font-size:12.5px;
+  }
+  .tape-wrap:hover .tape-track{animation-play-state:paused;}
+  @media (prefers-reduced-motion: reduce){
+    .tape-track{animation:none; padding-left:90px;}
+  }
+  .tape-item{padding:0 22px;color:#aab4bd;border-right:1px solid rgba(255,255,255,.12);}
+  .tape-item b{color:#ffffff;font-weight:700;margin-right:6px;}
+  .tape-up{color:#4ade80;font-weight:600;}
+  .tape-down{color:#f87171;font-weight:600;}
+  @keyframes tape-scroll{
+    0%{transform:translateX(0);}
+    100%{transform:translateX(-100%);}
+  }
+
+  /* ---------- Shell ---------- */
+  .shell{display:flex; min-height:calc(100vh - 38px);}
+  .sidebar{
+    width:220px; flex-shrink:0;
+    background:var(--panel);
+    border-right:1px solid var(--border);
+    padding:18px 10px;
+  }
+  .brand{
+    font-family:var(--disp); font-weight:700; font-size:15px;
+    letter-spacing:.02em; padding:4px 10px 18px 10px;
+    color:var(--text); display:flex; flex-direction:column; gap:2px;
+  }
+  .brand span{color:var(--gold); font-family:var(--mono); font-size:11px; font-weight:500;}
+  nav.navlist{display:flex; flex-direction:column; gap:2px;}
+  .navbtn{
+    display:flex; align-items:center; gap:10px;
+    background:transparent; border:none; color:var(--muted);
+    text-align:left; padding:10px 12px; border-radius:8px;
+    font-size:13.5px; font-weight:500; cursor:pointer; width:100%;
+    transition:background .12s, color .12s;
+  }
+  .navbtn:hover{background:var(--panel-2); color:var(--text);}
+  .navbtn.active{background:var(--accent-soft); color:var(--on-accent-soft); box-shadow:inset 3px 0 0 var(--accent);}
+  .navbtn .num{font-family:var(--mono); color:var(--gold); font-size:11px; width:16px; flex-shrink:0;}
+
+  .main{flex:1; padding:26px 30px 60px 30px; max-width:1180px;}
+  @media(max-width:700px){ .main{padding:18px 14px 50px 14px;} }
+  .page{display:none;}
+  .page.active{display:block; animation:fadein .18s ease;}
+  @keyframes fadein{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;}}
+
+  h1.pagetitle{
+    font-family:var(--disp); font-size:22px; font-weight:600; margin:0 0 4px 0;
+  }
+  .pagesub{color:var(--muted); font-size:14.5px; margin:0 0 22px 0; line-height:1.5;}
+
+  .grid{display:grid; gap:12px;}
+  .grid-4{grid-template-columns:repeat(4,1fr);}
+  .grid-3{grid-template-columns:repeat(3,1fr);}
+  .grid-2{grid-template-columns:repeat(2,1fr);}
+  @media(max-width:1000px){.grid-4{grid-template-columns:repeat(2,1fr);} .grid-3{grid-template-columns:repeat(2,1fr);}}
+
+  .card{
+    background:var(--panel); border:1px solid var(--border); border-radius:var(--radius);
+    padding:18px;
+    box-shadow:0 1px 2px rgba(0,0,0,.08), 0 4px 14px rgba(0,0,0,.10);
+  }
+  :root[data-theme="light"] .card{ box-shadow:0 1px 2px rgba(20,20,30,.05), 0 4px 14px rgba(20,20,30,.06); }
+  .stat-card{padding:11px 13px;}
+  .stat-card .label{color:var(--muted); font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; line-height:1.25;}
+  .stat-card .value{font-family:var(--mono); font-size:17px; font-weight:700; line-height:1.2;}
+  .stat-card .sub{font-size:10.5px; margin-top:3px; color:var(--muted); line-height:1.3;}
+
+  /* ---------- Density: Compact — an even tighter pass for people who want
+     to see as much data as possible with minimal scrolling. Comfortable
+     (default) is the sizing above; Compact shrinks it all further. ---------- */
+  html[data-density="compact"] .grid{gap:8px;}
+  html[data-density="compact"] .card{padding:10px 12px;}
+  html[data-density="compact"] .stat-card{padding:8px 10px;}
+  html[data-density="compact"] .stat-card .label{font-size:9px; margin-bottom:2px;}
+  html[data-density="compact"] .stat-card .value{font-size:14px;}
+  html[data-density="compact"] .stat-card .sub{font-size:9px; margin-top:2px;}
+  html[data-density="compact"] .section-title{margin:12px 0 6px 0; font-size:13px;}
+  html[data-density="compact"] .mgrid{gap:4px;}
+  html[data-density="compact"] .mcard{padding:6px 8px;}
+  html[data-density="compact"] .mcard .mvalue{font-size:13px;}
+  html[data-density="compact"] .mcard .mlabel{font-size:9.5px; margin-bottom:2px;}
+  html[data-density="compact"] .ticker-card{padding:8px 10px;}
+  html[data-density="compact"] .portfolio-grid{grid-template-columns:repeat(auto-fill, minmax(190px,1fr)); gap:8px;}
+  html[data-density="compact"] .pagesub{margin-bottom:12px;}
+  html[data-density="compact"] table, html[data-density="compact"] thead th, html[data-density="compact"] tbody td{font-size:12.5px;}
+  html[data-density="compact"] tbody td{padding:7px 8px;}
+
+  .section-title{font-family:var(--disp); font-size:15px; font-weight:600; margin:20px 0 10px 0; display:flex; align-items:center; gap:8px;}
+  .section-title .tag{font-family:var(--mono); font-size:10.5px; color:var(--gold); border:1px solid var(--gold); border-radius:20px; padding:1px 8px;}
+
+  table{width:100%; border-collapse:collapse; font-size:14px;}
+  thead th{
+    text-align:left; color:var(--muted); font-weight:600; text-transform:uppercase;
+    font-size:11.5px; letter-spacing:.04em; padding:10px 10px; border-bottom:1px solid var(--border);
+    position:sticky; top:0; background:var(--panel);
+  }
+  tbody td{padding:11px 10px; border-bottom:1px solid var(--border); font-family:var(--mono); white-space:nowrap; font-size:14px;}
+  tbody tr:hover{background:var(--panel-2);}
+  .num-cell{text-align:right;}
+  .pos{color:var(--profit);}
+  .neg{color:var(--loss);}
+  .neutral{color:var(--warn);}
+
+  .pill{display:inline-block; padding:3px 9px; border-radius:20px; font-size:11.5px; font-family:var(--mono); font-weight:700;}
+  .pill-buy{background:color-mix(in srgb, var(--profit) 16%, var(--panel)); color:var(--profit);}
+  .pill-sell{background:color-mix(in srgb, var(--loss) 16%, var(--panel)); color:var(--loss);}
+
+  label{display:block; font-size:12.5px; color:var(--muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:.03em;}
+  input[type=text], input[type=number], input[type=date], select{
+    width:100%; background:#0d1115; border:1px solid var(--border); color:var(--text);
+    padding:10px 11px; border-radius:7px; font-family:var(--mono); font-size:14.5px;
+  }
+  .field{margin-bottom:14px;}
+  .row{display:flex; gap:12px;}
+  .row > *{flex:1;}
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; width:auto;
+    background:color-mix(in srgb, var(--accent) 65%, #000); color:#fff; border:none; padding:11px 17px; border-radius:7px;
+    font-weight:600; font-size:14px; cursor:pointer; font-family:var(--body);
+  }
+  .btn:hover{filter:brightness(1.1);}
+  .btn.secondary{background:var(--panel-2); border:1px solid var(--border); color:var(--text);}
+  .btn.ghost{background:transparent; border:1px solid var(--border); color:var(--muted);}
+  .btn.small{padding:6px 11px; font-size:12.5px;}
+  .btn.danger{background:color-mix(in srgb, var(--loss) 16%, var(--panel)); color:var(--loss); border:1px solid color-mix(in srgb, var(--loss) 45%, var(--panel));}
+
+  .calc-panel{display:grid; grid-template-columns:280px 1fr; gap:24px;}
+  @media(max-width:900px){.calc-panel{grid-template-columns:1fr;}}
+  .result-line{display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px dashed var(--border); font-family:var(--mono); font-size:14.5px; line-height:1.4;}
+  .result-line:last-child{border-bottom:none;}
+  .result-line .k{color:var(--muted);}
+  .result-line .v{font-weight:700;}
+
+  .settings-list .result-line{cursor:default;}
+  .badge-dot{width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px;}
+
+  .empty{
+    padding:40px 20px; text-align:center; color:var(--muted); border:1px dashed var(--border); border-radius:var(--radius);
+  }
+  .toolbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:10px; flex-wrap:wrap;}
+  .toolbar .right{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+  th.sortable{cursor:pointer; user-select:none; white-space:nowrap;}
+  th.sortable:hover{color:var(--text);}
+  th.sortable .arrow{color:var(--gold); font-size:10px; margin-left:3px;}
+  tr.group-row td{background:var(--panel-2); font-size:12px; padding:8px 12px; border-top:1px solid var(--border); border-bottom:1px solid var(--border);}
+  tr.group-row .g-stats{color:var(--muted); font-weight:400; margin-left:8px;}
+
+  .chip-tabs{display:flex; gap:6px; margin-bottom:18px; flex-wrap:wrap;}
+  .chip{
+    background:var(--panel-2); border:1px solid var(--border); color:var(--muted);
+    padding:7px 13px; border-radius:20px; font-size:12.5px; cursor:pointer; font-weight:500;
+  }
+  .chip.active{background:var(--accent-soft); color:var(--on-accent-soft); border-color:var(--accent);}
+
+  .subpage{display:none;}
+  .subpage.active{display:block;}
+
+  .footer-note{color:var(--muted); font-size:11.5px; margin-top:30px; border-top:1px solid var(--border); padding-top:14px;}
+  canvas{max-width:100%;}
+  .charts-row{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:16px;}
+  @media(max-width:1100px){.charts-row{grid-template-columns:repeat(2,1fr);}}
+  @media(max-width:640px){.charts-row{grid-template-columns:1fr;}}
+  .chart-card{padding:16px 16px 12px 16px;}
+  .chart-card .section-title{margin:0 0 10px 0; font-size:13px;}
+  .chart-box{position:relative; height:220px; width:100%;}
+  .chart-box canvas{max-height:220px;}
+  /* ---------- Info tooltip — compact "what is this / how is it computed"
+     explainer. Pure CSS (no JS), so it's cheap to sprinkle everywhere a
+     paragraph of explanation used to sit permanently under a heading. ---------- */
+  .info-tip{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:15px; height:15px; border-radius:50%; margin-left:6px;
+    background:var(--panel-2); border:1px solid var(--border); color:var(--muted);
+    font-size:10.5px; font-weight:700; font-style:italic; font-family:Georgia,'Times New Roman',serif;
+    cursor:help; position:relative; vertical-align:middle; flex-shrink:0;
+  }
+  .info-tip:hover{color:var(--accent); border-color:var(--accent);}
+  .info-tip::after{
+    content:attr(data-tip);
+    position:absolute; left:50%; bottom:135%; transform:translateX(-50%);
+    width:250px; max-width:64vw; background:var(--panel); color:var(--text);
+    border:1px solid var(--border); border-radius:8px; padding:9px 11px;
+    font-size:11.5px; font-style:normal; font-weight:400; letter-spacing:normal; text-transform:none; line-height:1.45; text-align:left;
+    box-shadow:0 8px 24px rgba(0,0,0,.4);
+    opacity:0; visibility:hidden; transition:opacity .12s ease;
+    z-index:60; pointer-events:none;
+  }
+  .info-tip:hover::after, .info-tip:focus::after{ opacity:1; visibility:visible; }
+  @media(max-width:700px){ .info-tip::after{ left:auto; right:-8px; transform:none; } }
+  .toast{
+    position:fixed; bottom:20px; right:20px; background:var(--panel); border:1px solid var(--accent);
+    padding:12px 18px; border-radius:8px; font-size:13px; box-shadow:0 6px 24px rgba(0,0,0,.4);
+    opacity:0; transform:translateY(10px); transition:.2s; z-index:50; pointer-events:none;
+  }
+  .toast.show{opacity:1; transform:none;}
+
+  /* ---------- Modal ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.55); display:none;
+    align-items:flex-start; justify-content:center; padding:4vh 16px 40px 16px; z-index:100;
+    overflow-y:auto;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal-box{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:26px 30px; width:100%; max-width:920px; box-shadow:0 20px 60px rgba(0,0,0,.5);
+    animation:fadein .16s ease; max-height:92vh; overflow-y:auto;
+  }
+  .modal-box .modal-head{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;}
+  .modal-box .modal-title{font-family:var(--disp); font-size:20px; font-weight:700;}
+  .modal-box .modal-close{background:transparent; border:none; color:var(--muted); font-size:20px; cursor:pointer; line-height:1; padding:2px 6px;}
+  .modal-box .modal-close:hover{color:var(--text);}
+  @media(max-width:700px){ .modal-box{padding:18px;} }
+
+  /* ---------- Portfolio summary (dashboard) ---------- */
+  .psum-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:11px 4px; border-bottom:1px solid var(--border); cursor:pointer;
+    background:transparent; border-left:none; border-right:none; border-top:none; width:100%; text-align:left;
+    font-family:var(--body); transition:background .12s;
+  }
+  .psum-row:last-child{border-bottom:none;}
+  .psum-row:hover{background:var(--panel-2);}
+  .psum-row .psum-name{display:flex; flex-direction:column; gap:2px;}
+  .psum-row .psum-ticker{font-family:var(--mono); font-weight:700; font-size:13.5px;}
+  .psum-row .psum-company{font-size:11px; color:var(--muted);}
+  .psum-row .psum-shares{font-family:var(--mono); font-size:13px; color:var(--muted); flex-shrink:0;}
+  .psum-row .psum-nums{text-align:right; display:flex; flex-direction:column; gap:2px;}
+  .psum-row .psum-invested{font-family:var(--mono); font-size:13px;}
+  .psum-row .psum-be{font-family:var(--mono); font-size:11px; color:var(--muted);}
+  .table-scroll{overflow-x:auto; max-height:480px; overflow-y:auto;}
+  .table-scroll table thead th{position:sticky; top:0; background:var(--panel); z-index:1;}
+  .rule-note{
+    font-size:12px; color:var(--muted); background:var(--panel-2); border:1px solid var(--border);
+    border-radius:8px; padding:10px 12px; margin-bottom:16px; line-height:1.5;
+  }
+  .rule-note b{color:var(--text);}
+
+  /* ---------- Modal info cards (grouped, side-by-side, quick glance) ---------- */
+  .mgroups{display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:20px; align-items:start;}
+  .mgroup-title{
+    font-family:var(--disp); font-size:13px; font-weight:700; text-transform:uppercase;
+    letter-spacing:.04em; color:var(--gold); margin:0 0 8px 0;
+  }
+  .mgrid{display:grid; grid-template-columns:repeat(auto-fit, minmax(110px,1fr)); gap:6px;}
+  .mcard{
+    background:var(--panel-2); border:1px solid var(--border); border-radius:8px;
+    padding:8px 10px;
+  }
+  .mcard.wide{grid-column:1 / -1;}
+  .mcard .mlabel{font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:3px;}
+  .mcard .mlabel .info-tip{width:12px; height:12px; font-size:9px; margin-left:4px; vertical-align:text-top;}
+  .stat-card .label .info-tip{vertical-align:text-top;}
+  .mcard .mvalue{font-family:var(--mono); font-size:14.5px; font-weight:700; line-height:1.25;}
+  .mcard .mvalue.pos{color:var(--profit);}
+  .mcard .mvalue.neg{color:var(--loss);}
+  .mcard .msub{font-size:10.5px; color:var(--muted); margin-top:2px;}
+  /* Semantic highlight variants — break-even is always the "important
+     reference number" (gold), share count is always the "how much do I
+     hold" number (blue). Gentle gradient, not a flat fill, so it reads as
+     an accent rather than a warning/alert block. */
+  .mcard.mc-gold{
+    background:linear-gradient(135deg, rgba(var(--gold-rgb),.20), rgba(var(--gold-rgb),.04));
+    border-color:rgba(var(--gold-rgb),.45);
+  }
+  .mcard.mc-gold .mlabel{color:rgba(var(--gold-rgb),.85);}
+  .mcard.mc-gold .mvalue{color:var(--gold);}
+  .mcard.mc-blue{
+    background:linear-gradient(135deg, rgba(var(--info-rgb),.20), rgba(var(--info-rgb),.04));
+    border-color:rgba(var(--info-rgb),.45);
+  }
+  .mcard.mc-blue .mlabel{color:rgba(var(--info-rgb),.85);}
+  .mcard.mc-blue .mvalue{color:var(--info);}
+
+  /* ---------- Dashboard ticker cards ----------
+     These are the highest-priority items on the page, so they get a
+     noticeably stronger shadow than a regular .card (not just the ambient
+     baseline one) plus a hover lift — and tighter internal spacing so more
+     of them fit on screen without scrolling. */
+  .ticker-card{
+    cursor:pointer; padding:12px 14px;
+    box-shadow:0 2px 5px rgba(0,0,0,.20), 0 10px 26px rgba(0,0,0,.24);
+    transition:border-color .12s, transform .12s, box-shadow .12s;
+  }
+  .ticker-card:hover{
+    border-color:var(--gold); transform:translateY(-2px);
+    box-shadow:0 4px 10px rgba(0,0,0,.26), 0 14px 34px rgba(0,0,0,.30);
+  }
+  :root[data-theme="light"] .ticker-card{ box-shadow:0 2px 5px rgba(20,20,30,.10), 0 10px 24px rgba(20,20,30,.12); }
+  :root[data-theme="light"] .ticker-card:hover{ box-shadow:0 4px 10px rgba(20,20,30,.14), 0 14px 30px rgba(20,20,30,.16); }
+  .ticker-card-head{display:flex; justify-content:space-between; align-items:flex-start;}
+  .tc-ticker{font-family:var(--mono); font-weight:700; font-size:14px; line-height:1.2;}
+  .tc-company{font-size:10.5px; color:var(--muted); margin-top:1px;}
+  .tc-price-input{width:100%; background:transparent; border:none; padding:0; font-family:var(--mono); font-size:14.5px; font-weight:700; color:var(--text);}
+  .tc-price-input:focus-visible{outline:none;}
+  .mcard.tc-price-card{cursor:default;}
+  .tc-pl-inline{font-family:var(--mono); font-size:12px; font-weight:700; margin-top:5px; color:var(--muted);}
+  .tc-pl-inline.pos{color:var(--profit);}
+  .tc-pl-inline.neg{color:var(--loss);}
+  .tc-qc-toggle{width:100%; margin-top:8px; cursor:pointer;}
+  .tc-qc-panel{margin-top:8px; padding-top:8px; border-top:1px dashed var(--border); cursor:default;}
+  .portfolio-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(226px,1fr)); gap:12px;}
+  .ticker-logo{width:20px; height:20px; border-radius:5px; object-fit:contain; vertical-align:middle; margin-right:7px; background:#fff; padding:2px; flex-shrink:0;}
+  .ticker-logo.lg{width:26px; height:26px; border-radius:6px; padding:3px; margin-right:8px;}
+  .ticker-logo.sm{width:14px; height:14px; border-radius:3px; padding:1px; margin-right:5px;}
+   .ticker-logo-fallback{
+     display:inline-flex; align-items:center; justify-content:center;
+     box-sizing:border-box; overflow:hidden; flex:0 0 auto;
+     background:color-mix(in srgb, var(--ticker-accent) 18%, var(--panel));
+     color:var(--ticker-accent); border:1px solid color-mix(in srgb, var(--ticker-accent) 42%, transparent);
+     font-family:var(--mono); font-size:9px; font-weight:800; letter-spacing:-.2px;
+     line-height:1; user-select:none;
+   }
+   .ticker-logo-fallback.lg{font-size:12px;}
+   .ticker-logo-fallback.sm{font-size:7px;}
+  .hybrid-board{display:grid;gap:10px;}
+  .hybrid-row{display:grid;grid-template-columns:1.1fr repeat(6,minmax(78px,1fr));gap:8px;align-items:center;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--panel-2);}
+  .hybrid-head{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;}
+  .hybrid-main{display:flex;align-items:center;min-width:0;font-weight:700;}
+  .hybrid-cell{font-variant-numeric:tabular-nums;font-size:12px;}
+  .hybrid-status{font-size:10px;font-weight:800;padding:4px 7px;border-radius:999px;display:inline-block;background:var(--panel);border:1px solid var(--border);}
+  .hybrid-status.pos{color:var(--profit);}
+  .hybrid-status.neg{color:var(--loss);}
+  .hybrid-status.watch{color:var(--accent);}
+  @media(max-width:900px){.hybrid-row{grid-template-columns:1.2fr repeat(3,minmax(78px,1fr));}.hybrid-row .optional{display:none;}}
+  .trade-cycle-grid{display:grid;grid-template-columns:1.1fr repeat(7,minmax(82px,1fr));gap:8px;align-items:end}
+  .trade-cycle-grid .field{min-width:0}
+  .trade-cycle-grid .field label{font-size:10px}
+  .trade-cycle-result{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:8px;margin-top:12px}
+  .trade-cycle-card{padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--panel-2)}
+  .trade-cycle-card .k{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .trade-cycle-card .v{font-family:var(--mono);font-size:14px;font-weight:750;margin-top:3px}
+  .trade-cycle-note{font-size:11px;color:var(--muted);line-height:1.45;margin-top:10px}
+  @media(max-width:900px){.trade-cycle-grid{grid-template-columns:repeat(2,minmax(140px,1fr));}.trade-cycle-result{grid-template-columns:repeat(2,minmax(120px,1fr));}}
+
+
+   @supports not (color: color-mix(in srgb, red 20%, white)){
+     .ticker-logo-fallback{background:var(--panel-2); border-color:var(--ticker-accent);}
+   }
+
+  /* ---------- Collapsible sections ---------- */
+  .section-title.collapsible{cursor:pointer; user-select:none;}
+  .section-title.collapsible:hover{color:var(--gold);}
+  .section-title.collapsible:hover .collapse-arrow{color:var(--gold);}
+  .section-title .collapse-arrow{
+    color:var(--muted); font-size:20px; line-height:1; margin-left:6px; font-weight:700;
+    display:inline-flex; align-items:center; justify-content:center;
+    width:22px; height:22px; border-radius:6px; background:var(--panel-2);
+    transition:transform .15s ease, color .12s ease, background .12s ease;
+  }
+  .section-title.collapsed .collapse-arrow{transform:rotate(-90deg);}
+
+  /* ---------- Sub-nav chip row (reuses .chip-tabs / .chip) ---------- */
+  .subnav{margin-bottom:20px; margin-top:-6px;}
+  /* Readability pass: keep semantic colors restrained and text high-contrast. */
+  .mgroup-title{color:var(--text);font-weight:800;border-bottom:1px solid var(--border);padding-bottom:7px;}
+  .mcard{background:var(--panel-2);border-color:var(--border);}
+  .mcard .mlabel{color:var(--muted);}
+  .mcard .msub{color:var(--muted);}
+  .mcard.mc-gold,.mcard.mc-blue{background:var(--panel-2);border-color:var(--border);}
+  .mcard.mc-gold .mlabel,.mcard.mc-blue .mlabel{color:var(--muted);}
+  .mcard.mc-gold .mvalue{color:var(--gold);text-shadow:0 0 0 transparent;}
+  .mcard.mc-blue .mvalue{color:var(--info);}
+  .hybrid-row{border-color:var(--border);background:var(--panel);}
+  .hybrid-row.hybrid-head{color:var(--muted);}
+  .hybrid-cell b{color:var(--text);}
+  html[data-color^="material-"] .mgroup-title{color:var(--accent);}
+  html[data-color^="material-"] .mcard.mc-gold .mvalue{color:var(--accent);}
+  html[data-color^="material-"] .mcard.mc-blue .mvalue{color:var(--accent);}
+  html[data-color^="material-"] .hybrid-status{background:var(--accent-soft);border:0;}
+  html[data-color^="material-"] .hybrid-status.pos{color:var(--profit);}
+  html[data-color^="material-"] .hybrid-status.neg{color:var(--loss);}
+  html[data-color^="material-"] .hybrid-status.watch{color:var(--accent);}
+    /* Final Material palette guard: ensures component backgrounds/text follow
+     the selected Material palette instead of the generic root palette. */
+  html[data-color^="material-"] body{background:var(--bg);color:var(--text);}
+  html[data-color^="material-"] .topbar,
+  html[data-color^="material-"] .sidebar,
+  html[data-color^="material-"] .card,
+  html[data-color^="material-"] .modal,
+  html[data-color^="material-"] .table-wrap{background-color:var(--panel);color:var(--text);border-color:var(--border);}
+  html[data-color^="material-"] .card.stat-card,
+  html[data-color^="material-"] .card.chart-card{background:linear-gradient(180deg,var(--accent-soft),var(--panel) 86px);}
+  html[data-color^="material-"] input[type=text],
+  html[data-color^="material-"] input[type=number],
+  html[data-color^="material-"] input[type=date],
+  html[data-color^="material-"] select,
+  html[data-color^="material-"] textarea{background:var(--panel-2);color:var(--text);border-color:var(--border);}
+  html[data-color^="material-"] .navbtn{color:var(--muted);}
+  html[data-color^="material-"] .navbtn.active{background:var(--accent-soft);color:var(--accent);}
+  html[data-color^="material-"] .section-title .tag,
+  html[data-color^="material-"] .chip{background:var(--accent-soft);color:var(--accent);}
+  html[data-color^="material-"] .btn.primary{background:color-mix(in srgb, var(--accent) 65%, #000);color:#fff;}
+
+  /* ================================================================
+     MATERIAL PALETTE OVERRIDE — FINAL SPECIFICITY FIX
+     The original light-mode rule is :root[data-theme="light"], which
+     outranks html[data-color="material-*"]. These selectors intentionally
+     include BOTH attributes so the selected Material palette wins.
+     ================================================================ */
+  html[data-color^="material-"][data-theme="light"] {
+    --bg: var(--material-bg, #F7F5FA);
+    --panel: var(--material-panel, #FFFBFE);
+    --panel-2: var(--material-panel-2, #F3EDF7);
+    --border: var(--material-border, #E6E0E9);
+    --text: var(--material-text, #1D1B20);
+    --muted: var(--material-muted, #6F6875);
+    --accent: var(--material-accent, #6750A4);
+    --accent-soft: var(--material-accent-soft, #E8DEF8);
+  }
+  html[data-color="material-blue"][data-theme="light"] { --material-bg:#F7F5FA; --material-panel:#FFFBFE; --material-panel-2:#F3EDF7; --material-border:#E6E0E9; --material-text:#1D1B20; --material-muted:#6F6875; --material-accent:#6750A4; --material-accent-soft:#E8DEF8; }
+  html[data-color="material-green"][data-theme="light"] { --material-bg:#F5F8F2; --material-panel:#FBFDF8; --material-panel-2:#EFF5EA; --material-border:#DCE6D6; --material-text:#1A1C18; --material-muted:#687064; --material-accent:#386A20; --material-accent-soft:#D9EAD0; }
+  html[data-color="material-purple"][data-theme="light"] { --material-bg:#FBF5F7; --material-panel:#FFF8F9; --material-panel-2:#FCEEF2; --material-border:#EEDDE3; --material-text:#201A1B; --material-muted:#74676B; --material-accent:#7D5260; --material-accent-soft:#FFD8E4; }
+  html[data-color="material-teal"][data-theme="light"] { --material-bg:#F3F9F9; --material-panel:#F8FAFA; --material-panel-2:#E8F2F2; --material-border:#D6E5E5; --material-text:#191C1C; --material-muted:#647171; --material-accent:#006A6A; --material-accent-soft:#CDE8E8; }
+  html[data-color="material-amber"][data-theme="light"] { --material-bg:#FFF8F1; --material-panel:#FFFBF8; --material-panel-2:#FFF1E4; --material-border:#EFDFD0; --material-text:#211A13; --material-muted:#776A5D; --material-accent:#8A5000; --material-accent-soft:#FFDCB5; }
+
+  html[data-color="material-blue"][data-theme="dark"] { --bg:#141218; --panel:#211F26; --panel-2:#2B2930; --border:#39363F; --text:#E6E1E9; --muted:#CAC4D0; --accent:#D0BCFF; --accent-soft:#4F378B; }
+  html[data-color="material-green"][data-theme="dark"] { --bg:#10140E; --panel:#1C2119; --panel-2:#252C21; --border:#394334; --text:#E4E9DE; --muted:#BDC6B6; --accent:#B0D49A; --accent-soft:#315724; }
+  html[data-color="material-purple"][data-theme="dark"] { --bg:#181113; --panel:#251B1E; --panel-2:#302327; --border:#49383D; --text:#F2DFE3; --muted:#D0BFC3; --accent:#FFB1C6; --accent-soft:#633B49; }
+  html[data-color="material-teal"][data-theme="dark"] { --bg:#0C1414; --panel:#162020; --panel-2:#202B2B; --border:#334141; --text:#E0F2F2; --muted:#B8CCCC; --accent:#4FDADA; --accent-soft:#004F50; }
+  html[data-color="material-amber"][data-theme="dark"] { --bg:#17120D; --panel:#241C14; --panel-2:#30251A; --border:#493B2C; --text:#F4E4D1; --muted:#D0BCA4; --accent:#FFB96B; --accent-soft:#5F3B00; }
+
+  /* Material components must also outrank the original light/dark component rules. */
+  html[data-color^="material-"][data-theme="light"] body,
+  html[data-color^="material-"][data-theme="dark"] body { background:var(--bg); color:var(--text); }
+  html[data-color^="material-"][data-theme="light"] .topbar,
+  html[data-color^="material-"][data-theme="dark"] .topbar,
+  html[data-color^="material-"][data-theme="light"] .sidebar,
+  html[data-color^="material-"][data-theme="dark"] .sidebar,
+  html[data-color^="material-"][data-theme="light"] .card,
+  html[data-color^="material-"][data-theme="dark"] .card,
+  html[data-color^="material-"][data-theme="light"] .modal,
+  html[data-color^="material-"][data-theme="dark"] .modal,
+  html[data-color^="material-"][data-theme="light"] .table-wrap,
+  html[data-color^="material-"][data-theme="dark"] .table-wrap {
+    background-color:var(--panel); color:var(--text); border-color:var(--border);
+  }
+  html[data-color^="material-"][data-theme="light"] input[type=text],
+  html[data-color^="material-"][data-theme="dark"] input[type=text],
+  html[data-color^="material-"][data-theme="light"] input[type=number],
+  html[data-color^="material-"][data-theme="dark"] input[type=number],
+  html[data-color^="material-"][data-theme="light"] input[type=date],
+  html[data-color^="material-"][data-theme="dark"] input[type=date],
+  html[data-color^="material-"][data-theme="light"] input[type=email],
+  html[data-color^="material-"][data-theme="dark"] input[type=email],
+  html[data-color^="material-"][data-theme="light"] input[type=password],
+  html[data-color^="material-"][data-theme="dark"] input[type=password],
+  html[data-color^="material-"][data-theme="light"] input[type=tel],
+  html[data-color^="material-"][data-theme="dark"] input[type=tel],
+  html[data-color^="material-"][data-theme="light"] select,
+  html[data-color^="material-"][data-theme="dark"] select,
+  html[data-color^="material-"][data-theme="light"] textarea,
+  html[data-color^="material-"][data-theme="dark"] textarea {
+    background:var(--panel-2); color:var(--text); border-color:var(--border);
+  }
+  html[data-color^="material-"][data-theme="light"] .navbtn,
+  html[data-color^="material-"][data-theme="dark"] .navbtn { color:var(--muted); }
+  html[data-color^="material-"][data-theme="light"] .navbtn:hover,
+  html[data-color^="material-"][data-theme="dark"] .navbtn:hover { background:var(--panel-2); color:var(--text); }
+  html[data-color^="material-"][data-theme="light"] .navbtn.active,
+  html[data-color^="material-"][data-theme="dark"] .navbtn.active { background:var(--accent-soft); color:var(--accent); box-shadow:none; }
+  html[data-color^="material-"][data-theme="light"] .btn.primary,
+  html[data-color^="material-"][data-theme="dark"] .btn.primary,
+  html[data-color^="material-"][data-theme="light"] .btn:not(.secondary):not(.ghost):not(.danger),
+  html[data-color^="material-"][data-theme="dark"] .btn:not(.secondary):not(.ghost):not(.danger) { background:color-mix(in srgb, var(--accent) 65%, #000); color:#fff; border-color:transparent; }
+  html[data-color^="material-"][data-theme="light"] .btn.secondary,
+  html[data-color^="material-"][data-theme="dark"] .btn.secondary { background:var(--accent-soft); color:var(--accent); border-color:transparent; }
+  html[data-color^="material-"][data-theme="light"] .btn.ghost,
+  html[data-color^="material-"][data-theme="dark"] .btn.ghost { background:transparent; color:var(--accent); border-color:transparent; }
+  html[data-color^="material-"][data-theme="light"] .chip,
+  html[data-color^="material-"][data-theme="dark"] .chip,
+  html[data-color^="material-"][data-theme="light"] .section-title .tag,
+  html[data-color^="material-"][data-theme="dark"] .section-title .tag { background:var(--accent-soft); color:var(--accent); border-color:transparent; }
+  html[data-color^="material-"][data-theme="light"] thead th,
+  html[data-color^="material-"][data-theme="dark"] thead th { background:var(--panel); color:var(--accent); border-bottom-color:var(--border); }
+  html[data-color^="material-"][data-theme="light"] tbody td,
+  html[data-color^="material-"][data-theme="dark"] tbody td { border-bottom-color:var(--border); color:var(--text); }
+  html[data-color^="material-"][data-theme="light"] tbody tr:hover,
+  html[data-color^="material-"][data-theme="dark"] tbody tr:hover { background:var(--accent-soft); }
+  html[data-color^="material-"][data-theme="light"] .card.stat-card,
+  html[data-color^="material-"][data-theme="dark"] .card.stat-card,
+  html[data-color^="material-"][data-theme="light"] .card.chart-card,
+  html[data-color^="material-"][data-theme="dark"] .card.chart-card { background:linear-gradient(180deg,var(--accent-soft),var(--panel) 86px); border-left:0; }
+  html[data-color^="material-"][data-theme="light"] .section-title,
+  html[data-color^="material-"][data-theme="dark"] .section-title { color:var(--text); }
+  html[data-color^="material-"][data-theme="light"] .pagetitle,
+  html[data-color^="material-"][data-theme="dark"] .pagetitle { color:var(--text); }
+  html[data-color^="material-"][data-theme="light"] .pagesub,
+  html[data-color^="material-"][data-theme="dark"] .pagesub { color:var(--muted); }
+  html[data-color^="material-"][data-theme="light"] input:focus,
+  html[data-color^="material-"][data-theme="dark"] input:focus,
+  html[data-color^="material-"][data-theme="light"] select:focus,
+  html[data-color^="material-"][data-theme="dark"] select:focus { border-color:var(--accent); outline:3px solid var(--accent-soft); }
+
+/* ---------- Card & field accents — minimal gradient, shadows not borders ---
+   1) The gradient on stat/chart cards is now barely-there: the top edge is
+      only ~6–8% shifted toward --accent-soft before settling back into
+      plain --panel — a hint of color, not a wash. Same tiny ratio for
+      every color theme, material included, so nothing goes pale/white.
+   2) No hard card borders — a soft two-layer shadow gives lift and
+      definition instead.
+   3) Colour only touches .card surfaces and input/select fields. The page
+      background, topbar, and sidebar are untouched by any of this and
+      stay their theme's plain white/off-white/grey (or dark) panel — no
+      accent tint leaks into them.
+   Placed last so it wins over the earlier, more saturated definitions
+   above regardless of theme. */
+html:not([data-color="wine"]) .card.stat-card,
+html:not([data-color="wine"]) .card.chart-card{
+  border:0;
+  box-shadow:0 1px 2px rgba(0,0,0,.10), 0 6px 18px rgba(0,0,0,.14);
+  background:linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 8%, var(--panel)), var(--panel) 60px);
+}
+html[data-color^="material-"][data-theme="light"] .card.stat-card,
+html[data-color^="material-"][data-theme="dark"] .card.stat-card,
+html[data-color^="material-"][data-theme="light"] .card.chart-card,
+html[data-color^="material-"][data-theme="dark"] .card.chart-card{
+  border:0;
+  box-shadow:0 1px 2px rgba(0,0,0,.10), 0 6px 18px rgba(0,0,0,.14);
+  background:linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 6%, var(--panel)), var(--panel) 60px);
+}
+
+/* Fields get the same whisper of color the cards get — background only,
+   border stays the plain theme border, no accent bleeding into it. */
+html:not([data-color="wine"]) input[type=text],
+html:not([data-color="wine"]) input[type=number],
+html:not([data-color="wine"]) input[type=date],
+html:not([data-color="wine"]) select{
+  background: color-mix(in srgb, var(--accent-soft) 6%, var(--panel-2));
+}
+html[data-color^="material-"][data-theme="light"] input[type=text],
+html[data-color^="material-"][data-theme="dark"] input[type=text],
+html[data-color^="material-"][data-theme="light"] input[type=number],
+html[data-color^="material-"][data-theme="dark"] input[type=number],
+html[data-color^="material-"][data-theme="light"] input[type=date],
+html[data-color^="material-"][data-theme="dark"] input[type=date],
+html[data-color^="material-"][data-theme="light"] select,
+html[data-color^="material-"][data-theme="dark"] select{
+  background: color-mix(in srgb, var(--accent-soft) 6%, var(--panel-2));
+}
+
+/* Authentication UI guard: only one state is visible. */
+html.auth-signed-in #cloudSignedOutBox{display:none !important;}
+html.auth-signed-out #cloudSignedInBox{display:none !important;}
+
+.risk-shell{max-width:1280px;margin:0 auto;padding:22px 24px 50px}.risk-grid{display:grid;grid-template-columns:330px 1fr;gap:14px}@media(max-width:950px){.risk-grid{grid-template-columns:1fr}}
+.risk-hero{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}.risk-title{font-family:var(--disp);font-size:24px;font-weight:700;margin:0}.risk-sub{color:var(--muted);margin:4px 0 0;font-size:13px}
+.risk-mode{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.risk-mode button{border:0;background:var(--panel-2);color:var(--muted);padding:8px 13px;border-radius:999px;cursor:pointer;font-weight:600}.risk-mode button.active{background:var(--accent-soft);color:var(--accent)}
+.risk-score{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}@media(max-width:700px){.risk-score{grid-template-columns:repeat(2,1fr)}}.metric{padding:11px 12px;background:var(--panel-2);border-radius:10px}.metric .k{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}.metric .v{font-family:var(--mono);font-weight:800;font-size:16px;margin-top:3px}
+.scenario-table{overflow:auto}.scenario-table table{min-width:800px}.scenario-table tr.recommended td{background:var(--accent-soft)}.scenario-table tr.stop td{background:color-mix(in srgb,var(--warn) 10%,var(--panel))}.alert{padding:12px 14px;border-radius:10px;background:var(--panel-2);margin-bottom:10px;line-height:1.5}.alert b{color:var(--text)}.alert.good{border-left:4px solid var(--profit)}.alert.warn{border-left:4px solid var(--warn)}.alert.bad{border-left:4px solid var(--loss)}
+.disclaimer,.small-note{font-size:11px;color:var(--muted);line-height:1.5}.risk-form .field{margin-bottom:10px}.risk-form label{font-size:11px}.risk-form input,.risk-form select{padding:9px 10px}.stress-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}@media(max-width:900px){.stress-grid{grid-template-columns:repeat(3,1fr)}}@media(max-width:550px){.stress-grid{grid-template-columns:repeat(2,1fr)}}.stress-card{padding:9px;background:var(--panel-2);border-radius:9px;text-align:center}.stress-card .p{font-family:var(--mono);font-size:11px;color:var(--muted)}.stress-card .v{font-family:var(--mono);font-weight:800;margin-top:3px}
+</style>
+<style>
+.sidebar .navbtn{ text-decoration:none; }
+.sidebar .navbtn:visited{ color:var(--muted); }
+.sidebar .navbtn.active:visited{ color:var(--on-accent-soft); }
+</style>
+</head><body>
+<div class="topbar"><select id="setFontFamily" onchange="applyAppearance()"><option value="system">Clean system font</option><option value="arial">Arial</option><option value="arial-narrow">Arial Narrow</option><option value="default">Inter / Space Grotesk</option><option value="legible">Atkinson Hyperlegible</option><option value="rounded">Lexend</option><option value="serif">Serif</option></select><select id="setFontSize" onchange="applyAppearance()"><option value="small">Small text</option><option value="medium">Medium text</option><option value="large">Large text</option><option value="xl">Extra large</option></select><select id="setColorTheme" onchange="applyAppearance()"><optgroup label="Classic"><option value="wine">Classic</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="violet">Violet</option><option value="sunset">Sunset</option></optgroup><optgroup label="Material"><option value="material-blue">Material Purple / Blue</option><option value="material-green">Material Green</option><option value="material-purple">Material Rose</option><option value="material-teal">Material Teal</option><option value="material-amber">Material Amber</option></optgroup></select><select id="setDensity" onchange="applyAppearance()"><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select><button class="btn secondary small" id="themeToggle" onclick="toggleTheme()">☀ Light mode</button></div>
+<div class="tape-wrap"><div class="tape-track"><span class="tape-item"><b>QSE</b> Advanced Risk Analysis • Fee-aware • Capital-aware</span><span class="tape-item">Averaging down is not recovery</span><span class="tape-item">Diminishing returns matter</span></div></div>
+<div class="shell">
+
+<div class="sidebar">
+  <div class="brand">QSE WORKBOOK<span>trading assistant</span></div>
+  <nav class="navlist">
+    <a class="navbtn" href="index.html"><span class="num">01</span>Dashboard</a>
+    <a class="navbtn active" href="Advanced_Risk_Analysis_Calculator.html"><span class="num">02</span>Advanced Risk Analysis</a>
+  </nav>
+  <div class="footer-note" style="margin-top:24px; padding-top:12px;">
+    Data lives in this browser (localStorage). Use Export/Import in Settings to move it between devices.
+  </div>
+</div>
+
+<div class="main">
+<main class="risk-shell"><div class="risk-hero"><div><h1 class="risk-title">Advanced Risk Analysis Calculator</h1><p class="risk-sub">Test whether averaging down actually improves the trade enough to justify the additional capital.</p></div><button class="btn secondary small" onclick="resetRisk()">Reset</button></div>
+<div class="risk-mode"><button id="riskConservative" onclick="setRisk('conservative')">Conservative</button><button id="riskBalanced" class="active" onclick="setRisk('balanced')">Balanced</button><button id="riskAggressive" onclick="setRisk('aggressive')">Aggressive</button></div>
+<div class="risk-grid"><section class="card risk-form"><div class="section-title">Position & risk inputs <span class="info-tip" tabindex="0" data-tip="Values come from the same QSE workbook database as the main index page. Hypothetical averaging inputs never modify your portfolio.">i</span></div>
+<div class="field"><label>Stock</label><select id="ticker" onchange="loadTicker()"></select></div><div class="row"><div class="field"><label>Buy price</label><input id="buyPrice" type="number" step="0.001"></div><div class="field"><label>Current price</label><input id="currentPrice" type="number" step="0.001"></div></div><div class="row"><div class="field"><label>Shares held</label><input id="shares" type="number" step="1"></div><div class="field"><label>Avg buy price</label><input id="avgPrice" type="number" step="0.001"></div></div><div class="field"><label>Additional capital <span class="info-tip" tabindex="0" data-tip="New QAR at risk. It is not a loss-recovery amount.">i</span></label><input id="capital" type="number" step="10" value="500"></div><div class="row"><div class="field"><label>Target sell price</label><input id="target" type="number" step="0.001"></div><div class="field"><label>Minimum net profit</label><input id="minProfit" type="number" step="0.01" value="5"></div></div><div class="row"><div class="field"><label>Stress drawdown</label><select id="stress"><option value="5">5%</option><option value="10" selected>10%</option><option value="15">15%</option><option value="20">20%</option></select></div><div class="field"><label>Fee %</label><input id="fee" type="number" step="0.001" value="0.275"></div></div><button class="btn" style="width:100%;margin-top:4px" onclick="analyze()">Analyze averaging plan</button><p class="small-note">Risk level changes the suggested capital ceiling; it never overrides the math or guarantees recovery.</p></section>
+<section><div id="headline" class="card" style="margin-bottom:12px"></div><div class="card" style="margin-bottom:12px"><div class="section-title">Current position</div><div id="currentMetrics" class="risk-score"></div></div><div class="card" style="margin-bottom:12px"><div class="section-title">Meaningful averaging points</div><div class="scenario-table" id="scenarios"></div></div></section></div>
+<section class="card" style="margin-top:14px"><div class="section-title">Capital efficiency & diminishing returns</div><div id="efficiency"></div></section>
+<section class="card" style="margin-top:14px"><div class="section-title">Stress test after selected average</div><div id="stressBox"></div></section>
+<section class="card" style="margin-top:14px"><div class="section-title">Historical / workbook evidence <span class="info-tip" tabindex="0" data-tip="This version uses your recorded transactions. It does not fabricate market-recovery probabilities without a real historical price series.">i</span></div><div id="historyBox"></div></section>
+<p class="disclaimer"><b>Core principle:</b> averaging down does not recover a loss. It lowers weighted average cost while increasing exposure. Recovery still requires a future price increase. P/L includes estimated buy and sell fees. Historical probabilities are not shown without sufficient real historical price observations.</p></main>
+<script>
+const STORAGE_KEY='qse_workbook_db_v1';
+const DEFAULT_SETTINGS={feePct:0.275,minFee:0,tick:0.001,currency:'QAR',depositFee:10};
+const DEFAULT_APPEARANCE={theme:'dark',font:'system',fontSize:'medium',colorTheme:'wine',density:'comfortable'};
+const TICKER_NAMES={
+  VFQS:'Vodafone Qatar', QFLS:'Qatar Fuel (WOQOD)', MPHC:'Mesaieed Petrochemical Holding',
+  TQES:'Qatar Electronic Systems (Techno Q)', MARK:'AlRayan Bank', QIBK:'Qatar Islamic Bank',
+  QNBK:'Qatar National Bank', IQCD:'Industries Qatar', ORDS:'Ooredoo', QGTS:'Nakilat',
+  ERES:'Ezdan Holding Group', IGRD:'Estithmar Holding', DUBK:'Dukhan Bank', QIIK:'Qatar Intl Islamic Bank',
+  CBQK:'The Commercial Bank', QEWS:'Nebras Energy', QNNS:'Qatar Navigation', ABQK:'Ahli Bank',
+  QAMC:'Qatar Aluminium Manufacturing', BRES:'Barwa Real Estate', DHBK:'Doha Bank', QATI:'Qatar Insurance',
+  AHCS:'Aamal Company', ZHCD:'Zad Holding', GISS:'Gulf International Services', UDCD:'United Development',
+  BLDN:'Baladna', MERS:'Al Meera Consumer Goods', MCCS:'Mannai Corporation', QFBQ:'Lesha Bank',
+  MEZA:'MEEZA', QNCD:'Qatar National Cement', QIGD:'Qatari Investors Group', MCGS:'Medicare Group',
+  DOHI:'Doha Insurance Group', GWCS:'Gulf Warehousing', QIMD:'Qatar Industrial Manufacturing',
+};
+const SEED_TRANSACTIONS=[
+  {date:'2026-06-22', ticker:'VFQS', action:'BUY',  shares:100, price:2.744},
+  {date:'2026-06-22', ticker:'QFLS', action:'BUY',  shares:14,  price:14.11},
+  {date:'2026-06-22', ticker:'MPHC', action:'BUY',  shares:9,   price:1.214},
+  {date:'2026-06-23', ticker:'MPHC', action:'SELL', shares:9,   price:1.215},
+  {date:'2026-06-23', ticker:'TQES', action:'BUY',  shares:5,   price:2.19},
+  {date:'2026-06-23', ticker:'QFLS', action:'SELL', shares:14,  price:14.16},
+  {date:'2026-06-23', ticker:'TQES', action:'BUY',  shares:91,  price:2.164},
+  {date:'2026-06-23', ticker:'TQES', action:'SELL', shares:96,  price:2.183},
+  {date:'2026-06-24', ticker:'MARK', action:'BUY',  shares:36,  price:2.075},
+  {date:'2026-06-24', ticker:'QIBK', action:'BUY',  shares:6,   price:21.53},
+  {date:'2026-06-24', ticker:'VFQS', action:'BUY',  shares:2,   price:2.683},
+  {date:'2026-06-24', ticker:'QIBK', action:'SELL', shares:6,   price:21.54},
+  {date:'2026-06-24', ticker:'MARK', action:'BUY',  shares:62,  price:2.07},
+  {date:'2026-06-25', ticker:'MARK', action:'SELL', shares:98,  price:2.074},
+  {date:'2026-06-25', ticker:'VFQS', action:'BUY',  shares:76,  price:2.658},
+  {date:'2026-06-28', ticker:'MARK', action:'BUY',  shares:110, price:2.068},
+  {date:'2026-06-28', ticker:'MARK', action:'BUY',  shares:128, price:2.066},
+  {date:'2026-06-28', ticker:'MARK', action:'BUY',  shares:54,  price:2.064},
+  {date:'2026-06-29', ticker:'MARK', action:'BUY',  shares:100, price:2.061},
+  {date:'2026-06-29', ticker:'MARK', action:'BUY',  shares:91,  price:2.059},
+  {date:'2026-06-29', ticker:'MARK', action:'BUY',  shares:300, price:2.056},
+  {date:'2026-06-30', ticker:'VFQS', action:'BUY',  shares:200, price:2.655},
+  {date:'2026-06-30', ticker:'VFQS', action:'BUY',  shares:311, price:2.652},
+  {date:'2026-06-30', ticker:'VFQS', action:'SELL', shares:689, price:2.669},
+  {date:'2026-08-06', ticker:'QFLS', action:'BUY',  shares:50,  price:13.80},
+  {date:'2026-08-06', ticker:'MPHC', action:'BUY',  shares:60,  price:1.125},
+  {date:'2026-08-06', ticker:'QFBQ', action:'BUY',  shares:200, price:2.899},
+  {date:'2026-08-06', ticker:'QFLS', action:'BUY',  shares:25,  price:13.66},
+  {date:'2026-08-09', ticker:'MPHC', action:'BUY',  shares:74,  price:1.116},
+  {date:'2026-08-09', ticker:'QFBQ', action:'SELL', shares:200, price:2.94},
+  {date:'2026-08-09', ticker:'QFLS', action:'BUY',  shares:49,  price:13.52},
+];
+function loadDB(){try{const raw=localStorage.getItem(STORAGE_KEY);if(!raw)return {settings:{...DEFAULT_SETTINGS},appearance:{...DEFAULT_APPEARANCE},transactions:[...SEED_TRANSACTIONS],marketPrices:{}};const db=JSON.parse(raw);db.settings={...DEFAULT_SETTINGS,...(db.settings||{})};db.appearance={...DEFAULT_APPEARANCE,...(db.appearance||{})};db.transactions=db.transactions||[];db.marketPrices=db.marketPrices||{};return db}catch(e){return {settings:{...DEFAULT_SETTINGS},appearance:{...DEFAULT_APPEARANCE},transactions:[...SEED_TRANSACTIONS],marketPrices:{}}}}
+let DB=loadDB();
+function saveDB(){localStorage.setItem(STORAGE_KEY,JSON.stringify(DB));}
+function applyThemeAttrs(){const a=DB.appearance||DEFAULT_APPEARANCE;document.documentElement.dataset.theme=a.theme;document.documentElement.dataset.font=a.font;document.documentElement.dataset.fontsize=a.fontSize;document.documentElement.dataset.color=a.colorTheme;document.documentElement.dataset.density=a.density||'comfortable';const b=document.getElementById('themeToggle');if(b)b.textContent=a.theme==='light'?'● Dark mode':'☀ Light mode';['setFontFamily','setFontSize','setColorTheme','setDensity'].forEach((id)=>{const e=document.getElementById(id);if(e){const k={setFontFamily:'font',setFontSize:'fontSize',setColorTheme:'colorTheme',setDensity:'density'}[id];e.value=a[k]||e.value}})}
+function applyAppearance(){const a=DB.appearance;for(const [id,key] of [['setFontFamily','font'],['setFontSize','fontSize'],['setColorTheme','colorTheme'],['setDensity','density']]){const e=document.getElementById(id);if(e)a[key]=e.value}applyThemeAttrs();saveDB();}
+function toggleTheme(){DB.appearance.theme=DB.appearance.theme==='light'?'dark':'light';applyThemeAttrs();saveDB();}
+function calcFee(amount){if(amount<=0)return 0;const raw=amount*(Number(document.getElementById('fee')?.value)||DB.settings.feePct)/100;return Math.max(Math.round(raw*100)/100,DB.settings.minFee||0)}
+function breakEven(cost,shares){if(shares<=0)return 0;const rate=(Number(document.getElementById('fee')?.value)||DB.settings.feePct)/100;return cost/(shares*(1-rate))}
+function getMarketPrice(t){const p=Number(DB.marketPrices?.[t]);if(p>0)return p;const buys=DB.transactions.filter(x=>x.ticker===t&&String(x.action).toUpperCase()==='BUY'&&Number(x.price)>0);return buys.length?Number(buys[buys.length-1].price):0}
+function positions(){const map={};[...(DB.transactions||[])].sort((a,b)=>String(a.date).localeCompare(String(b.date))).forEach(tx=>{const t=tx.ticker;if(!map[t])map[t]={ticker:t,shares:0,cost:0,buyFees:0,sellFees:0};const sh=Number(tx.shares)||0,p=Number(tx.price)||0,f=calcFee(sh*p);if(String(tx.action).toUpperCase()==='BUY'){map[t].shares+=sh;map[t].cost+=sh*p+f;map[t].buyFees+=f}else{const avg=map[t].shares?map[t].cost/map[t].shares:0;map[t].cost-=avg*sh;map[t].shares-=sh;map[t].sellFees+=f}});return Object.values(map).filter(x=>x.shares>0.0001).map(x=>({...x,avg:x.cost/x.shares}))}
+function fmt(n,d=3){return Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d})}function money(n){return fmt(n,2)+' QAR'}
+let risk='balanced';function setRisk(r){risk=r;['conservative','balanced','aggressive'].forEach(x=>document.getElementById('risk'+x[0].toUpperCase()+x.slice(1)).classList.toggle('active',x===r));analyze()}
+function riskCeiling(existing){return existing*({conservative:.25,balanced:.5,aggressive:1}[risk]||.5)}
+function scenario(add,cur,shares,avg,target){const extraShares=Math.floor(add/cur);if(extraShares<=0)return null;const oldCost=shares*avg,newShares=shares+extraShares,newCost=oldCost+extraShares*cur,newAvg=newCost/newShares,be=breakEven(newCost,newShares),sellGross=target*newShares,sellFee=calcFee(sellGross),net=sellGross-sellFee-newCost;return {add,extraShares,newShares,newAvg,be,need:(be/cur-1)*100,net}}
+function analyze(){const t=document.getElementById('ticker').value,p=positions().find(x=>x.ticker===t);if(!p)return;const cur=Number(document.getElementById('currentPrice').value)||getMarketPrice(t),shares=Number(document.getElementById('shares').value)||p.shares,avg=Number(document.getElementById('avgPrice').value)||p.avg,cap=Math.max(0,Number(document.getElementById('capital').value)||0),target=Number(document.getElementById('target').value)||breakEven(shares*avg,shares),existing=shares*avg,currentBE=breakEven(existing,shares),loss=cur*shares-calcFee(cur*shares)-existing,ceiling=riskCeiling(existing);
+document.getElementById('currentMetrics').innerHTML=[['Shares',fmt(shares,0)],['Invested',money(existing)],['Avg buy',fmt(avg)],['Current',fmt(cur)],['Break-even',fmt(currentBE)],['Recovery needed',fmt((currentBE/cur-1)*100,2)+'%'],['Current net P/L',money(loss)],['Risk ceiling',money(ceiling)]].map(a=>'<div class="metric"><div class="k">'+a[0]+'</div><div class="v">'+a[1]+'</div></div>').join('');
+let rawSteps=[50,100,150,200,250,300,400,500,750,1000,1250,1500,2000,2500,3000,4000,5000];let steps=rawSteps.filter(x=>x<=Math.max(cap,250)*1.2);if(cap>0&&!steps.includes(cap))steps.push(cap);steps=[...new Set(steps)].sort((a,b)=>a-b);const ss=steps.map(a=>scenario(a,cur,shares,avg,target)).filter(Boolean);const best=ss.reduce((a,b)=>Math.abs(b.add-cap)<Math.abs(a.add-cap)?b:a,ss[0]);
+document.getElementById('scenarios').innerHTML='<table><thead><tr><th>Add</th><th>Shares</th><th>New avg</th><th>New break-even</th><th>Recovery</th><th>BE improvement</th><th>Net P/L @ target</th><th>Signal</th></tr></thead><tbody>'+ss.map((s,i)=>{const prev=i?ss[i-1]:null,delta=prev?prev.need-s.need:null,stop=delta!==null&&delta<.25,rec=Math.abs(s.add-cap)<1;return '<tr class="'+(stop?'stop ':'')+(rec?'recommended':'')+'"><td>'+money(s.add)+'</td><td>'+fmt(s.newShares,0)+'</td><td>'+fmt(s.newAvg)+'</td><td>'+fmt(s.be)+'</td><td>'+fmt(s.need,2)+'%</td><td>'+(delta===null?'—':fmt(delta,2)+' pp')+'</td><td class="'+(s.net>=0?'pos':'neg')+'">'+money(s.net)+'</td><td>'+(stop?'Diminishing':rec?'Selected':'Useful')+'</td></tr>'}).join('')+'</tbody></table>';
+const marginal=ss.map((s,i)=>i?{...s,delta:ss[i-1].need-s.need}:{...s,delta:null});const stop=marginal.find(s=>s.delta!==null&&s.delta<.25);document.getElementById('efficiency').innerHTML='<div class="risk-score"><div class="metric"><div class="k">Risk level</div><div class="v">'+risk.toUpperCase()+'</div></div><div class="metric"><div class="k">Suggested ceiling</div><div class="v">'+money(ceiling)+'</div></div><div class="metric"><div class="k">Selected capital</div><div class="v">'+money(best.add)+'</div></div><div class="metric"><div class="k">Stop averaging around</div><div class="v">'+(stop?money(stop.add):'Not reached')+'</div></div></div><div class="alert '+(stop?'warn':'good')+'" style="margin-top:10px"><b>'+(stop?'Diminishing-return warning':'Capital still has measurable benefit')+'.</b> '+(stop?'Around '+money(stop.add)+' the next tranche improves required recovery by less than 0.25 percentage points.':'The tested range has not crossed the configured diminishing-return threshold.')+'</div>';
+const stressPct=Number(document.getElementById('stress').value)||10;const prices=[0,-.02,-.05,-.1,-.15,-stressPct/100].map(x=>cur*(1+x));document.getElementById('stressBox').innerHTML='<div class="stress-grid">'+prices.map((pr,i)=>{const val=best.newShares*pr-calcFee(best.newShares*pr)-(shares*avg+best.extraShares*cur);const lab=['Current','-2%','-5%','-10%','-15%','Stress'][i];return '<div class="stress-card"><div class="p">'+lab+'</div><div class="v '+(val>=0?'pos':'neg')+'">'+money(val)+'</div></div>'}).join('')+'</div><p class="small-note">Stress P/L includes the original position plus the selected additional purchase. A lower average can coexist with a larger monetary loss if the decline continues.</p>';
+const buys=DB.transactions.filter(x=>x.ticker===t&&String(x.action).toUpperCase()==='BUY'),sells=DB.transactions.filter(x=>x.ticker===t&&String(x.action).toUpperCase()==='SELL');document.getElementById('historyBox').innerHTML='<div class="risk-score"><div class="metric"><div class="k">Recorded buys</div><div class="v">'+buys.length+'</div></div><div class="metric"><div class="k">Recorded sells</div><div class="v">'+sells.length+'</div></div><div class="metric"><div class="k">Your avg cost</div><div class="v">'+fmt(avg)+'</div></div><div class="metric"><div class="k">Evidence quality</div><div class="v">Transaction history only</div></div></div><div class="alert warn" style="margin-top:10px"><b>No fake recovery probability.</b> The workbook has transaction history/current prices but no sufficiently complete daily historical series here, so this calculator does not invent recovery odds.</div>';
+const severe=loss<0&&(t==='MPHC'||t==='IQCD');document.getElementById('headline').innerHTML='<div class="alert '+(severe?'bad':loss<0?'warn':'good')+'"><b>'+(severe?'High caution: averaging is not a recovery strategy.':loss<0?'Position is underwater: test capital before adding.':'Position is not currently underwater.')+'</b><br>Current net P/L is <b>'+money(loss)+'</b>. Adding '+money(best.add)+' changes the average to <b>'+fmt(best.newAvg)+'</b>; break-even after fees becomes <b>'+fmt(best.be)+'</b>. '+(best.net>=Number(document.getElementById('minProfit').value||0)?'The selected target meets the requested minimum net profit.':'The selected target does not meet the requested minimum net profit.')+'</div>'}
+function loadTicker(){const t=document.getElementById('ticker').value,p=positions().find(x=>x.ticker===t);if(!p)return;const cur=getMarketPrice(t)||p.avg;document.getElementById('currentPrice').value=cur;document.getElementById('buyPrice').value=cur;document.getElementById('shares').value=Math.round(p.shares);document.getElementById('avgPrice').value=p.avg;document.getElementById('target').value=breakEven(p.cost,p.shares).toFixed(3);analyze()}
+function resetRisk(){document.getElementById('capital').value=500;document.getElementById('minProfit').value=5;document.getElementById('stress').value=10;setRisk('balanced');loadTicker()}
+function init(){applyThemeAttrs();const pos=positions(),sel=document.getElementById('ticker');sel.innerHTML=pos.map(p=>'<option value="'+p.ticker+'">'+p.ticker+' — '+(TICKER_NAMES[p.ticker]||'')+'</option>').join('');if(pos.length)loadTicker();else document.getElementById('headline').innerHTML='<div class="alert warn">No open positions found in the shared workbook database.</div>'}
+window.addEventListener('load',init);window.addEventListener('storage',()=>{DB=loadDB();init()});
+</script></body></html>

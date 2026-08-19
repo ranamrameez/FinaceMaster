@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>PSX Trade Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&family=Atkinson+Hyperlegible:wght@400;700&family=Source+Serif+4:wght@400;600;700&family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="js/psx-symbols.js"></script>
+<link rel="stylesheet" href="css/theme.css">
+<link rel="stylesheet" href="css/psx-planner.css">
+</head>
+<body>
+
+<div class="shell">
+  <div class="sidebar">
+    <div class="brand"><b>PSX Trade Planner</b><small>Zindigi / PSX</small></div>
+    <nav class="navlist">
+      <button class="navbtn active" data-page="planner"><span class="num">01</span>Trade Planner</button>
+      <button class="navbtn" data-page="lots"><span class="num">02</span>Buy Lots</button>
+      <button class="navbtn" data-page="targets"><span class="num">03</span>Targets</button>
+      <button class="navbtn" data-page="transactions"><span class="num">04</span>Transactions</button>
+      <button class="navbtn" data-page="saved"><span class="num">05</span>Saved Trades</button>
+      <button class="navbtn" data-page="settings"><span class="num">06</span>Settings</button>
+    </nav>
+
+    <div class="appearance-popover sidebar-popover" id="appearancePopover">
+      <button class="navbtn appearance-trigger" id="appearanceTrigger" type="button" title="Appearance settings">
+        <span class="num">✦</span>Appearance
+      </button>
+      <div class="appearance-panel" id="appearancePanel">
+        <div class="appearance-panel-title">Appearance</div>
+        <select id="setFontFamily" onchange="applyAppearance()" title="Font style">
+          <option value="system">Clean system font</option>
+          <option value="arial">Arial</option>
+          <option value="arial-narrow">Arial Narrow</option>
+          <option value="default">Inter / Space Grotesk</option>
+          <option value="legible">Atkinson Hyperlegible (max readability)</option>
+          <option value="rounded">Lexend (reading-friendly)</option>
+          <option value="serif">Serif (Source Serif)</option>
+        </select>
+        <select id="setFontSize" onchange="applyAppearance()" title="Text size">
+          <option value="small">Small text</option>
+          <option value="medium">Medium text</option>
+          <option value="large">Large text</option>
+          <option value="xl">Extra large text</option>
+        </select>
+        <select id="setColorTheme" onchange="applyAppearance()" title="Color theme">
+          <optgroup label="Classic themes">
+            <option value="wine">Classic (Graphite &amp; Gold)</option>
+            <option value="ocean">Ocean Blue</option>
+            <option value="forest">Forest Green</option>
+            <option value="violet">Violet</option>
+            <option value="sunset">Sunset Amber</option>
+          </optgroup>
+          <optgroup label="Material Design themes">
+            <option value="material-blue">Material Purple / Blue</option>
+            <option value="material-green">Material Green</option>
+            <option value="material-purple">Material Rose</option>
+            <option value="material-teal">Material Teal</option>
+            <option value="material-amber">Material Amber</option>
+            <option value="material-crimson">Material Crimson</option>
+            <option value="material-slate">Material Slate</option>
+          </optgroup>
+        </select>
+        <select id="setDensity" onchange="applyAppearance()" title="Card density">
+          <option value="comfortable">Comfortable</option>
+          <option value="compact">Compact</option>
+        </select>
+        <button class="btn secondary small" id="themeToggle" onclick="toggleTheme()">☀ Light mode</button>
+      </div>
+    </div>
+    <div class="footer-note" style="margin-top:20px; padding-top:12px;">
+      Data lives in this browser (localStorage). Use Export/Import in Settings to move it between devices.
+    </div>
+  </div>
+
+  <div class="main">
+
+    <div id="page-planner" class="page active">
+      <h1 class="pagetitle">Trade Planner</h1><p class="pagesub">Calculate total cost, break-even, target sell prices, profit and ROI before placing a PSX order.</p>
+
+      <div class="grid grid-4">
+       <div class="card stat-card"><div class="label">Total invested</div><div class="value" id="sInvested">PKR 0</div></div>
+       <div class="card stat-card"><div class="label">Break-even</div><div class="value gold" id="sBE">PKR 0</div></div>
+       <div class="card stat-card"><div class="label">Target profit</div><div class="value pos" id="sProfit">PKR 0</div></div>
+       <div class="card stat-card"><div class="label">ROI</div><div class="value" id="sROI">0.00%</div></div>
+      </div>
+
+      <div style="height:12px"></div>
+      <div class="grid grid-2">
+      <div class="card">
+       <div class="section-title">1. Current / Buy Position <span class="tag">INPUT</span></div>
+       <div class="grid grid-2">
+        <div class="field"><label>Symbol</label><input id="symbol" list="symbolList" value="OGDC" maxlength="15" autocomplete="off"></div>
+        <div class="field"><label>Buy date</label><input type="date" id="buyDate"></div>
+        <div class="field"><label>Buy price (PKR)</label><input type="number" id="buyPrice" value="50" min="0" step=".01"></div>
+        <div class="field"><label>Shares</label><input type="number" id="qty" value="1000" min="1" step="1"></div>
+       </div>
+       <div class="switch"><input type="checkbox" id="intraday"><label for="intraday" style="margin:0;text-transform:none;font-size:12px;color:var(--text)">Intraday / same-day transaction</label></div>
+       <div class="note" id="intradayNote" style="margin-top:8px"></div>
+       <hr>
+       <div class="section-title">2. Sell Strategy <span class="tag">WHAT-IF</span></div>
+       <div class="field"><label>Target sell price (PKR)</label><input type="number" id="sellPrice" value="55" min="0" step=".01"></div>
+       <div class="field"><label>Desired profit (%)</label><input type="number" id="desiredPct" value="5" min="-100" step=".1"></div>
+       <div class="actions"><button class="btn" onclick="calculate()">Calculate</button><button class="btn secondary" onclick="resetPlanner()">Reset</button><button class="btn secondary" onclick="saveTrade()">Save trade</button></div>
+      </div>
+
+      <div class="card">
+       <div class="section-title">Transaction Cost <span class="tag">ZINDIGI MODEL</span></div>
+       <div id="buyResults"></div>
+       <hr>
+       <div class="section-title">Target Sale</div>
+       <div id="sellResults"></div>
+      </div>
+      </div>
+
+      <div style="height:12px"></div>
+      <div class="grid grid-2">
+       <div class="hero"><small>Minimum sell price for 0% net profit</small><div class="big" id="bePrice">PKR 0.00</div><small>Includes buy-side costs, sell-side costs and CGT when applicable.</small></div>
+       <div class="hero"><small>Sell price for desired profit</small><div class="big" id="targetPrice">PKR 0.00</div><small id="targetSub">Based on desired ROI.</small></div>
+      </div>
+      <div style="height:12px"></div>
+      <div class="card">
+       <div class="section-title">Price Explorer <span class="tag">LIVE</span></div>
+       <div class="split"><input class="range" id="priceRange" type="range" min="1" max="200" step=".01" value="55"><input type="number" id="explorePrice" value="55" step=".01" min="0"></div>
+       <div id="explore" style="margin-top:10px"></div>
+      </div>
+    </div>
+
+    <div id="page-lots" class="page">
+      <h1 class="pagetitle">Buy Lots</h1><p class="pagesub">Add additional purchases of the same share to calculate the new weighted position and break-even.</p>
+      <div class="card">
+       <div class="grid grid-4">
+        <div class="field"><label>Price</label><input id="lotPrice" type="number" step=".01"></div>
+        <div class="field"><label>Shares</label><input id="lotQty" type="number" step="1"></div>
+        <div class="field"><label>Date</label><input id="lotDate" type="date"></div>
+        <div class="field"><label>Note</label><input id="lotNote" type="text" placeholder="Optional"></div>
+       </div>
+       <div class="actions"><button class="btn" onclick="addLot()">Add buy lot</button><button class="btn secondary" onclick="clearLots()">Clear lots</button></div>
+      </div>
+      <div style="height:12px"></div>
+      <div class="grid grid-4">
+       <div class="card stat-card"><div class="label">Total shares</div><div class="value blue" id="lotShares">0</div></div>
+       <div class="card stat-card"><div class="label">Gross purchase</div><div class="value" id="lotGross">PKR 0</div></div>
+       <div class="card stat-card"><div class="label">Total cost</div><div class="value" id="lotCost">PKR 0</div></div>
+       <div class="card stat-card"><div class="label">Effective average</div><div class="value gold" id="lotAvg">PKR 0</div></div>
+      </div>
+      <div style="height:12px"></div><div class="card table-wrap"><table><thead><tr><th>Date</th><th>Price</th><th>Shares</th><th>Gross</th><th>Fees</th><th>Total</th><th></th></tr></thead><tbody id="lotsTable"></tbody></table></div>
+    </div>
+
+    <div id="page-targets" class="page">
+      <h1 class="pagetitle">Target Matrix</h1><p class="pagesub">Compare sell prices and see net profit after transaction costs and CGT.</p>
+      <div class="card">
+       <div class="grid grid-3">
+        <div class="field"><label>Start price</label><input id="matrixStart" type="number" value="45" step=".01"></div>
+        <div class="field"><label>End price</label><input id="matrixEnd" type="number" value="70" step=".01"></div>
+        <div class="field"><label>Step</label><input id="matrixStep" type="number" value="1" step=".01"></div>
+       </div>
+       <button class="btn" onclick="renderMatrix()">Generate matrix</button>
+      </div>
+      <div style="height:12px"></div><div class="card table-wrap"><table><thead><tr><th>Sell price</th><th>Gross sale</th><th>Sell fees</th><th>CGT</th><th>Net proceeds</th><th>Net P/L</th><th>ROI</th></tr></thead><tbody id="matrixTable"></tbody></table></div>
+    </div>
+
+    <div id="page-transactions" class="page">
+      <h1 class="pagetitle">Transactions</h1><p class="pagesub">Log actual buy/sell fills as they happen. Fees are estimated with the same fee model used on the Trade Planner page.</p>
+      <div class="card">
+       <div class="grid grid-4">
+        <div class="field"><label>Date</label><input id="txDate" type="date"></div>
+        <div class="field"><label>Symbol</label><input id="txSymbol" list="symbolList" placeholder="e.g. OGDC" maxlength="15" autocomplete="off"></div>
+        <div class="field"><label>Side</label><select id="txSide"><option value="buy">Buy</option><option value="sell">Sell</option></select></div>
+        <div class="field"><label>Shares</label><input id="txQty" type="number" min="1" step="1"></div>
+       </div>
+       <div class="grid grid-3">
+        <div class="field"><label>Price (PKR)</label><input id="txPrice" type="number" min="0" step=".01"></div>
+        <div class="field"><label>Note</label><input id="txNote" type="text" placeholder="Optional"></div>
+        <div class="switch"><input type="checkbox" id="txIntraday"><label for="txIntraday" style="margin:0;text-transform:none;font-size:12px;color:var(--text)">Intraday / same-day</label></div>
+       </div>
+       <div class="actions"><button class="btn" onclick="addTransaction()">Log transaction</button><button class="btn secondary" onclick="clearTransactions()">Clear all</button></div>
+      </div>
+      <div style="height:12px"></div>
+      <div class="grid grid-4">
+       <div class="card stat-card"><div class="label">Total bought</div><div class="value" id="txBuyTotal">PKR 0</div></div>
+       <div class="card stat-card"><div class="label">Total sold</div><div class="value" id="txSellTotal">PKR 0</div></div>
+       <div class="card stat-card"><div class="label">Total fees paid</div><div class="value" id="txFeeTotal">PKR 0</div></div>
+       <div class="card stat-card"><div class="label">Net cash flow</div><div class="value" id="txNetFlow">PKR 0</div></div>
+      </div>
+      <div style="height:12px"></div>
+      <div class="card table-wrap"><table><thead><tr><th>Date</th><th>Symbol</th><th>Side</th><th>Shares</th><th>Price</th><th>Gross</th><th>Fees</th><th>Net amount</th><th>Note</th><th></th></tr></thead><tbody id="txTable"></tbody></table></div>
+    </div>
+
+    <div id="page-saved" class="page">
+      <h1 class="pagetitle">Saved Trades</h1><p class="pagesub">Your saved PSX planning scenarios are stored locally and, when signed in, under the PSX parent node in Firebase.</p>
+      <div class="actions" style="margin-bottom:12px"><button class="btn secondary" onclick="exportJSON()">Export JSON</button><label class="btn secondary" style="display:inline-flex;align-items:center;cursor:pointer">Import JSON<input hidden type="file" accept="application/json" onchange="importJSON(event)"></label><button class="btn danger" onclick="clearSaved()">Clear saved trades</button></div>
+      <div class="card table-wrap"><table><thead><tr><th>Date</th><th>Symbol</th><th>Shares</th><th>Buy</th><th>Break-even</th><th>Target</th><th>Net P/L</th><th>ROI</th><th></th></tr></thead><tbody id="savedTable"></tbody></table></div>
+    </div>
+
+    <div id="page-settings" class="page">
+      <h1 class="pagetitle">Settings</h1><p class="pagesub">Fee assumptions, tax assumptions and cloud sync. Appearance (theme, color, font, density) lives in the ✦ Appearance panel in the sidebar and applies across every page instantly.</p>
+      <div class="grid grid-2">
+      <div class="card">
+       <div class="section-title">PSX / Zindigi Fee Model <span class="tag">EDITABLE</span></div>
+       <div class="field"><label>Commission above PKR 25 (%)</label><input id="feePct" type="number" step=".001"></div>
+       <div class="field"><label>Commission at / below PKR 25 (PKR/share)</label><input id="lowFee" type="number" step=".001"></div>
+       <div class="field"><label>Estimated regulatory levies (%)</label><input id="levyPct" type="number" step=".001"></div>
+       <div class="field"><label>Provincial sales tax on commission (%)</label><input id="pst" type="number" step=".1"></div>
+       <div class="field"><label>CGT on taxable gain (%)</label><input id="cgt" type="number" step=".1"></div>
+       <div class="field"><label>Price tick</label><input id="tick" type="number" step=".001"></div>
+       <div class="field"><label>Intraday / same-day commission (%)</label><input id="intradayFeePct" type="number" step=".001"></div>
+       <div class="switch"><input type="checkbox" id="cgtExemptIntraday"><label for="cgtExemptIntraday" style="margin:0;text-transform:none;font-size:12px;color:var(--text)">Treat intraday trades as CGT-exempt</label></div>
+       <div class="note">These are configurable assumptions, not a statement of current PSX/Zindigi tax law. Update them when your broker statement or current schedule differs. The intraday commission rate and CGT treatment apply whenever the "Intraday / same-day transaction" switch is on.</div>
+       <div style="height:10px"></div><button class="btn" onclick="saveSettings()">Save settings</button>
+      </div>
+      <div class="card">
+       <div class="section-title">Cloud Sync</div>
+       <div id="cloudStatus" class="cloud">Checking Firebase…</div>
+       <div id="signedOut">
+        <div class="field"><label>Email</label><input id="email" type="email" placeholder="you@example.com"></div>
+        <div class="field"><label>Password</label><input id="password" type="password" placeholder="6+ characters"></div>
+        <div class="actions"><button class="btn" onclick="signUp()">Create account</button><button class="btn secondary" onclick="signIn()">Sign in</button></div>
+       </div>
+       <div id="signedIn" style="display:none"><div id="userEmail" class="note"></div><div style="height:9px"></div><div class="actions"><button class="btn" onclick="pushCloud()">Sync now</button><button class="btn secondary" onclick="signOut()">Sign out</button></div></div>
+       <div class="note" style="margin-top:12px">Cloud path: <b>users/{uid}/psx</b>. Local storage remains the offline fallback.</div>
+      </div>
+      </div>
+      <div class="footer-note">PSX Trade Planner • Zindigi fee assumptions are editable • Always verify the final debit/credit against your broker contract note.</div>
+    </div>
+
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal"><div class="modal-box" id="modalBox"></div></div>
+<div class="toast" id="toast"></div>
+<datalist id="symbolList"></datalist>
+
+<script>
+const firebaseConfig={apiKey:"AIzaSyCzg_KmLGNUXlIzqEAUJctG29kyJQruM8I",authDomain:"qse-app.firebaseapp.com",databaseURL:"https://qse-app-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"qse-app",storageBucket:"qse-app.firebasestorage.app",messagingSenderId:"766310206577",appId:"1:766310206577:web:271c3974a45503e5999fd0"};
+let fbAuth=null,fbDb=null,firebaseReady=false,cloudUser=null,cloudTimer=null,remoteApplying=false;
+const LOCAL_KEY="psx_trade_planner_v1";
+const DEFAULT={settings:{feePct:.20,lowFee:.05,levyPct:.03,pst:13,cgt:15,tick:.01,intradayFeePct:.03,cgtExemptIntraday:true},appearance:{theme:"dark",font:"system",fontSize:"medium",colorTheme:"wine",density:"comfortable"},lots:[],saved:[],transactions:[]};
+let DB=loadDB();
+
+function $(id){return document.getElementById(id)}
+function money(n,d=2){return "PKR "+Number(n||0).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d})}
+function pct(n){return Number(n||0).toFixed(2)+"%"}
+function toast(s){let e=$("toast");e.textContent=s;e.classList.add("show");clearTimeout(window.tt);window.tt=setTimeout(()=>e.classList.remove("show"),2200)}
+function cloneDefault(){return JSON.parse(JSON.stringify(DEFAULT))}
+function loadDB(){try{let x=JSON.parse(localStorage.getItem(LOCAL_KEY)||"null");if(!x)return cloneDefault();return {settings:{...DEFAULT.settings,...(x.settings||{})},appearance:{...DEFAULT.appearance,...(x.appearance||{})},lots:x.lots||[],saved:x.saved||[],transactions:x.transactions||[]}}catch(e){return cloneDefault()}}
+function saveDB(){localStorage.setItem(LOCAL_KEY,JSON.stringify(DB));scheduleCloud()}
+
+// ---------- Appearance (theme / color / font / density) — same DB.appearance
+// shape and same html[data-*] attributes as the QSE workbook, so the shared
+// stylesheet's theming applies identically on every page here too. ----------
+function applyThemeAttrs(){
+ let a=DB.appearance;
+ document.documentElement.setAttribute("data-theme",a.theme||"dark");
+ document.documentElement.setAttribute("data-font",a.font||"system");
+ document.documentElement.setAttribute("data-fontsize",a.fontSize||"medium");
+ document.documentElement.setAttribute("data-color",a.colorTheme||"wine");
+ document.documentElement.setAttribute("data-density",a.density||"comfortable");
+ let btn=$("themeToggle");if(btn)btn.textContent=a.theme==="light"?"● Dark mode":"☀ Light mode";
+}
+function applyAppearance(){
+ let f=$("setFontFamily"),s=$("setFontSize"),c=$("setColorTheme"),d=$("setDensity");
+ if(f)DB.appearance.font=f.value;
+ if(s)DB.appearance.fontSize=s.value;
+ if(c)DB.appearance.colorTheme=c.value;
+ if(d)DB.appearance.density=d.value;
+ applyThemeAttrs();saveDB()
+}
+function toggleTheme(){DB.appearance.theme=DB.appearance.theme==="light"?"dark":"light";applyThemeAttrs();saveDB()}
+function renderAppearanceControls(){
+ let a=DB.appearance;
+ if($("setFontFamily"))$("setFontFamily").value=a.font||"system";
+ if($("setFontSize"))$("setFontSize").value=a.fontSize||"medium";
+ if($("setColorTheme"))$("setColorTheme").value=a.colorTheme||"wine";
+ if($("setDensity"))$("setDensity").value=a.density||"comfortable";
+ applyThemeAttrs()
+}
+applyThemeAttrs();
+
+// ---------- Appearance popover (flyout) — positioning ported from the QSE
+// workbook so it behaves the same: flies out right of the sidebar trigger,
+// falls back to dropping below on narrow viewports. ----------
+function positionAppearancePanel(trigger,panel){
+ let r=trigger.getBoundingClientRect(),panelW=255;
+ let left=r.right+8,top=r.bottom-panel.offsetHeight;
+ if(left+panelW>window.innerWidth-8||window.innerWidth<901){left=Math.max(8,r.left);top=r.bottom+7}
+ top=Math.max(8,Math.min(top,window.innerHeight-panel.offsetHeight-8));
+ panel.style.left=left+"px";panel.style.top=top+"px"
+}
+function initAppearancePopover(){
+ let trigger=$("appearanceTrigger"),panel=$("appearancePanel"),wrap=$("appearancePopover");
+ if(!trigger||!panel||!wrap||trigger.dataset.bound)return;
+ trigger.dataset.bound="1";
+ document.body.appendChild(panel);
+ let reposition=()=>{if(panel.classList.contains("open"))positionAppearancePanel(trigger,panel)};
+ trigger.addEventListener("click",e=>{e.stopPropagation();let opening=!panel.classList.contains("open");panel.classList.toggle("open",opening);if(opening)positionAppearancePanel(trigger,panel)});
+ panel.addEventListener("click",e=>e.stopPropagation());
+ document.addEventListener("click",()=>panel.classList.remove("open"));
+ window.addEventListener("scroll",reposition,true);
+ window.addEventListener("resize",reposition)
+}
+
+if(location.protocol!=="file:" && typeof firebase!=="undefined"){try{firebase.initializeApp(firebaseConfig);fbAuth=firebase.auth();fbDb=firebase.database();firebaseReady=true}catch(e){console.warn(e)}}
+if(firebaseReady){
+ fbAuth.onAuthStateChanged(async user=>{
+  cloudUser=user; updateCloudUI();
+  if(!user){$("cloudStatus").textContent="Not signed in — saving locally on this device.";return}
+  $("cloudStatus").textContent="Signed in — loading PSX data…";
+  try{
+   let snap=await fbDb.ref("users/"+user.uid+"/psx").once("value");
+   if(snap.exists()){let x=snap.val();remoteApplying=true;DB={settings:{...DEFAULT.settings,...(x.settings||{})},appearance:{...DEFAULT.appearance,...(x.appearance||{})},lots:x.lots||[],saved:x.saved||[],transactions:x.transactions||[]};localStorage.setItem(LOCAL_KEY,JSON.stringify(DB));applyThemeAttrs();remoteApplying=false;renderAll();$("cloudStatus").textContent="PSX data loaded from cloud."}
+   else {await pushCloud(false)}
+  }catch(e){$("cloudStatus").textContent="Cloud load failed: "+e.message}
+ })
+}else $("cloudStatus").textContent=location.protocol==="file:"?"Local mode — serve over http/https for cloud sync.":"Firebase unavailable — local mode.";
+
+function cloudRef(){return fbDb.ref("users/"+cloudUser.uid+"/psx")}
+function scheduleCloud(){if(!firebaseReady||!cloudUser||remoteApplying)return;clearTimeout(cloudTimer);cloudTimer=setTimeout(()=>pushCloud(false),900)}
+async function pushCloud(manual=true){if(!firebaseReady){if(manual)toast("Firebase is unavailable.");return}if(!cloudUser){if(manual)toast("Sign in first.");return}try{await cloudRef().set({...DB,_updated:new Date().toISOString()});$("cloudStatus").textContent="PSX synced — "+new Date().toLocaleTimeString();if(manual)toast("PSX data synced.")}catch(e){$("cloudStatus").textContent="Cloud save failed: "+e.message;if(manual)toast("Sync failed.")}}
+function updateCloudUI(){let on=!!cloudUser;$("signedOut").style.display=on?"none":"";$("signedIn").style.display=on?"":"none";if(on)$("userEmail").textContent="Signed in as "+(cloudUser.email||"user")}
+
+async function signIn(){if(!firebaseReady)return toast("Cloud sync unavailable.");try{await fbAuth.signInWithEmailAndPassword($("email").value.trim(),$("password").value)}catch(e){toast(e.message)}}
+async function signUp(){if(!firebaseReady)return toast("Cloud sync unavailable.");try{await fbAuth.createUserWithEmailAndPassword($("email").value.trim(),$("password").value)}catch(e){toast(e.message)}}
+async function signOut(){if(fbAuth)await fbAuth.signOut()}
+function saveSettings(){DB.settings={feePct:+$("feePct").value,lowFee:+$("lowFee").value,levyPct:+$("levyPct").value,pst:+$("pst").value,cgt:+$("cgt").value,tick:+$("tick").value||.01,intradayFeePct:+$("intradayFeePct").value,cgtExemptIntraday:$("cgtExemptIntraday").checked};saveDB();toast("Settings saved.");calculate()}
+
+function isIntraday(){let el=$("intraday");return !!(el&&el.checked)}
+function feeFor(price,qty,intraday){let gross=price*qty;let rate=intraday?DB.settings.intradayFeePct:DB.settings.feePct;let commission=price<=25?qty*DB.settings.lowFee:gross*rate/100;let pst=commission*DB.settings.pst/100;let levy=gross*DB.settings.levyPct/100;return {gross,commission,pst,levy,total:commission+pst+levy}}
+function sideResult(price,qty,intraday){return feeFor(price,qty,intraday)}
+function baseBuy(){return sideResult(+$("buyPrice").value,+$("qty").value,isIntraday())}
+function taxableGain(sell){let buy=baseBuy(), sf=sideResult(sell,+$("qty").value,isIntraday());return Math.max(0,sf.gross-buy.gross-buy.total-sf.total)}
+function saleResult(sell){let intraday=isIntraday(),buy=baseBuy(),sf=sideResult(sell,+$("qty").value,intraday),gain=sf.gross-buy.gross-buy.total-sf.total,cgtExempt=intraday&&DB.settings.cgtExemptIntraday,cgt=cgtExempt?0:Math.max(0,gain)*DB.settings.cgt/100,net=sf.gross-sf.total-cgt,profit=net-(buy.gross+buy.total);return {buy,sf,gain,cgt,cgtExempt,intraday,net,profit,roi:buy.gross+buy.total?profit/(buy.gross+buy.total)*100:0}}
+function solvePrice(desiredROI){let cost=baseBuy().gross+baseBuy().total;let lo=0,hi=Math.max(100,+$("buyPrice").value*3+100);for(let i=0;i<80;i++){let mid=(lo+hi)/2,r=saleResult(mid);if(r.profit/cost*100<desiredROI)lo=mid;else hi=mid}let tick=DB.settings.tick||.01;return Math.ceil((hi-1e-10)/tick)*tick}
+function line(k,v,c=""){return `<div class="result-line"><span class="k">${k}</span><span class="v ${c}">${v}</span></div>`}
+function calculate(){
+ let sell=+$("sellPrice").value||0,r=saleResult(sell),be=solvePrice(0),target=solvePrice(+$("desiredPct").value||0);
+ $("sInvested").textContent=money(r.buy.gross+r.buy.total);$("sBE").textContent=money(be);$("sProfit").textContent=money(r.profit,r.profit%1?2:2);$("sROI").textContent=pct(r.roi);$("sROI").className="value "+(r.profit>=0?"pos":"neg");
+ $("bePrice").textContent=money(be);$("targetPrice").textContent=money(target);$("targetSub").textContent=`For ${pct(+$("desiredPct").value||0)} desired ROI`;
+ $("buyResults").innerHTML=line("Gross purchase",money(r.buy.gross))+line("Commission",money(r.buy.commission))+line("PST on commission",money(r.buy.pst))+line("Estimated regulatory levies",money(r.buy.levy))+line("Total buy cost",money(r.buy.gross+r.buy.total),"gold")+line("Effective buy cost/share",money((r.buy.gross+r.buy.total)/(+$("qty").value||1)));
+ $("sellResults").innerHTML=line("Gross sale",money(r.sf.gross))+line("Sell commission",money(r.sf.commission))+line("Sell PST",money(r.sf.pst))+line("Sell regulatory levies",money(r.sf.levy))+line("Taxable gain",money(r.gain))+line(r.cgtExempt?"CGT (exempt — intraday)":"CGT",money(r.cgt))+line("Net proceeds",money(r.net))+line("Net realized P/L",money(r.profit),r.profit>=0?"pos":"neg")+line("ROI",pct(r.roi),r.roi>=0?"pos":"neg");
+ $("priceRange").value=Math.min(+$("priceRange").max,Math.max(+$("priceRange").min,sell));$("explorePrice").value=sell;renderExplore(sell);
+ $("intradayNote").textContent=r.intraday?`Intraday mode: commission at ${DB.settings.intradayFeePct}% applied${r.cgtExempt?", CGT skipped.":"."}`:`Standard delivery commission at ${DB.settings.feePct}% applied.`;
+}
+function renderExplore(p){let r=saleResult(+p||0);$("explore").innerHTML=line("Price",money(+p||0))+line("Net P/L",money(r.profit),r.profit>=0?"pos":"neg")+line("ROI",pct(r.roi),r.roi>=0?"pos":"neg")+line("Net proceeds",money(r.net))}
+$("priceRange").addEventListener("input",()=>{$("explorePrice").value=$("priceRange").value;renderExplore(+$("priceRange").value)})
+$("explorePrice").addEventListener("input",()=>{let p=+$("explorePrice").value||0;$("priceRange").value=p;renderExplore(p)})
+function resetPlanner(){$("symbol").value="OGDC";$("buyPrice").value=50;$("qty").value=1000;$("sellPrice").value=55;$("desiredPct").value=5;$("intraday").checked=false;calculate()}
+function saveTrade(){let r=saleResult(+$("sellPrice").value||0),item={id:Date.now(),date:$("buyDate").value||new Date().toISOString().slice(0,10),symbol:$("symbol").value.trim().toUpperCase(),qty:+$("qty").value,buy:+$("buyPrice").value,sell:+$("sellPrice").value,be:solvePrice(0),target:solvePrice(+$("desiredPct").value||0),profit:r.profit,roi:r.roi,intraday:$("intraday").checked};DB.saved.unshift(item);saveDB();renderSaved();toast("Trade saved.")}
+function renderSaved(){let b=$("savedTable");b.innerHTML=DB.saved.length?DB.saved.map((x,i)=>`<tr><td>${x.date}</td><td><b>${x.symbol}</b></td><td>${x.qty.toLocaleString()}</td><td>${x.buy.toFixed(2)}</td><td class="gold">${x.be.toFixed(2)}</td><td>${x.target.toFixed(2)}</td><td class="${x.profit>=0?"pos":"neg"}">${x.profit.toFixed(2)}</td><td class="${x.roi>=0?"pos":"neg"}">${x.roi.toFixed(2)}%</td><td><button class="btn small danger" onclick="deleteSaved(${i})">Delete</button></td></tr>`).join(""):`<tr><td colspan="9" style="text-align:center;color:var(--muted)">No saved trades.</td></tr>`}
+function deleteSaved(i){DB.saved.splice(i,1);saveDB();renderSaved()}function clearSaved(){if(confirm("Delete all saved trades?")){DB.saved=[];saveDB();renderSaved()}}
+function exportJSON(){let a=document.createElement("a"),u=URL.createObjectURL(new Blob([JSON.stringify(DB,null,2)],{type:"application/json"}));a.href=u;a.download="psx-trade-planner-backup.json";a.click();URL.revokeObjectURL(u)}
+function importJSON(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let x=JSON.parse(r.result);DB={settings:{...DEFAULT.settings,...(x.settings||{})},appearance:{...DEFAULT.appearance,...(x.appearance||{})},lots:x.lots||[],saved:x.saved||[],transactions:x.transactions||[]};localStorage.setItem(LOCAL_KEY,JSON.stringify(DB));applyThemeAttrs();renderAll();toast("Imported.")}catch(_){toast("Invalid JSON file.")}};r.readAsText(f)}
+
+function addLot(){let price=+$("lotPrice").value,qty=+$("lotQty").value;if(!(price>0&&qty>0))return toast("Enter price and shares.");DB.lots.push({id:Date.now(),date:$("lotDate").value||new Date().toISOString().slice(0,10),price,qty,note:$("lotNote").value.trim()});$("lotPrice").value="";$("lotQty").value="";$("lotNote").value="";saveDB();renderLots();toast("Buy lot added.")}
+function lotSummary(){let rows=DB.lots,shares=rows.reduce((s,x)=>s+x.qty,0),gross=rows.reduce((s,x)=>s+x.price*x.qty,0),fees=rows.reduce((s,x)=>s+feeFor(x.price,x.qty).total,0);return {shares,gross,fees,total:gross+fees,avg:shares?(gross+fees)/shares:0}}
+function renderLots(){let s=lotSummary();$("lotShares").textContent=s.shares.toLocaleString();$("lotGross").textContent=money(s.gross);$("lotCost").textContent=money(s.total);$("lotAvg").textContent=money(s.avg);$("lotsTable").innerHTML=DB.lots.length?DB.lots.map((x,i)=>{let f=feeFor(x.price,x.qty);return `<tr><td>${x.date}</td><td>${x.price.toFixed(2)}</td><td>${x.qty.toLocaleString()}</td><td>${money(f.gross)}</td><td>${money(f.total)}</td><td>${money(f.gross+f.total)}</td><td><button class="btn small danger" onclick="deleteLot(${i})">Delete</button></td></tr>`}).join(""):`<tr><td colspan="7" style="text-align:center;color:var(--muted)">No additional lots.</td></tr>`}
+function deleteLot(i){DB.lots.splice(i,1);saveDB();renderLots()}function clearLots(){if(confirm("Clear all additional buy lots?")){DB.lots=[];saveDB();renderLots()}}
+
+function addTransaction(){
+ let symbol=$("txSymbol").value.trim().toUpperCase(),qty=+$("txQty").value,price=+$("txPrice").value,side=$("txSide").value;
+ if(!symbol)return toast("Enter a symbol.");
+ if(!(qty>0&&price>0))return toast("Enter shares and price.");
+ let f=feeFor(price,qty,$("txIntraday").checked),gross=f.gross,net=side==="buy"?-(gross+f.total):(gross-f.total);
+ DB.transactions.unshift({id:Date.now(),date:$("txDate").value||new Date().toISOString().slice(0,10),symbol,side,qty,price,gross,fees:f.total,net,intraday:$("txIntraday").checked,note:$("txNote").value.trim()});
+ $("txQty").value="";$("txPrice").value="";$("txNote").value="";
+ saveDB();renderTransactions();toast("Transaction logged.")
+}
+function deleteTransaction(i){DB.transactions.splice(i,1);saveDB();renderTransactions()}
+function clearTransactions(){if(confirm("Delete all logged transactions?")){DB.transactions=[];saveDB();renderTransactions()}}
+function renderTransactions(){
+ let rows=DB.transactions,buyTotal=0,sellTotal=0,feeTotal=0,netFlow=0;
+ rows.forEach(x=>{if(x.side==="buy")buyTotal+=x.gross+x.fees;else sellTotal+=x.gross-x.fees;feeTotal+=x.fees;netFlow+=x.net});
+ $("txBuyTotal").textContent=money(buyTotal);$("txSellTotal").textContent=money(sellTotal);$("txFeeTotal").textContent=money(feeTotal);
+ $("txNetFlow").textContent=money(netFlow);$("txNetFlow").className="value "+(netFlow>=0?"pos":"neg");
+ $("txTable").innerHTML=rows.length?rows.map((x,i)=>`<tr><td>${x.date}</td><td><b>${x.symbol}</b></td><td class="${x.side==="buy"?"blue":"gold"}">${x.side==="buy"?"Buy":"Sell"}${x.intraday?" (intraday)":""}</td><td>${x.qty.toLocaleString()}</td><td>${x.price.toFixed(2)}</td><td>${money(x.gross)}</td><td>${money(x.fees)}</td><td class="${x.net>=0?"pos":"neg"}">${money(x.net)}</td><td>${x.note?x.note.replace(/</g,"&lt;"):""}</td><td><button class="btn small danger" onclick="deleteTransaction(${i})">Delete</button></td></tr>`).join(""):`<tr><td colspan="10" style="text-align:center;color:var(--muted)">No transactions logged yet.</td></tr>`
+}
+function populateSymbolList(){
+ let list=$("symbolList");if(!list)return;
+ let tickers=(typeof PSX_TICKERS!=="undefined"&&PSX_TICKERS.length)?PSX_TICKERS:[];
+ list.innerHTML=tickers.map(s=>`<option value="${s}">`).join("")
+}
+function renderMatrix(){let a=+$("matrixStart").value,b=+$("matrixEnd").value,step=+$("matrixStep").value;if(!(step>0))return;let rows="",count=0;for(let p=a;p<=b+step/1000&&count<1000;p+=step){let r=saleResult(p);rows+=`<tr><td>${p.toFixed(2)}</td><td>${money(r.sf.gross)}</td><td>${money(r.sf.total)}</td><td>${money(r.cgt)}</td><td>${money(r.net)}</td><td class="${r.profit>=0?"pos":"neg"}">${money(r.profit)}</td><td class="${r.roi>=0?"pos":"neg"}">${r.roi.toFixed(2)}%</td></tr>`;count++}$("matrixTable").innerHTML=rows}
+function renderSettings(){$("feePct").value=DB.settings.feePct;$("lowFee").value=DB.settings.lowFee;$("levyPct").value=DB.settings.levyPct;$("pst").value=DB.settings.pst;$("cgt").value=DB.settings.cgt;$("tick").value=DB.settings.tick;$("intradayFeePct").value=DB.settings.intradayFeePct;$("cgtExemptIntraday").checked=DB.settings.cgtExemptIntraday}
+function renderAll(){populateSymbolList();renderAppearanceControls();renderSettings();renderLots();renderSaved();renderTransactions();calculate();renderMatrix()}
+
+document.querySelectorAll(".navbtn[data-page]").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".navbtn[data-page]").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));$("page-"+b.dataset.page).classList.add("active")}));
+$("buyDate").value=new Date().toISOString().slice(0,10);$("lotDate").value=new Date().toISOString().slice(0,10);$("txDate").value=new Date().toISOString().slice(0,10);
+
+// Live calculator — every planner input recalculates instantly as you type/toggle,
+// no "Calculate" click required. The button remains as an explicit trigger too.
+["buyPrice","qty","sellPrice","desiredPct","symbol"].forEach(id=>{$(id).addEventListener("input",calculate);$(id).addEventListener("change",calculate)});
+$("intraday").addEventListener("change",calculate);
+$("intraday").addEventListener("input",calculate);
+
+initAppearancePopover();
+renderAll();
+</script>
+
+</body>
+</html>

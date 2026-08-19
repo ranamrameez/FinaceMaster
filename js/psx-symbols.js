@@ -1,0 +1,179 @@
+/*
+ * PSX_SYMBOLS — reference list of commonly-traded Pakistan Stock Exchange
+ * ticker symbols, grouped by sector, for use in autocomplete/selector fields.
+ *
+ * This is a general reference list maintained by hand, NOT a live feed from
+ * PSX and NOT an official index constituent list (index membership changes
+ * every 6 months). Symbols, especially small-caps, can be added, removed,
+ * merged or delisted over time — edit this file freely to keep it current
+ * for your own watchlist. A matching psx-symbols.json is provided if you'd
+ * rather load the data as JSON instead of a script tag.
+ */
+(function (root) {
+  "use strict";
+
+  var PSX_SYMBOLS = [
+    // Oil & Gas Exploration
+    { symbol: "OGDC", name: "Oil & Gas Development Company", sector: "Oil & Gas Exploration" },
+    { symbol: "PPL", name: "Pakistan Petroleum", sector: "Oil & Gas Exploration" },
+    { symbol: "POL", name: "Pakistan Oilfields", sector: "Oil & Gas Exploration" },
+    { symbol: "MARI", name: "Mari Petroleum", sector: "Oil & Gas Exploration" },
+
+    // Oil & Gas Marketing / Refineries
+    { symbol: "PSO", name: "Pakistan State Oil", sector: "Oil & Gas Marketing" },
+    { symbol: "SHEL", name: "Shell Pakistan", sector: "Oil & Gas Marketing" },
+    { symbol: "APL", name: "Attock Petroleum", sector: "Oil & Gas Marketing" },
+    { symbol: "HASCOL", name: "Hascol Petroleum", sector: "Oil & Gas Marketing" },
+    { symbol: "SNGP", name: "Sui Northern Gas Pipelines", sector: "Gas Distribution" },
+    { symbol: "SSGC", name: "Sui Southern Gas Company", sector: "Gas Distribution" },
+    { symbol: "ATRL", name: "Attock Refinery", sector: "Refinery" },
+    { symbol: "NRL", name: "National Refinery", sector: "Refinery" },
+    { symbol: "PRL", name: "Pakistan Refinery", sector: "Refinery" },
+    { symbol: "CNERGY", name: "Cnergyico PK", sector: "Refinery" },
+
+    // Banks
+    { symbol: "HBL", name: "Habib Bank", sector: "Commercial Banks" },
+    { symbol: "UBL", name: "United Bank", sector: "Commercial Banks" },
+    { symbol: "MCB", name: "MCB Bank", sector: "Commercial Banks" },
+    { symbol: "NBP", name: "National Bank of Pakistan", sector: "Commercial Banks" },
+    { symbol: "ABL", name: "Allied Bank", sector: "Commercial Banks" },
+    { symbol: "BAFL", name: "Bank Alfalah", sector: "Commercial Banks" },
+    { symbol: "BAHL", name: "Bank AL Habib", sector: "Commercial Banks" },
+    { symbol: "MEBL", name: "Meezan Bank", sector: "Commercial Banks" },
+    { symbol: "FABL", name: "Faysal Bank", sector: "Commercial Banks" },
+    { symbol: "AKBL", name: "Askari Bank", sector: "Commercial Banks" },
+    { symbol: "BOP", name: "The Bank of Punjab", sector: "Commercial Banks" },
+    { symbol: "BIPL", name: "BankIslami Pakistan", sector: "Commercial Banks" },
+    { symbol: "JSBL", name: "JS Bank", sector: "Commercial Banks" },
+    { symbol: "SILK", name: "Silk Bank", sector: "Commercial Banks" },
+
+    // Cement
+    { symbol: "LUCK", name: "Lucky Cement", sector: "Cement" },
+    { symbol: "DGKC", name: "D.G. Khan Cement", sector: "Cement" },
+    { symbol: "MLCF", name: "Maple Leaf Cement", sector: "Cement" },
+    { symbol: "FCCL", name: "Fauji Cement", sector: "Cement" },
+    { symbol: "PIOC", name: "Pioneer Cement", sector: "Cement" },
+    { symbol: "CHCC", name: "Cherat Cement", sector: "Cement" },
+    { symbol: "KOHC", name: "Kohat Cement", sector: "Cement" },
+    { symbol: "ACPL", name: "Attock Cement Pakistan", sector: "Cement" },
+    { symbol: "BWCL", name: "Bestway Cement", sector: "Cement" },
+    { symbol: "POWER", name: "Power Cement", sector: "Cement" },
+    { symbol: "GWLC", name: "Gharibwal Cement", sector: "Cement" },
+    { symbol: "THCCL", name: "Thatta Cement", sector: "Cement" },
+
+    // Fertilizer
+    { symbol: "FFC", name: "Fauji Fertilizer Company", sector: "Fertilizer" },
+    { symbol: "EFERT", name: "Engro Fertilizers", sector: "Fertilizer" },
+    { symbol: "FATIMA", name: "Fatima Fertilizer", sector: "Fertilizer" },
+    { symbol: "FFBL", name: "Fauji Fertilizer Bin Qasim", sector: "Fertilizer" },
+    { symbol: "EFUG", name: "EFU General Insurance", sector: "Insurance" },
+
+    // Chemicals / Engro group
+    { symbol: "ENGRO", name: "Engro Corporation", sector: "Chemicals / Conglomerate" },
+    { symbol: "ENGROH", name: "Engro Holdings", sector: "Chemicals / Conglomerate" },
+    { symbol: "ICI", name: "ICI Pakistan", sector: "Chemicals" },
+    { symbol: "LOTCHEM", name: "Lotte Chemical Pakistan", sector: "Chemicals" },
+    { symbol: "EPCL", name: "Engro Polymer & Chemicals", sector: "Chemicals" },
+    { symbol: "SITARA", name: "Sitara Chemical Industries", sector: "Chemicals" },
+
+    // Power Generation & Distribution
+    { symbol: "HUBC", name: "Hub Power Company", sector: "Power Generation & Distribution" },
+    { symbol: "KAPCO", name: "Kot Addu Power Company", sector: "Power Generation & Distribution" },
+    { symbol: "KEL", name: "K-Electric", sector: "Power Generation & Distribution" },
+    { symbol: "NPL", name: "Nishat Power", sector: "Power Generation & Distribution" },
+    { symbol: "NCPL", name: "Nishat Chunian Power", sector: "Power Generation & Distribution" },
+    { symbol: "LOTS", name: "Lotte Chemical (legacy)", sector: "Power Generation & Distribution" },
+    { symbol: "PKGP", name: "Packages Power", sector: "Power Generation & Distribution" },
+
+    // Textile
+    { symbol: "NML", name: "Nishat Mills", sector: "Textile Composite" },
+    { symbol: "GATM", name: "Gul Ahmed Textile Mills", sector: "Textile Composite" },
+    { symbol: "ILP", name: "Interloop", sector: "Textile Composite" },
+    { symbol: "KTML", name: "Kohinoor Textile Mills", sector: "Textile Composite" },
+    { symbol: "CTM", name: "Crescent Textile Mills", sector: "Textile Composite" },
+    { symbol: "ASTM", name: "Ansar Management (Textile)", sector: "Textile Composite" },
+    { symbol: "SAPT", name: "Sapphire Textile Mills", sector: "Textile Composite" },
+    { symbol: "SFL", name: "Sapphire Fibres", sector: "Textile Composite" },
+    { symbol: "FEROZ", name: "Ferozsons Laboratories", sector: "Pharmaceuticals" },
+
+    // Automobiles
+    { symbol: "INDU", name: "Indus Motor Company", sector: "Automobile Assembler" },
+    { symbol: "PSMC", name: "Pak Suzuki Motor Company", sector: "Automobile Assembler" },
+    { symbol: "HCAR", name: "Honda Atlas Cars", sector: "Automobile Assembler" },
+    { symbol: "MTL", name: "Millat Tractors", sector: "Automobile Assembler" },
+    { symbol: "AGTL", name: "Al-Ghazi Tractors", sector: "Automobile Assembler" },
+    { symbol: "SAZEW", name: "Sazgar Engineering Works", sector: "Automobile Assembler" },
+    { symbol: "GHNI", name: "Ghandhara Nissan", sector: "Automobile Assembler" },
+    { symbol: "GHGL", name: "Ghandhara Industries", sector: "Automobile Assembler" },
+    { symbol: "PSEL", name: "Pak Suzuki (legacy code)", sector: "Automobile Assembler" },
+    { symbol: "ATLH", name: "Atlas Honda", sector: "Automobile Parts & Accessories" },
+    { symbol: "THALL", name: "Thal Limited", sector: "Automobile Parts & Accessories" },
+
+    // Food & Personal Care
+    { symbol: "NESTLE", name: "Nestle Pakistan", sector: "Food & Personal Care" },
+    { symbol: "UNITY", name: "Unity Foods", sector: "Food & Personal Care" },
+    { symbol: "FRIESLAND" , name: "Friesland Campina Engro", sector: "Food & Personal Care" },
+    { symbol: "MFFL", name: "Mitchell's Fruit Farms", sector: "Food & Personal Care" },
+    { symbol: "MUREB", name: "Murree Brewery", sector: "Food & Personal Care" },
+    { symbol: "COLG", name: "Colgate-Palmolive Pakistan", sector: "Food & Personal Care" },
+    { symbol: "NATF", name: "National Foods", sector: "Food & Personal Care" },
+    { symbol: "SHEZAN", name: "Shezan International", sector: "Food & Personal Care" },
+    { symbol: "MEHT", name: "Mehmood Textile (Foods)", sector: "Food & Personal Care" },
+
+    // Technology & Communication
+    { symbol: "SYS", name: "Systems Limited", sector: "Technology & Communication" },
+    { symbol: "TRG", name: "TRG Pakistan", sector: "Technology & Communication" },
+    { symbol: "NETSOL", name: "NetSol Technologies", sector: "Technology & Communication" },
+    { symbol: "AIRLINK", name: "Air Link Communication", sector: "Technology & Communication" },
+    { symbol: "AVN", name: "Avanceon", sector: "Technology & Communication" },
+    { symbol: "PTC", name: "Pakistan Telecommunication Company", sector: "Technology & Communication" },
+    { symbol: "WTL", name: "WorldCall Telecom", sector: "Technology & Communication" },
+    { symbol: "OCTOPUS", name: "Octopus Digital", sector: "Technology & Communication" },
+
+    // Engineering / Steel
+    { symbol: "ISL", name: "International Steels", sector: "Engineering" },
+    { symbol: "ASTL", name: "Amreli Steels", sector: "Engineering" },
+    { symbol: "MUGHAL", name: "Mughal Iron & Steel Industries", sector: "Engineering" },
+    { symbol: "ASL", name: "Aisha Steel Mills", sector: "Engineering" },
+    { symbol: "CSAP", name: "Crescent Steel & Allied Products", sector: "Engineering" },
+    { symbol: "IPAK", name: "International Industries", sector: "Engineering" },
+
+    // Paper, Board & Packaging
+    { symbol: "PKGS", name: "Packages Limited", sector: "Paper & Board" },
+    { symbol: "CPPL", name: "Century Paper & Board", sector: "Paper & Board" },
+    { symbol: "SPL", name: "Security Papers", sector: "Paper & Board" },
+
+    // Investment Banks / Insurance / Modarabas
+    { symbol: "JSCL", name: "JS Investments", sector: "Investment Banks" },
+    { symbol: "AICL", name: "Adamjee Insurance", sector: "Insurance" },
+    { symbol: "IGIHL", name: "IGI Holdings", sector: "Insurance" },
+    { symbol: "PICIC", name: "PICIC Insurance", sector: "Insurance" },
+
+    // Miscellaneous large caps
+    { symbol: "PIBTL", name: "Pakistan International Bulk Terminal", sector: "Transport" },
+    { symbol: "PIAHCLA", name: "PIA Holding Company", sector: "Transport" },
+    { symbol: "KOSM", name: "Kohinoor Spinning", sector: "Textile Spinning" },
+    { symbol: "TREET", name: "Treet Corporation", sector: "Household Goods" },
+    { symbol: "TPLP", name: "TPL Properties", sector: "Real Estate" },
+    { symbol: "DAWH", name: "Dawood Hercules Corporation", sector: "Chemicals / Conglomerate" },
+    { symbol: "DOL", name: "Dost Steels", sector: "Engineering" },
+    { symbol: "PAEL", name: "Pak Elektron", sector: "Cable & Electrical Goods" },
+    { symbol: "WAVES", name: "Waves Corporation", sector: "Cable & Electrical Goods" },
+    { symbol: "SEARL", name: "The Searle Company", sector: "Pharmaceuticals" },
+    { symbol: "GLAXO", name: "GlaxoSmithKline Pakistan", sector: "Pharmaceuticals" },
+    { symbol: "ABOT", name: "Abbott Laboratories Pakistan", sector: "Pharmaceuticals" },
+    { symbol: "HINOON", name: "Highnoon Laboratories", sector: "Pharmaceuticals" }
+  ];
+
+  // Flat array of ticker symbols only, handy for <datalist>/<select> fill.
+  var TICKERS = PSX_SYMBOLS.map(function (s) { return s.symbol; });
+
+  var api = { PSX_SYMBOLS: PSX_SYMBOLS, TICKERS: TICKERS };
+
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = api;
+  } else {
+    root.PSX_SYMBOLS = PSX_SYMBOLS;
+    root.PSX_TICKERS = TICKERS;
+  }
+})(typeof window !== "undefined" ? window : this);
