@@ -582,10 +582,58 @@ function legacyAppearance(){
     colorTheme: localStorage.getItem(LEGACY_COLOR_THEME_KEY) || DEFAULT_APPEARANCE.colorTheme,
   };
 }
-// Nothing is pre-loaded for PSX — this is your own trading log, not a demo.
+// Seeded from the JSBL-Zindigi trade confirmations, 17–21 Aug 2026.
 // Only used the first time the workbook loads (i.e. before anything is saved
-// to localStorage); add real entries from the Transactions page.
-const SEED_TRANSACTIONS = [];
+// to localStorage); add further entries from the Transactions page from here on.
+// price = gross traded rate (per-share); the app's own fee engine (Settings)
+// computes commission/SST/levies from this, so this is NOT the broker's net rate.
+const SEED_TRANSACTIONS = [
+  {date:'2026-08-17', ticker:'OGDC', action:'BUY', shares:1, price:319.0},
+  {date:'2026-08-17', ticker:'OGDC', action:'SELL', shares:1, price:319.0},
+  {date:'2026-08-18', ticker:'CNERGY', action:'BUY', shares:5, price:15.25},
+  {date:'2026-08-18', ticker:'CNERGY', action:'SELL', shares:5, price:15.36},
+  {date:'2026-08-18', ticker:'DCR', action:'BUY', shares:1, price:38.8},
+  {date:'2026-08-18', ticker:'DCR', action:'SELL', shares:1, price:38.9},
+  {date:'2026-08-18', ticker:'OGDC', action:'BUY', shares:5, price:314.5},
+  {date:'2026-08-18', ticker:'OGDC', action:'BUY', shares:2, price:314.55},
+  {date:'2026-08-18', ticker:'OGDC', action:'BUY', shares:5, price:314.9},
+  {date:'2026-08-18', ticker:'OGDC', action:'BUY', shares:10, price:315.8},
+  {date:'2026-08-18', ticker:'OGDC', action:'BUY', shares:10, price:315.91},
+  {date:'2026-08-18', ticker:'OGDC', action:'BUY', shares:2, price:317.55},
+  {date:'2026-08-18', ticker:'SNGP', action:'BUY', shares:1, price:104.2},
+  {date:'2026-08-18', ticker:'SNGP', action:'BUY', shares:1, price:105.6},
+  {date:'2026-08-19', ticker:'SNGP', action:'BUY', shares:1, price:101.85},
+  {date:'2026-08-19', ticker:'SNGP', action:'BUY', shares:1, price:101.9},
+  {date:'2026-08-19', ticker:'SNGP', action:'BUY', shares:1, price:102.0},
+  {date:'2026-08-19', ticker:'SNGP', action:'BUY', shares:1, price:102.2},
+  {date:'2026-08-19', ticker:'SNGP', action:'BUY', shares:1, price:102.6},
+  {date:'2026-08-19', ticker:'SNGP', action:'BUY', shares:1, price:102.75},
+  {date:'2026-08-19', ticker:'SNGP', action:'BUY', shares:1, price:103.0},
+  {date:'2026-08-19', ticker:'OGDC', action:'SELL', shares:34, price:319.05},
+  {date:'2026-08-20', ticker:'SNGP', action:'BUY', shares:1, price:101.5},
+  {date:'2026-08-20', ticker:'SNGP', action:'BUY', shares:1, price:101.6},
+  {date:'2026-08-20', ticker:'SNGP', action:'BUY', shares:1, price:101.61},
+  {date:'2026-08-20', ticker:'SNGP', action:'BUY', shares:2, price:101.75},
+  {date:'2026-08-20', ticker:'SNGP', action:'BUY', shares:1, price:101.8},
+  {date:'2026-08-20', ticker:'SNGP', action:'BUY', shares:1, price:101.9},
+  {date:'2026-08-20', ticker:'SNGP', action:'BUY', shares:1, price:102.0},
+  {date:'2026-08-20', ticker:'SNGP', action:'BUY', shares:2, price:102.1},
+  {date:'2026-08-20', ticker:'SNGP', action:'BUY', shares:1, price:102.2},
+  {date:'2026-08-20', ticker:'SNGP', action:'BUY', shares:1, price:102.3},
+  {date:'2026-08-20', ticker:'SNGP', action:'BUY', shares:1, price:102.31},
+  {date:'2026-08-20', ticker:'SNGP', action:'BUY', shares:2, price:102.4},
+  {date:'2026-08-20', ticker:'SNGP', action:'BUY', shares:2, price:102.41},
+  {date:'2026-08-20', ticker:'SNGP', action:'BUY', shares:2, price:102.5},
+  {date:'2026-08-20', ticker:'SNGP', action:'BUY', shares:2, price:102.51},
+  {date:'2026-08-20', ticker:'SNGP', action:'BUY', shares:1, price:102.61},
+  {date:'2026-08-20', ticker:'SNGP', action:'BUY', shares:1, price:102.7},
+  {date:'2026-08-20', ticker:'SNGP', action:'BUY', shares:1, price:102.81},
+  {date:'2026-08-21', ticker:'SNGP', action:'BUY', shares:6, price:101.1},
+  {date:'2026-08-21', ticker:'SNGP', action:'BUY', shares:3, price:101.27},
+  {date:'2026-08-21', ticker:'SNGP', action:'BUY', shares:5, price:101.31},
+  {date:'2026-08-21', ticker:'SNGP', action:'SELL', shares:14, price:102.94},
+  {date:'2026-08-21', ticker:'SNGP', action:'SELL', shares:33, price:102.94},
+];
 // Deposits/withdrawals into the brokerage account, same shape as above.
 const SEED_TRANSFERS = [];
 // Broker cashback / trading-reward credits not tied to a specific buy or sell.
