@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trades Display</title>
+<style>
+    * { box-sizing: border-box; }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+        margin: 0;
+        padding: 16px;
+        background: #f5f6f7;
+        color: #1a1a1a;
+    }
+    h1 {
+        font-size: 18px;
+        margin: 0 0 12px 0;
+    }
+    .table-wrap {
+        overflow: auto;
+        max-height: 85vh;
+        border: 1px solid #d0d3d6;
+        border-radius: 6px;
+        background: #fff;
+    }
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 12.5px;
+        white-space: nowrap;
+    }
+    th, td {
+        padding: 4px 8px;
+        border: 1px solid #e4e6e8;
+        text-align: right;
+    }
+    th:nth-child(1), th:nth-child(2), th:nth-child(3), th:nth-child(4), th:nth-child(5), th:nth-child(6),
+    td:nth-child(1), td:nth-child(2), td:nth-child(3), td:nth-child(4), td:nth-child(5), td:nth-child(6) {
+        text-align: left;
+    }
+    thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: #2b3138;
+        color: #fff;
+        font-weight: 600;
+        border-color: #2b3138;
+    }
+    tbody tr:nth-child(even) {
+        background: #f8f9fa;
+    }
+    tbody tr:hover {
+        background: #eef3fb;
+    }
+    tr.purchase td:nth-child(2) {
+        color: #0a7d32;
+        font-weight: 600;
+    }
+    tr.sale td:nth-child(2) {
+        color: #b3261e;
+        font-weight: 600;
+    }
+    td.amt.neg {
+        color: #b3261e;
+    }
+    td.amt {
+        font-variant-numeric: tabular-nums;
+    }
+    .meta {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 10px;
+    }
+</style>
+</head>
+<body>
+<h1>Trades Display</h1>
+<div class="meta">40 transactions &middot; 17&ndash;20 Aug 2026</div>
+<div class="table-wrap">
+<table>
+    <thead>
+        <tr><th>Trade Date</th><th>Transaction</th><th>Contract #</th><th>Market</th><th>Sett. Date</th><th>Symbol</th><th>Quantity</th><th>Rate</th><th>Brok. Rate</th><th>Brok. Amount</th><th>Net Rate</th><th>SST Amount</th><th>Levies</th><th>Amount</th></tr>
+    </thead>
+    <tbody>
+        <tr class="purchase"><td>17-08-2026</td><td>Purchase</td><td>01967521</td><td>Ready</td><td>18-08-26</td><td>OGDC</td><td>1</td><td>319.0000</td><td>0.6380</td><td>0.64</td><td>319.6380</td><td>0.10</td><td>0.04</td><td class="amt ">319.77</td></tr>
+        <tr class="sale"><td>17-08-2026</td><td>Sale</td><td>01057026</td><td>Ready</td><td>18-08-26</td><td>OGDC</td><td>1</td><td>319.0000</td><td>0.0000</td><td>0.00</td><td>319.0000</td><td>0.00</td><td>0.04</td><td class="amt neg">-318.96</td></tr>
+        <tr class="purchase"><td>18-08-2026</td><td>Purchase</td><td>01984117</td><td>Ready</td><td>19-08-26</td><td>CNERGY</td><td>5</td><td>15.2500</td><td>0.0500</td><td>0.25</td><td>15.3000</td><td>0.04</td><td>0.01</td><td class="amt ">76.55</td></tr>
+        <tr class="purchase"><td>18-08-2026</td><td>Purchase</td><td>01984118</td><td>Ready</td><td>19-08-26</td><td>DCR</td><td>1</td><td>38.8000</td><td>0.0776</td><td>0.08</td><td>38.8776</td><td>0.01</td><td>0.00</td><td class="amt ">38.89</td></tr>
+        <tr class="purchase"><td>18-08-2026</td><td>Purchase</td><td>01984119</td><td>Ready</td><td>19-08-26</td><td>OGDC</td><td>5</td><td>314.5000</td><td>0.6290</td><td>3.15</td><td>315.1290</td><td>0.47</td><td>0.19</td><td class="amt ">1576.31</td></tr>
+        <tr class="purchase"><td>18-08-2026</td><td>Purchase</td><td>01984119</td><td>Ready</td><td>19-08-26</td><td>OGDC</td><td>2</td><td>314.5500</td><td>0.6291</td><td>1.26</td><td>315.1791</td><td>0.19</td><td>0.08</td><td class="amt ">630.62</td></tr>
+        <tr class="purchase"><td>18-08-2026</td><td>Purchase</td><td>01984119</td><td>Ready</td><td>19-08-26</td><td>OGDC</td><td>5</td><td>314.9000</td><td>0.6298</td><td>3.15</td><td>315.5298</td><td>0.47</td><td>0.19</td><td class="amt ">1578.31</td></tr>
+        <tr class="purchase"><td>18-08-2026</td><td>Purchase</td><td>01984119</td><td>Ready</td><td>19-08-26</td><td>OGDC</td><td>10</td><td>315.8000</td><td>0.6316</td><td>6.32</td><td>316.4316</td><td>0.95</td><td>0.38</td><td class="amt ">3165.64</td></tr>
+        <tr class="purchase"><td>18-08-2026</td><td>Purchase</td><td>01984119</td><td>Ready</td><td>19-08-26</td><td>OGDC</td><td>10</td><td>315.9100</td><td>0.6318</td><td>6.32</td><td>316.5418</td><td>0.95</td><td>0.38</td><td class="amt ">3166.74</td></tr>
+        <tr class="purchase"><td>18-08-2026</td><td>Purchase</td><td>01984119</td><td>Ready</td><td>19-08-26</td><td>OGDC</td><td>2</td><td>317.5500</td><td>0.6351</td><td>1.27</td><td>318.1851</td><td>0.19</td><td>0.08</td><td class="amt ">636.64</td></tr>
+        <tr class="purchase"><td>18-08-2026</td><td>Purchase</td><td>01984120</td><td>Ready</td><td>19-08-26</td><td>SNGP</td><td>1</td><td>104.2000</td><td>0.2084</td><td>0.21</td><td>104.4084</td><td>0.03</td><td>0.01</td><td class="amt ">104.45</td></tr>
+        <tr class="purchase"><td>18-08-2026</td><td>Purchase</td><td>01984120</td><td>Ready</td><td>19-08-26</td><td>SNGP</td><td>1</td><td>105.6000</td><td>0.2112</td><td>0.21</td><td>105.8112</td><td>0.03</td><td>0.01</td><td class="amt ">105.86</td></tr>
+        <tr class="sale"><td>18-08-2026</td><td>Sale</td><td>01066016</td><td>Ready</td><td>19-08-26</td><td>CNERGY</td><td>5</td><td>15.3600</td><td>0.0000</td><td>0.00</td><td>15.3600</td><td>0.00</td><td>0.01</td><td class="amt neg">-76.79</td></tr>
+        <tr class="sale"><td>18-08-2026</td><td>Sale</td><td>01066017</td><td>Ready</td><td>19-08-26</td><td>DCR</td><td>1</td><td>38.9000</td><td>0.0000</td><td>0.00</td><td>38.9000</td><td>0.00</td><td>0.00</td><td class="amt neg">-38.90</td></tr>
+        <tr class="purchase"><td>19-08-2026</td><td>Purchase</td><td>01999659</td><td>Ready</td><td>20-08-26</td><td>SNGP</td><td>1</td><td>101.8500</td><td>0.2037</td><td>0.20</td><td>102.0537</td><td>0.03</td><td>0.01</td><td class="amt ">102.10</td></tr>
+        <tr class="purchase"><td>19-08-2026</td><td>Purchase</td><td>01999659</td><td>Ready</td><td>20-08-26</td><td>SNGP</td><td>1</td><td>101.9000</td><td>0.2038</td><td>0.20</td><td>102.1038</td><td>0.03</td><td>0.01</td><td class="amt ">102.15</td></tr>
+        <tr class="purchase"><td>19-08-2026</td><td>Purchase</td><td>01999659</td><td>Ready</td><td>20-08-26</td><td>SNGP</td><td>1</td><td>102.0000</td><td>0.2040</td><td>0.20</td><td>102.2040</td><td>0.03</td><td>0.01</td><td class="amt ">102.25</td></tr>
+        <tr class="purchase"><td>19-08-2026</td><td>Purchase</td><td>01999659</td><td>Ready</td><td>20-08-26</td><td>SNGP</td><td>1</td><td>102.2000</td><td>0.2044</td><td>0.20</td><td>102.4044</td><td>0.03</td><td>0.01</td><td class="amt ">102.45</td></tr>
+        <tr class="purchase"><td>19-08-2026</td><td>Purchase</td><td>01999659</td><td>Ready</td><td>20-08-26</td><td>SNGP</td><td>1</td><td>102.6000</td><td>0.2052</td><td>0.21</td><td>102.8052</td><td>0.03</td><td>0.01</td><td class="amt ">103.00</td></tr>
+        <tr class="purchase"><td>19-08-2026</td><td>Purchase</td><td>01999659</td><td>Ready</td><td>20-08-26</td><td>SNGP</td><td>1</td><td>102.7500</td><td>0.2055</td><td>0.21</td><td>102.9555</td><td>0.03</td><td>0.01</td><td class="amt ">103.00</td></tr>
+        <tr class="purchase"><td>19-08-2026</td><td>Purchase</td><td>01999659</td><td>Ready</td><td>20-08-26</td><td>SNGP</td><td>1</td><td>103.0000</td><td>0.2060</td><td>0.21</td><td>103.2060</td><td>0.03</td><td>0.01</td><td class="amt ">103.25</td></tr>
+        <tr class="sale"><td>19-08-2026</td><td>Sale</td><td>01073426</td><td>Ready</td><td>20-08-26</td><td>OGDC</td><td>34</td><td>319.0500</td><td>0.6381</td><td>21.70</td><td>318.4119</td><td>3.25</td><td>1.30</td><td class="amt neg">-10821.45</td></tr>
+        <tr class="purchase"><td>20-08-2026</td><td>Purchase</td><td>02013952</td><td>Ready</td><td>21-08-26</td><td>SNGP</td><td>1</td><td>101.5000</td><td>0.2030</td><td>0.20</td><td>101.7030</td><td>0.03</td><td>0.01</td><td class="amt ">101.75</td></tr>
+        <tr class="purchase"><td>20-08-2026</td><td>Purchase</td><td>02013952</td><td>Ready</td><td>21-08-26</td><td>SNGP</td><td>1</td><td>101.6000</td><td>0.2032</td><td>0.20</td><td>101.8032</td><td>0.03</td><td>0.01</td><td class="amt ">101.85</td></tr>
+        <tr class="purchase"><td>20-08-2026</td><td>Purchase</td><td>02013952</td><td>Ready</td><td>21-08-26</td><td>SNGP</td><td>1</td><td>101.6100</td><td>0.2032</td><td>0.20</td><td>101.8132</td><td>0.03</td><td>0.01</td><td class="amt ">101.86</td></tr>
+        <tr class="purchase"><td>20-08-2026</td><td>Purchase</td><td>02013952</td><td>Ready</td><td>21-08-26</td><td>SNGP</td><td>2</td><td>101.7500</td><td>0.2035</td><td>0.41</td><td>101.9535</td><td>0.06</td><td>0.02</td><td class="amt ">203.99</td></tr>
+        <tr class="purchase"><td>20-08-2026</td><td>Purchase</td><td>02013952</td><td>Ready</td><td>21-08-26</td><td>SNGP</td><td>1</td><td>101.8000</td><td>0.2036</td><td>0.20</td><td>102.0036</td><td>0.03</td><td>0.01</td><td class="amt ">102.05</td></tr>
+        <tr class="purchase"><td>20-08-2026</td><td>Purchase</td><td>02013952</td><td>Ready</td><td>21-08-26</td><td>SNGP</td><td>1</td><td>101.9000</td><td>0.2038</td><td>0.20</td><td>102.1038</td><td>0.03</td><td>0.01</td><td class="amt ">102.15</td></tr>
+        <tr class="purchase"><td>20-08-2026</td><td>Purchase</td><td>02013952</td><td>Ready</td><td>21-08-26</td><td>SNGP</td><td>1</td><td>102.0000</td><td>0.2040</td><td>0.20</td><td>102.2040</td><td>0.03</td><td>0.01</td><td class="amt ">102.25</td></tr>
+        <tr class="purchase"><td>20-08-2026</td><td>Purchase</td><td>02013952</td><td>Ready</td><td>21-08-26</td><td>SNGP</td><td>2</td><td>102.1000</td><td>0.2042</td><td>0.41</td><td>102.3042</td><td>0.06</td><td>0.02</td><td class="amt ">204.69</td></tr>
+        <tr class="purchase"><td>20-08-2026</td><td>Purchase</td><td>02013952</td><td>Ready</td><td>21-08-26</td><td>SNGP</td><td>1</td><td>102.2000</td><td>0.2044</td><td>0.20</td><td>102.4044</td><td>0.03</td><td>0.01</td><td class="amt ">102.45</td></tr>
+        <tr class="purchase"><td>20-08-2026</td><td>Purchase</td><td>02013952</td><td>Ready</td><td>21-08-26</td><td>SNGP</td><td>1</td><td>102.3000</td><td>0.2046</td><td>0.20</td><td>102.5046</td><td>0.03</td><td>0.01</td><td class="amt ">102.55</td></tr>
+        <tr class="purchase"><td>20-08-2026</td><td>Purchase</td><td>02013952</td><td>Ready</td><td>21-08-26</td><td>SNGP</td><td>1</td><td>102.3100</td><td>0.2046</td><td>0.20</td><td>102.5146</td><td>0.03</td><td>0.01</td><td class="amt ">102.56</td></tr>
+        <tr class="purchase"><td>20-08-2026</td><td>Purchase</td><td>02013952</td><td>Ready</td><td>21-08-26</td><td>SNGP</td><td>2</td><td>102.4000</td><td>0.2048</td><td>0.41</td><td>102.6048</td><td>0.06</td><td>0.02</td><td class="amt ">205.30</td></tr>
+        <tr class="purchase"><td>20-08-2026</td><td>Purchase</td><td>02013952</td><td>Ready</td><td>21-08-26</td><td>SNGP</td><td>2</td><td>102.4100</td><td>0.2048</td><td>0.41</td><td>102.6148</td><td>0.06</td><td>0.02</td><td class="amt ">205.32</td></tr>
+        <tr class="purchase"><td>20-08-2026</td><td>Purchase</td><td>02013952</td><td>Ready</td><td>21-08-26</td><td>SNGP</td><td>2</td><td>102.5000</td><td>0.2050</td><td>0.41</td><td>102.7050</td><td>0.06</td><td>0.02</td><td class="amt ">205.50</td></tr>
+        <tr class="purchase"><td>20-08-2026</td><td>Purchase</td><td>02013952</td><td>Ready</td><td>21-08-26</td><td>SNGP</td><td>2</td><td>102.5100</td><td>0.2050</td><td>0.41</td><td>102.7150</td><td>0.06</td><td>0.02</td><td class="amt ">205.52</td></tr>
+        <tr class="purchase"><td>20-08-2026</td><td>Purchase</td><td>02013952</td><td>Ready</td><td>21-08-26</td><td>SNGP</td><td>1</td><td>102.6100</td><td>0.2052</td><td>0.21</td><td>102.8152</td><td>0.03</td><td>0.01</td><td class="amt ">102.86</td></tr>
+        <tr class="purchase"><td>20-08-2026</td><td>Purchase</td><td>02013952</td><td>Ready</td><td>21-08-26</td><td>SNGP</td><td>1</td><td>102.7000</td><td>0.2054</td><td>0.21</td><td>102.9054</td><td>0.03</td><td>0.01</td><td class="amt ">102.95</td></tr>
+        <tr class="purchase"><td>20-08-2026</td><td>Purchase</td><td>02013952</td><td>Ready</td><td>21-08-26</td><td>SNGP</td><td>1</td><td>102.8100</td><td>0.2056</td><td>0.21</td><td>103.0156</td><td>0.03</td><td>0.01</td><td class="amt ">103.06</td></tr>
+    </tbody>
+</table>
+</div>
+</body>
+</html>
