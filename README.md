@@ -15,6 +15,12 @@ FinanceManager live link:
 6. PSX: Currently app is applying fees without realizing same day trade one leg charges only.
 7. PSX: app should auto check, and show both, if share is sold same or after that day to calculate commission based fees. with the manual checkbox as well for same day trade recording. All calculators must show, break-even and all other calculations for shares sold same day or after.
 8. PSX: each buy should have its own sell peer (on sold). only then we can truly adjust and control(manually, if needed) share selling commission.
+9. Trade Planner -> Save *Trade Plans*: Allow user to plan trades in a nutshell including multiple buy and sells with the ability to save multiple plans. Edit the plans and their transactions. And Mark-As-Done trades to include in actual transaction history without the need to fill duplicate transactions.
+10. Allow to enter multiple transactions at a time.
+11. PSX: currently doesn't allow to edit Fees break-down. It is needed to adjust to a transaction according to the account statement.
+12. Ability to read account statement pdfs, excels to update the app trade history.
+13. Find APIs to directly fetch symbols, logos, stocks prices, historical data and finance news.
+14. Include console-like themes for super compact UI.
 
 -------- -----------
 
