@@ -28,9 +28,23 @@ FinanceManager live link:
 
 ## Migration from plain HTML FinanceMaster app to React JS FinanceRecorder app
 
-### App Name: FinanceRecorder
+## Idea:
 
-### Plan
+React and node based or more secure tech for a Fintech app. 
+Primarily I'm focusing on Pakistan stock exchange and Qatar stock exchange in first phase. Also banks from the same countries. Although other than stock exchanges, other app features can be used globally. 
+1. QSE & PSX stock tracking, calculations and trade planning
+2. Feeding and tracking banking transactions including cards spendings.
+3. Cash tracking
+4. Expense tracking
+5. Mutual funds tracking and performance analysis
+Monitoring, Analysis and planning for all of these.
+6. Phase 2 (financial news, Fintech apis integration).
+
+Suggest me app name which isn't used online yet. In my mind *finance recorder*, finance tracker, finance guru, finance master.
+
+## Preferred App Name: FinanceRecorder
+
+## Plan
 
 Include each and evrything from our FinanceMaster app.
 Develop FinanceGuru app which will be React JS based. All shared components should be extracted developed separately. Then we can have Specialized components for each Stock Exchange. User can switch between Exchanges to view and modify his portfolio. For both PSX and QSE we have real trade data to verify our formulas and calculations.
