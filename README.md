@@ -3,7 +3,7 @@
 FinanceManager live link:
 <https://ranamrameez.github.io/FinaceMaster/>
 
-## Updates Pending
+## Pending Updates
 
 1. QSE: save H1 EPS data on db rather hard coding. also, check other data as well and make sure no data is hard coded. you may general stock data in their own node rather than belonging to 1 user. 
 2. Save multiple selling plan in db.
@@ -42,7 +42,9 @@ Monitoring, Analysis and planning for all of these.
 
 Suggest me app name which isn't used online yet. In my mind *finance recorder*, finance tracker, finance guru, finance master.
 
-## Preferred App Name: FinanceRecorder
+## Preferred App Name: 
+
+**FinanceRecorder**
 
 ## Plan
 
