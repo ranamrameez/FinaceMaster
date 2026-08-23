@@ -592,6 +592,44 @@ not developer notes) continuously as features ship.
   on direction. Personal Loans (needs an id retrofit) and Funds (needs its
   hidden `Transfer` field exposed in the UI) remain unlinked; EMI still
   has no repayment ledger to link into at all.
+- **PR #2 code review fix + two user-reported bugs, same day (2026-08-23).**
+  A real reviewer (Sourcery, on PR #2) flagged two gaps in the v1 linking
+  feature: no rollback if a linked-transfer create partially fails, and
+  direct deletion of a linked record from its *native* module (not the
+  Transfers page) leaving a one-sided orphan. Both fixed via new
+  `lib/linkCascade.ts`, which centralizes what used to be duplicated
+  dispatch-switch statements in `TransferLinksPage.tsx` plus new
+  `createLinkedTransfer` (rolls back the first side on a later failure —
+  explicitly documented as defense-in-depth, not real DB-style atomicity,
+  since a client-only app with per-store localStorage + independently-
+  debounced Firebase pushes can't be made genuinely transactional),
+  `updateLinkedTransfer`, `deleteLinkCascade`, `findLinkForRecord`, and
+  `confirmAndDeleteLinkable` — wired into every native delete button
+  across all 5 linkable modules (Cash, Bank, QSE, PSX, Rentals) so
+  deleting either side of a link from *anywhere* cascades identically to
+  deleting it from the Transfers page. Known, stated-not-hidden remaining
+  gap: editing (not deleting) a linked record directly in its native
+  module still doesn't propagate — would need every edit form to know
+  it's touching a linked record, a bigger UI change not attempted here.
+  Separately, same session: (1) **critical bug, user-reported** — signing
+  out never actually cleared any of the 9 per-account Zustand stores (in
+  memory or in localStorage), so the next person on the browser, or the
+  same person switching accounts, would see the previous account's data
+  and could even push it into their own new cloud path via the existing
+  "upload local data" prompt. Fixed centrally in the single shared
+  `useAuthState.ts` auth listener (new `lib/resetLocalData.ts`'s
+  `resetAllLocalWorkbooks()`), firing only on a transition *away* from a
+  previously-known signed-in uid — never on first page load, which must
+  not wipe a legitimately-returning user's data. Deliberately doesn't
+  touch `appearanceStore`/`termsStore` (global prefs, not per-account
+  data). (2) The "Sign in with Google" button's icon was a plain blue-
+  circle emoji placeholder — replaced with a real 4-color Google "G" mark
+  (new `GoogleIcon` in `components/icons.tsx`). (3) A third user report —
+  "only a toast shows instead of the sign-in popup" — could **not** be
+  reproduced: both primary sign-in entry points (sidebar button, a gated
+  write action) correctly open the real modal locally, zero console
+  errors. Left as an open item needing a specific page/button to chase
+  further if it recurs; see README Pending.
 
 ## Live URLs
 

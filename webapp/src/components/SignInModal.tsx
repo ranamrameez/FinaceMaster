@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { create } from 'zustand';
 import { resetPassword, signInWithEmail, signInWithGoogle, signUpWithEmail } from '../lib/firebase/auth';
 import { firebaseReady } from '../lib/firebase/client';
-import { LogInIcon } from './icons';
+import { GoogleIcon, LogInIcon } from './icons';
 import { Modal } from './Modal';
 import { toast } from './Toast';
 
@@ -76,8 +76,8 @@ export function SignInModalHost() {
         <button className="btn secondary" disabled={busy} onClick={() => run(() => signUpWithEmail(email, password))}>
           Sign up
         </button>
-        <button className="btn secondary" disabled={busy} onClick={() => run(signInWithGoogle)}>
-          <span aria-hidden style={{ marginRight: 6 }}>🔵</span>Sign in with Google
+        <button className="btn secondary" disabled={busy} onClick={() => run(signInWithGoogle)} style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <GoogleIcon />Sign in with Google
         </button>
         <button
           className="btn ghost small"

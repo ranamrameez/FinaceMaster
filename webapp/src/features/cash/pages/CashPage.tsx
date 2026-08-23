@@ -10,6 +10,7 @@ import { useSortableRows } from '../../../hooks/useSortableRows';
 import { cashBalanceByCurrency, cashByCategory, cashRunningLedger } from '../../../lib/calc/cashModule';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
+import { confirmAndDeleteLinkable } from '../../../lib/linkCascade';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
 import { createEmptyCashWorkbook } from '../../../store/defaultCashWorkbook';
@@ -200,9 +201,7 @@ function EntryList() {
                   <button className="btn secondary small" onClick={() => startEdit(entry)}>Edit</button>{' '}
                   <button
                     className="btn secondary small"
-                    onClick={async () => {
-                      if (await confirmDialog('This cannot be undone.', 'Delete this entry?')) deleteEntry(entry.id);
-                    }}
+                    onClick={() => confirmAndDeleteLinkable('cash', entry.id, () => deleteEntry(entry.id))}
                   >
                     <TrashIcon size={12} />Delete
                   </button>

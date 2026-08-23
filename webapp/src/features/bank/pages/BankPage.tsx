@@ -11,6 +11,7 @@ import { accountBalance, accountByCategory, accountRunningLedger, totalBalanceBy
 import { parseCSV } from '../../../lib/csv';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
+import { confirmAndDeleteLinkable } from '../../../lib/linkCascade';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
 import { createEmptyBankWorkbook } from '../../../store/defaultBankWorkbook';
@@ -298,9 +299,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
                   <button className="btn secondary small" onClick={() => startEdit(tx)}>Edit</button>{' '}
                   <button
                     className="btn secondary small"
-                    onClick={async () => {
-                      if (await confirmDialog('This cannot be undone.', 'Delete this transaction?')) deleteTransaction(tx.id);
-                    }}
+                    onClick={() => confirmAndDeleteLinkable('bank', tx.id, () => deleteTransaction(tx.id))}
                   >
                     <TrashIcon size={12} />Delete
                   </button>

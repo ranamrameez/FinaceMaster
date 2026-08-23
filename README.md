@@ -314,6 +314,63 @@ FinanceManager live link:
     retrofit) and Funds (needs its hidden `Transfer` field exposed in the UI first) remain
     unlinked; EMI has no repayment ledger at all to link into (a data-model question, not an
     oversight).
+35. **Cross-entity linking: cascade deletes + create/update failure handling (2026-08-23) —
+    code-review fix on PR #2.** A real reviewer (Sourcery) flagged two gaps in the v1 linking
+    feature: (1) creating a link wrote to three separate stores with no rollback if a later
+    write failed, risking a one-sided orphan reported as success; (2) deleting a linked record
+    directly from its *native* module (Cash's ledger, Bank's transactions, QSE/PSX transfers,
+    Rentals entries) — instead of from the Transfers page — just removed that one row, leaving
+    the link pointing at a missing id and the other side still present. Both fixed. New
+    `lib/linkCascade.ts` centralizes the store-dispatch switch statements (moved out of
+    `TransferLinksPage.tsx`) plus: `createLinkedTransfer` (rolls back the first side if the
+    second write throws — honest about this being defense-in-depth, not a real database
+    transaction, since a client-only app with per-store localStorage + independently-debounced
+    Firebase pushes can't be made genuinely atomic), `updateLinkedTransfer` (reports a failure
+    honestly rather than claiming a rollback it can't actually do for edits), `deleteLinkCascade`
+    (removes both sides + the link record together), `findLinkForRecord`, and
+    `confirmAndDeleteLinkable` — every native delete button across all 5 linkable modules now
+    calls this instead of deleting directly, so removing either side of a link from *anywhere*
+    cascades identically to deleting it from the Transfers page. Known remaining gap, stated
+    explicitly rather than silently left: *editing* (not deleting) a linked record's amount/date
+    directly in its native module still doesn't propagate to the other side — full correctness
+    there would need every edit form to know it's touching a linked record, a larger UI change
+    not attempted here. New tests in `lib/__tests__/linkCascade.test.ts` (5 tests) cover
+    create/rollback/find/update/cascade-delete against real store instances (not mocks).
+    `npm run build` / `npm run test` (113 tests, 5 new) both clean; verified live that all 5
+    modules' pages still render with zero console errors after the wiring changes (the actual
+    authenticated delete-cascade click-through needs a real signed-in session, same caveat as
+    the rest of this linking feature).
+36. **Critical: signing out didn't clear local data (2026-08-23), user-reported.** Every
+    module's Zustand store persists to its own localStorage key and only overwrites itself on
+    an explicit local write or a cloud pull — `signOutUser()` only called Firebase's own
+    `signOut()`, so QSE/PSX/Cash/Bank/Personal Loans/EMI/Funds/Rentals/linked-transfers data
+    all stayed sitting in memory and in localStorage after logging out. The next person to use
+    the browser (or the same person signing into a *different* account) would see the previous
+    account's data — and could hit the existing "cloud looks empty, upload local data?" prompt
+    and push the previous account's data into their own new cloud path. Fixed centrally in
+    `lib/firebase/useAuthState.ts` (the single shared auth listener every module's sync already
+    reads from) rather than only at the explicit "sign out" button: a new `resetAllLocalWorkbooks()`
+    (`lib/resetLocalData.ts`) clears all 9 per-account stores back to empty (in memory *and*
+    in localStorage) whenever `onAuthStateChanged` reports a transition away from a *previously
+    known* signed-in uid — sign-out, or switching accounts. Deliberately does **not** fire on
+    the very first callback of a page load (a returning signed-in user's local data legitimately
+    belongs to them) and deliberately does **not** touch `appearanceStore`/`termsStore` (global
+    browser preferences, not per-account data, per this app's existing design rule). New test
+    `lib/__tests__/resetLocalData.test.ts` seeds every store and confirms a full reset, including
+    that the emptied state is actually persisted to localStorage (not just in-memory) so a reload
+    immediately after logout can't bring the old data back.
+37. **Google logo on the "Sign in with Google" button (2026-08-23), user-reported.** Was a
+    plain blue-circle emoji (🔵) placeholder. New `GoogleIcon` in `components/icons.tsx` — the
+    real 4-color Google "G" mark (fixed brand colors, the one deliberate exception to this
+    file's otherwise-`currentColor` stroke icons) — wired into `SignInModal.tsx`.
+38. **Investigated but could not reproduce: "only a toast shows instead of the sign-in popup"
+    (2026-08-23), user-reported.** Tested both primary sign-in entry points locally — the
+    sidebar's "Not signed in — tap to sign in" button, and a gated write action (adding a Cash
+    entry while signed out) — and both correctly open the real `SignInModalHost` popup, not a
+    toast, with zero console errors. Couldn't find a code path anywhere that shows a toast in
+    place of opening the modal. This may be specific to the live deployed site in a way this
+    session's local dev server didn't reproduce, or may already be stale (fixed by something
+    else today) — needs a specific page/button from the user to chase further if it recurs.
 
 ## Pending
 
@@ -363,6 +420,14 @@ wave" section)**:
     separate Python backend service** for OCR/parsing, hosted on infrastructure the user
     chooses — real new infra outside a single coding session's control). Not started — see
     `MODULES_PLAN.md` §13.
+26. "Only a toast shows instead of the sign-in popup" (see Done item 38) — investigated,
+    couldn't reproduce locally (both primary sign-in entry points open the real modal
+    correctly). Needs a specific page/button from the user to chase further if it recurs.
+27. Editing (not deleting) a linked record directly in its native module (Cash/Bank/QSE/
+    PSX/Rentals) still doesn't propagate to the other side of the link or the link record
+    itself (see Done item 35's "known remaining gap"). Deletion is now safe (cascades
+    correctly from any entry point); editing amounts/dates only fully stays in sync when
+    done from the Transfers page.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

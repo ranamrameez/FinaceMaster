@@ -6,6 +6,7 @@ import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
+import { confirmAndDeleteLinkable } from '../../../lib/linkCascade';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { createEmptyWorkbook } from '../../../store/defaultWorkbook';
 import { useWorkbookStore } from '../../../store/workbookStore';
@@ -414,7 +415,7 @@ function TransfersSection() {
                   <td>{fmtMoney(t.fee, currency)}</td>
                   <td>
                     <button className="btn secondary small" onClick={() => startEdit(t)}>Edit</button>{' '}
-                    <button className="btn secondary small" onClick={() => deleteTransfer(t.id)}><TrashIcon size={12} />Delete</button>
+                    <button className="btn secondary small" onClick={() => confirmAndDeleteLinkable('qse', t.id, () => deleteTransfer(t.id))}><TrashIcon size={12} />Delete</button>
                   </td>
                 </tr>
               ),

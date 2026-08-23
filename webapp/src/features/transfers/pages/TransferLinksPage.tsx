@@ -8,7 +8,8 @@ import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
 import { fmtMoney } from '../../../lib/format';
-import { buildLinkedRecords, isSupportedLinkPair, type LinkSideRecord } from '../../../lib/interEntityLink';
+import { isSupportedLinkPair } from '../../../lib/interEntityLink';
+import { createLinkedTransfer, deleteLinkCascade, updateLinkedTransfer } from '../../../lib/linkCascade';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
 import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
 import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
@@ -18,41 +19,6 @@ import { useWorkbookStore } from '../../../store/workbookStore';
 import { LINK_MODULES, LINK_MODULE_LABELS, type InterEntityTransfer, type LinkModule, type LinkSideConfig } from '../../../types/interEntityTransfer';
 
 const today = () => new Date().toISOString().slice(0, 10);
-
-/** Dispatches a side record into the module store it belongs to. Not pure
- * (touches live stores) and not unit-tested — same split as the rest of the
- * app: `lib/interEntityLink.ts`'s record-building is pure and tested,
- * wiring the result into each store is page-level glue verified live in
- * the browser, matching e.g. the Bank CSV-import wiring in BankPage.tsx. */
-function dispatchAdd(side: LinkSideRecord) {
-  switch (side.module) {
-    case 'cash': return useCashWorkbookStore.getState().addEntry(side.record);
-    case 'bank': return useBankWorkbookStore.getState().addTransaction(side.record);
-    case 'qse': return useWorkbookStore.getState().addTransfer(side.record);
-    case 'psx': return usePSXWorkbookStore.getState().addTransfer(side.record);
-    case 'rentals': return useRentalsWorkbookStore.getState().addEntry(side.record);
-  }
-}
-
-function dispatchUpdate(side: LinkSideRecord) {
-  switch (side.module) {
-    case 'cash': return useCashWorkbookStore.getState().updateEntry(side.record.id, side.record);
-    case 'bank': return useBankWorkbookStore.getState().updateTransaction(side.record.id, side.record);
-    case 'qse': return useWorkbookStore.getState().updateTransfer(side.record.id, side.record);
-    case 'psx': return usePSXWorkbookStore.getState().updateTransfer(side.record.id, side.record);
-    case 'rentals': return useRentalsWorkbookStore.getState().updateEntry(side.record.id, side.record);
-  }
-}
-
-function dispatchRemove(module: LinkModule, id: string) {
-  switch (module) {
-    case 'cash': return useCashWorkbookStore.getState().deleteEntry(id);
-    case 'bank': return useBankWorkbookStore.getState().deleteTransaction(id);
-    case 'qse': return useWorkbookStore.getState().deleteTransfer(id);
-    case 'psx': return usePSXWorkbookStore.getState().deleteTransfer(id);
-    case 'rentals': return useRentalsWorkbookStore.getState().deleteEntry(id);
-  }
-}
 
 interface CurrencyContext {
   cashCurrency: string;
@@ -136,7 +102,6 @@ function SideFields({ label, cfg, onChange }: { label: string; cfg: LinkSideConf
 
 function CreateLinkForm() {
   const ensureSignedIn = useEnsureSignedIn();
-  const addLink = useInterEntityTransfersStore((s) => s.addEntry);
   const bankAccounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
   const cashCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
 
@@ -164,14 +129,8 @@ function CreateLinkForm() {
     if ((from.module === 'rentals' && !from.ref) || (to.module === 'rentals' && !to.ref)) return toast('Add a rental property first.');
     if (!(await ensureSignedIn('Sign in to save transfers.'))) return;
 
-    const ids = { linkId: crypto.randomUUID(), fromRecordId: crypto.randomUUID(), toRecordId: crypto.randomUUID() };
-    const { from: fromRecord, to: toRecord, link } = buildLinkedRecords(
-      { date, fromAmount, toAmount: toAmountEffective, from, to, note: note.trim() || undefined },
-      ids,
-    );
-    dispatchAdd(fromRecord);
-    dispatchAdd(toRecord);
-    addLink(link);
+    const result = createLinkedTransfer({ date, fromAmount, toAmount: toAmountEffective, from, to, note: note.trim() || undefined });
+    if ('error' in result) return toast(`Couldn't create the linked transfer: ${result.error}`);
     toast('Linked transfer created — both sides updated.');
     setFromAmount(0);
     setToAmount(0);
@@ -244,8 +203,6 @@ function moduleLabel(
 
 function LinksList() {
   const links = useInterEntityTransfersStore((s) => s.workbook.entries);
-  const updateLink = useInterEntityTransfersStore((s) => s.updateEntry);
-  const deleteLink = useInterEntityTransfersStore((s) => s.deleteEntry);
   const bankAccounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
   const properties = useRentalsWorkbookStore((s) => s.workbook.settings.properties);
   const cashCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
@@ -270,14 +227,11 @@ function LinksList() {
 
   const saveEdit = (l: InterEntityTransfer) => {
     if (editFromAmount <= 0 || editToAmount <= 0) return toast('Enter both amounts.');
-    const ids = { linkId: l.id, fromRecordId: l.fromRecordId, toRecordId: l.toRecordId };
-    const { from, to, link } = buildLinkedRecords(
+    const result = updateLinkedTransfer(
       { date: editDate, fromAmount: editFromAmount, toAmount: editToAmount, from: l.from, to: l.to, note: editNote.trim() || undefined },
-      ids,
+      l,
     );
-    dispatchUpdate(from);
-    dispatchUpdate(to);
-    updateLink(l.id, link);
+    if ('error' in result) return toast(`Couldn't update the linked transfer: ${result.error}`);
     toast('Linked transfer updated — both sides updated.');
     setEditId(null);
   };
@@ -288,9 +242,7 @@ function LinksList() {
       'Delete this linked transfer?',
     );
     if (!ok) return;
-    dispatchRemove(l.from.module, l.fromRecordId);
-    dispatchRemove(l.to.module, l.toRecordId);
-    deleteLink(l.id);
+    deleteLinkCascade(l);
     toast('Linked transfer deleted.');
   };
 
