@@ -1,19 +1,32 @@
 import type { User } from 'firebase/auth';
 import { useMemo, useRef, useState } from 'react';
+import { Bar } from 'react-chartjs-2';
 import { Card } from '../../../components/Card';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
+import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { CURRENCIES } from '../../../lib/currencies';
 import { parseCSV } from '../../../lib/csv';
 import { fmtMoney } from '../../../lib/format';
 import { confirmAndDeleteLinkable } from '../../../lib/linkCascade';
-import { loanOutstanding, netPositionByCurrency } from '../../../lib/calc/personalLoansModule';
+import {
+  loanOutstanding,
+  netPositionByCurrency,
+  outstandingByLoan,
+  projectPayoff,
+  repaymentsByMonth,
+} from '../../../lib/calc/personalLoansModule';
+import { dlBarV } from '../../../lib/chartLabels';
+import { applyChartTheme } from '../../../lib/chartSetup';
+import { cssVar } from '../../../lib/cssVar';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
+import { useAppearanceStore } from '../../../store/appearanceStore';
 import { usePersonalLoansWorkbookStore } from '../../../store/personalLoansWorkbookStore';
 import type { PersonalLoan, PersonalLoanRepayment } from '../../../types/personalLoansWorkbook';
+import { ChartCard } from '../../qse/components/ChartCard';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -37,6 +50,79 @@ function NetPositionSummary() {
           <div className="sub">{net[code] >= 0 ? 'Net owed to you' : 'Net you owe'}</div>
         </div>
       ))}
+    </div>
+  );
+}
+
+/** README item 23 / MODULES_PLAN.md §11: per-module Analytics, second
+ * module (after Cash). The two charts sketched there — outstanding-by-
+ * person, and a repayment timeline; the "payoff planner" from that same
+ * sketch lives inside `LoanDetail` below instead, since it needs one
+ * specific loan's outstanding balance to project from. */
+function AnalyticsTab() {
+  const loans = usePersonalLoansWorkbookStore((s) => s.workbook.loans);
+  const repayments = usePersonalLoansWorkbookStore((s) => s.workbook.repayments);
+  useAppearanceStore((s) => s.appearance);
+  applyChartTheme();
+
+  const currencies = useMemo(() => [...new Set(loans.map((l) => l.currencyCode))].sort(), [loans]);
+  const [currency, setCurrency] = useState(currencies[0] ?? 'USD');
+  const effectiveCurrency = currencies.includes(currency) ? currency : (currencies[0] ?? currency);
+
+  const outstandingRows = useMemo(
+    () => outstandingByLoan(loans, repayments, effectiveCurrency),
+    [loans, repayments, effectiveCurrency],
+  );
+  const monthlyRepayments = useMemo(
+    () => repaymentsByMonth(loans, repayments, effectiveCurrency),
+    [loans, repayments, effectiveCurrency],
+  );
+
+  if (!currencies.length) {
+    return <p className="footer-note">Add a loan first to see charts here.</p>;
+  }
+
+  return (
+    <div>
+      {currencies.length > 1 && (
+        <Field label="Currency" width={120}>
+          <Select value={effectiveCurrency} onChange={(e) => setCurrency(e.target.value)}>
+            {currencies.map((c) => <option key={c} value={c}>{c}</option>)}
+          </Select>
+        </Field>
+      )}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginTop: 12 }}>
+        <ChartCard title="Outstanding by loan" empty={!outstandingRows.length}>
+          <Bar
+            data={{
+              labels: outstandingRows.map((r) => r.person),
+              datasets: [
+                {
+                  data: outstandingRows.map((r) => r.outstanding),
+                  backgroundColor: outstandingRows.map((r) => (r.direction === 'owed_to_me' ? cssVar('--profit') || '#3ecf8e' : cssVar('--loss') || '#e5484d')),
+                },
+              ],
+            }}
+            options={{
+              indexAxis: 'y',
+              plugins: {
+                legend: { display: false },
+                datalabels: dlBarV((v) => fmtMoney(v, effectiveCurrency)),
+                tooltip: { callbacks: { afterLabel: (ctx) => (outstandingRows[ctx.dataIndex].direction === 'owed_to_me' ? 'Owed to you' : 'You owe') } },
+              },
+            }}
+          />
+        </ChartCard>
+        <ChartCard title="Repayments by month" empty={!monthlyRepayments.length}>
+          <Bar
+            data={{
+              labels: monthlyRepayments.map((f) => f.month),
+              datasets: [{ label: 'Repayments', data: monthlyRepayments.map((f) => f.amount), backgroundColor: '#5aa9c9' }],
+            }}
+            options={{ plugins: { legend: { display: false }, datalabels: dlBarV((v) => fmtMoney(v, effectiveCurrency)) } }}
+          />
+        </ChartCard>
+      </div>
     </div>
   );
 }
@@ -289,6 +375,40 @@ function ImportRepaymentsSection({ loan }: { loan: PersonalLoan }) {
   );
 }
 
+/** The "payoff planner" from MODULES_PLAN.md §11's Personal Loans sketch —
+ * unlike EMI/Loans there's no interest/schedule concept for an informal
+ * debt, so this is just "how many months at this repayment rate clears
+ * what's left," recomputed live as the user types (nothing is saved). */
+function PayoffPlanner({ loan, outstanding }: { loan: PersonalLoan; outstanding: number }) {
+  const [monthly, setMonthly] = useState(0);
+  const projection = monthly > 0 ? projectPayoff(outstanding, monthly, today()) : null;
+
+  if (outstanding <= 0) return null;
+
+  return (
+    <Card style={{ marginBottom: 16 }}>
+      <h4 style={{ marginTop: 0 }}>Payoff planner</h4>
+      <p className="footer-note" style={{ marginTop: 0 }}>
+        A quick "what if" — see how many months it'd take to clear the remaining {fmtMoney(outstanding, loan.currencyCode)}
+        {' '}at a repayment rate you pick. Not saved anywhere, just a live estimate.
+      </p>
+      <Field label={`Planned monthly repayment (${loan.currencyCode})`} width={200}>
+        <TextInput type="number" step="0.01" value={monthly || ''} onChange={(e) => setMonthly(Number(e.target.value))} />
+      </Field>
+      {monthly > 0 && (
+        projection ? (
+          <p style={{ marginBottom: 0 }}>
+            At {fmtMoney(monthly, loan.currencyCode)}/month, this loan would be paid off in{' '}
+            <strong>{projection.months} month{projection.months === 1 ? '' : 's'}</strong>, around <strong>{projection.payoffDate}</strong>.
+          </p>
+        ) : (
+          <p className="footer-note" style={{ marginBottom: 0 }}>Enter a positive monthly amount to project a payoff date.</p>
+        )
+      )}
+    </Card>
+  );
+}
+
 function LoanDetail({ loan, onBack }: { loan: PersonalLoan; onBack: () => void }) {
   const repayments = usePersonalLoansWorkbookStore((s) => s.workbook.repayments);
   const deleteLoan = usePersonalLoansWorkbookStore((s) => s.deleteLoan);
@@ -356,6 +476,7 @@ function LoanDetail({ loan, onBack }: { loan: PersonalLoan; onBack: () => void }
           </div>
         </div>
       </Card>
+      <PayoffPlanner loan={loan} outstanding={outstanding} />
       <h3>Repayments</h3>
       <RepaymentsSection loan={loan} />
     </div>
@@ -482,9 +603,22 @@ export function PersonalLoansPage({
         <LoanDetail loan={liveSelected} onBack={() => setSelected(null)} />
       ) : (
         <div>
-          <NetPositionSummary />
-          <AddLoanForm />
-          <LoanList onSelect={setSelected} />
+          <Tabs
+            tabs={[
+              {
+                key: 'loans',
+                label: 'Loans',
+                content: (
+                  <div>
+                    <NetPositionSummary />
+                    <AddLoanForm />
+                    <LoanList onSelect={setSelected} />
+                  </div>
+                ),
+              },
+              { key: 'analytics', label: 'Analytics', content: <AnalyticsTab /> },
+            ]}
+          />
           <div style={{ marginTop: 16 }}>
             <AccountSection syncStatus={syncStatus} cloudEmpty={cloudEmpty} uploadLocalToCloud={uploadLocalToCloud} />
           </div>

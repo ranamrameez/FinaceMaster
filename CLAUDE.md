@@ -799,6 +799,24 @@ not developer notes) continuously as features ship.
   Next per MODULES_PLAN.md §11's suggested order: Personal Loans, then
   Banking, EMI/Loans, Funds, Rentals — this whole item is "several
   modules' worth of work," treat each module as its own pass.
+- **Personal Loans Analytics tab built (2026-08-23) — second module of
+  the same wave, see README Done item 45, MODULES_PLAN.md §11.**
+  Outstanding-by-loan bar chart (per loan, not netted per person — a
+  person with two loans in opposite directions would otherwise hide
+  which is which, so this deliberately doesn't aggregate), a
+  repayments-by-month bar chart, and a "payoff planner" — the last one
+  lives inside a loan's own detail view (not the Analytics tab) since it
+  needs that specific loan's current outstanding balance, and it's a
+  live unsaved "what if" calculator, never persisted. Two new tested
+  pure functions in `lib/calc/personalLoansModule.ts`:
+  `outstandingByLoan()`, `repaymentsByMonth()`, plus `projectPayoff()`
+  for the planner (simple linear months-to-payoff, no interest/
+  compounding concept — an informal debt isn't EMI/Loans' amortization
+  schedule). Verified live via Playwright: both charts rendered, and the
+  payoff planner's math checked out by hand (700 outstanding at 100/
+  month correctly projected 7 months) — zero console errors.
+  `npm run build` / `npm run test` (138 tests, 7 new) both clean. Next:
+  Banking, EMI/Loans, Funds, Rentals.
 
 ## Live URLs
 

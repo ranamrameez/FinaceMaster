@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PersonalLoan, PersonalLoanRepayment } from '../../../types/personalLoansWorkbook';
-import { loanOutstanding, netPositionByCurrency } from '../personalLoansModule';
+import { loanOutstanding, netPositionByCurrency, outstandingByLoan, projectPayoff, repaymentsByMonth } from '../personalLoansModule';
 
 const loan = (over: Partial<PersonalLoan>): PersonalLoan => ({
   id: 'l1',
@@ -51,5 +51,63 @@ describe('netPositionByCurrency', () => {
     const loans: PersonalLoan[] = [loan({ id: 'l1', direction: 'i_owe', currencyCode: 'USD', principal: 500 })];
     const repayments: PersonalLoanRepayment[] = [{ id: 'r1', loanId: 'l1', date: '2026-02-01', amount: 300 }];
     expect(netPositionByCurrency(loans, repayments).USD).toBe(-200);
+  });
+});
+
+describe('outstandingByLoan', () => {
+  it('returns one row per loan in the requested currency, not netted per person', () => {
+    const loans: PersonalLoan[] = [
+      loan({ id: 'l1', person: 'Bilal', direction: 'owed_to_me', currencyCode: 'USD', principal: 500 }),
+      loan({ id: 'l2', person: 'Bilal', direction: 'i_owe', currencyCode: 'USD', principal: 200 }),
+      loan({ id: 'l3', person: 'Ahmed', direction: 'owed_to_me', currencyCode: 'PKR', principal: 1000 }),
+    ];
+    const rows = outstandingByLoan(loans, [], 'USD');
+    expect(rows).toEqual([
+      { loanId: 'l1', person: 'Bilal', direction: 'owed_to_me', outstanding: 500 },
+      { loanId: 'l2', person: 'Bilal', direction: 'i_owe', outstanding: 200 },
+    ]);
+  });
+
+  it('reflects repayments already made', () => {
+    const loans: PersonalLoan[] = [loan({ id: 'l1', principal: 500 })];
+    const repayments: PersonalLoanRepayment[] = [{ id: 'r1', loanId: 'l1', date: '2026-02-01', amount: 100 }];
+    expect(outstandingByLoan(loans, repayments, 'USD')[0].outstanding).toBe(400);
+  });
+});
+
+describe('repaymentsByMonth', () => {
+  it('sums repayments per calendar month for loans in one currency', () => {
+    const loans: PersonalLoan[] = [loan({ id: 'l1', currencyCode: 'USD' }), loan({ id: 'l2', currencyCode: 'PKR' })];
+    const repayments: PersonalLoanRepayment[] = [
+      { id: 'r1', loanId: 'l1', date: '2026-01-05', amount: 100 },
+      { id: 'r2', loanId: 'l1', date: '2026-01-20', amount: 50 },
+      { id: 'r3', loanId: 'l1', date: '2026-02-01', amount: 75 },
+      { id: 'r4', loanId: 'l2', date: '2026-01-10', amount: 9999 },
+    ];
+    expect(repaymentsByMonth(loans, repayments, 'USD')).toEqual([
+      { month: '2026-01', amount: 150 },
+      { month: '2026-02', amount: 75 },
+    ]);
+  });
+});
+
+describe('projectPayoff', () => {
+  it('projects the payoff date at a given monthly repayment rate', () => {
+    const result = projectPayoff(1000, 200, '2026-01-01');
+    expect(result).toEqual({ months: 5, payoffDate: '2026-06-01' });
+  });
+
+  it('rounds up a fractional number of months', () => {
+    const result = projectPayoff(1000, 300, '2026-01-01');
+    expect(result?.months).toBe(4); // 1000/300 = 3.33 -> 4
+  });
+
+  it('returns zero months when already fully repaid', () => {
+    expect(projectPayoff(0, 100, '2026-01-01')).toEqual({ months: 0, payoffDate: '2026-01-01' });
+  });
+
+  it('returns null when the repayment rate cannot ever clear the balance', () => {
+    expect(projectPayoff(500, 0, '2026-01-01')).toBeNull();
+    expect(projectPayoff(500, -10, '2026-01-01')).toBeNull();
   });
 });

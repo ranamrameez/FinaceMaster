@@ -282,10 +282,18 @@ Informal loans with another person — money you lent out, or money you owe — 
 - **Click a loan to open it**: see principal, outstanding balance, edit the loan itself
   (person, direction, currency, principal, date, note), or delete it (this also deletes its
   logged repayments).
+- **Payoff planner**, inside a loan's detail view: enter a planned monthly repayment amount
+  and see how many months it would take to clear what's left, and roughly when. This is a
+  live "what if" estimate — nothing is saved, and there's no interest involved (an informal
+  loan just gets paid down at whatever rate you type in).
 - **Log repayments** against a loan any time — date + amount — and edit or delete any
   repayment later. Outstanding = principal minus all repayments logged so far.
 - No interest or repayment-schedule automation here by design — if a "personal loan"
   actually has a real repayment schedule, it belongs in EMI/Loans (§18 below) instead.
+- **Analytics tab** (back on the main Personal Loans page, alongside the loan list): an
+  outstanding-by-loan chart (green for money lent out, red for money you owe) and a
+  repayments-by-month chart. A currency picker appears if you have loans in more than one
+  currency.
 - A repayment created from the **Transfers** page (§22) is linked to a Bank or Cash entry —
   deleting it there also removes the matching Bank/Cash record; see §22 for details.
 - **Import repayments (CSV)**: inside a loan's detail view, below its repayments table, import

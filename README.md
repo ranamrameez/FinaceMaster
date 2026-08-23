@@ -512,6 +512,26 @@ FinanceManager live link:
     errors. `npm run build` / `npm run test` (131 tests, 3 new) both clean. **Next up per
     MODULES_PLAN.md §11's suggested build order**: Personal Loans, then Banking, EMI/Loans,
     Funds, Rentals — this is "several modules' worth of work," so treat each as its own pass.
+45. **Personal Loans Analytics tab (2026-08-23), README item 23's second module.** The three
+    pieces sketched in `MODULES_PLAN.md` §11: an outstanding-by-loan bar chart (color-coded
+    green/red by direction — money lent out vs. money owed — and kept **per loan**, not
+    netted per person, since netting two loans with the same person but opposite directions
+    into one bar would hide which is which), a repayments-by-month bar chart, and a "payoff
+    planner." Two new pure functions in `lib/calc/personalLoansModule.ts`:
+    `outstandingByLoan()` and `repaymentsByMonth()` (both tested), plus `projectPayoff()` for
+    the planner — a simple linear "months to clear the remaining balance at a given monthly
+    rate" projection (no interest/compounding concept for an informal debt, unlike EMI/Loans;
+    returns `null` rather than an infinite/NaN result when the rate can't ever clear the
+    balance). New "Analytics" tab (with the same per-currency picker pattern as Cash's, shown
+    only when more than one currency is actually present) added alongside the existing loan
+    list, now both under a `Tabs` wrapper. The payoff planner itself lives inside a loan's own
+    detail view instead of the Analytics tab, since it needs one specific loan's current
+    outstanding balance to project from — it's a live, unsaved "what if" calculator, not a
+    persisted plan. Verified live in the browser: both charts rendered (confirmed via
+    `<canvas>` count), and the payoff planner's math checked out by hand (a loan with 700
+    outstanding at a 100/month input correctly projected "7 months") — zero console errors.
+    `npm run build` / `npm run test` (138 tests, 7 new) both clean. **Next up**: Banking,
+    EMI/Loans, Funds, Rentals.
 
 ## Pending
 
@@ -550,8 +570,8 @@ wave" section)**:
     to exist first. Tracked together with item 23.
 23. Per-module Analytics & Planning for Cash/Banking/Personal Loans/EMI-Loans/Funds/Rentals —
     each currently has just a ledger + basic totals, no charts or planning tools like
-    QSE/PSX's Analytics page or Trade Planner. Largest item in this wave. **Cash done (see
-    Done item 44)**; Banking/Personal Loans/EMI-Loans/Funds/Rentals still need it — see
+    QSE/PSX's Analytics page or Trade Planner. Largest item in this wave. **Cash and Personal
+    Loans done (see Done items 44/45)**; Banking/EMI-Loans/Funds/Rentals still need it — see
     `MODULES_PLAN.md` §11 for a per-module chart/tool sketch.
 24. New Subscriptions module — recurring payments (streaming, gym, etc.) linked to a paying
     entity (a Bank account or Cash), reusing the cross-entity linking mechanism from item 21

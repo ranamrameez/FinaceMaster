@@ -669,9 +669,13 @@ what's actually meaningful for each, don't force identical chart sets):
   balance-over-time reused already-computed `cashByCategory`/`cashRunningLedger` as-is).
 - **Banking**: per-account balance trend, category breakdown, income vs. spend by month,
   a simple budget/spend-plan tool (e.g. monthly category targets vs. actuals).
-- **Personal Loans**: outstanding-by-person bar chart, repayment timeline, a "payoff
-  planner" (like EMI's schedule, but for informal debt — projected payoff date at a given
-  repayment rate).
+- **Personal Loans**: ✅ built 2026-08-23 — see README Done item 45. Outstanding-by-loan bar
+  chart (per loan, not netted per person — a person with two loans in opposite directions
+  would otherwise hide which is which), repayments-by-month bar chart, and a payoff planner
+  living inside a loan's own detail view (a live "months to clear the balance at rate X"
+  projection, not persisted). Two new tested pure functions in
+  `lib/calc/personalLoansModule.ts`: `outstandingByLoan()`, `repaymentsByMonth()`, plus
+  `projectPayoff()` for the planner (linear, no interest concept — unlike EMI's schedule).
 - **EMI/Loans**: amortization schedule chart (principal vs. interest per month — the data
   already exists in `emiSchedule()`, just not visualized), a "what-if" planner (extra
   payment → new payoff date, already partially useful given the existing calc engine).
