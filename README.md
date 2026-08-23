@@ -74,6 +74,11 @@ FinanceManager live link:
     the top of the sidebar and a "© {year} FinanceRecorder" line at the bottom
     (`components/Sidebar.tsx`). The browser tab title was already "FinanceRecorder"
     (`webapp/index.html`), but nothing showed inside the app itself before this.
+20. New-modules plan written (2026-08-23) — see **`MODULES_PLAN.md`** at the repo root:
+    per-module data model sketches, v1 feature scope, and build-order suggestion (Cash →
+    Banking → Funds → Rentals) for Funds/Banking/Cash/Rentals, plus a cross-entity transfer
+    design sketch (item 19). Per the locked sequencing decision (item 19's note), none of
+    those modules get built yet — this is design-ahead, not a start signal.
 
 ## Pending
 
@@ -97,18 +102,13 @@ FinanceManager live link:
     Banking / Cash / Rentals" — with the selected category clearly highlighted, generalizing
     today's QSE/PSX-only `ExchangeSwitcher` chip pair (`components/Sidebar.tsx`). Only "Stock
     Exchanges" would be functional at first (leading to today's QSE/PSX pages); the other
-    categories wait until their modules exist (see item 19 below and item 6's sequencing).
+    categories wait until their modules exist (see item 19 below and the locked sequencing
+    decision under Done item 20).
 19. Cross-entity transaction linking — e.g. a transfer FROM a Bank module TO a stock
     exchange's cash balance, or Cash to Bank, so money moving between modules is one linked
     record instead of two independent, easily-inconsistent entries. Depends on the Funds/
     Banking/Cash modules existing first (none of them are built yet — see the Migration Plan
     Overview below and item 20).
-20. New-modules plan: **per explicit 2026-08-23 sequencing decision, Funds/Banking/Cash/
-    Rentals wait until the Stock Exchanges module (QSE+PSX) is considered finished** — no
-    speculative building ahead of that. A proposed-features/architecture plan for those
-    modules should still be written now (not deferred) so there's a real design to build
-    from once that time comes, rather than starting from scratch — this doc doesn't exist
-    yet.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

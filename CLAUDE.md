@@ -183,10 +183,12 @@ picking the project back up, not a substitute for it. Keep both current.
     Banking/Cash/Rentals modules wait until QSE+PSX (Stock Exchanges) are
     considered finished — don't start building them speculatively ahead of
     that, matching this file's existing "don't build the rest
-    speculatively" guidance from the top of this file. A proposed-features
-    plan doc for those modules should still exist even though the modules
-    themselves don't yet (README item 20) — check whether that doc has
-    been written in a later session before assuming it hasn't.
+    speculatively" guidance from the top of this file. **The proposed-
+    features/architecture plan for those modules is written: see
+    `MODULES_PLAN.md` at the repo root** (per-module data model sketches,
+    v1 scope, suggested build order Cash → Banking → Funds → Rentals, and
+    a cross-entity-transfer design sketch) — read that file, not just this
+    one, before starting any of these modules in a future session.
   - **Not done — still open PSX/README items for a future session:**
     statement PDF/Excel import (item 12), dynamic/filterable charts (item
     17), the Sidebar's category-dropdown redesign for Stock Exchanges/
@@ -218,6 +220,7 @@ picking the project back up, not a substitute for it. Keep both current.
 ## Repo layout
 
 ```
+MODULES_PLAN.md                                                     design plan for Funds/Banking/Cash/Rentals (not built yet — read before starting any of them)
 index.html, PSX_Trade_Planner.html, Risk_Analysis_Calculator.html   legacy static apps (untouched)
 css/, js/, psx/                                                     legacy assets/data
 qse-workbook-backup.json, psx/psx-workbook-backup.json              real user data snapshots (see Data safety below)
