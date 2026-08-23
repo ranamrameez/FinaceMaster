@@ -5,6 +5,7 @@ import { ConfirmDialogHost } from './components/ConfirmDialog';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PSXTickerDatalist } from './components/PSXTickerDatalist';
 import { SignInModalHost } from './components/SignInModal';
+import { TermsGateModal } from './components/TermsGateModal';
 import { TickerDatalist } from './components/TickerDatalist';
 import { Toast } from './components/Toast';
 import { useFirebaseSync } from './lib/firebase/useFirebaseSync';
@@ -64,6 +65,7 @@ function App() {
 
   return (
     <ErrorBoundary>
+      <TermsGateModal />
       <ConfirmDialogHost />
       <SignInModalHost />
       <HashRouter>

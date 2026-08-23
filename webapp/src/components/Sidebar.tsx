@@ -64,6 +64,7 @@ export function Sidebar({
 
   return (
     <div className={`sidebar ${className}`.trim()}>
+      <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 12, letterSpacing: '.01em' }}>FinanceRecorder</div>
       <div className="footer-note" style={{ textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 4 }}>
         Stocks
       </div>
@@ -104,6 +105,9 @@ export function Sidebar({
       <div className="footer-note" style={{ marginTop: 6 }}>
         Estimates only — verify against your official statement.{' '}
         <NavLink to="/legal" style={{ color: 'inherit' }}>Disclaimer &amp; Privacy</NavLink>
+      </div>
+      <div className="footer-note" style={{ marginTop: 6 }}>
+        © {new Date().getFullYear()} FinanceRecorder
       </div>
     </div>
   );

@@ -164,8 +164,35 @@ picking the project back up, not a substitute for it. Keep both current.
     recomputes their entire historical P/L (nothing here is stored
     per-entry, everything is derived live from full transaction history on
     every load) and must never happen silently.
+  - **First-time Terms/Disclaimer gate + app branding (README items 15/16,
+    2026-08-23):** `components/TermsGateModal.tsx` + `store/termsStore.ts`
+    (own localStorage key, same shape as `appearanceStore` — global, not
+    per-account) blocks the whole app behind a condensed risk/liability
+    disclaimer + explicit accept checkbox for every first-time visitor,
+    signed in or not. Mounted at the `App.tsx` root with `zIndex: 1000` —
+    **this had to be higher than the shared `.modal-overlay`'s z-index
+    (100) and the floating Calculator button's `zIndex: 500`**, or the
+    Calculator button would render (and be clickable) right through the
+    gate, defeating it; verified this in the browser by clicking the
+    button's coordinates while the gate was up and confirming nothing
+    opened. Also added a "FinanceRecorder" header at the top of
+    `Sidebar.tsx` and a "© {year} FinanceRecorder" line at the bottom — the
+    app previously had its name in the browser tab title only, nowhere in
+    the UI itself.
+  - **New-modules sequencing (locked 2026-08-23, user-directed):** Funds/
+    Banking/Cash/Rentals modules wait until QSE+PSX (Stock Exchanges) are
+    considered finished — don't start building them speculatively ahead of
+    that, matching this file's existing "don't build the rest
+    speculatively" guidance from the top of this file. A proposed-features
+    plan doc for those modules should still exist even though the modules
+    themselves don't yet (README item 20) — check whether that doc has
+    been written in a later session before assuming it hasn't.
   - **Not done — still open PSX/README items for a future session:**
-    statement PDF/Excel import (item 12), and a shared `stockData/PSX`
+    statement PDF/Excel import (item 12), dynamic/filterable charts (item
+    17), the Sidebar's category-dropdown redesign for Stock Exchanges/
+    Funds/Banking/Cash/Rentals (item 18, only Stock Exchanges functional
+    until those modules exist), cross-entity transaction linking (item 19,
+    blocked on those same modules existing), and a shared `stockData/PSX`
     Firebase node with real fundamentals (PSX's analytics page has no
     Fundamentals card for this reason — QSE's does).
   - **Not yet restructured**: routes are still flat (`/psx/...` bolted on

@@ -61,6 +61,19 @@ FinanceManager live link:
     shows an "(override)" tag when active. This is a single total-fee override, not a fully
     itemized per-line breakdown editor (commission/SST/CDC/etc. individually) — simpler and
     safer for now; a fully itemized editor is a possible future refinement if ever needed.
+15. First-time Terms/Disclaimer acceptance gate (2026-08-23) — a blocking one-time modal
+    (`components/TermsGateModal.tsx`, backed by `store/termsStore.ts`, its own localStorage
+    key like `appearanceStore`) shows condensed risk/liability/no-advice disclaimers to
+    every first-time visitor (signed in or not, since the legal exposure applies to anyone
+    reading the numbers) and requires an explicit checkbox + "Accept & continue" before
+    anything else is usable — no close button, no click-outside dismiss. Mounted at the
+    `App.tsx` root with `z-index: 1000`, deliberately higher than the shared `.modal-overlay`
+    (100) and the floating Calculator button (500), so it can't be clicked through. Full
+    legal text remains at `/legal` (`LegalPage.tsx`, pre-existing) via the sidebar link.
+16. App name + copyright now visible in the UI (2026-08-23) — "FinanceRecorder" header at
+    the top of the sidebar and a "© {year} FinanceRecorder" line at the bottom
+    (`components/Sidebar.tsx`). The browser tab title was already "FinanceRecorder"
+    (`webapp/index.html`), but nothing showed inside the app itself before this.
 
 ## Pending
 
@@ -78,6 +91,24 @@ FinanceManager live link:
 14. Include console-like/super-compact UI themes — a `density` appearance setting
     (comfortable, in `appearanceStore.ts`) exists already, but no dedicated console-style
     compact theme yet.
+17. Charts should be dynamic — filterable (date range, ticker, category) and otherwise more
+    interactive, not just static renders of whatever the page computes. Not started.
+18. Sidebar navigation should become a proper category dropdown — "Stock Exchanges / Funds /
+    Banking / Cash / Rentals" — with the selected category clearly highlighted, generalizing
+    today's QSE/PSX-only `ExchangeSwitcher` chip pair (`components/Sidebar.tsx`). Only "Stock
+    Exchanges" would be functional at first (leading to today's QSE/PSX pages); the other
+    categories wait until their modules exist (see item 19 below and item 6's sequencing).
+19. Cross-entity transaction linking — e.g. a transfer FROM a Bank module TO a stock
+    exchange's cash balance, or Cash to Bank, so money moving between modules is one linked
+    record instead of two independent, easily-inconsistent entries. Depends on the Funds/
+    Banking/Cash modules existing first (none of them are built yet — see the Migration Plan
+    Overview below and item 20).
+20. New-modules plan: **per explicit 2026-08-23 sequencing decision, Funds/Banking/Cash/
+    Rentals wait until the Stock Exchanges module (QSE+PSX) is considered finished** — no
+    speculative building ahead of that. A proposed-features/architecture plan for those
+    modules should still be written now (not deferred) so there's a real design to build
+    from once that time comes, rather than starting from scratch — this doc doesn't exist
+    yet.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank
