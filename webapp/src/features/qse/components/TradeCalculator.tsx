@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { breakEvenPrice, requiredSellPrice, roundTick } from '../../../lib/calc';
+import { PlusIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
+import { Field, TextInput } from '../../../components/ui/Field';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { useWorkbookStore } from '../../../store/workbookStore';
@@ -61,6 +63,7 @@ export function TradeCalculator() {
   const [newShares, setNewShares] = useState(0);
   const [targetAvg, setTargetAvg] = useState(0);
   const [targetSell, setTargetSell] = useState(0);
+  const [priceOverride, setPriceOverride] = useState('');
 
   const held = useMemo(() => positions.filter((p) => p.shares > 0).sort((a, b) => a.ticker.localeCompare(b.ticker)), [positions]);
   const others = useMemo(
@@ -78,10 +81,28 @@ export function TradeCalculator() {
   const invested = position?.invested || 0;
   const avg = shares > 0 ? invested / shares : 0;
   const mp = workbook.marketPrices[ticker] || 0;
+  const currentPrice = priceOverride !== '' ? Number(priceOverride) || 0 : mp;
   const be = shares > 0 ? breakEvenPrice(invested, shares, feePct, tick, calcFee) : 0;
-  const sellFeeNow = mp > 0 ? calcFee(shares * mp, false) : 0;
-  const worth = mp > 0 ? shares * mp - sellFeeNow : 0;
-  const currentPL = mp > 0 ? worth - invested : 0;
+  const sellFeeNow = currentPrice > 0 ? calcFee(shares * currentPrice, false) : 0;
+  const worth = currentPrice > 0 ? shares * currentPrice - sellFeeNow : 0;
+  const currentPL = currentPrice > 0 ? worth - invested : 0;
+
+  // Re-prefill every field from this ticker's current known state (stored
+  // price, full share count) whenever the selected ticker changes, but not
+  // on every recalculation — otherwise typing into a field would keep
+  // getting clobbered by the position's live numbers.
+  useEffect(() => {
+    setPriceOverride('');
+    setSellShares(shares);
+    setSellPrice(mp);
+    setBuyPrice(mp);
+    setNewShares(0);
+    setTargetProfit(0);
+    setTargetAvg(0);
+    setTargetSell(0);
+    setTargetTouched(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ticker]);
 
   const buyAmount = newShares * buyPrice;
   const buyFee = buyPrice > 0 ? calcFee(buyAmount, true) : 0;
@@ -183,21 +204,43 @@ export function TradeCalculator() {
         </select>
       </div>
 
-      {position && (
-        <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 8, marginBottom: 12 }}>
-          <div className="stat-card card"><div className="label">Avg cost</div><div className="value">{fmtPrice(avg)}</div></div>
-          <div className="stat-card card"><div className="label">Break-even</div><div className="value">{fmtPrice(be)}</div></div>
-          <div className="stat-card card"><div className="label">Worth now</div><div className="value">{fmtMoney(worth, currency)}</div></div>
-          <div className="stat-card card"><div className="label">Current P/L</div><div className="value">{fmtMoney(currentPL, currency)}</div></div>
+      {ticker && (
+        <div className="row" style={{ gap: 8, alignItems: 'flex-end', marginBottom: 12 }}>
+          <Field label="Current price *" width={110}>
+            <TextInput
+              type="number"
+              step="0.001"
+              value={priceOverride !== '' ? priceOverride : mp > 0 ? String(mp) : ''}
+              onChange={(e) => setPriceOverride(e.target.value)}
+              style={{ borderColor: currentPrice > 0 ? undefined : 'var(--loss)' }}
+            />
+          </Field>
+          {position && (
+            <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 8, flex: 1 }}>
+              <div className="stat-card card"><div className="label">Avg cost</div><div className="value">{fmtPrice(avg)}</div></div>
+              <div className="stat-card card">
+                <div className="label">Break-even</div>
+                <div className={`value ${currentPrice > 0 ? (currentPrice >= be ? 'pill-buy' : 'pill-sell') : ''}`}>{fmtPrice(be)}</div>
+              </div>
+              <div className="stat-card card"><div className="label">Worth now</div><div className="value">{fmtMoney(worth, currency)}</div></div>
+              <div className="stat-card card"><div className="label">Current P/L</div><div className={`value ${currentPrice > 0 ? (currentPL >= 0 ? 'pill-buy' : 'pill-sell') : ''}`}>{fmtMoney(currentPL, currency)}</div></div>
+            </div>
+          )}
         </div>
       )}
 
       {mode === 'SELL' ? (
         <div>
           <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-            <label>Shares to sell<input type="number" value={sellShares || ''} onChange={(e) => setSellShares(Number(e.target.value))} style={{ width: 90, marginLeft: 6 }} /></label>
-            <label>Sell price<input type="number" step="0.001" value={sellPrice || ''} onChange={(e) => setSellPrice(Number(e.target.value))} style={{ width: 90, marginLeft: 6 }} /></label>
-            <label>Target profit ({currency}, optional)<input type="number" step="0.01" value={targetProfit || ''} onChange={(e) => setTargetProfit(Number(e.target.value))} style={{ width: 90, marginLeft: 6 }} /></label>
+            <Field label="Shares to sell" width={90}>
+              <TextInput type="number" value={sellShares || ''} onChange={(e) => setSellShares(Number(e.target.value))} />
+            </Field>
+            <Field label="Sell price" width={90}>
+              <TextInput type="number" step="0.001" value={sellPrice || ''} onChange={(e) => setSellPrice(Number(e.target.value))} />
+            </Field>
+            <Field label={`Target profit (${currency}, optional)`} width={110}>
+              <TextInput type="number" step="0.01" value={targetProfit || ''} onChange={(e) => setTargetProfit(Number(e.target.value))} />
+            </Field>
           </div>
           {overCap && <p className="footer-note" style={{ color: 'var(--loss)' }}>Capped at {shares} shares held.</p>}
           {solvedSellPriceForProfit !== null && (
@@ -217,12 +260,22 @@ export function TradeCalculator() {
       ) : (
         <div>
           <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-            <label>Buy price<input type="number" step="0.001" value={buyPrice || ''} onChange={(e) => setBuyPrice(Number(e.target.value))} style={{ width: 90, marginLeft: 6 }} /></label>
-            <label>New shares<input type="number" value={newShares || ''} onChange={(e) => setNewShares(Number(e.target.value))} style={{ width: 90, marginLeft: 6 }} /></label>
-            <label>Amount<input type="number" step="0.01" value={buyAmount ? buyAmount.toFixed(2) : ''} onChange={(e) => setNewShares(buyPrice > 0 ? Number(e.target.value) / buyPrice : 0)} style={{ width: 100, marginLeft: 6 }} /></label>
-            <label>Target avg cost (optional)<input type="number" step="0.001" value={targetAvg || ''} onChange={(e) => setTargetAvg(Number(e.target.value))} style={{ width: 90, marginLeft: 6 }} /></label>
+            <Field label="Buy price" width={90}>
+              <TextInput type="number" step="0.001" value={buyPrice || ''} onChange={(e) => setBuyPrice(Number(e.target.value))} />
+            </Field>
+            <Field label="New shares" width={90}>
+              <TextInput type="number" value={newShares || ''} onChange={(e) => setNewShares(Number(e.target.value))} />
+            </Field>
+            <Field label="Amount" width={100}>
+              <TextInput type="number" step="0.01" value={buyAmount ? buyAmount.toFixed(2) : ''} onChange={(e) => setNewShares(buyPrice > 0 ? Number(e.target.value) / buyPrice : 0)} />
+            </Field>
+            <Field label="Target avg cost (optional)" width={90}>
+              <TextInput type="number" step="0.001" value={targetAvg || ''} onChange={(e) => setTargetAvg(Number(e.target.value))} />
+            </Field>
             {mode === 'CYCLE' && (
-              <label>Target sell price<input type="number" step="0.001" value={targetSell || ''} onChange={(e) => { setTargetSell(Number(e.target.value)); setTargetTouched(true); }} style={{ width: 90, marginLeft: 6 }} /></label>
+              <Field label="Target sell price" width={90}>
+                <TextInput type="number" step="0.001" value={targetSell || ''} onChange={(e) => { setTargetSell(Number(e.target.value)); setTargetTouched(true); }} />
+              </Field>
             )}
           </div>
           {solvedSharesForAvg !== null && (
@@ -249,7 +302,7 @@ export function TradeCalculator() {
       )}
 
       <button className="btn" style={{ marginTop: 12 }} onClick={addTrade}>
-        Add {mode === 'SELL' ? 'sell' : mode === 'CYCLE' ? 'buy (cycle)' : 'buy'} to transactions
+        <PlusIcon />Add {mode === 'SELL' ? 'sell' : mode === 'CYCLE' ? 'buy (cycle)' : 'buy'} to transactions
       </button>
       {mode === 'CYCLE' && (
         <p className="footer-note" style={{ marginTop: 4 }}>

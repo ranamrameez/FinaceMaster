@@ -4,6 +4,8 @@ import { Card } from '../../../components/Card';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
+import { LogInIcon, SaveIcon } from '../../../components/icons';
+import { Field, TextInput } from '../../../components/ui/Field';
 import { signOutUser } from '../../../lib/firebase/auth';
 import { firebaseReady } from '../../../lib/firebase/client';
 import { saveProfile } from '../../../lib/firebase/profile';
@@ -48,7 +50,7 @@ function ProfileEditor({ user }: { user: User }) {
       <div
         style={{
           width: 40, height: 40, borderRadius: '50%', background: 'var(--accent-soft)', color: 'var(--on-accent-soft)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, flexShrink: 0, fontSize: 18,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, flex: '0 0 40px', fontSize: 18,
         }}
       >
         {avatarEmoji || initial}
@@ -68,7 +70,7 @@ function ProfileEditor({ user }: { user: User }) {
         title="Pick one or two emoji as your avatar"
       />
       <button className="btn secondary small" disabled={busy || !dirty} onClick={save}>
-        Save profile
+        <SaveIcon size={12} />Save profile
       </button>
       <span className="footer-note">{user.email || user.phoneNumber || user.uid}</span>
     </div>
@@ -153,7 +155,7 @@ function AccountSection({
       <h3 style={{ marginTop: 0 }}>Account</h3>
       <p className="footer-note">{syncStatus}</p>
       <button className="btn" style={{ marginTop: 8 }} onClick={() => requireSignIn()}>
-        Sign in
+        <LogInIcon />Sign in
       </button>
     </Card>
   );
@@ -232,54 +234,21 @@ function AmountSettings() {
     <Card>
       <h3 style={{ marginTop: 0 }}>Amount settings</h3>
       <div className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
-        <label>
-          Fee %
-          <input
-            type="number"
-            step="0.001"
-            value={settings.feePct}
-            onChange={(e) => updateSettings({ feePct: Number(e.target.value) })}
-            style={{ width: 90, marginLeft: 6 }}
-          />
-        </label>
-        <label>
-          Min fee
-          <input
-            type="number"
-            step="0.01"
-            value={settings.minFee}
-            onChange={(e) => updateSettings({ minFee: Number(e.target.value) })}
-            style={{ width: 90, marginLeft: 6 }}
-          />
-        </label>
-        <label>
-          Tick size
-          <input
-            type="number"
-            step="0.001"
-            value={settings.tick}
-            onChange={(e) => updateSettings({ tick: Number(e.target.value) })}
-            style={{ width: 90, marginLeft: 6 }}
-          />
-        </label>
-        <label>
-          Currency
-          <input
-            value={settings.currency}
-            onChange={(e) => updateSettings({ currency: e.target.value })}
-            style={{ width: 70, marginLeft: 6 }}
-          />
-        </label>
-        <label>
-          Default deposit fee
-          <input
-            type="number"
-            step="0.01"
-            value={settings.depositFee}
-            onChange={(e) => updateSettings({ depositFee: Number(e.target.value) })}
-            style={{ width: 90, marginLeft: 6 }}
-          />
-        </label>
+        <Field label="Fee %" width={90}>
+          <TextInput type="number" step="0.001" value={settings.feePct} onChange={(e) => updateSettings({ feePct: Number(e.target.value) })} />
+        </Field>
+        <Field label="Min fee" width={90}>
+          <TextInput type="number" step="0.01" value={settings.minFee} onChange={(e) => updateSettings({ minFee: Number(e.target.value) })} />
+        </Field>
+        <Field label="Tick size" width={90}>
+          <TextInput type="number" step="0.001" value={settings.tick} onChange={(e) => updateSettings({ tick: Number(e.target.value) })} />
+        </Field>
+        <Field label="Currency" width={70}>
+          <TextInput value={settings.currency} onChange={(e) => updateSettings({ currency: e.target.value })} />
+        </Field>
+        <Field label="Default deposit fee" width={90}>
+          <TextInput type="number" step="0.01" value={settings.depositFee} onChange={(e) => updateSettings({ depositFee: Number(e.target.value) })} />
+        </Field>
       </div>
     </Card>
   );

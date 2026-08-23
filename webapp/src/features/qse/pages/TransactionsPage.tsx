@@ -1,8 +1,10 @@
 import { Fragment, useMemo, useState } from 'react';
 import { QSE_TICKER_DATALIST_ID } from '../../../components/TickerDatalist';
 import { confirmDialog } from '../../../components/ConfirmDialog';
+import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
+import { useSortableRows } from '../../../hooks/useSortableRows';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { createEmptyWorkbook } from '../../../store/defaultWorkbook';
@@ -70,16 +72,16 @@ function TransactionRows() {
             style={{ width: 90 }}
           />
           <button className="btn secondary small" onClick={() => setRows((rs) => rs.filter((_, idx) => idx !== i))}>
-            Remove
+            <TrashIcon size={12} />Remove
           </button>
         </div>
       ))}
       <div className="row" style={{ gap: 8 }}>
         <button className="btn secondary" onClick={() => setRows((rs) => [...rs, emptyRow()])}>
-          + Add row
+          <PlusIcon />Add row
         </button>
         <button className="btn" onClick={submit}>
-          Save {rows.length > 1 ? `${rows.length} transactions` : 'transaction'}
+          <SaveIcon />Save {rows.length > 1 ? `${rows.length} transactions` : 'transaction'}
         </button>
       </div>
     </div>
@@ -123,7 +125,7 @@ function TransferForm() {
           setT({ date: today(), type: 'DEPOSIT', gross: 0, fee: depositFee });
         }}
       >
-        Add
+        <PlusIcon />Add
       </button>
     </div>
   );
@@ -156,7 +158,7 @@ function AdjustmentForm() {
           setA({ date: today(), amount: 0, note: '' });
         }}
       >
-        Add
+        <PlusIcon />Add
       </button>
     </div>
   );
@@ -188,7 +190,18 @@ function TransactionList() {
   const tickers = useMemo(() => [...new Set(workbook.transactions.map((t) => t.ticker))].sort(), [workbook.transactions]);
 
   const filtered = filterTicker === 'ALL' ? indexed : indexed.filter((r) => r.tx.ticker === filterTicker);
-  const sorted = [...filtered].sort((a, b) => b.tx.date.localeCompare(a.tx.date));
+  type TxCol = 'date' | 'ticker' | 'action' | 'shares' | 'price' | 'amount';
+  const sortValue = (r: (typeof filtered)[number], col: TxCol): number | string => {
+    switch (col) {
+      case 'ticker': return r.tx.ticker;
+      case 'action': return r.tx.action;
+      case 'shares': return r.tx.shares;
+      case 'price': return r.tx.price;
+      case 'amount': return r.tx.shares * r.tx.price;
+      default: return r.tx.date;
+    }
+  };
+  const { sorted, Th } = useSortableRows(filtered, sortValue, 'date', 'desc');
 
   const groups = useMemo(() => {
     if (groupBy === 'none') return [{ key: '', rows: sorted }];
@@ -250,13 +263,21 @@ function TransactionList() {
           <option value="month">Group by month</option>
         </select>
         <button className="btn secondary" onClick={exportJSON}>Export JSON</button>
-        <button className="btn secondary" onClick={clearAll}>Clear all</button>
+        <button className="btn secondary" onClick={clearAll}><TrashIcon size={12} />Clear all</button>
       </div>
 
       <div className="table-scroll">
         <table>
           <thead>
-            <tr><th>Date</th><th>Ticker</th><th>Action</th><th>Shares</th><th>Price</th><th>Amount</th><th></th></tr>
+            <tr>
+              <Th col="date">Date</Th>
+              <Th col="ticker">Ticker</Th>
+              <Th col="action">Action</Th>
+              <Th col="shares">Shares</Th>
+              <Th col="price">Price</Th>
+              <Th col="amount">Amount</Th>
+              <th></th>
+            </tr>
           </thead>
           <tbody>
             {groups.map((g) => (
@@ -287,7 +308,7 @@ function TransactionList() {
                       <td><input type="number" step="0.001" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })} style={{ width: 80 }} /></td>
                       <td>{fmtMoney(editRow.shares * editRow.price, currency)}</td>
                       <td>
-                        <button className="btn secondary small" onClick={saveEdit}>Save</button>{' '}
+                        <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
                         <button className="btn secondary small" onClick={() => setEditIndex(null)}>Cancel</button>
                       </td>
                     </tr>
@@ -307,7 +328,7 @@ function TransactionList() {
                             if (await confirmDialog('This cannot be undone.', `Delete ${tx.action} ${tx.shares} ${tx.ticker}?`)) deleteTransaction(i);
                           }}
                         >
-                          Delete
+                          <TrashIcon size={12} />Delete
                         </button>
                       </td>
                     </tr>
@@ -329,25 +350,44 @@ function TransfersSection() {
   const workbook = useWorkbookStore((s) => s.workbook);
   const deleteTransfer = useWorkbookStore((s) => s.deleteTransfer);
   const currency = workbook.settings.currency;
+  const indexed = workbook.transfers.map((t, i) => ({ t, i }));
+
+  type TransferCol = 'date' | 'type' | 'gross' | 'fee';
+  const sortValue = (r: (typeof indexed)[number], col: TransferCol): number | string => {
+    switch (col) {
+      case 'type': return r.t.type;
+      case 'gross': return r.t.gross;
+      case 'fee': return r.t.fee;
+      default: return r.t.date;
+    }
+  };
+  const { sorted, Th } = useSortableRows(indexed, sortValue, 'date', 'desc');
+
   return (
     <div>
       <TransferForm />
       <div className="table-scroll" style={{ marginTop: 8 }}>
         <table>
           <thead>
-            <tr><th>Date</th><th>Type</th><th>Gross</th><th>Fee</th><th></th></tr>
+            <tr>
+              <Th col="date">Date</Th>
+              <Th col="type">Type</Th>
+              <Th col="gross">Gross</Th>
+              <Th col="fee">Fee</Th>
+              <th></th>
+            </tr>
           </thead>
           <tbody>
-            {workbook.transfers.map((t, i) => (
+            {sorted.map(({ t, i }) => (
               <tr key={i}>
                 <td>{t.date}</td>
                 <td>{t.type}</td>
                 <td>{fmtMoney(t.gross, currency)}</td>
                 <td>{fmtMoney(t.fee, currency)}</td>
-                <td><button className="btn secondary small" onClick={() => deleteTransfer(i)}>Delete</button></td>
+                <td><button className="btn secondary small" onClick={() => deleteTransfer(i)}><TrashIcon size={12} />Delete</button></td>
               </tr>
             ))}
-            {!workbook.transfers.length && <tr><td colSpan={5} className="footer-note">No transfers yet.</td></tr>}
+            {!sorted.length && <tr><td colSpan={5} className="footer-note">No transfers yet.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -359,24 +399,41 @@ function AdjustmentsSection() {
   const workbook = useWorkbookStore((s) => s.workbook);
   const deleteAdjustment = useWorkbookStore((s) => s.deleteAdjustment);
   const currency = workbook.settings.currency;
+  const indexed = workbook.adjustments.map((a, i) => ({ a, i }));
+
+  type AdjustmentCol = 'date' | 'amount' | 'note';
+  const sortValue = (r: (typeof indexed)[number], col: AdjustmentCol): number | string => {
+    switch (col) {
+      case 'amount': return r.a.amount;
+      case 'note': return r.a.note ?? '';
+      default: return r.a.date;
+    }
+  };
+  const { sorted, Th } = useSortableRows(indexed, sortValue, 'date', 'desc');
+
   return (
     <div>
       <AdjustmentForm />
       <div className="table-scroll" style={{ marginTop: 8 }}>
         <table>
           <thead>
-            <tr><th>Date</th><th>Amount</th><th>Note</th><th></th></tr>
+            <tr>
+              <Th col="date">Date</Th>
+              <Th col="amount">Amount</Th>
+              <Th col="note">Note</Th>
+              <th></th>
+            </tr>
           </thead>
           <tbody>
-            {workbook.adjustments.map((a, i) => (
+            {sorted.map(({ a, i }) => (
               <tr key={i}>
                 <td>{a.date}</td>
                 <td>{fmtMoney(a.amount, currency)}</td>
                 <td>{a.note}</td>
-                <td><button className="btn secondary small" onClick={() => deleteAdjustment(i)}>Delete</button></td>
+                <td><button className="btn secondary small" onClick={() => deleteAdjustment(i)}><TrashIcon size={12} />Delete</button></td>
               </tr>
             ))}
-            {!workbook.adjustments.length && <tr><td colSpan={4} className="footer-note">No adjustments yet.</td></tr>}
+            {!sorted.length && <tr><td colSpan={4} className="footer-note">No adjustments yet.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -387,14 +444,33 @@ function AdjustmentsSection() {
 function CashLedgerSection() {
   const { workbook, ledger } = useQSEDerived();
   const currency = workbook.settings.currency;
+
+  type LedgerCol = 'date' | 'kind' | 'label' | 'amount' | 'balance';
+  const sortValue = (e: (typeof ledger)[number], col: LedgerCol): number | string => {
+    switch (col) {
+      case 'kind': return e.kind;
+      case 'label': return e.label;
+      case 'amount': return e.amount;
+      case 'balance': return e.balance;
+      default: return e.date;
+    }
+  };
+  const { sorted, Th } = useSortableRows(ledger, sortValue, 'date', 'desc');
+
   return (
     <div className="table-scroll">
       <table>
         <thead>
-          <tr><th>Date</th><th>Kind</th><th>Label</th><th>Amount</th><th>Balance</th></tr>
+          <tr>
+            <Th col="date">Date</Th>
+            <Th col="kind">Kind</Th>
+            <Th col="label">Label</Th>
+            <Th col="amount">Amount</Th>
+            <Th col="balance">Balance</Th>
+          </tr>
         </thead>
         <tbody>
-          {[...ledger].reverse().map((e, i) => (
+          {sorted.map((e, i) => (
             <tr key={i}>
               <td>{e.date}</td>
               <td>{e.kind}</td>
@@ -403,7 +479,7 @@ function CashLedgerSection() {
               <td>{fmtMoney(e.balance, currency)}</td>
             </tr>
           ))}
-          {!ledger.length && <tr><td colSpan={5} className="footer-note">Nothing recorded yet.</td></tr>}
+          {!sorted.length && <tr><td colSpan={5} className="footer-note">Nothing recorded yet.</td></tr>}
         </tbody>
       </table>
     </div>

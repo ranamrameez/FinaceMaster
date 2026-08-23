@@ -2,6 +2,7 @@ import type { User } from 'firebase/auth';
 import { NavLink } from 'react-router-dom';
 import { useProfile } from '../lib/firebase/useProfile';
 import { AppearancePanel } from './AppearancePanel';
+import { LogInIcon } from './icons';
 import { requireSignIn } from './SignInModal';
 
 const NAV_ITEMS = [
@@ -56,11 +57,7 @@ export function Sidebar({
       <AppearancePanel />
 
       {user ? (
-        <NavLink
-          to="/settings"
-          className="footer-note"
-          style={{ marginTop: 24, paddingTop: 12, borderTop: '1px solid var(--border)', display: 'block', textDecoration: 'none' }}
-        >
+        <NavLink to="/settings" className="footer-note" style={{ marginTop: 24, display: 'block', textDecoration: 'none' }}>
           {profile.avatarEmoji || '●'} Signed in as <strong>{name}</strong>
         </NavLink>
       ) : (
@@ -68,14 +65,14 @@ export function Sidebar({
           className="footer-note"
           onClick={() => requireSignIn()}
           style={{
-            marginTop: 24, paddingTop: 12, borderTop: '1px solid var(--border)', display: 'block', width: '100%',
-            textAlign: 'left', background: 'transparent', border: 'none', borderTopColor: 'var(--border)', cursor: 'pointer',
+            marginTop: 24, display: 'flex', alignItems: 'center', gap: 6, width: '100%',
+            textAlign: 'left', background: 'transparent', borderLeft: 'none', borderRight: 'none', borderBottom: 'none', cursor: 'pointer',
           }}
         >
-          ○ Not signed in — tap to sign in
+          <LogInIcon size={12} />Not signed in — tap to sign in
         </button>
       )}
-      <div className="footer-note" style={{ marginTop: 8 }}>
+      <div className="footer-note" style={{ marginTop: 8, border: 'none', paddingTop: 0 }}>
         Estimates only — verify against your official statement.{' '}
         <NavLink to="/legal" style={{ color: 'inherit' }}>Disclaimer &amp; Privacy</NavLink>
       </div>

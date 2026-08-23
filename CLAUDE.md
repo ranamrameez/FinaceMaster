@@ -24,6 +24,29 @@ to extend cleanly to the rest; don't build the rest speculatively.
   Transactions (tabbed sub-sections), Watchlist, Analytics (18 charts in 4
   category tabs), Settings, sparklines, popup Trade Calculator, sign-in-gated
   writes, legal/disclaimer content. Live at the URL below.
+- **QSE UI polish pass (2026-08-23):** fixed a user-reported punch list of 16
+  UI/UX issues across the QSE module — sortable headers on every table (new
+  shared `hooks/useSortableRows.tsx`), a real Current Price input + full
+  prefill in the Trade Calculator, break-even color-coding, 5 new dashboard
+  stat cards (all reusing already-computed `cashSummary()` fields, no new
+  calc logic), Alerts moved to page bottom with a first-visit-per-session
+  toast, smaller buttons with small inline SVG icons (new
+  `components/icons.tsx` — no icon library dependency), the `Field`/
+  `TextInput` components wired into the Trade Calculator and Settings forms,
+  several `.row > * { flex:1 }` layout bugs (modal close button and the
+  settings avatar rendering as ellipses instead of circles), and a sign-in
+  success toast. Also found and fixed a real timing bug: `App.tsx` applied
+  `data-theme`/`data-color`/etc to `<html>` inside a `useEffect`, which runs
+  *after* child components (including chart-bearing pages) mount and read
+  those CSS vars — charts could paint with the wrong theme's colors on first
+  load and never update on live theme switches since Dashboard/Analytics
+  weren't subscribed to appearance state. Fixed by applying the attributes
+  synchronously during `App`'s render and subscribing chart-bearing pages
+  to `useAppearanceStore`. **Not visually re-confirmed after the fix** — the
+  session that made this change had no compositing browser pane available:
+  screenshots and canvas pixel reads came back blank, so double-check chart
+  rendering (especially right after a theme switch) next time you're in the
+  app.
 - **PSX module: calc engine + store + types only, no UI yet.** See
   `webapp/src/lib/calc/psxFees.ts` (itemized commission/SST/PSX/NCCPL/SECP/
   CDC/CVT fees, same-day trade netting, CGT filer/non-filer rates — this
@@ -109,6 +132,22 @@ webapp/                                                              the new Rea
 - **HashRouter, not BrowserRouter** — required for GitHub Pages (no
   server-side rewrite available), and it's what makes the subpath deploy
   below work without extra configuration.
+- **Theme/appearance attributes must be applied synchronously, not in a
+  `useEffect`.** `App.tsx`'s `useApplyAppearance()` sets `data-theme` etc. on
+  `document.documentElement` directly in the render body on purpose — a
+  `useEffect` there runs *after* children (including chart components) have
+  already mounted and read the CSS vars those attributes gate, which was a
+  real bug (see Current status above). Any future code that needs a
+  CSS-var-derived value at first paint has the same hazard; either read it
+  synchronously like this, or make the consuming component subscribe to
+  `useAppearanceStore` so it re-renders when appearance changes.
+- **Chart.js `options`/`plugins.datalabels` colors computed from CSS vars
+  (`lib/chartLabels.ts`'s `cssVar()`) are only recomputed when the owning
+  React component re-renders** — react-chartjs-2 doesn't know to recompute
+  them just because `<html>`'s attributes changed elsewhere. Any page with
+  charts (`DashboardPage`, `AnalyticsPage`, `PositionDetail`) subscribes to
+  `useAppearanceStore` for exactly this reason; keep doing that for new
+  chart-bearing components.
 
 ## Local dev setup
 
@@ -175,8 +214,15 @@ reused deliberately, so existing users' cloud data loads unchanged:
 `users/{uid}/profile` (display name + emoji avatar). There's also a shared
 public node `stockData/QSE` (ticker names + fundamentals) that the app
 prefers over the bundled fallback in `lib/stockData/qseSeed.ts` — it hasn't
-actually been seeded in Firebase yet (needs RTDB console access neither
-Claude nor this doc has); reads of it currently fall back gracefully. The
+actually been seeded in Firebase yet, and its RTDB rules likely require
+auth (needs RTDB console access neither Claude nor this doc has to confirm/
+change); reads of it currently fall back gracefully. `useQSEStockData.ts`
+only *attempts* the read once signed in — a signed-out visitor is a
+guaranteed permission-denied, and the Firebase SDK logs that to the console
+itself before app code's own catch runs, which isn't something app code can
+suppress, so the read is skipped entirely for the common signed-out/
+browsing case instead. If a signed-in user still sees a permission-denied
+for this path, that's the RTDB rules and needs the user to change them. The
 Firebase client config in `lib/firebase/client.ts` is intentionally public
 (client-side Firebase keys aren't secrets — access control is enforced by
 RTDB security rules, not by hiding the config).

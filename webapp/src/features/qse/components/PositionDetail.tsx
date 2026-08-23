@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
 import '../../../lib/chartSetup';
+import { SaveIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { breakEvenPrice, computePriceStats, getMarketPrice } from '../../../lib/calc';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
+import { useAppearanceStore } from '../../../store/appearanceStore';
 import { useWorkbookStore } from '../../../store/workbookStore';
 import { useQSEDerived } from '../hooks/useQSEDerived';
 
@@ -26,7 +28,9 @@ export function PositionDetail({ ticker }: { ticker: string }) {
   const setMarketPrice = useWorkbookStore((s) => s.setMarketPrice);
   const ensureSignedIn = useEnsureSignedIn();
   const currency = workbook.settings.currency;
-  const [priceInput, setPriceInput] = useState('');
+  // See DashboardPage: charts only recompute their CSS-var-derived colors
+  // on this component's own re-renders.
+  useAppearanceStore((s) => s.appearance);
 
   const position = positions.find((p) => p.ticker === ticker);
   const shares = position?.shares || 0;
@@ -35,6 +39,11 @@ export function PositionDetail({ ticker }: { ticker: string }) {
   const avg = shares > 0 ? invested / shares : 0;
   const mp = getMarketPrice(ticker, workbook.marketPrices, workbook.transactions);
   const be = shares > 0 ? breakEvenPrice(invested, shares, workbook.settings.feePct, workbook.settings.tick, calcFee) : 0;
+
+  const [priceInput, setPriceInput] = useState(mp > 0 ? String(mp) : '');
+  // Re-prefill from the stored price whenever the ticker changes (this
+  // component is reused across stock pages without remounting).
+  useEffect(() => setPriceInput(mp > 0 ? String(mp) : ''), [ticker]); // eslint-disable-line react-hooks/exhaustive-deps
   const lastBuyPrice = [...workbook.transactions].filter((t) => t.ticker === ticker && t.action === 'BUY').sort((a, b) => a.date.localeCompare(b.date)).pop()?.price || 0;
   const holdingDays = position
     ? Math.max(0, Math.round((new Date(position.lastDate).getTime() - new Date(position.firstDate).getTime()) / 86400000))
@@ -79,13 +88,13 @@ export function PositionDetail({ ticker }: { ticker: string }) {
         <input
           type="number"
           step="0.001"
-          placeholder={mp > 0 ? fmtPrice(mp) : 'Update price'}
+          placeholder="Update price"
           value={priceInput}
           onChange={(e) => setPriceInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && commitPrice()}
           style={{ width: 130 }}
         />
-        <button className="btn secondary small" onClick={commitPrice}>Save price</button>
+        <button className="btn secondary small" onClick={commitPrice}><SaveIcon size={12} />Save price</button>
       </div>
 
       {isOpen && (
@@ -95,7 +104,10 @@ export function PositionDetail({ ticker }: { ticker: string }) {
             <div className="stat-card card"><div className="label">Shares</div><div className="value">{fmt(shares, 0)}</div></div>
             <div className="stat-card card"><div className="label">Avg cost</div><div className="value">{fmtPrice(avg)}</div></div>
             <div className="stat-card card"><div className="label">Invested</div><div className="value">{fmtMoney(invested, currency)}</div></div>
-            <div className="stat-card card"><div className="label">Break-even</div><div className="value">{fmtPrice(be)}</div></div>
+            <div className="stat-card card">
+              <div className="label">Break-even</div>
+              <div className={`value ${mp > 0 ? (mp >= be ? 'pill-buy' : 'pill-sell') : ''}`}>{fmtPrice(be)}</div>
+            </div>
           </div>
           <CompactChart height={90}>
             <Bar

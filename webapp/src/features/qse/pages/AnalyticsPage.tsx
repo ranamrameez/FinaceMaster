@@ -2,6 +2,7 @@ import '../../../lib/chartSetup';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { Card } from '../../../components/Card';
 import { Tabs } from '../../../components/Tabs';
+import { useSortableRows } from '../../../hooks/useSortableRows';
 import { tickerColor } from '../../../lib/cssVar';
 import { dlBarH, dlBarV, dlDoughnut } from '../../../lib/chartLabels';
 import { profitColor } from '../../../lib/chartLabels';
@@ -10,11 +11,15 @@ import { ChartCard } from '../components/ChartCard';
 import { useChartData } from '../hooks/useChartData';
 import { useQSEDerived } from '../hooks/useQSEDerived';
 import { useQSEStockData } from '../hooks/useQSEStockData';
+import { useAppearanceStore } from '../../../store/appearanceStore';
 
 const chartGrid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 } as const;
 
 export function AnalyticsPage() {
   const { workbook, rows, summary, ledger } = useQSEDerived();
+  // See DashboardPage: charts only recompute their CSS-var-derived colors
+  // on this component's own re-renders.
+  useAppearanceStore((s) => s.appearance);
   const { tickerNames, fundamentals } = useQSEStockData();
   const { lifetimeRows, activityByMonth, divByMonth, divByTicker, feesByMonth, holdRows, allocRows } = useChartData();
   const currency = workbook.settings.currency;
@@ -180,36 +185,73 @@ export function AnalyticsPage() {
         ]}
       />
 
-      <Card style={{ marginTop: 16 }}>
-        <h3 style={{ marginTop: 0 }}>Fundamentals (held tickers)</h3>
-        {fundamentalsRows.length ? (
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr><th>Ticker</th><th>Name</th><th>Period</th><th>EPS</th><th>Prior EPS</th><th>DPS</th><th>Status</th></tr>
-              </thead>
-              <tbody>
-                {fundamentalsRows.map((t) => {
-                  const f = fundamentals[t];
-                  return (
-                    <tr key={t}>
-                      <td>{t}</td>
-                      <td>{tickerNames[t] || f.name}</td>
-                      <td>{f.period}</td>
-                      <td>{f.eps === null ? '—' : fmtPrice(f.eps)}</td>
-                      <td>{f.priorEps === null ? '—' : fmtPrice(f.priorEps)}</td>
-                      <td>{f.dps === null ? '—' : fmtPrice(f.dps)}</td>
-                      <td>{f.status}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="footer-note">No fundamentals data for currently held tickers.</p>
-        )}
-      </Card>
+      <FundamentalsCard fundamentalsRows={fundamentalsRows} fundamentals={fundamentals} tickerNames={tickerNames} />
     </div>
+  );
+}
+
+function FundamentalsCard({
+  fundamentalsRows,
+  fundamentals,
+  tickerNames,
+}: {
+  fundamentalsRows: string[];
+  fundamentals: ReturnType<typeof useQSEStockData>['fundamentals'];
+  tickerNames: Record<string, string>;
+}) {
+  type FundCol = 'ticker' | 'name' | 'period' | 'eps' | 'priorEps' | 'dps' | 'status';
+  const sortValue = (t: string, col: FundCol): number | string => {
+    const f = fundamentals[t];
+    switch (col) {
+      case 'name': return tickerNames[t] || f.name;
+      case 'period': return f.period;
+      case 'eps': return f.eps ?? -Infinity;
+      case 'priorEps': return f.priorEps ?? -Infinity;
+      case 'dps': return f.dps ?? -Infinity;
+      case 'status': return f.status;
+      default: return t;
+    }
+  };
+  const { sorted, Th } = useSortableRows(fundamentalsRows, sortValue, 'ticker', 'asc');
+
+  return (
+    <Card style={{ marginTop: 16 }}>
+      <h3 style={{ marginTop: 0 }}>Fundamentals (held tickers)</h3>
+      {sorted.length ? (
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <Th col="ticker">Ticker</Th>
+                <Th col="name">Name</Th>
+                <Th col="period">Period</Th>
+                <Th col="eps">EPS</Th>
+                <Th col="priorEps">Prior EPS</Th>
+                <Th col="dps">DPS</Th>
+                <Th col="status">Status</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((t) => {
+                const f = fundamentals[t];
+                return (
+                  <tr key={t}>
+                    <td>{t}</td>
+                    <td>{tickerNames[t] || f.name}</td>
+                    <td>{f.period}</td>
+                    <td>{f.eps === null ? '—' : fmtPrice(f.eps)}</td>
+                    <td>{f.priorEps === null ? '—' : fmtPrice(f.priorEps)}</td>
+                    <td>{f.dps === null ? '—' : fmtPrice(f.dps)}</td>
+                    <td>{f.status}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="footer-note">No fundamentals data for currently held tickers.</p>
+      )}
+    </Card>
   );
 }

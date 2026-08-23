@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { QSE_TICKER_DATALIST_ID } from '../../../components/TickerDatalist';
+import { PlusIcon, TrashIcon } from '../../../components/icons';
 import { Sparkline } from '../../../components/Sparkline';
 import { toast } from '../../../components/Toast';
+import { useSortableRows } from '../../../hooks/useSortableRows';
 import { getDailyPriceHistory } from '../../../lib/calc';
 import { fmtPrice } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { shortenCompanyName } from '../../../lib/shortenName';
 import { useWorkbookStore } from '../../../store/workbookStore';
-import type { WatchlistItem } from '../../../types/workbook';
+import type { Workbook, WatchlistItem } from '../../../types/workbook';
 import { useQSEStockData } from '../hooks/useQSEStockData';
 
 export function WatchlistPage() {
@@ -58,53 +60,81 @@ export function WatchlistPage() {
             setW({ ticker: '', target: 0, current: 0 });
           }}
         >
-          Add
+          <PlusIcon />Add
         </button>
       </div>
 
-      <div className="table-scroll" style={{ marginTop: 16 }}>
-        <table>
-          <thead>
-            <tr>
-              <th>Ticker</th>
-              <th>Name</th>
-              <th>Trend</th>
-              <th>Target</th>
-              <th>Current</th>
-              <th>Gap</th>
-              <th></th>
+      <WatchlistTable workbook={workbook} tickerNames={tickerNames} removeWatchlistItem={removeWatchlistItem} />
+    </div>
+  );
+}
+
+function WatchlistTable({
+  workbook,
+  tickerNames,
+  removeWatchlistItem,
+}: {
+  workbook: Workbook;
+  tickerNames: Record<string, string>;
+  removeWatchlistItem: (ticker: string) => void;
+}) {
+  const rows = workbook.watchlist.map((item) => {
+    const gap = item.current && item.target ? ((item.current - item.target) / item.target) * 100 : null;
+    const sparkData = getDailyPriceHistory(item.ticker, workbook.priceHistory).map((p) => p.price);
+    return { item, gap, sparkData };
+  });
+
+  type WatchCol = 'ticker' | 'name' | 'target' | 'current' | 'gap';
+  const sortValue = (r: (typeof rows)[number], col: WatchCol): number | string => {
+    switch (col) {
+      case 'name': return tickerNames[r.item.ticker] ? shortenCompanyName(tickerNames[r.item.ticker]) : '';
+      case 'target': return r.item.target;
+      case 'current': return r.item.current ?? -Infinity;
+      case 'gap': return r.gap ?? Infinity;
+      default: return r.item.ticker;
+    }
+  };
+  const { sorted, Th } = useSortableRows(rows, sortValue, 'ticker', 'asc');
+
+  return (
+    <div className="table-scroll" style={{ marginTop: 16 }}>
+      <table>
+        <thead>
+          <tr>
+            <Th col="ticker">Ticker</Th>
+            <Th col="name">Name</Th>
+            <th>Trend</th>
+            <Th col="target">Target</Th>
+            <Th col="current">Current</Th>
+            <Th col="gap">Gap</Th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map(({ item, gap, sparkData }) => (
+            <tr key={item.ticker}>
+              <td><Link to={`/stock/${item.ticker}`}>{item.ticker}</Link></td>
+              <td style={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>{tickerNames[item.ticker] ? shortenCompanyName(tickerNames[item.ticker]) : ''}</td>
+              <td style={{ width: 82 }}><Sparkline data={sparkData} formatValue={fmtPrice} /></td>
+              <td>{fmtPrice(item.target)}</td>
+              <td>{item.current ? fmtPrice(item.current) : '—'}</td>
+              <td className={gap !== null && gap <= 0 ? 'pill-buy' : ''}>{gap !== null ? `${gap.toFixed(1)}%` : '—'}</td>
+              <td>
+                <button className="btn secondary small" onClick={() => removeWatchlistItem(item.ticker)}>
+                  <TrashIcon size={12} />Remove
+                </button>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {workbook.watchlist.map((item) => {
-              const gap = item.current && item.target ? ((item.current - item.target) / item.target) * 100 : null;
-              const sparkData = getDailyPriceHistory(item.ticker, workbook.priceHistory).map((p) => p.price);
-              return (
-                <tr key={item.ticker}>
-                  <td><Link to={`/stock/${item.ticker}`}>{item.ticker}</Link></td>
-                  <td>{tickerNames[item.ticker] ? shortenCompanyName(tickerNames[item.ticker]) : ''}</td>
-                  <td><Sparkline data={sparkData} formatValue={fmtPrice} /></td>
-                  <td>{fmtPrice(item.target)}</td>
-                  <td>{item.current ? fmtPrice(item.current) : '—'}</td>
-                  <td className={gap !== null && gap <= 0 ? 'pill-buy' : ''}>{gap !== null ? `${gap.toFixed(1)}%` : '—'}</td>
-                  <td>
-                    <button className="btn secondary small" onClick={() => removeWatchlistItem(item.ticker)}>
-                      Remove
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-            {!workbook.watchlist.length && (
-              <tr>
-                <td colSpan={7} className="footer-note">
-                  Watchlist is empty.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+          ))}
+          {!sorted.length && (
+            <tr>
+              <td colSpan={7} className="footer-note">
+                Watchlist is empty.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
     </div>
   );
 }

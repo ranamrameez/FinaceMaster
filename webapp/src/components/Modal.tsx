@@ -20,7 +20,7 @@ export function Modal({
             style={{
               background: 'transparent', border: 'none', color: 'var(--muted)', cursor: 'pointer',
               width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              borderRadius: '50%', fontSize: 18, lineHeight: 1, flexShrink: 0, padding: 0,
+              borderRadius: '50%', fontSize: 18, lineHeight: 1, flex: '0 0 28px', padding: 0,
             }}
             onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--panel-2)')}
             onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}

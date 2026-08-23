@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sparkline } from '../../../components/Sparkline';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
+import { useSortableRows } from '../../../hooks/useSortableRows';
 import { breakEvenPrice, getDailyPriceHistory, getMarketPrice } from '../../../lib/calc';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
@@ -20,7 +21,6 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
   const ensureSignedIn = useEnsureSignedIn();
   const currency = workbook.settings.currency;
   const { feePct, tick } = workbook.settings;
-  const [sort, setSort] = useState<{ col: SortCol; dir: 'asc' | 'desc' }>({ col: 'status', dir: 'desc' });
 
   // Merges what used to be a separate "Exit Board" (break-even / +1% / +2%
   // / +5% exit targets, status) directly into the holdings table — same
@@ -75,22 +75,7 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
       default: return r.ticker;
     }
   };
-  const sorted = useMemo(() => {
-    const copy = [...rows];
-    copy.sort((a, b) => {
-      const av = sortValue(a, sort.col);
-      const bv = sortValue(b, sort.col);
-      const cmp = typeof av === 'string' ? av.localeCompare(bv as string) : (av as number) - (bv as number);
-      return sort.dir === 'asc' ? cmp : -cmp;
-    });
-    return copy;
-  }, [rows, sort]);
-  const toggleSort = (col: SortCol) =>
-    setSort((s) => (s.col === col ? { col, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { col, dir: col === 'ticker' ? 'asc' : 'desc' }));
-  const arrow = (col: SortCol) => (sort.col === col ? (sort.dir === 'asc' ? ' ▲' : ' ▼') : '');
-  const th = (col: SortCol, label: string) => (
-    <th onClick={() => toggleSort(col)} style={{ cursor: 'pointer' }}>{label}{arrow(col)}</th>
-  );
+  const { sorted, Th } = useSortableRows(rows, sortValue, 'status', 'desc');
 
   if (!sorted.length) return <p className="footer-note">No open positions.</p>;
 
@@ -99,24 +84,26 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
       <table>
         <thead>
           <tr>
-            {th('ticker', 'Ticker')}
+            <Th col="ticker">Ticker</Th>
             <th>Trend</th>
             <th>Shares</th>
             <th>Avg Cost</th>
-            {th('market', 'Market Price')}
-            {th('be', 'Break-even')}
-            {th('net', 'Net P/L')}
-            {th('t1', '+1% exit')}
-            {th('t2', '+2% exit')}
-            {th('t3', '+5% exit')}
-            {th('status', 'Status')}
+            <Th col="market">Market Price</Th>
+            <Th col="be">Break-even</Th>
+            <Th col="net">Net P/L</Th>
+            <Th col="t1">+1% exit</Th>
+            <Th col="t2">+2% exit</Th>
+            <Th col="t3">+5% exit</Th>
+            <Th col="status">Status</Th>
           </tr>
         </thead>
         <tbody>
           {sorted.map((r) => (
             <tr key={r.ticker} style={{ cursor: 'pointer' }}>
-              <td onClick={() => onSelect(r.ticker)}>{r.ticker} <span className="footer-note">{tickerNames[r.ticker] ? shortenCompanyName(tickerNames[r.ticker]) : ''}</span></td>
-              <td onClick={(e) => e.stopPropagation()}><Sparkline data={r.sparkData} formatValue={fmtPrice} /></td>
+              <td onClick={() => onSelect(r.ticker)} style={{ maxWidth: 190 }}>
+                {r.ticker} <span className="footer-note" style={{ display: 'inline-block', maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'bottom' }}>{tickerNames[r.ticker] ? shortenCompanyName(tickerNames[r.ticker]) : ''}</span>
+              </td>
+              <td onClick={(e) => e.stopPropagation()} style={{ width: 82 }}><Sparkline data={r.sparkData} formatValue={fmtPrice} /></td>
               <td onClick={() => onSelect(r.ticker)}>{fmt(r.shares, 0)}</td>
               <td onClick={() => onSelect(r.ticker)}>{fmtPrice(r.avgCost)}</td>
               <td onClick={(e) => e.stopPropagation()}>
@@ -139,7 +126,7 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
                   }}
                 />
               </td>
-              <td onClick={() => onSelect(r.ticker)}>{fmtPrice(r.be)}</td>
+              <td onClick={() => onSelect(r.ticker)} className={r.hasMarket ? (r.mp >= r.be ? 'pill-buy' : 'pill-sell') : ''}>{fmtPrice(r.be)}</td>
               <td onClick={() => onSelect(r.ticker)} className={Number.isFinite(r.net) ? (r.net >= 0 ? 'pill-buy' : 'pill-sell') : ''}>
                 {Number.isFinite(r.net) ? fmtMoney(r.net, currency) : '—'}
               </td>
@@ -161,14 +148,38 @@ function ClosedPositionsTable({ onSelect }: { onSelect: (ticker: string) => void
   const currency = workbook.settings.currency;
   const closed = positions.filter((p) => p.shares === 0 && p.sellCount > 0);
 
+  type ClosedCol = 'ticker' | 'name' | 'bought' | 'sold' | 'realized' | 'fees' | 'first' | 'last';
+  const sortValue = (p: (typeof closed)[number], col: ClosedCol): number | string => {
+    switch (col) {
+      case 'name': return tickerNames[p.ticker] ? shortenCompanyName(tickerNames[p.ticker]) : '';
+      case 'bought': return p.totalBoughtShares;
+      case 'sold': return p.totalSoldShares;
+      case 'realized': return p.realized;
+      case 'fees': return p.buyFees + p.sellFees;
+      case 'first': return p.firstDate;
+      case 'last': return p.lastDate;
+      default: return p.ticker;
+    }
+  };
+  const { sorted, Th } = useSortableRows(closed, sortValue, 'last', 'desc');
+
   return (
     <div className="table-scroll">
       <table>
         <thead>
-          <tr><th>Ticker</th><th>Name</th><th>Bought</th><th>Sold</th><th>Realized P/L</th><th>Fees paid</th><th>First trade</th><th>Last trade</th></tr>
+          <tr>
+            <Th col="ticker">Ticker</Th>
+            <Th col="name">Name</Th>
+            <Th col="bought">Bought</Th>
+            <Th col="sold">Sold</Th>
+            <Th col="realized">Realized P/L</Th>
+            <Th col="fees">Fees paid</Th>
+            <Th col="first">First trade</Th>
+            <Th col="last">Last trade</Th>
+          </tr>
         </thead>
         <tbody>
-          {closed.map((p) => (
+          {sorted.map((p) => (
             <tr key={p.ticker} style={{ cursor: 'pointer' }} onClick={() => onSelect(p.ticker)}>
               <td>{p.ticker}</td>
               <td>{tickerNames[p.ticker] ? shortenCompanyName(tickerNames[p.ticker]) : ''}</td>
@@ -180,7 +191,7 @@ function ClosedPositionsTable({ onSelect }: { onSelect: (ticker: string) => void
               <td>{p.lastDate}</td>
             </tr>
           ))}
-          {!closed.length && (
+          {!sorted.length && (
             <tr><td colSpan={8} className="footer-note">No closed positions yet.</td></tr>
           )}
         </tbody>
@@ -196,6 +207,7 @@ export function PortfolioPage() {
   return (
     <div>
       <h1 className="pagetitle">Portfolio</h1>
+      <p className="pagesub">Open positions and closed trade history.</p>
       <Tabs
         tabs={[
           { key: 'open', label: 'Holdings', content: <OpenPositionsTable onSelect={goToStock} /> },

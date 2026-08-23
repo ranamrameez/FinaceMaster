@@ -1,17 +1,19 @@
 import '../../../lib/chartSetup';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { Card, StatCard } from '../../../components/Card';
 import { Sparkline } from '../../../components/Sparkline';
+import { toast } from '../../../components/Toast';
 import { getDailyPriceHistory } from '../../../lib/calc';
 import { dlBarV, dlDoughnut, dlLine, profitColor } from '../../../lib/chartLabels';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { shortenCompanyName } from '../../../lib/shortenName';
-import { AlertsBox } from '../components/AlertsBox';
+import { AlertsBox, useQSEAlerts } from '../components/AlertsBox';
 import { ChartCard } from '../components/ChartCard';
 import { useQSEDerived } from '../hooks/useQSEDerived';
 import { useQSEStockData } from '../hooks/useQSEStockData';
+import { useAppearanceStore } from '../../../store/appearanceStore';
 
 const INVEST_PALETTE = ['#3d4b58', '#c9a227', '#34c77b', '#3b6bd6', '#8a97a3', '#e5484d', '#7b5cd6', '#2ea3a3'];
 
@@ -47,8 +49,10 @@ function HoldingsCard() {
             <tbody>
               {held.map((r) => (
                 <tr key={r.ticker} style={{ cursor: 'pointer' }} onClick={() => navigate(`/stock/${r.ticker}`)}>
-                  <td>{r.ticker} <span className="footer-note">{tickerNames[r.ticker] ? shortenCompanyName(tickerNames[r.ticker]) : ''}</span></td>
-                  <td><Sparkline data={r.sparkData} formatValue={fmtPrice} /></td>
+                  <td style={{ maxWidth: 190 }}>
+                    {r.ticker} <span className="footer-note" style={{ display: 'inline-block', maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'bottom' }}>{tickerNames[r.ticker] ? shortenCompanyName(tickerNames[r.ticker]) : ''}</span>
+                  </td>
+                  <td style={{ width: 82 }}><Sparkline data={r.sparkData} formatValue={fmtPrice} /></td>
                   <td>{fmt(r.shares, 0)}</td>
                   <td>{r.marketPrice > 0 ? fmtPrice(r.marketPrice) : '—'}</td>
                   <td className={r.profit >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(r.profit, currency)}</td>
@@ -67,6 +71,25 @@ function HoldingsCard() {
 export function DashboardPage() {
   const { workbook, rows, summary, realizedSeries } = useQSEDerived();
   const currency = workbook.settings.currency;
+  const alerts = useQSEAlerts();
+  // Re-render (and so recompute chart colors from CSS vars) whenever the
+  // user changes theme/color/density — chart.js options are only
+  // recomputed on this component's own re-renders, not just because the
+  // <html> attributes changed elsewhere.
+  useAppearanceStore((s) => s.appearance);
+  const totalInvestment = rows.reduce((s, r) => s + r.invested, 0);
+  const portfolioROIPct = totalInvestment > 0 ? (summary.unrealizedPL / totalInvestment) * 100 : 0;
+
+  // Auto-hide popup once per browser session on first Dashboard visit,
+  // summarizing alerts — the persistent Alerts card further down stays
+  // available any time after that.
+  useEffect(() => {
+    if (alerts.length && !sessionStorage.getItem('qse-alerts-shown')) {
+      sessionStorage.setItem('qse-alerts-shown', '1');
+      toast(`${alerts.length} alert${alerts.length > 1 ? 's' : ''} need your attention — see Alerts below.`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div>
@@ -79,14 +102,14 @@ export function DashboardPage() {
         <StatCard label="Realized P/L" value={fmtMoney(summary.realizedPL, currency)} />
         <StatCard label="Unrealized P/L" value={fmtMoney(summary.unrealizedPL, currency)} />
         <StatCard label="Net P/L" value={fmtMoney(summary.netPL, currency)} />
+        <StatCard label="Total Deposits" value={fmtMoney(summary.totalInward, currency)} />
+        <StatCard label="Total Fees" value={fmtMoney(summary.totalCharges, currency)} />
+        <StatCard label="Rewards" value={fmtMoney(summary.totalRewards, currency)} />
+        <StatCard label="Open Positions" value={fmt(rows.length, 0)} />
+        <StatCard label="Portfolio ROI" value={`${portfolioROIPct.toFixed(1)}%`} />
       </div>
 
       <HoldingsCard />
-
-      <Card style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0 }}>Alerts</h3>
-        <AlertsBox />
-      </Card>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
         <ChartCard title="Allocation by ticker (cost basis)" empty={!rows.length}>
@@ -125,6 +148,11 @@ export function DashboardPage() {
           />
         </ChartCard>
       </div>
+
+      <Card style={{ marginTop: 16 }}>
+        <h3 style={{ marginTop: 0 }}>Alerts</h3>
+        <AlertsBox />
+      </Card>
 
       <div style={{ marginTop: 16, textAlign: 'center' }}>
         <Link to="/analytics" className="btn secondary">

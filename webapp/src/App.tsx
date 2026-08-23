@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { HashRouter, Route, Routes } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
 import { ConfirmDialogHost } from './components/ConfirmDialog';
@@ -21,14 +20,20 @@ import { LegalPage } from './pages/LegalPage';
 function useApplyAppearance() {
   const appearance = useAppearanceStore((s) => s.appearance);
 
-  useEffect(() => {
-    const root = document.documentElement;
-    root.setAttribute('data-theme', appearance.theme);
-    root.setAttribute('data-font', appearance.font);
-    root.setAttribute('data-fontsize', appearance.fontSize);
-    root.setAttribute('data-color', appearance.colorTheme);
-    root.setAttribute('data-density', appearance.density || 'comfortable');
-  }, [appearance]);
+  // Applied directly during render (not in a useEffect): chart-bearing
+  // children mount and read these CSS variables via their own effects,
+  // which run *before* a useEffect in this parent would — a real bug
+  // where charts picked up the theme-less :root default colors (the dark
+  // palette) on first paint regardless of the user's actual theme,
+  // producing near-black datalabel boxes on a light theme. Setting the
+  // attributes synchronously here guarantees they're correct before any
+  // child ever paints.
+  const root = document.documentElement;
+  root.setAttribute('data-theme', appearance.theme);
+  root.setAttribute('data-font', appearance.font);
+  root.setAttribute('data-fontsize', appearance.fontSize);
+  root.setAttribute('data-color', appearance.colorTheme);
+  root.setAttribute('data-density', appearance.density || 'comfortable');
 }
 
 // Browsing, calculators, and (later) read-only features like news/analysis

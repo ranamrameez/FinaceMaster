@@ -2,13 +2,15 @@ import { fmtPrice } from '../../../lib/format';
 import { useWorkbookStore } from '../../../store/workbookStore';
 import { useQSEDerived } from '../hooks/useQSEDerived';
 
-interface Alert {
+export interface Alert {
   ticker: string;
   message: string;
   cls: 'pos' | 'neg';
 }
 
-export function AlertsBox() {
+/** Extracted so DashboardPage can know the alert count (for the first-visit
+ * toast) without re-implementing this logic. */
+export function useQSEAlerts(): Alert[] {
   const { rows } = useQSEDerived();
   const watchlist = useWorkbookStore((s) => s.workbook.watchlist);
 
@@ -31,6 +33,12 @@ export function AlertsBox() {
       });
     }
   });
+
+  return alerts;
+}
+
+export function AlertsBox() {
+  const alerts = useQSEAlerts();
 
   if (!alerts.length) {
     return <p className="footer-note">No alerts right now — nothing above ±5% or at a watchlist target.</p>;

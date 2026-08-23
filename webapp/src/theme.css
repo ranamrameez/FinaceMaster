@@ -465,14 +465,15 @@
   .row{display:flex; gap:12px;}
   .row > *{flex:1;}
   .btn{
-    display:inline-flex; align-items:center; justify-content:center; width:auto;
-    background:color-mix(in srgb, var(--accent) 65%, #000); color:#fff; border:none; padding:11px 17px; border-radius:7px;
-    font-weight:600; font-size:14px; cursor:pointer; font-family:var(--body);
+    display:inline-flex; align-items:center; justify-content:center; gap:6px; width:auto;
+    background:color-mix(in srgb, var(--accent) 65%, #000); color:#fff; border:none; padding:8px 13px; border-radius:7px;
+    font-weight:600; font-size:13px; cursor:pointer; font-family:var(--body);
   }
+  .btn svg{flex-shrink:0;}
   .btn:hover{filter:brightness(1.1);}
   .btn.secondary{background:var(--panel-2); border:1px solid var(--border); color:var(--text);}
   .btn.ghost{background:transparent; border:1px solid var(--border); color:var(--muted);}
-  .btn.small{padding:6px 11px; font-size:12.5px;}
+  .btn.small{padding:5px 9px; font-size:12px;}
   .btn.danger{background:color-mix(in srgb, var(--loss) 16%, var(--panel)); color:var(--loss); border:1px solid color-mix(in srgb, var(--loss) 45%, var(--panel));}
 
   .result-line{display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px dashed var(--border); font-family:var(--mono); font-size:14.5px; line-height:1.4;}

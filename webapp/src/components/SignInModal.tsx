@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { create } from 'zustand';
 import { resetPassword, signInWithEmail, signInWithGoogle, signUpWithEmail } from '../lib/firebase/auth';
 import { firebaseReady } from '../lib/firebase/client';
+import { LogInIcon } from './icons';
 import { Modal } from './Modal';
 import { toast } from './Toast';
 
@@ -45,6 +46,7 @@ export function SignInModalHost() {
     try {
       await fn();
       close(true);
+      toast('Signed in.');
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Something went wrong.');
     } finally {
@@ -69,7 +71,7 @@ export function SignInModalHost() {
       </div>
       <div className="row" style={{ gap: 8, marginTop: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <button className="btn" disabled={busy} onClick={() => run(() => signInWithEmail(email, password))}>
-          Sign in
+          <LogInIcon />Sign in
         </button>
         <button className="btn secondary" disabled={busy} onClick={() => run(() => signUpWithEmail(email, password))}>
           Sign up
