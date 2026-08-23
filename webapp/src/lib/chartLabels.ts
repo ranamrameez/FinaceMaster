@@ -1,9 +1,23 @@
 import { cssVar } from './cssVar';
 
 // On-chart value labels via chartjs-plugin-datalabels. display:'auto' lets
-// the plugin drop labels that would overlap on dense charts. clamp:true
-// keeps a label that would land outside the plot area pinned just inside
-// it instead of getting clipped. Ported from the legacy app's dl* helpers.
+// the plugin drop labels that would overlap *each other*, but with many
+// bars/points crammed into one card-sized chart, each individual label can
+// still render without literally overlapping its neighbor while the whole
+// row reads as a wall of unreadable numbers sitting on top of (and hiding)
+// the axis ticks underneath — a real cluttered-chart report, not something
+// 'auto' catches on its own. Past this many points in a dataset, per-point
+// labels stop being useful anyway (there's no room to read them) and the
+// axis + tooltip-on-hover communicate the same values without the clutter.
+const MAX_LABELED_POINTS = 10;
+
+function autoDisplay(context: { dataset: { data: unknown[] } }): boolean | 'auto' {
+  return context.dataset.data.length <= MAX_LABELED_POINTS ? 'auto' : false;
+}
+
+// clamp:true keeps a label that would land outside the plot area pinned
+// just inside it instead of getting clipped. Ported from the legacy app's
+// dl* helpers.
 export function dlBase(formatter: (v: number) => string, extra: Record<string, unknown> = {}) {
   // Solid --panel-2 (not a translucent --panel + alpha suffix) — alpha
   // blending a light panel color at ~85% opacity over a dark bar/line
@@ -12,7 +26,7 @@ export function dlBase(formatter: (v: number) => string, extra: Record<string, u
   // top of that muddy result has poor/no contrast. A solid, already-themed
   // "elevated surface" color has no such compositing risk.
   return {
-    display: 'auto',
+    display: autoDisplay,
     clamp: true,
     color: cssVar('--text') || '#ECECEE',
     backgroundColor: cssVar('--panel-2') || cssVar('--panel') || '#12161b',

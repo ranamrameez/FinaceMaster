@@ -871,6 +871,21 @@ not developer notes) continuously as features ship.
   Rentals/Funds each get their own). Edit-row currency selects
   deliberately untouched — editing an existing record's currency isn't
   "what should a new record default to."
+- **Cluttered chart datalabels fixed app-wide (2026-08-23), user-
+  reported — see README Done item 50.** The real cause wasn't the axis
+  tick labels — it was `chartjs-plugin-datalabels`' per-point value
+  labels: `display: 'auto'` only hides labels overlapping *each other*,
+  so a chart with many bars/points (confirmed with a real Playwright
+  screenshot on Cash's Analytics charts using 18 months of seeded data)
+  could render each label without technically overlapping its neighbor
+  while the whole row still looked like an unreadable wall of numbers
+  hiding the axis underneath. Fixed once in `lib/chartLabels.ts`'s
+  `dlBase()` (shared by every `dl*` helper, so this fixes every chart
+  app-wide): `display` is now a function that hides labels entirely
+  once a dataset has more than 10 points, since per-point labels stop
+  being readable past that anyway and the axis + tooltip already carry
+  the same information. Verified with a real before/after screenshot
+  comparison, not just described intent.
 
 ## Live URLs
 

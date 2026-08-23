@@ -612,6 +612,30 @@ FinanceManager live link:
     PKR in Cash's form persists to `localStorage`, and a full page reload correctly shows PKR
     pre-selected in that same form — zero console errors. `npm run build` / `npm run test`
     (146 tests, 3 new) both clean.
+50. **Cluttered chart datalabels fixed across every chart in the app (2026-08-23, user-
+    reported: "charts look ugly with cluttered x,y scale labels").** The real cause wasn't the
+    axis tick labels themselves — it was `chartjs-plugin-datalabels`' per-bar/per-point value
+    labels. `display: 'auto'` only hides labels that directly overlap *each other*; with many
+    bars/points crammed into one card-sized chart (e.g. 18 months of data), each label could
+    render without technically overlapping its immediate neighbor while the whole row still
+    read as an unreadable wall of numbers sitting on top of (and visually hiding) the axis
+    ticks underneath — confirmed with a real Playwright screenshot showing exactly this on
+    Cash's new "Income vs. expense by month" and "Balance over time" charts (see Done item 44)
+    with 18 months of seeded data. Fixed centrally in `lib/chartLabels.ts`'s `dlBase()` —
+    shared by every `dl*` helper (`dlBarV`/`dlBarH`/`dlLine`/`dlDoughnut`/`dlStack`), so this
+    fixes every chart in the app, not just Cash's — by changing `display` from the static
+    `'auto'` to a function that checks `context.dataset.data.length`: past 10 points in a
+    dataset, per-point labels stop being useful anyway (there's no room to read them, and the
+    axis + tooltip-on-hover already communicate the same values), so labels are hidden
+    entirely rather than rendered illegibly; at or under 10 points, the original `'auto'`
+    behavior is unchanged. Verified with a before/after screenshot comparison (not just a
+    described intent) using seeded 18-month Cash data: before, the bar/line charts showed
+    overlapping "536.00 USD"/"515.00 USD"-style label clusters obscuring the y-axis numbers;
+    after, both charts show clean axis-only labels, while the 2-category doughnut chart (well
+    under the 10-point threshold) still correctly shows its per-slice value labels — confirming
+    the fix only hides labels where they'd actually be clutter, not universally. `npm run
+    build` / `npm run test` (146 tests, unchanged — a display-threshold tweak isn't separately
+    unit-tested, verified visually instead) both clean.
 
 ## Pending
 
