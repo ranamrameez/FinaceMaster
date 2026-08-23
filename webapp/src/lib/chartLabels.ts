@@ -5,12 +5,17 @@ import { cssVar } from './cssVar';
 // keeps a label that would land outside the plot area pinned just inside
 // it instead of getting clipped. Ported from the legacy app's dl* helpers.
 export function dlBase(formatter: (v: number) => string, extra: Record<string, unknown> = {}) {
-  const panel = cssVar('--panel');
+  // Solid --panel-2 (not a translucent --panel + alpha suffix) — alpha
+  // blending a light panel color at ~85% opacity over a dark bar/line
+  // segment underneath can still composite to a muddy near-black box, which
+  // read as "black boxes with invisible text" since the theme text color on
+  // top of that muddy result has poor/no contrast. A solid, already-themed
+  // "elevated surface" color has no such compositing risk.
   return {
     display: 'auto',
     clamp: true,
     color: cssVar('--text') || '#ECECEE',
-    backgroundColor: panel ? panel + 'd9' : 'rgba(20,20,20,.85)',
+    backgroundColor: cssVar('--panel-2') || cssVar('--panel') || '#12161b',
     borderRadius: 4,
     padding: { top: 2, bottom: 2, left: 5, right: 5 },
     font: { size: 10, weight: 700 },

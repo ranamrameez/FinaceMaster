@@ -1,14 +1,16 @@
-import '../../../lib/chartSetup';
 import { useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { Card, StatCard } from '../../../components/Card';
 import { Sparkline } from '../../../components/Sparkline';
 import { toast } from '../../../components/Toast';
-import { getDailyPriceHistory } from '../../../lib/calc';
+import { breakEvenPrice, getDailyPriceHistory } from '../../../lib/calc';
 import { dlBarV, dlDoughnut, dlLine, profitColor } from '../../../lib/chartLabels';
+import { applyChartTheme } from '../../../lib/chartSetup';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
+import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { shortenCompanyName } from '../../../lib/shortenName';
+import { useWorkbookStore } from '../../../store/workbookStore';
 import { AlertsBox, useQSEAlerts } from '../components/AlertsBox';
 import { ChartCard } from '../components/ChartCard';
 import { useQSEDerived } from '../hooks/useQSEDerived';
@@ -18,44 +20,75 @@ import { useAppearanceStore } from '../../../store/appearanceStore';
 const INVEST_PALETTE = ['#3d4b58', '#c9a227', '#34c77b', '#3b6bd6', '#8a97a3', '#e5484d', '#7b5cd6', '#2ea3a3'];
 
 function HoldingsCard() {
-  const { workbook, rows } = useQSEDerived();
+  const { workbook, positions, calcFee } = useQSEDerived();
   const { tickerNames } = useQSEStockData();
+  const setMarketPrice = useWorkbookStore((s) => s.setMarketPrice);
+  const ensureSignedIn = useEnsureSignedIn();
   const navigate = useNavigate();
   const currency = workbook.settings.currency;
+  const { feePct, tick } = workbook.settings;
 
   const held = useMemo(
     () =>
-      [...rows]
-        .sort((a, b) => b.value - a.value)
-        .map((r) => ({
-          ...r,
-          sparkData: getDailyPriceHistory(r.ticker, workbook.priceHistory).map((p) => p.price),
-        })),
-    [rows, workbook.priceHistory],
+      positions
+        .filter((p) => p.shares > 0)
+        .map((p) => {
+          const mp = workbook.marketPrices[p.ticker] || 0;
+          const avgCost = p.invested / p.shares;
+          const value = p.shares * mp;
+          const sellFee = mp > 0 ? calcFee(value, false) : 0;
+          const profit = mp > 0 ? value - sellFee - p.invested : NaN;
+          const be = breakEvenPrice(p.invested, p.shares, feePct, tick, calcFee);
+          const sparkData = getDailyPriceHistory(p.ticker, workbook.priceHistory).map((pt) => pt.price);
+          return { ticker: p.ticker, shares: p.shares, avgCost, mp, profit, be, sparkData };
+        })
+        .sort((a, b) => (Number.isFinite(b.profit) ? b.profit : 0) - (Number.isFinite(a.profit) ? a.profit : 0)),
+    [positions, workbook.marketPrices, workbook.priceHistory, calcFee, feePct, tick],
   );
 
   return (
-    <Card style={{ marginBottom: 16 }}>
-      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+    <Card style={{ marginBottom: 16, paddingBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h3 style={{ margin: 0 }}>Holdings</h3>
         <Link to="/portfolio" className="footer-note">Full portfolio →</Link>
       </div>
       {held.length ? (
-        <div className="table-scroll" style={{ marginTop: 12 }}>
+        <div className="table-scroll table-compact" style={{ marginTop: 8 }}>
           <table>
             <thead>
-              <tr><th>Ticker</th><th>Trend</th><th>Shares</th><th>Market Price</th><th>Net P/L</th></tr>
+              <tr><th>Ticker</th><th>Trend</th><th>Shares</th><th>Avg Cost</th><th>Current Price</th><th>Break-even</th><th>Net P/L</th></tr>
             </thead>
             <tbody>
               {held.map((r) => (
-                <tr key={r.ticker} style={{ cursor: 'pointer' }} onClick={() => navigate(`/stock/${r.ticker}`)}>
-                  <td style={{ maxWidth: 190 }}>
-                    {r.ticker} <span className="footer-note" style={{ display: 'inline-block', maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'bottom' }}>{tickerNames[r.ticker] ? shortenCompanyName(tickerNames[r.ticker]) : ''}</span>
+                <tr key={r.ticker} style={{ cursor: 'pointer' }}>
+                  <td onClick={() => navigate(`/stock/${r.ticker}`)} style={{ maxWidth: 170 }}>
+                    {r.ticker} <span className="footer-note" style={{ display: 'inline-block', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'bottom' }}>{tickerNames[r.ticker] ? shortenCompanyName(tickerNames[r.ticker]) : ''}</span>
                   </td>
-                  <td style={{ width: 82 }}><Sparkline data={r.sparkData} formatValue={fmtPrice} /></td>
-                  <td>{fmt(r.shares, 0)}</td>
-                  <td>{r.marketPrice > 0 ? fmtPrice(r.marketPrice) : '—'}</td>
-                  <td className={r.profit >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(r.profit, currency)}</td>
+                  <td style={{ width: 70 }}><Sparkline data={r.sparkData} formatValue={fmtPrice} width={56} height={20} /></td>
+                  <td onClick={() => navigate(`/stock/${r.ticker}`)}>{fmt(r.shares, 0)}</td>
+                  <td onClick={() => navigate(`/stock/${r.ticker}`)}>{fmtPrice(r.avgCost)}</td>
+                  <td onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="number"
+                      step="0.001"
+                      defaultValue={r.mp || ''}
+                      placeholder="—"
+                      style={{ width: 72 }}
+                      onKeyDown={async (e) => {
+                        if (e.key === 'Enter') {
+                          const target = e.target as HTMLInputElement;
+                          const val = parseFloat(target.value) || 0;
+                          if (val > 0 && (await ensureSignedIn('Sign in to save price updates.'))) {
+                            setMarketPrice(r.ticker, val);
+                            toast(`${r.ticker} price saved: ${fmtPrice(val)}`);
+                          }
+                          target.blur();
+                        }
+                      }}
+                    />
+                  </td>
+                  <td onClick={() => navigate(`/stock/${r.ticker}`)} className={r.mp > 0 ? (r.mp >= r.be ? 'pill-buy' : 'pill-sell') : ''}>{fmtPrice(r.be)}</td>
+                  <td onClick={() => navigate(`/stock/${r.ticker}`)} className={Number.isFinite(r.profit) ? (r.profit >= 0 ? 'pill-buy' : 'pill-sell') : ''}>{Number.isFinite(r.profit) ? fmtMoney(r.profit, currency) : '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -77,6 +110,7 @@ export function DashboardPage() {
   // recomputed on this component's own re-renders, not just because the
   // <html> attributes changed elsewhere.
   useAppearanceStore((s) => s.appearance);
+  applyChartTheme();
   const totalInvestment = rows.reduce((s, r) => s + r.invested, 0);
   const portfolioROIPct = totalInvestment > 0 ? (summary.unrealizedPL / totalInvestment) * 100 : 0;
 

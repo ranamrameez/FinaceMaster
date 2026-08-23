@@ -42,11 +42,35 @@ to extend cleanly to the rest; don't build the rest speculatively.
   load and never update on live theme switches since Dashboard/Analytics
   weren't subscribed to appearance state. Fixed by applying the attributes
   synchronously during `App`'s render and subscribing chart-bearing pages
-  to `useAppearanceStore`. **Not visually re-confirmed after the fix** — the
-  session that made this change had no compositing browser pane available:
-  screenshots and canvas pixel reads came back blank, so double-check chart
-  rendering (especially right after a theme switch) next time you're in the
-  app.
+  to `useAppearanceStore`.
+- **QSE UI polish, round 2 (2026-08-23, same day):** the user re-tested live
+  and reported the chart-label fix above didn't visibly help, plus new
+  issues: `.footer-note`'s base CSS class used to bake in
+  `margin-top/border-top/padding-top` unconditionally, which is wrong for
+  the *majority* of its ~18 usages (it's mostly used as a plain "small muted
+  text" utility — inline ticker/company-name spans, empty-state `<p>`s — not
+  a footer divider); simplified the class to just color+font-size and moved
+  spacing to the one place (Sidebar) that actually wants it. `dlBase()` in
+  `lib/chartLabels.ts` switched from a translucent `--panel + alpha-suffix`
+  datalabel-box background to a **solid** `--panel-2` — alpha-blending a
+  light color over a dark bar/line segment underneath can still composite
+  dark/muddy, a second plausible cause of the "black box, invisible text"
+  report on top of the timing bug already fixed; also added
+  `chartSetup.ts`'s new `applyChartTheme()` (sets `ChartJS.defaults.color`/
+  `borderColor`, since Chart.js's own legend/tick/tooltip text otherwise
+  defaults to a fixed gray, not a themed color), called from every
+  chart-bearing page. **Still not visually confirmed** — this dev
+  environment's browser pane has a **0×0 viewport** when not actively
+  displayed (`window.innerWidth`/`innerHeight` read `0`), which breaks not
+  just screenshots/canvas pixel reads but *all* `getBoundingClientRect()`
+  layout geometry too — so any future session hitting the same "still
+  broken" report on this should treat it as genuinely unverified, not
+  re-confirmed, and either get a real screenshot from the user or find an
+  environment where the pane actually composites. Also: the Dashboard
+  Holdings preview table (`HoldingsCard` in `DashboardPage.tsx`) now
+  duplicates the Avg Cost/Break-even calculation from `PortfolioPage.tsx`'s
+  `OpenPositionsTable` rather than sharing it — if that logic changes,
+  update both.
 - **PSX module: calc engine + store + types only, no UI yet.** See
   `webapp/src/lib/calc/psxFees.ts` (itemized commission/SST/PSX/NCCPL/SECP/
   CDC/CVT fees, same-day trade netting, CGT filer/non-filer rates — this

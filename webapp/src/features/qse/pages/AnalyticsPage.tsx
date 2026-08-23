@@ -1,4 +1,3 @@
-import '../../../lib/chartSetup';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { Card } from '../../../components/Card';
 import { Tabs } from '../../../components/Tabs';
@@ -6,6 +5,7 @@ import { useSortableRows } from '../../../hooks/useSortableRows';
 import { tickerColor } from '../../../lib/cssVar';
 import { dlBarH, dlBarV, dlDoughnut } from '../../../lib/chartLabels';
 import { profitColor } from '../../../lib/chartLabels';
+import { applyChartTheme } from '../../../lib/chartSetup';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { ChartCard } from '../components/ChartCard';
 import { useChartData } from '../hooks/useChartData';
@@ -20,6 +20,7 @@ export function AnalyticsPage() {
   // See DashboardPage: charts only recompute their CSS-var-derived colors
   // on this component's own re-renders.
   useAppearanceStore((s) => s.appearance);
+  applyChartTheme();
   const { tickerNames, fundamentals } = useQSEStockData();
   const { lifetimeRows, activityByMonth, divByMonth, divByTicker, feesByMonth, holdRows, allocRows } = useChartData();
   const currency = workbook.settings.currency;

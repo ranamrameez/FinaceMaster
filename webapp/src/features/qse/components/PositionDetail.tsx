@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
-import '../../../lib/chartSetup';
 import { SaveIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { breakEvenPrice, computePriceStats, getMarketPrice } from '../../../lib/calc';
+import { applyChartTheme } from '../../../lib/chartSetup';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { useAppearanceStore } from '../../../store/appearanceStore';
@@ -31,6 +31,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
   // See DashboardPage: charts only recompute their CSS-var-derived colors
   // on this component's own re-renders.
   useAppearanceStore((s) => s.appearance);
+  applyChartTheme();
 
   const position = positions.find((p) => p.ticker === ticker);
   const shares = position?.shares || 0;
@@ -45,6 +46,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
   // component is reused across stock pages without remounting).
   useEffect(() => setPriceInput(mp > 0 ? String(mp) : ''), [ticker]); // eslint-disable-line react-hooks/exhaustive-deps
   const lastBuyPrice = [...workbook.transactions].filter((t) => t.ticker === ticker && t.action === 'BUY').sort((a, b) => a.date.localeCompare(b.date)).pop()?.price || 0;
+  const lastSellPrice = [...workbook.transactions].filter((t) => t.ticker === ticker && t.action === 'SELL').sort((a, b) => a.date.localeCompare(b.date)).pop()?.price || 0;
   const holdingDays = position
     ? Math.max(0, Math.round((new Date(position.lastDate).getTime() - new Date(position.firstDate).getTime()) / 86400000))
     : 0;
@@ -109,15 +111,25 @@ export function PositionDetail({ ticker }: { ticker: string }) {
               <div className={`value ${mp > 0 ? (mp >= be ? 'pill-buy' : 'pill-sell') : ''}`}>{fmtPrice(be)}</div>
             </div>
           </div>
-          <CompactChart height={90}>
-            <Bar
-              data={{
-                labels: ['Buy', 'Current', 'Break-even'],
-                datasets: [{ data: [lastBuyPrice, mp, be], backgroundColor: ['#8f5ac9', mp >= be ? '#3ecf8e' : '#e5484d', '#c9a35a'] }],
-              }}
-              options={{ maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }}
-            />
-          </CompactChart>
+          <div style={{ maxWidth: 380 }}>
+            <CompactChart height={lastSellPrice > 0 ? 110 : 90}>
+              <Bar
+                data={{
+                  labels: lastSellPrice > 0 ? ['Buy', 'Sold', 'Current', 'Break-even'] : ['Buy', 'Current', 'Break-even'],
+                  datasets: [
+                    {
+                      data: lastSellPrice > 0 ? [lastBuyPrice, lastSellPrice, mp, be] : [lastBuyPrice, mp, be],
+                      backgroundColor: lastSellPrice > 0
+                        ? ['#8f5ac9', '#3b6bd6', mp >= be ? '#3ecf8e' : '#e5484d', '#c9a35a']
+                        : ['#8f5ac9', mp >= be ? '#3ecf8e' : '#e5484d', '#c9a35a'],
+                      maxBarThickness: 20,
+                    },
+                  ],
+                }}
+                options={{ maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }}
+              />
+            </CompactChart>
+          </div>
         </>
       )}
 
