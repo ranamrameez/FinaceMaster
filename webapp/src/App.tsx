@@ -24,6 +24,7 @@ import { TransactionsPage as PSXTransactionsPage } from './features/psx/pages/Tr
 import { WatchlistPage as PSXWatchlistPage } from './features/psx/pages/WatchlistPage';
 import { StockPage as PSXStockPage } from './features/psx/pages/StockPage';
 import { SettingsPage as PSXSettingsPage } from './features/psx/pages/SettingsPage';
+import { TradePlannerPage as PSXTradePlannerPage } from './features/psx/pages/TradePlannerPage';
 import { LegalPage } from './pages/LegalPage';
 
 function useApplyAppearance() {
@@ -92,6 +93,7 @@ function App() {
               <Route path="/psx/watchlist" element={<PSXWatchlistPage />} />
               <Route path="/psx/stock/:ticker" element={<PSXStockPage />} />
               <Route path="/psx/analytics" element={<PSXAnalyticsPage />} />
+              <Route path="/psx/trade-planner" element={<PSXTradePlannerPage />} />
               <Route
                 path="/psx/settings"
                 element={

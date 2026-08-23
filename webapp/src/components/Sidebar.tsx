@@ -20,7 +20,8 @@ const PSX_NAV_ITEMS = [
   { num: '03', label: 'Transactions', to: '/psx/transactions' },
   { num: '04', label: 'Watchlist', to: '/psx/watchlist' },
   { num: '05', label: 'Analytics', to: '/psx/analytics' },
-  { num: '06', label: 'Settings', to: '/psx/settings' },
+  { num: '06', label: 'Trade Planner', to: '/psx/trade-planner' },
+  { num: '07', label: 'Settings', to: '/psx/settings' },
 ];
 
 // Risk Analysis hasn't been migrated to React yet — link out to the legacy

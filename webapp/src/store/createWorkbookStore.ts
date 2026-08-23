@@ -1,5 +1,5 @@
 import { create, type UseBoundStore, type StoreApi } from 'zustand';
-import type { Adjustment, Dividend, PricePoint, Transaction, Transfer, WatchlistItem } from '../types/workbook';
+import type { Adjustment, Dividend, PricePoint, Transaction, TradePlan, Transfer, WatchlistItem } from '../types/workbook';
 
 export interface BaseWorkbook<TSettings> {
   settings: TSettings;
@@ -11,6 +11,7 @@ export interface BaseWorkbook<TSettings> {
   watchlist: WatchlistItem[];
   dividends: Dividend[];
   dividendEstimates: Record<string, number>;
+  tradePlans: TradePlan[];
 }
 
 export interface WorkbookStoreState<TWorkbook extends BaseWorkbook<unknown>> {
@@ -31,6 +32,15 @@ export interface WorkbookStoreState<TWorkbook extends BaseWorkbook<unknown>> {
   removeDividend: (index: number) => void;
   setDividendEstimate: (ticker: string, annualPerShare: number) => void;
   updateSettings: (patch: Partial<TWorkbook['settings']>) => void;
+  addTradePlan: (plan: TradePlan) => void;
+  updateTradePlan: (id: string, patch: Partial<TradePlan>) => void;
+  deleteTradePlan: (id: string) => void;
+  /** README item 9's "Mark-As-Done": converts one plan leg into a real
+   * Transaction (appended to `transactions`) and flags the leg `executed`,
+   * without touching the rest of the plan or requiring the leg's data to be
+   * re-typed into the Transactions tab. No-op if the plan/leg doesn't exist
+   * or the leg is already executed. */
+  executeTradePlanLeg: (planId: string, legIndex: number) => void;
 }
 
 /** One implementation of the "local-first, cloud-synced trading workbook"
@@ -123,6 +133,38 @@ export function createWorkbookStore<TWorkbook extends BaseWorkbook<unknown>>(
 
       updateSettings: (patch) =>
         mutate((wb) => ({ ...wb, settings: { ...(wb.settings as object), ...patch } as TWorkbook['settings'] })),
+
+      addTradePlan: (plan) => mutate((wb) => ({ ...wb, tradePlans: [...wb.tradePlans, plan] })),
+
+      updateTradePlan: (id, patch) =>
+        mutate((wb) => ({
+          ...wb,
+          tradePlans: wb.tradePlans.map((p) => (p.id === id ? { ...p, ...patch } : p)),
+        })),
+
+      deleteTradePlan: (id) =>
+        mutate((wb) => ({ ...wb, tradePlans: wb.tradePlans.filter((p) => p.id !== id) })),
+
+      executeTradePlanLeg: (planId, legIndex) =>
+        mutate((wb) => {
+          const plan = wb.tradePlans.find((p) => p.id === planId);
+          const leg = plan?.legs[legIndex];
+          if (!plan || !leg || leg.executed) return wb;
+          const tx: Transaction = {
+            date: leg.date || new Date().toISOString().slice(0, 10),
+            ticker: leg.ticker,
+            action: leg.action,
+            shares: leg.shares,
+            price: leg.price,
+          };
+          return {
+            ...wb,
+            transactions: [...wb.transactions, tx],
+            tradePlans: wb.tradePlans.map((p) =>
+              p.id === planId ? { ...p, legs: p.legs.map((l, i) => (i === legIndex ? { ...l, executed: true } : l)) } : p,
+            ),
+          };
+        }),
     };
   });
 }

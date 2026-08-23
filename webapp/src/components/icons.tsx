@@ -30,6 +30,14 @@ export function TrashIcon({ size = 14 }: IconProps) {
   );
 }
 
+export function CheckIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base} aria-hidden>
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+
 export function LogInIcon({ size = 14 }: IconProps) {
   return (
     <svg width={size} height={size} {...base} aria-hidden>

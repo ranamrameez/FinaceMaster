@@ -25,5 +25,6 @@ export function createEmptyWorkbook(): Workbook {
     watchlist: [],
     dividends: [],
     dividendEstimates: {},
+    tradePlans: [],
   };
 }

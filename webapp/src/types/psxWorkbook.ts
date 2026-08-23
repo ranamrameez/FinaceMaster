@@ -1,4 +1,4 @@
-import type { Adjustment, Appearance, Dividend, PricePoint, Transaction, Transfer, WatchlistItem } from './workbook';
+import type { Adjustment, Appearance, Dividend, PricePoint, Transaction, TradePlan, Transfer, WatchlistItem } from './workbook';
 
 export interface PSXSettings {
   feePct: number;
@@ -33,4 +33,5 @@ export interface PSXWorkbook {
   watchlist: WatchlistItem[];
   dividends: Dividend[];
   dividendEstimates: Record<string, number>;
+  tradePlans: TradePlan[];
 }

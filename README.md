@@ -24,6 +24,14 @@ FinanceManager live link:
    same-day round trip (e.g. settlement-date entry). `isNettedLeg()` in `psxFees.ts` is the
    single source of truth combining the manual flag with auto-detection; the "(netted)" tag
    shows ", manual" when it came from the override.
+9. Trade Planner (2026-08-23) — save multi-leg trade plans, edit them, and "Mark as done"
+   a leg to log it straight into transaction history without retyping it. Built for PSX
+   (`webapp/src/features/psx/pages/TradePlannerPage.tsx`, route `/psx/trade-planner`), but
+   the underlying data model (`TradePlan`/`TradePlanLeg` in `types/workbook.ts`) and store
+   actions (`addTradePlan`/`updateTradePlan`/`deleteTradePlan`/`executeTradePlanLeg` in the
+   shared `createWorkbookStore.ts`) are exchange-agnostic — QSE gets a Trade Planner page
+   for free later, it just doesn't have one yet (not needed until asked for). This also
+   resolves the old item 2 ("save multiple selling plans in the db") — same feature.
 10. Multiple transactions can be entered at once — both QSE's and PSX's Transactions pages
     have a multi-row entry form (`rows.map(...)` in each `TransactionsPage.tsx`), not just
     one row at a time.
@@ -35,13 +43,10 @@ FinanceManager live link:
    to no single user) exists as a concept the app already prefers when present, but it
    hasn't actually been seeded in Firebase yet — needs real seeding, ideally via the
    scheduled-refresh-job architecture described under item 13 below, not manual entry.
-2. Save multiple selling plans in the db — folds into Trade Planner, item 9 below.
 8. PSX: each buy should have its own sell peer (FIFO lot matching) instead of the current
    weighted-average cost basis, so selling commission/CGT can be tied to and manually
    adjusted per specific lot. Explicitly deferred to "Phase 2" in `positions.ts`'s own
    comment — real architecture change to the cost-basis calc, not a small tweak.
-9. Trade Planner → save, edit, and "Mark-As-Done" multi-leg trade plans without duplicating
-   manual transaction entry.
 11. PSX: no per-transaction editable fee breakdown yet, needed to reconcile a transaction
     against the actual account statement. Would need a `feeOverride`-shaped field added to
     the shared `Transaction` type (also used by QSE) — do that carefully since it's shared.

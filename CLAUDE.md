@@ -111,15 +111,32 @@ to extend cleanly to the rest; don't build the rest speculatively.
     the "(netted)" tag display (shows ", manual" when the override, not
     auto-detection, is why). New tests in `psxFees.test.ts` cover the
     override forcing netted treatment even when dates don't line up.
+  - **Trade Planner (README item 9, 2026-08-23):** `TradePlan`/`TradePlanLeg`
+    types added to `types/workbook.ts`, and `tradePlans: TradePlan[]` added
+    to `BaseWorkbook` (`store/createWorkbookStore.ts`) plus both `Workbook`
+    and `PSXWorkbook` — deliberately exchange-agnostic (both `createEmpty*`
+    functions seed `tradePlans: []`), with generic store actions
+    (`addTradePlan`/`updateTradePlan`/`deleteTradePlan`/
+    `executeTradePlanLeg`) added right in the shared factory. Only PSX has
+    a page for it so far (`features/psx/pages/TradePlannerPage.tsx`, route
+    `/psx/trade-planner`, nav item added to `PSX_NAV_ITEMS` in
+    `Sidebar.tsx`): create a named multi-leg plan, edit the plan's name/
+    notes or any individual leg in place, and "Mark done" a leg to convert
+    it into a real `Transaction` (via `executeTradePlanLeg`) without
+    retyping it into the Transactions tab — the leg itself stays in the
+    plan (flagged `executed`) as a record, independent of the transaction
+    it created. QSE gets this for free at the type/store level whenever it
+    gets its own page — that's intentionally left undone until asked for,
+    per this file's "don't build the rest speculatively" guidance.
   - **Not done — still open PSX/README items for a future session:**
     per-transaction editable fee breakdown (item 11 — would need a
     `feeOverride`-shaped field on the shared `Transaction` type, which QSE
     also uses, so do that carefully), FIFO buy/sell lot matching instead of
     weighted-average cost (item 8, explicitly deferred to "Phase 2" in
-    `positions.ts`'s own comment), Trade Planner / saved multi-leg trade
-    plans (item 9), statement PDF/Excel import (item 12), and a shared
-    `stockData/PSX` Firebase node with real fundamentals (PSX's analytics
-    page has no Fundamentals card for this reason — QSE's does).
+    `positions.ts`'s own comment), statement PDF/Excel import (item 12),
+    and a shared `stockData/PSX` Firebase node with real fundamentals
+    (PSX's analytics page has no Fundamentals card for this reason — QSE's
+    does).
   - **Not yet restructured**: routes are still flat (`/psx/...` bolted on
     alongside QSE's root-level routes), not the `/stocks/:exchange/...`
     shape mentioned below — flat was lower-risk to add without touching

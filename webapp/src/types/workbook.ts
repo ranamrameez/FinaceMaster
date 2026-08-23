@@ -24,6 +24,30 @@ export interface Adjustment {
   note?: string;
 }
 
+export interface TradePlanLeg {
+  action: 'BUY' | 'SELL';
+  ticker: string;
+  shares: number;
+  price: number;
+  date?: string;
+  /** True once this leg has been converted into a real Transaction via
+   * "Mark as done" (README item 9) — the leg itself is left in place as a
+   * record of the plan, the corresponding Transaction is a separate,
+   * independent entry in `transactions`. */
+  executed?: boolean;
+}
+
+/** README item 9: a saved, multi-leg trade sketch — plan several buys/sells
+ * ahead of time, edit them, and convert individual legs into real
+ * transactions ("Mark as done") without re-typing the same data. */
+export interface TradePlan {
+  id: string;
+  name: string;
+  createdAt: string;
+  notes?: string;
+  legs: TradePlanLeg[];
+}
+
 export interface PricePoint {
   date: string;
   time?: string;
@@ -76,6 +100,7 @@ export interface Workbook {
   /** ticker -> user-entered estimated annual dividend per share, used for
    * the yearly projection table. Not derived from historical payouts. */
   dividendEstimates: Record<string, number>;
+  tradePlans: TradePlan[];
 }
 
 /** Computes a transaction's fee. Kept pluggable so different exchanges can

@@ -34,5 +34,6 @@ export function createEmptyPSXWorkbook(): PSXWorkbook {
     watchlist: [],
     dividends: [],
     dividendEstimates: {},
+    tradePlans: [],
   };
 }
