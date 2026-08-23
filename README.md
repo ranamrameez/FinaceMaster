@@ -445,6 +445,20 @@ FinanceManager live link:
     `npm run build` / `npm run test` (119 tests, unchanged) both clean. **README item 25 is now
     fully done for its browser-only CSV/JSON half** — only PDF/image import (needs the separate
     Python backend, a locked but not-yet-started decision) remains.
+42. **Follow-up code-review fix on PR #2 (2026-08-23), spotted by Sourcery in a second review
+    pass the user flagged after the PR had already merged.** `createLinkedTransfer`'s rollback
+    (Done item 35) only tracked the `from` side's module, so if the *link-store* write
+    (`useInterEntityTransfersStore`'s `addEntry`) threw after **both** side records had already
+    been written successfully, the catch block rolled back `from` but left `to` (e.g. the bank
+    transaction) as an orphaned, unlinked record — a real gap in what was already meant to be a
+    rollback fix. Fixed in `lib/linkCascade.ts` by tracking every side actually written (a
+    `written: {module, id}[]` array, pushed to right after each successful `dispatchAdd`) and
+    rolling back all of them, in every failure branch including the final link-store write —
+    not just the first side. New regression test in `lib/__tests__/linkCascade.test.ts` uses
+    `vi.spyOn` to make the link-store's `addEntry` throw *after* both side writes have already
+    succeeded, and confirms both the Cash and Bank records get rolled back (the old code would
+    have left the Bank transaction behind). `npm run build` / `npm run test` (120 tests, 1 new)
+    both clean.
 
 ## Pending
 

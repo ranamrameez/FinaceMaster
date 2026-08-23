@@ -703,6 +703,21 @@ not developer notes) continuously as features ship.
   real CSV file uploads — zero console errors on either. This closes out
   README item 25's CSV/JSON scope entirely; only PDF/image import (the
   separate Python backend, not yet started) remains.
+- **Follow-up Sourcery finding on PR #2, fixed after merge (2026-08-23)
+  — see README Done item 42.** The user pointed at a second Sourcery
+  review pass on the already-merged PR #2
+  (pullrequestreview-5003351872): `createLinkedTransfer`'s rollback only
+  tracked `fromModule`, so a failure in the *link-store* write itself
+  (after both side records had already been written) rolled back `from`
+  but left `to` orphaned — a real remaining gap in what Done item 35
+  believed was a complete fix. Fixed by tracking every side actually
+  written (not just `from`) and rolling all of them back on any failure.
+  New test in `lib/__tests__/linkCascade.test.ts` uses `vi.spyOn` to
+  force the link-store write to fail after both side writes succeed,
+  confirming the fix. Lesson for future sessions: a rollback that only
+  tracks "the first thing written" is incomplete once there's more than
+  one prior write to protect — track everything written so far, not a
+  single pointer.
 
 ## Live URLs
 

@@ -50,26 +50,36 @@ export function dispatchRemove(module: LinkModule, id: string) {
  * Code-review finding (PR #2): the three writes below aren't a real
  * database transaction — there's no way to make a client-only app with
  * per-store localStorage + independently-debounced Firebase pushes
- * genuinely atomic. What this *can* do, and does: if the second side
- * record's write throws, it rolls back the first one rather than leaving
- * a one-sided orphan and reporting success. In practice none of the store
- * actions here throw synchronously (persistence failures are caught and
- * logged inside each store, not surfaced) — this is defense-in-depth for
- * if that ever changes, not a claim of full transactional safety. */
+ * genuinely atomic. What this *can* do, and does: if a later write throws,
+ * it rolls back every side record already written rather than leaving a
+ * one-sided (or, per Sourcery's follow-up review, a written-but-unlinked)
+ * orphan and reporting success. In practice none of the store actions here
+ * throw synchronously (persistence failures are caught and logged inside
+ * each store, not surfaced) — this is defense-in-depth for if that ever
+ * changes, not a claim of full transactional safety.
+ *
+ * Sourcery finding (2026-08-23, follow-up review on PR #2): the original
+ * version only tracked `fromModule`, so if the link-record write threw
+ * *after* both side records had already been written successfully, the
+ * catch block rolled back `from` but left `to` orphaned. Fixed by tracking
+ * both written sides and rolling back whichever ones actually succeeded,
+ * in every failure case — including a failure at the final link-store
+ * write. */
 export function createLinkedTransfer(input: InterEntityTransferInput): { link: InterEntityTransfer } | { error: string } {
   const ids = { linkId: crypto.randomUUID(), fromRecordId: crypto.randomUUID(), toRecordId: crypto.randomUUID() };
-  let fromModule: LinkSideRecord['module'] | undefined;
+  const written: { module: LinkSideRecord['module']; id: string }[] = [];
   try {
     const { from, to, link } = buildLinkedRecords(input, ids);
     dispatchAdd(from);
-    fromModule = from.module;
+    written.push({ module: from.module, id: ids.fromRecordId });
     dispatchAdd(to);
+    written.push({ module: to.module, id: ids.toRecordId });
     useInterEntityTransfersStore.getState().addEntry(link);
     return { link };
   } catch (e) {
-    if (fromModule) {
+    for (const side of written) {
       try {
-        dispatchRemove(fromModule, ids.fromRecordId);
+        dispatchRemove(side.module, side.id);
       } catch {
         // Best-effort rollback — if this also fails there's nothing more
         // to do client-side; the error below still surfaces to the user.

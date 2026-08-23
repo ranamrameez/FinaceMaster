@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createLinkedTransfer,
   deleteLinkCascade,
@@ -63,6 +63,24 @@ describe('createLinkedTransfer', () => {
     expect(useCashWorkbookStore.getState().workbook.entries).toHaveLength(0);
     expect(useBankWorkbookStore.getState().workbook.transactions).toHaveLength(0);
     expect(useInterEntityTransfersStore.getState().workbook.entries).toHaveLength(0);
+  });
+
+  it('rolls back BOTH side records if the link-store write fails after both succeed (Sourcery follow-up, PR #2)', () => {
+    // The original fix only tracked `fromModule`, so a failure here — after
+    // both `dispatchAdd` calls had already succeeded — rolled back the
+    // `from` side but left the `to` side (the bank transaction) orphaned.
+    const addEntrySpy = vi
+      .spyOn(useInterEntityTransfersStore.getState(), 'addEntry')
+      .mockImplementation(() => { throw new Error('simulated link-store write failure'); });
+
+    const result = createLinkedTransfer(cashToBankInput);
+
+    expect('error' in result).toBe(true);
+    expect(useCashWorkbookStore.getState().workbook.entries).toHaveLength(0);
+    expect(useBankWorkbookStore.getState().workbook.transactions).toHaveLength(0);
+    expect(useInterEntityTransfersStore.getState().workbook.entries).toHaveLength(0);
+
+    addEntrySpy.mockRestore();
   });
 });
 
