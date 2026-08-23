@@ -36,6 +36,8 @@ import { EMIPage } from './features/emi/pages/EMIPage';
 import { useEMIFirebaseSync } from './lib/firebase/useEMIFirebaseSync';
 import { FundsPage } from './features/funds/pages/FundsPage';
 import { useFundsFirebaseSync } from './lib/firebase/useFundsFirebaseSync';
+import { RentalsPage } from './features/rentals/pages/RentalsPage';
+import { useRentalsFirebaseSync } from './lib/firebase/useRentalsFirebaseSync';
 import { LegalPage } from './pages/LegalPage';
 
 function useApplyAppearance() {
@@ -77,6 +79,7 @@ function App() {
   const bankSync = useBankFirebaseSync();
   const emiSync = useEMIFirebaseSync();
   const fundsSync = useFundsFirebaseSync();
+  const rentalsSync = useRentalsFirebaseSync();
 
   return (
     <ErrorBoundary>
@@ -174,6 +177,17 @@ function App() {
                     syncStatus={fundsSync.status}
                     cloudEmpty={fundsSync.cloudEmpty}
                     uploadLocalToCloud={fundsSync.uploadLocalToCloud}
+                  />
+                }
+              />
+              <Route
+                path="/rentals"
+                element={
+                  <RentalsPage
+                    user={user}
+                    syncStatus={rentalsSync.status}
+                    cloudEmpty={rentalsSync.cloudEmpty}
+                    uploadLocalToCloud={rentalsSync.uploadLocalToCloud}
                   />
                 }
               />

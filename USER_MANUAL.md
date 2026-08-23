@@ -11,12 +11,12 @@ if a feature described here changes, this file changes with it.**
 
 ## 1. What this app does
 
-FinanceRecorder tracks your investments and (eventually) broader personal finances across
-multiple exchanges and account types. Right now it covers two stock exchanges — **QSE**
-(Qatar Stock Exchange) and **PSX** (Pakistan Stock Exchange) — each with its own portfolio,
-transactions, watchlist, analytics, and settings. It also now covers Cash, Personal Loans,
-Banking, EMI/Loans, and Funds (see §13-§19 below). Rentals is still planned — see
-`MODULES_PLAN.md` for what's coming.
+FinanceRecorder tracks your investments and broader personal finances across multiple
+exchanges and account types. It covers two stock exchanges — **QSE** (Qatar Stock Exchange)
+and **PSX** (Pakistan Stock Exchange) — each with its own portfolio, transactions,
+watchlist, analytics, and settings — plus six more modules: Cash, Personal Loans, Banking,
+EMI/Loans, Funds, and Rentals (see §13-§20 below). See `MODULES_PLAN.md` for the design
+notes behind each module and any future refinements.
 
 **Before anything else**: on your first visit, you'll see a one-time disclaimer screen.
 Read it and check the box to continue — it explains that all calculations here are
@@ -232,8 +232,6 @@ Informal loans with another person — money you lent out, or money you owe — 
 - No interest or repayment-schedule automation here by design — if a "personal loan"
   actually has a real repayment schedule, it belongs in EMI/Loans (§17 below) instead.
 
-More modules (Rentals) are planned — see `MODULES_PLAN.md`.
-
 ---
 
 ## 15. Banking
@@ -284,8 +282,6 @@ transactions) and Personal Loans (informal, no schedule).
   since the start date — there's no tracking of individually missed or late payments in
   this version.
 
-More modules (Rentals) are planned — see `MODULES_PLAN.md`.
-
 ---
 
 ## 19. Funds
@@ -307,7 +303,31 @@ sell shares at a price), so it shares the same underlying calculation engine.
 
 ---
 
-## 20. A note on accuracy
+## 20. Rentals
+
+Rental property income and expenses — under **More → Rentals**. Not discrete buy/sell
+trades like the other modules — recurring rent received and costs (maintenance, property
+tax, management fees) against one or more properties.
+
+- **Properties tab**: add a property (name, currency, optional purchase price for future
+  reference). Edit or delete any property (deleting also removes its income/expense
+  entries). A net-income summary at the top groups properties by currency.
+- **Income & expenses tab**: pick a property, then log rent income or an expense (with a
+  free-form, autocompleted category for expenses — "Maintenance", "Property tax", etc.).
+  See a category breakdown and a monthly income/expense/net rollup table, plus the full
+  entry list with edit/delete.
+- No tenant/lease management, property valuation tracking, or mortgage/loan tracking in
+  this version — a property's mortgage, if you have one, belongs in EMI/Loans (§17) instead.
+- **Settings tab**: same account/cloud-sync status and export/import/clear data management
+  as other modules.
+
+This completes the six modules planned in `MODULES_PLAN.md` — Cash, Personal Loans,
+Banking, EMI/Loans, Funds, and Rentals are all built alongside the original QSE/PSX stock
+exchange modules.
+
+---
+
+## 21. A note on accuracy
 
 Every number in this app is an **estimate** computed from settings you configure — it is
 not a substitute for your actual broker/exchange statement, and it is not financial advice.

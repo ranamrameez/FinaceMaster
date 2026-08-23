@@ -372,8 +372,31 @@ not developer notes) continuously as features ship.
     own worked example (two buys totaling $7000 invested, NAV rising to
     $214): position rollup/value/P&L%/XIRR all matched; NAV update and
     transaction edits recalculate everything live; sign-in gate fires on
-    both fund-add and NAV-update; no console errors. Next up per the build
-    order is Rentals — the last of the six planned modules.
+    both fund-add and NAV-update; no console errors.
+  - **Rentals module built (2026-08-23) — sixth and FINAL planned new
+    module. All six modules from `MODULES_PLAN.md` are now built:**
+    Cash, Personal Loans, Banking, EMI/Loans, Funds, Rentals. Rentals has
+    the same shape as Banking (`settings.properties` + top-level
+    `entries`) so `store/rentalsWorkbookStore.ts` is hand-written following
+    the identical idiom as `bankWorkbookStore.ts`. `lib/calc/
+    rentalsModule.ts` has per-property net income, per-currency portfolio
+    totals, category breakdown, monthly rollup — all tested. Files:
+    `types/rentalsWorkbook.ts`, `store/{rentalsWorkbookStore,
+    defaultRentalsWorkbook}.ts`, `lib/firebase/useRentalsFirebaseSync.ts`,
+    `features/rentals/pages/RentalsPage.tsx`, route `/rentals`, nav under
+    "More". Verified live in a fresh browser tab: net income/category/
+    monthly-rollup all correct against hand-traced numbers, property/entry
+    edits recalculate live, sign-in gates fire on both property-add and
+    entry-add, no console errors.
+    **What's next for a future session**: `MODULES_PLAN.md`'s own
+    six-module scope is now complete — check with the user for direction
+    before starting anything new (the Sidebar category-dropdown redesign,
+    README item 18, is a natural next UI step since "More" is currently a
+    flat unstyled list of 6 links; cross-entity transaction linking,
+    MODULES_PLAN.md §7, is another explicitly-deferred item now that
+    enough modules exist to actually link between). Don't assume either
+    is wanted without asking — this doc may be stale by the time you read
+    it if the user redirected mid-session.
   - **Not done — still open PSX/README items for a future session:**
     statement PDF/Excel import (item 12), dynamic/filterable charts (item
     17), the Sidebar's category-dropdown redesign for Stock Exchanges/
@@ -435,6 +458,9 @@ webapp/                                                              the new Rea
   src/features/funds/       Funds module (2026-08-23) — reuses the FULL createWorkbookStore.ts
                             factory (Fund.id plays `ticker`), see its own entry above and
                             MODULES_PLAN.md §3
+  src/features/rentals/     Rentals module (2026-08-23) — hand-written store (same shape as
+                            Banking), see its own entry above and MODULES_PLAN.md §4 — LAST
+                            of the six originally-planned modules, all now built
   src/components/           shared UI: Modal, ConfirmDialog, SignInModal, Sparkline, Tabs, Sidebar, etc.
   src/types/workbook.ts     QSE types; psxWorkbook.ts has PSX's parallel types
 .github/workflows/static.yml   CI: builds webapp/ and deploys it to /webapp/ alongside the legacy

@@ -93,8 +93,9 @@ riskier to get wrong:
    units, a "price" equivalent in NAV-per-unit, cost basis, P/L, XIRR) — most reuse of the
    existing calc engine (genuinely reused the full `createWorkbookStore` factory, unlike
    every other new module), but was also the most calculation-heavy of the six.
-6. **Rentals** — the most different shape (recurring income/expense on a property, not
-   discrete buy/sell trades) — do this last since it borrows the least from existing code.
+6. **Rentals** — ✅ built 2026-08-23. The most different shape (recurring income/expense on
+   a property, not discrete buy/sell trades) — done last since it borrowed the least from
+   existing code. All six modules are now built.
 
 This is a suggestion, not a mandate — reorder freely if priorities change.
 
@@ -294,11 +295,25 @@ that type if the shape fits).
 
 ---
 
-## 4. Rentals
+## 4. Rentals — ✅ built 2026-08-23
 
 **Purpose**: track rental property income and expenses — the most structurally different
 module: not discrete buy/sell trades, but recurring income (rent received) and expenses
 (maintenance, property tax, management fees) against one or more properties.
+
+**Built as designed below.** Same shape as Banking (`settings.properties` +  top-level
+`entries`), so `store/rentalsWorkbookStore.ts` is hand-written following the identical idiom
+as `bankWorkbookStore.ts`. `lib/calc/rentalsModule.ts` has per-property net income,
+per-currency portfolio totals, category breakdown, and a monthly income/expense/net rollup
+— all tested. Files: `types/rentalsWorkbook.ts`, `store/{rentalsWorkbookStore,
+defaultRentalsWorkbook}.ts`, `lib/firebase/useRentalsFirebaseSync.ts`,
+`features/rentals/pages/RentalsPage.tsx` (Properties/Income & expenses/Settings tabs),
+route `/rentals`, nav under "More". Verified live in a fresh browser tab: net income summary
+grouped by currency, category breakdown and monthly rollup both correct against hand-traced
+numbers, property/entry edit recalculates everything live, sign-in gate fires on both
+property-add and entry-add, no console errors. **This completes all six modules originally
+planned in this document** — see the top of the file for what's next (nav redesign,
+cross-entity linking, and whatever comes after that, per the user's direction at the time).
 
 **Data model**:
 ```ts

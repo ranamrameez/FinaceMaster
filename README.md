@@ -168,6 +168,15 @@ FinanceManager live link:
     totaling $7000, NAV rising to $214): position rollup, value, P/L%, and XIRR all matched;
     NAV update and transaction edits recalculate everything live; sign-in gate fires on both
     fund-add and NAV-update; no console errors.
+27. **Rentals module built (2026-08-23) — sixth and final planned new module.** Rental
+    property income/expenses (not buy/sell trades): properties (name/currency/purchase
+    price), rent income and categorized expenses per property, net income by currency,
+    category breakdown, monthly rollup. Find it at **More → Rentals**. Same shape as
+    Banking (properties nested under settings, entries top-level) — hand-written store
+    following that same idiom. Verified live: net income/category/monthly-rollup all
+    correct against hand-traced numbers, edits recalculate live, sign-in gates fire
+    correctly, no console errors. **All six modules from `MODULES_PLAN.md` are now built**:
+    Cash, Personal Loans, Banking, EMI/Loans, Funds, Rentals.
 
 ## Pending
 
