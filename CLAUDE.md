@@ -861,6 +861,16 @@ not developer notes) continuously as features ship.
   `FundsPage.tsx` from values `FundList` already derives, not a new
   pure function — a straightforward sum, not new calc logic. Verified
   live with seeded data for both modules, zero console errors.
+- **Currency pickers remember the last one picked (2026-08-23),
+  user-requested — see README Done item 49.** New
+  `hooks/useLastCurrency.ts` (tiny `useState`+`localStorage` wrapper,
+  tested via `@testing-library/react`'s `renderHook` — first use of
+  that library in this project's tests) keyed per add-form. Wired into
+  every module's add-form with a currency picker (Cash's ledger + its
+  Planning form share one key on purpose; Bank/Personal Loans/EMI/
+  Rentals/Funds each get their own). Edit-row currency selects
+  deliberately untouched — editing an existing record's currency isn't
+  "what should a new record default to."
 
 ## Live URLs
 

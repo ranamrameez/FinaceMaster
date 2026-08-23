@@ -595,6 +595,23 @@ FinanceManager live link:
     Verified live in the browser with seeded data for each module: both landing pages show
     the new summary card with correct totals, zero console errors. `npm run build` /
     `npm run test` (143 tests, 2 new) both clean.
+49. **Currency pickers now remember the last one you picked (2026-08-23, user-requested:
+    "Remember last used currency").** New `hooks/useLastCurrency.ts` (3 tests using
+    `@testing-library/react`'s `renderHook`) — a tiny `useState` + `localStorage` wrapper,
+    keyed per add-form (`'cash'`, `'bank-account'`, `'personalLoans'`, `'emi'`, `'funds'`,
+    `'rentals'`) so each module's own last choice is independent. Wired into every add-form
+    that has a currency picker: Cash's ledger entry form and its Planning add-plan form (share
+    the `'cash'` key — picking PKR in one pre-fills PKR in the other, since they're both "what
+    currency is this Cash amount in"), Bank's add-account form, Personal Loans' add-loan form,
+    EMI's add-loan form, Rentals' add-property form, and Funds' add-fund form. Falls back to
+    the module's configured default currency (or `'USD'` for Bank/Rentals/Funds, which have no
+    module-level default currency setting) when nothing's been remembered yet. Deliberately
+    left untouched: edit-row currency selects (EMI/Funds/Rentals/Personal Loans/Bank all have
+    one) — editing an *existing* record's currency isn't "what currency should a new record
+    default to," so there's nothing to remember there. Verified live via Playwright: picking
+    PKR in Cash's form persists to `localStorage`, and a full page reload correctly shows PKR
+    pre-selected in that same form — zero console errors. `npm run build` / `npm run test`
+    (146 tests, 3 new) both clean.
 
 ## Pending
 

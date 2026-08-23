@@ -6,6 +6,7 @@ import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { accountBalance, accountByCategory, accountRunningLedger, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
 import { plannedBankProjection } from '../../../lib/calc/plannedBalance';
@@ -51,8 +52,9 @@ function TotalBalances() {
 
 function AddAccountForm() {
   const addAccount = useBankWorkbookStore((s) => s.addAccount);
+  const [lastCurrency, setLastCurrency] = useLastCurrency('bank-account', 'USD');
   const ensureSignedIn = useEnsureSignedIn();
-  const [a, setA] = useState(() => emptyAccount('USD'));
+  const [a, setA] = useState(() => emptyAccount(lastCurrency));
 
   const submit = async () => {
     if (!a.name.trim()) return toast('Enter an account name.');
@@ -69,7 +71,7 @@ function AddAccountForm() {
           <TextInput value={a.name} onChange={(e) => setA({ ...a, name: e.target.value })} placeholder="e.g. Meezan Checking" />
         </Field>
         <Field label="Currency" width={100}>
-          <Select value={a.currencyCode} onChange={(e) => setA({ ...a, currencyCode: e.target.value })}>
+          <Select value={a.currencyCode} onChange={(e) => { setA({ ...a, currencyCode: e.target.value }); setLastCurrency(e.target.value); }}>
             {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>

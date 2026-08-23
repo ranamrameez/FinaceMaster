@@ -6,6 +6,7 @@ import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { netIncomeByCurrency, propertyByCategory, propertyMonthlyRollup, propertyNetIncome } from '../../../lib/calc/rentalsModule';
 import { parseCSV } from '../../../lib/csv';
@@ -48,8 +49,9 @@ function NetIncomeSummary() {
 
 function AddPropertyForm() {
   const addProperty = useRentalsWorkbookStore((s) => s.addProperty);
+  const [lastCurrency, setLastCurrency] = useLastCurrency('rentals', 'USD');
   const ensureSignedIn = useEnsureSignedIn();
-  const [p, setP] = useState(() => emptyProperty('USD'));
+  const [p, setP] = useState(() => emptyProperty(lastCurrency));
 
   const submit = async () => {
     if (!p.name.trim()) return toast('Enter a property name.');
@@ -66,7 +68,7 @@ function AddPropertyForm() {
           <TextInput value={p.name} onChange={(e) => setP({ ...p, name: e.target.value })} placeholder="e.g. Apartment 4B" />
         </Field>
         <Field label="Currency" width={100}>
-          <Select value={p.currencyCode} onChange={(e) => setP({ ...p, currencyCode: e.target.value })}>
+          <Select value={p.currencyCode} onChange={(e) => { setP({ ...p, currencyCode: e.target.value }); setLastCurrency(e.target.value); }}>
             {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>

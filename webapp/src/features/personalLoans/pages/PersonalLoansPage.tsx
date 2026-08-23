@@ -7,6 +7,7 @@ import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { CURRENCIES } from '../../../lib/currencies';
 import { parseCSV } from '../../../lib/csv';
@@ -131,8 +132,9 @@ function AnalyticsTab() {
 function AddLoanForm() {
   const addLoan = usePersonalLoansWorkbookStore((s) => s.addLoan);
   const defaultCurrency = usePersonalLoansWorkbookStore((s) => s.workbook.settings.defaultCurrency);
+  const [lastCurrency, setLastCurrency] = useLastCurrency('personalLoans', defaultCurrency);
   const ensureSignedIn = useEnsureSignedIn();
-  const [l, setL] = useState<PersonalLoan>(() => emptyLoan(defaultCurrency));
+  const [l, setL] = useState<PersonalLoan>(() => emptyLoan(lastCurrency));
 
   const submit = async () => {
     if (!l.person.trim()) return toast('Enter a person/lender name.');
@@ -140,7 +142,7 @@ function AddLoanForm() {
     if (!(await ensureSignedIn('Sign in to save personal loans.'))) return;
     addLoan({ ...l, id: crypto.randomUUID(), person: l.person.trim(), note: l.note?.trim() || undefined });
     toast(`Loan with ${l.person.trim()} saved.`);
-    setL(emptyLoan(defaultCurrency));
+    setL(emptyLoan(l.currencyCode));
   };
 
   return (
@@ -156,7 +158,7 @@ function AddLoanForm() {
           </Select>
         </Field>
         <Field label="Currency" width={100}>
-          <Select value={l.currencyCode} onChange={(e) => setL({ ...l, currencyCode: e.target.value })}>
+          <Select value={l.currencyCode} onChange={(e) => { setL({ ...l, currencyCode: e.target.value }); setLastCurrency(e.target.value); }}>
             {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>

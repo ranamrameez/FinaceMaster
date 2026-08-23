@@ -7,6 +7,7 @@ import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { cashBalanceByCurrency, cashByCategory, cashMonthlyFlow, cashRunningLedger } from '../../../lib/calc/cashModule';
 import { plannedCashProjection } from '../../../lib/calc/plannedBalance';
@@ -36,15 +37,16 @@ function emptyEntry(defaultCurrency: string): CashEntry {
 function AddEntryForm({ knownCategories }: { knownCategories: string[] }) {
   const addEntry = useCashWorkbookStore((s) => s.addEntry);
   const defaultCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
+  const [lastCurrency, setLastCurrency] = useLastCurrency('cash', defaultCurrency);
   const ensureSignedIn = useEnsureSignedIn();
-  const [e, setE] = useState<CashEntry>(() => emptyEntry(defaultCurrency));
+  const [e, setE] = useState<CashEntry>(() => emptyEntry(lastCurrency));
 
   const submit = async () => {
     if (!e.amount || e.amount <= 0) return toast('Enter an amount.');
     if (!(await ensureSignedIn('Sign in to save cash entries.'))) return;
     addEntry({ ...e, category: e.category?.trim() || undefined, note: e.note?.trim() || undefined });
     toast(`${e.type === 'IN' ? 'Cash in' : 'Cash out'} logged.`);
-    setE(emptyEntry(defaultCurrency));
+    setE(emptyEntry(e.currencyCode));
   };
 
   return (
@@ -63,7 +65,7 @@ function AddEntryForm({ knownCategories }: { knownCategories: string[] }) {
           <TextInput type="number" step="0.01" value={e.amount || ''} onChange={(ev) => setE({ ...e, amount: Number(ev.target.value) })} />
         </Field>
         <Field label="Currency" width={110}>
-          <Select value={e.currencyCode} onChange={(ev) => setE({ ...e, currencyCode: ev.target.value })}>
+          <Select value={e.currencyCode} onChange={(ev) => { setE({ ...e, currencyCode: ev.target.value }); setLastCurrency(ev.target.value); }}>
             {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>
@@ -537,15 +539,16 @@ function BalanceProjectionSummary() {
 function AddPlanForm() {
   const addPlan = usePlannedCashWorkbookStore((s) => s.addEntry);
   const defaultCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
+  const [lastCurrency, setLastCurrency] = useLastCurrency('cash', defaultCurrency);
   const ensureSignedIn = useEnsureSignedIn();
-  const [p, setP] = useState<PlannedCashEntry>(() => emptyPlan(defaultCurrency));
+  const [p, setP] = useState<PlannedCashEntry>(() => emptyPlan(lastCurrency));
 
   const submit = async () => {
     if (!p.amount || p.amount <= 0) return toast('Enter an amount.');
     if (!(await ensureSignedIn('Sign in to save plans.'))) return;
     addPlan({ ...p, id: crypto.randomUUID(), category: p.category?.trim() || undefined, note: p.note?.trim() || undefined });
     toast('Plan added.');
-    setP(emptyPlan(defaultCurrency));
+    setP(emptyPlan(p.currencyCode));
   };
 
   return (
@@ -565,7 +568,7 @@ function AddPlanForm() {
           <TextInput type="number" step="0.01" value={p.amount || ''} onChange={(e) => setP({ ...p, amount: Number(e.target.value) })} />
         </Field>
         <Field label="Currency" width={110}>
-          <Select value={p.currencyCode} onChange={(e) => setP({ ...p, currencyCode: e.target.value })}>
+          <Select value={p.currencyCode} onChange={(e) => { setP({ ...p, currencyCode: e.target.value }); setLastCurrency(e.target.value); }}>
             {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>

@@ -5,6 +5,7 @@ import { confirmDialog } from '../../../components/ConfirmDialog';
 import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { emiSummary, totalsByCurrency } from '../../../lib/calc/emiModule';
 import { CURRENCIES } from '../../../lib/currencies';
@@ -26,8 +27,9 @@ function emptyLoan(defaultCurrency: string): EMILoan {
 function AddLoanForm() {
   const addEntry = useEMIWorkbookStore((s) => s.addEntry);
   const defaultCurrency = useEMIWorkbookStore((s) => s.workbook.settings.defaultCurrency);
+  const [lastCurrency, setLastCurrency] = useLastCurrency('emi', defaultCurrency);
   const ensureSignedIn = useEnsureSignedIn();
-  const [l, setL] = useState<EMILoan>(() => emptyLoan(defaultCurrency));
+  const [l, setL] = useState<EMILoan>(() => emptyLoan(lastCurrency));
 
   const submit = async () => {
     if (!l.name.trim()) return toast('Enter a loan name.');
@@ -50,7 +52,7 @@ function AddLoanForm() {
           <TextInput value={l.lender} onChange={(e) => setL({ ...l, lender: e.target.value })} placeholder="e.g. Chase Bank" />
         </Field>
         <Field label="Currency" width={100}>
-          <Select value={l.currencyCode} onChange={(e) => setL({ ...l, currencyCode: e.target.value })}>
+          <Select value={l.currencyCode} onChange={(e) => { setL({ ...l, currencyCode: e.target.value }); setLastCurrency(e.target.value); }}>
             {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>

@@ -6,6 +6,7 @@ import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { getMarketPrice } from '../../../lib/calc';
 import { CURRENCIES } from '../../../lib/currencies';
@@ -32,8 +33,9 @@ function AddFundForm() {
   const workbook = useFundsWorkbookStore((s) => s.workbook);
   const setWorkbook = useFundsWorkbookStore((s) => s.setWorkbook);
   const addTransaction = useFundsWorkbookStore((s) => s.addTransaction);
+  const [lastCurrency, setLastCurrency] = useLastCurrency('funds', 'USD');
   const ensureSignedIn = useEnsureSignedIn();
-  const [f, setF] = useState<Fund>(() => emptyFund('USD'));
+  const [f, setF] = useState<Fund>(() => emptyFund(lastCurrency));
   const [initialDate, setInitialDate] = useState(today());
   const [initialAmount, setInitialAmount] = useState(0);
   const [initialNav, setInitialNav] = useState(1);
@@ -70,7 +72,7 @@ function AddFundForm() {
           </Select>
         </Field>
         <Field label="Currency" width={100}>
-          <Select value={f.currencyCode} onChange={(e) => setF({ ...f, currencyCode: e.target.value })}>
+          <Select value={f.currencyCode} onChange={(e) => { setF({ ...f, currencyCode: e.target.value }); setLastCurrency(e.target.value); }}>
             {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>
