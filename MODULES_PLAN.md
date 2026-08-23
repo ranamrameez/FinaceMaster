@@ -86,8 +86,9 @@ riskier to get wrong:
 3. **Banking** — ✅ built 2026-08-23. Builds directly on Cash's ledger concept, adds
    multiple accounts and CSV statement import (the first real use of the "manual entry +
    statement parsing" pattern).
-4. **EMI / Loans** — introduces real calculation (amortization schedule) but no market-price
-   dependency — a good bridge before Funds' XIRR/cost-basis complexity.
+4. **EMI / Loans** — ✅ built 2026-08-23. Introduces real calculation (amortization
+   schedule) but no market-price dependency — a good bridge before Funds' XIRR/cost-basis
+   complexity.
 5. **Funds** (mutual funds) — structurally closest to QSE/PSX (buy/sell units, a "price"
    equivalent in NAV-per-unit, cost basis, P/L, XIRR) — most reuse of the existing calc
    engine, but the most calculation-heavy of the six.
@@ -309,12 +310,28 @@ loan account — worth revisiting once both modules exist rather than deciding n
 
 ---
 
-## 5. EMI / Loans
+## 5. EMI / Loans — ✅ built 2026-08-23
 
 **Purpose** (added 2026-08-23, from `reference/finance-suite-prototype/`): track a loan
 you're repaying on a fixed schedule — a mortgage, car financing, or similar — with an
 auto-calculated amortization schedule. Distinct from Banking (which just tracks account
 transactions) and from Personal Loans below (informal, no schedule).
+
+**Built as designed below, with one shape change**: the data model's `loans: EMILoan[]`
+field is named `entries` instead (`EMIWorkbook.entries: EMILoan[]`) specifically so this
+module could reuse `createEntryStore` (the single-array generic factory built for Cash)
+rather than needing a fourth hand-written store — EMI/Loans has only one array (no
+repayments log, since it's a computed schedule), so it genuinely fits that shape. All
+amortization math (`lib/calc/emiModule.ts`'s `emiSchedule`/`emiSummary`) was ported directly
+from the reference prototype's formulas and hand-traced in tests (both repayment modes,
+including a 0%-rate edge case and elapsed-time clamping once a loan is fully repaid). Files:
+`types/emiWorkbook.ts`, `store/{emiWorkbookStore,defaultEmiWorkbook}.ts`,
+`lib/firebase/useEMIFirebaseSync.ts`, `lib/calc/emiModule.ts` (+ tests),
+`features/emi/pages/EMIPage.tsx`, route `/emi-loans`, nav under "More". Verified live in a
+fresh browser tab: sign-in gate on add, the amortization schedule table and summary stats
+matched hand-calculated expectations for both a standard mortgage and a no-interest/Sharia
+loan, editing recalculates the whole schedule immediately, delete confirms and removes
+correctly — no bugs this time (the §6 selector rule was checked before shipping).
 
 **Data model**:
 ```ts

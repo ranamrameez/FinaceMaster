@@ -32,6 +32,8 @@ import { PersonalLoansPage } from './features/personalLoans/pages/PersonalLoansP
 import { usePersonalLoansFirebaseSync } from './lib/firebase/usePersonalLoansFirebaseSync';
 import { BankPage } from './features/bank/pages/BankPage';
 import { useBankFirebaseSync } from './lib/firebase/useBankFirebaseSync';
+import { EMIPage } from './features/emi/pages/EMIPage';
+import { useEMIFirebaseSync } from './lib/firebase/useEMIFirebaseSync';
 import { LegalPage } from './pages/LegalPage';
 
 function useApplyAppearance() {
@@ -71,6 +73,7 @@ function App() {
   const cashSync = useCashFirebaseSync();
   const personalLoansSync = usePersonalLoansFirebaseSync();
   const bankSync = useBankFirebaseSync();
+  const emiSync = useEMIFirebaseSync();
 
   return (
     <ErrorBoundary>
@@ -146,6 +149,17 @@ function App() {
                     syncStatus={bankSync.status}
                     cloudEmpty={bankSync.cloudEmpty}
                     uploadLocalToCloud={bankSync.uploadLocalToCloud}
+                  />
+                }
+              />
+              <Route
+                path="/emi-loans"
+                element={
+                  <EMIPage
+                    user={user}
+                    syncStatus={emiSync.status}
+                    cloudEmpty={emiSync.cloudEmpty}
+                    uploadLocalToCloud={emiSync.uploadLocalToCloud}
                   />
                 }
               />

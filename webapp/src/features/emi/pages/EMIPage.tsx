@@ -1,0 +1,318 @@
+import type { User } from 'firebase/auth';
+import { useState } from 'react';
+import { Card } from '../../../components/Card';
+import { confirmDialog } from '../../../components/ConfirmDialog';
+import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
+import { toast } from '../../../components/Toast';
+import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { emiSummary } from '../../../lib/calc/emiModule';
+import { CURRENCIES } from '../../../lib/currencies';
+import { fmtMoney } from '../../../lib/format';
+import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
+import { firebaseReady } from '../../../lib/firebase/client';
+import { useEMIWorkbookStore } from '../../../store/emiWorkbookStore';
+import type { EMILoan } from '../../../types/emiWorkbook';
+
+const today = () => new Date().toISOString().slice(0, 10);
+
+function emptyLoan(defaultCurrency: string): EMILoan {
+  return {
+    id: '', name: '', lender: '', currencyCode: defaultCurrency, principal: 0,
+    tenureMonths: 12, startDate: today(), repaymentMode: 'interest', annualRatePct: 0,
+  };
+}
+
+function AddLoanForm() {
+  const addEntry = useEMIWorkbookStore((s) => s.addEntry);
+  const defaultCurrency = useEMIWorkbookStore((s) => s.workbook.settings.defaultCurrency);
+  const ensureSignedIn = useEnsureSignedIn();
+  const [l, setL] = useState<EMILoan>(() => emptyLoan(defaultCurrency));
+
+  const submit = async () => {
+    if (!l.name.trim()) return toast('Enter a loan name.');
+    if (!l.principal || l.principal <= 0) return toast('Enter a principal amount.');
+    if (!l.tenureMonths || l.tenureMonths <= 0) return toast('Enter a tenure in months.');
+    if (l.repaymentMode === 'fixedTotal' && (!l.totalToReturn || l.totalToReturn <= 0)) return toast('Enter the total amount to return.');
+    if (!(await ensureSignedIn('Sign in to save loans.'))) return;
+    addEntry({ ...l, id: crypto.randomUUID(), name: l.name.trim(), lender: l.lender.trim() });
+    toast(`Loan "${l.name.trim()}" saved.`);
+    setL(emptyLoan(l.currencyCode));
+  };
+
+  return (
+    <Card style={{ marginBottom: 16 }}>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+        <Field label="Loan name" width={160}>
+          <TextInput value={l.name} onChange={(e) => setL({ ...l, name: e.target.value })} placeholder="e.g. Home Mortgage" />
+        </Field>
+        <Field label="Lender" width={140}>
+          <TextInput value={l.lender} onChange={(e) => setL({ ...l, lender: e.target.value })} placeholder="e.g. Chase Bank" />
+        </Field>
+        <Field label="Currency" width={100}>
+          <Select value={l.currencyCode} onChange={(e) => setL({ ...l, currencyCode: e.target.value })}>
+            {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+          </Select>
+        </Field>
+        <Field label="Principal" width={120}>
+          <TextInput type="number" step="0.01" value={l.principal || ''} onChange={(e) => setL({ ...l, principal: Number(e.target.value) })} />
+        </Field>
+        <Field label="Repayment type" width={220}>
+          <Select value={l.repaymentMode} onChange={(e) => setL({ ...l, repaymentMode: e.target.value as EMILoan['repaymentMode'] })}>
+            <option value="interest">Interest rate (reducing balance)</option>
+            <option value="fixedTotal">Fixed total to return (no-interest / Sharia)</option>
+          </Select>
+        </Field>
+        {l.repaymentMode === 'interest' ? (
+          <Field label="Annual interest rate (%)" width={140}>
+            <TextInput type="number" step="0.01" value={l.annualRatePct ?? ''} onChange={(e) => setL({ ...l, annualRatePct: Number(e.target.value) })} />
+          </Field>
+        ) : (
+          <Field label="Total amount to return" width={160}>
+            <TextInput type="number" step="0.01" value={l.totalToReturn ?? ''} onChange={(e) => setL({ ...l, totalToReturn: Number(e.target.value) })} />
+          </Field>
+        )}
+        <Field label="Tenure (months)" width={110}>
+          <TextInput type="number" value={l.tenureMonths || ''} onChange={(e) => setL({ ...l, tenureMonths: Number(e.target.value) })} />
+        </Field>
+        <Field label="Start date">
+          <TextInput type="date" value={l.startDate} onChange={(e) => setL({ ...l, startDate: e.target.value })} />
+        </Field>
+      </div>
+      <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
+        <PlusIcon />Add loan
+      </button>
+    </Card>
+  );
+}
+
+function LoanDetail({ loan, onBack }: { loan: EMILoan; onBack: () => void }) {
+  const deleteEntry = useEMIWorkbookStore((s) => s.deleteEntry);
+  const entries = useEMIWorkbookStore((s) => s.workbook.entries);
+  const updateEntry = useEMIWorkbookStore((s) => s.updateEntry);
+  const [editing, setEditing] = useState(false);
+  const [editRow, setEditRow] = useState<EMILoan>(loan);
+  const sum = emiSummary(loan);
+  const index = entries.findIndex((e) => e.id === loan.id);
+
+  return (
+    <div>
+      <button className="btn secondary small" style={{ marginBottom: 12 }} onClick={onBack}>← All loans</button>
+      <Card style={{ marginBottom: 16 }}>
+        {editing ? (
+          <div>
+            <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+              <TextInput value={editRow.name} onChange={(e) => setEditRow({ ...editRow, name: e.target.value })} />
+              <TextInput value={editRow.lender} onChange={(e) => setEditRow({ ...editRow, lender: e.target.value })} />
+              <Select value={editRow.currencyCode} onChange={(e) => setEditRow({ ...editRow, currencyCode: e.target.value })}>
+                {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+              </Select>
+              <TextInput type="number" step="0.01" value={editRow.principal} onChange={(e) => setEditRow({ ...editRow, principal: Number(e.target.value) })} />
+              <Select value={editRow.repaymentMode} onChange={(e) => setEditRow({ ...editRow, repaymentMode: e.target.value as EMILoan['repaymentMode'] })}>
+                <option value="interest">Interest rate</option>
+                <option value="fixedTotal">Fixed total</option>
+              </Select>
+              {editRow.repaymentMode === 'interest' ? (
+                <TextInput type="number" step="0.01" value={editRow.annualRatePct ?? ''} onChange={(e) => setEditRow({ ...editRow, annualRatePct: Number(e.target.value) })} placeholder="Annual rate %" />
+              ) : (
+                <TextInput type="number" step="0.01" value={editRow.totalToReturn ?? ''} onChange={(e) => setEditRow({ ...editRow, totalToReturn: Number(e.target.value) })} placeholder="Total to return" />
+              )}
+              <TextInput type="number" value={editRow.tenureMonths} onChange={(e) => setEditRow({ ...editRow, tenureMonths: Number(e.target.value) })} placeholder="Tenure (months)" />
+              <TextInput type="date" value={editRow.startDate} onChange={(e) => setEditRow({ ...editRow, startDate: e.target.value })} />
+            </div>
+            <div className="row" style={{ gap: 8, marginTop: 8 }}>
+              <button
+                className="btn secondary small"
+                onClick={() => {
+                  if (index >= 0) updateEntry(index, editRow);
+                  toast('Loan updated.');
+                  setEditing(false);
+                }}
+              >
+                <SaveIcon size={12} />Save
+              </button>
+              <button className="btn secondary small" onClick={() => setEditing(false)}>Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 16 }}>{loan.name}</div>
+              <div className="footer-note">
+                {loan.lender} · {loan.currencyCode} · {loan.repaymentMode === 'fixedTotal' ? 'Fixed total (no interest)' : `${loan.annualRatePct}% p.a.`} · {loan.tenureMonths} months
+              </div>
+            </div>
+            <div className="row" style={{ gap: 8 }}>
+              <button className="btn secondary small" onClick={() => { setEditRow(loan); setEditing(true); }}>Edit</button>
+              <button
+                className="btn secondary small"
+                onClick={async () => {
+                  if (await confirmDialog('This cannot be undone.', `Delete loan "${loan.name}"?`)) {
+                    if (index >= 0) deleteEntry(index);
+                    onBack();
+                  }
+                }}
+              >
+                <TrashIcon size={12} />Delete
+              </button>
+            </div>
+          </div>
+        )}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px,1fr))', gap: 8, marginTop: 12 }}>
+          <div className="stat-card card"><div className="label">Monthly installment</div><div className="value">{fmtMoney(sum.emi, loan.currencyCode)}</div></div>
+          <div className="stat-card card"><div className="label">Outstanding</div><div className="value pill-sell">{fmtMoney(sum.outstanding, loan.currencyCode)}</div></div>
+          <div className="stat-card card"><div className="label">Paid so far</div><div className="value">{fmtMoney(sum.paidSoFar, loan.currencyCode)}</div></div>
+          <div className="stat-card card">
+            <div className="label">{loan.repaymentMode === 'fixedTotal' ? 'Markup so far' : 'Interest so far'}</div>
+            <div className="value">{fmtMoney(sum.interestSoFar, loan.currencyCode)}</div>
+          </div>
+          <div className="stat-card card"><div className="label">Months remaining</div><div className="value">{sum.monthsRemaining}</div></div>
+          <div className="stat-card card">
+            <div className="label">{loan.repaymentMode === 'fixedTotal' ? 'Total markup (life)' : 'Total interest (life)'}</div>
+            <div className="value">{fmtMoney(sum.totalInterest, loan.currencyCode)}</div>
+          </div>
+        </div>
+      </Card>
+
+      <h3>Schedule (next 12 installments from today)</h3>
+      <div className="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>Installment</th>
+              <th>{loan.repaymentMode === 'fixedTotal' ? 'Markup' : 'Interest'}</th>
+              <th>Principal</th><th>Balance</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sum.rows.slice(sum.elapsed, sum.elapsed + 12).map((r) => (
+              <tr key={r.month}>
+                <td>#{r.month}</td>
+                <td>{fmtMoney(r.emi, loan.currencyCode)}</td>
+                <td>{fmtMoney(r.interest, loan.currencyCode)}</td>
+                <td>{fmtMoney(r.principalComp, loan.currencyCode)}</td>
+                <td>{fmtMoney(r.balance, loan.currencyCode)}</td>
+              </tr>
+            ))}
+            {sum.elapsed >= loan.tenureMonths && <tr><td colSpan={5} className="footer-note">Loan fully repaid.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function LoanList({ onSelect }: { onSelect: (loan: EMILoan) => void }) {
+  const loans = useEMIWorkbookStore((s) => s.workbook.entries);
+
+  return (
+    <div className="table-scroll">
+      <table>
+        <thead><tr><th>Name</th><th>Lender</th><th>Monthly</th><th>Outstanding</th><th>Months left</th><th></th></tr></thead>
+        <tbody>
+          {loans.map((l) => {
+            const sum = emiSummary(l);
+            return (
+              <tr key={l.id} onClick={() => onSelect(l)} style={{ cursor: 'pointer' }}>
+                <td>{l.name}</td>
+                <td>{l.lender}{l.repaymentMode === 'fixedTotal' ? ' · no-interest' : ''}</td>
+                <td>{fmtMoney(sum.emi, l.currencyCode)}</td>
+                <td className="pill-sell">{fmtMoney(sum.outstanding, l.currencyCode)}</td>
+                <td>{sum.monthsRemaining}</td>
+                <td><button className="btn secondary small" onClick={(e) => { e.stopPropagation(); onSelect(l); }}>Open</button></td>
+              </tr>
+            );
+          })}
+          {!loans.length && <tr><td colSpan={6} className="footer-note">No loans yet — add one above.</td></tr>}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function AccountSection({
+  syncStatus,
+  cloudEmpty,
+  uploadLocalToCloud,
+}: {
+  syncStatus: string;
+  cloudEmpty: boolean;
+  uploadLocalToCloud: () => Promise<void>;
+}) {
+  const loans = useEMIWorkbookStore((s) => s.workbook.entries);
+  const [busy, setBusy] = useState(false);
+
+  if (!firebaseReady) {
+    return (
+      <Card>
+        <h3 style={{ marginTop: 0 }}>Account</h3>
+        <p className="footer-note">Cloud sync is unavailable — Firebase failed to load in this browser.</p>
+      </Card>
+    );
+  }
+  return (
+    <Card style={{ marginTop: 16 }}>
+      <h3 style={{ marginTop: 0 }}>Account</h3>
+      <p className="footer-note">{syncStatus}</p>
+      {cloudEmpty && (
+        <div className="card" style={{ marginTop: 8, borderLeft: '3px solid var(--warn, orange)' }}>
+          <p style={{ marginTop: 0 }}>No data found in the cloud for this account's EMI/Loans workbook. This won't upload automatically.</p>
+          <button
+            className="btn secondary"
+            disabled={busy}
+            onClick={async () => {
+              const ok = await confirmDialog(
+                'This will overwrite anything currently in the cloud (there is nothing there now, but confirming since this can\'t be undone).',
+                `Upload ${loans.length} local loan(s) to the cloud?`,
+              );
+              if (!ok) return;
+              setBusy(true);
+              try {
+                await uploadLocalToCloud();
+              } catch (e) {
+                toast(e instanceof Error ? e.message : 'Something went wrong.');
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Upload local data to cloud ({loans.length} loans)
+          </button>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+export function EMIPage({
+  syncStatus,
+  cloudEmpty,
+  uploadLocalToCloud,
+}: {
+  user: User | null;
+  syncStatus: string;
+  cloudEmpty: boolean;
+  uploadLocalToCloud: () => Promise<void>;
+}) {
+  const [selected, setSelected] = useState<EMILoan | null>(null);
+  const loans = useEMIWorkbookStore((s) => s.workbook.entries);
+  const liveSelected = selected ? loans.find((l) => l.id === selected.id) ?? null : null;
+
+  return (
+    <div>
+      <h1 className="pagetitle">EMI / Loans</h1>
+      <p className="footer-note" style={{ marginBottom: 12 }}>
+        A loan you're repaying on a fixed schedule — a mortgage, car financing, or similar — with an
+        auto-calculated amortization schedule. Assumes on-schedule payment; doesn't track missed/late payments.
+      </p>
+      {liveSelected ? (
+        <LoanDetail loan={liveSelected} onBack={() => setSelected(null)} />
+      ) : (
+        <div>
+          <AddLoanForm />
+          <LoanList onSelect={setSelected} />
+          <AccountSection syncStatus={syncStatus} cloudEmpty={cloudEmpty} uploadLocalToCloud={uploadLocalToCloud} />
+        </div>
+      )}
+    </div>
+  );
+}

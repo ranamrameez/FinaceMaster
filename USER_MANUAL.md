@@ -14,8 +14,9 @@ if a feature described here changes, this file changes with it.**
 FinanceRecorder tracks your investments and (eventually) broader personal finances across
 multiple exchanges and account types. Right now it covers two stock exchanges — **QSE**
 (Qatar Stock Exchange) and **PSX** (Pakistan Stock Exchange) — each with its own portfolio,
-transactions, watchlist, analytics, and settings. More modules (Cash, Banking, Funds,
-Rentals, EMI/Loans, Personal Loans) are planned; see `MODULES_PLAN.md` for what's coming.
+transactions, watchlist, analytics, and settings. It also now covers Cash, Personal Loans,
+Banking, and EMI/Loans (see §13-§17 below). Funds and Rentals are still planned — see
+`MODULES_PLAN.md` for what's coming.
 
 **Before anything else**: on your first visit, you'll see a one-time disclaimer screen.
 Read it and check the box to continue — it explains that all calculations here are
@@ -229,10 +230,9 @@ Informal loans with another person — money you lent out, or money you owe — 
 - **Log repayments** against a loan any time — date + amount — and edit or delete any
   repayment later. Outstanding = principal minus all repayments logged so far.
 - No interest or repayment-schedule automation here by design — if a "personal loan"
-  actually has a real repayment schedule, it belongs in EMI/Loans (a separate, not-yet-built
-  module — see `MODULES_PLAN.md`) instead.
+  actually has a real repayment schedule, it belongs in EMI/Loans (§17 below) instead.
 
-More modules (EMI/Loans, Funds, Rentals) are planned — see `MODULES_PLAN.md`.
+More modules (Funds, Rentals) are planned — see `MODULES_PLAN.md`.
 
 ---
 
@@ -262,7 +262,33 @@ required for that, so it's manual entry or statement import only).
 
 ---
 
-## 16. A note on accuracy
+## 17. EMI / Loans
+
+For a loan you're repaying on a fixed schedule — a mortgage, car financing, or similar —
+under **More → EMI / Loans**. Distinct from Banking (which just tracks account
+transactions) and Personal Loans (informal, no schedule).
+
+- **Add a loan**: name, lender, currency, principal, tenure (months), start date, and one
+  of two repayment types:
+  - **Interest rate (reducing balance)** — the standard EMI calculation: enter an annual
+    interest rate.
+  - **Fixed total to return (no-interest / Sharia)** — enter the total amount your lender
+    says you'll pay back overall instead of a rate; the markup is spread evenly across the
+    tenure with straight-line principal reduction, not compounding.
+- **Open a loan** to see its full amortization schedule (the next 12 installments from
+  today: installment, interest/markup, principal, remaining balance) plus summary stats —
+  monthly installment, outstanding balance, paid so far, months remaining, lifetime
+  interest/markup.
+- **Edit or delete** a loan any time; editing recalculates the whole schedule immediately.
+- Outstanding balance and paid-so-far assume **on-schedule payment** based on elapsed time
+  since the start date — there's no tracking of individually missed or late payments in
+  this version.
+
+More modules (Funds, Rentals) are planned — see `MODULES_PLAN.md`.
+
+---
+
+## 18. A note on accuracy
 
 Every number in this app is an **estimate** computed from settings you configure — it is
 not a substitute for your actual broker/exchange statement, and it is not financial advice.

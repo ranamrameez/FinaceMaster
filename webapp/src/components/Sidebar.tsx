@@ -103,6 +103,10 @@ export function Sidebar({
           <span className="num">03</span>
           Banking
         </NavLink>
+        <NavLink to="/emi-loans" onClick={onNavigate} className={({ isActive }) => `navbtn${isActive ? ' active' : ''}`}>
+          <span className="num">04</span>
+          EMI / Loans
+        </NavLink>
       </nav>
 
       <AppearancePanel />

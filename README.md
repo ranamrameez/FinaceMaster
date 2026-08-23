@@ -142,6 +142,18 @@ FinanceManager live link:
     same idiom as Cash/Personal Loans. Verified live in the browser: sign-in gate on add and
     on import, CSV column-mapping and preview work correctly against a synthetic statement,
     account/transaction edits recalculate balances correctly, no console errors.
+25. **EMI/Loans module built (2026-08-23)** — fourth new module, per `MODULES_PLAN.md`'s
+    build order. A loan repaid on a fixed schedule (mortgage, car financing, etc.) with an
+    auto-calculated amortization schedule, either **interest rate (reducing balance)** or
+    **fixed-total-to-return (no-interest/Sharia)** mode — both formulas ported from the
+    reference prototype and hand-traced in tests. Find it at **More → EMI / Loans**. Only
+    one array (no repayments log — it's a computed schedule), so it reuses `createEntryStore`
+    (the same factory Cash uses) by naming the data model's array `entries` instead of
+    `loans`. Verified live in a fresh browser tab: sign-in gate on add, schedule and summary
+    stats matched hand-calculated expectations for both a standard mortgage and a
+    no-interest loan, edit recalculates the whole schedule immediately, delete confirms and
+    removes correctly — no bugs this time (checked every selector against the rule learned
+    from the Personal Loans bug before shipping).
 
 ## Pending
 

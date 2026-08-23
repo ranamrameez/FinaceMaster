@@ -321,8 +321,28 @@ not developer notes) continuously as features ship.
     the browser (fresh tab): sign-in gate on both add-transaction and
     import, a synthetic 3-column CSV parsed and auto-mapped correctly with
     accurate preview amounts, account/transaction edits recalculated
-    balances correctly, no console errors. Next up per the build order is
-    EMI/Loans (see `MODULES_PLAN.md` §5), then Funds, then Rentals.
+    balances correctly, no console errors.
+  - **EMI/Loans module built (2026-08-23) — fourth new module.** Only one
+    array (`entries: EMILoan[]` — a computed amortization schedule, not a
+    logged repayments history), so this one genuinely reuses
+    `createEntryStore` (same factory as Cash) rather than a hand-written
+    store — the data model's field is named `entries`, not `loans`,
+    specifically so it fits that factory's shape. `lib/calc/emiModule.ts`
+    (`emiSchedule`/`emiSummary`) ports the reference prototype's formulas
+    for both repayment modes (reducing-balance interest, and fixed-total-
+    to-return for no-interest/Sharia loans, straight-line no compounding)
+    — hand-traced in tests including a 0%-rate edge case and elapsed-time
+    clamping once fully repaid. Files: `types/emiWorkbook.ts`, `store/
+    {emiWorkbookStore,defaultEmiWorkbook}.ts`, `lib/firebase/
+    useEMIFirebaseSync.ts`, `features/emi/pages/EMIPage.tsx`, route
+    `/emi-loans`, nav under "More". Every selector checked against the §6
+    rule before shipping (paid off — no bug this time, unlike Personal
+    Loans). Verified live in a fresh browser tab: sign-in gate on add,
+    schedule/summary stats matched hand-calculated expectations for both a
+    mortgage and a no-interest loan, edit recalculates immediately, delete
+    confirms and removes correctly, no console errors. Next up per the
+    build order is Funds, then Rentals — the last two of the six planned
+    modules.
   - **Not done — still open PSX/README items for a future session:**
     statement PDF/Excel import (item 12), dynamic/filterable charts (item
     17), the Sidebar's category-dropdown redesign for Stock Exchanges/
@@ -379,6 +399,8 @@ webapp/                                                              the new Rea
                             related arrays), see its own entry above and MODULES_PLAN.md §6
   src/features/bank/        Banking module (2026-08-23) — hand-written store, CSV statement
                             import, see its own entry above and MODULES_PLAN.md §2
+  src/features/emi/         EMI/Loans module (2026-08-23) — reuses createEntryStore.ts, see
+                            its own entry above and MODULES_PLAN.md §5
   src/components/           shared UI: Modal, ConfirmDialog, SignInModal, Sparkline, Tabs, Sidebar, etc.
   src/types/workbook.ts     QSE types; psxWorkbook.ts has PSX's parallel types
 .github/workflows/static.yml   CI: builds webapp/ and deploys it to /webapp/ alongside the legacy
