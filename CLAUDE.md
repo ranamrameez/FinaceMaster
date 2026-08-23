@@ -774,6 +774,15 @@ not developer notes) continuously as features ship.
   hanging plans that could explain one jump) is undesigned. **Do not
   guess at the algorithm** — wait for the sample data and design against
   a real worked example, per the user's own instruction.
+- **Planning v2 refined, still not built (2026-08-23, same session).**
+  User added: the "expected ordinary daily increment" some accounts
+  isn't flat across every day — some funds pay a noticeably larger
+  payout on one specific weekday (their example: Friday pays 15 instead
+  of the regular 2). Folded into MODULES_PLAN.md §15's detection-logic
+  and open-gaps sections — the eventual "expected profit rate" field
+  needs to support at least a day-of-week-varying rate. Still no code;
+  still waiting on the user's sample Excel data before designing the
+  actual shape.
 - **Cash Analytics tab built (2026-08-23), first module of README item
   23's "per-module Analytics" wave, see Done item 44, MODULES_PLAN.md
   §11.** Three charts (category-breakdown doughnut, income-vs-expense-

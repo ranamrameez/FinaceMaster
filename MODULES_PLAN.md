@@ -864,6 +864,21 @@ verified/refined against the real Excel data before implementing anything):
   app already applies everywhere else (the sign-in gate, cloud-sync-safety's
   never-assume-emptiness rule, etc.).
 
+**Refinement, added 2026-08-23 (same session): "ordinary daily profit" isn't necessarily
+flat across every day of the week.** The user's own example: some funds/accounts pay a
+noticeably larger payout on one specific weekday — e.g. every Friday pays 15 instead of the
+regular 2 — rather than a uniform daily rate. This directly affects the detection logic
+above: the "expected balance if nothing settled" the observed balance gets compared against
+must account for *which day of the week it is*, not just "yesterday's balance + one flat
+daily increment," or a real Friday bonus payout would itself get misread as a settled
+pending plan (a false positive), and conversely a same-day pending settlement could hide
+inside a larger expected Friday jump (a false negative — the app might report "nothing
+happened" when the deposit actually did clear, just on a day where the ordinary payout was
+already large). **Whatever "expected profit rate" field ends up being designed (see the open
+gaps below) needs to support at least a day-of-week-varying rate, not only a single flat
+number** — the exact shape (a per-weekday table? a "regular rate + optional weekday
+override") should still come from the real sample data, not be guessed at here.
+
 **The harder, explicitly-still-open part — which balance did each day's profit accrue on?**
 Once a pending plan is confirmed settled, the app also needs to get historical P&L right by
 correctly splitting which balance each day's profit was computed against:
@@ -885,7 +900,9 @@ same modules §14's Planning feature already covers. Not QSE/PSX.
 - **No field yet exists for an account's expected regular increment/profit rate.** Neither
   `CashSettings`/`CashEntry` nor `BankAccount`/`BankTransaction` has anything like this today
   — it's new data-model surface, shape TBD from the sample data (flat amount? percentage?
-  compounding? does it vary by account?).
+  compounding? does it vary by account? — and, per the weekly-payout refinement above, does
+  it need to vary by day of week too, e.g. a bigger Friday payout on top of a smaller regular
+  daily rate?).
 - **There is no single "the bank told me my balance is X right now" event in today's model.**
   Both Cash and Banking compute the current balance as a derived sum (opening balance +
   every logged entry/transaction) — there's no explicit "observed balance" action a user

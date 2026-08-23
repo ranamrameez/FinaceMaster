@@ -584,6 +584,11 @@ wave" section)**:
     including the open unresolved gaps (no "expected profit rate" field exists yet, no
     single "observed balance" event exists to hook a reconciliation check into, ambiguous-
     match tolerance undesigned) is in `MODULES_PLAN.md` §15 — read that before touching this.
+    **Refined same day**: the "expected ordinary increment" isn't necessarily flat every
+    day — some accounts pay a noticeably larger payout on one specific weekday (the user's
+    example: Friday pays 15 instead of the regular 2) — so the eventual "expected profit
+    rate" field needs to support at least a day-of-week-varying rate, not just one flat
+    number. Still blocked on the sample data for the exact shape.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank
