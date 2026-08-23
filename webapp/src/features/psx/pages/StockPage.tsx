@@ -4,7 +4,7 @@ import { confirmDialog } from '../../../components/ConfirmDialog';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
-import { sameDayChargedSide } from '../../../lib/calc/psxFees';
+import { isNettedLeg } from '../../../lib/calc/psxFees';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { shortenCompanyName } from '../../../lib/shortenName';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
@@ -90,7 +90,16 @@ function TickerTransactions({ ticker }: { ticker: string }) {
                   <td><input type="number" value={editRow.shares} onChange={(e) => setEditRow({ ...editRow, shares: Number(e.target.value) })} style={{ width: 70 }} /></td>
                   <td><input type="number" step="0.01" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })} style={{ width: 80 }} /></td>
                   <td>{fmtMoney(editRow.shares * editRow.price, currency)}</td>
-                  <td></td>
+                  <td>
+                    <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4 }} title="Force netted (government levies only) fee treatment, overriding auto-detection.">
+                      <input
+                        type="checkbox"
+                        checked={!!editRow.manualSameDay}
+                        onChange={(e) => setEditRow({ ...editRow, manualSameDay: e.target.checked })}
+                      />
+                      Same-day
+                    </label>
+                  </td>
                   <td>
                     <button className="btn secondary small" onClick={saveEdit}>Save</button>{' '}
                     <button className="btn secondary small" onClick={() => setEditIndex(null)}>Cancel</button>
@@ -105,12 +114,14 @@ function TickerTransactions({ ticker }: { ticker: string }) {
                   <td>{fmtMoney(tx.shares * tx.price, currency)}</td>
                   <td>
                     {fmtMoney(calcFee(tx.shares * tx.price, tx.action === 'BUY', { shares: tx.shares, tx }), currency)}
-                    {sameDayChargedSide(workbook.transactions, tx.ticker, tx.date) !== null &&
-                      sameDayChargedSide(workbook.transactions, tx.ticker, tx.date) !== tx.action && (
-                        <span className="footer-note" title="Same-day round trip — commission charged on the other leg, this one pays only government levies.">
-                          {' '}(netted)
-                        </span>
-                      )}
+                    {isNettedLeg(workbook.transactions, tx) && (
+                      <span
+                        className="footer-note"
+                        title={tx.manualSameDay ? 'Manually marked as a same-day netted leg — government levies only.' : 'Same-day round trip — commission charged on the other leg, this one pays only government levies.'}
+                      >
+                        {' '}(netted{tx.manualSameDay ? ', manual' : ''})
+                      </span>
+                    )}
                   </td>
                   <td>
                     <button className="btn secondary small" onClick={() => startEdit(i, tx)}>Edit</button>{' '}

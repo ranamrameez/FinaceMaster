@@ -3,24 +3,63 @@
 FinanceManager live link:
 <https://ranamrameez.github.io/FinaceMaster/>
 
-## Pending Updates
+## Done
 
-1. QSE: save H1 EPS data on db rather hard coding. also, check other data as well and make sure no data is hard coded. you may general stock data in their own node rather than belonging to 1 user. 
-2. Save multiple selling plan in db.
-3. QSE numbers in calculation are 4 digits (2.155 , 21.55)
+3. QSE numbers in calculation are 4 digits (2.155, 21.55) — prices now display at 4
+   significant figures (`fmtPrice` in `webapp/src/lib/format.ts`).
+4. Multiple pages treated as one website: React rewrite (`webapp/`) with centralized CSS,
+   shared components, a single router (HashRouter), and one Firebase sync layer shared
+   across pages instead of per-page copy-paste.
+5. PSX: CGT now correctly split 15% (filer) / 30% (non-filer) per the Settings-configured
+   filer status, computed in `psxFees.ts`'s `calcCGT` and shown in the UI (Position detail,
+   Trade Calculator).
+6. PSX: fees now account for same-day round trips — the smaller leg of a same-day buy/sell
+   is netted against the other rather than charged in full (`sameDayChargedSide` in
+   `psxFees.ts`), and the Transactions list shows a "(netted)" tag on the netted leg.
+7. PSX: app auto-detects and displays same-day vs. next-day fee/CGT outcomes (see #6 above
+   and the CGT display in #5), **plus a manual override checkbox** (2026-08-23) — each
+   transaction row (add form and both edit forms, in Transactions and per-stock pages) has
+   a "Same-day override" checkbox (`Transaction.manualSameDay`) that forces netted
+   (levies-only) fee treatment even when the recorded date doesn't line up with a real
+   same-day round trip (e.g. settlement-date entry). `isNettedLeg()` in `psxFees.ts` is the
+   single source of truth combining the manual flag with auto-detection; the "(netted)" tag
+   shows ", manual" when it came from the override.
+10. Multiple transactions can be entered at once — both QSE's and PSX's Transactions pages
+    have a multi-row entry form (`rows.map(...)` in each `TransactionsPage.tsx`), not just
+    one row at a time.
 
-4. we have multiple pages now. we must treat it as website rather single pages. centralized css, js, logos. separate js for apis. all data syncing to our firebase db.
+## Pending
 
-5. PSX: JS Bank charges sheet lists CGT at 15% for filers but 30% for non-filers — the app currently defaults both to 15%.
-6. PSX: Currently app is applying fees without realizing same day trade one leg charges only.
-7. PSX: app should auto check, and show both, if share is sold same or after that day to calculate commission based fees. with the manual checkbox as well for same day trade recording. All calculators must show, break-even and all other calculations for shares sold same day or after.
-8. PSX: each buy should have its own sell peer (on sold). only then we can truly adjust and control(manually, if needed) share selling commission.
-9. Trade Planner -> Save *Trade Plans*: Allow user to plan trades in a nutshell including multiple buy and sells with the ability to save multiple plans. Edit the plans and their transactions. And Mark-As-Done trades to include in actual transaction history without the need to fill duplicate transactions.
-10. Allow to enter multiple transactions at a time.
-11. PSX: currently doesn't allow to edit Fees break-down. It is needed to adjust to a transaction according to the account statement.
-12. Ability to read account statement pdfs, excels to update the app trade history.
-13. Find APIs to directly fetch symbols, logos, stocks prices, historical data and finance news.
-14. Include console-like themes for super compact UI.
+1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`
+   as a fallback. The intended shared `stockData/QSE` Firebase node (finance data belonging
+   to no single user) exists as a concept the app already prefers when present, but it
+   hasn't actually been seeded in Firebase yet — needs real seeding, ideally via the
+   scheduled-refresh-job architecture described under item 13 below, not manual entry.
+2. Save multiple selling plans in the db — folds into Trade Planner, item 9 below.
+8. PSX: each buy should have its own sell peer (FIFO lot matching) instead of the current
+   weighted-average cost basis, so selling commission/CGT can be tied to and manually
+   adjusted per specific lot. Explicitly deferred to "Phase 2" in `positions.ts`'s own
+   comment — real architecture change to the cost-basis calc, not a small tweak.
+9. Trade Planner → save, edit, and "Mark-As-Done" multi-leg trade plans without duplicating
+   manual transaction entry.
+11. PSX: no per-transaction editable fee breakdown yet, needed to reconcile a transaction
+    against the actual account statement. Would need a `feeOverride`-shaped field added to
+    the shared `Transaction` type (also used by QSE) — do that carefully since it's shared.
+12. Ability to read account statement PDFs/Excel files to auto-populate trade history.
+13. Find APIs to fetch symbols, logos, stock prices, historical data, and finance news —
+    **architecture constraint locked in 2026-08-23**: these must never be called live from
+    the app itself (free/cheap tiers rate-limit fast). Fetch on a schedule (cron/worker)
+    into our own database and serve the app from that store, same pattern already used for
+    QSE's `stockData/QSE` node (item 1 above) and PSX's bundled `psxSeed.ts`.
+14. Include console-like/super-compact UI themes — a `density` appearance setting
+    (comfortable, in `appearanceStore.ts`) exists already, but no dedicated console-style
+    compact theme yet.
+
+**Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
+QCB both require regulator licensing — a compliance process, not a coding task). When bank
+transaction tracking is eventually built, the primary path is manual entry + statement
+upload/parsing (same shape as item 12 above), with SMS/email alert parsing as an optional,
+later, additive input source — not something to design the core architecture around.
 
 -------- -----------
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import fixture from './fixtures/psx-workbook-backup.json';
 import type { Transaction } from '../../../types/workbook';
 import type { PSXSettings } from '../../../types/psxWorkbook';
-import { calcCGT, calcFeeBreakdown, makePSXFeeCalculator, sameDayChargedSide } from '../psxFees';
+import { calcCGT, calcFeeBreakdown, isNettedLeg, makePSXFeeCalculator, sameDayChargedSide } from '../psxFees';
 import { computePositions } from '../positions';
 import { cashSummary } from '../cashSummary';
 
@@ -145,6 +145,52 @@ describe('makePSXFeeCalculator — same-day netting (README items 6/7)', () => {
     const calcFee = makePSXFeeCalculator(netSettings, []);
     const fee = calcFee(10000, false, { shares: 100 });
     expect(fee).toBeCloseTo(calcFeeBreakdown(10000, false, 100, netSettings).total, 5);
+  });
+});
+
+describe('isNettedLeg / manualSameDay override (README item 7)', () => {
+  const day = '2026-08-21';
+  const otherDay = '2026-08-24';
+  const netSettings: PSXSettings = { ...BASE_SETTINGS, psxFeePct: 0.005, nccplFeePct: 0.011 };
+
+  it('is not netted when there is no same-day pairing and no manual override', () => {
+    const tx: Transaction = { date: day, ticker: 'TEST', action: 'BUY', shares: 10, price: 100 };
+    expect(isNettedLeg([tx], tx)).toBe(false);
+  });
+
+  it('matches auto-detection when there is a real same-day pairing', () => {
+    const buyTx: Transaction = { date: day, ticker: 'TEST', action: 'BUY', shares: 14, price: 100 };
+    const sellTx: Transaction = { date: day, ticker: 'TEST', action: 'SELL', shares: 47, price: 100 };
+    const all = [buyTx, sellTx];
+    expect(isNettedLeg(all, buyTx)).toBe(true); // smaller side, netted
+    expect(isNettedLeg(all, sellTx)).toBe(false); // larger side, charged in full
+  });
+
+  it('manualSameDay forces netted treatment even when dates do not line up', () => {
+    // Buy recorded a day later than the sell (e.g. settlement-date entry) — auto-detection
+    // sees no same-day pairing for either date, but the user knows from their statement
+    // that this leg was actually netted.
+    const sellTx: Transaction = { date: day, ticker: 'TEST', action: 'SELL', shares: 20, price: 100 };
+    const buyTx: Transaction = { date: otherDay, ticker: 'TEST', action: 'BUY', shares: 20, price: 100, manualSameDay: true };
+    const all = [sellTx, buyTx];
+
+    expect(sameDayChargedSide(all, 'TEST', otherDay)).toBeNull(); // auto-detection sees nothing
+    expect(isNettedLeg(all, buyTx)).toBe(true); // manual override wins
+    expect(isNettedLeg(all, sellTx)).toBe(false); // untouched — no override on this leg
+  });
+
+  it('a manually-netted transaction actually pays levies-only fees, not the full breakdown', () => {
+    const buyTx: Transaction = { date: otherDay, ticker: 'TEST', action: 'BUY', shares: 20, price: 100, manualSameDay: true };
+    const calcFee = makePSXFeeCalculator(netSettings, [buyTx]);
+    const amount = buyTx.shares * buyTx.price;
+
+    const fee = calcFee(amount, true, { shares: buyTx.shares, tx: buyTx });
+    const fullBreakdown = calcFeeBreakdown(amount, true, buyTx.shares, netSettings).total;
+    const expectedNettedFee =
+      amount * (netSettings.psxFeePct / 100) + amount * (netSettings.nccplFeePct / 100) + amount * (netSettings.cvtPct / 100);
+
+    expect(fee).toBeCloseTo(Math.round(expectedNettedFee * 100) / 100, 2);
+    expect(fee).toBeLessThan(fullBreakdown);
   });
 });
 

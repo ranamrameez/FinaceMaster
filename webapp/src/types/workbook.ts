@@ -4,6 +4,11 @@ export interface Transaction {
   action: 'BUY' | 'SELL';
   shares: number;
   price: number;
+  /** PSX only (README item 7): manual override of the auto same-day-round-trip
+   * detection, for when the recorded `date` doesn't line up with the actual
+   * trade day (e.g. settlement-date entry) but the user knows from their
+   * statement that this leg was netted. Ignored by QSE. */
+  manualSameDay?: boolean;
 }
 
 export interface Transfer {

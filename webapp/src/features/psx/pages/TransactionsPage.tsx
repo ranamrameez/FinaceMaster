@@ -6,7 +6,7 @@ import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
-import { sameDayChargedSide } from '../../../lib/calc/psxFees';
+import { isNettedLeg } from '../../../lib/calc/psxFees';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { createEmptyPSXWorkbook } from '../../../store/defaultPsxWorkbook';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
@@ -71,6 +71,14 @@ function TransactionRows() {
             onChange={(e) => update(i, { price: Number(e.target.value) })}
             style={{ width: 90 }}
           />
+          <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4 }} title="Force netted (government levies only) fee treatment for this leg, overriding auto-detection — use when your statement shows a same-day round trip that the recorded date doesn't line up with.">
+            <input
+              type="checkbox"
+              checked={!!r.manualSameDay}
+              onChange={(e) => update(i, { manualSameDay: e.target.checked })}
+            />
+            Same-day override
+          </label>
           <button className="btn secondary small" onClick={() => setRows((rs) => rs.filter((_, idx) => idx !== i))}>
             <TrashIcon size={12} />Remove
           </button>
@@ -87,7 +95,8 @@ function TransactionRows() {
       <p className="footer-note" style={{ marginTop: 8 }}>
         Same-day round trips are detected automatically: if you buy and sell the same ticker on the
         same date, the smaller side is charged government levies only (no double commission) — see
-        each transaction's Fee column in the list below.
+        each transaction's Fee column in the list below. If your account statement shows a same-day
+        netting that the recorded date doesn't line up with, check "Same-day override" to force it.
       </p>
     </div>
   );
@@ -313,7 +322,16 @@ function TransactionList() {
                       <td><input type="number" value={editRow.shares} onChange={(e) => setEditRow({ ...editRow, shares: Number(e.target.value) })} style={{ width: 70 }} /></td>
                       <td><input type="number" step="0.01" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })} style={{ width: 80 }} /></td>
                       <td>{fmtMoney(editRow.shares * editRow.price, currency)}</td>
-                      <td></td>
+                      <td>
+                        <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4 }} title="Force netted (government levies only) fee treatment, overriding auto-detection.">
+                          <input
+                            type="checkbox"
+                            checked={!!editRow.manualSameDay}
+                            onChange={(e) => setEditRow({ ...editRow, manualSameDay: e.target.checked })}
+                          />
+                          Same-day
+                        </label>
+                      </td>
                       <td>
                         <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
                         <button className="btn secondary small" onClick={() => setEditIndex(null)}>Cancel</button>
@@ -329,12 +347,14 @@ function TransactionList() {
                       <td>{fmtMoney(tx.shares * tx.price, currency)}</td>
                       <td>
                         {fmtMoney(calcFee(tx.shares * tx.price, tx.action === 'BUY', { shares: tx.shares, tx }), currency)}
-                        {sameDayChargedSide(workbook.transactions, tx.ticker, tx.date) !== null &&
-                          sameDayChargedSide(workbook.transactions, tx.ticker, tx.date) !== tx.action && (
-                            <span className="footer-note" title="Same-day round trip — netted, government levies only.">
-                              {' '}(netted)
-                            </span>
-                          )}
+                        {isNettedLeg(workbook.transactions, tx) && (
+                          <span
+                            className="footer-note"
+                            title={tx.manualSameDay ? 'Manually marked as a same-day netted leg — government levies only.' : 'Same-day round trip — netted, government levies only.'}
+                          >
+                            {' '}(netted{tx.manualSameDay ? ', manual' : ''})
+                          </span>
+                        )}
                       </td>
                       <td>
                         <button className="btn secondary small" onClick={() => startEdit(i, tx)}>Edit</button>{' '}

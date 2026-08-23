@@ -77,22 +77,33 @@ export function sameDayChargedSide(transactions: Transaction[], ticker: string, 
   return sellQty > buyQty ? 'SELL' : 'BUY';
 }
 
+/** README item 7: is this transaction's leg netted (government levies only,
+ * no commission/SST)? True either when the user has manually flagged it
+ * (`manualSameDay`, for when the recorded date doesn't line up with the
+ * real trade day) or when the date-based auto-detection pairs it with an
+ * opposite-side same-day trade. */
+export function isNettedLeg(transactions: Transaction[], tx: Transaction): boolean {
+  if (tx.manualSameDay) return true;
+  const charged = sameDayChargedSide(transactions, tx.ticker, tx.date);
+  return charged !== null && tx.action !== charged;
+}
+
 /** Builds a same-day-aware fee calculator over a fixed transaction list.
  * When called with a real transaction (`context.tx`), it looks up whether
  * that transaction's side is the one "charged" full commission for that
- * ticker+date, or the netted side (levies only). When called without a
- * `tx` (e.g. break-even/target-price what-ifs, where there's no real
- * same-day context yet), it falls back to modeling a single hypothetical
- * leg — matching the legacy calcFee()/calcFeeBreakdown() split between
- * "forward-looking calculators" and "actual recorded transactions". */
+ * ticker+date, or the netted side (levies only) — see `isNettedLeg`. When
+ * called without a `tx` (e.g. break-even/target-price what-ifs, where
+ * there's no real same-day context yet), it falls back to modeling a
+ * single hypothetical leg — matching the legacy calcFee()/
+ * calcFeeBreakdown() split between "forward-looking calculators" and
+ * "actual recorded transactions". */
 export function makePSXFeeCalculator(settings: PSXSettings, allTransactions: Transaction[]): FeeCalculator {
   return (amount, isBuy, context) => {
     const shares = context?.shares ?? 0;
     const tx = context?.tx;
     if (!tx) return calcFeeBreakdown(amount, isBuy, shares, settings).total;
 
-    const charged = sameDayChargedSide(allTransactions, tx.ticker, tx.date);
-    if (charged === null || tx.action === charged) {
+    if (!isNettedLeg(allTransactions, tx)) {
       return calcFeeBreakdown(amount, isBuy, shares, settings).total;
     }
     // Netted side: government levies only, no commission or SST.

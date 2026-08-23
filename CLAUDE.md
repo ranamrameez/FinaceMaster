@@ -100,9 +100,18 @@ to extend cleanly to the rest; don't build the rest speculatively.
     (synthetic hand-traced cases) plus a real-fixture sanity pass over
     `fixtures/psx-workbook-backup.json` (copy of the repo-root PSX backup —
     see Data safety below, same caveat about not overwriting it casually).
+  - **Manual same-day-trade override checkbox (README item 7, 2026-08-23):**
+    added `Transaction.manualSameDay?: boolean` (`webapp/src/types/workbook.ts`,
+    shared type but PSX-only in effect — QSE ignores it) and `isNettedLeg()`
+    in `psxFees.ts`, the single source of truth for whether a leg is netted
+    (checks the manual flag first, then falls back to the existing
+    date-based `sameDayChargedSide` auto-detection). Wired into the
+    add-transaction form and both edit-row forms (Transactions page and
+    per-stock `StockPage.tsx`) as a "Same-day override" checkbox, and into
+    the "(netted)" tag display (shows ", manual" when the override, not
+    auto-detection, is why). New tests in `psxFees.test.ts` cover the
+    override forcing netted treatment even when dates don't line up.
   - **Not done — still open PSX/README items for a future session:**
-    manual same-day-trade checkbox (README item 7 asked for an override
-    alongside the auto-detection; only auto-detection + display exist),
     per-transaction editable fee breakdown (item 11 — would need a
     `feeOverride`-shaped field on the shared `Transaction` type, which QSE
     also uses, so do that carefully), FIFO buy/sell lot matching instead of
@@ -157,6 +166,27 @@ webapp/                                                              the new Rea
 
 ## Design decisions worth knowing before you change anything
 
+- **No live third-party market-data API calls, ever, from the app itself
+  (locked in 2026-08-23).** Free/cheap tiers cap out fast (20–800 calls/day
+  depending on provider) — a design that hits the provider on every page
+  load will get rate-limited in production. Fetch on a schedule (cron job /
+  worker) into our own database, and serve all app requests from that local
+  store; if an unofficial/scraped source breaks, it should degrade the
+  refresh job, not the live app. This is the reasoning behind the existing
+  `stockData/QSE`/`stockData/PSX` Firebase-node pattern and PSX's bundled
+  `psxSeed.ts` fallback — don't design a feature that calls a market-data
+  API directly from a page load or user action.
+- **No bank account API / open-banking integration for now (locked in
+  2026-08-23).** Pakistan's SBP and Qatar's QCB both require regulator
+  licensing for this kind of access — a compliance/business-development
+  process, not a coding task. When bank-transaction tracking is eventually
+  built: primary path is manual entry + statement upload/parsing (PDF/CSV
+  → transactions), with the data model designed so a "transaction" doesn't
+  care whether it came from manual entry, a parsed statement, or (later) a
+  live feed — same shape, different source field. SMS/email transaction-
+  alert parsing is an optional, later, additive input source behind that
+  same model — don't let it shape the core architecture, and don't start it
+  before manual entry + statement upload are solid.
 - **Cloud sync safety is non-negotiable.** A prior version of this sync logic
   destroyed the user's real portfolio: it treated a `null`/empty first
   Firebase read as "this account has no data yet" and auto-uploaded local
