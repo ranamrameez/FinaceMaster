@@ -1,12 +1,14 @@
 import { HashRouter, Route, Routes } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
+import { CalculatorLauncher } from './components/CalculatorLauncher';
 import { ConfirmDialogHost } from './components/ConfirmDialog';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { PSXTickerDatalist } from './components/PSXTickerDatalist';
 import { SignInModalHost } from './components/SignInModal';
 import { TickerDatalist } from './components/TickerDatalist';
 import { Toast } from './components/Toast';
-import { CalculatorLauncher } from './features/qse/components/CalculatorLauncher';
 import { useFirebaseSync } from './lib/firebase/useFirebaseSync';
+import { usePSXFirebaseSync } from './lib/firebase/usePSXFirebaseSync';
 import { useAppearanceStore } from './store/appearanceStore';
 import { AnalyticsPage } from './features/qse/pages/AnalyticsPage';
 import { DashboardPage } from './features/qse/pages/DashboardPage';
@@ -15,6 +17,13 @@ import { TransactionsPage } from './features/qse/pages/TransactionsPage';
 import { WatchlistPage } from './features/qse/pages/WatchlistPage';
 import { StockPage } from './features/qse/pages/StockPage';
 import { SettingsPage } from './features/qse/pages/SettingsPage';
+import { AnalyticsPage as PSXAnalyticsPage } from './features/psx/pages/AnalyticsPage';
+import { DashboardPage as PSXDashboardPage } from './features/psx/pages/DashboardPage';
+import { PortfolioPage as PSXPortfolioPage } from './features/psx/pages/PortfolioPage';
+import { TransactionsPage as PSXTransactionsPage } from './features/psx/pages/TransactionsPage';
+import { WatchlistPage as PSXWatchlistPage } from './features/psx/pages/WatchlistPage';
+import { StockPage as PSXStockPage } from './features/psx/pages/StockPage';
+import { SettingsPage as PSXSettingsPage } from './features/psx/pages/SettingsPage';
 import { LegalPage } from './pages/LegalPage';
 
 function useApplyAppearance() {
@@ -46,6 +55,11 @@ function useApplyAppearance() {
 function App() {
   useApplyAppearance();
   const { user, status, cloudEmpty, uploadLocalToCloud } = useFirebaseSync();
+  // Same account, separate cloud path — see usePSXFirebaseSync. Both syncs
+  // run all the time (not just while their routes are active) so a PSX
+  // trade logged, say, right before switching to QSE has already started
+  // pushing before the component unmounts.
+  const psxSync = usePSXFirebaseSync();
 
   return (
     <ErrorBoundary>
@@ -72,6 +86,23 @@ function App() {
                   />
                 }
               />
+              <Route path="/psx" element={<PSXDashboardPage />} />
+              <Route path="/psx/portfolio" element={<PSXPortfolioPage />} />
+              <Route path="/psx/transactions" element={<PSXTransactionsPage />} />
+              <Route path="/psx/watchlist" element={<PSXWatchlistPage />} />
+              <Route path="/psx/stock/:ticker" element={<PSXStockPage />} />
+              <Route path="/psx/analytics" element={<PSXAnalyticsPage />} />
+              <Route
+                path="/psx/settings"
+                element={
+                  <PSXSettingsPage
+                    user={user}
+                    syncStatus={psxSync.status}
+                    cloudEmpty={psxSync.cloudEmpty}
+                    uploadLocalToCloud={psxSync.uploadLocalToCloud}
+                  />
+                }
+              />
               <Route path="/legal" element={<LegalPage />} />
             </Routes>
           </ErrorBoundary>
@@ -79,6 +110,7 @@ function App() {
         <CalculatorLauncher />
         <Toast />
         <TickerDatalist />
+        <PSXTickerDatalist />
       </HashRouter>
     </ErrorBoundary>
   );

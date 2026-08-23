@@ -71,26 +71,65 @@ to extend cleanly to the rest; don't build the rest speculatively.
   duplicates the Avg Cost/Break-even calculation from `PortfolioPage.tsx`'s
   `OpenPositionsTable` rather than sharing it — if that logic changes,
   update both.
-- **PSX module: calc engine + store + types only, no UI yet.** See
-  `webapp/src/lib/calc/psxFees.ts` (itemized commission/SST/PSX/NCCPL/SECP/
-  CDC/CVT fees, same-day trade netting, CGT filer/non-filer rates — this
-  already fixes README bugs items 5/6/7), `webapp/src/types/psxWorkbook.ts`,
-  `webapp/src/store/psxWorkbookStore.ts`,
-  `webapp/src/lib/firebase/usePSXFirebaseSync.ts`. **Next task: build PSX's
-  pages** mirroring `webapp/src/features/qse/` structure, plus an exchange
-  switcher in the nav (Stocks → QSE/PSX), then eventually restructure routes
-  to something like `/stocks/:exchange/...` so mutual funds / banking / cash
-  / property can slot in as sibling top-level domains later.
+- **PSX module: UI built and live, mirroring QSE (2026-08-23).** Full page
+  set under `webapp/src/features/psx/` — Dashboard, Portfolio
+  (Holdings/History), per-stock pages (`/psx/stock/:ticker`), Transactions
+  (tabbed sub-sections incl. Dividends), Watchlist, Analytics (4 category
+  tabs, same chart set as QSE minus Fundamentals — see below), Settings
+  (Account/Data/Fees & CGT). Nav has a "Stocks" exchange switcher
+  (`components/Sidebar.tsx`'s `ExchangeSwitcher`) with QSE/PSX chips; which
+  exchange is "current" is derived from the route (`/psx/*` vs everything
+  else), not stored separately. The floating Trade Calculator button
+  (`components/CalculatorLauncher.tsx`, moved out of `features/qse/` and
+  now route-aware) shows the QSE or PSX calculator depending on path. Both
+  QSE's and PSX's Firebase syncs run unconditionally in `App.tsx` (not just
+  while their routes are active), same pattern the sidebar/datalists follow.
+  PSX ticker names/sectors are a static bundled seed
+  (`lib/stockData/psxSeed.ts`, ported from the legacy `js/psx-symbols.json`,
+  121 symbols) — unlike QSE there's no shared Firebase `stockData/PSX` node
+  yet, so `usePSXStockData` doesn't attempt a fetch at all (see that file's
+  comment if adding one later).
+  - **README items 5/6/7 (CGT filer/non-filer, same-day fee netting) are
+    now both *computed* (already true before today, in `psxFees.ts`) and
+    *visible in the UI*.** The Transactions list and per-stock transaction
+    list show a Fee column with a "(netted)" tag on the smaller leg of a
+    detected same-day round trip (via `sameDayChargedSide`); PositionDetail
+    and the PSX TradeCalculator both show an "Est. CGT if sold now" /
+    "Est. CGT" stat using `calcCGT` + the Settings-configured filer status.
+    New test coverage: `webapp/src/lib/calc/__tests__/psxFees.test.ts`
+    (synthetic hand-traced cases) plus a real-fixture sanity pass over
+    `fixtures/psx-workbook-backup.json` (copy of the repo-root PSX backup —
+    see Data safety below, same caveat about not overwriting it casually).
+  - **Not done — still open PSX/README items for a future session:**
+    manual same-day-trade checkbox (README item 7 asked for an override
+    alongside the auto-detection; only auto-detection + display exist),
+    per-transaction editable fee breakdown (item 11 — would need a
+    `feeOverride`-shaped field on the shared `Transaction` type, which QSE
+    also uses, so do that carefully), FIFO buy/sell lot matching instead of
+    weighted-average cost (item 8, explicitly deferred to "Phase 2" in
+    `positions.ts`'s own comment), Trade Planner / saved multi-leg trade
+    plans (item 9), statement PDF/Excel import (item 12), and a shared
+    `stockData/PSX` Firebase node with real fundamentals (PSX's analytics
+    page has no Fundamentals card for this reason — QSE's does).
+  - **Not yet restructured**: routes are still flat (`/psx/...` bolted on
+    alongside QSE's root-level routes), not the `/stocks/:exchange/...`
+    shape mentioned below — flat was lower-risk to add without touching
+    QSE's existing (bookmarked, tested) routes. Revisit if/when mutual
+    funds/banking/cash/property modules actually get built, since that's
+    the point where a real shared-shell route structure starts paying off.
 - **Legacy static apps** (`index.html` = QSE, `PSX_Trade_Planner.html`,
   `Risk_Analysis_Calculator.html`) still live unchanged at the repo root and
   still deploy — **do not delete these** until PSX reaches parity and the
-  user explicitly approves a cutover.
+  user explicitly approves a cutover. The Sidebar's legacy-link list now
+  only links out to Risk Analysis (PSX has its own React nav item instead of
+  a legacy link, now that it's live).
 
 ## Live URLs
 
-- New React app (QSE): **https://ranamrameez.github.io/FinaceMaster/webapp/**
-- Legacy apps (still authoritative for PSX/Risk Analysis for now):
-  **https://ranamrameez.github.io/FinaceMaster/**
+- New React app (QSE + PSX, `#/` and `#/psx`): **https://ranamrameez.github.io/FinaceMaster/webapp/**
+- Legacy apps (still authoritative for Risk Analysis; `PSX_Trade_Planner.html`
+  is now superseded by the React PSX module but left in place — see Current
+  status above): **https://ranamrameez.github.io/FinaceMaster/**
 
 ## Repo layout
 
@@ -107,8 +146,9 @@ webapp/                                                              the new Rea
   src/lib/firebase/         useAuthState.ts = single shared auth listener; useWorkbookCloudSync.ts =
                             generic per-exchange sync factory; useFirebaseSync.ts (QSE) and
                             usePSXFirebaseSync.ts both use it
-  src/features/qse/         QSE-specific pages/components/hooks — mirror this structure for
-                            src/features/psx/ when building PSX's UI
+  src/features/qse/         QSE-specific pages/components/hooks
+  src/features/psx/         PSX-specific pages/components/hooks — mirrors features/qse/'s structure
+                            (see Current status above for what's built vs. still open)
   src/components/           shared UI: Modal, ConfirmDialog, SignInModal, Sparkline, Tabs, Sidebar, etc.
   src/types/workbook.ts     QSE types; psxWorkbook.ts has PSX's parallel types
 .github/workflows/static.yml   CI: builds webapp/ and deploys it to /webapp/ alongside the legacy
@@ -225,17 +265,20 @@ window/prompt on their screen rather than assuming failure.
 `qse-workbook-backup.json` and `psx/psx-workbook-backup.json` at the repo
 root are **real personal trading data snapshots** the user provided, kept in
 sync manually. They're also used as Vitest fixtures
-(`webapp/src/lib/calc/__tests__/fixtures/`) — that copy is pinned to
-specific hand-verified expected values in `calc.test.ts`; don't casually
-overwrite it when refreshing the root backup file, or the tests will need
-their expected values recomputed too.
+(`webapp/src/lib/calc/__tests__/fixtures/`) — `qse-workbook-backup.json`'s
+copy is pinned to specific hand-verified expected values in `calc.test.ts`;
+`psx-workbook-backup.json`'s copy (added 2026-08-23) is used more loosely by
+`psxFees.test.ts` (pipeline-runs-clean + a couple of settings-dependent spot
+checks, not fully hand-traced per-row). Don't casually overwrite either
+fixture copy when refreshing the root backup files without checking whether
+the tests' expected values still hold.
 
 ## Firebase
 
 Same Firebase project (`qse-app`) and RTDB paths as the legacy apps are
 reused deliberately, so existing users' cloud data loads unchanged:
-`users/{uid}/workbook` (QSE), `users/{uid}/psx` (PSX, not wired to UI yet),
-`users/{uid}/profile` (display name + emoji avatar). There's also a shared
+`users/{uid}/workbook` (QSE), `users/{uid}/psx` (PSX, wired to the UI as of
+2026-08-23), `users/{uid}/profile` (display name + emoji avatar). There's also a shared
 public node `stockData/QSE` (ticker names + fundamentals) that the app
 prefers over the bundled fallback in `lib/stockData/qseSeed.ts` — it hasn't
 actually been seeded in Firebase yet, and its RTDB rules likely require
