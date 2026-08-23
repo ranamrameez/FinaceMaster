@@ -19,15 +19,30 @@ interface PersonalLoansStoreState {
   updateLoan: (id: string, patch: Partial<PersonalLoan>) => void;
   deleteLoan: (id: string) => void;
   addRepayment: (repayment: PersonalLoanRepayment) => void;
-  updateRepayment: (loanId: string, index: number, patch: Partial<PersonalLoanRepayment>) => void;
-  deleteRepayment: (loanId: string, index: number) => void;
+  updateRepayment: (id: string, patch: Partial<PersonalLoanRepayment>) => void;
+  deleteRepayment: (id: string) => void;
   updateSettings: (patch: Partial<PersonalLoansWorkbook['settings']>) => void;
+}
+
+/** Assigns a stable id to any repayment saved before the 2026-08-23 id
+ * retrofit (see PersonalLoanRepayment's own doc comment), so real user data
+ * written before today keeps working with no manual migration step — same
+ * pattern as createWorkbookStore.ts's Transfer id retrofit and
+ * createEntryStore.ts's ensureIds. Applied on every path data enters the
+ * store: local load and setWorkbook (which also covers the Firebase pull in
+ * useWorkbookCloudSync). */
+function ensureRepaymentIds(repayments: PersonalLoanRepayment[]): PersonalLoanRepayment[] {
+  return repayments.map((r) => (r.id ? r : { ...r, id: crypto.randomUUID() }));
+}
+
+function normalize(wb: PersonalLoansWorkbook): PersonalLoansWorkbook {
+  return { ...wb, repayments: ensureRepaymentIds(wb.repayments) };
 }
 
 function loadFromLocalStorage(): PersonalLoansWorkbook {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return { ...createEmptyPersonalLoansWorkbook(), ...JSON.parse(raw) };
+    if (raw) return normalize({ ...createEmptyPersonalLoansWorkbook(), ...JSON.parse(raw) });
   } catch (e) {
     console.warn('Failed to load workbook from localStorage', e);
   }
@@ -53,8 +68,9 @@ export const usePersonalLoansWorkbookStore = create<PersonalLoansStoreState>((se
     workbook: loadFromLocalStorage(),
 
     setWorkbook: (wb, opts) => {
-      set({ workbook: wb });
-      if (!opts?.skipPersist) persist(wb);
+      const normalized = normalize(wb);
+      set({ workbook: normalized });
+      if (!opts?.skipPersist) persist(normalized);
     },
 
     addLoan: (loan) => mutate((wb) => ({ ...wb, loans: [...wb.loans, loan] })),
@@ -71,31 +87,10 @@ export const usePersonalLoansWorkbookStore = create<PersonalLoansStoreState>((se
 
     addRepayment: (repayment) => mutate((wb) => ({ ...wb, repayments: [...wb.repayments, repayment] })),
 
-    updateRepayment: (loanId, index, patch) =>
-      mutate((wb) => {
-        let seen = -1;
-        return {
-          ...wb,
-          repayments: wb.repayments.map((r) => {
-            if (r.loanId !== loanId) return r;
-            seen += 1;
-            return seen === index ? { ...r, ...patch } : r;
-          }),
-        };
-      }),
+    updateRepayment: (id, patch) =>
+      mutate((wb) => ({ ...wb, repayments: wb.repayments.map((r) => (r.id === id ? { ...r, ...patch } : r)) })),
 
-    deleteRepayment: (loanId, index) =>
-      mutate((wb) => {
-        let seen = -1;
-        return {
-          ...wb,
-          repayments: wb.repayments.filter((r) => {
-            if (r.loanId !== loanId) return true;
-            seen += 1;
-            return seen !== index;
-          }),
-        };
-      }),
+    deleteRepayment: (id) => mutate((wb) => ({ ...wb, repayments: wb.repayments.filter((r) => r.id !== id) })),
 
     updateSettings: (patch) => mutate((wb) => ({ ...wb, settings: { ...wb.settings, ...patch } })),
   };

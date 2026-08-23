@@ -554,10 +554,11 @@ decisions (flagged explicitly below).
 
 ## 8. Multi-currency-aware, multi-module cross-entity linking
 
-**Status: (a) and Rentals (part of (b)) built 2026-08-23** — see README Done item 34.
-`fromAmount`/`toAmount` are live, and Rentals is now a linkable module (Bank/Cash↔a specific
-property). Personal Loans/EMI/Funds remain unlinked per the blockers documented below —
-nothing changed about them, they're recorded here for whenever they're picked up next.
+**Status: (a), Rentals, and Personal Loans (part of (b)) built 2026-08-23** — see README
+Done items 34 and 39. `fromAmount`/`toAmount` are live, and Rentals + Personal Loans are now
+linkable modules (Bank/Cash↔a specific property, Bank/Cash↔a specific loan's repayment
+ledger). EMI/Funds remain unlinked per the blockers documented below — nothing changed about
+them, they're recorded here for whenever they're picked up next.
 
 Extends README item 19 / MODULES_PLAN §7 (v1 shipped 2026-08-23, Cash↔Bank + Bank↔QSE/PSX,
 single shared amount). Two separate asks bundled together by the user, both real:
@@ -576,12 +577,18 @@ hide the second field to keep the common case simple. `buildLinkedRecords` in
 link record itself stores both (so a later edit can recompute either side correctly without
 losing the original manual conversion).
 
-**b) More module pairs.** Currently only Cash/Bank/QSE/PSX participate. Extending to
-Funds/Rentals/EMI/Personal Loans hits real per-module blockers, investigated 2026-08-23:
-- **Personal Loans**: `PersonalLoanRepayment` is addressed by a `(loanId, index)` compound
-  key today, not a stable `id` — needs the same kind of id-retrofit already done for
-  `Transfer`/`CashEntry` (README item 29) before it can be a link target. Real but
-  tractable — same pattern, third time.
+**b) More module pairs.** Currently Cash/Bank/QSE/PSX/Rentals/Personal Loans participate.
+Extending to Funds/EMI hits real per-module blockers, investigated 2026-08-23:
+- **Personal Loans**: ✅ investigated and built 2026-08-23. `PersonalLoanRepayment` was
+  addressed by a `(loanId, index)` compound key, not a stable `id` — retrofitted the same
+  pattern already used for `Transfer`/`CashEntry` (README item 29): added `id: string`,
+  an `ensureRepaymentIds()` normalizer in `personalLoansWorkbookStore.ts` applied on load and
+  `setWorkbook` (so pre-retrofit user data keeps working), and switched
+  `updateRepayment`/`deleteRepayment` to plain id addressing. Now a linkable module: `ref` is
+  a `PersonalLoan.id`, and a linked transfer always creates a positive-amount
+  `PersonalLoanRepayment` against that loan regardless of link direction (unlike every other
+  module, a repayment's sign doesn't depend on which side of the link it's on). See README
+  Done item 39.
 - **EMI/Loans**: has **no repayment ledger at all** — `EMILoan` is a computed amortization
   schedule (principal/tenure/start-date), not logged payments (see CLAUDE.md's EMI entry).
   Linking a real transfer into it would mean adding a repayments log to EMI's data model,
@@ -600,10 +607,9 @@ Funds/Rentals/EMI/Personal Loans hits real per-module blockers, investigated 202
   linked transfer maps to `RentalEntry.type` (`RENT_INCOME` when Rentals is the `to` side,
   `EXPENSE` when it's the `from` side).
 
-**Suggested order**: (1) fromAmount/toAmount multi-currency support — no new module
-blockers, pure extension of what's shipped; (2) Personal Loans id retrofit + linking;
-(3) investigate Rentals; (4) EMI and Funds need their own design decisions first, don't just
-wire them in.
+**Suggested order**: (1) fromAmount/toAmount multi-currency support — ✅ done; (2) Personal
+Loans id retrofit + linking — ✅ done; (3) investigate Rentals — ✅ done; (4) EMI and Funds
+need their own design decisions first, don't just wire them in — still open.
 
 ## 9. Native Risk Calculator (replaces the legacy static-page link) — ✅ built 2026-08-23
 

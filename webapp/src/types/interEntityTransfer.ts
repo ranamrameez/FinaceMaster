@@ -8,12 +8,15 @@
  * 2026-08-23 to include Rentals (Bank/Cash <-> a specific property — a
  * rent payment in, or an expense paid out) since `RentalEntry` already had
  * a stable id and needed no retrofit, unlike Personal Loans (repayments
- * addressed by `(loanId, index)`, not a stable id) or EMI (no repayment
- * ledger to link into at all — see MODULES_PLAN.md §8). Funds linking can
+ * were addressed by `(loanId, index)`, not a stable id) or EMI (no
+ * repayment ledger to link into at all — see MODULES_PLAN.md §8). Extended
+ * again the same day to include Personal Loans now that
+ * `PersonalLoanRepayment` has been retrofitted with a stable id
+ * (Bank/Cash <-> a specific loan's repayment ledger). Funds linking can
  * follow once its `Transfer` field is actually exposed in the UI. */
-export type LinkModule = 'cash' | 'bank' | 'qse' | 'psx' | 'rentals';
+export type LinkModule = 'cash' | 'bank' | 'qse' | 'psx' | 'rentals' | 'personalLoans';
 
-export const LINK_MODULES: LinkModule[] = ['cash', 'bank', 'qse', 'psx', 'rentals'];
+export const LINK_MODULES: LinkModule[] = ['cash', 'bank', 'qse', 'psx', 'rentals', 'personalLoans'];
 
 export const LINK_MODULE_LABELS: Record<LinkModule, string> = {
   cash: 'Cash',
@@ -21,12 +24,14 @@ export const LINK_MODULE_LABELS: Record<LinkModule, string> = {
   qse: 'QSE (Stocks)',
   psx: 'PSX (Stocks)',
   rentals: 'Rentals',
+  personalLoans: 'Personal Loans',
 };
 
 export interface LinkSideConfig {
   module: LinkModule;
-  /** A `BankAccount.id` when `module === 'bank'`, or a `Property.id` when
-   * `module === 'rentals'` — the two sides with more than one sub-entity
+  /** A `BankAccount.id` when `module === 'bank'`, a `Property.id` when
+   * `module === 'rentals'`, or a `PersonalLoan.id` when
+   * `module === 'personalLoans'` — the sides with more than one sub-entity
    * to choose from. Ignored otherwise. */
   ref?: string;
   /** A `CashEntry.currencyCode` when `module === 'cash'` — the only side

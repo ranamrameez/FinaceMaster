@@ -15,21 +15,21 @@ const loan = (over: Partial<PersonalLoan>): PersonalLoan => ({
 describe('loanOutstanding', () => {
   it('subtracts repayments from principal', () => {
     const l = loan({ id: 'l1', principal: 500 });
-    const repayments: PersonalLoanRepayment[] = [{ loanId: 'l1', date: '2026-02-01', amount: 200 }];
+    const repayments: PersonalLoanRepayment[] = [{ id: 'r1', loanId: 'l1', date: '2026-02-01', amount: 200 }];
     expect(loanOutstanding(l, repayments)).toBe(300);
   });
 
   it('never goes negative even if overpaid', () => {
     const l = loan({ id: 'l1', principal: 500 });
-    const repayments: PersonalLoanRepayment[] = [{ loanId: 'l1', date: '2026-02-01', amount: 600 }];
+    const repayments: PersonalLoanRepayment[] = [{ id: 'r1', loanId: 'l1', date: '2026-02-01', amount: 600 }];
     expect(loanOutstanding(l, repayments)).toBe(0);
   });
 
   it('only counts repayments for the matching loan', () => {
     const l = loan({ id: 'l1', principal: 500 });
     const repayments: PersonalLoanRepayment[] = [
-      { loanId: 'l1', date: '2026-02-01', amount: 100 },
-      { loanId: 'other', date: '2026-02-01', amount: 9999 },
+      { id: 'r1', loanId: 'l1', date: '2026-02-01', amount: 100 },
+      { id: 'r2', loanId: 'other', date: '2026-02-01', amount: 9999 },
     ];
     expect(loanOutstanding(l, repayments)).toBe(400);
   });
@@ -49,7 +49,7 @@ describe('netPositionByCurrency', () => {
 
   it('accounts for repayments already made', () => {
     const loans: PersonalLoan[] = [loan({ id: 'l1', direction: 'i_owe', currencyCode: 'USD', principal: 500 })];
-    const repayments: PersonalLoanRepayment[] = [{ loanId: 'l1', date: '2026-02-01', amount: 300 }];
+    const repayments: PersonalLoanRepayment[] = [{ id: 'r1', loanId: 'l1', date: '2026-02-01', amount: 300 }];
     expect(netPositionByCurrency(loans, repayments).USD).toBe(-200);
   });
 });

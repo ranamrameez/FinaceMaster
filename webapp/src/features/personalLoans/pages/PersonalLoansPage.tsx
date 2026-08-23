@@ -7,6 +7,7 @@ import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
+import { confirmAndDeleteLinkable } from '../../../lib/linkCascade';
 import { loanOutstanding, netPositionByCurrency } from '../../../lib/calc/personalLoansModule';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
@@ -101,23 +102,23 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
   const ensureSignedIn = useEnsureSignedIn();
   const [date, setDate] = useState(today());
   const [amount, setAmount] = useState(0);
-  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<PersonalLoanRepayment | null>(null);
 
   const submit = async () => {
     if (!amount || amount <= 0) return toast('Enter a repayment amount.');
     if (!(await ensureSignedIn('Sign in to save repayments.'))) return;
-    addRepayment({ loanId: loan.id, date, amount });
+    addRepayment({ id: crypto.randomUUID(), loanId: loan.id, date, amount });
     toast('Repayment logged.');
     setAmount(0);
   };
 
-  const startEdit = (i: number, r: PersonalLoanRepayment) => { setEditIndex(i); setEditRow({ ...r }); };
+  const startEdit = (r: PersonalLoanRepayment) => { setEditId(r.id); setEditRow({ ...r }); };
   const saveEdit = () => {
-    if (editIndex === null || !editRow) return;
-    updateRepayment(loan.id, editIndex, editRow);
+    if (editId === null || !editRow) return;
+    updateRepayment(editId, editRow);
     toast('Repayment updated.');
-    setEditIndex(null);
+    setEditId(null);
     setEditRow(null);
   };
 
@@ -132,27 +133,25 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
         <table>
           <thead><tr><th>Date</th><th>Amount</th><th></th></tr></thead>
           <tbody>
-            {repayments.map((r, i) =>
-              editIndex === i && editRow ? (
-                <tr key={i}>
+            {repayments.map((r) =>
+              editId === r.id && editRow ? (
+                <tr key={r.id}>
                   <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
                   <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 90 }} /></td>
                   <td>
                     <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
-                    <button className="btn secondary small" onClick={() => setEditIndex(null)}>Cancel</button>
+                    <button className="btn secondary small" onClick={() => setEditId(null)}>Cancel</button>
                   </td>
                 </tr>
               ) : (
-                <tr key={i}>
+                <tr key={r.id}>
                   <td>{r.date}</td>
                   <td>{fmtMoney(r.amount, loan.currencyCode)}</td>
                   <td>
-                    <button className="btn secondary small" onClick={() => startEdit(i, r)}>Edit</button>{' '}
+                    <button className="btn secondary small" onClick={() => startEdit(r)}>Edit</button>{' '}
                     <button
                       className="btn secondary small"
-                      onClick={async () => {
-                        if (await confirmDialog('This cannot be undone.', 'Delete this repayment?')) deleteRepayment(loan.id, i);
-                      }}
+                      onClick={() => confirmAndDeleteLinkable('personalLoans', r.id, () => deleteRepayment(r.id))}
                     >
                       <TrashIcon size={12} />Delete
                     </button>

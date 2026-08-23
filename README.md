@@ -371,6 +371,36 @@ FinanceManager live link:
     place of opening the modal. This may be specific to the live deployed site in a way this
     session's local dev server didn't reproduce, or may already be stale (fixed by something
     else today) — needs a specific page/button from the user to chase further if it recurs.
+39. **Personal Loans added as a sixth linkable module (2026-08-23), README item 21's first
+    part.** `PersonalLoanRepayment` got the same stable-id retrofit already done for `Transfer`
+    and `CashEntry`: added `id: string`, a `ensureRepaymentIds()` normalizer in
+    `personalLoansWorkbookStore.ts` (applied on local load and on every `setWorkbook`, so real
+    repayments saved before today keep working without a manual migration step), and switched
+    `updateRepayment`/`deleteRepayment` from `(loanId, index)` compound addressing to plain
+    `(id)` — `PersonalLoansPage.tsx`'s repayment table updated to match. With a stable id in
+    place, Personal Loans slots into the existing linking architecture the same way Rentals did:
+    `buildSideRecord` in `lib/interEntityLink.ts` gained a `'personalLoans'` case producing a
+    `PersonalLoanRepayment` against the picked loan — deliberately ignoring the link's
+    `direction` (a repayment's amount is always positive regardless of which way the debt runs
+    or which side of the link it's on, unlike every other module's side record), and
+    `isSupportedLinkPair` now allows Bank&harr;Personal Loans and Cash&harr;Personal Loans.
+    `lib/linkCascade.ts`'s three dispatch switches and `TransferLinksPage.tsx`'s `SideFields`/
+    `moduleLabel`/currency-resolution all got a `personalLoans` case, following the exact same
+    pattern as the Rentals property picker (a "Loan" `<select>` keyed by `PersonalLoan.id`,
+    showing the person's name + currency). The repayment delete button in
+    `PersonalLoansPage.tsx` now goes through `confirmAndDeleteLinkable` like every other
+    linkable module, so deleting a linked repayment there cascades to the other side instead of
+    orphaning the link. New tests: `lib/__tests__/interEntityLink.test.ts` (Bank→Personal Loans,
+    Personal Loans→Cash, missing-ref throw) and `lib/__tests__/linkCascade.test.ts` (create +
+    cascade-delete against real store instances). Verified live in the browser with seeded
+    localStorage (a bank account + a PKR personal loan, no sign-in needed since this only
+    exercises the form's local state): the "Personal Loans" module option appears in both side
+    pickers, selecting it reveals a "Loan" picker listing the seeded loan by name and currency,
+    and the Cash(USD)/loan(PKR) pairing correctly triggers the existing currency-mismatch
+    warning — zero console errors. `npm run build` / `npm run test` (119 tests, 6 new) both
+    clean. **Still open** (README item 21's remainder): Funds (needs its hidden `Transfer`
+    field exposed in the UI first) remains unlinked; EMI has no repayment ledger at all to link
+    into (a data-model question, not an oversight).
 
 ## Pending
 
@@ -400,10 +430,9 @@ FinanceManager live link:
 **New wave, 2026-08-23 (user-requested, full design detail in `MODULES_PLAN.md`'s "Next
 wave" section)**:
 
-21. Cross-entity linking remainder (see Done item 34): Personal Loans still needs an id
-    retrofit before it can be linked; Funds needs its hidden `Transfer` field exposed in the
-    UI first; EMI has no repayment ledger at all to link into (a data-model question). None
-    of these are started.
+21. Cross-entity linking remainder (see Done item 39): Personal Loans is now linked. Funds
+    still needs its hidden `Transfer` field exposed in the UI first; EMI has no repayment
+    ledger at all to link into (a data-model question). Neither of these is started.
 22. Calculator button remainder: it's module-aware now (hidden outside Stock Exchanges, see
     Done item 32), but the longer-term goal — a *relevant* calculator per module (an EMI
     payoff calculator, a Cash quick-math tool, etc.) — needs those modules' own planning tools
@@ -424,10 +453,10 @@ wave" section)**:
     couldn't reproduce locally (both primary sign-in entry points open the real modal
     correctly). Needs a specific page/button from the user to chase further if it recurs.
 27. Editing (not deleting) a linked record directly in its native module (Cash/Bank/QSE/
-    PSX/Rentals) still doesn't propagate to the other side of the link or the link record
-    itself (see Done item 35's "known remaining gap"). Deletion is now safe (cascades
-    correctly from any entry point); editing amounts/dates only fully stays in sync when
-    done from the Transfers page.
+    PSX/Rentals/Personal Loans) still doesn't propagate to the other side of the link or the
+    link record itself (see Done item 35's "known remaining gap"). Deletion is now safe
+    (cascades correctly from any entry point); editing amounts/dates only fully stays in sync
+    when done from the Transfers page.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

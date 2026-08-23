@@ -268,6 +268,8 @@ Informal loans with another person — money you lent out, or money you owe — 
   repayment later. Outstanding = principal minus all repayments logged so far.
 - No interest or repayment-schedule automation here by design — if a "personal loan"
   actually has a real repayment schedule, it belongs in EMI/Loans (§18 below) instead.
+- A repayment created from the **Transfers** page (§22) is linked to a Bank or Cash entry —
+  deleting it there also removes the matching Bank/Cash record; see §22 for details.
 
 ---
 
@@ -374,16 +376,19 @@ fixes that for the most common moves by creating **one linked transfer** that wr
 record on both sides at once, and keeps them in sync afterward.
 
 **Supported so far**: Cash ↔ Banking, Banking ↔ your QSE or PSX cash balance (a deposit or
-withdrawal), and Banking/Cash ↔ a specific Rentals property (rent received, or an expense
-paid). Other pairings (e.g. Cash directly to a stock exchange, or anything involving
-Funds/EMI/Personal Loans) aren't wired up yet — the form tells you if a pairing isn't
-supported instead of silently doing something wrong.
+withdrawal), Banking/Cash ↔ a specific Rentals property (rent received, or an expense paid),
+and Banking/Cash ↔ a specific Personal Loan (a repayment logged against that loan). Other
+pairings (e.g. Cash directly to a stock exchange, or anything involving Funds/EMI) aren't
+wired up yet — the form tells you if a pairing isn't supported instead of silently doing
+something wrong.
 
 - **Create a link**: choose the **From** and **To** side (for Banking, also pick which
-  account; for Rentals, pick which property), an amount, a date, and an optional note, then
-  **Create link**. This adds a matching entry to both modules' own ledgers — you'll see it
-  appear in Cash's ledger, Banking's transaction list, or a property's income/expenses,
-  exactly like anything else you'd entered by hand there.
+  account; for Rentals, pick which property; for Personal Loans, pick which loan), an
+  amount, a date, and an optional note, then **Create link**. This adds a matching entry to
+  both modules' own ledgers — you'll see it appear in Cash's ledger, Banking's transaction
+  list, a property's income/expenses, or a loan's repayment list, exactly like anything else
+  you'd entered by hand there. A Personal Loans repayment created this way is always a
+  positive amount against the chosen loan, regardless of which side of the link it's on.
 - **Different currencies**: no live conversion happens automatically — but if the two sides
   use different currencies, check **"Different amount on the other side"** and enter the
   real converted amount yourself (from your bank's rate, a cash exchange receipt, etc.).

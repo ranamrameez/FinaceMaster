@@ -630,6 +630,41 @@ not developer notes) continuously as features ship.
   write action) correctly open the real modal locally, zero console
   errors. Left as an open item needing a specific page/button to chase
   further if it recurs; see README Pending.
+- **Workflow change, same day (2026-08-23): direct-to-main commits from
+  now on, no more PR-based development.** The user explicitly instructed
+  "commit into main directly for seamless development" mid-session, after
+  PR #2's review cycle was already in flight — that PR was finished,
+  merged, and local `main` fast-forwarded to match as usual, but every
+  session from here on should commit straight to `main` (still verifying
+  tests/build/browser-check first, per this file's existing standing
+  instructions — the removed step is only the PR/review ceremony, not the
+  quality bar) rather than opening a branch + PR per change.
+- **Personal Loans added as a sixth linkable module (2026-08-23) — see
+  README Done item 39, MODULES_PLAN.md §8.** Retrofitted
+  `PersonalLoanRepayment` with a stable `id` (same pattern as `Transfer`/
+  `CashEntry` before it — an `ensureRepaymentIds()` normalizer in
+  `personalLoansWorkbookStore.ts`, applied on load and `setWorkbook`, so
+  real pre-retrofit data keeps working) and switched
+  `updateRepayment`/`deleteRepayment` from `(loanId, index)` compound
+  addressing to plain `(id)`. With a stable id, Personal Loans slotted into
+  the existing linking machinery exactly like Rentals did:
+  `lib/interEntityLink.ts`'s `buildSideRecord` gained a `'personalLoans'`
+  case (a repayment against the picked loan, always positive — the one
+  side record whose amount doesn't flip sign based on link direction,
+  since paying off debt and receiving a repayment both just log a positive
+  `PersonalLoanRepayment`), `isSupportedLinkPair` allows Bank/Cash↔Personal
+  Loans, `lib/linkCascade.ts`'s three dispatch switches got a
+  `personalLoans` case, and `TransferLinksPage.tsx` gained a "Loan" picker
+  mirroring the Rentals "Property" picker. `PersonalLoansPage.tsx`'s
+  repayment delete button now goes through `confirmAndDeleteLinkable` like
+  every other linkable module. Verified live via Playwright with seeded
+  localStorage (no real sign-in — same reasoning as the rest of this
+  linking feature, see README Done item 39): the loan picker lists the
+  seeded loan by name/currency and the cross-currency warning fires
+  correctly, zero console errors. `npm run build` / `npm run test` (119
+  tests, 6 new) both clean. Funds (hidden `Transfer` field) and EMI (no
+  repayment ledger) remain the only unlinked modules — see
+  MODULES_PLAN.md §8 for why each needs its own design decision first.
 
 ## Live URLs
 

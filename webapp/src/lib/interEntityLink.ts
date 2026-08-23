@@ -1,6 +1,7 @@
 import type { BankTransaction } from '../types/bankWorkbook';
 import type { CashEntry } from '../types/cashWorkbook';
 import type { InterEntityTransfer, InterEntityTransferInput, LinkModule, LinkSideConfig } from '../types/interEntityTransfer';
+import type { PersonalLoanRepayment } from '../types/personalLoansWorkbook';
 import type { RentalEntry } from '../types/rentalsWorkbook';
 import type { Transfer } from '../types/workbook';
 
@@ -11,7 +12,8 @@ export type LinkSideRecord =
   | { module: 'cash'; record: CashEntry }
   | { module: 'bank'; record: BankTransaction }
   | { module: 'qse' | 'psx'; record: Transfer }
-  | { module: 'rentals'; record: RentalEntry };
+  | { module: 'rentals'; record: RentalEntry }
+  | { module: 'personalLoans'; record: PersonalLoanRepayment };
 
 function buildSideRecord(
   cfg: LinkSideConfig,
@@ -69,6 +71,17 @@ function buildSideRecord(
           note,
         },
       };
+    case 'personalLoans':
+      // A repayment's amount is always positive regardless of which way the
+      // debt runs or which side of the link it is — paying off "money I owe"
+      // and receiving a repayment for "money I lent out" both just log a
+      // PersonalLoanRepayment against the chosen loan, so `direction` is
+      // intentionally unused here (unlike every other module's side record).
+      if (!cfg.ref) throw new Error('Personal Loans side of a linked transfer needs a loan.');
+      return {
+        module: 'personalLoans',
+        record: { id, loanId: cfg.ref, date, amount },
+      };
   }
 }
 
@@ -114,6 +127,10 @@ export function isSupportedLinkPair(from: LinkModule, to: LinkModule): boolean {
     ['rentals', 'bank'],
     ['cash', 'rentals'],
     ['rentals', 'cash'],
+    ['bank', 'personalLoans'],
+    ['personalLoans', 'bank'],
+    ['cash', 'personalLoans'],
+    ['personalLoans', 'cash'],
   ];
   return supported.some(([a, b]) => a === from && b === to);
 }

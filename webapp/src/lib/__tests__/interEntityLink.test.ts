@@ -131,6 +131,47 @@ describe('buildLinkedRecords', () => {
     expect(() => buildLinkedRecords(input, ids)).toThrow();
   });
 
+  it('maps Bank -> Personal Loans to a repayment against the chosen loan', () => {
+    const input: InterEntityTransferInput = {
+      date: '2026-05-01',
+      fromAmount: 300,
+      toAmount: 300,
+      from: { module: 'bank', ref: 'acct-1' },
+      to: { module: 'personalLoans', ref: 'loan-1' },
+    };
+    const { from, to } = buildLinkedRecords(input, ids);
+    expect(from.module).toBe('bank');
+    if (from.module === 'bank') expect(from.record.amount).toBe(-300);
+    expect(to.module).toBe('personalLoans');
+    if (to.module === 'personalLoans') expect(to.record).toMatchObject({ loanId: 'loan-1', amount: 300, date: '2026-05-01' });
+  });
+
+  it('maps Personal Loans -> Cash to a repayment with the same positive amount, direction ignored', () => {
+    // A repayment always logs a positive amount against the loan regardless
+    // of which side of the link it's on or which way the debt runs.
+    const input: InterEntityTransferInput = {
+      date: '2026-05-02',
+      fromAmount: 75,
+      toAmount: 75,
+      from: { module: 'personalLoans', ref: 'loan-2' },
+      to: { module: 'cash', currencyCode: 'USD' },
+    };
+    const { from } = buildLinkedRecords(input, ids);
+    expect(from.module).toBe('personalLoans');
+    if (from.module === 'personalLoans') expect(from.record).toMatchObject({ loanId: 'loan-2', amount: 75 });
+  });
+
+  it('throws for a Personal Loans side missing a loan ref', () => {
+    const input: InterEntityTransferInput = {
+      date: '2026-05-01',
+      fromAmount: 10,
+      toAmount: 10,
+      from: { module: 'bank', ref: 'acct-1' },
+      to: { module: 'personalLoans' },
+    };
+    expect(() => buildLinkedRecords(input, ids)).toThrow();
+  });
+
   it('throws for a Bank side missing an account ref', () => {
     const input: InterEntityTransferInput = {
       date: '2026-01-01',
@@ -171,6 +212,10 @@ describe('isSupportedLinkPair', () => {
     expect(isSupportedLinkPair('rentals', 'bank')).toBe(true);
     expect(isSupportedLinkPair('cash', 'rentals')).toBe(true);
     expect(isSupportedLinkPair('rentals', 'cash')).toBe(true);
+    expect(isSupportedLinkPair('bank', 'personalLoans')).toBe(true);
+    expect(isSupportedLinkPair('personalLoans', 'bank')).toBe(true);
+    expect(isSupportedLinkPair('cash', 'personalLoans')).toBe(true);
+    expect(isSupportedLinkPair('personalLoans', 'cash')).toBe(true);
   });
 
   it('rejects pairs outside v1 scope', () => {

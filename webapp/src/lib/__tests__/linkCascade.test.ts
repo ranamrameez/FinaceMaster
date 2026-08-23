@@ -9,10 +9,13 @@ import { useBankWorkbookStore } from '../../store/bankWorkbookStore';
 import { useCashWorkbookStore } from '../../store/cashWorkbookStore';
 import { createEmptyBankWorkbook } from '../../store/defaultBankWorkbook';
 import { createEmptyCashWorkbook } from '../../store/defaultCashWorkbook';
+import { createEmptyPersonalLoansWorkbook } from '../../store/defaultPersonalLoansWorkbook';
 import { useInterEntityTransfersStore } from '../../store/interEntityTransfersStore';
+import { usePersonalLoansWorkbookStore } from '../../store/personalLoansWorkbookStore';
 import type { InterEntityTransferInput } from '../../types/interEntityTransfer';
 
 const bankAccountId = 'acct-1';
+const loanId = 'loan-1';
 
 beforeEach(() => {
   localStorage.clear();
@@ -20,6 +23,10 @@ beforeEach(() => {
   useBankWorkbookStore.getState().setWorkbook({
     ...createEmptyBankWorkbook(),
     settings: { accounts: [{ id: bankAccountId, name: 'Checking', currencyCode: 'USD', openingBalance: 0 }] },
+  });
+  usePersonalLoansWorkbookStore.getState().setWorkbook({
+    ...createEmptyPersonalLoansWorkbook(),
+    loans: [{ id: loanId, person: 'Bilal', direction: 'i_owe', currencyCode: 'USD', principal: 1000, date: '2026-01-01' }],
   });
   useInterEntityTransfersStore.getState().setWorkbook({ settings: {}, entries: [] });
 });
@@ -92,6 +99,37 @@ describe('deleteLinkCascade', () => {
     deleteLinkCascade(created.link);
 
     expect(useCashWorkbookStore.getState().workbook.entries).toHaveLength(0);
+    expect(useBankWorkbookStore.getState().workbook.transactions).toHaveLength(0);
+    expect(useInterEntityTransfersStore.getState().workbook.entries).toHaveLength(0);
+  });
+});
+
+describe('Personal Loans as a linked module', () => {
+  const bankToLoanInput: InterEntityTransferInput = {
+    date: '2026-05-01',
+    fromAmount: 200,
+    toAmount: 200,
+    from: { module: 'bank', ref: bankAccountId },
+    to: { module: 'personalLoans', ref: loanId },
+  };
+
+  it('creates a repayment on the loan and a matching bank transaction', () => {
+    const result = createLinkedTransfer(bankToLoanInput);
+    expect('link' in result).toBe(true);
+    if (!('link' in result)) return;
+
+    expect(usePersonalLoansWorkbookStore.getState().workbook.repayments).toHaveLength(1);
+    expect(usePersonalLoansWorkbookStore.getState().workbook.repayments[0]).toMatchObject({ loanId, amount: 200 });
+    expect(useBankWorkbookStore.getState().workbook.transactions[0]).toMatchObject({ accountId: bankAccountId, amount: -200 });
+  });
+
+  it('cascades a delete to both the repayment and the bank transaction', () => {
+    const created = createLinkedTransfer(bankToLoanInput);
+    if (!('link' in created)) throw new Error('expected success');
+
+    deleteLinkCascade(created.link);
+
+    expect(usePersonalLoansWorkbookStore.getState().workbook.repayments).toHaveLength(0);
     expect(useBankWorkbookStore.getState().workbook.transactions).toHaveLength(0);
     expect(useInterEntityTransfersStore.getState().workbook.entries).toHaveLength(0);
   });

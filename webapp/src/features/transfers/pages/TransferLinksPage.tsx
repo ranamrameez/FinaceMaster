@@ -13,6 +13,7 @@ import { createLinkedTransfer, deleteLinkCascade, updateLinkedTransfer } from '.
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
 import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
 import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
+import { usePersonalLoansWorkbookStore } from '../../../store/personalLoansWorkbookStore';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
 import { useRentalsWorkbookStore } from '../../../store/rentalsWorkbookStore';
 import { useWorkbookStore } from '../../../store/workbookStore';
@@ -26,6 +27,7 @@ interface CurrencyContext {
   qseCurrency: string;
   psxCurrency: string;
   properties: { id: string; currencyCode: string }[];
+  loans: { id: string; currencyCode: string }[];
 }
 
 /** Resolves the display currency for one side — a plain function (not a
@@ -39,6 +41,7 @@ function resolveCurrency(cfg: LinkSideConfig, ctx: CurrencyContext): string | nu
     case 'qse': return ctx.qseCurrency;
     case 'psx': return ctx.psxCurrency;
     case 'rentals': return ctx.properties.find((p) => p.id === cfg.ref)?.currencyCode ?? null;
+    case 'personalLoans': return ctx.loans.find((l) => l.id === cfg.ref)?.currencyCode ?? null;
   }
 }
 
@@ -53,12 +56,14 @@ function useSideCurrency(cfg: LinkSideConfig): string | null {
   const qseCurrency = useWorkbookStore((s) => s.workbook.settings.currency);
   const psxCurrency = usePSXWorkbookStore((s) => s.workbook.settings.currency);
   const properties = useRentalsWorkbookStore((s) => s.workbook.settings.properties);
-  return resolveCurrency(cfg, { cashCurrency, bankAccounts, qseCurrency, psxCurrency, properties });
+  const loans = usePersonalLoansWorkbookStore((s) => s.workbook.loans);
+  return resolveCurrency(cfg, { cashCurrency, bankAccounts, qseCurrency, psxCurrency, properties, loans });
 }
 
 function SideFields({ label, cfg, onChange }: { label: string; cfg: LinkSideConfig; onChange: (cfg: LinkSideConfig) => void }) {
   const bankAccounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
   const properties = useRentalsWorkbookStore((s) => s.workbook.settings.properties);
+  const loans = usePersonalLoansWorkbookStore((s) => s.workbook.loans);
   const cashCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
   const currency = useSideCurrency(cfg);
 
@@ -71,7 +76,11 @@ function SideFields({ label, cfg, onChange }: { label: string; cfg: LinkSideConf
             const module = e.target.value as LinkModule;
             onChange({
               module,
-              ref: module === 'bank' ? bankAccounts[0]?.id : module === 'rentals' ? properties[0]?.id : undefined,
+              ref:
+                module === 'bank' ? bankAccounts[0]?.id
+                : module === 'rentals' ? properties[0]?.id
+                : module === 'personalLoans' ? loans[0]?.id
+                : undefined,
               currencyCode: module === 'cash' ? cashCurrency : undefined,
             });
           }}
@@ -92,6 +101,14 @@ function SideFields({ label, cfg, onChange }: { label: string; cfg: LinkSideConf
           <Select value={cfg.ref ?? ''} onChange={(e) => onChange({ ...cfg, ref: e.target.value })}>
             {!properties.length && <option value="">No properties yet</option>}
             {properties.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.currencyCode})</option>)}
+          </Select>
+        </Field>
+      )}
+      {cfg.module === 'personalLoans' && (
+        <Field label="Loan">
+          <Select value={cfg.ref ?? ''} onChange={(e) => onChange({ ...cfg, ref: e.target.value })}>
+            {!loans.length && <option value="">No loans yet</option>}
+            {loans.map((l) => <option key={l.id} value={l.id}>{l.person} ({l.currencyCode})</option>)}
           </Select>
         </Field>
       )}
@@ -127,6 +144,7 @@ function CreateLinkForm() {
     if (sameBankAccount) return toast('Pick two different bank accounts.');
     if ((from.module === 'bank' && !from.ref) || (to.module === 'bank' && !to.ref)) return toast('Add a bank account first.');
     if ((from.module === 'rentals' && !from.ref) || (to.module === 'rentals' && !to.ref)) return toast('Add a rental property first.');
+    if ((from.module === 'personalLoans' && !from.ref) || (to.module === 'personalLoans' && !to.ref)) return toast('Add a personal loan first.');
     if (!(await ensureSignedIn('Sign in to save transfers.'))) return;
 
     const result = createLinkedTransfer({ date, fromAmount, toAmount: toAmountEffective, from, to, note: note.trim() || undefined });
@@ -154,7 +172,7 @@ function CreateLinkForm() {
       {!pairSupported && (
         <p className="footer-note" style={{ color: 'var(--warn, orange)' }}>
           {LINK_MODULE_LABELS[from.module]} &rarr; {LINK_MODULE_LABELS[to.module]} isn't a supported linked pair yet — this
-          only links Cash&harr;Bank, Bank&harr;QSE/PSX cash balances, and Bank/Cash&harr;Rentals.
+          only links Cash&harr;Bank, Bank&harr;QSE/PSX cash balances, Bank/Cash&harr;Rentals, and Bank/Cash&harr;Personal Loans.
         </p>
       )}
       {currencyMismatch && !differentAmount && (
@@ -195,9 +213,11 @@ function moduleLabel(
   ref: string | undefined,
   bankAccounts: { id: string; name: string }[],
   properties: { id: string; name: string }[],
+  loans: { id: string; person: string }[],
 ) {
   if (module === 'bank') return `Banking${ref ? ` (${bankAccounts.find((a) => a.id === ref)?.name ?? '?'})` : ''}`;
   if (module === 'rentals') return `Rentals${ref ? ` (${properties.find((p) => p.id === ref)?.name ?? '?'})` : ''}`;
+  if (module === 'personalLoans') return `Personal Loans${ref ? ` (${loans.find((l) => l.id === ref)?.person ?? '?'})` : ''}`;
   return LINK_MODULE_LABELS[module];
 }
 
@@ -205,10 +225,11 @@ function LinksList() {
   const links = useInterEntityTransfersStore((s) => s.workbook.entries);
   const bankAccounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
   const properties = useRentalsWorkbookStore((s) => s.workbook.settings.properties);
+  const loans = usePersonalLoansWorkbookStore((s) => s.workbook.loans);
   const cashCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
   const qseCurrency = useWorkbookStore((s) => s.workbook.settings.currency);
   const psxCurrency = usePSXWorkbookStore((s) => s.workbook.settings.currency);
-  const currencyCtx: CurrencyContext = { cashCurrency, bankAccounts, qseCurrency, psxCurrency, properties };
+  const currencyCtx: CurrencyContext = { cashCurrency, bankAccounts, qseCurrency, psxCurrency, properties, loans };
   const [editId, setEditId] = useState<string | null>(null);
   const [editFromAmount, setEditFromAmount] = useState(0);
   const [editToAmount, setEditToAmount] = useState(0);
@@ -265,8 +286,8 @@ function LinksList() {
             editId === l.id ? (
               <tr key={l.id}>
                 <td><input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} style={{ width: 130 }} /></td>
-                <td>{moduleLabel(l.from.module, l.from.ref, bankAccounts, properties)}</td>
-                <td>{moduleLabel(l.to.module, l.to.ref, bankAccounts, properties)}</td>
+                <td>{moduleLabel(l.from.module, l.from.ref, bankAccounts, properties, loans)}</td>
+                <td>{moduleLabel(l.to.module, l.to.ref, bankAccounts, properties, loans)}</td>
                 <td><input type="number" step="0.01" value={editFromAmount} onChange={(e) => setEditFromAmount(Number(e.target.value))} style={{ width: 90 }} /></td>
                 <td><input type="number" step="0.01" value={editToAmount} onChange={(e) => setEditToAmount(Number(e.target.value))} style={{ width: 90 }} /></td>
                 <td><input value={editNote} onChange={(e) => setEditNote(e.target.value)} /></td>
@@ -278,8 +299,8 @@ function LinksList() {
             ) : (
               <tr key={l.id}>
                 <td>{l.date}</td>
-                <td>{moduleLabel(l.from.module, l.from.ref, bankAccounts, properties)}</td>
-                <td>{moduleLabel(l.to.module, l.to.ref, bankAccounts, properties)}</td>
+                <td>{moduleLabel(l.from.module, l.from.ref, bankAccounts, properties, loans)}</td>
+                <td>{moduleLabel(l.to.module, l.to.ref, bankAccounts, properties, loans)}</td>
                 <td>{fmtMoney(l.fromAmount, resolveCurrency(l.from, currencyCtx) || '')}</td>
                 <td>{fmtMoney(l.toAmount, resolveCurrency(l.to, currencyCtx) || '')}</td>
                 <td>{l.note}</td>
@@ -315,8 +336,9 @@ export function TransferLinksPage({
       <h1 className="pagetitle">Transfers</h1>
       <p className="footer-note" style={{ marginBottom: 12 }}>
         Move money between modules as one linked record instead of two entries that can drift apart. Supports
-        Cash&harr;Bank, Bank&harr;QSE/PSX cash balances, and Bank/Cash&harr;Rentals (rent received or an expense
-        paid); other module pairs aren't wired up yet.
+        Cash&harr;Bank, Bank&harr;QSE/PSX cash balances, Bank/Cash&harr;Rentals (rent received or an expense paid),
+        and Bank/Cash&harr;Personal Loans (a repayment logged against a specific loan); other module pairs aren't
+        wired up yet.
       </p>
       <CreateLinkForm />
       <Card>

@@ -2,6 +2,7 @@ import { confirmDialog } from '../components/ConfirmDialog';
 import { useBankWorkbookStore } from '../store/bankWorkbookStore';
 import { useCashWorkbookStore } from '../store/cashWorkbookStore';
 import { useInterEntityTransfersStore } from '../store/interEntityTransfersStore';
+import { usePersonalLoansWorkbookStore } from '../store/personalLoansWorkbookStore';
 import { usePSXWorkbookStore } from '../store/psxWorkbookStore';
 import { useRentalsWorkbookStore } from '../store/rentalsWorkbookStore';
 import { useWorkbookStore } from '../store/workbookStore';
@@ -19,6 +20,7 @@ export function dispatchAdd(side: LinkSideRecord) {
     case 'qse': return useWorkbookStore.getState().addTransfer(side.record);
     case 'psx': return usePSXWorkbookStore.getState().addTransfer(side.record);
     case 'rentals': return useRentalsWorkbookStore.getState().addEntry(side.record);
+    case 'personalLoans': return usePersonalLoansWorkbookStore.getState().addRepayment(side.record);
   }
 }
 
@@ -29,6 +31,7 @@ export function dispatchUpdate(side: LinkSideRecord) {
     case 'qse': return useWorkbookStore.getState().updateTransfer(side.record.id, side.record);
     case 'psx': return usePSXWorkbookStore.getState().updateTransfer(side.record.id, side.record);
     case 'rentals': return useRentalsWorkbookStore.getState().updateEntry(side.record.id, side.record);
+    case 'personalLoans': return usePersonalLoansWorkbookStore.getState().updateRepayment(side.record.id, side.record);
   }
 }
 
@@ -39,6 +42,7 @@ export function dispatchRemove(module: LinkModule, id: string) {
     case 'qse': return useWorkbookStore.getState().deleteTransfer(id);
     case 'psx': return usePSXWorkbookStore.getState().deleteTransfer(id);
     case 'rentals': return useRentalsWorkbookStore.getState().deleteEntry(id);
+    case 'personalLoans': return usePersonalLoansWorkbookStore.getState().deleteRepayment(id);
   }
 }
 

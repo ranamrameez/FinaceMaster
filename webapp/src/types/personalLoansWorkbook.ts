@@ -11,6 +11,12 @@ export interface PersonalLoan {
 }
 
 export interface PersonalLoanRepayment {
+  /** Stable id, not a per-loan array position — retrofitted 2026-08-23 so
+   * cross-entity transfer links (README item 19/21) can reference a
+   * specific repayment that survives other repayments being added/edited/
+   * deleted around it, same reasoning as `Transfer`/`CashEntry`'s earlier
+   * id retrofits. */
+  id: string;
   loanId: string;
   date: string;
   amount: number;
