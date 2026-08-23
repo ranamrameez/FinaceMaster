@@ -774,6 +774,22 @@ not developer notes) continuously as features ship.
   hanging plans that could explain one jump) is undesigned. **Do not
   guess at the algorithm** — wait for the sample data and design against
   a real worked example, per the user's own instruction.
+- **Cash Analytics tab built (2026-08-23), first module of README item
+  23's "per-module Analytics" wave, see Done item 44, MODULES_PLAN.md
+  §11.** Three charts (category-breakdown doughnut, income-vs-expense-
+  by-month bar, balance-over-time line), all reusing already-computed
+  `cashByCategory`/`cashRunningLedger` plus one new pure function,
+  `cashMonthlyFlow()` in `lib/calc/cashModule.ts`. A currency picker
+  shows up only when the workbook actually has more than one currency in
+  it. Reused `features/qse/components/ChartCard` cross-module rather
+  than duplicating it, since PSX's `AnalyticsPage.tsx` already sets that
+  precedent. Verified live via Playwright with seeded multi-currency
+  data (USD + PKR): all 3 canvas charts rendered, switching the currency
+  picker correctly changed the charts' data, zero console errors.
+  `npm run build` / `npm run test` (131 tests, 3 new) both clean.
+  Next per MODULES_PLAN.md §11's suggested order: Personal Loans, then
+  Banking, EMI/Loans, Funds, Rentals — this whole item is "several
+  modules' worth of work," treat each module as its own pass.
 
 ## Live URLs
 

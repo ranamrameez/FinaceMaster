@@ -1,5 +1,6 @@
 import type { User } from 'firebase/auth';
 import { useMemo, useRef, useState } from 'react';
+import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { Card } from '../../../components/Card';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
@@ -7,8 +8,13 @@ import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { useSortableRows } from '../../../hooks/useSortableRows';
-import { cashBalanceByCurrency, cashByCategory, cashRunningLedger } from '../../../lib/calc/cashModule';
+import { cashBalanceByCurrency, cashByCategory, cashMonthlyFlow, cashRunningLedger } from '../../../lib/calc/cashModule';
 import { plannedCashProjection } from '../../../lib/calc/plannedBalance';
+import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
+import { applyChartTheme } from '../../../lib/chartSetup';
+import { cssVar, tickerColor } from '../../../lib/cssVar';
+import { useAppearanceStore } from '../../../store/appearanceStore';
+import { ChartCard } from '../../qse/components/ChartCard';
 import { parseCSV } from '../../../lib/csv';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
@@ -236,6 +242,82 @@ function LedgerTab() {
       <BalancesSummary />
       <CategoryBreakdown />
       <EntryList />
+    </div>
+  );
+}
+
+/** README item 23 / MODULES_PLAN.md §11: per-module Analytics, first pass
+ * for Cash — the three charts suggested for Cash there (category
+ * breakdown, income/expense trend, balance-over-time). Since a Cash
+ * workbook can hold entries in more than one currency (never converted,
+ * per the app's cross-cutting rule), a currency picker selects which
+ * currency's charts to show — QSE/PSX don't need this since each exchange
+ * has exactly one settings.currency. */
+function AnalyticsTab() {
+  const entries = useCashWorkbookStore((s) => s.workbook.entries);
+  // Charts read CSS-var-derived colors — subscribe so this re-renders (and
+  // recomputes those colors) on a live theme switch, same pattern as every
+  // other chart-bearing page in this app.
+  useAppearanceStore((s) => s.appearance);
+  applyChartTheme();
+
+  const currencies = useMemo(() => [...new Set(entries.map((e) => e.currencyCode))].sort(), [entries]);
+  const [currency, setCurrency] = useState(currencies[0] ?? 'USD');
+  const effectiveCurrency = currencies.includes(currency) ? currency : (currencies[0] ?? currency);
+
+  const byCategory = useMemo(() => cashByCategory(entries)[effectiveCurrency] ?? {}, [entries, effectiveCurrency]);
+  const categories = Object.keys(byCategory);
+  const monthlyFlow = useMemo(() => cashMonthlyFlow(entries, effectiveCurrency), [entries, effectiveCurrency]);
+  const balanceOverTime = useMemo(
+    () => cashRunningLedger(entries).filter((r) => r.entry.currencyCode === effectiveCurrency),
+    [entries, effectiveCurrency],
+  );
+
+  if (!currencies.length) {
+    return <p className="footer-note">Add a cash entry first (Ledger tab) to see charts here.</p>;
+  }
+
+  return (
+    <div>
+      {currencies.length > 1 && (
+        <Field label="Currency" width={120}>
+          <Select value={effectiveCurrency} onChange={(e) => setCurrency(e.target.value)}>
+            {currencies.map((c) => <option key={c} value={c}>{c}</option>)}
+          </Select>
+        </Field>
+      )}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginTop: 12 }}>
+        <ChartCard title="Category breakdown" empty={!categories.length}>
+          <Doughnut
+            data={{
+              labels: categories,
+              datasets: [{ data: categories.map((c) => Math.abs(byCategory[c])), backgroundColor: categories.map((c) => tickerColor(c)) }],
+            }}
+            options={{ cutout: '55%', plugins: { datalabels: dlDoughnut((v) => fmtMoney(v, effectiveCurrency)) } }}
+          />
+        </ChartCard>
+        <ChartCard title="Income vs. expense by month" empty={!monthlyFlow.length}>
+          <Bar
+            data={{
+              labels: monthlyFlow.map((f) => f.month),
+              datasets: [
+                { label: 'Income', data: monthlyFlow.map((f) => f.income), backgroundColor: cssVar('--profit') || '#3ecf8e' },
+                { label: 'Expense', data: monthlyFlow.map((f) => f.expense), backgroundColor: cssVar('--loss') || '#e5484d' },
+              ],
+            }}
+            options={{ plugins: { datalabels: dlBarV((v) => fmtMoney(v, effectiveCurrency)) } }}
+          />
+        </ChartCard>
+        <ChartCard title="Balance over time" empty={!balanceOverTime.length}>
+          <Line
+            data={{
+              labels: balanceOverTime.map((r) => r.entry.date),
+              datasets: [{ label: 'Balance', data: balanceOverTime.map((r) => r.balance), borderColor: '#5aa9c9', backgroundColor: '#5aa9c933', fill: true, tension: 0.2 }],
+            }}
+            options={{ plugins: { legend: { display: false }, datalabels: dlLine((v) => fmtMoney(v, effectiveCurrency)) } }}
+          />
+        </ChartCard>
+      </div>
     </div>
   );
 }
@@ -818,6 +900,7 @@ export function CashPage({
       <Tabs
         tabs={[
           { key: 'ledger', label: 'Ledger', content: <LedgerTab /> },
+          { key: 'analytics', label: 'Analytics', content: <AnalyticsTab /> },
           {
             key: 'planning',
             label: 'Planning',

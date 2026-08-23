@@ -247,6 +247,9 @@ ledger, separate from any exchange.
 - **Balances and category totals are shown per currency**, never blended into one number —
   if you've logged cash in both USD and PKR, you'll see two separate balance figures, since
   there's no reliable exchange rate to convert them with.
+- **Analytics tab**: a category-breakdown chart, an income-vs-expense-by-month chart, and a
+  balance-over-time chart. If you've logged entries in more than one currency, a currency
+  picker at the top switches which currency's charts you're looking at.
 - **Planning tab**: a "what if I spend on this" scenario planner, meant as a guardrail
   against overspending. Add a **plan** (an expected future cash in/out that hasn't happened
   yet) and see a **Real balance** (from your actual entries) alongside a **Planned balance**

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CashEntry } from '../../../types/cashWorkbook';
-import { cashBalanceByCurrency, cashByCategory, cashRunningLedger } from '../cashModule';
+import { cashBalanceByCurrency, cashByCategory, cashMonthlyFlow, cashRunningLedger } from '../cashModule';
 
 let nextId = 0;
 const entry = (over: Partial<CashEntry>): CashEntry => ({
@@ -67,5 +67,36 @@ describe('cashByCategory', () => {
   it('falls back to "Uncategorized" when no category is set', () => {
     const entries = [entry({ category: undefined })];
     expect(cashByCategory(entries).USD.Uncategorized).toBe(100);
+  });
+});
+
+describe('cashMonthlyFlow', () => {
+  it('sums income and expense per calendar month for one currency', () => {
+    const entries = [
+      entry({ date: '2026-01-05', type: 'IN', amount: 500, currencyCode: 'USD' }),
+      entry({ date: '2026-01-20', type: 'OUT', amount: 200, currencyCode: 'USD' }),
+      entry({ date: '2026-02-10', type: 'IN', amount: 100, currencyCode: 'USD' }),
+    ];
+    const flow = cashMonthlyFlow(entries, 'USD');
+    expect(flow).toEqual([
+      { month: '2026-01', income: 500, expense: 200, net: 300 },
+      { month: '2026-02', income: 100, expense: 0, net: 100 },
+    ]);
+  });
+
+  it('ignores entries in other currencies', () => {
+    const entries = [
+      entry({ date: '2026-01-05', type: 'IN', amount: 500, currencyCode: 'USD' }),
+      entry({ date: '2026-01-05', type: 'IN', amount: 9999, currencyCode: 'PKR' }),
+    ];
+    expect(cashMonthlyFlow(entries, 'USD')).toEqual([{ month: '2026-01', income: 500, expense: 0, net: 500 }]);
+  });
+
+  it('returns months sorted chronologically regardless of input order', () => {
+    const entries = [
+      entry({ date: '2026-03-01', type: 'IN', amount: 10 }),
+      entry({ date: '2026-01-01', type: 'IN', amount: 20 }),
+    ];
+    expect(cashMonthlyFlow(entries, 'USD').map((f) => f.month)).toEqual(['2026-01', '2026-03']);
   });
 });

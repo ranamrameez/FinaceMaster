@@ -495,6 +495,23 @@ FinanceManager live link:
     asked for): Personal Loans/Rentals/EMI/Funds don't get a Planning tab yet; a plan can't be
     linked into the cross-entity Transfers system; there's no reminder/notification for a
     plan's expected date arriving.
+44. **Cash Analytics tab (2026-08-23), README item 23's first module — per-module Analytics
+    &amp; Planning.** Three charts as sketched in `MODULES_PLAN.md` §11: a category-breakdown
+    doughnut, an income-vs-expense-by-month bar chart, and a balance-over-time line chart —
+    all built on already-computed data (`cashByCategory`, `cashRunningLedger`) plus one new
+    pure function, `cashMonthlyFlow()` in `lib/calc/cashModule.ts` (3 new hand-traced tests).
+    Since a Cash workbook can hold entries in more than one currency (never converted, per
+    this app's cross-cutting rule), a currency picker selects which currency's charts to show
+    — only rendered when more than one currency is actually present, mirroring how QSE/PSX
+    don't need this (one currency per exchange). Reuses `features/qse/components/ChartCard`
+    cross-module (PSX's `AnalyticsPage.tsx` already does the same — not a new pattern) rather
+    than duplicating it a third time. New "Analytics" tab added to `CashPage.tsx` alongside
+    Ledger/Planning/Import/Settings. Verified live in the browser with seeded multi-currency
+    data: all three charts rendered (confirmed via `<canvas>` element count), the currency
+    picker correctly switched the charts' data when toggled between USD and PKR, zero console
+    errors. `npm run build` / `npm run test` (131 tests, 3 new) both clean. **Next up per
+    MODULES_PLAN.md §11's suggested build order**: Personal Loans, then Banking, EMI/Loans,
+    Funds, Rentals — this is "several modules' worth of work," so treat each as its own pass.
 
 ## Pending
 
@@ -533,7 +550,8 @@ wave" section)**:
     to exist first. Tracked together with item 23.
 23. Per-module Analytics & Planning for Cash/Banking/Personal Loans/EMI-Loans/Funds/Rentals —
     each currently has just a ledger + basic totals, no charts or planning tools like
-    QSE/PSX's Analytics page or Trade Planner. Largest item in this wave. Not started — see
+    QSE/PSX's Analytics page or Trade Planner. Largest item in this wave. **Cash done (see
+    Done item 44)**; Banking/Personal Loans/EMI-Loans/Funds/Rentals still need it — see
     `MODULES_PLAN.md` §11 for a per-module chart/tool sketch.
 24. New Subscriptions module — recurring payments (streaming, gym, etc.) linked to a paying
     entity (a Bank account or Cash), reusing the cross-entity linking mechanism from item 21

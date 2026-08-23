@@ -41,3 +41,29 @@ export function cashByCategory(entries: CashEntry[]): Record<string, Record<stri
   });
   return out;
 }
+
+export interface MonthlyFlow {
+  month: string; // YYYY-MM
+  income: number;
+  expense: number;
+  net: number;
+}
+
+/** Income (IN) vs. expense (OUT) totals per calendar month, for one
+ * currency at a time — feeds the Analytics tab's trend chart. Months with
+ * no activity are simply absent (not zero-filled), same convention as
+ * QSE/PSX's monthly series. */
+export function cashMonthlyFlow(entries: CashEntry[], currencyCode: string): MonthlyFlow[] {
+  const byMonth: Record<string, { income: number; expense: number }> = {};
+  entries
+    .filter((e) => e.currencyCode === currencyCode)
+    .forEach((e) => {
+      const month = e.date.slice(0, 7);
+      if (!byMonth[month]) byMonth[month] = { income: 0, expense: 0 };
+      if (e.type === 'IN') byMonth[month].income += e.amount;
+      else byMonth[month].expense += e.amount;
+    });
+  return Object.keys(byMonth)
+    .sort()
+    .map((month) => ({ month, income: byMonth[month].income, expense: byMonth[month].expense, net: byMonth[month].income - byMonth[month].expense }));
+}

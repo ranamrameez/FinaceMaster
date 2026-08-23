@@ -662,8 +662,11 @@ category tabs) or Trade Planner. This is the largest item in this wave — reali
 several modules' worth of work, not a single sitting. Suggested shape per module (adapt to
 what's actually meaningful for each, don't force identical chart sets):
 
-- **Cash**: income/expense trend over time, category breakdown pie (already computed in
-  `cashByCategory`, just not charted), balance-over-time line per currency.
+- **Cash**: ✅ built 2026-08-23 — see README Done item 44. Category-breakdown doughnut,
+  income-vs-expense-by-month bar chart, balance-over-time line — a currency picker shows up
+  only when more than one currency is actually present in the workbook. One new pure
+  function needed: `cashMonthlyFlow()` in `lib/calc/cashModule.ts` (category breakdown and
+  balance-over-time reused already-computed `cashByCategory`/`cashRunningLedger` as-is).
 - **Banking**: per-account balance trend, category breakdown, income vs. spend by month,
   a simple budget/spend-plan tool (e.g. monthly category targets vs. actuals).
 - **Personal Loans**: outstanding-by-person bar chart, repayment timeline, a "payoff
