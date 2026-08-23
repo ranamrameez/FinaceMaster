@@ -266,7 +266,39 @@ not developer notes) continuously as features ship.
     edit recalculates balances/category totals correctly, multi-currency
     entries (tested USD + PKR together) stay properly separated with no
     fake conversion, no console errors. `MODULES_PLAN.md` §1 has the full
-    writeup; next up per the build order is Personal Loans.
+    writeup; next up per the build order was Personal Loans (now also
+    built — see below).
+  - **Personal Loans module built (2026-08-23) — second new module.**
+    Two related arrays (`loans` + `repayments`), so it doesn't fit
+    `createEntryStore`'s single-array shape either — hand-written in
+    `store/personalLoansWorkbookStore.ts` following the same idiom
+    (mutate/persist/localStorage, `{workbook, setWorkbook}` satisfying
+    `MinimalWorkbookStore`) rather than adding a third generic factory.
+    Files: `types/personalLoansWorkbook.ts`, `store/
+    {personalLoansWorkbookStore,defaultPersonalLoansWorkbook}.ts`,
+    `lib/firebase/usePersonalLoansFirebaseSync.ts`,
+    `lib/calc/personalLoansModule.ts` (+ tests),
+    `features/personalLoans/pages/PersonalLoansPage.tsx`, route
+    `/personal-loans`, nav under "More" in `Sidebar.tsx`.
+    **A real bug was hit and fixed here, worth remembering for any future
+    module**: `RepaymentsSection` originally selected
+    `(s) => s.workbook.repayments.filter((r) => r.loanId === loan.id)` —
+    filtering *inside* the zustand selector callback returns a new array
+    reference on every call, which `useSyncExternalStore` (zustand's hook
+    is built on it) reads as "the store changed," causing a genuine
+    infinite-render loop (`Maximum update depth exceeded` / "getSnapshot
+    should be cached"). Fixed by selecting the raw `s.workbook.repayments`
+    array and filtering it in a separate `useMemo([allRepayments,
+    loan.id])` instead. **Rule for any future module's zustand selectors:
+    select raw state, derive with `useMemo`, never inside the selector.**
+    Debugging note for future sessions: this bug was initially very hard
+    to pin down because a long-lived dev tab that had gone through many
+    hot-reloads during the fix kept showing the stale error even after the
+    fix was confirmed correct in the served source (checked via fetching
+    the transformed module directly) — a brand new browser tab with a
+    hard reload was what finally confirmed the fix actually worked. If a
+    "phantom" error persists suspiciously after a code fix looks correct,
+    try a fresh tab before assuming the fix is wrong.
   - **Not done — still open PSX/README items for a future session:**
     statement PDF/Excel import (item 12), dynamic/filterable charts (item
     17), the Sidebar's category-dropdown redesign for Stock Exchanges/
@@ -319,6 +351,8 @@ webapp/                                                              the new Rea
   src/features/cash/        Cash module (2026-08-23) — the first non-stock-exchange module,
                             uses createEntryStore.ts (not createWorkbookStore.ts) — see its own
                             entry above and MODULES_PLAN.md §1
+  src/features/personalLoans/  Personal Loans module (2026-08-23) — hand-written store (two
+                            related arrays), see its own entry above and MODULES_PLAN.md §6
   src/components/           shared UI: Modal, ConfirmDialog, SignInModal, Sparkline, Tabs, Sidebar, etc.
   src/types/workbook.ts     QSE types; psxWorkbook.ts has PSX's parallel types
 .github/workflows/static.yml   CI: builds webapp/ and deploys it to /webapp/ alongside the legacy

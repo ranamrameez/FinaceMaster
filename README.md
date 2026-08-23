@@ -116,6 +116,20 @@ FinanceManager live link:
     fires correctly on add, edit persists and recalculates balances/category totals
     correctly, multi-currency entries stay properly separated (no fake conversion), no
     console errors.
+23. **Personal Loans module built (2026-08-23)** — second new module, per
+    `MODULES_PLAN.md`'s build order. Informal loans tracked in either direction (money you
+    lent out / money you owe), net position summary grouped by currency, per-loan repayment
+    logging with full edit/delete support. Find it at **More → Personal Loans**. Has two
+    related arrays (loans + repayments) so it's hand-written following the same store idiom
+    rather than forced through `createEntryStore`. **A real bug was hit and fixed during this
+    build**: a zustand selector that filtered an array *inside* the selector callback
+    (`(s) => s.workbook.repayments.filter(...)`) caused a genuine infinite-render loop
+    ("getSnapshot should be cached") — fixed by selecting the raw array and filtering in a
+    `useMemo` instead. Documented in `MODULES_PLAN.md` §6 as a rule for any future module:
+    select raw state, derive in `useMemo`, never inside the selector. Verified live in a
+    fresh browser tab after the fix (the bug was initially hard to pin down because a
+    long-lived dev tab with repeated hot-reloads showed stale errors even after the fix
+    landed — a fresh tab/hard reload was needed to confirm).
 
 ## Pending
 

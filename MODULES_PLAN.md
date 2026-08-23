@@ -80,8 +80,9 @@ riskier to get wrong:
 1. **Cash** — ✅ built 2026-08-23. A single running ledger, no external data source,
    smallest possible module. Good first exercise in generalizing the workbook factories
    beyond stock exchanges (see §1 below for what that generalization actually required).
-2. **Personal Loans** — almost as simple as Cash (principal + repayments, no schedule math),
-   and a good second exercise before tackling anything with real calculation logic.
+2. **Personal Loans** — ✅ built 2026-08-23. Almost as simple as Cash (principal +
+   repayments, no schedule math), a good second exercise before tackling real calculation
+   logic — also where a real zustand selector bug was hit and fixed (see §6 below).
 3. **Banking** — builds directly on Cash's ledger concept, adds multiple accounts and
    statement import (the first real use of the "manual entry + statement parsing" pattern).
 4. **EMI / Loans** — introduces real calculation (amortization schedule) but no market-price
@@ -345,12 +346,32 @@ intentionally simple, no grouping by loan type), early-payoff/extra-payment reca
 
 ---
 
-## 6. Personal Loans
+## 6. Personal Loans — ✅ built 2026-08-23
 
 **Purpose** (added 2026-08-23, from `reference/finance-suite-prototype/`): informal loans
 with another person, tracked in **either direction** — money lent out, or money borrowed —
 as one module rather than two, with a combined net-position view. No repayment schedule
 automation (unlike EMI/Loans above): just principal and ad-hoc repayments.
+
+**Built as designed below, with one architecture note**: this has *two* related arrays
+(`loans` + `repayments`), so it doesn't fit `createEntryStore`'s single-array shape any
+better than it fit `createWorkbookStore`'s stock-exchange shape — rather than add a third
+generic factory just for "two arrays", `store/personalLoansWorkbookStore.ts` is hand-written
+following the identical idiom (mutate/persist/localStorage, `{workbook, setWorkbook}` shape
+satisfying `useWorkbookCloudSync`'s `MinimalWorkbookStore`) rather than a generic factory.
+Files: `types/personalLoansWorkbook.ts`, `store/{personalLoansWorkbookStore,
+defaultPersonalLoansWorkbook}.ts`, `lib/firebase/usePersonalLoansFirebaseSync.ts`,
+`lib/calc/personalLoansModule.ts` (+ tests), `features/personalLoans/pages/
+PersonalLoansPage.tsx`, route `/personal-loans`, nav under "More" in the Sidebar.
+**One real bug hit and fixed during this build** (not hypothetical, worth remembering for
+any future module using zustand): a selector that computes a derived array *inside* the
+selector callback itself (e.g. `(s) => s.workbook.repayments.filter(...)`) returns a new
+array reference on every call, which `useSyncExternalStore` (which zustand's hook is built
+on) reads as "the store changed," causing a real infinite-render loop with a "getSnapshot
+should be cached" console error — confirmed by reproducing it, then fixing it by selecting
+the raw stable array and filtering in a separate `useMemo` instead. Any new module's
+selectors should follow that same rule: **select raw state, derive in `useMemo`, never
+inside the selector callback**.
 
 **Data model**:
 ```ts

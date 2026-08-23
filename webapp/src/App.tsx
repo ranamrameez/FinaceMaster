@@ -28,6 +28,8 @@ import { SettingsPage as PSXSettingsPage } from './features/psx/pages/SettingsPa
 import { TradePlannerPage as PSXTradePlannerPage } from './features/psx/pages/TradePlannerPage';
 import { CashPage } from './features/cash/pages/CashPage';
 import { useCashFirebaseSync } from './lib/firebase/useCashFirebaseSync';
+import { PersonalLoansPage } from './features/personalLoans/pages/PersonalLoansPage';
+import { usePersonalLoansFirebaseSync } from './lib/firebase/usePersonalLoansFirebaseSync';
 import { LegalPage } from './pages/LegalPage';
 
 function useApplyAppearance() {
@@ -65,6 +67,7 @@ function App() {
   // pushing before the component unmounts.
   const psxSync = usePSXFirebaseSync();
   const cashSync = useCashFirebaseSync();
+  const personalLoansSync = usePersonalLoansFirebaseSync();
 
   return (
     <ErrorBoundary>
@@ -118,6 +121,17 @@ function App() {
                     syncStatus={cashSync.status}
                     cloudEmpty={cashSync.cloudEmpty}
                     uploadLocalToCloud={cashSync.uploadLocalToCloud}
+                  />
+                }
+              />
+              <Route
+                path="/personal-loans"
+                element={
+                  <PersonalLoansPage
+                    user={user}
+                    syncStatus={personalLoansSync.status}
+                    cloudEmpty={personalLoansSync.cloudEmpty}
+                    uploadLocalToCloud={personalLoansSync.uploadLocalToCloud}
                   />
                 }
               />

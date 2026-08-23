@@ -212,12 +212,31 @@ hand, gifts, small informal amounts — as a simple ledger, separate from any ex
 - **Settings tab**: pick a default currency (only pre-fills new entries — never converts
   existing ones), plus the same export/import/clear-all data management as other modules.
 
-More modules (Banking, EMI/Loans, Funds, Personal Loans, Rentals) are planned — see
-`MODULES_PLAN.md`.
+---
+
+## 14. Personal Loans
+
+Informal loans with another person — money you lent out, or money you owe — tracked in
+**either direction** in one place, under **More → Personal Loans**.
+
+- **Add a loan**: person/lender name, direction (lent out / I owe), currency, principal
+  amount, date, optional note.
+- **Net position summary** at the top shows, per currency, whether you're net owed money or
+  net owe money across all your personal loans combined.
+- **Click a loan to open it**: see principal, outstanding balance, edit the loan itself
+  (person, direction, currency, principal, date, note), or delete it (this also deletes its
+  logged repayments).
+- **Log repayments** against a loan any time — date + amount — and edit or delete any
+  repayment later. Outstanding = principal minus all repayments logged so far.
+- No interest or repayment-schedule automation here by design — if a "personal loan"
+  actually has a real repayment schedule, it belongs in EMI/Loans (a separate, not-yet-built
+  module — see `MODULES_PLAN.md`) instead.
+
+More modules (Banking, EMI/Loans, Funds, Rentals) are planned — see `MODULES_PLAN.md`.
 
 ---
 
-## 14. A note on accuracy
+## 15. A note on accuracy
 
 Every number in this app is an **estimate** computed from settings you configure — it is
 not a substitute for your actual broker/exchange statement, and it is not financial advice.
