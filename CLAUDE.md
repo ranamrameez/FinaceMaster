@@ -753,6 +753,27 @@ not developer notes) continuously as features ship.
   clean. Deliberately not done in v1: no Planning tab for Personal
   Loans/Rentals/EMI/Funds, no linking a plan into the cross-entity
   Transfers system, no reminder/notification for a plan's date arriving.
+- **Planning v2 design captured, NOT built (2026-08-23) — see README
+  Pending item 28, MODULES_PLAN.md §15.** Right after Planning shipped,
+  the user described a second, harder case: a real (not hypothetical)
+  transfer that's already been sent but takes a few business days to
+  clear, during which the observed balance doesn't reflect it yet — and
+  asked for balance-jump detection (comparing the actual new balance
+  against the account's ordinary daily increment, e.g. a daily-profit
+  accrual) to suggest that a specific hanging plan has settled, plus a
+  user-confirmed decision on which date profit-basis should switch on
+  for correct historical P&L. The user explicitly said they have real
+  sample Excel data illustrating this from their own account and will
+  attach it in a future turn, and explicitly asked to update the docs
+  first and not write code until then — so this is design-only, nothing
+  implemented. Real open gaps documented in MODULES_PLAN.md §15: no
+  "expected profit rate" field exists anywhere in the data model yet;
+  neither Cash nor Banking has a single "the bank told me my balance is
+  X right now" event to hook a reconciliation check into (both compute
+  balance as a derived sum today); ambiguous-match tolerance (multiple
+  hanging plans that could explain one jump) is undesigned. **Do not
+  guess at the algorithm** — wait for the sample data and design against
+  a real worked example, per the user's own instruction.
 
 ## Live URLs
 

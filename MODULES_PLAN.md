@@ -819,3 +819,84 @@ and Funds don't get a Planning tab; a plan isn't linkable into the cross-entity 
 system (§7/§8); there's no reminder/notification when a plan's expected date arrives (this
 is a "check when you visit" tool, not a push-notification feature — the app doesn't have a
 notification channel of any kind yet). Revisit if the user asks for any of these.
+
+## 15. Planning v2: real-but-pending transfers + balance reconciliation
+
+**Status: design captured 2026-08-23, NOT YET BUILT — explicitly blocked on the user's own
+sample Excel data, which they will attach in a future turn.** Per the user's direct
+instruction ("I have sample Excel data which will be attached later... update the docs
+first, before moving forward"), no code has been written for this yet. This section exists
+so a future session picks up the full context instead of re-deriving it.
+
+**The user's own framing**: §14's Planning feature (built) actually needs to work in **two**
+distinct ways, not one:
+1. **Imaginary / hypothetical plan** — what's already built. A pure "what if" projection
+   that may never actually happen.
+2. **Real-but-pending transfer** — a transaction the user has *already made* (e.g., sent a
+   deposit to a bank/investment account), which is genuinely committed money, but takes a few
+   business days to clear/process — so the account's *observed* balance doesn't reflect it
+   yet. This is a different situation from (1): not hypothetical, just not-yet-visible.
+
+**Why this is hard, restated in the user's own terms**: this app has a locked rule of never
+integrating live bank/broker APIs (restated again by the user in this conversation) — the
+user updates their real account balance manually, at whatever cadence they check their bank.
+Many real accounts (the user's own example) accrue a small, roughly predictable **daily
+profit** even with zero transactions — so a naive "the balance moved, something must have
+settled" check can't tell "just another day of ordinary profit accrual" apart from "my
+pending deposit cleared."
+
+**Detection logic, from the user's own worked example** (illustrative numbers, to be
+verified/refined against the real Excel data before implementing anything):
+- Balance is 10,000; the account's known/expected daily profit is ~2 (flat in this example —
+  the real accrual rule, flat vs. a %, needs to come from the sample data).
+- There's a hanging (not-yet-executed) plan for +1,000 — money already sent, awaiting
+  clearance.
+- Next observed balance ≈ 10,002 → consistent with *ordinary* daily profit only → the
+  pending 1,000 has **not** processed yet.
+- Next observed balance ≈ 11,002 → consistent with ordinary profit **plus** the pending
+  1,000 → the deposit **has** processed.
+- On detecting the second case, the app should **suggest** (never silently apply) that a
+  specific hanging plan appears to have settled, and let the user confirm, reject, or adjust
+  the settlement date — same "always ask before treating something as final" principle this
+  app already applies everywhere else (the sign-in gate, cloud-sync-safety's
+  never-assume-emptiness rule, etc.).
+
+**The harder, explicitly-still-open part — which balance did each day's profit accrue on?**
+Once a pending plan is confirmed settled, the app also needs to get historical P&L right by
+correctly splitting which balance each day's profit was computed against:
+- If the account credits a day's profit on the balance as of the *start* of that day (before
+  any same-day posting), days during the pending window use the pre-deposit balance for
+  their profit calc, and only days *after* the real clearing date switch to the post-deposit
+  balance.
+- If the account back-dates value differently, the split point moves.
+- The user's own words: this needs to be "carefully decided," and the app must "clearly
+  highlight... for his final approval" — i.e., show its reasoning/best-guess (which date it
+  thinks profit-basis should switch on, and why) but require the user to confirm or correct
+  it, never silently pick a convention. **This is exactly the part the sample Excel data is
+  meant to clarify** — don't guess at the exact rule ahead of seeing real numbers.
+
+**Scope, per the AskUserQuestion earlier in this session**: Cash and Banking only, for now —
+same modules §14's Planning feature already covers. Not QSE/PSX.
+
+**Open design gaps a future session should treat as unresolved, not assumed** (sketch only):
+- **No field yet exists for an account's expected regular increment/profit rate.** Neither
+  `CashSettings`/`CashEntry` nor `BankAccount`/`BankTransaction` has anything like this today
+  — it's new data-model surface, shape TBD from the sample data (flat amount? percentage?
+  compounding? does it vary by account?).
+- **There is no single "the bank told me my balance is X right now" event in today's model.**
+  Both Cash and Banking compute the current balance as a derived sum (opening balance +
+  every logged entry/transaction) — there's no explicit "observed balance" action a user
+  takes that this reconciliation check could hook into. Introducing one (a manual "update
+  observed balance" action, distinct from logging an individual transaction) looks necessary,
+  but is itself a real design decision, not a given.
+- **Matching an ambiguous jump to a specific plan** when more than one hanging plan could
+  explain a given delta (or when the "ordinary daily profit" itself isn't precisely known)
+  needs a tolerance/ranking rule — not designed yet.
+- **Where the resulting "confirmed settlement date" is stored**, and how downstream P&L
+  calculations (which don't exist yet for Cash/Banking beyond a running balance — there's no
+  P&L concept there today the way QSE/PSX has realized/unrealized P&L) actually consume it,
+  is undesigned. This may turn out to matter most for whatever account the user's real
+  example describes, so the shape should follow from their data, not be invented ahead of it.
+
+**Next step**: wait for the user's sample Excel data, read it carefully, and only then
+design the actual data model + detection algorithm + UI around a real worked example.

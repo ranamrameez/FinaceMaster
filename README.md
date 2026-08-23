@@ -551,6 +551,21 @@ wave" section)**:
     link record itself (see Done item 35's "known remaining gap"). Deletion is now safe
     (cascades correctly from any entry point); editing amounts/dates only fully stays in sync
     when done from the Transfers page.
+28. **Planning v2 — real-but-pending transfers + balance reconciliation (2026-08-23,
+    user-requested, design captured but explicitly NOT started).** The Planning feature
+    (item 43 below) needs to also handle a second case beyond a pure hypothetical: a real
+    transfer the user has already sent that takes a few business days to clear, during
+    which the observed account balance doesn't yet reflect it (their own example: an
+    account with a small daily profit accrual, where the app would need to tell "just
+    another day's profit" apart from "my pending deposit cleared" by comparing the actual
+    new balance against the expected ordinary increment). If it detects a match, it should
+    suggest — never silently apply — that a specific hanging plan has settled, including
+    which date profit-basis should switch on, for the user's explicit approval. **Blocked on
+    the user's own sample Excel data**, which they said they'll attach in a future turn —
+    per their explicit instruction, no code exists for this yet. Full design writeup,
+    including the open unresolved gaps (no "expected profit rate" field exists yet, no
+    single "observed balance" event exists to hook a reconciliation check into, ambiguous-
+    match tolerance undesigned) is in `MODULES_PLAN.md` §15 — read that before touching this.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank
