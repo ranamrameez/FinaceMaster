@@ -538,6 +538,33 @@ not developer notes) continuously as features ship.
   user explicitly approves a cutover. The Sidebar's legacy-link list now
   only links out to Risk Analysis (PSX has its own React nav item instead of
   a legacy link, now that it's live).
+- **PR #1 merged 2026-08-23** (sidebar dropdown + cross-entity linking v1 +
+  filterable Analytics charts, all three described above). Branch
+  `claude/app-development-jnh4r9` was fast-forwarded to `main` post-merge
+  (no reset needed — its own commits were already part of main's history)
+  and re-pushed since GitHub auto-deleted the remote branch on merge.
+- **"Next wave" requested by the user, same day, right after the merge —
+  not yet built, full design detail in `MODULES_PLAN.md`'s "Next wave"
+  section (§8–§13), summarized in README items 20–25**: (1) native Risk
+  Calculator replacing the legacy static-page link; (2) cross-entity
+  linking gains real multi-currency amounts (`fromAmount`/`toAmount`
+  instead of one shared number) plus more module pairs — Personal Loans is
+  tractable (needs the same id-retrofit pattern as `Transfer`/`CashEntry`),
+  EMI and Funds have real structural blockers (EMI has no repayment ledger
+  at all, Funds' `Transfer` field is unused/hidden) that need their own
+  design decisions, not silent skipping; (3) the floating Calculator button
+  is already global (not a visibility bug, confirmed by reading the code
+  live with the user) but wrongly shows the QSE/PSX stock calculator on
+  every page — needs to be module-aware; (4) per-module Analytics/Planning
+  for all six non-exchange modules (the biggest item here — treat as
+  several sessions' worth, not one sitting); (5) a brand-new Subscriptions
+  module (recurring payments linked to a paying Bank/Cash entity); (6) a
+  CSV/JSON/PDF/image import pipeline — CSV/JSON is buildable now with no
+  new infra (same pattern as Banking's existing CSV import), but PDF/image
+  parsing was explicitly decided (with the user, not assumed) to need a
+  **separate Python backend service** hosted on infrastructure the user
+  picks — real new infra a coding session can scaffold but not provision
+  end-to-end alone.
 
 ## Live URLs
 

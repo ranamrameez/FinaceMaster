@@ -266,7 +266,10 @@ FinanceManager live link:
    to no single user) exists as a concept the app already prefers when present, but it
    hasn't actually been seeded in Firebase yet — needs real seeding, ideally via the
    scheduled-refresh-job architecture described under item 13 below, not manual entry.
-12. Ability to read account statement PDFs/Excel files to auto-populate trade history.
+12. Ability to read account statement PDFs/Excel files/images to auto-populate trade
+    history — **superseded/expanded by item 25 below** (now includes CSV/JSON/PDF/image
+    import across every module, not just QSE trades, and locks in a Python backend for the
+    PDF/image half). See `MODULES_PLAN.md` §13.
 13. Find APIs to fetch symbols, logos, stock prices, historical data, and finance news —
     **architecture constraint locked in 2026-08-23**: these must never be called live from
     the app itself (free/cheap tiers rate-limit fast). Fetch on a schedule (cron/worker)
@@ -278,7 +281,33 @@ FinanceManager live link:
 19. Cross-entity transaction linking beyond v1 scope (see Done item 29): Funds/Rentals/EMI/
     Personal Loans aren't wired into the Transfers page yet — only Cash↔Bank and
     Bank↔QSE/PSX. A real signed-in browser round-trip (create/edit/delete a link, confirm
-    both sides update) is also still needed — see item 29's verification note.
+    both sides update) is also still needed — see item 29's verification note. **Expanded
+    2026-08-23 into item 21 below** (genuine multi-currency amounts, more module pairs).
+
+**New wave, 2026-08-23 (user-requested, full design detail in `MODULES_PLAN.md`'s "Next
+wave" section)**:
+
+20. Native Risk Calculator (QSE/PSX), replacing the sidebar's link-out to the legacy
+    `Risk_Analysis_Calculator.html`. Not started — see `MODULES_PLAN.md` §9.
+21. Cross-entity linking: real multi-currency amounts (independent `fromAmount`/`toAmount`
+    instead of one shared amount + a warning), plus investigating Personal Loans/Rentals as
+    additional linkable modules (EMI and Funds have real structural blockers, documented, not
+    silently skipped). Not started — see `MODULES_PLAN.md` §8.
+22. Calculator button (`components/CalculatorLauncher.tsx`) should be module-aware instead of
+    always showing the QSE/PSX stock calculator on every page. Not started — see
+    `MODULES_PLAN.md` §10.
+23. Per-module Analytics & Planning for Cash/Banking/Personal Loans/EMI-Loans/Funds/Rentals —
+    each currently has just a ledger + basic totals, no charts or planning tools like
+    QSE/PSX's Analytics page or Trade Planner. Largest item in this wave. Not started — see
+    `MODULES_PLAN.md` §11 for a per-module chart/tool sketch.
+24. New Subscriptions module — recurring payments (streaming, gym, etc.) linked to a paying
+    entity (a Bank account or Cash), reusing the cross-entity linking mechanism from item 21
+    once solid. Not started — see `MODULES_PLAN.md` §12.
+25. Import pipeline: CSV/JSON import (browser-only, extends Banking's existing CSV-import
+    pattern to more modules — no new infra) and PDF/image import (**locked decision: a
+    separate Python backend service** for OCR/parsing, hosted on infrastructure the user
+    chooses — real new infra outside a single coding session's control). Not started — see
+    `MODULES_PLAN.md` §13.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank
