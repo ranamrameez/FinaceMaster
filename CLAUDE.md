@@ -565,13 +565,41 @@ not developer notes) continuously as features ship.
   **separate Python backend service** hosted on infrastructure the user
   picks — real new infra a coding session can scaffold but not provision
   end-to-end alone.
+- **Native Risk Calculator built + Calculator button fixed (2026-08-23),
+  from the "next wave" above — see README Done items 32/33.** New
+  `lib/calc/riskAnalysis.ts` (pure, tested) + shared `components/
+  RiskCalculator.tsx` + pages at `/risk-analysis` and `/psx/risk-analysis`
+  replace the legacy static-page link. Two deliberate correctness fixes
+  vs. a blind port: reused the app's real iterative `breakEvenPrice`
+  solver (correct under PSX's tiered fees, not just QSE's flat %) instead
+  of the legacy page's closed-form formula, and included the buy-side fee
+  in a hypothetical new purchase's cost basis (the legacy version omitted
+  it, understating break-even). Deliberately *not* ported: a hardcoded
+  "MPHC/IQCD = severe" headline special-case in the legacy page — that was
+  leftover from one person's real portfolio holdings, not a generalizable
+  rule. `CalculatorLauncher.tsx` now returns `null` outside Stock
+  Exchanges routes instead of defaulting to the QSE calculator everywhere.
+- **Cross-entity linking gains real multi-currency + Rentals (2026-08-23)
+  — see README Done item 34.** `InterEntityTransferInput.amount` split
+  into `fromAmount`/`toAmount` (independent numbers, no live FX lookup —
+  the user enters both sides from their own real conversion); the create
+  form defaults to one shared amount and reveals a second field only when
+  "Different amount on the other side" is checked, keeping the common
+  same-currency case simple. Separately, investigated and added Rentals as
+  a linkable module: its `RentalEntry` was already id-addressed (checked
+  before assuming, per this file's own standing advice), so no retrofit
+  was needed — a linked transfer maps to `RENT_INCOME`/`EXPENSE` depending
+  on direction. Personal Loans (needs an id retrofit) and Funds (needs its
+  hidden `Transfer` field exposed in the UI) remain unlinked; EMI still
+  has no repayment ledger to link into at all.
 
 ## Live URLs
 
-- New React app (QSE + PSX, `#/` and `#/psx`): **https://ranamrameez.github.io/FinaceMaster/webapp/**
-- Legacy apps (still authoritative for Risk Analysis; `PSX_Trade_Planner.html`
-  is now superseded by the React PSX module but left in place — see Current
-  status above): **https://ranamrameez.github.io/FinaceMaster/**
+- New React app (QSE + PSX, `#/` and `#/psx`, now including a native Risk
+  Analysis page for both — see Current status): **https://ranamrameez.github.io/FinaceMaster/webapp/**
+- Legacy apps (`PSX_Trade_Planner.html` and `Risk_Analysis_Calculator.html`
+  are both now superseded by React equivalents but left in place — see
+  Current status above): **https://ranamrameez.github.io/FinaceMaster/**
 
 ## Repo layout
 

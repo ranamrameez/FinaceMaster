@@ -554,6 +554,11 @@ decisions (flagged explicitly below).
 
 ## 8. Multi-currency-aware, multi-module cross-entity linking
 
+**Status: (a) and Rentals (part of (b)) built 2026-08-23** — see README Done item 34.
+`fromAmount`/`toAmount` are live, and Rentals is now a linkable module (Bank/Cash↔a specific
+property). Personal Loans/EMI/Funds remain unlinked per the blockers documented below —
+nothing changed about them, they're recorded here for whenever they're picked up next.
+
 Extends README item 19 / MODULES_PLAN §7 (v1 shipped 2026-08-23, Cash↔Bank + Bank↔QSE/PSX,
 single shared amount). Two separate asks bundled together by the user, both real:
 
@@ -589,9 +594,11 @@ Funds/Rentals/EMI/Personal Loans hits real per-module blockers, investigated 202
   NAV. Wiring linking into an unused, hidden field would be linking into nothing the user can
   see. Exposing that concept in the Funds UI first is a prerequisite, not part of linking
   itself.
-- **Rentals**: not yet investigated in detail — likely tractable (its `entries` already have
-  a real id via `createEntryStore`... actually Rentals is hand-written like Bank, needs the
-  same check Banking already passed). Check before assuming.
+- **Rentals**: ✅ investigated and built 2026-08-23. Hand-written store (like Bank), and its
+  `updateEntry(id, ...)`/`deleteEntry(id)` were already id-addressed — same check Banking
+  already passed, no retrofit needed. Now a linkable module: `ref` is a `Property.id`, and a
+  linked transfer maps to `RentalEntry.type` (`RENT_INCOME` when Rentals is the `to` side,
+  `EXPENSE` when it's the `from` side).
 
 **Suggested order**: (1) fromAmount/toAmount multi-currency support — no new module
 blockers, pure extension of what's shipped; (2) Personal Loans id retrofit + linking;

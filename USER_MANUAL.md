@@ -373,18 +373,22 @@ related; edit or delete one later and the other silently goes stale. The Transfe
 fixes that for the most common moves by creating **one linked transfer** that writes a real
 record on both sides at once, and keeps them in sync afterward.
 
-**Supported so far**: Cash ↔ Banking, and Banking ↔ your QSE or PSX cash balance (a deposit
-or withdrawal). Other pairings (e.g. Cash directly to a stock exchange, or anything
-involving Funds/Rentals/EMI/Personal Loans) aren't wired up yet — the form tells you if a
-pairing isn't supported instead of silently doing something wrong.
+**Supported so far**: Cash ↔ Banking, Banking ↔ your QSE or PSX cash balance (a deposit or
+withdrawal), and Banking/Cash ↔ a specific Rentals property (rent received, or an expense
+paid). Other pairings (e.g. Cash directly to a stock exchange, or anything involving
+Funds/EMI/Personal Loans) aren't wired up yet — the form tells you if a pairing isn't
+supported instead of silently doing something wrong.
 
 - **Create a link**: choose the **From** and **To** side (for Banking, also pick which
-  account), an amount, a date, and an optional note, then **Create link**. This adds a
-  matching entry to both modules' own ledgers — you'll see it appear in Cash's ledger, or
-  in Banking's transaction list, exactly like anything else you'd entered by hand there.
-- **No currency conversion**: if the two sides use different currencies, the app copies the
-  number as-is rather than converting it — it warns you when this happens so you don't miss
-  it, but the amount itself is your responsibility to get right.
+  account; for Rentals, pick which property), an amount, a date, and an optional note, then
+  **Create link**. This adds a matching entry to both modules' own ledgers — you'll see it
+  appear in Cash's ledger, Banking's transaction list, or a property's income/expenses,
+  exactly like anything else you'd entered by hand there.
+- **Different currencies**: no live conversion happens automatically — but if the two sides
+  use different currencies, check **"Different amount on the other side"** and enter the
+  real converted amount yourself (from your bank's rate, a cash exchange receipt, etc.).
+  Leave it unchecked and the same number is used on both sides as-is, which is only correct
+  when both sides share a currency (the form warns you if they don't).
 - **Editing or deleting a link** (in the "Linked transfers" list at the bottom of the page)
   updates or removes **both** sides' records together — you don't need to (and shouldn't)
   go edit or delete the two records separately in their own modules.

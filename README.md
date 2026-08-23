@@ -291,6 +291,29 @@ FinanceManager live link:
     numbers all matched hand-expectations, the empty state (no open positions) renders
     correctly, PSX's version loads with its own fee model, zero console errors. `npm run
     build` / `npm run test` (104 tests, 9 new) both clean.
+34. **Cross-entity linking: real multi-currency amounts + Rentals added (2026-08-23),
+    README item 21.** `InterEntityTransferInput`'s single shared `amount` field is now
+    `fromAmount`/`toAmount` — two independent numbers, one per side's own currency. No live
+    FX-rate lookup (unchanged locked decision): a genuinely cross-currency transfer (e.g. a
+    USD bank account to PKR cash) needs the user to enter both amounts from whatever real
+    conversion actually happened. The create form defaults to one shared amount (the common
+    same-currency case) and reveals a second "Amount received" field only when "Different
+    amount on the other side" is checked; the edit row and the linked-transfers table always
+    show both amounts as separate columns for transparency. Also **added Rentals as a fifth
+    linkable module** (Bank/Cash&harr;a specific property — a rent payment in becomes
+    `RENT_INCOME`, an expense paid out becomes `EXPENSE`) after investigating it per this
+    item's own todo: `RentalEntry` already used stable-id addressing (`updateEntry(id, ...)`),
+    so — unlike Personal Loans (still `(loanId, index)`-addressed, needs the same retrofit
+    `Transfer`/`CashEntry` already went through) or EMI (no repayment ledger to link into at
+    all) — no data-model retrofit was needed, making it a same-day addition rather than a
+    separate future pass. Verified live in the browser: selecting a cross-currency pair shows
+    the correct warning and reveals the second amount field; selecting Rentals as either side
+    shows a property picker with the correct currency resolved from that property; the
+    Cash→Rentals path reaches the sign-in gate cleanly with no errors. `npm run build` /
+    `npm run test` (108 tests, 3 new) both clean. **Still open**: Personal Loans (needs the id
+    retrofit) and Funds (needs its hidden `Transfer` field exposed in the UI first) remain
+    unlinked; EMI has no repayment ledger at all to link into (a data-model question, not an
+    oversight).
 
 ## Pending
 
@@ -320,10 +343,10 @@ FinanceManager live link:
 **New wave, 2026-08-23 (user-requested, full design detail in `MODULES_PLAN.md`'s "Next
 wave" section)**:
 
-21. Cross-entity linking: real multi-currency amounts (independent `fromAmount`/`toAmount`
-    instead of one shared amount + a warning), plus investigating Personal Loans/Rentals as
-    additional linkable modules (EMI and Funds have real structural blockers, documented, not
-    silently skipped). Not started — see `MODULES_PLAN.md` §8.
+21. Cross-entity linking remainder (see Done item 34): Personal Loans still needs an id
+    retrofit before it can be linked; Funds needs its hidden `Transfer` field exposed in the
+    UI first; EMI has no repayment ledger at all to link into (a data-model question). None
+    of these are started.
 22. Calculator button remainder: it's module-aware now (hidden outside Stock Exchanges, see
     Done item 32), but the longer-term goal — a *relevant* calculator per module (an EMI
     payoff calculator, a Cash quick-math tool, etc.) — needs those modules' own planning tools
