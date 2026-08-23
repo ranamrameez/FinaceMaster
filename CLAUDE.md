@@ -389,14 +389,50 @@ not developer notes) continuously as features ship.
     edits recalculate live, sign-in gates fire on both property-add and
     entry-add, no console errors.
     **What's next for a future session**: `MODULES_PLAN.md`'s own
-    six-module scope is now complete — check with the user for direction
-    before starting anything new (the Sidebar category-dropdown redesign,
-    README item 18, is a natural next UI step since "More" is currently a
-    flat unstyled list of 6 links; cross-entity transaction linking,
-    MODULES_PLAN.md §7, is another explicitly-deferred item now that
-    enough modules exist to actually link between). Don't assume either
-    is wanted without asking — this doc may be stale by the time you read
-    it if the user redirected mid-session.
+    six-module scope is complete. The user was asked what to build next
+    (2026-08-23) and said to keep going module-by-module without asking
+    again unless something is critical — so no more per-item check-ins
+    are needed here.
+  - **Sidebar category dropdown built (2026-08-23) — README item 18.** New
+    `components/CategoryNav.tsx` replaces the old flat "Stocks" heading +
+    "More" link list with one dropdown spanning every module (Stock
+    Exchanges, Funds, Banking, Cash, Personal Loans, EMI/Loans, Rentals),
+    highlighting the active category (derived from the route via
+    `categoryForPath`, not stored separately — same pattern as the
+    existing QSE/PSX `ExchangeSwitcher`). `Sidebar.tsx` only renders the
+    QSE/PSX chip switcher + that exchange's page nav underneath the
+    dropdown when the active category is `'stocks'`; every other category
+    is a single page (its own internal tabs, not sidebar sub-nav), so
+    picking it just navigates straight there. Follows the same
+    `position:fixed`-with-no-explicit-offsets popover pattern already
+    used by `AppearancePanel.tsx` (see that component's CSS comment in
+    `theme.css` for why: it escapes the sidebar's `overflow:auto`
+    clipping while staying visually anchored where it'd sit in normal
+    flow) — new CSS is `.category-*` in `theme.css`, kept separate from
+    `.appearance-*` rather than shared, since they're two independent
+    trigger/panel pairs both rendered on every page.
+    **Verified via a scripted Playwright pass, not manual browser
+    testing** — same 0×0-viewport dev-pane limitation noted earlier in
+    this file meant a real interactive check wasn't possible, so a
+    throwaway Playwright script (chromium at `/opt/pw-browsers/chromium`,
+    the `playwright` package resolved from the global npm root since it
+    isn't a project dependency) drove the dev server directly: confirmed
+    the dropdown opens, lists all 7 categories, navigates on click,
+    highlights the active one with a checkmark, and that returning to
+    "Stock Exchanges" restores the QSE/PSX chips and page nav — with zero
+    console errors. `npm run build` and `npm run test` (76 tests) both
+    pass unchanged. Treat this as a real (if narrower) verification, not
+    the "still unverified" caveat attached to the earlier chart-theming
+    fix — Playwright's own headless viewport isn't subject to that 0×0
+    dev-pane bug.
+    **Still open next**: cross-entity transaction linking (README item 19,
+    MODULES_PLAN.md §7) is next in the README's Pending list and no
+    longer blocked on any module existing — all six now do — but isn't
+    designed yet; statement PDF/Excel import (item 12) and dynamic/
+    filterable charts (item 17) remain open too. Keep working down the
+    README's Pending list module-by-module per the user's standing
+    instruction above; no need to check in before picking the next one
+    unless it's genuinely ambiguous or destructive.
   - **Not done — still open PSX/README items for a future session:**
     statement PDF/Excel import (item 12), dynamic/filterable charts (item
     17), the Sidebar's category-dropdown redesign for Stock Exchanges/

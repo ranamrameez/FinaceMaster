@@ -177,6 +177,19 @@ FinanceManager live link:
     correct against hand-traced numbers, edits recalculate live, sign-in gates fire
     correctly, no console errors. **All six modules from `MODULES_PLAN.md` are now built**:
     Cash, Personal Loans, Banking, EMI/Loans, Funds, Rentals.
+28. **Sidebar category dropdown (2026-08-23), README item 18.** Replaced the flat "Stocks"
+    heading + "More" link list with one dropdown (`components/CategoryNav.tsx`) spanning
+    every module — Stock Exchanges, Funds, Banking, Cash, Personal Loans, EMI/Loans, Rentals
+    — with the active category highlighted (checkmark) and derived from the current route
+    (`categoryForPath`), same pattern as the existing QSE/PSX `ExchangeSwitcher`. Picking
+    "Stock Exchanges" still shows the QSE/PSX chip switcher and that exchange's full page nav
+    underneath, since it's the only category with more than one page; every other category
+    navigates straight to its single module page. Old "Find it at More → X" phrasing in
+    earlier Done entries above is now just "the sidebar" — the flat More list is gone.
+    Verified with a scripted Playwright pass (no manual browser available in this session):
+    dropdown opens/closes, navigates to each category, highlights the active one correctly,
+    and switching back to Stock Exchanges restores the exchange chips + nav; `npm run build`
+    and `npm run test` both clean, no console errors.
 
 ## Pending
 
@@ -196,17 +209,11 @@ FinanceManager live link:
     compact theme yet.
 17. Charts should be dynamic — filterable (date range, ticker, category) and otherwise more
     interactive, not just static renders of whatever the page computes. Not started.
-18. Sidebar navigation should become a proper category dropdown — "Stock Exchanges / Funds /
-    Banking / Cash / Rentals" — with the selected category clearly highlighted, generalizing
-    today's QSE/PSX-only `ExchangeSwitcher` chip pair (`components/Sidebar.tsx`). Only "Stock
-    Exchanges" would be functional at first (leading to today's QSE/PSX pages); the other
-    categories wait until their modules exist (see item 19 below and the locked sequencing
-    decision under Done item 20).
 19. Cross-entity transaction linking — e.g. a transfer FROM a Bank module TO a stock
     exchange's cash balance, or Cash to Bank, so money moving between modules is one linked
-    record instead of two independent, easily-inconsistent entries. Depends on the Funds/
-    Banking/Cash modules existing first (none of them are built yet — see the Migration Plan
-    Overview below and item 20).
+    record instead of two independent, easily-inconsistent entries. All six candidate modules
+    (Funds/Banking/Cash/Personal Loans/EMI-Loans/Rentals) now exist, so this is no longer
+    blocked on modules being built — it's just not designed or started yet.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank
