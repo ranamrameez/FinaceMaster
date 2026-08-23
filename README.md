@@ -233,6 +233,31 @@ FinanceManager live link:
     commit — this was a stale Pending entry, not missing functionality. Re-verified live in
     the browser (2026-08-23): switching density to Console visibly shrinks stat cards, page
     titles, and the sidebar with no console errors. Moved to Done; no code changed.
+31. **Dynamic/filterable Analytics charts (2026-08-23), README item 17 — ticker + month-range
+    filters, QSE and PSX both.** New `ChartFilterBar` (`components/ChartFilterBar.tsx`) at the
+    top of both Analytics pages: toggle-chip ticker selection ("All" or any combination) plus
+    a from/to month-range picker. Deliberately **doesn't** re-derive positions/cost-basis/P&L
+    for a filtered window — filtering "current holdings" to a date range would misrepresent
+    them (a stock bought two years ago and still held would show as "no position" under a
+    last-3-months filter). Instead `lib/calc/chartFilters.ts`'s pure helpers
+    (`filterRowsByTicker`, `filterTuplesByTicker`, `filterMonthlySeries`,
+    `filterMonthlyDualSeries` — tested in `chartFilters.test.ts`, 11 tests) post-process the
+    *already-computed* per-ticker rows and per-month series feeding each chart: ticker
+    filtering narrows ROI%/allocation/P&L-by-symbol/holding-period/dividends-by-ticker to the
+    selected tickers, month filtering narrows monthly-activity/dividends-by-month/fees-by-month
+    to the selected window. Whole-portfolio single-number charts (realized vs unrealized P/L,
+    cash vs stocks split, fees breakdown, deposits vs invested, and the cumulative cash-balance
+    line chart) are left as global totals on purpose — the filter bar says so directly, and
+    trying to filter a *cumulative running balance* to a sub-range doesn't have a sensible
+    starting point anyway. **Category filtering (also named in this item) doesn't apply here**
+    — QSE/PSX trades have no category field; that dimension belongs to Cash/Bank/Rentals, which
+    don't have Analytics/chart pages yet. Verified live in the browser with a seeded two-ticker,
+    three-month workbook: ticker chips correctly narrow every per-ticker chart and the
+    Fundamentals table; the month-range picker correctly narrows monthly charts (confirmed
+    "Monthly trading activity" and "Dividend income by month" both collapsed to just the
+    selected month) while "Dividend income by ticker" — a lifetime-per-ticker total, not
+    month-indexed — correctly stayed unaffected by the month filter; zero console errors.
+    `npm run build` / `npm run test` (95 tests, 11 new) both clean.
 
 ## Pending
 
@@ -247,8 +272,9 @@ FinanceManager live link:
     the app itself (free/cheap tiers rate-limit fast). Fetch on a schedule (cron/worker)
     into our own database and serve the app from that store, same pattern already used for
     QSE's `stockData/QSE` node (item 1 above) and PSX's bundled `psxSeed.ts`.
-17. Charts should be dynamic — filterable (date range, ticker, category) and otherwise more
-    interactive, not just static renders of whatever the page computes. Not started.
+17. Charts could get more interactive beyond the ticker/month filters shipped in Done item 31
+    (e.g. click-to-drill-down, hover cross-highlighting between charts). Not started — the
+    core "filterable" ask is done; this is a further-polish remainder, not a blocker.
 19. Cross-entity transaction linking beyond v1 scope (see Done item 29): Funds/Rentals/EMI/
     Personal Loans aren't wired into the Transfers page yet — only Cash↔Bank and
     Bank↔QSE/PSX. A real signed-in browser round-trip (create/edit/delete a link, confirm

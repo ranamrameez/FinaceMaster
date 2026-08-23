@@ -492,6 +492,40 @@ not developer notes) continuously as features ship.
     Pending item that looks suspiciously already-built, check git history
     before assuming it needs work — this file and the README can drift
     out of sync with what's actually shipped.
+  - **Dynamic/filterable Analytics charts built (2026-08-23) — README item
+    17, ticker + month-range filters for QSE and PSX.** New
+    `components/ChartFilterBar.tsx` (ticker toggle-chips + a from/to
+    `<input type="month">` pair) sits at the top of both Analytics pages.
+    Deliberately does **not** re-derive positions/cost-basis/P&L for a
+    filtered window — that would change what "current holdings" means
+    (a stock bought years ago and still held would look like "no
+    position" under a last-3-months filter) — so `lib/calc/
+    chartFilters.ts`'s pure helpers instead post-process the *already-
+    computed* per-ticker rows and per-month series each chart already
+    consumed (`filterRowsByTicker`, `filterTuplesByTicker`,
+    `filterMonthlySeries`, `filterMonthlyDualSeries` — tested in
+    `chartFilters.test.ts`). Both `AnalyticsPage.tsx` files apply the same
+    filter object to `useChartData()`'s output and to `useQSEDerived()`/
+    `usePSXDerived()`'s `rows`, memoized separately per array — the
+    hooks themselves are untouched, so Dashboard/Portfolio/other callers
+    of the same hooks are unaffected. Whole-portfolio single-number charts
+    (realized vs unrealized P/L, cash vs stocks, fees breakdown, deposits
+    vs invested, and the cumulative cash-balance line) are intentionally
+    left unfiltered — the filter bar's own copy explains why. The
+    README item also named "category" as a filter dimension; that doesn't
+    apply here since QSE/PSX trades have no category field (that belongs
+    to Cash/Bank/Rentals, none of which have chart/Analytics pages yet) —
+    noted as an explicit scope decision in the README, not silently
+    dropped. **Verified live in the browser** with a seeded two-ticker,
+    three-month workbook (`localStorage` pre-seeded via
+    `page.addInitScript`, no sign-in needed since this only reads local
+    state): ticker chips correctly narrow every per-ticker chart plus the
+    Fundamentals table; the month-range picker correctly collapsed
+    "Monthly trading activity" and "Dividend income by month" to just the
+    selected month, while "Dividend income by ticker" (a lifetime total,
+    not month-indexed) correctly stayed unaffected by the month filter —
+    exactly the intended semantics. Zero console errors. `npm run build`
+    and `npm run test` (95 tests, 11 new) both clean.
   - **Not yet restructured**: routes are still flat (`/psx/...` bolted on
     alongside QSE's root-level routes), not the `/stocks/:exchange/...`
     shape mentioned below — flat was lower-risk to add without touching

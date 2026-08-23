@@ -199,6 +199,15 @@ Deeper charts across four category tabs (exact set depends on the exchange) — 
 performance, fees, and (QSE only, for now) fundamentals. See individual chart tooltips for
 details on what each one shows.
 
+**Filtering**: a filter bar at the top lets you narrow the charts to specific tickers (click
+one or more ticker chips, or "All" to reset) and/or a month range. Per-ticker charts (ROI%,
+allocation, P/L by symbol, holding period, dividends by ticker) and monthly charts (trading
+activity, dividends by month, fees by month) respect the filter. A handful of whole-portfolio
+totals — realized vs unrealized P/L, cash vs stocks split, fees breakdown, deposits vs
+invested, and the cumulative cash-balance line — always show your full history: narrowing
+those to a ticker or date window wouldn't mean what it looks like it means (your *current*
+holdings aren't a function of which window you're looking at).
+
 ---
 
 ## 13. Cash

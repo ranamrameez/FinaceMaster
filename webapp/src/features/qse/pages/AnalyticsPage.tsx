@@ -1,8 +1,19 @@
+import { useMemo, useState } from 'react';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { Card } from '../../../components/Card';
+import { ChartFilterBar } from '../../../components/ChartFilterBar';
 import { Tabs } from '../../../components/Tabs';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { tickerColor } from '../../../lib/cssVar';
+import {
+  EMPTY_CHART_FILTER,
+  filterMonthlyDualSeries,
+  filterMonthlySeries,
+  filterRowsByTicker,
+  filterTuplesByTicker,
+  isChartFilterActive,
+  type ChartFilter,
+} from '../../../lib/calc/chartFilters';
 import { dlBarH, dlBarV, dlDoughnut } from '../../../lib/chartLabels';
 import { profitColor } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
@@ -16,16 +27,35 @@ import { useAppearanceStore } from '../../../store/appearanceStore';
 const chartGrid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 } as const;
 
 export function AnalyticsPage() {
-  const { workbook, rows, summary, ledger } = useQSEDerived();
+  const { workbook, rows: allRows, summary, ledger } = useQSEDerived();
   // See DashboardPage: charts only recompute their CSS-var-derived colors
   // on this component's own re-renders.
   useAppearanceStore((s) => s.appearance);
   applyChartTheme();
   const { tickerNames, fundamentals } = useQSEStockData();
-  const { lifetimeRows, activityByMonth, divByMonth, divByTicker, feesByMonth, holdRows, allocRows } = useChartData();
+  const chartData = useChartData();
   const currency = workbook.settings.currency;
 
-  const totalInvestment = rows.reduce((s, r) => s + r.invested, 0);
+  const [filter, setFilter] = useState<ChartFilter>(EMPTY_CHART_FILTER);
+  const allTickers = useMemo(
+    () => Array.from(new Set(workbook.transactions.map((t) => t.ticker))).sort(),
+    [workbook.transactions],
+  );
+
+  // README item 17: ticker/month filters are applied here, as a pure
+  // post-processing step on already-computed chart data — see
+  // lib/calc/chartFilters.ts for why positions/summary (whole-portfolio
+  // state) aren't re-derived per filter.
+  const rows = useMemo(() => filterRowsByTicker(allRows, filter), [allRows, filter]);
+  const lifetimeRows = useMemo(() => filterRowsByTicker(chartData.lifetimeRows, filter), [chartData.lifetimeRows, filter]);
+  const holdRows = useMemo(() => filterRowsByTicker(chartData.holdRows, filter), [chartData.holdRows, filter]);
+  const allocRows = useMemo(() => filterRowsByTicker(chartData.allocRows, filter), [chartData.allocRows, filter]);
+  const divByTicker = useMemo(() => filterTuplesByTicker(chartData.divByTicker, filter), [chartData.divByTicker, filter]);
+  const activityByMonth = useMemo(() => filterMonthlyDualSeries(chartData.activityByMonth, filter), [chartData.activityByMonth, filter]);
+  const divByMonth = useMemo(() => filterMonthlySeries(chartData.divByMonth, filter), [chartData.divByMonth, filter]);
+  const feesByMonth = useMemo(() => filterMonthlySeries(chartData.feesByMonth, filter), [chartData.feesByMonth, filter]);
+
+  const totalInvestment = allRows.reduce((s, r) => s + r.invested, 0);
   const totalsVals = [summary.totalInward, totalInvestment, summary.netWorth];
   const totalsMin = Math.min(...totalsVals);
   const totalsMax = Math.max(...totalsVals);
@@ -35,8 +65,7 @@ export function AnalyticsPage() {
     cash: Math.max(0, summary.cashBalance),
     stocks: Math.max(0, summary.netWorth - Math.max(0, summary.cashBalance)),
   };
-  const heldTickers = rows.map((r) => r.ticker);
-  const fundamentalsRows = heldTickers.filter((t) => fundamentals[t]);
+  const fundamentalsRows = rows.map((r) => r.ticker).filter((t) => fundamentals[t]);
 
   return (
     <div>
@@ -44,6 +73,13 @@ export function AnalyticsPage() {
       <p className="footer-note" style={{ marginTop: -8, marginBottom: 20 }}>
         The full chart library — head back to Dashboard for a quick overview.
       </p>
+
+      <ChartFilterBar tickers={allTickers} filter={filter} onChange={setFilter} />
+      {isChartFilterActive(filter) && !rows.length && !lifetimeRows.length && (
+        <p className="footer-note" style={{ marginTop: -8, marginBottom: 16 }}>
+          No data matches the current filter.
+        </p>
+      )}
 
       <Tabs
         tabs={[
