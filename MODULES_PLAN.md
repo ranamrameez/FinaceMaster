@@ -77,8 +77,9 @@ every module below, not just Stock Exchanges:
 Simplest and most self-contained first, each one a smaller step than the last render it
 riskier to get wrong:
 
-1. **Cash** — a single running ledger, no external data source, smallest possible module.
-   Good first exercise in generalizing the workbook factories beyond stock exchanges.
+1. **Cash** — ✅ built 2026-08-23. A single running ledger, no external data source,
+   smallest possible module. Good first exercise in generalizing the workbook factories
+   beyond stock exchanges (see §1 below for what that generalization actually required).
 2. **Personal Loans** — almost as simple as Cash (principal + repayments, no schedule math),
    and a good second exercise before tackling anything with real calculation logic.
 3. **Banking** — builds directly on Cash's ledger concept, adds multiple accounts and
@@ -95,11 +96,30 @@ This is a suggestion, not a mandate — reorder freely if priorities change.
 
 ---
 
-## 1. Cash
+## 1. Cash — ✅ built 2026-08-23
 
 **Purpose**: track physical/informal cash holdings (cash in hand, cash gifts, small
 informal loans) that don't live in a bank account or brokerage — the simplest module,
 closer to a manual ledger than anything else.
+
+**Built as designed below, with one real architecture change worth knowing**:
+`createWorkbookStore` (the stock-exchange factory) turned out not to be genuine reuse for
+a single-array module — its CRUD actions (`addTransaction`, `addTransfer`, ...) are all
+trade-specific and Cash needs none of them, so forcing Cash's shape through
+`BaseWorkbook<TSettings>` would mean carrying a pile of irrelevant empty arrays just to
+satisfy the type. Built a smaller sibling factory instead:
+`webapp/src/store/createEntryStore.ts` (`BaseEntryWorkbook<TSettings, TEntry>` = just
+`{ settings, entries }`, with generic `addEntry`/`updateEntry`/`deleteEntry`/
+`updateSettings`). `useWorkbookCloudSync` (`lib/firebase/useWorkbookCloudSync.ts`) was
+generalized to match — it only ever touched `workbook`/`setWorkbook` at runtime anyway, so
+its type constraint was relaxed from the full `WorkbookStoreState` to a minimal
+`{ workbook, setWorkbook }` interface, letting both factories' stores share the exact same
+sync hook (same safety guarantees, one implementation) instead of writing a second one.
+Files: `types/cashWorkbook.ts`, `store/{createEntryStore,defaultCashWorkbook,
+cashWorkbookStore}.ts`, `lib/firebase/useCashFirebaseSync.ts`,
+`lib/calc/cashModule.ts` (+ tests), `features/cash/pages/CashPage.tsx`, route `/cash`. Nav
+entry is a minimal "More → Cash" link in the Sidebar for now (see README item 18 — the real
+category-dropdown redesign is still pending and will replace this placeholder).
 
 **Data model**:
 ```ts

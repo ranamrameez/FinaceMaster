@@ -84,6 +84,19 @@ export function Sidebar({
         ))}
       </nav>
 
+      {/* Minimal placeholder nav for new modules until the category-dropdown
+          redesign (README item 18) replaces this with a proper switcher
+          alongside Stocks. Cash is the first module built per MODULES_PLAN.md. */}
+      <div className="footer-note" style={{ textTransform: 'uppercase', letterSpacing: '.04em', marginTop: 16, marginBottom: 4 }}>
+        More
+      </div>
+      <nav className="navlist">
+        <NavLink to="/cash" onClick={onNavigate} className={({ isActive }) => `navbtn${isActive ? ' active' : ''}`}>
+          <span className="num">01</span>
+          Cash
+        </NavLink>
+      </nav>
+
       <AppearancePanel />
 
       {user ? (

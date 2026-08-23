@@ -26,6 +26,8 @@ import { WatchlistPage as PSXWatchlistPage } from './features/psx/pages/Watchlis
 import { StockPage as PSXStockPage } from './features/psx/pages/StockPage';
 import { SettingsPage as PSXSettingsPage } from './features/psx/pages/SettingsPage';
 import { TradePlannerPage as PSXTradePlannerPage } from './features/psx/pages/TradePlannerPage';
+import { CashPage } from './features/cash/pages/CashPage';
+import { useCashFirebaseSync } from './lib/firebase/useCashFirebaseSync';
 import { LegalPage } from './pages/LegalPage';
 
 function useApplyAppearance() {
@@ -62,6 +64,7 @@ function App() {
   // trade logged, say, right before switching to QSE has already started
   // pushing before the component unmounts.
   const psxSync = usePSXFirebaseSync();
+  const cashSync = useCashFirebaseSync();
 
   return (
     <ErrorBoundary>
@@ -104,6 +107,17 @@ function App() {
                     syncStatus={psxSync.status}
                     cloudEmpty={psxSync.cloudEmpty}
                     uploadLocalToCloud={psxSync.uploadLocalToCloud}
+                  />
+                }
+              />
+              <Route
+                path="/cash"
+                element={
+                  <CashPage
+                    user={user}
+                    syncStatus={cashSync.status}
+                    cloudEmpty={cashSync.cloudEmpty}
+                    uploadLocalToCloud={cashSync.uploadLocalToCloud}
                   />
                 }
               />

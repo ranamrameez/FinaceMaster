@@ -7,6 +7,11 @@ FinanceManager live link:
 > state whenever a feature lands, changes, or gets deferred.** This is the standing
 > backlog/status doc for the project — keep it in sync with reality, not just with
 > `CLAUDE.md` (which is continuity notes for an AI session, not a substitute for this).
+>
+> **Also (2026-08-23): tested changes are auto-committed and pushed without asking first,
+> and the modules in `MODULES_PLAN.md` are being built in suggested order without waiting
+> for per-step confirmation** — both by explicit user instruction. See `USER_MANUAL.md` for
+> end-user-facing docs (kept up to date alongside this file).
 
 ## Done
 
@@ -80,12 +85,13 @@ FinanceManager live link:
     reference prototype (see **`reference/finance-suite-prototype/`**): **EMI/Loans**
     (structured amortization schedules, interest or fixed-total/Sharia-compliant mode) and
     **Personal Loans** (informal, bidirectional debt tracking) — plus a cross-entity
-    transfer design sketch (item 19). Per the locked sequencing decision, none of those
-    modules get built yet — this is design-ahead, not a start signal. Also locked in from
-    that review: every new module's every record type must ship with edit-in-place from day
-    one (not add/delete-only), category fields must be free-form/user-definable (not a fixed
-    enum), and currency should be tracked per-entity, not per-module, with aggregates
-    grouped by currency rather than converted.
+    transfer design sketch (item 19). Also locked in from that review: every new module's
+    every record type must ship with edit-in-place from day one (not add/delete-only),
+    category fields must be free-form/user-definable (not a fixed enum), and currency
+    should be tracked per-entity, not per-module, with aggregates grouped by currency
+    rather than converted. **Update (2026-08-23): building of these modules has started**,
+    per direct user instruction to proceed through the build order without per-module
+    check-ins — see the entries below for what's actually shipped so far.
 21. Edit capability added to Transfers, Adjustments, Dividends, and Watchlist (2026-08-23) —
     these had been add/delete-only in both QSE and PSX (a real gap matching the "every entry
     must be editable" decision above, spotted while reviewing the reference prototype's own
@@ -95,6 +101,21 @@ FinanceManager live link:
     always-editable Target/Current price inputs (ticker itself stays remove+re-add, since
     it's the item's key). Verified live: edited a transfer's fee and a watchlist target,
     confirmed both persisted correctly.
+22. **Cash module built (2026-08-23)** — the first of the new modules, per `MODULES_PLAN.md`'s
+    suggested build order. Add/edit/delete cash-in/cash-out entries with a free-form
+    category (autocomplete over your own previously-used categories, never a fixed list),
+    per-entry currency, running balance and category breakdown grouped by currency,
+    export/import/clear data. Find it at **More → Cash** in the sidebar (a minimal
+    placeholder nav spot until item 18's category-dropdown redesign). Required a real
+    architecture addition, not just new UI: `store/createEntryStore.ts`, a smaller sibling
+    to `createWorkbookStore` for modules that are just "settings + one array of entries"
+    (Cash's shape doesn't fit the stock-exchange-specific `BaseWorkbook`), and
+    `useWorkbookCloudSync`'s type constraint was relaxed to a minimal
+    `{ workbook, setWorkbook }` interface so both factories' stores share the same cloud-sync
+    safety logic — see `MODULES_PLAN.md` §1 for the full detail. Verified live: sign-in gate
+    fires correctly on add, edit persists and recalculates balances/category totals
+    correctly, multi-currency entries stay properly separated (no fake conversion), no
+    console errors.
 
 ## Pending
 

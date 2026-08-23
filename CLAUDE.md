@@ -24,6 +24,21 @@ finishing the work, not as an afterthought. `README.md` is the project's
 actual backlog/status doc; this file is continuity notes for an AI session
 picking the project back up, not a substitute for it. Keep both current.
 
+**Standing instruction (added 2026-08-23, user-requested): auto-commit and
+push tested changes without asking first, and keep building the modules in
+`MODULES_PLAN.md`'s suggested order without waiting for per-step
+confirmation.** The user is this repo's sole owner (solo project, `main`
+branch, no other collaborators) and explicitly asked to remove the
+per-commit "should I push?" and per-module "should I start this?" checkpoints
+that earlier sessions used. Still verify (tests, build, and browser-check
+UI changes) before every commit — the removed friction is the human
+confirmation step, not the quality bar. This does not extend to genuinely
+destructive or undesigned actions (force-push, deleting real user data,
+anything not already covered by a written plan) — use judgment and still
+ask if something outside already-decided scope comes up. Also maintain a
+**user manual** (`USER_MANUAL.md`, end-user facing — how to use the app,
+not developer notes) continuously as features ship.
+
 ## Current status (as of 2026-08-23)
 
 - **QSE module: feature-complete and polished.** Dashboard, Portfolio
@@ -179,15 +194,20 @@ picking the project back up, not a substitute for it. Keep both current.
     `Sidebar.tsx` and a "© {year} FinanceRecorder" line at the bottom — the
     app previously had its name in the browser tab title only, nowhere in
     the UI itself.
-  - **New-modules sequencing (locked 2026-08-23, user-directed):** Funds/
-    Banking/Cash/Rentals/EMI-Loans/Personal-Loans modules wait until
-    QSE+PSX (Stock Exchanges) are considered finished — don't start
-    building them speculatively ahead of that, matching this file's
-    existing "don't build the rest speculatively" guidance from the top of
-    this file. **The proposed-features/architecture plan for those modules
-    is written: see `MODULES_PLAN.md` at the repo root** — read that file,
-    not just this one, before starting any of these modules in a future
-    session. Two modules (EMI/Loans, Personal Loans) were added to the
+  - **New-modules sequencing — building now (updated 2026-08-23):** the
+    original "wait until Stock Exchanges is finished" gate was lifted the
+    same day by explicit user instruction ("start working on modules as
+    per your recommendation without needing my consent") — QSE+PSX are
+    considered finished enough for v1, and module work is now underway
+    following `MODULES_PLAN.md`'s suggested build order (Cash → Personal
+    Loans → Banking → EMI/Loans → Funds → Rentals) without per-module
+    check-ins. Check this file's own "Current status" section (kept
+    up to date) for which modules actually exist so far, since this note
+    may lag reality in a fast future session — don't rely on this line
+    alone to know what's built. **The proposed-features/architecture plan
+    for these modules is written: see `MODULES_PLAN.md` at the repo root**
+    — read that file, not just this one, before touching any of them.
+    Two modules (EMI/Loans, Personal Loans) were added to the
     original four after reviewing a user-supplied reference prototype kept
     at `reference/finance-suite-prototype/` (external project, different
     tech stack — React Native/Expo/SQLite — treat its calc functions as
@@ -215,6 +235,38 @@ picking the project back up, not a substitute for it. Keep both current.
     re-add covers that case). Verified live in the browser: edited a
     transfer's fee (10 → 15, persisted, "(Transfer updated.)" toast) and a
     watchlist target price (persisted to localStorage), no console errors.
+  - **Cash module built (2026-08-23) — first new module, per
+    `MODULES_PLAN.md`'s build order.** Real architecture addition, not just
+    UI: `store/createEntryStore.ts` is a new sibling factory to
+    `createWorkbookStore`, generic over `BaseEntryWorkbook<TSettings,
+    TEntry> = { settings, entries }` — built because Cash's shape (one
+    array of dated entries, no transactions/transfers/watchlist/etc.)
+    doesn't genuinely fit the stock-exchange-specific `BaseWorkbook`, and
+    forcing it through would mean carrying a pile of irrelevant empty
+    arrays just to satisfy the type. `useWorkbookCloudSync`
+    (`lib/firebase/useWorkbookCloudSync.ts`) had its generic constraint
+    relaxed from the full `WorkbookStoreState<TWorkbook>` to a new minimal
+    `MinimalWorkbookStore<TWorkbook> = { workbook, setWorkbook }` — the hook
+    body only ever touched those two members at runtime anyway (verified by
+    reading it), so both factories' stores now share the exact same
+    cloud-sync safety logic (never-write-on-assumed-emptiness, the
+    debounced-push-after-initial-pull guard, etc.) via one implementation,
+    with zero behavior change for QSE/PSX (confirmed via `npm run build`
+    passing unchanged before writing any Cash code). Files: `types/
+    cashWorkbook.ts`, `store/{createEntryStore,defaultCashWorkbook,
+    cashWorkbookStore}.ts`, `lib/firebase/useCashFirebaseSync.ts`,
+    `lib/calc/cashModule.ts` (+ `__tests__/cashModule.test.ts`),
+    `features/cash/pages/CashPage.tsx`, route `/cash` in `App.tsx`. Nav is
+    a minimal "More → Cash" section in `Sidebar.tsx` for now — a real
+    placeholder, not the category-dropdown redesign (item 18, still
+    pending). New `lib/currencies.ts` (`CURRENCIES`/`currencySymbol`) for
+    the per-entity currency picker — QSE/PSX keep their own free-text
+    currency setting (one currency per trading account, chosen once) and
+    weren't touched. Verified live in the browser: sign-in gate on add,
+    edit recalculates balances/category totals correctly, multi-currency
+    entries (tested USD + PKR together) stay properly separated with no
+    fake conversion, no console errors. `MODULES_PLAN.md` §1 has the full
+    writeup; next up per the build order is Personal Loans.
   - **Not done — still open PSX/README items for a future session:**
     statement PDF/Excel import (item 12), dynamic/filterable charts (item
     17), the Sidebar's category-dropdown redesign for Stock Exchanges/
@@ -246,7 +298,8 @@ picking the project back up, not a substitute for it. Keep both current.
 ## Repo layout
 
 ```
-MODULES_PLAN.md                                                     design plan for Funds/Banking/Cash/Rentals/EMI-Loans/Personal-Loans (not built yet — read before starting any of them)
+MODULES_PLAN.md                                                     design plan for Funds/Banking/Cash/Rentals/EMI-Loans/Personal-Loans (Cash is built, 2026-08-23 — see its own entry; the rest aren't yet)
+USER_MANUAL.md                                                      end-user-facing docs — kept up to date alongside features, not a substitute for this file
 reference/finance-suite-prototype/                                  external reference prototype (different tech stack, not wired into this app) — see its NOTE.md
 index.html, PSX_Trade_Planner.html, Risk_Analysis_Calculator.html   legacy static apps (untouched)
 css/, js/, psx/                                                     legacy assets/data
@@ -263,6 +316,9 @@ webapp/                                                              the new Rea
   src/features/qse/         QSE-specific pages/components/hooks
   src/features/psx/         PSX-specific pages/components/hooks — mirrors features/qse/'s structure
                             (see Current status above for what's built vs. still open)
+  src/features/cash/        Cash module (2026-08-23) — the first non-stock-exchange module,
+                            uses createEntryStore.ts (not createWorkbookStore.ts) — see its own
+                            entry above and MODULES_PLAN.md §1
   src/components/           shared UI: Modal, ConfirmDialog, SignInModal, Sparkline, Tabs, Sidebar, etc.
   src/types/workbook.ts     QSE types; psxWorkbook.ts has PSX's parallel types
 .github/workflows/static.yml   CI: builds webapp/ and deploys it to /webapp/ alongside the legacy

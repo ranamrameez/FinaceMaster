@@ -2,13 +2,24 @@ import type { User } from 'firebase/auth';
 import { onValue, ref, set } from 'firebase/database';
 import { useEffect, useRef, useState } from 'react';
 import type { StoreApi, UseBoundStore } from 'zustand';
-import type { BaseWorkbook, WorkbookStoreState } from '../../store/createWorkbookStore';
 import { db, firebaseReady } from './client';
 
 const PUSH_DEBOUNCE_MS = 900;
 
-/** Generic per-exchange Firebase sync, factored out so QSE and PSX (and any
- * future exchange) share one implementation instead of two copies of the
+/** The only shape this hook actually touches — `workbook` and `setWorkbook`
+ * — deliberately smaller than the full stock-exchange `WorkbookStoreState`
+ * (which also has addTransaction/addTransfer/etc. this hook never calls).
+ * Any store built from any factory (`createWorkbookStore`,
+ * `createEntryStore`, ...) satisfies this structurally, so non-stock
+ * modules (Cash, Personal Loans, ...) can reuse this same sync hook instead
+ * of a second copy of the pull/push/safety logic. */
+export interface MinimalWorkbookStore<TWorkbook> {
+  workbook: TWorkbook;
+  setWorkbook: (wb: TWorkbook, opts?: { skipPersist?: boolean }) => void;
+}
+
+/** Generic per-module Firebase sync, factored out so every module (QSE,
+ * PSX, Cash, ...) shares one implementation instead of N copies of the
  * same pull/push/safety logic.
  *
  * SAFETY: this must never write to the cloud based on an *assumption* that
@@ -20,9 +31,9 @@ const PUSH_DEBOUNCE_MS = 900;
  * also held back (`initialSnapshotReceived`) until we've actually seen what
  * the cloud contains at least once, so no local change can race ahead of
  * the initial pull and overwrite real data before it's even been read. */
-export function useWorkbookCloudSync<TWorkbook extends BaseWorkbook<unknown>>(
+export function useWorkbookCloudSync<TWorkbook>(
   cloudPathSuffix: string,
-  useStore: UseBoundStore<StoreApi<WorkbookStoreState<TWorkbook>>>,
+  useStore: UseBoundStore<StoreApi<MinimalWorkbookStore<TWorkbook>>>,
   user: User | null,
   createEmpty: () => TWorkbook,
 ) {
