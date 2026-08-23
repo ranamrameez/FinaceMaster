@@ -130,6 +130,18 @@ FinanceManager live link:
     fresh browser tab after the fix (the bug was initially hard to pin down because a
     long-lived dev tab with repeated hot-reloads showed stale errors even after the fix
     landed — a fresh tab/hard reload was needed to confirm).
+24. **Banking module built (2026-08-23)** — third new module, per `MODULES_PLAN.md`'s build
+    order. Multiple bank accounts (one currency each), manual transaction entry with running
+    balance and free-form category breakdown, and **CSV statement import**: pick a file,
+    map which detected column is Date/Description/Amount (a "flip sign" toggle covers banks
+    that export spending as positive numbers), preview the first 5 mapped rows, then import.
+    Find it at **More → Banking**. New `lib/csv.ts` (a small dependency-free CSV parser —
+    quoted fields, escaped quotes, CRLF) and `lib/calc/bankModule.ts` (running balance,
+    per-currency totals, category breakdown), both tested. Hand-written store again (a third
+    distinct shape: accounts nested under settings, transactions top-level) following the
+    same idiom as Cash/Personal Loans. Verified live in the browser: sign-in gate on add and
+    on import, CSV column-mapping and preview work correctly against a synthetic statement,
+    account/transaction edits recalculate balances correctly, no console errors.
 
 ## Pending
 

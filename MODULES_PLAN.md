@@ -83,8 +83,9 @@ riskier to get wrong:
 2. **Personal Loans** — ✅ built 2026-08-23. Almost as simple as Cash (principal +
    repayments, no schedule math), a good second exercise before tackling real calculation
    logic — also where a real zustand selector bug was hit and fixed (see §6 below).
-3. **Banking** — builds directly on Cash's ledger concept, adds multiple accounts and
-   statement import (the first real use of the "manual entry + statement parsing" pattern).
+3. **Banking** — ✅ built 2026-08-23. Builds directly on Cash's ledger concept, adds
+   multiple accounts and CSV statement import (the first real use of the "manual entry +
+   statement parsing" pattern).
 4. **EMI / Loans** — introduces real calculation (amortization schedule) but no market-price
    dependency — a good bridge before Funds' XIRR/cost-basis complexity.
 5. **Funds** (mutual funds) — structurally closest to QSE/PSX (buy/sell units, a "price"
@@ -147,11 +148,26 @@ conversion (single `currency` setting is enough to start), budgets/spending limi
 
 ---
 
-## 2. Banking
+## 2. Banking — ✅ built 2026-08-23
 
 **Purpose**: bank account balances and transaction history (deposits, withdrawals, card
 spending), entered manually or imported from a statement — no live bank API (locked
 decision above).
+
+**Built as designed below.** Third module, hand-written store (accounts nested under
+`settings`, plus a top-level `transactions` array — a third distinct shape from Cash's
+single array and Personal Loans' two top-level arrays), same idiom as the other two.
+CSV import was NOT deferred — built as specified: a lightweight custom parser
+(`lib/csv.ts`, handles quoted fields/escaped quotes/CRLF, no external dependency) plus a
+column-mapping UI (pick which detected header is Date/Description/Amount, optional "flip
+sign" toggle for banks that export spending as positive numbers) and a 5-row preview before
+committing. Files: `types/bankWorkbook.ts`, `store/{bankWorkbookStore,
+defaultBankWorkbook}.ts`, `lib/firebase/useBankFirebaseSync.ts`, `lib/calc/bankModule.ts` +
+`lib/csv.ts` (+ tests for both), `features/bank/pages/BankPage.tsx` (Accounts/Transactions/
+Import statement/Settings tabs), route `/bank`, nav under "More" in the Sidebar. Followed
+the zustand-selector rule from §6 throughout (checked explicitly before shipping — every
+selector in `BankPage.tsx` is a raw property accessor; derived values like known-categories
+are computed in `useMemo`, never inside the selector).
 
 **Data model**:
 ```ts

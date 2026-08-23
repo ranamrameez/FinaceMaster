@@ -299,6 +299,30 @@ not developer notes) continuously as features ship.
     hard reload was what finally confirmed the fix actually worked. If a
     "phantom" error persists suspiciously after a code fix looks correct,
     try a fresh tab before assuming the fix is wrong.
+  - **Banking module built (2026-08-23) — third new module.** Third
+    distinct store shape (accounts nested under `settings`, plus a
+    top-level `transactions` array) — hand-written in
+    `store/bankWorkbookStore.ts` following the same idiom as Cash/Personal
+    Loans. CSV statement import was built as specified, not deferred: a
+    small dependency-free parser (`lib/csv.ts` — quoted fields, escaped
+    `""` quotes, CRLF, blank-line skipping, all tested) plus a "map these
+    columns" UI in `features/bank/pages/BankPage.tsx`'s Import tab (auto-
+    picks the first 3 detected headers as a starting guess for Date/
+    Description/Amount, user can remap any of them, optional "flip sign"
+    for banks that export spending as positive numbers, 5-row preview
+    before committing). `lib/calc/bankModule.ts` has running balance
+    (`accountRunningLedger`), per-account balance, per-currency totals
+    (`totalBalanceByCurrency`), and category breakdown — all tested. Files:
+    `types/bankWorkbook.ts`, `store/{bankWorkbookStore,
+    defaultBankWorkbook}.ts`, `lib/firebase/useBankFirebaseSync.ts`, route
+    `/bank`, nav under "More". Checked every zustand selector in the new
+    file against the §6 rule (raw state only, derive in `useMemo`) before
+    shipping — none of them repeat the Personal Loans bug. Verified live in
+    the browser (fresh tab): sign-in gate on both add-transaction and
+    import, a synthetic 3-column CSV parsed and auto-mapped correctly with
+    accurate preview amounts, account/transaction edits recalculated
+    balances correctly, no console errors. Next up per the build order is
+    EMI/Loans (see `MODULES_PLAN.md` §5), then Funds, then Rentals.
   - **Not done — still open PSX/README items for a future session:**
     statement PDF/Excel import (item 12), dynamic/filterable charts (item
     17), the Sidebar's category-dropdown redesign for Stock Exchanges/
@@ -353,6 +377,8 @@ webapp/                                                              the new Rea
                             entry above and MODULES_PLAN.md §1
   src/features/personalLoans/  Personal Loans module (2026-08-23) — hand-written store (two
                             related arrays), see its own entry above and MODULES_PLAN.md §6
+  src/features/bank/        Banking module (2026-08-23) — hand-written store, CSV statement
+                            import, see its own entry above and MODULES_PLAN.md §2
   src/components/           shared UI: Modal, ConfirmDialog, SignInModal, Sparkline, Tabs, Sidebar, etc.
   src/types/workbook.ts     QSE types; psxWorkbook.ts has PSX's parallel types
 .github/workflows/static.yml   CI: builds webapp/ and deploys it to /webapp/ alongside the legacy

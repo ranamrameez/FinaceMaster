@@ -30,6 +30,8 @@ import { CashPage } from './features/cash/pages/CashPage';
 import { useCashFirebaseSync } from './lib/firebase/useCashFirebaseSync';
 import { PersonalLoansPage } from './features/personalLoans/pages/PersonalLoansPage';
 import { usePersonalLoansFirebaseSync } from './lib/firebase/usePersonalLoansFirebaseSync';
+import { BankPage } from './features/bank/pages/BankPage';
+import { useBankFirebaseSync } from './lib/firebase/useBankFirebaseSync';
 import { LegalPage } from './pages/LegalPage';
 
 function useApplyAppearance() {
@@ -68,6 +70,7 @@ function App() {
   const psxSync = usePSXFirebaseSync();
   const cashSync = useCashFirebaseSync();
   const personalLoansSync = usePersonalLoansFirebaseSync();
+  const bankSync = useBankFirebaseSync();
 
   return (
     <ErrorBoundary>
@@ -132,6 +135,17 @@ function App() {
                     syncStatus={personalLoansSync.status}
                     cloudEmpty={personalLoansSync.cloudEmpty}
                     uploadLocalToCloud={personalLoansSync.uploadLocalToCloud}
+                  />
+                }
+              />
+              <Route
+                path="/bank"
+                element={
+                  <BankPage
+                    user={user}
+                    syncStatus={bankSync.status}
+                    cloudEmpty={bankSync.cloudEmpty}
+                    uploadLocalToCloud={bankSync.uploadLocalToCloud}
                   />
                 }
               />

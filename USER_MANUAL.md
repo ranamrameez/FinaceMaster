@@ -232,11 +232,37 @@ Informal loans with another person — money you lent out, or money you owe — 
   actually has a real repayment schedule, it belongs in EMI/Loans (a separate, not-yet-built
   module — see `MODULES_PLAN.md`) instead.
 
-More modules (Banking, EMI/Loans, Funds, Rentals) are planned — see `MODULES_PLAN.md`.
+More modules (EMI/Loans, Funds, Rentals) are planned — see `MODULES_PLAN.md`.
 
 ---
 
-## 15. A note on accuracy
+## 15. Banking
+
+Bank account balances and transaction history, entered manually or imported from a CSV
+statement — under **More → Banking**. No live bank connection (regulator licensing is
+required for that, so it's manual entry or statement import only).
+
+- **Accounts tab**: add one or more accounts (name, currency, opening balance). Each
+  account has exactly one currency. Edit or delete any account (deleting an account also
+  deletes its transactions). A "Total balance" summary at the top groups accounts by
+  currency.
+- **Transactions tab**: pick an account, then log transactions with a multi-row form (date,
+  description, a signed amount — negative for spend/debit, positive for deposit/credit —
+  and an optional free-form category with autocomplete over your own previous categories).
+  The list shows a running balance and every entry is editable/deletable. A category
+  breakdown card shows net spend/income per category.
+- **Import statement tab**: pick the target account, choose a CSV file exported from your
+  bank, then map which column is Date/Description/Amount (every bank's export looks
+  different, so this asks you rather than guessing) — check "Flip sign" if your bank
+  exports spending as positive numbers. Preview the first 5 mapped rows, then import. This
+  is intentionally a simple column-mapping tool, not a parser for every specific bank
+  format.
+- **Settings tab**: same account/cloud-sync status and export/import/clear data management
+  as other modules.
+
+---
+
+## 16. A note on accuracy
 
 Every number in this app is an **estimate** computed from settings you configure — it is
 not a substitute for your actual broker/exchange statement, and it is not financial advice.
