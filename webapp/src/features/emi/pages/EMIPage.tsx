@@ -6,7 +6,7 @@ import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { useSortableRows } from '../../../hooks/useSortableRows';
-import { emiSummary } from '../../../lib/calc/emiModule';
+import { emiSummary, totalsByCurrency } from '../../../lib/calc/emiModule';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
@@ -200,6 +200,31 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
   );
 }
 
+/** Overall stats across every loan, shown on the landing view before any
+ * loan is opened — user feedback: every module needs an at-a-glance
+ * accumulative summary, not just per-loan detail. */
+function OverallSummary() {
+  const loans = useEMIWorkbookStore((s) => s.workbook.entries);
+  const totals = totalsByCurrency(loans);
+  const codes = Object.keys(totals);
+  if (!codes.length) return null;
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px,1fr))', gap: 8, marginBottom: 16 }}>
+      {codes.map((code) => (
+        <div key={code} className="card" style={{ padding: 12 }}>
+          <div className="footer-note" style={{ marginBottom: 6 }}>{code}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px,1fr))', gap: 8 }}>
+            <div className="stat-card card"><div className="label">Monthly total</div><div className="value">{fmtMoney(totals[code].monthlyInstallment, code)}</div></div>
+            <div className="stat-card card"><div className="label">Outstanding</div><div className="value pill-sell">{fmtMoney(totals[code].outstanding, code)}</div></div>
+            <div className="stat-card card"><div className="label">Paid so far</div><div className="value">{fmtMoney(totals[code].paidSoFar, code)}</div></div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function LoanList({ onSelect, onEdit }: { onSelect: (loan: EMILoan) => void; onEdit: (loan: EMILoan) => void }) {
   const loans = useEMIWorkbookStore((s) => s.workbook.entries);
 
@@ -330,6 +355,7 @@ export function EMIPage({
         <LoanDetail loan={liveSelected} onBack={() => setSelected(null)} startInEditMode={editOnOpen} />
       ) : (
         <div>
+          <OverallSummary />
           <AddLoanForm />
           <LoanList onSelect={openLoan} onEdit={editLoan} />
           <AccountSection syncStatus={syncStatus} cloudEmpty={cloudEmpty} uploadLocalToCloud={uploadLocalToCloud} />

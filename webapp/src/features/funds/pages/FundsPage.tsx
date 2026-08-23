@@ -96,6 +96,50 @@ function AddFundForm() {
 
 /* ============================== Fund list ============================== */
 
+/** Overall stats across every fund, shown on the landing view before any
+ * fund is opened — user feedback: every module needs an at-a-glance
+ * accumulative summary, not just per-fund detail. Aggregate XIRR isn't
+ * meaningful to sum/average across funds bought at different times, so
+ * this only totals invested/value/profit, same convention as every other
+ * module's currency-grouped totals (never blended across currencies). */
+function OverallSummary() {
+  const funds = useFundsWorkbookStore((s) => s.workbook.funds);
+  const { positions, workbook } = useFundsDerived();
+
+  const totals: Record<string, { invested: number; value: number }> = {};
+  funds.forEach((fund) => {
+    const p = positions.find((pos) => pos.ticker === fund.id);
+    const invested = p?.invested ?? 0;
+    const units = p?.shares ?? 0;
+    const nav = getMarketPrice(fund.id, workbook.marketPrices, workbook.transactions);
+    const value = units * nav;
+    if (!totals[fund.currencyCode]) totals[fund.currencyCode] = { invested: 0, value: 0 };
+    totals[fund.currencyCode].invested += invested;
+    totals[fund.currencyCode].value += value;
+  });
+  const codes = Object.keys(totals);
+  if (!codes.length) return null;
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px,1fr))', gap: 8, marginBottom: 16 }}>
+      {codes.map((code) => {
+        const profit = totals[code].value - totals[code].invested;
+        const profitPct = totals[code].invested > 0 ? (profit / totals[code].invested) * 100 : 0;
+        return (
+          <div key={code} className="card" style={{ padding: 12 }}>
+            <div className="footer-note" style={{ marginBottom: 6 }}>{code}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px,1fr))', gap: 8 }}>
+              <div className="stat-card card"><div className="label">Invested</div><div className="value">{fmtMoney(totals[code].invested, code)}</div></div>
+              <div className="stat-card card"><div className="label">Current value</div><div className="value">{fmtMoney(totals[code].value, code)}</div></div>
+              <div className="stat-card card"><div className="label">Net profit</div><div className={`value ${profit >= 0 ? 'pill-buy' : 'pill-sell'}`}>{fmtMoney(profit, code)} ({profitPct.toFixed(1)}%)</div></div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
   const funds = useFundsWorkbookStore((s) => s.workbook.funds);
   const { positions, fundXIRR, workbook } = useFundsDerived();
@@ -490,6 +534,7 @@ export function FundsPage({
               label: 'Funds',
               content: (
                 <div>
+                  <OverallSummary />
                   <AddFundForm />
                   <FundList onSelect={setSelected} />
                 </div>

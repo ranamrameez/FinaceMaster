@@ -849,6 +849,18 @@ not developer notes) continuously as features ship.
   every other module already had edit somewhere in its flow — this
   wasn't a universal gap, just these two extra-click cases plus the
   missing sort headers.
+- **Overall summary stats added to EMI/Loans and Funds landing pages
+  (2026-08-23), user-reported — see README Done item 48.** Every other
+  module already showed an accumulative summary on its first tab
+  (Cash's balance, Bank's total balance, Personal Loans' net position,
+  Rentals' net income, QSE/PSX's full Dashboard); EMI and Funds only
+  had stat cards inside a per-record detail view. New
+  `totalsByCurrency()` in `lib/calc/emiModule.ts` (tested) sums
+  monthly-installment/outstanding/paid-so-far across every loan; Funds'
+  equivalent (invested/current-value/net-profit) is computed inline in
+  `FundsPage.tsx` from values `FundList` already derives, not a new
+  pure function — a straightforward sum, not new calc logic. Verified
+  live with seeded data for both modules, zero console errors.
 
 ## Live URLs
 

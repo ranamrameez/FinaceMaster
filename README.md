@@ -577,6 +577,24 @@ FinanceManager live link:
     new Edit button opens the loan detail directly showing the Save/Cancel edit form — zero
     console errors. `npm run build` / `npm run test` (141 tests, unchanged — this is UI
     wiring around already-tested calc functions, not new calc logic) both clean.
+48. **Overall summary stats added to EMI/Loans and Funds landing pages (2026-08-23,
+    user-reported: "all modules must have summary stats... currently no accumulative data for
+    quick sight").** Audited every module's landing view — Cash/Banking/Personal Loans/
+    Rentals already show an at-a-glance summary card (balance/net-position/total-balance/
+    net-income) on their first tab; QSE/PSX have a full Dashboard page. EMI/Loans and Funds
+    were the two real gaps — both only showed stat cards inside a per-loan/per-fund detail
+    view, nothing accumulative before opening one. New `totalsByCurrency()` in
+    `lib/calc/emiModule.ts` (tested) sums monthly-installment/outstanding/paid-so-far across
+    every loan, grouped by currency; a new `OverallSummary` card renders it above EMI's loan
+    list. Funds' equivalent aggregates invested/current-value/net-profit across every fund
+    (computed inline in `FundsPage.tsx` from the same already-computed
+    `positions`/`getMarketPrice` values `FundList` itself uses — no new pure function, since
+    it's a straightforward sum of values already derived elsewhere, not new calc logic worth
+    its own testable module) — deliberately doesn't attempt an aggregate XIRR, since summing
+    or averaging XIRR across funds bought at different times isn't a meaningful number.
+    Verified live in the browser with seeded data for each module: both landing pages show
+    the new summary card with correct totals, zero console errors. `npm run build` /
+    `npm run test` (143 tests, 2 new) both clean.
 
 ## Pending
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { EMILoan } from '../../../types/emiWorkbook';
-import { emiSchedule, emiSummary } from '../emiModule';
+import { emiSchedule, emiSummary, totalsByCurrency } from '../emiModule';
 
 const loan = (over: Partial<EMILoan>): EMILoan => ({
   id: 'e1',
@@ -73,5 +73,28 @@ describe('emiSummary', () => {
     expect(sum.elapsed).toBe(12);
     expect(sum.monthsRemaining).toBe(0);
     expect(sum.outstanding).toBeCloseTo(0, 5);
+  });
+});
+
+describe('totalsByCurrency', () => {
+  it('sums monthly installment/outstanding/paid-so-far across loans in the same currency', () => {
+    const asOf = new Date('2026-04-01'); // 3 full months elapsed for a 2026-01-01 start
+    const loans = [
+      loan({ id: 'a', currencyCode: 'USD', principal: 1200, annualRatePct: 0, tenureMonths: 12, startDate: '2026-01-01' }),
+      loan({ id: 'b', currencyCode: 'USD', principal: 600, annualRatePct: 0, tenureMonths: 12, startDate: '2026-01-01' }),
+    ];
+    const totals = totalsByCurrency(loans, asOf);
+    expect(totals.USD.monthlyInstallment).toBeCloseTo(100 + 50, 5);
+    expect(totals.USD.outstanding).toBeCloseTo(900 + 450, 5);
+    expect(totals.USD.paidSoFar).toBeCloseTo(300 + 150, 5);
+  });
+
+  it('keeps currencies separate', () => {
+    const loans = [
+      loan({ id: 'a', currencyCode: 'USD', principal: 1200, tenureMonths: 12, startDate: '2026-01-01' }),
+      loan({ id: 'b', currencyCode: 'PKR', principal: 5000, tenureMonths: 10, startDate: '2026-01-01' }),
+    ];
+    const totals = totalsByCurrency(loans, new Date('2026-01-01'));
+    expect(Object.keys(totals).sort()).toEqual(['PKR', 'USD']);
   });
 });

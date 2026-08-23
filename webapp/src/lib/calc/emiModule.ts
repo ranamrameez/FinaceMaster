@@ -70,3 +70,26 @@ export function emiSummary(loan: EMILoan, asOf: Date = new Date()): EMISummary {
   const monthsRemaining = loan.tenureMonths - elapsed;
   return { emi, outstanding, paidSoFar, interestSoFar, totalInterest, monthsRemaining, elapsed, rows };
 }
+
+export interface EMITotals {
+  monthlyInstallment: number;
+  outstanding: number;
+  paidSoFar: number;
+}
+
+/** Aggregate stats across every loan, grouped by currency — feeds the
+ * main EMI/Loans landing page's summary cards (README item 23 / user
+ * feedback: every module needs an overall-stats view, not just per-loan
+ * detail). Never blended across currencies, same rule as every other
+ * module's totals. */
+export function totalsByCurrency(loans: EMILoan[], asOf: Date = new Date()): Record<string, EMITotals> {
+  const out: Record<string, EMITotals> = {};
+  loans.forEach((loan) => {
+    const sum = emiSummary(loan, asOf);
+    if (!out[loan.currencyCode]) out[loan.currencyCode] = { monthlyInstallment: 0, outstanding: 0, paidSoFar: 0 };
+    out[loan.currencyCode].monthlyInstallment += sum.emi;
+    out[loan.currencyCode].outstanding += sum.outstanding;
+    out[loan.currencyCode].paidSoFar += sum.paidSoFar;
+  });
+  return out;
+}
