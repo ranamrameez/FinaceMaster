@@ -20,6 +20,12 @@ export interface PersonalLoanRepayment {
   loanId: string;
   date: string;
   amount: number;
+  /** 'statement-import' added 2026-08-23 (README item 25 / MODULES_PLAN.md
+   * §13's CSV-import scope) — same "transaction doesn't care about its
+   * source" shape as Bank/Cash/Rentals. Unset (implicitly manual) for
+   * every repayment logged before today. */
+  source?: 'manual' | 'statement-import';
+  statementRef?: string;
 }
 
 export interface PersonalLoansSettings {

@@ -1,11 +1,12 @@
 import type { User } from 'firebase/auth';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Card } from '../../../components/Card';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { CURRENCIES } from '../../../lib/currencies';
+import { parseCSV } from '../../../lib/csv';
 import { fmtMoney } from '../../../lib/format';
 import { confirmAndDeleteLinkable } from '../../../lib/linkCascade';
 import { loanOutstanding, netPositionByCurrency } from '../../../lib/calc/personalLoansModule';
@@ -131,13 +132,14 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
       </div>
       <div className="table-scroll">
         <table>
-          <thead><tr><th>Date</th><th>Amount</th><th></th></tr></thead>
+          <thead><tr><th>Date</th><th>Amount</th><th>Source</th><th></th></tr></thead>
           <tbody>
             {repayments.map((r) =>
               editId === r.id && editRow ? (
                 <tr key={r.id}>
                   <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
                   <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 90 }} /></td>
+                  <td className="footer-note">{r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}</td>
                   <td>
                     <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
                     <button className="btn secondary small" onClick={() => setEditId(null)}>Cancel</button>
@@ -147,6 +149,7 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                 <tr key={r.id}>
                   <td>{r.date}</td>
                   <td>{fmtMoney(r.amount, loan.currencyCode)}</td>
+                  <td className="footer-note">{r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}</td>
                   <td>
                     <button className="btn secondary small" onClick={() => startEdit(r)}>Edit</button>{' '}
                     <button
@@ -159,11 +162,130 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                 </tr>
               ),
             )}
-            {!repayments.length && <tr><td colSpan={3} className="footer-note">No repayments logged yet.</td></tr>}
+            {!repayments.length && <tr><td colSpan={4} className="footer-note">No repayments logged yet.</td></tr>}
           </tbody>
         </table>
       </div>
+      <ImportRepaymentsSection loan={loan} />
     </div>
+  );
+}
+
+/** README item 25 / MODULES_PLAN.md §13: same browser-only "map these
+ * columns" CSV import pattern as Banking/Cash/Rentals. Unlike those
+ * modules, a repayment's amount has no direction to derive from a sign —
+ * it's always a positive amount against the loan — so there's no
+ * "Flip sign" checkbox here, just Date + Amount (absolute value). */
+function ImportRepaymentsSection({ loan }: { loan: PersonalLoan }) {
+  const addRepayments = usePersonalLoansWorkbookStore((s) => s.addRepayments);
+  const ensureSignedIn = useEnsureSignedIn();
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const [fileName, setFileName] = useState('');
+  const [headers, setHeaders] = useState<string[]>([]);
+  const [rows, setRows] = useState<string[][]>([]);
+  const [dateCol, setDateCol] = useState('');
+  const [amountCol, setAmountCol] = useState('');
+
+  const onFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const parsed = parseCSV(String(reader.result));
+      if (parsed.length < 2) {
+        toast('Could not find any data rows in that file.');
+        return;
+      }
+      const [head, ...body] = parsed;
+      setFileName(file.name);
+      setHeaders(head);
+      setRows(body);
+      setDateCol(head[0] ?? '');
+      setAmountCol(head[1] ?? '');
+    };
+    reader.readAsText(file);
+  };
+
+  const colIndex = (col: string) => headers.indexOf(col);
+  const mapRow = (r: string[]) => ({
+    date: (r[colIndex(dateCol)] ?? '').trim(),
+    amount: Math.abs(Number(r[colIndex(amountCol)] ?? 0)),
+  });
+  const mappedPreview = rows.slice(0, 5).map(mapRow);
+
+  const doImport = async () => {
+    if (!dateCol || !amountCol) return toast('Map both the date and amount columns.');
+    if (!(await ensureSignedIn('Sign in to import repayments.'))) return;
+    const imported: PersonalLoanRepayment[] = rows
+      .map(mapRow)
+      .filter((r) => r.date && !Number.isNaN(r.amount) && r.amount !== 0)
+      .map((r) => ({
+        id: crypto.randomUUID(),
+        loanId: loan.id,
+        date: r.date,
+        amount: r.amount,
+        source: 'statement-import' as const,
+        statementRef: fileName,
+      }));
+    if (!imported.length) return toast('No valid rows to import after mapping — check your column choices.');
+    addRepayments(imported);
+    toast(`Imported ${imported.length} repayment${imported.length === 1 ? '' : 's'} from ${fileName}.`);
+    setHeaders([]);
+    setRows([]);
+    setFileName('');
+  };
+
+  return (
+    <Card style={{ marginTop: 12 }}>
+      <h4 style={{ marginTop: 0 }}>Import repayments (CSV)</h4>
+      <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+        <button className="btn secondary small" onClick={() => fileInput.current?.click()}>Choose CSV file</button>
+        <input
+          ref={fileInput}
+          type="file"
+          accept=".csv,text/csv"
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) onFile(file);
+            e.target.value = '';
+          }}
+        />
+        {fileName && <span className="footer-note">{fileName} ({rows.length} rows)</span>}
+      </div>
+
+      {headers.length > 0 && (
+        <div style={{ marginTop: 12 }}>
+          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+            <Field label="Date column" width={160}>
+              <Select value={dateCol} onChange={(e) => setDateCol(e.target.value)}>
+                {headers.map((h) => <option key={h} value={h}>{h}</option>)}
+              </Select>
+            </Field>
+            <Field label="Amount column" width={160}>
+              <Select value={amountCol} onChange={(e) => setAmountCol(e.target.value)}>
+                {headers.map((h) => <option key={h} value={h}>{h}</option>)}
+              </Select>
+            </Field>
+          </div>
+          <div className="table-scroll" style={{ marginTop: 8 }}>
+            <table>
+              <thead><tr><th>Date</th><th>Amount</th></tr></thead>
+              <tbody>
+                {mappedPreview.map((r, i) => (
+                  <tr key={i}>
+                    <td>{r.date}</td>
+                    <td>{fmtMoney(r.amount, loan.currencyCode)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <button className="btn secondary" style={{ marginTop: 12 }} onClick={doImport}>
+            <PlusIcon />Import {rows.length} repayment{rows.length === 1 ? '' : 's'}
+          </button>
+        </div>
+      )}
+    </Card>
   );
 }
 

@@ -17,6 +17,12 @@ export interface RentalEntry {
    * MODULES_PLAN.md). */
   category?: string;
   note?: string;
+  /** 'statement-import' added 2026-08-23 (README item 25 / MODULES_PLAN.md
+   * §13's CSV-import scope) — same "transaction doesn't care about its
+   * source" shape as Bank/Cash. Unset (implicitly manual) for every entry
+   * logged before today. */
+  source?: 'manual' | 'statement-import';
+  statementRef?: string;
 }
 
 export interface RentalSettings {

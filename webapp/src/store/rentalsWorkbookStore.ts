@@ -17,6 +17,7 @@ interface RentalsStoreState {
   updateProperty: (id: string, patch: Partial<Property>) => void;
   deleteProperty: (id: string) => void;
   addEntry: (entry: RentalEntry) => void;
+  addEntries: (entries: RentalEntry[]) => void;
   updateEntry: (id: string, patch: Partial<RentalEntry>) => void;
   deleteEntry: (id: string) => void;
 }
@@ -71,6 +72,8 @@ export const useRentalsWorkbookStore = create<RentalsStoreState>((set, get) => {
       })),
 
     addEntry: (entry) => mutate((wb) => ({ ...wb, entries: [...wb.entries, entry] })),
+
+    addEntries: (entries) => mutate((wb) => ({ ...wb, entries: [...wb.entries, ...entries] })),
 
     updateEntry: (id, patch) =>
       mutate((wb) => ({ ...wb, entries: wb.entries.map((e) => (e.id === id ? { ...e, ...patch } : e)) })),

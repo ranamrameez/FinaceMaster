@@ -276,6 +276,10 @@ Informal loans with another person — money you lent out, or money you owe — 
   actually has a real repayment schedule, it belongs in EMI/Loans (§18 below) instead.
 - A repayment created from the **Transfers** page (§22) is linked to a Bank or Cash entry —
   deleting it there also removes the matching Bank/Cash record; see §22 for details.
+- **Import repayments (CSV)**: inside a loan's detail view, below its repayments table, import
+  a CSV of past repayments — map which column is Date and which is Amount, preview the first
+  5 rows, then import. Amounts are always treated as positive (a repayment doesn't have a
+  direction to flip). Imported repayments show "Import (filename)" in the Source column.
 
 ---
 
@@ -363,6 +367,10 @@ tax, management fees) against one or more properties.
   entry list with edit/delete.
 - No tenant/lease management, property valuation tracking, or mortgage/loan tracking in
   this version — a property's mortgage, if you have one, belongs in EMI/Loans (§18) instead.
+- **Import tab**: import a CSV of income/expense entries for one selected property — map
+  Date/Amount/an optional Category column; a positive amount is rent income, negative is an
+  expense (check "Flip sign" if your export does the opposite). Imported entries show
+  "Import (filename)" in the entry list's Source column.
 - **Settings tab**: same account/cloud-sync status and export/import/clear data management
   as other modules.
 

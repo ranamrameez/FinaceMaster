@@ -685,6 +685,24 @@ not developer notes) continuously as features ship.
   Import correctly reaches the sign-in gate — zero console errors.
   Personal Loans repayments and Rentals entries still need the same
   treatment (README item 25's remainder).
+- **CSV import extended to Rentals and Personal Loans, completing README
+  item 25's browser-only half (2026-08-23) — see README Done item 41.**
+  Same pattern as Cash: `RentalEntry` and `PersonalLoanRepayment` both
+  gained optional `source`/`statementRef` fields. Rentals' new "Import"
+  tab (in `RentalsPage.tsx`) maps Date/Amount/Category for one selected
+  property, with the Amount column's sign deciding RENT_INCOME vs
+  EXPENSE — same convention as Cash. Personal Loans' import lives inside
+  each loan's detail view instead of a separate tab (there's no
+  loan-independent "all repayments" list to import into) and skips the
+  sign/flip entirely, since a repayment is always a positive amount
+  regardless of which way the loan runs — same reasoning already used for
+  this module's linking side-record. Neither `rentalsWorkbookStore.ts`
+  nor `personalLoansWorkbookStore.ts` uses `createEntryStore`, so each
+  got its own hand-written bulk `addEntries()`/`addRepayments()` rather
+  than reusing Cash's generic one. Verified live via Playwright with two
+  real CSV file uploads — zero console errors on either. This closes out
+  README item 25's CSV/JSON scope entirely; only PDF/image import (the
+  separate Python backend, not yet started) remains.
 
 ## Live URLs
 

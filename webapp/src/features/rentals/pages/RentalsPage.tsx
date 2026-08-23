@@ -8,6 +8,7 @@ import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { netIncomeByCurrency, propertyByCategory, propertyMonthlyRollup, propertyNetIncome } from '../../../lib/calc/rentalsModule';
+import { parseCSV } from '../../../lib/csv';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
 import { confirmAndDeleteLinkable } from '../../../lib/linkCascade';
@@ -249,7 +250,7 @@ function EntriesList({ property }: { property: Property }) {
         <thead>
           <tr>
             <Th col="date">Date</Th><Th col="type">Type</Th><Th col="amount">Amount</Th>
-            <Th col="category">Category</Th><th>Note</th><th></th>
+            <Th col="category">Category</Th><th>Note</th><th>Source</th><th></th>
           </tr>
         </thead>
         <tbody>
@@ -266,6 +267,7 @@ function EntriesList({ property }: { property: Property }) {
                 <td><input type="number" step="0.01" value={editRow.amount} onChange={(ev) => setEditRow({ ...editRow, amount: Number(ev.target.value) })} style={{ width: 90 }} /></td>
                 <td><input value={editRow.category ?? ''} onChange={(ev) => setEditRow({ ...editRow, category: ev.target.value })} style={{ width: 100 }} /></td>
                 <td><input value={editRow.note ?? ''} onChange={(ev) => setEditRow({ ...editRow, note: ev.target.value })} /></td>
+                <td className="footer-note">{e.source === 'statement-import' ? `Import${e.statementRef ? ` (${e.statementRef})` : ''}` : 'Manual'}</td>
                 <td>
                   <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
                   <button className="btn secondary small" onClick={() => setEditId(null)}>Cancel</button>
@@ -278,6 +280,7 @@ function EntriesList({ property }: { property: Property }) {
                 <td className={e.type === 'RENT_INCOME' ? 'pill-buy' : 'pill-sell'}>{fmtMoney(e.type === 'RENT_INCOME' ? e.amount : -e.amount, property.currencyCode)}</td>
                 <td>{e.type === 'RENT_INCOME' ? '—' : e.category || '—'}</td>
                 <td>{e.note}</td>
+                <td className="footer-note">{e.source === 'statement-import' ? `Import${e.statementRef ? ` (${e.statementRef})` : ''}` : 'Manual'}</td>
                 <td>
                   <button className="btn secondary small" onClick={() => startEdit(e)}>Edit</button>{' '}
                   <button
@@ -290,9 +293,168 @@ function EntriesList({ property }: { property: Property }) {
               </tr>
             ),
           )}
-          {!sorted.length && <tr><td colSpan={6} className="footer-note">No entries for this property yet.</td></tr>}
+          {!sorted.length && <tr><td colSpan={7} className="footer-note">No entries for this property yet.</td></tr>}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+/** README item 25 / MODULES_PLAN.md §13: same browser-only "map these
+ * columns" CSV import pattern as Banking/Cash — no new infra. A rental
+ * entry's amount is unsigned with a separate `type`, so the mapped Amount
+ * column's sign (after an optional flip) decides RENT_INCOME vs EXPENSE
+ * and the stored amount is always the absolute value, same approach as
+ * Cash's `ImportTab`. */
+function ImportTab() {
+  const { properties, property, propertyId, setPropertyId } = usePropertyPicker();
+  const addEntries = useRentalsWorkbookStore((s) => s.addEntries);
+  const ensureSignedIn = useEnsureSignedIn();
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const [fileName, setFileName] = useState('');
+  const [headers, setHeaders] = useState<string[]>([]);
+  const [rows, setRows] = useState<string[][]>([]);
+  const [dateCol, setDateCol] = useState('');
+  const [amountCol, setAmountCol] = useState('');
+  const [categoryCol, setCategoryCol] = useState('');
+  const [flipSign, setFlipSign] = useState(false);
+
+  const onFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const parsed = parseCSV(String(reader.result));
+      if (parsed.length < 2) {
+        toast('Could not find any data rows in that file.');
+        return;
+      }
+      const [head, ...body] = parsed;
+      setFileName(file.name);
+      setHeaders(head);
+      setRows(body);
+      setDateCol(head[0] ?? '');
+      setAmountCol(head[1] ?? '');
+      setCategoryCol('');
+    };
+    reader.readAsText(file);
+  };
+
+  const colIndex = (col: string) => headers.indexOf(col);
+  const mapRow = (r: string[]) => {
+    const rawAmount = Number(r[colIndex(amountCol)] ?? 0) * (flipSign ? -1 : 1);
+    return {
+      date: (r[colIndex(dateCol)] ?? '').trim(),
+      type: (rawAmount >= 0 ? 'RENT_INCOME' : 'EXPENSE') as RentalEntry['type'],
+      amount: Math.abs(rawAmount),
+      category: categoryCol ? (r[colIndex(categoryCol)] ?? '').trim() || undefined : undefined,
+    };
+  };
+  const mappedPreview = rows.slice(0, 5).map(mapRow);
+
+  const doImport = async () => {
+    if (!property) return toast('Add and select a property first.');
+    if (!dateCol || !amountCol) return toast('Map at least the date and amount columns.');
+    if (!(await ensureSignedIn('Sign in to import entries.'))) return;
+    const imported: RentalEntry[] = rows
+      .map(mapRow)
+      .filter((r) => r.date && !Number.isNaN(r.amount) && r.amount !== 0)
+      .map((r) => ({
+        id: uid(),
+        propertyId: property.id,
+        date: r.date,
+        type: r.type,
+        amount: r.amount,
+        category: r.category,
+        source: 'statement-import' as const,
+        statementRef: fileName,
+      }));
+    if (!imported.length) return toast('No valid rows to import after mapping — check your column choices.');
+    addEntries(imported);
+    toast(`Imported ${imported.length} entr${imported.length === 1 ? 'y' : 'ies'} from ${fileName}.`);
+    setHeaders([]);
+    setRows([]);
+    setFileName('');
+  };
+
+  if (!properties.length) {
+    return <p className="footer-note">Add a property first (Properties tab) before importing entries.</p>;
+  }
+
+  return (
+    <div>
+      <p className="footer-note" style={{ marginBottom: 12 }}>
+        Import a CSV export of rent/expense entries for one property. This is a simple "map these columns" tool —
+        pick which column is which below. A positive amount is treated as rent income, negative as an expense
+        (check "Flip sign" if your export does the opposite).
+      </p>
+      <Field label="Import into property" width={220}>
+        <Select value={propertyId} onChange={(e) => setPropertyId(e.target.value)}>
+          {properties.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.currencyCode})</option>)}
+        </Select>
+      </Field>
+      <div style={{ marginTop: 8 }}>
+        <button className="btn secondary" onClick={() => fileInput.current?.click()}>Choose CSV file</button>
+        <input
+          ref={fileInput}
+          type="file"
+          accept=".csv,text/csv"
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) onFile(file);
+            e.target.value = '';
+          }}
+        />
+        {fileName && <span className="footer-note" style={{ marginLeft: 8 }}>{fileName} ({rows.length} rows)</span>}
+      </div>
+
+      {headers.length > 0 && (
+        <Card style={{ marginTop: 12 }}>
+          <h3 style={{ marginTop: 0 }}>Map columns</h3>
+          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+            <Field label="Date column" width={160}>
+              <Select value={dateCol} onChange={(e) => setDateCol(e.target.value)}>
+                {headers.map((h) => <option key={h} value={h}>{h}</option>)}
+              </Select>
+            </Field>
+            <Field label="Amount column" width={160}>
+              <Select value={amountCol} onChange={(e) => setAmountCol(e.target.value)}>
+                {headers.map((h) => <option key={h} value={h}>{h}</option>)}
+              </Select>
+            </Field>
+            <Field label="Category column (optional)" width={160}>
+              <Select value={categoryCol} onChange={(e) => setCategoryCol(e.target.value)}>
+                <option value="">None</option>
+                {headers.map((h) => <option key={h} value={h}>{h}</option>)}
+              </Select>
+            </Field>
+            <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 20 }} title="Check this if your export uses positive numbers for expenses.">
+              <input type="checkbox" checked={flipSign} onChange={(e) => setFlipSign(e.target.checked)} />
+              Flip sign
+            </label>
+          </div>
+
+          <h4>Preview (first 5 rows)</h4>
+          <div className="table-scroll">
+            <table>
+              <thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Category</th></tr></thead>
+              <tbody>
+                {mappedPreview.map((r, i) => (
+                  <tr key={i}>
+                    <td>{r.date}</td>
+                    <td className={r.type === 'RENT_INCOME' ? 'pill-buy' : 'pill-sell'}>{r.type === 'RENT_INCOME' ? 'Rent income' : 'Expense'}</td>
+                    <td>{property ? fmtMoney(r.amount, property.currencyCode) : r.amount}</td>
+                    <td>{r.category || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <button className="btn" style={{ marginTop: 12 }} onClick={doImport}>
+            <PlusIcon />Import {rows.length} entr{rows.length === 1 ? 'y' : 'ies'}
+          </button>
+        </Card>
+      )}
     </div>
   );
 }
@@ -512,6 +674,7 @@ export function RentalsPage({
         tabs={[
           { key: 'properties', label: 'Properties', content: <PropertiesTab /> },
           { key: 'entries', label: 'Income & expenses', content: <EntriesTab /> },
+          { key: 'import', label: 'Import', content: <ImportTab /> },
           {
             key: 'settings',
             label: 'Settings',

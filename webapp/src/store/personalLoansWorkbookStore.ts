@@ -19,6 +19,7 @@ interface PersonalLoansStoreState {
   updateLoan: (id: string, patch: Partial<PersonalLoan>) => void;
   deleteLoan: (id: string) => void;
   addRepayment: (repayment: PersonalLoanRepayment) => void;
+  addRepayments: (repayments: PersonalLoanRepayment[]) => void;
   updateRepayment: (id: string, patch: Partial<PersonalLoanRepayment>) => void;
   deleteRepayment: (id: string) => void;
   updateSettings: (patch: Partial<PersonalLoansWorkbook['settings']>) => void;
@@ -86,6 +87,8 @@ export const usePersonalLoansWorkbookStore = create<PersonalLoansStoreState>((se
       })),
 
     addRepayment: (repayment) => mutate((wb) => ({ ...wb, repayments: [...wb.repayments, repayment] })),
+
+    addRepayments: (repayments) => mutate((wb) => ({ ...wb, repayments: [...wb.repayments, ...repayments] })),
 
     updateRepayment: (id, patch) =>
       mutate((wb) => ({ ...wb, repayments: wb.repayments.map((r) => (r.id === id ? { ...r, ...patch } : r)) })),

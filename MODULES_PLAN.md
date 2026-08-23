@@ -745,11 +745,16 @@ service on the user's behalf without their account access.
   other modules where a statement-like import makes sense (Cash, Personal Loans repayments,
   Rentals entries). JSON import already exists in a limited form (workbook backup/restore) —
   generalize it per-module if useful. **This can be built now, independent of the backend
-  decision. Cash: ✅ built 2026-08-23** — see README Done item 40. `CashEntry` doesn't have
-  Bank's single signed `amount`, so the mapped Amount column's sign (with an optional flip)
-  decides IN/OUT and the stored amount is the absolute value; a new generic `addEntries()`
-  bulk-add on `createEntryStore.ts` avoids re-persisting once per row. Personal Loans
-  repayments and Rentals entries are the same pattern, not yet done.
+  decision. ✅ Now built for Cash, Rentals, and Personal Loans (2026-08-23)** — see README
+  Done items 40/41. Cash and Rentals don't have a single signed `amount` field, so the
+  mapped Amount column's sign (with an optional flip) decides IN/OUT or RENT_INCOME/EXPENSE
+  and the stored amount is the absolute value; Personal Loans repayments skip the sign/flip
+  entirely since a repayment is always positive regardless of loan direction. New bulk-add
+  actions: `createEntryStore.ts`'s generic `addEntries()` (used by Cash), plus hand-written
+  `addEntries()`/`addRepayments()` on `rentalsWorkbookStore.ts`/`personalLoansWorkbookStore.ts`
+  (neither uses `createEntryStore`, so each needed its own). **This closes out README item
+  25's browser-only CSV/JSON half entirely** — only PDF/image import remains, blocked on the
+  Python backend decision below.
 - **PDF/image import, needs the Python backend**: the backend receives an uploaded PDF/image,
   runs OCR + parsing (e.g. `pdfplumber`/`PyMuPDF` for text-based PDFs, `pytesseract` or a
   hosted OCR API for images and scanned PDFs), and returns structured transaction-like rows

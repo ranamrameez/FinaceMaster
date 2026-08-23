@@ -423,6 +423,28 @@ FinanceManager live link:
     import, not a separately unit-tested pure function) both clean. **Still open**: Personal
     Loans repayments and Rentals entries (also named in item 25) don't have CSV import yet;
     PDF/image import still needs the separate Python backend (locked decision, real infra).
+41. **CSV import extended to Rentals and Personal Loans (2026-08-23) — completes README item
+    25's browser-only CSV/JSON scope.** Same pattern as Cash's `ImportTab` (Done item 40).
+    **Rentals**: `RentalEntry` gained optional `source`/`statementRef` fields; a new "Import"
+    tab in `RentalsPage.tsx` maps Date/Amount/Category columns for one selected property, with
+    the Amount column's sign (plus an optional "Flip sign" checkbox) deciding RENT_INCOME vs
+    EXPENSE, same convention as Cash. **Personal Loans**: `PersonalLoanRepayment` gained the
+    same optional `source`/`statementRef` fields; a new "Import repayments (CSV)" section
+    inside each loan's detail view (`LoanDetail` in `PersonalLoansPage.tsx`, below the existing
+    repayments table) maps just Date + Amount — no sign/flip needed here, since a repayment is
+    always a positive amount regardless of which way the loan runs (same reasoning as this
+    module's linking-side-record logic from Done item 39). Both modules' entry lists gained a
+    "Source" column (Manual vs. "Import (filename)"), matching Banking/Cash's existing
+    convention. New generic `addEntries()` on `rentalsWorkbookStore.ts` and `addRepayments()`
+    on `personalLoansWorkbookStore.ts` (both hand-written stores, so each needed its own bulk
+    action — `createEntryStore.ts`'s shared `addEntries()` from Done item 40 doesn't apply to
+    either since neither module uses that factory). Verified live via Playwright with two real
+    synthetic CSV file uploads: Rentals' preview correctly derives Rent income/Expense from
+    sign, and Personal Loans' preview correctly shows the mapped repayment amounts inside a
+    loan's detail view — both correctly hit the sign-in gate on Import, zero console errors.
+    `npm run build` / `npm run test` (119 tests, unchanged) both clean. **README item 25 is now
+    fully done for its browser-only CSV/JSON half** — only PDF/image import (needs the separate
+    Python backend, a locked but not-yet-started decision) remains.
 
 ## Pending
 
@@ -466,12 +488,11 @@ wave" section)**:
 24. New Subscriptions module — recurring payments (streaming, gym, etc.) linked to a paying
     entity (a Bank account or Cash), reusing the cross-entity linking mechanism from item 21
     once solid. Not started — see `MODULES_PLAN.md` §12.
-25. Import pipeline: CSV/JSON import (browser-only, extends Banking's existing CSV-import
-    pattern to more modules — no new infra) and PDF/image import (**locked decision: a
-    separate Python backend service** for OCR/parsing, hosted on infrastructure the user
-    chooses — real new infra outside a single coding session's control). **CSV import for
-    Cash done (see Done item 40)**; Personal Loans repayments and Rentals entries still need
-    it. PDF/image import not started — see `MODULES_PLAN.md` §13.
+25. Import pipeline: CSV/JSON import — **✅ done for Cash, Rentals, and Personal Loans (see
+    Done items 40/41)**, browser-only, no new infra. PDF/image import still needs **a
+    separate Python backend service** (locked decision) for OCR/parsing, hosted on
+    infrastructure the user chooses — real new infra outside a single coding session's
+    control. Not started — see `MODULES_PLAN.md` §13.
 26. "Only a toast shows instead of the sign-in popup" (see Done item 38) — investigated,
     couldn't reproduce locally (both primary sign-in entry points open the real modal
     correctly). Needs a specific page/button from the user to chase further if it recurs.
