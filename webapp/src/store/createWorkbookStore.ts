@@ -22,13 +22,17 @@ export interface WorkbookStoreState<TWorkbook extends BaseWorkbook<unknown>> {
   updateTransaction: (index: number, patch: Partial<Transaction>) => void;
   deleteTransaction: (index: number) => void;
   addTransfer: (t: Transfer) => void;
+  updateTransfer: (index: number, patch: Partial<Transfer>) => void;
   deleteTransfer: (index: number) => void;
   addAdjustment: (a: Adjustment) => void;
+  updateAdjustment: (index: number, patch: Partial<Adjustment>) => void;
   deleteAdjustment: (index: number) => void;
   addWatchlistItem: (w: WatchlistItem) => void;
+  updateWatchlistItem: (ticker: string, patch: Partial<WatchlistItem>) => void;
   removeWatchlistItem: (ticker: string) => void;
   setMarketPrice: (ticker: string, price: number) => void;
   addDividend: (d: Dividend) => void;
+  updateDividend: (index: number, patch: Partial<Dividend>) => void;
   removeDividend: (index: number) => void;
   setDividendEstimate: (ticker: string, annualPerShare: number) => void;
   updateSettings: (patch: Partial<TWorkbook['settings']>) => void;
@@ -100,14 +104,23 @@ export function createWorkbookStore<TWorkbook extends BaseWorkbook<unknown>>(
 
       addTransfer: (t) => mutate((wb) => ({ ...wb, transfers: [...wb.transfers, t] })),
 
+      updateTransfer: (index, patch) =>
+        mutate((wb) => ({ ...wb, transfers: wb.transfers.map((t, i) => (i === index ? { ...t, ...patch } : t)) })),
+
       deleteTransfer: (index) => mutate((wb) => ({ ...wb, transfers: wb.transfers.filter((_, i) => i !== index) })),
 
       addAdjustment: (a) => mutate((wb) => ({ ...wb, adjustments: [...wb.adjustments, a] })),
+
+      updateAdjustment: (index, patch) =>
+        mutate((wb) => ({ ...wb, adjustments: wb.adjustments.map((a, i) => (i === index ? { ...a, ...patch } : a)) })),
 
       deleteAdjustment: (index) =>
         mutate((wb) => ({ ...wb, adjustments: wb.adjustments.filter((_, i) => i !== index) })),
 
       addWatchlistItem: (w) => mutate((wb) => ({ ...wb, watchlist: [...wb.watchlist, w] })),
+
+      updateWatchlistItem: (ticker, patch) =>
+        mutate((wb) => ({ ...wb, watchlist: wb.watchlist.map((w) => (w.ticker === ticker ? { ...w, ...patch } : w)) })),
 
       removeWatchlistItem: (ticker) =>
         mutate((wb) => ({ ...wb, watchlist: wb.watchlist.filter((w) => w.ticker !== ticker) })),
@@ -125,6 +138,9 @@ export function createWorkbookStore<TWorkbook extends BaseWorkbook<unknown>>(
         }),
 
       addDividend: (d) => mutate((wb) => ({ ...wb, dividends: [...wb.dividends, d] })),
+
+      updateDividend: (index, patch) =>
+        mutate((wb) => ({ ...wb, dividends: wb.dividends.map((d, i) => (i === index ? { ...d, ...patch } : d)) })),
 
       removeDividend: (index) => mutate((wb) => ({ ...wb, dividends: wb.dividends.filter((_, i) => i !== index) })),
 

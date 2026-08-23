@@ -348,9 +348,12 @@ function TransactionList() {
 
 function TransfersSection() {
   const workbook = useWorkbookStore((s) => s.workbook);
+  const updateTransfer = useWorkbookStore((s) => s.updateTransfer);
   const deleteTransfer = useWorkbookStore((s) => s.deleteTransfer);
   const currency = workbook.settings.currency;
   const indexed = workbook.transfers.map((t, i) => ({ t, i }));
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [editRow, setEditRow] = useState<Transfer | null>(null);
 
   type TransferCol = 'date' | 'type' | 'gross' | 'fee';
   const sortValue = (r: (typeof indexed)[number], col: TransferCol): number | string => {
@@ -362,6 +365,15 @@ function TransfersSection() {
     }
   };
   const { sorted, Th } = useSortableRows(indexed, sortValue, 'date', 'desc');
+
+  const startEdit = (i: number, t: Transfer) => { setEditIndex(i); setEditRow({ ...t }); };
+  const saveEdit = () => {
+    if (editIndex === null || !editRow) return;
+    updateTransfer(editIndex, editRow);
+    toast('Transfer updated.');
+    setEditIndex(null);
+    setEditRow(null);
+  };
 
   return (
     <div>
@@ -378,15 +390,36 @@ function TransfersSection() {
             </tr>
           </thead>
           <tbody>
-            {sorted.map(({ t, i }) => (
-              <tr key={i}>
-                <td>{t.date}</td>
-                <td>{t.type}</td>
-                <td>{fmtMoney(t.gross, currency)}</td>
-                <td>{fmtMoney(t.fee, currency)}</td>
-                <td><button className="btn secondary small" onClick={() => deleteTransfer(i)}><TrashIcon size={12} />Delete</button></td>
-              </tr>
-            ))}
+            {sorted.map(({ t, i }) =>
+              editIndex === i && editRow ? (
+                <tr key={i}>
+                  <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
+                  <td>
+                    <select value={editRow.type} onChange={(e) => setEditRow({ ...editRow, type: e.target.value as Transfer['type'] })}>
+                      <option value="DEPOSIT">Deposit</option>
+                      <option value="WITHDRAWAL">Withdrawal</option>
+                    </select>
+                  </td>
+                  <td><input type="number" value={editRow.gross} onChange={(e) => setEditRow({ ...editRow, gross: Number(e.target.value) })} style={{ width: 90 }} /></td>
+                  <td><input type="number" value={editRow.fee} onChange={(e) => setEditRow({ ...editRow, fee: Number(e.target.value) })} style={{ width: 70 }} /></td>
+                  <td>
+                    <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
+                    <button className="btn secondary small" onClick={() => setEditIndex(null)}>Cancel</button>
+                  </td>
+                </tr>
+              ) : (
+                <tr key={i}>
+                  <td>{t.date}</td>
+                  <td>{t.type}</td>
+                  <td>{fmtMoney(t.gross, currency)}</td>
+                  <td>{fmtMoney(t.fee, currency)}</td>
+                  <td>
+                    <button className="btn secondary small" onClick={() => startEdit(i, t)}>Edit</button>{' '}
+                    <button className="btn secondary small" onClick={() => deleteTransfer(i)}><TrashIcon size={12} />Delete</button>
+                  </td>
+                </tr>
+              ),
+            )}
             {!sorted.length && <tr><td colSpan={5} className="footer-note">No transfers yet.</td></tr>}
           </tbody>
         </table>
@@ -397,9 +430,12 @@ function TransfersSection() {
 
 function AdjustmentsSection() {
   const workbook = useWorkbookStore((s) => s.workbook);
+  const updateAdjustment = useWorkbookStore((s) => s.updateAdjustment);
   const deleteAdjustment = useWorkbookStore((s) => s.deleteAdjustment);
   const currency = workbook.settings.currency;
   const indexed = workbook.adjustments.map((a, i) => ({ a, i }));
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [editRow, setEditRow] = useState<Adjustment | null>(null);
 
   type AdjustmentCol = 'date' | 'amount' | 'note';
   const sortValue = (r: (typeof indexed)[number], col: AdjustmentCol): number | string => {
@@ -410,6 +446,15 @@ function AdjustmentsSection() {
     }
   };
   const { sorted, Th } = useSortableRows(indexed, sortValue, 'date', 'desc');
+
+  const startEdit = (i: number, a: Adjustment) => { setEditIndex(i); setEditRow({ ...a }); };
+  const saveEdit = () => {
+    if (editIndex === null || !editRow) return;
+    updateAdjustment(editIndex, editRow);
+    toast('Adjustment updated.');
+    setEditIndex(null);
+    setEditRow(null);
+  };
 
   return (
     <div>
@@ -425,14 +470,29 @@ function AdjustmentsSection() {
             </tr>
           </thead>
           <tbody>
-            {sorted.map(({ a, i }) => (
-              <tr key={i}>
-                <td>{a.date}</td>
-                <td>{fmtMoney(a.amount, currency)}</td>
-                <td>{a.note}</td>
-                <td><button className="btn secondary small" onClick={() => deleteAdjustment(i)}><TrashIcon size={12} />Delete</button></td>
-              </tr>
-            ))}
+            {sorted.map(({ a, i }) =>
+              editIndex === i && editRow ? (
+                <tr key={i}>
+                  <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
+                  <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 90 }} /></td>
+                  <td><input value={editRow.note ?? ''} onChange={(e) => setEditRow({ ...editRow, note: e.target.value })} /></td>
+                  <td>
+                    <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
+                    <button className="btn secondary small" onClick={() => setEditIndex(null)}>Cancel</button>
+                  </td>
+                </tr>
+              ) : (
+                <tr key={i}>
+                  <td>{a.date}</td>
+                  <td>{fmtMoney(a.amount, currency)}</td>
+                  <td>{a.note}</td>
+                  <td>
+                    <button className="btn secondary small" onClick={() => startEdit(i, a)}>Edit</button>{' '}
+                    <button className="btn secondary small" onClick={() => deleteAdjustment(i)}><TrashIcon size={12} />Delete</button>
+                  </td>
+                </tr>
+              ),
+            )}
             {!sorted.length && <tr><td colSpan={4} className="footer-note">No adjustments yet.</td></tr>}
           </tbody>
         </table>

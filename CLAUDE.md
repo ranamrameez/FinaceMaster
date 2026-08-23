@@ -180,15 +180,41 @@ picking the project back up, not a substitute for it. Keep both current.
     app previously had its name in the browser tab title only, nowhere in
     the UI itself.
   - **New-modules sequencing (locked 2026-08-23, user-directed):** Funds/
-    Banking/Cash/Rentals modules wait until QSE+PSX (Stock Exchanges) are
-    considered finished — don't start building them speculatively ahead of
-    that, matching this file's existing "don't build the rest
-    speculatively" guidance from the top of this file. **The proposed-
-    features/architecture plan for those modules is written: see
-    `MODULES_PLAN.md` at the repo root** (per-module data model sketches,
-    v1 scope, suggested build order Cash → Banking → Funds → Rentals, and
-    a cross-entity-transfer design sketch) — read that file, not just this
-    one, before starting any of these modules in a future session.
+    Banking/Cash/Rentals/EMI-Loans/Personal-Loans modules wait until
+    QSE+PSX (Stock Exchanges) are considered finished — don't start
+    building them speculatively ahead of that, matching this file's
+    existing "don't build the rest speculatively" guidance from the top of
+    this file. **The proposed-features/architecture plan for those modules
+    is written: see `MODULES_PLAN.md` at the repo root** — read that file,
+    not just this one, before starting any of these modules in a future
+    session. Two modules (EMI/Loans, Personal Loans) were added to the
+    original four after reviewing a user-supplied reference prototype kept
+    at `reference/finance-suite-prototype/` (external project, different
+    tech stack — React Native/Expo/SQLite — treat its calc functions as
+    algorithm reference to port, not code to import, per that folder's own
+    `NOTE.md`). That review also produced three cross-cutting requirements
+    now locked into `MODULES_PLAN.md` for every new module: every record
+    type must be editable in place (not add/delete-only — the reference
+    prototype itself lacks this everywhere), category fields must be
+    free-form/user-definable (not a fixed enum — the reference prototype's
+    `EXPENSE_CATEGORIES` is hardcoded), and currency should be tracked
+    per-entity rather than per-module, with aggregates grouped by currency
+    rather than converted (no live FX-rate source).
+  - **Edit capability added to Transfers/Adjustments/Dividends/Watchlist
+    (2026-08-23):** these were add/delete-only in both QSE and PSX — the
+    exact gap flagged as unacceptable for new modules above, so it got
+    fixed in the existing ones too. New `updateTransfer`/`updateAdjustment`/
+    `updateDividend`/`updateWatchlistItem` actions added to the shared
+    `createWorkbookStore.ts` (same pattern as the pre-existing
+    `updateTransaction`); Transfers/Adjustments/Dividends got the same
+    inline edit-row UX already used for Transactions (`editIndex`/`editRow`
+    state, Edit/Save/Cancel buttons); Watchlist got always-editable Target/
+    Current inputs directly in the table cells (no edit-mode toggle needed
+    — they're independent numeric fields) since `WatchlistItem`'s `ticker`
+    is the record's key and isn't meant to be renamed in place (remove +
+    re-add covers that case). Verified live in the browser: edited a
+    transfer's fee (10 → 15, persisted, "(Transfer updated.)" toast) and a
+    watchlist target price (persisted to localStorage), no console errors.
   - **Not done — still open PSX/README items for a future session:**
     statement PDF/Excel import (item 12), dynamic/filterable charts (item
     17), the Sidebar's category-dropdown redesign for Stock Exchanges/
@@ -220,7 +246,8 @@ picking the project back up, not a substitute for it. Keep both current.
 ## Repo layout
 
 ```
-MODULES_PLAN.md                                                     design plan for Funds/Banking/Cash/Rentals (not built yet — read before starting any of them)
+MODULES_PLAN.md                                                     design plan for Funds/Banking/Cash/Rentals/EMI-Loans/Personal-Loans (not built yet — read before starting any of them)
+reference/finance-suite-prototype/                                  external reference prototype (different tech stack, not wired into this app) — see its NOTE.md
 index.html, PSX_Trade_Planner.html, Risk_Analysis_Calculator.html   legacy static apps (untouched)
 css/, js/, psx/                                                     legacy assets/data
 qse-workbook-backup.json, psx/psx-workbook-backup.json              real user data snapshots (see Data safety below)

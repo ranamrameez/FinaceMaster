@@ -75,10 +75,26 @@ FinanceManager live link:
     (`components/Sidebar.tsx`). The browser tab title was already "FinanceRecorder"
     (`webapp/index.html`), but nothing showed inside the app itself before this.
 20. New-modules plan written (2026-08-23) — see **`MODULES_PLAN.md`** at the repo root:
-    per-module data model sketches, v1 feature scope, and build-order suggestion (Cash →
-    Banking → Funds → Rentals) for Funds/Banking/Cash/Rentals, plus a cross-entity transfer
-    design sketch (item 19). Per the locked sequencing decision (item 19's note), none of
-    those modules get built yet — this is design-ahead, not a start signal.
+    per-module data model sketches, v1 feature scope, and build-order suggestion for
+    Funds/Banking/Cash/Rentals plus two modules added after reviewing a user-supplied
+    reference prototype (see **`reference/finance-suite-prototype/`**): **EMI/Loans**
+    (structured amortization schedules, interest or fixed-total/Sharia-compliant mode) and
+    **Personal Loans** (informal, bidirectional debt tracking) — plus a cross-entity
+    transfer design sketch (item 19). Per the locked sequencing decision, none of those
+    modules get built yet — this is design-ahead, not a start signal. Also locked in from
+    that review: every new module's every record type must ship with edit-in-place from day
+    one (not add/delete-only), category fields must be free-form/user-definable (not a fixed
+    enum), and currency should be tracked per-entity, not per-module, with aggregates
+    grouped by currency rather than converted.
+21. Edit capability added to Transfers, Adjustments, Dividends, and Watchlist (2026-08-23) —
+    these had been add/delete-only in both QSE and PSX (a real gap matching the "every entry
+    must be editable" decision above, spotted while reviewing the reference prototype's own
+    lack of this). New `updateTransfer`/`updateAdjustment`/`updateDividend`/
+    `updateWatchlistItem` actions in the shared `createWorkbookStore.ts`; Transfers/
+    Adjustments/Dividends got the same inline edit-row UX as Transactions, Watchlist got
+    always-editable Target/Current price inputs (ticker itself stays remove+re-add, since
+    it's the item's key). Verified live: edited a transfer's fee and a watchlist target,
+    confirmed both persisted correctly.
 
 ## Pending
 

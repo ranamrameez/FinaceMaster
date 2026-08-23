@@ -17,6 +17,7 @@ import { usePSXStockData } from '../hooks/usePSXStockData';
 export function WatchlistPage() {
   const workbook = usePSXWorkbookStore((s) => s.workbook);
   const addWatchlistItem = usePSXWorkbookStore((s) => s.addWatchlistItem);
+  const updateWatchlistItem = usePSXWorkbookStore((s) => s.updateWatchlistItem);
   const removeWatchlistItem = usePSXWorkbookStore((s) => s.removeWatchlistItem);
   const { tickerNames } = usePSXStockData();
   const ensureSignedIn = useEnsureSignedIn();
@@ -65,7 +66,7 @@ export function WatchlistPage() {
         </button>
       </div>
 
-      <WatchlistTable workbook={workbook} tickerNames={tickerNames} removeWatchlistItem={removeWatchlistItem} />
+      <WatchlistTable workbook={workbook} tickerNames={tickerNames} updateWatchlistItem={updateWatchlistItem} removeWatchlistItem={removeWatchlistItem} />
     </div>
   );
 }
@@ -73,10 +74,12 @@ export function WatchlistPage() {
 function WatchlistTable({
   workbook,
   tickerNames,
+  updateWatchlistItem,
   removeWatchlistItem,
 }: {
   workbook: PSXWorkbook;
   tickerNames: Record<string, string>;
+  updateWatchlistItem: (ticker: string, patch: Partial<WatchlistItem>) => void;
   removeWatchlistItem: (ticker: string) => void;
 }) {
   const rows = workbook.watchlist.map((item) => {
@@ -117,8 +120,26 @@ function WatchlistTable({
               <td><Link to={`/psx/stock/${item.ticker}`}>{item.ticker}</Link></td>
               <td style={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>{tickerNames[item.ticker] ? shortenCompanyName(tickerNames[item.ticker]) : ''}</td>
               <td style={{ width: 82 }}><Sparkline data={sparkData} formatValue={fmtPrice} /></td>
-              <td>{fmtPrice(item.target)}</td>
-              <td>{item.current ? fmtPrice(item.current) : '—'}</td>
+              <td>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={item.target || ''}
+                  onChange={(e) => updateWatchlistItem(item.ticker, { target: Number(e.target.value) })}
+                  style={{ width: 90 }}
+                  title="Edit target price"
+                />
+              </td>
+              <td>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={item.current || ''}
+                  onChange={(e) => updateWatchlistItem(item.ticker, { current: Number(e.target.value) })}
+                  style={{ width: 90 }}
+                  title="Edit current price"
+                />
+              </td>
               <td className={gap !== null && gap <= 0 ? 'pill-buy' : ''}>{gap !== null ? `${gap.toFixed(1)}%` : '—'}</td>
               <td>
                 <button className="btn secondary small" onClick={() => removeWatchlistItem(item.ticker)}>

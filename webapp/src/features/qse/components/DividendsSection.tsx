@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { QSE_TICKER_DATALIST_ID } from '../../../components/TickerDatalist';
+import { SaveIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { fmt, fmtMoney } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { useWorkbookStore } from '../../../store/workbookStore';
+import type { Dividend } from '../../../types/workbook';
 import { useQSEDerived } from '../hooks/useQSEDerived';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -68,9 +70,21 @@ function AddDividendForm() {
 export function DividendsSection() {
   const { workbook, positions } = useQSEDerived();
   const removeDividend = useWorkbookStore((s) => s.removeDividend);
+  const updateDividend = useWorkbookStore((s) => s.updateDividend);
   const setDividendEstimate = useWorkbookStore((s) => s.setDividendEstimate);
   const currency = workbook.settings.currency;
   const [sort, setSort] = useState<{ col: string; dir: 'asc' | 'desc' }>({ col: 'date', dir: 'desc' });
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [editRow, setEditRow] = useState<Dividend | null>(null);
+
+  const startEdit = (i: number, d: Dividend) => { setEditIndex(i); setEditRow({ ...d }); };
+  const saveEdit = () => {
+    if (editIndex === null || !editRow) return;
+    updateDividend(editIndex, editRow);
+    toast('Dividend updated.');
+    setEditIndex(null);
+    setEditRow(null);
+  };
 
   const sortValue = (d: (typeof workbook.dividends)[number], col: string) => {
     switch (col) {
@@ -115,16 +129,33 @@ export function DividendsSection() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((d) => (
-              <tr key={d.i}>
-                <td>{d.date}</td>
-                <td>{d.ticker}</td>
-                <td>{d.perShare || '—'}</td>
-                <td>{d.shares || '—'}</td>
-                <td className="pill-buy">{fmtMoney(d.amount, currency)}</td>
-                <td><button className="btn secondary small" onClick={() => removeDividend(d.i)}>Delete</button></td>
-              </tr>
-            ))}
+            {rows.map((d) =>
+              editIndex === d.i && editRow ? (
+                <tr key={d.i}>
+                  <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
+                  <td><input value={editRow.ticker} onChange={(e) => setEditRow({ ...editRow, ticker: e.target.value.toUpperCase() })} style={{ width: 80 }} /></td>
+                  <td><input type="number" step="0.001" value={editRow.perShare} onChange={(e) => setEditRow({ ...editRow, perShare: Number(e.target.value) })} style={{ width: 80 }} /></td>
+                  <td><input type="number" value={editRow.shares} onChange={(e) => setEditRow({ ...editRow, shares: Number(e.target.value) })} style={{ width: 80 }} /></td>
+                  <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 90 }} /></td>
+                  <td>
+                    <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
+                    <button className="btn secondary small" onClick={() => setEditIndex(null)}>Cancel</button>
+                  </td>
+                </tr>
+              ) : (
+                <tr key={d.i}>
+                  <td>{d.date}</td>
+                  <td>{d.ticker}</td>
+                  <td>{d.perShare || '—'}</td>
+                  <td>{d.shares || '—'}</td>
+                  <td className="pill-buy">{fmtMoney(d.amount, currency)}</td>
+                  <td>
+                    <button className="btn secondary small" onClick={() => startEdit(d.i, d)}>Edit</button>{' '}
+                    <button className="btn secondary small" onClick={() => removeDividend(d.i)}>Delete</button>
+                  </td>
+                </tr>
+              ),
+            )}
             {!rows.length && <tr><td colSpan={6} className="footer-note">No dividends logged yet.</td></tr>}
           </tbody>
           <tfoot>
