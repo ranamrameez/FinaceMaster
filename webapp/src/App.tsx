@@ -18,6 +18,7 @@ import { TransactionsPage } from './features/qse/pages/TransactionsPage';
 import { WatchlistPage } from './features/qse/pages/WatchlistPage';
 import { StockPage } from './features/qse/pages/StockPage';
 import { SettingsPage } from './features/qse/pages/SettingsPage';
+import { RiskAnalysisPage } from './features/qse/pages/RiskAnalysisPage';
 import { AnalyticsPage as PSXAnalyticsPage } from './features/psx/pages/AnalyticsPage';
 import { DashboardPage as PSXDashboardPage } from './features/psx/pages/DashboardPage';
 import { PortfolioPage as PSXPortfolioPage } from './features/psx/pages/PortfolioPage';
@@ -26,6 +27,7 @@ import { WatchlistPage as PSXWatchlistPage } from './features/psx/pages/Watchlis
 import { StockPage as PSXStockPage } from './features/psx/pages/StockPage';
 import { SettingsPage as PSXSettingsPage } from './features/psx/pages/SettingsPage';
 import { TradePlannerPage as PSXTradePlannerPage } from './features/psx/pages/TradePlannerPage';
+import { RiskAnalysisPage as PSXRiskAnalysisPage } from './features/psx/pages/RiskAnalysisPage';
 import { CashPage } from './features/cash/pages/CashPage';
 import { useCashFirebaseSync } from './lib/firebase/useCashFirebaseSync';
 import { PersonalLoansPage } from './features/personalLoans/pages/PersonalLoansPage';
@@ -99,6 +101,7 @@ function App() {
               <Route path="/watchlist" element={<WatchlistPage />} />
               <Route path="/stock/:ticker" element={<StockPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route path="/risk-analysis" element={<RiskAnalysisPage />} />
               <Route
                 path="/settings"
                 element={
@@ -117,6 +120,7 @@ function App() {
               <Route path="/psx/stock/:ticker" element={<PSXStockPage />} />
               <Route path="/psx/analytics" element={<PSXAnalyticsPage />} />
               <Route path="/psx/trade-planner" element={<PSXTradePlannerPage />} />
+              <Route path="/psx/risk-analysis" element={<PSXRiskAnalysisPage />} />
               <Route
                 path="/psx/settings"
                 element={

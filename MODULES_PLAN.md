@@ -598,7 +598,18 @@ blockers, pure extension of what's shipped; (2) Personal Loans id retrofit + lin
 (3) investigate Rentals; (4) EMI and Funds need their own design decisions first, don't just
 wire them in.
 
-## 9. Native Risk Calculator (replaces the legacy static-page link)
+## 9. Native Risk Calculator (replaces the legacy static-page link) — ✅ built 2026-08-23
+
+**Status: built.** `lib/calc/riskAnalysis.ts` (pure, tested) + shared `components/
+RiskCalculator.tsx` + per-exchange pages at `/risk-analysis` (QSE) and `/psx/risk-analysis`
+(PSX), replacing the sidebar's link to `Risk_Analysis_Calculator.html`. See README Done item
+33 for the full writeup, including two deliberate correctness fixes made vs. a blind port
+(reusing the real iterative `breakEvenPrice` solver instead of a flat-fee-only closed-form
+formula; including the buy-side fee in a hypothetical purchase's cost basis) and one thing
+intentionally *not* ported (a hardcoded "MPHC/IQCD = severe" special-case that was leftover
+from one person's real portfolio, not a generalizable rule). The legacy HTML file itself
+is left in place — deleting it needs explicit approval, not assumed as part of this change.
+Original plan sketch kept for history below:
 
 Currently the sidebar links out to `Risk_Analysis_Calculator.html` (a legacy static page,
 predates the React rewrite, shared by both QSE and PSX). User wants a real React-native Risk
@@ -613,6 +624,10 @@ cutover" rule) ask before deleting `Risk_Analysis_Calculator.html` itself, since
 might still reference it.
 
 ## 10. Calculator button should be module-aware
+
+**Status: layer (a) built 2026-08-23** — the button is now hidden entirely outside Stock
+Exchanges routes (see README Done item 32). Layer (b), a real per-module calculator, is
+still pending on item 11's per-module planning tools existing.
 
 The floating Calculator button (`components/CalculatorLauncher.tsx`) is already rendered
 globally (not an exchange-only bug), but it hard-codes the QSE/PSX stock Trade Calculator

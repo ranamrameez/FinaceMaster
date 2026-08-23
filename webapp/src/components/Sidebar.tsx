@@ -12,7 +12,8 @@ const QSE_NAV_ITEMS = [
   { num: '03', label: 'Transactions', to: '/transactions' },
   { num: '04', label: 'Watchlist', to: '/watchlist' },
   { num: '05', label: 'Analytics', to: '/analytics' },
-  { num: '06', label: 'Settings', to: '/settings' },
+  { num: '06', label: 'Risk Analysis', to: '/risk-analysis' },
+  { num: '07', label: 'Settings', to: '/settings' },
 ];
 
 const PSX_NAV_ITEMS = [
@@ -21,14 +22,10 @@ const PSX_NAV_ITEMS = [
   { num: '03', label: 'Transactions', to: '/psx/transactions' },
   { num: '04', label: 'Watchlist', to: '/psx/watchlist' },
   { num: '05', label: 'Analytics', to: '/psx/analytics' },
-  { num: '06', label: 'Trade Planner', to: '/psx/trade-planner' },
-  { num: '07', label: 'Settings', to: '/psx/settings' },
+  { num: '06', label: 'Risk Analysis', to: '/psx/risk-analysis' },
+  { num: '07', label: 'Trade Planner', to: '/psx/trade-planner' },
+  { num: '08', label: 'Settings', to: '/psx/settings' },
 ];
-
-// Risk Analysis hasn't been migrated to React yet — link out to the legacy
-// static page at the repo root during the transition. PSX no longer needs
-// a legacy link now that it has its own React module (see PSX_NAV_ITEMS).
-const LEGACY_LINKS = [{ num: '07', label: 'Risk Analysis', href: '../Risk_Analysis_Calculator.html' }];
 
 /** Stocks → QSE/PSX switcher. Which exchange is "current" is derived from
  * the route (anything under /psx is PSX, everything else is QSE) rather
@@ -78,12 +75,6 @@ export function Sidebar({
                 <span className="num">{item.num}</span>
                 {item.label}
               </NavLink>
-            ))}
-            {LEGACY_LINKS.map((item) => (
-              <a key={item.href} className="navbtn" href={item.href}>
-                <span className="num">{item.num}</span>
-                {item.label}
-              </a>
             ))}
           </nav>
         </>

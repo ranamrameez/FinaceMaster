@@ -258,6 +258,39 @@ FinanceManager live link:
     selected month) while "Dividend income by ticker" — a lifetime-per-ticker total, not
     month-indexed — correctly stayed unaffected by the month filter; zero console errors.
     `npm run build` / `npm run test` (95 tests, 11 new) both clean.
+32. **Calculator button made module-aware (2026-08-23), README item 22.** The floating
+    Calculator button (`components/CalculatorLauncher.tsx`) used to render unconditionally on
+    every page and default to the QSE stock Trade Calculator anywhere that wasn't `/psx/*` —
+    including Cash/Bank/EMI/etc, where a stock calculator makes no sense. Now hidden entirely
+    outside Stock Exchanges routes (`categoryForPath(...) === 'stocks'`) until each module has
+    its own relevant calculator (see Pending item 22's remainder, and item 23). Verified live:
+    the button shows on Dashboard/Analytics/Risk Analysis, disappears on Cash, no console
+    errors.
+33. **Native Risk Calculator (2026-08-23), README item 20.** Replaces the sidebar's link-out
+    to the legacy `Risk_Analysis_Calculator.html` with a real React page at `/risk-analysis`
+    (QSE) and `/psx/risk-analysis` (PSX) — an averaging-down planner for an existing open
+    position: current break-even/recovery-needed/net-P&L, a scenario table of "add this much
+    capital → new average/break-even/net-P&L-at-target" across a capital ladder, a
+    diminishing-returns signal, and a stress test on the resulting position at several price
+    drops. New `lib/calc/riskAnalysis.ts` (pure, tested — 9 tests) ports the legacy page's
+    logic with two deliberate fixes rather than a blind copy: (1) reuses the app's real
+    iterative `breakEvenPrice` solver instead of the legacy's closed-form formula that assumed
+    a flat % fee — this makes the calculator correct for PSX's tiered/same-day-netted fee
+    model too, not just QSE's flat percentage; (2) includes the buy-side fee in a hypothetical
+    new purchase's cost basis (the legacy version omitted it, understating the resulting
+    break-even). Also dropped: the legacy page's hardcoded "MPHC/IQCD = severe risk" headline
+    special-case — that was leftover from one person's real portfolio holdings, not a
+    generalizable rule, and porting it into shared app code would have baked someone's
+    specific positions into a universal calculator. New shared `components/RiskCalculator.tsx`
+    (one implementation, QSE and PSX each pass their own rows/fee-calculator/settings — same
+    pattern as `useChartData`/`ChartFilterBar`), with thin per-exchange page wrappers. The
+    legacy `Risk_Analysis_Calculator.html` file itself is left in place for now — deleting it
+    needs explicit approval per this file's existing "don't delete legacy apps" rule, not
+    assumed as part of this change. Verified live in the browser with a seeded underwater
+    position (bought at 12, market price 9): break-even/recovery/scenario-table/stress-test
+    numbers all matched hand-expectations, the empty state (no open positions) renders
+    correctly, PSX's version loads with its own fee model, zero console errors. `npm run
+    build` / `npm run test` (104 tests, 9 new) both clean.
 
 ## Pending
 
@@ -287,15 +320,14 @@ FinanceManager live link:
 **New wave, 2026-08-23 (user-requested, full design detail in `MODULES_PLAN.md`'s "Next
 wave" section)**:
 
-20. Native Risk Calculator (QSE/PSX), replacing the sidebar's link-out to the legacy
-    `Risk_Analysis_Calculator.html`. Not started — see `MODULES_PLAN.md` §9.
 21. Cross-entity linking: real multi-currency amounts (independent `fromAmount`/`toAmount`
     instead of one shared amount + a warning), plus investigating Personal Loans/Rentals as
     additional linkable modules (EMI and Funds have real structural blockers, documented, not
     silently skipped). Not started — see `MODULES_PLAN.md` §8.
-22. Calculator button (`components/CalculatorLauncher.tsx`) should be module-aware instead of
-    always showing the QSE/PSX stock calculator on every page. Not started — see
-    `MODULES_PLAN.md` §10.
+22. Calculator button remainder: it's module-aware now (hidden outside Stock Exchanges, see
+    Done item 32), but the longer-term goal — a *relevant* calculator per module (an EMI
+    payoff calculator, a Cash quick-math tool, etc.) — needs those modules' own planning tools
+    to exist first. Tracked together with item 23.
 23. Per-module Analytics & Planning for Cash/Banking/Personal Loans/EMI-Loans/Funds/Rentals —
     each currently has just a ledger + basic totals, no charts or planning tools like
     QSE/PSX's Analytics page or Trade Planner. Largest item in this wave. Not started — see
