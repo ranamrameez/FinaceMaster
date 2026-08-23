@@ -247,6 +247,12 @@ ledger, separate from any exchange.
 - **Balances and category totals are shown per currency**, never blended into one number —
   if you've logged cash in both USD and PKR, you'll see two separate balance figures, since
   there's no reliable exchange rate to convert them with.
+- **Import tab**: import a CSV export of cash entries — pick which column is Date and which
+  is Amount (a positive amount is cash in, negative is cash out; check "Flip sign" if your
+  export does the opposite), optionally map a Category column too, pick the currency for the
+  whole imported batch, preview the first 5 rows, then import. Imported entries show
+  "Import (filename)" in the ledger's Source column so you can tell them apart from entries
+  you typed in by hand.
 - **Settings tab**: pick a default currency (only pre-fills new entries — never converts
   existing ones), plus the same export/import/clear-all data management as other modules.
 

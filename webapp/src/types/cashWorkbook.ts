@@ -14,11 +14,16 @@ export interface CashEntry {
    * categories for convenience, not a hardcoded list. */
   category?: string;
   note?: string;
-  /** Only 'manual' exists for v1 — there's no statement to parse for
-   * physical cash — kept for shape-consistency with other modules'
-   * transaction-like records (see the "transaction doesn't care about its
-   * source" cross-cutting decision). */
-  source: 'manual';
+  /** 'statement-import' added 2026-08-23 (README item 25 / MODULES_PLAN.md
+   * §13's CSV-import scope) — a CSV export doesn't map cleanly to "a
+   * statement" for physical cash, but the same simple column-mapping
+   * pattern from Banking's CSV import still applies to any spreadsheet
+   * export of cash entries a user keeps elsewhere. See the "transaction
+   * doesn't care about its source" cross-cutting decision. */
+  source: 'manual' | 'statement-import';
+  /** File name of the CSV a 'statement-import' entry came from — same
+   * purpose as `BankTransaction.statementRef`. Unset for manual entries. */
+  statementRef?: string;
 }
 
 export interface CashSettings {

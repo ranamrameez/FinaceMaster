@@ -9,6 +9,11 @@ export interface EntryStoreState<TSettings, TEntry extends { id: string }> {
   workbook: BaseEntryWorkbook<TSettings, TEntry>;
   setWorkbook: (wb: BaseEntryWorkbook<TSettings, TEntry>, opts?: { skipPersist?: boolean }) => void;
   addEntry: (entry: TEntry) => void;
+  /** Adds many entries in one persist/set cycle — for bulk operations like
+   * CSV import, where calling `addEntry` in a loop would re-persist to
+   * localStorage once per row. Mirrors `bankWorkbookStore.ts`'s
+   * `addTransactions`. */
+  addEntries: (entries: TEntry[]) => void;
   updateEntry: (id: string, patch: Partial<TEntry>) => void;
   deleteEntry: (id: string) => void;
   updateSettings: (patch: Partial<TSettings>) => void;
@@ -77,6 +82,8 @@ export function createEntryStore<TSettings, TEntry extends { id: string }>(
       },
 
       addEntry: (entry) => mutate((wb) => ({ ...wb, entries: [...wb.entries, entry] })),
+
+      addEntries: (entries) => mutate((wb) => ({ ...wb, entries: [...wb.entries, ...entries] })),
 
       updateEntry: (id, patch) =>
         mutate((wb) => ({

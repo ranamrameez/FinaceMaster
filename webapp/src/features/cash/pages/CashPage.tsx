@@ -8,6 +8,7 @@ import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { cashBalanceByCurrency, cashByCategory, cashRunningLedger } from '../../../lib/calc/cashModule';
+import { parseCSV } from '../../../lib/csv';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
 import { confirmAndDeleteLinkable } from '../../../lib/linkCascade';
@@ -166,6 +167,7 @@ function EntryList() {
             <Th col="category">Category</Th>
             <th>Note</th>
             <th>Balance</th>
+            <th>Source</th>
             <th></th>
           </tr>
         </thead>
@@ -184,6 +186,7 @@ function EntryList() {
                 <td><input value={editRow.category ?? ''} onChange={(e) => setEditRow({ ...editRow, category: e.target.value })} style={{ width: 100 }} /></td>
                 <td><input value={editRow.note ?? ''} onChange={(e) => setEditRow({ ...editRow, note: e.target.value })} /></td>
                 <td></td>
+                <td className="footer-note">{entry.source === 'statement-import' ? `Import${entry.statementRef ? ` (${entry.statementRef})` : ''}` : 'Manual'}</td>
                 <td>
                   <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
                   <button className="btn secondary small" onClick={() => setEditId(null)}>Cancel</button>
@@ -197,6 +200,7 @@ function EntryList() {
                 <td>{entry.category || '—'}</td>
                 <td>{entry.note}</td>
                 <td>{fmtMoney(balance, entry.currencyCode)}</td>
+                <td className="footer-note">{entry.source === 'statement-import' ? `Import${entry.statementRef ? ` (${entry.statementRef})` : ''}` : 'Manual'}</td>
                 <td>
                   <button className="btn secondary small" onClick={() => startEdit(entry)}>Edit</button>{' '}
                   <button
@@ -209,7 +213,7 @@ function EntryList() {
               </tr>
             ),
           )}
-          {!sorted.length && <tr><td colSpan={7} className="footer-note">No cash entries yet.</td></tr>}
+          {!sorted.length && <tr><td colSpan={8} className="footer-note">No cash entries yet.</td></tr>}
         </tbody>
       </table>
     </div>
@@ -229,6 +233,161 @@ function LedgerTab() {
       <BalancesSummary />
       <CategoryBreakdown />
       <EntryList />
+    </div>
+  );
+}
+
+/** README item 25 / MODULES_PLAN.md §13: browser-only CSV import, same
+ * simple "map these columns" pattern already proven in Banking's statement
+ * import (`BankPage.tsx`'s `ImportTab`) — no new infra. Cash entries don't
+ * have a signed amount field like Bank does; instead the mapped Amount
+ * column's sign (after an optional flip) decides IN vs OUT, and the stored
+ * `amount` is always the absolute value. */
+function ImportTab() {
+  const addEntries = useCashWorkbookStore((s) => s.addEntries);
+  const defaultCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
+  const ensureSignedIn = useEnsureSignedIn();
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const [fileName, setFileName] = useState('');
+  const [headers, setHeaders] = useState<string[]>([]);
+  const [rows, setRows] = useState<string[][]>([]);
+  const [dateCol, setDateCol] = useState('');
+  const [amountCol, setAmountCol] = useState('');
+  const [categoryCol, setCategoryCol] = useState('');
+  const [flipSign, setFlipSign] = useState(false);
+  const [currencyCode, setCurrencyCode] = useState(defaultCurrency);
+
+  const onFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const parsed = parseCSV(String(reader.result));
+      if (parsed.length < 2) {
+        toast('Could not find any data rows in that file.');
+        return;
+      }
+      const [head, ...body] = parsed;
+      setFileName(file.name);
+      setHeaders(head);
+      setRows(body);
+      setDateCol(head[0] ?? '');
+      setAmountCol(head[1] ?? '');
+      setCategoryCol('');
+    };
+    reader.readAsText(file);
+  };
+
+  const colIndex = (col: string) => headers.indexOf(col);
+  const mapRow = (r: string[]) => {
+    const rawAmount = Number(r[colIndex(amountCol)] ?? 0) * (flipSign ? -1 : 1);
+    return {
+      date: (r[colIndex(dateCol)] ?? '').trim(),
+      type: (rawAmount >= 0 ? 'IN' : 'OUT') as 'IN' | 'OUT',
+      amount: Math.abs(rawAmount),
+      category: categoryCol ? (r[colIndex(categoryCol)] ?? '').trim() || undefined : undefined,
+    };
+  };
+  const mappedPreview = rows.slice(0, 5).map(mapRow);
+
+  const doImport = async () => {
+    if (!dateCol || !amountCol) return toast('Map at least the date and amount columns.');
+    if (!(await ensureSignedIn('Sign in to import entries.'))) return;
+    const imported: CashEntry[] = rows
+      .map(mapRow)
+      .filter((r) => r.date && !Number.isNaN(r.amount) && r.amount !== 0)
+      .map((r) => ({
+        id: crypto.randomUUID(),
+        date: r.date,
+        type: r.type,
+        amount: r.amount,
+        currencyCode,
+        category: r.category,
+        source: 'statement-import' as const,
+        statementRef: fileName,
+      }));
+    if (!imported.length) return toast('No valid rows to import after mapping — check your column choices.');
+    addEntries(imported);
+    toast(`Imported ${imported.length} entr${imported.length === 1 ? 'y' : 'ies'} from ${fileName}.`);
+    setHeaders([]);
+    setRows([]);
+    setFileName('');
+  };
+
+  return (
+    <div>
+      <p className="footer-note" style={{ marginBottom: 12 }}>
+        Import a CSV export of cash entries. This is a simple "map these columns" tool, not a parser for a
+        specific spreadsheet format — pick which column is which below. A positive amount is treated as cash in,
+        negative as cash out (check "Flip sign" if your export does the opposite).
+      </p>
+      <Field label="Currency for imported entries" width={140}>
+        <Select value={currencyCode} onChange={(e) => setCurrencyCode(e.target.value)}>
+          {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+        </Select>
+      </Field>
+      <div style={{ marginTop: 8 }}>
+        <button className="btn secondary" onClick={() => fileInput.current?.click()}>Choose CSV file</button>
+        <input
+          ref={fileInput}
+          type="file"
+          accept=".csv,text/csv"
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) onFile(file);
+            e.target.value = '';
+          }}
+        />
+        {fileName && <span className="footer-note" style={{ marginLeft: 8 }}>{fileName} ({rows.length} rows)</span>}
+      </div>
+
+      {headers.length > 0 && (
+        <Card style={{ marginTop: 12 }}>
+          <h3 style={{ marginTop: 0 }}>Map columns</h3>
+          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+            <Field label="Date column" width={160}>
+              <Select value={dateCol} onChange={(e) => setDateCol(e.target.value)}>
+                {headers.map((h) => <option key={h} value={h}>{h}</option>)}
+              </Select>
+            </Field>
+            <Field label="Amount column" width={160}>
+              <Select value={amountCol} onChange={(e) => setAmountCol(e.target.value)}>
+                {headers.map((h) => <option key={h} value={h}>{h}</option>)}
+              </Select>
+            </Field>
+            <Field label="Category column (optional)" width={160}>
+              <Select value={categoryCol} onChange={(e) => setCategoryCol(e.target.value)}>
+                <option value="">None</option>
+                {headers.map((h) => <option key={h} value={h}>{h}</option>)}
+              </Select>
+            </Field>
+            <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 20 }} title="Check this if your export uses positive numbers for cash out.">
+              <input type="checkbox" checked={flipSign} onChange={(e) => setFlipSign(e.target.checked)} />
+              Flip sign
+            </label>
+          </div>
+
+          <h4>Preview (first 5 rows)</h4>
+          <div className="table-scroll">
+            <table>
+              <thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Category</th></tr></thead>
+              <tbody>
+                {mappedPreview.map((r, i) => (
+                  <tr key={i}>
+                    <td>{r.date}</td>
+                    <td className={r.type === 'IN' ? 'pill-buy' : 'pill-sell'}>{r.type === 'IN' ? 'Cash in' : 'Cash out'}</td>
+                    <td>{fmtMoney(r.amount, currencyCode)}</td>
+                    <td>{r.category || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <button className="btn" style={{ marginTop: 12 }} onClick={doImport}>
+            <PlusIcon />Import {rows.length} entr{rows.length === 1 ? 'y' : 'ies'}
+          </button>
+        </Card>
+      )}
     </div>
   );
 }
@@ -381,6 +540,7 @@ export function CashPage({
       <Tabs
         tabs={[
           { key: 'ledger', label: 'Ledger', content: <LedgerTab /> },
+          { key: 'import', label: 'Import', content: <ImportTab /> },
           {
             key: 'settings',
             label: 'Settings',

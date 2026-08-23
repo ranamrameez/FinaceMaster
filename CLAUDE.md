@@ -665,6 +665,26 @@ not developer notes) continuously as features ship.
   tests, 6 new) both clean. Funds (hidden `Transfer` field) and EMI (no
   repayment ledger) remain the only unlinked modules — see
   MODULES_PLAN.md §8 for why each needs its own design decision first.
+- **Cash gained CSV import (2026-08-23) — see README Done item 40,
+  MODULES_PLAN.md §13.** First module beyond Banking to get the "map these
+  columns" CSV import pattern. Cash's `amount` field isn't signed like
+  Bank's, so the mapped Amount column's sign (with an optional "Flip sign"
+  checkbox) decides IN vs OUT and the stored amount is always the absolute
+  value; Date and Amount are required, Category is optional, and one
+  Currency picker applies to the whole imported batch. `CashEntry.source`
+  widened to `'manual' | 'statement-import'` plus a new `statementRef?`
+  (mirrors `BankTransaction`) so the ledger's new Source column can show
+  which entries came from an import. Added a generic `addEntries()` bulk
+  action to `createEntryStore.ts` (mirrors `bankWorkbookStore.ts`'s
+  `addTransactions`) rather than looping `addEntry` and re-persisting to
+  localStorage once per row — this benefits any other `createEntryStore`
+  user (EMI, inter-entity transfers) that later wants bulk import too.
+  Verified live via Playwright with an actual CSV file upload (not just
+  seeded localStorage): the preview correctly derives Cash in/Cash out
+  from the amount's sign, category mapping applies live, and clicking
+  Import correctly reaches the sign-in gate — zero console errors.
+  Personal Loans repayments and Rentals entries still need the same
+  treatment (README item 25's remainder).
 
 ## Live URLs
 

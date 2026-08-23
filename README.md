@@ -401,6 +401,28 @@ FinanceManager live link:
     clean. **Still open** (README item 21's remainder): Funds (needs its hidden `Transfer`
     field exposed in the UI first) remains unlinked; EMI has no repayment ledger at all to link
     into (a data-model question, not an oversight).
+40. **Cash gained CSV import (2026-08-23), README item 25's first part (browser-only CSV/JSON
+    scope).** Extends the exact "map these columns" pattern already proven in Banking's
+    statement import (`lib/csv.ts` + `BankPage.tsx`'s `ImportTab`) to Cash's new `ImportTab` in
+    `CashPage.tsx`. Cash entries don't have Bank's single signed `amount` field, so the mapped
+    Amount column's sign (after an optional "Flip sign" checkbox) decides IN vs OUT and the
+    stored `amount` is always the absolute value; Date and Amount are required, Category is
+    optional. A single Currency picker applies to the whole imported batch (Cash entries are
+    per-entry-currency, but a CSV export is realistically all one currency). `CashEntry.source`
+    widened from `'manual'`-only to `'manual' | 'statement-import'`, plus a new
+    `statementRef?: string` (mirrors `BankTransaction`) — the entry list's new "Source" column
+    shows "Import (filename.csv)" vs "Manual", matching Banking's existing convention. New
+    generic `addEntries()` bulk-add action on `createEntryStore.ts` (mirrors
+    `bankWorkbookStore.ts`'s `addTransactions`) avoids re-persisting to localStorage once per
+    imported row. Verified live via Playwright with a real 3-row synthetic CSV file upload (not
+    just seeded localStorage): the preview correctly shows "Cash in"/"Cash out" derived from
+    sign, category mapping applies live, and clicking Import correctly hits the sign-in gate
+    (not tested past that point — same real-Firebase-project caveat as the rest of this app's
+    write-path verification) — zero console errors. `npm run build` / `npm run test` (119
+    tests, unchanged — this feature's logic lives in the page component, same as Banking's
+    import, not a separately unit-tested pure function) both clean. **Still open**: Personal
+    Loans repayments and Rentals entries (also named in item 25) don't have CSV import yet;
+    PDF/image import still needs the separate Python backend (locked decision, real infra).
 
 ## Pending
 
@@ -447,8 +469,9 @@ wave" section)**:
 25. Import pipeline: CSV/JSON import (browser-only, extends Banking's existing CSV-import
     pattern to more modules — no new infra) and PDF/image import (**locked decision: a
     separate Python backend service** for OCR/parsing, hosted on infrastructure the user
-    chooses — real new infra outside a single coding session's control). Not started — see
-    `MODULES_PLAN.md` §13.
+    chooses — real new infra outside a single coding session's control). **CSV import for
+    Cash done (see Done item 40)**; Personal Loans repayments and Rentals entries still need
+    it. PDF/image import not started — see `MODULES_PLAN.md` §13.
 26. "Only a toast shows instead of the sign-in popup" (see Done item 38) — investigated,
     couldn't reproduce locally (both primary sign-in entry points open the real modal
     correctly). Needs a specific page/button from the user to chase further if it recurs.
