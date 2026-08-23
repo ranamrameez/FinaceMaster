@@ -226,6 +226,13 @@ FinanceManager live link:
     the user's real signed-in session or a throwaway Firebase Auth account against the same
     production project; a future session with the user present should click through one real
     linked transfer (create, edit its amount, delete it) and confirm both sides update.
+30. **Doc correction: console-style compact theme (item 14) was already built, just never
+    marked Done.** `html[data-density="console"]` rules in `theme.css` (tighter card/table/
+    button padding, smaller monospace-leaning type) and the "Console (super compact)" option
+    in `AppearancePanel.tsx`'s density selector have existed since the original React rewrite
+    commit — this was a stale Pending entry, not missing functionality. Re-verified live in
+    the browser (2026-08-23): switching density to Console visibly shrinks stat cards, page
+    titles, and the sidebar with no console errors. Moved to Done; no code changed.
 
 ## Pending
 
@@ -240,9 +247,6 @@ FinanceManager live link:
     the app itself (free/cheap tiers rate-limit fast). Fetch on a schedule (cron/worker)
     into our own database and serve the app from that store, same pattern already used for
     QSE's `stockData/QSE` node (item 1 above) and PSX's bundled `psxSeed.ts`.
-14. Include console-like/super-compact UI themes — a `density` appearance setting
-    (comfortable, in `appearanceStore.ts`) exists already, but no dedicated console-style
-    compact theme yet.
 17. Charts should be dynamic — filterable (date range, ticker, category) and otherwise more
     interactive, not just static renders of whatever the page computes. Not started.
 19. Cross-entity transaction linking beyond v1 scope (see Done item 29): Funds/Rentals/EMI/

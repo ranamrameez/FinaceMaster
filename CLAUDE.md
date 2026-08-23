@@ -481,6 +481,17 @@ not developer notes) continuously as features ship.
     working down the README's Pending list per the user's standing
     instruction; ask first only for something genuinely ambiguous or
     destructive, same bar as before.
+  - **Doc-only correction (2026-08-23): README item 14 (console-style
+    compact theme) was already implemented** — the `data-density="console"`
+    CSS rules in `theme.css` and the density selector's "Console (super
+    compact)" option date back to the very first React-rewrite commit
+    (`git log -S` confirms), not to anything built today. It had just
+    never been moved out of Pending. Re-verified live (switching density
+    visibly shrinks cards/tables/titles, no console errors) and moved to
+    Done in README with no code change. If a future session finds another
+    Pending item that looks suspiciously already-built, check git history
+    before assuming it needs work — this file and the README can drift
+    out of sync with what's actually shipped.
   - **Not yet restructured**: routes are still flat (`/psx/...` bolted on
     alongside QSE's root-level routes), not the `/stocks/:exchange/...`
     shape mentioned below — flat was lower-risk to add without touching
