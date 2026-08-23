@@ -14,8 +14,8 @@ export function TickerDatalist() {
 
   const symbols = useMemo(() => {
     const set = new Set<string>(Object.keys(tickerNames));
-    workbook.transactions.forEach((t) => set.add(t.ticker));
-    workbook.watchlist.forEach((w) => set.add(w.ticker));
+    (workbook.transactions || []).forEach((t) => set.add(t.ticker));
+    (workbook.watchlist || []).forEach((w) => set.add(w.ticker));
     return [...set].sort();
   }, [tickerNames, workbook.transactions, workbook.watchlist]);
 

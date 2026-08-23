@@ -24,6 +24,7 @@ export function useWorkbookCloudSync<TWorkbook extends BaseWorkbook<unknown>>(
   cloudPathSuffix: string,
   useStore: UseBoundStore<StoreApi<WorkbookStoreState<TWorkbook>>>,
   user: User | null,
+  createEmpty: () => TWorkbook,
 ) {
   const [status, setStatus] = useState('Not signed in');
   const [cloudEmpty, setCloudEmpty] = useState(false);
@@ -53,7 +54,14 @@ export function useWorkbookCloudSync<TWorkbook extends BaseWorkbook<unknown>>(
         if (remote) {
           applyingRemote.current = true;
           const { _updated, ...workbook } = remote;
-          useStore.getState().setWorkbook(workbook as TWorkbook);
+          // Merge onto a fresh default shape instead of trusting the cloud
+          // document to have every field — older data (written before a
+          // field like `watchlist` existed) coming back without it crashed
+          // every page's ticker-datalist useMemo on `.forEach` of
+          // `undefined`. Same defensive pattern as loadFromLocalStorage()
+          // and the JSON-import flow; the cloud sync path was the one
+          // place still skipping it.
+          useStore.getState().setWorkbook({ ...createEmpty(), ...workbook } as TWorkbook);
           applyingRemote.current = false;
           setCloudEmpty(false);
           setStatus(`Synced${_updated ? ' · ' + new Date(_updated).toLocaleString() : ''}`);
