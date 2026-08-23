@@ -15,7 +15,7 @@ FinanceRecorder tracks your investments and broader personal finances across mul
 exchanges and account types. It covers two stock exchanges — **QSE** (Qatar Stock Exchange)
 and **PSX** (Pakistan Stock Exchange) — each with its own portfolio, transactions,
 watchlist, analytics, and settings — plus six more modules: Cash, Personal Loans, Banking,
-EMI/Loans, Funds, and Rentals (see §13-§20 below). See `MODULES_PLAN.md` for the design
+EMI/Loans, Funds, and Rentals (see §14-§21 below). See `MODULES_PLAN.md` for the design
 notes behind each module and any future refinements.
 
 **Before anything else**: on your first visit, you'll see a one-time disclaimer screen.
@@ -166,14 +166,38 @@ mistype a ticker, remove it and re-add it correctly.
 
 ## 10. Trade Calculator
 
-A floating 🧮 button, available on every page. Model a hypothetical BUY, SELL, or (PSX
-"Cycle" mode) a buy-then-planned-sell — see break-even price, current P/L, estimated fees,
-and (PSX) estimated CGT — before you actually commit to a trade. You can log the modeled
-trade straight from here once you're ready.
+A floating 🧮 button, available on Stock Exchanges pages (QSE and PSX). Model a hypothetical
+BUY, SELL, or (PSX "Cycle" mode) a buy-then-planned-sell — see break-even price, current P/L,
+estimated fees, and (PSX) estimated CGT — before you actually commit to a trade. You can log
+the modeled trade straight from here once you're ready. It doesn't appear on other modules
+(Cash, Banking, etc.) since a stock trade calculator wouldn't mean anything there.
 
 ---
 
-## 11. Trade Planner (PSX)
+## 11. Risk Analysis
+
+Under Stock Exchanges' page nav (QSE and PSX each have their own, since they use different
+fee models). Models **averaging down** into an existing open position — adding capital at
+the current price to lower your average cost — and shows whether it's actually worth it:
+
+- **Current position**: your invested amount, break-even price, how much recovery (%) is
+  needed at the current price, and current net P/L.
+- **Meaningful averaging points**: a table of "if you add this much capital" scenarios —
+  new average cost, new break-even, recovery needed, and net P/L if you later sell at your
+  target price. One row is marked **Selected** (closest to the capital you entered).
+- **Diminishing returns**: once adding more capital stops meaningfully improving your
+  break-even (less than a quarter percentage point per step), that row is flagged so you
+  know where more capital stops being worth it.
+- **Stress test**: shows what your P/L would look like after the selected averaging, if the
+  price fell further (a fixed set of drops, plus your own chosen "stress" percentage).
+
+**This is planning support, not a recovery guarantee** — averaging down doesn't guarantee a
+stock recovers, and the calculator says so directly. Only shows tickers you currently hold
+(there's nothing to "average into" without an existing position).
+
+---
+
+## 12. Trade Planner (PSX)
 
 For planning multi-leg trades ahead of time, separate from the one-shot Trade Calculator:
 
@@ -193,7 +217,7 @@ QSE doesn't have this page yet, but the same functionality is available undernea
 
 ---
 
-## 12. Analytics
+## 13. Analytics
 
 Deeper charts across four category tabs (exact set depends on the exchange) — allocation,
 performance, fees, and (QSE only, for now) fundamentals. See individual chart tooltips for
@@ -210,7 +234,7 @@ holdings aren't a function of which window you're looking at).
 
 ---
 
-## 13. Cash
+## 14. Cash
 
 The first non-stock-exchange module (pick **Cash** from the sidebar's category dropdown).
 Tracks physical/informal cash — cash in hand, gifts, small informal amounts — as a simple
@@ -228,7 +252,7 @@ ledger, separate from any exchange.
 
 ---
 
-## 14. Personal Loans
+## 15. Personal Loans
 
 Informal loans with another person — money you lent out, or money you owe — tracked in
 **either direction** in one place. Pick **Personal Loans** from the category dropdown.
@@ -243,11 +267,11 @@ Informal loans with another person — money you lent out, or money you owe — 
 - **Log repayments** against a loan any time — date + amount — and edit or delete any
   repayment later. Outstanding = principal minus all repayments logged so far.
 - No interest or repayment-schedule automation here by design — if a "personal loan"
-  actually has a real repayment schedule, it belongs in EMI/Loans (§17 below) instead.
+  actually has a real repayment schedule, it belongs in EMI/Loans (§18 below) instead.
 
 ---
 
-## 15. Banking
+## 16. Banking
 
 Bank account balances and transaction history, entered manually or imported from a CSV
 statement. Pick **Banking** from the category dropdown. No live bank connection (regulator
@@ -273,7 +297,7 @@ licensing is required for that, so it's manual entry or statement import only).
 
 ---
 
-## 17. EMI / Loans
+## 18. EMI / Loans
 
 For a loan you're repaying on a fixed schedule — a mortgage, car financing, or similar. Pick
 **EMI / Loans** from the category dropdown. Distinct from Banking (which just tracks account
@@ -297,7 +321,7 @@ transactions) and Personal Loans (informal, no schedule).
 
 ---
 
-## 19. Funds
+## 20. Funds
 
 Mutual fund unit holdings and performance. Pick **Funds** from the category dropdown.
 Structurally the closest of the new modules to QSE/PSX (buy/sell units at a NAV per unit is the same shape as buy/
@@ -316,7 +340,7 @@ sell shares at a price), so it shares the same underlying calculation engine.
 
 ---
 
-## 20. Rentals
+## 21. Rentals
 
 Rental property income and expenses. Pick **Rentals** from the category dropdown. Not
 discrete buy/sell trades like the other modules — recurring rent received and costs (maintenance, property
@@ -330,7 +354,7 @@ tax, management fees) against one or more properties.
   See a category breakdown and a monthly income/expense/net rollup table, plus the full
   entry list with edit/delete.
 - No tenant/lease management, property valuation tracking, or mortgage/loan tracking in
-  this version — a property's mortgage, if you have one, belongs in EMI/Loans (§17) instead.
+  this version — a property's mortgage, if you have one, belongs in EMI/Loans (§18) instead.
 - **Settings tab**: same account/cloud-sync status and export/import/clear data management
   as other modules.
 
@@ -340,7 +364,7 @@ exchange modules.
 
 ---
 
-## 21. Transfers (linking money between modules)
+## 22. Transfers (linking money between modules)
 
 Pick **Transfers** from the category dropdown. Normally, moving money between two modules
 — say, withdrawing cash from your bank account — means entering it twice: a withdrawal in
@@ -349,25 +373,29 @@ related; edit or delete one later and the other silently goes stale. The Transfe
 fixes that for the most common moves by creating **one linked transfer** that writes a real
 record on both sides at once, and keeps them in sync afterward.
 
-**Supported so far**: Cash ↔ Banking, and Banking ↔ your QSE or PSX cash balance (a deposit
-or withdrawal). Other pairings (e.g. Cash directly to a stock exchange, or anything
-involving Funds/Rentals/EMI/Personal Loans) aren't wired up yet — the form tells you if a
-pairing isn't supported instead of silently doing something wrong.
+**Supported so far**: Cash ↔ Banking, Banking ↔ your QSE or PSX cash balance (a deposit or
+withdrawal), and Banking/Cash ↔ a specific Rentals property (rent received, or an expense
+paid). Other pairings (e.g. Cash directly to a stock exchange, or anything involving
+Funds/EMI/Personal Loans) aren't wired up yet — the form tells you if a pairing isn't
+supported instead of silently doing something wrong.
 
 - **Create a link**: choose the **From** and **To** side (for Banking, also pick which
-  account), an amount, a date, and an optional note, then **Create link**. This adds a
-  matching entry to both modules' own ledgers — you'll see it appear in Cash's ledger, or
-  in Banking's transaction list, exactly like anything else you'd entered by hand there.
-- **No currency conversion**: if the two sides use different currencies, the app copies the
-  number as-is rather than converting it — it warns you when this happens so you don't miss
-  it, but the amount itself is your responsibility to get right.
+  account; for Rentals, pick which property), an amount, a date, and an optional note, then
+  **Create link**. This adds a matching entry to both modules' own ledgers — you'll see it
+  appear in Cash's ledger, Banking's transaction list, or a property's income/expenses,
+  exactly like anything else you'd entered by hand there.
+- **Different currencies**: no live conversion happens automatically — but if the two sides
+  use different currencies, check **"Different amount on the other side"** and enter the
+  real converted amount yourself (from your bank's rate, a cash exchange receipt, etc.).
+  Leave it unchecked and the same number is used on both sides as-is, which is only correct
+  when both sides share a currency (the form warns you if they don't).
 - **Editing or deleting a link** (in the "Linked transfers" list at the bottom of the page)
   updates or removes **both** sides' records together — you don't need to (and shouldn't)
   go edit or delete the two records separately in their own modules.
 
 ---
 
-## 22. A note on accuracy
+## 23. A note on accuracy
 
 Every number in this app is an **estimate** computed from settings you configure — it is
 not a substitute for your actual broker/exchange statement, and it is not financial advice.

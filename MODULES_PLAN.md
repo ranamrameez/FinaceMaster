@@ -491,8 +491,11 @@ instead, not this module).
 Bank — should be one linked record, not two independently-typed entries that can silently
 drift out of sync (one side edited or deleted without the other).
 
-**This is blocked on at least two modules existing** (there's nothing to link yet) — design
-sketch only, revisit once, say, Cash and Banking are both built:
+**Status: v1 shipped 2026-08-23** (Cash↔Bank, Bank↔QSE/PSX cash, single shared amount, no
+currency conversion) — see README Done item 29 and CLAUDE.md for what actually got built.
+The design sketch below is the original pre-build plan; **§8 below supersedes it** with the
+user-requested extensions (multi-currency amounts, more module pairs). Original sketch kept
+for history:
 
 ```ts
 interface InterEntityTransfer {
@@ -531,3 +534,222 @@ doesn't attempt that redesign itself since it's a UI change that can happen inde
 and earlier if wanted (see README item 18). The routing shape most likely moves from
 today's flat `/psx/...` to something like `/stocks/:exchange/...`, `/cash/...`, `/bank/...`,
 matching the note already in `CLAUDE.md`'s "Not yet restructured" section.
+
+**Status: built 2026-08-23** — see README Done item 28 (`components/CategoryNav.tsx`).
+Routing itself stayed flat (didn't restructure to `/stocks/:exchange/...`) — the dropdown
+was layered on top of the existing flat routes rather than requiring a routing rewrite first.
+
+---
+
+# Next wave (2026-08-23, user-requested)
+
+All six original modules and the v1 versions of navigation/linking/chart-filtering above are
+built and shipped (PR #1, merged). The user then gave direct feedback/requests that expand
+scope beyond what was originally planned here. Recording them here per the standing
+instruction to keep this doc current with whatever's been discussed — **this section is
+backlog, not yet built** except where marked done. Build order isn't strictly locked; pick
+off items as they become tractable, same "don't ask before starting the next one" standing
+instruction as the rest of this doc, with the exception of genuinely new infra/cost
+decisions (flagged explicitly below).
+
+## 8. Multi-currency-aware, multi-module cross-entity linking
+
+**Status: (a) and Rentals (part of (b)) built 2026-08-23** — see README Done item 34.
+`fromAmount`/`toAmount` are live, and Rentals is now a linkable module (Bank/Cash↔a specific
+property). Personal Loans/EMI/Funds remain unlinked per the blockers documented below —
+nothing changed about them, they're recorded here for whenever they're picked up next.
+
+Extends README item 19 / MODULES_PLAN §7 (v1 shipped 2026-08-23, Cash↔Bank + Bank↔QSE/PSX,
+single shared amount). Two separate asks bundled together by the user, both real:
+
+**a) Genuine multi-currency support for Bank↔Bank and Cash↔Bank.** v1 copies one `amount`
+number to both sides and only *warns* on a currency mismatch — it doesn't actually support,
+say, moving 500 USD out of a USD bank account into a PKR cash entry credited at whatever the
+real conversion was. Locked decision: **no live FX-rate lookup** (unchanged cross-cutting
+rule — no auditable rate source). Instead, `InterEntityTransferInput` needs two independent
+amounts — `fromAmount` (debited from the `from` side, in its own currency) and `toAmount`
+(credited to the `to` side, in its own currency) — entered manually by the user from
+whatever real conversion actually happened (their bank's rate, cash exchange receipt, etc.).
+When both sides share a currency, `toAmount` can default to `fromAmount` and the form can
+hide the second field to keep the common case simple. `buildLinkedRecords` in
+`lib/interEntityLink.ts` changes from one `amount` param to `fromAmount`/`toAmount`, and the
+link record itself stores both (so a later edit can recompute either side correctly without
+losing the original manual conversion).
+
+**b) More module pairs.** Currently only Cash/Bank/QSE/PSX participate. Extending to
+Funds/Rentals/EMI/Personal Loans hits real per-module blockers, investigated 2026-08-23:
+- **Personal Loans**: `PersonalLoanRepayment` is addressed by a `(loanId, index)` compound
+  key today, not a stable `id` — needs the same kind of id-retrofit already done for
+  `Transfer`/`CashEntry` (README item 29) before it can be a link target. Real but
+  tractable — same pattern, third time.
+- **EMI/Loans**: has **no repayment ledger at all** — `EMILoan` is a computed amortization
+  schedule (principal/tenure/start-date), not logged payments (see CLAUDE.md's EMI entry).
+  Linking a real transfer into it would mean adding a repayments log to EMI's data model,
+  which is a bigger design change than "add an id" — don't do this silently; if EMI linking
+  is wanted, decide explicitly whether EMI gains a real repayment log (changing what "elapsed
+  time" based payoff tracking means) or stays schedule-only and un-linkable.
+- **Funds**: technically has a `transfers: Transfer[]` array (inherited from reusing
+  `createWorkbookStore`) but it's explicitly unused/not shown in the Funds UI (see CLAUDE.md's
+  Funds entry) — a Fund doesn't really have a "cash balance" concept distinct from buy/sell at
+  NAV. Wiring linking into an unused, hidden field would be linking into nothing the user can
+  see. Exposing that concept in the Funds UI first is a prerequisite, not part of linking
+  itself.
+- **Rentals**: ✅ investigated and built 2026-08-23. Hand-written store (like Bank), and its
+  `updateEntry(id, ...)`/`deleteEntry(id)` were already id-addressed — same check Banking
+  already passed, no retrofit needed. Now a linkable module: `ref` is a `Property.id`, and a
+  linked transfer maps to `RentalEntry.type` (`RENT_INCOME` when Rentals is the `to` side,
+  `EXPENSE` when it's the `from` side).
+
+**Suggested order**: (1) fromAmount/toAmount multi-currency support — no new module
+blockers, pure extension of what's shipped; (2) Personal Loans id retrofit + linking;
+(3) investigate Rentals; (4) EMI and Funds need their own design decisions first, don't just
+wire them in.
+
+## 9. Native Risk Calculator (replaces the legacy static-page link) — ✅ built 2026-08-23
+
+**Status: built.** `lib/calc/riskAnalysis.ts` (pure, tested) + shared `components/
+RiskCalculator.tsx` + per-exchange pages at `/risk-analysis` (QSE) and `/psx/risk-analysis`
+(PSX), replacing the sidebar's link to `Risk_Analysis_Calculator.html`. See README Done item
+33 for the full writeup, including two deliberate correctness fixes made vs. a blind port
+(reusing the real iterative `breakEvenPrice` solver instead of a flat-fee-only closed-form
+formula; including the buy-side fee in a hypothetical purchase's cost basis) and one thing
+intentionally *not* ported (a hardcoded "MPHC/IQCD = severe" special-case that was leftover
+from one person's real portfolio, not a generalizable rule). The legacy HTML file itself
+is left in place — deleting it needs explicit approval, not assumed as part of this change.
+Original plan sketch kept for history below:
+
+Currently the sidebar links out to `Risk_Analysis_Calculator.html` (a legacy static page,
+predates the React rewrite, shared by both QSE and PSX). User wants a real React-native Risk
+Calculator instead of a link-out, per-exchange like the existing Trade Calculator
+(`features/qse/components/TradeCalculator.tsx` / `features/psx/components/TradeCalculator.tsx`)
+since QSE and PSX have different fee models. **Before building**: read
+`Risk_Analysis_Calculator.html`'s actual logic to know what it computes (position sizing?
+stop-loss/take-profit levels? portfolio risk %?) — port the real formulas, don't guess new
+ones. Once built and verified live, remove the legacy sidebar link and (per the existing
+"don't delete legacy apps until PSX reaches parity and the user explicitly approves a
+cutover" rule) ask before deleting `Risk_Analysis_Calculator.html` itself, since other things
+might still reference it.
+
+## 10. Calculator button should be module-aware
+
+**Status: layer (a) built 2026-08-23** — the button is now hidden entirely outside Stock
+Exchanges routes (see README Done item 32). Layer (b), a real per-module calculator, is
+still pending on item 11's per-module planning tools existing.
+
+The floating Calculator button (`components/CalculatorLauncher.tsx`) is already rendered
+globally (not an exchange-only bug), but it hard-codes the QSE/PSX stock Trade Calculator
+regardless of which module you're actually on — confusing on Cash/Bank/EMI/etc. pages.
+Clarified 2026-08-23: this is a "wrong content" problem, not a visibility one. Fix in two
+layers: (a) immediate — only render/enable the button on Stock Exchanges routes until each
+module has something real to calculate, rather than showing an irrelevant stock calculator
+elsewhere; (b) longer-term — as each module gains real planning tools (see item 11 below),
+`CalculatorLauncher` becomes route-aware across *all* modules (an EMI payoff calculator on
+EMI pages, a Cash quick-math tool on Cash pages, etc.), the same pattern it already uses to
+switch between QSE and PSX.
+
+## 11. Per-module Analytics & Planning
+
+User feedback: "All modules are very basic. Analysis & planning should be there for each
+module" — Cash, Banking, Personal Loans, EMI/Loans, Funds, and Rentals currently have a
+ledger/list and basic totals, but nothing like QSE/PSX's Analytics page (18 charts, 4
+category tabs) or Trade Planner. This is the largest item in this wave — realistically
+several modules' worth of work, not a single sitting. Suggested shape per module (adapt to
+what's actually meaningful for each, don't force identical chart sets):
+
+- **Cash**: income/expense trend over time, category breakdown pie (already computed in
+  `cashByCategory`, just not charted), balance-over-time line per currency.
+- **Banking**: per-account balance trend, category breakdown, income vs. spend by month,
+  a simple budget/spend-plan tool (e.g. monthly category targets vs. actuals).
+- **Personal Loans**: outstanding-by-person bar chart, repayment timeline, a "payoff
+  planner" (like EMI's schedule, but for informal debt — projected payoff date at a given
+  repayment rate).
+- **EMI/Loans**: amortization schedule chart (principal vs. interest per month — the data
+  already exists in `emiSchedule()`, just not visualized), a "what-if" planner (extra
+  payment → new payoff date, already partially useful given the existing calc engine).
+- **Funds**: NAV-over-time line per fund, allocation by category/platform, contribution vs.
+  value over time (XIRR already computed, chart it).
+- **Rentals**: net income by property over time, category breakdown (already computed in
+  `rentalsModule.ts`, not charted), occupancy/vacancy tracking if that data ever gets added.
+
+Build order suggestion: start with whichever module the user actually uses most, or go in
+the same build order as the original six modules (Cash → Personal Loans → Banking →
+EMI/Loans → Funds → Rentals) for consistency. Each module's Analytics page should follow the
+same `ChartFilterBar`/`chartFilters.ts` pattern already built for QSE/PSX (README item 17)
+rather than a new filtering mechanism per module.
+
+## 12. Subscriptions module (new, not in the original six)
+
+**Purpose**: track recurring payments (streaming, gym, software, memberships) — the user
+explicitly wants each subscription **linked to the entity that pays it** (a Bank account,
+primarily, per their wording — "linked to applicable entities like banks").
+
+Sketch (subject to revision when actually built, per this doc's own rule):
+
+```ts
+export interface Subscription {
+  id: string;
+  name: string;              // "Netflix", "Gym membership"
+  amount: number;
+  currencyCode: string;      // per-entity currency, same cross-cutting rule as every other module
+  billingCycle: 'monthly' | 'yearly' | 'weekly' | 'custom';
+  customDays?: number;       // used when billingCycle === 'custom'
+  startDate: string;
+  /** Optional — which Bank account (or 'cash') actually pays this, mirroring the
+   * LinkSideConfig.ref pattern from cross-entity linking rather than inventing a
+   * separate reference shape. */
+  paidVia?: { module: 'bank' | 'cash'; ref?: string };
+  category?: string;         // free-form, user-definable — same rule as every other module
+  active: boolean;           // toggled off instead of deleted when cancelled, keeps history
+  cancelledDate?: string;
+}
+
+export interface SubscriptionsWorkbook {
+  settings: { defaultCurrency: string };
+  entries: Subscription[];   // fits createEntryStore directly, same shape as EMI/Cash
+}
+```
+
+Whether marking a billing cycle "paid" should auto-create a linked Bank/Cash transaction
+(reusing `lib/interEntityLink.ts`'s pattern) or just track the subscription's existence/cost
+without auto-generating transactions is a real design choice to make when this is actually
+built — auto-generating avoids double-entry drift (matching the whole point of item 8) but
+adds complexity (what happens if a payment amount varies, or a cycle is skipped). Lean toward
+auto-generating via the same linking mechanism as item 8, once that's solid.
+
+**Analytics for this module** (tying into item 11): total monthly/yearly recurring spend,
+upcoming renewals in the next 30 days, spend by category, spend by paying account.
+
+## 13. Import pipeline: CSV/JSON now, PDF/image via a Python backend (locked 2026-08-23)
+
+User request: modules should be able to import data from CSV, JSON, PDF, and images ("use
+free services/APIs if needed, or suggest a Python-based backend for processing").
+
+**Decision made with the user**: PDF and (especially) image parsing (photos of receipts/
+statements) realistically needs either a paid OCR API or a real backend service — not
+something the browser app can do alone for free. **Chosen path: a Python backend service**
+(e.g. FastAPI), hosted somewhere the user chooses (a free tier like Render or Fly.io was
+suggested, not decided) — this is real new infrastructure, distinct from every other module
+built so far, and needs the user's own hosting account/credentials; a Claude Code session
+can scaffold the backend's code and a deployment guide, but can't provision a live hosted
+service on the user's behalf without their account access.
+
+**Scope split**:
+- **CSV/JSON import, browser-only, no new infra**: extend the pattern already proven in
+  Banking's CSV statement import (`lib/csv.ts` + the column-mapping UI in `BankPage.tsx`) to
+  other modules where a statement-like import makes sense (Cash, Personal Loans repayments,
+  Rentals entries). JSON import already exists in a limited form (workbook backup/restore) —
+  generalize it per-module if useful. **This can be built now, independent of the backend
+  decision.**
+- **PDF/image import, needs the Python backend**: the backend receives an uploaded PDF/image,
+  runs OCR + parsing (e.g. `pdfplumber`/`PyMuPDF` for text-based PDFs, `pytesseract` or a
+  hosted OCR API for images and scanned PDFs), and returns structured transaction-like rows
+  in the same shape the browser already expects (matching the "a transaction doesn't care
+  about its source" cross-cutting rule — `source: 'statement-import'` or similar). The
+  **architecture constraint already locked for market-data APIs applies here too**: no
+  parsing logic runs directly against a paid-per-call API from a page load if avoidable —
+  prefer a backend that does the work once and returns clean data, not a per-keystroke or
+  per-page-load external call.
+- **Before writing backend code**: confirm hosting choice and how the browser app
+  authenticates to it (an API key? tied to the user's Firebase auth token?) — these are
+  small decisions but real ones, best confirmed once actual implementation starts rather
+  than guessed here.

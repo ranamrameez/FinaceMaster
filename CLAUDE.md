@@ -538,13 +538,106 @@ not developer notes) continuously as features ship.
   user explicitly approves a cutover. The Sidebar's legacy-link list now
   only links out to Risk Analysis (PSX has its own React nav item instead of
   a legacy link, now that it's live).
+- **PR #1 merged 2026-08-23** (sidebar dropdown + cross-entity linking v1 +
+  filterable Analytics charts, all three described above). Branch
+  `claude/app-development-jnh4r9` was fast-forwarded to `main` post-merge
+  (no reset needed — its own commits were already part of main's history)
+  and re-pushed since GitHub auto-deleted the remote branch on merge.
+- **"Next wave" requested by the user, same day, right after the merge —
+  not yet built, full design detail in `MODULES_PLAN.md`'s "Next wave"
+  section (§8–§13), summarized in README items 20–25**: (1) native Risk
+  Calculator replacing the legacy static-page link; (2) cross-entity
+  linking gains real multi-currency amounts (`fromAmount`/`toAmount`
+  instead of one shared number) plus more module pairs — Personal Loans is
+  tractable (needs the same id-retrofit pattern as `Transfer`/`CashEntry`),
+  EMI and Funds have real structural blockers (EMI has no repayment ledger
+  at all, Funds' `Transfer` field is unused/hidden) that need their own
+  design decisions, not silent skipping; (3) the floating Calculator button
+  is already global (not a visibility bug, confirmed by reading the code
+  live with the user) but wrongly shows the QSE/PSX stock calculator on
+  every page — needs to be module-aware; (4) per-module Analytics/Planning
+  for all six non-exchange modules (the biggest item here — treat as
+  several sessions' worth, not one sitting); (5) a brand-new Subscriptions
+  module (recurring payments linked to a paying Bank/Cash entity); (6) a
+  CSV/JSON/PDF/image import pipeline — CSV/JSON is buildable now with no
+  new infra (same pattern as Banking's existing CSV import), but PDF/image
+  parsing was explicitly decided (with the user, not assumed) to need a
+  **separate Python backend service** hosted on infrastructure the user
+  picks — real new infra a coding session can scaffold but not provision
+  end-to-end alone.
+- **Native Risk Calculator built + Calculator button fixed (2026-08-23),
+  from the "next wave" above — see README Done items 32/33.** New
+  `lib/calc/riskAnalysis.ts` (pure, tested) + shared `components/
+  RiskCalculator.tsx` + pages at `/risk-analysis` and `/psx/risk-analysis`
+  replace the legacy static-page link. Two deliberate correctness fixes
+  vs. a blind port: reused the app's real iterative `breakEvenPrice`
+  solver (correct under PSX's tiered fees, not just QSE's flat %) instead
+  of the legacy page's closed-form formula, and included the buy-side fee
+  in a hypothetical new purchase's cost basis (the legacy version omitted
+  it, understating break-even). Deliberately *not* ported: a hardcoded
+  "MPHC/IQCD = severe" headline special-case in the legacy page — that was
+  leftover from one person's real portfolio holdings, not a generalizable
+  rule. `CalculatorLauncher.tsx` now returns `null` outside Stock
+  Exchanges routes instead of defaulting to the QSE calculator everywhere.
+- **Cross-entity linking gains real multi-currency + Rentals (2026-08-23)
+  — see README Done item 34.** `InterEntityTransferInput.amount` split
+  into `fromAmount`/`toAmount` (independent numbers, no live FX lookup —
+  the user enters both sides from their own real conversion); the create
+  form defaults to one shared amount and reveals a second field only when
+  "Different amount on the other side" is checked, keeping the common
+  same-currency case simple. Separately, investigated and added Rentals as
+  a linkable module: its `RentalEntry` was already id-addressed (checked
+  before assuming, per this file's own standing advice), so no retrofit
+  was needed — a linked transfer maps to `RENT_INCOME`/`EXPENSE` depending
+  on direction. Personal Loans (needs an id retrofit) and Funds (needs its
+  hidden `Transfer` field exposed in the UI) remain unlinked; EMI still
+  has no repayment ledger to link into at all.
+- **PR #2 code review fix + two user-reported bugs, same day (2026-08-23).**
+  A real reviewer (Sourcery, on PR #2) flagged two gaps in the v1 linking
+  feature: no rollback if a linked-transfer create partially fails, and
+  direct deletion of a linked record from its *native* module (not the
+  Transfers page) leaving a one-sided orphan. Both fixed via new
+  `lib/linkCascade.ts`, which centralizes what used to be duplicated
+  dispatch-switch statements in `TransferLinksPage.tsx` plus new
+  `createLinkedTransfer` (rolls back the first side on a later failure —
+  explicitly documented as defense-in-depth, not real DB-style atomicity,
+  since a client-only app with per-store localStorage + independently-
+  debounced Firebase pushes can't be made genuinely transactional),
+  `updateLinkedTransfer`, `deleteLinkCascade`, `findLinkForRecord`, and
+  `confirmAndDeleteLinkable` — wired into every native delete button
+  across all 5 linkable modules (Cash, Bank, QSE, PSX, Rentals) so
+  deleting either side of a link from *anywhere* cascades identically to
+  deleting it from the Transfers page. Known, stated-not-hidden remaining
+  gap: editing (not deleting) a linked record directly in its native
+  module still doesn't propagate — would need every edit form to know
+  it's touching a linked record, a bigger UI change not attempted here.
+  Separately, same session: (1) **critical bug, user-reported** — signing
+  out never actually cleared any of the 9 per-account Zustand stores (in
+  memory or in localStorage), so the next person on the browser, or the
+  same person switching accounts, would see the previous account's data
+  and could even push it into their own new cloud path via the existing
+  "upload local data" prompt. Fixed centrally in the single shared
+  `useAuthState.ts` auth listener (new `lib/resetLocalData.ts`'s
+  `resetAllLocalWorkbooks()`), firing only on a transition *away* from a
+  previously-known signed-in uid — never on first page load, which must
+  not wipe a legitimately-returning user's data. Deliberately doesn't
+  touch `appearanceStore`/`termsStore` (global prefs, not per-account
+  data). (2) The "Sign in with Google" button's icon was a plain blue-
+  circle emoji placeholder — replaced with a real 4-color Google "G" mark
+  (new `GoogleIcon` in `components/icons.tsx`). (3) A third user report —
+  "only a toast shows instead of the sign-in popup" — could **not** be
+  reproduced: both primary sign-in entry points (sidebar button, a gated
+  write action) correctly open the real modal locally, zero console
+  errors. Left as an open item needing a specific page/button to chase
+  further if it recurs; see README Pending.
 
 ## Live URLs
 
-- New React app (QSE + PSX, `#/` and `#/psx`): **https://ranamrameez.github.io/FinaceMaster/webapp/**
-- Legacy apps (still authoritative for Risk Analysis; `PSX_Trade_Planner.html`
-  is now superseded by the React PSX module but left in place — see Current
-  status above): **https://ranamrameez.github.io/FinaceMaster/**
+- New React app (QSE + PSX, `#/` and `#/psx`, now including a native Risk
+  Analysis page for both — see Current status): **https://ranamrameez.github.io/FinaceMaster/webapp/**
+- Legacy apps (`PSX_Trade_Planner.html` and `Risk_Analysis_Calculator.html`
+  are both now superseded by React equivalents but left in place — see
+  Current status above): **https://ranamrameez.github.io/FinaceMaster/**
 
 ## Repo layout
 

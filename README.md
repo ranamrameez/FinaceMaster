@@ -258,6 +258,119 @@ FinanceManager live link:
     selected month) while "Dividend income by ticker" — a lifetime-per-ticker total, not
     month-indexed — correctly stayed unaffected by the month filter; zero console errors.
     `npm run build` / `npm run test` (95 tests, 11 new) both clean.
+32. **Calculator button made module-aware (2026-08-23), README item 22.** The floating
+    Calculator button (`components/CalculatorLauncher.tsx`) used to render unconditionally on
+    every page and default to the QSE stock Trade Calculator anywhere that wasn't `/psx/*` —
+    including Cash/Bank/EMI/etc, where a stock calculator makes no sense. Now hidden entirely
+    outside Stock Exchanges routes (`categoryForPath(...) === 'stocks'`) until each module has
+    its own relevant calculator (see Pending item 22's remainder, and item 23). Verified live:
+    the button shows on Dashboard/Analytics/Risk Analysis, disappears on Cash, no console
+    errors.
+33. **Native Risk Calculator (2026-08-23), README item 20.** Replaces the sidebar's link-out
+    to the legacy `Risk_Analysis_Calculator.html` with a real React page at `/risk-analysis`
+    (QSE) and `/psx/risk-analysis` (PSX) — an averaging-down planner for an existing open
+    position: current break-even/recovery-needed/net-P&L, a scenario table of "add this much
+    capital → new average/break-even/net-P&L-at-target" across a capital ladder, a
+    diminishing-returns signal, and a stress test on the resulting position at several price
+    drops. New `lib/calc/riskAnalysis.ts` (pure, tested — 9 tests) ports the legacy page's
+    logic with two deliberate fixes rather than a blind copy: (1) reuses the app's real
+    iterative `breakEvenPrice` solver instead of the legacy's closed-form formula that assumed
+    a flat % fee — this makes the calculator correct for PSX's tiered/same-day-netted fee
+    model too, not just QSE's flat percentage; (2) includes the buy-side fee in a hypothetical
+    new purchase's cost basis (the legacy version omitted it, understating the resulting
+    break-even). Also dropped: the legacy page's hardcoded "MPHC/IQCD = severe risk" headline
+    special-case — that was leftover from one person's real portfolio holdings, not a
+    generalizable rule, and porting it into shared app code would have baked someone's
+    specific positions into a universal calculator. New shared `components/RiskCalculator.tsx`
+    (one implementation, QSE and PSX each pass their own rows/fee-calculator/settings — same
+    pattern as `useChartData`/`ChartFilterBar`), with thin per-exchange page wrappers. The
+    legacy `Risk_Analysis_Calculator.html` file itself is left in place for now — deleting it
+    needs explicit approval per this file's existing "don't delete legacy apps" rule, not
+    assumed as part of this change. Verified live in the browser with a seeded underwater
+    position (bought at 12, market price 9): break-even/recovery/scenario-table/stress-test
+    numbers all matched hand-expectations, the empty state (no open positions) renders
+    correctly, PSX's version loads with its own fee model, zero console errors. `npm run
+    build` / `npm run test` (104 tests, 9 new) both clean.
+34. **Cross-entity linking: real multi-currency amounts + Rentals added (2026-08-23),
+    README item 21.** `InterEntityTransferInput`'s single shared `amount` field is now
+    `fromAmount`/`toAmount` — two independent numbers, one per side's own currency. No live
+    FX-rate lookup (unchanged locked decision): a genuinely cross-currency transfer (e.g. a
+    USD bank account to PKR cash) needs the user to enter both amounts from whatever real
+    conversion actually happened. The create form defaults to one shared amount (the common
+    same-currency case) and reveals a second "Amount received" field only when "Different
+    amount on the other side" is checked; the edit row and the linked-transfers table always
+    show both amounts as separate columns for transparency. Also **added Rentals as a fifth
+    linkable module** (Bank/Cash&harr;a specific property — a rent payment in becomes
+    `RENT_INCOME`, an expense paid out becomes `EXPENSE`) after investigating it per this
+    item's own todo: `RentalEntry` already used stable-id addressing (`updateEntry(id, ...)`),
+    so — unlike Personal Loans (still `(loanId, index)`-addressed, needs the same retrofit
+    `Transfer`/`CashEntry` already went through) or EMI (no repayment ledger to link into at
+    all) — no data-model retrofit was needed, making it a same-day addition rather than a
+    separate future pass. Verified live in the browser: selecting a cross-currency pair shows
+    the correct warning and reveals the second amount field; selecting Rentals as either side
+    shows a property picker with the correct currency resolved from that property; the
+    Cash→Rentals path reaches the sign-in gate cleanly with no errors. `npm run build` /
+    `npm run test` (108 tests, 3 new) both clean. **Still open**: Personal Loans (needs the id
+    retrofit) and Funds (needs its hidden `Transfer` field exposed in the UI first) remain
+    unlinked; EMI has no repayment ledger at all to link into (a data-model question, not an
+    oversight).
+35. **Cross-entity linking: cascade deletes + create/update failure handling (2026-08-23) —
+    code-review fix on PR #2.** A real reviewer (Sourcery) flagged two gaps in the v1 linking
+    feature: (1) creating a link wrote to three separate stores with no rollback if a later
+    write failed, risking a one-sided orphan reported as success; (2) deleting a linked record
+    directly from its *native* module (Cash's ledger, Bank's transactions, QSE/PSX transfers,
+    Rentals entries) — instead of from the Transfers page — just removed that one row, leaving
+    the link pointing at a missing id and the other side still present. Both fixed. New
+    `lib/linkCascade.ts` centralizes the store-dispatch switch statements (moved out of
+    `TransferLinksPage.tsx`) plus: `createLinkedTransfer` (rolls back the first side if the
+    second write throws — honest about this being defense-in-depth, not a real database
+    transaction, since a client-only app with per-store localStorage + independently-debounced
+    Firebase pushes can't be made genuinely atomic), `updateLinkedTransfer` (reports a failure
+    honestly rather than claiming a rollback it can't actually do for edits), `deleteLinkCascade`
+    (removes both sides + the link record together), `findLinkForRecord`, and
+    `confirmAndDeleteLinkable` — every native delete button across all 5 linkable modules now
+    calls this instead of deleting directly, so removing either side of a link from *anywhere*
+    cascades identically to deleting it from the Transfers page. Known remaining gap, stated
+    explicitly rather than silently left: *editing* (not deleting) a linked record's amount/date
+    directly in its native module still doesn't propagate to the other side — full correctness
+    there would need every edit form to know it's touching a linked record, a larger UI change
+    not attempted here. New tests in `lib/__tests__/linkCascade.test.ts` (5 tests) cover
+    create/rollback/find/update/cascade-delete against real store instances (not mocks).
+    `npm run build` / `npm run test` (113 tests, 5 new) both clean; verified live that all 5
+    modules' pages still render with zero console errors after the wiring changes (the actual
+    authenticated delete-cascade click-through needs a real signed-in session, same caveat as
+    the rest of this linking feature).
+36. **Critical: signing out didn't clear local data (2026-08-23), user-reported.** Every
+    module's Zustand store persists to its own localStorage key and only overwrites itself on
+    an explicit local write or a cloud pull — `signOutUser()` only called Firebase's own
+    `signOut()`, so QSE/PSX/Cash/Bank/Personal Loans/EMI/Funds/Rentals/linked-transfers data
+    all stayed sitting in memory and in localStorage after logging out. The next person to use
+    the browser (or the same person signing into a *different* account) would see the previous
+    account's data — and could hit the existing "cloud looks empty, upload local data?" prompt
+    and push the previous account's data into their own new cloud path. Fixed centrally in
+    `lib/firebase/useAuthState.ts` (the single shared auth listener every module's sync already
+    reads from) rather than only at the explicit "sign out" button: a new `resetAllLocalWorkbooks()`
+    (`lib/resetLocalData.ts`) clears all 9 per-account stores back to empty (in memory *and*
+    in localStorage) whenever `onAuthStateChanged` reports a transition away from a *previously
+    known* signed-in uid — sign-out, or switching accounts. Deliberately does **not** fire on
+    the very first callback of a page load (a returning signed-in user's local data legitimately
+    belongs to them) and deliberately does **not** touch `appearanceStore`/`termsStore` (global
+    browser preferences, not per-account data, per this app's existing design rule). New test
+    `lib/__tests__/resetLocalData.test.ts` seeds every store and confirms a full reset, including
+    that the emptied state is actually persisted to localStorage (not just in-memory) so a reload
+    immediately after logout can't bring the old data back.
+37. **Google logo on the "Sign in with Google" button (2026-08-23), user-reported.** Was a
+    plain blue-circle emoji (🔵) placeholder. New `GoogleIcon` in `components/icons.tsx` — the
+    real 4-color Google "G" mark (fixed brand colors, the one deliberate exception to this
+    file's otherwise-`currentColor` stroke icons) — wired into `SignInModal.tsx`.
+38. **Investigated but could not reproduce: "only a toast shows instead of the sign-in popup"
+    (2026-08-23), user-reported.** Tested both primary sign-in entry points locally — the
+    sidebar's "Not signed in — tap to sign in" button, and a gated write action (adding a Cash
+    entry while signed out) — and both correctly open the real `SignInModalHost` popup, not a
+    toast, with zero console errors. Couldn't find a code path anywhere that shows a toast in
+    place of opening the modal. This may be specific to the live deployed site in a way this
+    session's local dev server didn't reproduce, or may already be stale (fixed by something
+    else today) — needs a specific page/button from the user to chase further if it recurs.
 
 ## Pending
 
@@ -266,7 +379,10 @@ FinanceManager live link:
    to no single user) exists as a concept the app already prefers when present, but it
    hasn't actually been seeded in Firebase yet — needs real seeding, ideally via the
    scheduled-refresh-job architecture described under item 13 below, not manual entry.
-12. Ability to read account statement PDFs/Excel files to auto-populate trade history.
+12. Ability to read account statement PDFs/Excel files/images to auto-populate trade
+    history — **superseded/expanded by item 25 below** (now includes CSV/JSON/PDF/image
+    import across every module, not just QSE trades, and locks in a Python backend for the
+    PDF/image half). See `MODULES_PLAN.md` §13.
 13. Find APIs to fetch symbols, logos, stock prices, historical data, and finance news —
     **architecture constraint locked in 2026-08-23**: these must never be called live from
     the app itself (free/cheap tiers rate-limit fast). Fetch on a schedule (cron/worker)
@@ -278,7 +394,40 @@ FinanceManager live link:
 19. Cross-entity transaction linking beyond v1 scope (see Done item 29): Funds/Rentals/EMI/
     Personal Loans aren't wired into the Transfers page yet — only Cash↔Bank and
     Bank↔QSE/PSX. A real signed-in browser round-trip (create/edit/delete a link, confirm
-    both sides update) is also still needed — see item 29's verification note.
+    both sides update) is also still needed — see item 29's verification note. **Expanded
+    2026-08-23 into item 21 below** (genuine multi-currency amounts, more module pairs).
+
+**New wave, 2026-08-23 (user-requested, full design detail in `MODULES_PLAN.md`'s "Next
+wave" section)**:
+
+21. Cross-entity linking remainder (see Done item 34): Personal Loans still needs an id
+    retrofit before it can be linked; Funds needs its hidden `Transfer` field exposed in the
+    UI first; EMI has no repayment ledger at all to link into (a data-model question). None
+    of these are started.
+22. Calculator button remainder: it's module-aware now (hidden outside Stock Exchanges, see
+    Done item 32), but the longer-term goal — a *relevant* calculator per module (an EMI
+    payoff calculator, a Cash quick-math tool, etc.) — needs those modules' own planning tools
+    to exist first. Tracked together with item 23.
+23. Per-module Analytics & Planning for Cash/Banking/Personal Loans/EMI-Loans/Funds/Rentals —
+    each currently has just a ledger + basic totals, no charts or planning tools like
+    QSE/PSX's Analytics page or Trade Planner. Largest item in this wave. Not started — see
+    `MODULES_PLAN.md` §11 for a per-module chart/tool sketch.
+24. New Subscriptions module — recurring payments (streaming, gym, etc.) linked to a paying
+    entity (a Bank account or Cash), reusing the cross-entity linking mechanism from item 21
+    once solid. Not started — see `MODULES_PLAN.md` §12.
+25. Import pipeline: CSV/JSON import (browser-only, extends Banking's existing CSV-import
+    pattern to more modules — no new infra) and PDF/image import (**locked decision: a
+    separate Python backend service** for OCR/parsing, hosted on infrastructure the user
+    chooses — real new infra outside a single coding session's control). Not started — see
+    `MODULES_PLAN.md` §13.
+26. "Only a toast shows instead of the sign-in popup" (see Done item 38) — investigated,
+    couldn't reproduce locally (both primary sign-in entry points open the real modal
+    correctly). Needs a specific page/button from the user to chase further if it recurs.
+27. Editing (not deleting) a linked record directly in its native module (Cash/Bank/QSE/
+    PSX/Rentals) still doesn't propagate to the other side of the link or the link record
+    itself (see Done item 35's "known remaining gap"). Deletion is now safe (cascades
+    correctly from any entry point); editing amounts/dates only fully stays in sync when
+    done from the Transfers page.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

@@ -1,6 +1,7 @@
 import type { BankTransaction } from '../types/bankWorkbook';
 import type { CashEntry } from '../types/cashWorkbook';
 import type { InterEntityTransfer, InterEntityTransferInput, LinkModule, LinkSideConfig } from '../types/interEntityTransfer';
+import type { RentalEntry } from '../types/rentalsWorkbook';
 import type { Transfer } from '../types/workbook';
 
 /** The ledger record a link creates/updates on one side, tagged by which
@@ -9,7 +10,8 @@ import type { Transfer } from '../types/workbook';
 export type LinkSideRecord =
   | { module: 'cash'; record: CashEntry }
   | { module: 'bank'; record: BankTransaction }
-  | { module: 'qse' | 'psx'; record: Transfer };
+  | { module: 'qse' | 'psx'; record: Transfer }
+  | { module: 'rentals'; record: RentalEntry };
 
 function buildSideRecord(
   cfg: LinkSideConfig,
@@ -54,6 +56,19 @@ function buildSideRecord(
         module: cfg.module,
         record: { id, date, type: direction === 'in' ? 'DEPOSIT' : 'WITHDRAWAL', gross: amount, fee: 0 },
       };
+    case 'rentals':
+      if (!cfg.ref) throw new Error('Rentals side of a linked transfer needs a property.');
+      return {
+        module: 'rentals',
+        record: {
+          id,
+          propertyId: cfg.ref,
+          date,
+          type: direction === 'in' ? 'RENT_INCOME' : 'EXPENSE',
+          amount,
+          note,
+        },
+      };
   }
 }
 
@@ -68,8 +83,8 @@ export function buildLinkedRecords(
   input: InterEntityTransferInput,
   ids: { linkId: string; fromRecordId: string; toRecordId: string },
 ): { from: LinkSideRecord; to: LinkSideRecord; link: InterEntityTransfer } {
-  const from = buildSideRecord(input.from, ids.fromRecordId, input.date, input.amount, 'out', input.note);
-  const to = buildSideRecord(input.to, ids.toRecordId, input.date, input.amount, 'in', input.note);
+  const from = buildSideRecord(input.from, ids.fromRecordId, input.date, input.fromAmount, 'out', input.note);
+  const to = buildSideRecord(input.to, ids.toRecordId, input.date, input.toAmount, 'in', input.note);
   const link: InterEntityTransfer = {
     ...input,
     id: ids.linkId,
@@ -95,6 +110,10 @@ export function isSupportedLinkPair(from: LinkModule, to: LinkModule): boolean {
     ['qse', 'bank'],
     ['bank', 'psx'],
     ['psx', 'bank'],
+    ['bank', 'rentals'],
+    ['rentals', 'bank'],
+    ['cash', 'rentals'],
+    ['rentals', 'cash'],
   ];
   return supported.some(([a, b]) => a === from && b === to);
 }

@@ -6,6 +6,7 @@ import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
+import { confirmAndDeleteLinkable } from '../../../lib/linkCascade';
 import { isNettedLeg } from '../../../lib/calc/psxFees';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { createEmptyPSXWorkbook } from '../../../store/defaultPsxWorkbook';
@@ -475,7 +476,7 @@ function TransfersSection() {
                   <td>{fmtMoney(t.fee, currency)}</td>
                   <td>
                     <button className="btn secondary small" onClick={() => startEdit(t)}>Edit</button>{' '}
-                    <button className="btn secondary small" onClick={() => deleteTransfer(t.id)}><TrashIcon size={12} />Delete</button>
+                    <button className="btn secondary small" onClick={() => confirmAndDeleteLinkable('psx', t.id, () => deleteTransfer(t.id))}><TrashIcon size={12} />Delete</button>
                   </td>
                 </tr>
               ),

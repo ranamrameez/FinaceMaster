@@ -8,7 +8,8 @@ describe('buildLinkedRecords', () => {
   it('builds a Cash-out / Bank-in pair for a Cash -> Bank transfer', () => {
     const input: InterEntityTransferInput = {
       date: '2026-01-05',
-      amount: 250,
+      fromAmount: 250,
+      toAmount: 250,
       from: { module: 'cash', currencyCode: 'USD' },
       to: { module: 'bank', ref: 'acct-1' },
       note: 'Deposited cash',
@@ -24,13 +25,14 @@ describe('buildLinkedRecords', () => {
       // Bank amounts are signed: money arriving is positive.
       expect(to.record).toMatchObject({ id: 'to-1', accountId: 'acct-1', amount: 250 });
     }
-    expect(link).toMatchObject({ id: 'link-1', fromRecordId: 'from-1', toRecordId: 'to-1', amount: 250 });
+    expect(link).toMatchObject({ id: 'link-1', fromRecordId: 'from-1', toRecordId: 'to-1', fromAmount: 250, toAmount: 250 });
   });
 
   it('signs the Bank record negative when Bank is the `from` side', () => {
     const input: InterEntityTransferInput = {
       date: '2026-01-05',
-      amount: 100,
+      fromAmount: 100,
+      toAmount: 100,
       from: { module: 'bank', ref: 'acct-1' },
       to: { module: 'cash', currencyCode: 'PKR' },
     };
@@ -44,7 +46,8 @@ describe('buildLinkedRecords', () => {
   it('maps Bank -> QSE to a WITHDRAWAL/DEPOSIT pair with zero fee', () => {
     const input: InterEntityTransferInput = {
       date: '2026-02-01',
-      amount: 5000,
+      fromAmount: 5000,
+      toAmount: 5000,
       from: { module: 'bank', ref: 'acct-1' },
       to: { module: 'qse' },
     };
@@ -58,7 +61,8 @@ describe('buildLinkedRecords', () => {
   it('maps QSE -> Bank to a WITHDRAWAL on the QSE side', () => {
     const input: InterEntityTransferInput = {
       date: '2026-02-01',
-      amount: 1200,
+      fromAmount: 1200,
+      toAmount: 1200,
       from: { module: 'qse' },
       to: { module: 'bank', ref: 'acct-2' },
     };
@@ -69,10 +73,69 @@ describe('buildLinkedRecords', () => {
     if (to.module === 'bank') expect(to.record.amount).toBe(1200);
   });
 
+  it('supports genuinely different amounts on each side for a cross-currency transfer', () => {
+    // 500 USD converted to 1400 PKR at the user's real bank rate — no live
+    // FX lookup, the user enters both sides from their own conversion.
+    const input: InterEntityTransferInput = {
+      date: '2026-03-01',
+      fromAmount: 500,
+      toAmount: 140000,
+      from: { module: 'bank', ref: 'usd-acct' },
+      to: { module: 'cash', currencyCode: 'PKR' },
+    };
+    const { from, to } = buildLinkedRecords(input, ids);
+    expect(from.module).toBe('bank');
+    if (from.module === 'bank') expect(from.record.amount).toBe(-500);
+    expect(to.module).toBe('cash');
+    if (to.module === 'cash') expect(to.record).toMatchObject({ amount: 140000, currencyCode: 'PKR' });
+  });
+
+  it('maps Bank -> Rentals to RENT_INCOME on the property side', () => {
+    const input: InterEntityTransferInput = {
+      date: '2026-04-01',
+      fromAmount: 800,
+      toAmount: 800,
+      from: { module: 'bank', ref: 'acct-1' },
+      to: { module: 'rentals', ref: 'prop-1' },
+    };
+    const { from, to } = buildLinkedRecords(input, ids);
+    expect(from.module).toBe('bank');
+    if (from.module === 'bank') expect(from.record.amount).toBe(-800);
+    expect(to.module).toBe('rentals');
+    if (to.module === 'rentals') expect(to.record).toMatchObject({ propertyId: 'prop-1', type: 'RENT_INCOME', amount: 800 });
+  });
+
+  it('maps Rentals -> Bank to an EXPENSE on the property side', () => {
+    const input: InterEntityTransferInput = {
+      date: '2026-04-05',
+      fromAmount: 150,
+      toAmount: 150,
+      from: { module: 'rentals', ref: 'prop-1' },
+      to: { module: 'bank', ref: 'acct-1' },
+    };
+    const { from, to } = buildLinkedRecords(input, ids);
+    expect(from.module).toBe('rentals');
+    if (from.module === 'rentals') expect(from.record).toMatchObject({ propertyId: 'prop-1', type: 'EXPENSE', amount: 150 });
+    expect(to.module).toBe('bank');
+    if (to.module === 'bank') expect(to.record.amount).toBe(150);
+  });
+
+  it('throws for a Rentals side missing a property ref', () => {
+    const input: InterEntityTransferInput = {
+      date: '2026-04-01',
+      fromAmount: 10,
+      toAmount: 10,
+      from: { module: 'bank', ref: 'acct-1' },
+      to: { module: 'rentals' },
+    };
+    expect(() => buildLinkedRecords(input, ids)).toThrow();
+  });
+
   it('throws for a Bank side missing an account ref', () => {
     const input: InterEntityTransferInput = {
       date: '2026-01-01',
-      amount: 10,
+      fromAmount: 10,
+      toAmount: 10,
       from: { module: 'cash' },
       to: { module: 'bank' },
     };
@@ -82,15 +145,16 @@ describe('buildLinkedRecords', () => {
   it('reuses the same ids when recomputing for an edit', () => {
     const input: InterEntityTransferInput = {
       date: '2026-01-01',
-      amount: 10,
+      fromAmount: 10,
+      toAmount: 10,
       from: { module: 'cash', currencyCode: 'USD' },
       to: { module: 'bank', ref: 'acct-1' },
     };
     const first = buildLinkedRecords(input, ids);
-    const edited = buildLinkedRecords({ ...input, amount: 99 }, ids);
+    const edited = buildLinkedRecords({ ...input, fromAmount: 99, toAmount: 99 }, ids);
     expect(first.link.id).toBe(edited.link.id);
     expect(first.from.record.id).toBe(edited.from.record.id);
-    expect(edited.link.amount).toBe(99);
+    expect(edited.link.fromAmount).toBe(99);
   });
 });
 
@@ -103,6 +167,10 @@ describe('isSupportedLinkPair', () => {
     expect(isSupportedLinkPair('qse', 'bank')).toBe(true);
     expect(isSupportedLinkPair('bank', 'psx')).toBe(true);
     expect(isSupportedLinkPair('psx', 'bank')).toBe(true);
+    expect(isSupportedLinkPair('bank', 'rentals')).toBe(true);
+    expect(isSupportedLinkPair('rentals', 'bank')).toBe(true);
+    expect(isSupportedLinkPair('cash', 'rentals')).toBe(true);
+    expect(isSupportedLinkPair('rentals', 'cash')).toBe(true);
   });
 
   it('rejects pairs outside v1 scope', () => {

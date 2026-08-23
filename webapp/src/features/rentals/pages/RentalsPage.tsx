@@ -10,6 +10,7 @@ import { useSortableRows } from '../../../hooks/useSortableRows';
 import { netIncomeByCurrency, propertyByCategory, propertyMonthlyRollup, propertyNetIncome } from '../../../lib/calc/rentalsModule';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
+import { confirmAndDeleteLinkable } from '../../../lib/linkCascade';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
 import { createEmptyRentalsWorkbook } from '../../../store/defaultRentalsWorkbook';
@@ -281,9 +282,7 @@ function EntriesList({ property }: { property: Property }) {
                   <button className="btn secondary small" onClick={() => startEdit(e)}>Edit</button>{' '}
                   <button
                     className="btn secondary small"
-                    onClick={async () => {
-                      if (await confirmDialog('This cannot be undone.', 'Delete this entry?')) deleteEntry(e.id);
-                    }}
+                    onClick={() => confirmAndDeleteLinkable('rentals', e.id, () => deleteEntry(e.id))}
                   >
                     <TrashIcon size={12} />Delete
                   </button>
