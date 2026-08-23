@@ -79,6 +79,15 @@ function TransactionRows() {
             />
             Same-day override
           </label>
+          <input
+            type="number"
+            step="0.01"
+            placeholder="Fee override"
+            title="Override the computed fee with the exact amount from your account statement (optional)."
+            value={r.feeOverride ?? ''}
+            onChange={(e) => update(i, { feeOverride: e.target.value === '' ? undefined : Number(e.target.value) })}
+            style={{ width: 100 }}
+          />
           <button className="btn secondary small" onClick={() => setRows((rs) => rs.filter((_, idx) => idx !== i))}>
             <TrashIcon size={12} />Remove
           </button>
@@ -97,6 +106,7 @@ function TransactionRows() {
         same date, the smaller side is charged government levies only (no double commission) — see
         each transaction's Fee column in the list below. If your account statement shows a same-day
         netting that the recorded date doesn't line up with, check "Same-day override" to force it.
+        Leave "Fee override" blank to use the computed fee, or fill it in to match your statement exactly.
       </p>
     </div>
   );
@@ -331,6 +341,15 @@ function TransactionList() {
                           />
                           Same-day
                         </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          placeholder="Fee override"
+                          title="Override the computed fee with the exact amount from your account statement (optional)."
+                          value={editRow.feeOverride ?? ''}
+                          onChange={(e) => setEditRow({ ...editRow, feeOverride: e.target.value === '' ? undefined : Number(e.target.value) })}
+                          style={{ width: 100, marginTop: 4 }}
+                        />
                       </td>
                       <td>
                         <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
@@ -347,13 +366,19 @@ function TransactionList() {
                       <td>{fmtMoney(tx.shares * tx.price, currency)}</td>
                       <td>
                         {fmtMoney(calcFee(tx.shares * tx.price, tx.action === 'BUY', { shares: tx.shares, tx }), currency)}
-                        {isNettedLeg(workbook.transactions, tx) && (
-                          <span
-                            className="footer-note"
-                            title={tx.manualSameDay ? 'Manually marked as a same-day netted leg — government levies only.' : 'Same-day round trip — netted, government levies only.'}
-                          >
-                            {' '}(netted{tx.manualSameDay ? ', manual' : ''})
+                        {tx.feeOverride !== undefined ? (
+                          <span className="footer-note" title="This fee was manually entered, overriding the computed value.">
+                            {' '}(override)
                           </span>
+                        ) : (
+                          isNettedLeg(workbook.transactions, tx) && (
+                            <span
+                              className="footer-note"
+                              title={tx.manualSameDay ? 'Manually marked as a same-day netted leg — government levies only.' : 'Same-day round trip — netted, government levies only.'}
+                            >
+                              {' '}(netted{tx.manualSameDay ? ', manual' : ''})
+                            </span>
+                          )
                         )}
                       </td>
                       <td>

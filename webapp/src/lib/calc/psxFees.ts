@@ -89,18 +89,21 @@ export function isNettedLeg(transactions: Transaction[], tx: Transaction): boole
 }
 
 /** Builds a same-day-aware fee calculator over a fixed transaction list.
- * When called with a real transaction (`context.tx`), it looks up whether
- * that transaction's side is the one "charged" full commission for that
- * ticker+date, or the netted side (levies only) — see `isNettedLeg`. When
- * called without a `tx` (e.g. break-even/target-price what-ifs, where
- * there's no real same-day context yet), it falls back to modeling a
- * single hypothetical leg — matching the legacy calcFee()/
- * calcFeeBreakdown() split between "forward-looking calculators" and
- * "actual recorded transactions". */
+ * README item 11: `tx.feeOverride`, when set, wins outright before anything
+ * else runs — a manual correction for reconciling against the real account
+ * statement, bypassing same-day netting too. Otherwise, when called with a
+ * real transaction (`context.tx`), it looks up whether that transaction's
+ * side is the one "charged" full commission for that ticker+date, or the
+ * netted side (levies only) — see `isNettedLeg`. When called without a
+ * `tx` (e.g. break-even/target-price what-ifs, where there's no real
+ * same-day context yet), it falls back to modeling a single hypothetical
+ * leg — matching the legacy calcFee()/calcFeeBreakdown() split between
+ * "forward-looking calculators" and "actual recorded transactions". */
 export function makePSXFeeCalculator(settings: PSXSettings, allTransactions: Transaction[]): FeeCalculator {
   return (amount, isBuy, context) => {
     const shares = context?.shares ?? 0;
     const tx = context?.tx;
+    if (tx?.feeOverride !== undefined) return tx.feeOverride;
     if (!tx) return calcFeeBreakdown(amount, isBuy, shares, settings).total;
 
     if (!isNettedLeg(allTransactions, tx)) {

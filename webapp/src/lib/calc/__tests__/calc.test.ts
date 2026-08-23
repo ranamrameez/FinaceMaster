@@ -26,6 +26,14 @@ describe('makeQSEFeeCalculator', () => {
     expect(calcFee(0, true)).toBe(0);
     expect(calcFee(-5, true)).toBe(0);
   });
+
+  it('README item 11: tx.feeOverride wins outright, bypassing the normal formula', () => {
+    const tx: Transaction = { date: '2026-08-23', ticker: 'TEST', action: 'BUY', shares: 9, price: 1.214, feeOverride: 1.23 };
+    expect(calcFee(9 * 1.214, true, { shares: 9, tx })).toBe(1.23);
+    // Even an override of exactly 0 should win — it's a real value, not "unset".
+    const zeroTx: Transaction = { ...tx, feeOverride: 0 };
+    expect(calcFee(9 * 1.214, true, { shares: 9, tx: zeroTx })).toBe(0);
+  });
 });
 
 describe('roundTick', () => {

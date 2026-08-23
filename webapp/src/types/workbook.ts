@@ -9,6 +9,13 @@ export interface Transaction {
    * trade day (e.g. settlement-date entry) but the user knows from their
    * statement that this leg was netted. Ignored by QSE. */
   manualSameDay?: boolean;
+  /** README item 11: manual override of this transaction's total fee, for
+   * reconciling against the real account statement — when set, both
+   * calculators (`makeQSEFeeCalculator`, `makePSXFeeCalculator`) return this
+   * value directly instead of computing one, bypassing same-day netting
+   * too. `undefined` means "use the computed fee" (the normal case);
+   * unlike `manualSameDay` this is shared/meaningful for both exchanges. */
+  feeOverride?: number;
 }
 
 export interface Transfer {

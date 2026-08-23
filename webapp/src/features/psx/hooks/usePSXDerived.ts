@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { buildCashLedger, cashSummary, computePositions, computeRealizedPLTimeSeries, getMarketPrice } from '../../../lib/calc';
+import { computeFIFOPositions, type FIFOLot } from '../../../lib/calc/fifoPositions';
 import { makePSXFeeCalculator } from '../../../lib/calc/psxFees';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
 
@@ -20,21 +21,42 @@ export interface PSXRow {
  * model. makePSXFeeCalculator is rebuilt from the *current* transaction list
  * every time (not just settings) because its same-day netting logic
  * (README items 6/7) needs the full transaction history to know which side
- * of a same-day round trip is the "charged" one. */
+ * of a same-day round trip is the "charged" one.
+ *
+ * README item 8: `positions`/`realizedSeries` come from FIFO lot matching
+ * instead of the weighted-average default when `settings.costBasisMethod`
+ * is 'fifo' — an explicit user opt-in (see PSXSettings), not the default,
+ * since it changes real computed P/L numbers. `lots` exposes each open
+ * ticker's remaining FIFO lots for display; it's empty under the
+ * weighted-average method, which has no discrete lots to show. */
 export function usePSXDerived() {
   const workbook = usePSXWorkbookStore((s) => s.workbook);
 
   return useMemo(() => {
     const calcFee = makePSXFeeCalculator(workbook.settings, workbook.transactions);
-    const positions = computePositions(workbook.transactions, calcFee);
+    const useFIFO = workbook.settings.costBasisMethod === 'fifo';
+
+    let positions;
+    let realizedSeries;
+    let lots: Record<string, FIFOLot[]> = {};
+    if (useFIFO) {
+      const fifo = computeFIFOPositions(workbook.transactions, calcFee);
+      positions = fifo.positions;
+      realizedSeries = fifo.realizedSeries;
+      lots = fifo.lotsByTicker;
+    } else {
+      positions = computePositions(workbook.transactions, calcFee);
+      realizedSeries = computeRealizedPLTimeSeries(workbook.transactions, calcFee);
+    }
+
     const summary = cashSummary(
       workbook.transactions,
       workbook.transfers,
       workbook.adjustments,
       workbook.marketPrices,
       calcFee,
+      positions,
     );
-    const realizedSeries = computeRealizedPLTimeSeries(workbook.transactions, calcFee);
     const ledger = buildCashLedger(workbook.transactions, workbook.transfers, workbook.adjustments, calcFee);
 
     const rows: PSXRow[] = positions
@@ -48,6 +70,6 @@ export function usePSXDerived() {
         return { ticker: p.ticker, shares: p.shares, invested: p.invested, marketPrice, value, sellFee, profit, roiPct };
       });
 
-    return { workbook, calcFee, positions, summary, realizedSeries, ledger, rows };
+    return { workbook, calcFee, positions, summary, realizedSeries, ledger, rows, lots };
   }, [workbook]);
 }

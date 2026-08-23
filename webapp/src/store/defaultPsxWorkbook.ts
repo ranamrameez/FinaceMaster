@@ -21,6 +21,7 @@ export const DEFAULT_PSX_SETTINGS: PSXSettings = {
   // 15%. Still user-editable in Settings if your broker differs.
   cgtNonFilerPct: 30,
   filerStatus: 'filer',
+  costBasisMethod: 'average',
 };
 
 export function createEmptyPSXWorkbook(): PSXWorkbook {

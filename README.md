@@ -3,6 +3,11 @@
 FinanceManager live link:
 <https://ranamrameez.github.io/FinaceMaster/>
 
+> **Always update this README's Done/Pending sections for the latest developments and
+> state whenever a feature lands, changes, or gets deferred.** This is the standing
+> backlog/status doc for the project — keep it in sync with reality, not just with
+> `CLAUDE.md` (which is continuity notes for an AI session, not a substitute for this).
+
 ## Done
 
 3. QSE numbers in calculation are 4 digits (2.155, 21.55) — prices now display at 4
@@ -35,6 +40,27 @@ FinanceManager live link:
 10. Multiple transactions can be entered at once — both QSE's and PSX's Transactions pages
     have a multi-row entry form (`rows.map(...)` in each `TransactionsPage.tsx`), not just
     one row at a time.
+8. PSX: FIFO lot matching (2026-08-23) — each buy is now tracked as its own lot instead of
+   blending into one running weighted-average cost, so a sell consumes the oldest open lot
+   first ("each buy has its own sell peer") and realized P/L, invested amount, and CGT are
+   all lot-accurate. New pure engine at `webapp/src/lib/calc/fifoPositions.ts`
+   (`computeFIFOPositions`), returning the same `Position[]` shape as the original
+   `computePositions` so it drops into `cashSummary`/the UI unchanged. **Opt-in, not the
+   default** — a new `costBasisMethod: 'average' | 'fifo'` field in PSX Settings → "Fees &
+   amounts" (defaults to `'average'`, i.e. today's unchanged behavior) — because switching
+   it recomputes a real user's entire historical P/L under the new method, which must never
+   happen silently. When FIFO is on, `PositionDetail` shows an "Open lots" table (buy date/
+   price/remaining shares/cost-per-share) per ticker. QSE is untouched — `computePositions`
+   itself was never modified, only added-to.
+11. PSX: per-transaction editable fee override (2026-08-23) — `Transaction.feeOverride`
+    (shared type, also usable by QSE) lets a transaction's total fee be manually set to
+    reconcile against the real account statement; when present it wins outright over both
+    the normal fee formula and same-day netting (checked first thing in both
+    `makeQSEFeeCalculator` and `makePSXFeeCalculator`). UI: a "Fee override" input in the
+    add-row and both edit-row forms (Transactions page and per-stock page); the Fee column
+    shows an "(override)" tag when active. This is a single total-fee override, not a fully
+    itemized per-line breakdown editor (commission/SST/CDC/etc. individually) — simpler and
+    safer for now; a fully itemized editor is a possible future refinement if ever needed.
 
 ## Pending
 
@@ -43,13 +69,6 @@ FinanceManager live link:
    to no single user) exists as a concept the app already prefers when present, but it
    hasn't actually been seeded in Firebase yet — needs real seeding, ideally via the
    scheduled-refresh-job architecture described under item 13 below, not manual entry.
-8. PSX: each buy should have its own sell peer (FIFO lot matching) instead of the current
-   weighted-average cost basis, so selling commission/CGT can be tied to and manually
-   adjusted per specific lot. Explicitly deferred to "Phase 2" in `positions.ts`'s own
-   comment — real architecture change to the cost-basis calc, not a small tweak.
-11. PSX: no per-transaction editable fee breakdown yet, needed to reconcile a transaction
-    against the actual account statement. Would need a `feeOverride`-shaped field added to
-    the shared `Transaction` type (also used by QSE) — do that carefully since it's shared.
 12. Ability to read account statement PDFs/Excel files to auto-populate trade history.
 13. Find APIs to fetch symbols, logos, stock prices, historical data, and finance news —
     **architecture constraint locked in 2026-08-23**: these must never be called live from

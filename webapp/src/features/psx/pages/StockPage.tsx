@@ -99,6 +99,15 @@ function TickerTransactions({ ticker }: { ticker: string }) {
                       />
                       Same-day
                     </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="Fee override"
+                      title="Override the computed fee with the exact amount from your account statement (optional)."
+                      value={editRow.feeOverride ?? ''}
+                      onChange={(e) => setEditRow({ ...editRow, feeOverride: e.target.value === '' ? undefined : Number(e.target.value) })}
+                      style={{ width: 100, marginTop: 4 }}
+                    />
                   </td>
                   <td>
                     <button className="btn secondary small" onClick={saveEdit}>Save</button>{' '}
@@ -114,13 +123,19 @@ function TickerTransactions({ ticker }: { ticker: string }) {
                   <td>{fmtMoney(tx.shares * tx.price, currency)}</td>
                   <td>
                     {fmtMoney(calcFee(tx.shares * tx.price, tx.action === 'BUY', { shares: tx.shares, tx }), currency)}
-                    {isNettedLeg(workbook.transactions, tx) && (
-                      <span
-                        className="footer-note"
-                        title={tx.manualSameDay ? 'Manually marked as a same-day netted leg — government levies only.' : 'Same-day round trip — commission charged on the other leg, this one pays only government levies.'}
-                      >
-                        {' '}(netted{tx.manualSameDay ? ', manual' : ''})
+                    {tx.feeOverride !== undefined ? (
+                      <span className="footer-note" title="This fee was manually entered, overriding the computed value.">
+                        {' '}(override)
                       </span>
+                    ) : (
+                      isNettedLeg(workbook.transactions, tx) && (
+                        <span
+                          className="footer-note"
+                          title={tx.manualSameDay ? 'Manually marked as a same-day netted leg — government levies only.' : 'Same-day round trip — commission charged on the other leg, this one pays only government levies.'}
+                        >
+                          {' '}(netted{tx.manualSameDay ? ', manual' : ''})
+                        </span>
+                      )
                     )}
                   </td>
                   <td>

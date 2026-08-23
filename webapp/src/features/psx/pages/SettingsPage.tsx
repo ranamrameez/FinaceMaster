@@ -304,6 +304,31 @@ function CGTSettings() {
   );
 }
 
+function CostBasisSettings() {
+  const settings = usePSXWorkbookStore((s) => s.workbook.settings);
+  const updateSettings = usePSXWorkbookStore((s) => s.updateSettings);
+
+  return (
+    <Card style={{ marginTop: 16 }}>
+      <h3 style={{ marginTop: 0 }}>Cost basis method</h3>
+      <p className="footer-note" style={{ marginTop: -4 }}>
+        Average cost blends every buy into one running average, so a sell can't be tied to a
+        specific lot. FIFO tracks each buy as its own lot and sells the oldest one first — more
+        accurate, but everything (realized P/L, invested amount, CGT) is recalculated from your
+        <em> entire</em> transaction history on every load, not stored per-entry — so switching
+        this immediately recomputes your whole historical P/L under the new method, not just
+        future trades.
+      </p>
+      <Field label="Method" width={220}>
+        <Select value={settings.costBasisMethod} onChange={(e) => updateSettings({ costBasisMethod: e.target.value as 'average' | 'fifo' })}>
+          <option value="average">Average cost (default)</option>
+          <option value="fifo">FIFO lots</option>
+        </Select>
+      </Field>
+    </Card>
+  );
+}
+
 function AmountSettings() {
   const settings = usePSXWorkbookStore((s) => s.workbook.settings);
   const updateSettings = usePSXWorkbookStore((s) => s.updateSettings);
@@ -312,6 +337,7 @@ function AmountSettings() {
     <div>
       <FeeSettings />
       <CGTSettings />
+      <CostBasisSettings />
       <Card style={{ marginTop: 16 }}>
         <h3 style={{ marginTop: 0 }}>General</h3>
         <div className="row" style={{ gap: 12, flexWrap: 'wrap' }}>

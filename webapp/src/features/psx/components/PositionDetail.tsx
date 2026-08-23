@@ -20,7 +20,7 @@ function CompactChart({ height, children }: { height: number; children: React.Re
  * capital gains tax is a real cost QSE doesn't have, so it's worth
  * surfacing here rather than only in the trade calculator). */
 export function PositionDetail({ ticker }: { ticker: string }) {
-  const { workbook, positions, calcFee } = usePSXDerived();
+  const { workbook, positions, calcFee, lots } = usePSXDerived();
   const setMarketPrice = usePSXWorkbookStore((s) => s.setMarketPrice);
   const ensureSignedIn = useEnsureSignedIn();
   const currency = workbook.settings.currency;
@@ -134,6 +134,30 @@ export function PositionDetail({ ticker }: { ticker: string }) {
           </div>
         </>
       )}
+
+      {lots[ticker]?.length ? (
+        <>
+          <h4 style={{ marginTop: 16 }}>Open lots (FIFO)</h4>
+          <div className="table-scroll">
+            <table>
+              <thead><tr><th>Buy date</th><th>Buy price</th><th>Remaining</th><th>Cost/share</th></tr></thead>
+              <tbody>
+                {lots[ticker].map((lot, i) => (
+                  <tr key={i}>
+                    <td>{lot.buyDate}</td>
+                    <td>{fmtPrice(lot.buyPrice)}</td>
+                    <td>{fmt(lot.remainingShares, 0)}</td>
+                    <td>{fmtPrice(lot.buyPrice + lot.buyFeeTotal / lot.originalShares)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="footer-note" style={{ marginTop: 4 }}>
+            A future sell of {ticker} will consume the oldest lot first (FIFO cost basis).
+          </p>
+        </>
+      ) : null}
 
       {position && (position.buyCount > 0 || position.sellCount > 0) && (
         <>

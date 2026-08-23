@@ -17,6 +17,13 @@ and **rental property income tracking**. All of that is real scope, not
 speculative — but only QSE is actually built so far. Design new architecture
 to extend cleanly to the rest; don't build the rest speculatively.
 
+**Standing instruction (added 2026-08-23, user-requested): always update
+`README.md`'s Done/Pending sections for the latest developments and state**
+whenever a feature lands, changes, or gets deferred — do this as part of
+finishing the work, not as an afterthought. `README.md` is the project's
+actual backlog/status doc; this file is continuity notes for an AI session
+picking the project back up, not a substitute for it. Keep both current.
+
 ## Current status (as of 2026-08-23)
 
 - **QSE module: feature-complete and polished.** Dashboard, Portfolio
@@ -128,15 +135,39 @@ to extend cleanly to the rest; don't build the rest speculatively.
     it created. QSE gets this for free at the type/store level whenever it
     gets its own page — that's intentionally left undone until asked for,
     per this file's "don't build the rest speculatively" guidance.
+  - **Per-transaction fee override + FIFO lot matching (README items 11/8,
+    2026-08-23):** `Transaction.feeOverride?: number` (shared type) lets a
+    transaction's total fee be set manually — checked first thing in both
+    `makeQSEFeeCalculator` (`lib/calc/fees.ts`) and `makePSXFeeCalculator`
+    (`lib/calc/psxFees.ts`), winning outright over the normal formula and
+    over same-day netting. UI: a "Fee override" input alongside the
+    "Same-day override" checkbox in the PSX add-row and both edit-row forms
+    (Transactions page, per-stock `StockPage.tsx`); Fee column shows
+    "(override)" when set. It's a single total-fee override, not a fully
+    itemized per-line-item editor — a possible future refinement, not done
+    now. Separately, `lib/calc/fifoPositions.ts`'s `computeFIFOPositions`
+    implements FIFO lot matching (each buy its own lot, oldest sold first)
+    as an **opt-in** alternative to `computePositions`'s weighted-average —
+    `PSXSettings.costBasisMethod: 'average' | 'fifo'`, defaulting to
+    `'average'` (today's unchanged behavior) and switchable in PSX Settings
+    → "Fees & amounts". `usePSXDerived.ts` branches positions/
+    `realizedSeries` on this setting and also exposes `lots` (open FIFO
+    lots per ticker) for `PositionDetail`'s new "Open lots" table.
+    `cashSummary()` was refactored to take `positions` as an optional
+    parameter (default: computes weighted-average itself, so QSE's call
+    site and both `cashSummary` test call sites are unchanged) instead of
+    always recomputing internally, specifically so PSX could pass its
+    FIFO-computed positions through without a duplicate cashSummary. QSE is
+    completely untouched by any of this — `computePositions` itself was
+    never modified, only added-to; this was a deliberate safety choice
+    since switching a real user's cost-basis method retroactively
+    recomputes their entire historical P/L (nothing here is stored
+    per-entry, everything is derived live from full transaction history on
+    every load) and must never happen silently.
   - **Not done — still open PSX/README items for a future session:**
-    per-transaction editable fee breakdown (item 11 — would need a
-    `feeOverride`-shaped field on the shared `Transaction` type, which QSE
-    also uses, so do that carefully), FIFO buy/sell lot matching instead of
-    weighted-average cost (item 8, explicitly deferred to "Phase 2" in
-    `positions.ts`'s own comment), statement PDF/Excel import (item 12),
-    and a shared `stockData/PSX` Firebase node with real fundamentals
-    (PSX's analytics page has no Fundamentals card for this reason — QSE's
-    does).
+    statement PDF/Excel import (item 12), and a shared `stockData/PSX`
+    Firebase node with real fundamentals (PSX's analytics page has no
+    Fundamentals card for this reason — QSE's does).
   - **Not yet restructured**: routes are still flat (`/psx/...` bolted on
     alongside QSE's root-level routes), not the `/stocks/:exchange/...`
     shape mentioned below — flat was lower-risk to add without touching

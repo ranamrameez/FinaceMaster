@@ -1,9 +1,12 @@
 import type { FeeCalculator } from '../../types/workbook';
 
 /** QSE's fee model: flat percentage of trade value, floored at a minimum fee.
- * Ported 1:1 from the legacy `calcFee()` in index.html. */
+ * Ported 1:1 from the legacy `calcFee()` in index.html. README item 11:
+ * `context.tx.feeOverride`, when set, wins outright — a manual correction
+ * for reconciling against the real account statement. */
 export function makeQSEFeeCalculator(settings: { feePct: number; minFee: number }): FeeCalculator {
-  return (amount, _isBuy = true) => {
+  return (amount, _isBuy = true, context) => {
+    if (context?.tx?.feeOverride !== undefined) return context.tx.feeOverride;
     if (amount <= 0) return 0;
     const rawFee = amount * (settings.feePct / 100);
     return Math.max(Math.round(rawFee * 100) / 100, settings.minFee || 0);

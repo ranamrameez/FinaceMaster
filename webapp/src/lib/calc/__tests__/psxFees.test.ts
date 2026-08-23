@@ -30,6 +30,7 @@ const BASE_SETTINGS: PSXSettings = {
   cgtFilerPct: 15,
   cgtNonFilerPct: 30,
   filerStatus: 'filer',
+  costBasisMethod: 'average',
 };
 
 describe('calcFeeBreakdown', () => {
@@ -191,6 +192,26 @@ describe('isNettedLeg / manualSameDay override (README item 7)', () => {
 
     expect(fee).toBeCloseTo(Math.round(expectedNettedFee * 100) / 100, 2);
     expect(fee).toBeLessThan(fullBreakdown);
+  });
+});
+
+describe('makePSXFeeCalculator — feeOverride (README item 11)', () => {
+  const day = '2026-08-21';
+  const netSettings: PSXSettings = { ...BASE_SETTINGS, psxFeePct: 0.005, nccplFeePct: 0.011 };
+
+  it('tx.feeOverride wins outright, even over a same-day-netted leg', () => {
+    // A same-day round trip where the smaller (BUY) side would normally be netted —
+    // but the override should short-circuit that entirely.
+    const buyTx: Transaction = { date: day, ticker: 'TEST', action: 'BUY', shares: 14, price: 100, feeOverride: 42 };
+    const sellTx: Transaction = { date: day, ticker: 'TEST', action: 'SELL', shares: 47, price: 100 };
+    const calcFee = makePSXFeeCalculator(netSettings, [buyTx, sellTx]);
+    expect(calcFee(buyTx.shares * buyTx.price, true, { shares: buyTx.shares, tx: buyTx })).toBe(42);
+  });
+
+  it('an override of exactly 0 still wins (not treated as "unset")', () => {
+    const tx: Transaction = { date: day, ticker: 'TEST', action: 'BUY', shares: 10, price: 100, feeOverride: 0 };
+    const calcFee = makePSXFeeCalculator(netSettings, [tx]);
+    expect(calcFee(tx.shares * tx.price, true, { shares: tx.shares, tx })).toBe(0);
   });
 });
 

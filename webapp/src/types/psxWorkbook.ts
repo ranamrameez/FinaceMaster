@@ -18,6 +18,15 @@ export interface PSXSettings {
   cgtFilerPct: number;
   cgtNonFilerPct: number;
   filerStatus: 'filer' | 'nonfiler';
+  /** README item 8: cost-basis method for realized/unrealized P/L and CGT.
+   * 'average' (default) is the original weighted-average behavior — every
+   * buy blends into one running average cost, so a sell can't be tied to a
+   * specific lot. 'fifo' tracks each buy as its own lot ("each buy should
+   * have its own sell peer") and consumes the oldest open lot first on a
+   * sell, giving lot-accurate realized P/L. Opt-in, not the default,
+   * because switching it changes a real user's computed historical P/L
+   * numbers — never flip this silently. */
+  costBasisMethod: 'average' | 'fifo';
 }
 
 export interface PSXWorkbook {
