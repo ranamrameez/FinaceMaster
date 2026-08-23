@@ -30,10 +30,12 @@ import { TradePlannerPage as PSXTradePlannerPage } from './features/psx/pages/Tr
 import { RiskAnalysisPage as PSXRiskAnalysisPage } from './features/psx/pages/RiskAnalysisPage';
 import { CashPage } from './features/cash/pages/CashPage';
 import { useCashFirebaseSync } from './lib/firebase/useCashFirebaseSync';
+import { usePlannedCashFirebaseSync } from './lib/firebase/usePlannedCashFirebaseSync';
 import { PersonalLoansPage } from './features/personalLoans/pages/PersonalLoansPage';
 import { usePersonalLoansFirebaseSync } from './lib/firebase/usePersonalLoansFirebaseSync';
 import { BankPage } from './features/bank/pages/BankPage';
 import { useBankFirebaseSync } from './lib/firebase/useBankFirebaseSync';
+import { usePlannedBankFirebaseSync } from './lib/firebase/usePlannedBankFirebaseSync';
 import { EMIPage } from './features/emi/pages/EMIPage';
 import { useEMIFirebaseSync } from './lib/firebase/useEMIFirebaseSync';
 import { FundsPage } from './features/funds/pages/FundsPage';
@@ -79,8 +81,10 @@ function App() {
   // pushing before the component unmounts.
   const psxSync = usePSXFirebaseSync();
   const cashSync = useCashFirebaseSync();
+  const plannedCashSync = usePlannedCashFirebaseSync();
   const personalLoansSync = usePersonalLoansFirebaseSync();
   const bankSync = useBankFirebaseSync();
+  const plannedBankSync = usePlannedBankFirebaseSync();
   const emiSync = useEMIFirebaseSync();
   const fundsSync = useFundsFirebaseSync();
   const rentalsSync = useRentalsFirebaseSync();
@@ -140,6 +144,9 @@ function App() {
                     syncStatus={cashSync.status}
                     cloudEmpty={cashSync.cloudEmpty}
                     uploadLocalToCloud={cashSync.uploadLocalToCloud}
+                    plannedSyncStatus={plannedCashSync.status}
+                    plannedCloudEmpty={plannedCashSync.cloudEmpty}
+                    uploadPlannedLocalToCloud={plannedCashSync.uploadLocalToCloud}
                   />
                 }
               />
@@ -162,6 +169,9 @@ function App() {
                     syncStatus={bankSync.status}
                     cloudEmpty={bankSync.cloudEmpty}
                     uploadLocalToCloud={bankSync.uploadLocalToCloud}
+                    plannedSyncStatus={plannedBankSync.status}
+                    plannedCloudEmpty={plannedBankSync.cloudEmpty}
+                    uploadPlannedLocalToCloud={plannedBankSync.uploadLocalToCloud}
                   />
                 }
               />

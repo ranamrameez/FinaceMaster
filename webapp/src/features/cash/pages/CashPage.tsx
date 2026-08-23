@@ -8,6 +8,7 @@ import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { cashBalanceByCurrency, cashByCategory, cashRunningLedger } from '../../../lib/calc/cashModule';
+import { plannedCashProjection } from '../../../lib/calc/plannedBalance';
 import { parseCSV } from '../../../lib/csv';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
@@ -16,7 +17,9 @@ import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
 import { createEmptyCashWorkbook } from '../../../store/defaultCashWorkbook';
 import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
+import { usePlannedCashWorkbookStore } from '../../../store/plannedCashWorkbookStore';
 import type { CashEntry, CashWorkbook } from '../../../types/cashWorkbook';
+import type { PlannedCashEntry } from '../../../types/plannedCash';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -392,6 +395,275 @@ function ImportTab() {
   );
 }
 
+/** User request 2026-08-23: a "what if I spend on this" scenario planner —
+ * see `types/plannedCash.ts`'s doc comment for the full reasoning. Mirrors
+ * the QSE/PSX Trade Planner's "separate plan, mark as done converts it
+ * into a real entry" pattern rather than an in-place status flag on a
+ * normal CashEntry. */
+function emptyPlan(defaultCurrency: string): PlannedCashEntry {
+  return { id: crypto.randomUUID(), date: today(), type: 'OUT', amount: 0, currencyCode: defaultCurrency, category: '', note: '' };
+}
+
+function BalanceProjectionSummary() {
+  const entries = useCashWorkbookStore((s) => s.workbook.entries);
+  const plannedEntries = usePlannedCashWorkbookStore((s) => s.workbook.entries);
+  const settings = usePlannedCashWorkbookStore((s) => s.workbook.settings);
+  const updateSettings = usePlannedCashWorkbookStore((s) => s.updateSettings);
+  const projection = useMemo(() => plannedCashProjection(entries, plannedEntries), [entries, plannedEntries]);
+  const codes = Object.keys(projection);
+
+  return (
+    <Card style={{ marginBottom: 16 }}>
+      <h3 style={{ marginTop: 0 }}>Balance projection</h3>
+      <p className="footer-note" style={{ marginTop: 0 }}>
+        See what your balance would look like if every plan below actually happened — a reality check before you
+        spend. Choose what you want to see:
+      </p>
+      <div className="row" style={{ gap: 16, marginBottom: 12 }}>
+        <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <input type="checkbox" checked={settings.showRealBalance} onChange={(e) => updateSettings({ showRealBalance: e.target.checked })} />
+          Real balance
+        </label>
+        <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <input type="checkbox" checked={settings.showPlannedBalance} onChange={(e) => updateSettings({ showPlannedBalance: e.target.checked })} />
+          Planned balance
+        </label>
+      </div>
+      {!codes.length ? (
+        <p className="footer-note">No balance yet — add a cash entry or a plan below.</p>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px,1fr))', gap: 8 }}>
+          {codes.map((code) => (
+            <div key={code} className="stat-card card">
+              <div className="label">{code}</div>
+              {settings.showRealBalance && (
+                <div className={projection[code].real >= 0 ? 'pill-buy' : 'pill-sell'}>Real: {fmtMoney(projection[code].real, code)}</div>
+              )}
+              {settings.showPlannedBalance && (
+                <div className={projection[code].planned >= 0 ? 'pill-buy' : 'pill-sell'}>
+                  Planned: {fmtMoney(projection[code].planned, code)}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function AddPlanForm() {
+  const addPlan = usePlannedCashWorkbookStore((s) => s.addEntry);
+  const defaultCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
+  const ensureSignedIn = useEnsureSignedIn();
+  const [p, setP] = useState<PlannedCashEntry>(() => emptyPlan(defaultCurrency));
+
+  const submit = async () => {
+    if (!p.amount || p.amount <= 0) return toast('Enter an amount.');
+    if (!(await ensureSignedIn('Sign in to save plans.'))) return;
+    addPlan({ ...p, id: crypto.randomUUID(), category: p.category?.trim() || undefined, note: p.note?.trim() || undefined });
+    toast('Plan added.');
+    setP(emptyPlan(defaultCurrency));
+  };
+
+  return (
+    <Card style={{ marginBottom: 16 }}>
+      <h3 style={{ marginTop: 0 }}>Add a plan</h3>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+        <Field label="Expected date">
+          <TextInput type="date" value={p.date} onChange={(e) => setP({ ...p, date: e.target.value })} />
+        </Field>
+        <Field label="Type">
+          <Select value={p.type} onChange={(e) => setP({ ...p, type: e.target.value as 'IN' | 'OUT' })} width={90}>
+            <option value="IN">Cash in</option>
+            <option value="OUT">Cash out</option>
+          </Select>
+        </Field>
+        <Field label="Amount" width={110}>
+          <TextInput type="number" step="0.01" value={p.amount || ''} onChange={(e) => setP({ ...p, amount: Number(e.target.value) })} />
+        </Field>
+        <Field label="Currency" width={110}>
+          <Select value={p.currencyCode} onChange={(e) => setP({ ...p, currencyCode: e.target.value })}>
+            {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+          </Select>
+        </Field>
+        <Field label="Category (optional)" width={140}>
+          <TextInput value={p.category} onChange={(e) => setP({ ...p, category: e.target.value })} placeholder="e.g. Rent" />
+        </Field>
+        <Field label="Note (optional)" width={180}>
+          <TextInput value={p.note} onChange={(e) => setP({ ...p, note: e.target.value })} />
+        </Field>
+      </div>
+      <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
+        <PlusIcon />Add plan
+      </button>
+    </Card>
+  );
+}
+
+function PlanList() {
+  const plans = usePlannedCashWorkbookStore((s) => s.workbook.entries);
+  const updatePlan = usePlannedCashWorkbookStore((s) => s.updateEntry);
+  const deletePlan = usePlannedCashWorkbookStore((s) => s.deleteEntry);
+  const addEntry = useCashWorkbookStore((s) => s.addEntry);
+  const ensureSignedIn = useEnsureSignedIn();
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editRow, setEditRow] = useState<PlannedCashEntry | null>(null);
+
+  const sorted = useMemo(() => [...plans].sort((a, b) => a.date.localeCompare(b.date)), [plans]);
+
+  const startEdit = (p: PlannedCashEntry) => { setEditId(p.id); setEditRow({ ...p }); };
+  const saveEdit = () => {
+    if (!editId || !editRow) return;
+    updatePlan(editId, editRow);
+    toast('Plan updated.');
+    setEditId(null);
+    setEditRow(null);
+  };
+
+  const markDone = async (p: PlannedCashEntry) => {
+    if (!(await ensureSignedIn('Sign in to save cash entries.'))) return;
+    addEntry({
+      id: crypto.randomUUID(),
+      date: p.date,
+      type: p.type,
+      amount: p.amount,
+      currencyCode: p.currencyCode,
+      category: p.category,
+      note: p.note,
+      source: 'manual',
+    });
+    updatePlan(p.id, { executed: true });
+    toast('Marked as done — added to your Cash ledger.');
+  };
+
+  return (
+    <Card>
+      <h3 style={{ marginTop: 0 }}>Plans</h3>
+      <div className="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Date</th><th>Type</th><th>Amount</th><th>Category</th><th>Note</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody>
+            {sorted.map((p) =>
+              editId === p.id && editRow ? (
+                <tr key={p.id}>
+                  <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
+                  <td>
+                    <select value={editRow.type} onChange={(e) => setEditRow({ ...editRow, type: e.target.value as 'IN' | 'OUT' })}>
+                      <option value="IN">Cash in</option>
+                      <option value="OUT">Cash out</option>
+                    </select>
+                  </td>
+                  <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 90 }} /></td>
+                  <td><input value={editRow.category ?? ''} onChange={(e) => setEditRow({ ...editRow, category: e.target.value })} style={{ width: 100 }} /></td>
+                  <td><input value={editRow.note ?? ''} onChange={(e) => setEditRow({ ...editRow, note: e.target.value })} /></td>
+                  <td></td>
+                  <td>
+                    <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
+                    <button className="btn secondary small" onClick={() => setEditId(null)}>Cancel</button>
+                  </td>
+                </tr>
+              ) : (
+                <tr key={p.id}>
+                  <td>{p.date}</td>
+                  <td className={p.type === 'IN' ? 'pill-buy' : 'pill-sell'}>{p.type === 'IN' ? 'Cash in' : 'Cash out'}</td>
+                  <td>{fmtMoney(p.amount, p.currencyCode)}</td>
+                  <td>{p.category || '—'}</td>
+                  <td>{p.note}</td>
+                  <td className="footer-note">{p.executed ? 'Done' : 'Planned'}</td>
+                  <td>
+                    {!p.executed && (
+                      <button className="btn secondary small" onClick={() => markDone(p)}>Mark as done</button>
+                    )}{' '}
+                    <button className="btn secondary small" onClick={() => startEdit(p)}>Edit</button>{' '}
+                    <button
+                      className="btn secondary small"
+                      onClick={async () => {
+                        if (await confirmDialog('This cannot be undone.', 'Delete this plan?')) deletePlan(p.id);
+                      }}
+                    >
+                      <TrashIcon size={12} />Delete
+                    </button>
+                  </td>
+                </tr>
+              ),
+            )}
+            {!sorted.length && <tr><td colSpan={7} className="footer-note">No plans yet — add one above.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+}
+
+function PlanningAccountSection({
+  syncStatus,
+  cloudEmpty,
+  uploadLocalToCloud,
+}: {
+  syncStatus: string;
+  cloudEmpty: boolean;
+  uploadLocalToCloud: () => Promise<void>;
+}) {
+  const plans = usePlannedCashWorkbookStore((s) => s.workbook.entries);
+  const [busy, setBusy] = useState(false);
+
+  if (!firebaseReady) return null;
+  return (
+    <Card style={{ marginTop: 16 }}>
+      <h3 style={{ marginTop: 0 }}>Plans — account</h3>
+      <p className="footer-note">{syncStatus}</p>
+      {cloudEmpty && (
+        <div className="card" style={{ marginTop: 8, borderLeft: '3px solid var(--warn, orange)' }}>
+          <p style={{ marginTop: 0 }}>No data found in the cloud for this account's plans. This won't upload automatically.</p>
+          <button
+            className="btn secondary"
+            disabled={busy}
+            onClick={async () => {
+              const ok = await confirmDialog(
+                `This will overwrite anything currently in the cloud for this account's plans (there is nothing there now, but confirming since this can't be undone).`,
+                `Upload ${plans.length} local plan${plans.length === 1 ? '' : 's'} to the cloud?`,
+              );
+              if (!ok) return;
+              setBusy(true);
+              try {
+                await uploadLocalToCloud();
+              } catch (e) {
+                toast(e instanceof Error ? e.message : 'Something went wrong.');
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Upload local data to cloud ({plans.length} plans)
+          </button>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function PlanningTab({
+  plannedSyncStatus,
+  plannedCloudEmpty,
+  uploadPlannedLocalToCloud,
+}: {
+  plannedSyncStatus: string;
+  plannedCloudEmpty: boolean;
+  uploadPlannedLocalToCloud: () => Promise<void>;
+}) {
+  return (
+    <div>
+      <BalanceProjectionSummary />
+      <AddPlanForm />
+      <PlanList />
+      <PlanningAccountSection syncStatus={plannedSyncStatus} cloudEmpty={plannedCloudEmpty} uploadLocalToCloud={uploadPlannedLocalToCloud} />
+    </div>
+  );
+}
+
 function DataManagement() {
   const workbook = useCashWorkbookStore((s) => s.workbook);
   const setWorkbook = useCashWorkbookStore((s) => s.setWorkbook);
@@ -524,11 +796,17 @@ export function CashPage({
   syncStatus,
   cloudEmpty,
   uploadLocalToCloud,
+  plannedSyncStatus,
+  plannedCloudEmpty,
+  uploadPlannedLocalToCloud,
 }: {
   user: User | null;
   syncStatus: string;
   cloudEmpty: boolean;
   uploadLocalToCloud: () => Promise<void>;
+  plannedSyncStatus: string;
+  plannedCloudEmpty: boolean;
+  uploadPlannedLocalToCloud: () => Promise<void>;
 }) {
   return (
     <div>
@@ -540,6 +818,17 @@ export function CashPage({
       <Tabs
         tabs={[
           { key: 'ledger', label: 'Ledger', content: <LedgerTab /> },
+          {
+            key: 'planning',
+            label: 'Planning',
+            content: (
+              <PlanningTab
+                plannedSyncStatus={plannedSyncStatus}
+                plannedCloudEmpty={plannedCloudEmpty}
+                uploadPlannedLocalToCloud={uploadPlannedLocalToCloud}
+              />
+            ),
+          },
           { key: 'import', label: 'Import', content: <ImportTab /> },
           {
             key: 'settings',

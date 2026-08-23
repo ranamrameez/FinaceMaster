@@ -1,0 +1,30 @@
+/** User request 2026-08-23: the Banking equivalent of `types/plannedCash.ts`
+ * — a "what if I spend on this" scenario planner. See that file's doc
+ * comment for the full reasoning (mirrors the QSE/PSX Trade Planner
+ * pattern: a plan stays around after being marked done, flagged
+ * `executed`, independent of the real transaction it created). */
+export interface PlannedBankTransaction {
+  id: string;
+  accountId: string;
+  date: string;
+  description: string;
+  /** Signed, same convention as `BankTransaction.amount`: negative =
+   * planned debit/spend, positive = planned credit/deposit. */
+  amount: number;
+  category?: string;
+  /** True once "Mark as done" created a real `BankTransaction` from this
+   * plan. */
+  executed?: boolean;
+}
+
+export interface PlannedBankSettings {
+  /** Same display-preference pair as `PlannedCashSettings` — see that
+   * file's doc comment. */
+  showRealBalance: boolean;
+  showPlannedBalance: boolean;
+}
+
+export interface PlannedBankWorkbook {
+  settings: PlannedBankSettings;
+  entries: PlannedBankTransaction[];
+}

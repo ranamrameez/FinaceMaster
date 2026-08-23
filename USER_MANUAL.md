@@ -247,6 +247,15 @@ ledger, separate from any exchange.
 - **Balances and category totals are shown per currency**, never blended into one number —
   if you've logged cash in both USD and PKR, you'll see two separate balance figures, since
   there's no reliable exchange rate to convert them with.
+- **Planning tab**: a "what if I spend on this" scenario planner, meant as a guardrail
+  against overspending. Add a **plan** (an expected future cash in/out that hasn't happened
+  yet) and see a **Real balance** (from your actual entries) alongside a **Planned balance**
+  (Real plus every plan you haven't marked done yet) — a realistic look at where you'd end up
+  if everything you've planned actually happens. Two checkboxes at the top let you choose
+  which of the two balances you want to see (both are on by default). Edit or delete a plan
+  any time while it's still pending; **"Mark as done"** turns it into a real Ledger entry
+  while keeping the plan itself around (now shown as "Done") as a record of what you'd
+  planned — it doesn't disappear or get merged into the real entry.
 - **Import tab**: import a CSV export of cash entries — pick which column is Date and which
   is Amount (a positive amount is cash in, negative is cash out; check "Flip sign" if your
   export does the opposite), optionally map a Category column too, pick the currency for the
@@ -298,6 +307,11 @@ licensing is required for that, so it's manual entry or statement import only).
   and an optional free-form category with autocomplete over your own previous categories).
   The list shows a running balance and every entry is editable/deletable. A category
   breakdown card shows net spend/income per category.
+- **Planning tab**: the same "what if I spend on this" scenario planner as Cash's (see §14)
+  — pick an account, add a plan (expected date, description, a signed amount), and see a
+  **Real** vs. **Planned** total balance for that account's currency, with the same two
+  display checkboxes. "Mark as done" turns a plan into a real transaction on that account
+  while keeping the plan around, now shown as "Done."
 - **Import statement tab**: pick the target account, choose a CSV file exported from your
   bank, then map which column is Date/Description/Amount (every bank's export looks
   different, so this asks you rather than guessing) — check "Flip sign" if your bank

@@ -1,0 +1,35 @@
+/** User request 2026-08-23: a "what if I spend on this" scenario planner
+ * for Cash — log a hypothetical future in/out before it actually happens,
+ * see how it would move your balance, then "mark as done" once it really
+ * happens to turn it into a real `CashEntry`. Same shape/pattern as the
+ * existing QSE/PSX Trade Planner (`TradePlan`/`TradePlanLeg` in
+ * `types/workbook.ts`): the plan stays around after being marked done,
+ * flagged `executed`, as a record independent of the real entry it
+ * created — never deleted or mutated into the real entry itself. */
+export interface PlannedCashEntry {
+  id: string;
+  date: string;
+  type: 'IN' | 'OUT';
+  amount: number;
+  currencyCode: string;
+  category?: string;
+  note?: string;
+  /** True once "Mark as done" created a real `CashEntry` from this plan. */
+  executed?: boolean;
+}
+
+export interface PlannedCashSettings {
+  /** Whether the Planning tab's balance summary shows the real (actual
+   * entries only) and/or planned (real + not-yet-executed plans) balance
+   * — the user's own call on what they want to see, per their request:
+   * showing the planned number is meant as a guardrail against
+   * overspending, not everyone wants it front and center. Both default
+   * to true (show both). */
+  showRealBalance: boolean;
+  showPlannedBalance: boolean;
+}
+
+export interface PlannedCashWorkbook {
+  settings: PlannedCashSettings;
+  entries: PlannedCashEntry[];
+}

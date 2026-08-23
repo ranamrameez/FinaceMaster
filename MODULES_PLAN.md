@@ -768,3 +768,54 @@ service on the user's behalf without their account access.
   authenticates to it (an API key? tied to the user's Firebase auth token?) — these are
   small decisions but real ones, best confirmed once actual implementation starts rather
   than guessed here.
+
+## 14. Planning: a "what if I spend on this" scenario planner — ✅ built 2026-08-23
+
+**Status: built for Cash and Banking.** See README Done item 43 for the full writeup. User's
+own framing for why this exists: a guardrail against overspending — "a mental deception to
+stop the user from overspending... give a realistic idea about what happens if he spends on
+something."
+
+**Two design decisions locked with the user before building** (asked via AskUserQuestion,
+2026-08-23):
+1. **Scope**: Cash and Banking together, in one pass (not one-module-first). Both share the
+   same "balance that can go negative if you're not careful" shape, so building the pattern
+   once for both was more consistent than prototyping in one and porting later.
+2. **Data model**: a **separate "planned" list**, same pattern as the existing QSE/PSX Trade
+   Planner (`TradePlan`/`TradePlanLeg` in `types/workbook.ts`) — not a status flag toggled
+   in-place on a normal `CashEntry`/`BankTransaction`. A plan is entered as a
+   `PlannedCashEntry`/`PlannedBankTransaction`, edited/deleted freely while still "planned,"
+   and "Mark as done" creates a real entry in the actual ledger while the plan itself stays
+   around flagged `executed: true` — a record of what was planned, independent of the real
+   entry it produced. This was the recommended option and the one picked, mainly because it's
+   an already-proven pattern in this codebase rather than a new one, and because a plan and a
+   real entry genuinely are different things (a plan can be wrong, deleted, or never happen —
+   collapsing them into one record with a status flag would make "was this ever really
+   planned, or did I just forget to check a box" ambiguous after the fact).
+
+**Architecture**: `PlannedCashEntry`/`PlannedBankTransaction` both fit `createEntryStore`'s
+generic `{settings, entries}` shape directly (unlike Personal Loans' two-array shape), so no
+new store factory was needed — `plannedCashWorkbookStore.ts`/`plannedBankWorkbookStore.ts`
+are two-line `createEntryStore(...)` calls. Deliberately **separate stores** from
+`cashWorkbookStore.ts`/`bankWorkbookStore.ts` (own localStorage keys, own Firebase paths)
+rather than a second array added to `CashWorkbook`/`BankWorkbook` — this was a real
+architecture choice, not a shortcut: `createEntryStore`'s generic type only has room for one
+`entries` array, and even if it didn't, touching the existing workbook shape at all carries
+migration risk to real user data that a brand-new independent store carries none of (same
+reasoning already used for `interEntityTransfersStore.ts`).
+
+**Balance projection**: `lib/calc/plannedBalance.ts`'s `plannedCashProjection`/
+`plannedBankProjection` compute **Real** (current balance from actual entries) and
+**Planned** (Real + every not-yet-executed plan's signed amount) per currency. A `Planned`
+side never double-counts an executed plan, since its real entry is already inside `Real`.
+
+**Display choice is the user's, not the app's** — per their own explicit ask ("we can ask
+user what he wants to see one or both"): the Planning tab's summary card has two independent
+checkboxes, "Real balance" and "Planned balance" (both on by default), persisted per-module
+in the planned workbook's own settings. Nothing is hidden by a hardcoded design choice.
+
+**Deliberately out of scope for v1** (kept small on purpose): Personal Loans, Rentals, EMI,
+and Funds don't get a Planning tab; a plan isn't linkable into the cross-entity Transfers
+system (§7/§8); there's no reminder/notification when a plan's expected date arrives (this
+is a "check when you visit" tool, not a push-notification feature — the app doesn't have a
+notification channel of any kind yet). Revisit if the user asks for any of these.

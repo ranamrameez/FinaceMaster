@@ -718,6 +718,41 @@ not developer notes) continuously as features ship.
   tracks "the first thing written" is incomplete once there's more than
   one prior write to protect — track everything written so far, not a
   single pointer.
+- **New "Planning" scenario planner for Cash and Banking (2026-08-23),
+  user-requested — see README Done item 43, MODULES_PLAN.md §14.** Before
+  building, asked the user two real design questions via
+  AskUserQuestion: which module(s) first (answer: Cash and Banking
+  together), and how a "planned" entry should relate to the real ledger
+  (answer: a separate plan, "Mark as done" converts it into a real entry
+  — same pattern as the existing QSE/PSX Trade Planner — rather than an
+  in-place status flag on a normal entry). `PlannedCashEntry`/
+  `PlannedBankTransaction` (`types/plannedCash.ts`/`types/plannedBank.ts`)
+  both fit `createEntryStore`'s generic shape directly, so
+  `plannedCashWorkbookStore.ts`/`plannedBankWorkbookStore.ts` are
+  two-line factory calls — deliberately **separate stores** (own
+  localStorage keys, own Firebase paths `users/{uid}/plannedCash`/
+  `plannedBank`) from the main Cash/Bank workbooks, so this carries zero
+  migration risk to real user data. New `lib/calc/plannedBalance.ts`
+  (`plannedCashProjection`/`plannedBankProjection`, 8 tests) computes
+  Real (actual entries) vs. Planned (Real + every not-yet-executed plan)
+  balance per currency. New "Planning" tab on both `CashPage.tsx` and
+  `BankPage.tsx`: a projection summary with **two checkboxes the user
+  controls** ("Real balance"/"Planned balance," both default on) — per
+  the user's own explicit ask to let them choose what to see rather than
+  the app deciding — plus an add-plan form and a plan list with
+  Edit/Delete/"Mark as done." Each Planning tab also gets its own
+  "Account" cloud-sync section for the new plan stores, matching the
+  standard never-auto-upload-on-empty-cloud pattern used everywhere
+  else. `App.tsx` runs both new sync hooks globally (same pattern as
+  every other module) and passes their status down as new props on
+  `CashPage`/`BankPage`. Verified live via Playwright with seeded
+  localStorage: Real/Planned numbers matched hand-calculated
+  expectations for both modules, unchecking "Planned balance" hid that
+  line, and "Mark as done" correctly hit the sign-in gate — zero console
+  errors. `npm run build` / `npm run test` (128 tests, 8 new) both
+  clean. Deliberately not done in v1: no Planning tab for Personal
+  Loans/Rentals/EMI/Funds, no linking a plan into the cross-entity
+  Transfers system, no reminder/notification for a plan's date arriving.
 
 ## Live URLs
 

@@ -459,6 +459,42 @@ FinanceManager live link:
     succeeded, and confirms both the Cash and Bank records get rolled back (the old code would
     have left the Bank transaction behind). `npm run build` / `npm run test` (120 tests, 1 new)
     both clean.
+43. **New "Planning" scenario planner for Cash and Banking (2026-08-23), user-requested — a
+    guardrail against overspending.** The user's own framing: "a mental deception to stop the
+    user from overspending... give a realistic idea about what happens if he spends on
+    something." New `PlannedCashEntry`/`PlannedBankTransaction` types (`types/plannedCash.ts`,
+    `types/plannedBank.ts`) follow the same "separate plan, mark as done converts it into a
+    real entry" pattern already proven by the QSE/PSX Trade Planner (`TradePlan`/
+    `TradePlanLeg`) — a plan stays around after being marked done, flagged `executed`,
+    independent of the real `CashEntry`/`BankTransaction` it created (never deleted or mutated
+    into it). Both plan types fit `createEntryStore`'s generic shape directly (`{settings,
+    entries}` with an `id`-addressed array), so `plannedCashWorkbookStore.ts`/
+    `plannedBankWorkbookStore.ts` are two-line factory calls — deliberately kept as **separate
+    stores** from the main Cash/Bank workbooks (own localStorage keys, own Firebase paths
+    `users/{uid}/plannedCash`/`plannedBank`) rather than a second array bolted onto
+    `CashWorkbook`/`BankWorkbook`, so this new feature carries zero migration risk to existing
+    real user data. New pure `lib/calc/plannedBalance.ts` (`plannedCashProjection`/
+    `plannedBankProjection`, both tested — 8 hand-traced cases in
+    `plannedBalance.test.ts`) computes **Real** (actual entries only) vs. **Planned** (real +
+    every not-yet-executed plan) balance per currency; executed plans are excluded from the
+    delta since they already created a real entry counted in "Real". New "Planning" tab on
+    both `CashPage.tsx` and `BankPage.tsx`: a balance-projection summary card with **two
+    checkboxes the user controls directly** ("Real balance" / "Planned balance," both default
+    on) — per the user's explicit ask to let them choose what they want to see rather than the
+    app deciding for them — plus an add-plan form and a plan list with Edit/Delete/"Mark as
+    done" per row. Each module's own "Account" cloud-sync section (with the standard
+    never-auto-upload-on-empty-cloud safety button) is repeated inside the Planning tab for the
+    new plan stores, matching the same cloud-sync-safety pattern used everywhere else in this
+    app. Verified live via Playwright with seeded localStorage (both a real entry and a
+    not-yet-executed plan): the projection summary showed the correct Real (1000)/Planned (700)
+    numbers for Cash and Real (500)/Planned (300) for Banking, unchecking "Planned balance"
+    correctly hid that line, and "Mark as done" correctly hit the sign-in gate (not tested past
+    that point — same real-Firebase-project caveat as the rest of this app's write-path
+    verification) — zero console errors. `npm run build` / `npm run test` (128 tests, 8 new)
+    both clean. **Deliberately not done in v1** (kept small on purpose, can be revisited if
+    asked for): Personal Loans/Rentals/EMI/Funds don't get a Planning tab yet; a plan can't be
+    linked into the cross-entity Transfers system; there's no reminder/notification for a
+    plan's expected date arriving.
 
 ## Pending
 
