@@ -817,6 +817,25 @@ not developer notes) continuously as features ship.
   month correctly projected 7 months) — zero console errors.
   `npm run build` / `npm run test` (138 tests, 7 new) both clean. Next:
   Banking, EMI/Loans, Funds, Rentals.
+- **Critical bug fixed, user-reported (2026-08-23): Personal Loans
+  cloud sync error — see README Done item 46.** Root cause was
+  systemic, not specific to Personal Loans: Firebase RTDB's `set()`
+  throws synchronously on a literal `undefined` anywhere in the value
+  tree, and several add-forms across modules write
+  `field: x?.trim() || undefined` for an empty optional field (Personal
+  Loans' `note`, plus the same pattern in Bank/Cash/Rentals/PSX Trade
+  Planner/Transfers) — so any record saved without that field crashed
+  the next debounced push. Fixed once, centrally: new
+  `stripUndefinedDeep()` in `lib/firebase/useWorkbookCloudSync.ts`
+  round-trips the payload through `JSON.parse(JSON.stringify(...))`
+  before every `set()` call (both the debounced auto-push and
+  `uploadLocalToCloud()`), fixing every module that goes through the
+  shared sync hook rather than patching each `|| undefined` call site.
+  New test file `lib/firebase/__tests__/useWorkbookCloudSync.test.ts`
+  (3 tests) covers the exact reported scenario. Lesson: this class of
+  bug (`x || undefined` on an optional field) is easy to reintroduce in
+  a new module's add-form — the fix belongs in the shared sync path,
+  not in each individual call site.
 
 ## Live URLs
 

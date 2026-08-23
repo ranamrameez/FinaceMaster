@@ -532,6 +532,31 @@ FinanceManager live link:
     outstanding at a 100/month input correctly projected "7 months") — zero console errors.
     `npm run build` / `npm run test` (138 tests, 7 new) both clean. **Next up**: Banking,
     EMI/Loans, Funds, Rentals.
+46. **Critical: Personal Loans cloud sync error, user-reported (2026-08-23) — root cause
+    was systemic, not Personal-Loans-specific.** Firebase Realtime Database's `set()`
+    validates its argument tree synchronously and throws (before even returning a promise a
+    `.catch()` could see) if it contains a literal `undefined` anywhere. Several add-forms
+    across modules write `field: x?.trim() || undefined` for an empty optional field —
+    `PersonalLoansPage.tsx`'s `AddLoanForm` does this for `note`, and the same pattern exists
+    in Bank/Cash/Rentals/PSX Trade Planner/Transfers. A loan (or entry) saved without that
+    optional field carried a literal `undefined` in the store, which crashed the push the
+    moment `useWorkbookCloudSync.ts`'s debounced sync tried to write it — reproducing exactly
+    as "personal loan data facing error while cloud sync," but only because that's the form
+    the user happened to test without filling in every optional field. Fixed at the root
+    rather than patching each call site: new `stripUndefinedDeep()` in
+    `useWorkbookCloudSync.ts` round-trips the payload through `JSON.parse(JSON.stringify(...))`
+    before every `set()` call (both the debounced auto-push and the explicit
+    `uploadLocalToCloud()`), which drops `undefined` object properties entirely (and turns an
+    `undefined` array element into `null`, which Firebase does accept) — fixing this for
+    every module that goes through the shared sync hook, not just Personal Loans, without
+    needing to hunt down and rewrite every `|| undefined` call site individually. Also wrapped
+    the debounced push in a try/catch as defense-in-depth, since `set()`'s synchronous throw
+    (for any future edge case `stripUndefinedDeep` doesn't catch) would otherwise become an
+    uncaught exception instead of a logged warning. New test
+    `lib/firebase/__tests__/useWorkbookCloudSync.test.ts` (3 tests) exercises the exact
+    reported scenario (a loan with `note: undefined`) plus nested/array cases and confirms
+    ordinary falsy values (`0`, `null`, `false`) survive untouched. `npm run build` /
+    `npm run test` (141 tests, 3 new) both clean.
 
 ## Pending
 

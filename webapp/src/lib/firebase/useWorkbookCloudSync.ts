@@ -18,6 +18,22 @@ export interface MinimalWorkbookStore<TWorkbook> {
   setWorkbook: (wb: TWorkbook, opts?: { skipPersist?: boolean }) => void;
 }
 
+/** Firebase Realtime Database's `set()` throws synchronously — before even
+ * making the network call — if the value tree contains a literal
+ * `undefined` anywhere (a `catch()` on the returned promise never sees it).
+ * Several add-forms across modules write `field: x?.trim() || undefined`
+ * for an empty optional field (e.g. a loan's `note`, an entry's
+ * `category`) — perfectly fine for local state, but a real crash the
+ * moment that record reaches this push path. Round-tripping through JSON
+ * strips every `undefined` object property (and turns an `undefined` array
+ * element into `null`, which Firebase does accept) without needing to hunt
+ * down and fix every call site that can produce one. Found via a real user
+ * report: Personal Loans data failed to sync because a loan saved without
+ * a note carried `note: undefined`. */
+export function stripUndefinedDeep<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
 /** Generic per-module Firebase sync, factored out so every module (QSE,
  * PSX, Cash, ...) shares one implementation instead of N copies of the
  * same pull/push/safety logic.
@@ -104,9 +120,17 @@ export function useWorkbookCloudSync<TWorkbook>(
       if (!initialSnapshotReceived.current) return;
       if (pushTimer.current) clearTimeout(pushTimer.current);
       pushTimer.current = setTimeout(() => {
-        set(ref(db!, cloudPath(user.uid)), { ...state.workbook, _updated: new Date().toISOString() }).catch((e) =>
-          console.warn(`Failed to push ${cloudPathSuffix} to cloud`, e),
-        );
+        try {
+          const payload = stripUndefinedDeep({ ...state.workbook, _updated: new Date().toISOString() });
+          set(ref(db!, cloudPath(user.uid)), payload).catch((e) => console.warn(`Failed to push ${cloudPathSuffix} to cloud`, e));
+        } catch (e) {
+          // set() validates its argument synchronously and throws before
+          // even returning a promise for some invalid shapes — a .catch()
+          // on the call above can't see that. stripUndefinedDeep should
+          // prevent this in practice; caught here as defense-in-depth so a
+          // bad push never becomes an uncaught exception.
+          console.warn(`Failed to push ${cloudPathSuffix} to cloud`, e);
+        }
       }, PUSH_DEBOUNCE_MS);
     });
     return () => {
@@ -123,7 +147,8 @@ export function useWorkbookCloudSync<TWorkbook>(
   const uploadLocalToCloud = async () => {
     if (!firebaseReady || !db || !user) throw new Error('Not signed in');
     const local = useStore.getState().workbook;
-    await set(ref(db, cloudPath(user.uid)), { ...local, _updated: new Date().toISOString() });
+    const payload = stripUndefinedDeep({ ...local, _updated: new Date().toISOString() });
+    await set(ref(db, cloudPath(user.uid)), payload);
     setCloudEmpty(false);
     setStatus('Synced (uploaded local data)');
   };
