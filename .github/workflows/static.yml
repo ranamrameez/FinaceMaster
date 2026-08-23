@@ -1,7 +1,8 @@
-# Deploys the whole repo as static content to GitHub Pages, after first
-# building the React app (webapp/) into webapp/dist so it's included in
-# the upload. The legacy root HTML files deploy unchanged alongside it —
-# this is additive, not a cutover.
+# Deploys the legacy static root files unchanged, plus the built React app
+# (webapp/dist) placed at /webapp/ — assembled into a clean staging
+# directory so the raw webapp/ source (webapp/index.html, webapp/src/,
+# etc.) never gets uploaded and can't shadow the actual built output at
+# that same URL path.
 name: Deploy static content to Pages
 
 on:
@@ -46,14 +47,20 @@ jobs:
       - name: Build webapp
         working-directory: webapp
         run: npm run build
+      - name: Assemble deploy directory
+        run: |
+          mkdir -p _site
+          # Legacy static files at the root, excluding source/dev-only dirs.
+          rsync -a --exclude '_site' --exclude 'webapp' --exclude '.github' --exclude '.git' --exclude 'node_modules' ./ _site/
+          # Built webapp only (not its source) at /webapp/.
+          mkdir -p _site/webapp
+          cp -r webapp/dist/. _site/webapp/
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository (webapp/dist now exists from the build
-          # step above, so it's included alongside the legacy static files)
-          path: '.'
+          path: '_site'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
