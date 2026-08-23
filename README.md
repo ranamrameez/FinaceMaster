@@ -190,6 +190,42 @@ FinanceManager live link:
     dropdown opens/closes, navigates to each category, highlights the active one correctly,
     and switching back to Stock Exchanges restores the exchange chips + nav; `npm run build`
     and `npm run test` both clean, no console errors.
+29. **Cross-entity transaction linking (2026-08-23), README item 19 / MODULES_PLAN.md §7 —
+    v1 scope: Cash↔Bank and Bank↔QSE/PSX cash balances.** New "Transfers" category/page
+    (`features/transfers/pages/TransferLinksPage.tsx`, `components/CategoryNav.tsx`) lets a
+    money movement between two modules be entered once and creates a real, linked record on
+    both sides — editing or deleting the link later updates or removes both. Real prerequisite
+    found and fixed first: `Transfer` (QSE/PSX) and `CashEntry` had no stable `id` at all,
+    only array-index addressing (`updateTransfer(index, ...)`) — exactly the two record types
+    the v1 scope needs to reference. Added `id: string` to both types; `createWorkbookStore.ts`
+    and `createEntryStore.ts` now normalize missing ids on every path data enters a store
+    (local load *and* `setWorkbook`, which also covers the Firebase pull in
+    `useWorkbookCloudSync` — real user data written before today has no `id` in storage and
+    JSON parsing doesn't enforce the TS type) so old data keeps working. `updateTransfer`/
+    `deleteTransfer` and Cash/EMI's shared `createEntryStore`'s `updateEntry`/`deleteEntry`
+    switched from index- to id-based addressing; `BankTransaction`/`EMILoan` already had ids
+    so neither module's data model changed. QSE/PSX `Transaction`/`Adjustment`/`Dividend`
+    were deliberately left index-based — out of scope, since linking only ever touches
+    Transfers, not trades. New pure `lib/interEntityLink.ts` (`buildLinkedRecords`,
+    `isSupportedLinkPair`) computes the two side records + the link record from user input
+    with no store access, reused as-is for both create and edit; tested in
+    `lib/__tests__/interEntityLink.test.ts` (sign conventions per module, both directions,
+    missing-account error, edit reusing the same ids). The link records themselves live in a
+    new `interEntityTransfersStore.ts` (reuses `createEntryStore`) with its own Firebase path
+    (`users/{uid}/interEntityTransfers`). No currency conversion (no live FX-rate source, per
+    the cross-cutting decision) — the form shows each side's resolved currency and warns on a
+    mismatch rather than blocking it. **Verified live in the browser** (no real Firebase test
+    account used, to avoid writing to the production project outside the user's own account —
+    see this file's Data safety / cloud-sync-safety notes): the Transfers page renders with no
+    console errors, the unsupported-pair warning fires correctly for an out-of-scope pairing
+    (e.g. Cash→QSE), the currency-mismatch warning fires correctly (USD vs QAR), the
+    missing-bank-account guard fires correctly, and `npm run build` / `npm run test` (84
+    tests, 8 new) are both clean. The actual signed-in create/edit/delete round-trip through
+    real Cash/Bank/QSE/PSX stores was **not** exercised end-to-end in the browser this
+    session — only via the pure-function unit tests above — since doing so would need either
+    the user's real signed-in session or a throwaway Firebase Auth account against the same
+    production project; a future session with the user present should click through one real
+    linked transfer (create, edit its amount, delete it) and confirm both sides update.
 
 ## Pending
 
@@ -209,11 +245,10 @@ FinanceManager live link:
     compact theme yet.
 17. Charts should be dynamic — filterable (date range, ticker, category) and otherwise more
     interactive, not just static renders of whatever the page computes. Not started.
-19. Cross-entity transaction linking — e.g. a transfer FROM a Bank module TO a stock
-    exchange's cash balance, or Cash to Bank, so money moving between modules is one linked
-    record instead of two independent, easily-inconsistent entries. All six candidate modules
-    (Funds/Banking/Cash/Personal Loans/EMI-Loans/Rentals) now exist, so this is no longer
-    blocked on modules being built — it's just not designed or started yet.
+19. Cross-entity transaction linking beyond v1 scope (see Done item 29): Funds/Rentals/EMI/
+    Personal Loans aren't wired into the Transfers page yet — only Cash↔Bank and
+    Bank↔QSE/PSX. A real signed-in browser round-trip (create/edit/delete a link, confirm
+    both sides update) is also still needed — see item 29's verification note.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

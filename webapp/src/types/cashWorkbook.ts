@@ -1,4 +1,8 @@
 export interface CashEntry {
+  /** Stable id, not the entry's array position — needed so cross-entity
+   * transfer links (README item 19) can reference a specific entry that
+   * survives other entries being added/edited/deleted around it. */
+  id: string;
   date: string;
   type: 'IN' | 'OUT';
   amount: number;

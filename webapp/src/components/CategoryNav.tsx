@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-export type CategoryKey = 'stocks' | 'funds' | 'bank' | 'cash' | 'personalLoans' | 'emi' | 'rentals';
+export type CategoryKey = 'stocks' | 'funds' | 'bank' | 'cash' | 'personalLoans' | 'emi' | 'rentals' | 'transfers';
 
 const CATEGORIES: { key: CategoryKey; label: string; to: string }[] = [
   { key: 'stocks', label: 'Stock Exchanges', to: '/' },
@@ -11,6 +11,7 @@ const CATEGORIES: { key: CategoryKey; label: string; to: string }[] = [
   { key: 'personalLoans', label: 'Personal Loans', to: '/personal-loans' },
   { key: 'emi', label: 'EMI / Loans', to: '/emi-loans' },
   { key: 'rentals', label: 'Rentals', to: '/rentals' },
+  { key: 'transfers', label: 'Transfers', to: '/transfers' },
 ];
 
 /** Derives the active category from the route rather than storing it
@@ -25,6 +26,7 @@ export function categoryForPath(pathname: string): CategoryKey {
   if (pathname.startsWith('/personal-loans')) return 'personalLoans';
   if (pathname.startsWith('/emi-loans')) return 'emi';
   if (pathname.startsWith('/rentals')) return 'rentals';
+  if (pathname.startsWith('/transfers')) return 'transfers';
   return 'stocks';
 }
 

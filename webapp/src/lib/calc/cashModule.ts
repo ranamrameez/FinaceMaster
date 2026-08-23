@@ -2,7 +2,6 @@ import type { CashEntry } from '../../types/cashWorkbook';
 
 export interface CashLedgerRow {
   entry: CashEntry;
-  index: number;
   balance: number; // running balance within this entry's own currency
 }
 
@@ -10,14 +9,13 @@ export interface CashLedgerRow {
  * different currencies never mix into one balance (no live FX-rate source
  * to convert with). Ties on date keep original array order (stable sort). */
 export function cashRunningLedger(entries: CashEntry[]): CashLedgerRow[] {
-  const indexed = entries.map((entry, index) => ({ entry, index }));
-  const sorted = [...indexed].sort((a, b) => a.entry.date.localeCompare(b.entry.date));
+  const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
   const runningByCurrency: Record<string, number> = {};
-  return sorted.map(({ entry, index }) => {
+  return sorted.map((entry) => {
     const delta = entry.type === 'IN' ? entry.amount : -entry.amount;
     const next = (runningByCurrency[entry.currencyCode] || 0) + delta;
     runningByCurrency[entry.currencyCode] = next;
-    return { entry, index, balance: next };
+    return { entry, balance: next };
   });
 }
 

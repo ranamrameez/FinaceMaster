@@ -425,22 +425,62 @@ not developer notes) continuously as features ship.
     the "still unverified" caveat attached to the earlier chart-theming
     fix — Playwright's own headless viewport isn't subject to that 0×0
     dev-pane bug.
-    **Still open next**: cross-entity transaction linking (README item 19,
-    MODULES_PLAN.md §7) is next in the README's Pending list and no
-    longer blocked on any module existing — all six now do — but isn't
-    designed yet; statement PDF/Excel import (item 12) and dynamic/
-    filterable charts (item 17) remain open too. Keep working down the
-    README's Pending list module-by-module per the user's standing
-    instruction above; no need to check in before picking the next one
-    unless it's genuinely ambiguous or destructive.
-  - **Not done — still open PSX/README items for a future session:**
-    statement PDF/Excel import (item 12), dynamic/filterable charts (item
-    17), the Sidebar's category-dropdown redesign for Stock Exchanges/
-    Funds/Banking/Cash/Rentals (item 18, only Stock Exchanges functional
-    until those modules exist), cross-entity transaction linking (item 19,
-    blocked on those same modules existing), and a shared `stockData/PSX`
-    Firebase node with real fundamentals (PSX's analytics page has no
-    Fundamentals card for this reason — QSE's does).
+  - **Cross-entity transaction linking, v1 scope built (2026-08-23) —
+    README item 19 / MODULES_PLAN.md §7.** Before starting this, asked the
+    user how to proceed on a real blocker (see AskUserQuestion in this
+    session): `Transfer` (QSE/PSX) and `CashEntry` had no stable `id`,
+    only array-index addressing — exactly the two record types v1 linking
+    (Cash↔Bank, Bank↔QSE/PSX cash) needs to reference. User chose
+    "retrofit ids first, then build linking." Did that: added
+    `id: string` to both types; `createWorkbookStore.ts` and
+    `createEntryStore.ts` now normalize any entry/transfer missing an id
+    on every path data enters the store (local load *and* `setWorkbook`,
+    which also covers the Firebase pull in `useWorkbookCloudSync`) so
+    real user data written before today — which has no `id` in storage —
+    keeps working without a manual migration step. `updateTransfer`/
+    `deleteTransfer` and `createEntryStore`'s `updateEntry`/`deleteEntry`
+    switched from index- to id-based addressing (`BankTransaction`/
+    `EMILoan` already had ids, so Bank/EMI's data model didn't change).
+    Left `Transaction`/`Adjustment`/`Dividend` on QSE/PSX index-based on
+    purpose — linking only ever touches Transfers, not trades, so adding
+    ids there would be unused surface area.
+    New pure `lib/interEntityLink.ts` (`buildLinkedRecords`,
+    `isSupportedLinkPair`) computes both side records + the link record
+    from user input with zero store access — reused unchanged for both
+    create and edit (edit just recomputes with the same three ids) —
+    tested in `lib/__tests__/interEntityLink.test.ts`. The link records
+    live in a new `interEntityTransfersStore.ts` (reuses
+    `createEntryStore`, own Firebase path
+    `users/{uid}/interEntityTransfers`). New "Transfers" category/page
+    (`features/transfers/pages/TransferLinksPage.tsx`,
+    `components/CategoryNav.tsx` gained an 8th entry) — picking two
+    module sides, an amount, and a date creates one record on each side;
+    editing or deleting the link updates or removes both. No currency
+    conversion (locked cross-cutting decision, no live FX source) — the
+    form resolves and shows each side's currency and warns on mismatch
+    rather than blocking it.
+    **Verification is narrower than usual, on purpose**: no real
+    Firebase Auth account was used to test the actual signed-in write
+    path, because the app's Firebase project (`qse-app`, in
+    `lib/firebase/client.ts`) is the user's real production project —
+    creating even a throwaway test account against it felt like the
+    wrong kind of shortcut given how hard this file's cloud-sync-safety
+    rules already lean against casual writes, so a future session with
+    the user actually signed in should click through one real linked
+    transfer (create, edit the amount, delete it) and confirm both sides
+    update before trusting this beyond the unit tests. What *was*
+    verified live in the browser: the Transfers page renders with no
+    console errors, the unsupported-pair warning, the currency-mismatch
+    warning, and the missing-bank-account guard all fire correctly for
+    the inputs that should trigger them. `npm run build` and
+    `npm run test` (84 tests, 8 new) both clean.
+    **Still open next**: Funds/Rentals/EMI/Personal Loans aren't wired
+    into linking yet (README item 19 in Pending now tracks just this
+    remainder); statement PDF/Excel import (item 12) and dynamic/
+    filterable charts (item 17) are the other open Pending items. Keep
+    working down the README's Pending list per the user's standing
+    instruction; ask first only for something genuinely ambiguous or
+    destructive, same bar as before.
   - **Not yet restructured**: routes are still flat (`/psx/...` bolted on
     alongside QSE's root-level routes), not the `/stocks/:exchange/...`
     shape mentioned below — flat was lower-risk to add without touching

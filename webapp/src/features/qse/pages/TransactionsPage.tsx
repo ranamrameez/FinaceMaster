@@ -92,7 +92,7 @@ function TransferForm() {
   const addTransfer = useWorkbookStore((s) => s.addTransfer);
   const depositFee = useWorkbookStore((s) => s.workbook.settings.depositFee);
   const ensureSignedIn = useEnsureSignedIn();
-  const [t, setT] = useState<Transfer>({ date: today(), type: 'DEPOSIT', gross: 0, fee: depositFee });
+  const [t, setT] = useState<Omit<Transfer, 'id'>>({ date: today(), type: 'DEPOSIT', gross: 0, fee: depositFee });
 
   return (
     <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
@@ -120,7 +120,7 @@ function TransferForm() {
         onClick={async () => {
           if (t.gross <= 0) return toast('Enter an amount.');
           if (!(await ensureSignedIn('Sign in to save transfers.'))) return;
-          addTransfer(t);
+          addTransfer({ ...t, id: crypto.randomUUID() });
           toast('Transfer added.');
           setT({ date: today(), type: 'DEPOSIT', gross: 0, fee: depositFee });
         }}
@@ -351,27 +351,26 @@ function TransfersSection() {
   const updateTransfer = useWorkbookStore((s) => s.updateTransfer);
   const deleteTransfer = useWorkbookStore((s) => s.deleteTransfer);
   const currency = workbook.settings.currency;
-  const indexed = workbook.transfers.map((t, i) => ({ t, i }));
-  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<Transfer | null>(null);
 
   type TransferCol = 'date' | 'type' | 'gross' | 'fee';
-  const sortValue = (r: (typeof indexed)[number], col: TransferCol): number | string => {
+  const sortValue = (t: Transfer, col: TransferCol): number | string => {
     switch (col) {
-      case 'type': return r.t.type;
-      case 'gross': return r.t.gross;
-      case 'fee': return r.t.fee;
-      default: return r.t.date;
+      case 'type': return t.type;
+      case 'gross': return t.gross;
+      case 'fee': return t.fee;
+      default: return t.date;
     }
   };
-  const { sorted, Th } = useSortableRows(indexed, sortValue, 'date', 'desc');
+  const { sorted, Th } = useSortableRows(workbook.transfers, sortValue, 'date', 'desc');
 
-  const startEdit = (i: number, t: Transfer) => { setEditIndex(i); setEditRow({ ...t }); };
+  const startEdit = (t: Transfer) => { setEditId(t.id); setEditRow({ ...t }); };
   const saveEdit = () => {
-    if (editIndex === null || !editRow) return;
-    updateTransfer(editIndex, editRow);
+    if (editId === null || !editRow) return;
+    updateTransfer(editId, editRow);
     toast('Transfer updated.');
-    setEditIndex(null);
+    setEditId(null);
     setEditRow(null);
   };
 
@@ -390,9 +389,9 @@ function TransfersSection() {
             </tr>
           </thead>
           <tbody>
-            {sorted.map(({ t, i }) =>
-              editIndex === i && editRow ? (
-                <tr key={i}>
+            {sorted.map((t) =>
+              editId === t.id && editRow ? (
+                <tr key={t.id}>
                   <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
                   <td>
                     <select value={editRow.type} onChange={(e) => setEditRow({ ...editRow, type: e.target.value as Transfer['type'] })}>
@@ -404,18 +403,18 @@ function TransfersSection() {
                   <td><input type="number" value={editRow.fee} onChange={(e) => setEditRow({ ...editRow, fee: Number(e.target.value) })} style={{ width: 70 }} /></td>
                   <td>
                     <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
-                    <button className="btn secondary small" onClick={() => setEditIndex(null)}>Cancel</button>
+                    <button className="btn secondary small" onClick={() => setEditId(null)}>Cancel</button>
                   </td>
                 </tr>
               ) : (
-                <tr key={i}>
+                <tr key={t.id}>
                   <td>{t.date}</td>
                   <td>{t.type}</td>
                   <td>{fmtMoney(t.gross, currency)}</td>
                   <td>{fmtMoney(t.fee, currency)}</td>
                   <td>
-                    <button className="btn secondary small" onClick={() => startEdit(i, t)}>Edit</button>{' '}
-                    <button className="btn secondary small" onClick={() => deleteTransfer(i)}><TrashIcon size={12} />Delete</button>
+                    <button className="btn secondary small" onClick={() => startEdit(t)}>Edit</button>{' '}
+                    <button className="btn secondary small" onClick={() => deleteTransfer(t.id)}><TrashIcon size={12} />Delete</button>
                   </td>
                 </tr>
               ),

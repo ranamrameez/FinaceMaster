@@ -19,7 +19,7 @@ import type { CashEntry, CashWorkbook } from '../../../types/cashWorkbook';
 const today = () => new Date().toISOString().slice(0, 10);
 
 function emptyEntry(defaultCurrency: string): CashEntry {
-  return { date: today(), type: 'IN', amount: 0, currencyCode: defaultCurrency, category: '', note: '', source: 'manual' };
+  return { id: crypto.randomUUID(), date: today(), type: 'IN', amount: 0, currencyCode: defaultCurrency, category: '', note: '', source: 'manual' };
 }
 
 function AddEntryForm({ knownCategories }: { knownCategories: string[] }) {
@@ -130,7 +130,7 @@ function EntryList() {
   const entries = useCashWorkbookStore((s) => s.workbook.entries);
   const updateEntry = useCashWorkbookStore((s) => s.updateEntry);
   const deleteEntry = useCashWorkbookStore((s) => s.deleteEntry);
-  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<CashEntry | null>(null);
 
   const ledger = useMemo(() => cashRunningLedger(entries), [entries]);
@@ -145,12 +145,12 @@ function EntryList() {
   };
   const { sorted, Th } = useSortableRows(ledger, sortValue, 'date', 'desc');
 
-  const startEdit = (i: number, e: CashEntry) => { setEditIndex(i); setEditRow({ ...e }); };
+  const startEdit = (e: CashEntry) => { setEditId(e.id); setEditRow({ ...e }); };
   const saveEdit = () => {
-    if (editIndex === null || !editRow) return;
-    updateEntry(editIndex, editRow);
+    if (editId === null || !editRow) return;
+    updateEntry(editId, editRow);
     toast('Entry updated.');
-    setEditIndex(null);
+    setEditId(null);
     setEditRow(null);
   };
 
@@ -169,9 +169,9 @@ function EntryList() {
           </tr>
         </thead>
         <tbody>
-          {sorted.map(({ entry, index, balance }) =>
-            editIndex === index && editRow ? (
-              <tr key={index}>
+          {sorted.map(({ entry, balance }) =>
+            editId === entry.id && editRow ? (
+              <tr key={entry.id}>
                 <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
                 <td>
                   <select value={editRow.type} onChange={(e) => setEditRow({ ...editRow, type: e.target.value as 'IN' | 'OUT' })}>
@@ -185,11 +185,11 @@ function EntryList() {
                 <td></td>
                 <td>
                   <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
-                  <button className="btn secondary small" onClick={() => setEditIndex(null)}>Cancel</button>
+                  <button className="btn secondary small" onClick={() => setEditId(null)}>Cancel</button>
                 </td>
               </tr>
             ) : (
-              <tr key={index}>
+              <tr key={entry.id}>
                 <td>{entry.date}</td>
                 <td className={entry.type === 'IN' ? 'pill-buy' : 'pill-sell'}>{entry.type === 'IN' ? 'Cash in' : 'Cash out'}</td>
                 <td>{fmtMoney(entry.amount, entry.currencyCode)}</td>
@@ -197,11 +197,11 @@ function EntryList() {
                 <td>{entry.note}</td>
                 <td>{fmtMoney(balance, entry.currencyCode)}</td>
                 <td>
-                  <button className="btn secondary small" onClick={() => startEdit(index, entry)}>Edit</button>{' '}
+                  <button className="btn secondary small" onClick={() => startEdit(entry)}>Edit</button>{' '}
                   <button
                     className="btn secondary small"
                     onClick={async () => {
-                      if (await confirmDialog('This cannot be undone.', 'Delete this entry?')) deleteEntry(index);
+                      if (await confirmDialog('This cannot be undone.', 'Delete this entry?')) deleteEntry(entry.id);
                     }}
                   >
                     <TrashIcon size={12} />Delete
