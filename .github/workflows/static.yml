@@ -1,4 +1,7 @@
-# Simple workflow for deploying static content to GitHub Pages
+# Deploys the whole repo as static content to GitHub Pages, after first
+# building the React app (webapp/) into webapp/dist so it's included in
+# the upload. The legacy root HTML files deploy unchanged alongside it —
+# this is additive, not a cutover.
 name: Deploy static content to Pages
 
 on:
@@ -31,12 +34,25 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: webapp/package-lock.json
+      - name: Install webapp dependencies
+        working-directory: webapp
+        run: npm ci
+      - name: Build webapp
+        working-directory: webapp
+        run: npm run build
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
+          # Upload entire repository (webapp/dist now exists from the build
+          # step above, so it's included alongside the legacy static files)
           path: '.'
       - name: Deploy to GitHub Pages
         id: deployment

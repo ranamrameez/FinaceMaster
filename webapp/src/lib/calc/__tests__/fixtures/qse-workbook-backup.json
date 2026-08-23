@@ -1,0 +1,365 @@
+{
+  "settings": {
+    "feePct": 0.275,
+    "minFee": 0,
+    "tick": 0.01,
+    "currency": "QAR",
+    "depositFee": 10
+  },
+  "appearance": {
+    "theme": "light",
+    "font": "rounded",
+    "fontSize": "medium",
+    "colorTheme": "material-teal",
+    "density": "comfortable"
+  },
+  "transactions": [
+    {
+      "action": "BUY",
+      "date": "2026-06-22",
+      "price": 2.744,
+      "shares": 100,
+      "ticker": "VFQS"
+    },
+    {
+      "action": "BUY",
+      "date": "2026-06-22",
+      "price": 14.11,
+      "shares": 14,
+      "ticker": "QFLS"
+    },
+    {
+      "action": "BUY",
+      "date": "2026-06-22",
+      "price": 1.214,
+      "shares": 9,
+      "ticker": "MPHC"
+    },
+    {
+      "action": "SELL",
+      "date": "2026-06-23",
+      "price": 1.215,
+      "shares": 9,
+      "ticker": "MPHC"
+    },
+    {
+      "action": "BUY",
+      "date": "2026-06-23",
+      "price": 2.19,
+      "shares": 5,
+      "ticker": "TQES"
+    },
+    {
+      "action": "SELL",
+      "date": "2026-06-23",
+      "price": 14.16,
+      "shares": 14,
+      "ticker": "QFLS"
+    },
+    {
+      "action": "BUY",
+      "date": "2026-06-23",
+      "price": 2.164,
+      "shares": 91,
+      "ticker": "TQES"
+    },
+    {
+      "action": "SELL",
+      "date": "2026-06-23",
+      "price": 2.183,
+      "shares": 96,
+      "ticker": "TQES"
+    },
+    {
+      "action": "BUY",
+      "date": "2026-06-24",
+      "price": 2.075,
+      "shares": 36,
+      "ticker": "MARK"
+    },
+    {
+      "action": "BUY",
+      "date": "2026-06-24",
+      "price": 21.53,
+      "shares": 6,
+      "ticker": "QIBK"
+    },
+    {
+      "action": "BUY",
+      "date": "2026-06-24",
+      "price": 2.683,
+      "shares": 2,
+      "ticker": "VFQS"
+    },
+    {
+      "action": "SELL",
+      "date": "2026-06-24",
+      "price": 21.54,
+      "shares": 6,
+      "ticker": "QIBK"
+    },
+    {
+      "action": "BUY",
+      "date": "2026-06-24",
+      "price": 2.07,
+      "shares": 62,
+      "ticker": "MARK"
+    },
+    {
+      "action": "SELL",
+      "date": "2026-06-25",
+      "price": 2.074,
+      "shares": 98,
+      "ticker": "MARK"
+    },
+    {
+      "action": "BUY",
+      "date": "2026-06-25",
+      "price": 2.658,
+      "shares": 76,
+      "ticker": "VFQS"
+    },
+    {
+      "action": "BUY",
+      "date": "2026-06-28",
+      "price": 2.068,
+      "shares": 110,
+      "ticker": "MARK"
+    },
+    {
+      "action": "BUY",
+      "date": "2026-06-28",
+      "price": 2.066,
+      "shares": 128,
+      "ticker": "MARK"
+    },
+    {
+      "action": "BUY",
+      "date": "2026-06-28",
+      "price": 2.064,
+      "shares": 54,
+      "ticker": "MARK"
+    },
+    {
+      "action": "BUY",
+      "date": "2026-06-29",
+      "price": 2.061,
+      "shares": 100,
+      "ticker": "MARK"
+    },
+    {
+      "action": "BUY",
+      "date": "2026-06-29",
+      "price": 2.059,
+      "shares": 91,
+      "ticker": "MARK"
+    },
+    {
+      "action": "BUY",
+      "date": "2026-06-29",
+      "price": 2.056,
+      "shares": 300,
+      "ticker": "MARK"
+    },
+    {
+      "action": "BUY",
+      "date": "2026-06-30",
+      "price": 2.655,
+      "shares": 200,
+      "ticker": "VFQS"
+    },
+    {
+      "action": "BUY",
+      "date": "2026-06-30",
+      "price": 2.652,
+      "shares": 311,
+      "ticker": "VFQS"
+    },
+    {
+      "action": "SELL",
+      "date": "2026-06-30",
+      "price": 2.669,
+      "shares": 689,
+      "ticker": "VFQS"
+    },
+    {
+      "action": "BUY",
+      "date": "2026-08-06",
+      "price": 13.8,
+      "shares": 50,
+      "ticker": "QFLS"
+    },
+    {
+      "action": "BUY",
+      "date": "2026-08-06",
+      "price": 1.125,
+      "shares": 60,
+      "ticker": "MPHC"
+    },
+    {
+      "action": "BUY",
+      "date": "2026-08-06",
+      "price": 2.899,
+      "shares": 200,
+      "ticker": "QFBQ"
+    },
+    {
+      "action": "BUY",
+      "date": "2026-08-06",
+      "price": 13.66,
+      "shares": 25,
+      "ticker": "QFLS"
+    },
+    {
+      "action": "BUY",
+      "date": "2026-08-09",
+      "price": 1.116,
+      "shares": 74,
+      "ticker": "MPHC"
+    },
+    {
+      "action": "SELL",
+      "date": "2026-08-09",
+      "price": 2.94,
+      "shares": 200,
+      "ticker": "QFBQ"
+    },
+    {
+      "action": "BUY",
+      "date": "2026-08-09",
+      "price": 13.52,
+      "shares": 49,
+      "ticker": "QFLS"
+    },
+    {
+      "action": "BUY",
+      "date": "2026-08-10",
+      "price": 1.967,
+      "shares": 217,
+      "ticker": "MARK"
+    },
+    {
+      "action": "BUY",
+      "date": "2026-08-10",
+      "price": 10.4,
+      "shares": 50,
+      "ticker": "IQCD"
+    },
+    {
+      "action": "BUY",
+      "date": "2026-08-10",
+      "price": 13.5,
+      "shares": 100,
+      "ticker": "QFLS"
+    },
+    {
+      "action": "BUY",
+      "date": "2026-08-10",
+      "price": 2.121,
+      "shares": 70,
+      "ticker": "TQES"
+    },
+    {
+      "action": "BUY",
+      "date": "2026-08-10",
+      "price": 1.087,
+      "shares": 500,
+      "ticker": "MPHC"
+    }
+  ],
+  "transfers": [
+    {
+      "date": "2026-06-22",
+      "fee": 10,
+      "gross": 495,
+      "type": "DEPOSIT"
+    },
+    {
+      "date": "2026-06-26",
+      "fee": 10,
+      "gross": 1010,
+      "type": "DEPOSIT"
+    },
+    {
+      "date": "2026-06-29",
+      "fee": 10,
+      "gross": 2000,
+      "type": "DEPOSIT"
+    },
+    {
+      "date": "2026-08-10",
+      "fee": 10,
+      "gross": 3000,
+      "type": "DEPOSIT"
+    }
+  ],
+  "adjustments": [
+    {
+      "amount": 0.34,
+      "date": "2026-06-23",
+      "note": "Trading reward"
+    },
+    {
+      "amount": 0.21,
+      "date": "2026-06-24",
+      "note": "Trading reward"
+    },
+    {
+      "amount": 0.34,
+      "date": "2026-06-25",
+      "note": "Trading reward"
+    },
+    {
+      "amount": 2.54,
+      "date": "2026-06-30",
+      "note": "Trading reward"
+    },
+    {
+      "amount": 1.1,
+      "date": "2026-08-09",
+      "note": "Trading Reward"
+    }
+  ],
+  "marketPrices": {
+    "IQCD": 9.989,
+    "MARK": 1.973,
+    "MPHC": 1.082,
+    "QFLS": 13.2,
+    "TQES": 2.115
+  },
+  "priceHistory": {
+    "IQCD": [
+      {
+        "date": "2026-08-16",
+        "price": 9.989
+      }
+    ],
+    "MARK": [
+      {
+        "date": "2026-08-16",
+        "price": 1.973
+      }
+    ],
+    "MPHC": [
+      {
+        "date": "2026-08-16",
+        "price": 1.082
+      }
+    ],
+    "QFLS": [
+      {
+        "date": "2026-08-16",
+        "price": 13.2
+      }
+    ],
+    "TQES": [
+      {
+        "date": "2026-08-16",
+        "price": 2.115
+      }
+    ]
+  },
+  "watchlist": [],
+  "dividends": [],
+  "dividendEstimates": {}
+}

@@ -1,0 +1,429 @@
+import { Fragment, useMemo, useState } from 'react';
+import { QSE_TICKER_DATALIST_ID } from '../../../components/TickerDatalist';
+import { confirmDialog } from '../../../components/ConfirmDialog';
+import { Tabs } from '../../../components/Tabs';
+import { toast } from '../../../components/Toast';
+import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
+import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
+import { createEmptyWorkbook } from '../../../store/defaultWorkbook';
+import { useWorkbookStore } from '../../../store/workbookStore';
+import type { Adjustment, Transaction, Transfer } from '../../../types/workbook';
+import { DividendsSection } from '../components/DividendsSection';
+import { useQSEDerived } from '../hooks/useQSEDerived';
+
+const today = () => new Date().toISOString().slice(0, 10);
+
+function emptyRow(): Transaction {
+  return { date: today(), ticker: '', action: 'BUY', shares: 0, price: 0 };
+}
+
+function TransactionRows() {
+  const addTransactions = useWorkbookStore((s) => s.addTransactions);
+  const ensureSignedIn = useEnsureSignedIn();
+  const [rows, setRows] = useState<Transaction[]>([emptyRow()]);
+
+  const update = (i: number, patch: Partial<Transaction>) =>
+    setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+
+  const submit = async () => {
+    const valid = rows.filter((r) => r.ticker && r.shares > 0 && r.price > 0);
+    if (!valid.length) {
+      toast('Fill in at least one complete row.');
+      return;
+    }
+    if (!(await ensureSignedIn('Sign in to save your transactions.'))) return;
+    addTransactions(valid.map((r) => ({ ...r, ticker: r.ticker.toUpperCase() })));
+    toast(`Added ${valid.length} transaction${valid.length > 1 ? 's' : ''}.`);
+    setRows([emptyRow()]);
+  };
+
+  return (
+    <div>
+      {/* README item 10: enter multiple transactions at once, not just one row at a time. */}
+      {rows.map((r, i) => (
+        <div key={i} className="row" style={{ gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+          <input type="date" value={r.date} onChange={(e) => update(i, { date: e.target.value })} />
+          <input
+            placeholder="Ticker"
+            value={r.ticker}
+            onChange={(e) => update(i, { ticker: e.target.value.toUpperCase() })}
+            list={QSE_TICKER_DATALIST_ID}
+            style={{ width: 80 }}
+          />
+          <select value={r.action} onChange={(e) => update(i, { action: e.target.value as 'BUY' | 'SELL' })}>
+            <option value="BUY">BUY</option>
+            <option value="SELL">SELL</option>
+          </select>
+          <input
+            type="number"
+            placeholder="Shares"
+            value={r.shares || ''}
+            onChange={(e) => update(i, { shares: Number(e.target.value) })}
+            style={{ width: 90 }}
+          />
+          <input
+            type="number"
+            step="0.001"
+            placeholder="Price"
+            value={r.price || ''}
+            onChange={(e) => update(i, { price: Number(e.target.value) })}
+            style={{ width: 90 }}
+          />
+          <button className="btn secondary small" onClick={() => setRows((rs) => rs.filter((_, idx) => idx !== i))}>
+            Remove
+          </button>
+        </div>
+      ))}
+      <div className="row" style={{ gap: 8 }}>
+        <button className="btn secondary" onClick={() => setRows((rs) => [...rs, emptyRow()])}>
+          + Add row
+        </button>
+        <button className="btn" onClick={submit}>
+          Save {rows.length > 1 ? `${rows.length} transactions` : 'transaction'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function TransferForm() {
+  const addTransfer = useWorkbookStore((s) => s.addTransfer);
+  const depositFee = useWorkbookStore((s) => s.workbook.settings.depositFee);
+  const ensureSignedIn = useEnsureSignedIn();
+  const [t, setT] = useState<Transfer>({ date: today(), type: 'DEPOSIT', gross: 0, fee: depositFee });
+
+  return (
+    <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+      <input type="date" value={t.date} onChange={(e) => setT({ ...t, date: e.target.value })} />
+      <select value={t.type} onChange={(e) => setT({ ...t, type: e.target.value as Transfer['type'] })}>
+        <option value="DEPOSIT">Deposit</option>
+        <option value="WITHDRAWAL">Withdrawal</option>
+      </select>
+      <input
+        type="number"
+        placeholder="Amount"
+        value={t.gross || ''}
+        onChange={(e) => setT({ ...t, gross: Number(e.target.value) })}
+        style={{ width: 100 }}
+      />
+      <input
+        type="number"
+        placeholder="Fee"
+        value={t.fee || ''}
+        onChange={(e) => setT({ ...t, fee: Number(e.target.value) })}
+        style={{ width: 80 }}
+      />
+      <button
+        className="btn"
+        onClick={async () => {
+          if (t.gross <= 0) return toast('Enter an amount.');
+          if (!(await ensureSignedIn('Sign in to save transfers.'))) return;
+          addTransfer(t);
+          toast('Transfer added.');
+          setT({ date: today(), type: 'DEPOSIT', gross: 0, fee: depositFee });
+        }}
+      >
+        Add
+      </button>
+    </div>
+  );
+}
+
+function AdjustmentForm() {
+  const addAdjustment = useWorkbookStore((s) => s.addAdjustment);
+  const ensureSignedIn = useEnsureSignedIn();
+  const [a, setA] = useState<Adjustment>({ date: today(), amount: 0, note: '' });
+
+  return (
+    <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+      <input type="date" value={a.date} onChange={(e) => setA({ ...a, date: e.target.value })} />
+      <input
+        type="number"
+        step="0.01"
+        placeholder="Amount"
+        value={a.amount || ''}
+        onChange={(e) => setA({ ...a, amount: Number(e.target.value) })}
+        style={{ width: 100 }}
+      />
+      <input placeholder="Note" value={a.note} onChange={(e) => setA({ ...a, note: e.target.value })} />
+      <button
+        className="btn"
+        onClick={async () => {
+          if (!a.amount) return toast('Enter an amount.');
+          if (!(await ensureSignedIn('Sign in to save adjustments.'))) return;
+          addAdjustment(a);
+          toast('Adjustment added.');
+          setA({ date: today(), amount: 0, note: '' });
+        }}
+      >
+        Add
+      </button>
+    </div>
+  );
+}
+
+type GroupBy = 'none' | 'ticker' | 'action' | 'month';
+
+function groupKey(tx: Transaction, groupBy: GroupBy): string {
+  switch (groupBy) {
+    case 'ticker': return tx.ticker;
+    case 'action': return tx.action;
+    case 'month': return tx.date.slice(0, 7);
+    default: return '';
+  }
+}
+
+function TransactionList() {
+  const { workbook, calcFee } = useQSEDerived();
+  const deleteTransaction = useWorkbookStore((s) => s.deleteTransaction);
+  const updateTransaction = useWorkbookStore((s) => s.updateTransaction);
+  const currency = workbook.settings.currency;
+
+  const [filterTicker, setFilterTicker] = useState('ALL');
+  const [groupBy, setGroupBy] = useState<GroupBy>('none');
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [editRow, setEditRow] = useState<Transaction | null>(null);
+
+  const indexed = workbook.transactions.map((tx, i) => ({ tx, i }));
+  const tickers = useMemo(() => [...new Set(workbook.transactions.map((t) => t.ticker))].sort(), [workbook.transactions]);
+
+  const filtered = filterTicker === 'ALL' ? indexed : indexed.filter((r) => r.tx.ticker === filterTicker);
+  const sorted = [...filtered].sort((a, b) => b.tx.date.localeCompare(a.tx.date));
+
+  const groups = useMemo(() => {
+    if (groupBy === 'none') return [{ key: '', rows: sorted }];
+    const map: Record<string, typeof sorted> = {};
+    sorted.forEach((r) => {
+      const k = groupKey(r.tx, groupBy);
+      if (!map[k]) map[k] = [];
+      map[k].push(r);
+    });
+    return Object.entries(map)
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([key, rows]) => ({ key, rows }));
+  }, [sorted, groupBy]);
+
+  const startEdit = (i: number, tx: Transaction) => {
+    setEditIndex(i);
+    setEditRow({ ...tx });
+  };
+  const saveEdit = () => {
+    if (editIndex === null || !editRow) return;
+    updateTransaction(editIndex, editRow);
+    toast('Transaction updated.');
+    setEditIndex(null);
+    setEditRow(null);
+  };
+
+  const exportJSON = () => {
+    const blob = new Blob([JSON.stringify(workbook, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `qse-workbook-backup-${today()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const setWorkbook = useWorkbookStore((s) => s.setWorkbook);
+  const clearAll = async () => {
+    const ok = await confirmDialog(
+      'This clears all transactions, prices and watchlist entries in this browser.',
+      'Clear all transaction data?',
+    );
+    if (!ok) return;
+    setWorkbook({ ...createEmptyWorkbook(), settings: workbook.settings, appearance: workbook.appearance });
+    toast('All transaction data cleared.');
+  };
+
+  return (
+    <div>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+        <select value={filterTicker} onChange={(e) => setFilterTicker(e.target.value)}>
+          <option value="ALL">All tickers</option>
+          {tickers.map((t) => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <select value={groupBy} onChange={(e) => setGroupBy(e.target.value as GroupBy)}>
+          <option value="none">No grouping</option>
+          <option value="ticker">Group by ticker</option>
+          <option value="action">Group by buy/sell</option>
+          <option value="month">Group by month</option>
+        </select>
+        <button className="btn secondary" onClick={exportJSON}>Export JSON</button>
+        <button className="btn secondary" onClick={clearAll}>Clear all</button>
+      </div>
+
+      <div className="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Date</th><th>Ticker</th><th>Action</th><th>Shares</th><th>Price</th><th>Amount</th><th></th></tr>
+          </thead>
+          <tbody>
+            {groups.map((g) => (
+              <Fragment key={g.key || 'ungrouped'}>
+                {g.key && (
+                  <tr key={'hdr-' + g.key} style={{ background: 'var(--panel-2)' }}>
+                    <td colSpan={7}>
+                      <strong>{g.key}</strong> — {g.rows.length} txns ·{' '}
+                      buys {fmt(g.rows.filter((r) => r.tx.action === 'BUY').reduce((s, r) => s + r.tx.shares, 0), 0)} ·{' '}
+                      sells {fmt(g.rows.filter((r) => r.tx.action === 'SELL').reduce((s, r) => s + r.tx.shares, 0), 0)} ·{' '}
+                      volume {fmtMoney(g.rows.reduce((s, r) => s + r.tx.shares * r.tx.price, 0), currency)} ·{' '}
+                      fees {fmtMoney(g.rows.reduce((s, r) => s + calcFee(r.tx.shares * r.tx.price, r.tx.action === 'BUY'), 0), currency)}
+                    </td>
+                  </tr>
+                )}
+                {g.rows.map(({ tx, i }) =>
+                  editIndex === i && editRow ? (
+                    <tr key={i}>
+                      <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
+                      <td><input value={editRow.ticker} onChange={(e) => setEditRow({ ...editRow, ticker: e.target.value.toUpperCase() })} style={{ width: 70 }} /></td>
+                      <td>
+                        <select value={editRow.action} onChange={(e) => setEditRow({ ...editRow, action: e.target.value as 'BUY' | 'SELL' })}>
+                          <option value="BUY">BUY</option>
+                          <option value="SELL">SELL</option>
+                        </select>
+                      </td>
+                      <td><input type="number" value={editRow.shares} onChange={(e) => setEditRow({ ...editRow, shares: Number(e.target.value) })} style={{ width: 70 }} /></td>
+                      <td><input type="number" step="0.001" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })} style={{ width: 80 }} /></td>
+                      <td>{fmtMoney(editRow.shares * editRow.price, currency)}</td>
+                      <td>
+                        <button className="btn secondary small" onClick={saveEdit}>Save</button>{' '}
+                        <button className="btn secondary small" onClick={() => setEditIndex(null)}>Cancel</button>
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr key={i}>
+                      <td>{tx.date}</td>
+                      <td>{tx.ticker}</td>
+                      <td className={tx.action === 'BUY' ? 'pill-buy' : 'pill-sell'}>{tx.action}</td>
+                      <td>{fmt(tx.shares, 0)}</td>
+                      <td>{fmtPrice(tx.price)}</td>
+                      <td>{fmtMoney(tx.shares * tx.price, currency)}</td>
+                      <td>
+                        <button className="btn secondary small" onClick={() => startEdit(i, tx)}>Edit</button>{' '}
+                        <button
+                          className="btn secondary small"
+                          onClick={async () => {
+                            if (await confirmDialog('This cannot be undone.', `Delete ${tx.action} ${tx.shares} ${tx.ticker}?`)) deleteTransaction(i);
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ),
+                )}
+              </Fragment>
+            ))}
+            {!sorted.length && (
+              <tr><td colSpan={7} className="footer-note">No transactions yet.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function TransfersSection() {
+  const workbook = useWorkbookStore((s) => s.workbook);
+  const deleteTransfer = useWorkbookStore((s) => s.deleteTransfer);
+  const currency = workbook.settings.currency;
+  return (
+    <div>
+      <TransferForm />
+      <div className="table-scroll" style={{ marginTop: 8 }}>
+        <table>
+          <thead>
+            <tr><th>Date</th><th>Type</th><th>Gross</th><th>Fee</th><th></th></tr>
+          </thead>
+          <tbody>
+            {workbook.transfers.map((t, i) => (
+              <tr key={i}>
+                <td>{t.date}</td>
+                <td>{t.type}</td>
+                <td>{fmtMoney(t.gross, currency)}</td>
+                <td>{fmtMoney(t.fee, currency)}</td>
+                <td><button className="btn secondary small" onClick={() => deleteTransfer(i)}>Delete</button></td>
+              </tr>
+            ))}
+            {!workbook.transfers.length && <tr><td colSpan={5} className="footer-note">No transfers yet.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function AdjustmentsSection() {
+  const workbook = useWorkbookStore((s) => s.workbook);
+  const deleteAdjustment = useWorkbookStore((s) => s.deleteAdjustment);
+  const currency = workbook.settings.currency;
+  return (
+    <div>
+      <AdjustmentForm />
+      <div className="table-scroll" style={{ marginTop: 8 }}>
+        <table>
+          <thead>
+            <tr><th>Date</th><th>Amount</th><th>Note</th><th></th></tr>
+          </thead>
+          <tbody>
+            {workbook.adjustments.map((a, i) => (
+              <tr key={i}>
+                <td>{a.date}</td>
+                <td>{fmtMoney(a.amount, currency)}</td>
+                <td>{a.note}</td>
+                <td><button className="btn secondary small" onClick={() => deleteAdjustment(i)}>Delete</button></td>
+              </tr>
+            ))}
+            {!workbook.adjustments.length && <tr><td colSpan={4} className="footer-note">No adjustments yet.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function CashLedgerSection() {
+  const { workbook, ledger } = useQSEDerived();
+  const currency = workbook.settings.currency;
+  return (
+    <div className="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Date</th><th>Kind</th><th>Label</th><th>Amount</th><th>Balance</th></tr>
+        </thead>
+        <tbody>
+          {[...ledger].reverse().map((e, i) => (
+            <tr key={i}>
+              <td>{e.date}</td>
+              <td>{e.kind}</td>
+              <td>{e.label}</td>
+              <td className={e.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(e.amount, currency)}</td>
+              <td>{fmtMoney(e.balance, currency)}</td>
+            </tr>
+          ))}
+          {!ledger.length && <tr><td colSpan={5} className="footer-note">Nothing recorded yet.</td></tr>}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export function TransactionsPage() {
+  return (
+    <div>
+      <h1 className="pagetitle">Transactions</h1>
+      <Tabs
+        tabs={[
+          { key: 'add', label: 'Add transaction(s)', content: <TransactionRows /> },
+          { key: 'list', label: 'Transaction list', content: <TransactionList /> },
+          { key: 'transfers', label: 'Cash transfers', content: <TransfersSection /> },
+          { key: 'adjustments', label: 'Rewards & adjustments', content: <AdjustmentsSection /> },
+          { key: 'ledger', label: 'Cash ledger', content: <CashLedgerSection /> },
+          { key: 'dividends', label: 'Dividends', content: <DividendsSection /> },
+        ]}
+      />
+    </div>
+  );
+}

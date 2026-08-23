@@ -755,8 +755,24 @@ if(!firebaseReady){
         const when = cloud._updated ? new Date(cloud._updated).toLocaleString() : 'unknown time';
         setCloudStatus('Synced — cloud data loaded (last saved '+when+')', 'pos');
       } else {
-        await pushToCloud(false); // first time this account has signed in: seed the cloud with what's local
-        setCloudStatus("No cloud data yet — uploaded this device's workbook.", "pos");
+        // SAFETY: do NOT auto-upload here. A `snap.exists()===false` read can
+        // happen for reasons other than "this account truly has no cloud
+        // data yet" (a transient read, wrong rules, etc.), and silently
+        // uploading whatever's in this device's local storage — which could
+        // be empty — would overwrite real data with nothing, permanently.
+        // Require an explicit, informed confirmation instead.
+        const proceed = window.confirm(
+          'No data was found in the cloud for ' + user.email + '.\n\n' +
+          'This does not necessarily mean the account is actually empty — it could be a transient read issue. ' +
+          "Only continue if you're sure this account has no cloud data yet and you want to upload THIS DEVICE's local workbook as the starting point.\n\n" +
+          'If you expected existing data and do not see it, click Cancel and investigate first (do not overwrite).'
+        );
+        if(proceed){
+          await pushToCloud(false);
+          setCloudStatus("Uploaded this device's workbook as the starting point.", "pos");
+        } else {
+          setCloudStatus('No cloud data found — nothing uploaded. Investigate before syncing.', 'neg');
+        }
       }
       renderAll();
     }catch(e){
