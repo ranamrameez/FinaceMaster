@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { CashEntry } from '../../../types/cashWorkbook';
 import { cashBalanceByCurrency, cashByCategory, cashRunningLedger } from '../cashModule';
 
+let nextId = 0;
 const entry = (over: Partial<CashEntry>): CashEntry => ({
+  id: `entry-${nextId++}`,
   date: '2026-01-01',
   type: 'IN',
   amount: 100,

@@ -2,6 +2,7 @@ import type { User } from 'firebase/auth';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useProfile } from '../lib/firebase/useProfile';
 import { AppearancePanel } from './AppearancePanel';
+import { CategoryNav, categoryForPath } from './CategoryNav';
 import { LogInIcon } from './icons';
 import { requireSignIn } from './SignInModal';
 
@@ -61,61 +62,32 @@ export function Sidebar({
   const location = useLocation();
   const exchange: 'qse' | 'psx' = location.pathname.startsWith('/psx') ? 'psx' : 'qse';
   const navItems = exchange === 'psx' ? PSX_NAV_ITEMS : QSE_NAV_ITEMS;
+  const category = categoryForPath(location.pathname);
 
   return (
     <div className={`sidebar ${className}`.trim()}>
       <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 12, letterSpacing: '.01em' }}>FinanceRecorder</div>
-      <div className="footer-note" style={{ textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 4 }}>
-        Stocks
-      </div>
-      <ExchangeSwitcher exchange={exchange} />
-      <nav className="navlist">
-        {navItems.map((item) => (
-          <NavLink key={item.to} to={item.to} end onClick={onNavigate} className={({ isActive }) => `navbtn${isActive ? ' active' : ''}`}>
-            <span className="num">{item.num}</span>
-            {item.label}
-          </NavLink>
-        ))}
-        {LEGACY_LINKS.map((item) => (
-          <a key={item.href} className="navbtn" href={item.href}>
-            <span className="num">{item.num}</span>
-            {item.label}
-          </a>
-        ))}
-      </nav>
+      <CategoryNav onNavigate={onNavigate} />
 
-      {/* Minimal placeholder nav for new modules until the category-dropdown
-          redesign (README item 18) replaces this with a proper switcher
-          alongside Stocks. Cash is the first module built per MODULES_PLAN.md. */}
-      <div className="footer-note" style={{ textTransform: 'uppercase', letterSpacing: '.04em', marginTop: 16, marginBottom: 4 }}>
-        More
-      </div>
-      <nav className="navlist">
-        <NavLink to="/cash" onClick={onNavigate} className={({ isActive }) => `navbtn${isActive ? ' active' : ''}`}>
-          <span className="num">01</span>
-          Cash
-        </NavLink>
-        <NavLink to="/personal-loans" onClick={onNavigate} className={({ isActive }) => `navbtn${isActive ? ' active' : ''}`}>
-          <span className="num">02</span>
-          Personal Loans
-        </NavLink>
-        <NavLink to="/bank" onClick={onNavigate} className={({ isActive }) => `navbtn${isActive ? ' active' : ''}`}>
-          <span className="num">03</span>
-          Banking
-        </NavLink>
-        <NavLink to="/emi-loans" onClick={onNavigate} className={({ isActive }) => `navbtn${isActive ? ' active' : ''}`}>
-          <span className="num">04</span>
-          EMI / Loans
-        </NavLink>
-        <NavLink to="/funds" onClick={onNavigate} className={({ isActive }) => `navbtn${isActive ? ' active' : ''}`}>
-          <span className="num">05</span>
-          Funds
-        </NavLink>
-        <NavLink to="/rentals" onClick={onNavigate} className={({ isActive }) => `navbtn${isActive ? ' active' : ''}`}>
-          <span className="num">06</span>
-          Rentals
-        </NavLink>
-      </nav>
+      {category === 'stocks' && (
+        <>
+          <ExchangeSwitcher exchange={exchange} />
+          <nav className="navlist">
+            {navItems.map((item) => (
+              <NavLink key={item.to} to={item.to} end onClick={onNavigate} className={({ isActive }) => `navbtn${isActive ? ' active' : ''}`}>
+                <span className="num">{item.num}</span>
+                {item.label}
+              </NavLink>
+            ))}
+            {LEGACY_LINKS.map((item) => (
+              <a key={item.href} className="navbtn" href={item.href}>
+                <span className="num">{item.num}</span>
+                {item.label}
+              </a>
+            ))}
+          </nav>
+        </>
+      )}
 
       <AppearancePanel />
 

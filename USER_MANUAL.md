@@ -38,12 +38,16 @@ automatically between your devices once you're signed in on each of them.
 
 ---
 
-## 3. Switching between QSE and PSX
+## 3. Switching between modules, and between QSE and PSX
 
-The sidebar has a **Stocks** section at the top with a **QSE / PSX** switcher (two chips).
-Click either one to jump to that exchange's Dashboard. Which exchange is "active" always
-matches whichever page you're on — the switcher doesn't need to be clicked to navigate
-within an exchange, only to hop between them.
+The sidebar's top control is a **category dropdown** — click it to see every module (Stock
+Exchanges, Funds, Banking, Cash, Personal Loans, EMI/Loans, Rentals, Transfers), with the one
+you're currently in checked. Picking a category jumps you to it; the dropdown always shows
+what you're on, so you don't need to reopen it just to confirm where you are.
+
+Inside **Stock Exchanges**, a second **QSE / PSX** switcher (two chips) appears underneath the
+dropdown — click either one to jump to that exchange's Dashboard. Which exchange is "active"
+always matches whichever page you're on, same as the category dropdown above it.
 
 Each exchange's pages, data, and settings are completely separate — QSE holdings don't mix
 with PSX holdings, and each has its own fee model (see §7).
@@ -195,13 +199,22 @@ Deeper charts across four category tabs (exact set depends on the exchange) — 
 performance, fees, and (QSE only, for now) fundamentals. See individual chart tooltips for
 details on what each one shows.
 
+**Filtering**: a filter bar at the top lets you narrow the charts to specific tickers (click
+one or more ticker chips, or "All" to reset) and/or a month range. Per-ticker charts (ROI%,
+allocation, P/L by symbol, holding period, dividends by ticker) and monthly charts (trading
+activity, dividends by month, fees by month) respect the filter. A handful of whole-portfolio
+totals — realized vs unrealized P/L, cash vs stocks split, fees breakdown, deposits vs
+invested, and the cumulative cash-balance line — always show your full history: narrowing
+those to a ticker or date window wouldn't mean what it looks like it means (your *current*
+holdings aren't a function of which window you're looking at).
+
 ---
 
 ## 13. Cash
 
-The first non-stock-exchange module (find it under **More → Cash** in the sidebar for now,
-until a proper category switcher replaces this). Tracks physical/informal cash — cash in
-hand, gifts, small informal amounts — as a simple ledger, separate from any exchange.
+The first non-stock-exchange module (pick **Cash** from the sidebar's category dropdown).
+Tracks physical/informal cash — cash in hand, gifts, small informal amounts — as a simple
+ledger, separate from any exchange.
 
 - **Add an entry**: date, Cash in/Cash out, amount, currency, an optional free-text category
   (type anything — it's never a fixed list, and previously-used categories show up as
@@ -218,7 +231,7 @@ hand, gifts, small informal amounts — as a simple ledger, separate from any ex
 ## 14. Personal Loans
 
 Informal loans with another person — money you lent out, or money you owe — tracked in
-**either direction** in one place, under **More → Personal Loans**.
+**either direction** in one place. Pick **Personal Loans** from the category dropdown.
 
 - **Add a loan**: person/lender name, direction (lent out / I owe), currency, principal
   amount, date, optional note.
@@ -237,8 +250,8 @@ Informal loans with another person — money you lent out, or money you owe — 
 ## 15. Banking
 
 Bank account balances and transaction history, entered manually or imported from a CSV
-statement — under **More → Banking**. No live bank connection (regulator licensing is
-required for that, so it's manual entry or statement import only).
+statement. Pick **Banking** from the category dropdown. No live bank connection (regulator
+licensing is required for that, so it's manual entry or statement import only).
 
 - **Accounts tab**: add one or more accounts (name, currency, opening balance). Each
   account has exactly one currency. Edit or delete any account (deleting an account also
@@ -262,8 +275,8 @@ required for that, so it's manual entry or statement import only).
 
 ## 17. EMI / Loans
 
-For a loan you're repaying on a fixed schedule — a mortgage, car financing, or similar —
-under **More → EMI / Loans**. Distinct from Banking (which just tracks account
+For a loan you're repaying on a fixed schedule — a mortgage, car financing, or similar. Pick
+**EMI / Loans** from the category dropdown. Distinct from Banking (which just tracks account
 transactions) and Personal Loans (informal, no schedule).
 
 - **Add a loan**: name, lender, currency, principal, tenure (months), start date, and one
@@ -286,8 +299,8 @@ transactions) and Personal Loans (informal, no schedule).
 
 ## 19. Funds
 
-Mutual fund unit holdings and performance — under **More → Funds**. Structurally the closest
-of the new modules to QSE/PSX (buy/sell units at a NAV per unit is the same shape as buy/
+Mutual fund unit holdings and performance. Pick **Funds** from the category dropdown.
+Structurally the closest of the new modules to QSE/PSX (buy/sell units at a NAV per unit is the same shape as buy/
 sell shares at a price), so it shares the same underlying calculation engine.
 
 - **Add a fund**: name, code, "invested via" platform, category (Equity/Debt/Hybrid/
@@ -305,8 +318,8 @@ sell shares at a price), so it shares the same underlying calculation engine.
 
 ## 20. Rentals
 
-Rental property income and expenses — under **More → Rentals**. Not discrete buy/sell
-trades like the other modules — recurring rent received and costs (maintenance, property
+Rental property income and expenses. Pick **Rentals** from the category dropdown. Not
+discrete buy/sell trades like the other modules — recurring rent received and costs (maintenance, property
 tax, management fees) against one or more properties.
 
 - **Properties tab**: add a property (name, currency, optional purchase price for future
@@ -327,7 +340,34 @@ exchange modules.
 
 ---
 
-## 21. A note on accuracy
+## 21. Transfers (linking money between modules)
+
+Pick **Transfers** from the category dropdown. Normally, moving money between two modules
+— say, withdrawing cash from your bank account — means entering it twice: a withdrawal in
+Banking and a cash-in entry in Cash. Do that and the two records have no idea they're
+related; edit or delete one later and the other silently goes stale. The Transfers page
+fixes that for the most common moves by creating **one linked transfer** that writes a real
+record on both sides at once, and keeps them in sync afterward.
+
+**Supported so far**: Cash ↔ Banking, and Banking ↔ your QSE or PSX cash balance (a deposit
+or withdrawal). Other pairings (e.g. Cash directly to a stock exchange, or anything
+involving Funds/Rentals/EMI/Personal Loans) aren't wired up yet — the form tells you if a
+pairing isn't supported instead of silently doing something wrong.
+
+- **Create a link**: choose the **From** and **To** side (for Banking, also pick which
+  account), an amount, a date, and an optional note, then **Create link**. This adds a
+  matching entry to both modules' own ledgers — you'll see it appear in Cash's ledger, or
+  in Banking's transaction list, exactly like anything else you'd entered by hand there.
+- **No currency conversion**: if the two sides use different currencies, the app copies the
+  number as-is rather than converting it — it warns you when this happens so you don't miss
+  it, but the amount itself is your responsibility to get right.
+- **Editing or deleting a link** (in the "Linked transfers" list at the bottom of the page)
+  updates or removes **both** sides' records together — you don't need to (and shouldn't)
+  go edit or delete the two records separately in their own modules.
+
+---
+
+## 22. A note on accuracy
 
 Every number in this app is an **estimate** computed from settings you configure — it is
 not a substitute for your actual broker/exchange statement, and it is not financial advice.

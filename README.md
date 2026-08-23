@@ -177,6 +177,87 @@ FinanceManager live link:
     correct against hand-traced numbers, edits recalculate live, sign-in gates fire
     correctly, no console errors. **All six modules from `MODULES_PLAN.md` are now built**:
     Cash, Personal Loans, Banking, EMI/Loans, Funds, Rentals.
+28. **Sidebar category dropdown (2026-08-23), README item 18.** Replaced the flat "Stocks"
+    heading + "More" link list with one dropdown (`components/CategoryNav.tsx`) spanning
+    every module — Stock Exchanges, Funds, Banking, Cash, Personal Loans, EMI/Loans, Rentals
+    — with the active category highlighted (checkmark) and derived from the current route
+    (`categoryForPath`), same pattern as the existing QSE/PSX `ExchangeSwitcher`. Picking
+    "Stock Exchanges" still shows the QSE/PSX chip switcher and that exchange's full page nav
+    underneath, since it's the only category with more than one page; every other category
+    navigates straight to its single module page. Old "Find it at More → X" phrasing in
+    earlier Done entries above is now just "the sidebar" — the flat More list is gone.
+    Verified with a scripted Playwright pass (no manual browser available in this session):
+    dropdown opens/closes, navigates to each category, highlights the active one correctly,
+    and switching back to Stock Exchanges restores the exchange chips + nav; `npm run build`
+    and `npm run test` both clean, no console errors.
+29. **Cross-entity transaction linking (2026-08-23), README item 19 / MODULES_PLAN.md §7 —
+    v1 scope: Cash↔Bank and Bank↔QSE/PSX cash balances.** New "Transfers" category/page
+    (`features/transfers/pages/TransferLinksPage.tsx`, `components/CategoryNav.tsx`) lets a
+    money movement between two modules be entered once and creates a real, linked record on
+    both sides — editing or deleting the link later updates or removes both. Real prerequisite
+    found and fixed first: `Transfer` (QSE/PSX) and `CashEntry` had no stable `id` at all,
+    only array-index addressing (`updateTransfer(index, ...)`) — exactly the two record types
+    the v1 scope needs to reference. Added `id: string` to both types; `createWorkbookStore.ts`
+    and `createEntryStore.ts` now normalize missing ids on every path data enters a store
+    (local load *and* `setWorkbook`, which also covers the Firebase pull in
+    `useWorkbookCloudSync` — real user data written before today has no `id` in storage and
+    JSON parsing doesn't enforce the TS type) so old data keeps working. `updateTransfer`/
+    `deleteTransfer` and Cash/EMI's shared `createEntryStore`'s `updateEntry`/`deleteEntry`
+    switched from index- to id-based addressing; `BankTransaction`/`EMILoan` already had ids
+    so neither module's data model changed. QSE/PSX `Transaction`/`Adjustment`/`Dividend`
+    were deliberately left index-based — out of scope, since linking only ever touches
+    Transfers, not trades. New pure `lib/interEntityLink.ts` (`buildLinkedRecords`,
+    `isSupportedLinkPair`) computes the two side records + the link record from user input
+    with no store access, reused as-is for both create and edit; tested in
+    `lib/__tests__/interEntityLink.test.ts` (sign conventions per module, both directions,
+    missing-account error, edit reusing the same ids). The link records themselves live in a
+    new `interEntityTransfersStore.ts` (reuses `createEntryStore`) with its own Firebase path
+    (`users/{uid}/interEntityTransfers`). No currency conversion (no live FX-rate source, per
+    the cross-cutting decision) — the form shows each side's resolved currency and warns on a
+    mismatch rather than blocking it. **Verified live in the browser** (no real Firebase test
+    account used, to avoid writing to the production project outside the user's own account —
+    see this file's Data safety / cloud-sync-safety notes): the Transfers page renders with no
+    console errors, the unsupported-pair warning fires correctly for an out-of-scope pairing
+    (e.g. Cash→QSE), the currency-mismatch warning fires correctly (USD vs QAR), the
+    missing-bank-account guard fires correctly, and `npm run build` / `npm run test` (84
+    tests, 8 new) are both clean. The actual signed-in create/edit/delete round-trip through
+    real Cash/Bank/QSE/PSX stores was **not** exercised end-to-end in the browser this
+    session — only via the pure-function unit tests above — since doing so would need either
+    the user's real signed-in session or a throwaway Firebase Auth account against the same
+    production project; a future session with the user present should click through one real
+    linked transfer (create, edit its amount, delete it) and confirm both sides update.
+30. **Doc correction: console-style compact theme (item 14) was already built, just never
+    marked Done.** `html[data-density="console"]` rules in `theme.css` (tighter card/table/
+    button padding, smaller monospace-leaning type) and the "Console (super compact)" option
+    in `AppearancePanel.tsx`'s density selector have existed since the original React rewrite
+    commit — this was a stale Pending entry, not missing functionality. Re-verified live in
+    the browser (2026-08-23): switching density to Console visibly shrinks stat cards, page
+    titles, and the sidebar with no console errors. Moved to Done; no code changed.
+31. **Dynamic/filterable Analytics charts (2026-08-23), README item 17 — ticker + month-range
+    filters, QSE and PSX both.** New `ChartFilterBar` (`components/ChartFilterBar.tsx`) at the
+    top of both Analytics pages: toggle-chip ticker selection ("All" or any combination) plus
+    a from/to month-range picker. Deliberately **doesn't** re-derive positions/cost-basis/P&L
+    for a filtered window — filtering "current holdings" to a date range would misrepresent
+    them (a stock bought two years ago and still held would show as "no position" under a
+    last-3-months filter). Instead `lib/calc/chartFilters.ts`'s pure helpers
+    (`filterRowsByTicker`, `filterTuplesByTicker`, `filterMonthlySeries`,
+    `filterMonthlyDualSeries` — tested in `chartFilters.test.ts`, 11 tests) post-process the
+    *already-computed* per-ticker rows and per-month series feeding each chart: ticker
+    filtering narrows ROI%/allocation/P&L-by-symbol/holding-period/dividends-by-ticker to the
+    selected tickers, month filtering narrows monthly-activity/dividends-by-month/fees-by-month
+    to the selected window. Whole-portfolio single-number charts (realized vs unrealized P/L,
+    cash vs stocks split, fees breakdown, deposits vs invested, and the cumulative cash-balance
+    line chart) are left as global totals on purpose — the filter bar says so directly, and
+    trying to filter a *cumulative running balance* to a sub-range doesn't have a sensible
+    starting point anyway. **Category filtering (also named in this item) doesn't apply here**
+    — QSE/PSX trades have no category field; that dimension belongs to Cash/Bank/Rentals, which
+    don't have Analytics/chart pages yet. Verified live in the browser with a seeded two-ticker,
+    three-month workbook: ticker chips correctly narrow every per-ticker chart and the
+    Fundamentals table; the month-range picker correctly narrows monthly charts (confirmed
+    "Monthly trading activity" and "Dividend income by month" both collapsed to just the
+    selected month) while "Dividend income by ticker" — a lifetime-per-ticker total, not
+    month-indexed — correctly stayed unaffected by the month filter; zero console errors.
+    `npm run build` / `npm run test` (95 tests, 11 new) both clean.
 
 ## Pending
 
@@ -191,22 +272,13 @@ FinanceManager live link:
     the app itself (free/cheap tiers rate-limit fast). Fetch on a schedule (cron/worker)
     into our own database and serve the app from that store, same pattern already used for
     QSE's `stockData/QSE` node (item 1 above) and PSX's bundled `psxSeed.ts`.
-14. Include console-like/super-compact UI themes — a `density` appearance setting
-    (comfortable, in `appearanceStore.ts`) exists already, but no dedicated console-style
-    compact theme yet.
-17. Charts should be dynamic — filterable (date range, ticker, category) and otherwise more
-    interactive, not just static renders of whatever the page computes. Not started.
-18. Sidebar navigation should become a proper category dropdown — "Stock Exchanges / Funds /
-    Banking / Cash / Rentals" — with the selected category clearly highlighted, generalizing
-    today's QSE/PSX-only `ExchangeSwitcher` chip pair (`components/Sidebar.tsx`). Only "Stock
-    Exchanges" would be functional at first (leading to today's QSE/PSX pages); the other
-    categories wait until their modules exist (see item 19 below and the locked sequencing
-    decision under Done item 20).
-19. Cross-entity transaction linking — e.g. a transfer FROM a Bank module TO a stock
-    exchange's cash balance, or Cash to Bank, so money moving between modules is one linked
-    record instead of two independent, easily-inconsistent entries. Depends on the Funds/
-    Banking/Cash modules existing first (none of them are built yet — see the Migration Plan
-    Overview below and item 20).
+17. Charts could get more interactive beyond the ticker/month filters shipped in Done item 31
+    (e.g. click-to-drill-down, hover cross-highlighting between charts). Not started — the
+    core "filterable" ask is done; this is a further-polish remainder, not a blocker.
+19. Cross-entity transaction linking beyond v1 scope (see Done item 29): Funds/Rentals/EMI/
+    Personal Loans aren't wired into the Transfers page yet — only Cash↔Bank and
+    Bank↔QSE/PSX. A real signed-in browser round-trip (create/edit/delete a link, confirm
+    both sides update) is also still needed — see item 29's verification note.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

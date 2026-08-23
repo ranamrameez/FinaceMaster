@@ -38,6 +38,8 @@ import { FundsPage } from './features/funds/pages/FundsPage';
 import { useFundsFirebaseSync } from './lib/firebase/useFundsFirebaseSync';
 import { RentalsPage } from './features/rentals/pages/RentalsPage';
 import { useRentalsFirebaseSync } from './lib/firebase/useRentalsFirebaseSync';
+import { TransferLinksPage } from './features/transfers/pages/TransferLinksPage';
+import { useInterEntityTransfersFirebaseSync } from './lib/firebase/useInterEntityTransfersFirebaseSync';
 import { LegalPage } from './pages/LegalPage';
 
 function useApplyAppearance() {
@@ -80,6 +82,7 @@ function App() {
   const emiSync = useEMIFirebaseSync();
   const fundsSync = useFundsFirebaseSync();
   const rentalsSync = useRentalsFirebaseSync();
+  const transfersSync = useInterEntityTransfersFirebaseSync();
 
   return (
     <ErrorBoundary>
@@ -188,6 +191,17 @@ function App() {
                     syncStatus={rentalsSync.status}
                     cloudEmpty={rentalsSync.cloudEmpty}
                     uploadLocalToCloud={rentalsSync.uploadLocalToCloud}
+                  />
+                }
+              />
+              <Route
+                path="/transfers"
+                element={
+                  <TransferLinksPage
+                    user={user}
+                    syncStatus={transfersSync.status}
+                    cloudEmpty={transfersSync.cloudEmpty}
+                    uploadLocalToCloud={transfersSync.uploadLocalToCloud}
                   />
                 }
               />

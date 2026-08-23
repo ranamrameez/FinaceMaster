@@ -87,12 +87,10 @@ function AddLoanForm() {
 
 function LoanDetail({ loan, onBack }: { loan: EMILoan; onBack: () => void }) {
   const deleteEntry = useEMIWorkbookStore((s) => s.deleteEntry);
-  const entries = useEMIWorkbookStore((s) => s.workbook.entries);
   const updateEntry = useEMIWorkbookStore((s) => s.updateEntry);
   const [editing, setEditing] = useState(false);
   const [editRow, setEditRow] = useState<EMILoan>(loan);
   const sum = emiSummary(loan);
-  const index = entries.findIndex((e) => e.id === loan.id);
 
   return (
     <div>
@@ -123,7 +121,7 @@ function LoanDetail({ loan, onBack }: { loan: EMILoan; onBack: () => void }) {
               <button
                 className="btn secondary small"
                 onClick={() => {
-                  if (index >= 0) updateEntry(index, editRow);
+                  updateEntry(loan.id, editRow);
                   toast('Loan updated.');
                   setEditing(false);
                 }}
@@ -147,7 +145,7 @@ function LoanDetail({ loan, onBack }: { loan: EMILoan; onBack: () => void }) {
                 className="btn secondary small"
                 onClick={async () => {
                   if (await confirmDialog('This cannot be undone.', `Delete loan "${loan.name}"?`)) {
-                    if (index >= 0) deleteEntry(index);
+                    deleteEntry(loan.id);
                     onBack();
                   }
                 }}

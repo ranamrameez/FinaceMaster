@@ -19,6 +19,10 @@ export interface Transaction {
 }
 
 export interface Transfer {
+  /** Stable id, not the transfer's array position — needed so cross-entity
+   * transfer links (README item 19) can reference a specific transfer that
+   * survives other transfers being added/edited/deleted around it. */
+  id: string;
   date: string;
   type: 'DEPOSIT' | 'WITHDRAWAL';
   gross: number;

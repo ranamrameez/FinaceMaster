@@ -22,8 +22,8 @@ export interface WorkbookStoreState<TWorkbook extends BaseWorkbook<unknown>> {
   updateTransaction: (index: number, patch: Partial<Transaction>) => void;
   deleteTransaction: (index: number) => void;
   addTransfer: (t: Transfer) => void;
-  updateTransfer: (index: number, patch: Partial<Transfer>) => void;
-  deleteTransfer: (index: number) => void;
+  updateTransfer: (id: string, patch: Partial<Transfer>) => void;
+  deleteTransfer: (id: string) => void;
   addAdjustment: (a: Adjustment) => void;
   updateAdjustment: (index: number, patch: Partial<Adjustment>) => void;
   deleteAdjustment: (index: number) => void;
@@ -54,10 +54,24 @@ export function createWorkbookStore<TWorkbook extends BaseWorkbook<unknown>>(
   storageKey: string,
   createEmpty: () => TWorkbook,
 ): UseBoundStore<StoreApi<WorkbookStoreState<TWorkbook>>> {
+  /** Assigns a stable id to any transfer missing one — real user data
+   * written before `Transfer` carried `id` (i.e. every transfer recorded
+   * before README item 19's cross-entity linking existed) won't have it in
+   * storage, and JSON parsing doesn't enforce the TypeScript type. Applied
+   * on every path data can enter the store (local load and setWorkbook,
+   * which also covers the Firebase pull in useWorkbookCloudSync) so
+   * `updateTransfer`/`deleteTransfer` can always address by id. */
+  function normalize(wb: TWorkbook): TWorkbook {
+    return {
+      ...wb,
+      transfers: wb.transfers.map((t) => (t.id ? t : { ...t, id: crypto.randomUUID() })),
+    };
+  }
+
   function loadFromLocalStorage(): TWorkbook {
     try {
       const raw = localStorage.getItem(storageKey);
-      if (raw) return { ...createEmpty(), ...JSON.parse(raw) };
+      if (raw) return normalize({ ...createEmpty(), ...JSON.parse(raw) });
     } catch (e) {
       console.warn(`Failed to load workbook from localStorage (${storageKey})`, e);
     }
@@ -85,8 +99,9 @@ export function createWorkbookStore<TWorkbook extends BaseWorkbook<unknown>>(
       workbook: loadFromLocalStorage(),
 
       setWorkbook: (wb, opts) => {
-        set({ workbook: wb });
-        if (!opts?.skipPersist) persist(wb);
+        const next = normalize(wb);
+        set({ workbook: next });
+        if (!opts?.skipPersist) persist(next);
       },
 
       addTransaction: (tx) => mutate((wb) => ({ ...wb, transactions: [...wb.transactions, tx] })),
@@ -104,10 +119,10 @@ export function createWorkbookStore<TWorkbook extends BaseWorkbook<unknown>>(
 
       addTransfer: (t) => mutate((wb) => ({ ...wb, transfers: [...wb.transfers, t] })),
 
-      updateTransfer: (index, patch) =>
-        mutate((wb) => ({ ...wb, transfers: wb.transfers.map((t, i) => (i === index ? { ...t, ...patch } : t)) })),
+      updateTransfer: (id, patch) =>
+        mutate((wb) => ({ ...wb, transfers: wb.transfers.map((t) => (t.id === id ? { ...t, ...patch } : t)) })),
 
-      deleteTransfer: (index) => mutate((wb) => ({ ...wb, transfers: wb.transfers.filter((_, i) => i !== index) })),
+      deleteTransfer: (id) => mutate((wb) => ({ ...wb, transfers: wb.transfers.filter((t) => t.id !== id) })),
 
       addAdjustment: (a) => mutate((wb) => ({ ...wb, adjustments: [...wb.adjustments, a] })),
 

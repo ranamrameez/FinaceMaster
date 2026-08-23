@@ -1011,6 +1011,36 @@ html.auth-signed-out #cloudSignedInBox{display:none !important;}
 .appearance-panel .btn{width:100%;padding:7px 10px;font-size:12px;}
 .sidebar-popover .appearance-trigger{width:100%; justify-content:flex-start; text-align:left;}
 
+/* Sidebar category dropdown (README item 18) — replaces the old flat
+   Stocks-heading + "More" link list with one switcher spanning every
+   module. Positioning follows the same position:fixed-with-no-offsets
+   trick as .appearance-panel above: it keeps the panel at the spot it
+   would occupy in normal flow while escaping the sidebar's own
+   overflow:auto clipping. */
+.category-popover{position:relative;width:100%;margin-bottom:10px;}
+.category-trigger{width:100%;display:flex;align-items:center;gap:6px;}
+.category-trigger .category-chevron{margin-left:auto;color:var(--muted);font-size:11px;}
+.category-panel{
+  position:fixed; z-index:1000;
+  width:220px;padding:6px;
+  background:var(--panel);border:1px solid var(--border);border-radius:10px;
+  box-shadow:0 14px 35px rgba(0,0,0,.28);
+  display:flex;flex-direction:column;gap:2px;
+}
+.category-panel-title{
+  font-family:var(--disp);font-weight:700;font-size:12px;
+  color:var(--muted);padding:4px 8px 6px;
+  text-transform:uppercase;letter-spacing:.04em;
+}
+.category-option{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  width:100%;padding:7px 9px;border-radius:7px;border:none;background:transparent;
+  color:var(--text);font-size:13px;text-align:left;cursor:pointer;
+}
+.category-option:hover{background:var(--panel-2);}
+.category-option.active{background:var(--accent-soft);color:var(--on-accent-soft);font-weight:600;}
+.category-check{color:var(--accent);font-size:12px;}
+
 /* Phase 1 addition (README item 14): a super-compact "console" density on
  * top of the existing comfortable/compact tiers — tighter padding, smaller
  * type, monospace-leaning, for users who want maximum information density. */
