@@ -7,6 +7,7 @@ import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { useSortableRows } from '../../../hooks/useSortableRows';
 import { CURRENCIES } from '../../../lib/currencies';
 import { parseCSV } from '../../../lib/csv';
 import { fmtMoney } from '../../../lib/format';
@@ -209,6 +210,10 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
     setEditRow(null);
   };
 
+  type Col = 'date' | 'amount';
+  const sortValue = (r: PersonalLoanRepayment, col: Col): number | string => (col === 'amount' ? r.amount : r.date);
+  const { sorted, Th } = useSortableRows(repayments, sortValue, 'date', 'desc');
+
   return (
     <div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
@@ -218,9 +223,9 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
       </div>
       <div className="table-scroll">
         <table>
-          <thead><tr><th>Date</th><th>Amount</th><th>Source</th><th></th></tr></thead>
+          <thead><tr><Th col="date">Date</Th><Th col="amount">Amount</Th><th>Source</th><th></th></tr></thead>
           <tbody>
-            {repayments.map((r) =>
+            {sorted.map((r) =>
               editId === r.id && editRow ? (
                 <tr key={r.id}>
                   <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
@@ -248,7 +253,7 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                 </tr>
               ),
             )}
-            {!repayments.length && <tr><td colSpan={4} className="footer-note">No repayments logged yet.</td></tr>}
+            {!sorted.length && <tr><td colSpan={4} className="footer-note">No repayments logged yet.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -409,11 +414,11 @@ function PayoffPlanner({ loan, outstanding }: { loan: PersonalLoan; outstanding:
   );
 }
 
-function LoanDetail({ loan, onBack }: { loan: PersonalLoan; onBack: () => void }) {
+function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onBack: () => void; startInEditMode?: boolean }) {
   const repayments = usePersonalLoansWorkbookStore((s) => s.workbook.repayments);
   const deleteLoan = usePersonalLoansWorkbookStore((s) => s.deleteLoan);
   const updateLoan = usePersonalLoansWorkbookStore((s) => s.updateLoan);
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(!!startInEditMode);
   const [editRow, setEditRow] = useState<PersonalLoan>(loan);
   const outstanding = loanOutstanding(loan, repayments);
 
@@ -483,11 +488,23 @@ function LoanDetail({ loan, onBack }: { loan: PersonalLoan; onBack: () => void }
   );
 }
 
-function LoanList({ onSelect }: { onSelect: (loan: PersonalLoan) => void }) {
+function LoanList({ onSelect, onEdit }: { onSelect: (loan: PersonalLoan) => void; onEdit: (loan: PersonalLoan) => void }) {
   const loans = usePersonalLoansWorkbookStore((s) => s.workbook.loans);
   const repayments = usePersonalLoansWorkbookStore((s) => s.workbook.repayments);
   const [filter, setFilter] = useState<'all' | 'owed_to_me' | 'i_owe'>('all');
   const filtered = filter === 'all' ? loans : loans.filter((l) => l.direction === filter);
+
+  type Row = { loan: PersonalLoan; outstanding: number };
+  const rows: Row[] = filtered.map((loan) => ({ loan, outstanding: loanOutstanding(loan, repayments) }));
+  type Col = 'person' | 'direction' | 'outstanding';
+  const sortValue = (r: Row, col: Col): number | string => {
+    switch (col) {
+      case 'direction': return r.loan.direction;
+      case 'outstanding': return r.outstanding;
+      default: return r.loan.person;
+    }
+  };
+  const { sorted, Th } = useSortableRows(rows, sortValue, 'person', 'asc');
 
   return (
     <div>
@@ -500,20 +517,20 @@ function LoanList({ onSelect }: { onSelect: (loan: PersonalLoan) => void }) {
       </div>
       <div className="table-scroll">
         <table>
-          <thead><tr><th>Person</th><th>Direction</th><th>Outstanding</th><th></th></tr></thead>
+          <thead><tr><Th col="person">Person</Th><Th col="direction">Direction</Th><Th col="outstanding">Outstanding</Th><th></th></tr></thead>
           <tbody>
-            {filtered.map((l) => {
-              const outstanding = loanOutstanding(l, repayments);
-              return (
-                <tr key={l.id} onClick={() => onSelect(l)} style={{ cursor: 'pointer' }}>
-                  <td>{l.person}</td>
-                  <td className={l.direction === 'owed_to_me' ? 'pill-buy' : 'pill-sell'}>{l.direction === 'owed_to_me' ? 'Lent out' : 'I owe'}</td>
-                  <td>{fmtMoney(outstanding, l.currencyCode)}</td>
-                  <td><button className="btn secondary small" onClick={(e) => { e.stopPropagation(); onSelect(l); }}>Open</button></td>
-                </tr>
-              );
-            })}
-            {!filtered.length && <tr><td colSpan={4} className="footer-note">No personal loans yet.</td></tr>}
+            {sorted.map(({ loan: l, outstanding }) => (
+              <tr key={l.id} onClick={() => onSelect(l)} style={{ cursor: 'pointer' }}>
+                <td>{l.person}</td>
+                <td className={l.direction === 'owed_to_me' ? 'pill-buy' : 'pill-sell'}>{l.direction === 'owed_to_me' ? 'Lent out' : 'I owe'}</td>
+                <td>{fmtMoney(outstanding, l.currencyCode)}</td>
+                <td>
+                  <button className="btn secondary small" onClick={(e) => { e.stopPropagation(); onEdit(l); }}>Edit</button>{' '}
+                  <button className="btn secondary small" onClick={(e) => { e.stopPropagation(); onSelect(l); }}>Open</button>
+                </td>
+              </tr>
+            ))}
+            {!sorted.length && <tr><td colSpan={4} className="footer-note">No personal loans yet.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -588,8 +605,12 @@ export function PersonalLoansPage({
   uploadLocalToCloud: () => Promise<void>;
 }) {
   const [selected, setSelected] = useState<PersonalLoan | null>(null);
+  const [editOnOpen, setEditOnOpen] = useState(false);
   const loans = usePersonalLoansWorkbookStore((s) => s.workbook.loans);
   const liveSelected = selected ? loans.find((l) => l.id === selected.id) ?? null : null;
+
+  const openLoan = (loan: PersonalLoan) => { setEditOnOpen(false); setSelected(loan); };
+  const editLoan = (loan: PersonalLoan) => { setEditOnOpen(true); setSelected(loan); };
 
   return (
     <div>
@@ -600,7 +621,7 @@ export function PersonalLoansPage({
         schedule, it probably belongs in EMI/Loans instead.
       </p>
       {liveSelected ? (
-        <LoanDetail loan={liveSelected} onBack={() => setSelected(null)} />
+        <LoanDetail loan={liveSelected} onBack={() => setSelected(null)} startInEditMode={editOnOpen} />
       ) : (
         <div>
           <Tabs
@@ -612,7 +633,7 @@ export function PersonalLoansPage({
                   <div>
                     <NetPositionSummary />
                     <AddLoanForm />
-                    <LoanList onSelect={setSelected} />
+                    <LoanList onSelect={openLoan} onEdit={editLoan} />
                   </div>
                 ),
               },

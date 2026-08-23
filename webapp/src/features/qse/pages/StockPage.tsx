@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
+import { useSortableRows } from '../../../hooks/useSortableRows';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { shortenCompanyName } from '../../../lib/shortenName';
@@ -31,10 +32,20 @@ function TickerTransactions({ ticker }: { ticker: string }) {
 
   // Keep the original index into workbook.transactions so edit/delete hit
   // the right row — the displayed list is filtered to this ticker only.
-  const rows = workbook.transactions
+  const filteredRows = workbook.transactions
     .map((tx, i) => ({ tx, i }))
-    .filter((r) => r.tx.ticker === ticker)
-    .sort((a, b) => b.tx.date.localeCompare(a.tx.date));
+    .filter((r) => r.tx.ticker === ticker);
+  type Col = 'date' | 'action' | 'shares' | 'price' | 'cost';
+  const sortValue = (r: (typeof filteredRows)[number], col: Col): number | string => {
+    switch (col) {
+      case 'action': return r.tx.action;
+      case 'shares': return r.tx.shares;
+      case 'price': return r.tx.price;
+      case 'cost': return r.tx.shares * r.tx.price;
+      default: return r.tx.date;
+    }
+  };
+  const { sorted: rows, Th } = useSortableRows(filteredRows, sortValue, 'date', 'desc');
 
   const submit = async () => {
     const shares = Number(sharesInput);
@@ -75,7 +86,7 @@ function TickerTransactions({ ticker }: { ticker: string }) {
       <div className="table-scroll">
         <table>
           <thead>
-            <tr><th>Date</th><th>Action</th><th>Shares</th><th>Price</th><th>Cost</th><th></th></tr>
+            <tr><Th col="date">Date</Th><Th col="action">Action</Th><Th col="shares">Shares</Th><Th col="price">Price</Th><Th col="cost">Cost</Th><th></th></tr>
           </thead>
           <tbody>
             {rows.map(({ tx, i }) =>

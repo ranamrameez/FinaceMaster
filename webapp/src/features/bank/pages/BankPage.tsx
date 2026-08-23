@@ -101,12 +101,23 @@ function AccountsList() {
     setEditRow(null);
   };
 
+  type Col = 'name' | 'currency' | 'opening' | 'current';
+  const sortValue = (a: BankAccount, col: Col): number | string => {
+    switch (col) {
+      case 'currency': return a.currencyCode;
+      case 'opening': return a.openingBalance;
+      case 'current': return accountBalance(a, transactions);
+      default: return a.name;
+    }
+  };
+  const { sorted, Th } = useSortableRows(accounts, sortValue, 'name', 'asc');
+
   return (
     <div className="table-scroll">
       <table>
-        <thead><tr><th>Name</th><th>Currency</th><th>Opening balance</th><th>Current balance</th><th></th></tr></thead>
+        <thead><tr><Th col="name">Name</Th><Th col="currency">Currency</Th><Th col="opening">Opening balance</Th><Th col="current">Current balance</Th><th></th></tr></thead>
         <tbody>
-          {accounts.map((a) =>
+          {sorted.map((a) =>
             editId === a.id && editRow ? (
               <tr key={a.id}>
                 <td><input value={editRow.name} onChange={(e) => setEditRow({ ...editRow, name: e.target.value })} /></td>
@@ -142,7 +153,7 @@ function AccountsList() {
               </tr>
             ),
           )}
-          {!accounts.length && <tr><td colSpan={5} className="footer-note">No accounts yet — add one above.</td></tr>}
+          {!sorted.length && <tr><td colSpan={5} className="footer-note">No accounts yet — add one above.</td></tr>}
         </tbody>
       </table>
     </div>

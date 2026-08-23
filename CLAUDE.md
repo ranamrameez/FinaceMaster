@@ -836,6 +836,19 @@ not developer notes) continuously as features ship.
   bug (`x || undefined` on an optional field) is easy to reintroduce in
   a new module's add-form — the fix belongs in the shared sync path,
   not in each individual call site.
+- **Sorting + direct edit added to a batch of tables that lacked them
+  (2026-08-23), user-reported — see README Done item 47.** Audited
+  every module for the existing `useSortableRows` pattern and for
+  whether records are editable at all. Added sorting to: Personal
+  Loans' loan list and repayments table, EMI's loan list, Bank's
+  accounts list, Rentals' properties list, the Transfers page's linked-
+  transfers list, and QSE/PSX's per-stock transaction tables. Added a
+  direct "Edit" button (opens the detail view already in edit mode, via
+  a new `startInEditMode` prop on `LoanDetail`) to Personal Loans' and
+  EMI's loan list rows, which previously only had "Open." Verified
+  every other module already had edit somewhere in its flow — this
+  wasn't a universal gap, just these two extra-click cases plus the
+  missing sort headers.
 
 ## Live URLs
 

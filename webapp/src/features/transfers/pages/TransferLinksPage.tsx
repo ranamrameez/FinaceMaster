@@ -1,10 +1,11 @@
 import type { User } from 'firebase/auth';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Card } from '../../../components/Card';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { useSortableRows } from '../../../hooks/useSortableRows';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
 import { fmtMoney } from '../../../lib/format';
@@ -236,7 +237,9 @@ function LinksList() {
   const [editDate, setEditDate] = useState('');
   const [editNote, setEditNote] = useState('');
 
-  const sorted = useMemo(() => [...links].sort((a, b) => b.date.localeCompare(a.date)), [links]);
+  type Col = 'date' | 'fromAmount' | 'toAmount';
+  const sortValue = (l: InterEntityTransfer, col: Col): number | string => (col === 'date' ? l.date : l[col]);
+  const { sorted, Th } = useSortableRows(links, sortValue, 'date', 'desc');
 
   const startEdit = (l: InterEntityTransfer) => {
     setEditId(l.id);
@@ -272,11 +275,11 @@ function LinksList() {
       <table>
         <thead>
           <tr>
-            <th>Date</th>
+            <Th col="date">Date</Th>
             <th>From</th>
             <th>To</th>
-            <th>From amt</th>
-            <th>To amt</th>
+            <Th col="fromAmount">From amt</Th>
+            <Th col="toAmount">To amt</Th>
             <th>Note</th>
             <th></th>
           </tr>

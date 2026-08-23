@@ -98,12 +98,23 @@ function PropertiesList() {
     setEditRow(null);
   };
 
+  type Col = 'name' | 'currency' | 'purchasePrice' | 'netIncome';
+  const sortValue = (p: Property, col: Col): number | string => {
+    switch (col) {
+      case 'currency': return p.currencyCode;
+      case 'purchasePrice': return p.purchasePrice ?? 0;
+      case 'netIncome': return propertyNetIncome(p, entries);
+      default: return p.name;
+    }
+  };
+  const { sorted, Th } = useSortableRows(properties, sortValue, 'name', 'asc');
+
   return (
     <div className="table-scroll">
       <table>
-        <thead><tr><th>Name</th><th>Currency</th><th>Purchase price</th><th>Net income (all time)</th><th></th></tr></thead>
+        <thead><tr><Th col="name">Name</Th><Th col="currency">Currency</Th><Th col="purchasePrice">Purchase price</Th><Th col="netIncome">Net income (all time)</Th><th></th></tr></thead>
         <tbody>
-          {properties.map((p) =>
+          {sorted.map((p) =>
             editId === p.id && editRow ? (
               <tr key={p.id}>
                 <td><input value={editRow.name} onChange={(e) => setEditRow({ ...editRow, name: e.target.value })} /></td>
@@ -139,7 +150,7 @@ function PropertiesList() {
               </tr>
             ),
           )}
-          {!properties.length && <tr><td colSpan={5} className="footer-note">No properties yet — add one above.</td></tr>}
+          {!sorted.length && <tr><td colSpan={5} className="footer-note">No properties yet — add one above.</td></tr>}
         </tbody>
       </table>
     </div>

@@ -5,6 +5,7 @@ import { confirmDialog } from '../../../components/ConfirmDialog';
 import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { useSortableRows } from '../../../hooks/useSortableRows';
 import { emiSummary } from '../../../lib/calc/emiModule';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
@@ -85,10 +86,10 @@ function AddLoanForm() {
   );
 }
 
-function LoanDetail({ loan, onBack }: { loan: EMILoan; onBack: () => void }) {
+function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: () => void; startInEditMode?: boolean }) {
   const deleteEntry = useEMIWorkbookStore((s) => s.deleteEntry);
   const updateEntry = useEMIWorkbookStore((s) => s.updateEntry);
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(!!startInEditMode);
   const [editRow, setEditRow] = useState<EMILoan>(loan);
   const sum = emiSummary(loan);
 
@@ -199,28 +200,47 @@ function LoanDetail({ loan, onBack }: { loan: EMILoan; onBack: () => void }) {
   );
 }
 
-function LoanList({ onSelect }: { onSelect: (loan: EMILoan) => void }) {
+function LoanList({ onSelect, onEdit }: { onSelect: (loan: EMILoan) => void; onEdit: (loan: EMILoan) => void }) {
   const loans = useEMIWorkbookStore((s) => s.workbook.entries);
+
+  type Row = { loan: EMILoan; sum: ReturnType<typeof emiSummary> };
+  const rows: Row[] = loans.map((loan) => ({ loan, sum: emiSummary(loan) }));
+  type Col = 'name' | 'lender' | 'monthly' | 'outstanding' | 'monthsLeft';
+  const sortValue = (r: Row, col: Col): number | string => {
+    switch (col) {
+      case 'lender': return r.loan.lender;
+      case 'monthly': return r.sum.emi;
+      case 'outstanding': return r.sum.outstanding;
+      case 'monthsLeft': return r.sum.monthsRemaining;
+      default: return r.loan.name;
+    }
+  };
+  const { sorted, Th } = useSortableRows(rows, sortValue, 'name', 'asc');
 
   return (
     <div className="table-scroll">
       <table>
-        <thead><tr><th>Name</th><th>Lender</th><th>Monthly</th><th>Outstanding</th><th>Months left</th><th></th></tr></thead>
+        <thead>
+          <tr>
+            <Th col="name">Name</Th><Th col="lender">Lender</Th><Th col="monthly">Monthly</Th>
+            <Th col="outstanding">Outstanding</Th><Th col="monthsLeft">Months left</Th><th></th>
+          </tr>
+        </thead>
         <tbody>
-          {loans.map((l) => {
-            const sum = emiSummary(l);
-            return (
-              <tr key={l.id} onClick={() => onSelect(l)} style={{ cursor: 'pointer' }}>
-                <td>{l.name}</td>
-                <td>{l.lender}{l.repaymentMode === 'fixedTotal' ? ' · no-interest' : ''}</td>
-                <td>{fmtMoney(sum.emi, l.currencyCode)}</td>
-                <td className="pill-sell">{fmtMoney(sum.outstanding, l.currencyCode)}</td>
-                <td>{sum.monthsRemaining}</td>
-                <td><button className="btn secondary small" onClick={(e) => { e.stopPropagation(); onSelect(l); }}>Open</button></td>
-              </tr>
-            );
-          })}
-          {!loans.length && <tr><td colSpan={6} className="footer-note">No loans yet — add one above.</td></tr>}
+          {sorted.map(({ loan: l, sum }) => (
+            <tr key={l.id} onClick={() => onSelect(l)} style={{ cursor: 'pointer' }}>
+              <td>{l.name}</td>
+              <td>{l.lender}{l.repaymentMode === 'fixedTotal' ? ' · no-interest' : ''}</td>
+              <td>{fmtMoney(sum.emi, l.currencyCode)}</td>
+              <td className="pill-sell">{fmtMoney(sum.outstanding, l.currencyCode)}</td>
+              <td>{sum.monthsRemaining}</td>
+              <td>
+                <button className="btn secondary small" onClick={(e) => { e.stopPropagation(); onEdit(l); }}>Edit</button>{' '}
+                <button className="btn secondary small" onClick={(e) => { e.stopPropagation(); onSelect(l); }}>Open</button>
+              </td>
+            </tr>
+          ))}
+          {!sorted.length && <tr><td colSpan={6} className="footer-note">No loans yet — add one above.</td></tr>}
         </tbody>
       </table>
     </div>
@@ -292,8 +312,12 @@ export function EMIPage({
   uploadLocalToCloud: () => Promise<void>;
 }) {
   const [selected, setSelected] = useState<EMILoan | null>(null);
+  const [editOnOpen, setEditOnOpen] = useState(false);
   const loans = useEMIWorkbookStore((s) => s.workbook.entries);
   const liveSelected = selected ? loans.find((l) => l.id === selected.id) ?? null : null;
+
+  const openLoan = (loan: EMILoan) => { setEditOnOpen(false); setSelected(loan); };
+  const editLoan = (loan: EMILoan) => { setEditOnOpen(true); setSelected(loan); };
 
   return (
     <div>
@@ -303,11 +327,11 @@ export function EMIPage({
         auto-calculated amortization schedule. Assumes on-schedule payment; doesn't track missed/late payments.
       </p>
       {liveSelected ? (
-        <LoanDetail loan={liveSelected} onBack={() => setSelected(null)} />
+        <LoanDetail loan={liveSelected} onBack={() => setSelected(null)} startInEditMode={editOnOpen} />
       ) : (
         <div>
           <AddLoanForm />
-          <LoanList onSelect={setSelected} />
+          <LoanList onSelect={openLoan} onEdit={editLoan} />
           <AccountSection syncStatus={syncStatus} cloudEmpty={cloudEmpty} uploadLocalToCloud={uploadLocalToCloud} />
         </div>
       )}

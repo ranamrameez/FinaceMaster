@@ -557,6 +557,26 @@ FinanceManager live link:
     reported scenario (a loan with `note: undefined`) plus nested/array cases and confirms
     ordinary falsy values (`0`, `null`, `false`) survive untouched. `npm run build` /
     `npm run test` (141 tests, 3 new) both clean.
+47. **Sorting and direct edit added across a batch of tables that lacked them (2026-08-23,
+    user-reported: "many tables not sorting... records don't have edit buttons").** Audited
+    every module's tables for the existing `useSortableRows` header pattern and for whether a
+    record can be edited at all. Found and fixed real gaps: **sorting** added to Personal
+    Loans' loan list and repayments table, EMI's loan list, Bank's accounts list, Rentals'
+    properties list, the Transfers page's linked-transfers list (previously a fixed
+    date-descending sort, now user-toggleable), and QSE/PSX's per-stock transaction tables.
+    **Direct edit** added to Personal Loans' and EMI's loan list rows — both previously only
+    had an "Open" button that navigated to the detail view, where Edit already existed one
+    click further in; each list row now also has an "Edit" button that opens the detail view
+    already in edit mode (`LoanDetail`'s `startInEditMode` prop), cutting the click needed to
+    fix a typo in a loan's name or amount. **Not a gap, verified while auditing**: every other
+    module's master/leaf records (Cash entries, Bank transactions/accounts, Rentals
+    properties/entries, Funds/EMI's own detail-view edit, Personal Loans repayments,
+    Transfers) already had edit — the "no edit buttons" impression was specifically these two
+    list views' extra click, not a missing capability. Verified live via Playwright: header
+    click toggles sort direction correctly on both a Personal Loans and a Bank table, and the
+    new Edit button opens the loan detail directly showing the Save/Cancel edit form — zero
+    console errors. `npm run build` / `npm run test` (141 tests, unchanged — this is UI
+    wiring around already-tested calc functions, not new calc logic) both clean.
 
 ## Pending
 
