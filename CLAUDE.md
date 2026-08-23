@@ -340,9 +340,40 @@ not developer notes) continuously as features ship.
     Loans). Verified live in a fresh browser tab: sign-in gate on add,
     schedule/summary stats matched hand-calculated expectations for both a
     mortgage and a no-interest loan, edit recalculates immediately, delete
-    confirms and removes correctly, no console errors. Next up per the
-    build order is Funds, then Rentals — the last two of the six planned
-    modules.
+    confirms and removes correctly, no console errors.
+  - **Funds module built (2026-08-23) — fifth new module, and the one
+    that genuinely reuses the full `createWorkbookStore` factory** (not
+    `createEntryStore`, not hand-written) — unlike Cash/Personal Loans/
+    Banking/EMI, Funds' shape (buy/sell units at a NAV) maps onto
+    QSE/PSX's exact `Transaction` shape (`Fund.id` plays `ticker`, units
+    play `shares`, NAV plays `price`), so `computePositions`/`cashSummary`/
+    `computeRealizedPLTimeSeries`/`marketPrices`/`priceHistory`/
+    `getMarketPrice` all work with **zero changes to any shared calc
+    file** — confirmed by not touching `lib/calc/positions.ts`,
+    `cashSummary.ts`, `realizedPL.ts`, or `priceHistory.ts` at all during
+    this build. `FundsWorkbook extends BaseWorkbook<FundsSettings>` plus
+    its own `funds: Fund[]`; since the factory has no action for that
+    extra field, Fund CRUD (add/update/delete a *Fund*, as opposed to a
+    *Transaction*) goes through the store's already-generic `setWorkbook`
+    directly in `features/funds/pages/FundsPage.tsx` rather than adding a
+    new store action. `transfers`/`watchlist`/`dividends`/`tradePlans`
+    inherited from `BaseWorkbook` are unused (documented in
+    `types/fundsWorkbook.ts`'s own comment) — an accepted tradeoff for
+    genuine factory reuse over a parallel type. No fee model (`calcFee` is
+    a no-op — NAV is already net of fund fees). New `lib/calc/xirr.ts`
+    (Newton-Raphson + bisection fallback, ported from the reference
+    prototype) — tested against an exact-10%-one-year-return case, a
+    multi-flow case, and null-for-same-sign-flows. Files: `types/
+    fundsWorkbook.ts`, `store/{fundsWorkbookStore,defaultFundsWorkbook}.ts`,
+    `lib/firebase/useFundsFirebaseSync.ts`,
+    `features/funds/hooks/useFundsDerived.ts`,
+    `features/funds/pages/FundsPage.tsx`, route `/funds`, nav under "More".
+    Verified live in a fresh browser tab against the reference prototype's
+    own worked example (two buys totaling $7000 invested, NAV rising to
+    $214): position rollup/value/P&L%/XIRR all matched; NAV update and
+    transaction edits recalculate everything live; sign-in gate fires on
+    both fund-add and NAV-update; no console errors. Next up per the build
+    order is Rentals — the last of the six planned modules.
   - **Not done — still open PSX/README items for a future session:**
     statement PDF/Excel import (item 12), dynamic/filterable charts (item
     17), the Sidebar's category-dropdown redesign for Stock Exchanges/
@@ -401,6 +432,9 @@ webapp/                                                              the new Rea
                             import, see its own entry above and MODULES_PLAN.md §2
   src/features/emi/         EMI/Loans module (2026-08-23) — reuses createEntryStore.ts, see
                             its own entry above and MODULES_PLAN.md §5
+  src/features/funds/       Funds module (2026-08-23) — reuses the FULL createWorkbookStore.ts
+                            factory (Fund.id plays `ticker`), see its own entry above and
+                            MODULES_PLAN.md §3
   src/components/           shared UI: Modal, ConfirmDialog, SignInModal, Sparkline, Tabs, Sidebar, etc.
   src/types/workbook.ts     QSE types; psxWorkbook.ts has PSX's parallel types
 .github/workflows/static.yml   CI: builds webapp/ and deploys it to /webapp/ alongside the legacy

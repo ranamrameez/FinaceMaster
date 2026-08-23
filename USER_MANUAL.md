@@ -15,7 +15,7 @@ FinanceRecorder tracks your investments and (eventually) broader personal financ
 multiple exchanges and account types. Right now it covers two stock exchanges — **QSE**
 (Qatar Stock Exchange) and **PSX** (Pakistan Stock Exchange) — each with its own portfolio,
 transactions, watchlist, analytics, and settings. It also now covers Cash, Personal Loans,
-Banking, and EMI/Loans (see §13-§17 below). Funds and Rentals are still planned — see
+Banking, EMI/Loans, and Funds (see §13-§19 below). Rentals is still planned — see
 `MODULES_PLAN.md` for what's coming.
 
 **Before anything else**: on your first visit, you'll see a one-time disclaimer screen.
@@ -232,7 +232,7 @@ Informal loans with another person — money you lent out, or money you owe — 
 - No interest or repayment-schedule automation here by design — if a "personal loan"
   actually has a real repayment schedule, it belongs in EMI/Loans (§17 below) instead.
 
-More modules (Funds, Rentals) are planned — see `MODULES_PLAN.md`.
+More modules (Rentals) are planned — see `MODULES_PLAN.md`.
 
 ---
 
@@ -284,11 +284,30 @@ transactions) and Personal Loans (informal, no schedule).
   since the start date — there's no tracking of individually missed or late payments in
   this version.
 
-More modules (Funds, Rentals) are planned — see `MODULES_PLAN.md`.
+More modules (Rentals) are planned — see `MODULES_PLAN.md`.
 
 ---
 
-## 18. A note on accuracy
+## 19. Funds
+
+Mutual fund unit holdings and performance — under **More → Funds**. Structurally the closest
+of the new modules to QSE/PSX (buy/sell units at a NAV per unit is the same shape as buy/
+sell shares at a price), so it shares the same underlying calculation engine.
+
+- **Add a fund**: name, code, "invested via" platform, category (Equity/Debt/Hybrid/
+  International/Other), currency, and optionally an initial investment (amount + NAV) to
+  create the first transaction right away.
+- **Fund list**: units held, current value, net profit (amount and %), and **XIRR** — a
+  return measure that accounts for *when* each investment happened, not just the total, so
+  it's more accurate than a flat percentage when you've invested at different times.
+- **Open a fund** to see full stats (units, average NAV cost, invested, current value, net
+  profit, XIRR), update its current NAV (like a stock's market price), and log or edit/
+  delete Invest/Withdraw transactions (units + NAV per unit).
+- Edit or delete the fund itself any time (deleting also removes its transactions).
+
+---
+
+## 20. A note on accuracy
 
 Every number in this app is an **estimate** computed from settings you configure — it is
 not a substitute for your actual broker/exchange statement, and it is not financial advice.

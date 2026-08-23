@@ -154,6 +154,20 @@ FinanceManager live link:
     no-interest loan, edit recalculates the whole schedule immediately, delete confirms and
     removes correctly — no bugs this time (checked every selector against the rule learned
     from the Personal Loans bug before shipping).
+26. **Funds module built (2026-08-23)** — fifth new module, per `MODULES_PLAN.md`'s build
+    order. Mutual fund unit holdings: add a fund (name, code, platform, category, currency),
+    buy/sell units at a NAV per unit, update current NAV, and see units held, invested,
+    current value, net profit, and **XIRR** (a proper time-weighted return, ported from the
+    reference prototype's Newton-Raphson + bisection algorithm — not just a flat percentage).
+    Find it at **More → Funds**. Unlike every other new module, this one genuinely reuses
+    the *full* `createWorkbookStore` factory (the same one QSE/PSX use) — a fund's `id` plays
+    the role of `ticker` in `Transaction` records, so `computePositions`/`cashSummary`/
+    `marketPrices`/`priceHistory` all work with zero changes to any shared calc file. New
+    `lib/calc/xirr.ts`, tested against an exact-10%-return hand-traced case. Verified live in
+    a fresh browser tab against the reference prototype's own worked example (two buys
+    totaling $7000, NAV rising to $214): position rollup, value, P/L%, and XIRR all matched;
+    NAV update and transaction edits recalculate everything live; sign-in gate fires on both
+    fund-add and NAV-update; no console errors.
 
 ## Pending
 

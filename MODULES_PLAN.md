@@ -89,9 +89,10 @@ riskier to get wrong:
 4. **EMI / Loans** — ✅ built 2026-08-23. Introduces real calculation (amortization
    schedule) but no market-price dependency — a good bridge before Funds' XIRR/cost-basis
    complexity.
-5. **Funds** (mutual funds) — structurally closest to QSE/PSX (buy/sell units, a "price"
-   equivalent in NAV-per-unit, cost basis, P/L, XIRR) — most reuse of the existing calc
-   engine, but the most calculation-heavy of the six.
+5. **Funds** (mutual funds) — ✅ built 2026-08-23. Structurally closest to QSE/PSX (buy/sell
+   units, a "price" equivalent in NAV-per-unit, cost basis, P/L, XIRR) — most reuse of the
+   existing calc engine (genuinely reused the full `createWorkbookStore` factory, unlike
+   every other new module), but was also the most calculation-heavy of the six.
 6. **Rentals** — the most different shape (recurring income/expense on a property, not
    discrete buy/sell trades) — do this last since it borrows the least from existing code.
 
@@ -210,11 +211,33 @@ start), multi-user/shared accounts.
 
 ---
 
-## 3. Funds (mutual funds)
+## 3. Funds (mutual funds) — ✅ built 2026-08-23
 
 **Purpose**: track mutual fund unit holdings and performance — structurally the closest of
 the four to QSE/PSX (a "buy N units at NAV X" is the same shape as "buy N shares at price
 X"), so this module should reuse the calc engine most directly.
+
+**Built as designed below — this is the one module that could genuinely reuse the full
+`createWorkbookStore` factory** (not `createEntryStore`, and not a hand-written store),
+because a `Fund.id` playing the role of `ticker` in `Transaction` records makes
+`computePositions`/`cashSummary`/`computeRealizedPLTimeSeries`/`marketPrices`/
+`priceHistory`/`getMarketPrice` all work completely unmodified — genuinely zero changes to
+any shared calc file. `FundsWorkbook extends BaseWorkbook<FundsSettings>` plus its own
+`funds: Fund[]` array; Fund CRUD (unlike Transaction CRUD) has no dedicated store action
+since the factory doesn't know about that extra field, so the Funds page mutates it via the
+store's already-generic `setWorkbook`. `transfers`/`watchlist`/`dividends`/`tradePlans`
+inherited from `BaseWorkbook` are unused (no UI for them) — an accepted, documented tradeoff
+for genuine reuse over a parallel type. No fee model (`calcFee` is a no-op — NAV is already
+net of fund fees). XIRR was ported to a new `lib/calc/xirr.ts` (Newton-Raphson + bisection
+fallback, hand-traced in tests including an exact-10%-return case and null-for-same-sign-
+flows). Files: `types/fundsWorkbook.ts`, `store/{fundsWorkbookStore,
+defaultFundsWorkbook}.ts`, `lib/firebase/useFundsFirebaseSync.ts`,
+`features/funds/hooks/useFundsDerived.ts`, `features/funds/pages/FundsPage.tsx`, route
+`/funds`, nav under "More". Verified live in a fresh browser tab against the reference
+prototype's own worked example (two buys, $5000+$2000 invested, NAV rising to $214):
+position rollup, current value, net P/L%, and XIRR all matched; NAV update and transaction
+edit both recalculate everything live; sign-in gate fires on both fund-add and NAV-update;
+no console errors.
 
 **Data model**:
 ```ts
