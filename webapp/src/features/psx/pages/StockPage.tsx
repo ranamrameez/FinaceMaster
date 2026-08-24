@@ -6,6 +6,7 @@ import { toast } from '../../../components/Toast';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { isNettedLeg } from '../../../lib/calc/psxFees';
+import { FeeModeControl, feeModeFor, type FeeMode } from '../../../components/ui/FeeModeControl';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { shortenCompanyName } from '../../../lib/shortenName';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
@@ -28,12 +29,15 @@ function TickerTransactions({ ticker }: { ticker: string }) {
   const [date, setDate] = useState(today());
   const [sharesInput, setSharesInput] = useState('');
   const [priceInput, setPriceInput] = useState('');
-  // Pre-checked when the form's own defaults (today + BUY) already match —
-  // a lone same-day buy otherwise can't be netted until a matching SELL is
-  // also logged the same day, so it'd be charged full commission up front.
-  // Only ever nudged ON by the date/action handlers below, never forced
-  // off, so a user's manual uncheck survives editing another field.
+  // Semi mode + checked by default: the form's own defaults (today + BUY)
+  // mean this is most likely a same-day buy, which otherwise can't be
+  // netted until a matching SELL is also logged the same day, so it'd be
+  // charged full commission up front. Only ever nudged ON by the
+  // date/action handlers below, never forced off, so a user's manual
+  // uncheck survives editing another field.
+  const [feeMode, setFeeMode] = useState<FeeMode>('semi');
   const [manualSameDay, setManualSameDay] = useState(true);
+  const [feeOverrideInput, setFeeOverrideInput] = useState<number | undefined>(undefined);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editRow, setEditRow] = useState<Transaction | null>(null);
 
@@ -58,7 +62,11 @@ function TickerTransactions({ ticker }: { ticker: string }) {
     const price = Number(priceInput);
     if (!shares || !price) return toast('Enter shares and price.');
     if (!(await ensureSignedIn('Sign in to save this transaction.'))) return;
-    addTransaction({ date, ticker, action, shares, price, manualSameDay: manualSameDay || undefined });
+    addTransaction({
+      date, ticker, action, shares, price,
+      manualSameDay: feeMode === 'semi' ? manualSameDay : undefined,
+      feeOverride: feeMode === 'manual' ? feeOverrideInput : undefined,
+    });
     toast(`${action} ${shares} ${ticker} @ ${fmtPrice(price)} logged.`);
     setSharesInput('');
     setPriceInput('');
@@ -109,10 +117,14 @@ function TickerTransactions({ ticker }: { ticker: string }) {
         />
         <input type="number" placeholder="Shares" value={sharesInput} onChange={(e) => setSharesInput(e.target.value)} style={{ width: 90 }} />
         <input type="number" step="0.01" placeholder="Price" value={priceInput} onChange={(e) => setPriceInput(e.target.value)} style={{ width: 90 }} />
-        <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4 }} title="Force netted (government levies only) fee treatment for this leg, overriding auto-detection — pre-checked for a same-day buy since it can't be netted until a matching sell is also logged.">
-          <input type="checkbox" checked={manualSameDay} onChange={(e) => setManualSameDay(e.target.checked)} />
-          Same-day
-        </label>
+        <FeeModeControl
+          mode={feeMode}
+          onModeChange={setFeeMode}
+          manualSameDay={manualSameDay}
+          onManualSameDayChange={setManualSameDay}
+          feeOverride={feeOverrideInput}
+          onFeeOverrideChange={setFeeOverrideInput}
+        />
         <button className="btn" onClick={submit}>Add {action === 'BUY' ? 'buy' : 'sell'}</button>
       </div>
 
@@ -136,22 +148,17 @@ function TickerTransactions({ ticker }: { ticker: string }) {
                   <td><input type="number" step="0.01" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })} style={{ width: 80 }} /></td>
                   <td>{fmtMoney(editRow.shares * editRow.price, currency)}</td>
                   <td>
-                    <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4 }} title="Force netted (government levies only) fee treatment, overriding auto-detection.">
-                      <input
-                        type="checkbox"
-                        checked={!!editRow.manualSameDay}
-                        onChange={(e) => setEditRow({ ...editRow, manualSameDay: e.target.checked })}
-                      />
-                      Same-day
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      placeholder="Fee override"
-                      title="Override the computed fee with the exact amount from your account statement (optional)."
-                      value={editRow.feeOverride ?? ''}
-                      onChange={(e) => setEditRow({ ...editRow, feeOverride: e.target.value === '' ? undefined : Number(e.target.value) })}
-                      style={{ width: 100, marginTop: 4 }}
+                    <FeeModeControl
+                      mode={feeModeFor(editRow)}
+                      onModeChange={(mode) => {
+                        if (mode === 'auto') setEditRow({ ...editRow, manualSameDay: undefined, feeOverride: undefined });
+                        else if (mode === 'semi') setEditRow({ ...editRow, manualSameDay: editRow.manualSameDay ?? false, feeOverride: undefined });
+                        else setEditRow({ ...editRow, manualSameDay: undefined, feeOverride: editRow.feeOverride ?? 0 });
+                      }}
+                      manualSameDay={!!editRow.manualSameDay}
+                      onManualSameDayChange={(v) => setEditRow({ ...editRow, manualSameDay: v })}
+                      feeOverride={editRow.feeOverride}
+                      onFeeOverrideChange={(v) => setEditRow({ ...editRow, feeOverride: v })}
                     />
                   </td>
                   <td>

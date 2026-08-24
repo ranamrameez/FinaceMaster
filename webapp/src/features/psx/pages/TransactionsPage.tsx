@@ -8,6 +8,7 @@ import { useSortableRows } from '../../../hooks/useSortableRows';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { confirmAndDeleteLinkable } from '../../../lib/linkCascade';
 import { isNettedLeg } from '../../../lib/calc/psxFees';
+import { FeeModeControl, feeModeFor } from '../../../components/ui/FeeModeControl';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { createEmptyPSXWorkbook } from '../../../store/defaultPsxWorkbook';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
@@ -104,22 +105,17 @@ function TransactionRows() {
             onChange={(e) => update(i, { price: Number(e.target.value) })}
             style={{ width: 90 }}
           />
-          <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4 }} title="Force netted (government levies only) fee treatment for this leg, overriding auto-detection — use when your statement shows a same-day round trip that the recorded date doesn't line up with.">
-            <input
-              type="checkbox"
-              checked={!!r.manualSameDay}
-              onChange={(e) => update(i, { manualSameDay: e.target.checked })}
-            />
-            Same-day override
-          </label>
-          <input
-            type="number"
-            step="0.01"
-            placeholder="Fee override"
-            title="Override the computed fee with the exact amount from your account statement (optional)."
-            value={r.feeOverride ?? ''}
-            onChange={(e) => update(i, { feeOverride: e.target.value === '' ? undefined : Number(e.target.value) })}
-            style={{ width: 100 }}
+          <FeeModeControl
+            mode={feeModeFor(r)}
+            onModeChange={(mode) => {
+              if (mode === 'auto') update(i, { manualSameDay: undefined, feeOverride: undefined });
+              else if (mode === 'semi') update(i, { manualSameDay: r.manualSameDay ?? false, feeOverride: undefined });
+              else update(i, { manualSameDay: undefined, feeOverride: r.feeOverride ?? 0 });
+            }}
+            manualSameDay={!!r.manualSameDay}
+            onManualSameDayChange={(v) => update(i, { manualSameDay: v })}
+            feeOverride={r.feeOverride}
+            onFeeOverrideChange={(v) => update(i, { feeOverride: v })}
           />
           <button className="btn secondary small" onClick={() => setRows((rs) => rs.filter((_, idx) => idx !== i))}>
             <TrashIcon size={12} />Remove
@@ -136,13 +132,15 @@ function TransactionRows() {
       </div>
       <p className="footer-note" style={{ marginTop: 8 }}>
         Same-day round trips are detected automatically: if you buy and sell the same ticker on the
-        same date, the smaller side is charged government levies only (no double commission) — see
-        each transaction's Fee column in the list below. A new BUY dated today has "Same-day
-        override" pre-checked, since that's a buy you're most likely about to close out the same
-        day — uncheck it if you're actually opening a position you plan to hold. If your account
-        statement shows a same-day netting that the recorded date doesn't line up with, check
-        "Same-day override" to force it. Leave "Fee override" blank to use the computed fee, or fill
-        it in to match your statement exactly.
+        same date, the larger side pays full commission and the smaller side is netted to
+        government levies only — see each transaction's Fee column in the list below. The
+        <strong> Fee mode</strong> dropdown per row controls how much you want to override that:
+        <strong> Auto</strong> leaves it fully computed, <strong>Semi</strong> lets you flip whether
+        this specific leg counts as netted (use when your statement shows a same-day netting the
+        recorded date doesn't line up with), and <strong>Manual</strong> lets you type the exact fee
+        from your statement, bypassing computation entirely. A new BUY dated today starts in Semi
+        mode with "Netted" pre-checked, since that's a buy you're most likely about to close out the
+        same day — switch to Auto if you're actually opening a position you plan to hold.
       </p>
     </div>
   );
@@ -366,22 +364,17 @@ function TransactionList() {
                     <td><input type="number" step="0.01" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })} style={{ width: 80 }} /></td>
                     <td>{fmtMoney(editRow.shares * editRow.price, currency)}</td>
                     <td>
-                      <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4 }} title="Force netted (government levies only) fee treatment, overriding auto-detection.">
-                        <input
-                          type="checkbox"
-                          checked={!!editRow.manualSameDay}
-                          onChange={(e) => setEditRow({ ...editRow, manualSameDay: e.target.checked })}
-                        />
-                        Same-day
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        placeholder="Fee override"
-                        title="Override the computed fee with the exact amount from your account statement (optional)."
-                        value={editRow.feeOverride ?? ''}
-                        onChange={(e) => setEditRow({ ...editRow, feeOverride: e.target.value === '' ? undefined : Number(e.target.value) })}
-                        style={{ width: 100, marginTop: 4 }}
+                      <FeeModeControl
+                        mode={feeModeFor(editRow)}
+                        onModeChange={(mode) => {
+                          if (mode === 'auto') setEditRow({ ...editRow, manualSameDay: undefined, feeOverride: undefined });
+                          else if (mode === 'semi') setEditRow({ ...editRow, manualSameDay: editRow.manualSameDay ?? false, feeOverride: undefined });
+                          else setEditRow({ ...editRow, manualSameDay: undefined, feeOverride: editRow.feeOverride ?? 0 });
+                        }}
+                        manualSameDay={!!editRow.manualSameDay}
+                        onManualSameDayChange={(v) => setEditRow({ ...editRow, manualSameDay: v })}
+                        feeOverride={editRow.feeOverride}
+                        onFeeOverrideChange={(v) => setEditRow({ ...editRow, feeOverride: v })}
                       />
                     </td>
                     <td>
