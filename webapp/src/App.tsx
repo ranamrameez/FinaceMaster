@@ -46,6 +46,7 @@ import { usePlannedRentalsFirebaseSync } from './lib/firebase/usePlannedRentalsF
 import { TransferLinksPage } from './features/transfers/pages/TransferLinksPage';
 import { useInterEntityTransfersFirebaseSync } from './lib/firebase/useInterEntityTransfersFirebaseSync';
 import { LegalPage } from './pages/LegalPage';
+import { NetWorthPage } from './features/netWorth/pages/NetWorthPage';
 
 function useApplyAppearance() {
   const appearance = useAppearanceStore((s) => s.appearance);
@@ -226,6 +227,7 @@ function App() {
                   />
                 }
               />
+              <Route path="/net-worth" element={<NetWorthPage />} />
               <Route path="/legal" element={<LegalPage />} />
             </Routes>
           </ErrorBoundary>

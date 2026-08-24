@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-export type CategoryKey = 'stocks' | 'funds' | 'bank' | 'cash' | 'personalLoans' | 'emi' | 'rentals' | 'transfers';
+export type CategoryKey = 'netWorth' | 'stocks' | 'funds' | 'bank' | 'cash' | 'personalLoans' | 'emi' | 'rentals' | 'transfers';
 
 const CATEGORIES: { key: CategoryKey; label: string; to: string }[] = [
+  { key: 'netWorth', label: 'Net Worth', to: '/net-worth' },
   { key: 'stocks', label: 'Stock Exchanges', to: '/' },
   { key: 'funds', label: 'Funds', to: '/funds' },
   { key: 'bank', label: 'Banking', to: '/bank' },
@@ -20,6 +21,7 @@ const CATEGORIES: { key: CategoryKey; label: string; to: string }[] = [
  * matches what's on screen. Anything not owned by a module (e.g. /legal)
  * falls back to Stock Exchanges. */
 export function categoryForPath(pathname: string): CategoryKey {
+  if (pathname.startsWith('/net-worth')) return 'netWorth';
   if (pathname.startsWith('/funds')) return 'funds';
   if (pathname.startsWith('/bank')) return 'bank';
   if (pathname.startsWith('/cash')) return 'cash';
