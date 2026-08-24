@@ -17,7 +17,7 @@ import { generateLeaseRentPlans } from '../../../lib/calc/rentalPlanning';
 import { parseCSV, toCSV } from '../../../lib/csv';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
-import { confirmAndDeleteLinkable } from '../../../lib/linkCascade';
+import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import { dlBarV, dlDoughnut } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar, tickerColor } from '../../../lib/cssVar';
@@ -515,8 +515,9 @@ function EntriesList({ property }: { property: Property }) {
   const { sorted, Th } = useSortableRows(entries, sortValue, 'date', 'desc');
 
   const startEdit = (e: RentalEntry) => { setEditId(e.id); setEditRow({ ...e }); };
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!editId || !editRow) return;
+    if (!(await warnIfLinked('rentals', editId))) return;
     updateEntry(editId, editRow);
     toast('Entry updated.');
     setEditId(null);

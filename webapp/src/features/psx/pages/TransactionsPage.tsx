@@ -7,7 +7,7 @@ import { Tooltip } from '../../../components/Tooltip';
 import { toast } from '../../../components/Toast';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
-import { confirmAndDeleteLinkable } from '../../../lib/linkCascade';
+import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import { isNettedLeg } from '../../../lib/calc/psxFees';
 import { transferRunningBalance } from '../../../lib/calc/transferBalance';
 import { FeeModeControl, feeModeFor } from '../../../components/ui/FeeModeControl';
@@ -492,8 +492,9 @@ function TransfersSection() {
   const { sorted, Th } = useSortableRows(workbook.transfers, sortValue, 'date', 'desc');
 
   const startEdit = (t: Transfer) => { setEditId(t.id); setEditRow({ ...t }); };
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (editId === null || !editRow) return;
+    if (!(await warnIfLinked('psx', editId))) return;
     updateTransfer(editId, editRow);
     toast('Transfer updated.');
     setEditId(null);

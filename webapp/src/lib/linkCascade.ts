@@ -136,6 +136,27 @@ export function findLinkForRecord(module: LinkModule, recordId: string): InterEn
     );
 }
 
+/** README item 27's known remaining gap, now closed at the "honest warning"
+ * level (not full propagation — see the reasoning below): editing a linked
+ * record's amount/date directly in its native module doesn't update the
+ * other side or the link record, and silently letting that happen was the
+ * actual gap. Auto-propagating the edit isn't safe to do blindly either —
+ * `InterEntityTransferInput.fromAmount`/`toAmount` are independently
+ * entered specifically because a cross-currency link has no live FX rate
+ * to derive one side from the other, so "just copy the new amount to the
+ * other side" would be wrong for exactly the links most likely to need
+ * this warning. Call this before saving a native edit to a record that
+ * might be linked; if it returns false, the caller should abort the save. */
+export async function warnIfLinked(module: LinkModule, id: string): Promise<boolean> {
+  const link = findLinkForRecord(module, id);
+  if (!link) return true;
+  const otherModule = link.from.module === module ? link.to.module : link.from.module;
+  return confirmDialog(
+    `This entry is linked to a transfer with ${LINK_MODULE_LABELS[otherModule]}. Editing it here updates only this side — the other side and the link record won't change to match. Use the Transfers page instead for a fully-synced edit.`,
+    'Edit this linked entry anyway?',
+  );
+}
+
 /** Code-review finding (PR #2): deleting a linked record directly from its
  * native module (Cash's ledger, Bank's transactions, QSE/PSX transfers,
  * Rentals entries) used to just remove that one row, leaving the link
@@ -147,12 +168,11 @@ export function findLinkForRecord(module: LinkModule, recordId: string): InterEn
  * like deleting from the Transfers page does — never a one-sided delete
  * from either entry point.
  *
- * Known remaining gap, not fixed here: *editing* (not deleting) a linked
- * record's amount/date directly in its native module still doesn't
- * propagate to the other side or the link record. Full correctness there
- * would mean every edit form knowing it's editing a linked record and
- * either blocking the edit or redirecting to the Transfers page — a larger
- * UI change than this fix, and not attempted silently. */
+ * *Editing* (not deleting) a linked record's amount/date directly in its
+ * native module still doesn't propagate to the other side or the link
+ * record — auto-propagating isn't generally safe (see `warnIfLinked`'s own
+ * comment on why), so the fix here is a warning, not full sync: every
+ * native edit form calls `warnIfLinked` before saving. */
 export async function confirmAndDeleteLinkable(module: LinkModule, id: string, plainDelete: () => void): Promise<void> {
   const link = findLinkForRecord(module, id);
   if (!link) {

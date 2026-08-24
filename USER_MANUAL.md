@@ -633,6 +633,12 @@ the form tells you if a pairing isn't supported instead of silently doing someth
 - **Editing or deleting a link** (in the "Linked transfers" list at the bottom of the page)
   updates or removes **both** sides' records together — you don't need to (and shouldn't)
   go edit or delete the two records separately in their own modules.
+- **Editing a linked record from its own module instead** (e.g. correcting the amount
+  directly in Cash's ledger rather than on the Transfers page) still works, but only changes
+  that one side — the other side and the link itself won't update to match. The app warns you
+  before saving in that case, so you can back out and use the Transfers page instead if you
+  want both sides to stay in sync. Deleting from either module is always safe either way — it
+  cascades to both sides automatically, same as deleting from the Transfers page.
 
 ---
 

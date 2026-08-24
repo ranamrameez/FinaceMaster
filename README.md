@@ -1906,6 +1906,29 @@ FinanceManager live link:
        (confirmed by reading `localStorage` back, not just the UI) — zero console errors
        throughout. `npx tsc -b` / `npm run test` (253 tests, unchanged) / `npm run build` all
        clean.
+106. **Editing a linked record now warns instead of silently going one-sided — closes Pending
+     item 27's remaining gap (2026-08-24).** Deleting either side of a cross-entity link
+     already cascaded correctly (Done item 35); *editing* one side directly in its native
+     module (not via the Transfers page) still silently updated only that side, leaving the
+     other side and the link record's own cached amounts stale with no indication anything
+     was wrong. Auto-propagating the edit to the other side isn't generally safe to do
+     blindly — `InterEntityTransferInput.fromAmount`/`toAmount` are independently entered
+     specifically because a cross-currency link has no live FX rate to derive one side from
+     the other, so "just copy the new amount over" would be wrong for exactly the links most
+     likely to need this warning. New `warnIfLinked(module, id)` in `lib/linkCascade.ts`
+     checks `findLinkForRecord` and, if the record is linked, shows a `confirmDialog` naming
+     the other module and explaining the edit won't sync — proceeding is the user's informed
+     choice, cancelling aborts the save entirely. Wired into all 6 native edit-save handlers
+     that can touch a linkable record: Cash's ledger, Bank's transactions, QSE's and PSX's
+     Transfers, Rentals' entries, and Personal Loans' repayments (Funds has no native
+     edit/delete UI for its `Transfer` records at all, so nothing to wire there). New tests:
+     `linkCascade.test.ts` gained a `warnIfLinked` describe block (2 cases: no prompt when
+     unlinked, prompts and returns the user's choice when linked, using a mocked
+     `confirmDialog`). Verified live via Playwright with a seeded Cash↔Bank link: editing the
+     Cash side surfaced "Edit this linked entry anyway?" naming Banking as the other side;
+     clicking Cancel correctly left the stored amount unchanged (confirmed via `localStorage`,
+     not just the UI) — zero console errors. `npx tsc -b` / `npm run test` (255 tests, 2 new) /
+     `npm run build` all clean.
 
 ## Pending
 
@@ -1968,11 +1991,13 @@ wave" section)**:
 26. "Only a toast shows instead of the sign-in popup" (see Done item 38) — investigated,
     couldn't reproduce locally (both primary sign-in entry points open the real modal
     correctly). Needs a specific page/button from the user to chase further if it recurs.
-27. Editing (not deleting) a linked record directly in its native module (Cash/Bank/QSE/
-    PSX/Rentals/Personal Loans) still doesn't propagate to the other side of the link or the
-    link record itself (see Done item 35's "known remaining gap"). Deletion is now safe
-    (cascades correctly from any entry point); editing amounts/dates only fully stays in sync
-    when done from the Transfers page.
+27. ~~Editing (not deleting) a linked record directly in its native module still doesn't
+    propagate to the other side of the link or the link record itself.~~ **Warned about, not
+    auto-synced — see Done item 106.** Full propagation isn't safe to do blindly (a
+    cross-currency link has no live FX rate to derive one side's new amount from the other's
+    edit), so every native edit-save now confirms with the user first, naming the other module
+    and explaining the edit stays one-sided if they proceed. Full sync still only happens via
+    the Transfers page itself.
 28. **Planning v2 — real-but-pending transfers + balance reconciliation (2026-08-23,
     user-requested, design captured but explicitly NOT started).** The Planning feature
     (item 43 below) needs to also handle a second case beyond a pure hypothetical: a real

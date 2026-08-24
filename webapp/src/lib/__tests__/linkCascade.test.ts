@@ -1,10 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { confirmDialog } from '../../components/ConfirmDialog';
 import {
   createLinkedTransfer,
   deleteLinkCascade,
   findLinkForRecord,
   updateLinkedTransfer,
+  warnIfLinked,
 } from '../linkCascade';
+
+vi.mock('../../components/ConfirmDialog', () => ({ confirmDialog: vi.fn() }));
 import { useBankWorkbookStore } from '../../store/bankWorkbookStore';
 import { useCashWorkbookStore } from '../../store/cashWorkbookStore';
 import { createEmptyBankWorkbook } from '../../store/defaultBankWorkbook';
@@ -150,5 +154,28 @@ describe('Personal Loans as a linked module', () => {
     expect(usePersonalLoansWorkbookStore.getState().workbook.repayments).toHaveLength(0);
     expect(useBankWorkbookStore.getState().workbook.transactions).toHaveLength(0);
     expect(useInterEntityTransfersStore.getState().workbook.entries).toHaveLength(0);
+  });
+});
+
+describe('warnIfLinked', () => {
+  it('resolves true without prompting when the record is not part of any link', async () => {
+    const mockedConfirm = vi.mocked(confirmDialog);
+    mockedConfirm.mockClear();
+    await expect(warnIfLinked('cash', 'not-a-real-id')).resolves.toBe(true);
+    expect(mockedConfirm).not.toHaveBeenCalled();
+  });
+
+  it('prompts and returns the user\'s choice when the record is linked', async () => {
+    const created = createLinkedTransfer(cashToBankInput);
+    if (!('link' in created)) throw new Error('expected success');
+
+    const mockedConfirm = vi.mocked(confirmDialog);
+    mockedConfirm.mockResolvedValueOnce(false);
+    await expect(warnIfLinked('cash', created.link.fromRecordId)).resolves.toBe(false);
+    expect(mockedConfirm).toHaveBeenCalledTimes(1);
+    expect(mockedConfirm.mock.calls[0][0]).toContain('Banking');
+
+    mockedConfirm.mockResolvedValueOnce(true);
+    await expect(warnIfLinked('bank', created.link.toRecordId)).resolves.toBe(true);
   });
 });

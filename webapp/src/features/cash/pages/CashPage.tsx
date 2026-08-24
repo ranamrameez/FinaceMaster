@@ -22,7 +22,7 @@ import { ChartCard } from '../../qse/components/ChartCard';
 import { parseCSV } from '../../../lib/csv';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
-import { confirmAndDeleteLinkable } from '../../../lib/linkCascade';
+import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
 import { createEmptyCashWorkbook } from '../../../store/defaultCashWorkbook';
@@ -179,8 +179,9 @@ function EntryList() {
   const { sorted, Th } = useSortableRows(ledger, sortValue, 'date', 'desc');
 
   const startEdit = (e: CashEntry) => { setEditId(e.id); setEditRow({ ...e }); };
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (editId === null || !editRow) return;
+    if (!(await warnIfLinked('cash', editId))) return;
     updateEntry(editId, editRow);
     toast('Entry updated.');
     setEditId(null);

@@ -22,7 +22,7 @@ import { cssVar, tickerColor } from '../../../lib/cssVar';
 import { parseCSV, toCSV } from '../../../lib/csv';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
-import { confirmAndDeleteLinkable } from '../../../lib/linkCascade';
+import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
 import { useAppearanceStore } from '../../../store/appearanceStore';
@@ -398,8 +398,9 @@ function TransactionsList({ account }: { account: BankAccount }) {
   const { sorted, Th } = useSortableRows(ledger, sortValue, 'date', 'desc');
 
   const startEdit = (tx: BankTransaction) => { setEditId(tx.id); setEditRow({ ...tx }); };
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!editId || !editRow) return;
+    if (!(await warnIfLinked('bank', editId))) return;
     updateTransaction(editId, editRow);
     toast('Transaction updated.');
     setEditId(null);

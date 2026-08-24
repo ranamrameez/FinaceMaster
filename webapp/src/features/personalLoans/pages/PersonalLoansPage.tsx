@@ -15,7 +15,7 @@ import { useSortableRows } from '../../../hooks/useSortableRows';
 import { CURRENCIES } from '../../../lib/currencies';
 import { parseCSV, toCSV } from '../../../lib/csv';
 import { fmtMoney } from '../../../lib/format';
-import { confirmAndDeleteLinkable } from '../../../lib/linkCascade';
+import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import {
   loanOutstanding,
   netPositionByCurrency,
@@ -235,8 +235,9 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
   };
 
   const startEdit = (r: PersonalLoanRepayment) => { setEditId(r.id); setEditRow({ ...r }); };
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (editId === null || !editRow) return;
+    if (!(await warnIfLinked('personalLoans', editId))) return;
     updateRepayment(editId, editRow);
     toast('Repayment updated.');
     setEditId(null);

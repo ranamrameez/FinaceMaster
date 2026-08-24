@@ -7,7 +7,7 @@ import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
-import { confirmAndDeleteLinkable } from '../../../lib/linkCascade';
+import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import { transferRunningBalance } from '../../../lib/calc/transferBalance';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { createEmptyWorkbook } from '../../../store/defaultWorkbook';
@@ -402,8 +402,9 @@ function TransfersSection() {
   const { sorted, Th } = useSortableRows(workbook.transfers, sortValue, 'date', 'desc');
 
   const startEdit = (t: Transfer) => { setEditId(t.id); setEditRow({ ...t }); };
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (editId === null || !editRow) return;
+    if (!(await warnIfLinked('qse', editId))) return;
     updateTransfer(editId, editRow);
     toast('Transfer updated.');
     setEditId(null);

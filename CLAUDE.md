@@ -2121,6 +2121,25 @@ not developer notes) continuously as features ship.
   `onClick` toggles state — so a click opens then immediately re-closes it. Switching to
   `.hover()` confirmed the tooltips work correctly. `npx tsc -b` / `npm run test` (253 tests,
   unchanged) / `npm run build` all clean.
+- **Editing a linked record now warns instead of silently going one-sided (2026-08-24) — see
+  README Done item 106, closes Pending item 27.** Deleting either side of a cross-entity link
+  already cascaded correctly; editing one side directly in its native module (not via the
+  Transfers page) still silently updated only that side. Didn't attempt auto-propagation —
+  `InterEntityTransferInput.fromAmount`/`toAmount` are independently entered on purpose (no
+  live FX rate to derive a cross-currency link's other side from), so blindly copying an
+  edited amount over would be wrong for exactly the links most likely to trigger this. New
+  `warnIfLinked(module, id)` in `lib/linkCascade.ts` checks `findLinkForRecord` and, if linked,
+  confirms with the user (naming the other module) before letting the native edit save at all
+  — cancelling aborts the save entirely, proceeding is an informed one-sided edit rather than
+  a silent one. Wired into all 6 native edit-save handlers that touch a linkable record type:
+  Cash ledger, Bank transactions, QSE/PSX Transfers, Rentals entries, Personal Loans
+  repayments (Funds has no native edit/delete UI for its `Transfer` field at all — nothing to
+  wire there). Verified live via Playwright with a seeded Cash↔Bank link: editing the Cash
+  side surfaced the warning naming Banking, and clicking Cancel left the stored amount
+  unchanged (confirmed via `localStorage`) — zero console errors. New tests:
+  `linkCascade.test.ts` gained a `warnIfLinked` block (2 cases, using a mocked
+  `confirmDialog`). `npx tsc -b` / `npm run test` (255 tests, 2 new) / `npm run build` all
+  clean.
 
 ## Live URLs
 
