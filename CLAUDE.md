@@ -886,6 +886,48 @@ not developer notes) continuously as features ship.
   being readable past that anyway and the axis + tooltip already carry
   the same information. Verified with a real before/after screenshot
   comparison, not just described intent.
+- **Critical: Trade Calculator "Amount" field rejected typed input,
+  user-reported from a real phone (2026-08-23) — see README Done item
+  51.** The field's displayed value was fully derived from
+  `(newShares * buyPrice).toFixed(2)` on every render — typing
+  multi-digit amounts got stuck re-snapping to a 2-decimal-reformatted
+  value after each keystroke (worse on mobile, no easy cursor
+  repositioning). Fixed in both `features/qse/components/
+  TradeCalculator.tsx` and the identical PSX copy by giving the Amount
+  field its own local text state that holds exactly what's typed,
+  never reformatted mid-typing; only the other fields ("Buy price"/
+  "New shares"/the "Use" button) resync it. Verified with real
+  per-character Playwright typing (not `.fill()`) in an emulated mobile
+  viewport — reproduced the exact failure before the fix, confirmed
+  fixed after.
+- **Large batch of user feedback received 2026-08-23, mid-session —
+  most items handled, some still open (check README Done/Pending for
+  current per-item status, this is a snapshot at time of receipt).**
+  Verbatim-ish list, for full context if a future session needs it:
+  (1) Trade Calculator amount input bug — fixed, see above. (2) Trade
+  Planner error deleting all trades in a plan — bug, needs root-cause.
+  (3) Checkbox/chip selected-state unclear — UI bug. (4) Inputs/
+  selects should be a bit larger on mobile to avoid cutting. (5)
+  Inputs should align to the bottom with labels directly above,
+  consistently — long labels currently push some inputs down while
+  others stay up. (6) Some chart labels cut off at chart edges. (7)
+  Mobile: stat card amount text overflowing. (8) Round stat-card
+  numbers for a cleaner look, show the real precise number as a
+  tooltip. (9) Stats should surface in-process/upcoming planned
+  payments (ties into the Planning feature). (10) Shorten large
+  numbers in display (10,000 → 10k) where reasonable. (11) EMI: a link
+  button to link an EMI loan to a bank + a payment date, generating a
+  recurring plan for the remaining installments, maybe a calendar
+  view; EMI is also missing a displayed expected end date. (12)
+  Rentals: auto-plan income/expenses per billing cycle from rental
+  agreement details, plus track security deposit info (cash/cheque).
+  (13) A net-worth dashboard summing everything up, collapsible
+  per-currency sections, **plus a converted total at a live ("Google")
+  exchange rate in the user's preferred currency** — this last part
+  directly conflicts with this project's own locked "no live FX-rate
+  lookup, no live market-data API calls" rule (see Design decisions
+  above) and needs to be raised with the user before any code is
+  written for it, not silently built or silently dropped.
 
 ## Live URLs
 

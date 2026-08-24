@@ -61,6 +61,18 @@ export function TradeCalculator() {
 
   const [buyPrice, setBuyPrice] = useState(0);
   const [newShares, setNewShares] = useState(0);
+  // The Amount field is a reverse-entry convenience (type a $ amount,
+  // back-derive shares) — it needs its OWN local text state rather than
+  // always displaying `buyAmount.toFixed(2)`. A fully derived+reformatted
+  // display re-snaps to "X.00" after every keystroke (the round-trip
+  // through shares and back reformats to exactly 2 decimals each render),
+  // which fights the browser's own text-input state and effectively makes
+  // it impossible to type a multi-digit amount — a real bug reported on
+  // mobile, where there's no easy way to reposition the cursor to work
+  // around it. Keeping the field's displayed text as whatever the user
+  // actually typed (only cleared, never reformatted, by other actions)
+  // fixes this.
+  const [amountInput, setAmountInput] = useState('');
   const [targetAvg, setTargetAvg] = useState(0);
   const [targetSell, setTargetSell] = useState(0);
   const [priceOverride, setPriceOverride] = useState('');
@@ -97,6 +109,7 @@ export function TradeCalculator() {
     setSellPrice(mp);
     setBuyPrice(mp);
     setNewShares(0);
+    setAmountInput('');
     setTargetProfit(0);
     setTargetAvg(0);
     setTargetSell(0);
@@ -165,6 +178,7 @@ export function TradeCalculator() {
           : `Logged BUY ${newShares} ${ticker} @ ${fmtPrice(buyPrice)}`,
       );
       setNewShares(0);
+      setAmountInput('');
     }
   };
 
@@ -261,13 +275,38 @@ export function TradeCalculator() {
         <div>
           <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
             <Field label="Buy price" width={90}>
-              <TextInput type="number" step="0.001" value={buyPrice || ''} onChange={(e) => setBuyPrice(Number(e.target.value))} />
+              <TextInput
+                type="number"
+                step="0.001"
+                value={buyPrice || ''}
+                onChange={(e) => {
+                  const price = Number(e.target.value);
+                  setBuyPrice(price);
+                  if (newShares) setAmountInput(price > 0 ? (newShares * price).toFixed(2) : '');
+                }}
+              />
             </Field>
             <Field label="New shares" width={90}>
-              <TextInput type="number" value={newShares || ''} onChange={(e) => setNewShares(Number(e.target.value))} />
+              <TextInput
+                type="number"
+                value={newShares || ''}
+                onChange={(e) => {
+                  const shares = Number(e.target.value);
+                  setNewShares(shares);
+                  setAmountInput(buyPrice > 0 && shares ? (shares * buyPrice).toFixed(2) : '');
+                }}
+              />
             </Field>
             <Field label="Amount" width={100}>
-              <TextInput type="number" step="0.01" value={buyAmount ? buyAmount.toFixed(2) : ''} onChange={(e) => setNewShares(buyPrice > 0 ? Number(e.target.value) / buyPrice : 0)} />
+              <TextInput
+                type="number"
+                step="0.01"
+                value={amountInput}
+                onChange={(e) => {
+                  setAmountInput(e.target.value);
+                  setNewShares(buyPrice > 0 ? Number(e.target.value) / buyPrice : 0);
+                }}
+              />
             </Field>
             <Field label="Target avg cost (optional)" width={90}>
               <TextInput type="number" step="0.001" value={targetAvg || ''} onChange={(e) => setTargetAvg(Number(e.target.value))} />
@@ -281,7 +320,16 @@ export function TradeCalculator() {
           {solvedSharesForAvg !== null && (
             <p className="footer-note">
               Buy ~{fmt(solvedSharesForAvg, 0)} shares to bring average cost to {fmtPrice(targetAvg)}{' '}
-              <button className="btn secondary small" onClick={() => setNewShares(Math.round(solvedSharesForAvg))}>Use</button>
+              <button
+                className="btn secondary small"
+                onClick={() => {
+                  const rounded = Math.round(solvedSharesForAvg);
+                  setNewShares(rounded);
+                  setAmountInput(buyPrice > 0 && rounded ? (rounded * buyPrice).toFixed(2) : '');
+                }}
+              >
+                Use
+              </button>
             </p>
           )}
           {buyPrice > 0 && (

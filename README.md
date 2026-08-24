@@ -636,6 +636,28 @@ FinanceManager live link:
     the fix only hides labels where they'd actually be clutter, not universally. `npm run
     build` / `npm run test` (146 tests, unchanged — a display-threshold tweak isn't separately
     unit-tested, verified visually instead) both clean.
+51. **Critical: Trade Calculator's "Amount" field rejected typed input, user-reported from a
+    real phone ("big problem").** Root cause: the Amount field (a reverse-entry convenience —
+    type a $ amount, back-derive shares) had its displayed `value` fully derived from
+    `(newShares * buyPrice).toFixed(2)` on every render, recomputed from whatever was just
+    typed. Typing "150" digit by digit: after the first "1", the field re-rendered showing
+    "1.00" (forced to exactly 2 decimals) with the cursor at the end; the next keystroke landed
+    *after* the decimal point instead of building up a bigger whole number, and the round-trip
+    through division-then-remultiplication snapped the display right back to a similar 2-decimal
+    value every time — the field was effectively unable to accept more than one digit, worse on
+    phones where there's no easy way to reposition the cursor to work around it. Fixed in both
+    `features/qse/components/TradeCalculator.tsx` and the identical PSX copy by giving the
+    Amount field its own local text state (`amountInput`) that holds exactly what the user
+    typed, never reformatted mid-typing — only the "Buy price"/"New shares" fields and the
+    "Use" button (all separate inputs) resync it to a freshly formatted value, since those
+    changes don't fight the user's own typing. Verified live via Playwright in an emulated
+    mobile viewport (390×844, `isMobile`/`hasTouch`), typing "150" one keystroke at a time with
+    a real per-character delay (not `.fill()`, which wouldn't have caught this): the Amount
+    field correctly held "150" and derived 50 shares at a 3/share buy price — reproduced the
+    exact reported failure before the fix and confirmed it fixed after. Also verified editing
+    "New shares" directly correctly syncs the Amount field to match. `npm run build` /
+    `npm run test` (146 tests, unchanged — a controlled-input state bug, not new calc logic)
+    both clean.
 
 ## Pending
 
@@ -713,6 +735,52 @@ wave" section)**:
     example: Friday pays 15 instead of the regular 2) — so the eventual "expected profit
     rate" field needs to support at least a day-of-week-varying rate, not just one flat
     number. Still blocked on the sample data for the exact shape.
+
+**New batch of user feedback, 2026-08-23 (mid-session) — see Done item 51 for item (1),
+already fixed; the rest tracked here**:
+
+29. Trade Planner throws an error when deleting all trades/legs in a plan — bug, needs
+    root-cause. Not started.
+30. Checkbox/chip toggle selectors (e.g. `ChartFilterBar`'s ticker chips) don't clearly show
+    which option is selected — a UI clarity bug. Not started.
+31. Mobile CSS pass: inputs/selects should be a bit larger on small screens (currently get cut
+    off); form labels should sit consistently right above their input with bottom-alignment
+    (long labels currently push some inputs down while shorter-labeled inputs in the same row
+    stay higher, an inconsistent row); stat-card amount text overflows its card on narrow
+    screens. Not started.
+32. Some chart labels get cut off at the chart's edges (distinct from the datalabels-clutter
+    fix in Done item 50 — this is about labels clipping against the container boundary, not
+    overlapping each other). Not started.
+33. Stat-card numbers should round for a cleaner look, with the exact/unrounded number
+    available as a hover tooltip. Not started.
+34. Large numbers should abbreviate where reasonable (10,000 → 10k) in stat cards/charts. Not
+    started.
+35. Module stat sections should surface in-process and/or upcoming planned/scheduled payments
+    — ties into the existing Planning feature (Done item 43) for Cash/Banking. Not started.
+36. Clicking an account (or the equivalent primary record in other modules) should open a
+    detail view showing in-process, planned, and recent transactions together, plus an option
+    to download a statement for a chosen period — requested across every module, not just
+    Banking. Needs a design pass (what "detail view" and "statement export" mean per module
+    differs) before building. Not started.
+37. EMI/Loans: a link button to link a loan to a bank account and a payment date, generating a
+    recurring plan (via the Planning feature) for the loan's remaining installments, with a
+    possible calendar view of upcoming payments; EMI/Loans is also missing a displayed
+    expected end date for a loan. Expands on item 21's EMI-linking gap with concrete UX.
+    Needs a design pass (recurring-plan generation isn't something the Planning feature does
+    today — it only creates one-off plans). Not started.
+38. Rentals: auto-plan projected income/expenses for each billing cycle's start day directly
+    from a property/lease's own details, and track security deposit info (cash, cheque, etc.)
+    per property or tenancy. Needs a design pass (what "cycle" means — monthly? the lease's
+    own recurrence? — and where deposit info lives in the data model). Not started.
+39. A net-worth dashboard summarizing everything across every module, with collapsible
+    per-currency sections. **The user also asked for a converted total at a live ("Google")
+    exchange rate in the user's preferred currency — this directly conflicts with this
+    project's own locked "no live FX-rate lookup, no live market-data API call" rule (see
+    CLAUDE.md's Design decisions).** The rest of the dashboard (collapsible per-currency
+    sections, no conversion) is buildable now; the live-rate conversion part needs to be
+    raised with the user for an explicit decision before any code is written for it — do not
+    silently build it (violates the locked rule) or silently drop it (wasn't asked to be
+    dropped). Not started.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank
