@@ -2078,6 +2078,35 @@ FinanceManager live link:
      `npx tsc -b` / `npm run test` (255 tests, unchanged) / `npm run build` all clean; a
      23-page console-error sweep found zero regressions.
 
+113. **Icon-only Edit/Delete/Save/Cancel/Export/Clear buttons on QSE and PSX Trade
+     Transactions — second item of the follow-up batch (2026-08-24), matching the
+     screenshot page the user posted.** New shared `components/ui/IconButton.tsx` (button +
+     real `Tooltip` popup instead of a native `title`, sized to match `.btn.small`) and two
+     new icons in `icons.tsx` (`EditIcon` — a pencil, nothing in the set covered "edit"
+     before this — and `ExportIcon`). Applied to every repeated table-row action
+     (Edit/Delete on the Trade List/Cash Transfers/Rewards & Adjustments sections, Save/Cancel
+     on their edit rows) and the two toolbar utilities (Export JSON, Clear all) on both QSE's
+     and PSX's Trade Transactions page — the exact set the user's screenshot showed with
+     full-text buttons crowding a now-right-aligned action column. Deliberately **not**
+     applied to "Add row"/"Save transaction" — those are the page's primary CTAs (shown
+     once per form, not repeated per row), which the user's own list ("Edit, Add, Delete,
+     Fullscreen, import, Export") reads as targeting *repeated small utilities*, not a form's
+     main confirm button; kept with visible text for clarity. One implementation pitfall
+     avoided from the same session's Calculator-button fix (Done item 112): initially tried a
+     rotated `CheckIcon` as a makeshift "X" for Cancel — looked wrong (a rotated checkmark
+     doesn't read as a close/cancel glyph) — replaced with a real new `XIcon` instead of
+     forcing an existing icon into a shape it wasn't designed for. Verified live via
+     Playwright: hovering Edit/Save showed the correct tooltip text, clicking Edit correctly
+     entered edit mode with icon-only Save/Cancel, and a before/after screenshot comparison
+     confirmed the Trade List/toolbar rows are visibly far less cluttered. `npx tsc -b` /
+     `npm run test` (255 tests, unchanged) / `npm run build` all clean; a 23-page
+     console-error sweep (both QSE and PSX Transactions pages included) found zero
+     regressions. **Scope note**: this covers the one page named in the screenshot: the
+     broader "icon-only buttons with tooltips app-wide" ask (README Pending item, still open)
+     is a much larger sweep across every other module's own Edit/Delete buttons —
+     `IconButton` is now a ready-made building block for that, not yet applied beyond
+     Transactions.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`

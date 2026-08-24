@@ -1,7 +1,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import { QSE_TICKER_DATALIST_ID } from '../../../components/TickerDatalist';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
+import { EditIcon, ExportIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
@@ -9,6 +9,7 @@ import { useSortableRows } from '../../../hooks/useSortableRows';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import { transferRunningBalance } from '../../../lib/calc/transferBalance';
+import { IconButton } from '../../../components/ui/IconButton';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { createEmptyWorkbook } from '../../../store/defaultWorkbook';
 import { useWorkbookStore } from '../../../store/workbookStore';
@@ -305,8 +306,8 @@ function TransactionList() {
                     <td><input type="number" step="0.001" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })} style={{ width: 80 }} /></td>
                     <td>{fmtMoney(editRow.shares * editRow.price, currency)}</td>
                     <td>
-                      <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
-                      <button className="btn secondary small" onClick={() => setEditIndex(null)}>Cancel</button>
+                      <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
+                      <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditIndex(null)} />
                     </td>
                   </tr>
                 ) : (
@@ -318,15 +319,15 @@ function TransactionList() {
                     <td>{fmtPrice(tx.price)}</td>
                     <td>{fmtMoney(tx.shares * tx.price, currency)}</td>
                     <td>
-                      <button className="btn secondary small" onClick={() => startEdit(i, tx)}>Edit</button>{' '}
-                      <button
-                        className="btn secondary small"
+                      <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(i, tx)} />{' '}
+                      <IconButton
+                        label="Delete"
+                        icon={<TrashIcon size={13} />}
+                        align="right"
                         onClick={async () => {
                           if (await confirmDialog('This cannot be undone.', `Delete ${tx.action} ${tx.shares} ${tx.ticker}?`)) deleteTransaction(i);
                         }}
-                      >
-                        <TrashIcon size={12} />Delete
-                      </button>
+                      />
                     </td>
                   </tr>
                 ),
@@ -354,8 +355,8 @@ function TransactionList() {
           <option value="action">Group by buy/sell</option>
           <option value="month">Group by month</option>
         </select>
-        <button className="btn secondary" onClick={exportJSON}>Export JSON</button>
-        <button className="btn secondary" onClick={clearAll}><TrashIcon size={12} />Clear all</button>
+        <IconButton label="Export JSON" icon={<ExportIcon size={14} />} className="btn secondary" align="right" onClick={exportJSON} />
+        <IconButton label="Clear all" icon={<TrashIcon size={14} />} className="btn secondary" align="right" onClick={clearAll} />
       </div>
 
       <details open style={{ marginBottom: 16 }}>
@@ -441,8 +442,8 @@ function TransfersSection() {
                   <td><input type="number" value={editRow.fee} onChange={(e) => setEditRow({ ...editRow, fee: Number(e.target.value) })} style={{ width: 70 }} /></td>
                   <td></td>
                   <td>
-                    <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
-                    <button className="btn secondary small" onClick={() => setEditId(null)}>Cancel</button>
+                    <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
+                    <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditId(null)} />
                   </td>
                 </tr>
               ) : (
@@ -457,8 +458,8 @@ function TransfersSection() {
                     </Tooltip>
                   </td>
                   <td>
-                    <button className="btn secondary small" onClick={() => startEdit(t)}>Edit</button>{' '}
-                    <button className="btn secondary small" onClick={() => confirmAndDeleteLinkable('qse', t.id, () => deleteTransfer(t.id))}><TrashIcon size={12} />Delete</button>
+                    <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(t)} />{' '}
+                    <IconButton label="Delete" icon={<TrashIcon size={13} />} align="right" onClick={() => confirmAndDeleteLinkable('qse', t.id, () => deleteTransfer(t.id))} />
                   </td>
                 </tr>
               ),
@@ -520,8 +521,8 @@ function AdjustmentsSection() {
                   <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 90 }} /></td>
                   <td><input value={editRow.note ?? ''} onChange={(e) => setEditRow({ ...editRow, note: e.target.value })} /></td>
                   <td>
-                    <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
-                    <button className="btn secondary small" onClick={() => setEditIndex(null)}>Cancel</button>
+                    <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
+                    <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditIndex(null)} />
                   </td>
                 </tr>
               ) : (
@@ -530,8 +531,8 @@ function AdjustmentsSection() {
                   <td>{fmtMoney(a.amount, currency)}</td>
                   <td>{a.note}</td>
                   <td>
-                    <button className="btn secondary small" onClick={() => startEdit(i, a)}>Edit</button>{' '}
-                    <button className="btn secondary small" onClick={() => deleteAdjustment(i)}><TrashIcon size={12} />Delete</button>
+                    <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(i, a)} />{' '}
+                    <IconButton label="Delete" icon={<TrashIcon size={13} />} align="right" onClick={() => deleteAdjustment(i)} />
                   </td>
                 </tr>
               ),

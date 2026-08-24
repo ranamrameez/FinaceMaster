@@ -2227,13 +2227,26 @@ not developer notes) continuously as features ship.
   empty rect. Verified via Playwright bounding-box overlap check (not just a screenshot) with
   a real triggered toast — zero overlap. `npx tsc -b` / `npm run test` (255 tests, unchanged) /
   `npm run build` all clean.
-- **Still open, not yet started**: icon-only buttons with tooltips app-wide, removing
-  single-child nested Settings cards, and a batch of larger deferred items (multi-theme
-  stat-card-color audit, Ticker+logo+name/Cost/Value/P-L column grouping standard everywhere,
-  side-by-side layout instead of scrolling, full Portfolio page overhaul, using unused
-  right-side page space) to be documented as scoped README Pending items rather than
-  attempted blind. Continue working down this list per the same standing auto-commit
-  instruction — this note itself will be superseded as more of the batch lands.
+- **Icon-only Edit/Delete/Save/Cancel/Export/Clear buttons on QSE/PSX Trade Transactions
+  (2026-08-24) — see README Done item 113.** New shared `components/ui/IconButton.tsx`
+  (button + real `Tooltip` instead of a native `title`) plus two new icons (`EditIcon`,
+  `ExportIcon`) applied to every repeated table-row action and the two toolbar utilities on
+  both exchanges' Transactions pages — exactly the page the user's screenshot showed. Kept
+  "Add row"/"Save transaction" as visible-text buttons on purpose (primary CTAs, not repeated
+  utilities). **Small lesson**: first tried a rotated `CheckIcon` as a makeshift Cancel "X" —
+  looked wrong, a real new `XIcon` was the right call instead of bending an existing icon into
+  a shape it wasn't drawn for. `IconButton` is now a ready-made block for the broader
+  "app-wide" version of this ask, not yet applied beyond Transactions. `npx tsc -b` /
+  `npm run test` (255 tests, unchanged) / `npm run build` all clean.
+- **Still open, not yet started**: icon-only buttons with tooltips on every other module
+  (Cash/Bank/Personal Loans/EMI/Funds/Rentals/Subscriptions/Transfers all still have
+  full-text Edit/Delete buttons), removing single-child nested Settings cards, and a batch of
+  larger deferred items (multi-theme stat-card-color audit, Ticker+logo+name/Cost/Value/P-L
+  column grouping standard everywhere, side-by-side layout instead of scrolling, full
+  Portfolio page overhaul, using unused right-side page space) to be documented as scoped
+  README Pending items rather than attempted blind. Continue working down this list per the
+  same standing auto-commit instruction — this note itself will be superseded as more of the
+  batch lands.
 
 ## Live URLs
 

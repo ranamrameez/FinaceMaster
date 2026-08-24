@@ -43,10 +43,39 @@ export function TrashIcon({ size = 14 }: IconProps) {
   );
 }
 
+/** User-reported: generic, repeated table-row actions (Edit/Delete/Save/
+ * Cancel) and toolbar utilities (Export/Clear) should be icon-only with
+ * their label moved into a tooltip, not a permanent text button — this is
+ * the pencil half of that; `TrashIcon`/`SaveIcon`/`CheckIcon` already
+ * cover Delete/Save/Cancel. */
+export function EditIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base} aria-hidden>
+      <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+    </svg>
+  );
+}
+
+export function ExportIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base} aria-hidden>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+    </svg>
+  );
+}
+
 export function CheckIcon({ size = 14 }: IconProps) {
   return (
     <svg width={size} height={size} {...base} aria-hidden>
       <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+
+export function XIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base} aria-hidden>
+      <path d="M18 6 6 18M6 6l12 12" />
     </svg>
   );
 }
