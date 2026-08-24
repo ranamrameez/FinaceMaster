@@ -1966,6 +1966,21 @@ not developer notes) continuously as features ship.
   all clean. **EMI is now the only unlinked module** — it has no
   repayment ledger at all to link into, a data-model question, not a
   UI gap.
+- **Chart cards made collapsible app-wide — README item 42's
+  remainder (2026-08-24).** Every module's Dashboard/Analytics charts
+  render through one shared `features/qse/components/ChartCard.tsx` —
+  changing that single component to build on `CollapsibleCard`
+  instead of a plain `Card` made every chart in the app collapsible
+  in one place (same fix-once-at-the-shared-layer pattern as
+  `MoneyValue`/`StatCard`/`Field`). Defaults open, so no chart's
+  default visibility changed. Verified live via Playwright with a
+  real canvas-count check on the QSE Dashboard: collapsing one chart
+  dropped canvas count 2→1, reopening restored 2→2, confirming the
+  chart genuinely unmounts/remounts cleanly (same mechanism already
+  proven for EMI's Amortization chart). `npx tsc -b` / `npm run test`
+  (251 tests, unchanged) / `npm run build` all clean. Still not
+  collapsible, deliberately: Portfolio's Holdings/History tables and
+  Personal Loans' `RepaymentsSection` (see README item 42).
 
 ## Live URLs
 

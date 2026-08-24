@@ -1677,6 +1677,26 @@ FinanceManager live link:
      correctly lists the new pairing — zero console errors. `npx tsc -b` / `npm run test`
      (251 tests, 2 new) / `npm run build` all clean. **Item 21's only remaining gap**: EMI
      still has no repayment ledger to link into at all (a data-model question, not a UI gap).
+101. **Chart cards made collapsible app-wide — README item 42's "chart cards on Analytics
+     pages... worth a design look" remainder (2026-08-24).** Every module's Dashboard/
+     Analytics charts (QSE/PSX's 18-chart Analytics pages, both Dashboards, and all six
+     non-exchange modules' newer Analytics tabs) render through one shared
+     `features/qse/components/ChartCard.tsx` component — changing that single component to
+     build on the already-existing `CollapsibleCard` instead of a plain `Card` made every
+     chart in the app collapsible in one place, the same fix-once-at-the-shared-layer pattern
+     already used for `MoneyValue`/`StatCard`/`Field`. Defaults open (`CollapsibleCard`'s own
+     default), so no chart's default visibility changed — this only adds the ability to
+     collapse a specific chart, on a page where up to 18 might be shown at once. Deliberately
+     left as previously scoped in item 42: Personal Loans' `RepaymentsSection` (its add-form
+     and list are one combined component, no clean seam) and Portfolio's Holdings/History
+     tables (each is the entire content of its own Tab, needing a different UI shape than a
+     plain collapsible wrap). Verified live via Playwright on the QSE Dashboard with a real
+     canvas-count check (not just a screenshot): collapsing one chart dropped the page's
+     canvas count from 2 to 1, and reopening it restored exactly 2 — confirming the chart
+     genuinely unmounts/remounts cleanly through `CollapsibleCard`'s existing conditional-
+     render mechanism (the same one already proven working for EMI's Amortization-schedule
+     chart, shipped earlier this session). `npx tsc -b` / `npm run test` (251 tests,
+     unchanged — UI-only) / `npm run build` all clean.
 
 ## Pending
 
@@ -1795,13 +1815,12 @@ already fixed; the rest tracked here**:
     decision on what time to backfill for old rows (midnight? noon? leave time optional and
     fall back to insertion order when absent?). Needs either a narrower first-module scope
     or explicit user confirmation on the backfill approach before implementing broadly.
-42. **Roll out `CollapsibleCard` further (see Done items 74 and 82).** Most display sections
-    across the app are now collapsible. Still not: Portfolio's Holdings/History tables (each
-    is the entire content of its own Tab — collapsing it would hide the whole tab, needs a
-    different UI shape than the plain wrap used everywhere else), the Trade Planner's
-    per-ticker analysis table (already inside a collapsible `PlanCard`, so lower priority),
-    chart cards on Analytics pages (many charts per page — collapsing every single one may be
-    excessive, worth a design look rather than a blind wrap), and Personal Loans'
+42. ~~Roll out `CollapsibleCard` further, including chart cards on Analytics pages.~~ **Mostly
+    done — see Done items 74, 82, and 101.** Chart cards across every Dashboard/Analytics
+    page are now collapsible (fixed once at the shared `ChartCard` component). Still not:
+    Portfolio's Holdings/History tables (each is the entire content of its own Tab, needing a
+    different UI shape than a plain wrap), the Trade Planner's per-ticker analysis table
+    (already inside a collapsible `PlanCard`, so lower priority), and Personal Loans'
     `RepaymentsSection` (its add-form and list are one combined component with no clean seam).
 43. ~~Roll out `StatCard`'s `hue` prop beyond QSE/PSX's Dashboard.~~ **Done — see Done items
     87/88.** StockPage's Summary tab and every non-exchange module's landing stat cards
