@@ -5,10 +5,11 @@ import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
+import { EditIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { toCSV } from '../../../lib/csv';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { IconButton } from '../../../components/ui/IconButton';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { emiSchedule, emiSummary, expectedEndDate, installmentDueDate, totalsByCurrency, whatIfExtraPayment } from '../../../lib/calc/emiModule';
@@ -193,17 +194,17 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
               <TextInput type="date" value={editRow.startDate} onChange={(e) => setEditRow({ ...editRow, startDate: e.target.value })} />
             </div>
             <div className="row" style={{ gap: 8, marginTop: 8 }}>
-              <button
-                className="btn secondary small"
+              <IconButton
+                label="Save"
+                icon={<SaveIcon size={13} />}
+                align="right"
                 onClick={() => {
                   updateEntry(loan.id, editRow);
                   toast('Loan updated.');
                   setEditing(false);
                 }}
-              >
-                <SaveIcon size={12} />Save
-              </button>
-              <button className="btn secondary small" onClick={() => setEditing(false)}>Cancel</button>
+              />
+              <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditing(false)} />
             </div>
           </div>
         ) : (
@@ -215,18 +216,18 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
               </div>
             </div>
             <div className="row" style={{ gap: 8 }}>
-              <button className="btn secondary small" onClick={() => { setEditRow(loan); setEditing(true); }}>Edit</button>
-              <button
-                className="btn secondary small"
+              <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => { setEditRow(loan); setEditing(true); }} />
+              <IconButton
+                label="Delete"
+                icon={<TrashIcon size={13} />}
+                align="right"
                 onClick={async () => {
                   if (await confirmDialog('This cannot be undone.', `Delete loan "${loan.name}"?`)) {
                     deleteEntry(loan.id);
                     onBack();
                   }
                 }}
-              >
-                <TrashIcon size={12} />Delete
-              </button>
+              />
             </div>
           </div>
         )}
@@ -406,7 +407,7 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: EMILoan) => void; onE
               <td className="pill-sell">{fmtMoney(sum.outstanding, l.currencyCode)}</td>
               <td>{sum.monthsRemaining}</td>
               <td>
-                <button className="btn secondary small" onClick={(e) => { e.stopPropagation(); onEdit(l); }}>Edit</button>{' '}
+                <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={(e) => { e.stopPropagation(); onEdit(l); }} />{' '}
                 <button className="btn secondary small" onClick={(e) => { e.stopPropagation(); onSelect(l); }}>Open</button>
               </td>
             </tr>

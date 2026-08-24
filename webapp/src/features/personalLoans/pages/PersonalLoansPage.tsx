@@ -5,11 +5,12 @@ import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
-import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
+import { EditIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { IconButton } from '../../../components/ui/IconButton';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { CURRENCIES } from '../../../lib/currencies';
@@ -278,8 +279,8 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                     <td></td>
                     <td className="footer-note">{r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}</td>
                     <td>
-                      <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
-                      <button className="btn secondary small" onClick={() => setEditId(null)}>Cancel</button>
+                      <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
+                      <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditId(null)} />
                     </td>
                   </tr>
                 ) : (
@@ -293,13 +294,13 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                     </td>
                     <td className="footer-note">{r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}</td>
                     <td>
-                      <button className="btn secondary small" onClick={() => startEdit(r)}>Edit</button>{' '}
-                      <button
-                        className="btn secondary small"
+                      <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(r)} />{' '}
+                      <IconButton
+                        label="Delete"
+                        icon={<TrashIcon size={13} />}
+                        align="right"
                         onClick={() => confirmAndDeleteLinkable('personalLoans', r.id, () => deleteRepayment(r.id))}
-                      >
-                        <TrashIcon size={12} />Delete
-                      </button>
+                      />
                     </td>
                   </tr>
                 ),
@@ -505,10 +506,13 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
               <TextInput value={editRow.note ?? ''} onChange={(e) => setEditRow({ ...editRow, note: e.target.value })} placeholder="Note" />
             </div>
             <div className="row" style={{ gap: 8, marginTop: 8 }}>
-              <button className="btn secondary small" onClick={() => { updateLoan(loan.id, editRow); toast('Loan updated.'); setEditing(false); }}>
-                <SaveIcon size={12} />Save
-              </button>
-              <button className="btn secondary small" onClick={() => setEditing(false)}>Cancel</button>
+              <IconButton
+                label="Save"
+                icon={<SaveIcon size={13} />}
+                align="right"
+                onClick={() => { updateLoan(loan.id, editRow); toast('Loan updated.'); setEditing(false); }}
+              />
+              <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditing(false)} />
             </div>
           </div>
         ) : (
@@ -521,18 +525,18 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
               {loan.note && <div className="footer-note">{loan.note}</div>}
             </div>
             <div className="row" style={{ gap: 8 }}>
-              <button className="btn secondary small" onClick={() => { setEditRow(loan); setEditing(true); }}>Edit</button>
-              <button
-                className="btn secondary small"
+              <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => { setEditRow(loan); setEditing(true); }} />
+              <IconButton
+                label="Delete"
+                icon={<TrashIcon size={13} />}
+                align="right"
                 onClick={async () => {
                   if (await confirmDialog('This deletes the loan and all its logged repayments.', `Delete loan with ${loan.person}?`)) {
                     deleteLoan(loan.id);
                     onBack();
                   }
                 }}
-              >
-                <TrashIcon size={12} />Delete
-              </button>
+              />
             </div>
           </div>
         )}
@@ -588,7 +592,7 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: PersonalLoan) => void
                 <td className={l.direction === 'owed_to_me' ? 'pill-buy' : 'pill-sell'}>{l.direction === 'owed_to_me' ? 'Lent out' : 'I owe'}</td>
                 <td>{fmtMoney(outstanding, l.currencyCode)}</td>
                 <td>
-                  <button className="btn secondary small" onClick={(e) => { e.stopPropagation(); onEdit(l); }}>Edit</button>{' '}
+                  <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={(e) => { e.stopPropagation(); onEdit(l); }} />{' '}
                   <button className="btn secondary small" onClick={(e) => { e.stopPropagation(); onSelect(l); }}>Open</button>
                 </td>
               </tr>

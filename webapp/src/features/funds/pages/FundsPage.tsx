@@ -5,10 +5,11 @@ import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
+import { EditIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { IconButton } from '../../../components/ui/IconButton';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { getMarketPrice } from '../../../lib/calc';
@@ -328,8 +329,8 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
               </Select>
             </div>
             <div className="row" style={{ gap: 8, marginTop: 8 }}>
-              <button className="btn secondary small" onClick={saveFund}><SaveIcon size={12} />Save</button>
-              <button className="btn secondary small" onClick={() => setEditingFund(false)}>Cancel</button>
+              <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveFund} />
+              <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditingFund(false)} />
             </div>
           </div>
         ) : (
@@ -339,8 +340,8 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
               <div className="footer-note">{fund.code} · {fund.platform} · {fund.category} · {fund.currencyCode}</div>
             </div>
             <div className="row" style={{ gap: 8 }}>
-              <button className="btn secondary small" onClick={() => { setEditFund(fund); setEditingFund(true); }}>Edit</button>
-              <button className="btn secondary small" onClick={deleteFund}><TrashIcon size={12} />Delete</button>
+              <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => { setEditFund(fund); setEditingFund(true); }} />
+              <IconButton label="Delete" icon={<TrashIcon size={13} />} align="right" onClick={deleteFund} />
             </div>
           </div>
         )}
@@ -391,8 +392,8 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                   <td><input type="number" step="0.0001" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })} style={{ width: 90 }} /></td>
                   <td>{fmtMoney(editRow.shares * editRow.price, fund.currencyCode)}</td>
                   <td>
-                    <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
-                    <button className="btn secondary small" onClick={() => setEditIndex(null)}>Cancel</button>
+                    <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
+                    <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditIndex(null)} />
                   </td>
                 </tr>
               ) : (
@@ -403,15 +404,15 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                   <td>{fmtPrice(t.price)}</td>
                   <td>{fmtMoney(t.shares * t.price, fund.currencyCode)}</td>
                   <td>
-                    <button className="btn secondary small" onClick={() => startEdit(i, t)}>Edit</button>{' '}
-                    <button
-                      className="btn secondary small"
+                    <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(i, t)} />{' '}
+                    <IconButton
+                      label="Delete"
+                      icon={<TrashIcon size={13} />}
+                      align="right"
                       onClick={async () => {
                         if (await confirmDialog('This cannot be undone.', 'Delete this transaction?')) deleteTransaction(i);
                       }}
-                    >
-                      <TrashIcon size={12} />Delete
-                    </button>
+                    />
                   </td>
                 </tr>
               ),

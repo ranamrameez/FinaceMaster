@@ -5,11 +5,12 @@ import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
+import { EditIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Modal } from '../../../components/Modal';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { IconButton } from '../../../components/ui/IconButton';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { netIncomeByCurrency, netIncomeByProperty, propertyByCategory, propertyMonthlyRollup, propertyNetIncome } from '../../../lib/calc/rentalsModule';
@@ -140,8 +141,8 @@ function PropertiesList() {
                 <td><input type="number" step="0.01" value={editRow.purchasePrice ?? ''} onChange={(e) => setEditRow({ ...editRow, purchasePrice: e.target.value === '' ? undefined : Number(e.target.value) })} style={{ width: 110 }} /></td>
                 <td></td>
                 <td>
-                  <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
-                  <button className="btn secondary small" onClick={() => setEditId(null)}>Cancel</button>
+                  <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
+                  <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditId(null)} />
                 </td>
               </tr>
             ) : (
@@ -152,15 +153,15 @@ function PropertiesList() {
                 <td className={propertyNetIncome(p, entries) >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(propertyNetIncome(p, entries), p.currencyCode)}</td>
                 <td>
                   <button className="btn secondary small" onClick={() => setDetailProperty(p)}>Details</button>{' '}
-                  <button className="btn secondary small" onClick={() => startEdit(p)}>Edit</button>{' '}
-                  <button
-                    className="btn secondary small"
+                  <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(p)} />{' '}
+                  <IconButton
+                    label="Delete"
+                    icon={<TrashIcon size={13} />}
+                    align="right"
                     onClick={async () => {
                       if (await confirmDialog('This deletes the property and all its income/expense entries.', `Delete property "${p.name}"?`)) deleteProperty(p.id);
                     }}
-                  >
-                    <TrashIcon size={12} />Delete
-                  </button>
+                  />
                 </td>
               </tr>
             ),
@@ -549,8 +550,8 @@ function EntriesList({ property }: { property: Property }) {
                 <td><input value={editRow.note ?? ''} onChange={(ev) => setEditRow({ ...editRow, note: ev.target.value })} /></td>
                 <td className="footer-note">{e.source === 'statement-import' ? `Import${e.statementRef ? ` (${e.statementRef})` : ''}` : 'Manual'}</td>
                 <td>
-                  <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
-                  <button className="btn secondary small" onClick={() => setEditId(null)}>Cancel</button>
+                  <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
+                  <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditId(null)} />
                 </td>
               </tr>
             ) : (
@@ -562,13 +563,13 @@ function EntriesList({ property }: { property: Property }) {
                 <td>{e.note}</td>
                 <td className="footer-note">{e.source === 'statement-import' ? `Import${e.statementRef ? ` (${e.statementRef})` : ''}` : 'Manual'}</td>
                 <td>
-                  <button className="btn secondary small" onClick={() => startEdit(e)}>Edit</button>{' '}
-                  <button
-                    className="btn secondary small"
+                  <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(e)} />{' '}
+                  <IconButton
+                    label="Delete"
+                    icon={<TrashIcon size={13} />}
+                    align="right"
                     onClick={() => confirmAndDeleteLinkable('rentals', e.id, () => deleteEntry(e.id))}
-                  >
-                    <TrashIcon size={12} />Delete
-                  </button>
+                  />
                 </td>
               </tr>
             ),

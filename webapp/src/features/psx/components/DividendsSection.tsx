@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { PSX_TICKER_DATALIST_ID } from '../../../components/PSXTickerDatalist';
-import { SaveIcon } from '../../../components/icons';
+import { EditIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
+import { IconButton } from '../../../components/ui/IconButton';
 import { fmt, fmtMoney } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { useSortableRows } from '../../../hooks/useSortableRows';
@@ -150,8 +151,8 @@ export function DividendsSection() {
                   <td><input type="number" value={editRow.shares} onChange={(e) => setEditRow({ ...editRow, shares: Number(e.target.value) })} style={{ width: 80 }} /></td>
                   <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 90 }} /></td>
                   <td>
-                    <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
-                    <button className="btn secondary small" onClick={() => setEditIndex(null)}>Cancel</button>
+                    <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
+                    <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditIndex(null)} />
                   </td>
                 </tr>
               ) : (
@@ -162,8 +163,8 @@ export function DividendsSection() {
                   <td>{d.shares || '—'}</td>
                   <td className="pill-buy">{fmtMoney(d.amount, currency)}</td>
                   <td>
-                    <button className="btn secondary small" onClick={() => startEdit(d.i, d)}>Edit</button>{' '}
-                    <button className="btn secondary small" onClick={() => removeDividend(d.i)}>Delete</button>
+                    <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(d.i, d)} />{' '}
+                    <IconButton label="Delete" icon={<TrashIcon size={13} />} align="right" onClick={() => removeDividend(d.i)} />
                   </td>
                 </tr>
               ),

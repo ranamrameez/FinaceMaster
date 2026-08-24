@@ -2278,11 +2278,26 @@ not developer notes) continuously as features ship.
   rather than only living in this file's prose. **This closes the entire 18-item UI/UX
   feedback batch** — every item from the original screenshot and both follow-up messages is
   now either shipped (see Done items 108-115) or a scoped Pending entry ready for its own
-  session. Next up per the README's own Pending list, per the standing auto-commit
-  instruction: icon-only buttons with tooltips on every other module (Cash/Bank/Personal
-  Loans/EMI/Funds/Rentals/Subscriptions/Transfers still have full-text Edit/Delete —
-  `IconButton` from Done item 113 is ready to reuse), or any other Pending item — no specific
-  priority order requested beyond what's already in the README.
+  session.
+- **`IconButton` rolled out to every other module's Edit/Delete/Save/Cancel buttons
+  (2026-08-24) — see README Done item 116, done on this session's own initiative per the
+  standing "keep working down the Pending list" instruction, not a new user report.** 13
+  files: QSE/PSX per-stock Transactions, Personal Loans, Rentals, Banking, Cash, EMI, Funds,
+  Transfers, Subscriptions, and both `DividendsSection` components. New `EditIcon`/`XIcon`
+  added to `icons.tsx`. Deliberately scoped down in `TradePlannerPage.tsx` (already the most
+  bug-fixed file this session) — only its two unambiguous per-leg "Edit" buttons converted,
+  its several single-instance form-Cancel buttons left as text rather than risk a subtle
+  breakage in an already-fragile file for low marginal value. **A real dangling-`</button>`
+  bug was caught mid-edit in `BankPage.tsx`** (the old wrapping tag's closer had nothing left
+  to match once the new `IconButton` self-closed) — caught by re-reading the surrounding JSX
+  right after the edit, before running `tsc`, which is why running `tsc -b` after every single
+  file (not batched at the end) mattered here: it would have caught it eventually, but the
+  read-immediately-after-editing habit caught it before even needing to. Verified via `npx tsc
+  -b` per file, `npm run test` (255 tests, unchanged), `npm run build`, a 23-page console-error
+  sweep, and a live Playwright functional test on Personal Loans confirming the Edit button's
+  tooltip and click behavior actually work, not just render.
+- Next up per the README's own Pending list, per the standing auto-commit instruction: any
+  Pending item — no specific priority order requested beyond what's already in the README.
 
 ## Live URLs
 

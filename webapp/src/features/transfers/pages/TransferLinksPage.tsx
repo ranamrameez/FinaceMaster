@@ -3,9 +3,10 @@ import { useState } from 'react';
 import { Card, CollapsibleCard } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
+import { EditIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { IconButton } from '../../../components/ui/IconButton';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
@@ -307,8 +308,8 @@ function LinksList() {
                 <td><input type="number" step="0.01" value={editToAmount} onChange={(e) => setEditToAmount(Number(e.target.value))} style={{ width: 90 }} /></td>
                 <td><input value={editNote} onChange={(e) => setEditNote(e.target.value)} /></td>
                 <td>
-                  <button className="btn secondary small" onClick={() => saveEdit(l)}><SaveIcon size={12} />Save</button>{' '}
-                  <button className="btn secondary small" onClick={() => setEditId(null)}>Cancel</button>
+                  <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={() => saveEdit(l)} />{' '}
+                  <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditId(null)} />
                 </td>
               </tr>
             ) : (
@@ -320,8 +321,8 @@ function LinksList() {
                 <td>{fmtMoney(l.toAmount, resolveCurrency(l.to, currencyCtx) || '')}</td>
                 <td>{l.note}</td>
                 <td>
-                  <button className="btn secondary small" onClick={() => startEdit(l)}>Edit</button>{' '}
-                  <button className="btn secondary small" onClick={() => removeLink(l)}><TrashIcon size={12} />Delete</button>
+                  <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(l)} />{' '}
+                  <IconButton label="Delete" icon={<TrashIcon size={13} />} align="right" onClick={() => removeLink(l)} />
                 </td>
               </tr>
             ),

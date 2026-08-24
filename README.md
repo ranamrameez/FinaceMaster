@@ -2154,6 +2154,38 @@ FinanceManager live link:
      tests, unchanged) / `npm run build` all clean; a 23-page console-error sweep found zero
      regressions.
 
+116. **`IconButton` rolled out to every other module's Edit/Delete/Save/Cancel buttons
+     (2026-08-24) — the "app-wide" remainder of Done items 62/113, done on the session's own
+     initiative per the standing instruction to keep working down the Pending list.** Applied
+     to QSE/PSX per-stock Transactions tables, Personal Loans (loan detail header + repayments
+     table + list row), Rentals (properties list + entries table), Banking (accounts list +
+     transactions table + Planning tab), Cash (ledger + Planning tab), EMI (loan detail header
+     + list row), Funds (fund header + transactions table), Transfers (linked-transfers table),
+     Subscriptions (subscription header), and both QSE/PSX `DividendsSection` components — 13
+     files in total. Added `EditIcon` (a pencil — nothing in the icon set covered "edit" before
+     this) and `XIcon` (a real close/cancel glyph) to `icons.tsx`. **Deliberately scoped down**
+     in one file: PSX's `TradePlannerPage.tsx` — already one of the most complex, frequently
+     bug-fixed files this session (Done items 42/43/64/81/102/104) — only got its two
+     unambiguous per-leg "Edit" buttons converted; its several single-instance form-level
+     "Cancel" buttons (for the metadata-edit form, the leg-link picker, the add-leg form) were
+     left as plain text, since those are lower-value, higher-risk-of-subtle-breakage targets in
+     an already-fragile file, not the repeated-list-row pattern this rollout targets elsewhere.
+     Also left "Add row"/"Save transaction"/"Save fund"-type primary-CTA buttons and
+     module-specific actions ("Open", "Mark as done", "Mark done", "Reactivate"/toggle-"Cancel")
+     untouched everywhere — those are distinct single actions, not the generic repeated
+     Edit/Delete/Save/Cancel utility this ask targets. **One real bug caught during the rollout,
+     not shipped**: an edit in `BankPage.tsx`'s Planning-tab plan-row Delete button left a
+     dangling `</button>` closing tag from the original markup (the new `IconButton` self-closes,
+     so the old wrapping tag's closer had nothing left to match) — caught by re-reading the
+     surrounding JSX immediately after the edit, before running `tsc`, not by the compiler
+     itself catching it after the fact. Verified via `npx tsc -b` after every file (not batched
+     at the end, specifically so a mistake like the above would be caught immediately against
+     the file that caused it) plus `npm run test` (255 tests, unchanged) and `npm run build`,
+     both clean at the end; a 23-page console-error sweep found zero regressions; and a live
+     Playwright functional test on Personal Loans (not just a render check) confirmed hovering
+     the Edit button shows the correct tooltip and clicking it actually enters edit mode with
+     the expected form fields.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`

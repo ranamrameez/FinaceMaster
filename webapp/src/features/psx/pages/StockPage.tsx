@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { confirmDialog } from '../../../components/ConfirmDialog';
+import { EditIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
 import { Field, TextInput } from '../../../components/ui/Field';
+import { IconButton } from '../../../components/ui/IconButton';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { toCSV } from '../../../lib/csv';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
@@ -189,8 +191,8 @@ function TickerTransactions({ ticker }: { ticker: string }) {
                     />
                   </td>
                   <td>
-                    <button className="btn secondary small" onClick={saveEdit}>Save</button>{' '}
-                    <button className="btn secondary small" onClick={() => setEditIndex(null)}>Cancel</button>
+                    <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
+                    <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditIndex(null)} />
                   </td>
                 </tr>
               ) : (
@@ -217,15 +219,15 @@ function TickerTransactions({ ticker }: { ticker: string }) {
                     )}
                   </td>
                   <td>
-                    <button className="btn secondary small" onClick={() => startEdit(i, tx)}>Edit</button>{' '}
-                    <button
-                      className="btn secondary small"
+                    <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(i, tx)} />{' '}
+                    <IconButton
+                      label="Delete"
+                      icon={<TrashIcon size={13} />}
+                      align="right"
                       onClick={async () => {
                         if (await confirmDialog('This cannot be undone.', `Delete ${tx.action} ${tx.shares} ${ticker}?`)) deleteTransaction(i);
                       }}
-                    >
-                      Delete
-                    </button>
+                    />
                   </td>
                 </tr>
               ),

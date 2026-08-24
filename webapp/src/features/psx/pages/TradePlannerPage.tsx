@@ -2,10 +2,11 @@ import { Fragment, useState, type ReactNode } from 'react';
 import { CollapsibleCard } from '../../../components/Card';
 import { PSX_TICKER_DATALIST_ID } from '../../../components/PSXTickerDatalist';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { CheckIcon, PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
+import { CheckIcon, EditIcon, PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
 import { Field, TextInput } from '../../../components/ui/Field';
+import { IconButton } from '../../../components/ui/IconButton';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { Notice } from '../../../components/Notice';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
@@ -588,13 +589,13 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                     <td>
                       {!leg.executed && (
                         <>
-                          <button className="btn secondary small" onClick={() => startEditLeg(i)}>Edit</button>{' '}
+                          <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEditLeg(i)} />{' '}
                           <button className="btn secondary small" onClick={() => markDone(i)}><CheckIcon size={12} />Mark done</button>{' '}
                           <button className="btn secondary small" onClick={() => removeLeg(i)}><TrashIcon size={12} />Remove</button>
                         </>
                       )}
                       {leg.executed && linkedTx && (
-                        <button className="btn secondary small" onClick={() => startEditTx(i, linkedTx)}>Edit</button>
+                        <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEditTx(i, linkedTx)} />
                       )}
                       {stale && (
                         <button className="btn secondary small" onClick={() => setLinkingLegIndex(linkingLegIndex === i ? null : i)}>

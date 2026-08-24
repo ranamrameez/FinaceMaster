@@ -5,10 +5,11 @@ import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
+import { EditIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { IconButton } from '../../../components/ui/IconButton';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import {
@@ -281,8 +282,8 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
               <TextInput value={editRow.category ?? ''} onChange={(e) => setEditRow({ ...editRow, category: e.target.value })} placeholder="Category" />
             </div>
             <div className="row" style={{ gap: 8, marginTop: 8 }}>
-              <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>
-              <button className="btn secondary small" onClick={() => setEditing(false)}>Cancel</button>
+              <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />
+              <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditing(false)} />
             </div>
           </div>
         ) : (
@@ -295,16 +296,16 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
               </div>
             </div>
             <div className="row" style={{ gap: 8 }}>
-              <button className="btn secondary small" onClick={() => { setEditRow(sub); setEditing(true); }}>Edit</button>
+              <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => { setEditRow(sub); setEditing(true); }} />
               <button className="btn secondary small" onClick={toggleActive}>{sub.active ? 'Cancel' : 'Reactivate'}</button>
-              <button
-                className="btn secondary small"
+              <IconButton
+                label="Delete"
+                icon={<TrashIcon size={13} />}
+                align="right"
                 onClick={async () => {
                   if (await confirmDialog('This cannot be undone.', `Delete subscription "${sub.name}"?`)) { deleteEntry(sub.id); onBack(); }
                 }}
-              >
-                <TrashIcon size={12} />Delete
-              </button>
+              />
             </div>
           </div>
         )}

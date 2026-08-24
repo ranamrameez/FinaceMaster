@@ -4,10 +4,11 @@ import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
+import { EditIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { IconButton } from '../../../components/ui/IconButton';
 import { useAmountFormat } from '../../../hooks/useAmountFormat';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
@@ -220,8 +221,8 @@ function EntryList() {
                 <td></td>
                 <td className="footer-note">{entry.source === 'statement-import' ? `Import${entry.statementRef ? ` (${entry.statementRef})` : ''}` : 'Manual'}</td>
                 <td>
-                  <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
-                  <button className="btn secondary small" onClick={() => setEditId(null)}>Cancel</button>
+                  <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
+                  <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditId(null)} />
                 </td>
               </tr>
             ) : (
@@ -234,13 +235,13 @@ function EntryList() {
                 <td>{fmtMoney(balance, entry.currencyCode)}</td>
                 <td className="footer-note">{entry.source === 'statement-import' ? `Import${entry.statementRef ? ` (${entry.statementRef})` : ''}` : 'Manual'}</td>
                 <td>
-                  <button className="btn secondary small" onClick={() => startEdit(entry)}>Edit</button>{' '}
-                  <button
-                    className="btn secondary small"
+                  <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(entry)} />{' '}
+                  <IconButton
+                    label="Delete"
+                    icon={<TrashIcon size={13} />}
+                    align="right"
                     onClick={() => confirmAndDeleteLinkable('cash', entry.id, () => deleteEntry(entry.id))}
-                  >
-                    <TrashIcon size={12} />Delete
-                  </button>
+                  />
                 </td>
               </tr>
             ),
@@ -665,8 +666,8 @@ function PlanList() {
                   <td><input value={editRow.note ?? ''} onChange={(e) => setEditRow({ ...editRow, note: e.target.value })} /></td>
                   <td></td>
                   <td>
-                    <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
-                    <button className="btn secondary small" onClick={() => setEditId(null)}>Cancel</button>
+                    <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
+                    <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditId(null)} />
                   </td>
                 </tr>
               ) : (
@@ -681,15 +682,15 @@ function PlanList() {
                     {!p.executed && (
                       <button className="btn secondary small" onClick={() => markDone(p)}>Mark as done</button>
                     )}{' '}
-                    <button className="btn secondary small" onClick={() => startEdit(p)}>Edit</button>{' '}
-                    <button
-                      className="btn secondary small"
+                    <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(p)} />{' '}
+                    <IconButton
+                      label="Delete"
+                      icon={<TrashIcon size={13} />}
+                      align="right"
                       onClick={async () => {
                         if (await confirmDialog('This cannot be undone.', 'Delete this plan?')) deletePlan(p.id);
                       }}
-                    >
-                      <TrashIcon size={12} />Delete
-                    </button>
+                    />
                   </td>
                 </tr>
               ),
