@@ -43,7 +43,7 @@ function solveSharesForTargetAvg(
   return (lo + hi) / 2;
 }
 
-export function TradeCalculator() {
+export function TradeCalculator({ initialTicker }: { initialTicker?: string } = {}) {
   const { workbook, positions, calcFee, summary } = useQSEDerived();
   const { tickerNames } = useQSEStockData();
   const addTransaction = useWorkbookStore((s) => s.addTransaction);
@@ -52,7 +52,7 @@ export function TradeCalculator() {
   const { feePct, tick } = workbook.settings;
 
   const [mode, setMode] = useState<Mode>('BUY');
-  const [ticker, setTicker] = useState('');
+  const [ticker, setTicker] = useState(initialTicker || '');
   const [targetTouched, setTargetTouched] = useState(false);
 
   const [sellShares, setSellShares] = useState(0);
@@ -220,10 +220,11 @@ export function TradeCalculator() {
 
       {ticker && (
         <div className="row" style={{ gap: 8, alignItems: 'flex-end', marginBottom: 12 }}>
-          <Field label="Current price *" width={110}>
+          <Field label="Current price *" width={140}>
             <TextInput
               type="number"
               step="0.001"
+              className="price-input"
               value={priceOverride !== '' ? priceOverride : mp > 0 ? String(mp) : ''}
               onChange={(e) => setPriceOverride(e.target.value)}
               style={{ borderColor: currentPrice > 0 ? undefined : 'var(--loss)' }}

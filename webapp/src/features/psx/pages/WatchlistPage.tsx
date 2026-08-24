@@ -39,18 +39,20 @@ export function WatchlistPage() {
         <input
           type="number"
           step="0.01"
+          className="price-input"
           placeholder="Target price"
           value={w.target || ''}
           onChange={(e) => setW({ ...w, target: Number(e.target.value) })}
-          style={{ width: 110 }}
+          style={{ width: 120 }}
         />
         <input
           type="number"
           step="0.01"
+          className="price-input"
           placeholder="Current price"
           value={w.current || ''}
           onChange={(e) => setW({ ...w, current: Number(e.target.value) })}
-          style={{ width: 110 }}
+          style={{ width: 120 }}
         />
         <button
           className="btn"
@@ -124,9 +126,10 @@ function WatchlistTable({
                 <input
                   type="number"
                   step="0.01"
+                  className="price-input"
                   value={item.target || ''}
                   onChange={(e) => updateWatchlistItem(item.ticker, { target: Number(e.target.value) })}
-                  style={{ width: 90 }}
+                  style={{ width: 100 }}
                   title="Edit target price"
                 />
               </td>
@@ -134,9 +137,10 @@ function WatchlistTable({
                 <input
                   type="number"
                   step="0.01"
+                  className="price-input"
                   value={item.current || ''}
                   onChange={(e) => updateWatchlistItem(item.ticker, { current: Number(e.target.value) })}
-                  style={{ width: 90 }}
+                  style={{ width: 100 }}
                   title="Edit current price"
                 />
               </td>

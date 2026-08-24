@@ -665,6 +665,17 @@
   .psum-row .psum-be{font-family:var(--mono); font-size:11px; color:var(--muted);}
   .table-scroll{overflow-x:auto; max-height:480px; overflow-y:auto;}
   .table-scroll table thead th{position:sticky; top:0; background:var(--panel); z-index:1;}
+  /* Narrow editable price inputs (Trade Calculator's "Current price",
+     every table's inline market-price cell, Watchlist's target/current
+     columns) inherit the base input's 10px/11px padding, which combined
+     with the browser's native number-spinner arrows left barely any room
+     for the digits themselves in a ~80-110px box — a real user-reported
+     "too small" complaint, worse since this app has no live price feed:
+     every one of these is a manually-typed value the user needs to
+     actually read back. Almost-zero padding (only enough on the left to
+     clear the input's own border) reclaims that space; the spinner still
+     has its native width, so padding-right stays at 0. */
+  input.price-input[type=number]{padding:8px 0 8px 6px; text-align:left; font-family:var(--mono);}
   .rule-note{
     font-size:12px; color:var(--muted); background:var(--panel-2); border:1px solid var(--border);
     border-radius:8px; padding:10px 12px; margin-bottom:16px; line-height:1.5;
