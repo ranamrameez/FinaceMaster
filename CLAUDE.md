@@ -2211,14 +2211,29 @@ not developer notes) continuously as features ship.
   specificity, with tighter values throughout — row height now goes 54.5px → 46.5px → 38.5px
   across Comfortable → Compact → Console, a genuine strictly-decreasing series. `npx tsc -b` /
   `npm run test` (255 tests, unchanged) / `npm run build` all clean.
-- **Still open, not yet started**: Calculator button toast/icon-only treatment, icon-only
-  buttons with tooltips app-wide, removing single-child nested Settings cards, and a batch of
-  larger deferred items (multi-theme stat-card-color audit, Ticker+logo+name/Cost/Value/P-L
-  column grouping standard everywhere, side-by-side layout instead of scrolling, full
-  Portfolio page overhaul, using unused right-side page space) to be documented as scoped
-  README Pending items rather than attempted blind. Continue working down this list per the
-  same standing auto-commit instruction — this note itself will be superseded as more of the
-  batch lands.
+- **Toast hidden behind the Calculator button, fixed (2026-08-24) — see README Done item 112,
+  first item of the follow-up batch.** The toast (`bottom:20/right:20/z-index:50`) and the
+  floating Calculator button (`bottom:24/right:24/z-index:500`) sat in almost the exact same
+  screen position with the button's z-index 10x higher, so a toast rendered genuinely hidden
+  behind it, not just visually close. Fixed by shrinking the Calculator button to a round
+  52px icon-only FAB (label moved into a real `Tooltip` popup) and moving `.toast` up to
+  `bottom:92px`, clear of the button's full height. **One non-obvious implementation detail
+  worth remembering for any future fixed-position + Tooltip combination**: `position:fixed`
+  has to live on a wrapper OUTSIDE `Tooltip`'s own trigger span, never on the element `Tooltip`
+  wraps directly — `Tooltip`'s trigger span is normally positioned, so a `fixed` child inside
+  it paints at the viewport corner while the span itself stays wherever it fell in document
+  flow (fixed elements are removed from flow), breaking both hover detection and the tooltip's
+  own `getBoundingClientRect()` positioning math, which reads the parent span's now-wrong,
+  empty rect. Verified via Playwright bounding-box overlap check (not just a screenshot) with
+  a real triggered toast — zero overlap. `npx tsc -b` / `npm run test` (255 tests, unchanged) /
+  `npm run build` all clean.
+- **Still open, not yet started**: icon-only buttons with tooltips app-wide, removing
+  single-child nested Settings cards, and a batch of larger deferred items (multi-theme
+  stat-card-color audit, Ticker+logo+name/Cost/Value/P-L column grouping standard everywhere,
+  side-by-side layout instead of scrolling, full Portfolio page overhaul, using unused
+  right-side page space) to be documented as scoped README Pending items rather than
+  attempted blind. Continue working down this list per the same standing auto-commit
+  instruction — this note itself will be superseded as more of the batch lands.
 
 ## Live URLs
 

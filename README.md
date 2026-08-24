@@ -2055,6 +2055,29 @@ FinanceManager live link:
      treatment, icon-only buttons with tooltips app-wide, single-child nested Settings cards)
      and the larger deferred redesigns are still open, tracked below.
 
+112. **Toast hidden behind the Calculator button + icon-only Calculator FAB — first item of
+     the follow-up batch (2026-08-24).** Real, measurable bug, not a z-index tweak done
+     blind: the toast (`bottom:20px;right:20px;z-index:50`) and the floating Calculator
+     button (`bottom:24px;right:24px;z-index:500`) sat in almost the exact same screen
+     position with the button's z-index 10x higher, so any toast while that button was
+     visible rendered genuinely hidden behind it, not just visually close. Fixed two ways
+     together, per the user's own two-part ask ("Toast is hidden beneath Calc Button. Calc
+     Icon is enough. move its text to the tooltip"): (a) shrank the Calculator button from a
+     "🧮 Calculator" text pill to a round 52px icon-only FAB, with the label moved into a
+     real `Tooltip` popup (`align="right"`) instead of a native `title` — the
+     `position:fixed` was moved to a new *outer* wrapper div rather than staying on the
+     button itself, since `Tooltip`'s own trigger span is normally positioned and a
+     `position:fixed` button directly inside it would visually render at the viewport corner
+     while its DOM parent stayed wherever it fell in document flow (fixed elements are
+     removed from flow) — breaking both hover detection and the tooltip's own position math,
+     which read the parent span's (wrong, empty) rect. (b) Moved `.toast` up to
+     `bottom:92px` — clear of the Calculator button's full height — rather than only raising
+     its z-index, so a toast is never painted on top of a live button either. Verified live
+     via Playwright: measured both elements' bounding boxes with a real triggered toast and
+     confirmed zero rectangle overlap, plus hovering the button showed the real tooltip text.
+     `npx tsc -b` / `npm run test` (255 tests, unchanged) / `npm run build` all clean; a
+     23-page console-error sweep found zero regressions.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`

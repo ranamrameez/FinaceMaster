@@ -682,8 +682,16 @@
     opacity:0; pointer-events:none; transition:opacity .12s ease;
   }
   .shared-tooltip.show{opacity:1;}
+  /* User-reported (batch-2 item 1): this used to sit at bottom:20/right:20
+     — almost exactly the same corner as the floating Calculator button
+     (bottom:24/right:24) and the "back to top" button below it — and with
+     a much lower z-index than the Calculator button (50 vs 500), it
+     rendered genuinely hidden behind it rather than just visually close.
+     Moved above both floating buttons' combined footprint (Calculator is
+     52px tall, back-to-top sits below it) instead of only bumping z-index,
+     so the toast is never painted OVER a live button either. */
   .toast{
-    position:fixed; bottom:20px; right:20px; background:var(--panel); border:1px solid var(--accent);
+    position:fixed; bottom:92px; right:20px; background:var(--panel); border:1px solid var(--accent);
     padding:12px 18px; border-radius:8px; font-size:13px; box-shadow:0 6px 24px rgba(0,0,0,.4);
     opacity:0; transform:translateY(10px); transition:.2s; z-index:50; pointer-events:none;
   }

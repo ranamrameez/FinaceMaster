@@ -4,6 +4,7 @@ import { TradeCalculator as QSETradeCalculator } from '../features/qse/component
 import { TradeCalculator as PSXTradeCalculator } from '../features/psx/components/TradeCalculator';
 import { categoryForPath } from './CategoryNav';
 import { Modal } from './Modal';
+import { Tooltip } from './Tooltip';
 
 /** Trade Calculator as an on-demand popup, available from anywhere via this
  * floating button. Route-aware: shows the QSE calculator on QSE routes and
@@ -40,22 +41,43 @@ export function CalculatorLauncher() {
 
   return (
     <>
-      <button
-        className="btn"
-        onClick={() => setOpen(true)}
-        title="Trade calculator"
-        style={{
-          position: 'fixed',
-          right: 24,
-          bottom: 24,
-          borderRadius: 999,
-          padding: '12px 20px',
-          boxShadow: '0 4px 16px rgba(0,0,0,.25)',
-          zIndex: 500,
-        }}
-      >
-        🧮 Calculator
-      </button>
+      {/* User-reported (batch-2 item 1): the toast notification sits at
+         bottom-right too and was rendering hidden behind this button's much
+         higher z-index, plus the button's own "🧮 Calculator" text label
+         was flagged separately as unnecessary — "Calc Icon is enough. move
+         its text to the tooltip." Shrinking this to a round icon-only FAB
+         frees up the corner enough that the toast (repositioned to sit
+         above it in theme.css) never collides with it, and the tooltip now
+         carries the label instead of a native `title`, matching every
+         other icon-only control's tooltip treatment in the app.
+         The `position:fixed` lives on this OUTER div, not the button —
+         `Tooltip`'s own trigger wrapper is a normal (statically positioned)
+         span, and a `position:fixed` button inside it would render at the
+         viewport corner while its DOM parent span stays wherever it fell
+         in document flow (fixed elements are removed from flow entirely),
+         so mouse hover and the tooltip's own getBoundingClientRect() math
+         would both target the wrong, invisible location. Fixing the OUTER
+         div instead means the button and Tooltip's span both sit, via
+         ordinary layout, exactly where the div is pinned. */}
+      <div style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 500 }}>
+        <Tooltip text="Trade calculator" align="right">
+          <button
+            className="btn"
+            onClick={() => setOpen(true)}
+            aria-label="Trade calculator"
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: '50%',
+              padding: 0,
+              fontSize: 22,
+              boxShadow: '0 4px 16px rgba(0,0,0,.25)',
+            }}
+          >
+            🧮
+          </button>
+        </Tooltip>
+      </div>
       {open && (
         <Modal title={`${isPSX ? 'PSX' : 'QSE'} Trade Calculator`} onClose={() => setOpen(false)}>
           {isPSX ? <PSXTradeCalculator initialTicker={initialTicker} /> : <QSETradeCalculator initialTicker={initialTicker} />}
