@@ -10,6 +10,7 @@ import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { useAmountFormat } from '../../../hooks/useAmountFormat';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
+import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { cashBalanceByCurrency, cashByCategory, cashMonthlyFlow, cashRunningLedger } from '../../../lib/calc/cashModule';
 import { plannedCashProjection } from '../../../lib/calc/plannedBalance';
 import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
@@ -108,11 +109,11 @@ function BalancesSummary() {
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px,1fr))', gap: 8, marginBottom: 16 }}>
-      {codes.map((code) => {
+      {codes.map((code, i) => {
         const pending = upcoming.filter((p) => p.currencyCode === code);
         const net = pending.reduce((s, p) => s + (p.type === 'IN' ? p.amount : -p.amount), 0);
         return (
-          <div key={code} className="stat-card card">
+          <div key={code} className="stat-card card" style={hueStyle(HUES[i % HUES.length])}>
             <div className="label">Balance ({code})</div>
             <MoneyValue n={balances[code]} currency={code} className={`value ${balances[code] >= 0 ? 'pill-buy' : 'pill-sell'}`} />
             {pending.length > 0 && (

@@ -10,6 +10,7 @@ import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { useAmountFormat } from '../../../hooks/useAmountFormat';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
+import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { accountBalance, accountByCategory, accountRunningLedger, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
 import { plannedBankProjection } from '../../../lib/calc/plannedBalance';
 import { parseCSV, toCSV } from '../../../lib/csv';
@@ -51,11 +52,11 @@ function TotalBalances() {
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px,1fr))', gap: 8, marginBottom: 16 }}>
-      {codes.map((code) => {
+      {codes.map((code, i) => {
         const pending = upcoming.filter((p) => currencyByAccount.get(p.accountId) === code);
         const net = pending.reduce((s, p) => s + p.amount, 0);
         return (
-          <div key={code} className="stat-card card">
+          <div key={code} className="stat-card card" style={hueStyle(HUES[i % HUES.length])}>
             <div className="label">Total balance ({code})</div>
             <MoneyValue n={totals[code]} currency={code} className={`value ${totals[code] >= 0 ? 'pill-buy' : 'pill-sell'}`} />
             {pending.length > 0 && (

@@ -1,6 +1,7 @@
 import type { User } from 'firebase/auth';
 import { useRef, useState } from 'react';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
+import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
@@ -131,9 +132,9 @@ function OverallSummary() {
           <div key={code} className="card" style={{ padding: 12 }}>
             <div className="footer-note" style={{ marginBottom: 6 }}>{code}</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px,1fr))', gap: 8 }}>
-              <div className="stat-card card"><div className="label">Invested</div><MoneyValue n={totals[code].invested} currency={code} /></div>
-              <div className="stat-card card"><div className="label">Current value</div><MoneyValue n={totals[code].value} currency={code} /></div>
-              <div className="stat-card card"><div className="label">Net profit</div><MoneyValue n={profit} currency={code} className={`value ${profit >= 0 ? 'pill-buy' : 'pill-sell'}`} after={` (${profitPct.toFixed(1)}%)`} /></div>
+              <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Invested</div><MoneyValue n={totals[code].invested} currency={code} /></div>
+              <div className="stat-card card" style={hueStyle(HUES[6])}><div className="label">Current value</div><MoneyValue n={totals[code].value} currency={code} /></div>
+              <div className="stat-card card" style={hueStyle(profit >= 0 ? 'var(--profit)' : 'var(--loss)')}><div className="label">Net profit</div><MoneyValue n={profit} currency={code} className={`value ${profit >= 0 ? 'pill-buy' : 'pill-sell'}`} after={` (${profitPct.toFixed(1)}%)`} /></div>
             </div>
           </div>
         );

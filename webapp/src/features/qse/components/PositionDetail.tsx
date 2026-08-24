@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useState } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
 import { CollapsibleCard } from '../../../components/Card';
 import { SaveIcon } from '../../../components/icons';
@@ -8,6 +8,7 @@ import { applyChartTheme } from '../../../lib/chartSetup';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { useSortableRows } from '../../../hooks/useSortableRows';
+import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { useAppearanceStore } from '../../../store/appearanceStore';
 import { useWorkbookStore } from '../../../store/workbookStore';
 import { useQSEDerived } from '../hooks/useQSEDerived';
@@ -19,12 +20,6 @@ import { useQSEDerived } from '../hooks/useQSEDerived';
 function CompactChart({ height, children }: { height: number; children: React.ReactNode }) {
   return <div style={{ height, position: 'relative' }}>{children}</div>;
 }
-
-// Same palette as QSE's/PSX's Dashboard stat-card grids — gives this page's
-// stat cards a distinct color each instead of the flat single-color look a
-// missing `--card-hue` used to leave every stat card with (README item 76).
-const HUES = ['#3d4b58', '#c9a227', '#34c77b', '#3b6bd6', '#8a97a3', '#e5484d', '#7b5cd6', '#2ea3a3'];
-const hueStyle = (hue: string): CSSProperties => ({ '--card-hue': hue } as CSSProperties);
 
 /** The actual "everything about this ticker" content — daily price chart,
  * current position (if open), all-time stats (works for closed positions

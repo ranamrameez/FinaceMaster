@@ -1417,6 +1417,18 @@ FinanceManager live link:
     screenshot with a real multi-buy/multi-sell seeded position: all cards render distinct
     colors, grouped values match hand-calculated expectations, zero console errors. `npx tsc
     -b` / `npm run test` (219 tests, unchanged — UI-only) / `npm run build` all clean.
+88. **`StatCard`/stat-card hue rollout finished for every module's landing summary (closes
+    README item 43).** Extracted the hue palette + helper (previously copy-pasted per file,
+    starting with Dashboard, then duplicated again for StockPage) into a shared
+    `lib/statCardHues.ts` instead of a fourth-plus copy, and used it to color Cash's
+    "Balance," Bank's "Total balance," Personal Loans' "Net position," EMI's "Monthly
+    total"/"Outstanding"/"Paid so far," Funds' "Invested"/"Current value"/"Net profit," and
+    Rentals' "Net income" stat cards — every module's very first, most-visible summary card(s)
+    now get the same colored treatment Dashboard/StockPage already had, instead of the flat
+    single-color look. Verified live via a 6-page Playwright sweep with seeded data for each
+    module (zero console errors) plus two screenshots (EMI, Funds) confirming the colors
+    actually render distinctly. `npx tsc -b` / `npm run test` (219 tests, unchanged — UI-only)
+    / `npm run build` all clean.
 
 ## Pending
 
@@ -1534,12 +1546,10 @@ already fixed; the rest tracked here**:
     chart cards on Analytics pages (many charts per page — collapsing every single one may be
     excessive, worth a design look rather than a blind wrap), and Personal Loans'
     `RepaymentsSection` (its add-form and list are one combined component with no clean seam).
-43. **Partially done — see Done item 87.** StockPage's Summary tab (QSE+PSX
-    `PositionDetail.tsx`) now has colored stat cards. Still the old flat single-color look:
-    Portfolio pages' own stat cards (if any — Portfolio is mostly tables, see item 45) and
-    every non-exchange module's landing stats (Cash, Bank, Personal Loans, EMI, Funds,
-    Rentals). Not started for those — each just needs a sensible per-stat color assignment,
-    same pattern as the Dashboard grids and Done item 87.
+43. ~~Roll out `StatCard`'s `hue` prop beyond QSE/PSX's Dashboard.~~ **Done — see Done items
+    87/88.** StockPage's Summary tab and every non-exchange module's landing stat cards
+    (Cash/Bank/Personal Loans/EMI/Funds/Rentals) now have distinct colors, backed by a shared
+    `lib/statCardHues.ts`.
 
 **User feedback, 2026-08-24 (mid-session, "preferred tasks" list) — not started yet**:
 

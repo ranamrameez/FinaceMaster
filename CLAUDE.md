@@ -1738,6 +1738,16 @@ not developer notes) continuously as features ship.
   had never gotten the colored-stat-card treatment Dashboard got earlier.
   Verified via screenshot with a real multi-buy/multi-sell position —
   zero console errors.
+- **StatCard hue rollout finished for every module (2026-08-24), closes
+  README item 43 — see Done item 88.** Extracted the hue palette/helper
+  (previously copy-pasted per file starting with Dashboard, then again
+  for StockPage) into a shared `lib/statCardHues.ts`, and colored Cash's/
+  Bank's balance cards, Personal Loans' net position, EMI's monthly/
+  outstanding/paid, Funds' invested/value/profit, and Rentals' net
+  income — every module's landing summary now has the same colored
+  stat-card treatment Dashboard originally got. Verified via a 6-page
+  Playwright sweep with seeded data (zero console errors) plus
+  screenshots confirming colors render.
 
 ## Live URLs
 

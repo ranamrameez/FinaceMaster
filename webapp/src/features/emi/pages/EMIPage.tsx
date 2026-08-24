@@ -1,6 +1,7 @@
 import type { User } from 'firebase/auth';
 import { useState } from 'react';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
+import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
@@ -291,9 +292,9 @@ function OverallSummary() {
         <div key={code} className="card" style={{ padding: 12 }}>
           <div className="footer-note" style={{ marginBottom: 6 }}>{code}</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px,1fr))', gap: 8 }}>
-            <div className="stat-card card"><div className="label">Monthly total</div><MoneyValue n={totals[code].monthlyInstallment} currency={code} /></div>
-            <div className="stat-card card"><div className="label">Outstanding</div><MoneyValue n={totals[code].outstanding} currency={code} className="value pill-sell" /></div>
-            <div className="stat-card card"><div className="label">Paid so far</div><MoneyValue n={totals[code].paidSoFar} currency={code} /></div>
+            <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Monthly total</div><MoneyValue n={totals[code].monthlyInstallment} currency={code} /></div>
+            <div className="stat-card card" style={hueStyle(HUES[5])}><div className="label">Outstanding</div><MoneyValue n={totals[code].outstanding} currency={code} className="value pill-sell" /></div>
+            <div className="stat-card card" style={hueStyle(HUES[2])}><div className="label">Paid so far</div><MoneyValue n={totals[code].paidSoFar} currency={code} /></div>
           </div>
         </div>
       ))}

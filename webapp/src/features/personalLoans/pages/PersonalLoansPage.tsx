@@ -3,6 +3,7 @@ import { useMemo, useRef, useState } from 'react';
 import { Bar } from 'react-chartjs-2';
 import { Card, MoneyValue } from '../../../components/Card';
 import { confirmDialog } from '../../../components/ConfirmDialog';
+import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
@@ -46,8 +47,8 @@ function NetPositionSummary() {
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px,1fr))', gap: 8, marginBottom: 16 }}>
-      {codes.map((code) => (
-        <div key={code} className="stat-card card">
+      {codes.map((code, i) => (
+        <div key={code} className="stat-card card" style={hueStyle(HUES[i % HUES.length])}>
           <div className="label">Net position ({code})</div>
           <MoneyValue n={net[code]} currency={code} className={`value ${net[code] >= 0 ? 'pill-buy' : 'pill-sell'}`} />
           <div className="sub">{net[code] >= 0 ? 'Net owed to you' : 'Net you owe'}</div>
