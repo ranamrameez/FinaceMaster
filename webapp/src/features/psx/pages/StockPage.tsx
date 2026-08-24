@@ -264,7 +264,7 @@ export function StockPage() {
       <Tabs
         tabs={[
           { key: 'summary', label: 'Summary', content: <PositionDetail ticker={ticker} /> },
-          { key: 'transactions', label: 'Transactions', content: <TickerTransactions ticker={ticker} /> },
+          { key: 'transactions', label: 'Trades', content: <TickerTransactions ticker={ticker} /> },
         ]}
       />
     </div>

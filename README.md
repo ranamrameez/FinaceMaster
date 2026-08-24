@@ -1993,11 +1993,25 @@ FinanceManager live link:
      literal `(s)` as `(S)`. `npx tsc -b` / `npm run test` (255 tests, unchanged — CSS/copy
      only) / `npm run build` all clean; a 23-page console-error sweep across every module
      found zero regressions. **Still open from this same batch** (tracked as new Pending items
-     below): right-aligning table action buttons, a "Transactions" → "Trade Transactions"
-     rename pass, chip active/inactive contrast on non-Classic themes, console density
-     differentiation, replacing the last remaining border-bottom table styling with the
-     already-added zebra striping, calculator-button toast/icon-only treatment, icon-only
-     buttons with tooltips app-wide, and removing single-child nested cards in Settings.
+     below): chip active/inactive contrast on non-Classic themes, console density
+     differentiation, calculator-button toast/icon-only treatment, icon-only buttons with
+     tooltips app-wide, and removing single-child nested cards in Settings.
+
+109. **Right-aligned table action buttons + "Transactions" → "Trade Transactions" rename
+     (2026-08-24), items 4/5 of the same batch — see Done item 108.** (a) Edit/Delete/Save/
+     Cancel buttons sit in the LAST `<td>` of every table row across the app (confirmed by
+     reading every table's JSX, not assumed) — a single `tbody td:last-child:has(button)
+     {text-align:right}` rule in `theme.css` right-pins that one cell wherever it holds a
+     button, without touching any other `:last-child` cell (a plain numeric/text last column
+     with no button is unaffected) or needing a class added to dozens of call sites. (b) "PSX
+     Transactions"/"Transactions" was ambiguous against Bank's own "Transactions" tab (real
+     money movements, not stock trades) — renamed the QSE/PSX sidebar nav item, page title, and
+     "Add transactions"/"Transaction list" tab labels to "Trade Transactions"/"Add trades"/
+     "Trade list", and the per-stock page's "Transactions" tab to "Trades" for the same reason.
+     Bank's own "Transactions" tab is untouched — it really is transactions, not trades, so no
+     ambiguity there. Verified live via Playwright (page title, nav link, and tab labels all
+     read correctly) plus a 23-page console-error sweep. `npx tsc -b` / `npm run test` (255
+     tests, unchanged — no calc/store logic touched) / `npm run build` all clean.
 
 ## Pending
 

@@ -2178,16 +2178,23 @@ not developer notes) continuously as features ship.
   bug** — this is the second time this exact class of bug (an app-wide base-tag style rule
   catching an element used for an unrelated purpose) has been the real cause this session.
   `npx tsc -b` / `npm run test` (255 tests, unchanged) / `npm run build` all clean; a 23-page
-  console-error sweep found zero regressions. **Still open, not yet started**: right-align
-  table action buttons, "Transactions"→"Trade Transactions" rename, chip contrast on
-  non-Classic themes, console-density differentiation, zebra-row rollout to any remaining
-  border-bottom tables, Calculator button toast/icon-only treatment, icon-only buttons with
-  tooltips app-wide, removing single-child nested Settings cards, and a batch of larger
-  deferred items (multi-theme stat-card-color audit, Ticker+logo+name/Cost/Value/P-L column
-  grouping standard everywhere, side-by-side layout instead of scrolling, full Portfolio page
-  overhaul, using unused right-side page space) to be documented as scoped README Pending
-  items rather than attempted blind. Continue working down this list per the same standing
-  auto-commit instruction — this note itself will be superseded as more of the batch lands.
+  console-error sweep found zero regressions.
+- **Same batch, continued (2026-08-24) — see README Done item 109.** (e) Table Edit/Delete/
+  Save/Cancel buttons right-pinned via one `tbody td:last-child:has(button){text-align:right}`
+  rule (every such row across the app puts its buttons in the row's last `<td>`, confirmed by
+  reading the JSX, not assumed). (f) "Transactions" renamed to "Trade Transactions" on the
+  QSE/PSX sidebar nav item, page title, and tab labels (plus the per-stock "Transactions" tab
+  → "Trades") to disambiguate from Bank's own "Transactions" tab, which really is money
+  transactions, not stock trades, and was left untouched. `npx tsc -b` / `npm run test` (255
+  tests, unchanged) / `npm run build` all clean. **Still open, not yet started**: chip
+  contrast on non-Classic themes, console-density differentiation, Calculator button toast/
+  icon-only treatment, icon-only buttons with tooltips app-wide, removing single-child nested
+  Settings cards, and a batch of larger deferred items (multi-theme stat-card-color audit,
+  Ticker+logo+name/Cost/Value/P-L column grouping standard everywhere, side-by-side layout
+  instead of scrolling, full Portfolio page overhaul, using unused right-side page space) to
+  be documented as scoped README Pending items rather than attempted blind. Continue working
+  down this list per the same standing auto-commit instruction — this note itself will be
+  superseded as more of the batch lands.
 
 ## Live URLs
 

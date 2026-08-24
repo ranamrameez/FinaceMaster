@@ -517,6 +517,14 @@
      whichever band its <tr> falls on. */
   tbody tr:nth-child(even){background:color-mix(in srgb, var(--panel-2) 55%, var(--panel));}
   tbody tr:hover{background:var(--panel-2);}
+  /* User-reported (item 4): Edit/Delete/Save/Cancel action buttons sit at
+     bad positions in a table row — every such row across the app puts
+     those buttons in the row's LAST <td> (confirmed by reading every
+     table's JSX, not assumed), so a single `:has()` rule right-aligns
+     that one cell wherever it holds a button, without needing a class
+     added to dozens of call sites. Doesn't touch any other `:last-child`
+     cell (e.g. a plain numeric/text last column with no buttons). */
+  tbody td:last-child:has(button){text-align:right;}
   .num-cell{text-align:right;}
   .pos{color:var(--profit);}
   .neg{color:var(--loss);}

@@ -682,11 +682,11 @@ function CashLedgerSection() {
 export function TransactionsPage() {
   return (
     <div>
-      <h1 className="pagetitle">PSX Transactions</h1>
+      <h1 className="pagetitle">PSX Trade Transactions</h1>
       <Tabs
         tabs={[
-          { key: 'add', label: 'Add transactions', content: <TransactionRows /> },
-          { key: 'list', label: 'Transaction list', content: <TransactionList /> },
+          { key: 'add', label: 'Add trades', content: <TransactionRows /> },
+          { key: 'list', label: 'Trade list', content: <TransactionList /> },
           { key: 'transfers', label: 'Cash transfers', content: <TransfersSection /> },
           { key: 'adjustments', label: 'Rewards & adjustments', content: <AdjustmentsSection /> },
           { key: 'ledger', label: 'Cash ledger', content: <CashLedgerSection /> },

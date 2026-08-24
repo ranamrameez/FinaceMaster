@@ -9,7 +9,7 @@ import { requireSignIn } from './SignInModal';
 const QSE_NAV_ITEMS = [
   { num: '01', label: 'Dashboard', to: '/' },
   { num: '02', label: 'Portfolio', to: '/portfolio' },
-  { num: '03', label: 'Transactions', to: '/transactions' },
+  { num: '03', label: 'Trade Transactions', to: '/transactions' },
   { num: '04', label: 'Watchlist', to: '/watchlist' },
   { num: '05', label: 'Analytics', to: '/analytics' },
   { num: '06', label: 'Risk Analysis', to: '/risk-analysis' },
@@ -19,7 +19,7 @@ const QSE_NAV_ITEMS = [
 const PSX_NAV_ITEMS = [
   { num: '01', label: 'Dashboard', to: '/psx' },
   { num: '02', label: 'Portfolio', to: '/psx/portfolio' },
-  { num: '03', label: 'Transactions', to: '/psx/transactions' },
+  { num: '03', label: 'Trade Transactions', to: '/psx/transactions' },
   { num: '04', label: 'Watchlist', to: '/psx/watchlist' },
   { num: '05', label: 'Analytics', to: '/psx/analytics' },
   { num: '06', label: 'Risk Analysis', to: '/psx/risk-analysis' },
