@@ -1880,6 +1880,17 @@ not developer notes) continuously as features ship.
   `npm run test` (235 tests, unchanged) / `npm run build` all clean.
   **README item 40 is now fully done** — every module has a statement
   export from its own primary record's detail view.
+- **Portfolio's closed-positions (History) table regrouped, completing
+  README item 45 (2026-08-24).** QSE's/PSX's `ClosedPositionsTable`
+  went from 8 one-fact columns to 4 grouped ones — Stock (ticker+
+  name), Bought / Sold, P/L (realized amount + fees paid as a
+  sub-line), Trade dates (first → last) — the same grouping pattern
+  already used for the Holdings table and StockPage's stat cards.
+  Verified via screenshot with two seeded closed positions (one
+  profit, one loss) — all 4 columns render correctly, P/L
+  color-coded. `npx tsc -b` / `npm run test` (235 tests, unchanged —
+  UI-only) / `npm run build` all clean. This closes out README item
+  45 in full.
 
 ## Live URLs
 

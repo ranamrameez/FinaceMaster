@@ -149,15 +149,11 @@ function ClosedPositionsTable({ onSelect }: { onSelect: (ticker: string) => void
   const currency = workbook.settings.currency;
   const closed = positions.filter((p) => p.shares === 0 && p.sellCount > 0);
 
-  type ClosedCol = 'ticker' | 'name' | 'bought' | 'sold' | 'realized' | 'fees' | 'first' | 'last';
+  type ClosedCol = 'ticker' | 'bought' | 'realized' | 'last';
   const sortValue = (p: (typeof closed)[number], col: ClosedCol): number | string => {
     switch (col) {
-      case 'name': return tickerNames[p.ticker] ? shortenCompanyName(tickerNames[p.ticker]) : '';
       case 'bought': return p.totalBoughtShares;
-      case 'sold': return p.totalSoldShares;
       case 'realized': return p.realized;
-      case 'fees': return p.buyFees + p.sellFees;
-      case 'first': return p.firstDate;
       case 'last': return p.lastDate;
       default: return p.ticker;
     }
@@ -169,31 +165,36 @@ function ClosedPositionsTable({ onSelect }: { onSelect: (ticker: string) => void
       <table>
         <thead>
           <tr>
-            <Th col="ticker">Ticker</Th>
-            <Th col="name">Name</Th>
-            <Th col="bought">Bought</Th>
-            <Th col="sold">Sold</Th>
-            <Th col="realized">Realized P/L</Th>
-            <Th col="fees">Fees paid</Th>
-            <Th col="first">First trade</Th>
-            <Th col="last">Last trade</Th>
+            <Th col="ticker">Stock</Th>
+            <Th col="bought">Bought / Sold</Th>
+            <Th col="realized">P/L</Th>
+            <Th col="last">Trade dates</Th>
           </tr>
         </thead>
         <tbody>
           {sorted.map((p) => (
             <tr key={p.ticker} style={{ cursor: 'pointer' }} onClick={() => onSelect(p.ticker)}>
-              <td>{p.ticker}</td>
-              <td>{tickerNames[p.ticker] ? shortenCompanyName(tickerNames[p.ticker]) : ''}</td>
-              <td>{fmt(p.totalBoughtShares, 0)}</td>
-              <td>{fmt(p.totalSoldShares, 0)}</td>
-              <td className={p.realized >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(p.realized, currency)}</td>
-              <td>{fmtMoney(p.buyFees + p.sellFees, currency)}</td>
-              <td>{p.firstDate}</td>
-              <td>{p.lastDate}</td>
+              <td style={{ maxWidth: 190 }}>
+                <div style={{ fontWeight: 600 }}>{p.ticker}</div>
+                <div className="footer-note" style={{ maxWidth: 170, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {tickerNames[p.ticker] ? shortenCompanyName(tickerNames[p.ticker]) : ''}
+                </div>
+              </td>
+              <td>
+                <div>{fmt(p.totalBoughtShares, 0)}</div>
+                <div className="footer-note">{fmt(p.totalSoldShares, 0)} sold</div>
+              </td>
+              <td className={p.realized >= 0 ? 'pill-buy' : 'pill-sell'}>
+                <div>{fmtMoney(p.realized, currency)}</div>
+                <div className="footer-note">Fees {fmtMoney(p.buyFees + p.sellFees, currency)}</div>
+              </td>
+              <td className="footer-note" style={{ whiteSpace: 'nowrap' }}>
+                {p.firstDate} → {p.lastDate}
+              </td>
             </tr>
           ))}
           {!sorted.length && (
-            <tr><td colSpan={8} className="footer-note">No closed positions yet.</td></tr>
+            <tr><td colSpan={4} className="footer-note">No closed positions yet.</td></tr>
           )}
         </tbody>
       </table>

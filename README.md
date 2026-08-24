@@ -1581,6 +1581,22 @@ FinanceManager live link:
     `npm run test` (235 tests, unchanged) / `npm run build` all clean. **This closes out
     README item 40 in full** — every module now has a statement export from its own primary
     record's detail view.
+97. **Portfolio's closed-positions (History) table regrouped, completing README item 45
+    (2026-08-24).** The last one-fact-per-column table from that item's list: QSE's and PSX's
+    `ClosedPositionsTable` (`PortfolioPage.tsx`) went from 8 columns (Ticker, Name, Bought,
+    Sold, Realized P/L, Fees paid, First trade, Last trade) to 4 grouped ones — Stock
+    (ticker+name), Bought / Sold, P/L (realized amount with fees paid as a sub-line), and
+    Trade dates (first → last) — same grouping pattern already used for the Holdings table
+    (Done items 85/86) and StockPage's stat cards (Done item 87). Sort keys were reduced to
+    one representative column per group (ticker/bought/realized/last-trade-date), same
+    tradeoff already accepted for every other grouped-column table in the app. Verified live
+    via Playwright with two seeded closed QSE positions (one profitable, one at a loss): the
+    screenshot confirmed all 4 columns render correctly with fees shown as a sub-line and the
+    P/L cell color-coded — a body-text substring check for "Bought / Sold" came back false
+    positive-negative purely from the `.label`/`th` CSS `text-transform: uppercase` (the
+    known false-negative pattern already documented earlier in this file), not a real miss.
+    `npx tsc -b` / `npm run test` (235 tests, unchanged — UI-only) / `npm run build` all
+    clean. **This closes out README item 45 in full.**
 
 ## Pending
 
@@ -1714,10 +1730,12 @@ already fixed; the rest tracked here**:
 44. ~~A running-balance column for Cash's ledger and other transaction-style tables.~~ **Done
     — see Done item 84.** Cash/Bank already had one; QSE/PSX Transfers and Personal Loans
     repayments were the real gaps and now have one too.
-45. **Partially done — see Done items 85/86/87.** QSE's/PSX's Dashboard Holdings, Portfolio
-    page, and StockPage's Summary tab now group related figures instead of one column/card
-    per fact. Still one-fact-per-column: Portfolio's own closed-positions (History) table and
-    every other module's list views.
+45. ~~QSE's/PSX's Dashboard Holdings, Portfolio page, and StockPage's Summary tab should
+    group related figures instead of one column/card per fact.~~ **Done (2026-08-24) — see
+    Done items 85/86/87/97.** Portfolio's own closed-positions (History) table was the last
+    one-fact-per-column table in QSE/PSX; every other module's own list views (Personal
+    Loans, EMI, Funds, Rentals, Bank) were never part of this item's original ask and are a
+    separate, much larger undertaking if wanted later — not tracked as a gap here.
 46. ~~A raw-vs-concise number display toggle in Appearance settings (1,000 vs 1k).~~ **Done —
     see Done item 83.**
 47. **Partially done — see Done items 85/89.** New `components/Tooltip.tsx` now backs
