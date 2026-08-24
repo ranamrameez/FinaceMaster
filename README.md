@@ -976,6 +976,97 @@ FinanceManager live link:
     `localStorage`, survives a reload still collapsed, and re-expands cleanly on tapping the
     tab — zero console errors throughout. `npx tsc -b`, `npm run build`, and `npm run test`
     (178 tests, unchanged — UI-only change, no new calc logic) all clean.
+66. **Net Worth dashboard shipped (2026-08-24) — README Pending item 39 (net worth) and
+    MODULES_PLAN.md §16, resolved without a Blaze-plan Cloud Function.** The user, when asked
+    to choose, said to skip the paid scheduled-function route entirely: "leave blaze plan. if
+    you have any free api, okay otherwise manual inputs accepted." New `/net-worth` page
+    (`features/netWorth/pages/NetWorthPage.tsx`, nav entry added to `CategoryNav.tsx`) sums
+    Cash balance, Bank total balance, QSE/PSX net worth (`cashSummary().netWorth`), and Funds'
+    current market value as assets; Personal Loans' net position contributes as an asset or
+    liability depending on sign; EMI's outstanding balance is always a liability — combined
+    per-currency by a new pure `lib/calc/netWorth.ts` (`computeNetWorthByCurrency`, 6 tests),
+    kept store-agnostic so it stays testable without touching any Zustand store. Rentals is
+    deliberately informational-only, shown separately, never summed into net worth — property
+    values aren't tracked in this app, and rental income already lands in whichever Cash/Bank
+    account it was deposited to, so counting it again would double-count. A new
+    `lib/calc/fundsModule.ts` (`fundsValueByCurrency`, 3 tests) mirrors FundsPage's own
+    per-fund value calculation so the dashboard doesn't depend on that page's component
+    internals. Currency conversion: new `lib/fx.ts` fetches from a free, no-API-key provider
+    (`open.er-api.com`) at most once every 24 hours, caching the result (with a timestamp) in
+    localStorage — never a live per-page-load call, consistent with the app's locked rule. If
+    the fetch ever fails for any reason (this dev sandbox's own network policy blocks
+    arbitrary outbound hosts, so the actual fetch succeeding could only be confirmed from a
+    real browser, not this session — verified instead that the failure path itself degrades
+    correctly), the page falls back to whatever's cached, or lets the user type a rate in by
+    hand (`setManualRate`) — exactly the "free API if it works, otherwise manual" the user
+    asked for, and the page never blocks or crashes either way. Each currency gets its own
+    collapsible (`<details>`) section showing real, unconverted Assets/Liabilities/Net; a
+    single grand-total stat card converts every currency with a known rate into a
+    user-selected preferred currency, and names any currency it couldn't convert instead of
+    silently dropping it. Verified live via Playwright with seeded Cash+Bank (both USD) and
+    QSE (QAR) data: the USD section correctly summed both modules (500+250=750), the QAR
+    section stayed separate, the real network-blocked auto-fetch failed gracefully into the
+    manual-entry UI with zero crash, and entering a manual QAR rate correctly updated the
+    grand total (750 USD + 1000 QAR/3.64 ≈ 1,024.73 → displayed "1.02k USD") — zero console
+    errors throughout. Also fixed during verification: an untouched QSE or PSX workbook was
+    contributing a spurious "0" row in its default currency even when the exchange was never
+    used at all — fixed by only including an exchange's contribution when its workbook has at
+    least one transaction/transfer/adjustment. `npx tsc -b` / `npm run test` (197 tests, 19
+    new) / `npm run build` all clean.
+67. **Critical, user-reported: PSX same-day (intraday) buys were charged full commission with
+    no way to net until a matching sell was also logged the same day — "we are trying to do
+    same-day trade."** `sameDayChargedSide()` in `psxFees.ts` (unchanged, still correct) only
+    detects a same-day round trip once BOTH a buy and a sell exist for that ticker+date — a
+    lone buy, freshly logged with the intent to close it out later the same day, has no sell
+    yet to pair against, so it was charged full commission the moment it was saved. Fixed at
+    the UI-default layer, not the calc engine (which was already behaving correctly for what
+    it was asked): a new BUY transaction dated today now has the existing "Same-day override"
+    checkbox (`manualSameDay`, which `isNettedLeg()` already checks first, ahead of the
+    date-based auto-detection) pre-checked by default, in both the Transactions page's add-row
+    form (`TransactionsPage.tsx`, new `autoSameDay()` helper) and the per-stock page's add
+    form (`StockPage.tsx`, which previously had no same-day control on add at all — only its
+    edit-row did). The nudge only ever turns the checkbox ON when the row currently matches
+    "BUY dated today," never OFF — so a manual override intentionally set for a genuinely
+    backdated trade (the checkbox's other real use case, per its own tooltip) survives editing
+    an unrelated field, and an ordinary buy-and-hold trader can still uncheck it before saving
+    if they're not planning to close same-day. Verified live via Playwright: a fresh row
+    pre-checks correctly; switching action to SELL leaves a manual check alone; switching back
+    to BUY (still dated today) re-checks it; unchecking then backdating the date does NOT
+    force it back on — zero console errors.
+68. **Critical, user-reported: prices/costs displayed with fewer decimals than what was
+    actually entered.** `fmtPrice()`'s 4-significant-figure rule (README item 3, still the
+    right idea for very cheap stocks) had an unintended side effect once a price cleared 3
+    digits: `123.456` displayed as `"123.5"` (1 decimal) and `1234.5` as `"1235"` (0 decimals)
+    — a real buy price silently looking less precise on screen than what the user actually
+    typed. Fixed with a floor: decimals are now `Math.max(2, 4 - magnitude - 1)` instead of
+    `Math.max(0, ...)`, so a price never drops below 2 displayed decimals regardless of
+    magnitude, while very small (sub-1) prices still get extra decimals via the same
+    significant-figure logic as before. Since ~20 files across the app all route through this
+    one shared `fmtPrice()` (Avg Cost, Break-even, Current Price, Target Price, the Trade
+    Calculator, etc.), fixing it once fixes all of them — no per-call-site changes needed.
+    New tests in `lib/__tests__/format.test.ts` (4 cases) cover the exact regression
+    (123.456/1234.5 no longer losing decimals) plus the existing sub-10 and sub-1 behavior.
+    Verified live via Playwright with a seeded 123.456 buy price: Avg Cost/Break-even both
+    rendered with 2 decimals instead of the previous 1. `npx tsc -b` / `npm run test` (201
+    tests, 4 new) / `npm run build` all clean.
+69. **User-reported (repeated feedback): several tables still weren't sortable, "like Holdings
+    in dashboard."** Audited every `<table>` in the app for `useSortableRows` usage and found
+    six real gaps beyond the one named: QSE and PSX Dashboard's Holdings preview table (the
+    exact one named — was hardcoded to sort by P/L descending with no way to change it),
+    PSX's per-stock "Open lots (FIFO)" table, both QSE's and PSX's per-stock "Recent updates"
+    price-history table, and both QSE's and PSX's Dividends "Yearly projection" table. Fixed
+    all six with the existing `useSortableRows` hook, same pattern as every other sortable
+    table in the app — clickable column headers, no new component. Deliberately left
+    un-sortable: the Trade Calculator/Risk Analysis "what-if" scenario ladders (a computed
+    progression meant to be read in order, not user data to reorder) and the Dividends
+    history table and PSX Trade Planner legs table, both of which already had their own
+    working sort mechanism (a hand-rolled `toggleSort`/pre-existing `useSortableRows` usage
+    respectively) before this pass — not gaps. Verified live via Playwright on the QSE
+    Dashboard Holdings table with 3 seeded tickers: clicking "Ticker" sorted descending
+    (QGTS → MEZN → CBQK), clicking again sorted ascending (CBQK → MEZN → QGTS) — same
+    click-to-toggle convention as every other sortable table — zero console errors. `npx
+    tsc -b` / `npm run test` (201 tests, unchanged — UI wiring onto an already-tested hook)
+    / `npm run build` all clean.
 
 ## Pending
 
@@ -1064,20 +1155,13 @@ already fixed; the rest tracked here**:
     loan's is its repayment history) — but the underlying pieces (a `Modal`-based detail view,
     `lib/csv.ts`'s module-agnostic `toCSV()`, a from/to date-range filter) are already built
     and reusable. Not started for these five modules.
-39. A net-worth dashboard summarizing everything across every module, with collapsible
-    per-currency sections. **Resolved via `AskUserQuestion`: the user chose the
-    scheduled-fetch approach for currency conversion** (a Cloud Function fetching FX rates
-    once daily into Realtime Database, never a live per-page-load API call — consistent with
-    the locked rule) **over skipping conversion or a bigger scheduled-infra build.** The
-    function itself is scaffolded (see MODULES_PLAN.md §16, `functions/index.js`) but **not
-    deployed** — that needs the `qse-app` Firebase project on the Blaze plan plus an
-    authenticated `firebase deploy`, both real actions only the project owner can take, not
-    something this session can do end-to-end (same category as item 12's PDF-import Python
-    backend). **The dashboard page itself (collapsible per-currency sections, no conversion
-    needed for that part) is also not yet built** — deprioritized mid-session when the user
-    flagged Trade Calculator/Planner work as the top priority instead (see Done items 61/62).
-    Once the FX function is deployed and `fxRates/latest` is confirmed populated, build the
-    dashboard reading it the same defensive way `useQSEStockData.ts` reads `stockData/QSE`.
+39. ~~A net-worth dashboard summarizing everything across every module, with collapsible
+    per-currency sections.~~ **Done — see Done item 66.** The user later overrode the
+    Cloud-Function plan below ("leave blaze plan. if you have any free api, okay otherwise
+    manual inputs accepted") in favor of a free client-side fetch with a manual-entry
+    fallback, so the Blaze-plan Cloud Function scaffolded in `functions/index.js`
+    (MODULES_PLAN.md §16) is now superseded and unused — left in the repo in case a real
+    scheduled backend is wanted later, but the shipped dashboard doesn't depend on it.
 
 41. **Standing instruction, user-requested, not yet implemented: "All tables should be
     sortable having index/id for chronological sorting. also, add time with all transaction

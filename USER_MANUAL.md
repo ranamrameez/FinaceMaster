@@ -99,7 +99,10 @@ together. On PSX, each row also has:
   trips and nets the smaller leg's fee down to government levies only (no double
   commission). Check this if your statement shows a same-day netting that the date you
   entered doesn't quite match (e.g. you logged the settlement date instead of the trade
-  date).
+  date). **A new BUY dated today comes with this pre-checked** — a lone buy has nothing to
+  net against yet if you haven't logged the matching sell, so the app assumes you're doing
+  same-day (intraday) trading and defaults to the netted fee treatment; uncheck it if you're
+  actually opening a position you plan to hold, not closing out today.
 - **Fee override** field — leave blank to use the computed fee, or type the exact fee from
   your account statement to override the estimate entirely (useful for reconciling against
   real broker charges).
@@ -497,7 +500,30 @@ something wrong.
 
 ---
 
-## 23. A note on accuracy
+## 23. Net Worth
+
+Pick **Net Worth** from the category dropdown — a single page summarizing everything you've
+recorded across every module. Each currency you use gets its own collapsible section (click
+its header to expand/collapse) showing your real, unconverted **Assets**, **Liabilities**,
+and **Net** total in that currency — Cash and Banking balances, your QSE/PSX portfolio value
+plus cash, Funds' current market value, and Personal Loans' net position all count as assets
+(or a liability, if you owe more than you're owed); EMI/Loans' outstanding balance always
+counts as a liability. **Rental income is shown separately below, not included in the total**
+— property values aren't tracked in this app, and the rent you've collected already landed in
+whichever Cash/Bank account you deposited it to, so adding it again here would count it twice.
+
+**One combined total, converted**: pick a currency in "Show total in" at the top, and every
+section with a known exchange rate gets converted and added into one grand total. Rates come
+from a free exchange-rate service, refreshed automatically at most once a day (never on every
+page load) and cached — click **Refresh rates** to force an update. If the automatic fetch
+ever fails (no internet, the service being unreachable), or a currency you use simply isn't
+covered, just enter the rate yourself under "Manual rate: 1 USD =" — the page works exactly
+the same either way, and it never blocks you from seeing your real per-currency totals even
+with no rate at all (only the one converted grand-total line depends on having a rate).
+
+---
+
+## 24. A note on accuracy
 
 Every number in this app is an **estimate** computed from settings you configure — it is
 not a substitute for your actual broker/exchange statement, and it is not financial advice.

@@ -1395,6 +1395,102 @@ not developer notes) continuously as features ship.
   toggle); clicking the expand tab restores `x:0` — zero console errors
   at every step. `npx tsc -b` / `npm run test` (178 tests, unchanged —
   UI-only) / `npm run build` all clean.
+- **Net Worth dashboard built (2026-08-24), user redirected the FX
+  approach away from the scaffolded Cloud Function — see README Done
+  item 66.** The user's exact instruction: "leave blaze plan. if you
+  have any free api, okay otherwise manual inputs accepted. continue."
+  This supersedes (doesn't delete) the `functions/index.js` Cloud
+  Function scaffolded earlier the same project — it's still in the
+  repo, just unused by the shipped feature. New `lib/fx.ts` fetches
+  from `open.er-api.com` (free, no key) at most once a day, caches the
+  result in `localStorage` with a timestamp, and — critically — never
+  lets a failed fetch block or crash the page: it falls back to
+  whatever's cached, or to a manual "1 USD = X" entry field the user
+  fills in themselves. **This dev sandbox's own outbound network policy
+  blocks arbitrary hosts** (confirmed via `$HTTPS_PROXY/__agentproxy/status`
+  showing `connect_rejected` for `open.er-api.com`), so the auto-fetch
+  actually succeeding in a real browser is unverified from this
+  session — what *was* verified is that the failure path degrades
+  correctly (no crash, manual entry works, math is right once a rate is
+  entered). A future session with real browser access should confirm
+  the live fetch actually works and drop this caveat once confirmed.
+  `/net-worth` (new `features/netWorth/pages/NetWorthPage.tsx`) sums
+  Cash/Bank/QSE/PSX/Funds as assets, nets Personal Loans by sign, and
+  always subtracts EMI outstanding as a liability — combined per
+  currency by new pure `lib/calc/netWorth.ts`. Rentals is shown
+  separately as informational-only net income, never summed into net
+  worth (property values aren't tracked, and the income already landed
+  in Cash/Bank once — summing it again would double-count it). A real
+  bug found during verification, not a design decision: an untouched
+  QSE or PSX workbook was contributing a spurious "0" row in its
+  default currency (QAR/PKR) even for a user who's never touched that
+  exchange — fixed by only including an exchange's contribution when
+  its workbook actually has at least one transaction/transfer/
+  adjustment. Verified live via Playwright: Cash(500 USD)+Bank(250 USD)
+  correctly summed to 750 USD in one section, QSE's QAR stayed
+  separate, and after manually entering a QAR rate the grand total
+  updated correctly (750 + 1000/3.64 ≈ 1024.73 → "1.02k USD") — zero
+  console errors. `npx tsc -b` / `npm run test` (197 tests, 19 new) /
+  `npm run build` all clean.
+- **Critical, user-reported, same day (2026-08-24): PSX same-day
+  (intraday) buys were charged full commission with no way to net
+  until a matching sell was logged the same day — see README Done item
+  67.** The user's own framing: "we are trying to do same day trade."
+  The underlying fee-netting calc (`sameDayChargedSide()` in
+  `psxFees.ts`) was already correct — it just has no way to net a lone
+  buy against a sell that doesn't exist yet. Fixed at the UI-default
+  layer instead: a new BUY dated today now has the existing "Same-day
+  override" checkbox (`manualSameDay`) pre-checked automatically in
+  both `TransactionsPage.tsx`'s add-row form (new `autoSameDay()`
+  helper) and `StockPage.tsx`'s per-stock add form (which previously
+  had **no** same-day control on add at all — a real gap, only its
+  edit-row had one). **Design rule worth remembering for any future
+  "smart default" checkbox**: the nudge only ever turns the flag ON
+  when the row matches the target condition, never forces it OFF — so
+  a manual override a user set for something else (here: a genuinely
+  backdated trade, the checkbox's other real use case) survives editing
+  an unrelated field instead of silently getting clobbered. Verified
+  live via Playwright: fresh row pre-checks; switching action to SELL
+  leaves a manual check alone; switching back to BUY (still dated
+  today) re-checks it; unchecking then backdating the date does *not*
+  force it back on. Zero console errors.
+- **Critical, user-reported, same day (2026-08-24): prices displayed
+  with fewer decimals than what was actually entered — see README Done
+  item 68.** `fmtPrice()`'s 4-significant-figure rule (README item 3,
+  still right for very cheap stocks) had a real side effect once a
+  price cleared 3 digits: 123.456 displayed as "123.5" (1 decimal),
+  1234.5 as "1235" (0 decimals) — a real entered buy price looking
+  *less* precise on screen than what was typed, which is a trust
+  problem for a finance app, not just a cosmetic one. Fixed with a
+  floor: `Math.max(2, 4 - magnitude - 1)` instead of `Math.max(0, ...)`
+  — never below 2 displayed decimals, small (sub-1) prices still get
+  extra decimals via the same sig-fig logic as before. Since ~20 files
+  across the app all route through this one shared `fmtPrice()` (Avg
+  Cost, Break-even, Trade Calculator, etc.), fixing it once fixed all
+  of them. Verified live via Playwright with a seeded 123.456 buy
+  price: Avg Cost/Break-even both rendered with 2 decimals instead of
+  the previous 1. `npx tsc -b` / `npm run test` (201 tests, 4 new) /
+  `npm run build` all clean.
+- **User-reported (repeated, same day 2026-08-24): more tables still
+  missing sortable headers, "like Holdings in dashboard" — see README
+  Done item 69.** Audited every `<table>` in the app for
+  `useSortableRows` usage rather than trusting memory of what was
+  already covered. Real gaps found and fixed: QSE/PSX Dashboard's
+  Holdings preview table (the one named — was hardcoded to sort by P/L
+  descending only), PSX's per-stock "Open lots (FIFO)" table, QSE's and
+  PSX's per-stock "Recent updates" price-history table, and QSE's/PSX's
+  Dividends "Yearly projection" table. All wired to the existing
+  `useSortableRows` hook — no new component needed. Deliberately left
+  alone: the Trade Calculator/Risk Analysis what-if ladders (a computed
+  progression, not reorderable user data) and two tables that already
+  had their own working sort before this pass (Dividends history's own
+  hand-rolled `toggleSort`, PSX Trade Planner's legs table). **Lesson
+  for future "is X still missing" reports**: grep for the actual
+  pattern (`<table` without `useSortableRows` in the same file) rather
+  than relying on what a past session's notes claimed was already
+  done — this is the second time in this project a "surely that's
+  already fixed" assumption turned out to have real gaps once actually
+  checked.
 
 ## Live URLs
 
