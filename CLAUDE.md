@@ -1792,6 +1792,31 @@ not developer notes) continuously as features ship.
   saved — matching the unit tests exactly. `npx tsc -b` / `npm run
   test` (228 tests, 4 new) / `npm run build` all clean. Next per
   MODULES_PLAN.md §11: Funds, then Rentals.
+- **Funds Analytics built (2026-08-24), fifth module of the same wave —
+  see README Done item 92, MODULES_PLAN.md §11.** New Analytics tab on
+  `FundsPage.tsx`: a currency picker (multi-currency only) plus a fund
+  picker scope three charts. "Allocation by category" (Doughnut, new
+  `allocationByCategory()` in `lib/calc/fundsModule.ts`) sums current
+  value per category across every fund in the picked currency, omitting
+  a fund with zero current value. "NAV over time" (Line) reuses the
+  already-existing `getDailyPriceHistory()` as-is. "Contribution vs.
+  value" (Line, two series) is the new piece worth remembering: new
+  `contributionVsValueSeries()` walks every date something is known (a
+  transaction or a NAV update) and tracks cumulative net invested next
+  to actual position value — **deliberately treats each transaction's
+  own price as an implicit NAV observation** when no explicit "Update
+  NAV" exists for that date (same fallback idea as `getMarketPrice`'s
+  "last BUY price" rule), so a fund with zero manual NAV updates still
+  gets a meaningful value line instead of a flat zero. Verified live
+  via Playwright with two seeded USD funds (one with NAV history, one
+  without): allocation doughnut correct, NAV-over-time traced its price
+  history correctly, contribution-vs-value showed Invested/Value
+  diverging correctly for the fund with history — and switching to the
+  NAV-less fund correctly emptied only that one chart while
+  contribution-vs-value still plotted its one known point from the
+  implicit buy-price fallback. `npx tsc -b` / `npm run test` (234
+  tests, 6 new) / `npm run build` all clean. Next per MODULES_PLAN.md
+  §11: Rentals — the last module in this wave.
 
 ## Live URLs
 

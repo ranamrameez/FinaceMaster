@@ -690,8 +690,16 @@ what's actually meaningful for each, don't force identical chart sets):
   interest/markup saved; handles both `interest` and `fixedTotal` repayment modes). Both live
   inside a loan's own `LoanDetail` view, not a separate tab — that's already where all of
   EMI's per-loan numbers live.
-- **Funds**: NAV-over-time line per fund, allocation by category/platform, contribution vs.
-  value over time (XIRR already computed, chart it).
+- **Funds**: ✅ built 2026-08-24 — see README Done item 92. A currency picker (multi-currency
+  only) plus a fund picker scope three charts: "Allocation by category" (Doughnut, new
+  `allocationByCategory()` in `lib/calc/fundsModule.ts`, current value summed per category
+  across every fund in the picked currency), "NAV over time" (Line, reuses the existing
+  `getDailyPriceHistory()` as-is), and "Contribution vs. value" (Line, new
+  `contributionVsValueSeries()` — cumulative net invested vs. position value at every date
+  something is known; treats each transaction's own price as an implicit NAV observation
+  when there's no explicit "Update NAV" for that date, so a fund with zero manual NAV
+  updates still gets a meaningful value line). XIRR itself was already surfaced on the fund
+  list/detail before this — this item added the *time-series* view alongside it.
 - **Rentals**: net income by property over time, category breakdown (already computed in
   `rentalsModule.ts`, not charted), occupancy/vacancy tracking if that data ever gets added.
 

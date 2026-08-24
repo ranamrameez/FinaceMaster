@@ -1,5 +1,6 @@
 import type { User } from 'firebase/auth';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
+import { Doughnut, Line } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
@@ -10,15 +11,22 @@ import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { getMarketPrice } from '../../../lib/calc';
+import { allocationByCategory, contributionVsValueSeries } from '../../../lib/calc/fundsModule';
+import { getDailyPriceHistory } from '../../../lib/calc/priceHistory';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
+import { dlDoughnut, dlLine } from '../../../lib/chartLabels';
+import { applyChartTheme } from '../../../lib/chartSetup';
+import { cssVar, tickerColor } from '../../../lib/cssVar';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
+import { useAppearanceStore } from '../../../store/appearanceStore';
 import { createEmptyFundsWorkbook } from '../../../store/defaultFundsWorkbook';
 import { useFundsWorkbookStore } from '../../../store/fundsWorkbookStore';
 import type { Fund, FundsWorkbook } from '../../../types/fundsWorkbook';
 import type { Transaction } from '../../../types/workbook';
 import { useFundsDerived } from '../hooks/useFundsDerived';
+import { ChartCard } from '../../qse/components/ChartCard';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const uid = () => crypto.randomUUID();
@@ -392,6 +400,99 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
   );
 }
 
+/* ============================== Analytics ============================== */
+
+function AnalyticsTab() {
+  const funds = useFundsWorkbookStore((s) => s.workbook.funds);
+  const { workbook } = useFundsDerived();
+  // Charts read CSS-var-derived colors — subscribe so this re-renders (and
+  // recomputes those colors) on a live theme switch, same pattern as every
+  // other chart-bearing page in this app.
+  useAppearanceStore((s) => s.appearance);
+  applyChartTheme();
+
+  const currencies = useMemo(() => [...new Set(funds.map((f) => f.currencyCode))].sort(), [funds]);
+  const [currency, setCurrency] = useState(currencies[0] ?? 'USD');
+  const effectiveCurrency = currencies.includes(currency) ? currency : (currencies[0] ?? currency);
+
+  const [fundId, setFundId] = useState(funds[0]?.id ?? '');
+  const selectedFund = funds.find((f) => f.id === fundId) ?? funds[0] ?? null;
+
+  const allocation = useMemo(
+    () => allocationByCategory(funds, workbook.transactions, workbook.marketPrices, effectiveCurrency),
+    [funds, workbook.transactions, workbook.marketPrices, effectiveCurrency],
+  );
+  const categories = Object.keys(allocation);
+
+  const navHistory = useMemo(
+    () => (selectedFund ? getDailyPriceHistory(selectedFund.id, workbook.priceHistory) : []),
+    [selectedFund, workbook.priceHistory],
+  );
+  const contribution = useMemo(
+    () => (selectedFund ? contributionVsValueSeries(selectedFund.id, workbook.transactions, workbook.priceHistory) : []),
+    [selectedFund, workbook.transactions, workbook.priceHistory],
+  );
+
+  if (!funds.length) {
+    return <p className="footer-note">Add a fund first (Funds tab) to see charts here.</p>;
+  }
+
+  return (
+    <div>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+        {currencies.length > 1 && (
+          <Field label="Currency" width={120}>
+            <Select value={effectiveCurrency} onChange={(e) => setCurrency(e.target.value)}>
+              {currencies.map((c) => <option key={c} value={c}>{c}</option>)}
+            </Select>
+          </Field>
+        )}
+        <Field label="Fund" width={220}>
+          <Select value={selectedFund?.id ?? ''} onChange={(e) => setFundId(e.target.value)}>
+            {funds.map((f) => <option key={f.id} value={f.id}>{f.name} ({f.code})</option>)}
+          </Select>
+        </Field>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginTop: 12 }}>
+        <ChartCard title="Allocation by category" empty={!categories.length}>
+          <Doughnut
+            data={{
+              labels: categories,
+              datasets: [{ data: categories.map((c) => allocation[c]), backgroundColor: categories.map((c) => tickerColor(c)) }],
+            }}
+            options={{ cutout: '55%', plugins: { datalabels: dlDoughnut((v) => fmtMoney(v, effectiveCurrency)) } }}
+          />
+        </ChartCard>
+        {selectedFund && (
+          <>
+            <ChartCard title={`NAV over time — ${selectedFund.code}`} empty={!navHistory.length}>
+              <Line
+                data={{
+                  labels: navHistory.map((p) => p.date),
+                  datasets: [{ label: 'NAV', data: navHistory.map((p) => p.price), borderColor: '#5aa9c9', backgroundColor: '#5aa9c933', fill: true, tension: 0.2 }],
+                }}
+                options={{ plugins: { legend: { display: false }, datalabels: dlLine((v) => fmtPrice(v)) } }}
+              />
+            </ChartCard>
+            <ChartCard title={`Contribution vs. value — ${selectedFund.code}`} empty={!contribution.length}>
+              <Line
+                data={{
+                  labels: contribution.map((c) => c.date),
+                  datasets: [
+                    { label: 'Invested', data: contribution.map((c) => c.invested), borderColor: cssVar('--warn') || '#e8a23d', backgroundColor: 'transparent', tension: 0.2 },
+                    { label: 'Value', data: contribution.map((c) => c.value), borderColor: cssVar('--profit') || '#3ecf8e', backgroundColor: 'transparent', tension: 0.2 },
+                  ],
+                }}
+                options={{ plugins: { datalabels: dlLine((v) => fmtMoney(v, selectedFund.currencyCode)) } }}
+              />
+            </ChartCard>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ============================== Settings ============================== */
 
 function AccountSection({
@@ -544,6 +645,7 @@ export function FundsPage({
                 </div>
               ),
             },
+            { key: 'analytics', label: 'Analytics', content: <AnalyticsTab /> },
             {
               key: 'settings',
               label: 'Settings',

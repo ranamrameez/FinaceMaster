@@ -1485,6 +1485,35 @@ FinanceManager live link:
     saved — matching the unit-tested math exactly. `npx tsc -b` / `npm run test` (228 tests,
     4 new) / `npm run build` all clean. **Next per MODULES_PLAN.md §11's suggested order**:
     Funds, then Rentals.
+92. **Funds Analytics built (2026-08-24), fifth module of the same wave — see MODULES_PLAN.md
+    §11.** New Analytics tab on `FundsPage.tsx` with a currency picker (shown only when more
+    than one currency is present) plus a fund picker that scopes two of the three charts.
+    "Allocation by category" (Doughnut) sums current value by category across every fund in
+    the selected currency — new `allocationByCategory()` in `lib/calc/fundsModule.ts`, a fund
+    with zero current value (fully sold, or no NAV known) is omitted rather than shown as a
+    meaningless zero-width slice. "NAV over time" (Line) is the selected fund's own
+    `priceHistory`, reusing the already-existing `getDailyPriceHistory()` — genuinely empty
+    (shows "Not enough data yet") for a fund that's only ever been bought/sold with no
+    separate "Update NAV" click. "Contribution vs. value" (Line, two series) is the more
+    interesting new piece: new `contributionVsValueSeries()` walks every date where something
+    is known (a transaction, or a NAV update) and tracks cumulative net invested next to what
+    the position was actually worth at that point — and **deliberately treats each
+    transaction's own price as an implicit NAV observation** when no explicit "Update NAV"
+    exists for that date, falling back to the last known price otherwise (same fallback idea
+    as `getMarketPrice`'s "last BUY price" rule) — so a fund with zero manual NAV updates
+    still gets a meaningful value line instead of a flat zero, verified live with exactly that
+    case (US Bonds: no NAV history, "NAV over time" correctly shows empty while "Contribution
+    vs. value" still plots its one known point from the buy price). New tests:
+    `fundsModule.test.ts` gained 6 cases (category scoping/omission/currency-isolation for
+    `allocationByCategory`; implicit-price fallback, explicit-NAV precedence, SELL handling,
+    and empty-fund for `contributionVsValueSeries`). Verified live via Playwright with two
+    seeded USD funds (one with NAV history, one without): allocation doughnut showed Equity
+    2,100/Debt 1,040, NAV-over-time correctly traced 10→12→11→14, and contribution-vs-value
+    showed Invested/Value diverging correctly (1,550 invested vs. a higher value line) —
+    switching the fund picker to the NAV-less fund correctly emptied just that one chart while
+    the other two still rendered. `npx tsc -b` / `npm run test` (234 tests, 6 new) / `npm run
+    build` all clean. **Next per MODULES_PLAN.md §11's suggested order**: Rentals — the last
+    module in this wave.
 
 ## Pending
 
@@ -1524,8 +1553,8 @@ wave" section)**:
 23. Per-module Analytics & Planning for Cash/Banking/Personal Loans/EMI-Loans/Funds/Rentals —
     each currently has just a ledger + basic totals, no charts or planning tools like
     QSE/PSX's Analytics page or Trade Planner. Largest item in this wave. **Cash, Personal
-    Loans, Banking, and EMI-Loans done (see Done items 44/45/90/91)**; Funds/Rentals still
-    need it — see `MODULES_PLAN.md` §11 for a per-module chart/tool sketch.
+    Loans, Banking, EMI-Loans, and Funds done (see Done items 44/45/90/91/92)**; Rentals is
+    the last module still needing it — see `MODULES_PLAN.md` §11 for its chart/tool sketch.
 24. New Subscriptions module — recurring payments (streaming, gym, etc.) linked to a paying
     entity (a Bank account or Cash), reusing the cross-entity linking mechanism from item 21
     once solid. Not started — see `MODULES_PLAN.md` §12.

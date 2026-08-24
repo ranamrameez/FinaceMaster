@@ -485,6 +485,14 @@ sell shares at a price), so it shares the same underlying calculation engine.
   profit, XIRR), update its current NAV (like a stock's market price), and log or edit/
   delete Invest/Withdraw transactions (units + NAV per unit).
 - Edit or delete the fund itself any time (deleting also removes its transactions).
+- **Analytics tab**: pick a fund (and a currency, if you hold funds in more than one) to see
+  its NAV over time, and a "Contribution vs. value" chart comparing what you've put in against
+  what the position is actually worth at each point — useful for spotting when a fund
+  genuinely pulled ahead of (or fell behind) your own money. There's also an "Allocation by
+  category" chart showing how your total holdings split across fund categories. If you've
+  never manually updated a fund's NAV, its NAV-over-time chart stays empty until you do — but
+  the Contribution vs. value chart still works, using the price from your buy/sell
+  transactions themselves.
 
 ---
 
