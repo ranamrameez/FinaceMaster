@@ -658,6 +658,30 @@ FinanceManager live link:
     "New shares" directly correctly syncs the Amount field to match. `npm run build` /
     `npm run test` (146 tests, unchanged — a controlled-input state bug, not new calc logic)
     both clean.
+52. **Trade Planner crash when deleting all legs in a plan, user-reported, root-caused to a
+    real Firebase RTDB gotcha, not a Trade Planner-specific bug.** Firebase Realtime Database
+    silently strips any empty array/object value from the tree it stores, at *any* nesting
+    depth — not just the top level (already handled everywhere by the existing
+    `{...createEmpty(), ...cloudData}` merge). Removing a plan's last leg sets `legs: []`;
+    that gets pushed to the cloud by the debounced sync, RTDB drops the now-empty `legs` key
+    entirely, and the next pulled snapshot's plan object has *no* `legs` key at all — every
+    `plan.legs.map/.filter/.reduce` call in `PlanCard` (`features/psx/pages/
+    TradePlannerPage.tsx`) then threw `Cannot read properties of undefined`, crashing the
+    whole page (caught by the error boundary as "Something went wrong"). Reproduced exactly
+    via Playwright by seeding a plan object with the `legs` key omitted (simulating the
+    post-round-trip shape) — confirmed the crash, then confirmed it gone after the fix.
+    Fixed in the one shared `normalize()` function in `store/createWorkbookStore.ts` (same
+    function that already retrofits missing `Transfer` ids) — restores `legs: []` on any
+    trade plan missing that key, applied on every path data enters the store (local load and
+    `setWorkbook`, which covers the Firebase pull), so it protects QSE's `tradePlans` field
+    too even though only PSX has a Trade Planner page today. Audited every other workbook type
+    for the same nested-array vulnerability (an array field nested inside another array-of-
+    objects field) — `TradePlan.legs` is the only one in the whole codebase; every other
+    module's arrays sit directly on the workbook root, already covered by the existing
+    top-level default-merge. New regression tests in `store/__tests__/
+    createWorkbookStore.test.ts` (4 tests) cover a plan missing `legs` on load, on
+    `setWorkbook`, and a plan with real legs staying untouched. `npm run build` /
+    `npm run test` (150 tests, 4 new) both clean.
 
 ## Pending
 
@@ -739,8 +763,6 @@ wave" section)**:
 **New batch of user feedback, 2026-08-23 (mid-session) — see Done item 51 for item (1),
 already fixed; the rest tracked here**:
 
-29. Trade Planner throws an error when deleting all trades/legs in a plan — bug, needs
-    root-cause. Not started.
 30. Checkbox/chip toggle selectors (e.g. `ChartFilterBar`'s ticker chips) don't clearly show
     which option is selected — a UI clarity bug. Not started.
 31. Mobile CSS pass: inputs/selects should be a bit larger on small screens (currently get cut

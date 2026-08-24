@@ -900,12 +900,54 @@ not developer notes) continuously as features ship.
   per-character Playwright typing (not `.fill()`) in an emulated mobile
   viewport — reproduced the exact failure before the fix, confirmed
   fixed after.
+- **Trade Planner crash when deleting all legs in a plan, user-reported
+  (2026-08-23) — see README Done item 52. Root cause was a genuine
+  Firebase RTDB gotcha, not a bug specific to the Trade Planner.**
+  Firebase's Realtime Database silently strips any empty array/object
+  value from a written tree at *any* nesting depth, not just the top
+  level (the top level was already safe everywhere via the existing
+  `{...createEmpty(), ...cloudData}` merge in both
+  `loadFromLocalStorage` and `useWorkbookCloudSync`'s pull handler).
+  Deleting a plan's last leg sets `legs: []`; the debounced push
+  writes that to Firebase, RTDB drops the now-empty `legs` key
+  entirely, and the *next* pulled snapshot's plan object has no
+  `legs` key at all — `plan.legs.map/.filter/.reduce` in `PlanCard`
+  (`features/psx/pages/TradePlannerPage.tsx`) then threw
+  `Cannot read properties of undefined`, crashing the whole page
+  (caught by the error boundary as "Something went wrong"). Static
+  reading of `TradePlannerPage.tsx` alone never would have found this —
+  every array read there is genuinely safe against a *local*, in-memory
+  empty array; the bug only exists once a value round-trips through
+  Firebase. Confirmed via Playwright by seeding a plan object with the
+  `legs` key omitted outright (simulating exactly what a real pull
+  would hand back) — reproduced the crash, then confirmed it gone after
+  the fix. **Fix, and the reasoning for where it lives**: added to the
+  one shared `normalize()` function in `store/createWorkbookStore.ts`
+  (the same function that already retrofits missing `Transfer` ids) —
+  restores `legs: []` on any trade plan missing that key. This runs on
+  every path data enters the store (local load and `setWorkbook`, which
+  covers the Firebase pull), so it protects QSE's `tradePlans` field
+  too even though only PSX has a Trade Planner page today — free
+  future-proofing from fixing it at the shared-factory level instead of
+  patching `TradePlannerPage.tsx` itself. Audited every other workbook
+  type in the codebase for the same vulnerability class (an array field
+  nested *inside* another array-of-objects field, as opposed to sitting
+  directly on the workbook root) — `TradePlan.legs` is the only one;
+  every other module's arrays are root-level and already covered by the
+  existing default-merge. **Rule for any future nested-array field**:
+  if a module ever adds one, it needs the same "restore missing key on
+  normalize" treatment — a root-level empty array is safe, a nested one
+  is not, because RTDB's empty-value stripping doesn't care how deep it
+  is. New tests: `store/__tests__/createWorkbookStore.test.ts` (4
+  tests). `npm run build` / `npm run test` (150 tests, 4 new) both
+  clean.
 - **Large batch of user feedback received 2026-08-23, mid-session —
   most items handled, some still open (check README Done/Pending for
   current per-item status, this is a snapshot at time of receipt).**
   Verbatim-ish list, for full context if a future session needs it:
   (1) Trade Calculator amount input bug — fixed, see above. (2) Trade
-  Planner error deleting all trades in a plan — bug, needs root-cause.
+  Planner error deleting all trades in a plan — fixed, see above (a
+  Firebase RTDB empty-nested-array gotcha, see README Done item 52).
   (3) Checkbox/chip selected-state unclear — UI bug. (4) Inputs/
   selects should be a bit larger on mobile to avoid cutting. (5)
   Inputs should align to the bottom with labels directly above,
@@ -1011,6 +1053,25 @@ webapp/                                                              the new Rea
   (`uploadLocalToCloud`) to ever write when the cloud looks empty. **Do not
   reintroduce any "seed the cloud if it looks empty" pattern**, here or in
   the PSX equivalent or any future module.
+- **Firebase RTDB silently strips empty arrays/objects at any nesting
+  depth, not just the top level.** `set()`ing a value tree where some
+  nested field is `[]` or `{}` doesn't store an empty array/object at
+  that path — it removes the key entirely, at any depth, so a value
+  that goes out as `{ id, legs: [] }` comes back as `{ id }` (no `legs`
+  key at all). A root-level empty array on a workbook (e.g.
+  `tradePlans: []`) is already safe everywhere via the
+  `{...createEmpty(), ...cloudData}` merge in both
+  `loadFromLocalStorage` and the cloud-sync pull handler — but a
+  *nested* empty array (an array field inside one element of another
+  array, e.g. `TradePlan.legs`) has no such default to fall back on and
+  will come back missing the key entirely. This caused a real crash
+  (README Done item 52: Trade Planner crashed after deleting a plan's
+  last leg). Fixed for `TradePlan.legs` in `createWorkbookStore.ts`'s
+  shared `normalize()`. **Any future module that adds a nested array
+  field (an array inside an array-of-objects) needs the same "restore
+  the missing key to `[]` on normalize" treatment** — audited every
+  other workbook type in the codebase when this was found and
+  `TradePlan.legs` was the only instance of this pattern at the time.
 - **No `window.confirm()` / `window.alert()`.** These are unreliable across
   browsers/webviews (this caused a real "stuck on login" bug — a confirm()
   never resolved true). Use `components/ConfirmDialog.tsx`'s `confirmDialog()`

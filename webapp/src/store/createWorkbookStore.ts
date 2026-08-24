@@ -60,11 +60,24 @@ export function createWorkbookStore<TWorkbook extends BaseWorkbook<unknown>>(
    * storage, and JSON parsing doesn't enforce the TypeScript type. Applied
    * on every path data can enter the store (local load and setWorkbook,
    * which also covers the Firebase pull in useWorkbookCloudSync) so
-   * `updateTransfer`/`deleteTransfer` can always address by id. */
+   * `updateTransfer`/`deleteTransfer` can always address by id.
+   *
+   * Also restores any `TradePlan.legs` that went missing entirely. Firebase
+   * RTDB silently strips any empty array/object value at *any* nesting
+   * depth on write — a top-level empty array (e.g. `tradePlans: []`) is
+   * already covered by the `{...createEmpty(), ...cloudData}` merge both
+   * `loadFromLocalStorage` and the cloud-sync pull use, but a *nested* empty
+   * array (a plan's `legs` going to `[]` after removing its last leg) has no
+   * such default to fall back on — the plan object just comes back without
+   * a `legs` key at all, and every `plan.legs.map/.filter/.reduce` call
+   * crashed the whole Trade Planner page. Real user-reproducible bug: delete
+   * the last leg of a plan, the debounced push round-trips through Firebase,
+   * and the next pulled snapshot has a leg-less plan. */
   function normalize(wb: TWorkbook): TWorkbook {
     return {
       ...wb,
       transfers: wb.transfers.map((t) => (t.id ? t : { ...t, id: crypto.randomUUID() })),
+      tradePlans: wb.tradePlans.map((p) => (p.legs ? p : { ...p, legs: [] })),
     };
   }
 
