@@ -1,7 +1,7 @@
 import type { User } from 'firebase/auth';
 import { useMemo, useRef, useState } from 'react';
 import { Bar } from 'react-chartjs-2';
-import { Card } from '../../../components/Card';
+import { Card, MoneyValue } from '../../../components/Card';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
@@ -48,7 +48,7 @@ function NetPositionSummary() {
       {codes.map((code) => (
         <div key={code} className="stat-card card">
           <div className="label">Net position ({code})</div>
-          <div className={`value ${net[code] >= 0 ? 'pill-buy' : 'pill-sell'}`}>{fmtMoney(net[code], code)}</div>
+          <MoneyValue n={net[code]} currency={code} className={`value ${net[code] >= 0 ? 'pill-buy' : 'pill-sell'}`} />
           <div className="sub">{net[code] >= 0 ? 'Net owed to you' : 'Net you owe'}</div>
         </div>
       ))}
@@ -476,10 +476,10 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
           </div>
         )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 8, marginTop: 12 }}>
-          <div className="stat-card card"><div className="label">Principal</div><div className="value">{fmtMoney(loan.principal, loan.currencyCode)}</div></div>
+          <div className="stat-card card"><div className="label">Principal</div><MoneyValue n={loan.principal} currency={loan.currencyCode} /></div>
           <div className={`stat-card card`}>
             <div className="label">Outstanding</div>
-            <div className={`value ${loan.direction === 'owed_to_me' ? 'pill-buy' : 'pill-sell'}`}>{fmtMoney(outstanding, loan.currencyCode)}</div>
+            <MoneyValue n={outstanding} currency={loan.currencyCode} className={`value ${loan.direction === 'owed_to_me' ? 'pill-buy' : 'pill-sell'}`} />
           </div>
         </div>
       </Card>

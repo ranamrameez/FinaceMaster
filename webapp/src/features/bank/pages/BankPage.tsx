@@ -1,6 +1,6 @@
 import type { User } from 'firebase/auth';
 import { useMemo, useRef, useState } from 'react';
-import { Card } from '../../../components/Card';
+import { Card, MoneyValue } from '../../../components/Card';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
@@ -43,7 +43,7 @@ function TotalBalances() {
       {codes.map((code) => (
         <div key={code} className="stat-card card">
           <div className="label">Total balance ({code})</div>
-          <div className={`value ${totals[code] >= 0 ? 'pill-buy' : 'pill-sell'}`}>{fmtMoney(totals[code], code)}</div>
+          <MoneyValue n={totals[code]} currency={code} className={`value ${totals[code] >= 0 ? 'pill-buy' : 'pill-sell'}`} />
         </div>
       ))}
     </div>

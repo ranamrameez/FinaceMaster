@@ -7,7 +7,7 @@ import { toast } from '../../../components/Toast';
 import { breakEvenPrice, getDailyPriceHistory } from '../../../lib/calc';
 import { dlBarV, dlDoughnut, dlLine, profitColor } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
-import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
+import { fmt, fmtMoney, fmtMoneyCompact, fmtPrice } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { shortenCompanyName } from '../../../lib/shortenName';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
@@ -123,15 +123,15 @@ export function DashboardPage() {
       <h1 className="pagetitle">PSX Dashboard</h1>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
-        <StatCard label="Net Worth" value={fmtMoney(summary.netWorth, currency)} />
-        <StatCard label="Cash Balance" value={fmtMoney(summary.cashBalance, currency)} />
-        <StatCard label="Portfolio Value" value={fmtMoney(summary.portfolioValue, currency)} />
-        <StatCard label="Realized P/L" value={fmtMoney(summary.realizedPL, currency)} />
-        <StatCard label="Unrealized P/L" value={fmtMoney(summary.unrealizedPL, currency)} />
-        <StatCard label="Net P/L" value={fmtMoney(summary.netPL, currency)} />
-        <StatCard label="Total Deposits" value={fmtMoney(summary.totalInward, currency)} />
-        <StatCard label="Total Fees" value={fmtMoney(summary.totalCharges, currency)} />
-        <StatCard label="Rewards" value={fmtMoney(summary.totalRewards, currency)} />
+        <StatCard label="Net Worth" value={fmtMoneyCompact(summary.netWorth, currency)} title={fmtMoney(summary.netWorth, currency)} />
+        <StatCard label="Cash Balance" value={fmtMoneyCompact(summary.cashBalance, currency)} title={fmtMoney(summary.cashBalance, currency)} />
+        <StatCard label="Portfolio Value" value={fmtMoneyCompact(summary.portfolioValue, currency)} title={fmtMoney(summary.portfolioValue, currency)} />
+        <StatCard label="Realized P/L" value={fmtMoneyCompact(summary.realizedPL, currency)} title={fmtMoney(summary.realizedPL, currency)} />
+        <StatCard label="Unrealized P/L" value={fmtMoneyCompact(summary.unrealizedPL, currency)} title={fmtMoney(summary.unrealizedPL, currency)} />
+        <StatCard label="Net P/L" value={fmtMoneyCompact(summary.netPL, currency)} title={fmtMoney(summary.netPL, currency)} />
+        <StatCard label="Total Deposits" value={fmtMoneyCompact(summary.totalInward, currency)} title={fmtMoney(summary.totalInward, currency)} />
+        <StatCard label="Total Fees" value={fmtMoneyCompact(summary.totalCharges, currency)} title={fmtMoney(summary.totalCharges, currency)} />
+        <StatCard label="Rewards" value={fmtMoneyCompact(summary.totalRewards, currency)} title={fmtMoney(summary.totalRewards, currency)} />
         <StatCard label="Open Positions" value={fmt(rows.length, 0)} />
         <StatCard label="Portfolio ROI" value={`${portfolioROIPct.toFixed(1)}%`} />
       </div>

@@ -1049,6 +1049,36 @@ not developer notes) continuously as features ship.
   visibly making room above every bar. `npm run build` / `npm run test`
   (150 tests, unchanged — a chart-defaults change, verified visually)
   both clean.
+- **Stat-card number abbreviation + tooltip, two related user-reported
+  items done together (2026-08-23) — see README Done item 56.** New
+  `lib/format.ts` helpers `fmtCompact`/`fmtMoneyCompact` (1,234,567 →
+  "1.23M"; unabbreviated below 1,000) and a new shared `MoneyValue`
+  component in `components/Card.tsx` — it renders the compact form as
+  the visible text and the full-precision `fmtMoney` string as a
+  native `title` attribute, needing no JS/extra markup for the
+  tooltip. Rather than touch each hand-rolled stat card's JSX with a
+  one-off `fmtMoneyCompact`+`title` combo, `MoneyValue` is a drop-in
+  replacement for `<div className="value">{fmtMoney(n, currency)}</div>`
+  wherever that exact pattern appeared — QSE/PSX Dashboard's shared
+  `StatCard` component also gained a `title` prop for the same purpose.
+  **Nine call sites across six files** ended up needing this pattern
+  once actually audited (`grep -rn "stat-card"`): Cash's balance card,
+  Bank's total-balance card, Personal Loans' net-position and per-loan
+  principal/outstanding cards, EMI's per-loan and overall-summary
+  cards, Funds' per-currency and per-fund cards, Rentals' net-income
+  card — a good example of why "round the stat cards" sounds like a
+  one-file fix but isn't, in an app with six independently hand-rolled
+  module pages instead of one shared dashboard. Deliberately left
+  alone: the Cash/Bank Planning tabs' "Real: X / Planned: X" projection
+  cards (a differently-shaped, prefixed display, not a plain `.value`
+  div — `MoneyValue` doesn't fit them without a "before" slot it
+  doesn't have yet) and every non-money stat (share counts,
+  percentages, XIRR — nothing to abbreviate). New tests:
+  `lib/__tests__/format.test.ts` (6 tests). Verified live: a seeded
+  8-figure PKR deposit displays as "12.35M PKR" with
+  "12,345,678.90 PKR" confirmed present in the DOM's `title` attribute
+  (checked via `getAttribute`, not just visually). `npm run build` /
+  `npm run test` (156 tests, 6 new) both clean.
 - **Large batch of user feedback received 2026-08-23, mid-session —
   most items handled, some still open (check README Done/Pending for
   current per-item status, this is a snapshot at time of receipt).**
@@ -1068,9 +1098,11 @@ not developer notes) continuously as features ship.
   Mobile: stat card amount text overflowing — fixed, see below (README
   Done item 54). (8) Round stat-card
   numbers for a cleaner look, show the real precise number as a
-  tooltip. (9) Stats should surface in-process/upcoming planned
+  tooltip — fixed together with (10), see below (README Done item 56).
+  (9) Stats should surface in-process/upcoming planned
   payments (ties into the Planning feature). (10) Shorten large
-  numbers in display (10,000 → 10k) where reasonable. (11) EMI: a link
+  numbers in display (10,000 → 10k) where reasonable — fixed, see
+  below (README Done item 56). (11) EMI: a link
   button to link an EMI loan to a bank + a payment date, generating a
   recurring plan for the remaining installments, maybe a calendar
   view; EMI is also missing a displayed expected end date. (12)

@@ -1,6 +1,6 @@
 import type { User } from 'firebase/auth';
 import { useState } from 'react';
-import { Card } from '../../../components/Card';
+import { Card, MoneyValue } from '../../../components/Card';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
@@ -159,17 +159,17 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
           </div>
         )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px,1fr))', gap: 8, marginTop: 12 }}>
-          <div className="stat-card card"><div className="label">Monthly installment</div><div className="value">{fmtMoney(sum.emi, loan.currencyCode)}</div></div>
-          <div className="stat-card card"><div className="label">Outstanding</div><div className="value pill-sell">{fmtMoney(sum.outstanding, loan.currencyCode)}</div></div>
-          <div className="stat-card card"><div className="label">Paid so far</div><div className="value">{fmtMoney(sum.paidSoFar, loan.currencyCode)}</div></div>
+          <div className="stat-card card"><div className="label">Monthly installment</div><MoneyValue n={sum.emi} currency={loan.currencyCode} /></div>
+          <div className="stat-card card"><div className="label">Outstanding</div><MoneyValue n={sum.outstanding} currency={loan.currencyCode} className="value pill-sell" /></div>
+          <div className="stat-card card"><div className="label">Paid so far</div><MoneyValue n={sum.paidSoFar} currency={loan.currencyCode} /></div>
           <div className="stat-card card">
             <div className="label">{loan.repaymentMode === 'fixedTotal' ? 'Markup so far' : 'Interest so far'}</div>
-            <div className="value">{fmtMoney(sum.interestSoFar, loan.currencyCode)}</div>
+            <MoneyValue n={sum.interestSoFar} currency={loan.currencyCode} />
           </div>
           <div className="stat-card card"><div className="label">Months remaining</div><div className="value">{sum.monthsRemaining}</div></div>
           <div className="stat-card card">
             <div className="label">{loan.repaymentMode === 'fixedTotal' ? 'Total markup (life)' : 'Total interest (life)'}</div>
-            <div className="value">{fmtMoney(sum.totalInterest, loan.currencyCode)}</div>
+            <MoneyValue n={sum.totalInterest} currency={loan.currencyCode} />
           </div>
         </div>
       </Card>
@@ -217,9 +217,9 @@ function OverallSummary() {
         <div key={code} className="card" style={{ padding: 12 }}>
           <div className="footer-note" style={{ marginBottom: 6 }}>{code}</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px,1fr))', gap: 8 }}>
-            <div className="stat-card card"><div className="label">Monthly total</div><div className="value">{fmtMoney(totals[code].monthlyInstallment, code)}</div></div>
-            <div className="stat-card card"><div className="label">Outstanding</div><div className="value pill-sell">{fmtMoney(totals[code].outstanding, code)}</div></div>
-            <div className="stat-card card"><div className="label">Paid so far</div><div className="value">{fmtMoney(totals[code].paidSoFar, code)}</div></div>
+            <div className="stat-card card"><div className="label">Monthly total</div><MoneyValue n={totals[code].monthlyInstallment} currency={code} /></div>
+            <div className="stat-card card"><div className="label">Outstanding</div><MoneyValue n={totals[code].outstanding} currency={code} className="value pill-sell" /></div>
+            <div className="stat-card card"><div className="label">Paid so far</div><MoneyValue n={totals[code].paidSoFar} currency={code} /></div>
           </div>
         </div>
       ))}

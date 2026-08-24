@@ -1,7 +1,7 @@
 import type { User } from 'firebase/auth';
 import { useMemo, useRef, useState } from 'react';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
-import { Card } from '../../../components/Card';
+import { Card, MoneyValue } from '../../../components/Card';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
@@ -102,7 +102,7 @@ function BalancesSummary() {
       {codes.map((code) => (
         <div key={code} className="stat-card card">
           <div className="label">Balance ({code})</div>
-          <div className={`value ${balances[code] >= 0 ? 'pill-buy' : 'pill-sell'}`}>{fmtMoney(balances[code], code)}</div>
+          <MoneyValue n={balances[code]} currency={code} className={`value ${balances[code] >= 0 ? 'pill-buy' : 'pill-sell'}`} />
         </div>
       ))}
     </div>

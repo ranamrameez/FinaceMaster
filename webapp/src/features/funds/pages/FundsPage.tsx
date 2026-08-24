@@ -1,6 +1,6 @@
 import type { User } from 'firebase/auth';
 import { useRef, useState } from 'react';
-import { Card } from '../../../components/Card';
+import { Card, MoneyValue } from '../../../components/Card';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
@@ -131,9 +131,9 @@ function OverallSummary() {
           <div key={code} className="card" style={{ padding: 12 }}>
             <div className="footer-note" style={{ marginBottom: 6 }}>{code}</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px,1fr))', gap: 8 }}>
-              <div className="stat-card card"><div className="label">Invested</div><div className="value">{fmtMoney(totals[code].invested, code)}</div></div>
-              <div className="stat-card card"><div className="label">Current value</div><div className="value">{fmtMoney(totals[code].value, code)}</div></div>
-              <div className="stat-card card"><div className="label">Net profit</div><div className={`value ${profit >= 0 ? 'pill-buy' : 'pill-sell'}`}>{fmtMoney(profit, code)} ({profitPct.toFixed(1)}%)</div></div>
+              <div className="stat-card card"><div className="label">Invested</div><MoneyValue n={totals[code].invested} currency={code} /></div>
+              <div className="stat-card card"><div className="label">Current value</div><MoneyValue n={totals[code].value} currency={code} /></div>
+              <div className="stat-card card"><div className="label">Net profit</div><MoneyValue n={profit} currency={code} className={`value ${profit >= 0 ? 'pill-buy' : 'pill-sell'}`} after={` (${profitPct.toFixed(1)}%)`} /></div>
             </div>
           </div>
         );
@@ -313,9 +313,9 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 8, marginTop: 12 }}>
           <div className="stat-card card"><div className="label">Units held</div><div className="value">{fmt(units, 2)}</div></div>
           <div className="stat-card card"><div className="label">Avg NAV cost</div><div className="value">{fmtPrice(avgNav)}</div></div>
-          <div className="stat-card card"><div className="label">Invested</div><div className="value">{fmtMoney(invested, fund.currencyCode)}</div></div>
-          <div className="stat-card card"><div className="label">Current value</div><div className="value">{fmtMoney(currentValue, fund.currencyCode)}</div></div>
-          <div className="stat-card card"><div className="label">Net profit</div><div className={`value ${profit >= 0 ? 'pill-buy' : 'pill-sell'}`}>{fmtMoney(profit, fund.currencyCode)} ({profitPct.toFixed(1)}%)</div></div>
+          <div className="stat-card card"><div className="label">Invested</div><MoneyValue n={invested} currency={fund.currencyCode} /></div>
+          <div className="stat-card card"><div className="label">Current value</div><MoneyValue n={currentValue} currency={fund.currencyCode} /></div>
+          <div className="stat-card card"><div className="label">Net profit</div><MoneyValue n={profit} currency={fund.currencyCode} className={`value ${profit >= 0 ? 'pill-buy' : 'pill-sell'}`} after={` (${profitPct.toFixed(1)}%)`} /></div>
           <div className="stat-card card"><div className="label">XIRR</div><div className="value">{rate !== null ? `${(rate * 100).toFixed(1)}%` : '—'}</div></div>
         </div>
       </Card>

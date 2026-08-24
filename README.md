@@ -754,6 +754,29 @@ FinanceManager live link:
     auto-ranges to 6,000, giving every value label real room above its bar. `npm run build` /
     `npm run test` (150 tests, unchanged — a chart-defaults change, verified visually) both
     clean.
+56. **Stat-card numbers abbreviated for a cleaner look, with the exact/unrounded number
+    available as a hover tooltip — two related user-reported items done together.** New
+    `lib/format.ts` helpers: `fmtCompact(n)` abbreviates a magnitude (1,234,567 → "1.23M";
+    below 1,000, identical to the existing `fmt`, since abbreviating "842" isn't useful) and
+    `fmtMoneyCompact(n, currency)` appends the currency code. New `MoneyValue` component in
+    `components/Card.tsx`: renders the compact form as the visible text and the full-precision
+    `fmtMoney` string as a native `title` attribute (hover tooltip) — one place for the
+    "round for display, keep the real number a hover away" pattern instead of repeating it at
+    every call site. QSE/PSX Dashboards' `StatCard` usages (which pre-format their own
+    `value` string) were switched to pass `fmtMoneyCompact` as the display value and
+    `fmtMoney` as a new `title` prop on `StatCard` itself. Every other module's hand-rolled
+    `.stat-card` markup (Cash's balance card, Bank's total-balance card, Personal Loans' net-
+    position and per-loan principal/outstanding cards, EMI's per-loan and overall-summary
+    cards, Funds' per-currency and per-fund cards, Rentals' net-income card — nine call sites
+    across six files) now renders through the shared `MoneyValue` component instead of a
+    hand-written `fmtMoney` call. New tests: `lib/__tests__/format.test.ts` (6 tests) cover
+    the abbreviation thresholds, sign preservation, and the null/NaN em-dash case. Verified
+    live: a seeded 8-figure PKR deposit (`12,345,678.90`) now displays as `12.35M PKR` on the
+    PSX Dashboard, with the full `12,345,678.90 PKR` string confirmed present in the
+    rendered `title` attribute. `npm run build` / `npm run test` (156 tests, 6 new) both
+    clean. Not touched: the Cash/Bank Planning tabs' "Real: X / Planned: X" projection cards
+    (a different, prefixed display shape, not a plain `.value` div) and every non-money stat
+    (share counts, percentages, XIRR) — none of those need abbreviating.
 
 ## Pending
 
@@ -835,10 +858,6 @@ wave" section)**:
 **New batch of user feedback, 2026-08-23 (mid-session) — see Done item 51 for item (1),
 already fixed; the rest tracked here**:
 
-33. Stat-card numbers should round for a cleaner look, with the exact/unrounded number
-    available as a hover tooltip. Not started.
-34. Large numbers should abbreviate where reasonable (10,000 → 10k) in stat cards/charts. Not
-    started.
 35. Module stat sections should surface in-process and/or upcoming planned/scheduled payments
     — ties into the existing Planning feature (Done item 43) for Cash/Banking. Not started.
 36. Clicking an account (or the equivalent primary record in other modules) should open a

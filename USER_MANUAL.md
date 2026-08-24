@@ -62,6 +62,11 @@ plus a Holdings preview, an allocation chart, a P/L-by-ticker chart, a realized-
 chart, and an Alerts panel (flags positions moving more than ±5%, or watchlist items near
 their target price — shown once per session as a toast, then listed at the page bottom).
 
+Large money amounts on stat cards (here and on every other module's summary cards) display
+abbreviated — e.g. "12.35M PKR" instead of "12,345,678.90 PKR" — for a cleaner look. Hover
+over (or tap-and-hold on a touchscreen) any abbreviated number to see the exact, unrounded
+figure as a tooltip.
+
 ---
 
 ## 5. Portfolio
