@@ -208,8 +208,9 @@ For planning multi-leg trades ahead of time, separate from the one-shot Trade Ca
 
 1. **Save a plan** — give it a name, optional notes, and one or more legs (ticker, action,
    shares, price, date).
-2. **Edit anytime** — rename the plan, edit its notes, or edit/remove any individual leg
-   that hasn't been executed yet.
+2. **Edit anytime** — rename the plan, edit its notes, add a new leg to an already-saved
+   plan ("+ Add leg" below the table), or edit/remove any individual leg that hasn't been
+   executed yet.
 3. **Mark a leg done** once you've actually executed that trade — this logs it straight
    into your real Transaction history (with an estimated fee shown per leg beforehand) so
    you don't have to re-type it into the Transactions tab. The leg stays in the plan as a

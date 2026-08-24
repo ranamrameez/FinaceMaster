@@ -114,6 +114,16 @@ function PlanCard({ plan }: { plan: TradePlan }) {
   const [notes, setNotes] = useState(plan.notes || '');
   const [editLegIndex, setEditLegIndex] = useState<number | null>(null);
   const [editLeg, setEditLeg] = useState<TradePlanLeg | null>(null);
+  const [addingLeg, setAddingLeg] = useState<TradePlanLeg | null>(null);
+
+  const addLeg = () => {
+    if (!addingLeg || !addingLeg.ticker || !addingLeg.shares || !addingLeg.price) {
+      return toast('Fill in ticker, shares, and price first.');
+    }
+    updateTradePlan(plan.id, { legs: [...plan.legs, { ...addingLeg, ticker: addingLeg.ticker.toUpperCase() }] });
+    toast('Leg added to plan.');
+    setAddingLeg(null);
+  };
 
   const saveMeta = () => {
     updateTradePlan(plan.id, { name: name.trim() || plan.name, notes: notes.trim() || undefined });
@@ -256,9 +266,43 @@ function PlanCard({ plan }: { plan: TradePlan }) {
             {!plan.legs.length && (
               <tr><td colSpan={9} className="footer-note">No legs left in this plan.</td></tr>
             )}
+            {addingLeg && (
+              <tr>
+                <td><input type="date" value={addingLeg.date} onChange={(e) => setAddingLeg({ ...addingLeg, date: e.target.value })} style={{ width: 130 }} /></td>
+                <td>
+                  <input
+                    value={addingLeg.ticker}
+                    onChange={(e) => setAddingLeg({ ...addingLeg, ticker: e.target.value.toUpperCase() })}
+                    list={PSX_TICKER_DATALIST_ID}
+                    style={{ width: 70 }}
+                  />
+                </td>
+                <td>
+                  <select value={addingLeg.action} onChange={(e) => setAddingLeg({ ...addingLeg, action: e.target.value as 'BUY' | 'SELL' })}>
+                    <option value="BUY">BUY</option>
+                    <option value="SELL">SELL</option>
+                  </select>
+                </td>
+                <td><input type="number" placeholder="Shares" value={addingLeg.shares || ''} onChange={(e) => setAddingLeg({ ...addingLeg, shares: Number(e.target.value) })} style={{ width: 70 }} /></td>
+                <td><input type="number" step="0.01" placeholder="Price" value={addingLeg.price || ''} onChange={(e) => setAddingLeg({ ...addingLeg, price: Number(e.target.value) })} style={{ width: 80 }} /></td>
+                <td>{fmtMoney(addingLeg.shares * addingLeg.price, currency)}</td>
+                <td></td>
+                <td></td>
+                <td>
+                  <button className="btn secondary small" onClick={addLeg}><SaveIcon size={12} />Add</button>{' '}
+                  <button className="btn secondary small" onClick={() => setAddingLeg(null)}>Cancel</button>
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
+
+      {!addingLeg && (
+        <button className="btn secondary small" style={{ marginTop: 8 }} onClick={() => setAddingLeg(emptyLeg())}>
+          <PlusIcon size={12} />Add leg
+        </button>
+      )}
 
       <p className="footer-note" style={{ marginTop: 8 }}>
         Planned buys {fmtMoney(totalBuy, currency)} · Planned sells {fmtMoney(totalSell, currency)}

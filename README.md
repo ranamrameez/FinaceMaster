@@ -871,6 +871,19 @@ FinanceManager live link:
     auto-plan safely; and there's no Real-vs-Planned net-income projection UI like Cash/Bank's
     Planning tab (`PlannedRentalSettings` is currently empty) since Rentals' "net income"
     isn't a single running balance the same way — just a plan list for v1.
+61. **Critical, user-flagged urgent: PSX Trade Planner couldn't add a new leg to an
+    already-saved plan.** `PlanCard` (the saved-plan view) already supported editing and
+    removing an existing leg, but had no way to append a new one — the only way to add a leg
+    was via `NewPlanForm`, which creates a brand-new plan from scratch. Fixed by adding an
+    "+ Add leg" button under each saved plan's table, opening an inline form row (same
+    fields as `NewPlanForm`'s own leg row: date/ticker/action/shares/price, with the PSX
+    ticker datalist) that appends the new leg via the existing `updateTradePlan` action on
+    **Add**, or discards it on **Cancel**. Requires ticker+shares+price all filled before
+    accepting, same validation bar as a new plan's legs. Verified live via Playwright: seeded
+    a saved single-leg plan, clicked "Add leg," filled in a second ticker, clicked "Add," and
+    confirmed via a fresh `localStorage` read that the plan now had both legs persisted
+    correctly (not just visually). `npm run build` / `npm run test` (167 tests, unchanged — UI
+    wiring onto an already-tested store action, no new calc logic) both clean.
 
 ## Pending
 

@@ -1216,6 +1216,25 @@ not developer notes) continuously as features ship.
   Switching the selector to match the placeholder confirmed the
   feature was correct all along. `npm run build` / `npm run test`
   (167 tests, 5 new) both clean.
+- **Critical, user-flagged urgent (2026-08-23, arrived mid-turn while
+  answering an unrelated question): PSX Trade Planner couldn't add a
+  new leg to an already-saved plan — see README Done item 61.**
+  `PlanCard` already had Edit/Remove per leg, but the only way to add
+  a leg at all was `NewPlanForm`, which only creates a *new* plan —
+  once saved, a plan was stuck at whatever legs it started with.
+  Fixed by adding an "+ Add leg" button under a saved plan's table
+  that opens an inline form row (mirrors `NewPlanForm`'s own leg row
+  exactly: date/ticker/action/shares/price, PSX ticker datalist), and
+  appends it via the existing `updateTradePlan` action on **Add**
+  (same validation as a new plan: ticker+shares+price required) or
+  discards it on **Cancel**. Verified live via Playwright with a real
+  persistence check (not just a visual one): seeded a saved single-leg
+  plan, added a second leg through the UI, then read `localStorage`
+  directly afterward and confirmed both legs were actually stored —
+  a UI-only check could have missed a bug where the leg *appeared* to
+  save but didn't actually persist to the store. `npm run build` /
+  `npm run test` (167 tests, unchanged — UI wiring onto an
+  already-tested store action) both clean.
 - **Large batch of user feedback received 2026-08-23, mid-session —
   most items handled, some still open (check README Done/Pending for
   current per-item status, this is a snapshot at time of receipt).**
