@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react';
+import { useState } from 'react';
 import { fmtMoney, fmtMoneyCompact } from '../lib/format';
 
 export function Card({
@@ -24,6 +25,56 @@ export function Card({
  * the same on desktop hover as it does nowhere on mobile (there's no
  * hover there), which is fine — mobile's own screens are narrow enough
  * that the compact form is the point. */
+/** A Card whose header toggles its body open/closed, accordion-style —
+ * user request ("cards should be collapsible by their headers"). `title`
+ * is whatever heading content the card already used (usually an `<h3>`);
+ * `headerExtra` renders alongside it on the right (e.g. a "Full portfolio
+ * →" link) and stops its own clicks from toggling the card, so it stays
+ * independently clickable. Defaults open so nothing looks different from
+ * a plain Card until the user actually collapses something. */
+export function CollapsibleCard({
+  title,
+  headerExtra,
+  defaultOpen = true,
+  style,
+  children,
+}: {
+  title: ReactNode;
+  headerExtra?: ReactNode;
+  defaultOpen?: boolean;
+  style?: CSSProperties;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <Card style={style}>
+      <div
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}
+        onClick={() => setOpen((o) => !o)}
+        role="button"
+        aria-expanded={open}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span
+            style={{
+              display: 'inline-block',
+              transition: 'transform .15s ease',
+              transform: open ? 'rotate(90deg)' : 'rotate(0deg)',
+              color: 'var(--muted)',
+              fontSize: 12,
+            }}
+          >
+            ▸
+          </span>
+          {title}
+        </div>
+        {headerExtra && <div onClick={(e) => e.stopPropagation()}>{headerExtra}</div>}
+      </div>
+      {open && <div style={{ marginTop: 8 }}>{children}</div>}
+    </Card>
+  );
+}
+
 export function StatCard({ label, value, sub, title }: { label: string; value: string; sub?: string; title?: string }) {
   return (
     <div className="card stat-card">

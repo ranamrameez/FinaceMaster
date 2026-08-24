@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
-import { Card, StatCard } from '../../../components/Card';
+import { CollapsibleCard, StatCard } from '../../../components/Card';
 import { Sparkline } from '../../../components/Sparkline';
 import { toast } from '../../../components/Toast';
 import { breakEvenPrice, getDailyPriceHistory } from '../../../lib/calc';
@@ -54,11 +54,11 @@ function HoldingsCard() {
   const { sorted: held, Th } = useSortableRows(heldRaw, sortValue, 'profit', 'desc');
 
   return (
-    <Card style={{ marginBottom: 16, paddingBottom: 12 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h3 style={{ margin: 0 }}>Holdings</h3>
-        <Link to="/psx/portfolio" className="footer-note">Full portfolio →</Link>
-      </div>
+    <CollapsibleCard
+      style={{ marginBottom: 16, paddingBottom: 12 }}
+      title={<h3 style={{ margin: 0 }}>Holdings</h3>}
+      headerExtra={<Link to="/psx/portfolio" className="footer-note">Full portfolio →</Link>}
+    >
       {held.length ? (
         <div className="table-scroll table-compact" style={{ marginTop: 8 }}>
           <table>
@@ -105,7 +105,7 @@ function HoldingsCard() {
       ) : (
         <p className="footer-note">No open positions yet.</p>
       )}
-    </Card>
+    </CollapsibleCard>
   );
 }
 
@@ -184,10 +184,9 @@ export function DashboardPage() {
         </ChartCard>
       </div>
 
-      <Card style={{ marginTop: 16 }}>
-        <h3 style={{ marginTop: 0 }}>Alerts</h3>
+      <CollapsibleCard style={{ marginTop: 16 }} title={<h3 style={{ margin: 0 }}>Alerts</h3>}>
         <AlertsBox />
-      </Card>
+      </CollapsibleCard>
 
       <div style={{ marginTop: 16, textAlign: 'center' }}>
         <Link to="/psx/analytics" className="btn secondary">
