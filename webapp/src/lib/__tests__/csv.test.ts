@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseCSV } from '../csv';
+import { parseCSV, toCSV } from '../csv';
 
 describe('parseCSV', () => {
   it('parses a simple comma-separated file with a header row', () => {
@@ -37,5 +37,24 @@ describe('parseCSV', () => {
   it('skips fully blank lines', () => {
     const text = 'A,B\n1,2\n\n3,4\n';
     expect(parseCSV(text)).toEqual([['A', 'B'], ['1', '2'], ['3', '4']]);
+  });
+});
+
+describe('toCSV', () => {
+  it('joins simple fields with commas and CRLF rows', () => {
+    expect(toCSV([['Date', 'Amount'], ['2026-01-01', -50]])).toBe('Date,Amount\r\n2026-01-01,-50');
+  });
+
+  it('quotes a field containing a comma', () => {
+    expect(toCSV([['Groceries, Inc.', 5]])).toBe('"Groceries, Inc.",5');
+  });
+
+  it('escapes embedded quotes by doubling them', () => {
+    expect(toCSV([['She said "hi"']])).toBe('"She said ""hi"""');
+  });
+
+  it('round-trips through parseCSV', () => {
+    const rows = [['Date', 'Description', 'Amount'], ['2026-01-01', 'Rent, Feb', '-1200']];
+    expect(parseCSV(toCSV(rows))).toEqual(rows.map((r) => r.map(String)));
   });
 });

@@ -39,3 +39,15 @@ export function parseCSV(text: string): string[][] {
 
   return rows.filter((r) => r.some((cell) => cell.trim() !== ''));
 }
+
+/** Inverse of `parseCSV` — quotes a field only when it actually needs it
+ * (contains a comma, quote, or newline), escaping embedded quotes by
+ * doubling them, per RFC4180. Used for the account/loan/property "download
+ * a statement" export shared across modules. */
+export function toCSV(rows: (string | number)[][]): string {
+  const escapeField = (v: string | number): string => {
+    const s = String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  return rows.map((row) => row.map(escapeField).join(',')).join('\r\n');
+}

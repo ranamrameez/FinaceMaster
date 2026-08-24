@@ -3,6 +3,7 @@ import { useMemo, useRef, useState } from 'react';
 import { Card, MoneyValue } from '../../../components/Card';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
+import { Modal } from '../../../components/Modal';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
@@ -10,7 +11,7 @@ import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { accountBalance, accountByCategory, accountRunningLedger, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
 import { plannedBankProjection } from '../../../lib/calc/plannedBalance';
-import { parseCSV } from '../../../lib/csv';
+import { parseCSV, toCSV } from '../../../lib/csv';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtCompact, fmtMoney } from '../../../lib/format';
 import { confirmAndDeleteLinkable } from '../../../lib/linkCascade';
@@ -111,6 +112,7 @@ function AccountsList() {
   const deleteAccount = useBankWorkbookStore((s) => s.deleteAccount);
   const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<BankAccount | null>(null);
+  const [detailAccount, setDetailAccount] = useState<BankAccount | null>(null);
 
   const startEdit = (a: BankAccount) => { setEditId(a.id); setEditRow({ ...a }); };
   const saveEdit = () => {
@@ -160,6 +162,7 @@ function AccountsList() {
                 <td>{fmtMoney(a.openingBalance, a.currencyCode)}</td>
                 <td>{fmtMoney(accountBalance(a, transactions), a.currencyCode)}</td>
                 <td>
+                  <button className="btn secondary small" onClick={() => setDetailAccount(a)}>Details</button>{' '}
                   <button className="btn secondary small" onClick={() => startEdit(a)}>Edit</button>{' '}
                   <button
                     className="btn secondary small"
@@ -176,7 +179,107 @@ function AccountsList() {
           {!sorted.length && <tr><td colSpan={5} className="footer-note">No accounts yet — add one above.</td></tr>}
         </tbody>
       </table>
+      {detailAccount && <AccountDetailModal account={detailAccount} onClose={() => setDetailAccount(null)} />}
     </div>
+  );
+}
+
+/** README item 19: clicking an account opens a detail view with its
+ * in-process (planned) and recent real transactions together, plus a
+ * "download a statement for a period" CSV export — the account-detail
+ * drill-down shipped first for Banking since "account" maps onto it most
+ * directly; the same pattern (a modal fed by that module's own ledger +
+ * planned-entries hooks) is the template to extend to other modules'
+ * primary record type (a loan, a fund, a property) later. */
+function AccountDetailModal({ account, onClose }: { account: BankAccount; onClose: () => void }) {
+  const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
+  const plannedEntries = usePlannedBankWorkbookStore((s) => s.workbook.entries);
+  const ledger = useMemo(() => [...accountRunningLedger(account, transactions)].reverse(), [account, transactions]);
+  const upcoming = useMemo(
+    () => plannedEntries.filter((p) => p.accountId === account.id && !p.executed).sort((a, b) => a.date.localeCompare(b.date)),
+    [plannedEntries, account.id],
+  );
+
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+
+  const exportStatement = () => {
+    const rows = ledger
+      .filter((r) => (!fromDate || r.tx.date >= fromDate) && (!toDate || r.tx.date <= toDate))
+      .slice()
+      .reverse();
+    const header = ['Date', 'Description', 'Category', 'Amount', 'Balance'];
+    const body = rows.map((r) => [r.tx.date, r.tx.description, r.tx.category || '', r.tx.amount, r.balance]);
+    const blob = new Blob([toCSV([header, ...body])], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const suffix = fromDate || toDate ? `_${fromDate || 'start'}_to_${toDate || 'now'}` : '';
+    a.download = `${account.name.replace(/\s+/g, '_')}_statement${suffix}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('Statement downloaded.');
+  };
+
+  return (
+    <Modal title={account.name} onClose={onClose}>
+      <p className="footer-note" style={{ marginBottom: 12 }}>
+        Current balance:{' '}
+        <strong title={fmtMoney(accountBalance(account, transactions), account.currencyCode)}>
+          {fmtCompact(accountBalance(account, transactions))} {account.currencyCode}
+        </strong>
+      </p>
+
+      {upcoming.length > 0 && (
+        <>
+          <h4 style={{ margin: '0 0 6px' }}>Upcoming plans ({upcoming.length})</h4>
+          <div className="table-scroll" style={{ marginBottom: 16 }}>
+            <table>
+              <thead><tr><th>Date</th><th>Description</th><th>Amount</th></tr></thead>
+              <tbody>
+                {upcoming.map((p) => (
+                  <tr key={p.id}>
+                    <td>{p.date}</td>
+                    <td>{p.description}</td>
+                    <td className={p.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(p.amount, account.currencyCode)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      <h4 style={{ margin: '0 0 6px' }}>Recent transactions</h4>
+      <div className="table-scroll" style={{ marginBottom: 16, maxHeight: 260, overflowY: 'auto' }}>
+        <table>
+          <thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Amount</th><th>Balance</th></tr></thead>
+          <tbody>
+            {ledger.slice(0, 20).map((r) => (
+              <tr key={r.tx.id}>
+                <td>{r.tx.date}</td>
+                <td>{r.tx.description}</td>
+                <td>{r.tx.category || '—'}</td>
+                <td className={r.tx.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(r.tx.amount, account.currencyCode)}</td>
+                <td>{fmtMoney(r.balance, account.currencyCode)}</td>
+              </tr>
+            ))}
+            {!ledger.length && <tr><td colSpan={5} className="footer-note">No transactions yet.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+
+      <h4 style={{ margin: '0 0 6px' }}>Download statement</h4>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <Field label="From (optional)">
+          <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+        </Field>
+        <Field label="To (optional)">
+          <TextInput type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+        </Field>
+        <button className="btn" onClick={exportStatement}>Export CSV</button>
+      </div>
+    </Modal>
   );
 }
 

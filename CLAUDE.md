@@ -1101,6 +1101,35 @@ not developer notes) continuously as features ship.
   "500 USD" / "1 upcoming plan (net -300 USD)" — both visible without
   navigating into Planning. `npm run build` / `npm run test` (156
   tests, unchanged) both clean.
+- **Account detail drill-down + statement export, v1 for Banking only
+  (2026-08-23) — see README Done item 58, Pending item 40 for the
+  remaining modules.** User asked for this across every module
+  ("clicking an account should open its details... same features for
+  other modules and their items"), but each module's "primary record"
+  and what a "statement" even means for it differs enough (a stock
+  position's statement is its transaction history; a loan's is its
+  repayment history) that building all of them in one pass risked
+  doing each shallowly — shipped Banking first as the template instead,
+  since "account" maps onto it most literally. New `AccountDetailModal`
+  in `features/bank/pages/BankPage.tsx` (opened via a "Details" button
+  per account row): current balance, upcoming not-yet-executed plans
+  for that account, the 20 most recent real transactions with running
+  balance (reuses the already-existing `accountRunningLedger`), and a
+  from/to date-range "Export CSV" button. New `toCSV()` in `lib/csv.ts`
+  — the inverse of the existing `parseCSV()` (statement import already
+  had a parser; nothing generated CSV text before this) — is
+  deliberately module-agnostic so any other module's future detail view
+  reuses the same helper instead of rolling its own serialization.
+  Verified with a real Playwright download (not just a code read): the
+  actual downloaded file's content was read off disk and confirmed
+  correct (header row, both transactions, correct running balance).
+  New tests: `lib/__tests__/csv.test.ts` gained 4 `toCSV` cases. `npm
+  run build` / `npm run test` (160 tests, 4 new) both clean. **The
+  reusable pieces for extending this to QSE/PSX/Personal Loans/EMI/
+  Funds/Rentals are already in place** (`Modal`, `toCSV`, the
+  date-range-filter pattern) — what's left per module is deciding what
+  "statement" and "recent activity" mean for that module's own record
+  type, not new infrastructure.
 - **Large batch of user feedback received 2026-08-23, mid-session —
   most items handled, some still open (check README Done/Pending for
   current per-item status, this is a snapshot at time of receipt).**

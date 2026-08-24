@@ -251,7 +251,9 @@ ledger, separate from any exchange.
 - **Every entry is editable and deletable** from the Ledger list.
 - **Balances and category totals are shown per currency**, never blended into one number —
   if you've logged cash in both USD and PKR, you'll see two separate balance figures, since
-  there's no reliable exchange rate to convert them with.
+  there's no reliable exchange rate to convert them with. If a currency has any upcoming
+  (not-yet-marked-done) plans from the Planning tab below, the balance card shows a note
+  with the count and net amount right there, so you don't have to open Planning to see it.
 - **Analytics tab**: a category-breakdown chart, an income-vs-expense-by-month chart, and a
   balance-over-time chart. If you've logged entries in more than one currency, a currency
   picker at the top switches which currency's charts you're looking at.
@@ -317,7 +319,11 @@ licensing is required for that, so it's manual entry or statement import only).
 - **Accounts tab**: add one or more accounts (name, currency, opening balance). Each
   account has exactly one currency. Edit or delete any account (deleting an account also
   deletes its transactions). A "Total balance" summary at the top groups accounts by
-  currency.
+  currency, and shows a note underneath if that currency has any upcoming (not-yet-marked-
+  done) plans from the Planning tab. Click **Details** on any account for its current
+  balance, upcoming plans, and 20 most recent transactions in one view, plus a "Download
+  statement" section — pick an optional From/To date range and click **Export CSV** to
+  download that account's transactions (with running balance) as a CSV file.
 - **Transactions tab**: pick an account, then log transactions with a multi-row form (date,
   description, a signed amount — negative for spend/debit, positive for deposit/credit —
   and an optional free-form category with autocomplete over your own previous categories).

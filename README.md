@@ -793,6 +793,28 @@ FinanceManager live link:
     already-tested `plannedCashProjection`/`plannedBankProjection` logic, no new calc code)
     both clean. EMI/Personal Loans/Rentals/Funds have no Planning feature yet (Done item 43
     only shipped it for Cash/Banking), so there's nothing to surface there.
+58. **Account detail drill-down + statement export, v1 shipped for Banking — the first module
+    of the cross-module item requested in old Pending item 36; the pattern, not the full
+    rollout, is what's new here.** Each account row in the Accounts tab gets a "Details"
+    button (`AccountsList` in `features/bank/pages/BankPage.tsx`) opening a new
+    `AccountDetailModal`: the account's current balance, its upcoming (not-yet-executed)
+    planned transactions from the Planning feature, its 20 most recent real transactions with
+    a running balance (reusing the already-existing `accountRunningLedger`), and a "Download
+    statement" section — an optional From/To date range plus an "Export CSV" button. New
+    `toCSV()` in `lib/csv.ts` (the inverse of the existing `parseCSV()` used for statement
+    import — quotes a field only when it needs it, escapes embedded quotes, RFC4180-ish) is
+    module-agnostic on purpose, so the same helper can back a statement export for any other
+    module's own detail view later rather than each one reinventing CSV serialization. Tests:
+    `lib/__tests__/csv.test.ts` gained 4 new `toCSV` cases (simple join, comma-quoting, embedded
+    quote escaping, and a round-trip through `parseCSV`). Verified live via a real Playwright
+    download: seeded a 2-transaction account, opened Details, clicked Export CSV, and read the
+    actual downloaded file's content — `Date,Description,Category,Amount,Balance` header plus
+    both rows with a correct running balance, filename `Checking_statement.csv`. `npm run
+    build` / `npm run test` (160 tests, 4 new) both clean. **Not done**: the same drill-down for
+    QSE/PSX positions, Personal Loans, EMI, Funds, and Rentals — each module's "primary record"
+    and what a "statement" means for it differs enough (a stock position's statement is really
+    its transaction history; a loan's is its repayment history) that each deserves its own pass
+    rather than a blind copy-paste, tracked as the new Pending item below.
 
 ## Pending
 
@@ -874,11 +896,6 @@ wave" section)**:
 **New batch of user feedback, 2026-08-23 (mid-session) — see Done item 51 for item (1),
 already fixed; the rest tracked here**:
 
-36. Clicking an account (or the equivalent primary record in other modules) should open a
-    detail view showing in-process, planned, and recent transactions together, plus an option
-    to download a statement for a chosen period — requested across every module, not just
-    Banking. Needs a design pass (what "detail view" and "statement export" mean per module
-    differs) before building. Not started.
 37. EMI/Loans: a link button to link a loan to a bank account and a payment date, generating a
     recurring plan (via the Planning feature) for the loan's remaining installments, with a
     possible calendar view of upcoming payments; EMI/Loans is also missing a displayed
@@ -889,6 +906,13 @@ already fixed; the rest tracked here**:
     from a property/lease's own details, and track security deposit info (cash, cheque, etc.)
     per property or tenancy. Needs a design pass (what "cycle" means — monthly? the lease's
     own recurrence? — and where deposit info lives in the data model). Not started.
+40. Account/record detail drill-down + statement export for every module besides Banking (see
+    Done item 58, which shipped the pattern for Bank accounts only): QSE/PSX positions,
+    Personal Loans, EMI, Funds, Rentals. Each needs its own short design pass — what counts as
+    a "statement" differs per record type (a stock position's is its transaction history; a
+    loan's is its repayment history) — but the underlying pieces (a `Modal`-based detail view,
+    `lib/csv.ts`'s module-agnostic `toCSV()`, a from/to date-range filter) are already built
+    and reusable. Not started for these five modules.
 39. A net-worth dashboard summarizing everything across every module, with collapsible
     per-currency sections. **The user also asked for a converted total at a live ("Google")
     exchange rate in the user's preferred currency — this directly conflicts with this
