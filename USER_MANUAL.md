@@ -212,19 +212,28 @@ For planning multi-leg trades ahead of time, separate from the one-shot Trade Ca
    action, shares, price, date).
 2. **Edit anytime** — rename the plan, edit its notes or default ticker, add a new leg to an
    already-saved plan ("+ Add leg" below the table — pre-fills the default ticker too), or
-   edit/remove any individual leg that hasn't been executed yet.
+   edit/remove any individual leg that hasn't been executed yet. Click any column header
+   (Date, Ticker, Action, Shares, Price, Amount, Status) to sort the legs table.
 3. **Per-ticker plan analysis**: below each plan's legs, a table shows — for every ticker in
-   the plan — your average cost (blending this plan's own buy legs with any shares you
-   already hold, so planning to sell existing stock works correctly even with no buy legs
-   in the plan), a fee-aware break-even price, shares remaining once the plan executes, and
-   planned profit/loss from the plan's sell legs. A "Total planned P/L" also shows in the
-   summary line once any leg is a sell — this is the actual point of a *planner*: not just
-   listing trades, but seeing whether the cycle as a whole is expected to be profitable.
-4. **Mark a leg done** once you've actually executed that trade — this logs it straight
+   the plan — how many shares are already executed vs. still planned (shown separately so
+   they're never conflated), your average cost (blending this plan's own *pending* buy legs
+   with any shares you already hold, so planning to sell existing stock works correctly even
+   with no buy legs in the plan), a fee-aware break-even price, shares remaining once the
+   plan executes, and planned profit/loss from the plan's pending sell legs. A "Total planned
+   P/L" also shows in the summary line once any leg is a sell — this is the actual point of a
+   *planner*: not just listing trades, but seeing whether the cycle as a whole is expected to
+   be profitable.
+4. **What if?**: right below the analysis table, type a hypothetical exit price per ticker to
+   see what selling would actually net after fees — shown two ways: just what's left after
+   this plan's own pending sells, and the full position as if those pending sells hadn't
+   happened. A quick way to check whether your planned exit price is actually the best one,
+   or a different price/quantity would net more — a sandbox for testing exit combinations
+   before committing to one.
+5. **Mark a leg done** once you've actually executed that trade — this logs it straight
    into your real Transaction history (with an estimated fee shown per leg beforehand) so
    you don't have to re-type it into the Transactions tab. The leg stays in the plan as a
    record, separate from the transaction it created.
-5. **Delete a plan** any time — this only removes the plan, not any transactions already
+6. **Delete a plan** any time — this only removes the plan, not any transactions already
    logged from marking legs done.
 
 QSE doesn't have this page yet, but the same functionality is available underneath

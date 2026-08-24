@@ -4,7 +4,8 @@ import { confirmDialog } from '../../../components/ConfirmDialog';
 import { CheckIcon, PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { Field, TextInput } from '../../../components/ui/Field';
-import { analyzeTradePlanByTicker } from '../../../lib/calc/tradePlanAnalysis';
+import { useSortableRows } from '../../../hooks/useSortableRows';
+import { analyzeTradePlanByTicker, whatIfExit, type TradePlanTickerSummary } from '../../../lib/calc/tradePlanAnalysis';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
@@ -122,6 +123,65 @@ function NewPlanForm() {
   );
 }
 
+/** "Trade planner plan is like a trade sandbox for testing different trade
+ * combos for profitable exit" (user request) — a per-ticker hypothetical
+ * exit-price tester. Two scenarios, since "planned" and "everything"
+ * answer different questions: exiting just what's left after this plan's
+ * own pending sells (`effectiveShares`), vs. exiting the whole position —
+ * real holding plus this plan's pending buys — as if the plan's own
+ * pending sells never happened, useful for comparing "follow my plan" vs.
+ * "close everything at a different price instead." */
+function WhatIfExitCalculator({
+  tickerAnalysis,
+  calcFee,
+  currency,
+}: {
+  tickerAnalysis: TradePlanTickerSummary[];
+  calcFee: (amount: number, isBuy: boolean, context?: { shares?: number }) => number;
+  currency: string;
+}) {
+  const [prices, setPrices] = useState<Record<string, number>>({});
+
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div className="footer-note" style={{ marginBottom: 4 }}>
+        What if? Test a hypothetical exit price per ticker.
+      </div>
+      {tickerAnalysis.map((t) => {
+        const price = prices[t.ticker] || 0;
+        const fullShares = t.effectiveShares + t.plannedSold;
+        const remaining = whatIfExit(t.effectiveShares, t.avgCost, price, calcFee);
+        const full = whatIfExit(fullShares, t.avgCost, price, calcFee);
+        return (
+          <div key={t.ticker} className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 6 }}>
+            <Field label={`${t.ticker} exit price`} width={110}>
+              <TextInput
+                type="number"
+                step="0.01"
+                value={price || ''}
+                onChange={(e) => setPrices((p) => ({ ...p, [t.ticker]: Number(e.target.value) }))}
+              />
+            </Field>
+            {price > 0 && (
+              <div className="footer-note">
+                Remaining ({fmt(t.effectiveShares, 0)} sh): {fmtMoney(remaining.proceeds, currency)} proceeds ·{' '}
+                <span className={remaining.pl >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(remaining.pl, currency)}</span> P/L
+                {t.plannedSold > 0 && (
+                  <>
+                    {' '}· Full position, ignoring planned sells ({fmt(fullShares, 0)} sh):{' '}
+                    {fmtMoney(full.proceeds, currency)} proceeds ·{' '}
+                    <span className={full.pl >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(full.pl, currency)}</span> P/L
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function PlanCard({ plan }: { plan: TradePlan }) {
   const updateTradePlan = usePSXWorkbookStore((s) => s.updateTradePlan);
   const deleteTradePlan = usePSXWorkbookStore((s) => s.deleteTradePlan);
@@ -192,6 +252,26 @@ function PlanCard({ plan }: { plan: TradePlan }) {
   const totalBuy = plan.legs.reduce((s, l) => s + (l.action === 'BUY' ? l.shares * l.price : 0), 0);
   const totalSell = plan.legs.reduce((s, l) => s + (l.action === 'SELL' ? l.shares * l.price : 0), 0);
 
+  // Sorting reorders *display* only — every action (edit/remove/mark done)
+  // still addresses the leg by its original array index (`originalIndex`),
+  // never the sorted position, the same pattern already used by QSE/PSX's
+  // per-stock transaction tables.
+  type LegRow = { leg: TradePlanLeg; originalIndex: number };
+  const legRows: LegRow[] = plan.legs.map((leg, originalIndex) => ({ leg, originalIndex }));
+  type LegCol = 'date' | 'ticker' | 'action' | 'shares' | 'price' | 'amount' | 'status';
+  const legSortValue = (r: LegRow, col: LegCol): number | string => {
+    switch (col) {
+      case 'ticker': return r.leg.ticker;
+      case 'action': return r.leg.action;
+      case 'shares': return r.leg.shares;
+      case 'price': return r.leg.price;
+      case 'amount': return r.leg.shares * r.leg.price;
+      case 'status': return r.leg.executed ? 1 : 0;
+      default: return r.leg.date || '';
+    }
+  };
+  const { sorted: sortedLegRows, Th: LegTh } = useSortableRows(legRows, legSortValue, 'date', 'asc');
+
   return (
     <div className="card" style={{ marginBottom: 16, padding: 12 }}>
       <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
@@ -252,11 +332,13 @@ function PlanCard({ plan }: { plan: TradePlan }) {
         <table>
           <thead>
             <tr>
-              <th>Date</th><th>Ticker</th><th>Action</th><th>Shares</th><th>Price</th><th>Amount</th><th>Est. fee</th><th>Status</th><th></th>
+              <LegTh col="date">Date</LegTh><LegTh col="ticker">Ticker</LegTh><LegTh col="action">Action</LegTh>
+              <LegTh col="shares">Shares</LegTh><LegTh col="price">Price</LegTh><LegTh col="amount">Amount</LegTh>
+              <th>Est. fee</th><LegTh col="status">Status</LegTh><th></th>
             </tr>
           </thead>
           <tbody>
-            {plan.legs.map((leg, i) =>
+            {sortedLegRows.map(({ leg, originalIndex: i }) =>
               editLegIndex === i && editLeg ? (
                 <tr key={i}>
                   <td><input type="date" value={editLeg.date} onChange={(e) => setEditLeg({ ...editLeg, date: e.target.value })} style={{ width: 130 }} /></td>
@@ -341,37 +423,52 @@ function PlanCard({ plan }: { plan: TradePlan }) {
       )}
 
       {tickerAnalysis.length > 0 && (
-        <div className="table-scroll" style={{ marginTop: 12 }}>
+        <div style={{ marginTop: 12 }}>
           <div className="footer-note" style={{ marginBottom: 4 }}>
-            Per-ticker plan analysis — average cost blends this plan's buys with any shares you already hold.
+            Per-ticker plan analysis — average cost blends this plan's pending buys with any shares you already
+            hold; already-executed legs are shown separately and never double-counted into it.
           </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Ticker</th><th>Avg cost (after buys)</th><th>Break-even</th>
-                <th>Shares after plan</th><th>Planned P/L (from sells)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tickerAnalysis.map((t) => (
-                <tr key={t.ticker}>
-                  <td>{t.ticker}</td>
-                  <td>{t.avgCost > 0 ? fmtPrice(t.avgCost) : '—'}</td>
-                  <td>{t.breakEven > 0 ? fmtPrice(t.breakEven) : '—'}</td>
-                  <td>{fmt(t.effectiveShares, 0)}</td>
-                  <td className={t.planSold > 0 ? (t.realizedPL >= 0 ? 'pill-buy' : 'pill-sell') : ''}>
-                    {t.planSold > 0 ? fmtMoney(t.realizedPL, currency) : '—'}
-                  </td>
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Ticker</th><th>Already executed</th><th>Still planned</th>
+                  <th>Avg cost</th><th>Break-even</th>
+                  <th>Shares after plan</th><th>Planned P/L (from pending sells)</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {tickerAnalysis.map((t) => (
+                  <tr key={t.ticker}>
+                    <td>{t.ticker}</td>
+                    <td className="footer-note">
+                      {t.executedBought > 0 && <>+{fmt(t.executedBought, 0)} buy </>}
+                      {t.executedSold > 0 && <>-{fmt(t.executedSold, 0)} sell</>}
+                      {!t.executedBought && !t.executedSold && '—'}
+                    </td>
+                    <td className="footer-note">
+                      {t.plannedBought > 0 && <>+{fmt(t.plannedBought, 0)} buy </>}
+                      {t.plannedSold > 0 && <>-{fmt(t.plannedSold, 0)} sell</>}
+                      {!t.plannedBought && !t.plannedSold && '—'}
+                    </td>
+                    <td>{t.avgCost > 0 ? fmtPrice(t.avgCost) : '—'}</td>
+                    <td>{t.breakEven > 0 ? fmtPrice(t.breakEven) : '—'}</td>
+                    <td>{fmt(t.effectiveShares, 0)}</td>
+                    <td className={t.plannedSold > 0 ? (t.realizedPL >= 0 ? 'pill-buy' : 'pill-sell') : ''}>
+                      {t.plannedSold > 0 ? fmtMoney(t.realizedPL, currency) : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <WhatIfExitCalculator tickerAnalysis={tickerAnalysis} calcFee={calcFee} currency={currency} />
         </div>
       )}
 
       <p className="footer-note" style={{ marginTop: 8 }}>
         Planned buys {fmtMoney(totalBuy, currency)} · Planned sells {fmtMoney(totalSell, currency)}
-        {tickerAnalysis.some((t) => t.planSold > 0) && (
+        {tickerAnalysis.some((t) => t.plannedSold > 0) && (
           <> · Total planned P/L {fmtMoney(tickerAnalysis.reduce((s, t) => s + t.realizedPL, 0), currency)}</>
         )}
       </p>

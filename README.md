@@ -921,6 +921,39 @@ FinanceManager live link:
     `inputValue()`, not just a screenshot — the field's own width visually clips longer
     tickers, which could otherwise be mistaken for a truncation bug). `npm run build` /
     `npm run test` (173 tests, unchanged — UI/type addition, no new calc logic) both clean.
+64. **PSX Trade Planner legs table made sortable; per-ticker analysis now separates
+    already-executed from still-planned legs (fixing a real double-counting bug found while
+    doing it); a per-ticker "what if I exit at price X" sandbox added — three related
+    user requests handled together.** Sorting: the legs table gets clickable headers
+    (Date/Ticker/Action/Shares/Price/Amount/Status) via `useSortableRows`, sorting *display*
+    only — every action (Edit/Mark done/Remove) still addresses a leg by its original array
+    index, never the sorted position, verified by editing the first row after a descending
+    ticker sort and confirming it opened the *correct* leg's data, not whichever leg happened
+    to be first in storage order. **Real bug found and fixed while adding the "planned vs.
+    executed" distinction the user asked for**: `analyzeTradePlanByTicker` previously
+    included every leg regardless of its `executed` flag in the cost-basis math — but an
+    executed leg already created a real Transaction, so its shares are *already* inside the
+    real holding passed in from `usePSXDerived()`. Counting an executed leg again on top of
+    that double-counted its shares/cost. Fixed by splitting legs into
+    executed/not-yet-executed and excluding executed ones from `avgCost`/`breakEven`/
+    `plannedBought`/`plannedSold` math entirely — they're now reported as separate
+    `executedBought`/`executedSold` figures instead, shown in their own table column. New
+    `whatIfExit()` in `lib/calc/tradePlanAnalysis.ts` computes fee-aware proceeds/P&L for a
+    hypothetical exit price; the new `WhatIfExitCalculator` component shows this two ways per
+    ticker — exiting just what's left after the plan's own pending sells, and exiting the
+    full position as if those pending sells hadn't happened — answering "is my planned exit
+    actually the best one, or would a different price/quantity net more" (the user's own
+    framing: "Trade planner plan is like a trade sandbox for testing different trade combos
+    for profitable exit"). New tests: `lib/calc/__tests__/tradePlanAnalysis.test.ts` expanded
+    to 10 cases including two that specifically cover the double-counting fix (an executed
+    buy leg correctly excluded from `avgCost`, an executed sell leg correctly excluded from
+    `realizedPL`) plus 3 new `whatIfExit` cases. Verified live: seeded a plan with one
+    executed buy leg (100 @ 10, matching a real Transaction), one pending buy (50 @ 12), and
+    one pending sell (30 @ 14) — confirmed the table correctly showed "+100 buy" under
+    Already Executed and "+50 buy -30 sell" under Still Planned, with a sane blended average
+    cost (not doubled), and the what-if calculator produced sensible proceeds/P&L for both
+    scenarios at a test price. `npm run build` / `npm run test` (178 tests, 5 new) both
+    clean.
 
 ## Pending
 
