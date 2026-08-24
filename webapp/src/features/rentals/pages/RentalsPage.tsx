@@ -13,7 +13,7 @@ import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { netIncomeByCurrency, netIncomeByProperty, propertyByCategory, propertyMonthlyRollup, propertyNetIncome } from '../../../lib/calc/rentalsModule';
 import { generateLeaseRentPlans } from '../../../lib/calc/rentalPlanning';
-import { parseCSV } from '../../../lib/csv';
+import { parseCSV, toCSV } from '../../../lib/csv';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
 import { confirmAndDeleteLinkable } from '../../../lib/linkCascade';
@@ -477,8 +477,31 @@ function EntriesList({ property }: { property: Property }) {
   const deleteEntry = useRentalsWorkbookStore((s) => s.deleteEntry);
   const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<RentalEntry | null>(null);
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
 
   const entries = useMemo(() => allEntries.filter((e) => e.propertyId === property.id), [allEntries, property.id]);
+
+  /** README item 40: extends Banking's statement-export pattern (Done
+   * item 58) to this module's own primary record — a property's
+   * "statement" is its income/expense entry history. */
+  const exportStatement = () => {
+    const rows = entries
+      .filter((e) => (!fromDate || e.date >= fromDate) && (!toDate || e.date <= toDate))
+      .slice()
+      .sort((a, b) => a.date.localeCompare(b.date));
+    const header = ['Date', 'Type', 'Amount', 'Category', 'Note'];
+    const body = rows.map((e) => [e.date, e.type === 'RENT_INCOME' ? 'Rent income' : 'Expense', e.type === 'RENT_INCOME' ? e.amount : -e.amount, e.category ?? '', e.note ?? '']);
+    const blob = new Blob([toCSV([header, ...body])], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const suffix = fromDate || toDate ? `_${fromDate || 'start'}_to_${toDate || 'now'}` : '';
+    a.download = `${property.name.replace(/\s+/g, '_')}_statement${suffix}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('Statement downloaded.');
+  };
   type Col = 'date' | 'type' | 'amount' | 'category';
   const sortValue = (e: RentalEntry, col: Col): number | string => {
     switch (col) {
@@ -551,6 +574,17 @@ function EntriesList({ property }: { property: Property }) {
           {!sorted.length && <tr><td colSpan={7} className="footer-note">No entries for this property yet.</td></tr>}
         </tbody>
       </table>
+      {entries.length > 0 && (
+        <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginTop: 12 }}>
+          <Field label="From (optional)">
+            <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+          </Field>
+          <Field label="To (optional)">
+            <TextInput type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+          </Field>
+          <button className="btn secondary" onClick={exportStatement}>Export CSV</button>
+        </div>
+      )}
     </div>
   );
 }

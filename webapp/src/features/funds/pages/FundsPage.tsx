@@ -12,6 +12,7 @@ import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { getMarketPrice } from '../../../lib/calc';
 import { allocationByCategory, contributionVsValueSeries } from '../../../lib/calc/fundsModule';
+import { toCSV } from '../../../lib/csv';
 import { getDailyPriceHistory } from '../../../lib/calc/priceHistory';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
@@ -230,6 +231,8 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
   const [txNav, setTxNav] = useState(0);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editRow, setEditRow] = useState<Transaction | null>(null);
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
 
   const position = positions.find((p) => p.ticker === fund.id);
   const units = position?.shares ?? 0;
@@ -242,6 +245,27 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
   const rate = fundXIRR(fund.id);
 
   const txs = workbook.transactions.map((t, i) => ({ t, i })).filter((r) => r.t.ticker === fund.id).sort((a, b) => b.t.date.localeCompare(a.t.date));
+
+  /** README item 40: extends Banking's statement-export pattern (Done
+   * item 58) to this module's own primary record — a fund's "statement"
+   * is its buy/sell transaction history. */
+  const exportStatement = () => {
+    const rows = txs
+      .filter((r) => (!fromDate || r.t.date >= fromDate) && (!toDate || r.t.date <= toDate))
+      .slice()
+      .reverse();
+    const header = ['Date', 'Type', 'Units', 'NAV', 'Amount'];
+    const body = rows.map((r) => [r.t.date, r.t.action === 'BUY' ? 'Invested' : 'Withdrew', r.t.shares, r.t.price, r.t.shares * r.t.price]);
+    const blob = new Blob([toCSV([header, ...body])], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const suffix = fromDate || toDate ? `_${fromDate || 'start'}_to_${toDate || 'now'}` : '';
+    a.download = `${fund.code || fund.name.replace(/\s+/g, '_')}_statement${suffix}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('Statement downloaded.');
+  };
 
   const saveFund = () => {
     setWorkbook({ ...workbook, funds: workbook.funds.map((f) => (f.id === fund.id ? editFund : f)) });
@@ -395,6 +419,17 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
           </tbody>
         </table>
       </div>
+      {txs.length > 0 && (
+        <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <Field label="From (optional)">
+            <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+          </Field>
+          <Field label="To (optional)">
+            <TextInput type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+          </Field>
+          <button className="btn secondary" onClick={exportStatement}>Export CSV</button>
+        </div>
+      )}
       </CollapsibleCard>
     </div>
   );

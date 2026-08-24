@@ -1852,6 +1852,18 @@ not developer notes) continuously as features ship.
   (235 tests, unchanged) / `npm run build` all clean. Still open per
   README item 40: QSE/PSX positions, Funds, Rentals don't have this
   export yet.
+- **Statement CSV export extended to Funds and Rentals (2026-08-24) —
+  see README Done item 95, completing item 40 for every module except
+  QSE/PSX.** Funds' `FundDetail` gets the same from/to date-range
+  "Export CSV" button below its Transactions table; Rentals' per-
+  property `EntriesList` (Income & expenses tab) gets it below its
+  entry table. Both reuse `toCSV()`, no new logic. Verified live via
+  Playwright with real file downloads read off disk, matching seeded
+  data exactly. `npx tsc -b` / `npm run test` (235 tests, unchanged) /
+  `npm run build` all clean. **Only QSE/PSX positions remain for item
+  40** — needs its own short design pass since a stock statement
+  plausibly wants both the trade log and price-history log, not just
+  one table.
 
 ## Live URLs
 

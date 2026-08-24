@@ -491,6 +491,9 @@ sell shares at a price), so it shares the same underlying calculation engine.
   profit, XIRR), update its current NAV (like a stock's market price), and log or edit/
   delete Invest/Withdraw transactions (units + NAV per unit).
 - Edit or delete the fund itself any time (deleting also removes its transactions).
+- **Export statement (CSV)**: below the Transactions table, optionally set a from/to date
+  range and click **Export CSV** to download that fund's buy/sell history as a spreadsheet
+  file.
 - **Analytics tab**: pick a fund (and a currency, if you hold funds in more than one) to see
   its NAV over time, and a "Contribution vs. value" chart comparing what you've put in against
   what the position is actually worth at each point — useful for spotting when a fund
@@ -526,7 +529,9 @@ tax, management fees) against one or more properties.
 - **Income & expenses tab**: pick a property, then log rent income or an expense (with a
   free-form, autocompleted category for expenses — "Maintenance", "Property tax", etc.).
   See a category breakdown and a monthly income/expense/net rollup table, plus the full
-  entry list with edit/delete.
+  entry list with edit/delete. Below that list, optionally set a from/to date range and
+  click **Export CSV** to download that property's income/expense history as a spreadsheet
+  file.
 - No property valuation tracking or mortgage/loan tracking in this version — a property's
   mortgage, if you have one, belongs in EMI/Loans (§18) instead.
 - **Analytics tab**: pick a currency (if you hold properties in more than one) to see a

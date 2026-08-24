@@ -1549,6 +1549,19 @@ FinanceManager live link:
     unchanged) / `npm run build` all clean. **Still open per item 40**: QSE/PSX positions,
     Funds, and Rentals don't have a CSV export yet — each already has its own detail view
     (PositionDetail, FundDetail, PropertyDetailModal), just needs the same button added.
+95. **Statement CSV export extended to Funds and Rentals (2026-08-24) — completing README item
+    40 for every module except QSE/PSX.** Funds' `FundDetail` gets a from/to date-range
+    "Export CSV" button below its Transactions table (Date/Type/Units/NAV/Amount). Rentals'
+    per-property `EntriesList` (Income & expenses tab) gets the same button below its entry
+    table (Date/Type/Amount/Category/Note, amount signed by type same as the on-screen table).
+    Both reuse the existing `toCSV()` helper, no new logic. Verified live via Playwright with
+    real file downloads read off disk: the Funds CSV matched its two seeded buy transactions
+    exactly, and the Rentals CSV matched its seeded rent-income/expense pair with correct
+    signed amounts. `npx tsc -b` / `npm run test` (235 tests, unchanged) / `npm run build` all
+    clean. **Only QSE/PSX positions remain for item 40** — `PositionDetail` already has a
+    per-stock transaction history and price-history table; adding the same export button
+    there needs a touch more design since a stock statement plausibly wants both the trade
+    log and the price history, not just one table like every other module here.
 
 ## Pending
 
@@ -1638,11 +1651,12 @@ wave" section)**:
 already fixed; the rest tracked here**:
 
 40. Account/record detail drill-down + statement export for every module besides Banking (see
-    Done item 58, which shipped the pattern for Bank accounts only). **Personal Loans and
-    EMI/Loans done — see Done item 94** (both already had their own detail view; just needed
-    the CSV export button added). Still not started: QSE/PSX positions, Funds, Rentals — each
-    already has its own detail view (`PositionDetail`, `FundDetail`, `PropertyDetailModal`),
-    just needs the same date-range "Export CSV" button using the existing `toCSV()` helper.
+    Done item 58, which shipped the pattern for Bank accounts only). **Personal Loans,
+    EMI/Loans, Funds, and Rentals all done — see Done items 94/95** (all four already had
+    their own detail view; just needed the CSV export button added). **Only QSE/PSX
+    positions remain** — `PositionDetail` already exists but needs its own short design pass
+    first, since a stock "statement" plausibly wants both the trade log and the price-history
+    log, unlike every other module here which only had one table to export.
 39. ~~A net-worth dashboard summarizing everything across every module, with collapsible
     per-currency sections.~~ **Done — see Done item 66.** The user later overrode the
     Cloud-Function plan below ("leave blaze plan. if you have any free api, okay otherwise
