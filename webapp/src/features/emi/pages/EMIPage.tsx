@@ -7,13 +7,16 @@ import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
-import { emiSummary, totalsByCurrency } from '../../../lib/calc/emiModule';
+import { emiSummary, expectedEndDate, installmentDueDate, totalsByCurrency } from '../../../lib/calc/emiModule';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
+import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
 import { useEMIWorkbookStore } from '../../../store/emiWorkbookStore';
+import { usePlannedBankWorkbookStore } from '../../../store/plannedBankWorkbookStore';
 import type { EMILoan } from '../../../types/emiWorkbook';
+import type { PlannedBankTransaction } from '../../../types/plannedBank';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -94,6 +97,45 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
   const [editing, setEditing] = useState(!!startInEditMode);
   const [editRow, setEditRow] = useState<EMILoan>(loan);
   const sum = emiSummary(loan);
+  const ensureSignedIn = useEnsureSignedIn();
+
+  const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
+  const plannedBankEntries = usePlannedBankWorkbookStore((s) => s.workbook.entries);
+  const addPlannedEntries = usePlannedBankWorkbookStore((s) => s.addEntries);
+  const deletePlannedEntry = usePlannedBankWorkbookStore((s) => s.deleteEntry);
+  const [linkAccountId, setLinkAccountId] = useState(loan.linkedBankAccountId || accounts[0]?.id || '');
+  const linkedAccount = accounts.find((a) => a.id === loan.linkedBankAccountId);
+
+  const linkToBank = async () => {
+    const account = accounts.find((a) => a.id === linkAccountId);
+    if (!account) return toast('Pick a bank account first.');
+    if (!(await ensureSignedIn('Sign in to link this loan to a bank account.'))) return;
+    const remaining = sum.rows.slice(sum.elapsed);
+    if (!remaining.length) return toast('This loan has no remaining installments to plan.');
+    const relinking = !!loan.linkedBankAccountId;
+    if (relinking) {
+      const ok = await confirmDialog(
+        'This replaces this loan\'s not-yet-done planned installments with fresh ones for the new account/date. Already-completed plans are untouched.',
+        'Re-link this loan?',
+      );
+      if (!ok) return;
+      plannedBankEntries
+        .filter((p) => p.sourceEmiLoanId === loan.id && !p.executed)
+        .forEach((p) => deletePlannedEntry(p.id));
+    }
+    const newPlans: PlannedBankTransaction[] = remaining.map((r) => ({
+      id: crypto.randomUUID(),
+      accountId: account.id,
+      date: installmentDueDate(loan, r.month),
+      description: `EMI: ${loan.name} (#${r.month}/${loan.tenureMonths})`,
+      amount: -r.emi,
+      executed: false,
+      sourceEmiLoanId: loan.id,
+    }));
+    addPlannedEntries(newPlans);
+    updateEntry(loan.id, { linkedBankAccountId: account.id });
+    toast(`Linked — ${newPlans.length} planned installment${newPlans.length > 1 ? 's' : ''} added to ${account.name}'s Planning tab.`);
+  };
 
   return (
     <div>
@@ -171,7 +213,38 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
             <div className="label">{loan.repaymentMode === 'fixedTotal' ? 'Total markup (life)' : 'Total interest (life)'}</div>
             <MoneyValue n={sum.totalInterest} currency={loan.currencyCode} />
           </div>
+          <div className="stat-card card"><div className="label">Expected end date</div><div className="value">{expectedEndDate(loan)}</div></div>
         </div>
+      </Card>
+
+      <Card style={{ marginBottom: 16 }}>
+        <h4 style={{ margin: '0 0 8px' }}>Link to bank</h4>
+        {linkedAccount ? (
+          <p className="footer-note" style={{ marginBottom: 8 }}>
+            Linked to <strong>{linkedAccount.name}</strong> — remaining installments are planned in its Planning tab.
+          </p>
+        ) : (
+          <p className="footer-note" style={{ marginBottom: 8 }}>
+            Not linked yet. Linking generates a planned (not-yet-done) entry for every remaining installment in the
+            chosen account's Planning tab, dated on this loan's own schedule.
+          </p>
+        )}
+        {accounts.length ? (
+          <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <Field label="Bank account">
+              <Select value={linkAccountId} onChange={(e) => setLinkAccountId(e.target.value)}>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>{a.name} ({a.currencyCode})</option>
+                ))}
+              </Select>
+            </Field>
+            <button className="btn secondary" onClick={linkToBank}>
+              {linkedAccount ? 'Re-link / regenerate plans' : 'Link to bank'}
+            </button>
+          </div>
+        ) : (
+          <p className="footer-note">No bank accounts yet — add one on the Banking page first.</p>
+        )}
       </Card>
 
       <h3>Schedule (next 12 installments from today)</h3>

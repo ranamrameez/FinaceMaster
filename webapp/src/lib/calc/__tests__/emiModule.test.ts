@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { EMILoan } from '../../../types/emiWorkbook';
-import { emiSchedule, emiSummary, totalsByCurrency } from '../emiModule';
+import { emiSchedule, emiSummary, expectedEndDate, installmentDueDate, totalsByCurrency } from '../emiModule';
 
 const loan = (over: Partial<EMILoan>): EMILoan => ({
   id: 'e1',
@@ -96,5 +96,18 @@ describe('totalsByCurrency', () => {
     ];
     const totals = totalsByCurrency(loans, new Date('2026-01-01'));
     expect(Object.keys(totals).sort()).toEqual(['PKR', 'USD']);
+  });
+});
+
+describe('installmentDueDate / expectedEndDate', () => {
+  it('adds the given number of months to startDate for a schedule row', () => {
+    const l = loan({ startDate: '2026-01-15', tenureMonths: 12 });
+    expect(installmentDueDate(l, 1)).toBe('2026-02-15');
+    expect(installmentDueDate(l, 6)).toBe('2026-07-15');
+  });
+
+  it('computes the expected end date as startDate plus tenureMonths', () => {
+    const l = loan({ startDate: '2026-01-15', tenureMonths: 12 });
+    expect(expectedEndDate(l)).toBe('2027-01-15');
   });
 });

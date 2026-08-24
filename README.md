@@ -815,6 +815,30 @@ FinanceManager live link:
     and what a "statement" means for it differs enough (a stock position's statement is really
     its transaction history; a loan's is its repayment history) that each deserves its own pass
     rather than a blind copy-paste, tracked as the new Pending item below.
+59. **EMI-to-Bank linking with recurring planned installments, plus the missing "Expected end
+    date" stat — README item 37.** A loan's detail view (`LoanDetail` in
+    `features/emi/pages/EMIPage.tsx`) gets a new "Link to bank" card: pick one of your Banking
+    accounts and click **Link to bank** to generate a `PlannedBankTransaction` (via the
+    existing Planning feature) for *every remaining, not-yet-paid installment* — dated on the
+    loan's own amortization schedule (new `installmentDueDate()`/`expectedEndDate()` in
+    `lib/calc/emiModule.ts`, both `startDate` plus N months), amount negative (an outgoing
+    payment), description `"EMI: {loan name} (#N/total)"`. `EMILoan` gained
+    `linkedBankAccountId?` and `PlannedBankTransaction` gained `sourceEmiLoanId?` — once
+    linked, the card shows "Linked to {account}" and the button becomes **Re-link / regenerate
+    plans**, which (after a confirm dialog) deletes only *this loan's own, still-pending*
+    generated plans before creating fresh ones — already-completed ("Mark as done") plans are
+    left alone, and re-linking never touches another loan's plans. Also added the "Expected
+    end date" stat card next to "Months remaining" using the same new `expectedEndDate()`.
+    New tests: `lib/calc/__tests__/emiModule.test.ts` gained 2 cases for the new date
+    functions. Verified live: seeded a loan + a bank account, opened the loan, confirmed the
+    "Expected end date" stat renders correctly and the "Link to bank" card shows the account
+    picker; clicking **Link to bank** correctly hit the sign-in gate with the right message
+    (same verification depth used elsewhere in this project for sign-in-gated writes — a real
+    authenticated round-trip needs a human with a real account, not a throwaway test account
+    against the production Firebase project). `npm run build` / `npm run test` (162 tests, 2
+    new) both clean. **Deliberately not built**: a calendar view of upcoming payments (the
+    README item's own wording said "maybe" — treated as a nice-to-have, not a requirement, and
+    left for a future pass since a plain sorted list already exists in Bank's Planning tab).
 
 ## Pending
 
@@ -896,12 +920,6 @@ wave" section)**:
 **New batch of user feedback, 2026-08-23 (mid-session) — see Done item 51 for item (1),
 already fixed; the rest tracked here**:
 
-37. EMI/Loans: a link button to link a loan to a bank account and a payment date, generating a
-    recurring plan (via the Planning feature) for the loan's remaining installments, with a
-    possible calendar view of upcoming payments; EMI/Loans is also missing a displayed
-    expected end date for a loan. Expands on item 21's EMI-linking gap with concrete UX.
-    Needs a design pass (recurring-plan generation isn't something the Planning feature does
-    today — it only creates one-off plans). Not started.
 38. Rentals: auto-plan projected income/expenses for each billing cycle's start day directly
     from a property/lease's own details, and track security deposit info (cash, cheque, etc.)
     per property or tenancy. Needs a design pass (what "cycle" means — monthly? the lease's

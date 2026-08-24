@@ -361,8 +361,14 @@ transactions) and Personal Loans (informal, no schedule).
 - **Open a loan** to see its full amortization schedule (the next 12 installments from
   today: installment, interest/markup, principal, remaining balance) plus summary stats —
   monthly installment, outstanding balance, paid so far, months remaining, lifetime
-  interest/markup.
+  interest/markup, and expected end date.
 - **Edit or delete** a loan any time; editing recalculates the whole schedule immediately.
+- **Link to bank**: pick one of your Banking accounts and click **Link to bank** to generate
+  a planned entry (in that account's Planning tab) for every installment you haven't paid
+  yet, dated on this loan's own schedule. Once linked, the button becomes **Re-link /
+  regenerate plans** — use it after editing the loan's terms, or to switch which account
+  pays it; this replaces only this loan's own not-yet-done planned installments, leaving
+  anything you've already marked done untouched.
 - Outstanding balance and paid-so-far assume **on-schedule payment** based on elapsed time
   since the start date — there's no tracking of individually missed or late payments in
   this version.

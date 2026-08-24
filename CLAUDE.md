@@ -1130,6 +1130,41 @@ not developer notes) continuously as features ship.
   date-range-filter pattern) — what's left per module is deciding what
   "statement" and "recent activity" mean for that module's own record
   type, not new infrastructure.
+- **EMI-to-Bank linking + Expected end date, user-reported (2026-08-23)
+  — see README Done item 59.** `LoanDetail`
+  (`features/emi/pages/EMIPage.tsx`) gained a "Link to bank" card: pick
+  a Banking account, click **Link to bank**, and it generates one
+  `PlannedBankTransaction` per *remaining* (not-yet-paid) installment
+  in that account's Planning feature — dated via two new pure
+  functions in `lib/calc/emiModule.ts`, `installmentDueDate(loan,
+  month)` and `expectedEndDate(loan)` (both `startDate` + N months,
+  reusing the exact `setMonth` pattern already used by
+  `personalLoansModule.ts`'s `projectPayoff` rather than inventing a
+  new date-math approach). **Re-linking needed real design thought, not
+  just "generate again"**: `EMILoan.linkedBankAccountId?` tracks which
+  account a loan is linked to (so the UI can show "Linked to X" and
+  switch the button to "Re-link"), and `PlannedBankTransaction.
+  sourceEmiLoanId?` tags every auto-generated plan so a re-link can
+  find and delete *only this loan's own still-pending* generated plans
+  before creating fresh ones — critically, a plan already marked
+  "Done" (`executed: true`) is left alone even on re-link, since that's
+  a real transaction record now, not a projection. Without
+  `sourceEmiLoanId`, re-linking would either orphan the old plans
+  (duplicates piling up) or risk deleting plans that happen to share an
+  account with a different loan. Also added the "Expected end date"
+  stat card next to "Months remaining" — the same `expectedEndDate()`
+  used for both is what keeps the two internally consistent. New
+  tests: 2 cases in `lib/calc/__tests__/emiModule.test.ts`. Verified
+  live: expected-end-date stat renders correctly, and clicking "Link to
+  bank" correctly hits the sign-in gate with the right message — same
+  verification depth as every other sign-in-gated write in this
+  project; a real authenticated round-trip (confirming the plans
+  actually land in Bank's Planning tab) needs a human with a real
+  account, not a throwaway one against the production Firebase
+  project. `npm run build` / `npm run test` (162 tests, 2 new) both
+  clean. **Not built**: the optional calendar view (README's own
+  wording said "maybe" — a plain sorted list already exists in Bank's
+  Planning tab, so this is a nice-to-have left for later, not a gap).
 - **Large batch of user feedback received 2026-08-23, mid-session —
   most items handled, some still open (check README Done/Pending for
   current per-item status, this is a snapshot at time of receipt).**
@@ -1157,7 +1192,9 @@ not developer notes) continuously as features ship.
   below (README Done item 56). (11) EMI: a link
   button to link an EMI loan to a bank + a payment date, generating a
   recurring plan for the remaining installments, maybe a calendar
-  view; EMI is also missing a displayed expected end date. (12)
+  view; EMI is also missing a displayed expected end date — fixed
+  (except the optional calendar view), see below (README Done item
+  59). (12)
   Rentals: auto-plan income/expenses per billing cycle from rental
   agreement details, plus track security deposit info (cash/cheque).
   (13) A net-worth dashboard summing everything up, collapsible

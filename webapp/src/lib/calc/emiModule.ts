@@ -71,6 +71,24 @@ export function emiSummary(loan: EMILoan, asOf: Date = new Date()): EMISummary {
   return { emi, outstanding, paidSoFar, interestSoFar, totalInterest, monthsRemaining, elapsed, rows };
 }
 
+/** Calendar date a given schedule row (1-indexed month) is due, and the
+ * loan's overall expected end date (its last installment's due date) —
+ * both derived from `startDate` the same way, so they stay consistent
+ * with each other. `setMonth` naturally clamps a day that doesn't exist
+ * in the target month (e.g. day 31 landing in February) to that month's
+ * last day, which is an accepted simplification here, same tradeoff as
+ * the reference prototype and the rest of this app's date-math (no
+ * calendar library dependency). */
+export function installmentDueDate(loan: EMILoan, month: number): string {
+  const d = new Date(loan.startDate);
+  d.setMonth(d.getMonth() + month);
+  return d.toISOString().slice(0, 10);
+}
+
+export function expectedEndDate(loan: EMILoan): string {
+  return installmentDueDate(loan, loan.tenureMonths);
+}
+
 export interface EMITotals {
   monthlyInstallment: number;
   outstanding: number;
