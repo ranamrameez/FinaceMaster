@@ -1,0 +1,16 @@
+{
+  "name": "financerecorder-functions",
+  "description": "Scheduled Firebase Cloud Function that fetches FX exchange rates on a timer and caches them in Realtime Database — the app itself never calls an FX API directly (locked architecture rule, see repo-root CLAUDE.md's Design decisions section).",
+  "private": true,
+  "engines": {
+    "node": "20"
+  },
+  "main": "index.js",
+  "scripts": {
+    "deploy": "firebase deploy --only functions:fetchFxRates"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0",
+    "firebase-functions": "^5.0.0"
+  }
+}

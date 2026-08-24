@@ -924,3 +924,58 @@ same modules §14's Planning feature already covers. Not QSE/PSX.
 
 **Next step**: wait for the user's sample Excel data, read it carefully, and only then
 design the actual data model + detection algorithm + UI around a real worked example.
+
+## 16. Net-worth dashboard + scheduled FX rate fetch — ✅ dashboard built, function scaffolded but NOT deployed 2026-08-23
+
+User asked for a dashboard summarizing net worth across every module, with collapsible
+per-currency sections, and a converted total at a live ("Google") exchange rate in their
+preferred currency. The live-rate part directly conflicted with this project's own locked
+"no live market-data/FX API call from the app itself" rule (see CLAUDE.md's Design
+decisions) — raised with the user via `AskUserQuestion` rather than silently building it or
+silently dropping it. **User's answer: build the scheduled-fetch version** — "fetch rate per
+3 hours or more even once a day and save into our db... fetch all listed currency, USD <=>
+PKR <=> QAR.." — the same architecture already used for `stockData/QSE` (fetch on a
+schedule into Firebase, app reads the cached value, never calls the API live).
+
+**Two halves, genuinely different in what's actually done vs. deployable from a coding
+session alone:**
+
+1. **The dashboard itself (`/net-worth`, `pages/NetWorthPage.tsx`) — built and working.**
+   Aggregates every module's own already-existing per-currency total function (QSE/PSX net
+   worth from `cashSummary`, Cash's `cashBalanceByCurrency`, Bank's `totalBalanceByCurrency`,
+   Personal Loans'/EMI's `totalsByCurrency`, Funds' per-currency invested/value, Rentals'
+   `netIncomeByCurrency`) into one page with a collapsible section per currency — no new
+   calc logic, purely composing what already exists. Works fully today with **zero**
+   dependency on the FX piece: every section shows its own currency's real number
+   unconverted, which is correct and complete on its own (this is exactly what item 39 in
+   README already called "buildable now" before the live-rate ask came up).
+2. **The scheduled FX-rate fetch — code scaffolded in `functions/` (a new Firebase Cloud
+   Functions codebase, `functions/index.js` + `functions/package.json`, plus root
+   `firebase.json`/`.firebaserc`), but genuinely NOT deployed, and can't be from this
+   session.** A scheduled Cloud Function (`onSchedule`, v2 SDK) fetches
+   `https://open.er-api.com/v6/latest/USD` (free, no API key) once every 24 hours — the free
+   tier's own data only refreshes once a day regardless of polling frequency, so polling
+   every 3 hours (the fast end of what the user said was acceptable) would just re-fetch an
+   identical cached value with no benefit; once daily is both what the source actually
+   supports and comfortably inside the user's "3 hours or more" ask — and writes
+   `fxRates/latest` = `{ base: 'USD', rates: {...every currency in lib/currencies.ts...},
+   fetchedAt, source }` to Realtime Database. **Why this can't be finished end-to-end from a
+   coding session, same category as item 13's PDF-import Python backend**: deploying a
+   *scheduled* Cloud Function requires the Firebase project to be on the Blaze (pay-as-you-go)
+   plan — Spark (free) doesn't support Cloud Scheduler-backed functions at all — which is a
+   real billing decision only the project owner can make, plus `firebase deploy --only
+   functions` needs an interactive `firebase login` this sandboxed session has no path to.
+   **What the user needs to do, once ready**: (a) upgrade the `qse-app` Firebase project to
+   Blaze in the Firebase console (this specific function's actual free-tier usage will be
+   negligible — one HTTP fetch + one small RTDB write per day — Blaze is required for the
+   *scheduling* mechanism itself, not because this function costs meaningfully); (b) run
+   `firebase login` then `firebase deploy --only functions` from the repo root; (c) add an
+   RTDB security rule allowing (at least authenticated) read access to `fxRates` — same open
+   question already flagged for `stockData/QSE`, which also hasn't been seeded/ruled on.
+   **App-side read path**: not yet wired into the dashboard as of this writing — the
+   dashboard's currency-conversion toggle should read `fxRates/latest` the same defensive
+   way `useQSEStockData.ts` reads `stockData/QSE` (attempt only when it might exist, degrade
+   silently to "no conversion available yet" on permission-denied or a missing node, never
+   block the rest of the page). Wire this up once the function is actually deployed and the
+   node is confirmed populated — building the read path against a node that doesn't exist
+   yet isn't verifiable and risks guessing wrong about the real shape.
