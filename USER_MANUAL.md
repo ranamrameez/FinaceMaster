@@ -458,6 +458,14 @@ transactions) and Personal Loans (informal, no schedule).
 - Outstanding balance and paid-so-far assume **on-schedule payment** based on elapsed time
   since the start date — there's no tracking of individually missed or late payments in
   this version.
+- **Amortization schedule chart**: a stacked bar chart on the loan's page showing how much
+  of each month's payment goes to principal vs. interest/markup — principal grows and
+  interest shrinks over time for an interest-rate loan; both stay flat for a fixed-total
+  loan (no compounding).
+- **What if: extra payment**: enter a fixed extra amount you'd pay on top of the normal
+  installment every month to see how much sooner the loan would clear and how much
+  interest/markup you'd save. This is a live, unsaved estimate — nothing is recorded until
+  you actually change your real payments.
 
 ---
 

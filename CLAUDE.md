@@ -1770,6 +1770,28 @@ not developer notes) continuously as features ship.
   flagged an over-budget category in red, "Add budget category" hit
   the sign-in gate. `npm run test` (224 tests, 5 new) clean. Next per
   MODULES_PLAN.md §11: EMI/Loans, then Funds, then Rentals.
+- **EMI/Loans Analytics built (2026-08-24), fourth module of the same
+  wave — see README Done item 91, MODULES_PLAN.md §11.** Both live
+  inside a loan's own `LoanDetail` view (`EMIPage.tsx`), not a separate
+  tab: an "Amortization schedule" stacked bar chart (Principal vs.
+  Interest/Markup per month, from the already-existing `emiSchedule()`
+  — no new calc needed) and a "What if: extra payment" live planner —
+  new `whatIfExtraPayment()` in `lib/calc/emiModule.ts` handling both
+  repayment modes (`interest`: reruns the reducing-balance formula with
+  a larger monthly payment until the balance clears, capped at the
+  original tenure; `fixedTotal`: `Math.ceil(principal /
+  (principalPerMonth + extra))` months, markup prorated by the new
+  month count — documented as a simplification, not a claim about any
+  specific lender's real early-payoff terms). Both the page's existing
+  7 stat cards and the what-if planner's 3 result cards got the
+  `--card-hue` colored treatment (same rollout as Done item 88).
+  Verified live via Playwright with a seeded $10,000/12mo/12%-p.a.
+  loan: amortization chart correctly showed principal rising/interest
+  falling month-to-month, and a $100/month extra payment correctly
+  projected 11 months (1 sooner), new end date 2026-12-01, $65 interest
+  saved — matching the unit tests exactly. `npx tsc -b` / `npm run
+  test` (228 tests, 4 new) / `npm run build` all clean. Next per
+  MODULES_PLAN.md §11: Funds, then Rentals.
 
 ## Live URLs
 

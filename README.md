@@ -1461,6 +1461,30 @@ FinanceManager live link:
     for `bankMonthlyFlow`/`budgetVsActual`. `npx tsc -b` / `npm run test` (224 tests, 5 new) /
     `npm run build` all clean. **Next per MODULES_PLAN.md §11's suggested order**: EMI/Loans,
     then Funds, then Rentals.
+91. **EMI/Loans Analytics built (2026-08-24), fourth module of the same wave — see
+    MODULES_PLAN.md §11.** Two additions to each loan's own detail page (`LoanDetail` in
+    `EMIPage.tsx`, not a separate tab — EMI's per-loan detail view is already where all its
+    numbers live). (a) An "Amortization schedule" stacked bar chart (Principal vs.
+    Interest/Markup per month, from the already-existing `emiSchedule()` — no new calc
+    needed, purely visualizing data that was already computed for the schedule table below
+    it). (b) A "What if: extra payment" live planner: enter a fixed extra amount on top of
+    the normal installment, see the new payoff month count, new expected end date, and
+    interest/markup saved — new `whatIfExtraPayment()` in `lib/calc/emiModule.ts`, handling
+    both repayment modes (`interest`: re-runs the reducing-balance formula with a larger
+    monthly payment until the balance clears, capped at the original tenure; `fixedTotal`:
+    `Math.ceil(principal / (principalPerMonth + extra))` months, with markup prorated by the
+    new month count — a documented simplification, not a claim about any specific lender's
+    real early-payoff terms). Both existing 7 stat cards on the page and the 3 new what-if
+    result cards got the `--card-hue` colored treatment via the shared `lib/statCardHues.ts`
+    helper (same rollout as Done item 88). New tests: `emiModule.test.ts` gained 4
+    `whatIfExtraPayment` cases (no-op at 0 extra; exact proportional payoff for a 0%-rate
+    loan; fixedTotal-mode markup savings; general interest-mode sanity bounds). Verified live
+    via Playwright with a seeded $10,000/12mo/12%-p.a. loan: the amortization chart correctly
+    showed principal rising/interest falling month-to-month, and a $100/month extra payment
+    correctly projected 11 months (1 sooner), new end date 2026-12-01, and $65 interest
+    saved — matching the unit-tested math exactly. `npx tsc -b` / `npm run test` (228 tests,
+    4 new) / `npm run build` all clean. **Next per MODULES_PLAN.md §11's suggested order**:
+    Funds, then Rentals.
 
 ## Pending
 
@@ -1500,8 +1524,8 @@ wave" section)**:
 23. Per-module Analytics & Planning for Cash/Banking/Personal Loans/EMI-Loans/Funds/Rentals —
     each currently has just a ledger + basic totals, no charts or planning tools like
     QSE/PSX's Analytics page or Trade Planner. Largest item in this wave. **Cash, Personal
-    Loans, and Banking done (see Done items 44/45/90)**; EMI-Loans/Funds/Rentals still need
-    it — see `MODULES_PLAN.md` §11 for a per-module chart/tool sketch.
+    Loans, Banking, and EMI-Loans done (see Done items 44/45/90/91)**; Funds/Rentals still
+    need it — see `MODULES_PLAN.md` §11 for a per-module chart/tool sketch.
 24. New Subscriptions module — recurring payments (streaming, gym, etc.) linked to a paying
     entity (a Bank account or Cash), reusing the cross-entity linking mechanism from item 21
     once solid. Not started — see `MODULES_PLAN.md` §12.

@@ -683,9 +683,13 @@ what's actually meaningful for each, don't force identical chart sets):
   projection, not persisted). Two new tested pure functions in
   `lib/calc/personalLoansModule.ts`: `outstandingByLoan()`, `repaymentsByMonth()`, plus
   `projectPayoff()` for the planner (linear, no interest concept — unlike EMI's schedule).
-- **EMI/Loans**: amortization schedule chart (principal vs. interest per month — the data
-  already exists in `emiSchedule()`, just not visualized), a "what-if" planner (extra
-  payment → new payoff date, already partially useful given the existing calc engine).
+- **EMI/Loans**: ✅ built 2026-08-24 — see README Done item 91. Amortization schedule chart
+  (stacked Principal vs. Interest/Markup per month, from the already-existing
+  `emiSchedule()` — no new calc needed) and a "what-if extra payment" live planner (new
+  `whatIfExtraPayment()` in `lib/calc/emiModule.ts` — new payoff month count, new end date,
+  interest/markup saved; handles both `interest` and `fixedTotal` repayment modes). Both live
+  inside a loan's own `LoanDetail` view, not a separate tab — that's already where all of
+  EMI's per-loan numbers live.
 - **Funds**: NAV-over-time line per fund, allocation by category/platform, contribution vs.
   value over time (XIRR already computed, chart it).
 - **Rentals**: net income by property over time, category breakdown (already computed in

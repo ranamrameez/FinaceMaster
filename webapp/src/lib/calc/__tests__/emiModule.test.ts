@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { EMILoan } from '../../../types/emiWorkbook';
-import { emiSchedule, emiSummary, expectedEndDate, installmentDueDate, totalsByCurrency } from '../emiModule';
+import { emiSchedule, emiSummary, expectedEndDate, installmentDueDate, totalsByCurrency, whatIfExtraPayment } from '../emiModule';
 
 const loan = (over: Partial<EMILoan>): EMILoan => ({
   id: 'e1',
@@ -109,5 +109,43 @@ describe('installmentDueDate / expectedEndDate', () => {
   it('computes the expected end date as startDate plus tenureMonths', () => {
     const l = loan({ startDate: '2026-01-15', tenureMonths: 12 });
     expect(expectedEndDate(l)).toBe('2027-01-15');
+  });
+});
+
+describe('whatIfExtraPayment', () => {
+  it('returns the unchanged schedule when no extra payment is given', () => {
+    const l = loan({ principal: 1000, annualRatePct: 12, tenureMonths: 12 });
+    const base = emiSchedule(l).rows.reduce((s, r) => s + r.interest, 0);
+    const result = whatIfExtraPayment(l, 0);
+    expect(result).toEqual({ months: 12, totalInterest: base, interestSaved: 0, monthsSaved: 0, newEndDate: expectedEndDate(l) });
+  });
+
+  it('pays off a 0%-interest loan exactly proportionally faster with an extra payment', () => {
+    const l = loan({ principal: 1200, annualRatePct: 0, tenureMonths: 12 }); // emi = 100/month
+    const result = whatIfExtraPayment(l, 100); // payment becomes 200/month
+    expect(result.months).toBe(6);
+    expect(result.totalInterest).toBe(0);
+    expect(result.interestSaved).toBe(0);
+    expect(result.monthsSaved).toBe(6);
+    expect(result.newEndDate).toBe(installmentDueDate(l, 6));
+  });
+
+  it('shortens payoff and saves markup for a fixedTotal (no-interest) loan', () => {
+    const l = loan({ principal: 1200, tenureMonths: 12, repaymentMode: 'fixedTotal', totalToReturn: 1320 }); // principal/mo=100, markup/mo=10
+    const result = whatIfExtraPayment(l, 100); // new principal/mo = 200
+    expect(result.months).toBe(6);
+    expect(result.totalInterest).toBe(60); // 10 * 6
+    expect(result.interestSaved).toBe(60); // 120 (life) - 60
+    expect(result.monthsSaved).toBe(6);
+  });
+
+  it('shortens payoff and reduces total interest for a real interest-bearing loan', () => {
+    const l = loan({ principal: 1000, annualRatePct: 12, tenureMonths: 12 });
+    const base = emiSchedule(l).rows.reduce((s, r) => s + r.interest, 0);
+    const result = whatIfExtraPayment(l, 50);
+    expect(result.months).toBeLessThan(12);
+    expect(result.totalInterest).toBeLessThan(base);
+    expect(result.interestSaved).toBeGreaterThan(0);
+    expect(result.monthsSaved).toBeGreaterThan(0);
   });
 });

@@ -1,5 +1,6 @@
 import type { User } from 'firebase/auth';
 import { useState } from 'react';
+import { Bar } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
@@ -8,7 +9,11 @@ import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
-import { emiSummary, expectedEndDate, installmentDueDate, totalsByCurrency } from '../../../lib/calc/emiModule';
+import { emiSchedule, emiSummary, expectedEndDate, installmentDueDate, totalsByCurrency, whatIfExtraPayment } from '../../../lib/calc/emiModule';
+import { dlBarV } from '../../../lib/chartLabels';
+import { applyChartTheme } from '../../../lib/chartSetup';
+import { cssVar } from '../../../lib/cssVar';
+import { useAppearanceStore } from '../../../store/appearanceStore';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
@@ -99,6 +104,11 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
   const [editRow, setEditRow] = useState<EMILoan>(loan);
   const sum = emiSummary(loan);
   const ensureSignedIn = useEnsureSignedIn();
+  useAppearanceStore((s) => s.appearance);
+  applyChartTheme();
+  const [extraPayment, setExtraPayment] = useState(0);
+  const whatIf = whatIfExtraPayment(loan, extraPayment);
+  const schedule = emiSchedule(loan);
 
   const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
   const plannedBankEntries = usePlannedBankWorkbookStore((s) => s.workbook.entries);
@@ -202,21 +212,60 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
           </div>
         )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px,1fr))', gap: 8, marginTop: 12 }}>
-          <div className="stat-card card"><div className="label">Monthly installment</div><MoneyValue n={sum.emi} currency={loan.currencyCode} /></div>
-          <div className="stat-card card"><div className="label">Outstanding</div><MoneyValue n={sum.outstanding} currency={loan.currencyCode} className="value pill-sell" /></div>
-          <div className="stat-card card"><div className="label">Paid so far</div><MoneyValue n={sum.paidSoFar} currency={loan.currencyCode} /></div>
-          <div className="stat-card card">
+          <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Monthly installment</div><MoneyValue n={sum.emi} currency={loan.currencyCode} /></div>
+          <div className="stat-card card" style={hueStyle(HUES[5])}><div className="label">Outstanding</div><MoneyValue n={sum.outstanding} currency={loan.currencyCode} className="value pill-sell" /></div>
+          <div className="stat-card card" style={hueStyle(HUES[2])}><div className="label">Paid so far</div><MoneyValue n={sum.paidSoFar} currency={loan.currencyCode} /></div>
+          <div className="stat-card card" style={hueStyle(HUES[4])}>
             <div className="label">{loan.repaymentMode === 'fixedTotal' ? 'Markup so far' : 'Interest so far'}</div>
             <MoneyValue n={sum.interestSoFar} currency={loan.currencyCode} />
           </div>
-          <div className="stat-card card"><div className="label">Months remaining</div><div className="value">{sum.monthsRemaining}</div></div>
-          <div className="stat-card card">
+          <div className="stat-card card" style={hueStyle(HUES[0])}><div className="label">Months remaining</div><div className="value">{sum.monthsRemaining}</div></div>
+          <div className="stat-card card" style={hueStyle(HUES[6])}>
             <div className="label">{loan.repaymentMode === 'fixedTotal' ? 'Total markup (life)' : 'Total interest (life)'}</div>
             <MoneyValue n={sum.totalInterest} currency={loan.currencyCode} />
           </div>
-          <div className="stat-card card"><div className="label">Expected end date</div><div className="value">{expectedEndDate(loan)}</div></div>
+          <div className="stat-card card" style={hueStyle(HUES[7])}><div className="label">Expected end date</div><div className="value">{expectedEndDate(loan)}</div></div>
         </div>
       </Card>
+
+      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Amortization schedule</h3>} style={{ marginBottom: 16 }}>
+        <div style={{ height: 220 }}>
+          <Bar
+            data={{
+              labels: schedule.rows.map((r) => r.month),
+              datasets: [
+                { label: 'Principal', data: schedule.rows.map((r) => r.principalComp), backgroundColor: cssVar('--profit') || '#3ecf8e', stack: 's' },
+                { label: loan.repaymentMode === 'fixedTotal' ? 'Markup' : 'Interest', data: schedule.rows.map((r) => r.interest), backgroundColor: cssVar('--loss') || '#e5484d', stack: 's' },
+              ],
+            }}
+            options={{
+              maintainAspectRatio: false,
+              scales: { x: { stacked: true, title: { display: true, text: 'Month' } }, y: { stacked: true } },
+              plugins: { datalabels: dlBarV((v) => fmtMoney(v, loan.currencyCode)) },
+            }}
+          />
+        </div>
+      </CollapsibleCard>
+
+      <CollapsibleCard title={<h3 style={{ margin: 0 }}>What if: extra payment</h3>} style={{ marginBottom: 16 }}>
+        <p className="footer-note" style={{ marginTop: 0 }}>
+          See how much sooner this loan clears — and how much {loan.repaymentMode === 'fixedTotal' ? 'markup' : 'interest'} you'd
+          save — by paying a fixed extra amount on top of the normal installment every month. A live estimate, nothing is saved.
+        </p>
+        <Field label={`Extra per month (${loan.currencyCode})`} width={160}>
+          <TextInput type="number" step="0.01" value={extraPayment || ''} onChange={(e) => setExtraPayment(Number(e.target.value))} />
+        </Field>
+        {extraPayment > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px,1fr))', gap: 8, marginTop: 12 }}>
+            <div className="stat-card card" style={hueStyle(HUES[0])}><div className="label">New months</div><div className="value">{whatIf.months}</div><div className="sub">{whatIf.monthsSaved} sooner</div></div>
+            <div className="stat-card card" style={hueStyle(HUES[7])}><div className="label">New end date</div><div className="value" style={{ fontSize: 14 }}>{whatIf.newEndDate}</div></div>
+            <div className="stat-card card" style={hueStyle('var(--profit)')}>
+              <div className="label">{loan.repaymentMode === 'fixedTotal' ? 'Markup' : 'Interest'} saved</div>
+              <MoneyValue n={whatIf.interestSaved} currency={loan.currencyCode} className="value pill-buy" />
+            </div>
+          </div>
+        )}
+      </CollapsibleCard>
 
       <Card style={{ marginBottom: 16 }}>
         <h4 style={{ margin: '0 0 8px' }}>Link to bank</h4>
