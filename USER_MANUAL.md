@@ -186,6 +186,10 @@ estimated fees, and (PSX) estimated CGT — before you actually commit to a trad
 the modeled trade straight from here once you're ready. It doesn't appear on other modules
 (Cash, Banking, etc.) since a stock trade calculator wouldn't mean anything there.
 
+Opening it from a specific stock's own page pre-selects that ticker automatically — you don't
+need to re-pick it from the dropdown. Opening it from anywhere else (Dashboard, Portfolio,
+Transactions) still defaults to your first held position.
+
 ---
 
 ## 11. Risk Analysis

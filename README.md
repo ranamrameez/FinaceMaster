@@ -1067,6 +1067,44 @@ FinanceManager live link:
     click-to-toggle convention as every other sortable table — zero console errors. `npx
     tsc -b` / `npm run test` (201 tests, unchanged — UI wiring onto an already-tested hook)
     / `npm run build` all clean.
+70. **Critical, user-reported live on PSX: the per-stock "Daily price" trend chart rendered
+    completely blank.** Root cause: `PositionDetail.tsx`'s Line chart sets `pointRadius: 0`
+    (a clean unbroken line, by design when there are many days of history) — but a ticker
+    with exactly **one** day of price history has no second point to draw a line between,
+    and with the dot itself hidden too, the canvas had nothing to show at all. This is the
+    common case for any ticker whose price was only just set today, which is exactly what a
+    user actively starting to use PSX live would hit immediately. Fixed in both QSE's and
+    PSX's `PositionDetail.tsx`: `pointRadius: stats.chronological.length > 1 ? 0 : 3` — a
+    single-point history now shows a visible dot; multi-point history is unaffected. Verified
+    via a real canvas pixel read in Playwright (not just "no console error") — sampled the
+    chart's rendered pixels before/after and confirmed non-blank content with a single seeded
+    price point.
+71. **PSX Trade Calculator: auto-selects the current ticker when opened from a stock's own
+    page — user request ("should auto-select it if on a portfolio item/ticker detail
+    page").** `CalculatorLauncher.tsx` (the floating button + modal, shared across every
+    Stock Exchanges route) now parses the ticker out of `/stock/:ticker` or
+    `/psx/stock/:ticker` and passes it as a new `initialTicker` prop to both QSE's and PSX's
+    `TradeCalculator`, which seed their own `ticker` state from it instead of always
+    defaulting to the first held position. Opening the calculator from anywhere else
+    (Dashboard, Portfolio, Transactions) is unaffected — still defaults to the first held
+    ticker as before. Verified live via Playwright: navigating to `/psx/stock/OGDC` and
+    opening the calculator showed OGDC pre-selected in the ticker dropdown.
+72. **Narrow editable price inputs across the app were too cramped to use — user-reported,
+    "Current Price inputbox visible textarea is too small due to padding and incremental
+    arrows."** Every one of these fields (Trade Calculator's "Current price", the inline
+    market-price cell in every Dashboard/Portfolio Holdings table, Watchlist's target/current
+    columns) inherited the base input's `10px 11px` padding, which combined with the
+    browser's native number-input spin buttons left very little room for the digits inside
+    an 70-110px box — a real usability problem for a finance app with no live price feed,
+    where every one of these is a value the user is manually typing and needs to read back
+    accurately. New shared `.price-input` class in `theme.css` (`padding: 8px 0 8px 6px` —
+    almost zero on the right, where the spinner sits) applied to every such field, with each
+    one's declared width also bumped up. Also confirmed (not just fixed the size of) that
+    editable current-price inputs already exist in every relevant table per a related user
+    request ("no APIs connected, so editable stock current price should be accessible from
+    any relevant table") — Dashboard Holdings, Portfolio Holdings, Watchlist, and the
+    per-stock page's Summary tab all already had one; this pass only fixed their sizing, no
+    new editability was needed.
 
 ## Pending
 

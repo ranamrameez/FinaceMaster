@@ -1491,6 +1491,24 @@ not developer notes) continuously as features ship.
   done — this is the second time in this project a "surely that's
   already fixed" assumption turned out to have real gaps once actually
   checked.
+- **Batch of live-testing feedback while the user was actively using
+  PSX (2026-08-24) — see README Done items 70-72.** (1) Blank "Daily
+  price" chart: `pointRadius:0` plus exactly one price-history point
+  meant nothing was drawn at all (no line to connect, no dot to show)
+  — fixed in both QSE's and PSX's `PositionDetail.tsx` by showing a
+  dot when there's only one point. Verified via an actual canvas pixel
+  read in Playwright, not just "no console error." (2) Trade
+  Calculator now auto-selects the ticker from `/stock/:ticker` or
+  `/psx/stock/:ticker` when opened from that page (`CalculatorLauncher.tsx`
+  parses it from the route, passes a new `initialTicker` prop). (3) New
+  shared `.price-input` CSS class (`theme.css`) fixes every narrow
+  editable price field app-wide (Trade Calculator, Dashboard/Portfolio
+  Holdings inline price cells, Watchlist target/current columns) —
+  the base input's padding plus the browser's native number spinner
+  left almost no room for digits in a ~80-110px box. Also confirmed
+  (rather than assumed) that editable current-price inputs already
+  exist in every relevant table the user asked about — nothing new
+  needed there, just the sizing fix.
 
 ## Live URLs
 
