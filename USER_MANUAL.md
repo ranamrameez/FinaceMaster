@@ -108,8 +108,12 @@ together. On PSX, each row also has:
   real broker charges).
 
 ### Transaction list
-Every transaction, sortable and filterable/groupable by ticker, action, or month. Click
-**Edit** on any row to fix a mistaken entry (date, ticker, shares, price, and on PSX the
+Split into two collapsible sections — **Open positions** (tickers you're still holding) and
+**Closed positions** (tickers you've fully exited) — so a stock you sold out of months ago
+doesn't clutter the same view as what you're actively holding. Every transaction is sortable
+and filterable/groupable by ticker, action, or month, same as before — the filter/sort just
+applies before the split, so picking one ticker shows it in whichever section it belongs to.
+Click **Edit** on any row to fix a mistaken entry (date, ticker, shares, price, and on PSX the
 same-day/fee-override fields too) — nothing here is add/delete-only. The Fee column shows
 `(netted)`, `(netted, manual)`, or `(override)` tags to explain how that fee was calculated.
 

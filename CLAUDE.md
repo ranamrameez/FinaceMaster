@@ -1509,6 +1509,33 @@ not developer notes) continuously as features ship.
   (rather than assumed) that editable current-price inputs already
   exist in every relevant table the user asked about — nothing new
   needed there, just the sizing fix.
+- **Transactions list split into Open/Closed sections + CollapsibleCard
+  component built (2026-08-24) — see README Done items 73/74.**
+  `TransactionsPage.tsx` (QSE and PSX) now splits its transaction table
+  into two `<details>` sections by whether that ticker currently has
+  `shares > 0` (via `positions` from `useQSEDerived()`/
+  `usePSXDerived()`) — the existing ticker filter/group-by/sort all
+  still apply first, then the result is split, so nothing about how
+  filtering/sorting works changed, just how it's displayed. Refactored
+  the shared table JSX into a local `renderTable()` function called
+  twice (once per section) rather than duplicating ~90 lines of markup.
+  Separately, new `CollapsibleCard` (`components/Card.tsx`) wraps a
+  `Card` with a clickable, chevron-toggled header — a `headerExtra`
+  slot (its own `stopPropagation`) keeps things like the Holdings
+  card's "Full portfolio →" link independently clickable even while
+  collapsed. Applied to QSE's and PSX's Dashboard Holdings and Alerts
+  cards only, as a working vertical slice — **deliberately not rolled
+  out to every Card in the app** in this pass (Portfolio, StockPage's
+  Summary tab, chart cards, other modules) given the sheer number of
+  call sites and the value of shipping something verified over
+  something broad and untested; the component itself is ready to drop
+  into any of them next (see README Pending item 42). Verified live
+  via Playwright: transactions split correctly by real open/closed
+  status with correct per-section counts and working Edit; collapsible
+  headers toggle `aria-expanded` and hide/show body content, with the
+  Holdings card's link staying visible/clickable while collapsed.
+  `npx tsc -b` / `npm run test` (201 tests, unchanged — UI
+  restructuring, no calc logic touched) / `npm run build` all clean.
 
 ## Live URLs
 

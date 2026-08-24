@@ -1105,6 +1105,34 @@ FinanceManager live link:
     any relevant table") — Dashboard Holdings, Portfolio Holdings, Watchlist, and the
     per-stock page's Summary tab all already had one; this pass only fixed their sizing, no
     new editability was needed.
+73. **PSX/QSE Transactions list split into Open positions / Closed positions sections — user
+    request.** `TransactionsPage.tsx`'s "Transaction list" tab used to show every transaction
+    in one flat table; a ticker you're still holding and one you fully exited months ago were
+    mixed together with nothing to tell them apart at a glance. Now split into two
+    collapsible sections (open by default) using the same open/closed distinction the
+    Portfolio page's Holdings/History tabs already use (a ticker with `shares > 0` from
+    `usePSXDerived()`/`useQSEDerived()`'s `positions` is "open"). The ticker filter, group-by
+    dropdown, sort headers, and inline Edit/Delete all still work exactly as before —
+    filtering/sorting happens first, then the result is split into the two sections, so
+    picking a specific ticker just shows it in whichever section it belongs to. The row's
+    real array index (not its position within its section) is still what every action
+    addresses, so no risk of editing/deleting the wrong transaction. Verified live via
+    Playwright with two seeded tickers (one open, one fully closed): each landed in the
+    correct section with the correct transaction count, and editing a row still worked.
+74. **Dashboard's Holdings and Alerts cards made collapsible by their headers, accordion-style
+    — user request ("cards should be collapsible by their headers like accordion panels").**
+    New shared `CollapsibleCard` component (`components/Card.tsx`) wraps a `Card` with a
+    clickable header (a chevron that rotates open/closed) and conditionally-rendered body;
+    an optional `headerExtra` slot renders content that stays independently clickable (its
+    own click handler stops propagation) — used for the Holdings card's "Full portfolio →"
+    link, which needs to keep working even when the card is collapsed. Applied to QSE's and
+    PSX's Dashboard Holdings and Alerts cards as a first working slice — the biggest,
+    always-visible cards on the page people would most want to collapse. **Not yet rolled out
+    everywhere** (Portfolio, StockPage's Summary sections, chart cards, other modules) — see
+    Pending; the component itself is ready to drop into any of them. Verified live via
+    Playwright: clicking a header toggles `aria-expanded` and hides/shows the body, the
+    Holdings card's "Full portfolio" link stays visible and clickable while collapsed, and
+    re-clicking expands it again — zero console errors.
 
 ## Pending
 
@@ -1214,6 +1242,13 @@ already fixed; the rest tracked here**:
     decision on what time to backfill for old rows (midnight? noon? leave time optional and
     fall back to insertion order when absent?). Needs either a narrower first-module scope
     or explicit user confirmation on the backfill approach before implementing broadly.
+42. **Roll out `CollapsibleCard` (see Done item 74) beyond Dashboard's Holdings/Alerts cards.**
+    The reusable component exists; still plain `Card`s (not yet collapsible): Portfolio's
+    Holdings/History tables, StockPage's Summary-tab sections (Daily price, Current position,
+    All-time stats, Price range), the Trade Planner's per-ticker analysis table, chart cards
+    on Analytics pages, and every other module's (Cash/Bank/Personal Loans/EMI/Funds/Rentals)
+    stat-card sections. Not started — each needs a quick per-page pass (wrap in
+    `CollapsibleCard`, decide a sensible `defaultOpen`), not new component work.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank
