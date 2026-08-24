@@ -595,7 +595,7 @@ export function TransactionsPage() {
       <h1 className="pagetitle">Transactions</h1>
       <Tabs
         tabs={[
-          { key: 'add', label: 'Add transaction(s)', content: <TransactionRows /> },
+          { key: 'add', label: 'Add transactions', content: <TransactionRows /> },
           { key: 'list', label: 'Transaction list', content: <TransactionList /> },
           { key: 'transfers', label: 'Cash transfers', content: <TransfersSection /> },
           { key: 'adjustments', label: 'Rewards & adjustments', content: <AdjustmentsSection /> },

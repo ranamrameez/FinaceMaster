@@ -92,6 +92,16 @@ export function Tooltip({ text, children, align = 'left' }: { text: string; chil
             boxShadow: '0 6px 24px rgba(0,0,0,.25)',
             whiteSpace: 'normal',
             textAlign: 'left',
+            // User-reported (item 3): a trigger nested inside a <th> (e.g.
+            // RiskCalculator's "Recovery"/"Signal" table-header tooltips)
+            // inherits `thead th`'s global text-transform:uppercase — this
+            // popup is a DOM child of that same <th>, `position:fixed`
+            // only changes where it paints, not what it inherits, so it
+            // picked up the same uppercase transform even though it's
+            // explanatory body text, not a heading. Reset explicitly
+            // rather than depending on knowing every ancestor a Tooltip
+            // might ever be nested inside.
+            textTransform: 'none',
           }}
         >
           {text}

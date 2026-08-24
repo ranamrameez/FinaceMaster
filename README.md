@@ -1944,6 +1944,61 @@ FinanceManager live link:
      zero console errors. `npx tsc -b` / `npm run test` (255 tests, unchanged — UI-only) /
      `npm run build` all clean.
 
+108. **New 18-item UI/UX critique batch (2026-08-24), user posted a screenshot of PSX
+     Transactions plus two follow-up feedback messages — in progress, this entry covers the
+     first four items fixed and verified so far.** (a) Sticky subnav chip row overlapping the
+     page title: `.chip-tabs.subnav`'s `margin-top:-14px` caused a measured 10px real overlap
+     with `h1.pagetitle` (confirmed via Playwright `getBoundingClientRect()` before/after, not
+     guessed) — changed to `margin:8px -5px 20px -5px`; the now-fully-dead standalone
+     `.subnav{margin-top:-6px}` rule (only ever used together with `.chip-tabs`, confirmed via
+     grep) was removed. (b) Tooltip popup text rendering in ALL CAPS in some spots (e.g.
+     RiskCalculator's "Signal" column header tooltip): `Tooltip.tsx`'s popup is a DOM
+     descendant of whatever it's nested inside — `position:fixed` only changes where it
+     *paints*, not what it *inherits* — so a tooltip nested inside a `<th>` picked up
+     `thead th`'s app-wide `text-transform:uppercase`; fixed with an explicit
+     `textTransform:'none'` on the popup itself, not a per-page workaround. (c) PSX/QSE Trade
+     Calculator's "Current price *" field: the bare asterisk had no explanation anywhere, and
+     typing a new value looked like it should "update" something but was purely a local
+     what-if override — added an explanatory `Field` tooltip plus a real "Save as market
+     price" button (mirrors `PositionDetail.tsx`'s existing `commitPrice` pattern) that
+     actually persists the typed value via `setMarketPrice()` when the user wants that. (d)
+     Inputs/buttons inconsistently sized and not vertically aligned in the same row (e.g. the
+     Add Transactions row): root cause was `.row`'s flexbox default `align-items:stretch` —
+     any bare `<input>`/`<button>` sitting beside a taller `Field`-wrapped sibling (e.g.
+     `FeeModeControl`, which stacks a label above its control) got stretched to match that
+     taller sibling's full height, since flex stretch applies even to native form controls
+     with no explicit height set; a Remove button next to "Fee mode" ballooned to ~67px tall
+     with its text centered inside the oversized box instead of sitting at a normal button
+     height. Fixed by switching `.row`'s default to `align-items:flex-end` (confirmed via grep
+     that no `.row` in the app wraps a `Card`/`ChartCard`/`CollapsibleCard` directly, so this
+     can't regress any equal-height card-grid layout) plus `min-height`/`min-width` on the base
+     `.btn` (38px) and text-input/select rule (38px/70px), with matching smaller overrides for
+     `.btn.small` and the `console` density's already-tighter `.btn`/input rules (so the
+     "console" density doesn't get forced back up to the new default min-height, keeping it
+     genuinely more compact than the default per Pending item 58 below). Verified via a
+     Playwright `getBoundingClientRect()` sweep of the actual Add Transactions row: every
+     child's bottom edge landed on the exact same pixel row regardless of its own height (38 /
+     40 / 67 / 30px), matching the intended fix. While re-screenshotting this row for
+     verification, also caught and fixed a related, previously unreported bug of the same
+     "unintended uppercase" class as (b): a checkbox's own inline description text (e.g.
+     "Netted (levies only)" next to the "Netted?" checkbox) was rendering as
+     "NETTED (LEVIES ONLY)" because it's wrapped in a real `<label>` tag for click-target
+     semantics, and the base `label{text-transform:uppercase}` rule (meant for a small caption
+     sitting *above* a Field's input, e.g. "FEE MODE") doesn't distinguish that from a
+     checkbox's inline description text sitting *beside* its control — fixed generally with
+     `label:has(> input[type=checkbox]), label:has(> input[type=radio]){text-transform:none;
+     ...}` rather than patching the 6 files using this pattern individually. Also renamed the
+     "Add transaction(s)" tab label to "Add transactions" — a minor, unreported side effect of
+     an earlier session's own `.card h3,h4{text-transform:capitalize}` fix mis-capitalizing the
+     literal `(s)` as `(S)`. `npx tsc -b` / `npm run test` (255 tests, unchanged — CSS/copy
+     only) / `npm run build` all clean; a 23-page console-error sweep across every module
+     found zero regressions. **Still open from this same batch** (tracked as new Pending items
+     below): right-aligning table action buttons, a "Transactions" → "Trade Transactions"
+     rename pass, chip active/inactive contrast on non-Classic themes, console density
+     differentiation, replacing the last remaining border-bottom table styling with the
+     already-added zebra striping, calculator-button toast/icon-only treatment, icon-only
+     buttons with tooltips app-wide, and removing single-child nested cards in Settings.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`

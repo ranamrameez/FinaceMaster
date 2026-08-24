@@ -2152,6 +2152,42 @@ not developer notes) continuously as features ship.
   a UX trap) while the table + export controls moved into a new "Repayment History"
   `CollapsibleCard`. Verified live via Playwright — zero console errors. `npx tsc -b` / `npm
   run test` (255 tests, unchanged) / `npm run build` all clean.
+- **New 18-item UI/UX critique batch, IN PROGRESS (2026-08-24) — see README Done item 108 for
+  what's fixed so far.** User posted a screenshot of PSX Transactions plus two follow-up
+  messages, 18 numbered items total. First four fixed + verified (see README item 108 for
+  full detail): (a) sticky subnav overlapping the page title (measured 10px overlap via
+  Playwright, fixed a stray `margin-top:-14px`); (b) tooltip text rendering all-caps when
+  nested inside a `<th>` (CSS inheritance, not position — `position:fixed` doesn't detach from
+  the DOM tree it inherits from); (c) Trade Calculator's unexplained "Current price *" —
+  added a tooltip and a real "Save as market price" button; (d) inconsistent input/button
+  row heights — root cause was `.row`'s flexbox `align-items:stretch` default stretching bare
+  inputs/buttons to match a taller `Field`-wrapped sibling (e.g. `FeeModeControl`'s
+  label+select); fixed by switching `.row` to `align-items:flex-end` app-wide (confirmed via
+  grep that no `.row` wraps a Card/ChartCard directly, so no card-grid regression risk) plus
+  `min-height`/`min-width` on `.btn`/inputs/selects, with matching relaxed overrides for
+  `.btn.small` and the `console` density so it stays genuinely more compact than default.
+  **While verifying (d) via Playwright, found and fixed a related unreported bug of the same
+  class as (b)**: a checkbox's own inline label text (e.g. "Netted (levies only)") rendered
+  ALL CAPS because it's wrapped in a real `<label>` for click-target semantics, and the base
+  `label{text-transform:uppercase}` rule (meant for a small caption *above* a Field's input)
+  doesn't distinguish that from inline description text sitting *beside* a checkbox — fixed
+  once with `label:has(> input[type=checkbox]), label:has(> input[type=radio])
+  {text-transform:none}` rather than patching the 6 files using this pattern. **Rule worth
+  repeating for future "why is this text uppercase/styled oddly" reports: check what a shared
+  base-element selector (`label`, `<th>`, etc.) is doing before assuming a component-specific
+  bug** — this is the second time this exact class of bug (an app-wide base-tag style rule
+  catching an element used for an unrelated purpose) has been the real cause this session.
+  `npx tsc -b` / `npm run test` (255 tests, unchanged) / `npm run build` all clean; a 23-page
+  console-error sweep found zero regressions. **Still open, not yet started**: right-align
+  table action buttons, "Transactions"→"Trade Transactions" rename, chip contrast on
+  non-Classic themes, console-density differentiation, zebra-row rollout to any remaining
+  border-bottom tables, Calculator button toast/icon-only treatment, icon-only buttons with
+  tooltips app-wide, removing single-child nested Settings cards, and a batch of larger
+  deferred items (multi-theme stat-card-color audit, Ticker+logo+name/Cost/Value/P-L column
+  grouping standard everywhere, side-by-side layout instead of scrolling, full Portfolio page
+  overhaul, using unused right-side page space) to be documented as scoped README Pending
+  items rather than attempted blind. Continue working down this list per the same standing
+  auto-commit instruction — this note itself will be superseded as more of the batch lands.
 
 ## Live URLs
 

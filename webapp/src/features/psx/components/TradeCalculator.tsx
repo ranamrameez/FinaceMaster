@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { breakEvenPrice, requiredSellPrice, roundTick } from '../../../lib/calc';
 import { calcCGT } from '../../../lib/calc/psxFees';
-import { PlusIcon } from '../../../components/icons';
+import { PlusIcon, SaveIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { Field, TextInput } from '../../../components/ui/Field';
+import { Tooltip } from '../../../components/Tooltip';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
@@ -47,6 +48,7 @@ export function TradeCalculator({ initialTicker }: { initialTicker?: string } = 
   const { workbook, positions, calcFee, summary } = usePSXDerived();
   const { tickerNames } = usePSXStockData();
   const addTransaction = usePSXWorkbookStore((s) => s.addTransaction);
+  const setMarketPrice = usePSXWorkbookStore((s) => s.setMarketPrice);
   const ensureSignedIn = useEnsureSignedIn();
   const currency = workbook.settings.currency;
   const { feePct, tick } = workbook.settings;
@@ -213,7 +215,11 @@ export function TradeCalculator({ initialTicker }: { initialTicker?: string } = 
 
       {ticker && (
         <div className="row" style={{ gap: 8, alignItems: 'flex-end', marginBottom: 12 }}>
-          <Field label="Current price *" width={140}>
+          <Field
+            label="Current price"
+            width={140}
+            title="Prefilled from the last market price you saved for this ticker. Editing it here only affects this calculator's numbers below — it does NOT save a new market price. Use the Save button to actually update it."
+          >
             <TextInput
               type="number"
               step="0.01"
@@ -223,6 +229,21 @@ export function TradeCalculator({ initialTicker }: { initialTicker?: string } = 
               style={{ borderColor: currentPrice > 0 ? undefined : 'var(--loss)' }}
             />
           </Field>
+          {priceOverride !== '' && currentPrice > 0 && currentPrice !== mp && (
+            <Tooltip text={`Save ${fmtPrice(currentPrice)} as this ticker's real market price (used everywhere else in the app, not just here).`}>
+              <button
+                className="btn secondary small"
+                onClick={async () => {
+                  if (!(await ensureSignedIn('Sign in to save price updates.'))) return;
+                  setMarketPrice(ticker, currentPrice);
+                  toast(`${ticker} market price saved: ${fmtPrice(currentPrice)}`);
+                  setPriceOverride('');
+                }}
+              >
+                <SaveIcon size={12} />Save as market price
+              </button>
+            </Tooltip>
+          )}
           {position && (
             <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 8, flex: 1 }}>
               <div className="stat-card card"><div className="label">Avg cost</div><div className="value">{fmtPrice(avg)}</div></div>
