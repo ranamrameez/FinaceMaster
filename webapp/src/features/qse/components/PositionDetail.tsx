@@ -6,6 +6,7 @@ import { breakEvenPrice, computePriceStats, getMarketPrice } from '../../../lib/
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
+import { useSortableRows } from '../../../hooks/useSortableRows';
 import { useAppearanceStore } from '../../../store/appearanceStore';
 import { useWorkbookStore } from '../../../store/workbookStore';
 import { useQSEDerived } from '../hooks/useQSEDerived';
@@ -53,6 +54,12 @@ export function PositionDetail({ ticker }: { ticker: string }) {
 
   const stats = computePriceStats(ticker, workbook.priceHistory);
 
+  const recentRows = stats?.recent ?? [];
+  type RecentCol = 'when' | 'price';
+  const recentSortValue = (p: (typeof recentRows)[number], col: RecentCol): number | string =>
+    col === 'price' ? p.price : (p.time ?? p.date);
+  const { sorted: sortedRecent, Th: RecentTh } = useSortableRows(recentRows, recentSortValue, 'when', 'desc');
+
   const commitPrice = async () => {
     const val = parseFloat(priceInput);
     if (!val || val <= 0) return;
@@ -73,7 +80,21 @@ export function PositionDetail({ ticker }: { ticker: string }) {
             data={{
               labels: stats.chronological.map((p) => p.date),
               datasets: [
-                { label: 'Price', data: stats.chronological.map((p) => p.price), borderColor: '#c9a35a', backgroundColor: 'rgba(201,163,90,0.12)', fill: true, tension: 0.25, pointRadius: 0, borderWidth: 1.75 },
+                {
+                  label: 'Price',
+                  data: stats.chronological.map((p) => p.price),
+                  borderColor: '#c9a35a',
+                  backgroundColor: 'rgba(201,163,90,0.12)',
+                  fill: true,
+                  tension: 0.25,
+                  // A single day of price history has no line to draw and
+                  // pointRadius:0 hides the dot too — the chart looked
+                  // completely blank (a real user-reported "not working"
+                  // bug) with exactly one data point, which is the common
+                  // case for a ticker whose price was only just set today.
+                  pointRadius: stats.chronological.length > 1 ? 0 : 3,
+                  borderWidth: 1.75,
+                },
               ],
             }}
             options={{
@@ -90,11 +111,12 @@ export function PositionDetail({ ticker }: { ticker: string }) {
         <input
           type="number"
           step="0.001"
+          className="price-input"
           placeholder="Update price"
           value={priceInput}
           onChange={(e) => setPriceInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && commitPrice()}
-          style={{ width: 130 }}
+          style={{ width: 150 }}
         />
         <button className="btn secondary small" onClick={commitPrice}><SaveIcon size={12} />Save price</button>
       </div>
@@ -165,9 +187,9 @@ export function PositionDetail({ ticker }: { ticker: string }) {
             <summary className="footer-note" style={{ cursor: 'pointer' }}>Recent updates ({stats.recent.length})</summary>
             <div className="table-scroll" style={{ marginTop: 8 }}>
               <table>
-                <thead><tr><th>When</th><th>Price</th></tr></thead>
+                <thead><tr><RecentTh col="when">When</RecentTh><RecentTh col="price">Price</RecentTh></tr></thead>
                 <tbody>
-                  {stats.recent.map((p, i) => (
+                  {sortedRecent.map((p, i) => (
                     <tr key={i}><td>{p.time ? new Date(p.time).toLocaleString() : p.date}</td><td>{fmtPrice(p.price)}</td></tr>
                   ))}
                 </tbody>

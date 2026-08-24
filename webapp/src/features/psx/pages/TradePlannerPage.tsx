@@ -190,6 +190,10 @@ function PlanCard({ plan }: { plan: TradePlan }) {
   const { workbook, calcFee, rows } = usePSXDerived();
   const currency = workbook.settings.currency;
   const tickerAnalysis = analyzeTradePlanByTicker(plan.legs, rows, calcFee, workbook.settings.feePct, workbook.settings.tick);
+  type AnalysisCol = 'ticker' | 'avgCost' | 'breakEven' | 'effectiveShares' | 'realizedPL';
+  const analysisSortValue = (t: (typeof tickerAnalysis)[number], col: AnalysisCol): number | string =>
+    col === 'ticker' ? t.ticker : t[col];
+  const { sorted: sortedTickerAnalysis, Th: AnalysisTh } = useSortableRows(tickerAnalysis, analysisSortValue, 'ticker', 'asc');
 
   const [editingMeta, setEditingMeta] = useState(false);
   const [name, setName] = useState(plan.name);
@@ -260,7 +264,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
   // per-stock transaction tables.
   type LegRow = { leg: TradePlanLeg; originalIndex: number };
   const legRows: LegRow[] = plan.legs.map((leg, originalIndex) => ({ leg, originalIndex }));
-  type LegCol = 'date' | 'ticker' | 'action' | 'shares' | 'price' | 'amount' | 'status';
+  type LegCol = 'date' | 'ticker' | 'action' | 'shares' | 'price' | 'amount' | 'fee' | 'status';
   const legSortValue = (r: LegRow, col: LegCol): number | string => {
     switch (col) {
       case 'ticker': return r.leg.ticker;
@@ -268,6 +272,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
       case 'shares': return r.leg.shares;
       case 'price': return r.leg.price;
       case 'amount': return r.leg.shares * r.leg.price;
+      case 'fee': return calcFee(r.leg.shares * r.leg.price, r.leg.action === 'BUY', { shares: r.leg.shares });
       case 'status': return r.leg.executed ? 1 : 0;
       default: return r.leg.date || '';
     }
@@ -361,7 +366,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
             <tr>
               <LegTh col="date">Date</LegTh><LegTh col="ticker">Ticker</LegTh><LegTh col="action">Action</LegTh>
               <LegTh col="shares">Shares</LegTh><LegTh col="price">Price</LegTh><LegTh col="amount">Amount</LegTh>
-              <th>Est. fee</th><LegTh col="status">Status</LegTh><th></th>
+              <LegTh col="fee">Est. fee</LegTh><LegTh col="status">Status</LegTh><th></th>
             </tr>
           </thead>
           <tbody>
@@ -459,13 +464,14 @@ function PlanCard({ plan }: { plan: TradePlan }) {
             <table>
               <thead>
                 <tr>
-                  <th>Ticker</th><th>Already executed</th><th>Still planned</th>
-                  <th>Avg cost</th><th>Break-even</th>
-                  <th>Shares after plan</th><th>Planned P/L (from pending sells)</th>
+                  <AnalysisTh col="ticker">Ticker</AnalysisTh><th>Already executed</th><th>Still planned</th>
+                  <AnalysisTh col="avgCost">Avg cost</AnalysisTh><AnalysisTh col="breakEven">Break-even</AnalysisTh>
+                  <AnalysisTh col="effectiveShares">Shares after plan</AnalysisTh>
+                  <AnalysisTh col="realizedPL">Planned P/L (from pending sells)</AnalysisTh>
                 </tr>
               </thead>
               <tbody>
-                {tickerAnalysis.map((t) => (
+                {sortedTickerAnalysis.map((t) => (
                   <tr key={t.ticker}>
                     <td>{t.ticker}</td>
                     <td className="footer-note">

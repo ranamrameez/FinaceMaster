@@ -12,7 +12,7 @@ import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
 import { usePSXDerived } from '../hooks/usePSXDerived';
 import { usePSXStockData } from '../hooks/usePSXStockData';
 
-type SortCol = 'ticker' | 'market' | 'be' | 'net' | 't1' | 't2' | 't3' | 'status';
+type SortCol = 'ticker' | 'shares' | 'avgCost' | 'market' | 'be' | 'net' | 't1' | 't2' | 't3' | 'status';
 
 function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }) {
   const { workbook, positions, calcFee } = usePSXDerived();
@@ -61,6 +61,8 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
 
   const sortValue = (r: (typeof rows)[number], col: SortCol): number | string => {
     switch (col) {
+      case 'shares': return r.shares;
+      case 'avgCost': return r.avgCost;
       case 'market': return r.hasMarket ? r.mp : -Infinity;
       case 'be': return r.be;
       case 'net': return Number.isFinite(r.net) ? r.net : -Infinity;
@@ -82,8 +84,8 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
           <tr>
             <Th col="ticker">Ticker</Th>
             <th>Trend</th>
-            <th>Shares</th>
-            <th>Avg Cost</th>
+            <Th col="shares">Shares</Th>
+            <Th col="avgCost">Avg Cost</Th>
             <Th col="market">Market Price</Th>
             <Th col="be">Break-even</Th>
             <Th col="net">Net P/L</Th>
@@ -106,9 +108,10 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
                 <input
                   type="number"
                   step="0.01"
+                  className="price-input"
                   defaultValue={r.mp || ''}
                   placeholder="—"
-                  style={{ width: 80 }}
+                  style={{ width: 96 }}
                   onKeyDown={async (e) => {
                     if (e.key === 'Enter') {
                       const target = e.target as HTMLInputElement;

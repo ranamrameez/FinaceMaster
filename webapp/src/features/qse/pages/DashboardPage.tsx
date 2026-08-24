@@ -11,6 +11,7 @@ import { fmt, fmtMoney, fmtMoneyCompact, fmtPrice } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { shortenCompanyName } from '../../../lib/shortenName';
 import { useWorkbookStore } from '../../../store/workbookStore';
+import { useSortableRows } from '../../../hooks/useSortableRows';
 import { AlertsBox, useQSEAlerts } from '../components/AlertsBox';
 import { ChartCard } from '../components/ChartCard';
 import { useQSEDerived } from '../hooks/useQSEDerived';
@@ -28,7 +29,7 @@ function HoldingsCard() {
   const currency = workbook.settings.currency;
   const { feePct, tick } = workbook.settings;
 
-  const held = useMemo(
+  const heldRaw = useMemo(
     () =>
       positions
         .filter((p) => p.shares > 0)
@@ -41,10 +42,16 @@ function HoldingsCard() {
           const be = breakEvenPrice(p.invested, p.shares, feePct, tick, calcFee);
           const sparkData = getDailyPriceHistory(p.ticker, workbook.priceHistory).map((pt) => pt.price);
           return { ticker: p.ticker, shares: p.shares, avgCost, mp, profit, be, sparkData };
-        })
-        .sort((a, b) => (Number.isFinite(b.profit) ? b.profit : 0) - (Number.isFinite(a.profit) ? a.profit : 0)),
+        }),
     [positions, workbook.marketPrices, workbook.priceHistory, calcFee, feePct, tick],
   );
+
+  type Col = 'ticker' | 'shares' | 'avgCost' | 'mp' | 'be' | 'profit';
+  const sortValue = (r: (typeof heldRaw)[number], col: Col): number | string => {
+    if (col === 'profit') return Number.isFinite(r.profit) ? r.profit : 0;
+    return r[col];
+  };
+  const { sorted: held, Th } = useSortableRows(heldRaw, sortValue, 'profit', 'desc');
 
   return (
     <Card style={{ marginBottom: 16, paddingBottom: 12 }}>
@@ -56,7 +63,7 @@ function HoldingsCard() {
         <div className="table-scroll table-compact" style={{ marginTop: 8 }}>
           <table>
             <thead>
-              <tr><th>Ticker</th><th>Trend</th><th>Shares</th><th>Avg Cost</th><th>Current Price</th><th>Break-even</th><th>Net P/L</th></tr>
+              <tr><Th col="ticker">Ticker</Th><th>Trend</th><Th col="shares">Shares</Th><Th col="avgCost">Avg Cost</Th><Th col="mp">Current Price</Th><Th col="be">Break-even</Th><Th col="profit">Net P/L</Th></tr>
             </thead>
             <tbody>
               {held.map((r) => (
@@ -71,9 +78,10 @@ function HoldingsCard() {
                     <input
                       type="number"
                       step="0.001"
+                      className="price-input"
                       defaultValue={r.mp || ''}
                       placeholder="—"
-                      style={{ width: 72 }}
+                      style={{ width: 96 }}
                       onKeyDown={async (e) => {
                         if (e.key === 'Enter') {
                           const target = e.target as HTMLInputElement;

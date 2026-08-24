@@ -4,6 +4,7 @@ import { SaveIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { fmt, fmtMoney } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
+import { useSortableRows } from '../../../hooks/useSortableRows';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
 import type { Dividend } from '../../../types/workbook';
 import { usePSXDerived } from '../hooks/usePSXDerived';
@@ -110,6 +111,17 @@ export function DividendsSection() {
   const estimates = workbook.dividendEstimates || {};
   const totalProjected = held.reduce((s, p) => s + (estimates[p.ticker] || 0) * p.shares, 0);
 
+  type HeldCol = 'ticker' | 'shares' | 'estPerShare' | 'projected';
+  const heldSortValue = (p: (typeof held)[number], col: HeldCol): number | string => {
+    switch (col) {
+      case 'ticker': return p.ticker;
+      case 'shares': return p.shares;
+      case 'estPerShare': return estimates[p.ticker] || 0;
+      case 'projected': return (estimates[p.ticker] || 0) * p.shares;
+    }
+  };
+  const { sorted: sortedHeld, Th: HeldTh } = useSortableRows(held, heldSortValue, 'ticker', 'asc');
+
   return (
     <div>
       <h3>Add dividend</h3>
@@ -170,9 +182,9 @@ export function DividendsSection() {
           <p className="footer-note">Enter an estimated annual per-share dividend rate for each held ticker; projection = rate × shares held.</p>
           <div className="table-scroll">
             <table>
-              <thead><tr><th>Ticker</th><th>Shares</th><th>Est. annual/share</th><th>Projected annual</th></tr></thead>
+              <thead><tr><HeldTh col="ticker">Ticker</HeldTh><HeldTh col="shares">Shares</HeldTh><HeldTh col="estPerShare">Est. annual/share</HeldTh><HeldTh col="projected">Projected annual</HeldTh></tr></thead>
               <tbody>
-                {held.map((p) => (
+                {sortedHeld.map((p) => (
                   <tr key={p.ticker}>
                     <td>{p.ticker}</td>
                     <td>{fmt(p.shares, 0)}</td>

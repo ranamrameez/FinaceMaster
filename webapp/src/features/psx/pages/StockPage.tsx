@@ -40,13 +40,14 @@ function TickerTransactions({ ticker }: { ticker: string }) {
   const filteredRows = workbook.transactions
     .map((tx, i) => ({ tx, i }))
     .filter((r) => r.tx.ticker === ticker);
-  type Col = 'date' | 'action' | 'shares' | 'price' | 'cost';
+  type Col = 'date' | 'action' | 'shares' | 'price' | 'cost' | 'fee';
   const sortValue = (r: (typeof filteredRows)[number], col: Col): number | string => {
     switch (col) {
       case 'action': return r.tx.action;
       case 'shares': return r.tx.shares;
       case 'price': return r.tx.price;
       case 'cost': return r.tx.shares * r.tx.price;
+      case 'fee': return calcFee(r.tx.shares * r.tx.price, r.tx.action === 'BUY', { shares: r.tx.shares, tx: r.tx });
       default: return r.tx.date;
     }
   };
@@ -110,7 +111,7 @@ function TickerTransactions({ ticker }: { ticker: string }) {
       <div className="table-scroll">
         <table>
           <thead>
-            <tr><Th col="date">Date</Th><Th col="action">Action</Th><Th col="shares">Shares</Th><Th col="price">Price</Th><Th col="cost">Cost</Th><th>Fee</th><th></th></tr>
+            <tr><Th col="date">Date</Th><Th col="action">Action</Th><Th col="shares">Shares</Th><Th col="price">Price</Th><Th col="cost">Cost</Th><Th col="fee">Fee</Th><th></th></tr>
           </thead>
           <tbody>
             {rows.map(({ tx, i }) =>

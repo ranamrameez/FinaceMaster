@@ -244,7 +244,7 @@ function TransactionList() {
   const tickers = useMemo(() => [...new Set(workbook.transactions.map((t) => t.ticker))].sort(), [workbook.transactions]);
 
   const filtered = filterTicker === 'ALL' ? indexed : indexed.filter((r) => r.tx.ticker === filterTicker);
-  type TxCol = 'date' | 'ticker' | 'action' | 'shares' | 'price' | 'amount';
+  type TxCol = 'date' | 'ticker' | 'action' | 'shares' | 'price' | 'amount' | 'fee';
   const sortValue = (r: (typeof filtered)[number], col: TxCol): number | string => {
     switch (col) {
       case 'ticker': return r.tx.ticker;
@@ -252,6 +252,7 @@ function TransactionList() {
       case 'shares': return r.tx.shares;
       case 'price': return r.tx.price;
       case 'amount': return r.tx.shares * r.tx.price;
+      case 'fee': return calcFee(r.tx.shares * r.tx.price, r.tx.action === 'BUY', { shares: r.tx.shares, tx: r.tx });
       default: return r.tx.date;
     }
   };
@@ -330,7 +331,7 @@ function TransactionList() {
               <Th col="shares">Shares</Th>
               <Th col="price">Price</Th>
               <Th col="amount">Amount</Th>
-              <th>Fee</th>
+              <Th col="fee">Fee</Th>
               <th></th>
             </tr>
           </thead>
