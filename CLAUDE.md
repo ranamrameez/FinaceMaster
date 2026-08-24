@@ -2250,15 +2250,39 @@ not developer notes) continuously as features ship.
   parent's title" pattern being fixed. Verified via an `h3`-text sweep (each label now appears
   exactly once) plus a screenshot confirming the multi-card section is unflattened. `npx tsc
   -b` / `npm run test` (255 tests, unchanged) / `npm run build` all clean.
-- **Still open, not yet started**: icon-only buttons with tooltips on every other module
-  (Cash/Bank/Personal Loans/EMI/Funds/Rentals/Subscriptions/Transfers all still have
-  full-text Edit/Delete buttons — `IconButton` from Done item 113 is ready to reuse there),
-  and a batch of larger deferred redesign items (multi-theme stat-card-color audit,
-  Ticker+logo+name/Cost/Value/P-L column grouping standard everywhere, side-by-side layout
-  instead of scrolling, full Portfolio page overhaul, using unused right-side page space) to
-  be documented as scoped README Pending items rather than attempted blind — this is the next
-  piece of work. Continue working down the README's Pending list per the standing auto-commit
-  instruction.
+- **"Colour cards only belong to one theme" fixed — a real bug, not a design tweak
+  (2026-08-24) — see README Done item 115.** Confirmed via a before/after screenshot across 4
+  themes first: every Dashboard stat card in every non-wine theme rendered the exact same
+  near-flat tint, zero visible difference between cards. Root cause: a later
+  `html:not([data-color="wine"]) .card.stat-card, .card.chart-card{background:...
+  --accent-soft...}` rule (added to tone down an earlier, more saturated per-theme treatment)
+  applied one flat, hue-blind gradient to every stat card in every non-wine theme, completely
+  overriding the `--card-hue`-driven per-card coloring `StatCard`'s `hue` prop already
+  provides everywhere else — wine was the only theme that never went through this override,
+  so it was the only one where the existing hue rollout (Done items 32/38/43/88) was actually
+  visible. Fixed by splitting `.card.stat-card` out from `.card.chart-card` (no per-card hue,
+  keeps the old flat tint) in both this rule and its Material light/dark duplicate, giving
+  stat-card the same `--card-hue` gradient formula the base rule already used. **Third
+  instance this session of the same bug class**: a later, broader CSS rule silently
+  overriding an earlier, more specific feature because nobody reconciled the two when the
+  later one was added (see the chip-contrast and checkbox-label-uppercase fixes above) — worth
+  treating as a standing suspicion whenever a "should be working but isn't" visual report
+  comes in: grep for every rule touching the same property on the same selector, not just the
+  one that looks most related. `npx tsc -b` / `npm run test` (255 tests, unchanged) / `npm run
+  build` all clean.
+- **Remaining deferred items documented in README (2026-08-24) — see README Pending items
+  56/57, item 64 of this batch.** Item 12 (a real, multi-part Portfolio page redesign — CGT
+  showing 0, missing chart labels, layout restructuring into left/right stacks, full-width
+  price input) and item 11 (side-by-side layout instead of scrolling, overlapping with the
+  existing "utilize page space" item 54) are now real Pending entries with their own numbers
+  rather than only living in this file's prose. **This closes the entire 18-item UI/UX
+  feedback batch** — every item from the original screenshot and both follow-up messages is
+  now either shipped (see Done items 108-115) or a scoped Pending entry ready for its own
+  session. Next up per the README's own Pending list, per the standing auto-commit
+  instruction: icon-only buttons with tooltips on every other module (Cash/Bank/Personal
+  Loans/EMI/Funds/Rentals/Subscriptions/Transfers still have full-text Edit/Delete —
+  `IconButton` from Done item 113 is ready to reuse), or any other Pending item — no specific
+  priority order requested beyond what's already in the README.
 
 ## Live URLs
 

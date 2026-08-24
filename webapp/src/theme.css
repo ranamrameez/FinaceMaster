@@ -1149,20 +1149,42 @@
    above regardless of theme. Both box-shadows below reference the same
    --shadow-card token as every other card, rather than their own
    near-identical literal numbers — the two blocks now only actually
-   differ in the gradient's accent-soft ratio (8% vs 6%). */
-html:not([data-color="wine"]) .card.stat-card,
+   differ in the gradient's accent-soft ratio (8% vs 6%).
+
+   User-reported (item 6): "colour cards only belong to one theme" — every
+   .stat-card everywhere else in the app gets an individual --card-hue
+   color (see StatCard's own `hue` prop and lib/statCardHues.ts), but THIS
+   rule's flat `--accent-soft`-only gradient applied to every stat card
+   regardless of its hue, in every theme except wine (which never goes
+   through this override at all, since it's excluded here) — so wine was
+   the only theme where different stat cards actually looked different
+   colors from each other; every other theme silently flattened them all
+   to the same washed-out tint. Split stat-card out from chart-card (which
+   has no per-card hue and keeps the old flat tint) and give it the same
+   --card-hue-driven gradient formula the base `.stat-card` rule already
+   uses, so hue differentiation survives in every color theme, not just
+   Classic. */
 html:not([data-color="wine"]) .card.chart-card{
   border:0;
   box-shadow:var(--shadow-card);
   background:linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 8%, var(--panel)), var(--panel) 60px);
 }
-html[data-color^="material-"][data-theme="light"] .card.stat-card,
-html[data-color^="material-"][data-theme="dark"] .card.stat-card,
+html:not([data-color="wine"]) .card.stat-card{
+  border:0;
+  box-shadow:var(--shadow-card);
+  background:linear-gradient(135deg, color-mix(in srgb, var(--card-hue, var(--accent)) 16%, var(--panel)) 0%, var(--panel) 100%);
+}
 html[data-color^="material-"][data-theme="light"] .card.chart-card,
 html[data-color^="material-"][data-theme="dark"] .card.chart-card{
   border:0;
   box-shadow:var(--shadow-card);
   background:linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 6%, var(--panel)), var(--panel) 60px);
+}
+html[data-color^="material-"][data-theme="light"] .card.stat-card,
+html[data-color^="material-"][data-theme="dark"] .card.stat-card{
+  border:0;
+  box-shadow:var(--shadow-card);
+  background:linear-gradient(135deg, color-mix(in srgb, var(--card-hue, var(--accent)) 16%, var(--panel)) 0%, var(--panel) 100%);
 }
 
 /* Fields get the same whisper of color the cards get — background only,

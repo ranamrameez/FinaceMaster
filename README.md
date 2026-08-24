@@ -2132,6 +2132,28 @@ FinanceManager live link:
      both follow-up messages** — what remains is the batch of larger, deliberately-deferred
      redesign items tracked below.
 
+115. **"Colour cards only belong to one theme" (item 6) fixed — a real, root-caused bug,
+     not a design tweak (2026-08-24).** Confirmed the premise first via a before/after
+     screenshot across wine/Material Blue/Ocean/dark Material Blue rather than assuming: in
+     every theme except wine, every Dashboard stat card rendered the exact same near-flat
+     tint, with zero visible difference between "Net Worth"'s color and "Total Fees"'s
+     color. Root cause: a later `html:not([data-color="wine"]) .card.stat-card,
+     .card.chart-card{background:linear-gradient(...--accent-soft...)}` rule (added to tone
+     down an earlier, more saturated per-theme card treatment) applied the exact same flat,
+     hue-blind gradient to every stat card in every non-wine theme, completely overriding the
+     `--card-hue`-driven per-card coloring `StatCard`'s own `hue` prop and
+     `lib/statCardHues.ts` already provide everywhere else — wine was the only theme that
+     never went through this override at all, so it was the only one where the hue rollout's
+     work (README Done items 32/38/43/88) was actually visible. Fixed by splitting
+     `.card.stat-card` out from `.card.chart-card` in both this rule and its Material
+     light/dark-specific duplicate, and giving stat-card the same `--card-hue`-based gradient
+     formula the base (wine-only-reachable) `.stat-card` rule already used — chart-card (which
+     has no per-card hue) keeps the original flat tint unchanged. Verified via a real
+     before/after screenshot comparison across all 4 themes tested — every theme now shows
+     the same distinct per-card colors wine always had. `npx tsc -b` / `npm run test` (255
+     tests, unchanged) / `npm run build` all clean; a 23-page console-error sweep found zero
+     regressions.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`
@@ -2341,6 +2363,24 @@ item 103) — all three now fixed, see Done item 104:**
     specifically, but the broader ask ("serve all kinds of users, not just pros") implies
     auditing labels/copy across every module for jargon that could be plain-language instead
     of just tooltipped, which hasn't been attempted yet.
+56. **Portfolio page overhaul (2026-08-24, item 12 of the original screenshot batch) — a real,
+    multi-part redesign, deliberately not attempted piecemeal.** The user's own list, verbatim:
+    no live market data makes the price chart too big/almost flat from scaling; CGT shows 0 in
+    the current-position card; the current-position card is missing some of the attributes it
+    should show; the chart is missing sold-price and break-even reference labels; the chart may
+    need resizing; charts and the "price range" stats should move to a right-hand stack while
+    other stats stay on the left; the "current price" input is full-width, which reads badly;
+    P/L and stat cards should be meaningful colored-background cards (this last part is now
+    partially covered by Done item 88's `--card-hue` rollout — worth re-checking against the
+    live page before assuming it's still a gap). This needs a real design pass against the live
+    Portfolio page (not a guess from the description alone) before touching layout — several of
+    these interact (e.g. moving stats to a right stack changes how much width the chart gets,
+    which changes whether it still looks "too big/flat").
+57. Side-by-side layout instead of vertical scrolling (2026-08-24, item 11 of the original
+    screenshot batch: "We can show UI components side by side instead of scrolling to see one
+    by one"). Overlaps with Pending item 54's "utilize page space" right-rail idea and item 56's
+    Portfolio-specific left/right stack ask above — likely the same underlying information-
+    architecture work rather than three separate passes, but not yet scoped as one.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank
