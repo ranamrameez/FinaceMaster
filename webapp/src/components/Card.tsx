@@ -75,9 +75,17 @@ export function CollapsibleCard({
   );
 }
 
-export function StatCard({ label, value, sub, title }: { label: string; value: string; sub?: string; title?: string }) {
+/** `hue` sets the `--card-hue` custom property `.stat-card`'s own CSS
+ * already reads for its left-border accent and background tint — that CSS
+ * existed but nothing ever set the variable, so every stat card silently
+ * fell back to the same plain `--accent` color regardless of what it
+ * showed (a real user-reported "hard to visually tell cards apart"
+ * complaint). Pass any CSS color (a hex from a shared palette, or
+ * `var(--profit)`/`var(--loss)` for a P/L-sign-driven stat) to give a
+ * card its own identity; omit it to keep the old single-color look. */
+export function StatCard({ label, value, sub, title, hue }: { label: string; value: string; sub?: string; title?: string; hue?: string }) {
   return (
-    <div className="card stat-card">
+    <div className="card stat-card" style={hue ? ({ '--card-hue': hue } as CSSProperties) : undefined}>
       <div className="label">{label}</div>
       <div className="value" title={title}>{value}</div>
       {sub && <div className="sub">{sub}</div>}

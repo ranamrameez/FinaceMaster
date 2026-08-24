@@ -1,8 +1,13 @@
 :root{
-    --bg:#0b0e11;
-    --panel:#12161b;
-    --panel-2:#171c22;
-    --border:#232b33;
+    /* User-reported: dark mode's page background and its panels sat too
+       close in lightness to read as separate surfaces ("hard to distinct
+       UI components"). Lifted all three a step while keeping the same
+       bg < panel < panel-2 ordering, so panels visibly "pop" off the page
+       instead of blending into a single near-black field. */
+    --bg:#15181d;
+    --panel:#1c2129;
+    --panel-2:#232a33;
+    --border:#2d3640;
     --text:#e8ecef;
     --muted:#8a97a3;
     --accent:#3d4b58;
@@ -21,10 +26,13 @@
     --body:'Inter',sans-serif;
   }
   :root[data-theme="light"]{
-    --bg:#eef0f3;
+    /* Same reasoning as the dark palette above — a touch greyer than the
+       previous near-white page background, so white panels stand out
+       more clearly as distinct surfaces. */
+    --bg:#e6e9ed;
     --panel:#ffffff;
     --panel-2:#f4f5f7;
-    --border:#dde1e6;
+    --border:#d3d8de;
     --text:#1b2027;
     --muted:#667085;
     --accent:#33414d;

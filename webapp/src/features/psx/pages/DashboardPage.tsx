@@ -131,17 +131,17 @@ export function DashboardPage() {
       <h1 className="pagetitle">PSX Dashboard</h1>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
-        <StatCard label="Net Worth" value={fmtMoneyCompact(summary.netWorth, currency)} title={fmtMoney(summary.netWorth, currency)} />
-        <StatCard label="Cash Balance" value={fmtMoneyCompact(summary.cashBalance, currency)} title={fmtMoney(summary.cashBalance, currency)} />
-        <StatCard label="Portfolio Value" value={fmtMoneyCompact(summary.portfolioValue, currency)} title={fmtMoney(summary.portfolioValue, currency)} />
-        <StatCard label="Realized P/L" value={fmtMoneyCompact(summary.realizedPL, currency)} title={fmtMoney(summary.realizedPL, currency)} />
-        <StatCard label="Unrealized P/L" value={fmtMoneyCompact(summary.unrealizedPL, currency)} title={fmtMoney(summary.unrealizedPL, currency)} />
-        <StatCard label="Net P/L" value={fmtMoneyCompact(summary.netPL, currency)} title={fmtMoney(summary.netPL, currency)} />
-        <StatCard label="Total Deposits" value={fmtMoneyCompact(summary.totalInward, currency)} title={fmtMoney(summary.totalInward, currency)} />
-        <StatCard label="Total Fees" value={fmtMoneyCompact(summary.totalCharges, currency)} title={fmtMoney(summary.totalCharges, currency)} />
-        <StatCard label="Rewards" value={fmtMoneyCompact(summary.totalRewards, currency)} title={fmtMoney(summary.totalRewards, currency)} />
-        <StatCard label="Open Positions" value={fmt(rows.length, 0)} />
-        <StatCard label="Portfolio ROI" value={`${portfolioROIPct.toFixed(1)}%`} />
+        <StatCard label="Net Worth" value={fmtMoneyCompact(summary.netWorth, currency)} title={fmtMoney(summary.netWorth, currency)} hue={INVEST_PALETTE[3]} />
+        <StatCard label="Cash Balance" value={fmtMoneyCompact(summary.cashBalance, currency)} title={fmtMoney(summary.cashBalance, currency)} hue={INVEST_PALETTE[7]} />
+        <StatCard label="Portfolio Value" value={fmtMoneyCompact(summary.portfolioValue, currency)} title={fmtMoney(summary.portfolioValue, currency)} hue={INVEST_PALETTE[6]} />
+        <StatCard label="Realized P/L" value={fmtMoneyCompact(summary.realizedPL, currency)} title={fmtMoney(summary.realizedPL, currency)} hue={summary.realizedPL >= 0 ? 'var(--profit)' : 'var(--loss)'} />
+        <StatCard label="Unrealized P/L" value={fmtMoneyCompact(summary.unrealizedPL, currency)} title={fmtMoney(summary.unrealizedPL, currency)} hue={summary.unrealizedPL >= 0 ? 'var(--profit)' : 'var(--loss)'} />
+        <StatCard label="Net P/L" value={fmtMoneyCompact(summary.netPL, currency)} title={fmtMoney(summary.netPL, currency)} hue={summary.netPL >= 0 ? 'var(--profit)' : 'var(--loss)'} />
+        <StatCard label="Total Deposits" value={fmtMoneyCompact(summary.totalInward, currency)} title={fmtMoney(summary.totalInward, currency)} hue={INVEST_PALETTE[1]} />
+        <StatCard label="Total Fees" value={fmtMoneyCompact(summary.totalCharges, currency)} title={fmtMoney(summary.totalCharges, currency)} hue={INVEST_PALETTE[4]} />
+        <StatCard label="Rewards" value={fmtMoneyCompact(summary.totalRewards, currency)} title={fmtMoney(summary.totalRewards, currency)} hue={INVEST_PALETTE[2]} />
+        <StatCard label="Open Positions" value={fmt(rows.length, 0)} hue={INVEST_PALETTE[0]} />
+        <StatCard label="Portfolio ROI" value={`${portfolioROIPct.toFixed(1)}%`} hue={portfolioROIPct >= 0 ? 'var(--profit)' : 'var(--loss)'} />
       </div>
 
       <HoldingsCard />
