@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
+import { CollapsibleCard } from '../../../components/Card';
 import { SaveIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { breakEvenPrice, computePriceStats, getMarketPrice } from '../../../lib/calc';
@@ -75,7 +76,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
     <div>
       {/* Daily price — the single most-asked-about number, so it leads
           instead of being buried under other sections. */}
-      <h4 style={{ marginTop: 0 }}>Daily price</h4>
+      <CollapsibleCard title={<h4 style={{ margin: 0 }}>Daily price</h4>} style={{ marginBottom: 12 }}>
       {stats ? (
         <CompactChart height={130}>
           <Line
@@ -122,10 +123,10 @@ export function PositionDetail({ ticker }: { ticker: string }) {
         />
         <button className="btn secondary small" onClick={commitPrice}><SaveIcon size={12} />Save price</button>
       </div>
+      </CollapsibleCard>
 
       {isOpen && (
-        <>
-          <h4 style={{ marginTop: 16 }}>Current position</h4>
+        <CollapsibleCard title={<h4 style={{ margin: 0 }}>Current position</h4>} style={{ marginBottom: 12 }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px,1fr))', gap: 8 }}>
             <div className="stat-card card"><div className="label">Shares</div><div className="value">{fmt(shares, 0)}</div></div>
             <div className="stat-card card"><div className="label">Avg cost</div><div className="value">{fmtPrice(avg)}</div></div>
@@ -154,7 +155,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
               />
             </CompactChart>
           </div>
-        </>
+        </CollapsibleCard>
       )}
 
       {/* All-time stats: the thing closed positions were missing entirely —
@@ -163,8 +164,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
           realized, and over what period) is exactly what you'd want to
           look back on. */}
       {position && (position.buyCount > 0 || position.sellCount > 0) && (
-        <>
-          <h4 style={{ marginTop: 16 }}>All-time stats</h4>
+        <CollapsibleCard title={<h4 style={{ margin: 0 }}>All-time stats</h4>} style={{ marginBottom: 12 }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px,1fr))', gap: 8 }}>
             <div className="stat-card card"><div className="label">Total bought</div><div className="value">{fmt(position.totalBoughtShares, 0)}</div><div className="sub">{position.buyCount} buys</div></div>
             <div className="stat-card card"><div className="label">Total sold</div><div className="value">{fmt(position.totalSoldShares, 0)}</div><div className="sub">{position.sellCount} sells</div></div>
@@ -180,12 +180,11 @@ export function PositionDetail({ ticker }: { ticker: string }) {
             <div className="stat-card card"><div className="label">Last trade</div><div className="value" style={{ fontSize: 13 }}>{position.lastDate}</div></div>
             {!isOpen && <div className="stat-card card"><div className="label">Held</div><div className="value">{holdingDays}d</div></div>}
           </div>
-        </>
+        </CollapsibleCard>
       )}
 
       {stats && (
-        <>
-          <h4 style={{ marginTop: 16 }}>Price range</h4>
+        <CollapsibleCard title={<h4 style={{ margin: 0 }}>Price range</h4>}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 8 }}>
             <div className="stat-card card"><div className="label">Lowest</div><div className="value">{fmtPrice(stats.min)}</div><div className="sub">{stats.minDate}</div></div>
             <div className="stat-card card" title="A simple fair-value estimate: the middle price across every update you've recorded for this ticker.">
@@ -207,7 +206,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
               </table>
             </div>
           </details>
-        </>
+        </CollapsibleCard>
       )}
     </div>
   );

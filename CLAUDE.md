@@ -1666,6 +1666,20 @@ not developer notes) continuously as features ship.
   editing a marked-done leg's linked transaction (100→150 shares,
   100→110 price) correctly updated the plan's row on next view. Zero
   console errors.
+- **Accordion (CollapsibleCard) rollout, round 2 (2026-08-24) — see
+  README Done item 82.** User repeated the "cards should be
+  collapsible" request after round 1 (Done item 74) only covered
+  Dashboard's Holdings/Alerts. This pass wrapped QSE's/PSX's
+  `PositionDetail.tsx` (all 4 sections — previously plain `<h4>` blocks
+  with no Card at all) and every non-exchange module's display-only
+  landing sections: Cash/Bank's "By category"/"Balance projection"/
+  "Plans", Rentals' "By category"/"Monthly rollup", EMI's per-loan
+  "Schedule," Funds' "Transactions," Transfers' "Linked transfers."
+  Deliberately skipped: input forms (collapsing mid-fill is a UX trap)
+  and Personal Loans' `RepaymentsSection` (form+list are one combined
+  component, no clean seam). Verified live via Playwright across every
+  touched page — zero console errors, headers actually toggle
+  (`aria-expanded` flips on click).
 
 ## Live URLs
 

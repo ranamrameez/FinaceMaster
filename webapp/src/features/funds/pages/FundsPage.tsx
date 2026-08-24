@@ -1,6 +1,6 @@
 import type { User } from 'firebase/auth';
 import { useRef, useState } from 'react';
-import { Card, MoneyValue } from '../../../components/Card';
+import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
@@ -338,7 +338,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
         <button className="btn" onClick={submitTx}><PlusIcon />Add</button>
       </div>
 
-      <h3>Transactions</h3>
+      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Transactions</h3>}>
       <div className="table-scroll">
         <table>
           <thead><tr><th>Date</th><th>Type</th><th>Units</th><th>NAV</th><th>Amount</th><th></th></tr></thead>
@@ -386,6 +386,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
           </tbody>
         </table>
       </div>
+      </CollapsibleCard>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import type { User } from 'firebase/auth';
 import { useState } from 'react';
-import { Card, MoneyValue } from '../../../components/Card';
+import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
@@ -247,7 +247,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
         )}
       </Card>
 
-      <h3>Schedule (next 12 installments from today)</h3>
+      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Schedule (next 12 installments from today)</h3>}>
       <div className="table-scroll">
         <table>
           <thead>
@@ -271,6 +271,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
           </tbody>
         </table>
       </div>
+      </CollapsibleCard>
     </div>
   );
 }

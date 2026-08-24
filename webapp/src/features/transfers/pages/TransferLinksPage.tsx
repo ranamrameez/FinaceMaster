@@ -1,6 +1,6 @@
 import type { User } from 'firebase/auth';
 import { useState } from 'react';
-import { Card } from '../../../components/Card';
+import { Card, CollapsibleCard } from '../../../components/Card';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
@@ -344,10 +344,9 @@ export function TransferLinksPage({
         wired up yet.
       </p>
       <CreateLinkForm />
-      <Card>
-        <h3 style={{ marginTop: 0 }}>Linked transfers</h3>
+      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Linked transfers</h3>}>
         <LinksList />
-      </Card>
+      </CollapsibleCard>
       {firebaseReady && (
         <Card style={{ marginTop: 16 }}>
           <h3 style={{ marginTop: 0 }}>Account</h3>

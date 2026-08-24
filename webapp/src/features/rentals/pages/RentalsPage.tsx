@@ -1,6 +1,6 @@
 import type { User } from 'firebase/auth';
 import { useMemo, useRef, useState } from 'react';
-import { Card, MoneyValue } from '../../../components/Card';
+import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { Modal } from '../../../components/Modal';
@@ -623,8 +623,7 @@ function CategoryAndRollup({ property }: { property: Property }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px,1fr))', gap: 16, marginBottom: 16 }}>
       {cats.length > 0 && (
-        <Card>
-          <h3 style={{ marginTop: 0 }}>By category</h3>
+        <CollapsibleCard title={<h3 style={{ margin: 0 }}>By category</h3>}>
           <div className="table-scroll">
             <table>
               <tbody>
@@ -637,11 +636,10 @@ function CategoryAndRollup({ property }: { property: Property }) {
               </tbody>
             </table>
           </div>
-        </Card>
+        </CollapsibleCard>
       )}
       {rollup.length > 0 && (
-        <Card>
-          <h3 style={{ marginTop: 0 }}>Monthly rollup</h3>
+        <CollapsibleCard title={<h3 style={{ margin: 0 }}>Monthly rollup</h3>}>
           <div className="table-scroll">
             <table>
               <thead><tr><th>Month</th><th>Income</th><th>Expense</th><th>Net</th></tr></thead>
@@ -657,7 +655,7 @@ function CategoryAndRollup({ property }: { property: Property }) {
               </tbody>
             </table>
           </div>
-        </Card>
+        </CollapsibleCard>
       )}
     </div>
   );

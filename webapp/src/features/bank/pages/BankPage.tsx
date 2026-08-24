@@ -1,6 +1,6 @@
 import type { User } from 'firebase/auth';
 import { useMemo, useRef, useState } from 'react';
-import { Card, MoneyValue } from '../../../components/Card';
+import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { Modal } from '../../../components/Modal';
@@ -458,8 +458,7 @@ function CategoryBreakdown({ account }: { account: BankAccount }) {
   if (!cats.length) return null;
 
   return (
-    <Card style={{ marginBottom: 16 }}>
-      <h3 style={{ marginTop: 0 }}>By category</h3>
+    <CollapsibleCard title={<h3 style={{ margin: 0 }}>By category</h3>} style={{ marginBottom: 16 }}>
       <div className="table-scroll">
         <table>
           <tbody>
@@ -472,7 +471,7 @@ function CategoryBreakdown({ account }: { account: BankAccount }) {
           </tbody>
         </table>
       </div>
-    </Card>
+    </CollapsibleCard>
   );
 }
 
@@ -737,8 +736,7 @@ function BalanceProjectionSummary() {
   const codes = Object.keys(projection);
 
   return (
-    <Card style={{ marginBottom: 16 }}>
-      <h3 style={{ marginTop: 0 }}>Balance projection</h3>
+    <CollapsibleCard title={<h3 style={{ margin: 0 }}>Balance projection</h3>} style={{ marginBottom: 16 }}>
       <p className="footer-note" style={{ marginTop: 0 }}>
         See what your total balance would look like if every plan below actually happened — a reality check
         before you spend. Choose what you want to see:
@@ -772,7 +770,7 @@ function BalanceProjectionSummary() {
           ))}
         </div>
       )}
-    </Card>
+    </CollapsibleCard>
   );
 }
 
@@ -857,8 +855,7 @@ function BankPlanList({ account }: { account: BankAccount }) {
   };
 
   return (
-    <Card>
-      <h3 style={{ marginTop: 0 }}>Plans</h3>
+    <CollapsibleCard title={<h3 style={{ margin: 0 }}>Plans</h3>}>
       <div className="table-scroll">
         <table>
           <thead>
@@ -906,7 +903,7 @@ function BankPlanList({ account }: { account: BankAccount }) {
           </tbody>
         </table>
       </div>
-    </Card>
+    </CollapsibleCard>
   );
 }
 
