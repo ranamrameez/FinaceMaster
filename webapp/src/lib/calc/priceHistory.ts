@@ -37,15 +37,28 @@ export function getDailyPriceHistory(ticker: string, priceHistory: Record<string
   return order.map((date) => ({ date, price: byDay[date] }));
 }
 
-/** Lowest / median / highest across every daily price on record for a
- * ticker — "is this cheap or expensive relative to its own recent range."
- * Ported 1:1 from the legacy `computePriceStats()`. */
+/** Lowest / median / highest, and the trend line, across every price
+ * update on record for a ticker — "is this cheap or expensive relative to
+ * its own recent range." **Computed from the raw (per-update) log, not
+ * the day-collapsed one** — a real bug (2026-08-24): a user updating a
+ * price several times over one trading day had every stat here silently
+ * collapse to that day's *last* update only, since `getDailyPriceHistory`
+ * keeps just one point per calendar day. Lowest/median/highest all showed
+ * the identical value, and the trend chart plotted a single flat point —
+ * both read as "the graph isn't picking up today's prices" even though
+ * every update really was recorded (visible in `recent`, which was
+ * already raw-based). Sorting by real timestamp (falling back to date
+ * when `time` is absent — old data recorded before `time` was tracked)
+ * means a ticker updated many times in one day now shows genuine
+ * intraday movement, while a ticker updated once a day still renders
+ * exactly as before (raw and daily are identical in that case). */
 export function computePriceStats(ticker: string, priceHistory: Record<string, PricePoint[]>): PriceStats | null {
   const raw = getPriceHistory(ticker, priceHistory);
   const daily = getDailyPriceHistory(ticker, priceHistory);
-  if (!daily.length) return null;
+  if (!raw.length) return null;
 
-  const sorted = [...daily].sort((a, b) => a.price - b.price);
+  const chronological = [...raw].sort((a, b) => (a.time || a.date).localeCompare(b.time || b.date));
+  const sorted = [...raw].sort((a, b) => a.price - b.price);
   const mid =
     sorted.length % 2 === 0
       ? (sorted[sorted.length / 2 - 1].price + sorted[sorted.length / 2].price) / 2
@@ -61,7 +74,7 @@ export function computePriceStats(ticker: string, priceHistory: Record<string, P
     median: mid,
     count: daily.length,
     totalUpdates: raw.length,
-    recent: [...raw].sort((a, b) => (a.time || a.date).localeCompare(b.time || b.date)).slice(-8).reverse(),
-    chronological: [...daily].sort((a, b) => a.date.localeCompare(b.date)),
+    recent: [...chronological].slice(-8).reverse(),
+    chronological,
   };
 }
