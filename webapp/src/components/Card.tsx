@@ -102,10 +102,36 @@ export function CollapsibleCard({
  * complaint). Pass any CSS color (a hex from a shared palette, or
  * `var(--profit)`/`var(--loss)` for a P/L-sign-driven stat) to give a
  * card its own identity; omit it to keep the old single-color look. */
-export function StatCard({ label, value, sub, title, hue }: { label: string; value: string; sub?: string; title?: string; hue?: string }) {
+export function StatCard({
+  label,
+  value,
+  sub,
+  title,
+  labelTitle,
+  hue,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  title?: string;
+  /** Tooltip on the LABEL instead of the value — for explaining a jargon-y
+   * term (e.g. "Break-even", "Recovery needed") rather than showing a
+   * value's full precision, which is what the existing `title` prop is
+   * for (kept separate rather than overloading one prop for two different
+   * jobs, since existing `title` call sites all mean "precision on the
+   * value" and shouldn't suddenly render as a label explanation). */
+  labelTitle?: string;
+  hue?: string;
+}) {
   return (
     <div className="card stat-card" style={hue ? ({ '--card-hue': hue } as CSSProperties) : undefined}>
-      <div className="label">{label}</div>
+      {labelTitle ? (
+        <Tooltip text={labelTitle}>
+          <div className="label" style={{ cursor: 'pointer' }}>{label}</div>
+        </Tooltip>
+      ) : (
+        <div className="label">{label}</div>
+      )}
       {title ? (
         <Tooltip text={title}>
           <div className="value">{value}</div>

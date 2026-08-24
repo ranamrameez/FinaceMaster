@@ -19,64 +19,60 @@ import { usePSXDerived } from '../hooks/usePSXDerived';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-function emptyLeg(defaultTicker = ''): TradePlanLeg {
-  return { date: today(), ticker: defaultTicker, action: 'BUY', shares: 0, price: 0 };
-}
-
 function NewPlanForm() {
   const addTradePlan = usePSXWorkbookStore((s) => s.addTradePlan);
   const ensureSignedIn = useEnsureSignedIn();
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
-  const [defaultTicker, setDefaultTicker] = useState('');
-  const [legs, setLegs] = useState<TradePlanLeg[]>([emptyLeg()]);
+  // User-reported: a plan is really meant for one ticker — "1 ticker may
+  // have plans but not vice versa." Simplified from an optional
+  // "default ticker" (a soft convenience that legs could still override)
+  // into a required, plan-level Ticker: every leg belongs to it, and the
+  // per-leg ticker input is gone entirely — one less field to fill in per
+  // row, and no way to end up with a mixed-ticker plan going forward.
+  const [ticker, setTicker] = useState('');
+
+  const [legs, setLegs] = useState<Omit<TradePlanLeg, 'ticker'>[]>([{ date: today(), action: 'BUY', shares: 0, price: 0 }]);
 
   const update = (i: number, patch: Partial<TradePlanLeg>) =>
     setLegs((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
 
-  // Most plans revolve around one ticker — set it once here and every leg
-  // (the initial one, and any added after) pre-fills with it. Only backfills
-  // a leg whose ticker is still blank, so a leg the user already typed a
-  // different ticker into is never silently overwritten.
-  const setDefaultTickerAndBackfill = (value: string) => {
-    setDefaultTicker(value);
-    setLegs((rs) => rs.map((r) => (r.ticker ? r : { ...r, ticker: value })));
-  };
-
   const save = async () => {
-    const valid = legs.filter((l) => l.ticker && l.shares > 0 && l.price > 0);
+    const valid = legs.filter((l) => l.shares > 0 && l.price > 0);
     if (!name.trim()) return toast('Give this plan a name.');
-    if (!valid.length) return toast('Add at least one complete leg (ticker, shares, price).');
+    if (!ticker.trim()) return toast('Pick a ticker for this plan.');
+    if (!valid.length) return toast('Add at least one complete leg (shares, price).');
     if (!(await ensureSignedIn('Sign in to save trade plans.'))) return;
+    const tickerUpper = ticker.trim().toUpperCase();
     const plan: TradePlan = {
       id: crypto.randomUUID(),
       name: name.trim(),
       createdAt: today(),
       notes: notes.trim() || undefined,
-      legs: valid.map((l) => ({ ...l, ticker: l.ticker.toUpperCase() })),
-      defaultTicker: defaultTicker.trim() ? defaultTicker.trim().toUpperCase() : undefined,
+      legs: valid.map((l) => ({ ...l, ticker: tickerUpper })),
+      defaultTicker: tickerUpper,
     };
     addTradePlan(plan);
     toast(`Saved plan "${plan.name}" with ${valid.length} leg${valid.length > 1 ? 's' : ''}.`);
     setName('');
     setNotes('');
-    setDefaultTicker('');
-    setLegs([emptyLeg()]);
+    setTicker('');
+    setLegs([{ date: today(), action: 'BUY', shares: 0, price: 0 }]);
   };
 
   return (
     <div className="card" style={{ padding: 12, marginBottom: 16 }}>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
         <Field label="Plan name" width={220}>
-          <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Q3 bank rotation" />
+          <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Q3 OGDC rotation" />
         </Field>
         <Field label="Notes (optional)" width={320}>
           <TextInput value={notes} onChange={(e) => setNotes(e.target.value)} />
         </Field>
-        <Field label="Default ticker (optional)" width={160}>
+        <Field label="Ticker" width={160} title="Every leg in this plan is for this one ticker — a plan is scoped to a single stock, though a stock can have several plans.">
           <TextInput
-            value={defaultTicker}
-            onChange={(e) => setDefaultTickerAndBackfill(e.target.value.toUpperCase())}
+            value={ticker}
+            onChange={(e) => setTicker(e.target.value.toUpperCase())}
             list={PSX_TICKER_DATALIST_ID}
             placeholder="e.g. QGTS"
           />
@@ -85,13 +81,6 @@ function NewPlanForm() {
       {legs.map((l, i) => (
         <div key={i} className="row" style={{ gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
           <input type="date" value={l.date} onChange={(e) => update(i, { date: e.target.value })} />
-          <input
-            placeholder="Ticker"
-            value={l.ticker}
-            onChange={(e) => update(i, { ticker: e.target.value.toUpperCase() })}
-            list={PSX_TICKER_DATALIST_ID}
-            style={{ width: 80 }}
-          />
           <select value={l.action} onChange={(e) => update(i, { action: e.target.value as 'BUY' | 'SELL' })}>
             <option value="BUY">BUY</option>
             <option value="SELL">SELL</option>
@@ -117,7 +106,7 @@ function NewPlanForm() {
         </div>
       ))}
       <div className="row" style={{ gap: 8 }}>
-        <button className="btn secondary" onClick={() => setLegs((rs) => [...rs, emptyLeg(defaultTicker)])}>
+        <button className="btn secondary" onClick={() => setLegs((rs) => [...rs, { date: today(), action: 'BUY', shares: 0, price: 0 }])}>
           <PlusIcon />Add leg
         </button>
         <button className="btn" onClick={save}>
@@ -288,26 +277,40 @@ function PlanCard({ plan }: { plan: TradePlan }) {
   const [editingMeta, setEditingMeta] = useState(false);
   const [name, setName] = useState(plan.name);
   const [notes, setNotes] = useState(plan.notes || '');
-  const [defaultTicker, setDefaultTicker] = useState(plan.defaultTicker || '');
+  // Plan-level ticker (user-reported: a plan is meant for a single ticker
+  // — "1 ticker may have plans but not vice versa"). Legacy plans without
+  // one (or, rarer, an old plan whose legs actually had mixed tickers
+  // before this constraint existed) fall back to the first leg's ticker
+  // so the field always shows something sensible to fix rather than a
+  // blank required field.
+  const [planTicker, setPlanTicker] = useState(plan.defaultTicker || plan.legs[0]?.ticker || '');
   const [editLegIndex, setEditLegIndex] = useState<number | null>(null);
   const [editLeg, setEditLeg] = useState<TradePlanLeg | null>(null);
-  const [addingLeg, setAddingLeg] = useState<TradePlanLeg | null>(null);
+  const [addingLeg, setAddingLeg] = useState<Omit<TradePlanLeg, 'ticker'> | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
 
   const addLeg = () => {
-    if (!addingLeg || !addingLeg.ticker || !addingLeg.shares || !addingLeg.price) {
-      return toast('Fill in ticker, shares, and price first.');
+    if (!addingLeg || !addingLeg.shares || !addingLeg.price) {
+      return toast('Fill in shares and price first.');
     }
-    updateTradePlan(plan.id, { legs: [...plan.legs, { ...addingLeg, ticker: addingLeg.ticker.toUpperCase() }] });
+    updateTradePlan(plan.id, { legs: [...plan.legs, { ...addingLeg, ticker: plan.defaultTicker || planTicker }] });
     toast('Leg added to plan.');
     setAddingLeg(null);
   };
 
   const saveMeta = () => {
+    const tickerUpper = planTicker.trim().toUpperCase();
+    if (!tickerUpper) return toast('This plan needs a ticker.');
     updateTradePlan(plan.id, {
       name: name.trim() || plan.name,
       notes: notes.trim() || undefined,
-      defaultTicker: defaultTicker.trim() ? defaultTicker.trim().toUpperCase() : undefined,
+      defaultTicker: tickerUpper,
+      // Changing the plan's ticker re-tickers every still-pending leg too —
+      // a plan can only ever have one ticker now, so there's no valid state
+      // where they'd disagree. Executed legs are left alone: they already
+      // created their own real Transaction with its own ticker, and
+      // rewriting the leg's snapshot afterward wouldn't change that.
+      legs: plan.legs.map((l) => (l.executed ? l : { ...l, ticker: tickerUpper })),
     });
     setEditingMeta(false);
   };
@@ -398,11 +401,11 @@ function PlanCard({ plan }: { plan: TradePlan }) {
       <TextInput value={name} onChange={(e) => setName(e.target.value)} />
       <TextInput value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes" />
       <TextInput
-        value={defaultTicker}
-        onChange={(e) => setDefaultTicker(e.target.value.toUpperCase())}
+        value={planTicker}
+        onChange={(e) => setPlanTicker(e.target.value.toUpperCase())}
         list={PSX_TICKER_DATALIST_ID}
-        placeholder="Default ticker"
-        style={{ width: 130 }}
+        placeholder="Ticker"
+        style={{ width: 100 }}
       />
       <button className="btn secondary small" onClick={saveMeta}><SaveIcon size={12} />Save</button>
       <button className="btn secondary small" onClick={() => setEditingMeta(false)}>Cancel</button>
@@ -410,9 +413,11 @@ function PlanCard({ plan }: { plan: TradePlan }) {
   ) : (
     <div>
       <strong>{plan.name}</strong>{' '}
+      {(plan.defaultTicker || plan.legs[0]?.ticker) && (
+        <span className="pill pill-info">{plan.defaultTicker || plan.legs[0]?.ticker}</span>
+      )}{' '}
       <span className="footer-note">
         {plan.createdAt} · {doneCount}/{plan.legs.length} executed
-        {plan.defaultTicker && <> · default ticker {plan.defaultTicker}</>}
       </span>
       {plan.notes && <p className="footer-note" style={{ margin: '4px 0 0' }}>{plan.notes}</p>}
     </div>
@@ -433,7 +438,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
           onClick={() => {
             setName(plan.name);
             setNotes(plan.notes || '');
-            setDefaultTicker(plan.defaultTicker || '');
+            setPlanTicker(plan.defaultTicker || plan.legs[0]?.ticker || '');
             setEditingMeta(true);
           }}
         >
@@ -486,7 +491,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
               if (editLegIndex === i && editLeg) return (
                 <tr key={i}>
                   <td><input type="date" value={editLeg.date} onChange={(e) => setEditLeg({ ...editLeg, date: e.target.value })} style={{ width: 130 }} /></td>
-                  <td><input value={editLeg.ticker} onChange={(e) => setEditLeg({ ...editLeg, ticker: e.target.value.toUpperCase() })} style={{ width: 70 }} /></td>
+                  <td>{editLeg.ticker}</td>
                   <td>
                     <select value={editLeg.action} onChange={(e) => setEditLeg({ ...editLeg, action: e.target.value as 'BUY' | 'SELL' })}>
                       <option value="BUY">BUY</option>
@@ -628,14 +633,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
             {addingLeg && (
               <tr>
                 <td><input type="date" value={addingLeg.date} onChange={(e) => setAddingLeg({ ...addingLeg, date: e.target.value })} style={{ width: 130 }} /></td>
-                <td>
-                  <input
-                    value={addingLeg.ticker}
-                    onChange={(e) => setAddingLeg({ ...addingLeg, ticker: e.target.value.toUpperCase() })}
-                    list={PSX_TICKER_DATALIST_ID}
-                    style={{ width: 70 }}
-                  />
-                </td>
+                <td>{plan.defaultTicker || planTicker}</td>
                 <td>
                   <select value={addingLeg.action} onChange={(e) => setAddingLeg({ ...addingLeg, action: e.target.value as 'BUY' | 'SELL' })}>
                     <option value="BUY">BUY</option>
@@ -658,7 +656,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
       </div>
 
       {!addingLeg && (
-        <button className="btn secondary small" style={{ marginTop: 8 }} onClick={() => setAddingLeg(emptyLeg(plan.defaultTicker))}>
+        <button className="btn secondary small" style={{ marginTop: 8 }} onClick={() => setAddingLeg({ date: today(), action: 'BUY', shares: 0, price: 0 })}>
           <PlusIcon size={12} />Add leg
         </button>
       )}

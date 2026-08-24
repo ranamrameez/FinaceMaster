@@ -1,4 +1,5 @@
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react';
+import { Tooltip } from '../Tooltip';
 
 /** Labeled form field wrapper — consistent label+control spacing instead of
  * ad-hoc inline styles scattered per page.
@@ -13,10 +14,15 @@ import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react
  * don't line up" bug). Anchoring to the bottom instead means every input's
  * bottom edge lands on the same line regardless of how tall its own label
  * happens to be. */
-export function Field({ label, children, width }: { label?: string; children: ReactNode; width?: number }) {
+/** `title` (optional, item 4: "tooltips still missing") wraps the label
+ * text in the same `Tooltip` popup used everywhere else in the app —
+ * a one-line addition here gives any `Field` call site a real tooltip
+ * for jargon-y labels (e.g. "Break-even", "CGT") without each page having
+ * to wire up its own `Tooltip` around the label by hand. */
+export function Field({ label, children, width, title }: { label?: string; children: ReactNode; width?: number; title?: string }) {
   return (
     <label style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 4, fontSize: 12, color: 'var(--muted)', width }}>
-      {label}
+      {title ? <Tooltip text={title}><span style={{ cursor: 'pointer' }}>{label}</span></Tooltip> : label}
       {children}
     </label>
   );

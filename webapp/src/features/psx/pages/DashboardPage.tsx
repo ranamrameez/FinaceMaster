@@ -223,7 +223,7 @@ export function DashboardPage() {
         </ChartCard>
       </div>
 
-      <CollapsibleCard style={{ marginTop: 16 }} title={<h3 style={{ margin: 0 }}>Alerts</h3>}>
+      <CollapsibleCard style={{ marginTop: 16 }} title={<h3 style={{ margin: 0 }}>Alerts</h3>} defaultOpen={false}>
         <AlertsBox />
       </CollapsibleCard>
 

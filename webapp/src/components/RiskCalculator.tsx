@@ -9,8 +9,9 @@ import {
 } from '../lib/calc/riskAnalysis';
 import { fmt, fmtMoney, fmtPrice } from '../lib/format';
 import type { FeeCalculator } from '../types/workbook';
-import { Card } from './Card';
+import { Card, StatCard } from './Card';
 import { Notice } from './Notice';
+import { Tooltip } from './Tooltip';
 import { Field, Select, TextInput } from './ui/Field';
 import { HUES, hueStyle } from '../lib/statCardHues';
 
@@ -50,7 +51,19 @@ export function RiskCalculator({
   const [currentPriceInput, setCurrentPriceInput] = useState(0);
   const [sharesInput, setSharesInput] = useState(0);
   const [avgInput, setAvgInput] = useState(0);
-  const [capital, setCapital] = useState(500);
+  // README item 1 (user-reported): a single "Additional capital" number
+  // couldn't model a real order — averaging down is usually a specific
+  // limit price, not necessarily today's live price. Replaced with a
+  // price/shares/amount trio, same 2-of-3 linked-input pattern already
+  // used by TradeCalculator's Buy price/New shares/Amount row: whichever
+  // field the user isn't actively typing into gets recalculated.
+  // `targetAmountInput` is a string (not a number) for the same reason
+  // TradeCalculator's Amount field is — a `.toFixed(2)`-formatted value
+  // re-set on every keystroke makes multi-digit typing impossible.
+  const [targetPrice, setTargetPrice] = useState(0);
+  const [targetShares, setTargetShares] = useState(0);
+  const [targetAmountInput, setTargetAmountInput] = useState('500');
+  const targetAmount = Number(targetAmountInput) || 0;
   const [target, setTarget] = useState(0);
   const [minProfit, setMinProfit] = useState(5);
   const [stressPct, setStressPct] = useState(10);
@@ -67,10 +80,13 @@ export function RiskCalculator({
   useEffect(() => {
     if (!row) return;
     const avg = row.shares > 0 ? Math.round((row.invested / row.shares) * 100) / 100 : 0;
-    setCurrentPriceInput(row.marketPrice || avg);
+    const price = row.marketPrice || avg;
+    setCurrentPriceInput(price);
     setSharesInput(Math.round(row.shares));
     setAvgInput(avg);
-    setCapital(500);
+    setTargetPrice(price);
+    setTargetAmountInput('500');
+    setTargetShares(price > 0 ? Math.floor(500 / price) : 0);
     setMinProfit(5);
     setStressPct(10);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -94,14 +110,14 @@ export function RiskCalculator({
 
   const scenarios = useMemo(
     () =>
-      sharesInput > 0 && currentPriceInput > 0
-        ? computeAveragingScenarios(capital, currentPriceInput, sharesInput, avgInput, target, feePct, tick, calcFee)
+      sharesInput > 0 && targetPrice > 0
+        ? computeAveragingScenarios(targetAmount, targetPrice, sharesInput, avgInput, target, feePct, tick, calcFee)
         : [],
-    [capital, currentPriceInput, sharesInput, avgInput, target, feePct, tick, calcFee],
+    [targetAmount, targetPrice, sharesInput, avgInput, target, feePct, tick, calcFee],
   );
-  const best = closestScenario(scenarios, capital);
+  const best = closestScenario(scenarios, targetAmount);
   const diminishing = findDiminishingReturnPoint(scenarios);
-  const stress = best ? stressTestScenario(best, currentPriceInput, stressPct, calcFee) : [];
+  const stress = best ? stressTestScenario(best, targetPrice, stressPct, calcFee) : [];
 
   if (!held.length) {
     return (
@@ -123,7 +139,7 @@ export function RiskCalculator({
               ))}
             </Select>
           </Field>
-          <Field label="Risk mode">
+          <Field label="Risk mode" title="Only changes the suggested capital ceiling further down the page — it never changes the math or guarantees a recovery.">
             <Select value={riskMode} onChange={(e) => setRiskMode(e.target.value as RiskMode)}>
               <option value="conservative">Conservative</option>
               <option value="balanced">Balanced</option>
@@ -138,19 +154,50 @@ export function RiskCalculator({
           <Field label="Shares held" width={90}>
             <TextInput type="number" value={sharesInput || ''} onChange={(e) => setSharesInput(Number(e.target.value))} />
           </Field>
-          <Field label="Avg buy price" width={100}>
+          <Field label="Avg buy price" width={100} title="Pre-filled from your real position (invested ÷ shares). Editable so you can test a hypothetical average, but editing it doesn't change your actual holdings.">
             <TextInput type="number" step="0.001" value={avgInput || ''} onChange={(e) => setAvgInput(Number(e.target.value))} />
           </Field>
-          <Field label="Additional capital" width={100}>
-            <TextInput type="number" step="10" value={capital || ''} onChange={(e) => setCapital(Number(e.target.value))} />
+          <Field label="Target buy price" width={100} title="The price you're planning to add shares at — can differ from Current price above (e.g. a limit order below today's price).">
+            <TextInput
+              type="number"
+              step="0.001"
+              value={targetPrice || ''}
+              onChange={(e) => {
+                const price = Number(e.target.value);
+                setTargetPrice(price);
+                if (targetShares) setTargetAmountInput(price > 0 ? (targetShares * price).toFixed(2) : '');
+              }}
+            />
           </Field>
-          <Field label="Target sell price" width={100}>
+          <Field label="Target shares to buy" width={110}>
+            <TextInput
+              type="number"
+              value={targetShares || ''}
+              onChange={(e) => {
+                const s = Number(e.target.value);
+                setTargetShares(s);
+                setTargetAmountInput(targetPrice > 0 && s ? (s * targetPrice).toFixed(2) : '');
+              }}
+            />
+          </Field>
+          <Field label="Target amount" width={110}>
+            <TextInput
+              type="number"
+              step="10"
+              value={targetAmountInput}
+              onChange={(e) => {
+                setTargetAmountInput(e.target.value);
+                setTargetShares(targetPrice > 0 ? Number(e.target.value) / targetPrice : 0);
+              }}
+            />
+          </Field>
+          <Field label="Target sell price" width={100} title="Defaults to your current break-even, but editable — the price you'd actually plan to sell at once you've averaged down.">
             <TextInput type="number" step="0.001" value={target || ''} onChange={(e) => { setTarget(Number(e.target.value)); setTargetTouched(true); }} />
           </Field>
-          <Field label={`Min net profit (${currency})`} width={100}>
+          <Field label={`Min net profit (${currency})`} width={100} title="The smallest profit (after fees) you'd consider worth it at Target sell price — used to flag whether a scenario actually clears your own bar.">
             <TextInput type="number" step="0.01" value={minProfit || ''} onChange={(e) => setMinProfit(Number(e.target.value))} />
           </Field>
-          <Field label="Stress drawdown" width={90}>
+          <Field label="Stress drawdown" width={90} title="How far the price would need to fall from here for the 'Stress' card below to show the resulting loss.">
             <Select value={stressPct} onChange={(e) => setStressPct(Number(e.target.value))}>
               <option value={5}>5%</option>
               <option value={10}>10%</option>
@@ -182,11 +229,26 @@ export function RiskCalculator({
           <Card style={{ marginBottom: 16 }}>
             <h3 style={{ marginTop: 0 }}>Current position</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 8 }}>
-              <div className="stat-card card" style={hueStyle(HUES[0])}><div className="label">Invested</div><div className="value">{fmtMoney(currentMetrics.invested, currency)}</div></div>
-              <div className="stat-card card" style={hueStyle(HUES[1])}><div className="label">Break-even</div><div className="value">{fmtPrice(currentMetrics.breakEven)}</div></div>
-              <div className="stat-card card" style={hueStyle(HUES[4])}><div className="label">Recovery needed</div><div className="value">{fmt(currentMetrics.recoveryNeededPct, 2)}%</div></div>
+              <StatCard label="Invested" value={fmtMoney(currentMetrics.invested, currency)} hue={HUES[0]} labelTitle="Total cost basis of your current position, fees included." />
+              <StatCard
+                label="Break-even"
+                value={fmtPrice(currentMetrics.breakEven)}
+                hue={HUES[1]}
+                labelTitle="The price this position needs to reach to fully recover its cost and fees — not a prediction, just the math."
+              />
+              <StatCard
+                label="Recovery needed"
+                value={`${fmt(currentMetrics.recoveryNeededPct, 2)}%`}
+                hue={HUES[4]}
+                labelTitle="How far the price needs to rise from here to reach break-even."
+              />
               <div className="stat-card card" style={hueStyle(currentMetrics.netPL >= 0 ? 'var(--profit)' : 'var(--loss)')}><div className="label">Current net P/L</div><div className={`value ${currentMetrics.netPL >= 0 ? 'pill-buy' : 'pill-sell'}`}>{fmtMoney(currentMetrics.netPL, currency)}</div></div>
-              <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Risk ceiling</div><div className="value">{fmtMoney(currentMetrics.ceiling, currency)}</div></div>
+              <StatCard
+                label="Risk ceiling"
+                value={fmtMoney(currentMetrics.ceiling, currency)}
+                hue={HUES[3]}
+                labelTitle="A suggested upper limit on how much more to add, scaled to your chosen risk mode — advisory only, never a rule or a guarantee."
+              />
             </div>
           </Card>
 
@@ -196,8 +258,10 @@ export function RiskCalculator({
               <table>
                 <thead>
                   <tr>
-                    <th>Add</th><th>Shares</th><th>New avg</th><th>New break-even</th><th>Recovery</th>
-                    <th>Net P/L @ target</th><th>Signal</th>
+                    <th>Add</th><th>Shares</th><th>New avg</th><th>New break-even</th>
+                    <th><Tooltip text="How far the price needs to rise from the new average to reach the new break-even."><span style={{ cursor: 'pointer' }}>Recovery</span></Tooltip></th>
+                    <th><Tooltip text="What you'd net (after fees) if you sold everything at Target sell price, using this scenario's new average cost."><span style={{ cursor: 'pointer' }}>Net P/L @ target</span></Tooltip></th>
+                    <th><Tooltip text="Selected = closest to your Target amount above. Diminishing = past this point, adding more barely helps. Useful = still meaningfully improves your position."><span style={{ cursor: 'pointer' }}>Signal</span></Tooltip></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -211,8 +275,16 @@ export function RiskCalculator({
                         <td>{fmtPrice(s.newAvg)}</td>
                         <td>{fmtPrice(s.breakEven)}</td>
                         <td>{fmt(s.recoveryNeededPct, 2)}%</td>
-                        <td className={s.netAtTarget >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(s.netAtTarget, currency)}</td>
-                        <td>{isDiminishing ? 'Diminishing' : isBest ? 'Selected' : 'Useful'}</td>
+                        <td style={{ padding: '10px 12px' }}><span className={s.netAtTarget >= 0 ? 'pill pill-buy' : 'pill pill-sell'}>{fmtMoney(s.netAtTarget, currency)}</span></td>
+                        <td>
+                          {isDiminishing ? (
+                            <span className="pill pill-warn">⚠ Diminishing</span>
+                          ) : isBest ? (
+                            <span className="pill pill-info">✓ Selected</span>
+                          ) : (
+                            <span className="pill pill-buy">Useful</span>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
@@ -225,10 +297,25 @@ export function RiskCalculator({
           <Card style={{ marginBottom: 16 }}>
             <h3 style={{ marginTop: 0 }}>Capital efficiency &amp; diminishing returns</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 8, marginBottom: 10 }}>
-              <div className="stat-card card" style={hueStyle(HUES[6])}><div className="label">Risk level</div><div className="value">{riskMode.toUpperCase()}</div></div>
-              <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Suggested ceiling</div><div className="value">{fmtMoney(currentMetrics.ceiling, currency)}</div></div>
-              <div className="stat-card card" style={hueStyle(HUES[2])}><div className="label">Selected capital</div><div className="value">{best ? fmtMoney(best.add, currency) : '—'}</div></div>
-              <div className="stat-card card" style={hueStyle(HUES[5])}><div className="label">Stop averaging around</div><div className="value">{diminishing ? fmtMoney(diminishing.add, currency) : 'Not reached'}</div></div>
+              <StatCard label="Risk level" value={riskMode.toUpperCase()} hue={HUES[6]} labelTitle="Conservative/Balanced/Aggressive only changes the suggested ceiling above — never the math." />
+              <StatCard
+                label="Suggested ceiling"
+                value={fmtMoney(currentMetrics.ceiling, currency)}
+                hue={HUES[3]}
+                labelTitle="Same suggested limit as the Current position card above, scaled by your risk mode — advisory only."
+              />
+              <StatCard
+                label="Selected capital"
+                value={best ? fmtMoney(best.add, currency) : '—'}
+                hue={HUES[2]}
+                labelTitle="Your Target amount above, matched to the closest step in the scenario table below."
+              />
+              <StatCard
+                label="Stop averaging around"
+                value={diminishing ? fmtMoney(diminishing.add, currency) : 'Not reached'}
+                hue={HUES[5]}
+                labelTitle="The point where adding more capital starts improving your required recovery by less than 0.25 percentage points — a signal to reconsider, not a hard stop."
+              />
             </div>
             <Notice tone={diminishing ? 'warning' : 'info'} style={{ marginTop: 0, opacity: diminishing ? 1 : 0.7 }}>
               <b>{diminishing ? 'Diminishing-return warning.' : 'Capital still has measurable benefit.'}</b>{' '}

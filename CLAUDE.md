@@ -2100,6 +2100,27 @@ not developer notes) continuously as features ship.
   together, which would have been a false "bug" if trusted without the layout check) — zero
   console errors. New tests: `psxFees.test.ts` gained 2 cases. `npx tsc -b` / `npm run test`
   (253 tests, 2 new) / `npm run build` all clean.
+- **PSX Risk Analysis 7-item feedback batch + single-ticker Trade Plans (2026-08-24) — see
+  README Done item 105.** Replaced RiskCalculator's "Additional capital" field with a 3-way
+  linked Target buy price/Target shares to buy/Target amount calculator (confirmed the exact
+  design via AskUserQuestion first, since the request was genuinely ambiguous) — also fixes a
+  real modeling gap, since the old field always priced every scenario at the live Current
+  price with no way to model a different (e.g. limit-order) buy price. Collapsed the
+  Dashboard's Alerts card by default (it had no `defaultOpen` prop, so silently defaulted
+  open — a real "eating space" bug, not a subjective complaint). Added `Field`'s `title` prop
+  and `StatCard`'s new `labelTitle` prop (see the dedicated bullet above on why that's a
+  separate prop from `title`) to explain jargon terms across the page. Signal column now uses
+  colored `.pill` badges with icons instead of plain text (two new CSS variants, `.pill-warn`/
+  `.pill-info`). `theme.css` gained `.card h3, .card h4{text-transform:capitalize;}` for
+  title-case section headings app-wide. **Right after this batch, same day**: the user
+  reversed an earlier same-project decision and asked that a Trade Plan be scoped to exactly
+  one ticker — see the dedicated "Trade Plan is scoped to exactly one ticker" bullet above.
+  Verified live via Playwright throughout; one real test-methodology bug caught and fixed
+  during verification, not an app bug: an initial `.click()`-based tooltip check read as
+  "tooltip broken" because Playwright's `.click()` fires hover-then-click, and `Tooltip`'s own
+  `onClick` toggles state — so a click opens then immediately re-closes it. Switching to
+  `.hover()` confirmed the tooltips work correctly. `npx tsc -b` / `npm run test` (253 tests,
+  unchanged) / `npm run build` all clean.
 
 ## Live URLs
 
@@ -2156,6 +2177,37 @@ webapp/                                                              the new Rea
 
 ## Design decisions worth knowing before you change anything
 
+- **Standing UI/copy guidelines (user-stated 2026-08-24, apply going forward, not a one-shot
+  rewrite):** (1) use the simplest possible language/terms everywhere — this is a tool for
+  "all kinds of users, not just pros," not just traders who already know the jargon; tooltips
+  on jargon terms (Break-even, Recovery needed, CGT, etc.) are a partial answer, a plain-
+  language copy audit is the fuller one (see README Pending item 55). (2) Apply background
+  color to the WHOLE card/badge for a data point, not just colored text inside an otherwise
+  plain card — `StatCard`'s `hue` prop and the `.pill`/`.pill-*` classes are the established
+  mechanisms for this; reach for those before adding a lone colored `<span>`. (3) Card section
+  heading text (h3/h4 inside `.card`) should read as a title, not sentence-case description
+  text — enforced once, app-wide, via `theme.css`'s `.card h3, .card h4{text-transform:
+  capitalize;}` rather than needing to remember it per new heading. (4) "Utilize page space" —
+  wide viewports have real unused space on most pages today; see README Pending item 54 for a
+  concrete direction (a persistent right-rail panel) that hasn't been built yet.
+- **`StatCard`'s two tooltip props mean different things — don't conflate them.** `title`
+  shows FULL PRECISION on the *value* (e.g. "12.35M PKR" with a title of the exact number) —
+  this is the original, still-most-common use, established for `MoneyValue`-style abbreviated
+  numbers. `labelTitle` (added 2026-08-24) explains what the *label* means (e.g. "Break-even"
+  → what break-even is) — a completely different job. A future stat card that needs to explain
+  jargon should use `labelTitle`, never repurpose `title` for it — every existing `title` call
+  site in the app means "precision," and silently changing that would make some other card's
+  tooltip say the wrong thing.
+- **A Trade Plan is scoped to exactly one ticker (locked 2026-08-24, supersedes an earlier
+  same-project decision).** Originally (2026-08-24, same day) a plan had an optional
+  "default ticker" that individual legs could still override, deliberately allowing a mixed-
+  ticker plan — the user's own words at the time were explicit about wanting that. The user
+  later reversed this: "1 ticker may have plans but not vice versa." The newer instruction
+  wins per the user's own stated priority rule (recent instructions override older ones on
+  conflict) — `NewPlanForm` and `PlanCard` no longer expose a per-leg ticker input at all;
+  every leg in a plan uses the plan's own (now-required) ticker. If a future request seems to
+  need multi-ticker plans again, don't silently revert this — it was an explicit, repeated,
+  deliberate choice, not an oversight.
 - **No live third-party market-data API calls, ever, from the app itself
   (locked in 2026-08-23).** Free/cheap tiers cap out fast (20–800 calls/day
   depending on provider) — a design that hits the provider on every page

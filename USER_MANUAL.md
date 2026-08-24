@@ -244,12 +244,18 @@ the current price to lower your average cost — and shows whether it's actually
 
 - **Current position**: your invested amount, break-even price, how much recovery (%) is
   needed at the current price, and current net P/L.
-- **Meaningful averaging points**: a table of "if you add this much capital" scenarios —
-  new average cost, new break-even, recovery needed, and net P/L if you later sell at your
-  target price. One row is marked **Selected** (closest to the capital you entered).
+- **Target buy price / Target shares to buy / Target amount**: a linked trio — type any two
+  and the third fills in automatically (same as the Trade Calculator's price/shares/amount
+  fields). The target buy price doesn't have to match "Current price" above — use it to model
+  a specific limit order below (or above) today's price, not just today's live price.
+- **Meaningful averaging points**: a table of "if you add this much capital" scenarios, priced
+  at your target buy price — new average cost, new break-even, recovery needed, and net P/L
+  if you later sell at your target sell price. One row is marked **✓ Selected** (closest to
+  the target amount you entered).
 - **Diminishing returns**: once adding more capital stops meaningfully improving your
-  break-even (less than a quarter percentage point per step), that row is flagged so you
-  know where more capital stops being worth it.
+  break-even (less than a quarter percentage point per step), that row is flagged
+  **⚠ Diminishing** so you know where more capital stops being worth it. Hover any stat
+  card's label, or a table header, for a plain-language explanation of what it means.
 - **Stress test**: shows what your P/L would look like after the selected averaging, if the
   price fell further (a fixed set of drops, plus your own chosen "stress" percentage).
 
@@ -263,16 +269,18 @@ stock recovers, and the calculator says so directly. Only shows tickers you curr
 
 For planning multi-leg trades ahead of time, separate from the one-shot Trade Calculator:
 
-1. **Save a plan** — give it a name, optional notes, an optional **default ticker** (most
-   plans revolve around one stock — set it once and new legs auto-fill with it; you can
-   still change any individual leg to a different ticker), and one or more legs (ticker,
-   action, shares, price, date).
-2. **Edit anytime** — rename the plan, edit its notes or default ticker, add a new leg to an
-   already-saved plan ("+ Add leg" below the table — pre-fills the default ticker too), or
-   edit/remove any individual leg that hasn't been executed yet. Click any column header
-   (Date, Ticker, Action, Shares, Price, Amount, Status) to sort the legs table.
-3. **Per-ticker plan analysis**: below each plan's legs, a table shows — for every ticker in
-   the plan — how many shares are already executed vs. still planned (shown separately so
+1. **Save a plan** — give it a name, optional notes, and a **ticker**. A plan covers exactly
+   one stock (a stock can have several plans, but not the other way around), so there's no
+   per-leg ticker to fill in — just add one or more legs (action, shares, price, date).
+2. **Edit anytime** — rename the plan or change its ticker (any not-yet-executed leg updates
+   to match automatically — executed legs, which already created a real transaction, are left
+   alone), add a new leg to an already-saved plan ("Add leg" below the table), or edit/remove
+   any individual leg that hasn't been executed yet. Click any column header (Date, Ticker,
+   Action, Shares, Price, Amount, Status) to sort the legs table.
+3. **Per-ticker plan analysis**: below each plan's legs, a row of colored summary cards gives
+   an at-a-glance read (average cost, break-even, shares after the plan, planned P/L), and the
+   detailed table underneath shows — for every ticker in the plan — how many shares are
+   already executed vs. still planned (shown separately so
    they're never conflated), your average cost (blending this plan's own *pending* buy legs
    with any shares you already hold, so planning to sell existing stock works correctly even
    with no buy legs in the plan), a fee-aware break-even price, shares remaining once the
@@ -291,10 +299,15 @@ For planning multi-leg trades ahead of time, separate from the one-shot Trade Ca
    you don't have to re-type it into the Transactions tab. Once executed, the plan row stays
    **synced** to that transaction — if you later edit its shares/price/date from the
    Transactions tab or a stock page, the plan row updates to match automatically, so you're
-   never looking at stale data in the planner. A pending leg's estimated fee also correctly
-   accounts for any other same-day buy/sell of the same ticker elsewhere in the same plan
-   (PSX's same-day netting rule — the larger side pays commission, the smaller side pays
-   government levies only), not just that one leg in isolation.
+   never looking at stale data in the planner. You can also click **Edit** right on that row
+   in the planner to change its shares/price/date without leaving the page at all. If a leg
+   shows **Executed (unlinked)** with a ⚠ next to its date instead (this only happens for
+   legs executed a long time ago, before this syncing existed), click **Link…** to manually
+   pick which of your real transactions it corresponds to — after that it syncs normally too.
+   A pending leg's estimated fee shows both possibilities side by side — "Full" (regular
+   commission) and "Same-day netted" (PSX's same-day round-trip rule — the larger side pays
+   commission, the smaller side pays government levies only) — so you can see the potential
+   saving before deciding whether to time it as a same-day trade.
 6. **Delete a plan** any time — this only removes the plan, not any transactions already
    logged from marking legs done.
 7. **Collapse** a plan (button in its header) to shrink it down to just the name/summary line

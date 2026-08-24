@@ -1838,6 +1838,74 @@ FinanceManager live link:
        been a false "bug" if trusted without the layout check); zero console errors throughout.
        New tests: `psxFees.test.ts` gained 2 `feeScenarios` cases. `npx tsc -b` / `npm run test`
        (253 tests, 2 new) / `npm run build` all clean.
+105. **PSX Risk Analysis 7-item feedback batch, plus a same-day single-ticker Trade Planner
+     simplification requested right after (both 2026-08-24).**
+     - **(1) Target price/shares/amount calculator.** Asked the user to clarify exactly what
+       "Additional capital" should become (AskUserQuestion) — confirmed: replace it outright
+       with a 3-way linked calculator (any 2 of Target buy price / Target shares to buy /
+       Target amount compute the 3rd), same interaction pattern already used by
+       TradeCalculator's Buy price/New shares/Amount row. Avg buy price stays exactly as-is
+       (a free-type override pre-filled from real data — the user confirmed that's wanted, not
+       a bug). The new Target buy price also fixes a real modeling gap: the old "Additional
+       capital" always priced every scenario at the live Current price, with no way to model a
+       limit order below/above it — averaging down in practice is usually a specific price, not
+       necessarily today's.
+     - **(2) Alerts eating space.** Root cause: `CollapsibleCard` around `AlertsBox` on both
+       QSE's and PSX's Dashboard had no `defaultOpen` prop, so it silently defaulted to fully
+       expanded — collapsed it by default (the existing first-visit toast — "N alerts, see
+       Alerts below" — remains the discovery path). Also gave the "Meaningful averaging points"
+       table's colored P/L cell real cell padding (it was flush against the cell edge, at risk
+       of visually blending into neighboring rows).
+     - **(4) Tooltips still missing.** Extended `Field` (the shared label+input wrapper used
+       app-wide) with an optional `title` prop that wraps the label in the existing `Tooltip`
+       component — added explanations to every jargon-y input on the Risk Analysis page (Risk
+       mode, Avg buy price, Target buy price, Target sell price, Min net profit, Stress
+       drawdown) and to the "Recovery"/"Net P/L @ target"/"Signal" table headers. Also extended
+       `StatCard` with a new `labelTitle` prop (tooltip on the *label*, e.g. "what does
+       Break-even mean") — deliberately separate from the existing `title` prop (tooltip on the
+       *value*, used everywhere else for showing full precision on an abbreviated number) so
+       reusing one prop for two different jobs didn't quietly change what `title` means at
+       every other call site in the app.
+     - **(5) Symbols/icons/colors for meaningful data.** The "Signal" column (Selected/
+       Diminishing/Useful) was plain text — now a colored `.pill` badge with an icon (✓
+       Selected, ⚠ Diminishing, plain Useful), reusing the same `.pill-buy`/`.pill-sell`
+       language already used for BUY/SELL everywhere, plus two new variants (`.pill-warn`,
+       `.pill-info`) for signals that aren't a P/L direction.
+     - **(6) Backgrounds on whole cards, not just text.** Mostly already true from the
+       preceding design-feedback batch (Done item 103's `StatCard` `hue` rollout onto this
+       page) — reinforced by making the new Signal/Net-P&L-at-target badges full-background
+       pills instead of colored text, consistent with the same principle.
+     - **(7) Card titles should read as titles.** `theme.css` gained
+       `.card h3, .card h4{text-transform:capitalize;}` — scoped to actual heading elements
+       only (never a plan's own free-typed name, which renders via a plain `<strong>`/`<div>`,
+       not a heading), so this can't mis-capitalize anyone's real data.
+     - **(3) "Simplest language" and the later "utilize page space" note** are standing
+       app-wide guidelines now, not one-shot fixes — see the Design decisions section in
+       `CLAUDE.md`.
+     - **Single-ticker Trade Plans (user-reported same day, right after this batch):** "1
+       ticker may have plans but not vice versa" — a plan is now scoped to exactly one ticker
+       (was: an optional "default ticker" that individual legs could still override,
+       intentionally allowing mixed-ticker plans in an earlier session — the user's newer
+       instruction supersedes that). `NewPlanForm`'s per-leg ticker input is gone entirely
+       (one less field per row); the plan-level "Ticker" field is now required to save.
+       Existing/saved plans (`PlanCard`) lost their per-leg ticker inputs too — "+ Add leg"
+       and the edit-leg row both lock to the plan's own ticker, shown as plain text instead of
+       an editable field. Renaming a plan's ticker now re-tickers every still-*pending* leg to
+       match (executed legs are left alone — they already created their own real Transaction).
+       The plan header now shows the ticker as a visible `pill-info` badge next to the plan
+       name instead of a buried "· default ticker X" footnote.
+     - **Verified live via Playwright**: the 3-way calculator correctly derived Target amount
+       from price×shares; `StatCard`/`Field` tooltips confirmed via `hover()` (an earlier
+       `.click()`-based check falsely read as "not working" — Playwright's `.click()` fires a
+       hover-then-click, and the Tooltip component's own `onClick` toggles state, so a click
+       opens-then-immediately-closes it; hover is required for a false-negative-free check,
+       matching how earlier tooltip sweeps in this project were already verified); a
+       single-ticker plan saved via the form is only reachable via the sign-in gate as
+       expected, and a plan seeded directly shows its ticker pill, offers no ticker input on
+       Add-leg, and a leg added through the UI correctly landed with the plan's own ticker
+       (confirmed by reading `localStorage` back, not just the UI) — zero console errors
+       throughout. `npx tsc -b` / `npm run test` (253 tests, unchanged) / `npm run build` all
+       clean.
 
 ## Pending
 
@@ -2028,6 +2096,19 @@ item 103) — all three now fixed, see Done item 104:**
     see Done item 104.** Every pending leg's fee now shows both the full-commission and
     same-day-netted price side by side; a row of colored summary cards sits above the detailed
     per-ticker table for an at-a-glance read.
+54. "Utilize all page spaces and add useful infos on sides — fintech apps are data heavy
+    rather than decorations" (2026-08-24). A real, still-open structural request, not yet
+    designed: most pages use a single centered column with real unused space on wide
+    viewports. A concrete direction worth trying first: a persistent right-rail panel on wide
+    screens (e.g. contextual glossary/tips reusing the same explanatory text already written
+    for tooltips, or a live at-a-glance summary) rather than a blind "make things wider" pass —
+    ties into Pending item 49's "assess a stock in one go" information-architecture rework, so
+    worth scoping together rather than as two separate passes.
+55. Simplest-possible-language pass (2026-08-24 app-wide note, item 3 of the Risk Analysis
+    batch) — Done item 105 added tooltips explaining jargon terms on the Risk Analysis page
+    specifically, but the broader ask ("serve all kinds of users, not just pros") implies
+    auditing labels/copy across every module for jargon that could be plain-language instead
+    of just tooltipped, which hasn't been attempted yet.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank
