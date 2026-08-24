@@ -1190,6 +1190,34 @@ FinanceManager live link:
     Verified live via Playwright: a fresh BUY-today row is pre-checked as before, and
     switching its action to SELL now correctly unchecks the box. `npx tsc -b` / `npm run
     test` (202 tests, 1 new) / `npm run build` all clean.
+78. **Critical, user-reported with a real uploaded workbook backup: "I have entered today's
+    prices but graph isn't picking them" — a genuine, confirmed bug, root-caused against the
+    user's actual data rather than guessed at.** `computePriceStats()`'s min/max/median AND
+    its trend-chart data (`chronological`) were both built from `getDailyPriceHistory()`'s
+    day-collapsed series — one point per calendar day, that day's *last* update wins. A user
+    entering several price updates across one trading day (their real data had 8-16 updates
+    per ticker, all dated the same day) had every one of those intermediate updates silently
+    discarded before Lowest/Median/Highest or the "Daily price" chart ever saw them — Lowest,
+    Median, and Highest all showed the exact same value (confirmed with their OGDC data:
+    all three read "332.49" despite real prices ranging 330.21-332.49 that day), and the
+    trend chart plotted a single flat point instead of the actual movement. Fixed by computing
+    `chronological`/`min`/`max`/`median` from the **raw**, per-update log (sorted by real
+    timestamp, falling back to date for older entries recorded before `time` was tracked)
+    instead of the day-collapsed one — a ticker updated once a day renders identically to
+    before (raw and daily are the same list in that case); a ticker updated many times in one
+    day now shows genuine intraday movement. `getDailyPriceHistory()` itself is unchanged and
+    still used as-is for sparklines elsewhere (a legitimately different use case — a clean
+    one-point-per-day mini chart across many days, not an intraday zoom). New
+    `lib/calc/__tests__/priceHistory.test.ts` (4 cases) locks in both the single-update-per-day
+    case (unaffected) and the exact regression (several same-day updates no longer collapse
+    min/max together). Verified against the user's own uploaded real backup file, not a
+    synthetic fixture: before the fix, OGDC's Price Range showed all three stats identical
+    (330.21/330.21/330.21 collapsed... actually 332.49 three times) with a near-blank chart
+    (63 non-transparent canvas pixels); after the fix, Lowest 330.21 / Median 331.05 / Highest
+    332.49 (all genuinely different) with a real visible trend line (35,804 non-transparent
+    pixels) — confirmed via both a DOM text read and an actual canvas pixel sample, not just a
+    visual glance. `npx tsc -b` / `npm run test` (206 tests, 4 new) / `npm run build` all
+    clean.
 
 ## Pending
 

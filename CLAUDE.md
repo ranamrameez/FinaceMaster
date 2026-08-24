@@ -1588,6 +1588,30 @@ not developer notes) continuously as features ship.
   calc engine itself was never wrong, this was purely a UI-defaulting
   bug. Verified live via Playwright: switching a fresh BUY-today row's
   action to SELL now correctly unchecks the box.
+- **Critical, root-caused against the user's own real uploaded workbook
+  backup (2026-08-24) — see README Done item 78.** "I have entered
+  today's prices but graph isn't picking them." `computePriceStats()`
+  built min/max/median and the trend chart's data from
+  `getDailyPriceHistory()`'s day-collapsed series (one point per
+  calendar day, last update wins) — so a ticker updated several times
+  in one trading day had all but the final update silently discarded.
+  Confirmed directly with the user's real OGDC data (8+ intraday
+  updates that day): Lowest/Median/Highest all read the identical
+  collapsed value, and the chart plotted one flat point. Fixed by
+  computing those from the **raw** per-update log (sorted by real
+  timestamp) instead — a once-a-day ticker is unaffected (raw ==
+  daily in that case), a many-updates-a-day ticker now shows genuine
+  movement. **Lesson for future "X isn't working" reports where the
+  user can attach a real data file**: seed the exact uploaded JSON
+  into a local Playwright session and read the real computed output
+  (DOM text, canvas pixel counts) rather than reasoning about a
+  synthetic case — this bug was invisible with a single seeded price
+  point (which is what earlier verification in this session used) and
+  only showed up once multiple same-day updates were actually present.
+  Verified before/after against the real file: Price Range went from
+  all-three-identical with a near-blank chart (63 non-transparent
+  canvas pixels) to three genuinely different values with a real
+  visible trend line (35,804 non-transparent pixels).
 
 ## Live URLs
 
