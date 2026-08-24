@@ -978,6 +978,50 @@ not developer notes) continuously as features ship.
   color-independent confirmation signal. No test suite coverage (a
   CSS/visual fix) — verified entirely via the before/after screenshots.
   `npm run build` / `npm run test` (150 tests, unchanged) both clean.
+- **Mobile CSS pass, user-reported (2026-08-23) — see README Done item
+  54. Both root causes found via real computed-style inspection in
+  Playwright (`getBoundingClientRect`/`getComputedStyle`), not guessed
+  from a screenshot.** Cramped-inputs report: `.row > *{flex:1}` sets
+  `flex-basis:0%`, so a `.row`'s per-field `width` props are entirely
+  ignored — the row just divides its actual width evenly among however
+  many fields sit in it. Confirmed on the Trade Calculator's Buy
+  price/New shares/Amount/Target avg cost row (4 fields, each with its
+  own `width` prop) on a 390px viewport: every field measured exactly
+  **74px**, not its requested width. Misaligned-inputs report, same
+  inspection: those 4 fields have very different label lengths (up to
+  3 wrapped lines for "Target avg cost (optional)" vs. 1 for others);
+  `.row`'s default `align-items: stretch` stretches every field to a
+  common height, but `Field` packed label+input at the *top* of that
+  stretched box, leaving unused space *below* the input — so
+  short-label fields' inputs sat 18-36px higher than long-label
+  fields' inputs in the very same row. **Fix**: `Field`
+  (`components/ui/Field.tsx`) now sets `justifyContent: 'flex-end'` —
+  anchors every field's label+input block to the *bottom* of its
+  stretched box instead, so input bottoms always line up regardless of
+  label height. This required zero changes to any of the dozens of
+  pages that use `Field` — it's a one-line fix in the shared component,
+  the same "fix once at the shared layer" pattern already used for
+  `stripUndefinedDeep` and the `createWorkbookStore` normalize fix.
+  Separately added a `max-width:640px` block in `theme.css`:
+  `.row{flex-wrap:wrap}` + `.row > *{min-width:140px}` so a crowded row
+  wraps to 2-per-line (156px each) instead of squeezing everything onto
+  one line; 16px input font-size on mobile (below that, iOS Safari
+  zooms in on focus — a real usability papercut that has nothing to do
+  with any app bug but reads like one); and `.stat-card .value` gets
+  `overflow-wrap:anywhere` + a smaller mobile font-size, verified with
+  a seeded 8-figure PKR total wrapping cleanly to a second line inside
+  its card instead of overflowing (checked via a `scrollWidth >
+  clientWidth` sweep across every `.stat-card .value` on the page, zero
+  hits). **Pattern worth remembering for any future "things feel
+  cramped/misaligned on mobile" report**: don't guess from a screenshot
+  alone — pull real `getBoundingClientRect`/`getComputedStyle` values
+  for the elements in question first. The visual estimate from the
+  first screenshot in this investigation was actually wrong (looked
+  like a 2-per-row wrap; the real numbers showed all 4 fields on one
+  line, just with a tall wrapped-label cell making it look like two
+  rows) — the measurements caught what eyeballing a screenshot missed.
+  `npm run build` / `npm run test` (150 tests, unchanged — a CSS/layout
+  fix) both clean.
 - **Large batch of user feedback received 2026-08-23, mid-session —
   most items handled, some still open (check README Done/Pending for
   current per-item status, this is a snapshot at time of receipt).**
@@ -987,11 +1031,14 @@ not developer notes) continuously as features ship.
   Firebase RTDB empty-nested-array gotcha, see README Done item 52).
   (3) Checkbox/chip selected-state unclear — fixed, see below (README
   Done item 53). (4) Inputs/
-  selects should be a bit larger on mobile to avoid cutting. (5)
+  selects should be a bit larger on mobile to avoid cutting — fixed,
+  see below (README Done item 54). (5)
   Inputs should align to the bottom with labels directly above,
   consistently — long labels currently push some inputs down while
-  others stay up. (6) Some chart labels cut off at chart edges. (7)
-  Mobile: stat card amount text overflowing. (8) Round stat-card
+  others stay up — fixed, see below (README Done item 54, same fix as
+  (4)). (6) Some chart labels cut off at chart edges. (7)
+  Mobile: stat card amount text overflowing — fixed, see below (README
+  Done item 54). (8) Round stat-card
   numbers for a cleaner look, show the real precise number as a
   tooltip. (9) Stats should surface in-process/upcoming planned
   payments (ties into the Planning feature). (10) Shorten large

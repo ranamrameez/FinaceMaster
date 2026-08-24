@@ -705,6 +705,36 @@ FinanceManager live link:
     fine from the fill alone — for an extra, color-independent confirmation signal. Verified
     with real before/after screenshots across all three themes tested. `npm run build` /
     `npm run test` (150 tests, unchanged — a CSS/visual fix) both clean.
+54. **Mobile CSS pass: inputs/selects no longer cramped/cut off, form-row inputs consistently
+    bottom-aligned, stat-card numbers no longer overflow — all three user-reported.** Root
+    cause of the cramped-inputs report, confirmed via `getBoundingClientRect`/
+    `getComputedStyle` inspection in Playwright (not guessed): `.row > *{flex:1}` uses
+    `flex-basis:0%`, which makes a `.row`'s explicit per-field `width` props (e.g. the Trade
+    Calculator's Buy price/New shares/Amount/Target avg cost row, each with its own
+    `width={90|100}`) irrelevant — the row divides its *actual* width evenly among however
+    many fields it holds instead. On a 390px phone with 4 fields in that one row, each field
+    measured **74px** regardless of its requested width. Root cause of the misaligned-inputs
+    report, from the same inspection: those 4 fields, having very different label lengths (1
+    line vs. up to 3 wrapped lines for "Target avg cost (optional)"), were all stretched to a
+    common height by `.row`'s default `align-items: stretch`, but `Field` packed its
+    label+input at the *top* of that stretched box — leaving unused space *below* the input
+    — so a short-label field's input measured 18-36px higher than a long-label field's input
+    in the exact same row. **Fixes**: (1) `Field` (`components/ui/Field.tsx`) now sets
+    `justifyContent: 'flex-end'`, anchoring every field's label+input block to the *bottom*
+    of its stretched box — re-measured after the fix: every input in a row now shares the
+    exact same bottom Y-coordinate, regardless of its own label's line count. (2) a new
+    `max-width:640px` block in `theme.css` sets `.row{flex-wrap:wrap}` and
+    `.row > *{min-width:140px}`, so a 4-field row now wraps to 2-per-line at 156px each
+    instead of squeezing to 74px — re-verified via the same inspection technique. Also bumped
+    input/select font-size to 16px on mobile (prevents iOS Safari's auto-zoom-on-focus below
+    that size, which reads as "the input behaves oddly" even though nothing was actually
+    broken) and padding for a larger touch target. (3) `.stat-card .value` gets
+    `overflow-wrap:anywhere` and a smaller mobile font-size; verified with a seeded 8-figure
+    PKR deposit total (`12,345,678.90 PKR`) — the number now wraps to a second line inside
+    the card instead of overflowing it, confirmed via a `scrollWidth > clientWidth` check
+    (zero overflowing stat values) plus a visual screenshot. `npm run build` / `npm run test`
+    (150 tests, unchanged — a CSS/layout fix, verified visually and via computed-style
+    inspection rather than unit tests) both clean.
 
 ## Pending
 
@@ -786,11 +816,6 @@ wave" section)**:
 **New batch of user feedback, 2026-08-23 (mid-session) — see Done item 51 for item (1),
 already fixed; the rest tracked here**:
 
-31. Mobile CSS pass: inputs/selects should be a bit larger on small screens (currently get cut
-    off); form labels should sit consistently right above their input with bottom-alignment
-    (long labels currently push some inputs down while shorter-labeled inputs in the same row
-    stay higher, an inconsistent row); stat-card amount text overflows its card on narrow
-    screens. Not started.
 32. Some chart labels get cut off at the chart's edges (distinct from the datalabels-clutter
     fix in Done item 50 — this is about labels clipping against the container boundary, not
     overlapping each other). Not started.
