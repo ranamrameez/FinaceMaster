@@ -941,6 +941,43 @@ not developer notes) continuously as features ship.
   is. New tests: `store/__tests__/createWorkbookStore.test.ts` (4
   tests). `npm run build` / `npm run test` (150 tests, 4 new) both
   clean.
+- **Chip/checkbox-chip selected-state indicator fixed app-wide,
+  user-reported (2026-08-23) — see README Done item 53.** Root cause
+  was two layers deep, and only the second layer was the "real" bug.
+  Layer one: even under the default "wine" theme, `.chip.active`'s old
+  style (a light `--accent-soft` tint) was too close in lightness to
+  the inactive chip's own background — a legitimate, if mild,
+  contrast problem. Layer two, the actual severe bug: **every other
+  color theme in the app (ocean/forest/violet/sunset, and all seven
+  `material-*` themes) had a *higher-specificity* per-theme `.chip`
+  rule in `theme.css` that unconditionally set the same background/
+  color properties `.chip.active` sets — with higher CSS specificity
+  (an `html:not(...)`/`html[data-color^=...]` type+attribute selector
+  beats a plain two-class `.chip.active` selector) — so under any
+  non-wine theme, active and inactive chips rendered **completely
+  identically**, regardless of state. This is exactly the kind of bug
+  that's invisible reading the "obvious" rule (`.chip.active` itself
+  looked fine in isolation) and only shows up once you trace which
+  *other* rule in the cascade wins for a given theme — worth
+  remembering the next time a chip/pill-style active-state complaint
+  comes in: check every per-theme override for the same class before
+  assuming the base active-state rule is broken. Confirmed via
+  Playwright screenshots (before/after, three themes: wine,
+  material-blue, ocean) of both the exchange-switcher chips and
+  `ChartFilterBar`'s ticker chips. **Fix**: rewrote the base
+  `.chip.active` rule to a solid, strongly-contrasting fill — the same
+  `color-mix(in srgb, var(--accent) 65%, #000)` + white-text treatment
+  the app's primary `.btn` already uses — and added `:not(.active)` to
+  every per-theme `.chip` override selector in `theme.css` (two
+  `:not([data-color="wine"]) .chip` blocks, the `material-*` block, and
+  the explicit material-light/dark block) so none of them can clobber
+  the active style regardless of theme. Also added a `CheckIcon`
+  checkmark to `ChartFilterBar`'s ticker chips specifically (a genuine
+  multi-select "checkbox" control, unlike the single-select exchange-
+  switcher/tab-bar chips, which read fine from the fill alone) for a
+  color-independent confirmation signal. No test suite coverage (a
+  CSS/visual fix) — verified entirely via the before/after screenshots.
+  `npm run build` / `npm run test` (150 tests, unchanged) both clean.
 - **Large batch of user feedback received 2026-08-23, mid-session —
   most items handled, some still open (check README Done/Pending for
   current per-item status, this is a snapshot at time of receipt).**
@@ -948,7 +985,8 @@ not developer notes) continuously as features ship.
   (1) Trade Calculator amount input bug — fixed, see above. (2) Trade
   Planner error deleting all trades in a plan — fixed, see above (a
   Firebase RTDB empty-nested-array gotcha, see README Done item 52).
-  (3) Checkbox/chip selected-state unclear — UI bug. (4) Inputs/
+  (3) Checkbox/chip selected-state unclear — fixed, see below (README
+  Done item 53). (4) Inputs/
   selects should be a bit larger on mobile to avoid cutting. (5)
   Inputs should align to the bottom with labels directly above,
   consistently — long labels currently push some inputs down while

@@ -86,7 +86,7 @@
   html:not([data-color="wine"]) thead th{
     color: var(--accent);
   }
-  html:not([data-color="wine"]) .chip{
+  html:not([data-color="wine"]) .chip:not(.active){
     background: var(--accent-soft);
     border-color: transparent;
     color: var(--accent);
@@ -176,6 +176,8 @@
   html[data-color^="material-"] .chip{
     border:0;
     border-radius:999px;
+  }
+  html[data-color^="material-"] .chip:not(.active){
     background:var(--accent-soft);
     color:var(--accent);
   }
@@ -499,10 +501,23 @@
 
   .chip-tabs{display:flex; gap:6px; margin-bottom:18px; margin-left:4px; flex-wrap:wrap;}
   .chip{
+    display:inline-flex; align-items:center; gap:4px;
     background:var(--panel-2); border:1px solid var(--border); color:var(--muted);
     padding:7px 13px; border-radius:20px; font-size:12.5px; cursor:pointer; font-weight:500;
   }
-  .chip.active{background:var(--accent-soft); color:var(--on-accent-soft); border-color:var(--accent);}
+  /* A solid fill (same treatment as the primary .btn) rather than the old
+     accent-soft tint — that tint sits so close in lightness to the
+     inactive chip's own background/border in several themes (and gets
+     entirely overridden by higher-specificity per-theme .chip rules in
+     every non-wine color theme, see the :not(.active)/. exclusions added
+     to those rules) that active vs. inactive chips read as visually
+     identical — a real user-reported "which one is selected?" bug. */
+  .chip.active{
+    background: color-mix(in srgb, var(--accent) 65%, #000);
+    color: #fff;
+    border-color: transparent;
+    font-weight: 700;
+  }
 
   .subpage{display:none;}
   .subpage.active{display:block;}
@@ -912,8 +927,8 @@
   html[data-color^="material-"][data-theme="dark"] .btn.secondary { background:var(--accent-soft); color:var(--accent); border-color:transparent; }
   html[data-color^="material-"][data-theme="light"] .btn.ghost,
   html[data-color^="material-"][data-theme="dark"] .btn.ghost { background:transparent; color:var(--accent); border-color:transparent; }
-  html[data-color^="material-"][data-theme="light"] .chip,
-  html[data-color^="material-"][data-theme="dark"] .chip,
+  html[data-color^="material-"][data-theme="light"] .chip:not(.active),
+  html[data-color^="material-"][data-theme="dark"] .chip:not(.active),
   html[data-color^="material-"][data-theme="light"] .section-title .tag,
   html[data-color^="material-"][data-theme="dark"] .section-title .tag { background:var(--accent-soft); color:var(--accent); border-color:transparent; }
   html[data-color^="material-"][data-theme="light"] thead th,

@@ -1,4 +1,5 @@
 import type { ChartFilter } from '../lib/calc/chartFilters';
+import { CheckIcon } from './icons';
 
 /** README item 17: shared ticker + month-range filter controls for the
  * Analytics pages — exchange-agnostic (QSE and PSX each pass their own
@@ -28,7 +29,7 @@ export function ChartFilterBar({
           className={`chip${filter.tickers.length === 0 ? ' active' : ''}`}
           onClick={() => onChange({ ...filter, tickers: [] })}
         >
-          All
+          {filter.tickers.length === 0 && <CheckIcon size={11} />}All
         </button>
         {tickers.map((t) => (
           <button
@@ -37,7 +38,7 @@ export function ChartFilterBar({
             className={`chip${filter.tickers.includes(t) ? ' active' : ''}`}
             onClick={() => toggleTicker(t)}
           >
-            {t}
+            {filter.tickers.includes(t) && <CheckIcon size={11} />}{t}
           </button>
         ))}
       </div>

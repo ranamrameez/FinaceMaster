@@ -682,6 +682,29 @@ FinanceManager live link:
     createWorkbookStore.test.ts` (4 tests) cover a plan missing `legs` on load, on
     `setWorkbook`, and a plan with real legs staying untouched. `npm run build` /
     `npm run test` (150 tests, 4 new) both clean.
+53. **Chip/checkbox-chip selected-state indicator fixed app-wide, user-reported ("checkbox
+    chips doesn't indicate selected option well making the UI confusing").** Root cause was
+    two-layered. First, even under the default theme, `.chip.active`'s old style
+    (`background:var(--accent-soft)`, a very light tint) sat so close in lightness to the
+    inactive chip's own background/border that the two were hard to tell apart at a glance.
+    Second, and more seriously, **every non-default color theme (ocean/forest/violet/sunset/
+    all seven `material-*` themes — everything except the default "wine" theme) had a
+    higher-specificity per-theme `.chip` rule that unconditionally overrode `.chip.active`'s
+    background/color, regardless of whether a chip was active** — under any of those themes,
+    active and inactive chips rendered *completely* identically. Confirmed via Playwright
+    screenshots of the PSX Analytics ticker-filter chips and exchange-switcher chips under
+    wine, `material-blue`, and `ocean` before and after. Fixed by (1) rewriting the base
+    `.chip.active` rule to a solid, strongly-contrasting fill (the same `color-mix(in srgb,
+    var(--accent) 65%, #000)` + white text treatment the app's primary `.btn` already uses,
+    rather than the subtle accent-soft tint), and (2) adding `:not(.active)` to every
+    per-theme `.chip` override selector in `theme.css` (the two `:not([data-color="wine"])
+    .chip` blocks, the `material-*` block, and the explicit material light/dark block) so
+    none of them can clobber the active style anymore. Also added a small checkmark
+    (`CheckIcon`) to `ChartFilterBar`'s ticker chips specifically — a genuine multi-select
+    "checkbox" control, unlike the single-select exchange-switcher/tab-bar chips that read
+    fine from the fill alone — for an extra, color-independent confirmation signal. Verified
+    with real before/after screenshots across all three themes tested. `npm run build` /
+    `npm run test` (150 tests, unchanged — a CSS/visual fix) both clean.
 
 ## Pending
 
@@ -763,8 +786,6 @@ wave" section)**:
 **New batch of user feedback, 2026-08-23 (mid-session) — see Done item 51 for item (1),
 already fixed; the rest tracked here**:
 
-30. Checkbox/chip toggle selectors (e.g. `ChartFilterBar`'s ticker chips) don't clearly show
-    which option is selected — a UI clarity bug. Not started.
 31. Mobile CSS pass: inputs/selects should be a bit larger on small screens (currently get cut
     off); form labels should sit consistently right above their input with bottom-alignment
     (long labels currently push some inputs down while shorter-labeled inputs in the same row
