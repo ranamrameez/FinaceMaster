@@ -4,6 +4,7 @@ import { confirmDialog } from '../../../components/ConfirmDialog';
 import { CheckIcon, PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { Field, TextInput } from '../../../components/ui/Field';
+import { analyzeTradePlanByTicker } from '../../../lib/calc/tradePlanAnalysis';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
@@ -12,8 +13,8 @@ import { usePSXDerived } from '../hooks/usePSXDerived';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-function emptyLeg(): TradePlanLeg {
-  return { date: today(), ticker: '', action: 'BUY', shares: 0, price: 0 };
+function emptyLeg(defaultTicker = ''): TradePlanLeg {
+  return { date: today(), ticker: defaultTicker, action: 'BUY', shares: 0, price: 0 };
 }
 
 function NewPlanForm() {
@@ -21,10 +22,20 @@ function NewPlanForm() {
   const ensureSignedIn = useEnsureSignedIn();
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
+  const [defaultTicker, setDefaultTicker] = useState('');
   const [legs, setLegs] = useState<TradePlanLeg[]>([emptyLeg()]);
 
   const update = (i: number, patch: Partial<TradePlanLeg>) =>
     setLegs((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+
+  // Most plans revolve around one ticker — set it once here and every leg
+  // (the initial one, and any added after) pre-fills with it. Only backfills
+  // a leg whose ticker is still blank, so a leg the user already typed a
+  // different ticker into is never silently overwritten.
+  const setDefaultTickerAndBackfill = (value: string) => {
+    setDefaultTicker(value);
+    setLegs((rs) => rs.map((r) => (r.ticker ? r : { ...r, ticker: value })));
+  };
 
   const save = async () => {
     const valid = legs.filter((l) => l.ticker && l.shares > 0 && l.price > 0);
@@ -37,11 +48,13 @@ function NewPlanForm() {
       createdAt: today(),
       notes: notes.trim() || undefined,
       legs: valid.map((l) => ({ ...l, ticker: l.ticker.toUpperCase() })),
+      defaultTicker: defaultTicker.trim() ? defaultTicker.trim().toUpperCase() : undefined,
     };
     addTradePlan(plan);
     toast(`Saved plan "${plan.name}" with ${valid.length} leg${valid.length > 1 ? 's' : ''}.`);
     setName('');
     setNotes('');
+    setDefaultTicker('');
     setLegs([emptyLeg()]);
   };
 
@@ -53,6 +66,14 @@ function NewPlanForm() {
         </Field>
         <Field label="Notes (optional)" width={320}>
           <TextInput value={notes} onChange={(e) => setNotes(e.target.value)} />
+        </Field>
+        <Field label="Default ticker (optional)" width={160}>
+          <TextInput
+            value={defaultTicker}
+            onChange={(e) => setDefaultTickerAndBackfill(e.target.value.toUpperCase())}
+            list={PSX_TICKER_DATALIST_ID}
+            placeholder="e.g. QGTS"
+          />
         </Field>
       </div>
       {legs.map((l, i) => (
@@ -90,7 +111,7 @@ function NewPlanForm() {
         </div>
       ))}
       <div className="row" style={{ gap: 8 }}>
-        <button className="btn secondary" onClick={() => setLegs((rs) => [...rs, emptyLeg()])}>
+        <button className="btn secondary" onClick={() => setLegs((rs) => [...rs, emptyLeg(defaultTicker)])}>
           <PlusIcon />Add leg
         </button>
         <button className="btn" onClick={save}>
@@ -106,12 +127,14 @@ function PlanCard({ plan }: { plan: TradePlan }) {
   const deleteTradePlan = usePSXWorkbookStore((s) => s.deleteTradePlan);
   const executeTradePlanLeg = usePSXWorkbookStore((s) => s.executeTradePlanLeg);
   const ensureSignedIn = useEnsureSignedIn();
-  const { workbook, calcFee } = usePSXDerived();
+  const { workbook, calcFee, rows } = usePSXDerived();
   const currency = workbook.settings.currency;
+  const tickerAnalysis = analyzeTradePlanByTicker(plan.legs, rows, calcFee, workbook.settings.feePct, workbook.settings.tick);
 
   const [editingMeta, setEditingMeta] = useState(false);
   const [name, setName] = useState(plan.name);
   const [notes, setNotes] = useState(plan.notes || '');
+  const [defaultTicker, setDefaultTicker] = useState(plan.defaultTicker || '');
   const [editLegIndex, setEditLegIndex] = useState<number | null>(null);
   const [editLeg, setEditLeg] = useState<TradePlanLeg | null>(null);
   const [addingLeg, setAddingLeg] = useState<TradePlanLeg | null>(null);
@@ -126,7 +149,11 @@ function PlanCard({ plan }: { plan: TradePlan }) {
   };
 
   const saveMeta = () => {
-    updateTradePlan(plan.id, { name: name.trim() || plan.name, notes: notes.trim() || undefined });
+    updateTradePlan(plan.id, {
+      name: name.trim() || plan.name,
+      notes: notes.trim() || undefined,
+      defaultTicker: defaultTicker.trim() ? defaultTicker.trim().toUpperCase() : undefined,
+    });
     setEditingMeta(false);
   };
 
@@ -172,6 +199,13 @@ function PlanCard({ plan }: { plan: TradePlan }) {
           <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
             <TextInput value={name} onChange={(e) => setName(e.target.value)} />
             <TextInput value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes" />
+            <TextInput
+              value={defaultTicker}
+              onChange={(e) => setDefaultTicker(e.target.value.toUpperCase())}
+              list={PSX_TICKER_DATALIST_ID}
+              placeholder="Default ticker"
+              style={{ width: 130 }}
+            />
             <button className="btn secondary small" onClick={saveMeta}><SaveIcon size={12} />Save</button>
             <button className="btn secondary small" onClick={() => setEditingMeta(false)}>Cancel</button>
           </div>
@@ -180,6 +214,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
             <strong>{plan.name}</strong>{' '}
             <span className="footer-note">
               {plan.createdAt} · {doneCount}/{plan.legs.length} executed
+              {plan.defaultTicker && <> · default ticker {plan.defaultTicker}</>}
             </span>
             {plan.notes && <p className="footer-note" style={{ margin: '4px 0 0' }}>{plan.notes}</p>}
           </div>
@@ -191,6 +226,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
               onClick={() => {
                 setName(plan.name);
                 setNotes(plan.notes || '');
+                setDefaultTicker(plan.defaultTicker || '');
                 setEditingMeta(true);
               }}
             >
@@ -299,13 +335,45 @@ function PlanCard({ plan }: { plan: TradePlan }) {
       </div>
 
       {!addingLeg && (
-        <button className="btn secondary small" style={{ marginTop: 8 }} onClick={() => setAddingLeg(emptyLeg())}>
+        <button className="btn secondary small" style={{ marginTop: 8 }} onClick={() => setAddingLeg(emptyLeg(plan.defaultTicker))}>
           <PlusIcon size={12} />Add leg
         </button>
       )}
 
+      {tickerAnalysis.length > 0 && (
+        <div className="table-scroll" style={{ marginTop: 12 }}>
+          <div className="footer-note" style={{ marginBottom: 4 }}>
+            Per-ticker plan analysis — average cost blends this plan's buys with any shares you already hold.
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Ticker</th><th>Avg cost (after buys)</th><th>Break-even</th>
+                <th>Shares after plan</th><th>Planned P/L (from sells)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tickerAnalysis.map((t) => (
+                <tr key={t.ticker}>
+                  <td>{t.ticker}</td>
+                  <td>{t.avgCost > 0 ? fmtPrice(t.avgCost) : '—'}</td>
+                  <td>{t.breakEven > 0 ? fmtPrice(t.breakEven) : '—'}</td>
+                  <td>{fmt(t.effectiveShares, 0)}</td>
+                  <td className={t.planSold > 0 ? (t.realizedPL >= 0 ? 'pill-buy' : 'pill-sell') : ''}>
+                    {t.planSold > 0 ? fmtMoney(t.realizedPL, currency) : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       <p className="footer-note" style={{ marginTop: 8 }}>
         Planned buys {fmtMoney(totalBuy, currency)} · Planned sells {fmtMoney(totalSell, currency)}
+        {tickerAnalysis.some((t) => t.planSold > 0) && (
+          <> · Total planned P/L {fmtMoney(tickerAnalysis.reduce((s, t) => s + t.realizedPL, 0), currency)}</>
+        )}
       </p>
     </div>
   );

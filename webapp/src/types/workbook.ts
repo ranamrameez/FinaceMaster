@@ -57,6 +57,12 @@ export interface TradePlan {
   createdAt: string;
   notes?: string;
   legs: TradePlanLeg[];
+  /** Most trade plans revolve around one ticker ("standard is, a default
+   * ticker per trade plan" — user request) — set once, new legs
+   * (both the initial one and any added later) pre-fill with it instead of
+   * starting blank, while a leg can still be changed to a different
+   * ticker for the (less common) multi-ticker plan. */
+  defaultTicker?: string;
 }
 
 export interface PricePoint {

@@ -206,16 +206,25 @@ stock recovers, and the calculator says so directly. Only shows tickers you curr
 
 For planning multi-leg trades ahead of time, separate from the one-shot Trade Calculator:
 
-1. **Save a plan** — give it a name, optional notes, and one or more legs (ticker, action,
-   shares, price, date).
-2. **Edit anytime** — rename the plan, edit its notes, add a new leg to an already-saved
-   plan ("+ Add leg" below the table), or edit/remove any individual leg that hasn't been
-   executed yet.
-3. **Mark a leg done** once you've actually executed that trade — this logs it straight
+1. **Save a plan** — give it a name, optional notes, an optional **default ticker** (most
+   plans revolve around one stock — set it once and new legs auto-fill with it; you can
+   still change any individual leg to a different ticker), and one or more legs (ticker,
+   action, shares, price, date).
+2. **Edit anytime** — rename the plan, edit its notes or default ticker, add a new leg to an
+   already-saved plan ("+ Add leg" below the table — pre-fills the default ticker too), or
+   edit/remove any individual leg that hasn't been executed yet.
+3. **Per-ticker plan analysis**: below each plan's legs, a table shows — for every ticker in
+   the plan — your average cost (blending this plan's own buy legs with any shares you
+   already hold, so planning to sell existing stock works correctly even with no buy legs
+   in the plan), a fee-aware break-even price, shares remaining once the plan executes, and
+   planned profit/loss from the plan's sell legs. A "Total planned P/L" also shows in the
+   summary line once any leg is a sell — this is the actual point of a *planner*: not just
+   listing trades, but seeing whether the cycle as a whole is expected to be profitable.
+4. **Mark a leg done** once you've actually executed that trade — this logs it straight
    into your real Transaction history (with an estimated fee shown per leg beforehand) so
    you don't have to re-type it into the Transactions tab. The leg stays in the plan as a
    record, separate from the transaction it created.
-4. **Delete a plan** any time — this only removes the plan, not any transactions already
+5. **Delete a plan** any time — this only removes the plan, not any transactions already
    logged from marking legs done.
 
 QSE doesn't have this page yet, but the same functionality is available underneath

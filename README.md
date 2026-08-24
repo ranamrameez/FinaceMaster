@@ -884,6 +884,43 @@ FinanceManager live link:
     confirmed via a fresh `localStorage` read that the plan now had both legs persisted
     correctly (not just visually). `npm run build` / `npm run test` (167 tests, unchanged — UI
     wiring onto an already-tested store action, no new calc logic) both clean.
+62. **PSX Trade Planner now shows per-ticker average cost, break-even, and planned P/L —
+    user-flagged priority ("purpose of trade planner is to find the buy avg, break-even, PL
+    per each trade and collectively to plan and run profitable trade cycle").** A plan's leg
+    table showed each leg's own amount/fee, but nothing about what the *cycle* as a whole
+    means for your actual cost basis or expected profit. New `lib/calc/tradePlanAnalysis.ts`
+    (`analyzeTradePlanByTicker`) computes, per ticker in a plan: average cost **blended with
+    any shares you already really hold** (not just this plan's own buy legs in isolation —
+    so planning to sell an existing position works correctly even with zero buy legs in the
+    plan), a fee-aware break-even price (reuses the same `breakEvenPrice` solver already used
+    by the Trade Calculator/Portfolio/Dashboard, not a new formula), shares remaining after
+    the plan executes, and planned realized P/L from the plan's own sell legs valued against
+    that blended cost. Shown as a new "Per-ticker plan analysis" table under each plan's legs,
+    plus a "Total planned P/L" figure in the summary line when any ticker has a sell leg. New
+    tests: `lib/calc/__tests__/tradePlanAnalysis.test.ts` (6 cases: plan-only buy cost basis,
+    blending a real holding into average cost, sell-only P/L against a real holding, fees
+    correctly reducing both buy cost basis and sell proceeds, one row per distinct ticker, and
+    a genuinely-empty case with neither a real holding nor a buy leg). Verified live: seeded a
+    real 100-share QGTS holding plus a plan with a 100-share buy and a 50-share sell,
+    confirmed the rendered average cost/break-even/P/L matched hand-calculated blended
+    values. `npm run build` / `npm run test` (173 tests, 6 new) both clean.
+63. **PSX Trade Planner: a per-plan default ticker that auto-fills new legs — user request
+    ("standard is, a default ticker per trade plan and autofill legs with it; 1 plan may have
+    different trade tickers").** `TradePlan` gained an optional `defaultTicker` field. New
+    plans (`NewPlanForm`) get a "Default ticker" field alongside name/notes — setting it
+    backfills every leg whose ticker is still blank (never overwrites a leg the user already
+    typed a different ticker into), and every subsequent "Add leg" click pre-fills the new
+    row with it. Saved plans (`PlanCard`) show their default ticker in the summary line
+    ("· default ticker QGTS"), can edit it via the same Edit action as name/notes, and their
+    own "+ Add leg" flow pre-fills from it too. A plan can still mix tickers freely — this is
+    a convenience default, not a constraint — matching the user's own "1 plan may have
+    different trade tickers" clarification. Verified live via Playwright: set a default
+    ticker in `NewPlanForm`, confirmed both the already-present leg and a newly added one
+    picked it up; opened an existing saved plan with `defaultTicker: 'MEZN'`, clicked "+ Add
+    leg," and confirmed the new row's ticker input held the full value "MEZN" (checked via
+    `inputValue()`, not just a screenshot — the field's own width visually clips longer
+    tickers, which could otherwise be mistaken for a truncation bug). `npm run build` /
+    `npm run test` (173 tests, unchanged — UI/type addition, no new calc logic) both clean.
 
 ## Pending
 
@@ -973,14 +1010,19 @@ already fixed; the rest tracked here**:
     `lib/csv.ts`'s module-agnostic `toCSV()`, a from/to date-range filter) are already built
     and reusable. Not started for these five modules.
 39. A net-worth dashboard summarizing everything across every module, with collapsible
-    per-currency sections. **The user also asked for a converted total at a live ("Google")
-    exchange rate in the user's preferred currency — this directly conflicts with this
-    project's own locked "no live FX-rate lookup, no live market-data API call" rule (see
-    CLAUDE.md's Design decisions).** The rest of the dashboard (collapsible per-currency
-    sections, no conversion) is buildable now; the live-rate conversion part needs to be
-    raised with the user for an explicit decision before any code is written for it — do not
-    silently build it (violates the locked rule) or silently drop it (wasn't asked to be
-    dropped). Not started.
+    per-currency sections. **Resolved via `AskUserQuestion`: the user chose the
+    scheduled-fetch approach for currency conversion** (a Cloud Function fetching FX rates
+    once daily into Realtime Database, never a live per-page-load API call — consistent with
+    the locked rule) **over skipping conversion or a bigger scheduled-infra build.** The
+    function itself is scaffolded (see MODULES_PLAN.md §16, `functions/index.js`) but **not
+    deployed** — that needs the `qse-app` Firebase project on the Blaze plan plus an
+    authenticated `firebase deploy`, both real actions only the project owner can take, not
+    something this session can do end-to-end (same category as item 12's PDF-import Python
+    backend). **The dashboard page itself (collapsible per-currency sections, no conversion
+    needed for that part) is also not yet built** — deprioritized mid-session when the user
+    flagged Trade Calculator/Planner work as the top priority instead (see Done items 61/62).
+    Once the FX function is deployed and `fxRates/latest` is confirmed populated, build the
+    dashboard reading it the same defensive way `useQSEStockData.ts` reads `stockData/QSE`.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

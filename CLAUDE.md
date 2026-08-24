@@ -1235,6 +1235,59 @@ not developer notes) continuously as features ship.
   save but didn't actually persist to the store. `npm run build` /
   `npm run test` (167 tests, unchanged — UI wiring onto an
   already-tested store action) both clean.
+- **PSX Trade Planner per-ticker analysis, user-prioritized mid-session
+  (2026-08-23) — see README Done item 62.** The user explicitly
+  restated the tool's purpose while asking for this: "find the buy
+  avg, break-even, PL per each trade and collectively to plan and run
+  profitable trade cycle" — a signal that the leg table alone (each
+  leg's own amount/fee) wasn't meeting the actual point of a
+  *planner*, as opposed to a plain multi-row form. New
+  `lib/calc/tradePlanAnalysis.ts`'s `analyzeTradePlanByTicker()` is
+  the core addition: per ticker in a plan, it blends the plan's own
+  buy legs with whatever you *already* hold (via `usePSXDerived()`'s
+  `rows`) into one average cost — this was a deliberate design choice,
+  not the simpler "just use this plan's own legs": a sell-only plan
+  (no buy legs at all, just "I want to sell part of what I already
+  own") needs to know your *real* cost basis to mean anything, and
+  ignoring the real holding would silently show a nonsensical 0
+  average cost for the single most common planning case (selling
+  existing stock). Reuses the exact same `breakEvenPrice` solver
+  already used by the Trade Calculator/Portfolio/Dashboard rather than
+  a new formula — one fee-aware break-even implementation for the
+  whole app. New tests: `lib/calc/__tests__/tradePlanAnalysis.test.ts`
+  (6 cases). **A debugging note worth remembering, again**: verifying
+  this live in Playwright first showed every value as "—" (looked like
+  a real bug — avg cost/break-even/P/L all blank) until adding
+  temporary debug logging revealed the seeded test fixture itself was
+  wrong twice over: the PSX `settings` object was missing most of its
+  required fields (a shallow top-level merge in `loadFromLocalStorage`
+  means a partial `settings` object *replaces* the complete default
+  wholesale, not merges into it — so `calcFee` silently computed `NaN`
+  throughout), and separately the seeded `Transaction` used a `type`
+  field instead of the real `action` field, so the "real holding" came
+  back as an empty `rows` array with zero error. Neither was a product
+  bug; both were test-fixture mistakes that produced exactly the
+  symptom a real bug would — the fix each time was building a
+  complete, schema-accurate fixture (borrowed directly from
+  `defaultPsxWorkbook.ts`'s own `DEFAULT_PSX_SETTINGS`) rather than a
+  hand-typed partial one. `npm run build` / `npm run test` (173 tests,
+  6 new) both clean.
+- **PSX Trade Planner: default ticker auto-fill, immediate follow-up
+  request (2026-08-23) — see README Done item 63.** `TradePlan` gained
+  `defaultTicker?: string`; setting it in `NewPlanForm` backfills any
+  leg whose ticker is still blank (never clobbers one the user already
+  typed something different into) and every subsequent "Add leg" 
+  pre-fills from it; a saved plan (`PlanCard`) shows and edits its own
+  default ticker the same way, with its own "+ Add leg" also
+  pre-filling from it. Deliberately still allows mixed tickers in one
+  plan — the user's own words were explicit about that ("1 plan may
+  have different trade tickers"), so this is a convenience default,
+  not a constraint. Verified live via Playwright, including checking
+  the actual `inputValue()` of a newly-added leg's ticker field (not
+  just a screenshot) — the field's own narrow width visually clips a
+  4-letter ticker, which could otherwise look like a truncation bug
+  when it's actually just CSS. `npm run build` / `npm run test` (173
+  tests, unchanged) both clean.
 - **Large batch of user feedback received 2026-08-23, mid-session —
   most items handled, some still open (check README Done/Pending for
   current per-item status, this is a snapshot at time of receipt).**
