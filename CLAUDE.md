@@ -1908,6 +1908,37 @@ not developer notes) continuously as features ship.
   conversions showed a real `role="tooltip"` popup with correct text,
   zero console errors. `npx tsc -b` / `npm run test` (235 tests,
   unchanged) / `npm run build` all clean.
+- **New Subscriptions module built (2026-08-24) — README item 24,
+  seventh module beyond the original six, per MODULES_PLAN.md §12.**
+  Tracks recurring payments (streaming, gym, software, memberships)
+  independently, with an optional link to whichever Bank account or
+  Cash pays them. Reuses `createEntryStore` (same shape as EMI/Cash),
+  own Firebase path `users/{uid}/subscriptions`. Cancelling sets
+  `active: false` + `cancelledDate` instead of deleting, so spend
+  history survives. **Resolved MODULES_PLAN.md §12's open design
+  question** ("auto-generate a linked transaction, or just track
+  existence/cost?") in favor of the lighter generate-a-planned-entry
+  pattern EMI/Loans' "Link to bank" and Rentals' lease-projection
+  already shipped, rather than the heavier full bidirectional
+  cross-entity-link record — "Generate renewal plans" creates a
+  `PlannedBankTransaction`/`PlannedCashEntry` per upcoming occurrence
+  (new `sourceSubscriptionId` field on both types, mirroring EMI's
+  `sourceEmiLoanId` for safe re-linking). New `lib/calc/
+  subscriptionsModule.ts`: `nextBillingDate()`/`monthlyEquivalent()`
+  (normalizes monthly/yearly/weekly/custom-days cycles to a comparable
+  per-month figure), `totalMonthlySpendByCurrency()`,
+  `upcomingRenewals()`, `spendByCategory()`, and
+  `generateRenewalOccurrences()` (12-month horizon, same "12 means 12
+  points not 13" off-by-one fix already applied in `rentalPlanning.ts`).
+  Analytics tab covers all four items the plan named: monthly/yearly
+  spend, upcoming renewals (30 days), spend by category, spend by
+  paying account. New tests: `subscriptionsModule.test.ts` (14 cases).
+  Verified live via Playwright with two active + one cancelled seeded
+  subscription: landing list, Monthly recurring spend total, the
+  "Generate renewal plans" flow (12 correct monthly occurrences, hit
+  the sign-in gate), and all three Analytics charts matched
+  hand-calculated numbers — zero console errors. `npx tsc -b` / `npm
+  run test` (249 tests, 14 new) / `npm run build` all clean.
 
 ## Live URLs
 
@@ -1953,6 +1984,9 @@ webapp/                                                              the new Rea
   src/features/rentals/     Rentals module (2026-08-23) — hand-written store (same shape as
                             Banking), see its own entry above and MODULES_PLAN.md §4 — LAST
                             of the six originally-planned modules, all now built
+  src/features/subscriptions/  Subscriptions module (2026-08-24) — seventh module, beyond the
+                            original six — reuses createEntryStore.ts (same shape as EMI),
+                            see its own entry above and MODULES_PLAN.md §12
   src/components/           shared UI: Modal, ConfirmDialog, SignInModal, Sparkline, Tabs, Sidebar, etc.
   src/types/workbook.ts     QSE types; psxWorkbook.ts has PSX's parallel types
 .github/workflows/static.yml   CI: builds webapp/ and deploys it to /webapp/ alongside the legacy

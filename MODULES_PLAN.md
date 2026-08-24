@@ -718,13 +718,13 @@ EMI/Loans → Funds → Rentals) for consistency. Each module's Analytics page s
 same `ChartFilterBar`/`chartFilters.ts` pattern already built for QSE/PSX (README item 17)
 rather than a new filtering mechanism per module.
 
-## 12. Subscriptions module (new, not in the original six)
+## 12. Subscriptions module — ✅ built 2026-08-24 (see README Done item 99)
 
 **Purpose**: track recurring payments (streaming, gym, software, memberships) — the user
 explicitly wants each subscription **linked to the entity that pays it** (a Bank account,
 primarily, per their wording — "linked to applicable entities like banks").
 
-Sketch (subject to revision when actually built, per this doc's own rule):
+Shipped shape (matches the original sketch essentially unchanged):
 
 ```ts
 export interface Subscription {
@@ -735,9 +735,8 @@ export interface Subscription {
   billingCycle: 'monthly' | 'yearly' | 'weekly' | 'custom';
   customDays?: number;       // used when billingCycle === 'custom'
   startDate: string;
-  /** Optional — which Bank account (or 'cash') actually pays this, mirroring the
-   * LinkSideConfig.ref pattern from cross-entity linking rather than inventing a
-   * separate reference shape. */
+  /** Which Bank account (or 'cash') actually pays this. Once set, "Generate renewal
+   * plans" creates planned entries in that entity's Planning tab. */
   paidVia?: { module: 'bank' | 'cash'; ref?: string };
   category?: string;         // free-form, user-definable — same rule as every other module
   active: boolean;           // toggled off instead of deleted when cancelled, keeps history
@@ -750,15 +749,28 @@ export interface SubscriptionsWorkbook {
 }
 ```
 
-Whether marking a billing cycle "paid" should auto-create a linked Bank/Cash transaction
-(reusing `lib/interEntityLink.ts`'s pattern) or just track the subscription's existence/cost
-without auto-generating transactions is a real design choice to make when this is actually
-built — auto-generating avoids double-entry drift (matching the whole point of item 8) but
-adds complexity (what happens if a payment amount varies, or a cycle is skipped). Lean toward
-auto-generating via the same linking mechanism as item 8, once that's solid.
+**The "auto-generate vs. just track" design question was resolved in favor of a lighter
+mechanism than originally sketched.** Rather than the full bidirectional `lib/
+interEntityLink.ts` cross-entity-link record (a two-sided, delete-cascading link with its
+own store) — which item 21's own remainder shows is still not solid for every module pair
+— Subscriptions reuses the simpler generate-a-planned-entry pattern EMI/Loans' "Link to
+bank" and Rentals' lease-projection already shipped and proved out: "Generate renewal
+plans" creates a `PlannedBankTransaction`/`PlannedCashEntry` per upcoming occurrence (new
+`sourceSubscriptionId` field on both types), and re-linking replaces only that
+subscription's own not-yet-executed plans, same safety property EMI's `sourceEmiLoanId`
+already has. This sidesteps the "what happens if a payment amount varies, or a cycle is
+skipped" complexity the original sketch worried about — a plan is just a projection; the
+real transaction it eventually becomes (via "Mark as done" in the Planning tab) can differ
+if the actual charge did.
 
-**Analytics for this module** (tying into item 11): total monthly/yearly recurring spend,
-upcoming renewals in the next 30 days, spend by category, spend by paying account.
+New `lib/calc/subscriptionsModule.ts`: `nextBillingDate()`/`monthlyEquivalent()` (normalizes
+any cycle to a comparable per-month figure), `totalMonthlySpendByCurrency()`,
+`upcomingRenewals()`, `spendByCategory()`, `generateRenewalOccurrences()` (12-month horizon,
+same off-by-one fix as `rentalPlanning.ts`).
+
+**Analytics for this module** (tying into item 11) — ✅ built: total monthly/yearly recurring
+spend (landing-view stat cards), upcoming renewals in the next 30 days (table), spend by
+category (Doughnut), spend by paying account (Bar, joined with Bank account names).
 
 ## 13. Import pipeline: CSV/JSON now, PDF/image via a Python backend (locked 2026-08-23)
 

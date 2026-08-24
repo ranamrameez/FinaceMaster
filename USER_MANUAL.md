@@ -14,9 +14,9 @@ if a feature described here changes, this file changes with it.**
 FinanceRecorder tracks your investments and broader personal finances across multiple
 exchanges and account types. It covers two stock exchanges — **QSE** (Qatar Stock Exchange)
 and **PSX** (Pakistan Stock Exchange) — each with its own portfolio, transactions,
-watchlist, analytics, and settings — plus six more modules: Cash, Personal Loans, Banking,
-EMI/Loans, Funds, and Rentals (see §14-§21 below). See `MODULES_PLAN.md` for the design
-notes behind each module and any future refinements.
+watchlist, analytics, and settings — plus seven more modules: Cash, Personal Loans, Banking,
+EMI/Loans, Funds, Rentals, and Subscriptions (see §14-§22 below). See `MODULES_PLAN.md` for
+the design notes behind each module and any future refinements.
 
 **Before anything else**: on your first visit, you'll see a one-time disclaimer screen.
 Read it and check the box to continue — it explains that all calculations here are
@@ -383,8 +383,8 @@ Informal loans with another person — money you lent out, or money you owe — 
   outstanding-by-loan chart (green for money lent out, red for money you owe) and a
   repayments-by-month chart. A currency picker appears if you have loans in more than one
   currency.
-- A repayment created from the **Transfers** page (§22) is linked to a Bank or Cash entry —
-  deleting it there also removes the matching Bank/Cash record; see §22 for details.
+- A repayment created from the **Transfers** page (§23) is linked to a Bank or Cash entry —
+  deleting it there also removes the matching Bank/Cash record; see §23 for details.
 - **Import repayments (CSV)**: inside a loan's detail view, below its repayments table, import
   a CSV of past repayments — map which column is Date and which is Amount, preview the first
   5 rows, then import. Amounts are always treated as positive (a repayment doesn't have a
@@ -551,13 +551,39 @@ tax, management fees) against one or more properties.
 - **Settings tab**: same account/cloud-sync status and export/import/clear data management
   as other modules.
 
-This completes the six modules planned in `MODULES_PLAN.md` — Cash, Personal Loans,
-Banking, EMI/Loans, Funds, and Rentals are all built alongside the original QSE/PSX stock
-exchange modules.
+This completes the six modules originally planned in `MODULES_PLAN.md` — Cash, Personal
+Loans, Banking, EMI/Loans, Funds, and Rentals are all built alongside the original QSE/PSX
+stock exchange modules. Subscriptions (§22 below) was added afterward as a seventh module.
 
 ---
 
-## 22. Transfers (linking money between modules)
+## 22. Subscriptions
+
+Recurring payments — streaming, gym memberships, software, anything you're billed for on a
+schedule. Pick **Subscriptions** from the category dropdown.
+
+- **Add a subscription**: name, amount, currency, billing cycle (Monthly/Yearly/Weekly, or
+  Custom with your own number of days), start date, and an optional free-form category.
+- **Subscription list**: shows each one's raw amount and cycle, its **monthly-equivalent**
+  cost (so a $120/year subscription and a $10/month one are directly comparable), category,
+  next renewal date, and whether it's active or cancelled.
+- **Open a subscription** to edit any field, see its monthly/yearly equivalent cost and next
+  renewal date, and a 12-month preview of upcoming renewal dates.
+- **Cancel** (instead of delete) keeps the subscription's history visible with a "Cancelled"
+  status and the date it was cancelled — use **Reactivate** to undo, or **Delete** if you
+  want it gone entirely.
+- **Link to a paying account**: pick whichever Bank account or Cash actually pays this
+  subscription, then click **Generate renewal plans** to create a planned (not-yet-done)
+  entry for every renewal in the next 12 months in that account's Planning tab — same
+  pattern as EMI/Loans' "Link to bank." Re-linking (to a different account, or after editing
+  the amount/cycle) replaces only the not-yet-done plans; anything already marked done is
+  left alone.
+- **Analytics tab**: total monthly recurring spend by currency, upcoming renewals in the
+  next 30 days, spend by category, and spend by paying account.
+
+---
+
+## 23. Transfers (linking money between modules)
 
 Pick **Transfers** from the category dropdown. Normally, moving money between two modules
 — say, withdrawing cash from your bank account — means entering it twice: a withdrawal in
@@ -591,7 +617,7 @@ something wrong.
 
 ---
 
-## 23. Net Worth
+## 24. Net Worth
 
 Pick **Net Worth** from the category dropdown — a single page summarizing everything you've
 recorded across every module. Each currency you use gets its own collapsible section (click
@@ -614,7 +640,7 @@ with no rate at all (only the one converted grand-total line depends on having a
 
 ---
 
-## 24. A note on accuracy
+## 25. A note on accuracy
 
 Every number in this app is an **estimate** computed from settings you configure — it is
 not a substitute for your actual broker/exchange statement, and it is not financial advice.

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-export type CategoryKey = 'netWorth' | 'stocks' | 'funds' | 'bank' | 'cash' | 'personalLoans' | 'emi' | 'rentals' | 'transfers';
+export type CategoryKey = 'netWorth' | 'stocks' | 'funds' | 'bank' | 'cash' | 'personalLoans' | 'emi' | 'rentals' | 'subscriptions' | 'transfers';
 
 const CATEGORIES: { key: CategoryKey; label: string; to: string }[] = [
   { key: 'netWorth', label: 'Net Worth', to: '/net-worth' },
@@ -12,6 +12,7 @@ const CATEGORIES: { key: CategoryKey; label: string; to: string }[] = [
   { key: 'personalLoans', label: 'Personal Loans', to: '/personal-loans' },
   { key: 'emi', label: 'EMI / Loans', to: '/emi-loans' },
   { key: 'rentals', label: 'Rentals', to: '/rentals' },
+  { key: 'subscriptions', label: 'Subscriptions', to: '/subscriptions' },
   { key: 'transfers', label: 'Transfers', to: '/transfers' },
 ];
 
@@ -28,6 +29,7 @@ export function categoryForPath(pathname: string): CategoryKey {
   if (pathname.startsWith('/personal-loans')) return 'personalLoans';
   if (pathname.startsWith('/emi-loans')) return 'emi';
   if (pathname.startsWith('/rentals')) return 'rentals';
+  if (pathname.startsWith('/subscriptions')) return 'subscriptions';
   if (pathname.startsWith('/transfers')) return 'transfers';
   return 'stocks';
 }

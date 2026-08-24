@@ -20,6 +20,10 @@ export interface PlannedBankTransaction {
    * re-linking find and replace this loan's previously-generated,
    * not-yet-executed plans instead of piling up duplicates. */
   sourceEmiLoanId?: string;
+  /** Same idea as `sourceEmiLoanId`, for Subscriptions' "Generate renewal
+   * plans" (README item 24) — lets regeneration replace only this
+   * subscription's own not-yet-executed plans. */
+  sourceSubscriptionId?: string;
 }
 
 export interface PlannedBankSettings {

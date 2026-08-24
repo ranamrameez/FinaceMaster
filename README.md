@@ -1617,6 +1617,39 @@ FinanceManager live link:
     `npx tsc -b` / `npm run test` (235 tests, unchanged) / `npm run build` all clean. **Item
     47's remainder is now narrower**: CollapsibleCard headers and the deliberately-skipped
     items named above are what's left, not a full sweep.
+99. **New Subscriptions module built (2026-08-24) — README item 24, seventh module beyond the
+    original six, per the design sketch in `MODULES_PLAN.md` §12.** Tracks recurring payments
+    (streaming, gym, software, memberships) independently of any other module's ledger, with
+    an optional link to whichever Bank account or Cash actually pays them. Reuses
+    `createEntryStore` (same shape as EMI/Cash — `Subscription[]` under `entries`), own
+    Firebase path `users/{uid}/subscriptions`. Cancelling a subscription sets `active: false`
+    + `cancelledDate` rather than deleting it, so spend history survives — deletion is still
+    available separately for genuine removal. New `lib/calc/subscriptionsModule.ts`:
+    `nextBillingDate()`/`monthlyEquivalent()` (normalizes any billing cycle — monthly/yearly/
+    weekly/custom-days — to a comparable per-month figure), `totalMonthlySpendByCurrency()`,
+    `upcomingRenewals()`, `spendByCategory()`, and `generateRenewalOccurrences()` (every
+    renewal from the next one forward, capped at a 12-month horizon — same "12 months means
+    12 points, not 13" off-by-one fix already applied in `rentalPlanning.ts`). **"Generate
+    renewal plans"** resolves the open design question MODULES_PLAN.md §12 flagged ("auto-
+    generate a linked transaction, or just track existence/cost?") by reusing the same
+    generate-a-planned-entry pattern EMI/Loans' "Link to bank" and Rentals' lease-projection
+    already shipped, rather than the heavier full bidirectional cross-entity-link record
+    (item 21's own remainder) — picking Bank or Cash creates a `PlannedBankTransaction`/
+    `PlannedCashEntry` per upcoming occurrence (new `sourceSubscriptionId` field on both
+    types, mirroring EMI's `sourceEmiLoanId`, so re-linking replaces only this subscription's
+    own not-yet-done plans). Analytics tab covers all four items MODULES_PLAN.md §12 named:
+    total monthly/yearly recurring spend (on the landing view, colored stat cards), spend by
+    category (Doughnut), spend by paying account (Bar, joins with Bank account names), and
+    upcoming renewals in the next 30 days (table). New tests: `subscriptionsModule.test.ts`
+    (14 cases, hand-traced cycle math for all four billing types). Verified live via
+    Playwright with two seeded active subscriptions and one cancelled: the landing list
+    showed correct amounts/next-renewal-dates/status, Monthly recurring spend summed
+    correctly (45 USD), the "Generate renewal plans" flow correctly listed 12 monthly
+    occurrences and hit the sign-in gate, and the Analytics tab's three charts all matched
+    hand-calculated numbers (category doughnut, paying-account bar showing "Not linked"
+    since generation was gated by sign-in, and both subscriptions correctly appearing in the
+    30-day upcoming-renewals window) — zero console errors. `npx tsc -b` / `npm run test`
+    (249 tests, 14 new) / `npm run build` all clean.
 
 ## Pending
 
@@ -1665,9 +1698,10 @@ wave" section)**:
     the Planning tab (item 43), EMI/Rentals have auto-generated plans (items 59/60), but QSE/
     PSX's Trade-Planner-style multi-scenario planner has no equivalent yet in Personal Loans/
     Funds — not tracked as a gap here since nothing in this wave's scope promised one.
-24. New Subscriptions module — recurring payments (streaming, gym, etc.) linked to a paying
-    entity (a Bank account or Cash), reusing the cross-entity linking mechanism from item 21
-    once solid. Not started — see `MODULES_PLAN.md` §12.
+24. ~~New Subscriptions module — recurring payments (streaming, gym, etc.) linked to a paying
+    entity (a Bank account or Cash).~~ **Done (2026-08-24) — see Done item 99, MODULES_PLAN.md
+    §12.** Uses the same generate-a-planned-entry pattern as EMI/Rentals rather than the
+    heavier full cross-entity-link record (item 21's own remainder is unrelated/still open).
 25. Import pipeline: CSV/JSON import — **✅ done for Cash, Rentals, and Personal Loans (see
     Done items 40/41)**, browser-only, no new infra. PDF/image import still needs **a
     separate Python backend service** (locked decision) for OCR/parsing, hosted on

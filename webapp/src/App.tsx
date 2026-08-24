@@ -43,6 +43,8 @@ import { useFundsFirebaseSync } from './lib/firebase/useFundsFirebaseSync';
 import { RentalsPage } from './features/rentals/pages/RentalsPage';
 import { useRentalsFirebaseSync } from './lib/firebase/useRentalsFirebaseSync';
 import { usePlannedRentalsFirebaseSync } from './lib/firebase/usePlannedRentalsFirebaseSync';
+import { SubscriptionsPage } from './features/subscriptions/pages/SubscriptionsPage';
+import { useSubscriptionsFirebaseSync } from './lib/firebase/useSubscriptionsFirebaseSync';
 import { TransferLinksPage } from './features/transfers/pages/TransferLinksPage';
 import { useInterEntityTransfersFirebaseSync } from './lib/firebase/useInterEntityTransfersFirebaseSync';
 import { LegalPage } from './pages/LegalPage';
@@ -97,6 +99,7 @@ function App() {
   // simplification. Still run the sync itself so plans persist/pull.
   usePlannedRentalsFirebaseSync();
   const transfersSync = useInterEntityTransfersFirebaseSync();
+  const subscriptionsSync = useSubscriptionsFirebaseSync();
 
   return (
     <ErrorBoundary>
@@ -224,6 +227,17 @@ function App() {
                     syncStatus={transfersSync.status}
                     cloudEmpty={transfersSync.cloudEmpty}
                     uploadLocalToCloud={transfersSync.uploadLocalToCloud}
+                  />
+                }
+              />
+              <Route
+                path="/subscriptions"
+                element={
+                  <SubscriptionsPage
+                    user={user}
+                    syncStatus={subscriptionsSync.status}
+                    cloudEmpty={subscriptionsSync.cloudEmpty}
+                    uploadLocalToCloud={subscriptionsSync.uploadLocalToCloud}
                   />
                 }
               />
