@@ -1697,6 +1697,31 @@ FinanceManager live link:
      render mechanism (the same one already proven working for EMI's Amortization-schedule
      chart, shipped earlier this session). `npx tsc -b` / `npm run test` (251 tests,
      unchanged — UI-only) / `npm run build` all clean.
+102. **PSX Trade Planner's Saved Plans made into a real accordion header, user-reported UI bug
+     (2026-08-24).** Two related complaints: the card's header didn't act as the accordion
+     toggle (a separate "Expand"/"Collapse" button did instead — clicking the name/title did
+     nothing), and the action buttons ("Full screen"/"Edit"/"Clear plan"/"Delete plan") sat in
+     their own row that could visually land in an awkward spot next to the title rather than
+     staying pinned to the right edge ("hanging in between"). Root cause of both: `PlanCard`
+     had its own hand-rolled header (`justifyContent: 'space-between'` row) and its own
+     `collapsed`/`setCollapsed` state wired only to a dedicated button, instead of using the
+     `CollapsibleCard` component already used everywhere else in the app for exactly this
+     pattern. Rewired `PlanCard` (non-full-screen mode) onto `CollapsibleCard`: the plan
+     name/meta (or, mid-edit, the rename form) is now the `title` — clicking anywhere on the
+     header row toggles the accordion — and the four action buttons move into `headerExtra`,
+     which `CollapsibleCard` already renders in its own right-aligned, click-stops-
+     propagation container, fixing both the "click header to expand" behavior and the button
+     alignment in one change. The rename form's own container also gets an explicit
+     `stopPropagation` so clicking into its inputs or its Save/Cancel buttons doesn't
+     double-fire the accordion toggle. Full-screen mode (a fixed-position overlay showing
+     the plan's full content unconditionally) keeps its previous plain-`div` structure
+     unchanged, since it never had — or needed — its own collapse toggle. Verified live via
+     Playwright: clicking the header title toggled `aria-expanded` true→false→true correctly
+     (confirmed via the attribute, not just a screenshot); clicking "Edit" opened the rename
+     form while the accordion stayed expanded and the button row correctly dropped "Edit"
+     itself while keeping the rest right-aligned; full-screen mode still shows all content
+     immediately with no accordion header at all — zero console errors throughout. `npx tsc
+     -b` / `npm run test` (251 tests, unchanged — UI-only) / `npm run build` all clean.
 
 ## Pending
 

@@ -1981,6 +1981,27 @@ not developer notes) continuously as features ship.
   (251 tests, unchanged) / `npm run build` all clean. Still not
   collapsible, deliberately: Portfolio's Holdings/History tables and
   Personal Loans' `RepaymentsSection` (see README item 42).
+- **PSX Trade Planner's Saved Plans made into a real accordion header,
+  user-reported (2026-08-24) — see README Done item 102.** Two
+  complaints: clicking the card header did nothing (a separate
+  "Expand"/"Collapse" button did the actual toggling), and the action
+  buttons sat "hanging in between" instead of staying right-aligned.
+  Root cause: `PlanCard` hand-rolled its own header instead of using
+  the `CollapsibleCard` component already used everywhere else for
+  this exact pattern. Rewired onto `CollapsibleCard`: the plan name/
+  meta (or, mid-edit, the rename form) is the `title` (clicking it
+  toggles the accordion); the four action buttons move into
+  `headerExtra`, which already renders right-aligned and stops click
+  propagation so those buttons never also toggle the accordion. The
+  rename form's own container gets an explicit `stopPropagation` too,
+  so its inputs/Save/Cancel don't double-fire the toggle. Full-screen
+  mode is untouched (a fixed-overlay view that always shows everything,
+  never had its own collapse toggle). Verified live via Playwright:
+  header click correctly toggled `aria-expanded` true↔false, clicking
+  "Edit" opened the rename form while staying expanded and the button
+  row stayed right-aligned, full-screen mode unaffected — zero console
+  errors. `npx tsc -b` / `npm run test` (251 tests, unchanged) / `npm
+  run build` all clean.
 
 ## Live URLs
 

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
+import { CollapsibleCard } from '../../../components/Card';
 import { PSX_TICKER_DATALIST_ID } from '../../../components/PSXTickerDatalist';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { CheckIcon, PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
@@ -238,10 +239,6 @@ function PlanCard({ plan }: { plan: TradePlan }) {
   const [editLegIndex, setEditLegIndex] = useState<number | null>(null);
   const [editLeg, setEditLeg] = useState<TradePlanLeg | null>(null);
   const [addingLeg, setAddingLeg] = useState<TradePlanLeg | null>(null);
-  // Collapsed by default — user request: once you have a handful of saved
-  // plans, having every one of them fully expanded on load is overwhelming;
-  // expand the ones you're actually working on.
-  const [collapsed, setCollapsed] = useState(true);
   const [fullscreen, setFullscreen] = useState(false);
 
   const addLeg = () => {
@@ -336,102 +333,92 @@ function PlanCard({ plan }: { plan: TradePlan }) {
   };
   const { sorted: sortedLegRows, Th: LegTh } = useSortableRows(legRows, legSortValue, 'date', 'asc');
 
-  return (
-    <>
-      {fullscreen && <div className="modal-overlay show" style={{ zIndex: 999 }} />}
-      <div
-        className="card"
-        style={
-          fullscreen
-            ? { position: 'fixed', inset: 12, zIndex: 1000, overflow: 'auto', padding: 16, boxShadow: '0 8px 40px rgba(0,0,0,.4)' }
-            : { marginBottom: 28, padding: 12 }
-        }
-      >
-      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
-        {editingMeta ? (
-          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-            <TextInput value={name} onChange={(e) => setName(e.target.value)} />
-            <TextInput value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes" />
-            <TextInput
-              value={defaultTicker}
-              onChange={(e) => setDefaultTicker(e.target.value.toUpperCase())}
-              list={PSX_TICKER_DATALIST_ID}
-              placeholder="Default ticker"
-              style={{ width: 130 }}
-            />
-            <button className="btn secondary small" onClick={saveMeta}><SaveIcon size={12} />Save</button>
-            <button className="btn secondary small" onClick={() => setEditingMeta(false)}>Cancel</button>
-          </div>
-        ) : (
-          <div>
-            <strong>{plan.name}</strong>{' '}
-            <span className="footer-note">
-              {plan.createdAt} · {doneCount}/{plan.legs.length} executed
-              {plan.defaultTicker && <> · default ticker {plan.defaultTicker}</>}
-            </span>
-            {plan.notes && <p className="footer-note" style={{ margin: '4px 0 0' }}>{plan.notes}</p>}
-          </div>
-        )}
-        <div className="row" style={{ gap: 8 }}>
-          {!fullscreen && (
-            <button className="btn secondary small" onClick={() => setCollapsed((c) => !c)}>
-              {collapsed ? 'Expand' : 'Collapse'}
-            </button>
-          )}
-          <button
-            className="btn secondary small"
-            onClick={() => {
-              setFullscreen((f) => !f);
-              if (!fullscreen) setCollapsed(false);
-            }}
-          >
-            {fullscreen ? 'Exit full screen' : 'Full screen'}
-          </button>
-          {!editingMeta && (
-            <button
-              className="btn secondary small"
-              onClick={() => {
-                setName(plan.name);
-                setNotes(plan.notes || '');
-                setDefaultTicker(plan.defaultTicker || '');
-                setEditingMeta(true);
-              }}
-            >
-              Edit
-            </button>
-          )}
-          {plan.legs.length > 0 && (
-            <button
-              className="btn secondary small"
-              title="Removes every leg from this plan so you can start fresh — keeps the plan's name, notes, and default ticker. Does not touch any transactions already logged from marking a leg done."
-              onClick={async () => {
-                const ok = await confirmDialog(
-                  'This removes every leg from the plan for a fresh start — the plan itself, its name/notes, and any transactions already logged from marking a leg done are untouched.',
-                  `Clear all legs from "${plan.name}"?`,
-                );
-                if (ok) updateTradePlan(plan.id, { legs: [] });
-              }}
-            >
-              Clear plan
-            </button>
-          )}
-          <button
-            className="btn secondary small"
-            onClick={async () => {
-              const ok = await confirmDialog(
-                'This deletes the plan itself, not any transactions already logged from it.',
-                `Delete plan "${plan.name}"?`,
-              );
-              if (ok) deleteTradePlan(plan.id);
-            }}
-          >
-            <TrashIcon size={12} />Delete plan
-          </button>
-        </div>
-      </div>
+  // The card's header (name/meta or the rename form) doubles as the
+  // accordion trigger when not in full-screen mode — user-reported: a
+  // separate "Expand"/"Collapse" button next to a header that visually
+  // looked clickable but wasn't good UX. Wrapping the rename form in
+  // its own stopPropagation guards against a Save/Cancel click also
+  // toggling the accordion (harmless no-op in the full-screen branch below,
+  // which has no accordion to stop propagation from).
+  const titleBlock: ReactNode = editingMeta ? (
+    <div className="row" style={{ gap: 8, flexWrap: 'wrap' }} onClick={(e) => e.stopPropagation()}>
+      <TextInput value={name} onChange={(e) => setName(e.target.value)} />
+      <TextInput value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes" />
+      <TextInput
+        value={defaultTicker}
+        onChange={(e) => setDefaultTicker(e.target.value.toUpperCase())}
+        list={PSX_TICKER_DATALIST_ID}
+        placeholder="Default ticker"
+        style={{ width: 130 }}
+      />
+      <button className="btn secondary small" onClick={saveMeta}><SaveIcon size={12} />Save</button>
+      <button className="btn secondary small" onClick={() => setEditingMeta(false)}>Cancel</button>
+    </div>
+  ) : (
+    <div>
+      <strong>{plan.name}</strong>{' '}
+      <span className="footer-note">
+        {plan.createdAt} · {doneCount}/{plan.legs.length} executed
+        {plan.defaultTicker && <> · default ticker {plan.defaultTicker}</>}
+      </span>
+      {plan.notes && <p className="footer-note" style={{ margin: '4px 0 0' }}>{plan.notes}</p>}
+    </div>
+  );
 
-      {(!collapsed || fullscreen) && (
-      <>
+  // Right-aligned action buttons — user-reported: buttons used to sit in
+  // their own row that could wrap awkwardly next to the title instead of
+  // staying pinned to the right edge. `CollapsibleCard`'s `headerExtra`
+  // slot already handles that alignment (and already stops propagation so
+  // these clicks never also toggle the accordion); `justifyContent:
+  // 'flex-end'` keeps the buttons right-aligned even if they wrap.
+  const actionButtons = (onFullScreenClick: () => void, fullScreenLabel: string): ReactNode => (
+    <div className="row" style={{ gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+      <button className="btn secondary small" onClick={onFullScreenClick}>{fullScreenLabel}</button>
+      {!editingMeta && (
+        <button
+          className="btn secondary small"
+          onClick={() => {
+            setName(plan.name);
+            setNotes(plan.notes || '');
+            setDefaultTicker(plan.defaultTicker || '');
+            setEditingMeta(true);
+          }}
+        >
+          Edit
+        </button>
+      )}
+      {plan.legs.length > 0 && (
+        <button
+          className="btn secondary small"
+          title="Removes every leg from this plan so you can start fresh — keeps the plan's name, notes, and default ticker. Does not touch any transactions already logged from marking a leg done."
+          onClick={async () => {
+            const ok = await confirmDialog(
+              'This removes every leg from the plan for a fresh start — the plan itself, its name/notes, and any transactions already logged from marking a leg done are untouched.',
+              `Clear all legs from "${plan.name}"?`,
+            );
+            if (ok) updateTradePlan(plan.id, { legs: [] });
+          }}
+        >
+          Clear plan
+        </button>
+      )}
+      <button
+        className="btn secondary small"
+        onClick={async () => {
+          const ok = await confirmDialog(
+            'This deletes the plan itself, not any transactions already logged from it.',
+            `Delete plan "${plan.name}"?`,
+          );
+          if (ok) deleteTradePlan(plan.id);
+        }}
+      >
+        <TrashIcon size={12} />Delete plan
+      </button>
+    </div>
+  );
+
+  const bodyContent = (
+    <>
       <div className="table-scroll" style={{ marginTop: 8 }}>
         <table>
           <thead>
@@ -606,9 +593,30 @@ function PlanCard({ plan }: { plan: TradePlan }) {
           <> · Total planned P/L {fmtMoney(tickerAnalysis.reduce((s, t) => s + t.realizedPL, 0), currency)}</>
         )}
       </p>
-      </>
+    </>
+  );
+
+  return (
+    <>
+      {fullscreen && <div className="modal-overlay show" style={{ zIndex: 999 }} />}
+      {fullscreen ? (
+        <div className="card" style={{ position: 'fixed', inset: 12, zIndex: 1000, overflow: 'auto', padding: 16, boxShadow: '0 8px 40px rgba(0,0,0,.4)' }}>
+          <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
+            {titleBlock}
+            {actionButtons(() => setFullscreen(false), 'Exit full screen')}
+          </div>
+          {bodyContent}
+        </div>
+      ) : (
+        <CollapsibleCard
+          title={titleBlock}
+          headerExtra={actionButtons(() => setFullscreen(true), 'Full screen')}
+          defaultOpen={false}
+          style={{ marginBottom: 28, padding: 12 }}
+        >
+          {bodyContent}
+        </CollapsibleCard>
       )}
-      </div>
     </>
   );
 }
