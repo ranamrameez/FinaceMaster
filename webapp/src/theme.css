@@ -20,6 +20,14 @@
     --loss:#e5484d;
     --warn:#e5a93f;
     --radius:10px;
+    --radius-lg:16px;
+    /* Single source of truth for "how a card sits above the page" — was
+       previously ~10 different literal box-shadow values scattered across
+       wine/material/light/dark blocks (user-reported item 4, "shadows are
+       inconsistent"). Every card-family shadow below now references one
+       of these two tokens instead of inventing its own numbers. */
+    --shadow-card:0 1px 2px rgba(0,0,0,.18), 0 4px 14px rgba(0,0,0,.16);
+    --shadow-lg:0 8px 24px rgba(0,0,0,.4);
     --on-accent-soft:#fff;
     --mono:'JetBrains Mono',monospace;
     --disp:'Space Grotesk',sans-serif;
@@ -45,6 +53,8 @@
     --loss:#c8302f;
     --warn:#a9790a;
     --on-accent-soft:var(--accent);
+    --shadow-card:0 1px 2px rgba(20,20,30,.06), 0 4px 14px rgba(20,20,30,.07);
+    --shadow-lg:0 14px 35px rgba(20,20,30,.16);
   }
   :root[data-theme="light"] input[type=text],
   :root[data-theme="light"] input[type=number],
@@ -70,15 +80,13 @@
      soft, filled "tonal" surfaces (a light accent-tinted fill + accent
      text, Material Design's filled/tonal button & card pattern) and
      gentle elevation shadows — no hard accent-colored outlines anywhere.
-     Buttons and cards still clearly change per theme, just softly. */
-  html:not([data-color="wine"]) .card{
-    box-shadow:0 1px 2px rgba(0,0,0,.16), 0 3px 10px rgba(0,0,0,.10);
-  }
-  html:not([data-color="wine"]) .card.stat-card,
-  html:not([data-color="wine"]) .card.chart-card{
-    background: linear-gradient(180deg, var(--accent-soft), var(--panel) 70px);
-    border-left:4px solid var(--accent);
-  }
+     Buttons and cards still clearly change per theme, just softly.
+     (The .card / .card.stat-card,.card.chart-card box-shadow/border-left
+     rules that used to live here were dead code — a later block in this
+     file, same selector and specificity, always won and set different
+     values. Removed rather than left as a red herring for the next
+     session reading this file — see the --shadow-card token below for
+     the surviving, single source of truth.) */
   html:not([data-color="wine"]) .btn.secondary{
     background: var(--accent-soft);
     border:1px solid transparent;
@@ -137,15 +145,14 @@
   html[data-color="material-crimson"][data-theme="dark"]{ --accent:#FFB4A9; --accent-soft:#73342B; }
   html[data-color="material-slate"][data-theme="dark"]{ --accent:#AAC7E8; --accent-soft:#2C4256; }
 
-  /* Soft, Material-like surfaces for every non-wine theme. */
+  /* Soft, Material-like surfaces for every non-wine theme. The
+     .card.stat-card/.card.chart-card border-left/background pair that
+     used to live here was dead code (a later, same-specificity block
+     further down always won instead) — removed rather than left as a
+     misleading second definition; see --shadow-card below. */
   html:not([data-color="wine"]) .card{
     border:0;
-    box-shadow:0 1px 2px rgba(0,0,0,.10), 0 4px 12px rgba(0,0,0,.08);
-  }
-  html:not([data-color="wine"]) .card.stat-card,
-  html:not([data-color="wine"]) .card.chart-card{
-    border-left:0;
-    background:linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 52%, var(--panel)), var(--panel) 86px);
+    box-shadow:var(--shadow-card);
   }
   html:not([data-color="wine"]) .btn.secondary,
   html:not([data-color="wine"]) .btn.ghost{
@@ -162,9 +169,9 @@
   /* Material Design family: deliberately borderless, tonal and elevated. */
   html[data-color^="material-"] body{ background:var(--bg); color:var(--text); }
   html[data-color^="material-"] .card{
-    border-radius:16px;
+    border-radius:var(--radius-lg);
     background:var(--panel);
-    box-shadow:0 1px 2px rgba(0,0,0,.12), 0 6px 18px rgba(0,0,0,.10);
+    box-shadow:var(--shadow-card);
   }
   html[data-color^="material-"] .btn{
     border:0 !important;
@@ -262,7 +269,7 @@
   html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--body);font-size:15px;line-height:1.5;overflow-x:clip;}
   ::-webkit-scrollbar{width:8px;height:8px;}
   ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
-  a{color:inherit;}
+  a{color:inherit; text-decoration:none;}
   button, input, select{font-family:var(--body);}
   input:focus-visible, select:focus-visible, button:focus-visible{outline:2px solid var(--gold); outline-offset:1px;}
 
@@ -386,10 +393,13 @@
     background:linear-gradient(165deg, color-mix(in srgb, var(--accent) 5%, var(--panel)) 0%, var(--panel) 65%);
     border:1px solid var(--border); border-radius:var(--radius);
     padding:18px;
-    box-shadow:0 1px 2px rgba(0,0,0,.08), 0 4px 14px rgba(0,0,0,.10);
+    box-shadow:var(--shadow-card);
   }
-  :root[data-theme="light"] .card{ box-shadow:0 1px 2px rgba(20,20,30,.05), 0 4px 14px rgba(20,20,30,.06); }
-  .stat-card{padding:11px 13px; background:linear-gradient(135deg, color-mix(in srgb, var(--card-hue, var(--accent)) 14%, var(--panel)) 0%, var(--panel) 100%); border-left:3px solid color-mix(in srgb, var(--card-hue, var(--accent)) 55%, var(--border));}
+  /* Left-border accent removed (user-reported item 10: "left borders don't
+     look good") — the colored gradient background + StatCard's own `hue`
+     prop already carry the per-card color identity; a thin bar on top of
+     that read as visual clutter, not a second useful signal. */
+  .stat-card{padding:11px 13px; background:linear-gradient(135deg, color-mix(in srgb, var(--card-hue, var(--accent)) 16%, var(--panel)) 0%, var(--panel) 100%);}
   .stat-card .label{color:var(--muted); font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; line-height:1.25;}
   .stat-card .value{font-family:var(--mono); font-size:17px; font-weight:700; line-height:1.2;}
   .stat-card .sub{font-size:10.5px; margin-top:3px; color:var(--muted); line-height:1.3;}
@@ -690,6 +700,30 @@
   }
   .rule-note b{color:var(--text);}
 
+  /* ---------- Notice — a distinct callout for warnings/info, not just
+     another card (user-reported items 10/11: a plain card with a thin
+     `borderLeft` accent didn't read as visually different from a regular
+     card, and the left bar alone looked bad). Full tinted background +
+     matching border on every side, plus a leading icon, makes it
+     unmistakable at a glance regardless of theme/density. ---------- */
+  .notice{
+    display:flex; gap:10px; align-items:flex-start;
+    border-radius:var(--radius); padding:12px 14px; margin-top:8px;
+    border:1px solid; line-height:1.5; font-size:13.5px;
+  }
+  .notice-icon{flex-shrink:0; font-size:15px; line-height:1.4;}
+  .notice-body{flex:1; min-width:0;}
+  .notice-body p:first-child{margin-top:0;}
+  .notice-body p:last-child{margin-bottom:0;}
+  .notice-info{ background:color-mix(in srgb, var(--info) 12%, var(--panel)); border-color:color-mix(in srgb, var(--info) 40%, var(--border)); }
+  .notice-info .notice-icon{color:var(--info);}
+  .notice-warning{ background:color-mix(in srgb, var(--warn) 14%, var(--panel)); border-color:color-mix(in srgb, var(--warn) 45%, var(--border)); }
+  .notice-warning .notice-icon{color:var(--warn);}
+  .notice-danger{ background:color-mix(in srgb, var(--loss) 12%, var(--panel)); border-color:color-mix(in srgb, var(--loss) 40%, var(--border)); }
+  .notice-danger .notice-icon{color:var(--loss);}
+  .notice-success{ background:color-mix(in srgb, var(--profit) 12%, var(--panel)); border-color:color-mix(in srgb, var(--profit) 40%, var(--border)); }
+  .notice-success .notice-icon{color:var(--profit);}
+
   /* ---------- Modal info cards (grouped, side-by-side, quick glance) ---------- */
   .mgroups{display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:20px; align-items:start;}
   .mgroup-title{
@@ -901,8 +935,6 @@
   html[data-color^="material-"] .card,
   html[data-color^="material-"] .modal,
   html[data-color^="material-"] .table-wrap{background-color:var(--panel);color:var(--text);border-color:var(--border);}
-  html[data-color^="material-"] .card.stat-card,
-  html[data-color^="material-"] .card.chart-card{background:linear-gradient(180deg,var(--accent-soft),var(--panel) 86px);}
   html[data-color^="material-"] input[type=text],
   html[data-color^="material-"] input[type=number],
   html[data-color^="material-"] input[type=date],
@@ -1008,10 +1040,6 @@
   html[data-color^="material-"][data-theme="dark"] tbody td { border-bottom-color:var(--border); color:var(--text); }
   html[data-color^="material-"][data-theme="light"] tbody tr:hover,
   html[data-color^="material-"][data-theme="dark"] tbody tr:hover { background:var(--accent-soft); }
-  html[data-color^="material-"][data-theme="light"] .card.stat-card,
-  html[data-color^="material-"][data-theme="dark"] .card.stat-card,
-  html[data-color^="material-"][data-theme="light"] .card.chart-card,
-  html[data-color^="material-"][data-theme="dark"] .card.chart-card { background:linear-gradient(180deg,var(--accent-soft),var(--panel) 86px); border-left:0; }
   html[data-color^="material-"][data-theme="light"] .section-title,
   html[data-color^="material-"][data-theme="dark"] .section-title { color:var(--text); }
   html[data-color^="material-"][data-theme="light"] .pagetitle,
@@ -1035,11 +1063,14 @@
       stay their theme's plain white/off-white/grey (or dark) panel — no
       accent tint leaks into them.
    Placed last so it wins over the earlier, more saturated definitions
-   above regardless of theme. */
+   above regardless of theme. Both box-shadows below reference the same
+   --shadow-card token as every other card, rather than their own
+   near-identical literal numbers — the two blocks now only actually
+   differ in the gradient's accent-soft ratio (8% vs 6%). */
 html:not([data-color="wine"]) .card.stat-card,
 html:not([data-color="wine"]) .card.chart-card{
   border:0;
-  box-shadow:0 1px 2px rgba(0,0,0,.10), 0 6px 18px rgba(0,0,0,.14);
+  box-shadow:var(--shadow-card);
   background:linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 8%, var(--panel)), var(--panel) 60px);
 }
 html[data-color^="material-"][data-theme="light"] .card.stat-card,
@@ -1047,7 +1078,7 @@ html[data-color^="material-"][data-theme="dark"] .card.stat-card,
 html[data-color^="material-"][data-theme="light"] .card.chart-card,
 html[data-color^="material-"][data-theme="dark"] .card.chart-card{
   border:0;
-  box-shadow:0 1px 2px rgba(0,0,0,.10), 0 6px 18px rgba(0,0,0,.14);
+  box-shadow:var(--shadow-card);
   background:linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 6%, var(--panel)), var(--panel) 60px);
 }
 
@@ -1086,7 +1117,7 @@ html.auth-signed-out #cloudSignedInBox{display:none !important;}
   position:fixed; z-index:1000;
   display:none;width:255px;padding:10px;
   background:var(--panel);border:1px solid var(--border);border-radius:10px;
-  box-shadow:0 14px 35px rgba(0,0,0,.28);
+  box-shadow:var(--shadow-lg);
 }
 .appearance-panel.open{display:grid;gap:8px;}
 .appearance-panel-title{
@@ -1110,7 +1141,7 @@ html.auth-signed-out #cloudSignedInBox{display:none !important;}
   position:fixed; z-index:1000;
   width:220px;padding:6px;
   background:var(--panel);border:1px solid var(--border);border-radius:10px;
-  box-shadow:0 14px 35px rgba(0,0,0,.28);
+  box-shadow:var(--shadow-lg);
   display:flex;flex-direction:column;gap:2px;
 }
 .category-panel-title{
@@ -1129,7 +1160,10 @@ html.auth-signed-out #cloudSignedInBox{display:none !important;}
 
 /* Phase 1 addition (README item 14): a super-compact "console" density on
  * top of the existing comfortable/compact tiers — tighter padding, smaller
- * type, monospace-leaning, for users who want maximum information density. */
+ * type, monospace-leaning, for users who want maximum information density.
+ * The tighter 4px radius here (vs. the base --radius:10px / Material's
+ * --radius-lg:16px) is a deliberate part of that "terminal" look — sharper
+ * corners read as denser/more utilitarian — not an accidental mismatch. */
 html[data-density="console"] .card{padding:6px 8px; border-radius:4px;}
 html[data-density="console"] .stat-card{padding:5px 7px;}
 html[data-density="console"] .stat-card .label{font-size:8.5px; margin-bottom:1px; letter-spacing:.02em;}

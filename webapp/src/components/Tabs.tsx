@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
+import { CollapsibleCard } from './Card';
 
 export interface TabDef {
   key: string;
@@ -6,28 +7,52 @@ export interface TabDef {
   content: ReactNode;
 }
 
-/** Sub-navigation within a page — splits what used to be one long stacked
- * page into switchable sections, using the existing .chip-tabs/.chip
- * classes (same visual language as the rest of the app, not a new pattern). */
+/** Sub-navigation within a page. User-reported (item 1): the old version
+ * fully hid every section except the active tab, so "keep pressing the
+ * chips just to view a small piece of info" — every section now stays
+ * present in the page as its own collapsible card; a chip click scrolls to
+ * that section and forces it open (decollapses it) rather than hiding the
+ * others. Only the first tab starts open (matching the old default of one
+ * visible section at a time, and keeping heavy content like charts from
+ * all mounting at once), but nothing is ever unreachable without clicking
+ * a chip repeatedly — it's just further down the page, not hidden. */
 export function Tabs({ tabs, defaultKey }: { tabs: TabDef[]; defaultKey?: string }) {
-  const [active, setActive] = useState(defaultKey || tabs[0]?.key);
-  const current = tabs.find((t) => t.key === active) || tabs[0];
+  const initialKey = defaultKey || tabs[0]?.key;
+  const [openKeys, setOpenKeys] = useState<Record<string, boolean>>({ [initialKey]: true });
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const jumpTo = (key: string) => {
+    setOpenKeys((prev) => ({ ...prev, [key]: true }));
+    requestAnimationFrame(() => {
+      sectionRefs.current[key]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
 
   return (
     <div>
-      <div className="chip-tabs">
+      <div className="chip-tabs subnav">
         {tabs.map((t) => (
           <button
             key={t.key}
             type="button"
-            className={`chip${t.key === active ? ' active' : ''}`}
-            onClick={() => setActive(t.key)}
+            className={`chip${openKeys[t.key] ? ' active' : ''}`}
+            onClick={() => jumpTo(t.key)}
           >
             {t.label}
           </button>
         ))}
       </div>
-      {current?.content}
+      {tabs.map((t) => (
+        <div key={t.key} ref={(el) => { sectionRefs.current[t.key] = el; }} style={{ marginTop: 12 }}>
+          <CollapsibleCard
+            title={<h3 style={{ margin: 0 }}>{t.label}</h3>}
+            open={!!openKeys[t.key]}
+            onToggle={(open) => setOpenKeys((prev) => ({ ...prev, [t.key]: open }))}
+          >
+            {t.content}
+          </CollapsibleCard>
+        </div>
+      ))}
     </div>
   );
 }

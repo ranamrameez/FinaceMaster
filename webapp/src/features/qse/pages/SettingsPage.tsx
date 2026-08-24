@@ -1,6 +1,7 @@
 import type { User } from 'firebase/auth';
 import { useRef, useState } from 'react';
 import { Card } from '../../../components/Card';
+import { Notice } from '../../../components/Notice';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
@@ -120,7 +121,7 @@ function AccountSection({
         <ProfileEditor user={user} />
         <p className="footer-note" style={{ marginTop: 8 }}>{syncStatus}</p>
         {cloudEmpty && (
-          <div className="card" style={{ marginTop: 8, borderLeft: '3px solid var(--warn, orange)' }}>
+          <Notice tone="warning" style={{ marginTop: 8 }}>
             <p style={{ marginTop: 0 }}>
               No data found in the cloud for this account. This app will <strong>not</strong> upload
               anything automatically — if you expected existing data here and don't see it, stop and
@@ -141,7 +142,7 @@ function AccountSection({
             >
               Upload local data to cloud ({localRowCount} rows)
             </button>
-          </div>
+          </Notice>
         )}
         <button className="btn secondary" disabled={busy} onClick={() => run(signOutUser)} style={{ marginTop: 8 }}>
           Sign out

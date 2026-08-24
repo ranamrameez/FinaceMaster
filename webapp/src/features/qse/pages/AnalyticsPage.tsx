@@ -123,7 +123,7 @@ export function AnalyticsPage() {
                     }}
                   />
                 </ChartCard>
-                <ChartCard title="Realized vs unrealized P/L" empty={summary.realizedPL === 0 && summary.unrealizedPL === 0}>
+                <ChartCard title="Realized vs unrealized P/L" unfiltered empty={summary.realizedPL === 0 && summary.unrealizedPL === 0}>
                   <Bar
                     data={{ labels: ['Realized', 'Unrealized'], datasets: [{ data: [summary.realizedPL, summary.unrealizedPL], backgroundColor: [profitColor(summary.realizedPL), profitColor(summary.unrealizedPL)] }] }}
                     options={{ plugins: { legend: { display: false }, datalabels: dlBarV((v) => fmt(v, 2)) } }}
@@ -149,7 +149,7 @@ export function AnalyticsPage() {
                     options={{ cutout: '55%', plugins: { datalabels: dlDoughnut((v) => ((v / allocTotal) * 100).toFixed(0) + '%') } }}
                   />
                 </ChartCard>
-                <ChartCard title="Cash vs stocks split" empty={summary.netWorth <= 0}>
+                <ChartCard title="Cash vs stocks split" unfiltered empty={summary.netWorth <= 0}>
                   <Doughnut
                     data={{ labels: ['Cash', 'Stocks'], datasets: [{ data: [cashVsStock.cash, cashVsStock.stocks], backgroundColor: ['#8a97a3', '#c9a227'] }] }}
                     options={{ cutout: '55%' }}
@@ -163,7 +163,7 @@ export function AnalyticsPage() {
             label: 'Cash & fees',
             content: (
               <div style={chartGrid}>
-                <ChartCard title="Cash balance over time" empty={!ledger.length}>
+                <ChartCard title="Cash balance over time" unfiltered empty={!ledger.length}>
                   <Line
                     data={{
                       labels: ledger.map((e) => e.date),
@@ -172,7 +172,7 @@ export function AnalyticsPage() {
                     options={{ interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: false } } }}
                   />
                 </ChartCard>
-                <ChartCard title="Deposits vs invested vs net worth" empty={summary.totalInward <= 0}>
+                <ChartCard title="Deposits vs invested vs net worth" unfiltered empty={summary.totalInward <= 0}>
                   <Bar
                     data={{ labels: ['Deposits', 'Invested', 'Net worth'], datasets: [{ data: totalsVals, backgroundColor: ['#8a97a3', '#c9a227', '#3ecf8e'] }] }}
                     options={{
@@ -181,7 +181,7 @@ export function AnalyticsPage() {
                     }}
                   />
                 </ChartCard>
-                <ChartCard title="Fees breakdown" empty={summary.totalCharges <= 0}>
+                <ChartCard title="Fees breakdown" unfiltered empty={summary.totalCharges <= 0}>
                   <Doughnut
                     data={{ labels: ['Trading fees', 'Transfer fees'], datasets: [{ data: [summary.tradingFees, summary.transferFees], backgroundColor: ['#3b6bd6', '#c9a227'] }] }}
                     options={{ plugins: { datalabels: dlDoughnut((v) => fmt(v, 2)) } }}

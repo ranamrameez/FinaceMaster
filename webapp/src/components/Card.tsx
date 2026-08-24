@@ -38,21 +38,38 @@ export function CollapsibleCard({
   title,
   headerExtra,
   defaultOpen = true,
+  open: openProp,
+  onToggle,
   style,
   children,
 }: {
   title: ReactNode;
   headerExtra?: ReactNode;
   defaultOpen?: boolean;
+  /** Controlled open state — when provided, the card no longer tracks its
+   * own open/closed state internally and the parent must respond to
+   * `onToggle` to actually change it. Used by `Tabs` (item 1: "chip should
+   * jump to a section and decollapse it") so a top-level chip click can
+   * force a specific section open even if the user had collapsed it. Omit
+   * both props to keep the original self-contained behavior every other
+   * call site already relies on. */
+  open?: boolean;
+  onToggle?: (open: boolean) => void;
   style?: CSSProperties;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const [internalOpen, setInternalOpen] = useState(defaultOpen);
+  const open = openProp ?? internalOpen;
+  const toggle = () => {
+    const next = !open;
+    if (onToggle) onToggle(next);
+    else setInternalOpen(next);
+  };
   return (
     <Card style={style}>
       <div
         style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}
-        onClick={() => setOpen((o) => !o)}
+        onClick={toggle}
         role="button"
         aria-expanded={open}
       >

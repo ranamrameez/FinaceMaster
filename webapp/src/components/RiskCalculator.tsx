@@ -10,7 +10,9 @@ import {
 import { fmt, fmtMoney, fmtPrice } from '../lib/format';
 import type { FeeCalculator } from '../types/workbook';
 import { Card } from './Card';
+import { Notice } from './Notice';
 import { Field, Select, TextInput } from './ui/Field';
+import { HUES, hueStyle } from '../lib/statCardHues';
 
 export interface RiskCalculatorRow {
   ticker: string;
@@ -64,7 +66,7 @@ export function RiskCalculator({
   // clobbered by the position's live numbers.
   useEffect(() => {
     if (!row) return;
-    const avg = row.shares > 0 ? row.invested / row.shares : 0;
+    const avg = row.shares > 0 ? Math.round((row.invested / row.shares) * 100) / 100 : 0;
     setCurrentPriceInput(row.marketPrice || avg);
     setSharesInput(Math.round(row.shares));
     setAvgInput(avg);
@@ -165,7 +167,7 @@ export function RiskCalculator({
 
       {currentMetrics && (
         <>
-          <Card style={{ marginBottom: 16, borderLeft: `3px solid var(--${currentMetrics.netPL >= 0 ? 'profit' : 'warn'})` }}>
+          <Notice tone={currentMetrics.netPL >= 0 ? 'success' : 'warning'} style={{ marginBottom: 16, marginTop: 0 }}>
             <b>{currentMetrics.netPL >= 0 ? 'Position is not currently underwater.' : 'Position is underwater — test capital before adding.'}</b>
             <br />
             Current net P/L is <b>{fmtMoney(currentMetrics.netPL, currency)}</b>.
@@ -175,16 +177,16 @@ export function RiskCalculator({
                   ? 'The selected target meets the requested minimum net profit.'
                   : 'The selected target does not meet the requested minimum net profit.'}</>
             )}
-          </Card>
+          </Notice>
 
           <Card style={{ marginBottom: 16 }}>
             <h3 style={{ marginTop: 0 }}>Current position</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 8 }}>
-              <div className="stat-card card"><div className="label">Invested</div><div className="value">{fmtMoney(currentMetrics.invested, currency)}</div></div>
-              <div className="stat-card card"><div className="label">Break-even</div><div className="value">{fmtPrice(currentMetrics.breakEven)}</div></div>
-              <div className="stat-card card"><div className="label">Recovery needed</div><div className="value">{fmt(currentMetrics.recoveryNeededPct, 2)}%</div></div>
-              <div className="stat-card card"><div className="label">Current net P/L</div><div className={`value ${currentMetrics.netPL >= 0 ? 'pill-buy' : 'pill-sell'}`}>{fmtMoney(currentMetrics.netPL, currency)}</div></div>
-              <div className="stat-card card"><div className="label">Risk ceiling</div><div className="value">{fmtMoney(currentMetrics.ceiling, currency)}</div></div>
+              <div className="stat-card card" style={hueStyle(HUES[0])}><div className="label">Invested</div><div className="value">{fmtMoney(currentMetrics.invested, currency)}</div></div>
+              <div className="stat-card card" style={hueStyle(HUES[1])}><div className="label">Break-even</div><div className="value">{fmtPrice(currentMetrics.breakEven)}</div></div>
+              <div className="stat-card card" style={hueStyle(HUES[4])}><div className="label">Recovery needed</div><div className="value">{fmt(currentMetrics.recoveryNeededPct, 2)}%</div></div>
+              <div className="stat-card card" style={hueStyle(currentMetrics.netPL >= 0 ? 'var(--profit)' : 'var(--loss)')}><div className="label">Current net P/L</div><div className={`value ${currentMetrics.netPL >= 0 ? 'pill-buy' : 'pill-sell'}`}>{fmtMoney(currentMetrics.netPL, currency)}</div></div>
+              <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Risk ceiling</div><div className="value">{fmtMoney(currentMetrics.ceiling, currency)}</div></div>
             </div>
           </Card>
 
@@ -223,24 +225,24 @@ export function RiskCalculator({
           <Card style={{ marginBottom: 16 }}>
             <h3 style={{ marginTop: 0 }}>Capital efficiency &amp; diminishing returns</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 8, marginBottom: 10 }}>
-              <div className="stat-card card"><div className="label">Risk level</div><div className="value">{riskMode.toUpperCase()}</div></div>
-              <div className="stat-card card"><div className="label">Suggested ceiling</div><div className="value">{fmtMoney(currentMetrics.ceiling, currency)}</div></div>
-              <div className="stat-card card"><div className="label">Selected capital</div><div className="value">{best ? fmtMoney(best.add, currency) : '—'}</div></div>
-              <div className="stat-card card"><div className="label">Stop averaging around</div><div className="value">{diminishing ? fmtMoney(diminishing.add, currency) : 'Not reached'}</div></div>
+              <div className="stat-card card" style={hueStyle(HUES[6])}><div className="label">Risk level</div><div className="value">{riskMode.toUpperCase()}</div></div>
+              <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Suggested ceiling</div><div className="value">{fmtMoney(currentMetrics.ceiling, currency)}</div></div>
+              <div className="stat-card card" style={hueStyle(HUES[2])}><div className="label">Selected capital</div><div className="value">{best ? fmtMoney(best.add, currency) : '—'}</div></div>
+              <div className="stat-card card" style={hueStyle(HUES[5])}><div className="label">Stop averaging around</div><div className="value">{diminishing ? fmtMoney(diminishing.add, currency) : 'Not reached'}</div></div>
             </div>
-            <div className="card" style={{ borderLeft: `3px solid var(--warn, orange)`, opacity: diminishing ? 1 : 0.7 }}>
+            <Notice tone={diminishing ? 'warning' : 'info'} style={{ marginTop: 0, opacity: diminishing ? 1 : 0.7 }}>
               <b>{diminishing ? 'Diminishing-return warning.' : 'Capital still has measurable benefit.'}</b>{' '}
               {diminishing
                 ? `Around ${fmtMoney(diminishing.add, currency)} the next tranche improves required recovery by less than 0.25 percentage points.`
                 : 'The tested range has not crossed the configured diminishing-return threshold.'}
-            </div>
+            </Notice>
           </Card>
 
           <Card>
             <h3 style={{ marginTop: 0 }}>Stress test after selected average</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px,1fr))', gap: 8 }}>
               {stress.map((p) => (
-                <div key={p.label} className="stat-card card">
+                <div key={p.label} className="stat-card card" style={hueStyle(p.pl >= 0 ? 'var(--profit)' : 'var(--loss)')}>
                   <div className="label">{p.label}</div>
                   <div className={`value ${p.pl >= 0 ? 'pill-buy' : 'pill-sell'}`}>{fmtMoney(p.pl, currency)}</div>
                 </div>

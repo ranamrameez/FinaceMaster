@@ -1722,6 +1722,71 @@ FinanceManager live link:
      itself while keeping the rest right-aligned; full-screen mode still shows all content
      immediately with no accordion header at all — zero console errors throughout. `npx tsc
      -b` / `npm run test` (251 tests, unchanged — UI-only) / `npm run build` all clean.
+103. **Design-system critique, 11-item batch (2026-08-24) — user posted a screenshot of PSX
+     Risk Analysis plus a list of cross-cutting UI/UX complaints. Most items were genuine,
+     confirmable defects (not taste), fixed at shared-component/shared-CSS level so the fix
+     applies app-wide from one change, matching this file's existing "fix once" pattern.**
+     - **(2) Avg buy price not rounding to 2dp**: `RiskCalculator.tsx` prefilled the "Avg buy
+       price" input straight from `invested/shares` with no rounding — fixed with
+       `Math.round(...*100)/100` at the point of prefill.
+     - **(6) Underlined nav links**: root cause was `theme.css`'s base `a{color:inherit;}` never
+       resetting `text-decoration` — every `<Link>`/`<a>` in the app (nav buttons, "Full
+       portfolio →", "← Back to Portfolio", Watchlist ticker links) inherited the browser's
+       default underline. One-line fix (`text-decoration:none`) resolved it everywhere.
+     - **(10/11) Left-border "warning" boxes / notices not distinct**: found the exact same ad
+       hoc `<div className="card" style={{borderLeft:'3px solid var(--warn, orange)'}}>` cloud-
+       sync-empty warning copy-pasted across 12 files (Cash/Bank/EMI/Funds/Rentals/Personal
+       Loans/Subscriptions/Transfers/QSE+PSX Settings), plus two more ad hoc instances in
+       `RiskCalculator.tsx`. New `components/Notice.tsx` (tone: info/warning/danger/success) —
+       full tinted background + matching border on every side + a leading icon, no left bar —
+       replaces all 15 call sites. New `.notice`/`.notice-*` CSS in `theme.css`.
+     - **(5) P/L highlighting should color the whole card, not just text**: `RiskCalculator`'s
+       stat cards were a real gap in the earlier app-wide `StatCard` `hue` rollout (Done item
+       88) — it never actually touched this page. Added `hueStyle()` (profit/loss-driven for
+       P/L cards, palette-driven for the rest) to every stat card on the page.
+     - **(4/9) Shadows inconsistent / cards & tables inconsistently rounded**: a real audit of
+       `theme.css` found the `.card`/`.card.stat-card`/`.card.chart-card` box-shadow and
+       border-left rules had accumulated **three to four competing definitions** at different
+       points in the file from repeated "add an override further down so it wins" patches —
+       confirmed dead by checking which rule actually won (same-specificity, later-in-file always
+       wins) and removed the losing ones rather than leaving them as a red herring for the next
+       session. Introduced `--shadow-card`/`--shadow-lg`/`--radius-lg` tokens so every card-family
+       shadow and the Material theme's/console density's radius values reference one named token
+       instead of each inventing its own numbers. `.stat-card`'s left-border accent was dropped
+       entirely (the colored gradient background + `hue` prop already carry the per-card color
+       identity; a bar on top of that was redundant clutter, not a second useful signal).
+     - **(1) Chips hide sections instead of navigating to them, and inconsistent-filter
+       confusion**: the shared `components/Tabs.tsx` (used by Analytics/Transactions/Settings/
+       every tabbed sub-page in the app) fully unmounted every non-active tab's content — "keep
+       pressing chips just to view a small piece of info." Rewrote it so every section renders
+       as its own `CollapsibleCard` (first one open by default, same as before), and a chip
+       click now scrolls to that section and forces it open rather than hiding the others —
+       nothing is ever unreachable, it's just further down the page. Required making
+       `CollapsibleCard` support an optional controlled `open`/`onToggle` pair (additive; every
+       other of its ~30 call sites keeps its original self-contained behavior). Also added a
+       small "(whole portfolio — not filtered)" badge (new `ChartCard` `unfiltered` prop) to the
+       5 whole-portfolio Analytics charts (Realized vs unrealized P/L, Cash vs stocks split,
+       Cash balance over time, Deposits vs invested vs net worth, Fees breakdown) that
+       deliberately ignore the ticker/month filter — the user's own concrete example ("filters
+       work on some and leave others") was this exact ambiguity, previously explained only in a
+       filter-bar paragraph easy to scroll past.
+     - **Verified live via Playwright** (not just described): Avg buy price showed exactly 2
+       decimals against a real fee-inclusive cost basis; every `<a>` on the Dashboard read
+       `text-decoration-line: none`; Risk Analysis's two `Notice` boxes rendered as a green
+       "not underwater" banner and a gold diminishing-return box, screenshot-confirmed with no
+       left bar; the Transactions page's Tabs redesign showed both "Add transaction(s)" and
+       "Transaction list" open simultaneously after clicking the second chip (`aria-expanded`
+       read `[true, true, false, false, false, false]`), with the other 4 sections visible but
+       collapsed on the same page; the Analytics page showed the same pattern plus the new
+       "(whole portfolio — not filtered)" badge; zero console errors across Settings/PSX
+       Settings/Bank/Subscriptions smoke-checked separately. `npx tsc -b` / `npm run test` (251
+       tests, unchanged — no calc logic touched) / `npm run build` all clean.
+     - **Deliberately scoped down, not attempted in this pass** (see Pending): (3) font choice
+       for continuous-reading legibility, (7) a genuine "assess a stock in one go" information-
+       architecture redesign, and (8) making themes/densities actual structural variations
+       rather than color/spacing swaps — all three are large, subjective, high-regression-risk
+       redesigns that deserve their own scoped session rather than a guess folded into this
+       batch.
 
 ## Pending
 
@@ -1872,6 +1937,53 @@ already fixed; the rest tracked here**:
     What's left is CollapsibleCard headers, plus a handful of single-word `<select>` labels
     and import-flow checkboxes deliberately left as native `title` (see Done item 98's own
     reasoning) — not a broad unaudited remainder anymore.
+
+**Design-system critique, remaining items (2026-08-24) — see Done item 103 for what shipped
+from this same batch.** Three items deliberately not attempted in that pass, since each is a
+large, subjective, high-regression-risk redesign that deserves its own scoped session rather
+than a guess folded into a mixed batch:
+48. Body font choice for continuous reading/focus — the user's complaint was about the
+    typeface itself, not size (font *size* presets already exist in Appearance). Needs an
+    actual font pick (a real reading-optimized typeface, likely still from Google Fonts) and a
+    visual before/after check, not a blind swap.
+49. "Assess a stock in one go" — the user's complaint is that a stock's info is spread across
+    Dashboard/Portfolio/StockPage/Risk Analysis with no single at-a-glance view. A real fix is
+    an information-architecture exercise (what goes on one screen, in what order) most likely
+    landing as a redesigned `PositionDetail`/`StockPage`, not a CSS tweak — needs its own pass.
+50. "Themes and densities are deception" — the user's complaint is that switching a color theme
+    or density mostly just recolors/respaces the same layout rather than being a genuinely
+    different reading experience. Worth scoping what a "meaningfully different" theme/density
+    would even look like (e.g. does Console density really need a different information
+    layout, not just tighter padding?) before writing any code.
+
+**Trade Planner follow-up, user-reported (2026-08-24, arrived mid-session right after Done
+item 103) — three items, not yet investigated/fixed:**
+51. Every record type across every module should carry a stable, unique `id` the way a
+    normal relational schema would (the user's own framing: "just like a good RDBMS ERD").
+    Several record types were retrofitted with ids over this project's history purely to
+    unblock cross-entity linking (`Transfer`, `CashEntry`, `PersonalLoanRepayment`,
+    `RentalEntry`, `Transaction` as of Done item 81) rather than as a general design pass —
+    needs a real audit of every remaining index-addressed record type (`Adjustment`,
+    `Dividend`, `WatchlistItem`, `Fund`'s own CRUD, `TradePlanLeg`, etc.) and a decision on
+    whether to retrofit the rest even where nothing currently needs to link to them.
+52. **Real bug, not yet root-caused**: executing a Trade Planner leg ("Mark as done") creates a
+    real Transaction and links back via `TradePlanLeg.executedTransactionId` (Done item 81) —
+    but the user edited that transaction afterward (correcting a mistaken share count) from
+    the Transactions page, and the plan still showed the stale old count. Done item 81's design
+    was supposed to resolve an executed leg's displayed values from the *live* linked
+    transaction precisely to prevent this — either that resolution isn't actually being read
+    where the user was looking, the transaction's `id` isn't surviving the edit-in-place flow,
+    or the specific display the user checked doesn't go through the resolution path at all.
+    User also asked that the linked transaction be directly editable from the Trade Planner
+    itself, not just cross-referenced. Needs real investigation before a fix.
+53. **Real design gap, not yet fixed**: the Trade Planner's per-ticker analysis always prices a
+    leg with full commission, missing same-day round-trip netting the way a Transaction itself
+    gets automatically — a plan can look like a worse trade than it would actually cost once
+    executed same-day. The user wants both the same-day and non-same-day price/fee shown side
+    by side so the actual cheaper timing is visible while still planning, not after the fact.
+    Also flagged as a UX issue: the per-ticker summary table is visually buried under the
+    heavier leg-editing UI and easy to miss at a glance — suggested colored summary cards
+    instead of (or alongside) the table.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

@@ -115,7 +115,12 @@ ticker's own trade history separately.
 
 ## 6. Transactions
 
-The Transactions page has several tabs:
+The Transactions page has several sections. Each one is a collapsible card, and the chip row
+at the top is a *jump-to* nav, not a switch — clicking a chip scrolls to that section and opens
+it if it was collapsed, but it doesn't hide any of the others. Only the first section starts
+open; scroll down (or click a chip) to see the rest. This applies to every chip row like this
+one across the app (Analytics' category tabs, Settings' Account/Data tabs, etc.) — nothing is
+ever hidden behind a chip, just collapsed further down the same page.
 
 ### Add transaction(s)
 Enter one or more BUY/SELL rows at once (date, ticker, action, shares, price) and save them

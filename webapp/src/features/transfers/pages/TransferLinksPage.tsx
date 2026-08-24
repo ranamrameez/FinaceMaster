@@ -1,6 +1,7 @@
 import type { User } from 'firebase/auth';
 import { useState } from 'react';
 import { Card, CollapsibleCard } from '../../../components/Card';
+import { Notice } from '../../../components/Notice';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
@@ -363,7 +364,7 @@ export function TransferLinksPage({
           <h3 style={{ marginTop: 0 }}>Account</h3>
           <p className="footer-note">{syncStatus}</p>
           {cloudEmpty && (
-            <div className="card" style={{ marginTop: 8, borderLeft: '3px solid var(--warn, orange)' }}>
+            <Notice tone="warning" style={{ marginTop: 8 }}>
               <p style={{ marginTop: 0 }}>
                 No data found in the cloud for this account's linked transfers. This app will <strong>not</strong>{' '}
                 upload anything automatically — if you expected existing data here and don't see it, stop and
@@ -390,7 +391,7 @@ export function TransferLinksPage({
               >
                 Upload local data to cloud ({links.length} links)
               </button>
-            </div>
+            </Notice>
           )}
         </Card>
       )}

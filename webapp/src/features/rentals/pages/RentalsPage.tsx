@@ -2,6 +2,7 @@ import type { User } from 'firebase/auth';
 import { useMemo, useRef, useState } from 'react';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
+import { Notice } from '../../../components/Notice';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
@@ -852,7 +853,7 @@ function AccountSection({
       <h3 style={{ marginTop: 0 }}>Account</h3>
       <p className="footer-note">{syncStatus}</p>
       {cloudEmpty && (
-        <div className="card" style={{ marginTop: 8, borderLeft: '3px solid var(--warn, orange)' }}>
+        <Notice tone="warning" style={{ marginTop: 8 }}>
           <p style={{ marginTop: 0 }}>No data found in the cloud for this account's Rentals workbook. This won't upload automatically.</p>
           <button
             className="btn secondary"
@@ -875,7 +876,7 @@ function AccountSection({
           >
             Upload local data to cloud ({entries.length} entries)
           </button>
-        </div>
+        </Notice>
       )}
     </Card>
   );
