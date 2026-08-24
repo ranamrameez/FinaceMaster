@@ -1697,6 +1697,28 @@ not developer notes) continuously as features ship.
   resolution). Verified live: number toggle switched and persisted
   correctly across reload; both new balance columns matched
   hand-calculated running totals exactly on seeded multi-entry data.
+- **Real popup tooltips + grouped-column Holdings redesign (2026-08-24) —
+  user posted a direct screenshot comparison against a competitor stock
+  page ("clean, compact info rich UI... you are making useless UI") — see
+  README Done item 85.** Two concrete fixes from that comparison: (a) the
+  PSX add-transaction form's permanent 4-line explanatory paragraph
+  became one sentence + a new `InfoIcon` that opens a real tooltip on
+  demand; (b) QSE's/PSX's Dashboard Holdings table columns were regrouped
+  from five one-fact columns into four grouped ones — Stock (ticker+
+  name), Cost (avg+break-even), Value (worth+invested+▲/▼), P/L
+  (amount+%) — directly matching the user's own earlier example. New
+  shared `components/Tooltip.tsx` backs `StatCard`/`MoneyValue`/
+  `FeeModeControl`'s tooltips instead of native `title`. **Real bug found
+  while verifying, not assumed away**: a naive "always above the
+  trigger" tooltip clipped off-screen for a long tooltip near the top of
+  a page — confirmed via an actual screenshot, fixed with a two-pass
+  measure-then-place approach (mount hidden, measure real height, place
+  above only if it fits, else below), using `position: fixed` so a
+  trigger inside a scrollable table never gets clipped by the
+  container's own overflow either. A 23-page Playwright sweep found zero
+  new console errors. Scope: covers Dashboard + the add-transaction
+  form; Portfolio's tables, StockPage, and other modules still use the
+  old layout/tooltips — tracked as Pending, not silently dropped.
 
 ## Live URLs
 

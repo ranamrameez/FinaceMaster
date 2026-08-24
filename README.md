@@ -1358,6 +1358,41 @@ FinanceManager live link:
     New tests: `transferBalance.test.ts` (4 cases), `personalLoansModule.test.ts` gained 4
     `repaymentRunningOutstanding` cases. `npx tsc -b` / `npm run test` (219 tests, 8 new) /
     `npm run build` all clean.
+85. **Real popup tooltips + grouped-column Holdings redesign, user-reported with a direct
+    screenshot comparison against a competitor stock-analysis page ("clean, compact info rich
+    UI... you are making useless UI with less data and more confusion").** Two concrete,
+    specific gaps in that comparison, both fixed: (a) a permanent wall of explanatory text sat
+    under the PSX add-transaction form, where the reference screen instead just labels things
+    clearly and puts detail behind an on-demand affordance — replaced with one short sentence
+    plus a new **`InfoIcon`** that opens a real tooltip on click/hover; (b) the reference groups
+    naturally-related numbers into one visual block (OPEN/PREV CLOSE/VOLUME together, RANGES
+    together) instead of one-fact-per-column — QSE's and PSX's Dashboard Holdings table
+    columns were redesigned the same way: **Stock** (ticker + company name stacked), **Cost**
+    (avg cost + break-even, break-even colored green/red vs. current price), **Value** (current
+    worth + invested + a ▲/▼ indicator), **P/L** (amount + percentage) — four grouped columns
+    replacing what were five separate same-size ones, matching the user's own earlier example
+    almost verbatim ("Ticker+logo+name, Avg Cost & Break-even, PL amount & %age, Current Worth
+    + Invested + arrow"). New shared **`components/Tooltip.tsx`** replaces native `title`
+    hover-only tooltips (small, invisible on mobile/touch) everywhere a `title` string was
+    passed to `StatCard`/`MoneyValue`/`FeeModeControl` — no call-site changes needed for
+    `StatCard`/`MoneyValue` since they already took a `title` prop, just render it differently
+    now. Real positioning bug found and fixed during verification, not assumed away: a naive
+    "always open above the trigger" tooltip clipped off the top of the viewport for a
+    long/multi-line tooltip near the top of a page (confirmed via an actual screenshot showing
+    the popup's first few lines missing above frame) — fixed with a two-pass measure-then-place
+    approach (mount hidden, measure real height, place above only if it actually fits, else
+    below) using `position: fixed` so a trigger inside a scrollable table/card never gets
+    clipped by the container's own `overflow` either. Verified live via Playwright screenshots,
+    before and after: the add-transaction row went from a permanent 4-line paragraph to one
+    line + an icon; the Holdings table visibly matches the grouped-block density of the
+    reference; the tooltip's position bug was reproduced and then confirmed fixed with a
+    before/after screenshot pair. A 23-page sweep across every module found zero new console
+    errors. `npx tsc -b` / `npm run test` (219 tests, unchanged — UI/layout work) / `npm run
+    build` all clean. **Scope note**: this pass covers the two most-viewed screens (Dashboard,
+    the add-transaction form); Portfolio's own tables, StockPage, and every other module's
+    lists still use the old one-fact-per-column layout and native-title-adjacent tooltips —
+    tracked as Pending, the same "ship a vertical slice, document the rest" pattern used
+    throughout this project rather than a blind app-wide rewrite in one pass.
 
 ## Pending
 
@@ -1486,18 +1521,17 @@ already fixed; the rest tracked here**:
 44. ~~A running-balance column for Cash's ledger and other transaction-style tables.~~ **Done
     — see Done item 84.** Cash/Bank already had one; QSE/PSX Transfers and Personal Loans
     repayments were the real gaps and now have one too.
-45. "One column = one fact" isn't a real constraint — group naturally-related info into a
-    single column instead of one column per field, e.g. Ticker+logo+company name together,
-    Avg cost & Break-even together, P/L amount & percentage together, Current worth + invested
-    + an up/down arrow together. Denser, more scannable tables. Not started — a real table
-    redesign pass across Portfolio/Dashboard/Holdings tables, not a one-file fix.
+45. **Partially done — see Done item 85.** QSE's/PSX's Dashboard Holdings table now groups
+    Ticker+name, Avg cost & Break-even, Current worth+invested+arrow, and P/L amount+% into
+    four columns instead of five separate ones. Still one-fact-per-column: Portfolio's own
+    Holdings/History tables, StockPage's stat-card grids, and every other module's list views.
 46. ~~A raw-vs-concise number display toggle in Appearance settings (1,000 vs 1k).~~ **Done —
     see Done item 83.**
-47. Tooltips are still hard to notice/read — `title` attribute hover tooltips are small, easy
-    to miss, and invisible on mobile/touch entirely (this exact gap is why Done item 81's
-    `FeeModeControl` fix added visible labels instead of relying on `title` alone). Needs a
-    real popup-style tooltip component (bigger box, larger font, works on tap not just hover)
-    used everywhere a `title` tooltip currently stands in for one.
+47. **Partially done — see Done item 85.** New `components/Tooltip.tsx` (bigger box, larger
+    font, works on click/tap not just hover) now backs `StatCard`/`MoneyValue`/
+    `FeeModeControl`'s tooltips. Still native `title` elsewhere: table-cell tooltips (e.g.
+    Fee column's "(netted)"/"(override)" tags), CollapsibleCard headers, and most other
+    scattered `title=` attributes across the app — not yet swept.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

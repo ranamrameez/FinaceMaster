@@ -1,8 +1,9 @@
 import { Fragment, useMemo, useState } from 'react';
 import { PSX_TICKER_DATALIST_ID } from '../../../components/PSXTickerDatalist';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
+import { InfoIcon, PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
+import { Tooltip } from '../../../components/Tooltip';
 import { toast } from '../../../components/Toast';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
@@ -131,17 +132,16 @@ function TransactionRows() {
           <SaveIcon />Save {rows.length > 1 ? `${rows.length} transactions` : 'transaction'}
         </button>
       </div>
-      <p className="footer-note" style={{ marginTop: 8 }}>
-        Same-day round trips are detected automatically: if you buy and sell the same ticker on the
-        same date, the larger side pays full commission and the smaller side is netted to
-        government levies only — see each transaction's Fee column in the list below. The
-        <strong> Fee mode</strong> dropdown per row controls how much you want to override that:
-        <strong> Auto</strong> leaves it fully computed, <strong>Semi</strong> lets you flip whether
-        this specific leg counts as netted (use when your statement shows a same-day netting the
-        recorded date doesn't line up with), and <strong>Manual</strong> lets you type the exact fee
-        from your statement, bypassing computation entirely. A new BUY dated today starts in Semi
-        mode with "Netted" pre-checked, since that's a buy you're most likely about to close out the
-        same day — switch to Auto if you're actually opening a position you plan to hold.
+      <p className="footer-note" style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+        Same-day round trips net automatically — the larger side pays full commission, the
+        smaller side pays levies only.
+        <Tooltip
+          text={'The "Fee mode" dropdown per row controls how much you want to override that: Auto leaves it fully computed, Semi lets you flip whether this specific leg counts as netted (use when your statement shows a same-day netting the recorded date doesn\'t line up with), and Manual lets you type the exact fee from your statement, bypassing computation entirely. A new BUY dated today starts in Semi mode with "Netted" pre-checked, since that\'s a buy you\'re most likely about to close out the same day — switch to Auto if you\'re actually opening a position you plan to hold.'}
+        >
+          <span style={{ cursor: 'pointer', color: 'var(--muted)', display: 'inline-flex' }}>
+            <InfoIcon size={13} />
+          </span>
+        </Tooltip>
       </p>
     </div>
   );

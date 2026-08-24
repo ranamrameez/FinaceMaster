@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { useState } from 'react';
 import { useAmountFormat } from '../hooks/useAmountFormat';
 import { fmtMoney } from '../lib/format';
+import { Tooltip } from './Tooltip';
 
 export function Card({
   children,
@@ -88,7 +89,13 @@ export function StatCard({ label, value, sub, title, hue }: { label: string; val
   return (
     <div className="card stat-card" style={hue ? ({ '--card-hue': hue } as CSSProperties) : undefined}>
       <div className="label">{label}</div>
-      <div className="value" title={title}>{value}</div>
+      {title ? (
+        <Tooltip text={title}>
+          <div className="value">{value}</div>
+        </Tooltip>
+      ) : (
+        <div className="value">{value}</div>
+      )}
       {sub && <div className="sub">{sub}</div>}
     </div>
   );
@@ -118,10 +125,11 @@ export function MoneyValue({
   after?: ReactNode;
 }) {
   const { raw, money } = useAmountFormat();
-  return (
-    <div className={className} title={raw ? undefined : fmtMoney(n, currency)}>
+  const content = (
+    <div className={className}>
       {money(n, currency)}
       {after}
     </div>
   );
+  return raw ? content : <Tooltip text={fmtMoney(n, currency)}>{content}</Tooltip>;
 }

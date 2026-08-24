@@ -13,6 +13,19 @@ export function PlusIcon({ size = 14 }: IconProps) {
   );
 }
 
+/** A small "more info" trigger — pairs with `Tooltip` to move a long
+ * explanation out of permanent on-page text (a real user-reported clutter
+ * complaint, comparing this app's forms unfavorably to a competitor's
+ * clean-looking screen) into something shown only on demand. */
+export function InfoIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base} aria-hidden>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5M12 8h.01" />
+    </svg>
+  );
+}
+
 export function SaveIcon({ size = 14 }: IconProps) {
   return (
     <svg width={size} height={size} {...base} aria-hidden>

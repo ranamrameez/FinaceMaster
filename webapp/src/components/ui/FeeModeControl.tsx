@@ -1,4 +1,5 @@
 import { Field } from './Field';
+import { Tooltip } from '../Tooltip';
 import type { Transaction } from '../../types/workbook';
 
 export type FeeMode = 'auto' | 'semi' | 'manual';
@@ -48,25 +49,22 @@ export function FeeModeControl({
   return (
     <div className="row" style={{ gap: 6, alignItems: 'flex-end', flex: '0 0 auto' }}>
       <Field label="Fee mode" width={100}>
-        <select
-          value={mode}
-          onChange={(e) => onModeChange(e.target.value as FeeMode)}
-          title="Auto: fee fully computed from Settings, same-day netting auto-detected. Semi: you decide whether this leg is the same-day-netted one, amount still computed. Manual: type the exact fee from your statement."
-        >
-          <option value="auto">Auto</option>
-          <option value="semi">Semi</option>
-          <option value="manual">Manual</option>
-        </select>
+        <Tooltip text="Auto: fee fully computed from Settings, same-day netting auto-detected. Semi: you decide whether this leg is the same-day-netted one, amount still computed. Manual: type the exact fee from your statement.">
+          <select value={mode} onChange={(e) => onModeChange(e.target.value as FeeMode)} style={{ width: 100 }}>
+            <option value="auto">Auto</option>
+            <option value="semi">Semi</option>
+            <option value="manual">Manual</option>
+          </select>
+        </Tooltip>
       </Field>
       {mode === 'semi' && (
-        <Field label="Same-day netted?" width={150}>
-          <label
-            style={{ display: 'flex', alignItems: 'center', gap: 4, height: 30 }}
-            title="Checked: this leg pays government levies only (netted). Unchecked: this leg pays full commission (charged). Overrides auto-detection either way."
-          >
-            <input type="checkbox" checked={manualSameDay} onChange={(e) => onManualSameDayChange(e.target.checked)} />
-            {manualSameDay ? 'Netted (levies only)' : 'Charged (full fee)'}
-          </label>
+        <Field label="Netted?" width={190}>
+          <Tooltip text="Checked: this leg pays government levies only (netted). Unchecked: this leg pays full commission (charged). Overrides auto-detection either way.">
+            <label style={{ display: 'flex', alignItems: 'center', gap: 4, height: 30, width: 190, whiteSpace: 'nowrap' }}>
+              <input type="checkbox" checked={manualSameDay} onChange={(e) => onManualSameDayChange(e.target.checked)} />
+              {manualSameDay ? 'Netted (levies only)' : 'Charged (full fee)'}
+            </label>
+          </Tooltip>
         </Field>
       )}
       {mode === 'manual' && (

@@ -40,16 +40,24 @@ function HoldingsCard() {
           const value = p.shares * mp;
           const sellFee = mp > 0 ? calcFee(value, false, { shares: p.shares }) : 0;
           const profit = mp > 0 ? value - sellFee - p.invested : NaN;
+          const profitPct = mp > 0 && p.invested > 0 ? (profit / p.invested) * 100 : NaN;
           const be = breakEvenPrice(p.invested, p.shares, feePct, tick, calcFee);
           const sparkData = getDailyPriceHistory(p.ticker, workbook.priceHistory).map((pt) => pt.price);
-          return { ticker: p.ticker, shares: p.shares, avgCost, mp, profit, be, sparkData };
+          return { ticker: p.ticker, shares: p.shares, avgCost, mp, value, invested: p.invested, profit, profitPct, be, sparkData };
         }),
     [positions, workbook.marketPrices, workbook.priceHistory, calcFee, feePct, tick],
   );
 
-  type Col = 'ticker' | 'shares' | 'avgCost' | 'mp' | 'be' | 'profit';
+  // Columns are grouped by related info rather than one fact per column
+  // (user request, with a real competitor screenshot as the reference
+  // point): "Cost" carries avg cost + break-even together, "Value" carries
+  // current worth + invested + an up/down indicator together, "P/L" carries
+  // the amount + percentage together — instead of five separate same-size
+  // columns for numbers a reader mentally pairs up anyway.
+  type Col = 'ticker' | 'shares' | 'avgCost' | 'mp' | 'value' | 'profit';
   const sortValue = (r: (typeof heldRaw)[number], col: Col): number | string => {
     if (col === 'profit') return Number.isFinite(r.profit) ? r.profit : 0;
+    if (col === 'value') return r.value;
     return r[col];
   };
   const { sorted: held, Th } = useSortableRows(heldRaw, sortValue, 'profit', 'desc');
@@ -64,17 +72,28 @@ function HoldingsCard() {
         <div className="table-scroll table-compact" style={{ marginTop: 8 }}>
           <table>
             <thead>
-              <tr><Th col="ticker">Ticker</Th><th>Trend</th><Th col="shares">Shares</Th><Th col="avgCost">Avg Cost</Th><Th col="mp">Current Price</Th><Th col="be">Break-even</Th><Th col="profit">Net P/L</Th></tr>
+              <tr><Th col="ticker">Stock</Th><th>Trend</th><Th col="shares">Shares</Th><Th col="avgCost">Cost</Th><Th col="mp">Current Price</Th><Th col="value">Value</Th><Th col="profit">P/L</Th></tr>
             </thead>
             <tbody>
               {held.map((r) => (
                 <tr key={r.ticker} style={{ cursor: 'pointer' }}>
                   <td onClick={() => navigate(`/psx/stock/${r.ticker}`)} style={{ maxWidth: 170 }}>
-                    {r.ticker} <span className="footer-note" style={{ display: 'inline-block', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'bottom' }}>{tickerNames[r.ticker] ? shortenCompanyName(tickerNames[r.ticker]) : ''}</span>
+                    <div style={{ fontWeight: 600 }}>{r.ticker}</div>
+                    <div className="footer-note" style={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {tickerNames[r.ticker] ? shortenCompanyName(tickerNames[r.ticker]) : ''}
+                    </div>
                   </td>
                   <td style={{ width: 70 }}><Sparkline data={r.sparkData} formatValue={fmtPrice} width={56} height={20} /></td>
                   <td onClick={() => navigate(`/psx/stock/${r.ticker}`)}>{fmt(r.shares, 0)}</td>
-                  <td onClick={() => navigate(`/psx/stock/${r.ticker}`)}>{fmtPrice(r.avgCost)}</td>
+                  <td onClick={() => navigate(`/psx/stock/${r.ticker}`)}>
+                    <div>{fmtPrice(r.avgCost)}</div>
+                    <div
+                      className="footer-note"
+                      style={{ color: r.mp > 0 ? (r.mp >= r.be ? 'var(--profit)' : 'var(--loss)') : undefined }}
+                    >
+                      BE {fmtPrice(r.be)}
+                    </div>
+                  </td>
                   <td onClick={(e) => e.stopPropagation()}>
                     <input
                       type="number"
@@ -96,8 +115,17 @@ function HoldingsCard() {
                       }}
                     />
                   </td>
-                  <td onClick={() => navigate(`/psx/stock/${r.ticker}`)} className={r.mp > 0 ? (r.mp >= r.be ? 'pill-buy' : 'pill-sell') : ''}>{fmtPrice(r.be)}</td>
-                  <td onClick={() => navigate(`/psx/stock/${r.ticker}`)} className={Number.isFinite(r.profit) ? (r.profit >= 0 ? 'pill-buy' : 'pill-sell') : ''}>{Number.isFinite(r.profit) ? fmtMoney(r.profit, currency) : '—'}</td>
+                  <td onClick={() => navigate(`/psx/stock/${r.ticker}`)}>
+                    <div>{r.mp > 0 ? fmtMoney(r.value, currency) : '—'}</div>
+                    <div className="footer-note">
+                      {r.mp > 0 && (r.value >= r.invested ? <span style={{ color: 'var(--profit)' }}>▲</span> : <span style={{ color: 'var(--loss)' }}>▼</span>)}
+                      {' '}Inv {fmtMoney(r.invested, currency)}
+                    </div>
+                  </td>
+                  <td onClick={() => navigate(`/psx/stock/${r.ticker}`)} className={Number.isFinite(r.profit) ? (r.profit >= 0 ? 'pill-buy' : 'pill-sell') : ''}>
+                    <div>{Number.isFinite(r.profit) ? fmtMoney(r.profit, currency) : '—'}</div>
+                    <div className="footer-note">{Number.isFinite(r.profitPct) ? `${r.profitPct >= 0 ? '+' : ''}${r.profitPct.toFixed(1)}%` : ''}</div>
+                  </td>
                 </tr>
               ))}
             </tbody>
