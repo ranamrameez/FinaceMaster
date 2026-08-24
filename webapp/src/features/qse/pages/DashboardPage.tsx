@@ -147,8 +147,13 @@ export function DashboardPage() {
         <StatCard label="Total Deposits" value={fmtMoneyCompact(summary.totalInward, currency)} title={fmtMoney(summary.totalInward, currency)} hue={INVEST_PALETTE[1]} />
         <StatCard label="Total Fees" value={fmtMoneyCompact(summary.totalCharges, currency)} title={fmtMoney(summary.totalCharges, currency)} hue={INVEST_PALETTE[4]} />
         <StatCard label="Rewards" value={fmtMoneyCompact(summary.totalRewards, currency)} title={fmtMoney(summary.totalRewards, currency)} hue={INVEST_PALETTE[2]} />
-        <StatCard label="Open Positions" value={fmt(rows.length, 0)} hue={INVEST_PALETTE[0]} />
-        <StatCard label="Portfolio ROI" value={`${portfolioROIPct.toFixed(1)}%`} hue={portfolioROIPct >= 0 ? 'var(--profit)' : 'var(--loss)'} />
+        <StatCard label="Open Positions" value={fmt(rows.length, 0)} hue={INVEST_PALETTE[0]} title="Number of distinct tickers you currently hold shares in." />
+        <StatCard
+          label="Portfolio ROI"
+          value={`${portfolioROIPct.toFixed(1)}%`}
+          hue={portfolioROIPct >= 0 ? 'var(--profit)' : 'var(--loss)'}
+          title="Unrealized P/L divided by total invested capital in your open positions — doesn't include realized gains/losses from closed trades."
+        />
       </div>
 
       <HoldingsCard />
