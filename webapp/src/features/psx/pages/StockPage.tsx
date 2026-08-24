@@ -28,6 +28,12 @@ function TickerTransactions({ ticker }: { ticker: string }) {
   const [date, setDate] = useState(today());
   const [sharesInput, setSharesInput] = useState('');
   const [priceInput, setPriceInput] = useState('');
+  // Pre-checked when the form's own defaults (today + BUY) already match —
+  // a lone same-day buy otherwise can't be netted until a matching SELL is
+  // also logged the same day, so it'd be charged full commission up front.
+  // Only ever nudged ON by the date/action handlers below, never forced
+  // off, so a user's manual uncheck survives editing another field.
+  const [manualSameDay, setManualSameDay] = useState(true);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editRow, setEditRow] = useState<Transaction | null>(null);
 
@@ -51,7 +57,7 @@ function TickerTransactions({ ticker }: { ticker: string }) {
     const price = Number(priceInput);
     if (!shares || !price) return toast('Enter shares and price.');
     if (!(await ensureSignedIn('Sign in to save this transaction.'))) return;
-    addTransaction({ date, ticker, action, shares, price });
+    addTransaction({ date, ticker, action, shares, price, manualSameDay: manualSameDay || undefined });
     toast(`${action} ${shares} ${ticker} @ ${fmtPrice(price)} logged.`);
     setSharesInput('');
     setPriceInput('');
@@ -72,13 +78,32 @@ function TickerTransactions({ ticker }: { ticker: string }) {
   return (
     <div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-        <select value={action} onChange={(e) => setAction(e.target.value as 'BUY' | 'SELL')}>
+        <select
+          value={action}
+          onChange={(e) => {
+            const next = e.target.value as 'BUY' | 'SELL';
+            setAction(next);
+            if (date === today() && next === 'BUY') setManualSameDay(true);
+          }}
+        >
           <option value="BUY">Buy</option>
           <option value="SELL">Sell</option>
         </select>
-        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => {
+            const next = e.target.value;
+            setDate(next);
+            if (next === today() && action === 'BUY') setManualSameDay(true);
+          }}
+        />
         <input type="number" placeholder="Shares" value={sharesInput} onChange={(e) => setSharesInput(e.target.value)} style={{ width: 90 }} />
         <input type="number" step="0.01" placeholder="Price" value={priceInput} onChange={(e) => setPriceInput(e.target.value)} style={{ width: 90 }} />
+        <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4 }} title="Force netted (government levies only) fee treatment for this leg, overriding auto-detection — pre-checked for a same-day buy since it can't be netted until a matching sell is also logged.">
+          <input type="checkbox" checked={manualSameDay} onChange={(e) => setManualSameDay(e.target.checked)} />
+          Same-day
+        </label>
         <button className="btn" onClick={submit}>Add {action === 'BUY' ? 'buy' : 'sell'}</button>
       </div>
 

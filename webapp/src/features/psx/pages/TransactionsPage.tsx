@@ -18,7 +18,23 @@ import { usePSXDerived } from '../hooks/usePSXDerived';
 const today = () => new Date().toISOString().slice(0, 10);
 
 function emptyRow(): Transaction {
-  return { date: today(), ticker: '', action: 'BUY', shares: 0, price: 0 };
+  // Auto-check "Same-day override" for a fresh row: it defaults to today's
+  // date + BUY, which is exactly the "I'm buying now, planning to close
+  // same-day" case a user reported — without this, the date-based
+  // auto-detection in psxFees.ts can't net the fee until a matching SELL
+  // leg is also logged the same day, so a lone same-day buy was charged
+  // full commission up front. Still just a default: the checkbox stays
+  // visible and editable, so an ordinary buy-and-hold is one click away
+  // from unchecking it.
+  return { date: today(), ticker: '', action: 'BUY', shares: 0, price: 0, manualSameDay: true };
+}
+
+/** Only ever nudges the flag ON when the row now matches "BUY dated today" —
+ * never forces it off, so a manual same-day override the user set for a
+ * genuinely backdated trade (the checkbox's other documented use case)
+ * survives editing an unrelated field. */
+function autoSameDay(date: string, action: 'BUY' | 'SELL', current?: boolean): boolean | undefined {
+  return date === today() && action === 'BUY' ? true : current;
 }
 
 function TransactionRows() {
@@ -45,7 +61,11 @@ function TransactionRows() {
     <div>
       {rows.map((r, i) => (
         <div key={i} className="row" style={{ gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-          <input type="date" value={r.date} onChange={(e) => update(i, { date: e.target.value })} />
+          <input
+            type="date"
+            value={r.date}
+            onChange={(e) => update(i, { date: e.target.value, manualSameDay: autoSameDay(e.target.value, r.action, r.manualSameDay) })}
+          />
           <input
             placeholder="Ticker"
             value={r.ticker}
@@ -53,7 +73,13 @@ function TransactionRows() {
             list={PSX_TICKER_DATALIST_ID}
             style={{ width: 80 }}
           />
-          <select value={r.action} onChange={(e) => update(i, { action: e.target.value as 'BUY' | 'SELL' })}>
+          <select
+            value={r.action}
+            onChange={(e) => {
+              const action = e.target.value as 'BUY' | 'SELL';
+              update(i, { action, manualSameDay: autoSameDay(r.date, action, r.manualSameDay) });
+            }}
+          >
             <option value="BUY">BUY</option>
             <option value="SELL">SELL</option>
           </select>
@@ -105,9 +131,12 @@ function TransactionRows() {
       <p className="footer-note" style={{ marginTop: 8 }}>
         Same-day round trips are detected automatically: if you buy and sell the same ticker on the
         same date, the smaller side is charged government levies only (no double commission) — see
-        each transaction's Fee column in the list below. If your account statement shows a same-day
-        netting that the recorded date doesn't line up with, check "Same-day override" to force it.
-        Leave "Fee override" blank to use the computed fee, or fill it in to match your statement exactly.
+        each transaction's Fee column in the list below. A new BUY dated today has "Same-day
+        override" pre-checked, since that's a buy you're most likely about to close out the same
+        day — uncheck it if you're actually opening a position you plan to hold. If your account
+        statement shows a same-day netting that the recorded date doesn't line up with, check
+        "Same-day override" to force it. Leave "Fee override" blank to use the computed fee, or fill
+        it in to match your statement exactly.
       </p>
     </div>
   );
