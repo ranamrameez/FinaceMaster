@@ -777,6 +777,22 @@ FinanceManager live link:
     clean. Not touched: the Cash/Bank Planning tabs' "Real: X / Planned: X" projection cards
     (a different, prefixed display shape, not a plain `.value` div) and every non-money stat
     (share counts, percentages, XIRR) — none of those need abbreviating.
+57. **Module stat sections now surface upcoming/in-process planned payments, user-reported —
+    ties into the existing Planning feature (Done item 43) for Cash and Banking, the only two
+    modules that have one.** Cash's `BalancesSummary` and Bank's `TotalBalances` (both render
+    right on each module's default/landing tab, not buried inside the Planning tab) now read
+    the not-yet-executed entries from `usePlannedCashWorkbookStore`/`usePlannedBankWorkbookStore`
+    directly and add a `sub` line under each currency's Balance stat card — e.g. "2 upcoming
+    plans (net -250 USD)" — only rendered when that currency actually has a pending plan, so a
+    module with no plans looks exactly as before. Bank's version maps each plan's `accountId`
+    to its account's currency the same way `plannedBankProjection` already does, since a
+    planned bank transaction doesn't carry a currency of its own. Verified live with seeded
+    pending plans on both modules: Cash showed "1k USD" + "2 upcoming plans (net -250 USD)";
+    Bank showed "500 USD" + "1 upcoming plan (net -300 USD)" — both without navigating into
+    the Planning tab. `npm run build` / `npm run test` (156 tests, unchanged — reuses the
+    already-tested `plannedCashProjection`/`plannedBankProjection` logic, no new calc code)
+    both clean. EMI/Personal Loans/Rentals/Funds have no Planning feature yet (Done item 43
+    only shipped it for Cash/Banking), so there's nothing to surface there.
 
 ## Pending
 
@@ -858,8 +874,6 @@ wave" section)**:
 **New batch of user feedback, 2026-08-23 (mid-session) — see Done item 51 for item (1),
 already fixed; the rest tracked here**:
 
-35. Module stat sections should surface in-process and/or upcoming planned/scheduled payments
-    — ties into the existing Planning feature (Done item 43) for Cash/Banking. Not started.
 36. Clicking an account (or the equivalent primary record in other modules) should open a
     detail view showing in-process, planned, and recent transactions together, plus an option
     to download a statement for a chosen period — requested across every module, not just

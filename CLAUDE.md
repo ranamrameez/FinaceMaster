@@ -1079,6 +1079,28 @@ not developer notes) continuously as features ship.
   "12,345,678.90 PKR" confirmed present in the DOM's `title` attribute
   (checked via `getAttribute`, not just visually). `npm run build` /
   `npm run test` (156 tests, 6 new) both clean.
+- **Upcoming/in-process planned payments surfaced in module stats,
+  user-reported (2026-08-23) — see README Done item 57.** Ties into
+  the existing Planning feature (Done item 43), which only Cash and
+  Banking have. Cash's `BalancesSummary` and Bank's `TotalBalances` —
+  both already rendered on each module's default/landing tab, not
+  buried inside the Planning tab — now also read the not-yet-executed
+  entries straight from `usePlannedCashWorkbookStore`/
+  `usePlannedBankWorkbookStore` and add a `sub` line under the
+  relevant currency's Balance card (e.g. "2 upcoming plans (net -250
+  USD)"), shown only when that currency actually has a pending plan.
+  Bank's version needed one extra step Cash didn't: a planned bank
+  transaction has no currency of its own, only an `accountId`, so it
+  maps account → currency the same way `plannedBankProjection` already
+  does internally — reused that same mapping logic rather than
+  duplicating it. No new calc code or tests needed since both
+  `plannedCashProjection`/`plannedBankProjection` (Done item 43) were
+  already covered; this is purely surfacing data that already existed
+  one tab away. Verified live with seeded pending plans on both
+  modules — Cash: "1k USD" / "2 upcoming plans (net -250 USD)"; Bank:
+  "500 USD" / "1 upcoming plan (net -300 USD)" — both visible without
+  navigating into Planning. `npm run build` / `npm run test` (156
+  tests, unchanged) both clean.
 - **Large batch of user feedback received 2026-08-23, mid-session —
   most items handled, some still open (check README Done/Pending for
   current per-item status, this is a snapshot at time of receipt).**
@@ -1100,7 +1122,8 @@ not developer notes) continuously as features ship.
   numbers for a cleaner look, show the real precise number as a
   tooltip — fixed together with (10), see below (README Done item 56).
   (9) Stats should surface in-process/upcoming planned
-  payments (ties into the Planning feature). (10) Shorten large
+  payments (ties into the Planning feature) — fixed, see below
+  (README Done item 57). (10) Shorten large
   numbers in display (10,000 → 10k) where reasonable — fixed, see
   below (README Done item 56). (11) EMI: a link
   button to link an EMI loan to a bank + a payment date, generating a

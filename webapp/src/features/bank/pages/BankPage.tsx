@@ -12,7 +12,7 @@ import { accountBalance, accountByCategory, accountRunningLedger, totalBalanceBy
 import { plannedBankProjection } from '../../../lib/calc/plannedBalance';
 import { parseCSV } from '../../../lib/csv';
 import { CURRENCIES } from '../../../lib/currencies';
-import { fmtMoney } from '../../../lib/format';
+import { fmtCompact, fmtMoney } from '../../../lib/format';
 import { confirmAndDeleteLinkable } from '../../../lib/linkCascade';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
@@ -34,18 +34,36 @@ function emptyAccount(defaultCurrency: string): Omit<BankAccount, 'id'> {
 function TotalBalances() {
   const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
   const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
+  const plannedEntries = usePlannedBankWorkbookStore((s) => s.workbook.entries);
   const totals = totalBalanceByCurrency(accounts, transactions);
   const codes = Object.keys(totals);
   if (!codes.length) return null;
 
+  // Not-yet-executed plans, per currency — surfaced here (not just inside
+  // the Planning tab) so "how much is still hanging over my balance" is
+  // visible at a glance without a click, per a user report that stats
+  // didn't show upcoming/in-process planned payments at all.
+  const currencyByAccount = new Map(accounts.map((a) => [a.id, a.currencyCode]));
+  const upcoming = plannedEntries.filter((p) => !p.executed);
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px,1fr))', gap: 8, marginBottom: 16 }}>
-      {codes.map((code) => (
-        <div key={code} className="stat-card card">
-          <div className="label">Total balance ({code})</div>
-          <MoneyValue n={totals[code]} currency={code} className={`value ${totals[code] >= 0 ? 'pill-buy' : 'pill-sell'}`} />
-        </div>
-      ))}
+      {codes.map((code) => {
+        const pending = upcoming.filter((p) => currencyByAccount.get(p.accountId) === code);
+        const net = pending.reduce((s, p) => s + p.amount, 0);
+        return (
+          <div key={code} className="stat-card card">
+            <div className="label">Total balance ({code})</div>
+            <MoneyValue n={totals[code]} currency={code} className={`value ${totals[code] >= 0 ? 'pill-buy' : 'pill-sell'}`} />
+            {pending.length > 0 && (
+              <div className="sub">
+                {pending.length} upcoming plan{pending.length > 1 ? 's' : ''} (net {net >= 0 ? '+' : ''}
+                {fmtCompact(net)} {code})
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
