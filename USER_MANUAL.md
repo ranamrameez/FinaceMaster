@@ -418,6 +418,14 @@ licensing is required for that, so it's manual entry or statement import only).
   exports spending as positive numbers. Preview the first 5 mapped rows, then import. This
   is intentionally a simple column-mapping tool, not a parser for every specific bank
   format.
+- **Analytics tab**: pick an account (each chart is scoped to it, not a currency, since a
+  bank account's history is naturally one account's own data) — a balance-over-time chart, a
+  category breakdown of your spend (income categories aren't mixed in, since a doughnut of
+  credit and debit together wouldn't mean anything), and income vs. spend by month. Below the
+  charts, a **budget** tool: set a monthly spend target per category (type an amount, press
+  Enter to save) and see this month's actual spend against it — over-budget shows in red. A
+  category you've spent in but haven't set a target for still shows up with its actual spend
+  and a blank target, so nothing gets hidden just because you haven't budgeted for it yet.
 - **Settings tab**: same account/cloud-sync status and export/import/clear data management
   as other modules.
 

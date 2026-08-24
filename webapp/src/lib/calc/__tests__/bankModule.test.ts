@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BankAccount, BankTransaction } from '../../../types/bankWorkbook';
-import { accountBalance, accountByCategory, accountRunningLedger, totalBalanceByCurrency } from '../bankModule';
+import { accountBalance, accountByCategory, accountRunningLedger, bankMonthlyFlow, budgetVsActual, totalBalanceByCurrency } from '../bankModule';
 
 const account = (over: Partial<BankAccount>): BankAccount => ({
   id: 'a1',
@@ -77,5 +77,54 @@ describe('accountByCategory', () => {
   it('falls back to "Uncategorized"', () => {
     const a = account({ id: 'a1' });
     expect(accountByCategory(a, [tx({ category: undefined })]).Uncategorized).toBe(-50);
+  });
+});
+
+describe('bankMonthlyFlow', () => {
+  it('sums income (positive amounts) and expense (negative amounts) per month for the given accounts', () => {
+    const txs: BankTransaction[] = [
+      tx({ id: 't1', accountId: 'a1', date: '2026-01-05', amount: 1000 }),
+      tx({ id: 't2', accountId: 'a1', date: '2026-01-10', amount: -300 }),
+      tx({ id: 't3', accountId: 'a1', date: '2026-02-01', amount: -100 }),
+    ];
+    const flow = bankMonthlyFlow(txs, ['a1']);
+    expect(flow).toEqual([
+      { month: '2026-01', income: 1000, expense: 300, net: 700 },
+      { month: '2026-02', income: 0, expense: 100, net: -100 },
+    ]);
+  });
+
+  it('ignores transactions for accounts not in the given list', () => {
+    const txs: BankTransaction[] = [tx({ accountId: 'a1', amount: -50 }), tx({ id: 't2', accountId: 'a2', amount: -9999 })];
+    const flow = bankMonthlyFlow(txs, ['a1']);
+    expect(flow[0].expense).toBe(50);
+  });
+});
+
+describe('budgetVsActual', () => {
+  it('sums actual spend per category for the given month, matched against budget targets', () => {
+    const txs: BankTransaction[] = [
+      tx({ id: 't1', accountId: 'a1', date: '2026-01-05', amount: -150, category: 'Groceries' }),
+      tx({ id: 't2', accountId: 'a1', date: '2026-01-10', amount: -50, category: 'Groceries' }),
+      tx({ id: 't3', accountId: 'a1', date: '2026-01-15', amount: -80, category: 'Dining' }),
+      tx({ id: 't4', accountId: 'a1', date: '2026-02-01', amount: -999, category: 'Groceries' }), // different month, excluded
+    ];
+    const rows = budgetVsActual(txs, ['a1'], { Groceries: 250, Dining: 100 }, '2026-01');
+    expect(rows).toEqual([
+      { category: 'Dining', budget: 100, actual: 80 },
+      { category: 'Groceries', budget: 250, actual: 200 },
+    ]);
+  });
+
+  it('includes a category with actual spend but no set budget target', () => {
+    const txs: BankTransaction[] = [tx({ accountId: 'a1', date: '2026-01-05', amount: -40, category: 'Fuel' })];
+    const rows = budgetVsActual(txs, ['a1'], {}, '2026-01');
+    expect(rows).toEqual([{ category: 'Fuel', budget: 0, actual: 40 }]);
+  });
+
+  it('excludes credits (income) from actual spend', () => {
+    const txs: BankTransaction[] = [tx({ accountId: 'a1', date: '2026-01-05', amount: 500, category: 'Salary' })];
+    const rows = budgetVsActual(txs, ['a1'], {}, '2026-01');
+    expect(rows).toEqual([]);
   });
 });

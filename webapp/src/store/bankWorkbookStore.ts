@@ -22,6 +22,7 @@ interface BankStoreState {
   addTransactions: (txs: BankTransaction[]) => void;
   updateTransaction: (id: string, patch: Partial<BankTransaction>) => void;
   deleteTransaction: (id: string) => void;
+  setBudget: (category: string, amount: number) => void;
 }
 
 function loadFromLocalStorage(): BankWorkbook {
@@ -81,5 +82,11 @@ export const useBankWorkbookStore = create<BankStoreState>((set, get) => {
       mutate((wb) => ({ ...wb, transactions: wb.transactions.map((t) => (t.id === id ? { ...t, ...patch } : t)) })),
 
     deleteTransaction: (id) => mutate((wb) => ({ ...wb, transactions: wb.transactions.filter((t) => t.id !== id) })),
+
+    setBudget: (category, amount) =>
+      mutate((wb) => ({
+        ...wb,
+        settings: { ...wb.settings, budgets: { ...(wb.settings.budgets ?? {}), [category]: amount } },
+      })),
   };
 });

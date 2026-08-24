@@ -25,6 +25,14 @@ export interface BankTransaction {
 
 export interface BankSettings {
   accounts: BankAccount[];
+  /** Monthly spend target per category (free-form category name -> a
+   * currency-agnostic target amount, in whatever currency the user has in
+   * mind when setting it — same simplification as the rest of this app's
+   * "no live FX conversion" rule). Optional so existing stored workbooks
+   * without any budgets set still parse; `undefined` is treated as `{}`
+   * wherever it's read. MODULES_PLAN.md §11's "simple budget/spend-plan
+   * tool" for Banking's Analytics tab. */
+  budgets?: Record<string, number>;
 }
 
 export interface BankWorkbook {

@@ -667,8 +667,15 @@ what's actually meaningful for each, don't force identical chart sets):
   only when more than one currency is actually present in the workbook. One new pure
   function needed: `cashMonthlyFlow()` in `lib/calc/cashModule.ts` (category breakdown and
   balance-over-time reused already-computed `cashByCategory`/`cashRunningLedger` as-is).
-- **Banking**: per-account balance trend, category breakdown, income vs. spend by month,
-  a simple budget/spend-plan tool (e.g. monthly category targets vs. actuals).
+- **Banking**: ✅ built 2026-08-24 — see README Done item 90. Per-account balance trend
+  (Line, from `accountRunningLedger`), category breakdown doughnut (spend categories only —
+  net credit/debit mixed into one doughnut isn't meaningful), income vs. spend by month (new
+  `bankMonthlyFlow()`), and a budget/spend-plan tool: editable monthly category targets
+  (`BankSettings.budgets`, persisted, new `setBudget` action) compared against the current
+  month's actual spend for the selected account (new `budgetVsActual()`) — a category with
+  spend but no set target still shows (target reads as "—"), not silently dropped. An account
+  picker (not a currency picker) scopes every chart, since Banking's data is inherently
+  per-account, not per-currency like Cash's.
 - **Personal Loans**: ✅ built 2026-08-23 — see README Done item 45. Outstanding-by-loan bar
   chart (per loan, not netted per person — a person with two loans in opposite directions
   would otherwise hide which is which), repayments-by-month bar chart, and a payoff planner

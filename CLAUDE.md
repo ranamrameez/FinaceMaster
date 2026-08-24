@@ -1756,6 +1756,20 @@ not developer notes) continuously as features ship.
   indicator. Verified live: hovering a seeded same-day BUY/SELL pair's
   "(netted)" tag shows a real `role="tooltip"` popup, zero console
   errors.
+- **Banking Analytics tab built (2026-08-24), third module of README
+  item 23's "per-module Analytics" wave — see MODULES_PLAN.md §11.**
+  An account picker (per-account data, not per-currency
+  like Cash) scopes Balance-over-time (Line), Category breakdown
+  (Doughnut, spend-only), and Income-vs-spend-by-month (new
+  `bankMonthlyFlow()`). Also a budget tool: new `BankSettings.budgets`
+  (category -> monthly target, optional field) + `setBudget` action,
+  compared against actual spend via new `budgetVsActual()` — a category
+  with spend but no target still shows (target reads "—"). Verified
+  live via Playwright with a seeded account: balance/category/flow
+  charts all matched hand-calculated numbers, budget table correctly
+  flagged an over-budget category in red, "Add budget category" hit
+  the sign-in gate. `npm run test` (224 tests, 5 new) clean. Next per
+  MODULES_PLAN.md §11: EMI/Loans, then Funds, then Rentals.
 
 ## Live URLs
 

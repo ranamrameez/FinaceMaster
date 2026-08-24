@@ -1,6 +1,8 @@
 import type { User } from 'firebase/auth';
 import { useMemo, useRef, useState } from 'react';
+import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
+import { ChartCard } from '../../qse/components/ChartCard';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { Modal } from '../../../components/Modal';
@@ -11,14 +13,18 @@ import { useAmountFormat } from '../../../hooks/useAmountFormat';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
-import { accountBalance, accountByCategory, accountRunningLedger, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
+import { accountBalance, accountByCategory, accountRunningLedger, bankMonthlyFlow, budgetVsActual, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
 import { plannedBankProjection } from '../../../lib/calc/plannedBalance';
+import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
+import { applyChartTheme } from '../../../lib/chartSetup';
+import { cssVar, tickerColor } from '../../../lib/cssVar';
 import { parseCSV, toCSV } from '../../../lib/csv';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
 import { confirmAndDeleteLinkable } from '../../../lib/linkCascade';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
+import { useAppearanceStore } from '../../../store/appearanceStore';
 import { createEmptyBankWorkbook } from '../../../store/defaultBankWorkbook';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
 import { usePlannedBankWorkbookStore } from '../../../store/plannedBankWorkbookStore';
@@ -958,6 +964,155 @@ function PlanningAccountSection({
   );
 }
 
+/** README item 23 / MODULES_PLAN.md §11: per-module Analytics, Banking's
+ * pass. An account picker (not a currency picker like Cash/Personal
+ * Loans) since every chart here is naturally scoped to one account's own
+ * transaction history — balance trend, category breakdown, and income vs.
+ * spend by month all read `accountId`, not a currency. Also includes the
+ * "simple budget/spend-plan tool" MODULES_PLAN.md §11 asks for: editable
+ * monthly category targets (persisted in `settings.budgets`) compared
+ * against this month's actual spend for the selected account. */
+function AnalyticsTab() {
+  const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
+  const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
+  const budgets = useBankWorkbookStore((s) => s.workbook.settings.budgets);
+  const setBudget = useBankWorkbookStore((s) => s.setBudget);
+  const ensureSignedIn = useEnsureSignedIn();
+  useAppearanceStore((s) => s.appearance);
+  applyChartTheme();
+
+  const [accountId, setAccountId] = useState(accounts[0]?.id ?? '');
+  const account = accounts.find((a) => a.id === accountId) ?? accounts[0];
+
+  const byCategory = useMemo(() => (account ? accountByCategory(account, transactions) : {}), [account, transactions]);
+  const categories = Object.keys(byCategory).filter((c) => byCategory[c] < 0); // spend categories only — a doughnut of net credit/debit mixed together isn't meaningful
+  const monthlyFlow = useMemo(() => (account ? bankMonthlyFlow(transactions, [account.id]) : []), [account, transactions]);
+  const balanceOverTime = useMemo(() => (account ? accountRunningLedger(account, transactions) : []), [account, transactions]);
+
+  const thisMonth = today().slice(0, 7);
+  const budgetRows = useMemo(
+    () => (account ? budgetVsActual(transactions, [account.id], budgets ?? {}, thisMonth) : []),
+    [account, transactions, budgets, thisMonth],
+  );
+  const [newBudgetCategory, setNewBudgetCategory] = useState('');
+  const [newBudgetAmount, setNewBudgetAmount] = useState(0);
+
+  if (!accounts.length) {
+    return <p className="footer-note">Add a bank account first (Accounts tab) to see charts here.</p>;
+  }
+
+  return (
+    <div>
+      <Field label="Account" width={200}>
+        <Select value={accountId || accounts[0].id} onChange={(e) => setAccountId(e.target.value)}>
+          {accounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.currencyCode})</option>)}
+        </Select>
+      </Field>
+      {account && (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginTop: 12 }}>
+            <ChartCard title="Balance over time" empty={!balanceOverTime.length}>
+              <Line
+                data={{
+                  labels: balanceOverTime.map((r) => r.tx.date),
+                  datasets: [{ label: 'Balance', data: balanceOverTime.map((r) => r.balance), borderColor: '#5aa9c9', backgroundColor: '#5aa9c933', fill: true, tension: 0.2 }],
+                }}
+                options={{ plugins: { legend: { display: false }, datalabels: dlLine((v) => fmtMoney(v, account.currencyCode)) } }}
+              />
+            </ChartCard>
+            <ChartCard title="Category breakdown (spend)" empty={!categories.length}>
+              <Doughnut
+                data={{
+                  labels: categories,
+                  datasets: [{ data: categories.map((c) => Math.abs(byCategory[c])), backgroundColor: categories.map((c) => tickerColor(c)) }],
+                }}
+                options={{ cutout: '55%', plugins: { datalabels: dlDoughnut((v) => fmtMoney(v, account.currencyCode)) } }}
+              />
+            </ChartCard>
+            <ChartCard title="Income vs. spend by month" empty={!monthlyFlow.length}>
+              <Bar
+                data={{
+                  labels: monthlyFlow.map((f) => f.month),
+                  datasets: [
+                    { label: 'Income', data: monthlyFlow.map((f) => f.income), backgroundColor: cssVar('--profit') || '#3ecf8e' },
+                    { label: 'Expense', data: monthlyFlow.map((f) => f.expense), backgroundColor: cssVar('--loss') || '#e5484d' },
+                  ],
+                }}
+                options={{ plugins: { datalabels: dlBarV((v) => fmtMoney(v, account.currencyCode)) } }}
+              />
+            </ChartCard>
+          </div>
+
+          <CollapsibleCard title={<h3 style={{ margin: 0 }}>Budget — {thisMonth}</h3>} style={{ marginTop: 16 }}>
+            <p className="footer-note" style={{ marginTop: 0 }}>
+              Set a monthly spend target per category for {account.name}; compared against what you've actually
+              spent there this month.
+            </p>
+            <div className="table-scroll">
+              <table>
+                <thead><tr><th>Category</th><th>Budget</th><th>Actual</th><th>Remaining</th></tr></thead>
+                <tbody>
+                  {budgetRows.map((r) => (
+                    <tr key={r.category}>
+                      <td>{r.category}</td>
+                      <td>
+                        <input
+                          type="number"
+                          step="0.01"
+                          className="price-input"
+                          defaultValue={r.budget || ''}
+                          placeholder="—"
+                          style={{ width: 96 }}
+                          onKeyDown={async (e) => {
+                            if (e.key === 'Enter') {
+                              const val = parseFloat((e.target as HTMLInputElement).value) || 0;
+                              if (await ensureSignedIn('Sign in to save a budget target.')) setBudget(r.category, val);
+                              (e.target as HTMLInputElement).blur();
+                            }
+                          }}
+                        />
+                      </td>
+                      <td className={r.budget > 0 && r.actual > r.budget ? 'pill-sell' : ''}>{fmtMoney(r.actual, account.currencyCode)}</td>
+                      <td className={r.budget > 0 ? (r.budget - r.actual >= 0 ? 'pill-buy' : 'pill-sell') : ''}>
+                        {r.budget > 0 ? fmtMoney(r.budget - r.actual, account.currencyCode) : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                  {!budgetRows.length && <tr><td colSpan={4} className="footer-note">No spend or budget targets for this account yet.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+            <div className="row" style={{ gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+              <TextInput placeholder="New category" value={newBudgetCategory} onChange={(e) => setNewBudgetCategory(e.target.value)} style={{ width: 140 }} />
+              <input
+                type="number"
+                step="0.01"
+                placeholder="Monthly target"
+                value={newBudgetAmount || ''}
+                onChange={(e) => setNewBudgetAmount(Number(e.target.value))}
+                style={{ width: 120 }}
+              />
+              <button
+                className="btn secondary small"
+                onClick={async () => {
+                  if (!newBudgetCategory.trim() || !newBudgetAmount) return toast('Enter a category name and a target amount.');
+                  if (!(await ensureSignedIn('Sign in to save a budget target.'))) return;
+                  setBudget(newBudgetCategory.trim(), newBudgetAmount);
+                  toast(`Budget set for ${newBudgetCategory.trim()}.`);
+                  setNewBudgetCategory('');
+                  setNewBudgetAmount(0);
+                }}
+              >
+                <PlusIcon size={12} />Add budget category
+              </button>
+            </div>
+          </CollapsibleCard>
+        </>
+      )}
+    </div>
+  );
+}
+
 function PlanningTab({
   plannedSyncStatus,
   plannedCloudEmpty,
@@ -1078,6 +1233,7 @@ export function BankPage({
         tabs={[
           { key: 'accounts', label: 'Accounts', content: <AccountsTab /> },
           { key: 'transactions', label: 'Transactions', content: <TransactionsTab /> },
+          { key: 'analytics', label: 'Analytics', content: <AnalyticsTab /> },
           {
             key: 'planning',
             label: 'Planning',

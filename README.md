@@ -1438,6 +1438,29 @@ FinanceManager live link:
     the "(netted)" tag on a seeded same-day BUY/SELL pair correctly shows a `role="tooltip"`
     popup, zero console errors. `npx tsc -b` / `npm run test` (219 tests, unchanged) / `npm
     run build` all clean.
+90. **Banking Analytics tab built (2026-08-24), third module of README item 23's "per-module
+    Analytics" wave (Cash and Personal Loans done earlier) — see MODULES_PLAN.md §11.** An
+    account picker (not a currency picker — Banking's data is inherently per-account, unlike
+    Cash) scopes three charts: Balance over time (Line, from the existing
+    `accountRunningLedger`), Category breakdown (Doughnut, spend categories only — a category
+    with net credit is excluded since mixing credit/debit into one doughnut isn't meaningful),
+    and Income vs. spend by month (new `bankMonthlyFlow()`, mirroring Cash's
+    `cashMonthlyFlow()` but built from Bank's signed-`amount` transactions instead of Cash's
+    IN/OUT+unsigned-amount shape). Also built the "simple budget/spend-plan tool"
+    MODULES_PLAN.md §11 asked for: a new `BankSettings.budgets` field (category name -> a
+    monthly target amount, optional so existing workbooks parse unchanged) and `setBudget`
+    store action, compared each month against actual spend via new `budgetVsActual()` — a
+    category with spend but no set target still shows in the table (target column reads "—"),
+    not silently dropped, since that's exactly the case a real budget tool needs to surface.
+    Verified live via Playwright with a seeded account (3000 salary, 350 groceries spend
+    against a 300 target, 80 fuel spend unbudgeted): balance trend correctly stepped
+    2000→5000→4650→4570, category doughnut showed Groceries 350/Fuel 80 (Salary correctly
+    excluded), income-vs-spend showed 3000/430, and the budget table correctly flagged
+    Groceries as 50 over target (red) while showing Fuel's actual with no target — "Add budget
+    category" correctly hit the sign-in gate. New tests: `bankModule.test.ts` gained 5 cases
+    for `bankMonthlyFlow`/`budgetVsActual`. `npx tsc -b` / `npm run test` (224 tests, 5 new) /
+    `npm run build` all clean. **Next per MODULES_PLAN.md §11's suggested order**: EMI/Loans,
+    then Funds, then Rentals.
 
 ## Pending
 
@@ -1476,9 +1499,9 @@ wave" section)**:
     to exist first. Tracked together with item 23.
 23. Per-module Analytics & Planning for Cash/Banking/Personal Loans/EMI-Loans/Funds/Rentals —
     each currently has just a ledger + basic totals, no charts or planning tools like
-    QSE/PSX's Analytics page or Trade Planner. Largest item in this wave. **Cash and Personal
-    Loans done (see Done items 44/45)**; Banking/EMI-Loans/Funds/Rentals still need it — see
-    `MODULES_PLAN.md` §11 for a per-module chart/tool sketch.
+    QSE/PSX's Analytics page or Trade Planner. Largest item in this wave. **Cash, Personal
+    Loans, and Banking done (see Done items 44/45/90)**; EMI-Loans/Funds/Rentals still need
+    it — see `MODULES_PLAN.md` §11 for a per-module chart/tool sketch.
 24. New Subscriptions module — recurring payments (streaming, gym, etc.) linked to a paying
     entity (a Bank account or Cash), reusing the cross-entity linking mechanism from item 21
     once solid. Not started — see `MODULES_PLAN.md` §12.

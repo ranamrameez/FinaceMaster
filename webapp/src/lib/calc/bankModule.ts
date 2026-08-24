@@ -46,3 +46,68 @@ export function accountByCategory(account: BankAccount, transactions: BankTransa
     });
   return out;
 }
+
+export interface BankMonthlyFlow {
+  month: string;
+  income: number;
+  expense: number;
+  net: number;
+}
+
+/** Income vs. spend per calendar month, across whichever accounts the
+ * caller passes in (MODULES_PLAN.md §11: "income vs. spend by month" for
+ * Banking's Analytics tab) — same shape as Cash's `cashMonthlyFlow`, but
+ * built from Bank's signed-`amount` transactions instead of Cash's
+ * IN/OUT + unsigned-amount entries, since the two modules' data models
+ * differ. Callers pass the set of account ids sharing the currency being
+ * charted (see `accountByCategory`'s equivalent per-account scoping). */
+export function bankMonthlyFlow(transactions: BankTransaction[], accountIds: string[]): BankMonthlyFlow[] {
+  const ids = new Set(accountIds);
+  const byMonth: Record<string, { income: number; expense: number }> = {};
+  transactions
+    .filter((t) => ids.has(t.accountId))
+    .forEach((t) => {
+      const month = t.date.slice(0, 7);
+      if (!byMonth[month]) byMonth[month] = { income: 0, expense: 0 };
+      if (t.amount >= 0) byMonth[month].income += t.amount;
+      else byMonth[month].expense += -t.amount;
+    });
+  return Object.keys(byMonth)
+    .sort()
+    .map((month) => ({ month, income: byMonth[month].income, expense: byMonth[month].expense, net: byMonth[month].income - byMonth[month].expense }));
+}
+
+export interface BudgetRow {
+  category: string;
+  budget: number;
+  actual: number;
+}
+
+/** Monthly category spend vs. a user-set target — the "simple budget/
+ * spend-plan tool" MODULES_PLAN.md §11 asks for. `budgets` is keyed by
+ * category name (free-form, per this app's own "categories are never a
+ * fixed enum" rule) with a monthly target amount. Only debits (spend)
+ * count toward `actual` — a credit in a spend category (e.g. a refund)
+ * nets against it rather than being ignored, matching how a real budget
+ * would treat a refund. Includes every category that has EITHER a set
+ * budget OR actual spend this month, so an unbudgeted category the user
+ * actually spent in still shows up rather than being silently dropped. */
+export function budgetVsActual(
+  transactions: BankTransaction[],
+  accountIds: string[],
+  budgets: Record<string, number>,
+  month: string,
+): BudgetRow[] {
+  const ids = new Set(accountIds);
+  const actualByCategory: Record<string, number> = {};
+  transactions
+    .filter((t) => ids.has(t.accountId) && t.date.slice(0, 7) === month && t.amount < 0)
+    .forEach((t) => {
+      const cat = t.category?.trim() || 'Uncategorized';
+      actualByCategory[cat] = (actualByCategory[cat] || 0) - t.amount;
+    });
+  const categories = new Set([...Object.keys(budgets), ...Object.keys(actualByCategory)]);
+  return [...categories]
+    .sort()
+    .map((category) => ({ category, budget: budgets[category] || 0, actual: actualByCategory[category] || 0 }));
+}
