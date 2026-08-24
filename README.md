@@ -1168,6 +1168,28 @@ FinanceManager live link:
     readability unaffected. **Not yet applied to QSE/PSX's other pages' stat cards** (Portfolio,
     module pages like Cash/Bank/EMI/etc. that use plain `StatCard` without a `hue`) — see
     Pending; the `hue` prop is ready, each page just needs its own sensible color assignment.
+77. **Critical regression, user-reported same day: a same-day BUY+SELL pair both came out with
+    0 fee ("app must check on sell transaction... currently buy and sell both have 0 fee").**
+    Root cause traced directly to the same-day auto-check fix earlier this session (Done item
+    67): a fresh row defaults to BUY dated today with `manualSameDay` auto-checked, but
+    switching that same row's action to SELL (rather than adding a brand-new row) never reset
+    the flag back to false — the `autoSameDay()` helper only ever nudged it ON, never off, per
+    that fix's own stated design. `isNettedLeg()` trusts a manual override unconditionally by
+    design (it exists specifically to fix a single leg's date mismatch), so once BOTH legs of
+    a real pair carried `manualSameDay: true`, both were treated as the netted side —
+    government levies only, on both legs, instead of exactly one of them paying full
+    commission. Fixed in both `TransactionsPage.tsx`'s `autoSameDay()` and `StockPage.tsx`'s
+    equivalent inline logic: for a row dated today, BUY still defaults to netted (nothing to
+    pair against yet), but SELL is now **explicitly reset to false** (not just left alone) so
+    it relies on real same-day auto-detection once both legs exist. A non-today date is still
+    left exactly as the user set it, in either direction, since a manually backdated override
+    is a deliberate choice this logic shouldn't second-guess. New regression test in
+    `psxFees.test.ts` documents the exact failure mode (`isNettedLeg` returns `true` for both
+    legs of a pair when both incorrectly carry the manual flag) — the calc engine's own
+    behavior was correct by design throughout; the bug was purely in the UI defaulting logic.
+    Verified live via Playwright: a fresh BUY-today row is pre-checked as before, and
+    switching its action to SELL now correctly unchecks the box. `npx tsc -b` / `npm run
+    test` (202 tests, 1 new) / `npm run build` all clean.
 
 ## Pending
 

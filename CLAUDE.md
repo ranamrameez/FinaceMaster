@@ -1563,6 +1563,31 @@ not developer notes) continuously as features ship.
   `CollapsibleCard` component are both ready to reuse; rollout tracked
   as separate Pending items rather than done blind everywhere in one
   pass.
+- **Critical regression fixed same day (2026-08-24), self-inflicted by
+  an earlier fix this session — see README Done item 77.** The
+  same-day auto-check fix (Done item 67) only ever nudged
+  `manualSameDay` ON, per its own explicit design ("never forces it
+  off, so a manual override... survives editing an unrelated field")
+  — but that rule was wrong for one specific transition: a fresh row
+  defaults to BUY+today (auto-checked), and switching that *same row's*
+  action to SELL (instead of adding a new row) left the stale `true`
+  in place, since the helper only skipped setting `true`, never reset
+  to `false`. `isNettedLeg()` trusts a manual flag unconditionally by
+  design, so once both legs of a real pair carried it, both came out
+  netted — the user's exact report: "buy and sell both have 0 fee."
+  **Lesson**: a "only ever nudge forward, never backward" default rule
+  needs to identify precisely which state transitions genuinely call
+  for forward-only, since here the BUY→SELL transition on a same-day
+  row needed an explicit reset, not just "don't set true." Fixed in
+  `TransactionsPage.tsx`'s `autoSameDay()` and `StockPage.tsx`'s
+  inline equivalent: for a today-dated row, SELL now explicitly resets
+  to `false` (BUY still defaults `true`); a non-today date is left
+  exactly as the user set it, either direction. New regression test in
+  `psxFees.test.ts` documents the exact failure at the calc-engine
+  boundary (both legs netted when both wrongly carry the flag) — the
+  calc engine itself was never wrong, this was purely a UI-defaulting
+  bug. Verified live via Playwright: switching a fresh BUY-today row's
+  action to SELL now correctly unchecks the box.
 
 ## Live URLs
 
