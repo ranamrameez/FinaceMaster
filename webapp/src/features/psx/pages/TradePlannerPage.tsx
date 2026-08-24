@@ -198,6 +198,8 @@ function PlanCard({ plan }: { plan: TradePlan }) {
   const [editLegIndex, setEditLegIndex] = useState<number | null>(null);
   const [editLeg, setEditLeg] = useState<TradePlanLeg | null>(null);
   const [addingLeg, setAddingLeg] = useState<TradePlanLeg | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
 
   const addLeg = () => {
     if (!addingLeg || !addingLeg.ticker || !addingLeg.shares || !addingLeg.price) {
@@ -273,7 +275,16 @@ function PlanCard({ plan }: { plan: TradePlan }) {
   const { sorted: sortedLegRows, Th: LegTh } = useSortableRows(legRows, legSortValue, 'date', 'asc');
 
   return (
-    <div className="card" style={{ marginBottom: 16, padding: 12 }}>
+    <>
+      {fullscreen && <div className="modal-overlay show" style={{ zIndex: 999 }} />}
+      <div
+        className="card"
+        style={
+          fullscreen
+            ? { position: 'fixed', inset: 12, zIndex: 1000, overflow: 'auto', padding: 16, boxShadow: '0 8px 40px rgba(0,0,0,.4)' }
+            : { marginBottom: 16, padding: 12 }
+        }
+      >
       <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
         {editingMeta ? (
           <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
@@ -300,6 +311,20 @@ function PlanCard({ plan }: { plan: TradePlan }) {
           </div>
         )}
         <div className="row" style={{ gap: 8 }}>
+          {!fullscreen && (
+            <button className="btn secondary small" onClick={() => setCollapsed((c) => !c)}>
+              {collapsed ? 'Expand' : 'Collapse'}
+            </button>
+          )}
+          <button
+            className="btn secondary small"
+            onClick={() => {
+              setFullscreen((f) => !f);
+              if (!fullscreen) setCollapsed(false);
+            }}
+          >
+            {fullscreen ? 'Exit full screen' : 'Full screen'}
+          </button>
           {!editingMeta && (
             <button
               className="btn secondary small"
@@ -328,6 +353,8 @@ function PlanCard({ plan }: { plan: TradePlan }) {
         </div>
       </div>
 
+      {(!collapsed || fullscreen) && (
+      <>
       <div className="table-scroll" style={{ marginTop: 8 }}>
         <table>
           <thead>
@@ -472,7 +499,10 @@ function PlanCard({ plan }: { plan: TradePlan }) {
           <> · Total planned P/L {fmtMoney(tickerAnalysis.reduce((s, t) => s + t.realizedPL, 0), currency)}</>
         )}
       </p>
-    </div>
+      </>
+      )}
+      </div>
+    </>
   );
 }
 

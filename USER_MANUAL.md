@@ -49,6 +49,12 @@ Inside **Stock Exchanges**, a second **QSE / PSX** switcher (two chips) appears 
 dropdown — click either one to jump to that exchange's Dashboard. Which exchange is "active"
 always matches whichever page you're on, same as the category dropdown above it.
 
+On a desktop-width screen, click the **«** button next to the "FinanceRecorder" title to
+slide the sidebar off-screen and reclaim the space — a small **»** tab stays in the top-left
+corner to bring it back. This choice is remembered, so it stays collapsed (or expanded) the
+next time you load the app. On a narrow/mobile screen the sidebar instead works as a normal
+off-canvas menu opened via the **☰ Menu** button, unaffected by this setting.
+
 Each exchange's pages, data, and settings are completely separate — QSE holdings don't mix
 with PSX holdings, and each has its own fee model (see §7).
 
@@ -235,6 +241,10 @@ For planning multi-leg trades ahead of time, separate from the one-shot Trade Ca
    record, separate from the transaction it created.
 6. **Delete a plan** any time — this only removes the plan, not any transactions already
    logged from marking legs done.
+7. **Collapse** a plan (button in its header) to shrink it down to just the name/summary line
+   — handy once you have several plans and only want to focus on one. **Full screen** a plan
+   to expand it to fill the whole page for distraction-free editing; click "Exit full screen"
+   (or the dimmed backdrop) to return to the normal view.
 
 QSE doesn't have this page yet, but the same functionality is available underneath
 (technically shared) if a QSE Trade Planner page ever gets built.

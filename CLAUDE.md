@@ -1366,6 +1366,35 @@ not developer notes) continuously as features ship.
   lookup, no live market-data API calls" rule (see Design decisions
   above) and needs to be raised with the user before any code is
   written for it, not silently built or silently dropped.
+- **Trade Planner full-screen/collapse + app-wide collapsible sidebar
+  (2026-08-23), same batch — user request: "full screen button to view
+  a plan with high focus. plans should be collapsible. sidebar also
+  collapsible to save space and focus." See README Done item 65.**
+  Each `PlanCard` (`features/psx/pages/TradePlannerPage.tsx`) gained
+  independent `fullscreen`/`collapsed` states — full-screen renders the
+  card `position:fixed;inset:12px` above a dimmed `.modal-overlay`
+  backdrop; collapsed hides the legs table/analysis/what-if calculator
+  down to just the header. Separately, `AppShell.tsx` gained a
+  **desktop-only** sidebar collapse, deliberately distinct from the
+  existing sub-860px mobile drawer (which is closed by default, opened
+  by a hamburger button, and unaffected by this change): above 860px
+  the sidebar is open by default and can be slid off-screen via a new
+  `«` button (`Sidebar.tsx`'s `.sidebar-title-row`/
+  `.sidebar-collapse-btn`, next to the "FinanceRecorder" title), leaving
+  a small floating `»` tab (`.sidebar-expand-tab`, `@media(min-width:
+  861px)`-gated so it never appears on mobile) to bring it back — state
+  persists across reloads via `localStorage` key
+  `financerecorder_sidebar_collapsed_v1`. Uses a CSS
+  `transform:translateX(-100%)` on `.sidebar.desktop-collapsed` (not
+  `display:none`) so the `.18s` slide transition animates, with
+  `.main.sidebar-collapsed{margin-left:0}` so content reflows into the
+  freed space. Verified live via Playwright: collapsing slides the
+  sidebar to `x:-220` and shows the expand tab; `localStorage` reads
+  back `"true"`; a full page reload still shows the sidebar collapsed
+  (confirms the persisted-state read on mount works, not just the
+  toggle); clicking the expand tab restores `x:0` — zero console errors
+  at every step. `npx tsc -b` / `npm run test` (178 tests, unchanged —
+  UI-only) / `npm run build` all clean.
 
 ## Live URLs
 

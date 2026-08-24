@@ -49,10 +49,12 @@ export function Sidebar({
   user,
   className = '',
   onNavigate,
+  onCollapse,
 }: {
   user: User | null;
   className?: string;
   onNavigate?: () => void;
+  onCollapse?: () => void;
 }) {
   const profile = useProfile(user);
   const name = profile.displayName || user?.email || user?.phoneNumber || 'account';
@@ -63,7 +65,14 @@ export function Sidebar({
 
   return (
     <div className={`sidebar ${className}`.trim()}>
-      <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 12, letterSpacing: '.01em' }}>FinanceRecorder</div>
+      <div className="sidebar-title-row">
+        <span style={{ fontWeight: 700, fontSize: 18, letterSpacing: '.01em' }}>FinanceRecorder</span>
+        {onCollapse && (
+          <button type="button" className="sidebar-collapse-btn" onClick={onCollapse} aria-label="Hide sidebar" title="Hide sidebar">
+            «
+          </button>
+        )}
+      </div>
       <CategoryNav onNavigate={onNavigate} />
 
       {category === 'stocks' && (

@@ -954,6 +954,28 @@ FinanceManager live link:
     cost (not doubled), and the what-if calculator produced sensible proceeds/P&L for both
     scenarios at a test price. `npm run build` / `npm run test` (178 tests, 5 new) both
     clean.
+65. **Trade Planner full-screen/collapse + app-wide collapsible sidebar — user request
+    ("full screen button to view a plan with high focus. plans should be collapsible.
+    sidebar also collapsible to save space and focus").** Each `PlanCard` in the PSX Trade
+    Planner gained two independent view-state toggles: "Full screen" (renders the card
+    `position:fixed;inset:12px` above a dimmed `.modal-overlay` backdrop for high-focus
+    editing of one plan) and "Collapse" (hides the legs table/per-ticker analysis/what-if
+    calculator, leaving just the header — useful once several plans exist and only one is
+    being actively worked). Separately, `AppShell.tsx` gained a desktop-only sidebar
+    collapse (distinct from the existing sub-860px mobile drawer, which is closed by
+    default and toggled by a hamburger button): above 860px the sidebar is open by default
+    and can be slid off-screen via a new `«` button next to the "FinanceRecorder" title
+    (`Sidebar.tsx`'s new `.sidebar-title-row`/`.sidebar-collapse-btn`), leaving a small
+    floating `»` tab (`.sidebar-expand-tab`, only rendered above 860px) to bring it back —
+    state persists across reloads via `localStorage`
+    (`financerecorder_sidebar_collapsed_v1`). Implemented via a CSS transform
+    (`translateX(-100%)`) rather than `display:none`, so the slide transition animates.
+    Verified live via Playwright: full-screen shows the dimmed backdrop and the card
+    filling the viewport; collapse hides the body content and shows "Expand"; the sidebar
+    collapse button slides the sidebar off-screen, shows the expand tab, persists `true` in
+    `localStorage`, survives a reload still collapsed, and re-expands cleanly on tapping the
+    tab — zero console errors throughout. `npx tsc -b`, `npm run build`, and `npm run test`
+    (178 tests, unchanged — UI-only change, no new calc logic) all clean.
 
 ## Pending
 
@@ -1056,6 +1078,20 @@ already fixed; the rest tracked here**:
     flagged Trade Calculator/Planner work as the top priority instead (see Done items 61/62).
     Once the FX function is deployed and `fxRates/latest` is confirmed populated, build the
     dashboard reading it the same defensive way `useQSEStockData.ts` reads `stockData/QSE`.
+
+41. **Standing instruction, user-requested, not yet implemented: "All tables should be
+    sortable having index/id for chronological sorting. also, add time with all transaction
+    dates for true chronology."** The sortability half is done — every table in the app now
+    uses `useSortableRows`. The second half (adding a TIME component, not just a date, to
+    every transaction-like record — QSE/PSX `Transaction`/`Transfer`/`Adjustment`/
+    `Dividend`, Cash/Bank/Rentals/Personal-Loans entries, etc.) is a genuinely cross-cutting
+    data-model change deliberately **not** blindly applied given its scope: it touches the
+    core date field on nearly every record type across every module, and needs a
+    backward-compatible default (existing real user data has no time component recorded) —
+    e.g. same-day records currently tie-broken only by insertion order would need a real
+    decision on what time to backfill for old rows (midnight? noon? leave time optional and
+    fall back to insertion order when absent?). Needs either a narrower first-module scope
+    or explicit user confirmation on the backfill approach before implementing broadly.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank
