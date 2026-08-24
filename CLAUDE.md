@@ -1727,6 +1727,17 @@ not developer notes) continuously as features ship.
   exit-target columns into one stacked "Exit targets" cell. Verified via
   screenshot with a seeded up/down pair of positions — zero console
   errors.
+- **StockPage/PositionDetail regrouped + colorized (2026-08-24), same
+  continuation — see README Done item 87.** The per-stock page's stat
+  cards were still flat single-color, one-fact-each. Merged Avg cost +
+  Break-even into one "Cost" card (BE colored against current price,
+  matching Dashboard/Portfolio), Total bought/sold into "Bought / Sold",
+  Avg/Last sell price into "Sell price", First/Last trade into "Trade
+  dates", and gave every stat card on the page (Current position,
+  All-time stats, Price range) a distinct `--card-hue` color — StockPage
+  had never gotten the colored-stat-card treatment Dashboard got earlier.
+  Verified via screenshot with a real multi-buy/multi-sell position —
+  zero console errors.
 
 ## Live URLs
 

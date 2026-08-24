@@ -1403,6 +1403,20 @@ FinanceManager live link:
     Verified live via a Playwright screenshot with two seeded positions (one up, one down):
     grouping and coloring rendered correctly, zero console errors. `npx tsc -b` / `npm run
     test` (219 tests, unchanged — UI-only) / `npm run build` all clean.
+87. **StockPage/PositionDetail regrouped + colorized (QSE+PSX), same "vertical slice"
+    continuation (README items 43/45).** The per-stock page's stat-card grids were still the
+    original flat single-color cards with one fact each. Regrouped: "Avg cost" + "Break-even"
+    merged into one **Cost** card (break-even colored against the current price, same pattern
+    as Dashboard/Portfolio); "Total bought"/"Total sold" merged into **Bought / Sold**; "Avg
+    sell price"/"Last sell price" merged into **Sell price**; "First trade"/"Last trade"
+    merged into **Trade dates**; "Realized P/L" now gets a profit/loss-colored card instead of
+    a flat one. Every stat card on the page (Current position, All-time stats, Price range)
+    now also gets a distinct `--card-hue` color, closing the same "every stat card had the
+    identical flat single color" gap Dashboard's stat cards had before Done item 76 fixed it
+    there — StockPage was never covered by that earlier fix. Verified live via a Playwright
+    screenshot with a real multi-buy/multi-sell seeded position: all cards render distinct
+    colors, grouped values match hand-calculated expectations, zero console errors. `npx tsc
+    -b` / `npm run test` (219 tests, unchanged — UI-only) / `npm run build` all clean.
 
 ## Pending
 
@@ -1520,21 +1534,22 @@ already fixed; the rest tracked here**:
     chart cards on Analytics pages (many charts per page — collapsing every single one may be
     excessive, worth a design look rather than a blind wrap), and Personal Loans'
     `RepaymentsSection` (its add-form and list are one combined component with no clean seam).
-43. **Roll out `StatCard`'s `hue` prop (see Done item 76) beyond QSE/PSX's Dashboard.** Every
-    other page using plain `StatCard`s without a `hue` still renders the old flat single-color
-    look: Portfolio pages, StockPage's Summary tab, and every non-exchange module's landing
-    stats (Cash, Bank, Personal Loans, EMI, Funds, Rentals). Not started — each just needs a
-    sensible per-stat color assignment, same pattern as the Dashboard grids.
+43. **Partially done — see Done item 87.** StockPage's Summary tab (QSE+PSX
+    `PositionDetail.tsx`) now has colored stat cards. Still the old flat single-color look:
+    Portfolio pages' own stat cards (if any — Portfolio is mostly tables, see item 45) and
+    every non-exchange module's landing stats (Cash, Bank, Personal Loans, EMI, Funds,
+    Rentals). Not started for those — each just needs a sensible per-stat color assignment,
+    same pattern as the Dashboard grids and Done item 87.
 
 **User feedback, 2026-08-24 (mid-session, "preferred tasks" list) — not started yet**:
 
 44. ~~A running-balance column for Cash's ledger and other transaction-style tables.~~ **Done
     — see Done item 84.** Cash/Bank already had one; QSE/PSX Transfers and Personal Loans
     repayments were the real gaps and now have one too.
-45. **Partially done — see Done items 85/86.** QSE's/PSX's Dashboard Holdings AND Portfolio
-    page tables now group related figures (Ticker+name, Cost, Value/Exit targets, P/L) instead
-    of one column per fact. Still one-fact-per-column: Portfolio's own closed-positions
-    (History) table, StockPage's stat-card grids, and every other module's list views.
+45. **Partially done — see Done items 85/86/87.** QSE's/PSX's Dashboard Holdings, Portfolio
+    page, and StockPage's Summary tab now group related figures instead of one column/card
+    per fact. Still one-fact-per-column: Portfolio's own closed-positions (History) table and
+    every other module's list views.
 46. ~~A raw-vs-concise number display toggle in Appearance settings (1,000 vs 1k).~~ **Done —
     see Done item 83.**
 47. **Partially done — see Done item 85.** New `components/Tooltip.tsx` (bigger box, larger

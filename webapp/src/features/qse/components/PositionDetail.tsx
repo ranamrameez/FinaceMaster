@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
 import { CollapsibleCard } from '../../../components/Card';
 import { SaveIcon } from '../../../components/icons';
@@ -19,6 +19,12 @@ import { useQSEDerived } from '../hooks/useQSEDerived';
 function CompactChart({ height, children }: { height: number; children: React.ReactNode }) {
   return <div style={{ height, position: 'relative' }}>{children}</div>;
 }
+
+// Same palette as QSE's/PSX's Dashboard stat-card grids — gives this page's
+// stat cards a distinct color each instead of the flat single-color look a
+// missing `--card-hue` used to leave every stat card with (README item 76).
+const HUES = ['#3d4b58', '#c9a227', '#34c77b', '#3b6bd6', '#8a97a3', '#e5484d', '#7b5cd6', '#2ea3a3'];
+const hueStyle = (hue: string): CSSProperties => ({ '--card-hue': hue } as CSSProperties);
 
 /** The actual "everything about this ticker" content — daily price chart,
  * current position (if open), all-time stats (works for closed positions
@@ -128,13 +134,13 @@ export function PositionDetail({ ticker }: { ticker: string }) {
       {isOpen && (
         <CollapsibleCard title={<h4 style={{ margin: 0 }}>Current position</h4>} style={{ marginBottom: 12 }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px,1fr))', gap: 8 }}>
-            <div className="stat-card card"><div className="label">Shares</div><div className="value">{fmt(shares, 0)}</div></div>
-            <div className="stat-card card"><div className="label">Avg cost</div><div className="value">{fmtPrice(avg)}</div></div>
-            <div className="stat-card card"><div className="label">Invested</div><div className="value">{fmtMoney(invested, currency)}</div></div>
-            <div className="stat-card card">
-              <div className="label">Break-even</div>
-              <div className={`value ${mp > 0 ? (mp >= be ? 'pill-buy' : 'pill-sell') : ''}`}>{fmtPrice(be)}</div>
+            <div className="stat-card card" style={hueStyle(HUES[0])}><div className="label">Shares</div><div className="value">{fmt(shares, 0)}</div></div>
+            <div className="stat-card card" style={hueStyle(HUES[1])}>
+              <div className="label">Cost</div>
+              <div className="value">{fmtPrice(avg)}</div>
+              <div className="sub" style={{ color: mp > 0 ? (mp >= be ? 'var(--profit)' : 'var(--loss)') : undefined }}>BE {fmtPrice(be)}</div>
             </div>
+            <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Invested</div><div className="value">{fmtMoney(invested, currency)}</div></div>
           </div>
           <div style={{ maxWidth: 380 }}>
             <CompactChart height={lastSellPrice > 0 ? 110 : 90}>
@@ -166,19 +172,29 @@ export function PositionDetail({ ticker }: { ticker: string }) {
       {position && (position.buyCount > 0 || position.sellCount > 0) && (
         <CollapsibleCard title={<h4 style={{ margin: 0 }}>All-time stats</h4>} style={{ marginBottom: 12 }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px,1fr))', gap: 8 }}>
-            <div className="stat-card card"><div className="label">Total bought</div><div className="value">{fmt(position.totalBoughtShares, 0)}</div><div className="sub">{position.buyCount} buys</div></div>
-            <div className="stat-card card"><div className="label">Total sold</div><div className="value">{fmt(position.totalSoldShares, 0)}</div><div className="sub">{position.sellCount} sells</div></div>
+            <div className="stat-card card" style={hueStyle(HUES[0])}>
+              <div className="label">Bought / Sold</div>
+              <div className="value">{fmt(position.totalBoughtShares, 0)} / {fmt(position.totalSoldShares, 0)}</div>
+              <div className="sub">{position.buyCount} buys · {position.sellCount} sells</div>
+            </div>
             {position.sellCount > 0 && (
-              <>
-                <div className="stat-card card" title="Weighted average price across every sell of this ticker."><div className="label">Avg sell price</div><div className="value">{fmtPrice(avgSellPrice)}</div></div>
-                <div className="stat-card card"><div className="label">Last sell price</div><div className="value">{fmtPrice(lastSellPrice)}</div></div>
-              </>
+              <div className="stat-card card" style={hueStyle(HUES[7])} title="Weighted average, and most recent, sell price for this ticker.">
+                <div className="label">Sell price</div>
+                <div className="value">{fmtPrice(avgSellPrice)}</div>
+                <div className="sub">avg · last {fmtPrice(lastSellPrice)}</div>
+              </div>
             )}
-            <div className="stat-card card"><div className="label">Realized P/L</div><div className="value">{fmtMoney(position.realized, currency)}</div></div>
-            <div className="stat-card card"><div className="label">Fees paid</div><div className="value">{fmtMoney(position.buyFees + position.sellFees, currency)}</div></div>
-            <div className="stat-card card"><div className="label">First trade</div><div className="value" style={{ fontSize: 13 }}>{position.firstDate}</div></div>
-            <div className="stat-card card"><div className="label">Last trade</div><div className="value" style={{ fontSize: 13 }}>{position.lastDate}</div></div>
-            {!isOpen && <div className="stat-card card"><div className="label">Held</div><div className="value">{holdingDays}d</div></div>}
+            <div className="stat-card card" style={hueStyle(position.realized >= 0 ? 'var(--profit)' : 'var(--loss)')}>
+              <div className="label">Realized P/L</div>
+              <div className="value">{fmtMoney(position.realized, currency)}</div>
+            </div>
+            <div className="stat-card card" style={hueStyle(HUES[4])}><div className="label">Fees paid</div><div className="value">{fmtMoney(position.buyFees + position.sellFees, currency)}</div></div>
+            <div className="stat-card card" style={hueStyle(HUES[3])}>
+              <div className="label">Trade dates</div>
+              <div className="value" style={{ fontSize: 14 }}>{position.firstDate}</div>
+              <div className="sub">to {position.lastDate}</div>
+            </div>
+            {!isOpen && <div className="stat-card card" style={hueStyle(HUES[6])}><div className="label">Held</div><div className="value">{holdingDays}d</div></div>}
           </div>
         </CollapsibleCard>
       )}
@@ -186,12 +202,12 @@ export function PositionDetail({ ticker }: { ticker: string }) {
       {stats && (
         <CollapsibleCard title={<h4 style={{ margin: 0 }}>Price range</h4>}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 8 }}>
-            <div className="stat-card card"><div className="label">Lowest</div><div className="value">{fmtPrice(stats.min)}</div><div className="sub">{stats.minDate}</div></div>
-            <div className="stat-card card" title="A simple fair-value estimate: the middle price across every update you've recorded for this ticker.">
+            <div className="stat-card card" style={hueStyle(HUES[5])}><div className="label">Lowest</div><div className="value">{fmtPrice(stats.min)}</div><div className="sub">{stats.minDate}</div></div>
+            <div className="stat-card card" style={hueStyle(HUES[1])} title="A simple fair-value estimate: the middle price across every update you've recorded for this ticker.">
               <div className="label">Median (fair value)</div>
               <div className="value">{fmtPrice(stats.median)}</div>
             </div>
-            <div className="stat-card card"><div className="label">Highest</div><div className="value">{fmtPrice(stats.max)}</div><div className="sub">{stats.maxDate}</div></div>
+            <div className="stat-card card" style={hueStyle(HUES[2])}><div className="label">Highest</div><div className="value">{fmtPrice(stats.max)}</div><div className="sub">{stats.maxDate}</div></div>
           </div>
           <details>
             <summary className="footer-note" style={{ cursor: 'pointer' }}>Recent updates ({stats.recent.length})</summary>

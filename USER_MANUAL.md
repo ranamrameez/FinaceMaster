@@ -99,11 +99,13 @@ Two tabs:
 
 Click any ticker to open its dedicated stock page (price chart, buy/sell history, and —
 on PSX, if you've turned on FIFO cost basis in Settings — an **Open lots** table showing
-each remaining buy lot separately). If you've sold any of this ticker, "All-time stats"
-also shows your **Avg sell price** and **Last sell price**. In "Price range," **Median
-(fair value)** is a simple fair-value estimate — the middle price across every price
-you've recorded for this ticker — useful as a sanity check when deciding whether to buy
-more or sell, since the app has no live market data of its own.
+each remaining buy lot separately). Its stat cards are grouped and color-coded the same way:
+"Cost" carries avg cost + break-even; "Bought / Sold" and "Trade dates" each carry a pair of
+related figures; if you've sold any of this ticker, "Sell price" shows both your average and
+most recent sell price. In "Price range," **Median (fair value)** is a simple fair-value
+estimate — the middle price across every price you've recorded for this ticker — useful as
+a sanity check when deciding whether to buy more or sell, since the app has no live market
+data of its own.
 
 ---
 
