@@ -18,6 +18,7 @@ import {
   netPositionByCurrency,
   outstandingByLoan,
   projectPayoff,
+  repaymentRunningOutstanding,
   repaymentsByMonth,
 } from '../../../lib/calc/personalLoansModule';
 import { dlBarV } from '../../../lib/chartLabels';
@@ -186,6 +187,10 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
   // reads as "state changed", risking an infinite re-render loop.
   const allRepayments = usePersonalLoansWorkbookStore((s) => s.workbook.repayments);
   const repayments = useMemo(() => allRepayments.filter((r) => r.loanId === loan.id), [allRepayments, loan.id]);
+  // Independent of the table's own sort order, same reasoning as
+  // transferRunningBalance — "Remaining" must reflect the true
+  // chronological running total regardless of how rows are displayed.
+  const remaining = useMemo(() => repaymentRunningOutstanding(loan, allRepayments), [loan, allRepayments]);
   const addRepayment = usePersonalLoansWorkbookStore((s) => s.addRepayment);
   const updateRepayment = usePersonalLoansWorkbookStore((s) => s.updateRepayment);
   const deleteRepayment = usePersonalLoansWorkbookStore((s) => s.deleteRepayment);
@@ -212,8 +217,12 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
     setEditRow(null);
   };
 
-  type Col = 'date' | 'amount';
-  const sortValue = (r: PersonalLoanRepayment, col: Col): number | string => (col === 'amount' ? r.amount : r.date);
+  type Col = 'date' | 'amount' | 'remaining';
+  const sortValue = (r: PersonalLoanRepayment, col: Col): number | string => {
+    if (col === 'amount') return r.amount;
+    if (col === 'remaining') return remaining.get(r.id) ?? 0;
+    return r.date;
+  };
   const { sorted, Th } = useSortableRows(repayments, sortValue, 'date', 'desc');
 
   return (
@@ -225,13 +234,14 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
       </div>
       <div className="table-scroll">
         <table>
-          <thead><tr><Th col="date">Date</Th><Th col="amount">Amount</Th><th>Source</th><th></th></tr></thead>
+          <thead><tr><Th col="date">Date</Th><Th col="amount">Amount</Th><Th col="remaining">Remaining</Th><th>Source</th><th></th></tr></thead>
           <tbody>
             {sorted.map((r) =>
               editId === r.id && editRow ? (
                 <tr key={r.id}>
                   <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
                   <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 90 }} /></td>
+                  <td></td>
                   <td className="footer-note">{r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}</td>
                   <td>
                     <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
@@ -242,6 +252,7 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                 <tr key={r.id}>
                   <td>{r.date}</td>
                   <td>{fmtMoney(r.amount, loan.currencyCode)}</td>
+                  <td title="Loan balance still remaining after this repayment, in date order.">{fmtMoney(remaining.get(r.id) ?? 0, loan.currencyCode)}</td>
                   <td className="footer-note">{r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}</td>
                   <td>
                     <button className="btn secondary small" onClick={() => startEdit(r)}>Edit</button>{' '}
@@ -255,7 +266,7 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                 </tr>
               ),
             )}
-            {!sorted.length && <tr><td colSpan={4} className="footer-note">No repayments logged yet.</td></tr>}
+            {!sorted.length && <tr><td colSpan={5} className="footer-note">No repayments logged yet.</td></tr>}
           </tbody>
         </table>
       </div>

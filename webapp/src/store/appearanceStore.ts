@@ -9,6 +9,7 @@ export const DEFAULT_APPEARANCE: Appearance = {
   fontSize: 'medium',
   colorTheme: 'wine',
   density: 'comfortable',
+  numberDisplay: 'compact',
 };
 
 function load(): Appearance {

@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { useState } from 'react';
-import { fmtMoney, fmtMoneyCompact } from '../lib/format';
+import { useAmountFormat } from '../hooks/useAmountFormat';
+import { fmtMoney } from '../lib/format';
 
 export function Card({
   children,
@@ -94,13 +95,16 @@ export function StatCard({ label, value, sub, title, hue }: { label: string; val
 }
 
 /** A money amount rendered in a stat-card `.value` div: the visible text is
- * the compact/abbreviated form (`fmtMoneyCompact`, e.g. "12.35M PKR"), and
- * the native `title` tooltip carries the full-precision amount — one place
- * for the "round for a clean look, keep the real number a hover away"
- * pattern used across every module's hand-rolled stat cards, instead of
- * repeating `fmtMoneyCompact`+`fmtMoney`+`title` at each of the ~20 call
- * sites that previously just rendered `fmtMoney` directly. `after` renders
- * extra inline text (e.g. a "(12.3%)" suffix) that isn't part of the money
+ * either the compact/abbreviated form (`fmtMoneyCompact`, e.g. "12.35M
+ * PKR") or the full un-abbreviated number, per the user's Appearance →
+ * "Number display" preference (`useAmountFormat`, README item 56's compact
+ * form followed by a later user-requested toggle away from it being the
+ * only option). In compact mode the native `title` tooltip still carries
+ * the full-precision amount; in raw mode the visible text already IS that
+ * amount, so the tooltip would be redundant and is skipped. One place for
+ * this pattern instead of repeating it at each of the ~20 call sites that
+ * previously just rendered `fmtMoney` directly. `after` renders extra
+ * inline text (e.g. a "(12.3%)" suffix) that isn't part of the money
  * amount itself and so isn't abbreviated or covered by the tooltip. */
 export function MoneyValue({
   n,
@@ -113,9 +117,10 @@ export function MoneyValue({
   className?: string;
   after?: ReactNode;
 }) {
+  const { raw, money } = useAmountFormat();
   return (
-    <div className={className} title={fmtMoney(n, currency)}>
-      {fmtMoneyCompact(n, currency)}
+    <div className={className} title={raw ? undefined : fmtMoney(n, currency)}>
+      {money(n, currency)}
       {after}
     </div>
   );

@@ -7,9 +7,10 @@ import { toast } from '../../../components/Toast';
 import { breakEvenPrice, getDailyPriceHistory } from '../../../lib/calc';
 import { dlBarV, dlDoughnut, dlLine, profitColor } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
-import { fmt, fmtMoney, fmtMoneyCompact, fmtPrice } from '../../../lib/format';
+import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { shortenCompanyName } from '../../../lib/shortenName';
+import { useAmountFormat } from '../../../hooks/useAmountFormat';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
 import { useAppearanceStore } from '../../../store/appearanceStore';
@@ -115,6 +116,11 @@ export function DashboardPage() {
   const alerts = usePSXAlerts();
   useAppearanceStore((s) => s.appearance);
   applyChartTheme();
+  const { raw, money } = useAmountFormat();
+  // Skips the tooltip in raw mode — the visible value already IS the full
+  // precision, so a duplicate tooltip would be redundant (same reasoning
+  // as MoneyValue's own raw-mode title skip).
+  const moneyTitle = (n: number) => (raw ? undefined : fmtMoney(n, currency));
   const totalInvestment = rows.reduce((s, r) => s + r.invested, 0);
   const portfolioROIPct = totalInvestment > 0 ? (summary.unrealizedPL / totalInvestment) * 100 : 0;
 
@@ -131,15 +137,15 @@ export function DashboardPage() {
       <h1 className="pagetitle">PSX Dashboard</h1>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
-        <StatCard label="Net Worth" value={fmtMoneyCompact(summary.netWorth, currency)} title={fmtMoney(summary.netWorth, currency)} hue={INVEST_PALETTE[3]} />
-        <StatCard label="Cash Balance" value={fmtMoneyCompact(summary.cashBalance, currency)} title={fmtMoney(summary.cashBalance, currency)} hue={INVEST_PALETTE[7]} />
-        <StatCard label="Portfolio Value" value={fmtMoneyCompact(summary.portfolioValue, currency)} title={fmtMoney(summary.portfolioValue, currency)} hue={INVEST_PALETTE[6]} />
-        <StatCard label="Realized P/L" value={fmtMoneyCompact(summary.realizedPL, currency)} title={fmtMoney(summary.realizedPL, currency)} hue={summary.realizedPL >= 0 ? 'var(--profit)' : 'var(--loss)'} />
-        <StatCard label="Unrealized P/L" value={fmtMoneyCompact(summary.unrealizedPL, currency)} title={fmtMoney(summary.unrealizedPL, currency)} hue={summary.unrealizedPL >= 0 ? 'var(--profit)' : 'var(--loss)'} />
-        <StatCard label="Net P/L" value={fmtMoneyCompact(summary.netPL, currency)} title={fmtMoney(summary.netPL, currency)} hue={summary.netPL >= 0 ? 'var(--profit)' : 'var(--loss)'} />
-        <StatCard label="Total Deposits" value={fmtMoneyCompact(summary.totalInward, currency)} title={fmtMoney(summary.totalInward, currency)} hue={INVEST_PALETTE[1]} />
-        <StatCard label="Total Fees" value={fmtMoneyCompact(summary.totalCharges, currency)} title={fmtMoney(summary.totalCharges, currency)} hue={INVEST_PALETTE[4]} />
-        <StatCard label="Rewards" value={fmtMoneyCompact(summary.totalRewards, currency)} title={fmtMoney(summary.totalRewards, currency)} hue={INVEST_PALETTE[2]} />
+        <StatCard label="Net Worth" value={money(summary.netWorth, currency)} title={moneyTitle(summary.netWorth)} hue={INVEST_PALETTE[3]} />
+        <StatCard label="Cash Balance" value={money(summary.cashBalance, currency)} title={moneyTitle(summary.cashBalance)} hue={INVEST_PALETTE[7]} />
+        <StatCard label="Portfolio Value" value={money(summary.portfolioValue, currency)} title={moneyTitle(summary.portfolioValue)} hue={INVEST_PALETTE[6]} />
+        <StatCard label="Realized P/L" value={money(summary.realizedPL, currency)} title={moneyTitle(summary.realizedPL)} hue={summary.realizedPL >= 0 ? 'var(--profit)' : 'var(--loss)'} />
+        <StatCard label="Unrealized P/L" value={money(summary.unrealizedPL, currency)} title={moneyTitle(summary.unrealizedPL)} hue={summary.unrealizedPL >= 0 ? 'var(--profit)' : 'var(--loss)'} />
+        <StatCard label="Net P/L" value={money(summary.netPL, currency)} title={moneyTitle(summary.netPL)} hue={summary.netPL >= 0 ? 'var(--profit)' : 'var(--loss)'} />
+        <StatCard label="Total Deposits" value={money(summary.totalInward, currency)} title={moneyTitle(summary.totalInward)} hue={INVEST_PALETTE[1]} />
+        <StatCard label="Total Fees" value={money(summary.totalCharges, currency)} title={moneyTitle(summary.totalCharges)} hue={INVEST_PALETTE[4]} />
+        <StatCard label="Rewards" value={money(summary.totalRewards, currency)} title={moneyTitle(summary.totalRewards)} hue={INVEST_PALETTE[2]} />
         <StatCard label="Open Positions" value={fmt(rows.length, 0)} hue={INVEST_PALETTE[0]} title="Number of distinct tickers you currently hold shares in." />
         <StatCard
           label="Portfolio ROI"

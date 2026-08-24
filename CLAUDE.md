@@ -1680,6 +1680,23 @@ not developer notes) continuously as features ship.
   component, no clean seam). Verified live via Playwright across every
   touched page — zero console errors, headers actually toggle
   (`aria-expanded` flips on click).
+- **Raw-vs-concise number toggle + running-balance columns where genuinely
+  missing (2026-08-24) — see README Done items 83/84.** New Appearance →
+  "Number display" setting (`compact`/`raw`, default `compact` — no
+  behavior change unless the user opts in) backed by a shared
+  `hooks/useAmountFormat.ts` hook, wired into `MoneyValue`, both
+  Dashboards' 9 stat cards each, and Cash/Bank's "upcoming plans"
+  sub-lines — replacing every direct `fmtMoneyCompact`/`fmtCompact` call
+  at those sites. Separately, audited every transaction-style table for
+  a running balance rather than assuming — Cash/Bank already had one;
+  QSE's/PSX's Transfers section (deposits/withdrawals) and Personal
+  Loans' repayments list did not. New `lib/calc/transferBalance.ts`
+  and `personalLoansModule.ts`'s `repaymentRunningOutstanding()` add a
+  "Balance"/"Remaining" column to each, computed independent of the
+  table's current sort (same pattern as the Trade Planner's leg-value
+  resolution). Verified live: number toggle switched and persisted
+  correctly across reload; both new balance columns matched
+  hand-calculated running totals exactly on seeded multi-entry data.
 
 ## Live URLs
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PersonalLoan, PersonalLoanRepayment } from '../../../types/personalLoansWorkbook';
-import { loanOutstanding, netPositionByCurrency, outstandingByLoan, projectPayoff, repaymentsByMonth } from '../personalLoansModule';
+import { loanOutstanding, netPositionByCurrency, outstandingByLoan, projectPayoff, repaymentRunningOutstanding, repaymentsByMonth } from '../personalLoansModule';
 
 const loan = (over: Partial<PersonalLoan>): PersonalLoan => ({
   id: 'l1',
@@ -109,5 +109,49 @@ describe('projectPayoff', () => {
   it('returns null when the repayment rate cannot ever clear the balance', () => {
     expect(projectPayoff(500, 0, '2026-01-01')).toBeNull();
     expect(projectPayoff(500, -10, '2026-01-01')).toBeNull();
+  });
+});
+
+describe('repaymentRunningOutstanding', () => {
+  const repayment = (over: Partial<PersonalLoanRepayment>): PersonalLoanRepayment => ({
+    id: crypto.randomUUID(),
+    loanId: 'l1',
+    date: '2026-01-01',
+    amount: 0,
+    ...over,
+  });
+
+  it('decreases remaining balance after each repayment, in date order', () => {
+    const l = loan({ principal: 500 });
+    const r1 = repayment({ date: '2026-01-05', amount: 100 });
+    const r2 = repayment({ date: '2026-01-10', amount: 150 });
+    const remaining = repaymentRunningOutstanding(l, [r1, r2]);
+    expect(remaining.get(r1.id)).toBe(400);
+    expect(remaining.get(r2.id)).toBe(250);
+  });
+
+  it('ignores repayments for a different loan', () => {
+    const l = loan({ id: 'l1', principal: 500 });
+    const mine = repayment({ loanId: 'l1', date: '2026-01-05', amount: 100 });
+    const other = repayment({ loanId: 'l2', date: '2026-01-03', amount: 999 });
+    const remaining = repaymentRunningOutstanding(l, [mine, other]);
+    expect(remaining.get(mine.id)).toBe(400);
+    expect(remaining.has(other.id)).toBe(false);
+  });
+
+  it('clamps at 0 on an overpayment, never goes negative', () => {
+    const l = loan({ principal: 100 });
+    const r1 = repayment({ date: '2026-01-05', amount: 150 });
+    const remaining = repaymentRunningOutstanding(l, [r1]);
+    expect(remaining.get(r1.id)).toBe(0);
+  });
+
+  it('is independent of input array order — sorts by date first', () => {
+    const l = loan({ principal: 500 });
+    const early = repayment({ date: '2026-01-01', amount: 100 });
+    const later = repayment({ date: '2026-01-10', amount: 50 });
+    const remaining = repaymentRunningOutstanding(l, [later, early]);
+    expect(remaining.get(early.id)).toBe(400);
+    expect(remaining.get(later.id)).toBe(350);
   });
 });

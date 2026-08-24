@@ -1322,6 +1322,42 @@ FinanceManager live link:
     chart-grid cards, and Personal Loans'/EMI's/Funds' account-sync-status cards (trivial
     one-line content, low value) — is tracked as README Pending, not silently dropped.
     `npx tsc -b` / `npm run test` (209 tests, unchanged — UI-only) / `npm run build` all clean.
+83. **Raw-vs-concise number display toggle, user-requested (2026-08-24).** README item 56's
+    compact stat-card formatting (10,000 → "10k") was a fixed choice with no way to see raw
+    numbers without hovering for the tooltip. New Appearance → "Number display" setting
+    (`compact`/`raw`, defaulting to `compact` — today's unchanged look) and a shared
+    `useAmountFormat()` hook (`hooks/useAmountFormat.ts`) that every call site now reads from
+    instead of hardcoding `fmtMoneyCompact`/`fmtCompact`: `MoneyValue` (the ~9 stat cards using
+    it), QSE's and PSX's Dashboard (9 more stat cards each, previously calling
+    `fmtMoneyCompact` directly), and the Cash/Bank "N upcoming plans (net X)" sub-lines. In raw
+    mode the redundant hover tooltip (which exists specifically to show the full number the
+    compact form abbreviates) is skipped, since the visible text already is that number.
+    Verified live via Playwright: a seeded 12,345,678 USD Cash balance showed "12.35M USD" by
+    default, "12,345,678.00 USD" after switching the setting, and stayed raw across a page
+    reload (persisted). New `hooks/__tests__/useAmountFormat.test.ts` (2 tests). `npx tsc -b` /
+    `npm run test` (211 tests, 2 new) / `npm run build` all clean.
+84. **Running balance columns added where they were genuinely missing, user-reported ("no
+    running balance column in the cash transfers... same for other transactions").** Audited
+    every transaction-style table in the app rather than assuming — Cash's ledger and Bank's
+    transaction list already had one (`cashRunningLedger`/`accountRunningLedger`); the real
+    gaps were QSE's and PSX's Transfers section (deposits/withdrawals into the trading
+    account — no cumulative total at all) and Personal Loans' repayments list (no running
+    "remaining outstanding" per repayment, only the loan's current total). New
+    `lib/calc/transferBalance.ts`'s `transferRunningBalance()` (deposits add gross-minus-fee,
+    withdrawals subtract gross-plus-fee, in date order) adds a "Balance" column to both QSE's
+    and PSX's Transfers tables; new `repaymentRunningOutstanding()` in
+    `lib/calc/personalLoansModule.ts` adds a "Remaining" column to Personal Loans' repayments
+    list. Both are computed independent of the table's current sort order (same pattern as the
+    Trade Planner's leg-value resolution) so the running total is always true chronological
+    order regardless of which column the user sorted by. Deliberately its own running total,
+    not the shared `cashSummary()` ledger that also includes trading activity — the Transfers
+    section is specifically about cash moved in/out of the account. Verified live via
+    Playwright with real multi-entry seeded data: PSX Transfers (10,000 deposit − 50 fee =
+    9,950, then −2,000 withdrawal − 20 fee = 7,930) and Personal Loans (500 principal − 100 =
+    400, − 150 = 250) both matched hand-calculated expectations exactly, zero console errors.
+    New tests: `transferBalance.test.ts` (4 cases), `personalLoansModule.test.ts` gained 4
+    `repaymentRunningOutstanding` cases. `npx tsc -b` / `npm run test` (219 tests, 8 new) /
+    `npm run build` all clean.
 
 ## Pending
 
@@ -1447,19 +1483,16 @@ already fixed; the rest tracked here**:
 
 **User feedback, 2026-08-24 (mid-session, "preferred tasks" list) — not started yet**:
 
-44. A running-balance column for Cash's ledger and other transaction-style tables (Bank,
-    Transfers) — currently shows per-row amounts only, no cumulative running total per row.
-    Bank's `accountRunningLedger` already computes this shape for its own account-detail
-    modal; the ask here is to surface a running balance directly in the main list views too.
+44. ~~A running-balance column for Cash's ledger and other transaction-style tables.~~ **Done
+    — see Done item 84.** Cash/Bank already had one; QSE/PSX Transfers and Personal Loans
+    repayments were the real gaps and now have one too.
 45. "One column = one fact" isn't a real constraint — group naturally-related info into a
     single column instead of one column per field, e.g. Ticker+logo+company name together,
     Avg cost & Break-even together, P/L amount & percentage together, Current worth + invested
     + an up/down arrow together. Denser, more scannable tables. Not started — a real table
     redesign pass across Portfolio/Dashboard/Holdings tables, not a one-file fix.
-46. A raw-vs-concise number display toggle in Appearance settings (1,000 vs 1k) — Done item 56
-    made compact formatting (`fmtMoneyCompact`) the *only* mode for stat-card values; this asks
-    for it to be a user preference instead of a fixed choice, with a way to see full precision
-    without hovering for the tooltip.
+46. ~~A raw-vs-concise number display toggle in Appearance settings (1,000 vs 1k).~~ **Done —
+    see Done item 83.**
 47. Tooltips are still hard to notice/read — `title` attribute hover tooltips are small, easy
     to miss, and invisible on mobile/touch entirely (this exact gap is why Done item 81's
     `FeeModeControl` fix added visible labels instead of relying on `title` alone). Needs a

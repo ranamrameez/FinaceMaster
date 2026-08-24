@@ -7,6 +7,7 @@ import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { useAmountFormat } from '../../../hooks/useAmountFormat';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { cashBalanceByCurrency, cashByCategory, cashMonthlyFlow, cashRunningLedger } from '../../../lib/calc/cashModule';
@@ -18,7 +19,7 @@ import { useAppearanceStore } from '../../../store/appearanceStore';
 import { ChartCard } from '../../qse/components/ChartCard';
 import { parseCSV } from '../../../lib/csv';
 import { CURRENCIES } from '../../../lib/currencies';
-import { fmtCompact, fmtMoney } from '../../../lib/format';
+import { fmtMoney } from '../../../lib/format';
 import { confirmAndDeleteLinkable } from '../../../lib/linkCascade';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
@@ -94,6 +95,7 @@ function AddEntryForm({ knownCategories }: { knownCategories: string[] }) {
 function BalancesSummary() {
   const entries = useCashWorkbookStore((s) => s.workbook.entries);
   const plannedEntries = usePlannedCashWorkbookStore((s) => s.workbook.entries);
+  const { num } = useAmountFormat();
   const balances = cashBalanceByCurrency(entries);
   const codes = Object.keys(balances);
   if (!codes.length) return null;
@@ -116,7 +118,7 @@ function BalancesSummary() {
             {pending.length > 0 && (
               <div className="sub">
                 {pending.length} upcoming plan{pending.length > 1 ? 's' : ''} (net {net >= 0 ? '+' : ''}
-                {fmtCompact(net)} {code})
+                {num(net)} {code})
               </div>
             )}
           </div>

@@ -7,6 +7,7 @@ import { toast } from '../../../components/Toast';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { confirmAndDeleteLinkable } from '../../../lib/linkCascade';
+import { transferRunningBalance } from '../../../lib/calc/transferBalance';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { createEmptyWorkbook } from '../../../store/defaultWorkbook';
 import { useWorkbookStore } from '../../../store/workbookStore';
@@ -381,12 +382,19 @@ function TransfersSection() {
   const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<Transfer | null>(null);
 
-  type TransferCol = 'date' | 'type' | 'gross' | 'fee';
+  // Computed independently of the table's own sort order (which the user
+  // can flip to any column) so "Balance" always reflects the true
+  // chronological running total, not whatever order the rows happen to be
+  // displayed in — same reasoning as the Trade Planner's leg-value resolution.
+  const balances = useMemo(() => transferRunningBalance(workbook.transfers), [workbook.transfers]);
+
+  type TransferCol = 'date' | 'type' | 'gross' | 'fee' | 'balance';
   const sortValue = (t: Transfer, col: TransferCol): number | string => {
     switch (col) {
       case 'type': return t.type;
       case 'gross': return t.gross;
       case 'fee': return t.fee;
+      case 'balance': return balances.get(t.id) ?? 0;
       default: return t.date;
     }
   };
@@ -412,6 +420,7 @@ function TransfersSection() {
               <Th col="type">Type</Th>
               <Th col="gross">Gross</Th>
               <Th col="fee">Fee</Th>
+              <Th col="balance">Balance</Th>
               <th></th>
             </tr>
           </thead>
@@ -428,6 +437,7 @@ function TransfersSection() {
                   </td>
                   <td><input type="number" value={editRow.gross} onChange={(e) => setEditRow({ ...editRow, gross: Number(e.target.value) })} style={{ width: 90 }} /></td>
                   <td><input type="number" value={editRow.fee} onChange={(e) => setEditRow({ ...editRow, fee: Number(e.target.value) })} style={{ width: 70 }} /></td>
+                  <td></td>
                   <td>
                     <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
                     <button className="btn secondary small" onClick={() => setEditId(null)}>Cancel</button>
@@ -439,6 +449,9 @@ function TransfersSection() {
                   <td>{t.type}</td>
                   <td>{fmtMoney(t.gross, currency)}</td>
                   <td>{fmtMoney(t.fee, currency)}</td>
+                  <td title="Running net cash contributed, in date order — deposits net of fee, minus withdrawals plus their fee. Doesn't include trading gains/losses; see Dashboard for total cash balance.">
+                    {fmtMoney(balances.get(t.id) ?? 0, currency)}
+                  </td>
                   <td>
                     <button className="btn secondary small" onClick={() => startEdit(t)}>Edit</button>{' '}
                     <button className="btn secondary small" onClick={() => confirmAndDeleteLinkable('qse', t.id, () => deleteTransfer(t.id))}><TrashIcon size={12} />Delete</button>
@@ -446,7 +459,7 @@ function TransfersSection() {
                 </tr>
               ),
             )}
-            {!sorted.length && <tr><td colSpan={5} className="footer-note">No transfers yet.</td></tr>}
+            {!sorted.length && <tr><td colSpan={6} className="footer-note">No transfers yet.</td></tr>}
           </tbody>
         </table>
       </div>

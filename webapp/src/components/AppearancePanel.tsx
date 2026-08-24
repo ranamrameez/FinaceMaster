@@ -79,6 +79,14 @@ export function AppearancePanel() {
             <option value="compact">Compact</option>
             <option value="console">Console (super compact)</option>
           </select>
+          <select
+            value={appearance.numberDisplay ?? 'compact'}
+            onChange={(e) => updateAppearance({ numberDisplay: e.target.value as 'compact' | 'raw' })}
+            title="How large numbers display in stat cards: shortened (10,000 -> 10k) or full precision"
+          >
+            <option value="compact">Numbers: shortened (10k)</option>
+            <option value="raw">Numbers: full (10,000)</option>
+          </select>
           <button
             className="btn secondary small"
             type="button"

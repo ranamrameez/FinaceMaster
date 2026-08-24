@@ -7,13 +7,14 @@ import { Modal } from '../../../components/Modal';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { useAmountFormat } from '../../../hooks/useAmountFormat';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { accountBalance, accountByCategory, accountRunningLedger, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
 import { plannedBankProjection } from '../../../lib/calc/plannedBalance';
 import { parseCSV, toCSV } from '../../../lib/csv';
 import { CURRENCIES } from '../../../lib/currencies';
-import { fmtCompact, fmtMoney } from '../../../lib/format';
+import { fmtMoney } from '../../../lib/format';
 import { confirmAndDeleteLinkable } from '../../../lib/linkCascade';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
@@ -36,6 +37,7 @@ function TotalBalances() {
   const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
   const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
   const plannedEntries = usePlannedBankWorkbookStore((s) => s.workbook.entries);
+  const { num } = useAmountFormat();
   const totals = totalBalanceByCurrency(accounts, transactions);
   const codes = Object.keys(totals);
   if (!codes.length) return null;
@@ -59,7 +61,7 @@ function TotalBalances() {
             {pending.length > 0 && (
               <div className="sub">
                 {pending.length} upcoming plan{pending.length > 1 ? 's' : ''} (net {net >= 0 ? '+' : ''}
-                {fmtCompact(net)} {code})
+                {num(net)} {code})
               </div>
             )}
           </div>
@@ -194,6 +196,7 @@ function AccountsList() {
 function AccountDetailModal({ account, onClose }: { account: BankAccount; onClose: () => void }) {
   const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
   const plannedEntries = usePlannedBankWorkbookStore((s) => s.workbook.entries);
+  const { num } = useAmountFormat();
   const ledger = useMemo(() => [...accountRunningLedger(account, transactions)].reverse(), [account, transactions]);
   const upcoming = useMemo(
     () => plannedEntries.filter((p) => p.accountId === account.id && !p.executed).sort((a, b) => a.date.localeCompare(b.date)),
@@ -226,7 +229,7 @@ function AccountDetailModal({ account, onClose }: { account: BankAccount; onClos
       <p className="footer-note" style={{ marginBottom: 12 }}>
         Current balance:{' '}
         <strong title={fmtMoney(accountBalance(account, transactions), account.currencyCode)}>
-          {fmtCompact(accountBalance(account, transactions))} {account.currencyCode}
+          {num(accountBalance(account, transactions))} {account.currencyCode}
         </strong>
       </p>
 

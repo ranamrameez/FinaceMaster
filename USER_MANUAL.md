@@ -58,6 +58,12 @@ off-canvas menu opened via the **☰ Menu** button, unaffected by this setting.
 Each exchange's pages, data, and settings are completely separate — QSE holdings don't mix
 with PSX holdings, and each has its own fee model (see §7).
 
+The **✦ Appearance** button (sidebar) controls font, text size, color theme, density, light/
+dark mode, and **Number display** — choose "shortened" (large stat-card numbers show as
+"10k"/"1.23M", with the exact figure available as a hover tooltip) or "full" (every stat card
+always shows the complete, un-abbreviated number). This is a global, app-wide preference, not
+per-module — change it once and it applies everywhere.
+
 ---
 
 ## 4. Dashboard
@@ -129,6 +135,10 @@ same-day/fee-override fields too) — nothing here is add/delete-only. The Fee c
 
 ### Cash transfers
 Log deposits/withdrawals into your trading account's cash balance. Editable and deletable.
+A **Balance** column shows the running net cash you've contributed so far (deposits net of
+fee, minus withdrawals plus their fee) — always in true date order regardless of which column
+you've sorted the table by. This is separate from the Cash ledger's balance below, which also
+factors in trading activity.
 
 ### Rewards & adjustments
 Any other cash-affecting event that isn't a trade or transfer — a broker reward, a
@@ -349,7 +359,9 @@ Informal loans with another person — money you lent out, or money you owe — 
   live "what if" estimate — nothing is saved, and there's no interest involved (an informal
   loan just gets paid down at whatever rate you type in).
 - **Log repayments** against a loan any time — date + amount — and edit or delete any
-  repayment later. Outstanding = principal minus all repayments logged so far.
+  repayment later. Outstanding = principal minus all repayments logged so far. The repayments
+  list has a **Remaining** column showing the loan's running balance after each repayment, in
+  true date order regardless of how you've sorted the table.
 - No interest or repayment-schedule automation here by design — if a "personal loan"
   actually has a real repayment schedule, it belongs in EMI/Loans (§18 below) instead.
 - **Analytics tab** (back on the main Personal Loans page, alongside the loan list): an

@@ -5,6 +5,28 @@ export function loanOutstanding(loan: PersonalLoan, repayments: PersonalLoanRepa
   return Math.max(0, loan.principal - repaid);
 }
 
+/** Running "remaining outstanding" after each repayment to this loan, in
+ * date order — user-reported gap: no running balance column on the
+ * repayments list, only the loan's current total (`loanOutstanding`).
+ * Returns a map keyed by `PersonalLoanRepayment.id` so the caller can look
+ * up a value regardless of what order the table is currently sorted in
+ * (same pattern as `transferRunningBalance`). Clamped at 0 per-row like
+ * `loanOutstanding` itself — an overpayment shows the loan as settled, not
+ * negative. */
+export function repaymentRunningOutstanding(loan: PersonalLoan, repayments: PersonalLoanRepayment[]): Map<string, number> {
+  const forLoan = repayments
+    .filter((r) => r.loanId === loan.id)
+    .map((r, i) => ({ r, i }))
+    .sort((a, b) => a.r.date.localeCompare(b.r.date) || a.i - b.i);
+  const out = new Map<string, number>();
+  let remaining = loan.principal;
+  for (const { r } of forLoan) {
+    remaining = Math.max(0, remaining - r.amount);
+    out.set(r.id, remaining);
+  }
+  return out;
+}
+
 /** Net position per currency: positive means net owed *to* you, negative
  * means you owe net overall, in that currency. Never blended across
  * currencies — no live FX-rate source (see MODULES_PLAN.md). */

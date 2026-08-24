@@ -117,6 +117,13 @@ export interface Appearance {
   fontSize: string;
   colorTheme: string;
   density: string;
+  /** User-reported preference: stat-card money values were made compact
+   * (10,000 -> "10k") unconditionally (README item 56) with the full number
+   * only a hover away — this lets the user flip that default and see raw,
+   * un-abbreviated numbers everywhere instead. Optional so existing stored
+   * appearance JSON without this field still parses; `undefined` is treated
+   * as `'compact'` (today's unchanged default) wherever it's read. */
+  numberDisplay?: 'compact' | 'raw';
 }
 
 export interface Workbook {
