@@ -6,6 +6,7 @@ import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
+import { toCSV } from '../../../lib/csv';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
@@ -109,6 +110,23 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
   const [extraPayment, setExtraPayment] = useState(0);
   const whatIf = whatIfExtraPayment(loan, extraPayment);
   const schedule = emiSchedule(loan);
+
+  /** README item 40: extends Banking's statement-export pattern (Done
+   * item 58) to this module's own primary record — a loan's "statement"
+   * is its full amortization schedule, not just the next-12 slice shown
+   * on screen. */
+  const exportSchedule = () => {
+    const header = ['#', 'Due date', 'Installment', loan.repaymentMode === 'fixedTotal' ? 'Markup' : 'Interest', 'Principal', 'Balance'];
+    const body = schedule.rows.map((r) => [r.month, installmentDueDate(loan, r.month), r.emi, r.interest, r.principalComp, r.balance]);
+    const blob = new Blob([toCSV([header, ...body])], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${loan.name.replace(/\s+/g, '_')}_schedule.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('Schedule downloaded.');
+  };
 
   const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
   const plannedBankEntries = usePlannedBankWorkbookStore((s) => s.workbook.entries);
@@ -321,6 +339,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
           </tbody>
         </table>
       </div>
+      <button className="btn secondary" onClick={exportSchedule}>Export full schedule CSV</button>
       </CollapsibleCard>
     </div>
   );

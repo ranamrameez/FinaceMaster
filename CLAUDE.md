@@ -1836,6 +1836,22 @@ not developer notes) continuously as features ship.
   property red, and switching the property picker correctly updated
   both other charts to that property's own numbers. `npx tsc -b` /
   `npm run test` (235 tests, 1 new) / `npm run build` all clean.
+- **Statement CSV export extended to Personal Loans and EMI/Loans
+  (2026-08-24) — see README Done item 94, extending Banking's pattern
+  from Done item 58.** Personal Loans' `LoanDetail` gets a from/to
+  date-range "Export CSV" button next to its repayments table
+  (Date/Amount/Remaining/Source, reusing the same running-outstanding
+  map the table already shows). EMI's `LoanDetail` gets an "Export
+  full schedule CSV" button under its Schedule card, exporting every
+  remaining installment (not just the next-12 slice on screen) with
+  its due date via `installmentDueDate()`. Both reuse the existing
+  `toCSV()` helper, no new export logic. Verified live via Playwright
+  with a real file download read off disk: Personal Loans' Remaining
+  column matched hand-calculated running balances, EMI's CSV had
+  exactly 13 rows (header + 12 months). `npx tsc -b` / `npm run test`
+  (235 tests, unchanged) / `npm run build` all clean. Still open per
+  README item 40: QSE/PSX positions, Funds, Rentals don't have this
+  export yet.
 
 ## Live URLs
 

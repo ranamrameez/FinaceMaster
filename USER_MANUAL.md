@@ -385,6 +385,9 @@ Informal loans with another person — money you lent out, or money you owe — 
   a CSV of past repayments — map which column is Date and which is Amount, preview the first
   5 rows, then import. Amounts are always treated as positive (a repayment doesn't have a
   direction to flip). Imported repayments show "Import (filename)" in the Source column.
+- **Export repayments (CSV)**: below the repayments table, optionally set a from/to date
+  range and click **Export CSV** to download that loan's repayment history (with the same
+  running Remaining balance shown on screen) as a spreadsheet file.
 
 ---
 
@@ -466,6 +469,9 @@ transactions) and Personal Loans (informal, no schedule).
   installment every month to see how much sooner the loan would clear and how much
   interest/markup you'd save. This is a live, unsaved estimate — nothing is recorded until
   you actually change your real payments.
+- **Export full schedule (CSV)**: below the Schedule table, click **Export full schedule
+  CSV** to download every remaining installment (not just the next 12 shown on screen) as a
+  spreadsheet file, with each installment's due date.
 
 ---
 

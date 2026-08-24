@@ -11,7 +11,7 @@ import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { CURRENCIES } from '../../../lib/currencies';
-import { parseCSV } from '../../../lib/csv';
+import { parseCSV, toCSV } from '../../../lib/csv';
 import { fmtMoney } from '../../../lib/format';
 import { confirmAndDeleteLinkable } from '../../../lib/linkCascade';
 import {
@@ -200,6 +200,8 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
   const [amount, setAmount] = useState(0);
   const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<PersonalLoanRepayment | null>(null);
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
 
   const submit = async () => {
     if (!amount || amount <= 0) return toast('Enter a repayment amount.');
@@ -207,6 +209,27 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
     addRepayment({ id: crypto.randomUUID(), loanId: loan.id, date, amount });
     toast('Repayment logged.');
     setAmount(0);
+  };
+
+  /** README item 40: extends Banking's account-detail statement export
+   * (Done item 58) to this module's own primary record — a loan's
+   * "statement" is its repayment history, with the same running-balance
+   * ("Remaining") column already shown in the table. */
+  const exportStatement = () => {
+    const rows = [...repayments]
+      .filter((r) => (!fromDate || r.date >= fromDate) && (!toDate || r.date <= toDate))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    const header = ['Date', 'Amount', 'Remaining', 'Source'];
+    const body = rows.map((r) => [r.date, r.amount, remaining.get(r.id) ?? 0, r.source === 'statement-import' ? 'Import' : 'Manual']);
+    const blob = new Blob([toCSV([header, ...body])], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const suffix = fromDate || toDate ? `_${fromDate || 'start'}_to_${toDate || 'now'}` : '';
+    a.download = `${loan.person.replace(/\s+/g, '_')}_repayments${suffix}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('Statement downloaded.');
   };
 
   const startEdit = (r: PersonalLoanRepayment) => { setEditId(r.id); setEditRow({ ...r }); };
@@ -271,6 +294,17 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
           </tbody>
         </table>
       </div>
+      {repayments.length > 0 && (
+        <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 16 }}>
+          <Field label="From (optional)">
+            <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+          </Field>
+          <Field label="To (optional)">
+            <TextInput type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+          </Field>
+          <button className="btn secondary" onClick={exportStatement}>Export CSV</button>
+        </div>
+      )}
       <ImportRepaymentsSection loan={loan} />
     </div>
   );
