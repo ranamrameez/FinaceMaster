@@ -94,18 +94,24 @@ The Transactions page has several tabs:
 
 ### Add transaction(s)
 Enter one or more BUY/SELL rows at once (date, ticker, action, shares, price) and save them
-together. On PSX, each row also has:
-- **Same-day override** checkbox — the app already auto-detects same-day buy/sell round
-  trips and nets the smaller leg's fee down to government levies only (no double
-  commission). Check this if your statement shows a same-day netting that the date you
-  entered doesn't quite match (e.g. you logged the settlement date instead of the trade
-  date). **A new BUY dated today comes with this pre-checked** — a lone buy has nothing to
-  net against yet if you haven't logged the matching sell, so the app assumes you're doing
-  same-day (intraday) trading and defaults to the netted fee treatment; uncheck it if you're
-  actually opening a position you plan to hold, not closing out today.
-- **Fee override** field — leave blank to use the computed fee, or type the exact fee from
-  your account statement to override the estimate entirely (useful for reconciling against
-  real broker charges).
+together. On PSX, each row also has a **Fee mode** dropdown with three options:
+- **Auto** — the fee is fully computed from your Settings. Same-day round trips (buy and sell
+  the same ticker on the same date) are auto-detected: the larger side pays full commission,
+  the smaller side is netted to government levies only (matches real PSX same-day
+  square-off rules — one side only pays commission, not both).
+- **Semi** — you decide whether *this* leg counts as the netted one via a "Netted" checkbox,
+  but the amount is still computed from Settings. Use this when your statement shows a
+  same-day netting that the date you entered doesn't quite match (e.g. you logged the
+  settlement date instead of the trade date). **A new BUY dated today starts in Semi mode
+  with "Netted" pre-checked** — a lone buy has nothing to net against yet if you haven't
+  logged the matching sell, so the app assumes you're doing same-day (intraday) trading;
+  switch to Auto if you're actually opening a position you plan to hold, not closing out
+  today.
+- **Manual** — type the exact fee from your account statement, bypassing computation
+  entirely (useful for reconciling against real broker charges down to the last rupee).
+
+Switching modes clears whatever the other mode was using, so there's no way for a leftover
+checkbox and a leftover fee number to silently conflict with each other.
 
 ### Transaction list
 Split into two collapsible sections — **Open positions** (tickers you're still holding) and

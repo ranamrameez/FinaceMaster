@@ -1612,6 +1612,22 @@ not developer notes) continuously as features ship.
   all-three-identical with a near-blank chart (63 non-transparent
   canvas pixels) to three genuinely different values with a real
   visible trend line (35,804 non-transparent pixels).
+- **Same-day/fee UI consolidated into a three-mode selector (2026-08-24)
+  — see README Done item 79.** User complaint: "Same-day override" and
+  "Fee override" were two independent controls shown at once with no
+  indication that setting one made the other pointless. Before
+  building, web-researched PSX's real same-day-square-off convention
+  (confirmed: one side only pays commission, the larger-quantity side
+  — matching the app's existing rule and the user's own report about
+  their broker, "Zindagi"). New `components/ui/FeeModeControl.tsx`:
+  a single Auto/Semi/Manual selector whose mode is *derived* from
+  which of `manualSameDay`/`feeOverride` is set (never stored
+  separately), so switching modes clears the field the new mode
+  doesn't use — the two can't conflict again. Wired into all four PSX
+  fee-entry locations (`TransactionsPage` add-row + edit-row,
+  `StockPage` add-form + edit-row). Verified live: fresh row starts in
+  Semi with "Netted" pre-checked; Manual/Auto correctly show/hide the
+  right control; zero console errors.
 
 ## Live URLs
 

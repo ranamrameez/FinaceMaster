@@ -1218,6 +1218,32 @@ FinanceManager live link:
     pixels) — confirmed via both a DOM text read and an actual canvas pixel sample, not just a
     visual glance. `npx tsc -b` / `npm run test` (206 tests, 4 new) / `npm run build` all
     clean.
+79. **Same-day-checkbox / auto-fee / fee-override "should be synced" — user-reported confusion
+    ("fee isn't auto-calculating due to same day check"), turned into a clear three-mode
+    selector.** Web-researched PSX's actual same-day-square-off convention first (minimum
+    commission of 3p/0.15% charged on **one side only** for a same-day round trip, per PSX's
+    own Ready Market brokerage circular) — confirms the app's existing "larger quantity side
+    is charged" rule matches real broker practice, which the user's own report ("sell legs are
+    bigger... it should be applied on sell leg") independently confirmed for their own trades.
+    The actual UX problem was that "Same-day override" (a checkbox) and "Fee override" (a
+    number field) were two independent controls shown side by side at all times — nothing
+    stopped both from being filled in at once (feeOverride silently wins), and neither made
+    clear that setting one made the other irrelevant. New shared `FeeModeControl`
+    (`components/ui/FeeModeControl.tsx`) replaces both with a single three-way selector per
+    transaction row: **Auto** (fully computed from Settings, same-day netting still
+    auto-detected from the transaction log — the default for most rows), **Semi** (you flip
+    whether *this* leg counts as the netted side via a "Netted" checkbox, but the fee amount
+    is still computed from Settings — this is what a fresh same-day BUY row starts in, since
+    it can't yet know which side will end up bigger), and **Manual** (type the exact fee from
+    your statement, bypassing computation). The mode is derived from which of the two
+    underlying fields (`manualSameDay`/`feeOverride`) is set — never stored separately — and
+    switching modes clears whichever field the new mode doesn't use, so the two can never
+    conflict again. Applied to all four PSX transaction-fee UI locations: `TransactionsPage`'s
+    add-row form and edit-row, and `StockPage`'s per-stock add form and edit-row. Verified live
+    via Playwright: a fresh row defaults to Semi with "Netted" pre-checked; switching to Manual
+    hides the checkbox and shows the fee input; switching to Auto hides both — zero console
+    errors. `npx tsc -b` / `npm run test` (206 tests, unchanged — UI consolidation onto
+    already-tested fields) / `npm run build` all clean.
 
 ## Pending
 
