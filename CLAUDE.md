@@ -1536,6 +1536,33 @@ not developer notes) continuously as features ship.
   Holdings card's link staying visible/clickable while collapsed.
   `npx tsc -b` / `npm run test` (201 tests, unchanged — UI
   restructuring, no calc logic touched) / `npm run build` all clean.
+- **Trade Planner "Clear plan" + collapsed-by-default + colorful
+  stat cards + darker/greyer page background (2026-08-24) — see
+  README Done items 75/76.** Trade Planner: a "Clear plan" button
+  (shown only when a plan has legs) removes every leg for a fresh
+  start without deleting the plan record itself; `PlanCard`'s
+  `collapsed` state now defaults `true`; saved plans get 28px spacing
+  instead of 16px. Separately, a real gap was found (not a design
+  decision): `.stat-card`'s CSS in `theme.css` already read a
+  `--card-hue` variable for its colored left-border/tint, but nothing
+  anywhere ever set it, so every stat card silently rendered the same
+  flat color regardless of what it showed — exactly matching a
+  user report that the dashboard felt monochrome/hard to visually
+  parse. Fixed by adding a `hue` prop to `StatCard` and assigning each
+  Dashboard stat a distinct color (reusing the same `INVEST_PALETTE`
+  hexes the charts already use for non-P/L stats, `var(--profit)`/
+  `var(--loss)` sign-driven for P/L stats). Also lifted the dark
+  theme's `--bg`/`--panel`/`--panel-2` (they sat too close in
+  lightness — genuinely flat, not just a taste call) and nudged the
+  light theme's `--bg` greyer, keeping the same relative ordering.
+  Verified via actual before/after screenshots in both themes, not
+  just described intent — every stat card now shows a distinct color,
+  panels visibly separate from the page background in both light and
+  dark mode. **Not yet applied beyond QSE/PSX's Dashboard** (Portfolio,
+  StockPage, other modules' stat cards) — the `hue` prop and
+  `CollapsibleCard` component are both ready to reuse; rollout tracked
+  as separate Pending items rather than done blind everywhere in one
+  pass.
 
 ## Live URLs
 

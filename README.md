@@ -1133,6 +1133,41 @@ FinanceManager live link:
     Playwright: clicking a header toggles `aria-expanded` and hides/shows the body, the
     Holdings card's "Full portfolio" link stays visible and clickable while collapsed, and
     re-clicking expands it again — zero console errors.
+75. **PSX Trade Planner: "Clear plan" button, bigger spacing between saved plans, plans
+    collapsed by default — user requests.** "Clear plan" (shown only when a plan has legs)
+    removes every leg from a plan in one action — a `confirmDialog`-gated fresh start that
+    keeps the plan's own name/notes/default ticker and never touches transactions already
+    logged from a previously-marked-done leg — as distinct from "Delete plan," which removes
+    the plan record entirely. Saved-plan cards now sit 28px apart instead of 16px so a list of
+    several plans doesn't read as one dense block. `PlanCard`'s `collapsed` state now defaults
+    to `true` instead of `false` — with several saved plans, having every one fully expanded
+    on load was the actual complaint; entering full-screen still force-expands a plan as
+    before. Verified live via Playwright: a fresh page load shows no leg-table content for any
+    plan (confirming the collapsed default), and the "Clear plan" button is present exactly on
+    the plan that has legs.
+76. **Stat cards across the app were visually flat/monochrome — user-reported ("colorful
+    gradients to distinct the UI components easily") — a real gap, not a design decision.**
+    `.stat-card`'s own CSS in `theme.css` already read a `--card-hue` custom property for its
+    left-border accent and background tint, but nothing anywhere ever *set* that variable, so
+    every stat card silently fell back to the same flat `--accent` color no matter what it
+    showed. `StatCard` (`components/Card.tsx`) gained an optional `hue` prop that sets
+    `--card-hue` inline; QSE's and PSX's Dashboard stat-card grids now pass a distinct color
+    per stat — a fixed palette color (reusing the same `INVEST_PALETTE` hex values the
+    allocation/P&L charts already use, for visual consistency) for non-P/L stats like Net
+    Worth/Cash Balance/Portfolio Value/Deposits/Fees/Rewards/Open Positions, and
+    `var(--profit)`/`var(--loss)` (sign-driven) for Realized/Unrealized/Net P/L and ROI, so a
+    loss actually reads red rather than an arbitrary color. Also lifted the dark theme's
+    `--bg`/`--panel`/`--panel-2`/`--border` and the light theme's `--bg`/`--border` a step —
+    user-reported the page felt hard to visually parse into distinct surfaces, and in dark
+    mode specifically `--bg:#0b0e11` vs `--panel:#12161b` was genuinely too close in lightness
+    to read as separate ("flat"). Kept the same relative ordering (bg darkest, panel lighter,
+    panel-2 lighter still) so nothing about the color *system* changed, just the amount of
+    separation between its layers. Verified via before/after screenshots in both light and
+    dark mode: every stat card now shows a visibly distinct colored left border/tint, and
+    panels clearly separate from the page background in both themes — text contrast and
+    readability unaffected. **Not yet applied to QSE/PSX's other pages' stat cards** (Portfolio,
+    module pages like Cash/Bank/EMI/etc. that use plain `StatCard` without a `hue`) — see
+    Pending; the `hue` prop is ready, each page just needs its own sensible color assignment.
 
 ## Pending
 
@@ -1249,6 +1284,11 @@ already fixed; the rest tracked here**:
     on Analytics pages, and every other module's (Cash/Bank/Personal Loans/EMI/Funds/Rentals)
     stat-card sections. Not started — each needs a quick per-page pass (wrap in
     `CollapsibleCard`, decide a sensible `defaultOpen`), not new component work.
+43. **Roll out `StatCard`'s `hue` prop (see Done item 76) beyond QSE/PSX's Dashboard.** Every
+    other page using plain `StatCard`s without a `hue` still renders the old flat single-color
+    look: Portfolio pages, StockPage's Summary tab, and every non-exchange module's landing
+    stats (Cash, Bank, Personal Loans, EMI, Funds, Rentals). Not started — each just needs a
+    sensible per-stat color assignment, same pattern as the Dashboard grids.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank
