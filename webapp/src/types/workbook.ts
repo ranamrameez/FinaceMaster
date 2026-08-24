@@ -40,6 +40,15 @@ export interface Transfer {
 }
 
 export interface Adjustment {
+  /** Stable id, not the adjustment's array position — added for the same
+   * reason as `Transaction.id` (README item 51): every record type should
+   * carry one, not just the ones a specific feature happened to need first.
+   * Optional and retrofitted by `createWorkbookStore.ts`'s `normalize()`
+   * since existing data predates this field; still index-addressed for now
+   * (`updateAdjustment`/`removeAdjustment` unchanged) — nothing currently
+   * needs to reference a specific adjustment the way linking needs
+   * `Transfer.id`, so this is the groundwork, not a full addressing switch. */
+  id?: string;
   date: string;
   amount: number;
   note?: string;
@@ -96,6 +105,8 @@ export interface WatchlistItem {
 }
 
 export interface Dividend {
+  /** Stable id — same reasoning as `Adjustment.id` above (README item 51). */
+  id?: string;
   date: string;
   ticker: string;
   perShare: number;

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 import { CollapsibleCard } from '../../../components/Card';
 import { PSX_TICKER_DATALIST_ID } from '../../../components/PSXTickerDatalist';
 import { confirmDialog } from '../../../components/ConfirmDialog';
@@ -7,8 +7,10 @@ import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
 import { Field, TextInput } from '../../../components/ui/Field';
 import { useSortableRows } from '../../../hooks/useSortableRows';
+import { Notice } from '../../../components/Notice';
+import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { analyzeTradePlanByTicker, whatIfExit, type TradePlanTickerSummary } from '../../../lib/calc/tradePlanAnalysis';
-import { makePSXFeeCalculator } from '../../../lib/calc/psxFees';
+import { feeScenarios, makePSXFeeCalculator } from '../../../lib/calc/psxFees';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
@@ -225,6 +227,57 @@ function PlanCard({ plan }: { plan: TradePlan }) {
     }
     return calcLegFee(leg);
   };
+  // README item 53: a pending leg was always priced under one guessed
+  // scenario — full commission unless another leg already in *this* plan
+  // happened to pair with it same-day — hiding the cheaper same-day-netted
+  // price exactly when seeing it could change how the user times the trade.
+  // Shown alongside (not instead of) `legFee`'s automatic best-guess.
+  const legFeeScenarios = (leg: TradePlanLeg) => feeScenarios(leg.shares * leg.price, leg.action === 'BUY', leg.shares, workbook.settings);
+
+  // Item 52 (user-reported bug): an executed leg's displayed values already
+  // resolve from its LIVE linked transaction (see `resolveExecutedTx`
+  // above) — but a leg executed before that link existed (or whose link
+  // target got deleted) has nothing to resolve, and silently falls back to
+  // its own frozen snapshot with only a small "*" marker as a clue. Rather
+  // than guess a fuzzy match automatically (risking linking the WRONG
+  // transaction), let the user pick the right one themselves.
+  const updateTransaction = usePSXWorkbookStore((s) => s.updateTransaction);
+  const [linkingLegIndex, setLinkingLegIndex] = useState<number | null>(null);
+  const [linkChoice, setLinkChoice] = useState('');
+  const candidateTxsFor = (ticker: string): Transaction[] =>
+    workbook.transactions.filter((t) => t.ticker === ticker && t.id);
+  const confirmLink = (i: number) => {
+    if (!linkChoice) return;
+    updateTradePlan(plan.id, { legs: plan.legs.map((l, idx) => (idx === i ? { ...l, executedTransactionId: linkChoice } : l)) });
+    toast('Linked to that transaction — its live data will show here from now on.');
+    setLinkingLegIndex(null);
+    setLinkChoice('');
+  };
+
+  // Item 52's other ask: editing the linked transaction shouldn't require
+  // leaving the Trade Planner at all. `updateTransaction` is index-based
+  // (a QSE/PSX-wide convention — see CLAUDE.md), so look up the transaction's
+  // current array position by its stable id right before saving, rather than
+  // capturing an index up front that could go stale if the list changes
+  // while this row is being edited.
+  const [editingTxLegIndex, setEditingTxLegIndex] = useState<number | null>(null);
+  const [editTxRow, setEditTxRow] = useState<Transaction | null>(null);
+  const startEditTx = (i: number, tx: Transaction) => {
+    setEditingTxLegIndex(i);
+    setEditTxRow({ ...tx });
+  };
+  const saveEditTx = () => {
+    if (editingTxLegIndex === null || !editTxRow) return;
+    const idx = workbook.transactions.findIndex((t) => t.id === editTxRow.id);
+    if (idx < 0) {
+      toast('Could not find that transaction — it may have been deleted.');
+      return;
+    }
+    updateTransaction(idx, editTxRow);
+    toast('Transaction updated.');
+    setEditingTxLegIndex(null);
+    setEditTxRow(null);
+  };
 
   const tickerAnalysis = analyzeTradePlanByTicker(plan.legs, rows, calcFee, workbook.settings.feePct, workbook.settings.tick, calcLegFee);
   type AnalysisCol = 'ticker' | 'avgCost' | 'breakEven' | 'effectiveShares' | 'realizedPL';
@@ -429,8 +482,8 @@ function PlanCard({ plan }: { plan: TradePlan }) {
             </tr>
           </thead>
           <tbody>
-            {sortedLegRows.map(({ leg, originalIndex: i }) =>
-              editLegIndex === i && editLeg ? (
+            {sortedLegRows.map(({ leg, originalIndex: i }) => {
+              if (editLegIndex === i && editLeg) return (
                 <tr key={i}>
                   <td><input type="date" value={editLeg.date} onChange={(e) => setEditLeg({ ...editLeg, date: e.target.value })} style={{ width: 130 }} /></td>
                   <td><input value={editLeg.ticker} onChange={(e) => setEditLeg({ ...editLeg, ticker: e.target.value.toUpperCase() })} style={{ width: 70 }} /></td>
@@ -450,57 +503,125 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                     <button className="btn secondary small" onClick={() => setEditLegIndex(null)}>Cancel</button>
                   </td>
                 </tr>
-              ) : (() => {
-                // For an executed leg, show the LINKED transaction's live
-                // data (date/shares/price) so an edit made afterward in the
-                // Transactions page or per-stock page is reflected here too,
-                // instead of the leg's own frozen-at-execution snapshot
-                // going stale (README bug report: "plan and transactions
-                // are not synced"). Falls back to the leg's own snapshot
-                // when there's no link (executed before this fix existed)
-                // or the linked transaction was deleted.
-                const linkedTx = leg.executed ? resolveExecutedTx(leg) : null;
-                const display = linkedTx ?? leg;
-                const stale = leg.executed && !linkedTx;
-                return (
+              );
+
+              // Editing the LINKED transaction directly (item 52: "should be
+              // editable from here") — right-here inline, no trip to the
+              // Transactions page required.
+              if (editingTxLegIndex === i && editTxRow) return (
                 <tr key={i}>
-                  <td>{display.date}{stale && (
-                    <Tooltip text="No linked transaction found — showing the plan's original snapshot from when this was marked done.">
-                      <span className="footer-note" style={{ cursor: 'pointer' }}> *</span>
-                    </Tooltip>
-                  )}</td>
-                  <td>{display.ticker}</td>
-                  <td className={display.action === 'BUY' ? 'pill-buy' : 'pill-sell'}>{display.action}</td>
-                  <td>{fmt(display.shares, 0)}</td>
-                  <td>{fmtPrice(display.price)}</td>
-                  <td>{fmtMoney(display.shares * display.price, currency)}</td>
-                  <td>{fmtMoney(legFee(leg), currency)}</td>
+                  <td><input type="date" value={editTxRow.date} onChange={(e) => setEditTxRow({ ...editTxRow, date: e.target.value })} style={{ width: 130 }} /></td>
+                  <td>{editTxRow.ticker}</td>
                   <td>
-                    {leg.executed ? (
-                      linkedTx ? (
-                        <Tooltip text="Synced with its transaction — edit it from the Transactions page.">
-                          <span className="pill-buy" style={{ cursor: 'pointer' }}>Executed</span>
-                        </Tooltip>
-                      ) : (
-                        <span className="pill-buy">Executed</span>
-                      )
-                    ) : (
-                      <span className="footer-note">Planned</span>
-                    )}
+                    <select value={editTxRow.action} onChange={(e) => setEditTxRow({ ...editTxRow, action: e.target.value as 'BUY' | 'SELL' })}>
+                      <option value="BUY">BUY</option>
+                      <option value="SELL">SELL</option>
+                    </select>
                   </td>
+                  <td><input type="number" value={editTxRow.shares} onChange={(e) => setEditTxRow({ ...editTxRow, shares: Number(e.target.value) })} style={{ width: 70 }} /></td>
+                  <td><input type="number" step="0.01" value={editTxRow.price} onChange={(e) => setEditTxRow({ ...editTxRow, price: Number(e.target.value) })} style={{ width: 80 }} /></td>
+                  <td>{fmtMoney(editTxRow.shares * editTxRow.price, currency)}</td>
+                  <td>{fmtMoney(calcFee(editTxRow.shares * editTxRow.price, editTxRow.action === 'BUY', { shares: editTxRow.shares, tx: editTxRow }), currency)}</td>
+                  <td><span className="pill-buy">Executed</span></td>
                   <td>
-                    {!leg.executed && (
-                      <>
-                        <button className="btn secondary small" onClick={() => startEditLeg(i)}>Edit</button>{' '}
-                        <button className="btn secondary small" onClick={() => markDone(i)}><CheckIcon size={12} />Mark done</button>{' '}
-                        <button className="btn secondary small" onClick={() => removeLeg(i)}><TrashIcon size={12} />Remove</button>
-                      </>
-                    )}
+                    <button className="btn secondary small" onClick={saveEditTx}><SaveIcon size={12} />Save</button>{' '}
+                    <button className="btn secondary small" onClick={() => { setEditingTxLegIndex(null); setEditTxRow(null); }}>Cancel</button>
                   </td>
                 </tr>
-                );
-              })(),
-            )}
+              );
+
+              // For an executed leg, show the LINKED transaction's live
+              // data (date/shares/price) so an edit made afterward in the
+              // Transactions page or per-stock page is reflected here too,
+              // instead of the leg's own frozen-at-execution snapshot
+              // going stale (README bug report: "plan and transactions
+              // are not synced"). Falls back to the leg's own snapshot
+              // when there's no link (executed before this fix existed)
+              // or the linked transaction was deleted — that's now a
+              // visible, fixable state (see the "Link…" row below) rather
+              // than a barely-noticeable asterisk.
+              const linkedTx = leg.executed ? resolveExecutedTx(leg) : null;
+              const display = linkedTx ?? leg;
+              const stale = leg.executed && !linkedTx;
+              const scenarios = !leg.executed ? legFeeScenarios(leg) : null;
+              return (
+                <Fragment key={i}>
+                  <tr>
+                    <td>{display.date}{stale && (
+                      <Tooltip text="No linked transaction found — showing the plan's original snapshot from when this was marked done. Use Link below to fix this.">
+                        <span style={{ cursor: 'pointer', color: 'var(--warn)' }}> ⚠</span>
+                      </Tooltip>
+                    )}</td>
+                    <td>{display.ticker}</td>
+                    <td className={display.action === 'BUY' ? 'pill-buy' : 'pill-sell'}>{display.action}</td>
+                    <td>{fmt(display.shares, 0)}</td>
+                    <td>{fmtPrice(display.price)}</td>
+                    <td>{fmtMoney(display.shares * display.price, currency)}</td>
+                    <td>
+                      {fmtMoney(legFee(leg), currency)}
+                      {scenarios && (
+                        <Tooltip text="Shown regardless of what else is in this plan — a lone leg is priced at full commission unless it actually pairs with an opposite same-day trade.">
+                          <div className="footer-note" style={{ cursor: 'pointer' }}>
+                            Full {fmtMoney(scenarios.full, currency)} · Same-day netted {fmtMoney(scenarios.netted, currency)}
+                          </div>
+                        </Tooltip>
+                      )}
+                    </td>
+                    <td>
+                      {leg.executed ? (
+                        linkedTx ? (
+                          <Tooltip text="Synced with its transaction — edit it below or from the Transactions page.">
+                            <span className="pill-buy" style={{ cursor: 'pointer' }}>Executed</span>
+                          </Tooltip>
+                        ) : (
+                          <span className="pill-sell">Executed (unlinked)</span>
+                        )
+                      ) : (
+                        <span className="footer-note">Planned</span>
+                      )}
+                    </td>
+                    <td>
+                      {!leg.executed && (
+                        <>
+                          <button className="btn secondary small" onClick={() => startEditLeg(i)}>Edit</button>{' '}
+                          <button className="btn secondary small" onClick={() => markDone(i)}><CheckIcon size={12} />Mark done</button>{' '}
+                          <button className="btn secondary small" onClick={() => removeLeg(i)}><TrashIcon size={12} />Remove</button>
+                        </>
+                      )}
+                      {leg.executed && linkedTx && (
+                        <button className="btn secondary small" onClick={() => startEditTx(i, linkedTx)}>Edit</button>
+                      )}
+                      {stale && (
+                        <button className="btn secondary small" onClick={() => setLinkingLegIndex(linkingLegIndex === i ? null : i)}>
+                          Link…
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                  {linkingLegIndex === i && (
+                    <tr>
+                      <td colSpan={9} style={{ padding: 0 }}>
+                        <Notice tone="warning" style={{ margin: '4px 0' }}>
+                          <div className="row" style={{ gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                            <span>Pick the transaction this leg actually corresponds to:</span>
+                            <select value={linkChoice} onChange={(e) => setLinkChoice(e.target.value)}>
+                              <option value="">— Select a transaction —</option>
+                              {candidateTxsFor(leg.ticker).map((t) => (
+                                <option key={t.id} value={t.id}>
+                                  {t.date} · {t.action} {fmt(t.shares, 0)} @ {fmtPrice(t.price)}
+                                </option>
+                              ))}
+                            </select>
+                            <button className="btn secondary small" disabled={!linkChoice} onClick={() => confirmLink(i)}>Confirm link</button>
+                            <button className="btn secondary small" onClick={() => { setLinkingLegIndex(null); setLinkChoice(''); }}>Cancel</button>
+                          </div>
+                        </Notice>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              );
+            })}
             {!plan.legs.length && (
               <tr><td colSpan={9} className="footer-note">No legs left in this plan.</td></tr>
             )}
@@ -547,6 +668,26 @@ function PlanCard({ plan }: { plan: TradePlan }) {
           <div className="footer-note" style={{ marginBottom: 4 }}>
             Per-ticker plan analysis — average cost blends this plan's pending buys with any shares you already
             hold; already-executed legs are shown separately and never double-counted into it.
+          </div>
+          {/* User-reported (item 53): this summary was easy to miss, buried
+           * below the heavier leg-editing table above. A row of colored
+           * cards — one per ticker, key figures only — gives an at-a-glance
+           * read before the detailed table underneath. */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px,1fr))', gap: 8, marginBottom: 12 }}>
+            {sortedTickerAnalysis.map((t, idx) => (
+              <div key={t.ticker} className="card stat-card" style={hueStyle(HUES[idx % HUES.length])}>
+                <div className="label">{t.ticker}</div>
+                <div className="value" style={{ fontSize: 15 }}>
+                  {t.avgCost > 0 ? `Avg ${fmtPrice(t.avgCost)}` : 'No avg cost'}
+                </div>
+                <div className="sub">
+                  BE {t.breakEven > 0 ? fmtPrice(t.breakEven) : '—'} · {fmt(t.effectiveShares, 0)} sh after plan
+                  {t.plannedSold > 0 && (
+                    <> · <span className={t.realizedPL >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(t.realizedPL, currency)} P/L</span></>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
           <div className="table-scroll">
             <table>

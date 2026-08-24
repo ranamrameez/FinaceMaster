@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import fixture from './fixtures/psx-workbook-backup.json';
 import type { Transaction } from '../../../types/workbook';
 import type { PSXSettings } from '../../../types/psxWorkbook';
-import { calcCGT, calcFeeBreakdown, isNettedLeg, makePSXFeeCalculator, sameDayChargedSide } from '../psxFees';
+import { calcCGT, calcFeeBreakdown, feeScenarios, isNettedLeg, makePSXFeeCalculator, sameDayChargedSide } from '../psxFees';
 import { computePositions } from '../positions';
 import { cashSummary } from '../cashSummary';
 
@@ -69,6 +69,26 @@ describe('calcFeeBreakdown', () => {
     const fb = calcFeeBreakdown(0, true, 0, BASE_SETTINGS);
     expect(fb.total).toBe(0);
     expect(fb.commission).toBe(0);
+  });
+});
+
+describe('feeScenarios', () => {
+  it('full matches calcFeeBreakdown, netted matches levies-only sum', () => {
+    const amount = 100 * 102.94;
+    const scenarios = feeScenarios(amount, false, 100, BASE_SETTINGS);
+    const fb = calcFeeBreakdown(amount, false, 100, BASE_SETTINGS);
+    expect(scenarios.full).toBe(fb.total);
+    expect(scenarios.netted).toBeCloseTo(fb.psxFee + fb.nccplFee + fb.secpLevy + fb.cdc + fb.cvt, 5);
+    // Netted (levies only) must always be strictly cheaper than full
+    // commission whenever there's a nonzero commission to skip.
+    expect(scenarios.netted).toBeLessThan(scenarios.full);
+  });
+
+  it('netted is 0 when the settings have no levies configured at all', () => {
+    const noLevies: PSXSettings = { ...BASE_SETTINGS, psxFeePct: 0, nccplFeePct: 0, secpLevyPct: 0, cdcPerShare: 0, cvtPct: 0 };
+    const scenarios = feeScenarios(10000, true, 100, noLevies);
+    expect(scenarios.netted).toBe(0);
+    expect(scenarios.full).toBeGreaterThan(0);
   });
 });
 

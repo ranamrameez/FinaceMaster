@@ -2067,6 +2067,39 @@ not developer notes) continuously as features ship.
   and easy to miss — suggested colored summary cards. None of this is built yet; do NOT assume
   Done item 81 already covers it just because it sounds related — the user is reporting these
   as currently-broken/currently-missing against the live app.
+- **Trade Planner follow-up batch fixed (2026-08-24) — see README Done item 104, closes
+  Pending items 51-53.** (1) `Adjustment`/`Dividend` gained `id?: string` (same optional-
+  retrofit pattern as `Transaction`/`Transfer`, backfilled by `createWorkbookStore.ts`'s
+  `normalize()`) — a partial answer to the id-audit ask, not a full addressing switch (their
+  update/remove actions stay index-based since nothing needs to reference one specifically
+  yet). (2) **Traced the "stale after edit" bug end to end and found the live-resolution
+  mechanism itself was already correct** — `TransactionsPage.tsx`'s and `StockPage.tsx`'s edit
+  flows both preserve the real global array index (and therefore the transaction's `id`)
+  through filtering/sorting/grouping, confirmed by reading the code, not assumed. The much
+  more likely explanation: the user's specific leg was executed *before* Done item 81's link
+  existed at all (same very long session — easily older test data), so it simply had no
+  `executedTransactionId` to resolve from and silently fell back to its frozen snapshot with
+  only a barely-visible "*" as a clue. **Lesson for any future "the linking feature doesn't
+  work" report**: check whether the record predates the linking feature before assuming the
+  resolver itself is broken — a resolver with nothing to resolve from isn't a bug in the
+  resolver. Fixed the actual gap: a stale/unlinked executed leg now shows a red "Executed
+  (unlinked)" status and a "Link…" button opens an inline picker to manually establish the
+  missing link (deliberately manual, not a fuzzy auto-match, since guessing wrong would link
+  the wrong transaction). Also built the user's second ask: a linked leg's transaction is now
+  directly editable inline from the Trade Planner (looks up the transaction's current array
+  index by its stable id right before saving, not a captured-up-front index that could go
+  stale). (3) New `feeScenarios()` in `psxFees.ts` (pure, tested) shows both the full-
+  commission and same-day-netted fee for every pending leg side by side, independent of what
+  else is in the plan — shown *alongside*, not replacing, the existing automatic best-guess
+  fee. Added a row of colored `StatCard`-style summary cards (avg cost/break-even/shares-
+  after-plan/planned P&L per ticker) above the detailed table for an at-a-glance read.
+  **Verified live via Playwright**: seeded a stale unlinked leg, linked it through the picker,
+  edited its now-linked transaction's shares inline, and confirmed both the UI and
+  `localStorage` reflected the change; confirmed the fee-scenario note is a genuine second
+  DOM line via `getComputedStyle` (a screenshot at test resolution made it look squeezed
+  together, which would have been a false "bug" if trusted without the layout check) — zero
+  console errors. New tests: `psxFees.test.ts` gained 2 cases. `npx tsc -b` / `npm run test`
+  (253 tests, 2 new) / `npm run build` all clean.
 
 ## Live URLs
 

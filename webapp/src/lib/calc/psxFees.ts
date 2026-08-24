@@ -99,6 +99,20 @@ export function isNettedLeg(transactions: Transaction[], tx: Transaction): boole
  * same-day context yet), it falls back to modeling a single hypothetical
  * leg — matching the legacy calcFee()/calcFeeBreakdown() split between
  * "forward-looking calculators" and "actual recorded transactions". */
+/** Both possible fee outcomes for a not-yet-executed leg — user-reported: the
+ * Trade Planner always priced a leg under one guessed scenario (full
+ * commission, unless another leg already in the plan happened to pair with
+ * it same-day), which hid the cheaper same-day-netted price from view while
+ * still planning, exactly when seeing it could change whether the user times
+ * the trade as a same-day round trip. Pure and stateless — doesn't care what
+ * else is in the plan or the real transaction log, unlike `calcLegFee` in
+ * `TradePlannerPage.tsx`, which still remains the "best automatic guess"
+ * fee shown for an already-paired leg. */
+export function feeScenarios(amount: number, isBuy: boolean, shares: number, settings: PSXSettings): { full: number; netted: number } {
+  const fb = calcFeeBreakdown(amount, isBuy, shares, settings);
+  return { full: fb.total, netted: round2(fb.psxFee + fb.nccplFee + fb.secpLevy + fb.cdc + fb.cvt) };
+}
+
 export function makePSXFeeCalculator(settings: PSXSettings, allTransactions: Transaction[]): FeeCalculator {
   return (amount, isBuy, context) => {
     const shares = context?.shares ?? 0;

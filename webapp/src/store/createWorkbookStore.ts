@@ -78,6 +78,8 @@ export function createWorkbookStore<TWorkbook extends BaseWorkbook<unknown>>(
       ...wb,
       transactions: wb.transactions.map((t) => (t.id ? t : { ...t, id: crypto.randomUUID() })),
       transfers: wb.transfers.map((t) => (t.id ? t : { ...t, id: crypto.randomUUID() })),
+      adjustments: wb.adjustments.map((a) => (a.id ? a : { ...a, id: crypto.randomUUID() })),
+      dividends: wb.dividends.map((d) => (d.id ? d : { ...d, id: crypto.randomUUID() })),
       tradePlans: wb.tradePlans.map((p) => (p.legs ? p : { ...p, legs: [] })),
     };
   }
@@ -138,7 +140,7 @@ export function createWorkbookStore<TWorkbook extends BaseWorkbook<unknown>>(
 
       deleteTransfer: (id) => mutate((wb) => ({ ...wb, transfers: wb.transfers.filter((t) => t.id !== id) })),
 
-      addAdjustment: (a) => mutate((wb) => ({ ...wb, adjustments: [...wb.adjustments, a] })),
+      addAdjustment: (a) => mutate((wb) => ({ ...wb, adjustments: [...wb.adjustments, a.id ? a : { ...a, id: crypto.randomUUID() }] })),
 
       updateAdjustment: (index, patch) =>
         mutate((wb) => ({ ...wb, adjustments: wb.adjustments.map((a, i) => (i === index ? { ...a, ...patch } : a)) })),
@@ -166,7 +168,7 @@ export function createWorkbookStore<TWorkbook extends BaseWorkbook<unknown>>(
           };
         }),
 
-      addDividend: (d) => mutate((wb) => ({ ...wb, dividends: [...wb.dividends, d] })),
+      addDividend: (d) => mutate((wb) => ({ ...wb, dividends: [...wb.dividends, d.id ? d : { ...d, id: crypto.randomUUID() }] })),
 
       updateDividend: (index, patch) =>
         mutate((wb) => ({ ...wb, dividends: wb.dividends.map((d, i) => (i === index ? { ...d, ...patch } : d)) })),

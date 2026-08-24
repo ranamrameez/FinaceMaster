@@ -1787,6 +1787,57 @@ FinanceManager live link:
        rather than color/spacing swaps — all three are large, subjective, high-regression-risk
        redesigns that deserve their own scoped session rather than a guess folded into this
        batch.
+104. **Trade Planner follow-up batch (2026-08-24), user-reported right after Done item 103 —
+     three items, see Pending items 51-53 for the pre-fix framing.**
+     - **(51) Entity id audit.** `Adjustment`/`Dividend` gained `id?: string` (same optional-
+       retrofit pattern as `Transaction`/`Transfer` — backfilled by `createWorkbookStore.ts`'s
+       `normalize()` on every load/`setWorkbook`, and assigned on creation by `addAdjustment`/
+       `addDividend` for new records). Deliberately did NOT switch `updateAdjustment`/
+       `removeAdjustment`/`updateDividend`/`removeDividend` off index-based addressing — nothing
+       currently needs to reference a specific one the way linking needs `Transfer.id`, so this
+       is groundwork for whenever that changes, not a full addressing switch (same reasoning
+       `Transaction.id` followed before Done item 81 built on it).
+     - **(52) Trade Planner leg showing stale data after editing its linked transaction.**
+       Traced the actual resolution mechanism (`resolveExecutedTx` in `TradePlannerPage.tsx`,
+       `updateTransaction`'s index-based addressing in `createWorkbookStore.ts`) end to end and
+       found it correct — both `TransactionsPage.tsx`'s and `StockPage.tsx`'s edit flows
+       preserve the real global array index (and therefore the transaction's `id`) through
+       filtering/sorting/grouping. The much more likely explanation: the user's leg was almost
+       certainly executed *before* Done item 81 shipped the link at all (same very long session,
+       so easily older test data) — with no `executedTransactionId` to resolve from, the row
+       silently fell back to the leg's own frozen snapshot with only a barely-visible "*"
+       tooltip as a clue. Fixed the actual gap rather than a phantom bug in the resolver: a
+       stale/unlinked executed leg now shows a red "Executed (unlinked)" status plus a
+       warning-toned "⚠" marker, and a new "Link…" button opens an inline picker (a `<select>`
+       of that ticker's own transactions) to manually establish the missing link — safer than
+       guessing a fuzzy match automatically, which could silently link the wrong transaction.
+       Also built the user's second ask: a linked leg's transaction is now directly editable
+       inline from the Trade Planner itself (new `startEditTx`/`saveEditTx`, looks up the
+       transaction's current array index by its stable id right before saving rather than
+       capturing a possibly-stale index up front) — no trip to the Transactions page needed.
+     - **(53) Fee always priced at full commission; summary buried.** New `feeScenarios()` in
+       `psxFees.ts` (pure, tested) returns both the full-commission and same-day-netted totals
+       for a hypothetical leg, independent of what else happens to be in the plan already —
+       every pending leg's "Est. fee" cell now shows both side by side ("Full 15.99 PKR ·
+       Same-day netted 1.05 PKR"), so the potential same-day saving is visible while still
+       planning, not just after the fact. This is shown *alongside*, not instead of, the
+       existing automatic `legFee`/`calcLegFee` best-guess (which stays accurate for a leg that
+       already does pair with another leg in the same plan). Separately, a row of colored
+       `StatCard`-style summary cards (one per ticker, `hueStyle` from the shared palette,
+       showing avg cost/break-even/shares-after-plan/planned P&L) now sits above the detailed
+       per-ticker table — the at-a-glance read the user asked for, without removing the
+       detailed table underneath.
+     - **Verified live via Playwright** with a seeded stale (no-link) executed leg and a
+       pending same-day-fee-eligible leg: "Executed (unlinked)" status and the Link… picker
+       both appeared and correctly re-linked to the right transaction (confirmed via
+       `localStorage`, not just the UI); editing the now-linked transaction's shares inline and
+       saving correctly updated both the on-screen plan row and the underlying transaction
+       record (`localStorage` read back the new share count directly); the fee-scenario note
+       rendered as a genuine second line in the cell (confirmed via `getComputedStyle` — a
+       screenshot at this resolution made it look visually squeezed together, which would have
+       been a false "bug" if trusted without the layout check); zero console errors throughout.
+       New tests: `psxFees.test.ts` gained 2 `feeScenarios` cases. `npx tsc -b` / `npm run test`
+       (253 tests, 2 new) / `npm run build` all clean.
 
 ## Pending
 
@@ -1957,33 +2008,26 @@ than a guess folded into a mixed batch:
     layout, not just tighter padding?) before writing any code.
 
 **Trade Planner follow-up, user-reported (2026-08-24, arrived mid-session right after Done
-item 103) — three items, not yet investigated/fixed:**
-51. Every record type across every module should carry a stable, unique `id` the way a
-    normal relational schema would (the user's own framing: "just like a good RDBMS ERD").
-    Several record types were retrofitted with ids over this project's history purely to
-    unblock cross-entity linking (`Transfer`, `CashEntry`, `PersonalLoanRepayment`,
-    `RentalEntry`, `Transaction` as of Done item 81) rather than as a general design pass —
-    needs a real audit of every remaining index-addressed record type (`Adjustment`,
-    `Dividend`, `WatchlistItem`, `Fund`'s own CRUD, `TradePlanLeg`, etc.) and a decision on
-    whether to retrofit the rest even where nothing currently needs to link to them.
-52. **Real bug, not yet root-caused**: executing a Trade Planner leg ("Mark as done") creates a
-    real Transaction and links back via `TradePlanLeg.executedTransactionId` (Done item 81) —
-    but the user edited that transaction afterward (correcting a mistaken share count) from
-    the Transactions page, and the plan still showed the stale old count. Done item 81's design
-    was supposed to resolve an executed leg's displayed values from the *live* linked
-    transaction precisely to prevent this — either that resolution isn't actually being read
-    where the user was looking, the transaction's `id` isn't surviving the edit-in-place flow,
-    or the specific display the user checked doesn't go through the resolution path at all.
-    User also asked that the linked transaction be directly editable from the Trade Planner
-    itself, not just cross-referenced. Needs real investigation before a fix.
-53. **Real design gap, not yet fixed**: the Trade Planner's per-ticker analysis always prices a
-    leg with full commission, missing same-day round-trip netting the way a Transaction itself
-    gets automatically — a plan can look like a worse trade than it would actually cost once
-    executed same-day. The user wants both the same-day and non-same-day price/fee shown side
-    by side so the actual cheaper timing is visible while still planning, not after the fact.
-    Also flagged as a UX issue: the per-ticker summary table is visually buried under the
-    heavier leg-editing UI and easy to miss at a glance — suggested colored summary cards
-    instead of (or alongside) the table.
+item 103) — all three now fixed, see Done item 104:**
+51. ~~Every record type across every module should carry a stable, unique `id`.~~ **Partially
+    done — see Done item 104.** `Adjustment`/`Dividend` retrofitted with `id?: string` (same
+    pattern as `Transaction`/`Transfer`). Still open: `WatchlistItem` (has a natural key,
+    `ticker`, so lower priority), `TradePlanLeg` (addressed by index within its own plan, a
+    narrower scope than a top-level workbook array), Funds' own CRUD (already gets `id` for
+    free since it reuses the `Transaction` shape).
+52. ~~Real bug: executing a Trade Planner leg, then editing its transaction, left the plan
+    showing stale data.~~ **Investigated and fixed — see Done item 104.** Root cause: the
+    live-resolution mechanism itself was correct (confirmed by reading through
+    `resolveExecutedTx`/`updateTransaction`'s index-based addressing — both preserve `id`
+    correctly), so the user's specific report was very likely a leg executed *before* Done
+    item 81's linking existed at all (no `executedTransactionId` to resolve from — a real gap
+    in the fix's coverage, just not a bug in the fix itself). Added a manual "Link…" picker for
+    any executed leg with no live link, and made a linked transaction directly editable inline
+    from the Trade Planner.
+53. ~~Trade Planner always prices a leg at full commission; summary table buried.~~ **Done —
+    see Done item 104.** Every pending leg's fee now shows both the full-commission and
+    same-day-netted price side by side; a row of colored summary cards sits above the detailed
+    per-ticker table for an at-a-glance read.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank
