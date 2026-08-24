@@ -202,7 +202,10 @@ function PlanCard({ plan }: { plan: TradePlan }) {
   const [editLegIndex, setEditLegIndex] = useState<number | null>(null);
   const [editLeg, setEditLeg] = useState<TradePlanLeg | null>(null);
   const [addingLeg, setAddingLeg] = useState<TradePlanLeg | null>(null);
-  const [collapsed, setCollapsed] = useState(false);
+  // Collapsed by default — user request: once you have a handful of saved
+  // plans, having every one of them fully expanded on load is overwhelming;
+  // expand the ones you're actually working on.
+  const [collapsed, setCollapsed] = useState(true);
   const [fullscreen, setFullscreen] = useState(false);
 
   const addLeg = () => {
@@ -287,7 +290,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
         style={
           fullscreen
             ? { position: 'fixed', inset: 12, zIndex: 1000, overflow: 'auto', padding: 16, boxShadow: '0 8px 40px rgba(0,0,0,.4)' }
-            : { marginBottom: 16, padding: 12 }
+            : { marginBottom: 28, padding: 12 }
         }
       >
       <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
@@ -341,6 +344,21 @@ function PlanCard({ plan }: { plan: TradePlan }) {
               }}
             >
               Edit
+            </button>
+          )}
+          {plan.legs.length > 0 && (
+            <button
+              className="btn secondary small"
+              title="Removes every leg from this plan so you can start fresh — keeps the plan's name, notes, and default ticker. Does not touch any transactions already logged from marking a leg done."
+              onClick={async () => {
+                const ok = await confirmDialog(
+                  'This removes every leg from the plan for a fresh start — the plan itself, its name/notes, and any transactions already logged from marking a leg done are untouched.',
+                  `Clear all legs from "${plan.name}"?`,
+                );
+                if (ok) updateTradePlan(plan.id, { legs: [] });
+              }}
+            >
+              Clear plan
             </button>
           )}
           <button
