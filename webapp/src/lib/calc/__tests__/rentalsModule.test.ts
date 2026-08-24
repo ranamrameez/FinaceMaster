@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Property, RentalEntry } from '../../../types/rentalsWorkbook';
-import { netIncomeByCurrency, propertyByCategory, propertyMonthlyRollup, propertyNetIncome } from '../rentalsModule';
+import { netIncomeByCurrency, netIncomeByProperty, propertyByCategory, propertyMonthlyRollup, propertyNetIncome } from '../rentalsModule';
 
 const property = (over: Partial<Property>): Property => ({
   id: 'p1',
@@ -53,6 +53,27 @@ describe('netIncomeByCurrency', () => {
     const totals = netIncomeByCurrency(properties, entries);
     expect(totals.USD).toBe(1500);
     expect(totals.AED).toBe(2000);
+  });
+});
+
+describe('netIncomeByProperty', () => {
+  it('returns one row per property in the given currency, others excluded', () => {
+    const properties = [
+      property({ id: 'p1', name: 'Apartment 4B', currencyCode: 'USD' }),
+      property({ id: 'p2', name: 'Studio 2A', currencyCode: 'USD' }),
+      property({ id: 'p3', name: 'Villa 9', currencyCode: 'AED' }),
+    ];
+    const entries = [
+      entry({ propertyId: 'p1', type: 'RENT_INCOME', amount: 1000 }),
+      entry({ propertyId: 'p2', type: 'RENT_INCOME', amount: 500 }),
+      entry({ propertyId: 'p2', type: 'EXPENSE', amount: 100, category: 'Repairs' }),
+      entry({ propertyId: 'p3', type: 'RENT_INCOME', amount: 9999 }),
+    ];
+    const rows = netIncomeByProperty(properties, entries, 'USD');
+    expect(rows).toEqual([
+      { propertyId: 'p1', name: 'Apartment 4B', net: 1000 },
+      { propertyId: 'p2', name: 'Studio 2A', net: 400 },
+    ]);
   });
 });
 

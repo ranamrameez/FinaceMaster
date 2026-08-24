@@ -1,5 +1,6 @@
 import type { User } from 'firebase/auth';
 import { useMemo, useRef, useState } from 'react';
+import { Bar, Doughnut } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
@@ -10,18 +11,23 @@ import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
-import { netIncomeByCurrency, propertyByCategory, propertyMonthlyRollup, propertyNetIncome } from '../../../lib/calc/rentalsModule';
+import { netIncomeByCurrency, netIncomeByProperty, propertyByCategory, propertyMonthlyRollup, propertyNetIncome } from '../../../lib/calc/rentalsModule';
 import { generateLeaseRentPlans } from '../../../lib/calc/rentalPlanning';
 import { parseCSV } from '../../../lib/csv';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
 import { confirmAndDeleteLinkable } from '../../../lib/linkCascade';
+import { dlBarV, dlDoughnut } from '../../../lib/chartLabels';
+import { applyChartTheme } from '../../../lib/chartSetup';
+import { cssVar, tickerColor } from '../../../lib/cssVar';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
+import { useAppearanceStore } from '../../../store/appearanceStore';
 import { createEmptyRentalsWorkbook } from '../../../store/defaultRentalsWorkbook';
 import { useRentalsWorkbookStore } from '../../../store/rentalsWorkbookStore';
 import { usePlannedRentalsWorkbookStore } from '../../../store/plannedRentalsWorkbookStore';
 import type { Property, RentalEntry, RentalsWorkbook } from '../../../types/rentalsWorkbook';
+import { ChartCard } from '../../qse/components/ChartCard';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const uid = () => crypto.randomUUID();
@@ -319,6 +325,99 @@ function usePropertyPicker() {
   const [propertyId, setPropertyId] = useState<string>(properties[0]?.id ?? '');
   const property = properties.find((p) => p.id === propertyId) ?? properties[0] ?? null;
   return { properties, property, propertyId: property?.id ?? '', setPropertyId };
+}
+
+/* ============================== Analytics ============================== */
+
+/** MODULES_PLAN.md §11's Rentals sketch: net income by property (portfolio-
+ * wide, currency-scoped) plus a category breakdown and monthly rollup for
+ * one selected property — the latter two reuse `propertyByCategory`/
+ * `propertyMonthlyRollup`, already computed for the plain tables in the
+ * Entries tab (README item 23), just charted here instead. */
+function AnalyticsTab() {
+  const properties = useRentalsWorkbookStore((s) => s.workbook.settings.properties);
+  const entries = useRentalsWorkbookStore((s) => s.workbook.entries);
+  useAppearanceStore((s) => s.appearance);
+  applyChartTheme();
+
+  const currencies = useMemo(() => [...new Set(properties.map((p) => p.currencyCode))].sort(), [properties]);
+  const [currency, setCurrency] = useState(currencies[0] ?? 'USD');
+  const effectiveCurrency = currencies.includes(currency) ? currency : (currencies[0] ?? currency);
+
+  const [propertyId, setPropertyId] = useState(properties[0]?.id ?? '');
+  const selectedProperty = properties.find((p) => p.id === propertyId) ?? properties[0] ?? null;
+
+  const netByProperty = useMemo(
+    () => netIncomeByProperty(properties, entries, effectiveCurrency),
+    [properties, entries, effectiveCurrency],
+  );
+  const byCategory = useMemo(() => (selectedProperty ? propertyByCategory(selectedProperty, entries) : {}), [selectedProperty, entries]);
+  const categories = Object.keys(byCategory);
+  const rollup = useMemo(() => (selectedProperty ? propertyMonthlyRollup(selectedProperty, entries) : []), [selectedProperty, entries]);
+
+  if (!properties.length) {
+    return <p className="footer-note">Add a property first (Properties tab) to see charts here.</p>;
+  }
+
+  return (
+    <div>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+        {currencies.length > 1 && (
+          <Field label="Currency" width={120}>
+            <Select value={effectiveCurrency} onChange={(e) => setCurrency(e.target.value)}>
+              {currencies.map((c) => <option key={c} value={c}>{c}</option>)}
+            </Select>
+          </Field>
+        )}
+        <Field label="Property" width={220}>
+          <Select value={selectedProperty?.id ?? ''} onChange={(e) => setPropertyId(e.target.value)}>
+            {properties.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.currencyCode})</option>)}
+          </Select>
+        </Field>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginTop: 12 }}>
+        <ChartCard title="Net income by property" empty={!netByProperty.length}>
+          <Bar
+            data={{
+              labels: netByProperty.map((r) => r.name),
+              datasets: [
+                {
+                  data: netByProperty.map((r) => r.net),
+                  backgroundColor: netByProperty.map((r) => (r.net >= 0 ? cssVar('--profit') || '#3ecf8e' : cssVar('--loss') || '#e5484d')),
+                },
+              ],
+            }}
+            options={{ indexAxis: 'y', plugins: { legend: { display: false }, datalabels: dlBarV((v) => fmtMoney(v, effectiveCurrency)) } }}
+          />
+        </ChartCard>
+        {selectedProperty && (
+          <>
+            <ChartCard title={`By category — ${selectedProperty.name}`} empty={!categories.length}>
+              <Doughnut
+                data={{
+                  labels: categories,
+                  datasets: [{ data: categories.map((c) => Math.abs(byCategory[c])), backgroundColor: categories.map((c) => tickerColor(c)) }],
+                }}
+                options={{ cutout: '55%', plugins: { datalabels: dlDoughnut((v) => fmtMoney(v, selectedProperty.currencyCode)) } }}
+              />
+            </ChartCard>
+            <ChartCard title={`Monthly rollup — ${selectedProperty.name}`} empty={!rollup.length}>
+              <Bar
+                data={{
+                  labels: rollup.map((r) => r.month),
+                  datasets: [
+                    { label: 'Income', data: rollup.map((r) => r.income), backgroundColor: cssVar('--profit') || '#3ecf8e' },
+                    { label: 'Expense', data: rollup.map((r) => r.expense), backgroundColor: cssVar('--loss') || '#e5484d' },
+                  ],
+                }}
+                options={{ plugins: { datalabels: dlBarV((v) => fmtMoney(v, selectedProperty.currencyCode)) } }}
+              />
+            </ChartCard>
+          </>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function emptyEntry(propertyId: string): RentalEntry {
@@ -829,6 +928,7 @@ export function RentalsPage({
           { key: 'properties', label: 'Properties', content: <PropertiesTab /> },
           { key: 'entries', label: 'Income & expenses', content: <EntriesTab /> },
           { key: 'import', label: 'Import', content: <ImportTab /> },
+          { key: 'analytics', label: 'Analytics', content: <AnalyticsTab /> },
           {
             key: 'settings',
             label: 'Settings',

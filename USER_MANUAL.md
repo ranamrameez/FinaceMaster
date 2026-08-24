@@ -523,6 +523,12 @@ tax, management fees) against one or more properties.
   entry list with edit/delete.
 - No property valuation tracking or mortgage/loan tracking in this version — a property's
   mortgage, if you have one, belongs in EMI/Loans (§18) instead.
+- **Analytics tab**: pick a currency (if you hold properties in more than one) to see a
+  "Net income by property" chart comparing all your properties side by side — profitable
+  ones in green, properties running at a loss in red. Pick a property to see its category
+  breakdown (how much of its income/expense came from where) and its monthly income vs.
+  expense trend as charts, alongside the same tables already available in the Income &
+  expenses tab.
 - **Import tab**: import a CSV of income/expense entries for one selected property — map
   Date/Amount/an optional Category column; a positive amount is rent income, negative is an
   expense (check "Flip sign" if your export does the opposite). Imported entries show

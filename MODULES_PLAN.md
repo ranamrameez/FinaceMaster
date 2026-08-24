@@ -700,8 +700,17 @@ what's actually meaningful for each, don't force identical chart sets):
   when there's no explicit "Update NAV" for that date, so a fund with zero manual NAV
   updates still gets a meaningful value line). XIRR itself was already surfaced on the fund
   list/detail before this — this item added the *time-series* view alongside it.
-- **Rentals**: net income by property over time, category breakdown (already computed in
-  `rentalsModule.ts`, not charted), occupancy/vacancy tracking if that data ever gets added.
+- **Rentals**: ✅ built 2026-08-24 — see README Done item 93, the sixth and final module in
+  this wave. A currency picker plus a property picker scope three charts: "Net income by
+  property" (horizontal Bar, new `netIncomeByProperty()` in `lib/calc/rentalsModule.ts`,
+  portfolio-wide across every property in the picked currency, mirroring Personal Loans'
+  "Outstanding by loan" pattern), "By category" (Doughnut) and "Monthly rollup" (Bar) for the
+  selected property — the latter two just chart the already-existing `propertyByCategory()`/
+  `propertyMonthlyRollup()` that already fed plain tables in the Entries tab. Occupancy/
+  vacancy tracking wasn't built — there's no lease-vacancy data model to chart yet (this
+  module's `Property` type tracks one lease at a time, not a history of tenancies).
+
+**All six modules now have an Analytics tab — this item (README item 23) is complete.**
 
 Build order suggestion: start with whichever module the user actually uses most, or go in
 the same build order as the original six modules (Cash → Personal Loans → Banking →

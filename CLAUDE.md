@@ -1817,6 +1817,25 @@ not developer notes) continuously as features ship.
   implicit buy-price fallback. `npx tsc -b` / `npm run test` (234
   tests, 6 new) / `npm run build` all clean. Next per MODULES_PLAN.md
   §11: Rentals — the last module in this wave.
+- **Rentals Analytics built (2026-08-24), sixth and final module of the
+  per-module Analytics wave — see README Done item 93,
+  MODULES_PLAN.md §11. This closes out README item 23 in full: every
+  one of the six non-exchange modules now has an Analytics tab.** A
+  currency picker (multi-currency only) plus a property picker scope
+  three charts: "Net income by property" (horizontal Bar, new
+  `netIncomeByProperty()` in `lib/calc/rentalsModule.ts` — portfolio-
+  wide, one row per property in the picked currency, mirroring Personal
+  Loans' "Outstanding by loan" chart) is the only genuinely new
+  portfolio-wide view; "By category" (Doughnut) and "Monthly rollup"
+  (Bar) for the selected property just chart the already-existing
+  `propertyByCategory()`/`propertyMonthlyRollup()` that already fed
+  plain tables in the Entries tab — this adds a charted view alongside
+  them, doesn't replace the tables. Verified live via Playwright with
+  two seeded USD properties (Apartment 4B net +2,800, Studio 2A net
+  -100): the property bar chart correctly color-coded the negative
+  property red, and switching the property picker correctly updated
+  both other charts to that property's own numbers. `npx tsc -b` /
+  `npm run test` (235 tests, 1 new) / `npm run build` all clean.
 
 ## Live URLs
 

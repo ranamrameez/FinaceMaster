@@ -1514,6 +1514,25 @@ FinanceManager live link:
     the other two still rendered. `npx tsc -b` / `npm run test` (234 tests, 6 new) / `npm run
     build` all clean. **Next per MODULES_PLAN.md §11's suggested order**: Rentals — the last
     module in this wave.
+93. **Rentals Analytics built (2026-08-24), sixth and final module of the per-module Analytics
+    wave — see MODULES_PLAN.md §11. Every module in README item 23 now has an Analytics tab.**
+    A currency picker (multi-currency only) plus a property picker scope three charts. "Net
+    income by property" (horizontal Bar, new `netIncomeByProperty()` in `lib/calc/
+    rentalsModule.ts` — one row per property in the picked currency, green/red colored by
+    sign, mirroring Personal Loans' "Outstanding by loan" chart pattern) is portfolio-wide,
+    not per-property. "By category" (Doughnut) and "Monthly rollup" (Bar, income vs. expense)
+    are both for the selected property — reusing the already-existing `propertyByCategory()`/
+    `propertyMonthlyRollup()` as-is (they already fed the plain tables already present in the
+    Entries tab; this just adds a charted view alongside them, doesn't replace the tables).
+    New tests: `rentalsModule.test.ts` gained 1 case for `netIncomeByProperty` (currency
+    scoping/exclusion). Verified live via Playwright with two seeded USD properties
+    (Apartment 4B net +2,800, Studio 2A net -100): the property bar chart correctly
+    color-coded the negative property red, and switching the property picker correctly
+    updated both the category doughnut and monthly rollup to that property's own numbers
+    (Studio 2A: Rent income 800 / Repairs 900, matching hand-calculated). `npx tsc -b` / `npm
+    run test` (235 tests, 1 new) / `npm run build` all clean. **This closes out README item
+    23 in full** — Cash, Personal Loans, Banking, EMI/Loans, Funds, and Rentals all now have
+    an Analytics tab (Done items 44/45/90/91/92/93).
 
 ## Pending
 
@@ -1547,14 +1566,21 @@ wave" section)**:
     still needs its hidden `Transfer` field exposed in the UI first; EMI has no repayment
     ledger at all to link into (a data-model question). Neither of these is started.
 22. Calculator button remainder: it's module-aware now (hidden outside Stock Exchanges, see
-    Done item 32), but the longer-term goal — a *relevant* calculator per module (an EMI
-    payoff calculator, a Cash quick-math tool, etc.) — needs those modules' own planning tools
-    to exist first. Tracked together with item 23.
-23. Per-module Analytics & Planning for Cash/Banking/Personal Loans/EMI-Loans/Funds/Rentals —
-    each currently has just a ledger + basic totals, no charts or planning tools like
-    QSE/PSX's Analytics page or Trade Planner. Largest item in this wave. **Cash, Personal
-    Loans, Banking, EMI-Loans, and Funds done (see Done items 44/45/90/91/92)**; Rentals is
-    the last module still needing it — see `MODULES_PLAN.md` §11 for its chart/tool sketch.
+    Done item 32) — the longer-term goal of a *relevant* calculator per module (an EMI payoff
+    calculator, a Cash quick-math tool, etc.) is now largely covered by each module's own
+    what-if/planner tools built during item 23's Analytics wave (EMI's extra-payment planner,
+    Personal Loans' payoff planner, Cash/Banking's Planning tab) rather than a dedicated
+    Calculator-button variant per module — no separate work item left here unless a module-
+    specific popup calculator is explicitly requested later.
+23. **Per-module Analytics for Cash/Banking/Personal Loans/EMI-Loans/Funds/Rentals — DONE
+    (2026-08-24), see Done items 44/45/90/91/92/93.** Every one of the six non-exchange
+    modules now has a real Analytics tab with charts, matching QSE/PSX's Analytics page in
+    spirit (fewer charts per module, all fit for that module's own data shape — see
+    `MODULES_PLAN.md` §11 for what each module got). Module-specific "planning" tools
+    (distinct from Analytics) are tracked separately and are not all done: Cash/Banking have
+    the Planning tab (item 43), EMI/Rentals have auto-generated plans (items 59/60), but QSE/
+    PSX's Trade-Planner-style multi-scenario planner has no equivalent yet in Personal Loans/
+    Funds — not tracked as a gap here since nothing in this wave's scope promised one.
 24. New Subscriptions module — recurring payments (streaming, gym, etc.) linked to a paying
     entity (a Bank account or Cash), reusing the cross-entity linking mechanism from item 21
     once solid. Not started — see `MODULES_PLAN.md` §12.

@@ -17,6 +17,21 @@ export function netIncomeByCurrency(properties: Property[], entries: RentalEntry
   return out;
 }
 
+export interface PropertyNetIncomeRow {
+  propertyId: string;
+  name: string;
+  net: number;
+}
+
+/** Net income per property, scoped to one currency — feeds the Analytics
+ * tab's "Net income by property" bar chart (MODULES_PLAN.md §11). Never
+ * blended across currencies, same rule as every other module's totals. */
+export function netIncomeByProperty(properties: Property[], entries: RentalEntry[], currencyCode: string): PropertyNetIncomeRow[] {
+  return properties
+    .filter((p) => p.currencyCode === currencyCode)
+    .map((p) => ({ propertyId: p.id, name: p.name, net: propertyNetIncome(p, entries) }));
+}
+
 /** Category breakdown for one property (rent income nets in as its own
  * "Rent" bucket; expenses net by their own category). */
 export function propertyByCategory(property: Property, entries: RentalEntry[]): Record<string, number> {
