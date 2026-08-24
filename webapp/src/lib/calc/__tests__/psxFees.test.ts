@@ -180,6 +180,23 @@ describe('isNettedLeg / manualSameDay override (README item 7)', () => {
     expect(isNettedLeg(all, sellTx)).toBe(false); // untouched — no override on this leg
   });
 
+  it('documents why manualSameDay must never be set on both legs of a pair: both come out netted', () => {
+    // This is the calc engine correctly honoring the manual override — the
+    // actual bug (fixed 2026-08-24) was in the UI layer, which defaulted a
+    // fresh same-day BUY row to manualSameDay:true and then failed to reset
+    // it back to false when that same row's action was switched to SELL,
+    // so both legs of a real same-day pair got saved with the flag set.
+    // isNettedLeg trusts a manual override unconditionally by design (it's
+    // meant to correct a single leg's date mismatch), so this is exactly
+    // the failure mode that produces: a real user-reported "buy and sell
+    // both have 0 fee" bug once both legs carry the flag.
+    const buyTx: Transaction = { date: day, ticker: 'TEST', action: 'BUY', shares: 20, price: 100, manualSameDay: true };
+    const sellTx: Transaction = { date: day, ticker: 'TEST', action: 'SELL', shares: 20, price: 100, manualSameDay: true };
+    const all = [buyTx, sellTx];
+    expect(isNettedLeg(all, buyTx)).toBe(true);
+    expect(isNettedLeg(all, sellTx)).toBe(true); // both netted — the bug's exact symptom
+  });
+
   it('a manually-netted transaction actually pays levies-only fees, not the full breakdown', () => {
     const buyTx: Transaction = { date: otherDay, ticker: 'TEST', action: 'BUY', shares: 20, price: 100, manualSameDay: true };
     const calcFee = makePSXFeeCalculator(netSettings, [buyTx]);

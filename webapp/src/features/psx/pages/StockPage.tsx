@@ -62,6 +62,10 @@ function TickerTransactions({ ticker }: { ticker: string }) {
     toast(`${action} ${shares} ${ticker} @ ${fmtPrice(price)} logged.`);
     setSharesInput('');
     setPriceInput('');
+    // Re-derive for whatever action/date is still selected, same as the
+    // date/action onChange handlers above — otherwise a stale flag from
+    // this submission could carry into the next one.
+    if (date === today()) setManualSameDay(action === 'BUY');
   };
 
   const startEdit = (i: number, tx: Transaction) => {
@@ -84,7 +88,11 @@ function TickerTransactions({ ticker }: { ticker: string }) {
           onChange={(e) => {
             const next = e.target.value as 'BUY' | 'SELL';
             setAction(next);
-            if (date === today() && next === 'BUY') setManualSameDay(true);
+            // Explicitly reset to false when leaving "BUY dated today" (not
+            // just skip setting true) — a stale true surviving a BUY->SELL
+            // toggle was a real bug: both legs ended up unconditionally
+            // netted (0 fee each) instead of exactly one of them once saved.
+            if (date === today()) setManualSameDay(next === 'BUY');
           }}
         >
           <option value="BUY">Buy</option>
@@ -96,7 +104,7 @@ function TickerTransactions({ ticker }: { ticker: string }) {
           onChange={(e) => {
             const next = e.target.value;
             setDate(next);
-            if (next === today() && action === 'BUY') setManualSameDay(true);
+            if (next === today()) setManualSameDay(action === 'BUY');
           }}
         />
         <input type="number" placeholder="Shares" value={sharesInput} onChange={(e) => setSharesInput(e.target.value)} style={{ width: 90 }} />

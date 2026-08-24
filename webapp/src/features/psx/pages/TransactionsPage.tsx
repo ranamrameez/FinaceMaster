@@ -29,12 +29,18 @@ function emptyRow(): Transaction {
   return { date: today(), ticker: '', action: 'BUY', shares: 0, price: 0, manualSameDay: true };
 }
 
-/** Only ever nudges the flag ON when the row now matches "BUY dated today" —
- * never forces it off, so a manual same-day override the user set for a
- * genuinely backdated trade (the checkbox's other documented use case)
- * survives editing an unrelated field. */
+/** For a row dated today: BUY defaults to netted (nothing to pair against
+ * yet), and SELL is explicitly reset to false so it relies on the real
+ * same-day auto-detection once both legs exist — critical fix, since a
+ * fresh row defaults to BUY+today (netted) and simply toggling its action
+ * to SELL without this reset left the stale `true` in place, so BOTH legs
+ * came out unconditionally netted (0 fee each) instead of exactly one of
+ * them, once the pair was saved. A non-today date is left exactly as the
+ * user set it either way, since a backdated same-day override is a
+ * deliberate manual call this code shouldn't second-guess. */
 function autoSameDay(date: string, action: 'BUY' | 'SELL', current?: boolean): boolean | undefined {
-  return date === today() && action === 'BUY' ? true : current;
+  if (date !== today()) return current;
+  return action === 'BUY';
 }
 
 function TransactionRows() {
