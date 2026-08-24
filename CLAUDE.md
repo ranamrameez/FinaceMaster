@@ -1719,6 +1719,14 @@ not developer notes) continuously as features ship.
   new console errors. Scope: covers Dashboard + the add-transaction
   form; Portfolio's tables, StockPage, and other modules still use the
   old layout/tooltips — tracked as Pending, not silently dropped.
+- **Portfolio page columns regrouped (2026-08-24), continuing the same
+  pattern — see README Done item 86.** The Portfolio Holdings table
+  (QSE+PSX) was the densest table in the app at 11 columns; regrouped to
+  8 by merging Avg Cost+Break-even into "Cost", adding a P/L percentage
+  next to the amount, and collapsing the three separate +1%/+2%/+5%
+  exit-target columns into one stacked "Exit targets" cell. Verified via
+  screenshot with a seeded up/down pair of positions — zero console
+  errors.
 
 ## Live URLs
 

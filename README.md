@@ -1393,6 +1393,16 @@ FinanceManager live link:
     lists still use the old one-fact-per-column layout and native-title-adjacent tooltips —
     tracked as Pending, the same "ship a vertical slice, document the rest" pattern used
     throughout this project rather than a blind app-wide rewrite in one pass.
+86. **Portfolio page columns regrouped (QSE+PSX), continuing Done item 85's pattern.** The
+    Portfolio page's Holdings table was the densest table in the app — 11 columns (Ticker,
+    Trend, Shares, Avg Cost, Market Price, Break-even, Net P/L, +1%/+2%/+5% exit, Status).
+    Regrouped to 8: **Stock** (ticker+name stacked), Trend, Shares, **Cost** (avg cost +
+    break-even, break-even colored against current price), Market Price (editable input,
+    unchanged), **P/L** (amount + percentage, new — percentage wasn't shown here before),
+    **Exit targets** (the three +1%/+2%/+5% columns merged into one stacked cell), Status.
+    Verified live via a Playwright screenshot with two seeded positions (one up, one down):
+    grouping and coloring rendered correctly, zero console errors. `npx tsc -b` / `npm run
+    test` (219 tests, unchanged — UI-only) / `npm run build` all clean.
 
 ## Pending
 
@@ -1521,10 +1531,10 @@ already fixed; the rest tracked here**:
 44. ~~A running-balance column for Cash's ledger and other transaction-style tables.~~ **Done
     — see Done item 84.** Cash/Bank already had one; QSE/PSX Transfers and Personal Loans
     repayments were the real gaps and now have one too.
-45. **Partially done — see Done item 85.** QSE's/PSX's Dashboard Holdings table now groups
-    Ticker+name, Avg cost & Break-even, Current worth+invested+arrow, and P/L amount+% into
-    four columns instead of five separate ones. Still one-fact-per-column: Portfolio's own
-    Holdings/History tables, StockPage's stat-card grids, and every other module's list views.
+45. **Partially done — see Done items 85/86.** QSE's/PSX's Dashboard Holdings AND Portfolio
+    page tables now group related figures (Ticker+name, Cost, Value/Exit targets, P/L) instead
+    of one column per fact. Still one-fact-per-column: Portfolio's own closed-positions
+    (History) table, StockPage's stat-card grids, and every other module's list views.
 46. ~~A raw-vs-concise number display toggle in Appearance settings (1,000 vs 1k).~~ **Done —
     see Done item 83.**
 47. **Partially done — see Done item 85.** New `components/Tooltip.tsx` (bigger box, larger

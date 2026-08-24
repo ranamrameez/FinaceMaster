@@ -12,7 +12,7 @@ import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
 import { usePSXDerived } from '../hooks/usePSXDerived';
 import { usePSXStockData } from '../hooks/usePSXStockData';
 
-type SortCol = 'ticker' | 'shares' | 'avgCost' | 'market' | 'be' | 'net' | 't1' | 't2' | 't3' | 'status';
+type SortCol = 'ticker' | 'shares' | 'avgCost' | 'market' | 'net' | 'status';
 
 function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }) {
   const { workbook, positions, calcFee } = usePSXDerived();
@@ -33,6 +33,7 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
           const gross = hasMarket ? mp * p.shares : 0;
           const sellFee = hasMarket ? calcFee(gross, false, { shares: p.shares }) : 0;
           const net = hasMarket ? gross - sellFee - p.invested : NaN;
+          const netPct = hasMarket && p.invested > 0 ? (net / p.invested) * 100 : NaN;
           const be = breakEvenPrice(p.invested, p.shares, feePct, tick, calcFee);
           const target = (pct: number) => breakEvenPrice(p.invested * (1 + pct / 100), p.shares, feePct, tick, calcFee);
           const sparkData = getDailyPriceHistory(p.ticker, workbook.priceHistory).map((pt) => pt.price);
@@ -52,7 +53,7 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
 
           return {
             ticker: p.ticker, shares: p.shares, invested: p.invested, avgCost, mp, hasMarket, sparkData,
-            be, net, t1: target(1), t2: target(2), t3: target(5),
+            be, net, netPct, t1: target(1), t2: target(2), t3: target(5),
             statusRank, statusLabel, statusClass,
           };
         }),
@@ -64,11 +65,7 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
       case 'shares': return r.shares;
       case 'avgCost': return r.avgCost;
       case 'market': return r.hasMarket ? r.mp : -Infinity;
-      case 'be': return r.be;
       case 'net': return Number.isFinite(r.net) ? r.net : -Infinity;
-      case 't1': return r.t1;
-      case 't2': return r.t2;
-      case 't3': return r.t3;
       case 'status': return r.statusRank;
       default: return r.ticker;
     }
@@ -82,16 +79,13 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
       <table>
         <thead>
           <tr>
-            <Th col="ticker">Ticker</Th>
+            <Th col="ticker">Stock</Th>
             <th>Trend</th>
             <Th col="shares">Shares</Th>
-            <Th col="avgCost">Avg Cost</Th>
+            <Th col="avgCost">Cost</Th>
             <Th col="market">Market Price</Th>
-            <Th col="be">Break-even</Th>
-            <Th col="net">Net P/L</Th>
-            <Th col="t1">+1% exit</Th>
-            <Th col="t2">+2% exit</Th>
-            <Th col="t3">+5% exit</Th>
+            <Th col="net">P/L</Th>
+            <th>Exit targets</th>
             <Th col="status">Status</Th>
           </tr>
         </thead>
@@ -99,11 +93,19 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
           {sorted.map((r) => (
             <tr key={r.ticker} style={{ cursor: 'pointer' }}>
               <td onClick={() => onSelect(r.ticker)} style={{ maxWidth: 190 }}>
-                {r.ticker} <span className="footer-note" style={{ display: 'inline-block', maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'bottom' }}>{tickerNames[r.ticker] ? shortenCompanyName(tickerNames[r.ticker]) : ''}</span>
+                <div style={{ fontWeight: 600 }}>{r.ticker}</div>
+                <div className="footer-note" style={{ maxWidth: 170, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {tickerNames[r.ticker] ? shortenCompanyName(tickerNames[r.ticker]) : ''}
+                </div>
               </td>
               <td onClick={(e) => e.stopPropagation()} style={{ width: 82 }}><Sparkline data={r.sparkData} formatValue={fmtPrice} /></td>
               <td onClick={() => onSelect(r.ticker)}>{fmt(r.shares, 0)}</td>
-              <td onClick={() => onSelect(r.ticker)}>{fmtPrice(r.avgCost)}</td>
+              <td onClick={() => onSelect(r.ticker)}>
+                <div>{fmtPrice(r.avgCost)}</div>
+                <div className="footer-note" style={{ color: r.hasMarket ? (r.mp >= r.be ? 'var(--profit)' : 'var(--loss)') : undefined }}>
+                  BE {fmtPrice(r.be)}
+                </div>
+              </td>
               <td onClick={(e) => e.stopPropagation()}>
                 <input
                   type="number"
@@ -125,13 +127,13 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
                   }}
                 />
               </td>
-              <td onClick={() => onSelect(r.ticker)} className={r.hasMarket ? (r.mp >= r.be ? 'pill-buy' : 'pill-sell') : ''}>{fmtPrice(r.be)}</td>
               <td onClick={() => onSelect(r.ticker)} className={Number.isFinite(r.net) ? (r.net >= 0 ? 'pill-buy' : 'pill-sell') : ''}>
-                {Number.isFinite(r.net) ? fmtMoney(r.net, currency) : '—'}
+                <div>{Number.isFinite(r.net) ? fmtMoney(r.net, currency) : '—'}</div>
+                <div className="footer-note">{Number.isFinite(r.netPct) ? `${r.netPct >= 0 ? '+' : ''}${r.netPct.toFixed(1)}%` : ''}</div>
               </td>
-              <td onClick={() => onSelect(r.ticker)}>{fmtPrice(r.t1)}</td>
-              <td onClick={() => onSelect(r.ticker)}>{fmtPrice(r.t2)}</td>
-              <td onClick={() => onSelect(r.ticker)}>{fmtPrice(r.t3)}</td>
+              <td onClick={() => onSelect(r.ticker)} className="footer-note" style={{ whiteSpace: 'nowrap' }}>
+                +1% {fmtPrice(r.t1)}<br />+2% {fmtPrice(r.t2)}<br />+5% {fmtPrice(r.t3)}
+              </td>
               <td onClick={() => onSelect(r.ticker)} className={r.statusClass}>{r.statusLabel}</td>
             </tr>
           ))}

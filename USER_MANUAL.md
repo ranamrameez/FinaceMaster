@@ -91,8 +91,10 @@ underneath).
 ## 5. Portfolio
 
 Two tabs:
-- **Holdings** — every open position: shares held, average cost, current value, unrealized
-  P/L, and (PSX only) an estimated CGT-if-sold-now figure.
+- **Holdings** — every open position, grouped into scannable columns: **Stock** (ticker +
+  name), Shares, **Cost** (avg cost with break-even underneath, colored against the current
+  market price), Market Price (editable), **P/L** (amount + percentage), **Exit targets**
+  (the price you'd need to hit a +1%/+2%/+5% profit, stacked in one cell), and Status.
 - **History** — every closed position (fully sold tickers), with realized P/L.
 
 Click any ticker to open its dedicated stock page (price chart, buy/sell history, and —
