@@ -1009,8 +1009,16 @@
   html[data-color^="material-"] textarea{background:var(--panel-2);color:var(--text);border-color:var(--border);}
   html[data-color^="material-"] .navbtn{color:var(--muted);}
   html[data-color^="material-"] .navbtn.active{background:var(--accent-soft);color:var(--accent);}
-  html[data-color^="material-"] .section-title .tag,
-  html[data-color^="material-"] .chip{background:var(--accent-soft);color:var(--accent);}
+  html[data-color^="material-"] .section-title .tag{background:var(--accent-soft);color:var(--accent);}
+  /* User-reported (item 6/13): active vs. inactive chips look identical on
+     every Material theme. Root cause: this rule (unlike its sibling
+     .chip:not(.active) rules just above and at the "FINAL SPECIFICITY FIX"
+     section below) never excluded .active — and its extra `html` type
+     selector gives it a higher specificity than the plain two-class
+     `.chip.active` rule (a tied class-count is broken by the type-selector
+     count), so it silently overrode .chip.active's solid fill back to the
+     same soft tint every inactive chip gets, on all 7 material-* themes. */
+  html[data-color^="material-"] .chip:not(.active){background:var(--accent-soft);color:var(--accent);}
   html[data-color^="material-"] .btn.primary{background:color-mix(in srgb, var(--accent) 65%, #000);color:#fff;}
 
   /* ================================================================

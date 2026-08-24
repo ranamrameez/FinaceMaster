@@ -2013,6 +2013,24 @@ FinanceManager live link:
      read correctly) plus a 23-page console-error sweep. `npx tsc -b` / `npm run test` (255
      tests, unchanged — no calc/store logic touched) / `npm run build` all clean.
 
+110. **Chip active/inactive contrast fixed on all 7 Material themes — item 6/13 of the same
+     batch (2026-08-24).** The user's report ("chips aren't distinguished well in all themes
+     except Classic") pointed at a real leftover bug from an earlier session's own fix (README
+     item 53's original fix added `.chip:not(.active)` exclusions to the per-theme override
+     rules that were clobbering `.chip.active`'s solid fill) — one sibling rule,
+     `html[data-color^="material-"] .chip{background:var(--accent-soft);color:var(--accent);}`,
+     was missed. Its extra `html` type selector gives it higher specificity than the plain
+     two-class `.chip.active` rule (tied class-count broken by type-selector count), so it
+     silently overrode `.chip.active` back to the same soft tint every inactive chip gets, on
+     all 7 `material-*` themes — the non-Material, non-wine themes (ocean/forest/violet/
+     sunset) were already fine, since their own override rule never touched background/color
+     in the first place. Fixed by adding the same `:not(.active)` exclusion. Verified via
+     Playwright computed-style checks (not just a screenshot) across light Material Blue, dark
+     Material Blue, and light Material Crimson — active vs. inactive background colors are now
+     genuinely distinct in all three, plus a before/after screenshot comparison. `npx tsc -b` /
+     `npm run test` (255 tests, unchanged) / `npm run build` all clean; a 23-page console-error
+     sweep found zero regressions.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`

@@ -2186,10 +2186,23 @@ not developer notes) continuously as features ship.
   QSE/PSX sidebar nav item, page title, and tab labels (plus the per-stock "Transactions" tab
   → "Trades") to disambiguate from Bank's own "Transactions" tab, which really is money
   transactions, not stock trades, and was left untouched. `npx tsc -b` / `npm run test` (255
-  tests, unchanged) / `npm run build` all clean. **Still open, not yet started**: chip
-  contrast on non-Classic themes, console-density differentiation, Calculator button toast/
-  icon-only treatment, icon-only buttons with tooltips app-wide, removing single-child nested
-  Settings cards, and a batch of larger deferred items (multi-theme stat-card-color audit,
+  tests, unchanged) / `npm run build` all clean.
+- **Chip contrast fixed on all 7 Material themes (2026-08-24) — see README Done item 110.**
+  Real root cause, not a design tweak: one `html[data-color^="material-"] .chip{...}` rule
+  (no `data-theme` in its selector) was missed when `:not(.active)` exclusions were added to
+  its sibling rules in an earlier session — its extra `html` type selector still out-specifies
+  `.chip.active`'s plain two-class selector (a tied class-count is broken by type-selector
+  count), so it silently clobbered the active fill back to the inactive tint on every Material
+  theme. **Lesson for any future "I added `:not(.active)` and it's still broken" moment: grep
+  for every rule setting the same property on the same base selector, not just the ones that
+  look obviously related** — this is the second time a same-shaped bug (a base-selector rule
+  the earlier fix pass didn't know about) was the real cause this session (see the checkbox-
+  label uppercase bug above). Verified via Playwright computed-style checks across 3 themes
+  (light/dark Material Blue, light Material Crimson), not just a screenshot. `npx tsc -b` /
+  `npm run test` (255 tests, unchanged) / `npm run build` all clean. **Still open, not yet
+  started**: console-density differentiation, Calculator button toast/icon-only treatment,
+  icon-only buttons with tooltips app-wide, removing single-child nested Settings cards, and a
+  batch of larger deferred items (multi-theme stat-card-color audit,
   Ticker+logo+name/Cost/Value/P-L column grouping standard everywhere, side-by-side layout
   instead of scrolling, full Portfolio page overhaul, using unused right-side page space) to
   be documented as scoped README Pending items rather than attempted blind. Continue working
