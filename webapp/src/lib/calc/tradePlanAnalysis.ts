@@ -56,6 +56,16 @@ export function analyzeTradePlanByTicker(
   calcFee: FeeCalculator,
   feePct: number,
   tick: number,
+  /** Fee for one specific pending leg. Defaults to a plain standalone-leg
+   * calculation (matches the old behavior); callers that want same-day
+   * buy/sell legs within a plan to net against each other (PSX's
+   * commission-netting rule) should pass a calculator that's aware of the
+   * plan's *other* legs — see `TradePlannerPage.tsx`'s `calcLegFee`. Without
+   * this, a plan with a same-day buy AND sell of the same ticker silently
+   * over-estimates fees by charging full commission on both legs instead of
+   * netting the smaller side, per README item 5's "buy & sell aren't
+   * linked" bug report. */
+  calcLegFee: (leg: TradePlanLeg) => number = (l) => calcFee(l.shares * l.price, l.action === 'BUY', { shares: l.shares }),
 ): TradePlanTickerSummary[] {
   const tickers = [...new Set(legs.map((l) => l.ticker))];
   return tickers.map((ticker) => {
@@ -67,7 +77,7 @@ export function analyzeTradePlanByTicker(
     const executedSold = tickerLegs.filter((l) => l.action === 'SELL' && l.executed).reduce((s, l) => s + l.shares, 0);
 
     const plannedBought = pendingBuys.reduce((s, l) => s + l.shares, 0);
-    const pendingBuyCost = pendingBuys.reduce((s, l) => s + l.shares * l.price + calcFee(l.shares * l.price, true, { shares: l.shares }), 0);
+    const pendingBuyCost = pendingBuys.reduce((s, l) => s + l.shares * l.price + calcLegFee(l), 0);
 
     const baseShares = (real?.shares ?? 0) + plannedBought;
     const baseCost = (real?.invested ?? 0) + pendingBuyCost;
@@ -76,7 +86,7 @@ export function analyzeTradePlanByTicker(
 
     const plannedSold = pendingSells.reduce((s, l) => s + l.shares, 0);
     const realizedPL = pendingSells.reduce((sum, l) => {
-      const proceeds = l.shares * l.price - calcFee(l.shares * l.price, false, { shares: l.shares });
+      const proceeds = l.shares * l.price - calcLegFee(l);
       const costOfSold = l.shares * avgCost;
       return sum + (proceeds - costOfSold);
     }, 0);

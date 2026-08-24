@@ -6,10 +6,11 @@ import { toast } from '../../../components/Toast';
 import { Field, TextInput } from '../../../components/ui/Field';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { analyzeTradePlanByTicker, whatIfExit, type TradePlanTickerSummary } from '../../../lib/calc/tradePlanAnalysis';
+import { makePSXFeeCalculator } from '../../../lib/calc/psxFees';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
-import type { TradePlan, TradePlanLeg } from '../../../types/workbook';
+import type { Transaction, TradePlan, TradePlanLeg } from '../../../types/workbook';
 import { usePSXDerived } from '../hooks/usePSXDerived';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -189,7 +190,41 @@ function PlanCard({ plan }: { plan: TradePlan }) {
   const ensureSignedIn = useEnsureSignedIn();
   const { workbook, calcFee, rows } = usePSXDerived();
   const currency = workbook.settings.currency;
-  const tickerAnalysis = analyzeTradePlanByTicker(plan.legs, rows, calcFee, workbook.settings.feePct, workbook.settings.tick);
+
+  // Fee estimates for legs still pending need to know about this plan's
+  // OTHER pending legs (and any real same-day transaction) to apply PSX's
+  // same-day commission-netting rule correctly — the plain `calcFee` above
+  // only sees real, already-logged transactions, so a plan with e.g. a
+  // same-day BUY and SELL of the same ticker would otherwise charge full
+  // commission on both legs instead of netting the smaller side (README
+  // item 5). Built once per render from every not-yet-executed leg in this
+  // plan, layered on top of the real transaction list.
+  const pendingLegTxs: Transaction[] = plan.legs
+    .filter((l) => !l.executed)
+    .map((l) => ({ date: l.date || today(), ticker: l.ticker, action: l.action, shares: l.shares, price: l.price }));
+  const planFeeCalc = makePSXFeeCalculator(workbook.settings, [...workbook.transactions, ...pendingLegTxs]);
+  const calcLegFee = (leg: TradePlanLeg) =>
+    planFeeCalc(leg.shares * leg.price, leg.action === 'BUY', {
+      shares: leg.shares,
+      tx: { date: leg.date || today(), ticker: leg.ticker, action: leg.action, shares: leg.shares, price: leg.price },
+    });
+  // An executed leg already created a real Transaction — its fee should
+  // come from that transaction's own live data (and the real calcFee,
+  // which already sees every real same-day transaction), resolved by the
+  // stable link `executeTradePlanLeg` stores. Falls back to the leg's own
+  // frozen snapshot when there's no link yet (legs executed before this
+  // link existed) or the linked transaction was deleted.
+  const resolveExecutedTx = (leg: TradePlanLeg): Transaction | null =>
+    leg.executedTransactionId ? (workbook.transactions.find((t) => t.id === leg.executedTransactionId) ?? null) : null;
+  const legFee = (leg: TradePlanLeg): number => {
+    if (leg.executed) {
+      const tx = resolveExecutedTx(leg);
+      if (tx) return calcFee(tx.shares * tx.price, tx.action === 'BUY', { shares: tx.shares, tx });
+    }
+    return calcLegFee(leg);
+  };
+
+  const tickerAnalysis = analyzeTradePlanByTicker(plan.legs, rows, calcFee, workbook.settings.feePct, workbook.settings.tick, calcLegFee);
   type AnalysisCol = 'ticker' | 'avgCost' | 'breakEven' | 'effectiveShares' | 'realizedPL';
   const analysisSortValue = (t: (typeof tickerAnalysis)[number], col: AnalysisCol): number | string =>
     col === 'ticker' ? t.ticker : t[col];
@@ -257,9 +292,26 @@ function PlanCard({ plan }: { plan: TradePlan }) {
     toast('Logged to transaction history.');
   };
 
+  // For an executed leg, "current" values come from its linked transaction
+  // (live) rather than the leg's own frozen-at-execution snapshot — kept
+  // consistent everywhere a leg's shares/price feed into a total or a sort,
+  // not just the row display, so nothing derived here goes stale relative
+  // to an edit made in the Transactions page.
+  const resolvedLegValues = (leg: TradePlanLeg): { date: string; ticker: string; action: 'BUY' | 'SELL'; shares: number; price: number } => {
+    const tx = leg.executed ? resolveExecutedTx(leg) : null;
+    if (tx) return tx;
+    return { date: leg.date || today(), ticker: leg.ticker, action: leg.action, shares: leg.shares, price: leg.price };
+  };
+
   const doneCount = plan.legs.filter((l) => l.executed).length;
-  const totalBuy = plan.legs.reduce((s, l) => s + (l.action === 'BUY' ? l.shares * l.price : 0), 0);
-  const totalSell = plan.legs.reduce((s, l) => s + (l.action === 'SELL' ? l.shares * l.price : 0), 0);
+  const totalBuy = plan.legs.reduce((s, l) => {
+    const v = resolvedLegValues(l);
+    return s + (v.action === 'BUY' ? v.shares * v.price : 0);
+  }, 0);
+  const totalSell = plan.legs.reduce((s, l) => {
+    const v = resolvedLegValues(l);
+    return s + (v.action === 'SELL' ? v.shares * v.price : 0);
+  }, 0);
 
   // Sorting reorders *display* only — every action (edit/remove/mark done)
   // still addresses the leg by its original array index (`originalIndex`),
@@ -269,15 +321,16 @@ function PlanCard({ plan }: { plan: TradePlan }) {
   const legRows: LegRow[] = plan.legs.map((leg, originalIndex) => ({ leg, originalIndex }));
   type LegCol = 'date' | 'ticker' | 'action' | 'shares' | 'price' | 'amount' | 'fee' | 'status';
   const legSortValue = (r: LegRow, col: LegCol): number | string => {
+    const v = resolvedLegValues(r.leg);
     switch (col) {
-      case 'ticker': return r.leg.ticker;
-      case 'action': return r.leg.action;
-      case 'shares': return r.leg.shares;
-      case 'price': return r.leg.price;
-      case 'amount': return r.leg.shares * r.leg.price;
-      case 'fee': return calcFee(r.leg.shares * r.leg.price, r.leg.action === 'BUY', { shares: r.leg.shares });
+      case 'ticker': return v.ticker;
+      case 'action': return v.action;
+      case 'shares': return v.shares;
+      case 'price': return v.price;
+      case 'amount': return v.shares * v.price;
+      case 'fee': return legFee(r.leg);
       case 'status': return r.leg.executed ? 1 : 0;
-      default: return r.leg.date || '';
+      default: return v.date || '';
     }
   };
   const { sorted: sortedLegRows, Th: LegTh } = useSortableRows(legRows, legSortValue, 'date', 'asc');
@@ -409,16 +462,28 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                     <button className="btn secondary small" onClick={() => setEditLegIndex(null)}>Cancel</button>
                   </td>
                 </tr>
-              ) : (
+              ) : (() => {
+                // For an executed leg, show the LINKED transaction's live
+                // data (date/shares/price) so an edit made afterward in the
+                // Transactions page or per-stock page is reflected here too,
+                // instead of the leg's own frozen-at-execution snapshot
+                // going stale (README bug report: "plan and transactions
+                // are not synced"). Falls back to the leg's own snapshot
+                // when there's no link (executed before this fix existed)
+                // or the linked transaction was deleted.
+                const linkedTx = leg.executed ? resolveExecutedTx(leg) : null;
+                const display = linkedTx ?? leg;
+                const stale = leg.executed && !linkedTx;
+                return (
                 <tr key={i}>
-                  <td>{leg.date}</td>
-                  <td>{leg.ticker}</td>
-                  <td className={leg.action === 'BUY' ? 'pill-buy' : 'pill-sell'}>{leg.action}</td>
-                  <td>{fmt(leg.shares, 0)}</td>
-                  <td>{fmtPrice(leg.price)}</td>
-                  <td>{fmtMoney(leg.shares * leg.price, currency)}</td>
-                  <td>{fmtMoney(calcFee(leg.shares * leg.price, leg.action === 'BUY', { shares: leg.shares }), currency)}</td>
-                  <td>{leg.executed ? <span className="pill-buy">Executed</span> : <span className="footer-note">Planned</span>}</td>
+                  <td>{display.date}{stale && <span className="footer-note" title="No linked transaction found — showing the plan's original snapshot from when this was marked done."> *</span>}</td>
+                  <td>{display.ticker}</td>
+                  <td className={display.action === 'BUY' ? 'pill-buy' : 'pill-sell'}>{display.action}</td>
+                  <td>{fmt(display.shares, 0)}</td>
+                  <td>{fmtPrice(display.price)}</td>
+                  <td>{fmtMoney(display.shares * display.price, currency)}</td>
+                  <td>{fmtMoney(legFee(leg), currency)}</td>
+                  <td>{leg.executed ? <span className="pill-buy" title={linkedTx ? 'Synced with its transaction — edit it from the Transactions page.' : undefined}>Executed</span> : <span className="footer-note">Planned</span>}</td>
                   <td>
                     {!leg.executed && (
                       <>
@@ -429,7 +494,8 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                     )}
                   </td>
                 </tr>
-              ),
+                );
+              })(),
             )}
             {!plan.legs.length && (
               <tr><td colSpan={9} className="footer-note">No legs left in this plan.</td></tr>

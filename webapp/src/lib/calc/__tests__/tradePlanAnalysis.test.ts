@@ -91,6 +91,21 @@ describe('analyzeTradePlanByTicker', () => {
     // Only the pending sell (20 @ 18) counts toward realizedPL, against avgCost 10.
     expect(summary.realizedPL).toBeCloseTo(20 * 18 - 20 * 10, 5);
   });
+
+  it('uses the calcLegFee override, not the plain calcFee, for each pending leg (README item 5: same-day buy/sell legs must be able to net against each other)', () => {
+    // A same-day BUY+SELL pair should net commission on the smaller side —
+    // simulate that by giving the buy leg a real fee and the sell leg a
+    // netted (zero) fee via calcLegFee, and confirm the analysis actually
+    // used those per-leg values rather than falling back to calcFee (which
+    // would charge the flat 1% fee on both, unaware they're a pair).
+    const legs = [leg({ action: 'BUY', shares: 100, price: 10 }), leg({ action: 'SELL', shares: 100, price: 15 })];
+    const calcLegFee = (l: TradePlanLeg) => (l.action === 'BUY' ? 10 : 0); // sell leg netted to 0
+    const [summary] = analyzeTradePlanByTicker(legs, [], flatFee, 1, 0.01, calcLegFee);
+    // Buy cost basis: 1000 + 10 (from calcLegFee, not flatFee's own 1%) = 1010
+    expect(summary.avgCost).toBeCloseTo(10.1, 5);
+    // Sell proceeds: 1500 - 0 (netted) = 1500; cost of sold = 100*10.10 = 1010
+    expect(summary.realizedPL).toBeCloseTo(1500 - 1010, 5);
+  });
 });
 
 describe('whatIfExit', () => {

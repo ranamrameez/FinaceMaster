@@ -1262,6 +1262,43 @@ FinanceManager live link:
     hand-calculated expectations, zero console errors. `npx tsc -b` / `npm run test` (206
     tests, unchanged — no new calc logic, just surfacing existing transaction data) / `npm run
     build` all clean.
+81. **Critical, user-reported: "planned trade item marked as done, then updated in the
+    transactions but plan and transactions are not synced" + "unless buy & sell are linked,
+    fee calc will be buggy" + "fee calculation selectors need labels," three related fixes.**
+    (a) `executeTradePlanLeg` ("Mark as done") used to copy a leg's date/ticker/action/
+    shares/price into a brand-new Transaction and never link the two records again — the
+    Trade Planner kept showing the leg's own frozen-at-execution snapshot forever, so editing
+    the real transaction afterward (in Transactions or a per-stock page) never showed up back
+    in the plan. Fixed by retrofitting a stable `id` onto `Transaction` (same pattern as
+    `Transfer.id` before it — optional, backfilled onto existing data by
+    `createWorkbookStore.ts`'s `normalize()`) and a new `TradePlanLeg.executedTransactionId`
+    set at execution time; the Trade Planner now resolves an executed leg's displayed date/
+    ticker/action/shares/price/fee (and the plan's totals) from the **live** linked
+    transaction, falling back to the leg's own snapshot only if no link exists (legs executed
+    before this fix) or the linked transaction was deleted (marked with a `*`). (b) Separately,
+    a real bug in the fee *estimate* for still-pending legs: `analyzeTradePlanByTicker`'s
+    per-leg fee always used a plain standalone-leg calculation, with no awareness of the
+    plan's *other* legs — so a plan with a same-day BUY and SELL of the same ticker (the
+    exact "trade cycle" the planner exists for) charged full commission on both legs instead
+    of PSX's real same-day-netting rule (commission on the larger-quantity side only, the
+    smaller side pays levies only). Fixed with a new `calcLegFee` parameter (defaults to the
+    old plain behavior, so QSE/other callers are unaffected) — `TradePlannerPage.tsx` builds
+    a same-day-aware calculator from the plan's own not-yet-executed legs layered on top of
+    the real transaction log, so legs within one plan now correctly net against each other
+    exactly like real transactions do. (c) `FeeModeControl`'s Auto/Semi/Manual selector and
+    its conditional Netted-checkbox/Fee-amount field previously relied only on `title` hover
+    tooltips to explain themselves — invisible on mobile and easy to miss on desktop; each
+    now has a visible `Field` label ("Fee mode," "Same-day netted?," "Fee amount"), and the
+    checkbox's own text switches between "Netted (levies only)" and "Charged (full fee)"
+    instead of a bare "Netted" that gave no clue what unchecking it meant. Verified live via
+    Playwright: a same-day BUY(100)/SELL(50) pair in an unsaved plan correctly showed the BUY
+    leg (larger qty) charged 23.00 PKR and the SELL leg netted to 0.00 PKR; marking the BUY
+    leg done, then editing its linked transaction's shares/price from the Transactions page
+    (100→150 shares, 100→110 price, no sign-in needed to edit an existing transaction),
+    correctly updated the Trade Planner's row live on next view — zero console errors either
+    way. New tests: `createWorkbookStore.test.ts` (id retrofit + leg-link-stays-live-after-
+    edit), `tradePlanAnalysis.test.ts` (calcLegFee override actually used). `npx tsc -b` /
+    `npm run test` (209 tests, 4 new) / `npm run build` all clean.
 
 ## Pending
 
@@ -1383,6 +1420,27 @@ already fixed; the rest tracked here**:
     look: Portfolio pages, StockPage's Summary tab, and every non-exchange module's landing
     stats (Cash, Bank, Personal Loans, EMI, Funds, Rentals). Not started — each just needs a
     sensible per-stat color assignment, same pattern as the Dashboard grids.
+
+**User feedback, 2026-08-24 (mid-session, "preferred tasks" list) — not started yet**:
+
+44. A running-balance column for Cash's ledger and other transaction-style tables (Bank,
+    Transfers) — currently shows per-row amounts only, no cumulative running total per row.
+    Bank's `accountRunningLedger` already computes this shape for its own account-detail
+    modal; the ask here is to surface a running balance directly in the main list views too.
+45. "One column = one fact" isn't a real constraint — group naturally-related info into a
+    single column instead of one column per field, e.g. Ticker+logo+company name together,
+    Avg cost & Break-even together, P/L amount & percentage together, Current worth + invested
+    + an up/down arrow together. Denser, more scannable tables. Not started — a real table
+    redesign pass across Portfolio/Dashboard/Holdings tables, not a one-file fix.
+46. A raw-vs-concise number display toggle in Appearance settings (1,000 vs 1k) — Done item 56
+    made compact formatting (`fmtMoneyCompact`) the *only* mode for stat-card values; this asks
+    for it to be a user preference instead of a fixed choice, with a way to see full precision
+    without hovering for the tooltip.
+47. Tooltips are still hard to notice/read — `title` attribute hover tooltips are small, easy
+    to miss, and invisible on mobile/touch entirely (this exact gap is why Done item 81's
+    `FeeModeControl` fix added visible labels instead of relying on `title` alone). Needs a
+    real popup-style tooltip component (bigger box, larger font, works on tap not just hover)
+    used everywhere a `title` tooltip currently stands in for one.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

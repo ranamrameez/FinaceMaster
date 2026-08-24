@@ -76,6 +76,7 @@ export function createWorkbookStore<TWorkbook extends BaseWorkbook<unknown>>(
   function normalize(wb: TWorkbook): TWorkbook {
     return {
       ...wb,
+      transactions: wb.transactions.map((t) => (t.id ? t : { ...t, id: crypto.randomUUID() })),
       transfers: wb.transfers.map((t) => (t.id ? t : { ...t, id: crypto.randomUUID() })),
       tradePlans: wb.tradePlans.map((p) => (p.legs ? p : { ...p, legs: [] })),
     };
@@ -195,6 +196,7 @@ export function createWorkbookStore<TWorkbook extends BaseWorkbook<unknown>>(
           const leg = plan?.legs[legIndex];
           if (!plan || !leg || leg.executed) return wb;
           const tx: Transaction = {
+            id: crypto.randomUUID(),
             date: leg.date || new Date().toISOString().slice(0, 10),
             ticker: leg.ticker,
             action: leg.action,
@@ -205,7 +207,9 @@ export function createWorkbookStore<TWorkbook extends BaseWorkbook<unknown>>(
             ...wb,
             transactions: [...wb.transactions, tx],
             tradePlans: wb.tradePlans.map((p) =>
-              p.id === planId ? { ...p, legs: p.legs.map((l, i) => (i === legIndex ? { ...l, executed: true } : l)) } : p,
+              p.id === planId
+                ? { ...p, legs: p.legs.map((l, i) => (i === legIndex ? { ...l, executed: true, executedTransactionId: tx.id } : l)) }
+                : p,
             ),
           };
         }),

@@ -1642,6 +1642,30 @@ not developer notes) continuously as features ship.
   Verified live: seeded two-buy/two-sell OGDC position showed Avg sell
   125.00, Last sell 130.00, Median (fair value) 120.00 — all correct,
   zero console errors.
+- **Trade Planner leg/transaction sync + same-day fee linking + fee-mode
+  labels, three related fixes (2026-08-24) — see README Done item 81.**
+  (a) "Mark as done" copied a leg's data into a new Transaction but never
+  linked the two records again, so editing the transaction afterward
+  never showed up back in the plan — a real, reported sync bug. Fixed by
+  retrofitting a stable `id` onto `Transaction` (same pattern as
+  `Transfer.id`, backfilled by `createWorkbookStore.ts`'s `normalize()`)
+  and a new `TradePlanLeg.executedTransactionId`; the Trade Planner now
+  resolves an executed leg's displayed values from the **live** linked
+  transaction, falling back to the leg's own snapshot only if unlinked or
+  the transaction was deleted. (b) Separately, `analyzeTradePlanByTicker`'s
+  per-leg fee estimate had no awareness of a plan's *other* legs, so a
+  same-day BUY+SELL pair within one plan (the core "trade cycle" use case)
+  was charged full commission on both legs instead of PSX's real
+  same-day-netting rule. Fixed with a new `calcLegFee` parameter
+  (defaults to the old behavior) — `TradePlannerPage.tsx` builds a
+  same-day-aware fee calculator from the plan's own pending legs layered
+  on the real transaction log. (c) `FeeModeControl`'s fields relied only
+  on hover `title` tooltips — invisible on mobile — now have visible
+  `Field` labels. Verified live via Playwright: same-day BUY(100)/SELL(50)
+  correctly showed BUY charged 23.00 PKR and SELL netted to 0.00 PKR;
+  editing a marked-done leg's linked transaction (100→150 shares,
+  100→110 price) correctly updated the plan's row on next view. Zero
+  console errors.
 
 ## Live URLs
 

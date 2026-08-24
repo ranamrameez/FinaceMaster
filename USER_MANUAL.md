@@ -258,8 +258,13 @@ For planning multi-leg trades ahead of time, separate from the one-shot Trade Ca
    before committing to one.
 5. **Mark a leg done** once you've actually executed that trade — this logs it straight
    into your real Transaction history (with an estimated fee shown per leg beforehand) so
-   you don't have to re-type it into the Transactions tab. The leg stays in the plan as a
-   record, separate from the transaction it created.
+   you don't have to re-type it into the Transactions tab. Once executed, the plan row stays
+   **synced** to that transaction — if you later edit its shares/price/date from the
+   Transactions tab or a stock page, the plan row updates to match automatically, so you're
+   never looking at stale data in the planner. A pending leg's estimated fee also correctly
+   accounts for any other same-day buy/sell of the same ticker elsewhere in the same plan
+   (PSX's same-day netting rule — the larger side pays commission, the smaller side pays
+   government levies only), not just that one leg in isolation.
 6. **Delete a plan** any time — this only removes the plan, not any transactions already
    logged from marking legs done.
 7. **Collapse** a plan (button in its header) to shrink it down to just the name/summary line

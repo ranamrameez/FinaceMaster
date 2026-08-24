@@ -1,3 +1,4 @@
+import { Field } from './Field';
 import type { Transaction } from '../../types/workbook';
 
 export type FeeMode = 'auto' | 'semi' | 'manual';
@@ -22,7 +23,13 @@ export function feeModeFor(tx: Pick<Transaction, 'manualSameDay' | 'feeOverride'
  * counts as the netted side, but the amount is still computed from
  * Settings), and **Manual** (you type the exact fee from your statement,
  * bypassing computation entirely). Switching modes clears whichever
- * field the new mode doesn't use, so the two can never conflict. */
+ * field the new mode doesn't use, so the two can never conflict.
+ *
+ * Every field is explicitly labeled (via `Field`), not just given a
+ * `title` tooltip — a second round of feedback pointed out that a hover
+ * tooltip never shows on mobile/touch and isn't obvious even on desktop,
+ * so what each field actually does needs to be visible up front, not
+ * discovered by hovering. */
 export function FeeModeControl({
   mode,
   onModeChange,
@@ -39,37 +46,40 @@ export function FeeModeControl({
   onFeeOverrideChange: (value: number | undefined) => void;
 }) {
   return (
-    <div className="row" style={{ gap: 6, alignItems: 'center', flex: '0 0 auto' }}>
-      <select
-        value={mode}
-        onChange={(e) => onModeChange(e.target.value as FeeMode)}
-        title="Auto: fee fully computed from Settings, same-day netting auto-detected. Semi: you decide whether this leg is the same-day-netted one, amount still computed. Manual: type the exact fee from your statement."
-        style={{ width: 92 }}
-      >
-        <option value="auto">Auto fee</option>
-        <option value="semi">Semi</option>
-        <option value="manual">Manual fee</option>
-      </select>
-      {mode === 'semi' && (
-        <label
-          className="footer-note"
-          style={{ display: 'flex', alignItems: 'center', gap: 4 }}
-          title="Checked: this leg pays government levies only (netted). Unchecked: this leg pays full commission (charged). Overrides auto-detection either way."
+    <div className="row" style={{ gap: 6, alignItems: 'flex-end', flex: '0 0 auto' }}>
+      <Field label="Fee mode" width={100}>
+        <select
+          value={mode}
+          onChange={(e) => onModeChange(e.target.value as FeeMode)}
+          title="Auto: fee fully computed from Settings, same-day netting auto-detected. Semi: you decide whether this leg is the same-day-netted one, amount still computed. Manual: type the exact fee from your statement."
         >
-          <input type="checkbox" checked={manualSameDay} onChange={(e) => onManualSameDayChange(e.target.checked)} />
-          Netted
-        </label>
+          <option value="auto">Auto</option>
+          <option value="semi">Semi</option>
+          <option value="manual">Manual</option>
+        </select>
+      </Field>
+      {mode === 'semi' && (
+        <Field label="Same-day netted?" width={150}>
+          <label
+            style={{ display: 'flex', alignItems: 'center', gap: 4, height: 30 }}
+            title="Checked: this leg pays government levies only (netted). Unchecked: this leg pays full commission (charged). Overrides auto-detection either way."
+          >
+            <input type="checkbox" checked={manualSameDay} onChange={(e) => onManualSameDayChange(e.target.checked)} />
+            {manualSameDay ? 'Netted (levies only)' : 'Charged (full fee)'}
+          </label>
+        </Field>
       )}
       {mode === 'manual' && (
-        <input
-          type="number"
-          step="0.01"
-          className="price-input"
-          placeholder="Fee amount"
-          value={feeOverride ?? ''}
-          onChange={(e) => onFeeOverrideChange(e.target.value === '' ? undefined : Number(e.target.value))}
-          style={{ width: 110 }}
-        />
+        <Field label="Fee amount" width={110}>
+          <input
+            type="number"
+            step="0.01"
+            className="price-input"
+            placeholder="e.g. 25.00"
+            value={feeOverride ?? ''}
+            onChange={(e) => onFeeOverrideChange(e.target.value === '' ? undefined : Number(e.target.value))}
+          />
+        </Field>
       )}
     </div>
   );

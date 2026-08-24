@@ -1,4 +1,14 @@
 export interface Transaction {
+  /** Stable id, not the transaction's array position. Optional because
+   * QSE/PSX transactions have historically been index-addressed (see
+   * CLAUDE.md) — added specifically so a Trade Planner leg ("Mark as
+   * done") can keep pointing at the exact transaction it created even as
+   * other transactions are added/edited/deleted around it, so an edit made
+   * later in the Transactions page is reflected back in the plan instead
+   * of the plan showing a stale snapshot. Retrofitted onto existing data
+   * by `createWorkbookStore.ts`'s `normalize()`, same pattern as
+   * `Transfer.id`. */
+  id?: string;
   date: string;
   ticker: string;
   action: 'BUY' | 'SELL';
@@ -46,6 +56,14 @@ export interface TradePlanLeg {
    * record of the plan, the corresponding Transaction is a separate,
    * independent entry in `transactions`. */
   executed?: boolean;
+  /** The `id` of the real Transaction this leg's "Mark as done" created —
+   * lets the UI show that transaction's LIVE data (date/shares/price/fee)
+   * instead of the leg's own frozen-at-execution-time snapshot, so an edit
+   * made later in the Transactions page is reflected here too. Absent on
+   * legs executed before this field existed, or if the linked transaction
+   * was later deleted — the UI falls back to the leg's own snapshot in
+   * either case. */
+  executedTransactionId?: string;
 }
 
 /** README item 9: a saved, multi-leg trade sketch — plan several buys/sells
