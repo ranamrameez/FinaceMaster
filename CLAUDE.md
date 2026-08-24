@@ -2199,15 +2199,26 @@ not developer notes) continuously as features ship.
   the earlier fix pass didn't know about) was the real cause this session (see the checkbox-
   label uppercase bug above). Verified via Playwright computed-style checks across 3 themes
   (light/dark Material Blue, light Material Crimson), not just a screenshot. `npx tsc -b` /
-  `npm run test` (255 tests, unchanged) / `npm run build` all clean. **Still open, not yet
-  started**: console-density differentiation, Calculator button toast/icon-only treatment,
-  icon-only buttons with tooltips app-wide, removing single-child nested Settings cards, and a
-  batch of larger deferred items (multi-theme stat-card-color audit,
-  Ticker+logo+name/Cost/Value/P-L column grouping standard everywhere, side-by-side layout
-  instead of scrolling, full Portfolio page overhaul, using unused right-side page space) to
-  be documented as scoped README Pending items rather than attempted blind. Continue working
-  down this list per the same standing auto-commit instruction — this note itself will be
-  superseded as more of the batch lands.
+  `npm run test` (255 tests, unchanged) / `npm run build` all clean.
+- **Console density fixed to actually be the densest tier (2026-08-24) — see README Done item
+  111, closes items 1-9 of the original screenshot report.** Real, measurable bug, confirmed
+  via Playwright before touching anything: a table row's font-size/padding was IDENTICAL
+  between "Comfortable" and "Console" (Console's `table{font-size:...}` rule could never
+  out-specify the base ruleset's own `tbody td{font-size:14px}`, and Console never overrode
+  `tbody td` padding at all, unlike Compact) — so Console was measurably *less* dense than
+  Compact for the densest, most information-heavy element type in a finance app. Rewrote
+  Console's density block to mirror every property Compact overrides, using the same selector
+  specificity, with tighter values throughout — row height now goes 54.5px → 46.5px → 38.5px
+  across Comfortable → Compact → Console, a genuine strictly-decreasing series. `npx tsc -b` /
+  `npm run test` (255 tests, unchanged) / `npm run build` all clean.
+- **Still open, not yet started**: Calculator button toast/icon-only treatment, icon-only
+  buttons with tooltips app-wide, removing single-child nested Settings cards, and a batch of
+  larger deferred items (multi-theme stat-card-color audit, Ticker+logo+name/Cost/Value/P-L
+  column grouping standard everywhere, side-by-side layout instead of scrolling, full
+  Portfolio page overhaul, using unused right-side page space) to be documented as scoped
+  README Pending items rather than attempted blind. Continue working down this list per the
+  same standing auto-commit instruction — this note itself will be superseded as more of the
+  batch lands.
 
 ## Live URLs
 

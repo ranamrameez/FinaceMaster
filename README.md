@@ -2031,6 +2031,30 @@ FinanceManager live link:
      `npm run test` (255 tests, unchanged) / `npm run build` all clean; a 23-page console-error
      sweep found zero regressions.
 
+111. **Console density fixed to actually be the densest tier — item 7 of the same batch
+     (2026-08-24).** User's report ("No significant difference between UI compress options.
+     Console is even more reverse than its name") was a real, measurable bug, not a subjective
+     complaint. Confirmed via Playwright before touching anything: a table row's computed
+     font-size/padding was **identical between "Comfortable" and "Console"** (14px / 11px 10px
+     / 54.5px row height) — Console's own rule only ever set `table{font-size:...}`, but the
+     base ruleset gives `tbody td` its own explicit `font-size:14px`, and a plain type selector
+     (`table`) can never out-specify a type+class selector (`tbody td`), so that rule was
+     silently dead; Console also never overrode `tbody td` padding at all, unlike Compact.
+     Rewrote the Console density block to mirror every property Compact already overrides
+     (`.grid`, `.section-title`, `.mgrid`/`.mcard`, `.ticker-card`, `.portfolio-grid`,
+     `.pagesub`, and — using the *same* `table, thead th, tbody td` selector list Compact uses,
+     so the same specificity applies — table font-size and `tbody td` padding), each with
+     tighter values, so the three tiers now form a genuine strictly-decreasing series rather
+     than three partially-overlapping, independently-authored rule sets. Verified via the same
+     Playwright measurement before/after: row height now goes 54.5px (Comfortable) → 46.5px
+     (Compact) → 38.5px (Console), plus a before/after Dashboard screenshot comparison showing
+     Console's stat cards and page title genuinely smaller. `npx tsc -b` / `npm run test` (255
+     tests, unchanged) / `npm run build` all clean; a 23-page console-error sweep found zero
+     regressions. **This closes out items 1-9 of the original screenshot report** (see item
+     108's note) — the two follow-up messages' items (Calculator button toast/icon-only
+     treatment, icon-only buttons with tooltips app-wide, single-child nested Settings cards)
+     and the larger deferred redesigns are still open, tracked below.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`

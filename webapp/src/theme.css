@@ -1246,7 +1246,36 @@ html[data-density="console"] .stat-card .value{font-size:12.5px; font-family:var
 html[data-density="console"] .stat-card .sub{font-size:8.5px; margin-top:1px;}
 html[data-density="console"] .main{padding:14px 16px 40px 16px;}
 html[data-density="console"] h1.pagetitle{font-size:16px; margin-bottom:10px;}
-html[data-density="console"] table{font-size:11.5px; font-family:var(--mono);}
 html[data-density="console"] .btn{padding:4px 8px; font-size:11.5px; min-height:26px; min-width:26px;}
 html[data-density="console"] input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]),
 html[data-density="console"] select{padding:5px 7px; font-size:11.5px; min-height:26px; min-width:56px;}
+/* User-reported: "No significant difference between UI compress options.
+ * Console is even more reverse than its name." Root cause, confirmed via
+ * Playwright measurement before this fix: the block above only ever set
+ * `table{font-size:...}` (never `tbody td`), but the base ruleset already
+ * gives `tbody td` its own explicit `font-size:14px` — a plain-type
+ * selector (`table`) can never out-specify a type+class selector
+ * (`tbody td`), so that rule was silently dead and console's actual table
+ * ROWS rendered at the exact same font-size/padding as Comfortable (14px /
+ * 11px 10px, measured), i.e. LESS dense than Compact (12.5px / 7px 8px) —
+ * the opposite of what the densest tier should do. This block mirrors
+ * every property Compact overrides above (same selectors, so the same
+ * specificity — the later-in-file console rule wins), using tighter
+ * values than Compact everywhere, so each density tier is a strictly
+ * decreasing series rather than three unrelated, partially-overlapping
+ * rule sets. */
+html[data-density="console"] .grid{gap:6px;}
+html[data-density="console"] .section-title{margin:8px 0 4px 0; font-size:12px;}
+html[data-density="console"] .mgrid{gap:3px;}
+html[data-density="console"] .mcard{padding:4px 6px;}
+html[data-density="console"] .mcard .mvalue{font-size:11.5px; font-family:var(--mono);}
+html[data-density="console"] .mcard .mlabel{font-size:8.5px; margin-bottom:1px;}
+html[data-density="console"] .ticker-card{padding:6px 8px;}
+html[data-density="console"] .portfolio-grid{grid-template-columns:repeat(auto-fill, minmax(170px,1fr)); gap:6px;}
+html[data-density="console"] .pagesub{margin-bottom:8px;}
+html[data-density="console"] table, html[data-density="console"] thead th, html[data-density="console"] tbody td{font-size:10.5px; font-family:var(--mono);}
+html[data-density="console"] tbody td{padding:5px 6px;}
+html[data-density="console"] .hybrid-status{font-size:8px; padding:2px 5px;}
+html[data-density="console"] .tc-current-grid{padding:6px 8px; gap:4px; margin:8px 0;}
+html[data-density="console"] .tc-current-grid .v{font-size:11.5px;}
+html[data-density="console"] .tc-explore-box{padding:6px 8px; margin-top:8px;}
