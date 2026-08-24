@@ -42,6 +42,7 @@ import { FundsPage } from './features/funds/pages/FundsPage';
 import { useFundsFirebaseSync } from './lib/firebase/useFundsFirebaseSync';
 import { RentalsPage } from './features/rentals/pages/RentalsPage';
 import { useRentalsFirebaseSync } from './lib/firebase/useRentalsFirebaseSync';
+import { usePlannedRentalsFirebaseSync } from './lib/firebase/usePlannedRentalsFirebaseSync';
 import { TransferLinksPage } from './features/transfers/pages/TransferLinksPage';
 import { useInterEntityTransfersFirebaseSync } from './lib/firebase/useInterEntityTransfersFirebaseSync';
 import { LegalPage } from './pages/LegalPage';
@@ -88,6 +89,12 @@ function App() {
   const emiSync = useEMIFirebaseSync();
   const fundsSync = useFundsFirebaseSync();
   const rentalsSync = useRentalsFirebaseSync();
+  // Rentals' Planning feature (README item 38) has no dedicated tab/status
+  // UI yet, unlike Cash/Bank's — projected rent plans are regenerate-safe
+  // speculative data, not irreplaceable history, so skipping the manual
+  // "upload local to cloud" affordance for cloudEmpty is an accepted v1
+  // simplification. Still run the sync itself so plans persist/pull.
+  usePlannedRentalsFirebaseSync();
   const transfersSync = useInterEntityTransfersFirebaseSync();
 
   return (

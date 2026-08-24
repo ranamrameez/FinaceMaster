@@ -3,12 +3,14 @@ import { useMemo, useRef, useState } from 'react';
 import { Card, MoneyValue } from '../../../components/Card';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
+import { Modal } from '../../../components/Modal';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { netIncomeByCurrency, propertyByCategory, propertyMonthlyRollup, propertyNetIncome } from '../../../lib/calc/rentalsModule';
+import { generateLeaseRentPlans } from '../../../lib/calc/rentalPlanning';
 import { parseCSV } from '../../../lib/csv';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
@@ -17,6 +19,7 @@ import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
 import { createEmptyRentalsWorkbook } from '../../../store/defaultRentalsWorkbook';
 import { useRentalsWorkbookStore } from '../../../store/rentalsWorkbookStore';
+import { usePlannedRentalsWorkbookStore } from '../../../store/plannedRentalsWorkbookStore';
 import type { Property, RentalEntry, RentalsWorkbook } from '../../../types/rentalsWorkbook';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -90,6 +93,7 @@ function PropertiesList() {
   const deleteProperty = useRentalsWorkbookStore((s) => s.deleteProperty);
   const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<Property | null>(null);
+  const [detailProperty, setDetailProperty] = useState<Property | null>(null);
 
   const startEdit = (p: Property) => { setEditId(p.id); setEditRow({ ...p }); };
   const saveEdit = () => {
@@ -139,6 +143,7 @@ function PropertiesList() {
                 <td>{p.purchasePrice ? fmtMoney(p.purchasePrice, p.currencyCode) : '—'}</td>
                 <td className={propertyNetIncome(p, entries) >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(propertyNetIncome(p, entries), p.currencyCode)}</td>
                 <td>
+                  <button className="btn secondary small" onClick={() => setDetailProperty(p)}>Details</button>{' '}
                   <button className="btn secondary small" onClick={() => startEdit(p)}>Edit</button>{' '}
                   <button
                     className="btn secondary small"
@@ -155,7 +160,144 @@ function PropertiesList() {
           {!sorted.length && <tr><td colSpan={5} className="footer-note">No properties yet — add one above.</td></tr>}
         </tbody>
       </table>
+      {detailProperty && <PropertyDetailModal property={detailProperty} onClose={() => setDetailProperty(null)} />}
     </div>
+  );
+}
+
+/** README items 38/13: lease/tenant/security-deposit info per property,
+ * plus a one-click "Generate projected rent" that creates a Planning-
+ * feature plan (via `usePlannedRentalsWorkbookStore`) for every rent cycle
+ * from the lease's own details — see `lib/calc/rentalPlanning.ts` for the
+ * pure date-math this button calls. */
+function PropertyDetailModal({ property, onClose }: { property: Property; onClose: () => void }) {
+  const updateProperty = useRentalsWorkbookStore((s) => s.updateProperty);
+  const addRentalEntry = useRentalsWorkbookStore((s) => s.addEntry);
+  const ensureSignedIn = useEnsureSignedIn();
+  const [lease, setLease] = useState<Property>(property);
+
+  const plannedEntries = usePlannedRentalsWorkbookStore((s) => s.workbook.entries);
+  const addPlannedEntries = usePlannedRentalsWorkbookStore((s) => s.addEntries);
+  const deletePlannedEntry = usePlannedRentalsWorkbookStore((s) => s.deleteEntry);
+  const updatePlannedEntry = usePlannedRentalsWorkbookStore((s) => s.updateEntry);
+  const propertyPlans = plannedEntries
+    .filter((p) => p.propertyId === property.id)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  const saveLease = async () => {
+    if (!(await ensureSignedIn('Sign in to save lease/tenant details.'))) return;
+    updateProperty(property.id, lease);
+    toast('Lease details saved.');
+  };
+
+  const generatePlans = async () => {
+    if (!(await ensureSignedIn('Sign in to generate projected rent plans.'))) return;
+    const generated = generateLeaseRentPlans(lease);
+    if (!generated.length) return toast('Add monthly rent, a cycle day, and a lease start date first.');
+    const existing = plannedEntries.filter((p) => p.sourceLeasePropertyId === property.id && !p.executed);
+    if (existing.length) {
+      const ok = await confirmDialog(
+        'This replaces this property\'s not-yet-done projected plans with fresh ones. Already-completed plans are untouched.',
+        'Regenerate projected rent?',
+      );
+      if (!ok) return;
+      existing.forEach((p) => deletePlannedEntry(p.id));
+    }
+    addPlannedEntries(generated);
+    toast(`${generated.length} projected rent plan${generated.length > 1 ? 's' : ''} added.`);
+  };
+
+  const markDone = async (planId: string) => {
+    const plan = plannedEntries.find((p) => p.id === planId);
+    if (!plan) return;
+    const ok = await confirmDialog(`Add this ${fmtMoney(plan.amount, property.currencyCode)} rent income to the ledger?`, 'Mark as done?');
+    if (!ok) return;
+    if (!(await ensureSignedIn('Sign in to record this transaction.'))) return;
+    addRentalEntry({ id: crypto.randomUUID(), propertyId: plan.propertyId, date: plan.date, type: plan.type, amount: plan.amount, category: plan.category });
+    updatePlannedEntry(planId, { executed: true });
+    toast('Logged to the ledger.');
+  };
+
+  return (
+    <Modal title={property.name} onClose={onClose}>
+      <h4 style={{ margin: '0 0 8px' }}>Lease &amp; tenant details</h4>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+        <Field label="Monthly rent">
+          <TextInput type="number" step="0.01" value={lease.monthlyRent ?? ''} onChange={(e) => setLease({ ...lease, monthlyRent: e.target.value === '' ? undefined : Number(e.target.value) })} />
+        </Field>
+        <Field label="Cycle start day (1-31)">
+          <TextInput type="number" min={1} max={31} value={lease.cycleStartDay ?? ''} onChange={(e) => setLease({ ...lease, cycleStartDay: e.target.value === '' ? undefined : Number(e.target.value) })} />
+        </Field>
+        <Field label="Lease start">
+          <TextInput type="date" value={lease.leaseStartDate ?? ''} onChange={(e) => setLease({ ...lease, leaseStartDate: e.target.value || undefined })} />
+        </Field>
+        <Field label="Lease end (optional)">
+          <TextInput type="date" value={lease.leaseEndDate ?? ''} onChange={(e) => setLease({ ...lease, leaseEndDate: e.target.value || undefined })} />
+        </Field>
+      </div>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+        <Field label="Tenant name">
+          <TextInput value={lease.tenantName ?? ''} onChange={(e) => setLease({ ...lease, tenantName: e.target.value })} />
+        </Field>
+        <Field label="Tenant contact">
+          <TextInput value={lease.tenantContact ?? ''} onChange={(e) => setLease({ ...lease, tenantContact: e.target.value })} />
+        </Field>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)' }}>
+          <input type="checkbox" checked={!!lease.utilitiesIncluded} onChange={(e) => setLease({ ...lease, utilitiesIncluded: e.target.checked })} />
+          Utilities included in rent
+        </label>
+      </div>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+        <Field label="Security deposit">
+          <TextInput type="number" step="0.01" value={lease.securityDeposit ?? ''} onChange={(e) => setLease({ ...lease, securityDeposit: e.target.value === '' ? undefined : Number(e.target.value) })} />
+        </Field>
+        <Field label="Deposit type">
+          <Select value={lease.securityDepositType ?? ''} onChange={(e) => setLease({ ...lease, securityDepositType: (e.target.value || undefined) as Property['securityDepositType'] })}>
+            <option value="">—</option>
+            <option value="cash">Cash</option>
+            <option value="cheque">Cheque</option>
+            <option value="bank_transfer">Bank transfer</option>
+            <option value="other">Other</option>
+          </Select>
+        </Field>
+        <Field label="Deposit date">
+          <TextInput type="date" value={lease.securityDepositDate ?? ''} onChange={(e) => setLease({ ...lease, securityDepositDate: e.target.value || undefined })} />
+        </Field>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)' }}>
+          <input type="checkbox" checked={!!lease.securityDepositReturned} onChange={(e) => setLease({ ...lease, securityDepositReturned: e.target.checked })} />
+          Deposit returned
+        </label>
+      </div>
+      <div className="row" style={{ gap: 8, marginBottom: 16 }}>
+        <button className="btn secondary" onClick={saveLease}><SaveIcon size={12} />Save lease details</button>
+        <button className="btn" onClick={generatePlans}>Generate projected rent</button>
+      </div>
+
+      <h4 style={{ margin: '0 0 6px' }}>Projected rent plans</h4>
+      <div className="table-scroll" style={{ maxHeight: 260, overflowY: 'auto' }}>
+        <table>
+          <thead><tr><th>Date</th><th>Amount</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            {propertyPlans.map((p) => (
+              <tr key={p.id}>
+                <td>{p.date}</td>
+                <td>{fmtMoney(p.amount, property.currencyCode)}</td>
+                <td>{p.executed ? <span className="pill-buy">Done</span> : <span className="footer-note">Planned</span>}</td>
+                <td>
+                  {!p.executed && (
+                    <>
+                      <button className="btn secondary small" onClick={() => markDone(p.id)}>Mark done</button>{' '}
+                      <button className="btn secondary small" onClick={() => deletePlannedEntry(p.id)}><TrashIcon size={12} />Remove</button>
+                    </>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {!propertyPlans.length && <tr><td colSpan={4} className="footer-note">No projected plans yet — fill in lease details above and click "Generate projected rent."</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </Modal>
   );
 }
 

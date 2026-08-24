@@ -1165,6 +1165,57 @@ not developer notes) continuously as features ship.
   clean. **Not built**: the optional calendar view (README's own
   wording said "maybe" — a plain sorted list already exists in Bank's
   Planning tab, so this is a nice-to-have left for later, not a gap).
+- **Rentals auto-planning from lease info + security deposit/tenant
+  tracking (2026-08-23) — see README Done item 60, the sixth and final
+  item in this feedback round.** `Property` gained a batch of optional
+  lease/tenant/deposit fields — all optional so every existing
+  property keeps working unchanged, same "retrofit-safe" approach used
+  throughout this project. A new "Details" button per property
+  (`PropertyDetailModal`) is the third module now using the Bank-
+  account-Details drill-down pattern from Done item 58 (Bank
+  → EMI's "Link to bank" card reused its sign-in+regenerate structure
+  → now Rentals' property details) — worth noting as a real, repeating
+  pattern rather than three independent inventions. New pure
+  `generateLeaseRentPlans()` in `lib/calc/rentalPlanning.ts` computes
+  projected rent cycles: starts from whichever is later of the lease
+  start and today (skips cycles already in the past even when resuming
+  a lease that started long ago — the function's own tests specifically
+  cover this, since it was the one subtle date-math case worth getting
+  wrong), caps at the lease's own end date or a 12-month horizon for an
+  open-ended lease, and clamps a cycle day past a short month to that
+  month's last day (day 31 in February → 28th/29th), same accepted
+  simplification as EMI's `installmentDueDate`. **One real off-by-one
+  bug found and fixed while writing this**: the initial "12-month
+  horizon" implementation used `today + 12 months` as an *inclusive*
+  cutoff, which generated 13 cycles, not 12, because a cycle exactly
+  on that 13th-month boundary date still satisfied `<= cutoff`. Fixed
+  by pulling the cutoff back one day (`horizonEnd.setDate(...− 1)`) —
+  caught by the test suite, not a manual eyeball. New store/type files
+  mirror `plannedBank`'s exactly (`types/plannedRentals.ts`,
+  `plannedRentalsWorkbookStore.ts` via `createEntryStore`, own
+  Firebase path `plannedRentals`); `PlannedRentalEntry.
+  sourceLeasePropertyId?` is the same "so regeneration only touches
+  its own still-pending plans" mechanism as EMI's `sourceEmiLoanId`,
+  applied by literal copy-paste of the reasoning, not a new pattern.
+  **Deliberately scoped down from the request**: only rent income is
+  auto-planned, not expenses (recurring maintenance/tax is too
+  irregular to project safely, and utilities are a lump included/not
+  flag per this file's own earlier note, not itemized recurring
+  costs); and there's no Real-vs-Planned net-income projection UI like
+  Cash/Bank's Planning tab — `PlannedRentalSettings` is an empty
+  placeholder type for now, just a plan list. New tests:
+  `lib/calc/__tests__/rentalPlanning.test.ts` (5 cases, including the
+  off-by-one regression above). Verified live: filled in lease details
+  in the modal, confirmed clicking "Generate projected rent" correctly
+  hits the sign-in gate. **Debugging note worth remembering**: initial
+  verification looked like a genuine bug (button click did nothing
+  visible) until adding temporary debug logging showed the sign-in
+  modal WAS opening — the test script's own selector
+  (`input[type=email]`) was wrong, since `SignInModal.tsx` uses a
+  plain `<input placeholder="Email">` with no `type=email` attribute.
+  Switching the selector to match the placeholder confirmed the
+  feature was correct all along. `npm run build` / `npm run test`
+  (167 tests, 5 new) both clean.
 - **Large batch of user feedback received 2026-08-23, mid-session —
   most items handled, some still open (check README Done/Pending for
   current per-item status, this is a snapshot at time of receipt).**
@@ -1196,7 +1247,8 @@ not developer notes) continuously as features ship.
   (except the optional calendar view), see below (README Done item
   59). (12)
   Rentals: auto-plan income/expenses per billing cycle from rental
-  agreement details, plus track security deposit info (cash/cheque).
+  agreement details, plus track security deposit info (cash/cheque) —
+  fixed (income only, not expenses — see below, README Done item 60).
   (13) A net-worth dashboard summing everything up, collapsible
   per-currency sections, **plus a converted total at a live ("Google")
   exchange rate in the user's preferred currency** — this last part

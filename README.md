@@ -839,6 +839,38 @@ FinanceManager live link:
     new) both clean. **Deliberately not built**: a calendar view of upcoming payments (the
     README item's own wording said "maybe" — treated as a nice-to-have, not a requirement, and
     left for a future pass since a plain sorted list already exists in Bank's Planning tab).
+60. **Rentals auto-planning from lease info + security deposit/tenant tracking — README item
+    38.** `Property` gained optional lease/tenant/deposit fields (`monthlyRent`,
+    `cycleStartDay`, `leaseStartDate`, `leaseEndDate`, `utilitiesIncluded`, `tenantName`,
+    `tenantContact`, `securityDeposit`, `securityDepositType`, `securityDepositDate`,
+    `securityDepositReturned`) — all optional, so every existing property keeps working
+    unchanged. New "Details" button per property (`PropertyDetailModal` in
+    `features/rentals/pages/RentalsPage.tsx`, same drill-down pattern as Bank's account
+    Details from Done item 58) edits these fields and has a **Generate projected rent**
+    button. New pure function `generateLeaseRentPlans()` in `lib/calc/rentalPlanning.ts`
+    computes one projected RENT_INCOME plan per rent cycle — starting from whichever is later
+    of the lease start and today (no point projecting rent already in the past), capped at the
+    lease's own end date or a 12-month horizon for an open-ended lease. Plans are real
+    Planning-feature records (new `types/plannedRentals.ts`, `plannedRentalsWorkbookStore.ts`
+    reusing `createEntryStore`, own Firebase path `plannedRentals`) shown in the same modal
+    with Mark-done/Remove, mirroring Cash/Bank/EMI's plan-list pattern. **Regeneration needed
+    the same design thought as EMI's re-linking (Done item 59)**: `PlannedRentalEntry` gained
+    `sourceLeasePropertyId?` so clicking "Generate projected rent" again replaces only that
+    property's own still-pending generated plans (after a confirm dialog), never touching
+    plans already marked done or another property's plans. New tests:
+    `lib/calc/__tests__/rentalPlanning.test.ts` (5 cases — incomplete lease info returns
+    nothing, a bounded lease generates exactly the right cycles, an open-ended lease caps at
+    12 months, a cycle day past a short month clamps to that month's last day, and starting
+    from "today" mid-lease skips already-past cycles). Verified live: filled in lease details
+    in the modal, confirmed the sign-in gate correctly fires on "Generate projected rent"
+    (same verification depth as every other sign-in-gated write in this project). `npm run
+    build` / `npm run test` (167 tests, 5 new) both clean. **Scope decisions made explicitly,
+    not silently**: only rent INCOME auto-plans (not expenses) — the user's own follow-up
+    context said utility bills are a lump "included or not" flag for now, not itemized
+    recurring costs, and other rental expenses (maintenance, tax) are too irregular to
+    auto-plan safely; and there's no Real-vs-Planned net-income projection UI like Cash/Bank's
+    Planning tab (`PlannedRentalSettings` is currently empty) since Rentals' "net income"
+    isn't a single running balance the same way — just a plan list for v1.
 
 ## Pending
 
@@ -920,10 +952,6 @@ wave" section)**:
 **New batch of user feedback, 2026-08-23 (mid-session) — see Done item 51 for item (1),
 already fixed; the rest tracked here**:
 
-38. Rentals: auto-plan projected income/expenses for each billing cycle's start day directly
-    from a property/lease's own details, and track security deposit info (cash, cheque, etc.)
-    per property or tenancy. Needs a design pass (what "cycle" means — monthly? the lease's
-    own recurrence? — and where deposit info lives in the data model). Not started.
 40. Account/record detail drill-down + statement export for every module besides Banking (see
     Done item 58, which shipped the pattern for Bank accounts only): QSE/PSX positions,
     Personal Loans, EMI, Funds, Rentals. Each needs its own short design pass — what counts as

@@ -403,12 +403,24 @@ tax, management fees) against one or more properties.
 - **Properties tab**: add a property (name, currency, optional purchase price for future
   reference). Edit or delete any property (deleting also removes its income/expense
   entries). A net-income summary at the top groups properties by currency.
+- **Details**: click **Details** on any property to record lease and tenant info (monthly
+  rent, the day of the month rent is due, lease start/end dates, whether utilities are
+  included, tenant name/contact) and security deposit info (amount, type — cash, cheque,
+  bank transfer, other — date, and whether it's been returned). Fill in monthly rent, a
+  cycle day, and a lease start date, then click **Generate projected rent** to create a
+  projected income plan for every upcoming rent cycle (through the lease end date, or 12
+  months ahead for an open-ended lease) — each shows in the same view with **Mark done**
+  (logs it to the Income & expenses tab as a real entry) or **Remove**. Click **Generate
+  projected rent** again any time (after editing lease terms, say) to regenerate — this
+  replaces only this property's own not-yet-done projected plans, leaving anything already
+  marked done untouched. Only rent income is auto-planned, not expenses (those are too
+  irregular to project reliably) — log expenses manually in the Income & expenses tab.
 - **Income & expenses tab**: pick a property, then log rent income or an expense (with a
   free-form, autocompleted category for expenses — "Maintenance", "Property tax", etc.).
   See a category breakdown and a monthly income/expense/net rollup table, plus the full
   entry list with edit/delete.
-- No tenant/lease management, property valuation tracking, or mortgage/loan tracking in
-  this version — a property's mortgage, if you have one, belongs in EMI/Loans (§18) instead.
+- No property valuation tracking or mortgage/loan tracking in this version — a property's
+  mortgage, if you have one, belongs in EMI/Loans (§18) instead.
 - **Import tab**: import a CSV of income/expense entries for one selected property — map
   Date/Amount/an optional Category column; a positive amount is rent income, negative is an
   expense (check "Flip sign" if your export does the opposite). Imported entries show
