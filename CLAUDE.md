@@ -1864,6 +1864,22 @@ not developer notes) continuously as features ship.
   40** — needs its own short design pass since a stock statement
   plausibly wants both the trade log and price-history log, not just
   one table.
+- **Statement CSV export extended to QSE and PSX, completing README
+  item 40 for every module (2026-08-24).** Exported the two logs
+  separately rather than merging them: each stock's Transactions tab
+  (`TickerTransactions` in both QSE's and PSX's `StockPage.tsx`) gets
+  the same from/to date-range "Export CSV" button as every other
+  module (PSX's also includes a Fee column, since its fees are
+  variable unlike QSE's flat rate); `PositionDetail.tsx`'s "Recent
+  updates" section gets a separate "Export price history CSV" button
+  exporting the full raw price log (`stats.chronological`), not just
+  the 8-row "recent" slice shown on screen. Verified live via
+  Playwright with real file downloads for all four combinations
+  (QSE/PSX × trade statement/price history) — each matched seeded
+  data exactly, including PSX's computed per-row fee. `npx tsc -b` /
+  `npm run test` (235 tests, unchanged) / `npm run build` all clean.
+  **README item 40 is now fully done** — every module has a statement
+  export from its own primary record's detail view.
 
 ## Live URLs
 

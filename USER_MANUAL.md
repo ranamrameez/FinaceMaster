@@ -105,7 +105,11 @@ related figures; if you've sold any of this ticker, "Sell price" shows both your
 most recent sell price. In "Price range," **Median (fair value)** is a simple fair-value
 estimate — the middle price across every price you've recorded for this ticker — useful as
 a sanity check when deciding whether to buy more or sell, since the app has no live market
-data of its own.
+data of its own. Under "Recent updates," click **Export price history CSV** to download
+every price update you've ever recorded for this ticker (not just the recent few shown on
+screen) as a spreadsheet file. On the stock page's **Transactions** tab, below the trade
+table, optionally set a from/to date range and click **Export CSV** to download that
+ticker's own trade history separately.
 
 ---
 

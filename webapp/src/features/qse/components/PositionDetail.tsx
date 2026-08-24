@@ -5,6 +5,7 @@ import { SaveIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { breakEvenPrice, computePriceStats, getMarketPrice } from '../../../lib/calc';
 import { applyChartTheme } from '../../../lib/chartSetup';
+import { toCSV } from '../../../lib/csv';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { useSortableRows } from '../../../hooks/useSortableRows';
@@ -63,6 +64,25 @@ export function PositionDetail({ ticker }: { ticker: string }) {
   const recentSortValue = (p: (typeof recentRows)[number], col: RecentCol): number | string =>
     col === 'price' ? p.price : (p.time ?? p.date);
   const { sorted: sortedRecent, Th: RecentTh } = useSortableRows(recentRows, recentSortValue, 'when', 'desc');
+
+  /** README item 40: this ticker's price-history statement, separate from
+   * the trade statement exported on the Transactions tab — exports the
+   * full raw log (`stats.chronological`), not just the "recent" slice
+   * shown on screen. */
+  const exportPriceHistory = () => {
+    if (!stats) return;
+    const rows = [...stats.chronological].sort((a, b) => (a.time || a.date).localeCompare(b.time || b.date));
+    const header = ['When', 'Price'];
+    const body = rows.map((p) => [p.time ? new Date(p.time).toLocaleString() : p.date, p.price]);
+    const blob = new Blob([toCSV([header, ...body])], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${ticker}_price_history.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('Price history downloaded.');
+  };
 
   const commitPrice = async () => {
     const val = parseFloat(priceInput);
@@ -216,6 +236,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
                 </tbody>
               </table>
             </div>
+            <button className="btn secondary small" style={{ marginTop: 8 }} onClick={exportPriceHistory}>Export price history CSV</button>
           </details>
         </CollapsibleCard>
       )}

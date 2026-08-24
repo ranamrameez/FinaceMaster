@@ -3,7 +3,9 @@ import { Link, useParams } from 'react-router-dom';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
+import { Field, TextInput } from '../../../components/ui/Field';
 import { useSortableRows } from '../../../hooks/useSortableRows';
+import { toCSV } from '../../../lib/csv';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { shortenCompanyName } from '../../../lib/shortenName';
@@ -29,12 +31,36 @@ function TickerTransactions({ ticker }: { ticker: string }) {
   const [priceInput, setPriceInput] = useState('');
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editRow, setEditRow] = useState<Transaction | null>(null);
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
 
   // Keep the original index into workbook.transactions so edit/delete hit
   // the right row — the displayed list is filtered to this ticker only.
   const filteredRows = workbook.transactions
     .map((tx, i) => ({ tx, i }))
     .filter((r) => r.tx.ticker === ticker);
+
+  /** README item 40: extends Banking's statement-export pattern (Done
+   * item 58) to QSE's own primary record — a stock position's trade
+   * statement is its transaction history (the price-history log is
+   * exported separately, from PositionDetail's own "Recent updates"). */
+  const exportStatement = () => {
+    const exportRows = filteredRows
+      .filter((r) => (!fromDate || r.tx.date >= fromDate) && (!toDate || r.tx.date <= toDate))
+      .map((r) => r.tx)
+      .sort((a, b) => a.date.localeCompare(b.date));
+    const header = ['Date', 'Action', 'Shares', 'Price', 'Cost'];
+    const body = exportRows.map((tx) => [tx.date, tx.action, tx.shares, tx.price, tx.shares * tx.price]);
+    const blob = new Blob([toCSV([header, ...body])], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const suffix = fromDate || toDate ? `_${fromDate || 'start'}_to_${toDate || 'now'}` : '';
+    a.download = `${ticker}_statement${suffix}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('Statement downloaded.');
+  };
   type Col = 'date' | 'action' | 'shares' | 'price' | 'cost';
   const sortValue = (r: (typeof filteredRows)[number], col: Col): number | string => {
     switch (col) {
@@ -132,6 +158,17 @@ function TickerTransactions({ ticker }: { ticker: string }) {
           </tbody>
         </table>
       </div>
+      {filteredRows.length > 0 && (
+        <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginTop: 12 }}>
+          <Field label="From (optional)">
+            <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+          </Field>
+          <Field label="To (optional)">
+            <TextInput type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+          </Field>
+          <button className="btn secondary" onClick={exportStatement}>Export CSV</button>
+        </div>
+      )}
     </div>
   );
 }

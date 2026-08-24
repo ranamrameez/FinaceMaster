@@ -1562,6 +1562,25 @@ FinanceManager live link:
     per-stock transaction history and price-history table; adding the same export button
     there needs a touch more design since a stock statement plausibly wants both the trade
     log and the price history, not just one table like every other module here.
+96. **Statement CSV export extended to QSE and PSX, completing README item 40 for every
+    module (2026-08-24).** Resolved the "touch more design" note from Done item 95 by
+    exporting the two logs separately rather than merging them into one table, since a trade
+    and a price update aren't the same kind of row and forcing them into one CSV would mean
+    empty columns on every row: each stock's **Transactions tab** (`TickerTransactions` in
+    both `features/qse/pages/StockPage.tsx` and `features/psx/pages/StockPage.tsx`) gets the
+    same from/to date-range "Export CSV" button as every other module (Date/Action/Shares/
+    Price/Cost, plus a Fee column for PSX since its fees are variable — same-day netting,
+    manual overrides — unlike QSE's flat rate); separately, `PositionDetail.tsx`'s existing
+    "Recent updates" `<details>` section gets its own "Export price history CSV" button,
+    exporting the **full raw price log** (`stats.chronological`), not just the 8-row "recent"
+    slice already shown on screen — same "export more than the on-screen slice" pattern
+    already used for EMI's full-schedule export (Done item 91). Both reuse the existing
+    `toCSV()` helper. Verified live via Playwright with real file downloads read off disk for
+    all four combinations (QSE/PSX × trade statement/price history): each matched its seeded
+    data exactly, including PSX's per-row computed fee in the trade statement. `npx tsc -b` /
+    `npm run test` (235 tests, unchanged) / `npm run build` all clean. **This closes out
+    README item 40 in full** — every module now has a statement export from its own primary
+    record's detail view.
 
 ## Pending
 
@@ -1650,13 +1669,12 @@ wave" section)**:
 **New batch of user feedback, 2026-08-23 (mid-session) — see Done item 51 for item (1),
 already fixed; the rest tracked here**:
 
-40. Account/record detail drill-down + statement export for every module besides Banking (see
-    Done item 58, which shipped the pattern for Bank accounts only). **Personal Loans,
-    EMI/Loans, Funds, and Rentals all done — see Done items 94/95** (all four already had
-    their own detail view; just needed the CSV export button added). **Only QSE/PSX
-    positions remain** — `PositionDetail` already exists but needs its own short design pass
-    first, since a stock "statement" plausibly wants both the trade log and the price-history
-    log, unlike every other module here which only had one table to export.
+40. ~~Account/record detail drill-down + statement export for every module besides
+    Banking.~~ **Done (2026-08-24) — see Done items 58/94/95/96.** Every module now has a
+    statement export from its own primary record's detail view: Bank (accounts), Personal
+    Loans (repayments), EMI/Loans (full schedule), Funds (transactions), Rentals
+    (income/expenses), and QSE/PSX (trade statement + a separate price-history export, since
+    those needed two distinct logs rather than one table like every other module).
 39. ~~A net-worth dashboard summarizing everything across every module, with collapsible
     per-currency sections.~~ **Done — see Done item 66.** The user later overrode the
     Cloud-Function plan below ("leave blaze plan. if you have any free api, okay otherwise
