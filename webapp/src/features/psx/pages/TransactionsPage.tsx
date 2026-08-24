@@ -394,17 +394,16 @@ function TransactionList() {
                     <td>
                       {fmtMoney(calcFee(tx.shares * tx.price, tx.action === 'BUY', { shares: tx.shares, tx }), currency)}
                       {tx.feeOverride !== undefined ? (
-                        <span className="footer-note" title="This fee was manually entered, overriding the computed value.">
-                          {' '}(override)
-                        </span>
+                        <Tooltip text="This fee was manually entered, overriding the computed value.">
+                          <span className="footer-note" style={{ cursor: 'pointer' }}>{' '}(override)</span>
+                        </Tooltip>
                       ) : (
                         isNettedLeg(workbook.transactions, tx) && (
-                          <span
-                            className="footer-note"
-                            title={tx.manualSameDay ? 'Manually marked as a same-day netted leg — government levies only.' : 'Same-day round trip — netted, government levies only.'}
+                          <Tooltip
+                            text={tx.manualSameDay ? 'Manually marked as a same-day netted leg — government levies only.' : 'Same-day round trip — netted, government levies only.'}
                           >
-                            {' '}(netted{tx.manualSameDay ? ', manual' : ''})
-                          </span>
+                            <span className="footer-note" style={{ cursor: 'pointer' }}>{' '}(netted{tx.manualSameDay ? ', manual' : ''})</span>
+                          </Tooltip>
                         )
                       )}
                     </td>

@@ -1429,6 +1429,15 @@ FinanceManager live link:
     module (zero console errors) plus two screenshots (EMI, Funds) confirming the colors
     actually render distinctly. `npx tsc -b` / `npm run test` (219 tests, unchanged — UI-only)
     / `npm run build` all clean.
+89. **Table-cell tooltip sweep, continuing Done item 85's `Tooltip` component into the
+    remaining scattered native `title=` spots it named as unswept.** Converted the Fee
+    column's "(netted)"/"(override)" tags (both QSE... actually PSX-only, since same-day
+    netting is a PSX concept — `TransactionsPage.tsx` and `StockPage.tsx`) and the Trade
+    Planner's stale-snapshot `*` marker and "Executed" sync indicator (`TradePlannerPage.tsx`)
+    from native `title` to the real popup `Tooltip`. Verified live via Playwright: hovering
+    the "(netted)" tag on a seeded same-day BUY/SELL pair correctly shows a `role="tooltip"`
+    popup, zero console errors. `npx tsc -b` / `npm run test` (219 tests, unchanged) / `npm
+    run build` all clean.
 
 ## Pending
 
@@ -1562,11 +1571,11 @@ already fixed; the rest tracked here**:
     every other module's list views.
 46. ~~A raw-vs-concise number display toggle in Appearance settings (1,000 vs 1k).~~ **Done —
     see Done item 83.**
-47. **Partially done — see Done item 85.** New `components/Tooltip.tsx` (bigger box, larger
-    font, works on click/tap not just hover) now backs `StatCard`/`MoneyValue`/
-    `FeeModeControl`'s tooltips. Still native `title` elsewhere: table-cell tooltips (e.g.
-    Fee column's "(netted)"/"(override)" tags), CollapsibleCard headers, and most other
-    scattered `title=` attributes across the app — not yet swept.
+47. **Partially done — see Done items 85/89.** New `components/Tooltip.tsx` now backs
+    `StatCard`/`MoneyValue`/`FeeModeControl`'s tooltips and the Fee column's "(netted)"/
+    "(override)" tags plus the Trade Planner's sync indicators. Still native `title`
+    elsewhere: CollapsibleCard headers, per-lot/per-transaction table cells not yet audited,
+    and most other scattered `title=` attributes across the app — not yet swept.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

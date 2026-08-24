@@ -1748,6 +1748,14 @@ not developer notes) continuously as features ship.
   stat-card treatment Dashboard originally got. Verified via a 6-page
   Playwright sweep with seeded data (zero console errors) plus
   screenshots confirming colors render.
+- **Table-cell tooltip sweep (2026-08-24) — see README Done item 89.**
+  Converted the remaining scattered native `title=` spots the earlier
+  Tooltip rollout (Done item 85) had left unswept: PSX's Fee column
+  "(netted)"/"(override)" tags in `TransactionsPage.tsx`/`StockPage.tsx`,
+  and the Trade Planner's stale-snapshot `*` marker / "Executed" sync
+  indicator. Verified live: hovering a seeded same-day BUY/SELL pair's
+  "(netted)" tag shows a real `role="tooltip"` popup, zero console
+  errors.
 
 ## Live URLs
 

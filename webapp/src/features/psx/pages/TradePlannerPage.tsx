@@ -3,6 +3,7 @@ import { PSX_TICKER_DATALIST_ID } from '../../../components/PSXTickerDatalist';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { CheckIcon, PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
+import { Tooltip } from '../../../components/Tooltip';
 import { Field, TextInput } from '../../../components/ui/Field';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { analyzeTradePlanByTicker, whatIfExit, type TradePlanTickerSummary } from '../../../lib/calc/tradePlanAnalysis';
@@ -476,14 +477,30 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                 const stale = leg.executed && !linkedTx;
                 return (
                 <tr key={i}>
-                  <td>{display.date}{stale && <span className="footer-note" title="No linked transaction found — showing the plan's original snapshot from when this was marked done."> *</span>}</td>
+                  <td>{display.date}{stale && (
+                    <Tooltip text="No linked transaction found — showing the plan's original snapshot from when this was marked done.">
+                      <span className="footer-note" style={{ cursor: 'pointer' }}> *</span>
+                    </Tooltip>
+                  )}</td>
                   <td>{display.ticker}</td>
                   <td className={display.action === 'BUY' ? 'pill-buy' : 'pill-sell'}>{display.action}</td>
                   <td>{fmt(display.shares, 0)}</td>
                   <td>{fmtPrice(display.price)}</td>
                   <td>{fmtMoney(display.shares * display.price, currency)}</td>
                   <td>{fmtMoney(legFee(leg), currency)}</td>
-                  <td>{leg.executed ? <span className="pill-buy" title={linkedTx ? 'Synced with its transaction — edit it from the Transactions page.' : undefined}>Executed</span> : <span className="footer-note">Planned</span>}</td>
+                  <td>
+                    {leg.executed ? (
+                      linkedTx ? (
+                        <Tooltip text="Synced with its transaction — edit it from the Transactions page.">
+                          <span className="pill-buy" style={{ cursor: 'pointer' }}>Executed</span>
+                        </Tooltip>
+                      ) : (
+                        <span className="pill-buy">Executed</span>
+                      )
+                    ) : (
+                      <span className="footer-note">Planned</span>
+                    )}
+                  </td>
                   <td>
                     {!leg.executed && (
                       <>
