@@ -3,6 +3,7 @@ import { Bar, Line } from 'react-chartjs-2';
 import { CollapsibleCard } from '../../../components/Card';
 import { SaveIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
+import { Tooltip } from '../../../components/Tooltip';
 import { breakEvenPrice, computePriceStats, getMarketPrice } from '../../../lib/calc';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { toCSV } from '../../../lib/csv';
@@ -193,9 +194,11 @@ export function PositionDetail({ ticker }: { ticker: string }) {
               <div className="sub">{position.buyCount} buys · {position.sellCount} sells</div>
             </div>
             {position.sellCount > 0 && (
-              <div className="stat-card card" style={hueStyle(HUES[7])} title="Weighted average, and most recent, sell price for this ticker.">
+              <div className="stat-card card" style={hueStyle(HUES[7])}>
                 <div className="label">Sell price</div>
-                <div className="value">{fmtPrice(avgSellPrice)}</div>
+                <Tooltip text="Weighted average, and most recent, sell price for this ticker.">
+                  <div className="value">{fmtPrice(avgSellPrice)}</div>
+                </Tooltip>
                 <div className="sub">avg · last {fmtPrice(lastSellPrice)}</div>
               </div>
             )}
@@ -218,9 +221,11 @@ export function PositionDetail({ ticker }: { ticker: string }) {
         <CollapsibleCard title={<h4 style={{ margin: 0 }}>Price range</h4>}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 8 }}>
             <div className="stat-card card" style={hueStyle(HUES[5])}><div className="label">Lowest</div><div className="value">{fmtPrice(stats.min)}</div><div className="sub">{stats.minDate}</div></div>
-            <div className="stat-card card" style={hueStyle(HUES[1])} title="A simple fair-value estimate: the middle price across every update you've recorded for this ticker.">
+            <div className="stat-card card" style={hueStyle(HUES[1])}>
               <div className="label">Median (fair value)</div>
-              <div className="value">{fmtPrice(stats.median)}</div>
+              <Tooltip text="A simple fair-value estimate: the middle price across every update you've recorded for this ticker.">
+                <div className="value">{fmtPrice(stats.median)}</div>
+              </Tooltip>
             </div>
             <div className="stat-card card" style={hueStyle(HUES[2])}><div className="label">Highest</div><div className="value">{fmtPrice(stats.max)}</div><div className="sub">{stats.maxDate}</div></div>
           </div>

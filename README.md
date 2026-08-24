@@ -1597,6 +1597,26 @@ FinanceManager live link:
     known false-negative pattern already documented earlier in this file), not a real miss.
     `npx tsc -b` / `npm run test` (235 tests, unchanged — UI-only) / `npm run build` all
     clean. **This closes out README item 45 in full.**
+98. **Further tooltip sweep, continuing README item 47's remainder (2026-08-24).** Converted
+    the highest-value remaining native `title=` spots to the real popup `Tooltip` component:
+    QSE's and PSX's `PositionDetail.tsx` "Sell price" and "Median (fair value)" stat cards
+    (4 total — these predate the `StatCard` component's own built-in `title`-to-`Tooltip`
+    wiring, so they'd been missed by that earlier rollout), Personal Loans' repayments table
+    "Remaining" column, and QSE's/PSX's Transactions table "Balance" column — the latter two
+    are exactly the "per-lot/per-transaction table cells" this item's own text named as
+    unswept. Deliberately left as native `title` (lower value, more invasive to convert):
+    single-word `<select>` labels (Appearance's font/size/color/density/number-display
+    pickers, whose own option text is already self-explanatory), "Flip sign" import
+    checkboxes (Cash/Bank/Rentals — the import tab already has an explanatory paragraph
+    above them), and raw `<input>` hint text (Bank's "+/-" amount field, whose placeholder
+    already says as much) — converting these would mean restructuring simple form controls
+    for marginal benefit, not because they were missed. Verified live via Playwright
+    (hover-based, not click, since click toggles state and can look like "not working" in
+    an automated check that doesn't also verify the toggle-off): all 3 conversions showed a
+    real `role="tooltip"` popup with the correct text on hover, zero console errors.
+    `npx tsc -b` / `npm run test` (235 tests, unchanged) / `npm run build` all clean. **Item
+    47's remainder is now narrower**: CollapsibleCard headers and the deliberately-skipped
+    items named above are what's left, not a full sweep.
 
 ## Pending
 
@@ -1738,11 +1758,13 @@ already fixed; the rest tracked here**:
     separate, much larger undertaking if wanted later — not tracked as a gap here.
 46. ~~A raw-vs-concise number display toggle in Appearance settings (1,000 vs 1k).~~ **Done —
     see Done item 83.**
-47. **Partially done — see Done items 85/89.** New `components/Tooltip.tsx` now backs
-    `StatCard`/`MoneyValue`/`FeeModeControl`'s tooltips and the Fee column's "(netted)"/
-    "(override)" tags plus the Trade Planner's sync indicators. Still native `title`
-    elsewhere: CollapsibleCard headers, per-lot/per-transaction table cells not yet audited,
-    and most other scattered `title=` attributes across the app — not yet swept.
+47. **Mostly done — see Done items 85/89/98.** `components/Tooltip.tsx` now backs
+    `StatCard`/`MoneyValue`/`FeeModeControl`'s tooltips, the Fee column's "(netted)"/
+    "(override)" tags, the Trade Planner's sync indicators, QSE's/PSX's `PositionDetail`
+    stat cards, and the per-transaction/per-repayment "Balance"/"Remaining" table cells.
+    What's left is CollapsibleCard headers, plus a handful of single-word `<select>` labels
+    and import-flow checkboxes deliberately left as native `title` (see Done item 98's own
+    reasoning) — not a broad unaudited remainder anymore.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

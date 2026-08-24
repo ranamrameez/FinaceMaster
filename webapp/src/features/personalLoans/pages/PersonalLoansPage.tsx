@@ -7,6 +7,7 @@ import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
+import { Tooltip } from '../../../components/Tooltip';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
@@ -276,7 +277,11 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                 <tr key={r.id}>
                   <td>{r.date}</td>
                   <td>{fmtMoney(r.amount, loan.currencyCode)}</td>
-                  <td title="Loan balance still remaining after this repayment, in date order.">{fmtMoney(remaining.get(r.id) ?? 0, loan.currencyCode)}</td>
+                  <td>
+                    <Tooltip text="Loan balance still remaining after this repayment, in date order.">
+                      <span>{fmtMoney(remaining.get(r.id) ?? 0, loan.currencyCode)}</span>
+                    </Tooltip>
+                  </td>
                   <td className="footer-note">{r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}</td>
                   <td>
                     <button className="btn secondary small" onClick={() => startEdit(r)}>Edit</button>{' '}

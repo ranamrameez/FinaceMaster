@@ -540,8 +540,10 @@ function TransfersSection() {
                   <td>{t.type}</td>
                   <td>{fmtMoney(t.gross, currency)}</td>
                   <td>{fmtMoney(t.fee, currency)}</td>
-                  <td title="Running net cash contributed, in date order — deposits net of fee, minus withdrawals plus their fee. Doesn't include trading gains/losses; see Dashboard for total cash balance.">
-                    {fmtMoney(balances.get(t.id) ?? 0, currency)}
+                  <td>
+                    <Tooltip text="Running net cash contributed, in date order — deposits net of fee, minus withdrawals plus their fee. Doesn't include trading gains/losses; see Dashboard for total cash balance.">
+                      <span>{fmtMoney(balances.get(t.id) ?? 0, currency)}</span>
+                    </Tooltip>
                   </td>
                   <td>
                     <button className="btn secondary small" onClick={() => startEdit(t)}>Edit</button>{' '}

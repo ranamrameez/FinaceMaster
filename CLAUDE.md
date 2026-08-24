@@ -1891,6 +1891,23 @@ not developer notes) continuously as features ship.
   color-coded. `npx tsc -b` / `npm run test` (235 tests, unchanged —
   UI-only) / `npm run build` all clean. This closes out README item
   45 in full.
+- **Further tooltip sweep, continuing README item 47's remainder
+  (2026-08-24).** Converted the highest-value remaining native
+  `title=` spots to the real `Tooltip` component: QSE's/PSX's
+  `PositionDetail.tsx` "Sell price"/"Median (fair value)" stat cards
+  (these predate `StatCard`'s own built-in `title`-to-`Tooltip`
+  wiring, so an earlier rollout missed them), Personal Loans'
+  repayments "Remaining" column, and QSE's/PSX's Transactions
+  "Balance" column — the latter two are exactly the "per-transaction
+  table cells" item 47 named as unswept. Deliberately left as native
+  `title`: single-word `<select>` labels (Appearance pickers — option
+  text already self-explanatory) and import-flow "Flip sign"
+  checkboxes (an explanatory paragraph already sits above them) —
+  lower value, more invasive to convert, not overlooked. Verified via
+  Playwright **hover** (not click, since click toggles state): all 3
+  conversions showed a real `role="tooltip"` popup with correct text,
+  zero console errors. `npx tsc -b` / `npm run test` (235 tests,
+  unchanged) / `npm run build` all clean.
 
 ## Live URLs
 
