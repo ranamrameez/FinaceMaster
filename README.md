@@ -1929,6 +1929,20 @@ FinanceManager live link:
      clicking Cancel correctly left the stored amount unchanged (confirmed via `localStorage`,
      not just the UI) — zero console errors. `npx tsc -b` / `npm run test` (255 tests, 2 new) /
      `npm run build` all clean.
+107. **CollapsibleCard rollout remainder closed — see Pending item 42, 2026-08-24.** Checked
+     Portfolio's Holdings/History tables (rendered through the shared `Tabs` component, which
+     was rewritten in Done item 103 to wrap every tab section in its own `CollapsibleCard`) and
+     found them already collapsible with zero extra work — a side effect of that earlier fix,
+     not something this pass built. Personal Loans' `RepaymentsSection` actually needed a
+     change: split it so the add-repayment form stays outside any collapsible (a form
+     shouldn't disappear mid-fill) while the repayment table + date-range export controls now
+     live inside a new "Repayment History" `CollapsibleCard`. Verified live via Playwright:
+     Portfolio's Holdings section defaults open and History defaults closed
+     (`aria-expanded: ['true', 'false']`, matching the shared `Tabs` component's "first tab
+     open" convention); Personal Loans' add-repayment form stayed visible and clickable while
+     the repayment history table sat inside a real collapsible section with its own chevron —
+     zero console errors. `npx tsc -b` / `npm run test` (255 tests, unchanged — UI-only) /
+     `npm run build` all clean.
 
 ## Pending
 
@@ -2049,13 +2063,18 @@ already fixed; the rest tracked here**:
     decision on what time to backfill for old rows (midnight? noon? leave time optional and
     fall back to insertion order when absent?). Needs either a narrower first-module scope
     or explicit user confirmation on the backfill approach before implementing broadly.
-42. ~~Roll out `CollapsibleCard` further, including chart cards on Analytics pages.~~ **Mostly
-    done — see Done items 74, 82, and 101.** Chart cards across every Dashboard/Analytics
-    page are now collapsible (fixed once at the shared `ChartCard` component). Still not:
-    Portfolio's Holdings/History tables (each is the entire content of its own Tab, needing a
-    different UI shape than a plain wrap), the Trade Planner's per-ticker analysis table
-    (already inside a collapsible `PlanCard`, so lower priority), and Personal Loans'
-    `RepaymentsSection` (its add-form and list are one combined component with no clean seam).
+42. ~~Roll out `CollapsibleCard` further, including chart cards on Analytics pages.~~ **Done —
+    see Done items 74, 82, 101, and 107.** Chart cards across every Dashboard/Analytics page
+    are collapsible (fixed once at the shared `ChartCard` component). Portfolio's Holdings/
+    History tables turned out to already be collapsible as a side effect of the later Tabs
+    redesign (Done item 103) — each is rendered through the shared `Tabs` component, which now
+    wraps every section in its own `CollapsibleCard`; this line was stale by the time it was
+    re-checked, not actually still open. Personal Loans' `RepaymentsSection` needed a real
+    split (Done item 107): the add-form stays outside any collapsible (collapsing a form
+    mid-fill is a UX trap, same rule the rest of this rollout followed), and the table + export
+    controls now sit inside their own "Repayment History" `CollapsibleCard`. The Trade
+    Planner's per-ticker analysis table remains uncollapsed on purpose — it's already inside a
+    collapsible `PlanCard`, so a second nested toggle would add clutter, not clarity.
 43. ~~Roll out `StatCard`'s `hue` prop beyond QSE/PSX's Dashboard.~~ **Done — see Done items
     87/88.** StockPage's Summary tab and every non-exchange module's landing stat cards
     (Cash/Bank/Personal Loans/EMI/Funds/Rentals) now have distinct colors, backed by a shared

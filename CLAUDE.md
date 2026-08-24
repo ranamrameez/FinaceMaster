@@ -2140,6 +2140,18 @@ not developer notes) continuously as features ship.
   `linkCascade.test.ts` gained a `warnIfLinked` block (2 cases, using a mocked
   `confirmDialog`). `npx tsc -b` / `npm run test` (255 tests, 2 new) / `npm run build` all
   clean.
+- **CollapsibleCard rollout remainder closed (2026-08-24) — see README Done item 107, closes
+  Pending item 42.** Portfolio's Holdings/History tables turned out to already be collapsible
+  — a side effect of the earlier `Tabs` rewrite (Done item 103), which wraps every tab section
+  in its own `CollapsibleCard`; Portfolio just renders through `Tabs` like everything else, so
+  this needed zero code changes, only re-checking a stale README line. **Lesson**: when a
+  Pending item says something "needs a different UI shape," re-verify against current code
+  before assuming it's still true — a shared-component fix elsewhere in the same project can
+  silently resolve an old note. Personal Loans' `RepaymentsSection` genuinely needed a change:
+  split so the add-repayment form stays outside any collapsible (collapsing a form mid-fill is
+  a UX trap) while the table + export controls moved into a new "Repayment History"
+  `CollapsibleCard`. Verified live via Playwright — zero console errors. `npx tsc -b` / `npm
+  run test` (255 tests, unchanged) / `npm run build` all clean.
 
 ## Live URLs
 

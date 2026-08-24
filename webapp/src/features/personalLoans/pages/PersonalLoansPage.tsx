@@ -1,7 +1,7 @@
 import type { User } from 'firebase/auth';
 import { useMemo, useRef, useState } from 'react';
 import { Bar } from 'react-chartjs-2';
-import { Card, MoneyValue } from '../../../components/Card';
+import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
@@ -259,59 +259,67 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
         <input type="number" step="0.01" placeholder="Amount" value={amount || ''} onChange={(e) => setAmount(Number(e.target.value))} style={{ width: 100 }} />
         <button className="btn secondary" onClick={submit}><PlusIcon />Add repayment</button>
       </div>
-      <div className="table-scroll">
-        <table>
-          <thead><tr><Th col="date">Date</Th><Th col="amount">Amount</Th><Th col="remaining">Remaining</Th><th>Source</th><th></th></tr></thead>
-          <tbody>
-            {sorted.map((r) =>
-              editId === r.id && editRow ? (
-                <tr key={r.id}>
-                  <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
-                  <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 90 }} /></td>
-                  <td></td>
-                  <td className="footer-note">{r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}</td>
-                  <td>
-                    <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
-                    <button className="btn secondary small" onClick={() => setEditId(null)}>Cancel</button>
-                  </td>
-                </tr>
-              ) : (
-                <tr key={r.id}>
-                  <td>{r.date}</td>
-                  <td>{fmtMoney(r.amount, loan.currencyCode)}</td>
-                  <td>
-                    <Tooltip text="Loan balance still remaining after this repayment, in date order.">
-                      <span>{fmtMoney(remaining.get(r.id) ?? 0, loan.currencyCode)}</span>
-                    </Tooltip>
-                  </td>
-                  <td className="footer-note">{r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}</td>
-                  <td>
-                    <button className="btn secondary small" onClick={() => startEdit(r)}>Edit</button>{' '}
-                    <button
-                      className="btn secondary small"
-                      onClick={() => confirmAndDeleteLinkable('personalLoans', r.id, () => deleteRepayment(r.id))}
-                    >
-                      <TrashIcon size={12} />Delete
-                    </button>
-                  </td>
-                </tr>
-              ),
-            )}
-            {!sorted.length && <tr><td colSpan={5} className="footer-note">No repayments logged yet.</td></tr>}
-          </tbody>
-        </table>
-      </div>
-      {repayments.length > 0 && (
-        <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 16 }}>
-          <Field label="From (optional)">
-            <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
-          </Field>
-          <Field label="To (optional)">
-            <TextInput type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
-          </Field>
-          <button className="btn secondary" onClick={exportStatement}>Export CSV</button>
+      {/* README item 42's remainder: this component's add-form and list used
+       * to have no clean seam for a CollapsibleCard — the form itself is
+       * deliberately left outside it (collapsing a form mid-fill is a UX
+       * trap, per the same rule every other module's rollout followed), but
+       * the table + export controls below it split off cleanly into their
+       * own collapsible section. */}
+      <CollapsibleCard title={<h4 style={{ margin: 0 }}>Repayment history</h4>} style={{ marginBottom: 16 }}>
+        <div className="table-scroll">
+          <table>
+            <thead><tr><Th col="date">Date</Th><Th col="amount">Amount</Th><Th col="remaining">Remaining</Th><th>Source</th><th></th></tr></thead>
+            <tbody>
+              {sorted.map((r) =>
+                editId === r.id && editRow ? (
+                  <tr key={r.id}>
+                    <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
+                    <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 90 }} /></td>
+                    <td></td>
+                    <td className="footer-note">{r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}</td>
+                    <td>
+                      <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
+                      <button className="btn secondary small" onClick={() => setEditId(null)}>Cancel</button>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr key={r.id}>
+                    <td>{r.date}</td>
+                    <td>{fmtMoney(r.amount, loan.currencyCode)}</td>
+                    <td>
+                      <Tooltip text="Loan balance still remaining after this repayment, in date order.">
+                        <span>{fmtMoney(remaining.get(r.id) ?? 0, loan.currencyCode)}</span>
+                      </Tooltip>
+                    </td>
+                    <td className="footer-note">{r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}</td>
+                    <td>
+                      <button className="btn secondary small" onClick={() => startEdit(r)}>Edit</button>{' '}
+                      <button
+                        className="btn secondary small"
+                        onClick={() => confirmAndDeleteLinkable('personalLoans', r.id, () => deleteRepayment(r.id))}
+                      >
+                        <TrashIcon size={12} />Delete
+                      </button>
+                    </td>
+                  </tr>
+                ),
+              )}
+              {!sorted.length && <tr><td colSpan={5} className="footer-note">No repayments logged yet.</td></tr>}
+            </tbody>
+          </table>
         </div>
-      )}
+        {repayments.length > 0 && (
+          <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginTop: 12 }}>
+            <Field label="From (optional)">
+              <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+            </Field>
+            <Field label="To (optional)">
+              <TextInput type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+            </Field>
+            <button className="btn secondary" onClick={exportStatement}>Export CSV</button>
+          </div>
+        )}
+      </CollapsibleCard>
       <ImportRepaymentsSection loan={loan} />
     </div>
   );
