@@ -594,18 +594,19 @@ record on both sides at once, and keeps them in sync afterward.
 
 **Supported so far**: Cash ↔ Banking, Banking ↔ your QSE or PSX cash balance (a deposit or
 withdrawal), Banking/Cash ↔ a specific Rentals property (rent received, or an expense paid),
-and Banking/Cash ↔ a specific Personal Loan (a repayment logged against that loan). Other
-pairings (e.g. Cash directly to a stock exchange, or anything involving Funds/EMI) aren't
-wired up yet — the form tells you if a pairing isn't supported instead of silently doing
-something wrong.
+Banking/Cash ↔ a specific Personal Loan (a repayment logged against that loan), and
+Banking/Cash ↔ Funds (a deposit into or withdrawal from Funds' cash balance). Other pairings
+(e.g. Cash directly to a stock exchange, or anything involving EMI) aren't wired up yet —
+the form tells you if a pairing isn't supported instead of silently doing something wrong.
 
 - **Create a link**: choose the **From** and **To** side (for Banking, also pick which
   account; for Rentals, pick which property; for Personal Loans, pick which loan), an
   amount, a date, and an optional note, then **Create link**. This adds a matching entry to
   both modules' own ledgers — you'll see it appear in Cash's ledger, Banking's transaction
-  list, a property's income/expenses, or a loan's repayment list, exactly like anything else
-  you'd entered by hand there. A Personal Loans repayment created this way is always a
-  positive amount against the chosen loan, regardless of which side of the link it's on.
+  list, a property's income/expenses, a loan's repayment list, or Funds' own transaction
+  history, exactly like anything else you'd entered by hand there. A Personal Loans
+  repayment created this way is always a positive amount against the chosen loan, regardless
+  of which side of the link it's on.
 - **Different currencies**: no live conversion happens automatically — but if the two sides
   use different currencies, check **"Different amount on the other side"** and enter the
   real converted amount yourself (from your bank's rate, a cash exchange receipt, etc.).

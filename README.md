@@ -1650,6 +1650,33 @@ FinanceManager live link:
     since generation was gated by sign-in, and both subscriptions correctly appearing in the
     30-day upcoming-renewals window) — zero console errors. `npx tsc -b` / `npm run test`
     (249 tests, 14 new) / `npm run build` all clean.
+100. **Funds added as a cross-entity-linking module — README item 21's remainder (2026-08-24).**
+     Exposed Funds' `Transfer` field (inherited unused from the full `createWorkbookStore`
+     factory) in the Transfers page, resolving the "can follow once its Transfer field is
+     actually exposed" note that had blocked this since Done item 29. Since `FundsWorkbook`
+     already uses the exact same `Transfer` type as QSE/PSX, this was a mechanical addition
+     mirroring their existing case throughout: `types/interEntityTransfer.ts` gained `'funds'`
+     to `LinkModule`, `lib/interEntityLink.ts`'s `buildSideRecord` folds it into the same
+     `case 'qse': case 'psx':` branch (DEPOSIT/WITHDRAWAL, zero fee), `lib/linkCascade.ts`'s
+     three dispatch switches gained a `funds` case using `useFundsWorkbookStore`'s existing
+     `addTransfer`/`updateTransfer`/`deleteTransfer`, and `isSupportedLinkPair` allows
+     Bank/Cash↔Funds (the same "only pairs with the two hub modules" rule every other
+     module here follows — no Funds↔QSE/PSX/Rentals/PersonalLoans pairing). **One real
+     design call**: unlike QSE/PSX, Funds has no single portfolio currency (funds can be
+     added in different currencies) — `TransferLinksPage.tsx` uses `settings.defaultCurrency`
+     as the Funds side's currency for display/mismatch-warning purposes, a pragmatic
+     stand-in that matches the same implicit single-currency assumption `useFundsDerived`'s
+     already-unused `cashSummary`/`buildCashLedger` calls made before this change — not a
+     new problem introduced here. New tests: `interEntityLink.test.ts` gained 2
+     `buildLinkedRecords` cases (Bank→Funds, Funds→Cash) and extended both
+     `isSupportedLinkPair` cases (accepted pairs, rejected pairs) to cover Funds. Verified
+     live via Playwright (same reduced-verification precedent as Rentals/Personal Loans
+     linking — no real Firebase Auth round-trip attempted against the production project):
+     selecting Funds as either side correctly shows its (default) currency, no
+     unsupported-pair warning fires for Bank/Cash↔Funds, and the page's own intro text
+     correctly lists the new pairing — zero console errors. `npx tsc -b` / `npm run test`
+     (251 tests, 2 new) / `npm run build` all clean. **Item 21's only remaining gap**: EMI
+     still has no repayment ledger to link into at all (a data-model question, not a UI gap).
 
 ## Pending
 
@@ -1679,9 +1706,11 @@ FinanceManager live link:
 **New wave, 2026-08-23 (user-requested, full design detail in `MODULES_PLAN.md`'s "Next
 wave" section)**:
 
-21. Cross-entity linking remainder (see Done item 39): Personal Loans is now linked. Funds
-    still needs its hidden `Transfer` field exposed in the UI first; EMI has no repayment
-    ledger at all to link into (a data-model question). Neither of these is started.
+21. ~~Cross-entity linking remainder: Funds needs its hidden `Transfer` field exposed in the
+    UI.~~ **Done (2026-08-24) — see Done item 100.** Bank/Cash↔Funds now works, same pattern
+    as every other linked module pair. **Still open**: EMI has no repayment ledger at all to
+    link into — that's a data-model question (would need a real repayment-tracking feature
+    added to EMI/Loans first, not just UI wiring), not attempted.
 22. Calculator button remainder: it's module-aware now (hidden outside Stock Exchanges, see
     Done item 32) — the longer-term goal of a *relevant* calculator per module (an EMI payoff
     calculator, a Cash quick-math tool, etc.) is now largely covered by each module's own

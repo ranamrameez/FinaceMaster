@@ -12,11 +12,16 @@
  * repayment ledger to link into at all — see MODULES_PLAN.md §8). Extended
  * again the same day to include Personal Loans now that
  * `PersonalLoanRepayment` has been retrofitted with a stable id
- * (Bank/Cash <-> a specific loan's repayment ledger). Funds linking can
- * follow once its `Transfer` field is actually exposed in the UI. */
-export type LinkModule = 'cash' | 'bank' | 'qse' | 'psx' | 'rentals' | 'personalLoans';
+ * (Bank/Cash <-> a specific loan's repayment ledger). Extended again
+ * 2026-08-24 to include Funds (Bank/Cash <-> Funds' cash balance) — its
+ * `Transfer` field (inherited unused from `createWorkbookStore`'s full
+ * factory) needed no retrofit, so this is a plain module-list addition
+ * mirroring QSE/PSX exactly (a currency, no per-fund `ref`, since a Funds
+ * deposit/withdrawal is portfolio-level, not tied to one specific fund).
+ * EMI still has no repayment ledger to link into at all. */
+export type LinkModule = 'cash' | 'bank' | 'qse' | 'psx' | 'rentals' | 'personalLoans' | 'funds';
 
-export const LINK_MODULES: LinkModule[] = ['cash', 'bank', 'qse', 'psx', 'rentals', 'personalLoans'];
+export const LINK_MODULES: LinkModule[] = ['cash', 'bank', 'qse', 'psx', 'rentals', 'personalLoans', 'funds'];
 
 export const LINK_MODULE_LABELS: Record<LinkModule, string> = {
   cash: 'Cash',
@@ -25,6 +30,7 @@ export const LINK_MODULE_LABELS: Record<LinkModule, string> = {
   psx: 'PSX (Stocks)',
   rentals: 'Rentals',
   personalLoans: 'Personal Loans',
+  funds: 'Funds',
 };
 
 export interface LinkSideConfig {

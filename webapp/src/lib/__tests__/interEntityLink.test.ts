@@ -183,6 +183,36 @@ describe('buildLinkedRecords', () => {
     expect(() => buildLinkedRecords(input, ids)).toThrow();
   });
 
+  it('maps Bank -> Funds to a WITHDRAWAL/DEPOSIT pair with zero fee, same as QSE/PSX', () => {
+    const input: InterEntityTransferInput = {
+      date: '2026-06-01',
+      fromAmount: 2000,
+      toAmount: 2000,
+      from: { module: 'bank', ref: 'acct-1' },
+      to: { module: 'funds' },
+    };
+    const { from, to } = buildLinkedRecords(input, ids);
+    expect(from.module).toBe('bank');
+    if (from.module === 'bank') expect(from.record.amount).toBe(-2000);
+    expect(to.module).toBe('funds');
+    if (to.module === 'funds') expect(to.record).toMatchObject({ type: 'DEPOSIT', gross: 2000, fee: 0 });
+  });
+
+  it('maps Funds -> Cash to a WITHDRAWAL on the Funds side', () => {
+    const input: InterEntityTransferInput = {
+      date: '2026-06-02',
+      fromAmount: 500,
+      toAmount: 500,
+      from: { module: 'funds' },
+      to: { module: 'cash', currencyCode: 'USD' },
+    };
+    const { from, to } = buildLinkedRecords(input, ids);
+    expect(from.module).toBe('funds');
+    if (from.module === 'funds') expect(from.record).toMatchObject({ type: 'WITHDRAWAL', gross: 500 });
+    expect(to.module).toBe('cash');
+    if (to.module === 'cash') expect(to.record).toMatchObject({ type: 'IN', amount: 500 });
+  });
+
   it('reuses the same ids when recomputing for an edit', () => {
     const input: InterEntityTransferInput = {
       date: '2026-01-01',
@@ -216,11 +246,17 @@ describe('isSupportedLinkPair', () => {
     expect(isSupportedLinkPair('personalLoans', 'bank')).toBe(true);
     expect(isSupportedLinkPair('cash', 'personalLoans')).toBe(true);
     expect(isSupportedLinkPair('personalLoans', 'cash')).toBe(true);
+    expect(isSupportedLinkPair('bank', 'funds')).toBe(true);
+    expect(isSupportedLinkPair('funds', 'bank')).toBe(true);
+    expect(isSupportedLinkPair('cash', 'funds')).toBe(true);
+    expect(isSupportedLinkPair('funds', 'cash')).toBe(true);
   });
 
   it('rejects pairs outside v1 scope', () => {
     expect(isSupportedLinkPair('cash', 'qse')).toBe(false);
     expect(isSupportedLinkPair('qse', 'psx')).toBe(false);
     expect(isSupportedLinkPair('cash', 'cash')).toBe(false);
+    expect(isSupportedLinkPair('qse', 'funds')).toBe(false);
+    expect(isSupportedLinkPair('rentals', 'funds')).toBe(false);
   });
 });

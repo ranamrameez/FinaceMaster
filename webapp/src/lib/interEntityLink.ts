@@ -11,7 +11,7 @@ import type { Transfer } from '../types/workbook';
 export type LinkSideRecord =
   | { module: 'cash'; record: CashEntry }
   | { module: 'bank'; record: BankTransaction }
-  | { module: 'qse' | 'psx'; record: Transfer }
+  | { module: 'qse' | 'psx' | 'funds'; record: Transfer }
   | { module: 'rentals'; record: RentalEntry }
   | { module: 'personalLoans'; record: PersonalLoanRepayment };
 
@@ -54,6 +54,7 @@ function buildSideRecord(
       };
     case 'qse':
     case 'psx':
+    case 'funds':
       return {
         module: cfg.module,
         record: { id, date, type: direction === 'in' ? 'DEPOSIT' : 'WITHDRAWAL', gross: amount, fee: 0 },
@@ -131,6 +132,10 @@ export function isSupportedLinkPair(from: LinkModule, to: LinkModule): boolean {
     ['personalLoans', 'bank'],
     ['cash', 'personalLoans'],
     ['personalLoans', 'cash'],
+    ['bank', 'funds'],
+    ['funds', 'bank'],
+    ['cash', 'funds'],
+    ['funds', 'cash'],
   ];
   return supported.some(([a, b]) => a === from && b === to);
 }

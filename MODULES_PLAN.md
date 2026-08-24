@@ -554,11 +554,12 @@ decisions (flagged explicitly below).
 
 ## 8. Multi-currency-aware, multi-module cross-entity linking
 
-**Status: (a), Rentals, and Personal Loans (part of (b)) built 2026-08-23** — see README
-Done items 34 and 39. `fromAmount`/`toAmount` are live, and Rentals + Personal Loans are now
-linkable modules (Bank/Cash↔a specific property, Bank/Cash↔a specific loan's repayment
-ledger). EMI/Funds remain unlinked per the blockers documented below — nothing changed about
-them, they're recorded here for whenever they're picked up next.
+**Status: (a), Rentals, Personal Loans (part of (b)), and now Funds all built** — see README
+Done items 34, 39, and 100 (Funds, 2026-08-24). `fromAmount`/`toAmount` are live, and
+Rentals, Personal Loans, and Funds are all linkable modules now (Bank/Cash↔a specific
+property, Bank/Cash↔a specific loan's repayment ledger, Bank/Cash↔Funds' cash balance).
+**EMI remains the only unlinked module**, per the data-model blocker documented below —
+nothing has changed about it.
 
 Extends README item 19 / MODULES_PLAN §7 (v1 shipped 2026-08-23, Cash↔Bank + Bank↔QSE/PSX,
 single shared amount). Two separate asks bundled together by the user, both real:
@@ -595,12 +596,15 @@ Extending to Funds/EMI hits real per-module blockers, investigated 2026-08-23:
   which is a bigger design change than "add an id" — don't do this silently; if EMI linking
   is wanted, decide explicitly whether EMI gains a real repayment log (changing what "elapsed
   time" based payoff tracking means) or stays schedule-only and un-linkable.
-- **Funds**: technically has a `transfers: Transfer[]` array (inherited from reusing
-  `createWorkbookStore`) but it's explicitly unused/not shown in the Funds UI (see CLAUDE.md's
-  Funds entry) — a Fund doesn't really have a "cash balance" concept distinct from buy/sell at
-  NAV. Wiring linking into an unused, hidden field would be linking into nothing the user can
-  see. Exposing that concept in the Funds UI first is a prerequisite, not part of linking
-  itself.
+- **Funds**: ✅ investigated and built 2026-08-24 — see README Done item 100. Reused its
+  already-present `transfers: Transfer[]` array (inherited from `createWorkbookStore`, same
+  type QSE/PSX use) — since `buildSideRecord` already had a `case 'qse': case 'psx':` branch
+  producing exactly this `Transfer` shape (DEPOSIT/WITHDRAWAL, zero fee), Funds folded into
+  that same branch with zero new record-building logic. The one real design call: Funds has
+  no single portfolio currency (unlike QSE/PSX), so `TransferLinksPage.tsx` uses
+  `settings.defaultCurrency` as a pragmatic stand-in for display/mismatch-warning purposes —
+  not a new problem, since `useFundsDerived`'s own unused `cashSummary`/`buildCashLedger`
+  calls already made the same implicit single-currency assumption before this change.
 - **Rentals**: ✅ investigated and built 2026-08-23. Hand-written store (like Bank), and its
   `updateEntry(id, ...)`/`deleteEntry(id)` were already id-addressed — same check Banking
   already passed, no retrofit needed. Now a linkable module: `ref` is a `Property.id`, and a
@@ -608,8 +612,9 @@ Extending to Funds/EMI hits real per-module blockers, investigated 2026-08-23:
   `EXPENSE` when it's the `from` side).
 
 **Suggested order**: (1) fromAmount/toAmount multi-currency support — ✅ done; (2) Personal
-Loans id retrofit + linking — ✅ done; (3) investigate Rentals — ✅ done; (4) EMI and Funds
-need their own design decisions first, don't just wire them in — still open.
+Loans id retrofit + linking — ✅ done; (3) investigate Rentals — ✅ done; (4) Funds — ✅ done
+2026-08-24; (5) EMI needs a real data-model decision (add a repayment ledger, or stay
+schedule-only and unlinked) before it can follow — still open.
 
 ## 9. Native Risk Calculator (replaces the legacy static-page link) — ✅ built 2026-08-23
 

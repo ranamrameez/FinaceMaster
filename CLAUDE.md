@@ -1939,6 +1939,33 @@ not developer notes) continuously as features ship.
   the sign-in gate), and all three Analytics charts matched
   hand-calculated numbers — zero console errors. `npx tsc -b` / `npm
   run test` (249 tests, 14 new) / `npm run build` all clean.
+- **Funds added as a cross-entity-linking module — README item 21's
+  remainder (2026-08-24), see Done item 100.** Exposed Funds' hidden
+  `Transfer` field (inherited unused from `createWorkbookStore`) in
+  the Transfers page — since `FundsWorkbook` already uses the exact
+  same `Transfer` type as QSE/PSX, `lib/interEntityLink.ts`'s
+  `buildSideRecord` just folds `'funds'` into the existing `case
+  'qse': case 'psx':` branch (DEPOSIT/WITHDRAWAL, zero fee), and
+  `lib/linkCascade.ts`'s three dispatch switches gained a `funds` case
+  using `useFundsWorkbookStore`'s existing `addTransfer`/
+  `updateTransfer`/`deleteTransfer`. `isSupportedLinkPair` allows
+  Bank/Cash↔Funds only (same "hub modules only" rule every other
+  linked module follows). **One real design call**: Funds has no
+  single portfolio currency (funds can be added in different
+  currencies) — `TransferLinksPage.tsx` uses `settings.defaultCurrency`
+  as the Funds side's display currency, matching the same implicit
+  single-currency assumption `useFundsDerived`'s own already-unused
+  `cashSummary`/`buildCashLedger` calls already made. New tests:
+  `interEntityLink.test.ts` gained 2 `buildLinkedRecords` cases plus
+  extended `isSupportedLinkPair` coverage. Verified live via
+  Playwright (same reduced-verification precedent as Rentals/Personal
+  Loans linking — no real signed-in round-trip against the production
+  Firebase project): selecting Funds as either side shows the correct
+  currency, no unsupported-pair warning fires, zero console errors.
+  `npx tsc -b` / `npm run test` (251 tests, 2 new) / `npm run build`
+  all clean. **EMI is now the only unlinked module** — it has no
+  repayment ledger at all to link into, a data-model question, not a
+  UI gap.
 
 ## Live URLs
 

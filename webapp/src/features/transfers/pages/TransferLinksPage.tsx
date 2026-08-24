@@ -13,6 +13,7 @@ import { isSupportedLinkPair } from '../../../lib/interEntityLink';
 import { createLinkedTransfer, deleteLinkCascade, updateLinkedTransfer } from '../../../lib/linkCascade';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
 import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
+import { useFundsWorkbookStore } from '../../../store/fundsWorkbookStore';
 import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
 import { usePersonalLoansWorkbookStore } from '../../../store/personalLoansWorkbookStore';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
@@ -27,6 +28,7 @@ interface CurrencyContext {
   bankAccounts: { id: string; currencyCode: string }[];
   qseCurrency: string;
   psxCurrency: string;
+  fundsCurrency: string;
   properties: { id: string; currencyCode: string }[];
   loans: { id: string; currencyCode: string }[];
 }
@@ -41,6 +43,12 @@ function resolveCurrency(cfg: LinkSideConfig, ctx: CurrencyContext): string | nu
     case 'bank': return ctx.bankAccounts.find((a) => a.id === cfg.ref)?.currencyCode ?? null;
     case 'qse': return ctx.qseCurrency;
     case 'psx': return ctx.psxCurrency;
+    // Unlike QSE/PSX, Funds has no single portfolio currency (funds can be
+    // added in different currencies) — `defaultCurrency` is a pragmatic
+    // stand-in, same simplification the unused `cashSummary`/
+    // `buildCashLedger` calls in `useFundsDerived` already made implicitly
+    // by treating every Transfer as one currency.
+    case 'funds': return ctx.fundsCurrency;
     case 'rentals': return ctx.properties.find((p) => p.id === cfg.ref)?.currencyCode ?? null;
     case 'personalLoans': return ctx.loans.find((l) => l.id === cfg.ref)?.currencyCode ?? null;
   }
@@ -56,9 +64,10 @@ function useSideCurrency(cfg: LinkSideConfig): string | null {
   const bankAccounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
   const qseCurrency = useWorkbookStore((s) => s.workbook.settings.currency);
   const psxCurrency = usePSXWorkbookStore((s) => s.workbook.settings.currency);
+  const fundsCurrency = useFundsWorkbookStore((s) => s.workbook.settings.defaultCurrency);
   const properties = useRentalsWorkbookStore((s) => s.workbook.settings.properties);
   const loans = usePersonalLoansWorkbookStore((s) => s.workbook.loans);
-  return resolveCurrency(cfg, { cashCurrency, bankAccounts, qseCurrency, psxCurrency, properties, loans });
+  return resolveCurrency(cfg, { cashCurrency, bankAccounts, qseCurrency, psxCurrency, fundsCurrency, properties, loans });
 }
 
 function SideFields({ label, cfg, onChange }: { label: string; cfg: LinkSideConfig; onChange: (cfg: LinkSideConfig) => void }) {
@@ -173,7 +182,8 @@ function CreateLinkForm() {
       {!pairSupported && (
         <p className="footer-note" style={{ color: 'var(--warn, orange)' }}>
           {LINK_MODULE_LABELS[from.module]} &rarr; {LINK_MODULE_LABELS[to.module]} isn't a supported linked pair yet — this
-          only links Cash&harr;Bank, Bank&harr;QSE/PSX cash balances, Bank/Cash&harr;Rentals, and Bank/Cash&harr;Personal Loans.
+          only links Cash&harr;Bank, Bank&harr;QSE/PSX cash balances, Bank/Cash&harr;Rentals, Bank/Cash&harr;Personal Loans,
+          and Bank/Cash&harr;Funds.
         </p>
       )}
       {currencyMismatch && !differentAmount && (
@@ -230,7 +240,8 @@ function LinksList() {
   const cashCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
   const qseCurrency = useWorkbookStore((s) => s.workbook.settings.currency);
   const psxCurrency = usePSXWorkbookStore((s) => s.workbook.settings.currency);
-  const currencyCtx: CurrencyContext = { cashCurrency, bankAccounts, qseCurrency, psxCurrency, properties, loans };
+  const fundsCurrency = useFundsWorkbookStore((s) => s.workbook.settings.defaultCurrency);
+  const currencyCtx: CurrencyContext = { cashCurrency, bankAccounts, qseCurrency, psxCurrency, fundsCurrency, properties, loans };
   const [editId, setEditId] = useState<string | null>(null);
   const [editFromAmount, setEditFromAmount] = useState(0);
   const [editToAmount, setEditToAmount] = useState(0);
@@ -340,8 +351,8 @@ export function TransferLinksPage({
       <p className="footer-note" style={{ marginBottom: 12 }}>
         Move money between modules as one linked record instead of two entries that can drift apart. Supports
         Cash&harr;Bank, Bank&harr;QSE/PSX cash balances, Bank/Cash&harr;Rentals (rent received or an expense paid),
-        and Bank/Cash&harr;Personal Loans (a repayment logged against a specific loan); other module pairs aren't
-        wired up yet.
+        Bank/Cash&harr;Personal Loans (a repayment logged against a specific loan), and Bank/Cash&harr;Funds (a
+        deposit or withdrawal against Funds' cash balance); other module pairs aren't wired up yet.
       </p>
       <CreateLinkForm />
       <CollapsibleCard title={<h3 style={{ margin: 0 }}>Linked transfers</h3>}>
