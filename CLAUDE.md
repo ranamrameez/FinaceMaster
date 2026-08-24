@@ -1628,6 +1628,20 @@ not developer notes) continuously as features ship.
   `StockPage` add-form + edit-row). Verified live: fresh row starts in
   Semi with "Netted" pre-checked; Manual/Auto correctly show/hide the
   right control; zero console errors.
+- **Sold-price stats + "fair value" labeling on the per-stock page
+  (2026-08-24) — see README Done item 80.** User asked for a sold price
+  to be visible and for a way to "find fair market value" from their own
+  data. Trade history already existed (StockPage's Transactions tab);
+  added **Avg sell price**/**Last sell price** stat cards to "All-time
+  stats" (shown only when the ticker has a sell) and relabeled the
+  existing Price-range "Median" stat to "Median (fair value)" with a
+  tooltip — it was already computing correctly (fixed the same session,
+  see the raw-price-history fix above) but wasn't described as what it
+  is. No new calc logic, just surfacing already-available transaction
+  data. Applied identically to QSE's and PSX's `PositionDetail.tsx`.
+  Verified live: seeded two-buy/two-sell OGDC position showed Avg sell
+  125.00, Last sell 130.00, Median (fair value) 120.00 — all correct,
+  zero console errors.
 
 ## Live URLs
 

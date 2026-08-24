@@ -1244,6 +1244,24 @@ FinanceManager live link:
     hides the checkbox and shows the fee input; switching to Auto hides both — zero console
     errors. `npx tsc -b` / `npm run test` (206 tests, unchanged — UI consolidation onto
     already-tested fields) / `npm run build` all clean.
+80. **"We should add sold price to our stock for better understanding" + "find fair market
+    value as per my data," two related user requests on the per-stock page, addressed
+    together.** Trade history for a ticker already existed (StockPage's "Transactions" tab,
+    unchanged) — the actual gaps were: no sell price shown anywhere as its own stat (only
+    buried inside the "Current position" bar chart's "Sold" bar, and only the *last* sell, not
+    an average), and the existing "Median" price-range stat — now correctly computed from raw
+    per-update history (Done item 78) — wasn't labeled as what it actually is: a fair-value
+    estimate from the user's own recorded data. Fixed by adding two new stat cards to
+    "All-time stats" (shown only when the ticker has at least one sell): **Avg sell price**
+    (weighted average across every sell) and **Last sell price**; and relabeling "Median" to
+    "Median (fair value)" with a tooltip explaining it's a simple fair-value estimate derived
+    from every price the user has recorded, not invented new calc logic. Applied identically
+    to both QSE's and PSX's `PositionDetail.tsx`. Verified live via Playwright with a seeded
+    two-buy/two-sell OGDC position: Avg sell price correctly computed 125.00
+    ((50×120+50×130)/100), Last sell price 130.00, Median (fair value) 120.00 — all matching
+    hand-calculated expectations, zero console errors. `npx tsc -b` / `npm run test` (206
+    tests, unchanged — no new calc logic, just surfacing existing transaction data) / `npm run
+    build` all clean.
 
 ## Pending
 

@@ -47,7 +47,9 @@ export function PositionDetail({ ticker }: { ticker: string }) {
   // component is reused across stock pages without remounting).
   useEffect(() => setPriceInput(mp > 0 ? String(mp) : ''), [ticker]); // eslint-disable-line react-hooks/exhaustive-deps
   const lastBuyPrice = [...workbook.transactions].filter((t) => t.ticker === ticker && t.action === 'BUY').sort((a, b) => a.date.localeCompare(b.date)).pop()?.price || 0;
-  const lastSellPrice = [...workbook.transactions].filter((t) => t.ticker === ticker && t.action === 'SELL').sort((a, b) => a.date.localeCompare(b.date)).pop()?.price || 0;
+  const soldTx = workbook.transactions.filter((t) => t.ticker === ticker && t.action === 'SELL');
+  const lastSellPrice = [...soldTx].sort((a, b) => a.date.localeCompare(b.date)).pop()?.price || 0;
+  const avgSellPrice = soldTx.length ? soldTx.reduce((s, t) => s + t.shares * t.price, 0) / soldTx.reduce((s, t) => s + t.shares, 0) : 0;
   const holdingDays = position
     ? Math.max(0, Math.round((new Date(position.lastDate).getTime() - new Date(position.firstDate).getTime()) / 86400000))
     : 0;
@@ -166,6 +168,12 @@ export function PositionDetail({ ticker }: { ticker: string }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px,1fr))', gap: 8 }}>
             <div className="stat-card card"><div className="label">Total bought</div><div className="value">{fmt(position.totalBoughtShares, 0)}</div><div className="sub">{position.buyCount} buys</div></div>
             <div className="stat-card card"><div className="label">Total sold</div><div className="value">{fmt(position.totalSoldShares, 0)}</div><div className="sub">{position.sellCount} sells</div></div>
+            {position.sellCount > 0 && (
+              <>
+                <div className="stat-card card" title="Weighted average price across every sell of this ticker."><div className="label">Avg sell price</div><div className="value">{fmtPrice(avgSellPrice)}</div></div>
+                <div className="stat-card card"><div className="label">Last sell price</div><div className="value">{fmtPrice(lastSellPrice)}</div></div>
+              </>
+            )}
             <div className="stat-card card"><div className="label">Realized P/L</div><div className="value">{fmtMoney(position.realized, currency)}</div></div>
             <div className="stat-card card"><div className="label">Fees paid</div><div className="value">{fmtMoney(position.buyFees + position.sellFees, currency)}</div></div>
             <div className="stat-card card"><div className="label">First trade</div><div className="value" style={{ fontSize: 13 }}>{position.firstDate}</div></div>
@@ -180,7 +188,10 @@ export function PositionDetail({ ticker }: { ticker: string }) {
           <h4 style={{ marginTop: 16 }}>Price range</h4>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 8 }}>
             <div className="stat-card card"><div className="label">Lowest</div><div className="value">{fmtPrice(stats.min)}</div><div className="sub">{stats.minDate}</div></div>
-            <div className="stat-card card"><div className="label">Median</div><div className="value">{fmtPrice(stats.median)}</div></div>
+            <div className="stat-card card" title="A simple fair-value estimate: the middle price across every update you've recorded for this ticker.">
+              <div className="label">Median (fair value)</div>
+              <div className="value">{fmtPrice(stats.median)}</div>
+            </div>
             <div className="stat-card card"><div className="label">Highest</div><div className="value">{fmtPrice(stats.max)}</div><div className="sub">{stats.maxDate}</div></div>
           </div>
           <details>
