@@ -1,6 +1,5 @@
 import type { User } from 'firebase/auth';
 import { useRef, useState } from 'react';
-import { Card } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { Tabs } from '../../../components/Tabs';
@@ -106,18 +105,12 @@ function AccountSection({
   };
 
   if (!firebaseReady) {
-    return (
-      <Card>
-        <h3 style={{ marginTop: 0 }}>Account</h3>
-        <p className="footer-note">Cloud sync is unavailable — Firebase failed to load in this browser.</p>
-      </Card>
-    );
+    return <p className="footer-note">Cloud sync is unavailable — Firebase failed to load in this browser.</p>;
   }
 
   if (user) {
     return (
-      <Card>
-        <h3 style={{ marginTop: 0 }}>Account</h3>
+      <>
         <ProfileEditor user={user} />
         <p className="footer-note" style={{ marginTop: 8 }}>{syncStatus}</p>
         {cloudEmpty && (
@@ -147,18 +140,17 @@ function AccountSection({
         <button className="btn secondary" disabled={busy} onClick={() => run(signOutUser)} style={{ marginTop: 8 }}>
           Sign out
         </button>
-      </Card>
+      </>
     );
   }
 
   return (
-    <Card>
-      <h3 style={{ marginTop: 0 }}>Account</h3>
+    <>
       <p className="footer-note">{syncStatus}</p>
       <button className="btn" style={{ marginTop: 8 }} onClick={() => requireSignIn()}>
         <LogInIcon />Sign in
       </button>
-    </Card>
+    </>
   );
 }
 
@@ -199,31 +191,28 @@ function DataManagement() {
   };
 
   return (
-    <Card>
-      <h3 style={{ marginTop: 0 }}>Data management</h3>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-        <button className="btn secondary" onClick={exportJSON}>
-          Export JSON
-        </button>
-        <button className="btn secondary" onClick={() => fileInput.current?.click()}>
-          Import JSON
-        </button>
-        <input
-          ref={fileInput}
-          type="file"
-          accept="application/json"
-          style={{ display: 'none' }}
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) importJSON(file);
-            e.target.value = '';
-          }}
-        />
-        <button className="btn secondary" onClick={clearAll}>
-          Clear all data
-        </button>
-      </div>
-    </Card>
+    <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+      <button className="btn secondary" onClick={exportJSON}>
+        Export JSON
+      </button>
+      <button className="btn secondary" onClick={() => fileInput.current?.click()}>
+        Import JSON
+      </button>
+      <input
+        ref={fileInput}
+        type="file"
+        accept="application/json"
+        style={{ display: 'none' }}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) importJSON(file);
+          e.target.value = '';
+        }}
+      />
+      <button className="btn secondary" onClick={clearAll}>
+        Clear all data
+      </button>
+    </div>
   );
 }
 
@@ -232,26 +221,23 @@ function AmountSettings() {
   const updateSettings = useWorkbookStore((s) => s.updateSettings);
 
   return (
-    <Card>
-      <h3 style={{ marginTop: 0 }}>Amount settings</h3>
-      <div className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
-        <Field label="Fee %" width={90}>
-          <TextInput type="number" step="0.001" value={settings.feePct} onChange={(e) => updateSettings({ feePct: Number(e.target.value) })} />
-        </Field>
-        <Field label="Min fee" width={90}>
-          <TextInput type="number" step="0.01" value={settings.minFee} onChange={(e) => updateSettings({ minFee: Number(e.target.value) })} />
-        </Field>
-        <Field label="Tick size" width={90}>
-          <TextInput type="number" step="0.001" value={settings.tick} onChange={(e) => updateSettings({ tick: Number(e.target.value) })} />
-        </Field>
-        <Field label="Currency" width={70}>
-          <TextInput value={settings.currency} onChange={(e) => updateSettings({ currency: e.target.value })} />
-        </Field>
-        <Field label="Default deposit fee" width={90}>
-          <TextInput type="number" step="0.01" value={settings.depositFee} onChange={(e) => updateSettings({ depositFee: Number(e.target.value) })} />
-        </Field>
-      </div>
-    </Card>
+    <div className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
+      <Field label="Fee %" width={90}>
+        <TextInput type="number" step="0.001" value={settings.feePct} onChange={(e) => updateSettings({ feePct: Number(e.target.value) })} />
+      </Field>
+      <Field label="Min fee" width={90}>
+        <TextInput type="number" step="0.01" value={settings.minFee} onChange={(e) => updateSettings({ minFee: Number(e.target.value) })} />
+      </Field>
+      <Field label="Tick size" width={90}>
+        <TextInput type="number" step="0.001" value={settings.tick} onChange={(e) => updateSettings({ tick: Number(e.target.value) })} />
+      </Field>
+      <Field label="Currency" width={70}>
+        <TextInput value={settings.currency} onChange={(e) => updateSettings({ currency: e.target.value })} />
+      </Field>
+      <Field label="Default deposit fee" width={90}>
+        <TextInput type="number" step="0.01" value={settings.depositFee} onChange={(e) => updateSettings({ depositFee: Number(e.target.value) })} />
+      </Field>
+    </div>
   );
 }
 

@@ -2107,6 +2107,31 @@ FinanceManager live link:
      `IconButton` is now a ready-made building block for that, not yet applied beyond
      Transactions.
 
+114. **Single-child card nesting removed from QSE/PSX Settings pages — third item of the
+     follow-up batch (2026-08-24), the user's own examples: "Account -> Account, Data
+     management -> Data management."** Root cause: `Tabs` (the shared sub-nav component)
+     already wraps each tab's content in its own `CollapsibleCard` titled with that tab's
+     label — but `AccountSection`/`DataManagement` (both exchanges) and QSE's own
+     `AmountSettings` each ALSO wrapped their content in a second, inner `<Card>` with an
+     `<h3>` repeating the exact same label, so "Account" (for example) rendered twice: once
+     as the outer accordion's real header, once again as a redundant heading one level in.
+     Fixed by removing the inner `<Card>`/`<h3>` wrapper from all three, letting the outer
+     `CollapsibleCard` (from `Tabs`) provide both the card chrome and the title — confirmed via
+     a Playwright `h3` text sweep that "Account"/"Data management"/"Amount settings" now each
+     appear exactly once on the page, not twice. **Deliberately left alone**: PSX's "Fees &
+     amounts" tab, whose content (`AmountSettings`) genuinely contains four separate cards
+     with their OWN distinct sub-headings ("Commission & fees", "Capital gains tax", "Cost
+     basis method", "General") — that's a real, useful grouping of different information under
+     one outer accordion, not the "only child repeating the parent's own title" pattern the
+     user's examples named; verified this multi-card section still renders correctly
+     (unflattened) via a screenshot after expanding it. `npx tsc -b` / `npm run test` (255
+     tests, unchanged) / `npm run build` all clean; a 23-page console-error sweep found zero
+     regressions (one page showed a transient network error on one run, gone on a re-run —
+     the same known sandbox FX-fetch limitation documented elsewhere in this file, not a
+     real regression). **This closes out every item from the user's original screenshot plus
+     both follow-up messages** — what remains is the batch of larger, deliberately-deferred
+     redesign items tracked below.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`

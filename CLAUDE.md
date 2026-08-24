@@ -2238,15 +2238,27 @@ not developer notes) continuously as features ship.
   a shape it wasn't drawn for. `IconButton` is now a ready-made block for the broader
   "app-wide" version of this ask, not yet applied beyond Transactions. `npx tsc -b` /
   `npm run test` (255 tests, unchanged) / `npm run build` all clean.
+- **Single-child card nesting removed from QSE/PSX Settings (2026-08-24) — see README Done
+  item 114, closes out the ENTIRE 18-item batch (original screenshot + both follow-ups).**
+  `Tabs` already wraps each tab's content in its own `CollapsibleCard` titled with that tab's
+  label; `AccountSection`/`DataManagement` (both exchanges) and QSE's `AmountSettings` each
+  also wrapped their own content in a second inner `<Card>` with a matching `<h3>`, so
+  "Account" (e.g.) rendered twice — once as the real accordion header, once as a redundant
+  heading one level in. Fixed by dropping the inner `<Card>`/`<h3>` from all three. Left PSX's
+  "Fees & amounts" tab alone on purpose — its content is 4 real sub-cards with distinct
+  headings ("Commission & fees", "Capital gains tax", etc.), not the "only child repeating the
+  parent's title" pattern being fixed. Verified via an `h3`-text sweep (each label now appears
+  exactly once) plus a screenshot confirming the multi-card section is unflattened. `npx tsc
+  -b` / `npm run test` (255 tests, unchanged) / `npm run build` all clean.
 - **Still open, not yet started**: icon-only buttons with tooltips on every other module
   (Cash/Bank/Personal Loans/EMI/Funds/Rentals/Subscriptions/Transfers all still have
-  full-text Edit/Delete buttons), removing single-child nested Settings cards, and a batch of
-  larger deferred items (multi-theme stat-card-color audit, Ticker+logo+name/Cost/Value/P-L
-  column grouping standard everywhere, side-by-side layout instead of scrolling, full
-  Portfolio page overhaul, using unused right-side page space) to be documented as scoped
-  README Pending items rather than attempted blind. Continue working down this list per the
-  same standing auto-commit instruction — this note itself will be superseded as more of the
-  batch lands.
+  full-text Edit/Delete buttons — `IconButton` from Done item 113 is ready to reuse there),
+  and a batch of larger deferred redesign items (multi-theme stat-card-color audit,
+  Ticker+logo+name/Cost/Value/P-L column grouping standard everywhere, side-by-side layout
+  instead of scrolling, full Portfolio page overhaul, using unused right-side page space) to
+  be documented as scoped README Pending items rather than attempted blind — this is the next
+  piece of work. Continue working down the README's Pending list per the standing auto-commit
+  instruction.
 
 ## Live URLs
 

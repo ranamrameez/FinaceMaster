@@ -103,18 +103,12 @@ function AccountSection({
   };
 
   if (!firebaseReady) {
-    return (
-      <Card>
-        <h3 style={{ marginTop: 0 }}>Account</h3>
-        <p className="footer-note">Cloud sync is unavailable — Firebase failed to load in this browser.</p>
-      </Card>
-    );
+    return <p className="footer-note">Cloud sync is unavailable — Firebase failed to load in this browser.</p>;
   }
 
   if (user) {
     return (
-      <Card>
-        <h3 style={{ marginTop: 0 }}>Account</h3>
+      <>
         <ProfileEditor user={user} />
         <p className="footer-note" style={{ marginTop: 8 }}>{syncStatus}</p>
         {cloudEmpty && (
@@ -143,18 +137,17 @@ function AccountSection({
         <button className="btn secondary" disabled={busy} onClick={() => run(signOutUser)} style={{ marginTop: 8 }}>
           Sign out
         </button>
-      </Card>
+      </>
     );
   }
 
   return (
-    <Card>
-      <h3 style={{ marginTop: 0 }}>Account</h3>
+    <>
       <p className="footer-note">{syncStatus}</p>
       <button className="btn" style={{ marginTop: 8 }} onClick={() => requireSignIn()}>
         <LogInIcon />Sign in
       </button>
-    </Card>
+    </>
   );
 }
 
@@ -195,31 +188,28 @@ function DataManagement() {
   };
 
   return (
-    <Card>
-      <h3 style={{ marginTop: 0 }}>Data management</h3>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-        <button className="btn secondary" onClick={exportJSON}>
-          Export JSON
-        </button>
-        <button className="btn secondary" onClick={() => fileInput.current?.click()}>
-          Import JSON
-        </button>
-        <input
-          ref={fileInput}
-          type="file"
-          accept="application/json"
-          style={{ display: 'none' }}
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) importJSON(file);
-            e.target.value = '';
-          }}
-        />
-        <button className="btn secondary" onClick={clearAll}>
-          Clear all data
-        </button>
-      </div>
-    </Card>
+    <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+      <button className="btn secondary" onClick={exportJSON}>
+        Export JSON
+      </button>
+      <button className="btn secondary" onClick={() => fileInput.current?.click()}>
+        Import JSON
+      </button>
+      <input
+        ref={fileInput}
+        type="file"
+        accept="application/json"
+        style={{ display: 'none' }}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) importJSON(file);
+          e.target.value = '';
+        }}
+      />
+      <button className="btn secondary" onClick={clearAll}>
+        Clear all data
+      </button>
+    </div>
   );
 }
 
