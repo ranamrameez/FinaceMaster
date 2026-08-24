@@ -1022,6 +1022,33 @@ not developer notes) continuously as features ship.
   rows) — the measurements caught what eyeballing a screenshot missed.
   `npm run build` / `npm run test` (150 tests, unchanged — a CSS/layout
   fix) both clean.
+- **Chart value labels clipping at the chart's edge, user-reported
+  (2026-08-23) — see README Done item 55.** Distinct from the earlier
+  datalabels-clutter fix (Done item 50, which *hides* labels once a
+  dataset has more than 10 points) — this is about a label that *does*
+  render but has nowhere to go: `chartjs-plugin-datalabels` draws a
+  value label just outside its bar/point (above for `dlBarV`/`dlLine`,
+  to the side for `dlBarH`), but Chart.js's own auto-ranged scale has
+  no awareness that a plugin is about to draw past the data's own
+  max/min — so the single tallest/rightmost value's label routinely
+  got clipped right at the canvas boundary, with zero reserved
+  headroom. Fixed with two Chart.js global defaults set once in
+  `lib/chartSetup.ts` — `ChartJS.defaults.scales.linear.grace = '10%'`
+  (pads the auto-computed numeric range past the actual data extent)
+  and `ChartJS.defaults.layout.padding = {top:20, right:16, bottom:4,
+  left:4}` (reserves canvas space around the plot area) — rather than
+  touching each of the 8 files across the app that build their own
+  Chart.js `options` object. **TS note**: `ChartJS.defaults.scale.grace`
+  doesn't typecheck (the generic `scale` defaults type doesn't include
+  `grace`, which is LinearScale-specific) — use
+  `ChartJS.defaults.scales.linear.grace` instead, which is correctly
+  typed. Verified by comparing before/after screenshots of the same
+  seeded Cash "Income vs. expense by month" data: before, the y-axis
+  topped out exactly at the tallest bar's own value (no headroom
+  visible at all); after, the same data auto-ranges 50% higher,
+  visibly making room above every bar. `npm run build` / `npm run test`
+  (150 tests, unchanged — a chart-defaults change, verified visually)
+  both clean.
 - **Large batch of user feedback received 2026-08-23, mid-session —
   most items handled, some still open (check README Done/Pending for
   current per-item status, this is a snapshot at time of receipt).**
@@ -1036,7 +1063,8 @@ not developer notes) continuously as features ship.
   Inputs should align to the bottom with labels directly above,
   consistently — long labels currently push some inputs down while
   others stay up — fixed, see below (README Done item 54, same fix as
-  (4)). (6) Some chart labels cut off at chart edges. (7)
+  (4)). (6) Some chart labels cut off at chart edges — fixed, see
+  below (README Done item 55). (7)
   Mobile: stat card amount text overflowing — fixed, see below (README
   Done item 54). (8) Round stat-card
   numbers for a cleaner look, show the real precise number as a

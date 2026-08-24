@@ -735,6 +735,25 @@ FinanceManager live link:
     (zero overflowing stat values) plus a visual screenshot. `npm run build` / `npm run test`
     (150 tests, unchanged — a CSS/layout fix, verified visually and via computed-style
     inspection rather than unit tests) both clean.
+55. **Chart value labels clipping at the chart's edge fixed globally, user-reported (distinct
+    from the datalabels-clutter fix, Done item 50 — that one hides labels past a point-count
+    threshold; this one is about labels that *do* render running out of room).** Root cause:
+    `chartjs-plugin-datalabels` draws a bar/line's value label just outside the bar/point
+    (`dlBarV`: above; `dlBarH`: to the right/left; `dlLine`: above), but Chart.js's own
+    auto-ranged scale has no idea an external plugin is about to draw text past the data's
+    own max/min — so the tallest bar (or rightmost horizontal bar, or highest line point)
+    routinely had its label clipped right at the canvas edge, with zero headroom reserved.
+    Fixed with two Chart.js global defaults in `lib/chartSetup.ts` (set once, applying to
+    every chart on every page, rather than touching each of the 8 chart-bearing files
+    individually): `ChartJS.defaults.scales.linear.grace = '10%'` pads a linear scale's
+    auto-computed range 10% past the actual data extent, and
+    `ChartJS.defaults.layout.padding = {top:20, right:16, bottom:4, left:4}` reserves canvas
+    space around the plot area. Verified by comparing before/after screenshots of Cash's
+    "Income vs. expense by month" chart with identical seeded data: before, the y-axis
+    topped out exactly at the tallest bar's value (4,000, no headroom); after, the same data
+    auto-ranges to 6,000, giving every value label real room above its bar. `npm run build` /
+    `npm run test` (150 tests, unchanged — a chart-defaults change, verified visually) both
+    clean.
 
 ## Pending
 
@@ -816,9 +835,6 @@ wave" section)**:
 **New batch of user feedback, 2026-08-23 (mid-session) — see Done item 51 for item (1),
 already fixed; the rest tracked here**:
 
-32. Some chart labels get cut off at the chart's edges (distinct from the datalabels-clutter
-    fix in Done item 50 — this is about labels clipping against the container boundary, not
-    overlapping each other). Not started.
 33. Stat-card numbers should round for a cleaner look, with the exact/unrounded number
     available as a hover tooltip. Not started.
 34. Large numbers should abbreviate where reasonable (10,000 → 10k) in stat cards/charts. Not
