@@ -230,7 +230,7 @@ function groupKey(tx: Transaction, groupBy: GroupBy): string {
 }
 
 function TransactionList() {
-  const { workbook, calcFee } = usePSXDerived();
+  const { workbook, calcFee, positions } = usePSXDerived();
   const deleteTransaction = usePSXWorkbookStore((s) => s.deleteTransaction);
   const updateTransaction = usePSXWorkbookStore((s) => s.updateTransaction);
   const currency = workbook.settings.currency;
@@ -242,6 +242,13 @@ function TransactionList() {
 
   const indexed = workbook.transactions.map((tx, i) => ({ tx, i }));
   const tickers = useMemo(() => [...new Set(workbook.transactions.map((t) => t.ticker))].sort(), [workbook.transactions]);
+
+  // Which tickers are currently open (nonzero shares) vs. fully closed —
+  // user request: split the flat transaction log into two sections so
+  // "stuff I'm still holding" and "stuff I've fully exited" aren't mixed
+  // together the way the Portfolio page's own Holdings/History tabs
+  // already separate them.
+  const openTickers = useMemo(() => new Set(positions.filter((p) => p.shares > 0).map((p) => p.ticker)), [positions]);
 
   const filtered = filterTicker === 'ALL' ? indexed : indexed.filter((r) => r.tx.ticker === filterTicker);
   type TxCol = 'date' | 'ticker' | 'action' | 'shares' | 'price' | 'amount' | 'fee';
@@ -258,10 +265,13 @@ function TransactionList() {
   };
   const { sorted, Th } = useSortableRows(filtered, sortValue, 'date', 'desc');
 
-  const groups = useMemo(() => {
-    if (groupBy === 'none') return [{ key: '', rows: sorted }];
+  const openSorted = useMemo(() => sorted.filter((r) => openTickers.has(r.tx.ticker)), [sorted, openTickers]);
+  const closedSorted = useMemo(() => sorted.filter((r) => !openTickers.has(r.tx.ticker)), [sorted, openTickers]);
+
+  const groupRows = (rows: typeof sorted) => {
+    if (groupBy === 'none') return [{ key: '', rows }];
     const map: Record<string, typeof sorted> = {};
-    sorted.forEach((r) => {
+    rows.forEach((r) => {
       const k = groupKey(r.tx, groupBy);
       if (!map[k]) map[k] = [];
       map[k].push(r);
@@ -269,7 +279,9 @@ function TransactionList() {
     return Object.entries(map)
       .sort((a, b) => b[0].localeCompare(a[0]))
       .map(([key, rows]) => ({ key, rows }));
-  }, [sorted, groupBy]);
+  };
+  const openGroups = useMemo(() => groupRows(openSorted), [openSorted, groupBy]);
+  const closedGroups = useMemo(() => groupRows(closedSorted), [closedSorted, groupBy]);
 
   const startEdit = (i: number, tx: Transaction) => {
     setEditIndex(i);
@@ -304,6 +316,122 @@ function TransactionList() {
     toast('All transaction data cleared.');
   };
 
+  const renderTable = (groups: typeof openGroups, emptyMessage: string) => (
+    <div className="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <Th col="date">Date</Th>
+            <Th col="ticker">Ticker</Th>
+            <Th col="action">Action</Th>
+            <Th col="shares">Shares</Th>
+            <Th col="price">Price</Th>
+            <Th col="amount">Amount</Th>
+            <Th col="fee">Fee</Th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {groups.map((g) => (
+            <Fragment key={g.key || 'ungrouped'}>
+              {g.key && (
+                <tr key={'hdr-' + g.key} style={{ background: 'var(--panel-2)' }}>
+                  <td colSpan={8}>
+                    <strong>{g.key}</strong> — {g.rows.length} txns ·{' '}
+                    buys {fmt(g.rows.filter((r) => r.tx.action === 'BUY').reduce((s, r) => s + r.tx.shares, 0), 0)} ·{' '}
+                    sells {fmt(g.rows.filter((r) => r.tx.action === 'SELL').reduce((s, r) => s + r.tx.shares, 0), 0)} ·{' '}
+                    volume {fmtMoney(g.rows.reduce((s, r) => s + r.tx.shares * r.tx.price, 0), currency)} ·{' '}
+                    fees {fmtMoney(g.rows.reduce((s, r) => s + calcFee(r.tx.shares * r.tx.price, r.tx.action === 'BUY', { shares: r.tx.shares, tx: r.tx }), 0), currency)}
+                  </td>
+                </tr>
+              )}
+              {g.rows.map(({ tx, i }) =>
+                editIndex === i && editRow ? (
+                  <tr key={i}>
+                    <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
+                    <td><input value={editRow.ticker} onChange={(e) => setEditRow({ ...editRow, ticker: e.target.value.toUpperCase() })} style={{ width: 70 }} /></td>
+                    <td>
+                      <select value={editRow.action} onChange={(e) => setEditRow({ ...editRow, action: e.target.value as 'BUY' | 'SELL' })}>
+                        <option value="BUY">BUY</option>
+                        <option value="SELL">SELL</option>
+                      </select>
+                    </td>
+                    <td><input type="number" value={editRow.shares} onChange={(e) => setEditRow({ ...editRow, shares: Number(e.target.value) })} style={{ width: 70 }} /></td>
+                    <td><input type="number" step="0.01" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })} style={{ width: 80 }} /></td>
+                    <td>{fmtMoney(editRow.shares * editRow.price, currency)}</td>
+                    <td>
+                      <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4 }} title="Force netted (government levies only) fee treatment, overriding auto-detection.">
+                        <input
+                          type="checkbox"
+                          checked={!!editRow.manualSameDay}
+                          onChange={(e) => setEditRow({ ...editRow, manualSameDay: e.target.checked })}
+                        />
+                        Same-day
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="Fee override"
+                        title="Override the computed fee with the exact amount from your account statement (optional)."
+                        value={editRow.feeOverride ?? ''}
+                        onChange={(e) => setEditRow({ ...editRow, feeOverride: e.target.value === '' ? undefined : Number(e.target.value) })}
+                        style={{ width: 100, marginTop: 4 }}
+                      />
+                    </td>
+                    <td>
+                      <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
+                      <button className="btn secondary small" onClick={() => setEditIndex(null)}>Cancel</button>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr key={i}>
+                    <td>{tx.date}</td>
+                    <td>{tx.ticker}</td>
+                    <td className={tx.action === 'BUY' ? 'pill-buy' : 'pill-sell'}>{tx.action}</td>
+                    <td>{fmt(tx.shares, 0)}</td>
+                    <td>{fmtPrice(tx.price)}</td>
+                    <td>{fmtMoney(tx.shares * tx.price, currency)}</td>
+                    <td>
+                      {fmtMoney(calcFee(tx.shares * tx.price, tx.action === 'BUY', { shares: tx.shares, tx }), currency)}
+                      {tx.feeOverride !== undefined ? (
+                        <span className="footer-note" title="This fee was manually entered, overriding the computed value.">
+                          {' '}(override)
+                        </span>
+                      ) : (
+                        isNettedLeg(workbook.transactions, tx) && (
+                          <span
+                            className="footer-note"
+                            title={tx.manualSameDay ? 'Manually marked as a same-day netted leg — government levies only.' : 'Same-day round trip — netted, government levies only.'}
+                          >
+                            {' '}(netted{tx.manualSameDay ? ', manual' : ''})
+                          </span>
+                        )
+                      )}
+                    </td>
+                    <td>
+                      <button className="btn secondary small" onClick={() => startEdit(i, tx)}>Edit</button>{' '}
+                      <button
+                        className="btn secondary small"
+                        onClick={async () => {
+                          if (await confirmDialog('This cannot be undone.', `Delete ${tx.action} ${tx.shares} ${tx.ticker}?`)) deleteTransaction(i);
+                        }}
+                      >
+                        <TrashIcon size={12} />Delete
+                      </button>
+                    </td>
+                  </tr>
+                ),
+              )}
+            </Fragment>
+          ))}
+          {!groups.some((g) => g.rows.length) && (
+            <tr><td colSpan={8} className="footer-note">{emptyMessage}</td></tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+
   return (
     <div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
@@ -321,119 +449,19 @@ function TransactionList() {
         <button className="btn secondary" onClick={clearAll}><TrashIcon size={12} />Clear all</button>
       </div>
 
-      <div className="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <Th col="date">Date</Th>
-              <Th col="ticker">Ticker</Th>
-              <Th col="action">Action</Th>
-              <Th col="shares">Shares</Th>
-              <Th col="price">Price</Th>
-              <Th col="amount">Amount</Th>
-              <Th col="fee">Fee</Th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {groups.map((g) => (
-              <Fragment key={g.key || 'ungrouped'}>
-                {g.key && (
-                  <tr key={'hdr-' + g.key} style={{ background: 'var(--panel-2)' }}>
-                    <td colSpan={8}>
-                      <strong>{g.key}</strong> — {g.rows.length} txns ·{' '}
-                      buys {fmt(g.rows.filter((r) => r.tx.action === 'BUY').reduce((s, r) => s + r.tx.shares, 0), 0)} ·{' '}
-                      sells {fmt(g.rows.filter((r) => r.tx.action === 'SELL').reduce((s, r) => s + r.tx.shares, 0), 0)} ·{' '}
-                      volume {fmtMoney(g.rows.reduce((s, r) => s + r.tx.shares * r.tx.price, 0), currency)} ·{' '}
-                      fees {fmtMoney(g.rows.reduce((s, r) => s + calcFee(r.tx.shares * r.tx.price, r.tx.action === 'BUY', { shares: r.tx.shares, tx: r.tx }), 0), currency)}
-                    </td>
-                  </tr>
-                )}
-                {g.rows.map(({ tx, i }) =>
-                  editIndex === i && editRow ? (
-                    <tr key={i}>
-                      <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
-                      <td><input value={editRow.ticker} onChange={(e) => setEditRow({ ...editRow, ticker: e.target.value.toUpperCase() })} style={{ width: 70 }} /></td>
-                      <td>
-                        <select value={editRow.action} onChange={(e) => setEditRow({ ...editRow, action: e.target.value as 'BUY' | 'SELL' })}>
-                          <option value="BUY">BUY</option>
-                          <option value="SELL">SELL</option>
-                        </select>
-                      </td>
-                      <td><input type="number" value={editRow.shares} onChange={(e) => setEditRow({ ...editRow, shares: Number(e.target.value) })} style={{ width: 70 }} /></td>
-                      <td><input type="number" step="0.01" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })} style={{ width: 80 }} /></td>
-                      <td>{fmtMoney(editRow.shares * editRow.price, currency)}</td>
-                      <td>
-                        <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4 }} title="Force netted (government levies only) fee treatment, overriding auto-detection.">
-                          <input
-                            type="checkbox"
-                            checked={!!editRow.manualSameDay}
-                            onChange={(e) => setEditRow({ ...editRow, manualSameDay: e.target.checked })}
-                          />
-                          Same-day
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          placeholder="Fee override"
-                          title="Override the computed fee with the exact amount from your account statement (optional)."
-                          value={editRow.feeOverride ?? ''}
-                          onChange={(e) => setEditRow({ ...editRow, feeOverride: e.target.value === '' ? undefined : Number(e.target.value) })}
-                          style={{ width: 100, marginTop: 4 }}
-                        />
-                      </td>
-                      <td>
-                        <button className="btn secondary small" onClick={saveEdit}><SaveIcon size={12} />Save</button>{' '}
-                        <button className="btn secondary small" onClick={() => setEditIndex(null)}>Cancel</button>
-                      </td>
-                    </tr>
-                  ) : (
-                    <tr key={i}>
-                      <td>{tx.date}</td>
-                      <td>{tx.ticker}</td>
-                      <td className={tx.action === 'BUY' ? 'pill-buy' : 'pill-sell'}>{tx.action}</td>
-                      <td>{fmt(tx.shares, 0)}</td>
-                      <td>{fmtPrice(tx.price)}</td>
-                      <td>{fmtMoney(tx.shares * tx.price, currency)}</td>
-                      <td>
-                        {fmtMoney(calcFee(tx.shares * tx.price, tx.action === 'BUY', { shares: tx.shares, tx }), currency)}
-                        {tx.feeOverride !== undefined ? (
-                          <span className="footer-note" title="This fee was manually entered, overriding the computed value.">
-                            {' '}(override)
-                          </span>
-                        ) : (
-                          isNettedLeg(workbook.transactions, tx) && (
-                            <span
-                              className="footer-note"
-                              title={tx.manualSameDay ? 'Manually marked as a same-day netted leg — government levies only.' : 'Same-day round trip — netted, government levies only.'}
-                            >
-                              {' '}(netted{tx.manualSameDay ? ', manual' : ''})
-                            </span>
-                          )
-                        )}
-                      </td>
-                      <td>
-                        <button className="btn secondary small" onClick={() => startEdit(i, tx)}>Edit</button>{' '}
-                        <button
-                          className="btn secondary small"
-                          onClick={async () => {
-                            if (await confirmDialog('This cannot be undone.', `Delete ${tx.action} ${tx.shares} ${tx.ticker}?`)) deleteTransaction(i);
-                          }}
-                        >
-                          <TrashIcon size={12} />Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ),
-                )}
-              </Fragment>
-            ))}
-            {!sorted.length && (
-              <tr><td colSpan={8} className="footer-note">No transactions yet.</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <details open style={{ marginBottom: 16 }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 700, marginBottom: 8 }}>
+          Open positions — {openSorted.length} txns
+        </summary>
+        {renderTable(openGroups, 'No transactions for a currently open position.')}
+      </details>
+
+      <details open>
+        <summary style={{ cursor: 'pointer', fontWeight: 700, marginBottom: 8 }}>
+          Closed positions — {closedSorted.length} txns
+        </summary>
+        {renderTable(closedGroups, 'No transactions for a fully closed position yet.')}
+      </details>
     </div>
   );
 }
