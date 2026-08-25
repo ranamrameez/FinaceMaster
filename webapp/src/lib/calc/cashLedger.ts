@@ -1,10 +1,14 @@
 import type { Adjustment, CashLedgerEvent, FeeCalculator, Transaction, Transfer } from '../../types/workbook';
 import { fmt } from '../format';
+import { toInstantMs } from '../datetime';
 
 /** Merges every buy, sell, deposit, and withdrawal into one chronological cash
  * ledger with a running balance — same shape as a broker statement's
- * "Balance" column. Order ties (same date) go transfers-then-trades, since
- * that's how money usually has to arrive before you can spend it.
+ * "Balance" column. Sorted by real instant (Pending item 41's optional
+ * `time`/`timezone` on each record, see `lib/datetime.ts`); on an exact
+ * tie (the common case for untimed records, which all default to the same
+ * noon-UTC placeholder) transfers still go before trades, since that's how
+ * money usually has to arrive before you can spend it.
  * Ported 1:1 from the legacy `buildCashLedger()` in index.html. */
 export function buildCashLedger(
   transactions: Transaction[],
@@ -20,6 +24,8 @@ export function buildCashLedger(
     const cashDelta = tx.action === 'BUY' ? -(amount + fee) : amount - fee;
     events.push({
       date: tx.date,
+      time: tx.time,
+      timezone: tx.timezone,
       kind: 'trade',
       action: tx.action,
       label: `${tx.action} ${fmt(tx.shares, 0)} ${tx.ticker} @ ${fmt(tx.price, 3)}`,
@@ -32,6 +38,8 @@ export function buildCashLedger(
     const cashDelta = t.type === 'DEPOSIT' ? t.gross - t.fee : -(t.gross + t.fee);
     events.push({
       date: t.date,
+      time: t.time,
+      timezone: t.timezone,
       kind: 'transfer',
       action: t.type,
       label: t.type === 'DEPOSIT' ? 'Deposit' : 'Withdrawal',
@@ -43,6 +51,8 @@ export function buildCashLedger(
   (adjustments || []).forEach((a) => {
     events.push({
       date: a.date,
+      time: a.time,
+      timezone: a.timezone,
       kind: 'adjustment',
       action: a.amount >= 0 ? 'REWARD' : 'CORRECTION',
       label: a.note || (a.amount >= 0 ? 'Trading reward' : 'Adjustment'),
@@ -51,11 +61,11 @@ export function buildCashLedger(
     });
   });
 
-  events.sort((a, b) =>
-    a.date === b.date
-      ? (a.kind === 'transfer' ? -1 : 1) - (b.kind === 'transfer' ? -1 : 1)
-      : a.date.localeCompare(b.date),
-  );
+  events.sort((a, b) => {
+    const byInstant = toInstantMs(a.date, a.time, a.timezone) - toInstantMs(b.date, b.time, b.timezone);
+    if (byInstant !== 0) return byInstant;
+    return (a.kind === 'transfer' ? -1 : 1) - (b.kind === 'transfer' ? -1 : 1);
+  });
 
   let balance = 0;
   return events.map((e) => {

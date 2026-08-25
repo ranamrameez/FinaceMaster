@@ -10,6 +10,17 @@ export interface Transaction {
    * `Transfer.id`. */
   id?: string;
   date: string;
+  /** Pending item 41: optional time-of-day, "HH:MM" 24-hour, alongside
+   * `date` — see `lib/datetime.ts`. Missing time backfills to noon for
+   * sorting/display, so every record entered before this field existed
+   * keeps working with no migration. */
+  time?: string;
+  /** IANA timezone identifier (e.g. "Asia/Karachi") the `time` above is
+   * in — meaningless without a `time`, so left unset whenever `time` is.
+   * Missing timezone falls back to UTC (see `lib/datetime.ts`'s
+   * `toInstantMs`), not the viewer's own timezone, so sort order doesn't
+   * depend on who's looking. */
+  timezone?: string;
   ticker: string;
   action: 'BUY' | 'SELL';
   shares: number;
@@ -34,6 +45,10 @@ export interface Transfer {
    * survives other transfers being added/edited/deleted around it. */
   id: string;
   date: string;
+  /** Pending item 41 — see `Transaction.time`/`timezone` above for the
+   * shared reasoning; same optional, backfill-to-noon fields here. */
+  time?: string;
+  timezone?: string;
   type: 'DEPOSIT' | 'WITHDRAWAL';
   gross: number;
   fee: number;
@@ -50,6 +65,9 @@ export interface Adjustment {
    * `Transfer.id`, so this is the groundwork, not a full addressing switch. */
   id?: string;
   date: string;
+  /** Pending item 41 — same optional time/timezone fields as `Transaction`. */
+  time?: string;
+  timezone?: string;
   amount: number;
   note?: string;
 }
@@ -108,6 +126,9 @@ export interface Dividend {
   /** Stable id — same reasoning as `Adjustment.id` above (README item 51). */
   id?: string;
   date: string;
+  /** Pending item 41 — same optional time/timezone fields as `Transaction`. */
+  time?: string;
+  timezone?: string;
   ticker: string;
   perShare: number;
   shares: number;
@@ -191,6 +212,10 @@ export interface Position {
 
 export interface CashLedgerEvent {
   date: string;
+  /** Pending item 41 — carried through from whichever record produced this
+   * event, for real chronological sorting and (optionally) display. */
+  time?: string;
+  timezone?: string;
   kind: 'trade' | 'transfer' | 'adjustment';
   action: string;
   label: string;
