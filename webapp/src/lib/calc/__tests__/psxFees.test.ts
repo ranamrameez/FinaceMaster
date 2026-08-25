@@ -5,6 +5,7 @@ import type { PSXSettings } from '../../../types/psxWorkbook';
 import { calcCGT, calcFeeBreakdown, feeScenarios, isNettedLeg, makePSXFeeCalculator, sameDayChargedSide } from '../psxFees';
 import { computePositions } from '../positions';
 import { cashSummary } from '../cashSummary';
+import { DEFAULT_PSX_SETTINGS } from '../../../store/defaultPsxWorkbook';
 
 // Mirrors calc.test.ts's structure: hand-traced synthetic examples for the
 // pure fee functions, plus a sanity pass over the real backup fixture
@@ -249,6 +250,41 @@ describe('makePSXFeeCalculator — feeOverride (README item 11)', () => {
     const tx: Transaction = { date: day, ticker: 'TEST', action: 'BUY', shares: 10, price: 100, feeOverride: 0 };
     const calcFee = makePSXFeeCalculator(netSettings, [tx]);
     expect(calcFee(tx.shares * tx.price, true, { shares: tx.shares, tx })).toBe(0);
+  });
+});
+
+describe('calcFeeBreakdown calibrated against a real broker contract note (2026-08-24)', () => {
+  // Every value below is transcribed directly from a real JS Global
+  // Capital / Zindigi contract note (Trade Date 24/08/2026) — commission
+  // (Brok. Amount), SST Amount, and Levies Charges columns. Confirms
+  // feePct=0.2%/lowPriceFee=PKR0.05, sstPct=15%, and the nccplFeePct=0.0119%
+  // "Levies" calibration (see defaultPsxWorkbook.ts) all reconcile exactly
+  // — this is the real ground truth the user asked to validate the formula
+  // against, not a synthetic hand-traced case like the other tests here.
+  const realRows: { shares: number; rate: number; brokAmount: number; sst: number; levies: number }[] = [
+    { shares: 1, rate: 330.5, brokAmount: 0.66, sst: 0.1, levies: 0.04 },
+    { shares: 1, rate: 331.46, brokAmount: 0.66, sst: 0.1, levies: 0.04 },
+    { shares: 1, rate: 242.5, brokAmount: 0.49, sst: 0.07, levies: 0.03 },
+    { shares: 15, rate: 374.25, brokAmount: 11.23, sst: 1.68, levies: 0.67 },
+    { shares: 4, rate: 374.51, brokAmount: 3.0, sst: 0.45, levies: 0.18 },
+    { shares: 10, rate: 376.12, brokAmount: 7.52, sst: 1.13, levies: 0.45 },
+    { shares: 10, rate: 376.25, brokAmount: 7.53, sst: 1.13, levies: 0.45 },
+    { shares: 10, rate: 377.1, brokAmount: 7.54, sst: 1.13, levies: 0.45 },
+    { shares: 10, rate: 377.7, brokAmount: 7.55, sst: 1.13, levies: 0.45 },
+    { shares: 10, rate: 378.03, brokAmount: 7.56, sst: 1.13, levies: 0.45 },
+    { shares: 10, rate: 378.2, brokAmount: 7.56, sst: 1.13, levies: 0.45 },
+    { shares: 2, rate: 378.8, brokAmount: 1.52, sst: 0.23, levies: 0.09 },
+    { shares: 1, rate: 102.61, brokAmount: 0.21, sst: 0.03, levies: 0.01 },
+  ];
+
+  it('matches commission, SST, and levies for every real purchase leg in the statement', () => {
+    realRows.forEach((r) => {
+      const amount = r.shares * r.rate;
+      const fb = calcFeeBreakdown(amount, true, r.shares, DEFAULT_PSX_SETTINGS);
+      expect(fb.commission).toBeCloseTo(r.brokAmount, 2);
+      expect(fb.taxOnCommission).toBeCloseTo(r.sst, 2);
+      expect(fb.nccplFee).toBeCloseTo(r.levies, 2);
+    });
   });
 });
 

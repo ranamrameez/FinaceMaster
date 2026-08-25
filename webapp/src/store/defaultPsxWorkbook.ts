@@ -7,7 +7,15 @@ export const DEFAULT_PSX_SETTINGS: PSXSettings = {
   sstPct: 15,
   sstIncludedInCommission: false,
   psxFeePct: 0,
-  nccplFeePct: 0.011,
+  // Calibrated 2026-08-25 against a real JS Global Capital / Zindigi
+  // contract note's "Levies Charges" column (13 rows, one full statement,
+  // plus 4 independent spot-checks from an earlier statement) — every real
+  // value reconciles exactly under standard 2-decimal rounding at this
+  // rate (the fitted range was 0.01185%-0.01202%; this app models the
+  // whole combined PSX+NCCPL+SECP+CDC "Levies" line item as one bucket via
+  // this single field, rather than guessing at each component separately,
+  // since the broker's own statement doesn't itemize them either).
+  nccplFeePct: 0.0119,
   secpLevyPct: 0,
   cdcPerShare: 0,
   cvtPct: 0,
