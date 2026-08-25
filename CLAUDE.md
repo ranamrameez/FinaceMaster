@@ -2902,7 +2902,7 @@ not developer notes) continuously as features ship.
   check with the user, or check the Funds page's own fund list, before assuming this file's
   data already exists in their workbook.
 - **Hover cross-highlighting, QSE/PSX Dashboard first pass (2026-08-25) — see README Done item
-  146.** A shared `hoveredTicker` page-level state links Dashboard's Allocation and P/L-by-
+  147.** A shared `hoveredTicker` page-level state links Dashboard's Allocation and P/L-by-
   ticker charts: hovering either dims every other ticker in BOTH. New `dimColor()` in
   `lib/chartLabels.ts` (alpha-suffix dim, not a background-mix — correct under any chart
   background, unlike blending toward an assumed one). Hit the same TS-inference gap already
@@ -2916,7 +2916,7 @@ not developer notes) continuously as features ship.
   **Still open**: Analytics' 6 ticker charts per exchange (12 total) aren't linked yet — a larger
   follow-up, not attempted here.
 - **Net Worth page 6-item feedback batch + Risk Analysis/Trade Transactions ticker links +
-  Portfolio's missing Value column, all 2026-08-25 — see README Done items 147/148/149.**
+  Portfolio's missing Value column, all 2026-08-25 — see README Done items 148/149/150.**
   Net Worth: a real bug (not a design nit) was the "oddly showing text bg" report — the big
   number was `<div className="stat-card" style={{padding:0}}>`, missing the `.card` class every
   other stat card has, so `.stat-card`'s own `--card-hue` gradient background (which exists

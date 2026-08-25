@@ -3031,7 +3031,7 @@ FinanceManager live link:
      scoped down**: only Dashboard's 2 ticker charts per exchange are linked — Analytics' 6
      ticker-indexed charts per exchange (12 total) are a separate, larger follow-up, not attempted
      in this pass — see the updated Pending item 17.
-147. **Net Worth page 6-item feedback batch fixed (2026-08-25).** User posted a screenshot of
+148. **Net Worth page 6-item feedback batch fixed (2026-08-25).** User posted a screenshot of
      the page plus 6 numbered items. (1/3) "Use current values as default... exchange rates" +
      "currency value should be editable/prefilled" — picking a currency in the Manual rate
      override used to always start the Rate field blank even when a rate for that currency was
@@ -3071,7 +3071,7 @@ FinanceManager live link:
      500.00 USD" / "Bank 250.00 USD" against seeded data; the currency-section grid genuinely
      laid out 2 columns at a 1400px viewport. `npx tsc -b` / `npm run test` (281 tests, 1 new) /
      `npm run build` all clean.
-148. **Risk Analysis and Trade Transactions: link a ticker to its own stock page (item 7 of the
+149. **Risk Analysis and Trade Transactions: link a ticker to its own stock page (item 7 of the
      same 2026-08-25 batch).** `RiskCalculator.tsx` gained an optional `stockPageUrl?: (ticker)
      => string` prop — when provided, a "TICKER's page →" button renders next to the Stock
      picker. Passed by both standalone `RiskAnalysisPage.tsx` files (QSE → `/stock/:ticker`,
@@ -3083,7 +3083,7 @@ FinanceManager live link:
      to that stock's page too. Verified live via Playwright: the Risk Analysis link renders and
      points at `#/stock/QIBK` for the selected ticker; the Trade list's ticker cell is a real
      link to the same URL once that (collapsible) section is expanded.
-149. **Portfolio's Holdings table was missing the Value column Dashboard's Holdings table has —
+150. **Portfolio's Holdings table was missing the Value column Dashboard's Holdings table has —
      user-reported mid-session (2026-08-25).** Comparing QSE's/PSX's `PortfolioPage.tsx`
      `OpenPositionsTable` against `DashboardPage.tsx`'s `HoldingsCard` (both list open positions,
      but were built as two separate hand-rolled tables) found a real, concrete gap: Dashboard's
@@ -3125,7 +3125,7 @@ FinanceManager live link:
     (Dashboard's Allocation/P-L-by-ticker, and Analytics' ROI%/Invested-vs-value/Total P&L/
     Holding period/Portfolio allocation/Dividend-by-ticker, on both QSE and PSX) now navigates
     to that ticker's own stock page on click. **Hover cross-highlighting: first pass done
-    (2026-08-25) — see Done item 146**: QSE's and PSX's Dashboard now link their two ticker
+    (2026-08-25) — see Done item 147**: QSE's and PSX's Dashboard now link their two ticker
     charts (Allocation, P/L by ticker) — hovering a ticker's slice/bar in either one dims every
     other ticker in BOTH. **Still open**: Analytics' own 6 ticker-indexed charts per exchange
     aren't linked yet — a materially larger rollout (12 charts across two pages) than the
@@ -3443,7 +3443,7 @@ what's already shipped from this same message**:
     has no repayment ledger at all to link into (see Pending item 21), a data-model gap that
     needs its own design decision, not a UI-parity gap like the other four had.
 
-**2026-08-25, Net Worth page feedback batch — see Done item 147 for what shipped from this
+**2026-08-25, Net Worth page feedback batch — see Done item 148 for what shipped from this
 same batch**:
 
 63. "Cards in multiple columns (2 or 3 depending upon the amount of data) to avoid scrolling,
