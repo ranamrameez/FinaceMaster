@@ -2687,6 +2687,33 @@ not developer notes) continuously as features ship.
   live via Playwright: QSE prefills "Asia/Qatar", PSX prefills "Asia/Karachi", QSE's Transfer
   form prefills "Asia/Qatar" from its QAR currency — zero console errors throughout. `npx tsc
   -b` / `npm run test` (280 tests, 9 new) / `npm run build` all clean.
+- **Dashboard chart click-to-drill-down (2026-08-25) — see README Done item 134, partial
+  start on Pending item 17.** QSE's/PSX's Dashboard "Allocation by ticker (cost basis)"
+  Doughnut and "P/L by ticker" Bar charts now navigate to `/stock/:ticker` (or
+  `/psx/stock/:ticker`) on click, cursor turns to a pointer on hover so it's discoverable —
+  just `onClick`/`onHover` in each chart's Chart.js `options`, mapping the clicked element's
+  index back into the same `rows` array the chart's own data already came from. **Small
+  scoping trap worth remembering for this specific file**: `DashboardPage.tsx` (both
+  exchanges) has two separate top-level functions — `HoldingsCard()` (had its own
+  `useNavigate()` already, for the Holdings table's row click) and `DashboardPage()` itself,
+  where these two charts actually render — a hook declared in one function isn't visible in a
+  sibling function in the same file, so `DashboardPage()` needed its own `useNavigate()` call
+  too; caught immediately by `tsc -b` (`Cannot find name 'navigate'`), fixed in both files
+  before running the test suite. **Verification note on clicking a Chart.js canvas
+  correctly**: a first Playwright attempt aimed at a coordinate just inside the doughnut
+  canvas's bounding box silently did nothing — not a bug, just a miss, since a doughnut's own
+  ring only occupies a fraction of its canvas (there's a hole in the middle and legend/
+  padding around the edge). Confirmed the ring's real on-screen bounds by reading the canvas's
+  own pixel data (`getImageData` along a horizontal scanline, looking for the ring's fill
+  color vs. transparent background) rather than eyeballing a screenshot, then clicked inside
+  the confirmed ring pixels — worth repeating this pixel-sampling approach for any future
+  Chart.js click-target verification instead of guessing coordinates from a screenshot, which
+  is exactly the kind of false negative that's easy to misdiagnose as "the feature doesn't
+  work." Verified both exchanges' both charts this way (QSE→`/stock/QIBK`, PSX→
+  `/psx/stock/OGDC`) — zero console errors. `npx tsc -b` / `npm run test` (280 tests,
+  unchanged) / `npm run build` all clean. **Deliberately scoped down**: Analytics page's ~18
+  charts (mostly month-indexed or whole-portfolio-wide, lower drill-down value than a
+  ticker-indexed chart) and hover cross-highlighting between charts are still open.
 
 ## Live URLs
 

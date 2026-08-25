@@ -2727,6 +2727,28 @@ FinanceManager live link:
      Adjustments/Dividends and the six non-exchange modules' own add-forms don't have the UI
      fields yet — see the updated Pending item 41 for the remainder, now a mechanical rollout
      with the hard design/engine work already done.
+134. **Dashboard chart click-to-drill-down, partial start on Pending item 17 (2026-08-25).**
+     QSE's and PSX's Dashboard "Allocation by ticker (cost basis)" (Doughnut) and "P/L by
+     ticker" (Bar) charts are now clickable — clicking a slice/bar navigates to that ticker's
+     own `/stock/:ticker` (or `/psx/stock/:ticker`) page, with a pointer cursor on hover so it's
+     discoverable. Both charts already have their data indexed by `rows[i].ticker` (the same
+     array the click handler's Chart.js element index maps back into), so no new data plumbing
+     was needed — just `onClick`/`onHover` in each chart's `options`. **A real small bug caught
+     immediately by `tsc`**: `DashboardPage.tsx` (both exchanges) has two separate top-level
+     functions in one file — `HoldingsCard()` (already had its own `useNavigate()` for the
+     Holdings table's row-click) and `DashboardPage()` itself, which is where these two charts
+     actually render — `navigate` needed its own `useNavigate()` call inside `DashboardPage()`,
+     since a hook declared in one function isn't visible in a sibling function in the same
+     file. Verified live via Playwright with a seeded single-position workbook for each
+     exchange: clicking the doughnut ring navigated to `/stock/QIBK`/`/psx/stock/OGDC`,
+     clicking the bar did the same — both confirmed by pixel-sampling the canvas to find the
+     ring/bar's real on-screen bounds first, not guessing coordinates from a screenshot alone
+     (a first attempt's coordinate landed just outside the ring and silently did nothing,
+     which is exactly the kind of false negative pixel-sampling avoids). Zero console errors.
+     `npx tsc -b` / `npm run test` (280 tests, unchanged) / `npm run build` all clean.
+     **Deliberately scoped down**: Analytics page's ~18 charts (mostly month-indexed or
+     whole-portfolio-wide, lower drill-down value than a ticker-indexed chart) and hover
+     cross-highlighting between charts are still open — see the updated Pending item 17.
 
 ## Pending
 
@@ -2745,8 +2767,11 @@ FinanceManager live link:
     into our own database and serve the app from that store, same pattern already used for
     QSE's `stockData/QSE` node (item 1 above) and PSX's bundled `psxSeed.ts`.
 17. Charts could get more interactive beyond the ticker/month filters shipped in Done item 31
-    (e.g. click-to-drill-down, hover cross-highlighting between charts). Not started — the
-    core "filterable" ask is done; this is a further-polish remainder, not a blocker.
+    (e.g. click-to-drill-down, hover cross-highlighting between charts). **Partially done
+    (2026-08-25) — see Done item 134**: QSE's/PSX's Dashboard "Allocation by ticker"/"P/L by
+    ticker" charts now navigate to that ticker's own page on click. Still open: Analytics
+    page's ~18 charts (mostly month-indexed or whole-portfolio, lower drill-down value) and
+    hover cross-highlighting between charts.
 19. Cross-entity transaction linking beyond v1 scope (see Done item 29): Funds/Rentals/EMI/
     Personal Loans aren't wired into the Transfers page yet — only Cash↔Bank and
     Bank↔QSE/PSX. A real signed-in browser round-trip (create/edit/delete a link, confirm

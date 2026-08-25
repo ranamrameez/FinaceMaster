@@ -140,6 +140,7 @@ function HoldingsCard() {
 }
 
 export function DashboardPage() {
+  const navigate = useNavigate();
   const { workbook, rows, summary, realizedSeries } = useQSEDerived();
   const currency = workbook.settings.currency;
   const alerts = useQSEAlerts();
@@ -195,7 +196,14 @@ export function DashboardPage() {
         <ChartCard title="Allocation by ticker (cost basis)" empty={!rows.length}>
           <Doughnut
             data={{ labels: rows.map((r) => r.ticker), datasets: [{ data: rows.map((r) => r.invested), backgroundColor: INVEST_PALETTE }] }}
-            options={{ plugins: { datalabels: dlDoughnut((v) => fmt(v, 2)) } }}
+            options={{
+              onClick: (_e, elements) => {
+                const i = elements[0]?.index;
+                if (i !== undefined && rows[i]) navigate(`/stock/${rows[i].ticker}`);
+              },
+              onHover: (e, elements) => { if (e.native?.target) (e.native.target as HTMLElement).style.cursor = elements.length ? 'pointer' : 'default'; },
+              plugins: { datalabels: dlDoughnut((v) => fmt(v, 2)) },
+            }}
           />
         </ChartCard>
 
@@ -205,7 +213,14 @@ export function DashboardPage() {
               labels: rows.map((r) => r.ticker),
               datasets: [{ data: rows.map((r) => r.profit), backgroundColor: rows.map((r) => profitColor(r.profit)) }],
             }}
-            options={{ plugins: { legend: { display: false }, datalabels: dlBarV((v) => fmt(v, 2)) } }}
+            options={{
+              onClick: (_e, elements) => {
+                const i = elements[0]?.index;
+                if (i !== undefined && rows[i]) navigate(`/stock/${rows[i].ticker}`);
+              },
+              onHover: (e, elements) => { if (e.native?.target) (e.native.target as HTMLElement).style.cursor = elements.length ? 'pointer' : 'default'; },
+              plugins: { legend: { display: false }, datalabels: dlBarV((v) => fmt(v, 2)) },
+            }}
           />
         </ChartCard>
 
