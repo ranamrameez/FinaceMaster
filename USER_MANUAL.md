@@ -534,6 +534,19 @@ sell shares at a price), so it shares the same underlying calculation engine.
   selling fund units — e.g. topping up before a purchase, or withdrawing after a redemption.
   Log a deposit/withdrawal here, edit or delete one later, or check the linking checkbox to
   create a matching entry in Bank/Cash at the same time (see §23 below).
+- **Import tab**: for a spreadsheet that tracks each fund's Total Invested / Withdrawn /
+  Current Balance rather than individual dated trades (a common way to track mutual funds
+  manually). Choose the CSV file, set a single "as-of" date, currency, and default category
+  for any brand-new funds it introduces, then review the preview table before importing —
+  platform/code/name are editable right there, so a typo or a misfiled row in your source
+  file can be fixed without re-exporting it. Since a snapshot has no real per-trade dates,
+  this reconstructs one buy (and, if you've withdrawn from it, one sell) per fund dated on
+  your chosen as-of date, at whatever price reproduces your reported balances — it's an
+  approximation of your real history, not a replay of it. If the same fund code appears more
+  than once in the file, each row still becomes its own entry (useful if they're genuinely
+  two separate positions) with a warning shown so you can catch a real duplicate before
+  importing. Re-importing into a fund that already has transactions adds another entry
+  rather than replacing anything, so this is best used once, as a starting point.
 
 ---
 

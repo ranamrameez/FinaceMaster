@@ -17,6 +17,13 @@ import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { getMarketPrice } from '../../../lib/calc';
 import { allocationByCategory, contributionVsValueSeries } from '../../../lib/calc/fundsModule';
+import {
+  buildFundsImportPlan,
+  materializeFundsImport,
+  parseFundsSnapshotCSV,
+  type FundSnapshotPlanRow,
+  type FundSnapshotRow,
+} from '../../../lib/calc/fundsSnapshotImport';
 import { toCSV } from '../../../lib/csv';
 import { getDailyPriceHistory } from '../../../lib/calc/priceHistory';
 import { transferRunningBalance } from '../../../lib/calc/transferBalance';
@@ -218,6 +225,162 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
           {!sorted.length && <tr><td colSpan={8} className="footer-note">No funds yet — add one above.</td></tr>}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+/* ============================== Snapshot import ============================== */
+
+/** Imports a "portfolio snapshot" CSV — one row per fund with aggregate
+ * Total Invested / Withdrawn / Current Balance, as opposed to a dated
+ * transaction log (see `lib/calc/fundsSnapshotImport.ts` for the full
+ * reasoning and the real-data test that validates it). Deliberately a
+ * separate flow from Bank/Cash's "map these columns" statement importer —
+ * this source format's columns are fixed, and there's no per-row date to
+ * map, only one shared "as of" date for the whole batch. */
+function SnapshotImportSection() {
+  const workbook = useFundsWorkbookStore((s) => s.workbook);
+  const setWorkbook = useFundsWorkbookStore((s) => s.setWorkbook);
+  const addTransactions = useFundsWorkbookStore((s) => s.addTransactions);
+  const setMarketPrice = useFundsWorkbookStore((s) => s.setMarketPrice);
+  const ensureSignedIn = useEnsureSignedIn();
+  const [lastCurrency, setLastCurrency] = useLastCurrency('funds', 'USD');
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const [rows, setRows] = useState<FundSnapshotRow[] | null>(null);
+  const [snapshotDate, setSnapshotDate] = useState(today());
+  const [currencyCode, setCurrencyCode] = useState(lastCurrency);
+  const [defaultCategory, setDefaultCategory] = useState<Fund['category']>('Other');
+  const [busy, setBusy] = useState(false);
+
+  const plan: FundSnapshotPlanRow[] = useMemo(
+    () => (rows ? buildFundsImportPlan(rows, workbook.funds) : []),
+    [rows, workbook.funds],
+  );
+
+  const duplicateCodes = useMemo(() => {
+    if (!rows) return [];
+    const counts = new Map<string, number>();
+    rows.forEach((r) => counts.set(r.code, (counts.get(r.code) ?? 0) + 1));
+    return [...counts.entries()].filter(([, n]) => n > 1).map(([code]) => code);
+  }, [rows]);
+
+  const onFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const parsed = parseFundsSnapshotCSV(String(reader.result));
+      if (!parsed.length) {
+        toast('No fund rows found — expected a "FundCode" column header.');
+        return;
+      }
+      setRows(parsed);
+      toast(`Parsed ${parsed.length} fund row(s) — review below before importing.`);
+    };
+    reader.readAsText(file);
+  };
+
+  const editRow = (i: number, patch: Partial<FundSnapshotRow>) => {
+    if (!rows) return;
+    setRows(rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+  };
+
+  const runImport = async () => {
+    if (!plan.length) return;
+    if (!(await ensureSignedIn('Sign in to import funds.'))) return;
+    setBusy(true);
+    try {
+      const { newFunds, transactions, navUpdates } = materializeFundsImport(plan, { snapshotDate, currencyCode, defaultCategory });
+      if (newFunds.length) setWorkbook({ ...workbook, funds: [...workbook.funds, ...newFunds] });
+      if (transactions.length) addTransactions(transactions);
+      navUpdates.forEach((u) => setMarketPrice(u.ticker, u.price));
+      setLastCurrency(currencyCode);
+      toast(`Imported ${plan.length} fund(s): ${newFunds.length} new, ${transactions.length} transaction(s).`);
+      setRows(null);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div>
+      <p className="footer-note" style={{ marginBottom: 12 }}>
+        For a spreadsheet that tracks Total Invested / Withdrawn / Current Balance per fund rather than individual
+        dated trades. Since there's no real transaction history in that shape, this reconstructs a buy (and, if
+        withdrawn, a sell) dated on the single "as of" date below, at whatever NAV reproduces your reported balances
+        exactly — it's an approximation of your real trade history, not a replay of it. Re-importing a fund that
+        already has transactions here adds another entry rather than replacing anything, so this is best used once,
+        as a starting point.
+      </p>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+        <button className="btn secondary" onClick={() => fileInput.current?.click()}>Choose CSV file</button>
+        <input
+          ref={fileInput}
+          type="file"
+          accept=".csv,text/csv"
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) onFile(file);
+            e.target.value = '';
+          }}
+        />
+        {rows && (
+          <>
+            <Field label="As-of date" width={140}>
+              <TextInput type="date" value={snapshotDate} onChange={(e) => setSnapshotDate(e.target.value)} />
+            </Field>
+            <Field label="Currency" width={100}>
+              <Select value={currencyCode} onChange={(e) => setCurrencyCode(e.target.value)}>
+                {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+              </Select>
+            </Field>
+            <Field label="Category for new funds" width={160}>
+              <Select value={defaultCategory} onChange={(e) => setDefaultCategory(e.target.value as Fund['category'])}>
+                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </Select>
+            </Field>
+          </>
+        )}
+      </div>
+
+      {rows && duplicateCodes.length > 0 && (
+        <Notice tone="warning" style={{ marginBottom: 12 }}>
+          Fund code{duplicateCodes.length > 1 ? 's' : ''} {duplicateCodes.join(', ')} appear{duplicateCodes.length === 1 ? 's' : ''} more
+          than once — each row below still becomes its own fund. If a row is actually a mistake (wrong platform/code
+          typed into the wrong line), fix it in the table below before importing rather than after.
+        </Notice>
+      )}
+
+      {rows && (
+        <>
+          <div className="table-scroll" style={{ marginBottom: 12 }}>
+            <table>
+              <thead>
+                <tr>
+                  <th>Platform</th><th>Code</th><th>Name</th><th>Invested</th><th>Withdrawn</th><th>Current balance</th><th>Status</th><th>New NAV</th>
+                </tr>
+              </thead>
+              <tbody>
+                {plan.map((p, i) => (
+                  <tr key={i}>
+                    <td><TextInput value={p.row.bank} onChange={(e) => editRow(i, { bank: e.target.value })} style={{ width: 140 }} /></td>
+                    <td><TextInput value={p.row.code} onChange={(e) => editRow(i, { code: e.target.value.toUpperCase() })} style={{ width: 90 }} /></td>
+                    <td><TextInput value={p.row.name} onChange={(e) => editRow(i, { name: e.target.value })} style={{ width: 200 }} /></td>
+                    <td>{fmtMoney(p.row.totalInvested, currencyCode)}</td>
+                    <td>{fmtMoney(p.row.withdrawn, currencyCode)}</td>
+                    <td>{fmtMoney(p.row.currentBalance, currencyCode)}</td>
+                    <td className={p.closed ? 'pill-sell' : 'pill-buy'}>{p.closed ? 'Closed' : 'Open'}</td>
+                    <td>{p.navUpdate !== null ? fmtPrice(p.navUpdate) : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <button className="btn" disabled={busy} onClick={runImport}>
+            <PlusIcon />Import {plan.length} fund{plan.length === 1 ? '' : 's'}
+          </button>
+        </>
+      )}
     </div>
   );
 }
@@ -914,6 +1077,7 @@ export function FundsPage({
               ),
             },
             { key: 'transfers', label: 'Transfers', content: <FundsTransfersSection /> },
+            { key: 'import', label: 'Import', content: <SnapshotImportSection /> },
             { key: 'analytics', label: 'Analytics', content: <AnalyticsTab /> },
             {
               key: 'settings',

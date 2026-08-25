@@ -2880,6 +2880,27 @@ not developer notes) continuously as features ship.
   open**: this only lets existing grids use more width — it doesn't add new right-rail content
   (a contextual glossary, a live summary panel), which is the deeper, more judgment-heavy half
   of Pending item 54 and ties into item 49's IA question.
+- **Funds "Snapshot Import" built (2026-08-25) — see README Done item 146.** The user uploaded
+  a real personal tracking CSV (per-fund Total Invested/Withdrawn/Current Balance, several
+  Pakistani mutual fund platforms) and asked to "feed this data to my account." Since this
+  session has no access to the user's real signed-in browser/account (and this project's own
+  locked cloud-sync-safety principle rules out creating a throwaway account against the
+  production Firebase project to do it directly), asked via `AskUserQuestion` how to proceed —
+  the user chose "build a CSV importer" over manual walkthrough, and separately clarified two
+  real data-quality issues in their own file: one row was mislabeled (should be MCB Live & MCB
+  iSave / ALHIIF / Alhamrah Islamic Income Fund, not a second "JS Cash Fund" row) and the
+  trailing bank-balance table (rows 15+) should be ignored for this import. Built
+  `lib/calc/fundsSnapshotImport.ts` + a new "Import" tab on `FundsPage.tsx` — see README Done
+  item 146 for the full design (a snapshot has no per-trade dates, so it reconstructs one
+  synthetic buy/sell per fund at whatever NAV reproduces the reported balances exactly) and
+  MODULES_PLAN.md if extending this to another module later. **Verified against the user's own
+  real uploaded file via Playwright**, including editing the real mislabeled row inline in the
+  preview and confirming the duplicate-fund-code warning fires correctly for both the mistake
+  and the genuine ALHISF double-entry — but the actual import was never completed end-to-end
+  into the user's real account, since that requires a real signed-in click this session
+  correctly can't perform. **A future session should not assume this data has been imported** —
+  check with the user, or check the Funds page's own fund list, before assuming this file's
+  data already exists in their workbook.
 - **Hover cross-highlighting, QSE/PSX Dashboard first pass (2026-08-25) — see README Done item
   146.** A shared `hoveredTicker` page-level state links Dashboard's Allocation and P/L-by-
   ticker charts: hovering either dims every other ticker in BOTH. New `dimColor()` in
