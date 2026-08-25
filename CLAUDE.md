@@ -2321,12 +2321,36 @@ not developer notes) continuously as features ship.
   button (same pattern as Rentals' `PropertyDetailModal`, since the modal's `account` prop is
   a point-in-time snapshot, not a live subscription). Deliberately not new table columns —
   supplementary setup-time metadata, not at-a-glance data.
-  **Still open, not yet started** (all from the same batch, several large): card-header
-  action-button alignment (top-right), whole-card coloring instead of colored text/pill
-  backgrounds, sidebar menu contrast, Rentals semi-automated rent collection (choose a cycle,
-  propose a transaction for approval, track partial payment), and remembering each entity's
-  last-used/default transfer source. Continue down this list per the standing auto-commit
-  instruction — the user explicitly asked to keep going until nothing is pending.
+  **Per-entity default transfer source remembered + prefilled (2026-08-25) — see README Done
+  item 120, closes the concrete half of this batch.** New `hooks/useLastTransferSource.ts`
+  remembers which "From" entity was used the last time a link was created INTO a given "To"
+  entity, keyed by `module(:ref)` so e.g. two different Rentals properties each remember their
+  own usual funding source independently — the user's own example was "PSX can only use Zindagi
+  for deposits/withdrawals, while I can collect rent through a different source each month...
+  prefill the last used source." Wired into `TransferLinksPage.tsx`'s `CreateLinkForm`: changing
+  "To" prefills "From" from whatever's remembered (still just a default, freely overridable), and
+  a successful link-creation updates the remembered value for next time. **Test-script debugging
+  note worth remembering for future Playwright verification on this page**: `getByText()` matches
+  *rendered* text, so a label under `text-transform:uppercase` CSS won't match its literal DOM
+  string, and even a case-insensitive regex can fail if the label element's `innerText` also
+  concatenates a nested `<select>`'s own option text. Positional (`nth()`) selectors are also
+  unreliable here since `SideFields` conditionally renders an extra "Account"/"Property"/"Loan"
+  `<select>` depending on which module is picked for that side — a fixed index silently points at
+  a different control once module selection changes the element count. The reliable check that
+  finally worked: read every select's live *value* on the form
+  (`locator('select').evaluateAll(...)`) and confirm the expected value's presence, rather than
+  trying to address "the right" element by text or position. Verified this way: selecting PSX as
+  "To" correctly prefilled "From" as Banking with the exact remembered account (`zindagi1`)
+  restored, not just the module. `npx tsc -b` / `npm run test` (255 tests, unchanged) / `npm run
+  build` all clean.
+  **Still open from this batch, tracked as README Pending items 58-62** (all real, several large
+  enough to need their own scoped pass): card-header action-button alignment (top-right),
+  whole-card coloring instead of colored text/pill backgrounds, sidebar menu contrast, Rentals
+  semi-automated rent collection (choose a cycle, propose a transaction for approval, track
+  partial payment), and the broader "link a transfer directly from each entity's own page"
+  feasibility question (distinct from the prefill feature just shipped — this is a per-module
+  shortcut UI, not the Transfers page itself). Continue down this list per the standing
+  auto-commit instruction — the user explicitly asked to keep going until nothing is pending.
 
 ## Live URLs
 

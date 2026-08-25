@@ -1,5 +1,5 @@
 import type { User } from 'firebase/auth';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CollapsibleCard } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
 import { confirmDialog } from '../../../components/ConfirmDialog';
@@ -7,6 +7,7 @@ import { EditIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../compone
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
+import { getLastTransferSource, rememberTransferSource } from '../../../hooks/useLastTransferSource';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
@@ -142,6 +143,18 @@ function CreateLinkForm() {
   const [from, setFrom] = useState<LinkSideConfig>({ module: 'cash', currencyCode: cashCurrency });
   const [to, setTo] = useState<LinkSideConfig>({ module: 'bank', ref: bankAccounts[0]?.id });
 
+  // User's own example: "PSX I can only use Zindagi Account for deposits &
+  // withdrawals, while I can collect rent each month through a different
+  // source" — remembers the last "From" used for each distinct "To" entity
+  // (keyed by module+ref, so two rental properties can each have their own
+  // usual source) and prefills it whenever "To" changes, without forcing
+  // it — the user can still pick something else afterward.
+  useEffect(() => {
+    const remembered = getLastTransferSource(to);
+    if (remembered) setFrom((prev) => ({ ...remembered, currencyCode: remembered.module === 'cash' ? cashCurrency : prev.currencyCode }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [to.module, to.ref]);
+
   const fromCurrency = useSideCurrency(from);
   const toCurrency = useSideCurrency(to);
   const currencyMismatch = !!(fromCurrency && toCurrency && fromCurrency !== toCurrency);
@@ -161,6 +174,7 @@ function CreateLinkForm() {
 
     const result = createLinkedTransfer({ date, fromAmount, toAmount: toAmountEffective, from, to, note: note.trim() || undefined });
     if ('error' in result) return toast(`Couldn't create the linked transfer: ${result.error}`);
+    rememberTransferSource(to, from);
     toast('Linked transfer created — both sides updated.');
     setFromAmount(0);
     setToAmount(0);

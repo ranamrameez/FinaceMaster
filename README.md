@@ -2241,6 +2241,33 @@ FinanceManager live link:
      (255 tests, unchanged) / `npm run build` all clean; a 23-page console-error sweep found
      zero regressions.
 
+120. **Per-entity default transfer source remembered + prefilled, fifth item of the same batch
+     (2026-08-25) — the user's own example: "PSX I can only use Zindagi Account for deposits &
+     withdrawals, while I can collect rent each month through a different source... we can pick/
+     prefill the last used source."** New `hooks/useLastTransferSource.ts` remembers the "From"
+     side used the last time a link was created INTO a given "To" entity, keyed by
+     `module(:ref)` (so two different Rentals properties, say, each remember their own usual
+     funding source independently). On the New Linked Transfer form, changing "To" now prefills
+     "From" with whatever was remembered for that entity — the user can still pick something
+     else afterward, this is a default, not a lock. A successful link creation updates the
+     remembered value for next time. Verified via Playwright: selecting "PSX" as "To" correctly
+     prefilled "From" as "Banking" with the exact remembered account (`zindagi1`) restored, not
+     just the module — confirmed by reading every select's live value on the form, not assumed
+     from DOM position (an earlier draft of this same check had a test-script bug: the "Account"
+     dropdown's position in the DOM shifts depending on which module is currently selected on
+     each side, so a fixed index matched the wrong control after the "To" change). **Deliberately
+     not built**: the broader "link a transfer directly from each entity's own page" idea from
+     the same message — a real UI-surface question ("check feasibility") spanning QSE/PSX
+     Settings, Rentals' property page, Personal Loans, Funds, and EMI, not something to guess a
+     design for; tracked as a Pending item instead. `npx tsc -b` / `npm run test` (255 tests,
+     unchanged) / `npm run build` all clean; a 23-page console-error sweep found zero
+     regressions (one page showed a transient network error on one run, gone on a re-run — the
+     same known sandbox FX-fetch limitation noted elsewhere in this file). **This closes the
+     concrete half of the Transfers-page feedback batch** — what remains (card-header
+     action-button alignment, whole-card coloring, sidebar contrast, Rentals semi-automated
+     collection, and the per-entity direct-link idea just mentioned) are all real, several
+     large enough to need their own scoped session, tracked below.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`
@@ -2468,6 +2495,45 @@ item 103) — all three now fixed, see Done item 104:**
     by one"). Overlaps with Pending item 54's "utilize page space" right-rail idea and item 56's
     Portfolio-specific left/right stack ask above — likely the same underlying information-
     architecture work rather than three separate passes, but not yet scoped as one.
+
+**New Transfers-page feedback batch, remainder (2026-08-25) — see Done items 117-120 for
+what's already shipped from this same message**:
+
+58. Card action buttons (Edit/Delete/Save/Cancel/Export/etc.) should consistently sit at the
+    top-right corner of their card's header, not wherever each page happens to place them today
+    (often below a table, or inline in a row). A real cross-cutting layout convention, not yet
+    audited or built.
+59. Colored `<span>`/pill text-only backgrounds (red/green highlight behind a word or number)
+    should become whole-card coloring instead — the user's own framing: "whole cards should be
+    colored and text bg colors should be removed." Needs an audit for every remaining
+    inline-colored-text spot that isn't already going through `StatCard`'s `hue` prop or the
+    `.pill`/`.pill-*` classes (the two established "color the whole element" mechanisms per this
+    file's own 2026-08-24 standing UI/copy guidelines).
+60. Sidebar background/text contrast is reportedly still poor in some spots ("Menu bg and text
+    contrast is still not visual at many places") — not yet investigated against real computed
+    styles/screenshots across every theme; likely the same class of "a later CSS rule silently
+    overrides an earlier one" bug found repeatedly elsewhere in this file (chip contrast, stat-
+    card hue, checkbox-label uppercase), but unconfirmed until actually measured.
+61. Rentals: semi-automated rent-collection cycles. The user's own framing: pick a collection
+    cycle (daily/weekly/monthly/annual) and a last collection day/date, then the app *proposes*
+    a collection transaction for the user's final approval and date adjustment (never auto-
+    creates one silently) — plus a way to record a partially-paid rent and track the remaining
+    balance owed. This is materially different from the existing lease-based
+    `generateLeaseRentPlans()` (Done item 60), which projects a full lease's cycles up front
+    from lease start/end dates; this ask is an ongoing, recurring "is it time to collect again"
+    prompt plus partial-payment tracking, which `PlannedRentalEntry`'s current all-or-nothing
+    shape doesn't support. Needs its own design pass, not a bolt-on to the existing feature.
+62. "We may give the option to all entities to directly link the transfers on its page (per
+    cycle, or regular, check feasibility)" — the user's own example: PSX only ever transfers
+    to/from one specific bank account (Zindagi), so a shortcut to create that link straight from
+    PSX's own page (rather than navigating to the separate Transfers page every time) could save
+    real friction, and the same could apply to Rentals/Personal Loans/Funds/EMI/QSE. Done item
+    120 already covers the "remember and prefill the last-used source" half of this ask on the
+    Transfers page itself; this remaining half — a per-entity shortcut UI embedded in each
+    module's own page — is a genuine "check feasibility" open question spanning up to 6 modules
+    (QSE, PSX, Rentals, Personal Loans, Funds, EMI), not something to guess a design for in one
+    pass. Worth prototyping on just one module first (PSX, the user's own example) before
+    deciding whether it generalizes cleanly to the rest.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank
