@@ -109,6 +109,22 @@ function AddAccountForm() {
           <TextInput type="number" step="0.01" value={a.openingBalance || ''} onChange={(e) => setA({ ...a, openingBalance: Number(e.target.value) })} />
         </Field>
       </div>
+      {/* User-requested: save an account number + the SMS sender details a
+         bank alert actually arrives from, for a future SMS-based
+         transaction-import feature (nothing reads these yet — this just
+         gives that feature somewhere to read from). All optional, so
+         skipping them changes nothing about today's add-account flow. */}
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+        <Field label="Account number (optional)" width={160} title="However your bank shows it on statements/SMS — often partially masked, e.g. xxxx1234.">
+          <TextInput value={a.accountNumber ?? ''} onChange={(e) => setA({ ...a, accountNumber: e.target.value || undefined })} placeholder="e.g. xxxx1234" />
+        </Field>
+        <Field label="SMS sender ID (optional)" width={160} title="The sender ID/short code your bank's alert SMS arrives from, e.g. a bank name or a numeric short code.">
+          <TextInput value={a.smsSenderId ?? ''} onChange={(e) => setA({ ...a, smsSenderId: e.target.value || undefined })} placeholder="e.g. 8123 or MEEZAN" />
+        </Field>
+        <Field label="SMS sender number (optional)" width={160} title="If your bank's alerts come from a full phone number instead of a short code.">
+          <TextInput value={a.smsSenderNumber ?? ''} onChange={(e) => setA({ ...a, smsSenderNumber: e.target.value || undefined })} placeholder="e.g. +923001234567" />
+        </Field>
+      </div>
       <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
         <PlusIcon />Add account
       </button>
@@ -204,8 +220,30 @@ function AccountsList() {
  * primary record type (a loan, a fund, a property) later. */
 function AccountDetailModal({ account, onClose }: { account: BankAccount; onClose: () => void }) {
   const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
+  const updateAccount = useBankWorkbookStore((s) => s.updateAccount);
+  const ensureSignedIn = useEnsureSignedIn();
   const plannedEntries = usePlannedBankWorkbookStore((s) => s.workbook.entries);
   const { num } = useAmountFormat();
+  // Local draft state (same pattern as Rentals' PropertyDetailModal) rather
+  // than editing the passed-in `account` prop directly — that prop is a
+  // point-in-time snapshot from AccountsList's own `detailAccount` state,
+  // not a live store subscription, so writing straight to it wouldn't be
+  // reflected back into what this modal displays.
+  const [meta, setMeta] = useState({
+    accountNumber: account.accountNumber ?? '',
+    smsSenderId: account.smsSenderId ?? '',
+    smsSenderNumber: account.smsSenderNumber ?? '',
+  });
+  const saveMeta = async () => {
+    if (!(await ensureSignedIn('Sign in to save account details.'))) return;
+    updateAccount(account.id, {
+      ...account,
+      accountNumber: meta.accountNumber.trim() || undefined,
+      smsSenderId: meta.smsSenderId.trim() || undefined,
+      smsSenderNumber: meta.smsSenderNumber.trim() || undefined,
+    });
+    toast('Account details saved.');
+  };
   const ledger = useMemo(() => [...accountRunningLedger(account, transactions)].reverse(), [account, transactions]);
   const upcoming = useMemo(
     () => plannedEntries.filter((p) => p.accountId === account.id && !p.executed).sort((a, b) => a.date.localeCompare(b.date)),
@@ -241,6 +279,26 @@ function AccountDetailModal({ account, onClose }: { account: BankAccount; onClos
           {num(accountBalance(account, transactions))} {account.currencyCode}
         </strong>
       </p>
+
+      {/* User-requested: save an account number + SMS sender details for a
+         future SMS-based transaction-import feature. Nothing reads these
+         yet — they're just captured here so that feature has somewhere to
+         read from once built. */}
+      <h4 style={{ margin: '0 0 6px' }}>Account details</h4>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+        <Field label="Account number" width={160} title="However your bank shows it on statements/SMS — often partially masked, e.g. xxxx1234.">
+          <TextInput value={meta.accountNumber} onChange={(e) => setMeta({ ...meta, accountNumber: e.target.value })} placeholder="e.g. xxxx1234" />
+        </Field>
+        <Field label="SMS sender ID" width={160} title="The sender ID/short code your bank's alert SMS arrives from, e.g. a bank name or a numeric short code.">
+          <TextInput value={meta.smsSenderId} onChange={(e) => setMeta({ ...meta, smsSenderId: e.target.value })} placeholder="e.g. 8123 or MEEZAN" />
+        </Field>
+        <Field label="SMS sender number" width={160} title="If your bank's alerts come from a full phone number instead of a short code.">
+          <TextInput value={meta.smsSenderNumber} onChange={(e) => setMeta({ ...meta, smsSenderNumber: e.target.value })} placeholder="e.g. +923001234567" />
+        </Field>
+        <button className="btn secondary" onClick={saveMeta}>
+          <SaveIcon size={13} />Save details
+        </button>
+      </div>
 
       {upcoming.length > 0 && (
         <>

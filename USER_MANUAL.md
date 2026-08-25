@@ -426,7 +426,11 @@ licensing is required for that, so it's manual entry or statement import only).
   done) plans from the Planning tab. Click **Details** on any account for its current
   balance, upcoming plans, and 20 most recent transactions in one view, plus a "Download
   statement" section — pick an optional From/To date range and click **Export CSV** to
-  download that account's transactions (with running balance) as a CSV file.
+  download that account's transactions (with running balance) as a CSV file. The same
+  Details view has an **Account details** section to optionally save an account number and
+  the SMS sender ID/number your bank's alert texts arrive from — nothing reads these yet,
+  they're saved for a possible future feature that imports transactions straight from those
+  SMS alerts.
 - **Transactions tab**: pick an account, then log transactions with a multi-row form (date,
   description, a signed amount — negative for spend/debit, positive for deposit/credit —
   and an optional free-form category with autocomplete over your own previous categories).

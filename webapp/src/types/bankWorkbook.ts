@@ -5,6 +5,20 @@ export interface BankAccount {
    * Cash/Personal Loans, currency isn't repeated per-transaction here. */
   currencyCode: string;
   openingBalance: number;
+  /** User-requested: saved so a future SMS-based transaction-import feature
+   * (parsing "Rs. 500 debited from a/c XX1234" style bank alerts) can match
+   * an incoming SMS to the right account. All optional — nothing about
+   * matching/importing from SMS is built yet, this just gives that future
+   * feature somewhere to read from. `accountNumber` is whatever the bank
+   * shows on statements/SMS (often partially masked, e.g. "xxxx1234") —
+   * intentionally a plain string, not validated against any particular
+   * bank's format. `smsSenderId` is the sender ID/short code the bank's
+   * alert SMS actually arrives from (e.g. "8123" or a bank name string),
+   * separate from `smsSenderNumber` since some banks send from a numeric
+   * short code and others from a named sender or a full phone number. */
+  accountNumber?: string;
+  smsSenderId?: string;
+  smsSenderNumber?: string;
 }
 
 export interface BankTransaction {

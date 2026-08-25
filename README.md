@@ -2224,6 +2224,23 @@ FinanceManager live link:
      -b` / `npm run test` (255 tests, unchanged) / `npm run build` all clean; a 23-page
      console-error sweep found zero regressions.
 
+119. **Bank account number + SMS sender metadata, fourth item of the same batch (2026-08-25) —
+     user is planning a mobile app to read transactions from SMS bank alerts.** `BankAccount`
+     gained three optional fields — `accountNumber`, `smsSenderId`, `smsSenderNumber` — captured
+     but not yet read by anything (no SMS-parsing feature exists yet; this just gives that
+     future feature somewhere to read from). Added to `AddAccountForm` for new accounts, and to
+     `AccountDetailModal` for existing ones via a local-draft-state + explicit "Save details"
+     button (same pattern Rentals' `PropertyDetailModal` already uses) rather than writing
+     straight to the modal's `account` prop, since that prop is a point-in-time snapshot from
+     `AccountsList`'s own `detailAccount` state, not a live store subscription. Deliberately
+     not added as new table columns — this is supplementary metadata a user only needs when
+     setting up SMS import later, not something to see at a glance in an already-dense accounts
+     table. Verified live via Playwright: filled in an account number + SMS sender ID on an
+     existing account and confirmed "Save details" correctly hit the sign-in gate (same
+     verification depth as every other gated write in this app). `npx tsc -b` / `npm run test`
+     (255 tests, unchanged) / `npm run build` all clean; a 23-page console-error sweep found
+     zero regressions.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`

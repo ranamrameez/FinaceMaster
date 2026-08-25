@@ -2313,14 +2313,20 @@ not developer notes) continuously as features ship.
   made each section its own collapsible card. New leading "All" chip in the single shared
   `Tabs.tsx` opens every section at once, so every page using `Tabs` gets it for free. Verified
   via Playwright: clicking it flipped every section from mixed open/closed to all-open.
+  **Bank account number + SMS sender metadata (2026-08-25) — see README Done item 119.**
+  `BankAccount` gained three optional fields (`accountNumber`, `smsSenderId`,
+  `smsSenderNumber`) for a future SMS-based transaction-import feature the user is planning —
+  nothing reads them yet. Added to `AddAccountForm` for new accounts and to
+  `AccountDetailModal` for existing ones via local-draft-state + an explicit "Save details"
+  button (same pattern as Rentals' `PropertyDetailModal`, since the modal's `account` prop is
+  a point-in-time snapshot, not a live subscription). Deliberately not new table columns —
+  supplementary setup-time metadata, not at-a-glance data.
   **Still open, not yet started** (all from the same batch, several large): card-header
   action-button alignment (top-right), whole-card coloring instead of colored text/pill
-  backgrounds, sidebar menu contrast, a bank-account-number + SMS-metadata field (for a future
-  SMS-based transaction-import feature the user is planning), Rentals semi-automated rent
-  collection (choose a cycle, propose a transaction for approval, track partial payment), and
-  remembering each entity's last-used/default transfer source. Continue down this list per the
-  standing auto-commit instruction — the user explicitly asked to keep going until nothing is
-  pending.
+  backgrounds, sidebar menu contrast, Rentals semi-automated rent collection (choose a cycle,
+  propose a transaction for approval, track partial payment), and remembering each entity's
+  last-used/default transfer source. Continue down this list per the standing auto-commit
+  instruction — the user explicitly asked to keep going until nothing is pending.
 
 ## Live URLs
 
