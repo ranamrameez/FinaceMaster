@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { EditIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { RiskCalculator } from '../../../components/RiskCalculator';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, TextInput } from '../../../components/ui/Field';
@@ -185,6 +186,8 @@ export function StockPage() {
   const { tickerNames } = useQSEStockData();
   const name = tickerNames[ticker];
   const { fromDate, setFromDate, toDate, setToDate, exportStatement, hasRows } = useTickerExport(ticker);
+  const { workbook, rows, calcFee, positions } = useQSEDerived();
+  const isOpen = (positions.find((p) => p.ticker === ticker)?.shares || 0) > 0;
 
   return (
     <div>
@@ -211,6 +214,29 @@ export function StockPage() {
               </div>
             ) : undefined,
           },
+          // Pending item 49 ("assess a stock in one go"): Risk Analysis used
+          // to only exist as a separate whole-portfolio page with its own
+          // ticker picker — embedding it here, pre-scoped to this ticker,
+          // means averaging-down planning is reachable without leaving the
+          // stock's own page. Only meaningful for an open position, same
+          // gate PositionDetail's "Current position" section already uses.
+          ...(isOpen
+            ? [{
+                key: 'risk',
+                label: 'Risk Analysis',
+                content: (
+                  <RiskCalculator
+                    rows={rows}
+                    tickerNames={tickerNames}
+                    currency={workbook.settings.currency}
+                    feePct={workbook.settings.feePct}
+                    tick={workbook.settings.tick}
+                    calcFee={calcFee}
+                    initialTicker={ticker}
+                  />
+                ),
+              }]
+            : []),
         ]}
       />
     </div>

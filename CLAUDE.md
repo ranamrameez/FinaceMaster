@@ -2835,6 +2835,22 @@ not developer notes) continuously as features ship.
   under Comfortable, hidden under Console. Deliberately scoped to density only — the color-theme
   half of the same Pending item (item 50) is a more speculative design question and remains
   open.
+- **Risk Analysis made reachable from a stock's own page, closing the named half of Pending
+  item 49 (2026-08-25) — see README Done item 143.** "Assess a stock in one go" previously
+  meant leaving `StockPage.tsx` for a separate whole-portfolio Risk Analysis page and re-picking
+  the same ticker there. `RiskCalculator.tsx` gained an optional `initialTicker` prop (defaults
+  the existing ticker `useState` instead of the auto-pick-first-held-ticker `useEffect`, which
+  now simply never fires when a caller supplies one) — the standalone `RiskAnalysisPage.tsx`
+  never passes it, so it's completely unaffected. Both QSE's and PSX's `StockPage.tsx` gained a
+  new "Risk Analysis" tab, conditionally spread into the `Tabs` array only when
+  `positions.find(p => p.ticker === ticker)?.shares > 0` — same open-position gate
+  `PositionDetail`'s own "Current position" section already uses, since averaging-down analysis
+  needs a real position to analyze. Verified live via Playwright both directions: the tab
+  appears and pre-fills to the seeded ticker on an open QSE position, and is correctly absent on
+  a fully-closed PSX position. `npx tsc -b` / `npm run test` (280 tests, unchanged) / `npm run
+  build` all clean. **Deliberately scoped down**: the broader "is `PositionDetail`'s own layout/
+  section order truly optimal" information-architecture question — the fuller reading of Pending
+  item 49 — was not attempted, only this specific named "Risk Analysis is a separate page" gap.
 
 ## Live URLs
 

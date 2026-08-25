@@ -2914,6 +2914,24 @@ FinanceManager live link:
      complaint; the color-theme half (do Material vs. wine/ocean/etc. themes need genuinely
      different visual treatment beyond a palette swap) remains open — see the updated Pending
      item 50. `npx tsc -b` / `npm run test` (280 tests, unchanged) / `npm run build` all clean.
+143. **Risk Analysis reachable from a stock's own page, Pending item 49's named gap
+     (2026-08-25).** Risk Analysis existed only as `/risk-analysis`/`/psx/risk-analysis`, a
+     separate whole-portfolio page with its own ticker picker — the exact "spread across
+     Dashboard/Portfolio/StockPage/Risk Analysis" complaint. `RiskCalculator` gained an optional
+     `initialTicker` prop (only sets the initial `useState`, so the existing whole-portfolio page
+     is completely unaffected — it just never passes the new prop); `StockPage.tsx` (QSE and
+     PSX) gained a third "Risk Analysis" tab alongside Summary/Trades, rendering the same shared
+     `RiskCalculator` pre-scoped to that ticker. Gated on the position actually being open (shares
+     `> 0`) — same guard `PositionDetail`'s own "Current position" section already uses — since
+     `RiskCalculator` only ever lists held tickers (averaging down needs something to average).
+     Verified live via Playwright: the tab appears and correctly prefills the ticker select on an
+     open QSE position, and correctly does NOT appear on a fully-closed PSX position (bought then
+     sold in full) — confirming the gate works both ways, not just the happy path. `npx tsc -b` /
+     `npm run test` (280 tests, unchanged) / `npm run build` all clean. **Deliberately scoped
+     down**: this closes the specific, named "Risk Analysis is a separate page" gap; the broader
+     "assess a stock in one go" information-architecture question (is `PositionDetail`'s own
+     section order/content actually optimal, should Dashboard/Portfolio link in more directly)
+     remains open — see the updated Pending item 49.
 
 ## Pending
 
@@ -3113,9 +3131,14 @@ than a guess folded into a mixed batch:
     checking the live deployed site) should confirm the 6 font options actually render
     differently and drop this caveat once confirmed.
 49. "Assess a stock in one go" — the user's complaint is that a stock's info is spread across
-    Dashboard/Portfolio/StockPage/Risk Analysis with no single at-a-glance view. A real fix is
-    an information-architecture exercise (what goes on one screen, in what order) most likely
-    landing as a redesigned `PositionDetail`/`StockPage`, not a CSS tweak — needs its own pass.
+    Dashboard/Portfolio/StockPage/Risk Analysis with no single at-a-glance view. **Risk Analysis
+    half done (2026-08-25) — see Done item 143**: the specific named gap (Risk Analysis existing
+    only as a separate whole-portfolio page, unreachable from a stock's own page) is closed —
+    `StockPage.tsx` gained a "Risk Analysis" tab, pre-scoped to that ticker, alongside Summary
+    and Trades. **Still open**: the deeper IA question — whether Dashboard/Portfolio's own
+    per-ticker views should also feed into or link from this single-stock page, and whether
+    `PositionDetail`'s own information order is truly optimal for "assess in one go" — hasn't
+    been attempted; that's a genuine redesign exercise, not a tab-addition.
 50. "Themes and densities are deception" — the user's complaint is that switching a color theme
     or density mostly just recolors/respaces the same layout rather than being a genuinely
     different reading experience. **Density half addressed (2026-08-25) — see Done item 142**:
