@@ -95,7 +95,68 @@ export function PositionDetail({ ticker }: { ticker: string }) {
   };
 
   return (
-    <div>
+    // Pending items 54/56/57: charts + Price range move to a right-hand
+    // stack while the other stat cards stay on the left, on wide viewports
+    // — see theme.css's .position-split comment for the mobile-order
+    // tradeoff (left-column content shows first when collapsed to one
+    // column, not the original top-to-bottom order).
+    <div className="position-split">
+    <div className="position-split-left">
+
+      {isOpen && (
+        <CollapsibleCard title={<h4 style={{ margin: 0 }}>Current position</h4>} style={{ marginBottom: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px,1fr))', gap: 8 }}>
+            <div className="stat-card card" style={hueStyle(HUES[0])}><div className="label">Shares</div><div className="value">{fmt(shares, 0)}</div></div>
+            <div className="stat-card card" style={hueStyle(HUES[1])}>
+              <div className="label">Cost</div>
+              <div className="value">{fmtPrice(avg)}</div>
+              <div className="sub" style={{ color: mp > 0 ? (mp >= be ? 'var(--profit)' : 'var(--loss)') : undefined }}>BE {fmtPrice(be)}</div>
+            </div>
+            <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Invested</div><div className="value">{fmtMoney(invested, currency)}</div></div>
+          </div>
+        </CollapsibleCard>
+      )}
+
+      {/* All-time stats: the thing closed positions were missing entirely —
+          shares/avg-cost/break-even are meaningless once a position is
+          fully closed, but the lifetime record (what was bought, sold,
+          realized, and over what period) is exactly what you'd want to
+          look back on. */}
+      {position && (position.buyCount > 0 || position.sellCount > 0) && (
+        <CollapsibleCard title={<h4 style={{ margin: 0 }}>All-time stats</h4>} style={{ marginBottom: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px,1fr))', gap: 8 }}>
+            <div className="stat-card card" style={hueStyle(HUES[0])}>
+              <div className="label">Bought / Sold</div>
+              <div className="value">{fmt(position.totalBoughtShares, 0)} / {fmt(position.totalSoldShares, 0)}</div>
+              <div className="sub">{position.buyCount} buys · {position.sellCount} sells</div>
+            </div>
+            {position.sellCount > 0 && (
+              <div className="stat-card card" style={hueStyle(HUES[7])}>
+                <div className="label">Sell price</div>
+                <Tooltip text="Weighted average, and most recent, sell price for this ticker.">
+                  <div className="value">{fmtPrice(avgSellPrice)}</div>
+                </Tooltip>
+                <div className="sub">avg · last {fmtPrice(lastSellPrice)}</div>
+              </div>
+            )}
+            <div className="stat-card card" style={hueStyle(position.realized >= 0 ? 'var(--profit)' : 'var(--loss)')}>
+              <div className="label">Realized P/L</div>
+              <div className="value">{fmtMoney(position.realized, currency)}</div>
+            </div>
+            <div className="stat-card card" style={hueStyle(HUES[4])}><div className="label">Fees paid</div><div className="value">{fmtMoney(position.buyFees + position.sellFees, currency)}</div></div>
+            <div className="stat-card card" style={hueStyle(HUES[3])}>
+              <div className="label">Trade dates</div>
+              <div className="value" style={{ fontSize: 14 }}>{position.firstDate}</div>
+              <div className="sub">to {position.lastDate}</div>
+            </div>
+            {!isOpen && <div className="stat-card card" style={hueStyle(HUES[6])}><div className="label">Held</div><div className="value">{holdingDays}d</div></div>}
+          </div>
+        </CollapsibleCard>
+      )}
+
+    </div>
+    <div className="position-split-right">
+
       {/* Daily price — the single most-asked-about number, so it leads
           instead of being buried under other sections. */}
       <CollapsibleCard title={<h4 style={{ margin: 0 }}>Daily price</h4>} style={{ marginBottom: 12 }}>
@@ -148,85 +209,31 @@ export function PositionDetail({ ticker }: { ticker: string }) {
       </CollapsibleCard>
 
       {isOpen && (
-        <CollapsibleCard title={<h4 style={{ margin: 0 }}>Current position</h4>} style={{ marginBottom: 12 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px,1fr))', gap: 8 }}>
-            <div className="stat-card card" style={hueStyle(HUES[0])}><div className="label">Shares</div><div className="value">{fmt(shares, 0)}</div></div>
-            <div className="stat-card card" style={hueStyle(HUES[1])}>
-              <div className="label">Cost</div>
-              <div className="value">{fmtPrice(avg)}</div>
-              <div className="sub" style={{ color: mp > 0 ? (mp >= be ? 'var(--profit)' : 'var(--loss)') : undefined }}>BE {fmtPrice(be)}</div>
-            </div>
-            <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Invested</div><div className="value">{fmtMoney(invested, currency)}</div></div>
-          </div>
-          <div style={{ maxWidth: 380 }}>
-            <CompactChart height={lastSellPrice > 0 ? 150 : 115}>
-              <Bar
-                data={{
-                  labels: lastSellPrice > 0 ? ['Buy', 'Sold', 'Current', 'Break-even'] : ['Buy', 'Current', 'Break-even'],
-                  datasets: [
-                    {
-                      data: lastSellPrice > 0 ? [lastBuyPrice, lastSellPrice, mp, be] : [lastBuyPrice, mp, be],
-                      backgroundColor: lastSellPrice > 0
-                        ? ['#8f5ac9', '#3b6bd6', mp >= be ? '#3ecf8e' : '#e5484d', '#c9a35a']
-                        : ['#8f5ac9', mp >= be ? '#3ecf8e' : '#e5484d', '#c9a35a'],
-                      maxBarThickness: 20,
-                    },
-                  ],
-                }}
-                options={{
-                  maintainAspectRatio: false,
-                  indexAxis: 'y',
-                  plugins: { legend: { display: false } },
-                  // Real bug (user-reported "missing sold-price/break-even
-                  // reference labels"): Chart.js's default autoSkip applies
-                  // to a category y-axis too, not just linear/time scales —
-                  // with 4 short rows it silently dropped "Sold" and
-                  // "Break-even" from the axis while still drawing all 4
-                  // bars, making the chart unreadable. Disabling autoSkip
-                  // plus the taller CompactChart above (110/90 -> 150/115)
-                  // gives every label room to render.
-                  scales: { y: { ticks: { autoSkip: false } } },
-                }}
-              />
-            </CompactChart>
-          </div>
-        </CollapsibleCard>
-      )}
-
-      {/* All-time stats: the thing closed positions were missing entirely —
-          shares/avg-cost/break-even are meaningless once a position is
-          fully closed, but the lifetime record (what was bought, sold,
-          realized, and over what period) is exactly what you'd want to
-          look back on. */}
-      {position && (position.buyCount > 0 || position.sellCount > 0) && (
-        <CollapsibleCard title={<h4 style={{ margin: 0 }}>All-time stats</h4>} style={{ marginBottom: 12 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px,1fr))', gap: 8 }}>
-            <div className="stat-card card" style={hueStyle(HUES[0])}>
-              <div className="label">Bought / Sold</div>
-              <div className="value">{fmt(position.totalBoughtShares, 0)} / {fmt(position.totalSoldShares, 0)}</div>
-              <div className="sub">{position.buyCount} buys · {position.sellCount} sells</div>
-            </div>
-            {position.sellCount > 0 && (
-              <div className="stat-card card" style={hueStyle(HUES[7])}>
-                <div className="label">Sell price</div>
-                <Tooltip text="Weighted average, and most recent, sell price for this ticker.">
-                  <div className="value">{fmtPrice(avgSellPrice)}</div>
-                </Tooltip>
-                <div className="sub">avg · last {fmtPrice(lastSellPrice)}</div>
-              </div>
-            )}
-            <div className="stat-card card" style={hueStyle(position.realized >= 0 ? 'var(--profit)' : 'var(--loss)')}>
-              <div className="label">Realized P/L</div>
-              <div className="value">{fmtMoney(position.realized, currency)}</div>
-            </div>
-            <div className="stat-card card" style={hueStyle(HUES[4])}><div className="label">Fees paid</div><div className="value">{fmtMoney(position.buyFees + position.sellFees, currency)}</div></div>
-            <div className="stat-card card" style={hueStyle(HUES[3])}>
-              <div className="label">Trade dates</div>
-              <div className="value" style={{ fontSize: 14 }}>{position.firstDate}</div>
-              <div className="sub">to {position.lastDate}</div>
-            </div>
-            {!isOpen && <div className="stat-card card" style={hueStyle(HUES[6])}><div className="label">Held</div><div className="value">{holdingDays}d</div></div>}
-          </div>
+        <CollapsibleCard title={<h4 style={{ margin: 0 }}>Buy vs. current vs. break-even</h4>} style={{ marginBottom: 12 }}>
+          <CompactChart height={lastSellPrice > 0 ? 150 : 115}>
+            <Bar
+              data={{
+                labels: lastSellPrice > 0 ? ['Buy', 'Sold', 'Current', 'Break-even'] : ['Buy', 'Current', 'Break-even'],
+                datasets: [
+                  {
+                    data: lastSellPrice > 0 ? [lastBuyPrice, lastSellPrice, mp, be] : [lastBuyPrice, mp, be],
+                    backgroundColor: lastSellPrice > 0
+                      ? ['#8f5ac9', '#3b6bd6', mp >= be ? '#3ecf8e' : '#e5484d', '#c9a35a']
+                      : ['#8f5ac9', mp >= be ? '#3ecf8e' : '#e5484d', '#c9a35a'],
+                    maxBarThickness: 20,
+                  },
+                ],
+              }}
+              options={{
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: { legend: { display: false } },
+                // Done item 138: Chart.js's autoSkip was silently dropping
+                // "Sold"/"Break-even" labels from this 4-row category axis.
+                scales: { y: { ticks: { autoSkip: false } } },
+              }}
+            />
+          </CompactChart>
         </CollapsibleCard>
       )}
 
@@ -258,6 +265,8 @@ export function PositionDetail({ ticker }: { ticker: string }) {
           </details>
         </CollapsibleCard>
       )}
+
+    </div>
     </div>
   );
 }

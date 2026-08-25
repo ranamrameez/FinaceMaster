@@ -2776,6 +2776,22 @@ not developer notes) continuously as features ship.
   unaddressed — folds into Pending item 57's identical structural request, not yet attempted.
   Verified via real before/after screenshots (not assumed) showing all 4 bar labels rendering
   correctly. `npx tsc -b` / `npm run test` (280 tests, unchanged) / `npm run build` all clean.
+- **Right-hand-stack layout built for PositionDetail, closing Pending items 56/57's remainder
+  (2026-08-25) — see README Done item 139.** New `.position-split` CSS grid (`theme.css`,
+  1fr + 380px, collapsing to one column under 900px) restructures QSE's/PSX's
+  `PositionDetail.tsx`: left column = stat-card sections (Current Position, Open lots for PSX,
+  All-time stats), right column = every chart (Daily Price line chart, the Buy/Sold/Current/
+  Break-even reference bars — pulled out of the Current Position card into its own small card
+  so charts all live together — and Price range). **Accepted tradeoff, not silently dropped**:
+  the mobile single-column fallback shows left-column content before right-column content
+  (Current Position, then All-time stats, then Daily Price, then Price range) rather than the
+  original top-to-bottom order (Daily Price first) — reordering this with flex `order` for a
+  mobile-only nicety wasn't judged worth the added complexity. Verified live via Playwright at
+  both a wide (1400px, confirms the split) and narrow (500px, confirms the collapse) viewport,
+  plus the "All" tab that renders every section on one page at once. **`PositionModal.tsx`**
+  (an alternate popup wrapper around the same component, presumably for a quick-glance use case)
+  has no live caller anywhere in the app currently — checked before assuming it needed separate
+  verification. `npx tsc -b` / `npm run test` (280 tests, unchanged) / `npm run build` all clean.
 
 ## Live URLs
 

@@ -100,55 +100,13 @@ export function PositionDetail({ ticker }: { ticker: string }) {
   };
 
   return (
-    <div>
-      <CollapsibleCard title={<h4 style={{ margin: 0 }}>Daily price</h4>} style={{ marginBottom: 12 }}>
-      {stats ? (
-        <CompactChart height={130}>
-          <Line
-            data={{
-              labels: stats.chronological.map((p) => p.date),
-              datasets: [
-                {
-                  label: 'Price',
-                  data: stats.chronological.map((p) => p.price),
-                  borderColor: '#c9a35a',
-                  backgroundColor: 'rgba(201,163,90,0.12)',
-                  fill: true,
-                  tension: 0.25,
-                  // A single day of price history has no line to draw and
-                  // pointRadius:0 hides the dot too — the chart looked
-                  // completely blank (a real user-reported "not working"
-                  // bug) with exactly one data point, which is the common
-                  // case for a ticker whose price was only just set today.
-                  pointRadius: stats.chronological.length > 1 ? 0 : 3,
-                  borderWidth: 1.75,
-                },
-              ],
-            }}
-            options={{
-              maintainAspectRatio: false,
-              plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
-              scales: { x: { display: false }, y: { display: false } },
-            }}
-          />
-        </CompactChart>
-      ) : (
-        <p className="footer-note">No price history recorded for {ticker} yet.</p>
-      )}
-      <div className="row" style={{ gap: 8, marginTop: 8 }}>
-        <input
-          type="number"
-          step="0.01"
-          className="price-input"
-          placeholder="Update price"
-          value={priceInput}
-          onChange={(e) => setPriceInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && commitPrice()}
-          style={{ width: 150 }}
-        />
-        <button className="btn secondary small" onClick={commitPrice}><SaveIcon size={12} />Save price</button>
-      </div>
-      </CollapsibleCard>
+    // Pending items 54/56/57: charts + Price range move to a right-hand
+    // stack while the other stat cards stay on the left, on wide viewports
+    // — see theme.css's .position-split comment for the mobile-order
+    // tradeoff (left-column content shows first when collapsed to one
+    // column, not the original top-to-bottom order).
+    <div className="position-split">
+    <div className="position-split-left">
 
       {isOpen && (
         <CollapsibleCard title={<h4 style={{ margin: 0 }}>Current position</h4>} style={{ marginBottom: 12 }}>
@@ -167,33 +125,6 @@ export function PositionDetail({ ticker }: { ticker: string }) {
                 <div className="sub">{workbook.settings.filerStatus === 'filer' ? `${workbook.settings.cgtFilerPct}% filer rate` : `${workbook.settings.cgtNonFilerPct}% non-filer rate`}</div>
               </div>
             )}
-          </div>
-          <div style={{ maxWidth: 380 }}>
-            <CompactChart height={lastSellPrice > 0 ? 150 : 115}>
-              <Bar
-                data={{
-                  labels: lastSellPrice > 0 ? ['Buy', 'Sold', 'Current', 'Break-even'] : ['Buy', 'Current', 'Break-even'],
-                  datasets: [
-                    {
-                      data: lastSellPrice > 0 ? [lastBuyPrice, lastSellPrice, mp, be] : [lastBuyPrice, mp, be],
-                      backgroundColor: lastSellPrice > 0
-                        ? ['#8f5ac9', '#3b6bd6', mp >= be ? '#3ecf8e' : '#e5484d', '#c9a35a']
-                        : ['#8f5ac9', mp >= be ? '#3ecf8e' : '#e5484d', '#c9a35a'],
-                      maxBarThickness: 20,
-                    },
-                  ],
-                }}
-                options={{
-                  maintainAspectRatio: false,
-                  indexAxis: 'y',
-                  plugins: { legend: { display: false } },
-                  // See the identical comment in QSE's PositionDetail.tsx —
-                  // Chart.js's autoSkip was silently dropping "Sold"/
-                  // "Break-even" labels from this 4-row category axis.
-                  scales: { y: { ticks: { autoSkip: false } } },
-                }}
-              />
-            </CompactChart>
           </div>
         </CollapsibleCard>
       )}
@@ -253,6 +184,87 @@ export function PositionDetail({ ticker }: { ticker: string }) {
         </CollapsibleCard>
       )}
 
+    </div>
+    <div className="position-split-right">
+
+      <CollapsibleCard title={<h4 style={{ margin: 0 }}>Daily price</h4>} style={{ marginBottom: 12 }}>
+      {stats ? (
+        <CompactChart height={130}>
+          <Line
+            data={{
+              labels: stats.chronological.map((p) => p.date),
+              datasets: [
+                {
+                  label: 'Price',
+                  data: stats.chronological.map((p) => p.price),
+                  borderColor: '#c9a35a',
+                  backgroundColor: 'rgba(201,163,90,0.12)',
+                  fill: true,
+                  tension: 0.25,
+                  // A single day of price history has no line to draw and
+                  // pointRadius:0 hides the dot too — the chart looked
+                  // completely blank (a real user-reported "not working"
+                  // bug) with exactly one data point, which is the common
+                  // case for a ticker whose price was only just set today.
+                  pointRadius: stats.chronological.length > 1 ? 0 : 3,
+                  borderWidth: 1.75,
+                },
+              ],
+            }}
+            options={{
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+              scales: { x: { display: false }, y: { display: false } },
+            }}
+          />
+        </CompactChart>
+      ) : (
+        <p className="footer-note">No price history recorded for {ticker} yet.</p>
+      )}
+      <div className="row" style={{ gap: 8, marginTop: 8 }}>
+        <input
+          type="number"
+          step="0.01"
+          className="price-input"
+          placeholder="Update price"
+          value={priceInput}
+          onChange={(e) => setPriceInput(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && commitPrice()}
+          style={{ width: 150 }}
+        />
+        <button className="btn secondary small" onClick={commitPrice}><SaveIcon size={12} />Save price</button>
+      </div>
+      </CollapsibleCard>
+
+      {isOpen && (
+        <CollapsibleCard title={<h4 style={{ margin: 0 }}>Buy vs. current vs. break-even</h4>} style={{ marginBottom: 12 }}>
+          <CompactChart height={lastSellPrice > 0 ? 150 : 115}>
+            <Bar
+              data={{
+                labels: lastSellPrice > 0 ? ['Buy', 'Sold', 'Current', 'Break-even'] : ['Buy', 'Current', 'Break-even'],
+                datasets: [
+                  {
+                    data: lastSellPrice > 0 ? [lastBuyPrice, lastSellPrice, mp, be] : [lastBuyPrice, mp, be],
+                    backgroundColor: lastSellPrice > 0
+                      ? ['#8f5ac9', '#3b6bd6', mp >= be ? '#3ecf8e' : '#e5484d', '#c9a35a']
+                      : ['#8f5ac9', mp >= be ? '#3ecf8e' : '#e5484d', '#c9a35a'],
+                    maxBarThickness: 20,
+                  },
+                ],
+              }}
+              options={{
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: { legend: { display: false } },
+                // Done item 138: Chart.js's autoSkip was silently dropping
+                // "Sold"/"Break-even" labels from this 4-row category axis.
+                scales: { y: { ticks: { autoSkip: false } } },
+              }}
+            />
+          </CompactChart>
+        </CollapsibleCard>
+      )}
+
       {stats && (
         <CollapsibleCard title={<h4 style={{ margin: 0 }}>Price range</h4>}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 8 }}>
@@ -281,6 +293,8 @@ export function PositionDetail({ ticker }: { ticker: string }) {
           </details>
         </CollapsibleCard>
       )}
+
+    </div>
     </div>
   );
 }

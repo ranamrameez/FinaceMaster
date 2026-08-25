@@ -2831,6 +2831,25 @@ FinanceManager live link:
      input already a fixed 150px, not full-width; stat cards already colored via Done item 88) —
      see the updated Pending item 56 for the full item-by-item breakdown. `npx tsc -b` / `npm
      run test` (280 tests, unchanged) / `npm run build` all clean.
+139. **Right-hand-stack layout built for the per-stock page, closing Pending items 56/57's
+     remainder and partially addressing item 54 (2026-08-25).** `PositionDetail.tsx` (QSE and
+     PSX) restructured from one long single-column stack of `CollapsibleCard`s into a new
+     `.position-split` CSS grid: a left column holding the stat-card sections (Current Position,
+     Open lots for PSX, All-time stats) and a narrower 380px right column holding every chart
+     (Daily Price, the Buy/Sold/Current/Break-even reference bars — pulled out of the Current
+     Position card into its own small card so it lives with the other charts — and Price range).
+     Collapses to a single column under 900px viewport width. **A real tradeoff, stated rather
+     than hidden**: on the mobile single-column fallback, cards now render in left-column-then-
+     right-column DOM order (Current Position, then All-time stats, then Daily Price, then Price
+     range) rather than the original top-to-bottom order (Daily Price first) — considered and
+     accepted rather than adding `order`-based reflow CSS for a mobile-only ordering nicety of
+     genuinely marginal value. Verified live via Playwright at both a wide (1400px) and narrow
+     (500px) viewport, plus the "All" tab view that renders every section on one page: stats
+     left/charts right on wide, clean single-column stacking on narrow, all 4 reference-chart
+     labels intact, zero console errors. `PositionModal.tsx` (an alternate quick-popup wrapper
+     around this same component) was checked and found to have no live caller in the app
+     currently, so it wasn't part of this verification. `npx tsc -b` / `npm run test` (280 tests,
+     unchanged — pure layout restructuring) / `npm run build` all clean.
 
 ## Pending
 
@@ -3042,13 +3061,14 @@ item 103) — all three now fixed, see Done item 104:**
     same-day-netted price side by side; a row of colored summary cards sits above the detailed
     per-ticker table for an at-a-glance read.
 54. "Utilize all page spaces and add useful infos on sides — fintech apps are data heavy
-    rather than decorations" (2026-08-24). A real, still-open structural request, not yet
-    designed: most pages use a single centered column with real unused space on wide
-    viewports. A concrete direction worth trying first: a persistent right-rail panel on wide
-    screens (e.g. contextual glossary/tips reusing the same explanatory text already written
-    for tooltips, or a live at-a-glance summary) rather than a blind "make things wider" pass —
-    ties into Pending item 49's "assess a stock in one go" information-architecture rework, so
-    worth scoping together rather than as two separate passes.
+    rather than decorations" (2026-08-24). **Partially addressed (2026-08-25) — see Done item
+    139**: the per-stock `PositionDetail` page now uses its wide-viewport space for a right-hand
+    chart/Price-range stack instead of one long centered column. Most other pages (Dashboard,
+    Portfolio, module landing pages) still use a single centered column with real unused space
+    on wide viewports — each would need its own judgment call about what belongs in a right
+    rail (a contextual glossary, a live summary, etc.) rather than a blind "make things wider"
+    pass; ties into Pending item 49's "assess a stock in one go" IA rework, so worth scoping
+    together rather than as separate passes.
 55. Simplest-possible-language pass (2026-08-24 app-wide note, item 3 of the Risk Analysis
     batch) — Done item 105 added tooltips explaining jargon terms on the Risk Analysis page
     specifically, but the broader ask ("serve all kinds of users, not just pros") implies
@@ -3076,13 +3096,18 @@ item 103) — all three now fixed, see Done item 104:**
     `CollapsibleCard`s top to bottom; the real structural ask remaining from this whole item.
     (g) "current price input is full-width" — checked live: it's `width: 150`, not full-width;
     not reproduced, no action taken. (h) "colored stat cards" — done, see Done item 88 (already
-    correctly noted as likely-resolved when this item was first written). **Remaining real scope
-    is just (f)**, the right-hand-stack layout — folds into Pending item 57's identical ask.
-57. Side-by-side layout instead of vertical scrolling (2026-08-24, item 11 of the original
+    correctly noted as likely-resolved when this item was first written). **(f) done (2026-08-25)
+    — see Done item 139**, closing this item and Pending item 57's identical ask in full.
+57. ~~Side-by-side layout instead of vertical scrolling (2026-08-24, item 11 of the original
     screenshot batch: "We can show UI components side by side instead of scrolling to see one
-    by one"). Overlaps with Pending item 54's "utilize page space" right-rail idea and item 56's
-    Portfolio-specific left/right stack ask above — likely the same underlying information-
-    architecture work rather than three separate passes, but not yet scoped as one.
+    by one").~~ **Done for the per-stock page (2026-08-25) — see Done item 139, closing item 56's
+    remainder too.** `PositionDetail.tsx` (QSE+PSX) now splits into a left stack (stat cards)
+    and a right stack (charts + Price range) on wide viewports via a new `.position-split` CSS
+    grid, collapsing to one column under 900px. **Still open**: Pending item 54's broader
+    "utilize page space" ask was about *every* page, not just the per-stock one — this closes
+    the one page with the clearest charts-vs-stats split; other pages (Dashboard, Portfolio,
+    module landing pages) haven't been touched and would each need their own judgment call
+    about what, if anything, belongs in a right rail.
 
 **New Transfers-page feedback batch, remainder (2026-08-25) — see Done items 117-120 for
 what's already shipped from this same message**:
