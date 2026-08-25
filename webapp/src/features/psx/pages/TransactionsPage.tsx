@@ -7,7 +7,11 @@ import { Tooltip } from '../../../components/Tooltip';
 import { toast } from '../../../components/Toast';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
-import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
+import { confirmAndDeleteLinkable, createLinkedTransfer, warnIfLinked } from '../../../lib/linkCascade';
+import { getLastTransferSource, rememberTransferSource } from '../../../hooks/useLastTransferSource';
+import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
+import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
+import type { LinkSideConfig } from '../../../types/interEntityTransfer';
 import { isNettedLeg } from '../../../lib/calc/psxFees';
 import { transferRunningBalance } from '../../../lib/calc/transferBalance';
 import { FeeModeControl, feeModeFor } from '../../../components/ui/FeeModeControl';
@@ -148,45 +152,126 @@ function TransactionRows() {
   );
 }
 
+/** README item 62 / Pending item 62's "check feasibility" ask: let PSX's own
+ * Transfers form create a linked Bank/Cash transfer directly, instead of
+ * needing the separate Transfers page for the exact case the user gave as
+ * their own example ("PSX i can only use Zindagi Account for Deposits &
+ * Withdrawals"). Prototyped here first, on one module, before deciding
+ * whether it's worth generalizing to Rentals/Personal Loans/Funds/EMI too —
+ * see this file's own README Done item for the reasoning. Reuses the exact
+ * same `createLinkedTransfer`/`useLastTransferSource` machinery the
+ * Transfers page itself uses, not a parallel implementation. Deliberately
+ * simpler than the full Transfers page in one respect: both sides always
+ * share the same amount (no "different amount on the other side" toggle) —
+ * a real cross-currency conversion still belongs on the full Transfers page,
+ * which already has that control; this shortcut is for the common
+ * same-currency case its own worked example describes. */
+function LinkedTransferFields({ date, type, gross, onLinked }: { date: string; type: Transfer['type']; gross: number; onLinked: () => void }) {
+  const ensureSignedIn = useEnsureSignedIn();
+  const bankAccounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
+  const cashCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
+  const psxSide: LinkSideConfig = { module: 'psx' };
+  const remembered = getLastTransferSource(psxSide);
+  const [otherModule, setOtherModule] = useState<'bank' | 'cash'>(remembered?.module === 'cash' ? 'cash' : 'bank');
+  const [otherAccountId, setOtherAccountId] = useState(remembered?.ref ?? bankAccounts[0]?.id ?? '');
+
+  const create = async () => {
+    if (gross <= 0) return toast('Enter an amount first.');
+    if (otherModule === 'bank' && !otherAccountId) return toast('Add a bank account on the Banking page first.');
+    if (!(await ensureSignedIn('Sign in to save transfers.'))) return;
+    const other: LinkSideConfig = otherModule === 'bank' ? { module: 'bank', ref: otherAccountId } : { module: 'cash', currencyCode: cashCurrency };
+    // A PSX deposit means money flows FROM the other source INTO PSX; a
+    // withdrawal is the reverse.
+    const input = {
+      date,
+      fromAmount: gross,
+      toAmount: gross,
+      from: type === 'DEPOSIT' ? other : psxSide,
+      to: type === 'DEPOSIT' ? psxSide : other,
+    };
+    const result = createLinkedTransfer(input);
+    if ('error' in result) return toast(result.error);
+    rememberTransferSource(psxSide, other);
+    toast('Linked transfer added — also recorded on the other side.');
+    onLinked();
+  };
+
+  return (
+    <>
+      <select value={otherModule} onChange={(e) => setOtherModule(e.target.value as 'bank' | 'cash')}>
+        <option value="bank">Bank account</option>
+        <option value="cash">Cash</option>
+      </select>
+      {otherModule === 'bank' && (
+        bankAccounts.length ? (
+          <select value={otherAccountId} onChange={(e) => setOtherAccountId(e.target.value)}>
+            {bankAccounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.currencyCode})</option>)}
+          </select>
+        ) : (
+          <span className="footer-note">No bank accounts yet.</span>
+        )
+      )}
+      <button className="btn" onClick={create}>
+        <PlusIcon />Link &amp; add
+      </button>
+    </>
+  );
+}
+
 function TransferForm() {
   const addTransfer = usePSXWorkbookStore((s) => s.addTransfer);
   const depositFee = usePSXWorkbookStore((s) => s.workbook.settings.depositFee);
   const ensureSignedIn = useEnsureSignedIn();
   const [t, setT] = useState<Omit<Transfer, 'id'>>({ date: today(), type: 'DEPOSIT', gross: 0, fee: depositFee });
+  const [linkMode, setLinkMode] = useState(false);
+
+  const reset = () => setT({ date: today(), type: 'DEPOSIT', gross: 0, fee: depositFee });
 
   return (
-    <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-      <input type="date" value={t.date} onChange={(e) => setT({ ...t, date: e.target.value })} />
-      <select value={t.type} onChange={(e) => setT({ ...t, type: e.target.value as Transfer['type'] })}>
-        <option value="DEPOSIT">Deposit</option>
-        <option value="WITHDRAWAL">Withdrawal</option>
-      </select>
-      <input
-        type="number"
-        placeholder="Amount"
-        value={t.gross || ''}
-        onChange={(e) => setT({ ...t, gross: Number(e.target.value) })}
-        style={{ width: 100 }}
-      />
-      <input
-        type="number"
-        placeholder="Fee"
-        value={t.fee || ''}
-        onChange={(e) => setT({ ...t, fee: Number(e.target.value) })}
-        style={{ width: 80 }}
-      />
-      <button
-        className="btn"
-        onClick={async () => {
-          if (t.gross <= 0) return toast('Enter an amount.');
-          if (!(await ensureSignedIn('Sign in to save transfers.'))) return;
-          addTransfer({ ...t, id: crypto.randomUUID() });
-          toast('Transfer added.');
-          setT({ date: today(), type: 'DEPOSIT', gross: 0, fee: depositFee });
-        }}
-      >
-        <PlusIcon />Add
-      </button>
+    <div>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+        <input type="date" value={t.date} onChange={(e) => setT({ ...t, date: e.target.value })} />
+        <select value={t.type} onChange={(e) => setT({ ...t, type: e.target.value as Transfer['type'] })}>
+          <option value="DEPOSIT">Deposit</option>
+          <option value="WITHDRAWAL">Withdrawal</option>
+        </select>
+        <input
+          type="number"
+          placeholder="Amount"
+          value={t.gross || ''}
+          onChange={(e) => setT({ ...t, gross: Number(e.target.value) })}
+          style={{ width: 100 }}
+        />
+        {linkMode ? (
+          <LinkedTransferFields date={t.date} type={t.type} gross={t.gross} onLinked={reset} />
+        ) : (
+          <>
+            <input
+              type="number"
+              placeholder="Fee"
+              value={t.fee || ''}
+              onChange={(e) => setT({ ...t, fee: Number(e.target.value) })}
+              style={{ width: 80 }}
+            />
+            <button
+              className="btn"
+              onClick={async () => {
+                if (t.gross <= 0) return toast('Enter an amount.');
+                if (!(await ensureSignedIn('Sign in to save transfers.'))) return;
+                addTransfer({ ...t, id: crypto.randomUUID() });
+                toast('Transfer added.');
+                reset();
+              }}
+            >
+              <PlusIcon />Add
+            </button>
+          </>
+        )}
+      </div>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>
+        <input type="checkbox" checked={linkMode} onChange={(e) => setLinkMode(e.target.checked)} />
+        Link this to a Bank account or Cash (creates a matching entry there too, instead of just here)
+      </label>
     </div>
   );
 }

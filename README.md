@@ -2403,6 +2403,28 @@ FinanceManager live link:
      console errors. `npx tsc -b` / `npm run test` (264 tests, 9 new) / `npm run build` all
      clean.
 
+125. **Direct transfer-link shortcut prototyped on PSX (2026-08-25) — partially closes Pending
+     item 62; still open for the other 5 modules.** The user's own example: "PSX i can only use
+     Zindagi Account for Deposits & Withdrawls... check feasibility" of linking a transfer
+     straight from a module's own page instead of always needing the separate Transfers page.
+     PSX's "Cash Transfers" add-form gained a "Link this to a Bank account or Cash" checkbox —
+     checking it swaps the plain Fee input + Add button for a module picker (Bank account or
+     Cash) and a "Link & add" button that calls the exact same `createLinkedTransfer()` the
+     Transfers page itself uses (no parallel implementation), and reuses `useLastTransferSource`
+     for the same prefill-the-usual-source behavior Done item 120 already built — checking the
+     box for the first time on a PSX deposit correctly pre-selected "Zindagi (PKR)" in the
+     verification below, matching the user's own example exactly. Deliberately simpler than the
+     full Transfers page in one respect: both sides always share the same amount (no "different
+     amount on the other side" toggle) — a real cross-currency conversion still belongs on the
+     full Transfers page, which already has that control. Verified live via Playwright: checking
+     the box swaps in the Bank/Cash picker with the remembered account pre-selected, and
+     "Link & add" correctly hits the sign-in gate — zero console errors. `npx tsc -b` /
+     `npm run test` (264 tests, unchanged) / `npm run build` all clean. **This confirms the
+     approach is sound and cheap to repeat** (no new infrastructure, ~70 lines) — QSE mirrors
+     PSX exactly and is the natural next one; Rentals/Personal Loans/Funds/EMI each need their
+     own short "what does linking mean on this page" pass since their primary record isn't a
+     plain deposit/withdrawal like QSE/PSX's `Transfer`.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`
@@ -2667,16 +2689,13 @@ what's already shipped from this same message**:
     124.** Built as a genuinely separate mechanism from `generateLeaseRentPlans()` (Done item
     60), per this item's own note that it needed its own design pass rather than a bolt-on.
 62. "We may give the option to all entities to directly link the transfers on its page (per
-    cycle, or regular, check feasibility)" — the user's own example: PSX only ever transfers
-    to/from one specific bank account (Zindagi), so a shortcut to create that link straight from
-    PSX's own page (rather than navigating to the separate Transfers page every time) could save
-    real friction, and the same could apply to Rentals/Personal Loans/Funds/EMI/QSE. Done item
-    120 already covers the "remember and prefill the last-used source" half of this ask on the
-    Transfers page itself; this remaining half — a per-entity shortcut UI embedded in each
-    module's own page — is a genuine "check feasibility" open question spanning up to 6 modules
-    (QSE, PSX, Rentals, Personal Loans, Funds, EMI), not something to guess a design for in one
-    pass. Worth prototyping on just one module first (PSX, the user's own example) before
-    deciding whether it generalizes cleanly to the rest.
+    cycle, or regular, check feasibility)" — **prototyped on PSX, see Done item 125; still open
+    for QSE/Rentals/Personal Loans/Funds/EMI.** The prototype confirmed the approach works
+    (reuses `createLinkedTransfer`/`useLastTransferSource` directly, no new infrastructure) —
+    what's left is repeating the same small addition on the other 5 modules' own add-transfer/
+    add-entry forms, one at a time, each needing its own "what does linking mean here" check
+    (QSE mirrors PSX exactly; Rentals/Personal Loans/Funds/EMI each have a different primary
+    record shape than a plain deposit/withdrawal).
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank
