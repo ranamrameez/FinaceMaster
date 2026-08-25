@@ -308,7 +308,14 @@
   .navbtn.active{background:var(--accent-soft); color:var(--on-accent-soft); box-shadow:inset 3px 0 0 var(--accent);}
   .navbtn .num{font-family:var(--mono); color:var(--gold); font-size:11px; width:16px; flex-shrink:0;}
 
-  .main{flex:1; margin-left:220px; padding:26px 30px 60px 30px; max-width:1180px; min-width:0; transition:margin-left .18s ease;}
+  /* Pending item 54 ("utilize all page spaces"): 1180px left ~520px of dead
+     space on a 1920px-wide viewport (measured: sidebar 220px + main 1180px =
+     1400px, viewport 1920px) — bumped to 1600px so wide monitors actually
+     get more of the auto-fit stat-card/chart grids' extra columns instead of
+     unused margin. Not removed entirely: an unbounded main would stretch a
+     single stat card or narrow form to an absurd width on an ultrawide
+     monitor, which is its own readability problem, not a fix. */
+  .main{flex:1; margin-left:220px; padding:26px 30px 60px 30px; max-width:1600px; min-width:0; transition:margin-left .18s ease;}
   @media(max-width:700px){ .main{padding:18px 14px 50px 14px;} }
 
   /* ---------- Desktop sidebar collapse ("save space and focus" —
@@ -1297,7 +1304,12 @@ html[data-density="console"] .card{padding:6px 8px; border-radius:4px;}
 html[data-density="console"] .stat-card{padding:5px 7px;}
 html[data-density="console"] .stat-card .label{font-size:8.5px; margin-bottom:1px; letter-spacing:.02em;}
 html[data-density="console"] .stat-card .value{font-size:12.5px; font-family:var(--mono);}
-html[data-density="console"] .stat-card .sub{font-size:8.5px; margin-top:1px;}
+/* Pending item 50: Console was previously just a tighter-padding version of
+   the same info — this is one real behavioral difference, not just resizing:
+   drop the secondary "sub" line (break-even color hint, avg/last sell price,
+   etc.) entirely rather than shrinking it, since Console's whole point is a
+   glanceable numbers-only view, not a smaller version of the full one. */
+html[data-density="console"] .stat-card .sub{display:none;}
 html[data-density="console"] .main{padding:14px 16px 40px 16px;}
 html[data-density="console"] h1.pagetitle{font-size:16px; margin-bottom:10px;}
 html[data-density="console"] .btn{padding:4px 8px; font-size:11.5px; min-height:26px; min-width:26px;}

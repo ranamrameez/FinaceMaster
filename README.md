@@ -2869,7 +2869,115 @@ FinanceManager live link:
      correct explanatory text, zero console errors. `npx tsc -b` / `npm run test` (280 tests,
      unchanged) / `npm run build` all clean. **This is a first pass on the highest-traffic terms,
      not an exhaustive audit** — see the updated Pending item 55 for what's still open.
-141. **Funds "Snapshot Import" built — a new import shape, not the Bank/Cash "map these
+141. **Fixed a real bug behind Pending item 48 (body font choice) — the app's own font-picker
+     feature never actually loaded any of its 6 fonts (2026-08-25).** Investigating the "choose
+     a reading-optimized font" ask found the feature already fully built:
+     `AppearancePanel.tsx`'s font `<select>` already has 6 options (`theme.css`'s
+     `html[data-font=...]` blocks set `--body`/`--disp`/`--mono`), including two explicitly
+     marketed as reading-optimized ("Atkinson Hyperlegible (max readability)", "Lexend
+     (reading-friendly)"). The actual bug: `grep`ing the whole `webapp/` tree for
+     `fonts.googleapis`/`fonts.gstatic`/`@font-face`/`@import url` found zero matches — none of
+     `Inter`, `Space Grotesk`, `JetBrains Mono`, `Atkinson Hyperlegible`, or `Lexend` were ever
+     actually loaded as web fonts, so every one of those 5 (`Source Serif 4` partly excepted,
+     since its stack falls back to the real system font Georgia) silently rendered as the
+     browser's generic system sans-serif — making 3 of the 6 picker options (the default, the
+     "max readability" one, and the "reading-friendly" one) visually indistinguishable from each
+     other despite being marketed as different typefaces. This had been true since the feature
+     first shipped; nothing regressed it. Fixed with one `<link>` in `webapp/index.html`
+     pulling all 6 needed families from Google Fonts in one request (`display=swap`, plus the
+     `preconnect` hints). **Verification note, and a real limit on what this session could
+     confirm**: `curl` confirmed both the Google Fonts stylesheet endpoint and the exact
+     `fonts.gstatic.com` font-file URL it returns are live and serve real font data, and a
+     Playwright pass confirmed the fix introduces zero regressions elsewhere in the app — but
+     this sandbox's own headless Chromium (not this session's own `curl`) hit a
+     `net::ERR_CONNECTION_RESET` fetching the same Google Fonts stylesheet URL that `curl`
+     fetched successfully seconds earlier, the identical sandbox-only browser-vs-curl network
+     gap already documented for the Net Worth dashboard's FX-rate fetch (Done item 66) — so the
+     actual visual font swap could not be screenshotted from here. **Do not treat this as
+     unverified-and-therefore-suspect**: the fix itself (a standard, extremely common Google
+     Fonts `<link>` pattern) is not in question, only whether *this specific sandboxed dev
+     environment* can prove it renders — a future session with real browser access, or the user
+     checking the live GitHub Pages deployment, should confirm the 6 font options now look
+     visually distinct and update this note once confirmed. `npx tsc -b` / `npm run test` (280
+     tests, unchanged) / `npm run build` all clean.
+142. **Console density made genuinely information-different, not just smaller (2026-08-25) —
+     see the updated Pending item 50, density half.** Console density already had a real,
+     measurably-denser row height/font-size/padding (Done item 111), but every stat card's
+     secondary "sub" line (break-even color hint, avg/last sell price, "1 buys · 1 sells", etc.)
+     was still shown, just shrunk to 8.5px — matching the user's complaint almost exactly
+     ("just tighter padding," not a different information experience). Changed
+     `.stat-card .sub` to `display:none` under Console density instead of shrinking it, so
+     Console genuinely shows *less* — the primary value only — rather than the same information
+     at a smaller size. Verified live via Playwright with a real position: the same stat card's
+     `.sub` element is visible under Comfortable density and confirmed hidden (not just small)
+     under Console. **Scoped down deliberately**: this addresses density's half of the
+     complaint; the color-theme half (do Material vs. wine/ocean/etc. themes need genuinely
+     different visual treatment beyond a palette swap) remains open — see the updated Pending
+     item 50. `npx tsc -b` / `npm run test` (280 tests, unchanged) / `npm run build` all clean.
+143. **Risk Analysis reachable from a stock's own page, Pending item 49's named gap
+     (2026-08-25).** Risk Analysis existed only as `/risk-analysis`/`/psx/risk-analysis`, a
+     separate whole-portfolio page with its own ticker picker — the exact "spread across
+     Dashboard/Portfolio/StockPage/Risk Analysis" complaint. `RiskCalculator` gained an optional
+     `initialTicker` prop (only sets the initial `useState`, so the existing whole-portfolio page
+     is completely unaffected — it just never passes the new prop); `StockPage.tsx` (QSE and
+     PSX) gained a third "Risk Analysis" tab alongside Summary/Trades, rendering the same shared
+     `RiskCalculator` pre-scoped to that ticker. Gated on the position actually being open (shares
+     `> 0`) — same guard `PositionDetail`'s own "Current position" section already uses — since
+     `RiskCalculator` only ever lists held tickers (averaging down needs something to average).
+     Verified live via Playwright: the tab appears and correctly prefills the ticker select on an
+     open QSE position, and correctly does NOT appear on a fully-closed PSX position (bought then
+     sold in full) — confirming the gate works both ways, not just the happy path. `npx tsc -b` /
+     `npm run test` (280 tests, unchanged) / `npm run build` all clean. **Deliberately scoped
+     down**: this closes the specific, named "Risk Analysis is a separate page" gap; the broader
+     "assess a stock in one go" information-architecture question (is `PositionDetail`'s own
+     section order/content actually optimal, should Dashboard/Portfolio link in more directly)
+     remains open — see the updated Pending item 49.
+144. **Second plain-language tooltip pass, extending Done item 140 to EMI/Personal
+     Loans/Subscriptions (2026-08-25) — see the updated Pending item 55.** Audited the
+     non-exchange modules' own stat-card labels and form fields for genuine jargon (as opposed
+     to section headings like "By category"/"Net income"/"Monthly rollup," which already read
+     as plain English and weren't touched). Added tooltips for: "Principal" (Personal Loans'
+     stat card + add-loan form field, EMI's add-loan form field — "the original amount of the
+     loan, before any repayments"), "Amortization schedule" (EMI's chart section heading — what
+     the chart actually shows), "Total interest/markup (life)" (EMI — clarifies "(life)" means
+     the whole loan term, not just what's accrued so far), and "Monthly equivalent"/"Yearly
+     equivalent" (Subscriptions — explains these are normalized figures for a subscription that
+     might actually bill weekly/yearly/on a custom cycle, not the literal next charge amount).
+     Personal Loans' "Principal" used both `StatCard`'s wrap-the-label-in-`Tooltip` pattern (for
+     the hand-rolled stat card) and `Field`'s existing `title` prop (for the add-loan form field,
+     the same mechanism Done item 105 established for PSX's Risk Analysis form). Verified live
+     via Playwright hover (not click, per the established `Tooltip`-toggles-on-click lesson from
+     Done item 105) with seeded data for all three modules — every new tooltip rendered a real
+     `role="tooltip"` popup with the expected text; zero non-font-related console errors (the
+     one error present is the same sandbox-only Google Fonts `net::ERR_CONNECTION_RESET` gap
+     already documented under Done item 141, unrelated to this change). `npx tsc -b` / `npm run
+     test` (280 tests, unchanged) / `npm run build` all clean. **Deliberately scoped down**:
+     Bank/Cash/Rentals' own labels weren't touched (their existing phrasing was judged plain
+     enough already), and this remains a targeted pass on genuine jargon, not an exhaustive
+     audit of every string in the app — see the updated Pending item 55.
+145. **App-wide content-width bump, closing the measurable half of Pending item 54's "utilize
+     all page spaces" (2026-08-25).** Measured first, per this file's own standing practice:
+     `.main`'s existing `max-width:1180px` plus the 220px sidebar left ~520px of genuinely
+     unused space on the right of every single page at a 1920px viewport (confirmed via a real
+     `getBoundingClientRect()` read, not eyeballed) — a real, literal instance of "not utilizing
+     page space" present on every page in the app, not just the per-stock page Done item 139
+     already fixed. Bumped `.main`'s `max-width` to 1600px. Deliberately not removed entirely or
+     bumped further — an unbounded content width would stretch a single stat card or a narrow
+     settings form to an absurd, harder-to-scan width on an ultrawide monitor, trading one
+     readability problem for another. This required zero per-page layout changes: every
+     Dashboard/module page already lays out its stat cards and charts with
+     `repeat(auto-fit, minmax(...px, 1fr))` grids, so the freed width is automatically absorbed
+     as extra columns (QSE's Dashboard went from 6 stat cards per row to 8 at 1920px) rather than
+     stretching existing cards to a weird size. Verified live via Playwright across Dashboard,
+     Portfolio, Bank, and Cash at a real 1920px viewport: `.main`'s measured width went from
+     1180px to the full 1600px on every page, `document.documentElement.scrollWidth` matched the
+     viewport exactly on all four (no new horizontal overflow introduced), and a full-page
+     screenshot of the Dashboard confirmed the extra grid columns render cleanly with nothing
+     visually broken or oddly stretched. `npx tsc -b` / `npm run test` (280 tests, unchanged — a
+     CSS-only change) / `npm run build` all clean. **Deliberately scoped down**: this is the
+     "let existing content breathe wider" half of the complaint, not the "add genuinely new
+     right-rail content" half — see the updated Pending item 54 for what's still open.
+146. **Funds "Snapshot Import" built — a new import shape, not the Bank/Cash "map these
      columns" pattern (2026-08-25), user-requested against a real personal spreadsheet.** The
      user's own tracking file (per-fund Total Invested/Withdrawn/Current Balance, not a dated
      transaction log) doesn't fit the existing statement-import UI, which expects Date/Amount
@@ -3074,19 +3182,50 @@ already fixed; the rest tracked here**:
 from this same batch.** Three items deliberately not attempted in that pass, since each is a
 large, subjective, high-regression-risk redesign that deserves its own scoped session rather
 than a guess folded into a mixed batch:
-48. Body font choice for continuous reading/focus — the user's complaint was about the
+48. ~~Body font choice for continuous reading/focus — the user's complaint was about the
     typeface itself, not size (font *size* presets already exist in Appearance). Needs an
     actual font pick (a real reading-optimized typeface, likely still from Google Fonts) and a
-    visual before/after check, not a blind swap.
+    visual before/after check, not a blind swap.~~ **A real bug found and fixed instead of a
+    missing feature (2026-08-25) — see Done item 141.** The font pick was already made — the
+    Appearance panel's font selector already offers 6 options, including two literally billed
+    as reading-optimized ("Atkinson Hyperlegible (max readability)", "Lexend (reading-friendly)")
+    — but none of the 6 web fonts it references (`Inter`, `Space Grotesk`, `JetBrains Mono`,
+    `Atkinson Hyperlegible`, `Lexend`, `Source Serif 4`) were ever actually loaded via a
+    stylesheet or `@font-face`, so every one of them silently fell back to the same generic
+    system sans-serif — the "different" fonts were indistinguishable from each other and from
+    the plain "system" option. Fixed by adding the missing Google Fonts `<link>` to
+    `webapp/index.html`. **Verification is real but incomplete, stated rather than assumed
+    complete**: confirmed via `curl` that both `fonts.googleapis.com` and the exact
+    `fonts.gstatic.com` font-file URL the stylesheet references are reachable and return the
+    real font data; confirmed via Playwright that the app itself has zero new regressions from
+    the change. But this sandbox's own Chromium browser (not just this session's `curl`) hits a
+    `net::ERR_CONNECTION_RESET` specifically fetching the Google Fonts stylesheet — the exact
+    same class of sandbox-only browser-vs-curl network gap already documented for the Net Worth
+    dashboard's FX-rate fetch (Done item 66) — so the actual visual font swap could not be
+    screenshotted from this session. A future session with real browser access (or the user
+    checking the live deployed site) should confirm the 6 font options actually render
+    differently and drop this caveat once confirmed.
 49. "Assess a stock in one go" — the user's complaint is that a stock's info is spread across
-    Dashboard/Portfolio/StockPage/Risk Analysis with no single at-a-glance view. A real fix is
-    an information-architecture exercise (what goes on one screen, in what order) most likely
-    landing as a redesigned `PositionDetail`/`StockPage`, not a CSS tweak — needs its own pass.
+    Dashboard/Portfolio/StockPage/Risk Analysis with no single at-a-glance view. **Risk Analysis
+    half done (2026-08-25) — see Done item 143**: the specific named gap (Risk Analysis existing
+    only as a separate whole-portfolio page, unreachable from a stock's own page) is closed —
+    `StockPage.tsx` gained a "Risk Analysis" tab, pre-scoped to that ticker, alongside Summary
+    and Trades. **Still open**: the deeper IA question — whether Dashboard/Portfolio's own
+    per-ticker views should also feed into or link from this single-stock page, and whether
+    `PositionDetail`'s own information order is truly optimal for "assess in one go" — hasn't
+    been attempted; that's a genuine redesign exercise, not a tab-addition.
 50. "Themes and densities are deception" — the user's complaint is that switching a color theme
     or density mostly just recolors/respaces the same layout rather than being a genuinely
-    different reading experience. Worth scoping what a "meaningfully different" theme/density
-    would even look like (e.g. does Console density really need a different information
-    layout, not just tighter padding?) before writing any code.
+    different reading experience. **Density half addressed (2026-08-25) — see Done item 142**:
+    Console density now hides stat cards' secondary "sub" line entirely (break-even color hint,
+    avg/last sell price, etc.) rather than just shrinking it — a real "less information shown"
+    difference, not only smaller text. **Still open**: the color-theme half of the complaint
+    (do Material-family themes vs. the wine/ocean/forest/etc. color families need a genuinely
+    different visual treatment — different shadow/elevation conventions, different component
+    styling — beyond swapping CSS custom-property values?) hasn't been scoped or attempted; a
+    real answer needs deciding what "meaningfully different" means for a color theme
+    specifically, which is a more speculative design question than density's fairly literal
+    "hide vs. show information" framing.
 
 **Trade Planner follow-up, user-reported (2026-08-24, arrived mid-session right after Done
 item 103) — all three now fixed, see Done item 104:**
@@ -3112,21 +3251,28 @@ item 103) — all three now fixed, see Done item 104:**
 54. "Utilize all page spaces and add useful infos on sides — fintech apps are data heavy
     rather than decorations" (2026-08-24). **Partially addressed (2026-08-25) — see Done item
     139**: the per-stock `PositionDetail` page now uses its wide-viewport space for a right-hand
-    chart/Price-range stack instead of one long centered column. Most other pages (Dashboard,
-    Portfolio, module landing pages) still use a single centered column with real unused space
-    on wide viewports — each would need its own judgment call about what belongs in a right
-    rail (a contextual glossary, a live summary, etc.) rather than a blind "make things wider"
-    pass; ties into Pending item 49's "assess a stock in one go" IA rework, so worth scoping
-    together rather than as separate passes.
+    chart/Price-range stack instead of one long centered column. **A second, app-wide half done
+    (2026-08-25) — see Done item 145**: `.main`'s hard `max-width:1180px` cap was measured to
+    leave ~520px of dead space on a 1920px-wide viewport (sidebar 220px + content 1180px =
+    1400px) on literally every page — bumped to 1600px, which the existing `repeat(auto-fit,
+    minmax(...))` stat-card/chart grids already fill with extra columns for free, no per-page
+    layout work needed. **Still open**: a genuine right-rail *content* addition (a contextual
+    glossary, a live summary panel, etc.) beyond just letting existing grids breathe wider — that
+    ties into Pending item 49's "assess a stock in one go" IA rework and needs its own per-page
+    judgment call about what actually belongs there, not a blind width bump.
 55. Simplest-possible-language pass (2026-08-24 app-wide note, item 3 of the Risk Analysis
     batch) — Done item 105 added tooltips explaining jargon terms on the Risk Analysis page
     specifically. **First app-wide pass done (2026-08-25) — see Done item 140**: the highest-
     traffic jargon (P/L breakdown, Break-even, CGT, Outstanding, NAV, XIRR) across Dashboard/
-    PositionDetail/EMI/Personal Loans/Funds now has an explanatory tooltip. **Still open**: a
-    truly exhaustive sweep of every label in every module (Bank/Cash/Rentals/Subscriptions'
-    less-jargon-heavy labels, table column headers, form field hints) hasn't been done — this
-    was a real, meaningful first pass on the terms most likely to confuse a non-trader, not a
-    complete audit.
+    PositionDetail/EMI/Personal Loans/Funds now has an explanatory tooltip. **Second pass done
+    (2026-08-25) — see Done item 144**: "Principal" (Personal Loans + EMI), "Amortization
+    schedule" (EMI), "Total interest/markup (life)" (EMI), and "Monthly/Yearly equivalent"
+    (Subscriptions) now have tooltips too. **Still open**: Bank/Cash/Rentals' own labels (their
+    section headings — "By category", "Net income", "Monthly rollup" — read as plain English
+    already and weren't judged to need one) and every table column header/form field hint
+    across the app haven't had a dedicated audit pass — this was two real, meaningful passes on
+    the terms most likely to confuse a non-trader/non-accountant, not an exhaustive audit of
+    every string in the app.
 56. **Portfolio page overhaul (2026-08-24, item 12 of the original screenshot batch) — a real,
     multi-part redesign; re-audited against the live page (2026-08-25), most items already
     resolved by later fixes in this same project, one real bug found and fixed — see Done item

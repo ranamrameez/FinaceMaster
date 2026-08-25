@@ -69,7 +69,7 @@ function AddLoanForm() {
             {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>
-        <Field label="Principal" width={120}>
+        <Field label="Principal" width={120} title="The original loan amount, before any interest/markup or repayments.">
           <TextInput type="number" step="0.01" value={l.principal || ''} onChange={(e) => setL({ ...l, principal: Number(e.target.value) })} />
         </Field>
         <Field label="Repayment type" width={220}>
@@ -87,7 +87,7 @@ function AddLoanForm() {
             <TextInput type="number" step="0.01" value={l.totalToReturn ?? ''} onChange={(e) => setL({ ...l, totalToReturn: Number(e.target.value) })} />
           </Field>
         )}
-        <Field label="Tenure (months)" width={110}>
+        <Field label="Tenure (months)" width={110} title="How many months the loan runs for, from the start date to when it's fully paid off.">
           <TextInput type="number" value={l.tenureMonths || ''} onChange={(e) => setL({ ...l, tenureMonths: Number(e.target.value) })} />
         </Field>
         <Field label="Start date">
@@ -247,14 +247,23 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
           </div>
           <div className="stat-card card" style={hueStyle(HUES[0])}><div className="label">Months remaining</div><div className="value">{sum.monthsRemaining}</div></div>
           <div className="stat-card card" style={hueStyle(HUES[6])}>
-            <div className="label">{loan.repaymentMode === 'fixedTotal' ? 'Total markup (life)' : 'Total interest (life)'}</div>
+            <Tooltip text={`The total ${loan.repaymentMode === 'fixedTotal' ? 'markup' : 'interest'} you'll pay across the whole loan, from start to the final installment — not just what's accrued so far.`}>
+              <div className="label" style={{ cursor: 'pointer' }}>{loan.repaymentMode === 'fixedTotal' ? 'Total markup (life)' : 'Total interest (life)'}</div>
+            </Tooltip>
             <MoneyValue n={sum.totalInterest} currency={loan.currencyCode} />
           </div>
           <div className="stat-card card" style={hueStyle(HUES[7])}><div className="label">Expected end date</div><div className="value">{expectedEndDate(loan)}</div></div>
         </div>
       </Card>
 
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Amortization schedule</h3>} style={{ marginBottom: 16 }}>
+      <CollapsibleCard
+        title={
+          <Tooltip text="A month-by-month breakdown of each installment, showing how much of it pays down the principal vs. how much is interest/markup.">
+            <h3 style={{ margin: 0, cursor: 'pointer' }}>Amortization schedule</h3>
+          </Tooltip>
+        }
+        style={{ marginBottom: 16 }}
+      >
         <div style={{ height: 220 }}>
           <Bar
             data={{

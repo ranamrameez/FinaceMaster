@@ -37,6 +37,7 @@ export function RiskCalculator({
   feePct,
   tick,
   calcFee,
+  initialTicker,
 }: {
   rows: RiskCalculatorRow[];
   tickerNames: Record<string, string>;
@@ -44,9 +45,13 @@ export function RiskCalculator({
   feePct: number;
   tick: number;
   calcFee: FeeCalculator;
+  /** Pending item 49 ("assess a stock in one go"): lets a per-stock page
+   * embed this calculator pre-scoped to that ticker, instead of only being
+   * reachable as a separate whole-portfolio page with its own picker. */
+  initialTicker?: string;
 }) {
   const held = useMemo(() => [...rows].filter((r) => r.shares > 0).sort((a, b) => a.ticker.localeCompare(b.ticker)), [rows]);
-  const [ticker, setTicker] = useState('');
+  const [ticker, setTicker] = useState(initialTicker || '');
   const [riskMode, setRiskMode] = useState<RiskMode>('balanced');
   const [currentPriceInput, setCurrentPriceInput] = useState(0);
   const [sharesInput, setSharesInput] = useState(0);

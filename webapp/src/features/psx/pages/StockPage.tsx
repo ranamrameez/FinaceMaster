@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { EditIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { RiskCalculator } from '../../../components/RiskCalculator';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
@@ -249,6 +250,8 @@ export function StockPage() {
   const { tickerNames } = usePSXStockData();
   const name = tickerNames[ticker];
   const { fromDate, setFromDate, toDate, setToDate, exportStatement, hasRows } = useTickerExport(ticker);
+  const { workbook, rows, calcFee, positions } = usePSXDerived();
+  const isOpen = (positions.find((p) => p.ticker === ticker)?.shares || 0) > 0;
 
   return (
     <div>
@@ -275,6 +278,25 @@ export function StockPage() {
               </div>
             ) : undefined,
           },
+          // Pending item 49 ("assess a stock in one go"): see the identical
+          // comment in QSE's StockPage.tsx.
+          ...(isOpen
+            ? [{
+                key: 'risk',
+                label: 'Risk Analysis',
+                content: (
+                  <RiskCalculator
+                    rows={rows}
+                    tickerNames={tickerNames}
+                    currency={workbook.settings.currency}
+                    feePct={workbook.settings.feePct}
+                    tick={workbook.settings.tick}
+                    calcFee={calcFee}
+                    initialTicker={ticker}
+                  />
+                ),
+              }]
+            : []),
         ]}
       />
     </div>

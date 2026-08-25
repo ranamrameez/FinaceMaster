@@ -2805,7 +2805,82 @@ not developer notes) continuously as features ship.
   a lesson from Done item 105). `npx tsc -b` / `npm run test` (280 tests, unchanged) / `npm run
   build` all clean. **Explicitly a first pass, not an exhaustive audit** — every non-jargon
   label, table header, and form hint across Bank/Cash/Rentals/Subscriptions was left untouched.
-- **Funds "Snapshot Import" built (2026-08-25) — see README Done item 141.** The user uploaded
+- **Font-picker feature found to have never actually loaded its fonts, fixed (2026-08-25) — see
+  README Done item 141, closes Pending item 48.** Investigating "pick a reading-optimized body
+  font" found the feature already built (`AppearancePanel.tsx`'s 6-option font `<select>`,
+  `theme.css`'s matching `html[data-font=...]` blocks) but never wired to actually load any of
+  the 5 non-system web fonts it references (`Inter`/`Space Grotesk`/`JetBrains Mono`/
+  `Atkinson Hyperlegible`/`Lexend`) — confirmed via a whole-tree grep for
+  `fonts.googleapis`/`@font-face`/`@import url` coming back completely empty. Every one of
+  those 5 silently fell back to the generic system sans-serif, making the two fonts explicitly
+  marketed as reading-optimized ("max readability", "reading-friendly") visually identical to
+  the default. Fixed with one `<link>` in `webapp/index.html`. **Rule for verifying any future
+  fix that depends on an external network fetch**: this session's own `curl` successfully
+  fetched both the Google Fonts stylesheet and the exact font-file URL it returns, but a
+  Playwright pass in this same sandbox hit `net::ERR_CONNECTION_RESET` on the identical
+  stylesheet URL — the sandboxed headless browser and this session's own shell hit outbound
+  network policy differently, the same gap already seen with the Net Worth FX-rate fetch (Done
+  item 66). Don't read a browser-level failure in this specific sandbox as disproving a fix
+  that's otherwise a completely standard, low-risk pattern (a `<link>` to Google Fonts) —
+  confirm what you can (the endpoint is live, the app has no new regressions) and flag the
+  visual confirmation as owed to a future session with real browser access, rather than
+  guessing at a workaround for a sandbox-specific network quirk.
+- **Console density made genuinely information-different, not just smaller (2026-08-25) — see
+  README Done item 142.** Console density already had real measurable spacing/font-size
+  differences (Done item 111), but every stat card's `.sub` secondary line (break-even color
+  hint, avg/last sell price, etc.) was still shown, just shrunk — exactly the "themes/densities
+  are just resizing, not a different experience" complaint. Changed `.stat-card .sub` to
+  `display:none` under Console density so it genuinely shows less information, not the same
+  information smaller. Verified live via Playwright: the same card's `.sub` element is visible
+  under Comfortable, hidden under Console. Deliberately scoped to density only — the color-theme
+  half of the same Pending item (item 50) is a more speculative design question and remains
+  open.
+- **Risk Analysis made reachable from a stock's own page, closing the named half of Pending
+  item 49 (2026-08-25) — see README Done item 143.** "Assess a stock in one go" previously
+  meant leaving `StockPage.tsx` for a separate whole-portfolio Risk Analysis page and re-picking
+  the same ticker there. `RiskCalculator.tsx` gained an optional `initialTicker` prop (defaults
+  the existing ticker `useState` instead of the auto-pick-first-held-ticker `useEffect`, which
+  now simply never fires when a caller supplies one) — the standalone `RiskAnalysisPage.tsx`
+  never passes it, so it's completely unaffected. Both QSE's and PSX's `StockPage.tsx` gained a
+  new "Risk Analysis" tab, conditionally spread into the `Tabs` array only when
+  `positions.find(p => p.ticker === ticker)?.shares > 0` — same open-position gate
+  `PositionDetail`'s own "Current position" section already uses, since averaging-down analysis
+  needs a real position to analyze. Verified live via Playwright both directions: the tab
+  appears and pre-fills to the seeded ticker on an open QSE position, and is correctly absent on
+  a fully-closed PSX position. `npx tsc -b` / `npm run test` (280 tests, unchanged) / `npm run
+  build` all clean. **Deliberately scoped down**: the broader "is `PositionDetail`'s own layout/
+  section order truly optimal" information-architecture question — the fuller reading of Pending
+  item 49 — was not attempted, only this specific named "Risk Analysis is a separate page" gap.
+- **Second plain-language tooltip pass, EMI/Personal Loans/Subscriptions (2026-08-25) — see
+  README Done item 144.** Extends Done item 140's pattern to genuine jargon in the non-exchange
+  modules: "Principal" (Personal Loans' stat card + both modules' add-loan forms), "Amortization
+  schedule" (EMI's chart heading), "Total interest/markup (life)" (EMI — the "(life)" qualifier
+  wasn't self-explanatory), and "Monthly/Yearly equivalent" (Subscriptions — these are
+  normalized figures, not necessarily the literal next-charge amount for a non-monthly-billed
+  subscription). Deliberately left Bank/Cash/Rentals' section headings ("By category", "Net
+  income", "Monthly rollup") untouched — already plain English, not jargon needing a tooltip.
+  Verified live via Playwright hover with seeded data across all three modules (seeded via
+  `page.addInitScript`, not `page.evaluate` after load — a Zustand store's
+  `workbook: loadFromLocalStorage()` runs once at module-init time, so setting `localStorage`
+  after the app has already loaded is too late; a hash-only `page.goto` doesn't force a fresh
+  module load either, since HashRouter navigations are same-document). `npx tsc -b` / `npm run
+  test` (280 tests, unchanged) / `npm run build` all clean.
+- **App-wide `.main` max-width bump, 1180px → 1600px (2026-08-25) — see README Done item 145,
+  the measurable half of Pending item 54.** Measured before touching anything: at a 1920px
+  viewport, `.main`'s bounding box was exactly 1180px wide with the 220px sidebar — ~520px of
+  the viewport was simply unused margin, on every page, not just one. Bumped the cap to 1600px
+  rather than removing it, since every page's stat-card/chart grids use
+  `repeat(auto-fit, minmax(...px, 1fr))` — they absorb the extra width as more columns
+  automatically (verified: QSE Dashboard's stat-card row went from 6 to 8 columns at 1920px),
+  so no per-page layout work was needed, but an *unbounded* width would make a single card or
+  narrow form absurdly wide on an ultrawide monitor instead. Verified live via Playwright across
+  4 pages (Dashboard/Portfolio/Bank/Cash) at 1920px: `.main` measured 1600px on all four,
+  `document.documentElement.scrollWidth` matched the viewport exactly (no new horizontal
+  overflow), and a Dashboard screenshot confirmed the extra columns render cleanly. **Still
+  open**: this only lets existing grids use more width — it doesn't add new right-rail content
+  (a contextual glossary, a live summary panel), which is the deeper, more judgment-heavy half
+  of Pending item 54 and ties into item 49's IA question.
+- **Funds "Snapshot Import" built (2026-08-25) — see README Done item 146.** The user uploaded
   a real personal tracking CSV (per-fund Total Invested/Withdrawn/Current Balance, several
   Pakistani mutual fund platforms) and asked to "feed this data to my account." Since this
   session has no access to the user's real signed-in browser/account (and this project's own
@@ -2816,7 +2891,7 @@ not developer notes) continuously as features ship.
   iSave / ALHIIF / Alhamrah Islamic Income Fund, not a second "JS Cash Fund" row) and the
   trailing bank-balance table (rows 15+) should be ignored for this import. Built
   `lib/calc/fundsSnapshotImport.ts` + a new "Import" tab on `FundsPage.tsx` — see README Done
-  item 141 for the full design (a snapshot has no per-trade dates, so it reconstructs one
+  item 146 for the full design (a snapshot has no per-trade dates, so it reconstructs one
   synthetic buy/sell per fund at whatever NAV reproduces the reported balances exactly) and
   MODULES_PLAN.md if extending this to another module later. **Verified against the user's own
   real uploaded file via Playwright**, including editing the real mislabeled row inline in the
