@@ -2865,6 +2865,21 @@ not developer notes) continuously as features ship.
   after the app has already loaded is too late; a hash-only `page.goto` doesn't force a fresh
   module load either, since HashRouter navigations are same-document). `npx tsc -b` / `npm run
   test` (280 tests, unchanged) / `npm run build` all clean.
+- **App-wide `.main` max-width bump, 1180px → 1600px (2026-08-25) — see README Done item 145,
+  the measurable half of Pending item 54.** Measured before touching anything: at a 1920px
+  viewport, `.main`'s bounding box was exactly 1180px wide with the 220px sidebar — ~520px of
+  the viewport was simply unused margin, on every page, not just one. Bumped the cap to 1600px
+  rather than removing it, since every page's stat-card/chart grids use
+  `repeat(auto-fit, minmax(...px, 1fr))` — they absorb the extra width as more columns
+  automatically (verified: QSE Dashboard's stat-card row went from 6 to 8 columns at 1920px),
+  so no per-page layout work was needed, but an *unbounded* width would make a single card or
+  narrow form absurdly wide on an ultrawide monitor instead. Verified live via Playwright across
+  4 pages (Dashboard/Portfolio/Bank/Cash) at 1920px: `.main` measured 1600px on all four,
+  `document.documentElement.scrollWidth` matched the viewport exactly (no new horizontal
+  overflow), and a Dashboard screenshot confirmed the extra columns render cleanly. **Still
+  open**: this only lets existing grids use more width — it doesn't add new right-rail content
+  (a contextual glossary, a live summary panel), which is the deeper, more judgment-heavy half
+  of Pending item 54 and ties into item 49's IA question.
 
 ## Live URLs
 

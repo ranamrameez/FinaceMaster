@@ -2955,6 +2955,28 @@ FinanceManager live link:
      Bank/Cash/Rentals' own labels weren't touched (their existing phrasing was judged plain
      enough already), and this remains a targeted pass on genuine jargon, not an exhaustive
      audit of every string in the app — see the updated Pending item 55.
+145. **App-wide content-width bump, closing the measurable half of Pending item 54's "utilize
+     all page spaces" (2026-08-25).** Measured first, per this file's own standing practice:
+     `.main`'s existing `max-width:1180px` plus the 220px sidebar left ~520px of genuinely
+     unused space on the right of every single page at a 1920px viewport (confirmed via a real
+     `getBoundingClientRect()` read, not eyeballed) — a real, literal instance of "not utilizing
+     page space" present on every page in the app, not just the per-stock page Done item 139
+     already fixed. Bumped `.main`'s `max-width` to 1600px. Deliberately not removed entirely or
+     bumped further — an unbounded content width would stretch a single stat card or a narrow
+     settings form to an absurd, harder-to-scan width on an ultrawide monitor, trading one
+     readability problem for another. This required zero per-page layout changes: every
+     Dashboard/module page already lays out its stat cards and charts with
+     `repeat(auto-fit, minmax(...px, 1fr))` grids, so the freed width is automatically absorbed
+     as extra columns (QSE's Dashboard went from 6 stat cards per row to 8 at 1920px) rather than
+     stretching existing cards to a weird size. Verified live via Playwright across Dashboard,
+     Portfolio, Bank, and Cash at a real 1920px viewport: `.main`'s measured width went from
+     1180px to the full 1600px on every page, `document.documentElement.scrollWidth` matched the
+     viewport exactly on all four (no new horizontal overflow introduced), and a full-page
+     screenshot of the Dashboard confirmed the extra grid columns render cleanly with nothing
+     visually broken or oddly stretched. `npx tsc -b` / `npm run test` (280 tests, unchanged — a
+     CSS-only change) / `npm run build` all clean. **Deliberately scoped down**: this is the
+     "let existing content breathe wider" half of the complaint, not the "add genuinely new
+     right-rail content" half — see the updated Pending item 54 for what's still open.
 
 ## Pending
 
@@ -3199,12 +3221,15 @@ item 103) — all three now fixed, see Done item 104:**
 54. "Utilize all page spaces and add useful infos on sides — fintech apps are data heavy
     rather than decorations" (2026-08-24). **Partially addressed (2026-08-25) — see Done item
     139**: the per-stock `PositionDetail` page now uses its wide-viewport space for a right-hand
-    chart/Price-range stack instead of one long centered column. Most other pages (Dashboard,
-    Portfolio, module landing pages) still use a single centered column with real unused space
-    on wide viewports — each would need its own judgment call about what belongs in a right
-    rail (a contextual glossary, a live summary, etc.) rather than a blind "make things wider"
-    pass; ties into Pending item 49's "assess a stock in one go" IA rework, so worth scoping
-    together rather than as separate passes.
+    chart/Price-range stack instead of one long centered column. **A second, app-wide half done
+    (2026-08-25) — see Done item 145**: `.main`'s hard `max-width:1180px` cap was measured to
+    leave ~520px of dead space on a 1920px-wide viewport (sidebar 220px + content 1180px =
+    1400px) on literally every page — bumped to 1600px, which the existing `repeat(auto-fit,
+    minmax(...))` stat-card/chart grids already fill with extra columns for free, no per-page
+    layout work needed. **Still open**: a genuine right-rail *content* addition (a contextual
+    glossary, a live summary panel, etc.) beyond just letting existing grids breathe wider — that
+    ties into Pending item 49's "assess a stock in one go" IA rework and needs its own per-page
+    judgment call about what actually belongs there, not a blind width bump.
 55. Simplest-possible-language pass (2026-08-24 app-wide note, item 3 of the Risk Analysis
     batch) — Done item 105 added tooltips explaining jargon terms on the Risk Analysis page
     specifically. **First app-wide pass done (2026-08-25) — see Done item 140**: the highest-
