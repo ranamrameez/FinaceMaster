@@ -552,6 +552,15 @@ tax, management fees) against one or more properties.
   replaces only this property's own not-yet-done projected plans, leaving anything already
   marked done untouched. Only rent income is auto-planned, not expenses (those are too
   irregular to project reliably) — log expenses manually in the Income & expenses tab.
+- **Rent collection (in the same Details view)**: a simpler, separate way to stay on top of
+  collecting rent, for when you don't want to project a whole lease's worth of cycles up
+  front. Pick a **Collection cycle** (daily, weekly, monthly, or annual) and set a **Last
+  collection date** — a "Rent collection" card then shows the next due date and amount
+  (pre-filled from your monthly rent, editable), which you approve with **Approve & log**.
+  Nothing is ever created automatically — you always get to adjust the date or the amount
+  before it's logged. If a tenant only pays part of what's due, just enter the lower amount
+  you actually received; the shortfall carries forward and is added on top of the next
+  proposal automatically, so you don't lose track of what's still owed.
 - **Income & expenses tab**: pick a property, then log rent income or an expense (with a
   free-form, autocompleted category for expenses — "Maintenance", "Property tax", etc.).
   See a category breakdown and a monthly income/expense/net rollup table, plus the full

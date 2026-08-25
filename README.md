@@ -2359,6 +2359,50 @@ FinanceManager live link:
      MDN-specified behavior), not a direct screenshot of an opened dropdown. `npx tsc -b` /
      `npm run test` (255 tests, unchanged — a CSS-only fix) / `npm run build` all clean.
 
+124. **Rentals semi-automated rent collection built (2026-08-25) — closes Pending item 61.** The
+     user's own framing: pick a collection cycle (daily/weekly/monthly/annual) and a last
+     collection date, then the app *proposes* the next collection for the user's approval and
+     date/amount adjustment (never auto-creates one silently), with a way to record a
+     partially-paid rent and carry the remaining balance into the next proposal. Built as a
+     genuinely separate mechanism from the existing lease-based `generateLeaseRentPlans()` (Done
+     item 60), which bulk-projects a whole lease's cycles up front from lease start/end dates —
+     this is an ongoing, one-at-a-time "is it due yet" prompt instead. `Property` gained three
+     optional fields (`collectionCycle`, `lastCollectionDate`, `pendingRentBalance` — a carried-
+     forward shortfall, never negative on an overpayment, an accepted v1 simplification over
+     tracking a real credit balance). New pure `proposeRentCollection()`/`nextPendingBalance()`
+     in `lib/calc/rentalPlanning.ts` (9 new tests): the proposal always advances exactly ONE
+     cycle past the anchor date (never loops ahead through multiple missed cycles) so a missed
+     collection surfaces as one overdue proposal the user approves, which then becomes the new
+     anchor for the next call — catching up one cycle at a time rather than silently skipping
+     ahead. `PropertyDetailModal`'s new "Rent collection" card shows the computed due date/
+     amount (pre-filled but editable) and an "Approve & log" button that creates a real
+     `RentalEntry`, updates `lastCollectionDate` to the logged date, and recomputes
+     `pendingRentBalance` from whatever amount was actually entered — a lower amount than
+     proposed is exactly how a partial payment gets recorded, no separate "partial payment" UI
+     needed. **A real, previously-undiscovered bug was found and fixed while verifying this**:
+     approving triggers `confirmDialog()` then (if not yet signed in) `ensureSignedIn()` from
+     *inside* `PropertyDetailModal`, which is itself a `Modal` — both the confirm dialog and the
+     sign-in modal share the exact same `.modal-overlay` CSS class and z-index (100) as every
+     other `Modal` in the app, and since `ConfirmDialogHost`/`SignInModalHost` are mounted once
+     near the app root (before routed page content in the DOM), a same-z-index page-level Modal
+     mounted later in the tree paints ON TOP of them — burying their buttons, unclickable,
+     underneath whatever modal triggered them. Confirmed via Playwright: an initial verification
+     attempt's `confirmDialog()` click timed out with Playwright reporting a stray date input
+     from the underlying Rentals modal "intercepting pointer events" at the Confirm button's
+     coordinates — a real, reproducible interaction bug, not a test-script artifact. This is a
+     pre-existing latent bug (the lease-based plans' own "Mark as done" already called
+     `confirmDialog()` from inside this same modal, just never exercised this failure mode
+     before — Bank's `AccountDetailModal` has the identical exposure for its own confirm/sign-in
+     calls). Fixed once at the shared layer: `Modal` gained an optional `zIndex` prop (same
+     escape hatch `TermsGateModal` already used its own inline `zIndex:1000` for, just now
+     available to any caller), and `ConfirmDialogHost`/`SignInModalHost` both pass `zIndex={300}`
+     — comfortably above any regular `.modal-overlay` (100) and the mobile sidebar drawer (150/
+     200), still well below the Terms gate (1000). Verified via a real click-hittability check
+     (not just a screenshot): both the Confirm button and the sign-in modal's email input are
+     now genuinely clickable when opened from inside an already-open Rentals modal, with zero
+     console errors. `npx tsc -b` / `npm run test` (264 tests, 9 new) / `npm run build` all
+     clean.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`
@@ -2619,15 +2663,9 @@ what's already shipped from this same message**:
     LIGHT appearance regardless of the app's dark theme — exactly a "menu" whose bg/text
     contrast looks wrong, and it happens at literally every `<select>` in the app ("many
     places"), matching the report far better than the sidebar theory did.
-61. Rentals: semi-automated rent-collection cycles. The user's own framing: pick a collection
-    cycle (daily/weekly/monthly/annual) and a last collection day/date, then the app *proposes*
-    a collection transaction for the user's final approval and date adjustment (never auto-
-    creates one silently) — plus a way to record a partially-paid rent and track the remaining
-    balance owed. This is materially different from the existing lease-based
-    `generateLeaseRentPlans()` (Done item 60), which projects a full lease's cycles up front
-    from lease start/end dates; this ask is an ongoing, recurring "is it time to collect again"
-    prompt plus partial-payment tracking, which `PlannedRentalEntry`'s current all-or-nothing
-    shape doesn't support. Needs its own design pass, not a bolt-on to the existing feature.
+61. ~~Rentals: semi-automated rent-collection cycles.~~ **Done (2026-08-25) — see Done item
+    124.** Built as a genuinely separate mechanism from `generateLeaseRentPlans()` (Done item
+    60), per this item's own note that it needed its own design pass rather than a bolt-on.
 62. "We may give the option to all entities to directly link the transfers on its page (per
     cycle, or regular, check feasibility)" — the user's own example: PSX only ever transfers
     to/from one specific bank account (Zindagi), so a shortcut to create that link straight from

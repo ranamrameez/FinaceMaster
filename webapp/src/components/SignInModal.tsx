@@ -56,14 +56,14 @@ export function SignInModalHost() {
 
   if (!firebaseReady) {
     return (
-      <Modal title="Sign in" onClose={() => close(false)}>
+      <Modal title="Sign in" onClose={() => close(false)} zIndex={300}>
         <p className="footer-note">Cloud sign-in is unavailable — Firebase failed to load in this browser.</p>
       </Modal>
     );
   }
 
   return (
-    <Modal title="Sign in" onClose={() => close(false)}>
+    <Modal title="Sign in" onClose={() => close(false)} zIndex={300}>
       <p>{message}</p>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
         <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />

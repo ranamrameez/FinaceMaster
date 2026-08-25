@@ -3,6 +3,73 @@ import type { PlannedRentalEntry } from '../../types/plannedRentals';
 
 const MAX_HORIZON_MONTHS = 12;
 
+/** One step forward from `date` by the given cadence. Calendar month/year
+ * steps use `Date`'s own rollover (no day-of-month clamping like the lease
+ * generator's `cycleDate` needs) since this advances from a real anchor
+ * date, not a fixed target day-of-month. */
+function advanceByCycle(date: Date, cycle: NonNullable<Property['collectionCycle']>): Date {
+  const d = new Date(date);
+  switch (cycle) {
+    case 'daily':
+      d.setDate(d.getDate() + 1);
+      break;
+    case 'weekly':
+      d.setDate(d.getDate() + 7);
+      break;
+    case 'monthly':
+      d.setMonth(d.getMonth() + 1);
+      break;
+    case 'annual':
+      d.setFullYear(d.getFullYear() + 1);
+      break;
+  }
+  return d;
+}
+
+export interface RentCollectionProposal {
+  dueDate: string;
+  /** `monthlyRent` plus any carried-forward `pendingRentBalance` — a
+   * partial payment last cycle rolls its shortfall into this one. */
+  amount: number;
+  /** True once `dueDate` has arrived (today or earlier) — the UI's cue
+   * that this collection is actually ready to propose, not just upcoming. */
+  isDue: boolean;
+}
+
+/** Semi-automated rent collection (README item 61) — a separate, simpler
+ * mechanism from `generateLeaseRentPlans` above: rather than bulk-projecting
+ * a whole lease's cycles up front, this proposes just the ONE next-due
+ * collection from a cycle + an anchor date, for the user to approve (and
+ * adjust the date/amount of) one at a time — never auto-creates anything
+ * itself. Returns `null` when the property hasn't opted in (no
+ * `collectionCycle` set) or has no anchor to compute from yet (neither
+ * `lastCollectionDate` nor `leaseStartDate`). The anchor is meant to
+ * advance to whatever date a collection was actually logged at, so a
+ * missed cycle surfaces as one overdue proposal rather than silently
+ * skipping ahead — the caller advances it by calling this again after
+ * logging, not by this function looping past multiple missed cycles. */
+export function proposeRentCollection(property: Property, today: Date = new Date()): RentCollectionProposal | null {
+  if (!property.collectionCycle) return null;
+  const anchor = property.lastCollectionDate ?? property.leaseStartDate;
+  if (!anchor) return null;
+  const due = advanceByCycle(new Date(anchor), property.collectionCycle);
+  const dueDate = due.toISOString().slice(0, 10);
+  const todayStr = today.toISOString().slice(0, 10);
+  return {
+    dueDate,
+    amount: (property.monthlyRent ?? 0) + (property.pendingRentBalance ?? 0),
+    isDue: dueDate <= todayStr,
+  };
+}
+
+/** After logging a collection of `amountPaid` against a proposal that
+ * expected `expectedAmount`, this is the new `pendingRentBalance` to carry
+ * into the next proposal — never negative (an overpayment just clears the
+ * balance rather than tracking a credit, an accepted v1 simplification). */
+export function nextPendingBalance(expectedAmount: number, amountPaid: number): number {
+  return Math.max(0, expectedAmount - amountPaid);
+}
+
 /** Due date for one cycle: `cycleStartDay` clamped to the target month's
  * actual length (day 31 in February lands on the 28th/29th) — same
  * accepted simplification as EMI/Loans' `installmentDueDate`. */

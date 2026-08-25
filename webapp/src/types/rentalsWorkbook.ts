@@ -28,6 +28,27 @@ export interface Property {
   securityDepositType?: 'cash' | 'cheque' | 'bank_transfer' | 'other';
   securityDepositDate?: string;
   securityDepositReturned?: boolean;
+
+  // ---- Semi-automated rent collection (README item 61) — a separate,
+  // simpler mechanism from the lease-based bulk plan generator above:
+  // instead of projecting a whole lease's worth of cycles up front, this
+  // proposes just the ONE next-due collection from a cycle + an anchor
+  // date, for the user to approve (and adjust) one at a time. All
+  // optional so this doesn't interact with properties that only use the
+  // lease-based generator. ----
+  /** How often rent is collected. Distinct from the lease generator's
+   * always-monthly `cycleStartDay` — this supports the other cadences a
+   * real informal/short-term rental can use. */
+  collectionCycle?: 'daily' | 'weekly' | 'monthly' | 'annual';
+  /** Anchor date the next due date is computed from — set initially by
+   * the user, then advanced automatically to whatever date a collection
+   * was actually logged at. */
+  lastCollectionDate?: string;
+  /** Carried-forward shortfall from a partial payment, added on top of
+   * `monthlyRent` when proposing the next collection. Never goes
+   * negative — an overpayment simply clears it rather than tracking a
+   * credit balance, an accepted simplification for v1. */
+  pendingRentBalance?: number;
 }
 
 export interface RentalEntry {

@@ -31,7 +31,7 @@ export function ConfirmDialogHost() {
   };
 
   return (
-    <Modal title={title} onClose={() => close(false)}>
+    <Modal title={title} onClose={() => close(false)} zIndex={300}>
       <p style={{ whiteSpace: 'pre-line' }}>{message}</p>
       <div className="row" style={{ gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
         <button className="btn secondary" onClick={() => close(false)}>

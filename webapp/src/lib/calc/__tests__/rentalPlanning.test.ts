@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Property } from '../../../types/rentalsWorkbook';
-import { generateLeaseRentPlans } from '../rentalPlanning';
+import { generateLeaseRentPlans, nextPendingBalance, proposeRentCollection } from '../rentalPlanning';
 
 const property = (over: Partial<Property>): Property => ({
   id: 'p1',
@@ -46,5 +46,55 @@ describe('generateLeaseRentPlans', () => {
     const today = new Date('2026-01-15');
     const plans = generateLeaseRentPlans(p, today);
     expect(plans.map((pl) => pl.date)).toEqual(['2026-02-01', '2026-03-01']);
+  });
+});
+
+describe('proposeRentCollection', () => {
+  it('returns null when the property has no collection cycle set', () => {
+    expect(proposeRentCollection(property({ lastCollectionDate: '2026-01-01' }))).toBeNull();
+  });
+
+  it('returns null when there is no anchor date to compute from', () => {
+    expect(proposeRentCollection(property({ collectionCycle: 'monthly' }))).toBeNull();
+  });
+
+  it('falls back to leaseStartDate as the anchor when lastCollectionDate is unset', () => {
+    const p = property({ collectionCycle: 'monthly', leaseStartDate: '2026-01-01', monthlyRent: 1000 });
+    const proposal = proposeRentCollection(p, new Date('2026-01-15'));
+    expect(proposal).toEqual({ dueDate: '2026-02-01', amount: 1000, isDue: false });
+  });
+
+  it('advances one cycle from lastCollectionDate for each cadence', () => {
+    const base = { monthlyRent: 500 };
+    expect(proposeRentCollection(property({ ...base, collectionCycle: 'daily', lastCollectionDate: '2026-01-01' }), new Date('2026-01-01'))?.dueDate).toBe('2026-01-02');
+    expect(proposeRentCollection(property({ ...base, collectionCycle: 'weekly', lastCollectionDate: '2026-01-01' }), new Date('2026-01-01'))?.dueDate).toBe('2026-01-08');
+    expect(proposeRentCollection(property({ ...base, collectionCycle: 'monthly', lastCollectionDate: '2026-01-01' }), new Date('2026-01-01'))?.dueDate).toBe('2026-02-01');
+    expect(proposeRentCollection(property({ ...base, collectionCycle: 'annual', lastCollectionDate: '2026-01-01' }), new Date('2026-01-01'))?.dueDate).toBe('2027-01-01');
+  });
+
+  it('flags a proposal as due once its date has arrived, not before', () => {
+    const p = property({ collectionCycle: 'monthly', lastCollectionDate: '2026-01-01', monthlyRent: 1000 });
+    expect(proposeRentCollection(p, new Date('2026-01-15'))?.isDue).toBe(false);
+    expect(proposeRentCollection(p, new Date('2026-02-01'))?.isDue).toBe(true);
+    expect(proposeRentCollection(p, new Date('2026-03-01'))?.isDue).toBe(true);
+  });
+
+  it('adds a carried-forward pendingRentBalance on top of monthlyRent', () => {
+    const p = property({ collectionCycle: 'monthly', lastCollectionDate: '2026-01-01', monthlyRent: 1000, pendingRentBalance: 250 });
+    expect(proposeRentCollection(p, new Date('2026-02-01'))?.amount).toBe(1250);
+  });
+});
+
+describe('nextPendingBalance', () => {
+  it('is zero when the full expected amount is paid', () => {
+    expect(nextPendingBalance(1000, 1000)).toBe(0);
+  });
+
+  it('carries the shortfall forward on a partial payment', () => {
+    expect(nextPendingBalance(1000, 700)).toBe(300);
+  });
+
+  it('never goes negative on an overpayment', () => {
+    expect(nextPendingBalance(1000, 1200)).toBe(0);
   });
 });

@@ -2418,6 +2418,24 @@ not developer notes) continuously as features ship.
   *structurally cannot* style at all — native browser chrome (`<select>` popups, date/number
   spinners, scrollbars) needs `color-scheme`, not a color override, since the app has no DOM
   access to that popup's own rendering.
+  **Rentals semi-automated rent collection built (2026-08-25) — see README Done item 124,
+  closes Pending item 61 and this file's own "New-modules sequencing" note above about the
+  original request being deferred.** A genuinely separate mechanism from the existing lease-
+  based `generateLeaseRentPlans()` (bulk-projects a whole lease up front): `Property` gained
+  `collectionCycle`/`lastCollectionDate`/`pendingRentBalance` (the last one a carried-forward
+  partial-payment shortfall, never negative on an overpayment), and new
+  `proposeRentCollection()`/`nextPendingBalance()` in `lib/calc/rentalPlanning.ts` compute just
+  the ONE next-due collection from the anchor + cycle — deliberately advancing only one cycle
+  per call (never looping ahead through multiple missed ones), so a missed collection surfaces
+  as a single overdue proposal the user approves, which becomes the new anchor for next time.
+  `PropertyDetailModal`'s new "Rent collection" card shows the computed due date/amount
+  (editable) with an "Approve & log" button; entering a lower amount than proposed IS how a
+  partial payment gets recorded — `pendingRentBalance` recomputes from whatever was actually
+  entered, no separate partial-payment UI needed. **See this file's own Design decisions section
+  for a real, previously-undiscovered `Modal`/`confirmDialog`/`ensureSignedIn` z-index bug found
+  and fixed while verifying this feature** — worth reading if touching any page-level Modal that
+  calls either of those from inside itself. `npx tsc -b` / `npm run test` (264 tests, 9 new) /
+  `npm run build` all clean.
 
 ## Live URLs
 
@@ -2558,6 +2576,31 @@ webapp/                                                              the new Rea
   browsers/webviews (this caused a real "stuck on login" bug — a confirm()
   never resolved true). Use `components/ConfirmDialog.tsx`'s `confirmDialog()`
   instead, everywhere.
+- **`confirmDialog()`/`ensureSignedIn()` called from inside an already-open
+  page-level `Modal` need `zIndex` set correctly, or found out the hard way
+  (README Done item 124).** `ConfirmDialogHost`/`SignInModalHost` are mounted
+  once near the app root (before routed page content in the DOM); a
+  page-level `Modal` (Bank's `AccountDetailModal`, Rentals'
+  `PropertyDetailModal`, etc.) calling either of them from inside itself
+  creates two `.modal-overlay`s at the same default z-index (100) — and
+  since same-z-index elements stack by DOM order, the page-level one (mounted
+  later, deeper in the tree) painted ON TOP, burying the confirm/sign-in
+  dialog's buttons underneath it, unclickable. This was a real, previously-
+  undiscovered bug already latent in the lease-based Rentals plans' own
+  "Mark as done" and reachable from Bank's `AccountDetailModal` too — just
+  never triggered/noticed before. Fixed by giving `Modal` an optional
+  `zIndex` prop (same escape hatch `TermsGateModal` already used its own
+  inline `zIndex:1000` for) and setting `ConfirmDialogHost`/`SignInModalHost`
+  to `zIndex={300}` — above any regular `.modal-overlay` (100) and the
+  mobile sidebar drawer (150/200), below the Terms gate (1000). **Any future
+  new page-level Modal that calls `confirmDialog()`/`ensureSignedIn()` from
+  inside itself already gets this for free** (the fix is in the shared
+  `ConfirmDialogHost`/`SignInModalHost`, not per-caller) — nothing more to
+  do there. Confirmed via Playwright with a real click-hittability check,
+  not just a screenshot: an initial attempt's confirm-button click timed out
+  with Playwright reporting a stray underlying-modal input "intercepting
+  pointer events" at the button's coordinates — a real interaction bug, not
+  a test-script artifact.
 - **No "local-only" account-less data entry.** Browsing and calculators are
   open to everyone; *saving* anything requires sign-in, enforced via
   `lib/firebase/useEnsureSignedIn.ts` + `components/SignInModal.tsx`

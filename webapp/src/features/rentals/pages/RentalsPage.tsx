@@ -14,7 +14,7 @@ import { IconButton } from '../../../components/ui/IconButton';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { netIncomeByCurrency, netIncomeByProperty, propertyByCategory, propertyMonthlyRollup, propertyNetIncome } from '../../../lib/calc/rentalsModule';
-import { generateLeaseRentPlans } from '../../../lib/calc/rentalPlanning';
+import { generateLeaseRentPlans, nextPendingBalance, proposeRentCollection } from '../../../lib/calc/rentalPlanning';
 import { parseCSV, toCSV } from '../../../lib/csv';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
@@ -193,6 +193,39 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
     .filter((p) => p.propertyId === property.id)
     .sort((a, b) => a.date.localeCompare(b.date));
 
+  // README item 61: semi-automated rent collection — a separate, simpler
+  // mechanism from the bulk lease-plan generator above. `proposal` is
+  // recomputed from the committed `property` (not the unsaved `lease`
+  // draft) every render, so it always reflects what's actually saved.
+  // `collectDate`/`collectAmount` are the user's editable draft for THIS
+  // one proposal — reset whenever the underlying due date changes, so
+  // approving an old edited value against a newly-advanced proposal can't
+  // happen by accident.
+  const proposal = proposeRentCollection(property);
+  const [collectDate, setCollectDate] = useState(proposal?.dueDate ?? '');
+  const [collectAmount, setCollectAmount] = useState(proposal?.amount ?? 0);
+  const lastProposalDueDate = useRef(proposal?.dueDate);
+  if (proposal && lastProposalDueDate.current !== proposal.dueDate) {
+    lastProposalDueDate.current = proposal.dueDate;
+    setCollectDate(proposal.dueDate);
+    setCollectAmount(proposal.amount);
+  }
+
+  const logCollection = async () => {
+    if (!proposal) return;
+    const ok = await confirmDialog(
+      `Log ${fmtMoney(collectAmount, property.currencyCode)} rent income on ${collectDate}?`,
+      'Approve this collection?',
+    );
+    if (!ok) return;
+    if (!(await ensureSignedIn('Sign in to record this transaction.'))) return;
+    addRentalEntry({ id: uid(), propertyId: property.id, date: collectDate, type: 'RENT_INCOME', amount: collectAmount, category: 'Rent' });
+    const pendingRentBalance = nextPendingBalance(proposal.amount, collectAmount);
+    updateProperty(property.id, { lastCollectionDate: collectDate, pendingRentBalance });
+    setLease((prev) => ({ ...prev, lastCollectionDate: collectDate, pendingRentBalance }));
+    toast(pendingRentBalance > 0 ? `Logged — ${fmtMoney(pendingRentBalance, property.currencyCode)} still pending, carried to next cycle.` : 'Logged to the ledger.');
+  };
+
   const saveLease = async () => {
     if (!(await ensureSignedIn('Sign in to save lease/tenant details.'))) return;
     updateProperty(property.id, lease);
@@ -245,6 +278,26 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
         </Field>
       </div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+        <Field
+          label="Collection cycle (optional)"
+          title="Opts this property into the separate rent-collection proposal below — pick how often rent is actually collected."
+        >
+          <Select value={lease.collectionCycle ?? ''} onChange={(e) => setLease({ ...lease, collectionCycle: (e.target.value || undefined) as Property['collectionCycle'] })}>
+            <option value="">— Not set —</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="annual">Annual</option>
+          </Select>
+        </Field>
+        <Field
+          label="Last collection date"
+          title="When rent was last actually collected — the next proposal below is computed one cycle forward from this date (falls back to Lease start if left blank)."
+        >
+          <TextInput type="date" value={lease.lastCollectionDate ?? ''} onChange={(e) => setLease({ ...lease, lastCollectionDate: e.target.value || undefined })} />
+        </Field>
+      </div>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
         <Field label="Tenant name">
           <TextInput value={lease.tenantName ?? ''} onChange={(e) => setLease({ ...lease, tenantName: e.target.value })} />
         </Field>
@@ -281,6 +334,35 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
         <button className="btn secondary" onClick={saveLease}><SaveIcon size={12} />Save lease details</button>
         <button className="btn" onClick={generatePlans}>Generate projected rent</button>
       </div>
+
+      {property.collectionCycle && (
+        <Card style={{ marginBottom: 16 }}>
+          <h4 style={{ margin: '0 0 6px' }}>Rent collection</h4>
+          {proposal ? (
+            <>
+              <p className="footer-note" style={{ marginBottom: 8 }}>
+                {proposal.isDue ? 'Due for collection' : 'Next collection'} — approve to log it, or adjust the date/amount first
+                (e.g. a partial payment).
+                {(property.pendingRentBalance ?? 0) > 0 && (
+                  <> Includes {fmtMoney(property.pendingRentBalance!, property.currencyCode)} carried over from a previous
+                  partial payment.</>
+                )}
+              </p>
+              <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                <Field label="Collection date">
+                  <TextInput type="date" value={collectDate} onChange={(e) => setCollectDate(e.target.value)} />
+                </Field>
+                <Field label="Amount" title="Pre-filled with the full expected amount — lower it to record a partial payment; the shortfall carries into the next proposal.">
+                  <TextInput type="number" step="0.01" value={collectAmount} onChange={(e) => setCollectAmount(Number(e.target.value))} />
+                </Field>
+                <button className="btn" onClick={logCollection}>Approve &amp; log</button>
+              </div>
+            </>
+          ) : (
+            <p className="footer-note">Set a Last collection date (or a Lease start) above so the next due date can be computed.</p>
+          )}
+        </Card>
+      )}
 
       <h4 style={{ margin: '0 0 6px' }}>Projected rent plans</h4>
       <div className="table-scroll" style={{ maxHeight: 260, overflowY: 'auto' }}>
