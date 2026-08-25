@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Bar } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
+import { Tooltip } from '../../../components/Tooltip';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { EditIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
@@ -233,7 +234,12 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
         )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px,1fr))', gap: 8, marginTop: 12 }}>
           <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Monthly installment</div><MoneyValue n={sum.emi} currency={loan.currencyCode} /></div>
-          <div className="stat-card card" style={hueStyle('var(--loss)')}><div className="label">Outstanding</div><MoneyValue n={sum.outstanding} currency={loan.currencyCode} /></div>
+          <div className="stat-card card" style={hueStyle('var(--loss)')}>
+            <Tooltip text="How much you still owe on this loan, not counting future interest/markup.">
+              <div className="label" style={{ cursor: 'pointer' }}>Outstanding</div>
+            </Tooltip>
+            <MoneyValue n={sum.outstanding} currency={loan.currencyCode} />
+          </div>
           <div className="stat-card card" style={hueStyle(HUES[2])}><div className="label">Paid so far</div><MoneyValue n={sum.paidSoFar} currency={loan.currencyCode} /></div>
           <div className="stat-card card" style={hueStyle(HUES[4])}>
             <div className="label">{loan.repaymentMode === 'fixedTotal' ? 'Markup so far' : 'Interest so far'}</div>
@@ -365,7 +371,12 @@ function OverallSummary() {
           <div className="footer-note" style={{ marginBottom: 6 }}>{code}</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px,1fr))', gap: 8 }}>
             <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Monthly total</div><MoneyValue n={totals[code].monthlyInstallment} currency={code} /></div>
-            <div className="stat-card card" style={hueStyle('var(--loss)')}><div className="label">Outstanding</div><MoneyValue n={totals[code].outstanding} currency={code} /></div>
+            <div className="stat-card card" style={hueStyle('var(--loss)')}>
+              <Tooltip text="How much you still owe across your loans in this currency, not counting future interest/markup.">
+                <div className="label" style={{ cursor: 'pointer' }}>Outstanding</div>
+              </Tooltip>
+              <MoneyValue n={totals[code].outstanding} currency={code} />
+            </div>
             <div className="stat-card card" style={hueStyle(HUES[2])}><div className="label">Paid so far</div><MoneyValue n={totals[code].paidSoFar} currency={code} /></div>
           </div>
         </div>

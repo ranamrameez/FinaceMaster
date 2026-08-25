@@ -2850,6 +2850,25 @@ FinanceManager live link:
      around this same component) was checked and found to have no live caller in the app
      currently, so it wasn't part of this verification. `npx tsc -b` / `npm run test` (280 tests,
      unchanged — pure layout restructuring) / `npm run build` all clean.
+140. **First app-wide plain-language pass, Pending item 55 (2026-08-25).** Surveyed every
+     `className="label"` stat-card text app-wide and picked out the genuine jargon a non-trader
+     wouldn't know: "Realized/Unrealized/Net P/L" (Dashboard, both exchanges), "Cost"/break-even
+     and "Est. CGT if sold now" (PositionDetail, both exchanges), "Outstanding" (EMI's per-loan
+     card and its currency-totals card; Personal Loans' per-loan card), and "Avg NAV cost"/"XIRR"
+     (Funds' per-fund detail). Each now has an explanatory `Tooltip` on the label — for the ones
+     already using the shared `StatCard` component (Dashboard) this was just the existing
+     `labelTitle` prop; for hand-rolled stat-card markup elsewhere (PositionDetail/EMI/Personal
+     Loans/Funds all build `<div className="stat-card card">` by hand, not via `StatCard`) it
+     meant wrapping the label `<div>` in `<Tooltip>` directly, matching the pattern
+     `PositionDetail.tsx` already used for "Sell price"/"Median (fair value)". Deliberately left
+     alone: labels that already explain themselves via an adjacent `sub` line (Personal Loans'
+     "Net position" already says "Net owed to you"/"Net you owe" underneath) and Subscriptions'
+     "Monthly equivalent"/"Yearly equivalent" (descriptive English, not an abbreviation). Verified
+     live via Playwright **hover** (not click, per this file's own earlier lesson that click
+     toggles a `Tooltip`'s state) on 5 of the new tooltips across 4 pages — each showed the
+     correct explanatory text, zero console errors. `npx tsc -b` / `npm run test` (280 tests,
+     unchanged) / `npm run build` all clean. **This is a first pass on the highest-traffic terms,
+     not an exhaustive audit** — see the updated Pending item 55 for what's still open.
 
 ## Pending
 
@@ -3071,9 +3090,13 @@ item 103) — all three now fixed, see Done item 104:**
     together rather than as separate passes.
 55. Simplest-possible-language pass (2026-08-24 app-wide note, item 3 of the Risk Analysis
     batch) — Done item 105 added tooltips explaining jargon terms on the Risk Analysis page
-    specifically, but the broader ask ("serve all kinds of users, not just pros") implies
-    auditing labels/copy across every module for jargon that could be plain-language instead
-    of just tooltipped, which hasn't been attempted yet.
+    specifically. **First app-wide pass done (2026-08-25) — see Done item 140**: the highest-
+    traffic jargon (P/L breakdown, Break-even, CGT, Outstanding, NAV, XIRR) across Dashboard/
+    PositionDetail/EMI/Personal Loans/Funds now has an explanatory tooltip. **Still open**: a
+    truly exhaustive sweep of every label in every module (Bank/Cash/Rentals/Subscriptions'
+    less-jargon-heavy labels, table column headers, form field hints) hasn't been done — this
+    was a real, meaningful first pass on the terms most likely to confuse a non-trader, not a
+    complete audit.
 56. **Portfolio page overhaul (2026-08-24, item 12 of the original screenshot batch) — a real,
     multi-part redesign; re-audited against the live page (2026-08-25), most items already
     resolved by later fixes in this same project, one real bug found and fixed — see Done item

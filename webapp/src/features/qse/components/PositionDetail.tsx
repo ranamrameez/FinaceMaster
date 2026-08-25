@@ -108,7 +108,9 @@ export function PositionDetail({ ticker }: { ticker: string }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px,1fr))', gap: 8 }}>
             <div className="stat-card card" style={hueStyle(HUES[0])}><div className="label">Shares</div><div className="value">{fmt(shares, 0)}</div></div>
             <div className="stat-card card" style={hueStyle(HUES[1])}>
-              <div className="label">Cost</div>
+              <Tooltip text="Cost: what you paid per share on average. BE (break-even): the price you'd need to sell at to get your money back, including fees.">
+                <div className="label" style={{ cursor: 'pointer' }}>Cost</div>
+              </Tooltip>
               <div className="value">{fmtPrice(avg)}</div>
               <div className="sub" style={{ color: mp > 0 ? (mp >= be ? 'var(--profit)' : 'var(--loss)') : undefined }}>BE {fmtPrice(be)}</div>
             </div>

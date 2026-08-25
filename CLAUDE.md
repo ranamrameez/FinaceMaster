@@ -2792,6 +2792,19 @@ not developer notes) continuously as features ship.
   (an alternate popup wrapper around the same component, presumably for a quick-glance use case)
   has no live caller anywhere in the app currently — checked before assuming it needed separate
   verification. `npx tsc -b` / `npm run test` (280 tests, unchanged) / `npm run build` all clean.
+- **First app-wide plain-language copy pass (2026-08-25) — see README Done item 140.**
+  Surveyed every stat-card label app-wide and added an explanatory `Tooltip` to the genuine
+  jargon: P/L breakdown terms (Dashboard), Cost/break-even and CGT (PositionDetail), Outstanding
+  (EMI, Personal Loans), NAV/XIRR (Funds). Two different wiring paths depending on how each stat
+  card is built: Dashboard already uses the shared `StatCard` component, so this was just its
+  existing `labelTitle` prop; PositionDetail/EMI/Personal Loans/Funds all hand-roll
+  `<div className="stat-card card">` markup instead of using `StatCard`, so there it meant
+  wrapping the label `<div>` directly in `<Tooltip>` — same pattern `PositionDetail.tsx` already
+  used for "Sell price"/"Median (fair value)". Verified live via Playwright hover (not click —
+  `Tooltip`'s `onClick` toggles state, so a click-based check can read a real tooltip as broken,
+  a lesson from Done item 105). `npx tsc -b` / `npm run test` (280 tests, unchanged) / `npm run
+  build` all clean. **Explicitly a first pass, not an exhaustive audit** — every non-jargon
+  label, table header, and form hint across Bank/Cash/Rentals/Subscriptions was left untouched.
 
 ## Live URLs
 

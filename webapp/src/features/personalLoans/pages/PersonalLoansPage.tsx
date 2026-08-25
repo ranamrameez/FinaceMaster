@@ -627,7 +627,9 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 8, marginTop: 12 }}>
           <div className="stat-card card"><div className="label">Principal</div><MoneyValue n={loan.principal} currency={loan.currencyCode} /></div>
           <div className="stat-card card" style={hueStyle(loan.direction === 'owed_to_me' ? 'var(--profit)' : 'var(--loss)')}>
-            <div className="label">Outstanding</div>
+            <Tooltip text="How much of this loan is still unpaid, after subtracting all repayments logged so far.">
+              <div className="label" style={{ cursor: 'pointer' }}>Outstanding</div>
+            </Tooltip>
             <MoneyValue n={outstanding} currency={loan.currencyCode} />
           </div>
         </div>

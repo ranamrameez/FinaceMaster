@@ -113,14 +113,18 @@ export function PositionDetail({ ticker }: { ticker: string }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px,1fr))', gap: 8 }}>
             <div className="stat-card card" style={hueStyle(HUES[0])}><div className="label">Shares</div><div className="value">{fmt(shares, 0)}</div></div>
             <div className="stat-card card" style={hueStyle(HUES[1])}>
-              <div className="label">Cost</div>
+              <Tooltip text="Cost: what you paid per share on average. BE (break-even): the price you'd need to sell at to get your money back, including fees.">
+                <div className="label" style={{ cursor: 'pointer' }}>Cost</div>
+              </Tooltip>
               <div className="value">{fmtPrice(avg)}</div>
               <div className="sub" style={{ color: mp > 0 ? (mp >= be ? 'var(--profit)' : 'var(--loss)') : undefined }}>BE {fmtPrice(be)}</div>
             </div>
             <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Invested</div><div className="value">{fmtMoney(invested, currency)}</div></div>
             {grossValue > 0 && (
               <div className="stat-card card" style={hueStyle(HUES[5])}>
-                <div className="label">Est. CGT if sold now</div>
+                <Tooltip text="CGT = Capital Gains Tax, a government tax on profit from selling stock. This is only an estimate of what you'd owe if you sold at today's price — it's not withheld automatically.">
+                  <div className="label" style={{ cursor: 'pointer' }}>Est. CGT if sold now</div>
+                </Tooltip>
                 <div className="value">{fmtMoney(estCGT, currency)}</div>
                 <div className="sub">{workbook.settings.filerStatus === 'filer' ? `${workbook.settings.cgtFilerPct}% filer rate` : `${workbook.settings.cgtNonFilerPct}% non-filer rate`}</div>
               </div>
