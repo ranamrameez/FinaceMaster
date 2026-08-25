@@ -3,6 +3,7 @@ import { useMemo, useRef, useState } from 'react';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
+import { Tooltip } from '../../../components/Tooltip';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { EditIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
@@ -310,8 +311,18 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
           </div>
         )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px,1fr))', gap: 8, marginTop: 12 }}>
-          <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Monthly equivalent</div><MoneyValue n={monthlyEquivalent(sub)} currency={sub.currencyCode} /></div>
-          <div className="stat-card card" style={hueStyle(HUES[2])}><div className="label">Yearly equivalent</div><MoneyValue n={monthlyEquivalent(sub) * 12} currency={sub.currencyCode} /></div>
+          <div className="stat-card card" style={hueStyle(HUES[3])}>
+            <Tooltip text="What this costs per month on average — converted from its real billing cycle (weekly, yearly, etc.) so you can compare it to other subscriptions.">
+              <div className="label" style={{ cursor: 'pointer' }}>Monthly equivalent</div>
+            </Tooltip>
+            <MoneyValue n={monthlyEquivalent(sub)} currency={sub.currencyCode} />
+          </div>
+          <div className="stat-card card" style={hueStyle(HUES[2])}>
+            <Tooltip text="The monthly equivalent multiplied by 12 — what this subscription costs you over a full year.">
+              <div className="label" style={{ cursor: 'pointer' }}>Yearly equivalent</div>
+            </Tooltip>
+            <MoneyValue n={monthlyEquivalent(sub) * 12} currency={sub.currencyCode} />
+          </div>
           <div className="stat-card card" style={hueStyle(HUES[0])}><div className="label">Next renewal</div><div className="value" style={{ fontSize: 14 }}>{sub.active ? nextBillingDate(sub) : '—'}</div></div>
           <div className="stat-card card" style={hueStyle(sub.active ? 'var(--profit)' : 'var(--loss)')}><div className="label">Status</div><div className="value" style={{ fontSize: 14 }}>{sub.active ? 'Active' : 'Cancelled'}</div></div>
         </div>

@@ -2851,6 +2851,20 @@ not developer notes) continuously as features ship.
   build` all clean. **Deliberately scoped down**: the broader "is `PositionDetail`'s own layout/
   section order truly optimal" information-architecture question — the fuller reading of Pending
   item 49 — was not attempted, only this specific named "Risk Analysis is a separate page" gap.
+- **Second plain-language tooltip pass, EMI/Personal Loans/Subscriptions (2026-08-25) — see
+  README Done item 144.** Extends Done item 140's pattern to genuine jargon in the non-exchange
+  modules: "Principal" (Personal Loans' stat card + both modules' add-loan forms), "Amortization
+  schedule" (EMI's chart heading), "Total interest/markup (life)" (EMI — the "(life)" qualifier
+  wasn't self-explanatory), and "Monthly/Yearly equivalent" (Subscriptions — these are
+  normalized figures, not necessarily the literal next-charge amount for a non-monthly-billed
+  subscription). Deliberately left Bank/Cash/Rentals' section headings ("By category", "Net
+  income", "Monthly rollup") untouched — already plain English, not jargon needing a tooltip.
+  Verified live via Playwright hover with seeded data across all three modules (seeded via
+  `page.addInitScript`, not `page.evaluate` after load — a Zustand store's
+  `workbook: loadFromLocalStorage()` runs once at module-init time, so setting `localStorage`
+  after the app has already loaded is too late; a hash-only `page.goto` doesn't force a fresh
+  module load either, since HashRouter navigations are same-document). `npx tsc -b` / `npm run
+  test` (280 tests, unchanged) / `npm run build` all clean.
 
 ## Live URLs
 

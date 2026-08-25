@@ -2932,6 +2932,29 @@ FinanceManager live link:
      "assess a stock in one go" information-architecture question (is `PositionDetail`'s own
      section order/content actually optimal, should Dashboard/Portfolio link in more directly)
      remains open — see the updated Pending item 49.
+144. **Second plain-language tooltip pass, extending Done item 140 to EMI/Personal
+     Loans/Subscriptions (2026-08-25) — see the updated Pending item 55.** Audited the
+     non-exchange modules' own stat-card labels and form fields for genuine jargon (as opposed
+     to section headings like "By category"/"Net income"/"Monthly rollup," which already read
+     as plain English and weren't touched). Added tooltips for: "Principal" (Personal Loans'
+     stat card + add-loan form field, EMI's add-loan form field — "the original amount of the
+     loan, before any repayments"), "Amortization schedule" (EMI's chart section heading — what
+     the chart actually shows), "Total interest/markup (life)" (EMI — clarifies "(life)" means
+     the whole loan term, not just what's accrued so far), and "Monthly equivalent"/"Yearly
+     equivalent" (Subscriptions — explains these are normalized figures for a subscription that
+     might actually bill weekly/yearly/on a custom cycle, not the literal next charge amount).
+     Personal Loans' "Principal" used both `StatCard`'s wrap-the-label-in-`Tooltip` pattern (for
+     the hand-rolled stat card) and `Field`'s existing `title` prop (for the add-loan form field,
+     the same mechanism Done item 105 established for PSX's Risk Analysis form). Verified live
+     via Playwright hover (not click, per the established `Tooltip`-toggles-on-click lesson from
+     Done item 105) with seeded data for all three modules — every new tooltip rendered a real
+     `role="tooltip"` popup with the expected text; zero non-font-related console errors (the
+     one error present is the same sandbox-only Google Fonts `net::ERR_CONNECTION_RESET` gap
+     already documented under Done item 141, unrelated to this change). `npx tsc -b` / `npm run
+     test` (280 tests, unchanged) / `npm run build` all clean. **Deliberately scoped down**:
+     Bank/Cash/Rentals' own labels weren't touched (their existing phrasing was judged plain
+     enough already), and this remains a targeted pass on genuine jargon, not an exhaustive
+     audit of every string in the app — see the updated Pending item 55.
 
 ## Pending
 
@@ -3186,11 +3209,15 @@ item 103) — all three now fixed, see Done item 104:**
     batch) — Done item 105 added tooltips explaining jargon terms on the Risk Analysis page
     specifically. **First app-wide pass done (2026-08-25) — see Done item 140**: the highest-
     traffic jargon (P/L breakdown, Break-even, CGT, Outstanding, NAV, XIRR) across Dashboard/
-    PositionDetail/EMI/Personal Loans/Funds now has an explanatory tooltip. **Still open**: a
-    truly exhaustive sweep of every label in every module (Bank/Cash/Rentals/Subscriptions'
-    less-jargon-heavy labels, table column headers, form field hints) hasn't been done — this
-    was a real, meaningful first pass on the terms most likely to confuse a non-trader, not a
-    complete audit.
+    PositionDetail/EMI/Personal Loans/Funds now has an explanatory tooltip. **Second pass done
+    (2026-08-25) — see Done item 144**: "Principal" (Personal Loans + EMI), "Amortization
+    schedule" (EMI), "Total interest/markup (life)" (EMI), and "Monthly/Yearly equivalent"
+    (Subscriptions) now have tooltips too. **Still open**: Bank/Cash/Rentals' own labels (their
+    section headings — "By category", "Net income", "Monthly rollup" — read as plain English
+    already and weren't judged to need one) and every table column header/form field hint
+    across the app haven't had a dedicated audit pass — this was two real, meaningful passes on
+    the terms most likely to confuse a non-trader/non-accountant, not an exhaustive audit of
+    every string in the app.
 56. **Portfolio page overhaul (2026-08-24, item 12 of the original screenshot batch) — a real,
     multi-part redesign; re-audited against the live page (2026-08-25), most items already
     resolved by later fixes in this same project, one real bug found and fixed — see Done item

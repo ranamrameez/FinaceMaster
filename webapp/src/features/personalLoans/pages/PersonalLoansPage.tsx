@@ -173,7 +173,7 @@ function AddLoanForm() {
             {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>
-        <Field label="Principal" width={110}>
+        <Field label="Principal" width={110} title="The original amount of the loan, before any repayments.">
           <TextInput type="number" step="0.01" value={l.principal || ''} onChange={(e) => setL({ ...l, principal: Number(e.target.value) })} />
         </Field>
         <Field label="Date">
@@ -625,7 +625,12 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
           </div>
         )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 8, marginTop: 12 }}>
-          <div className="stat-card card"><div className="label">Principal</div><MoneyValue n={loan.principal} currency={loan.currencyCode} /></div>
+          <div className="stat-card card">
+            <Tooltip text="The original amount of the loan, before any repayments.">
+              <div className="label" style={{ cursor: 'pointer' }}>Principal</div>
+            </Tooltip>
+            <MoneyValue n={loan.principal} currency={loan.currencyCode} />
+          </div>
           <div className="stat-card card" style={hueStyle(loan.direction === 'owed_to_me' ? 'var(--profit)' : 'var(--loss)')}>
             <Tooltip text="How much of this loan is still unpaid, after subtracting all repayments logged so far.">
               <div className="label" style={{ cursor: 'pointer' }}>Outstanding</div>
