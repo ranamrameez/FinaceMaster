@@ -2596,6 +2596,53 @@ FinanceManager live link:
      an unrelated same-price rerender doesn't disturb the field. A live Playwright sweep of all
      4 pages confirmed each renders its seeded price correctly and with zero console errors.
      `npx tsc -b` / `npm run test` (270 tests, 3 new) / `npm run build` all clean.
+130. **Real 24-08-2026 broker statement extracted and appended to every existing trade-log
+     artifact in the repo, plus the PSX fee formula calibrated against it (2026-08-25) —
+     user-requested, arrived alongside the critical same-day-order bug report (Done item 128)
+     with the exact same real data.** User attached two contract-note images (JS Global
+     Capital Limited / JSBL-ZINDIGI, Trade Date 24/08/2026) and asked to (a) append them to
+     "the html table and excel sheet in our repo" and (b) "use all this data to set defaults
+     and study the exact formulas." Found and updated three pre-existing artifacts:
+     `psx/trades/trades.html` (a new per-statement `<table>` appended, matching its existing
+     Purchase/Sale-section + per-symbol-subtotal + grand-total structure exactly — OGDC/PPL/
+     PSO/SNGP, 17 legs, grand total 79 net shares / 63.02 Brok. Amount / 9.45 SST / 3.99 Levies
+     / 29,810.90 PKR net, all transcribed and cross-footed against the real statement's own
+     subtotals before writing), `psx/trades/trades_all.html` (17 new rows appended to its flat
+     chronological table in the same order, meta line updated from "45 transactions · 17–21 Aug
+     2026" to "62 transactions · 17–24 Aug 2026"), and `JS_Zindigi_SNGP_Trading_Analysis.xlsx`
+     (one new `Trade Data` row for the statement's single SNGP leg — this workbook is
+     deliberately SNGP-only per its own filename/scope, unlike the two HTML logs which cover
+     every ticker — following the exact same formula pattern as every existing row, with the
+     `Summary` sheet's `SUM` ranges extended from row 32 to row 33). Both HTML files were
+     verified by actually rendering them in a headless browser and reading back the DOM (row
+     counts, computed totals), not just eyeballing the diff. **Formula calibration, the more
+     substantial part of this item**: cross-checked `calcFeeBreakdown()` against the real
+     statement's Brok. Amount/SST Amount/Levies Charges columns for all 13 purchase legs plus
+     4 independent spot-checks from an earlier (17–21 Aug) statement already in
+     `trades_all.html`. `feePct=0.2%`/`lowPriceFee=PKR0.05` (commission) and `sstPct=15%`
+     matched every real row exactly already — no change needed there. The government-levies
+     bucket did not: `nccplFeePct` (the app's one field standing in for the whole combined
+     PSX+NCCPL+SECP+CDC "Levies Charges" line, since the broker's own statement doesn't itemize
+     those separately either) was an uncalibrated guess at 0.011%, but the real data only
+     reconciles — every single one of the 13+4 real rows, exactly, under standard 2-decimal
+     rounding — at 0.0119% (the fitted valid range was 0.01185%–0.01202%). Updated
+     `DEFAULT_PSX_SETTINGS.nccplFeePct` to 0.0119 and added a permanent regression test
+     (`psxFees.test.ts`) pinning `calcFeeBreakdown`'s commission/SST/levies output against every
+     real row from the statement — this is real ground-truth data, not a synthetic hand-traced
+     case like this file's other fee tests. **This only changes what a brand-new PSX workbook
+     starts with — it does NOT retroactively touch any existing user's own saved Settings**
+     (per this project's locked cloud-sync-safety principle): the investigating user's own real
+     settings (from Done item 127's investigation) have `nccplFeePct: 0`, so their own workbook
+     computes zero government levies today regardless of this default change — they'd need to
+     manually update PSX → Settings → "Fees & amounts" themselves if they want the calibrated
+     0.0119% applied to their own account. **User's 4th ask, "trade timing... those
+     transactions should be marked as closed trades" — already fully resolved by Done item
+     128's fix, confirmed by re-reading the code, not a separate change**: the existing
+     Open/Closed split in `TransactionsPage.tsx` (Done item 73) already derives from
+     `computePositions`'s `shares > 0`, so the same-day-ordering fix that makes a closed
+     round-trip correctly show 0 open shares automatically makes it classify as "Closed" too —
+     no additional UI code was needed for this specific ask. `npx tsc -b` / `npm run test` (271
+     tests, 1 new) / `npm run build` all clean.
 
 ## Pending
 

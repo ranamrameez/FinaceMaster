@@ -132,11 +132,11 @@ together. On PSX, each row also has a **Fee mode** dropdown with three options:
 - **Semi** — you decide whether *this* leg counts as the netted one via a "Netted" checkbox,
   but the amount is still computed from Settings. Use this when your statement shows a
   same-day netting that the date you entered doesn't quite match (e.g. you logged the
-  settlement date instead of the trade date). **A new BUY dated today starts in Semi mode
-  with "Netted" pre-checked** — a lone buy has nothing to net against yet if you haven't
-  logged the matching sell, so the app assumes you're doing same-day (intraday) trading;
-  switch to Auto if you're actually opening a position you plan to hold, not closing out
-  today.
+  settlement date instead of the trade date). Every new row starts in **Auto**, including a
+  same-day BUY — there's no way to know in advance whether it'll end up being the charged or
+  netted side until you also log the matching sell (that depends on the sell's quantity, which
+  doesn't exist yet), so Auto's own same-day detection is left to figure it out once both legs
+  are there, exactly as described above.
 - **Manual** — type the exact fee from your account statement, bypassing computation
   entirely (useful for reconciling against real broker charges down to the last rupee).
 

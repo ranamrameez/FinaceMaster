@@ -2576,6 +2576,42 @@ not developer notes) continuously as features ship.
   run build` all clean; a live Playwright sweep of all 4 affected pages showed correct seeded
   values with zero console errors.
 
+- **Real 24-08-2026 broker statement extracted + PSX fee formula calibrated against it
+  (2026-08-25) — see README Done item 130.** User attached two contract-note images (JS Global
+  Capital / JSBL-ZINDIGI, Trade Date 24/08/2026) — the images themselves weren't retrievable
+  from the live conversation after a context-compaction boundary, but were recovered by
+  grepping the raw session JSONL transcript (`/root/.claude/projects/.../*.jsonl`) for the
+  message and base64-decoding the attached `source.data` fields; **worth remembering for any
+  future session that needs to re-examine an image the user sent earlier in a long session**:
+  the transcript file persists the full base64 image data even after a summary drops it from
+  visible context. Appended the extracted data to all three existing trade-log artifacts:
+  `psx/trades/trades.html` (new per-statement `<table>`, same Purchase/Sale-section format),
+  `psx/trades/trades_all.html` (17 new flat rows, meta line updated), and
+  `JS_Zindigi_SNGP_Trading_Analysis.xlsx` (one new SNGP row — that workbook is scoped to SNGP
+  only, per its own filename). **LibreOffice recalculation of the xlsx timed out repeatedly in
+  this sandbox** (confirmed via direct `soffice`/`run_soffice` testing that even a trivial
+  3-cell macro-based recalc hangs indefinitely here — a genuine environment limitation, not
+  something wrong with the file) — checked the file's own git history first and confirmed it
+  already ships with NO cached formula values even in its original, pre-existing form, so this
+  doesn't introduce a new inconsistency; a real Excel/Sheets session recalculates on open
+  regardless. **Fee calibration** (the substantial part): cross-checked `calcFeeBreakdown()`
+  against the real statement's Brok. Amount/SST/Levies columns — commission (`feePct=0.2%`/
+  `lowPriceFee=PKR0.05`) and SST (`sstPct=15%`) already matched every row exactly, but the
+  combined government-levies bucket (`nccplFeePct`, standing in for PSX+NCCPL+SECP+CDC since
+  the broker's own statement doesn't itemize them separately either) was an uncalibrated guess
+  at 0.011% — the real data (13 rows from this statement + 4 spot-checks from an earlier one)
+  only reconciles exactly at 0.0119% (fitted valid range 0.01185%-0.01202%). Updated
+  `DEFAULT_PSX_SETTINGS.nccplFeePct` to 0.0119, added a permanent regression test in
+  `psxFees.test.ts` pinning the real numbers. **Does not retroactively touch any existing
+  user's own saved settings** — the investigating user's own real workbook has
+  `nccplFeePct: 0` (confirmed in Done item 127's investigation) and stays that way unless they
+  manually update it themselves; this only changes what a brand-new workbook starts with.
+  **The user's 4th ask ("same-day trades should be marked as closed") needed no separate
+  fix** — re-read `TransactionsPage.tsx`'s existing Open/Closed split (Done item 73) and
+  confirmed it already derives from `computePositions`'s `shares > 0`, so Done item 128's
+  same-day-ordering fix alone makes a closed round-trip correctly classify as "Closed" too.
+  `npx tsc -b` / `npm run test` (271 tests, 1 new) / `npm run build` all clean.
+
 ## Live URLs
 
 - New React app (QSE + PSX, `#/` and `#/psx`, now including a native Risk
