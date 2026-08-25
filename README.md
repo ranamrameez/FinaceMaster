@@ -2268,6 +2268,39 @@ FinanceManager live link:
      collection, and the per-entity direct-link idea just mentioned) are all real, several
      large enough to need their own scoped session, tracked below.
 
+121. **Card action buttons moved to the top-right of their card's header, first pass
+     (2026-08-25) — see Pending item 58 for what's left.** The user's own framing: "wherever
+     action buttons are, try to align them at card header top right corner." Audited every
+     `CollapsibleCard` in the app for a single card-level utility action (Export/Save, not a
+     per-row Edit/Delete, which already lives right-aligned in its own table column per Done
+     item 109) sitting below the card's content instead of beside its own heading, and moved
+     each one into `CollapsibleCard`'s existing `headerExtra` slot — no new component needed,
+     just using the mechanism that already existed for this exact job (previously only used by
+     Dashboard's Holdings/Alerts cards and the Trade Planner). Fixed: Bank's `AccountDetailModal`
+     ("Account details" → Save details, "Download statement" → Export CSV, both previously
+     plain `<h4>`s with the button stranded below several fields), Personal Loans' "Repayment
+     History" card (Export CSV + its From/To date fields), EMI's "Schedule" card (Export full
+     schedule CSV), and Funds' "Transactions" card (Export CSV + From/To). **Deliberately left
+     as-is, and why**: per-row Edit/Delete/Save/Cancel buttons (correct convention already, not
+     this complaint); "Add row"/"Add repayment"/"Generate renewal plans"-style primary-CTA
+     buttons that cap off a fill-in-the-fields form (Done item 113 already established these
+     stay as visible-text buttons in their natural form-flow position, not header actions);
+     QSE's/PSX's per-stock "Trades" tab Export CSV and Rentals' "Income & expenses" tab Export
+     CSV, both of which live inside a tab rendered through the shared `Tabs` component (each tab
+     is its own auto-generated `CollapsibleCard` with no per-tab `headerExtra` support today) —
+     hoisting those specific buttons would need `Tabs`/`TabDef` to grow a per-tab header-extra
+     slot plus lifting each button's local date-range state up to the tab-definition call site,
+     a real but separate structural change not worth the risk in the same pass as the safer
+     fixes above; and QSE's/PSX's PositionDetail "Export price history CSV" button, which sits
+     inside a native `<details>` nested *within* the "Price range" `CollapsibleCard` (gated
+     behind expanding "Recent updates") — moving it to the outer card's header would misattribute
+     it as exporting the whole price-range stats section rather than just that inner table.
+     Verified live via Playwright with seeded data for all four fixed modules: all four Export/
+     Save buttons render top-right of their heading, functionally unchanged (Bank's account
+     modal, Personal Loans' and EMI's loan detail, Funds' fund detail all screenshot-confirmed),
+     zero console errors. `npx tsc -b` / `npm run test` (255 tests, unchanged) / `npm run build`
+     all clean.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`
@@ -2500,9 +2533,17 @@ item 103) — all three now fixed, see Done item 104:**
 what's already shipped from this same message**:
 
 58. Card action buttons (Edit/Delete/Save/Cancel/Export/etc.) should consistently sit at the
-    top-right corner of their card's header, not wherever each page happens to place them today
-    (often below a table, or inline in a row). A real cross-cutting layout convention, not yet
-    audited or built.
+    top-right corner of their card's header. **Partially done — see Done item 121.** Every
+    `CollapsibleCard` with a single stranded card-level action (Bank's account details/
+    statement export, Personal Loans' repayment export, EMI's schedule export, Funds'
+    transaction export) now uses the existing `headerExtra` slot. **Still open**: QSE's/PSX's
+    per-stock Trades tab and Rentals' Income & expenses tab both bury their own Export CSV
+    button inside a `Tabs`-rendered section (`Tabs`/`TabDef` has no per-tab `headerExtra` slot
+    yet, and each button's date-range state is local to its own component, not lifted to the
+    tab-definition call site) — needs `Tabs` extended first, a real but separate structural
+    change. QSE's/PSX's PositionDetail "Export price history CSV" also stays put on purpose —
+    it's nested inside a native `<details>` *within* a `CollapsibleCard`, one level too deep for
+    the outer card's header to correctly represent what it exports.
 59. Colored `<span>`/pill text-only backgrounds (red/green highlight behind a word or number)
     should become whole-card coloring instead — the user's own framing: "whole cards should be
     colored and text bg colors should be removed." Needs an audit for every remaining

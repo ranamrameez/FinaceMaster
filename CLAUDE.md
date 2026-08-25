@@ -2351,6 +2351,30 @@ not developer notes) continuously as features ship.
   feasibility question (distinct from the prefill feature just shipped — this is a per-module
   shortcut UI, not the Transfers page itself). Continue down this list per the standing
   auto-commit instruction — the user explicitly asked to keep going until nothing is pending.
+  **Card action buttons moved to header top-right, first pass (2026-08-25) — see README Done
+  item 121, partially closes Pending item 58.** `CollapsibleCard` already had a `headerExtra`
+  slot (only used by Dashboard's Holdings/Alerts cards and the Trade Planner before this) — used
+  it for every card with a single stranded action button below its content: Bank's
+  `AccountDetailModal` (Save details, Export CSV — previously plain `<h4>`s with the button
+  stuck below several fields), Personal Loans' "Repayment History", EMI's "Schedule", Funds'
+  "Transactions". **Two categories deliberately left alone, not overlooked**: per-row Edit/
+  Delete buttons (already correctly right-aligned in their own table column, a different
+  convention that was already right — see Done item 109) and primary-CTA form-submit buttons
+  ("Add row", "Generate renewal plans") that cap off a fill-in-the-fields flow, per Done item
+  113's established rule that those stay as visible-text buttons in natural form position, not
+  header actions. **Two real remaining gaps, tracked in Pending item 58, not silently dropped**:
+  QSE's/PSX's per-stock Trades tab and Rentals' Income & expenses tab both have an Export CSV
+  button buried inside a `Tabs`-rendered section — `Tabs`/`TabDef` has no per-tab `headerExtra`
+  slot today, and each button's date-range state lives locally in its own component rather than
+  at the tab-definition call site, so hoisting it needs `Tabs` extended first (a real, separate
+  structural change, not attempted in this pass to avoid touching the heavily-used shared `Tabs`
+  component alongside several other file edits at once). QSE's/PSX's PositionDetail "Export
+  price history CSV" also stays — it sits inside a native `<details>` nested *within* a
+  `CollapsibleCard`, one level too deep for the outer card's header to correctly represent what
+  it actually exports. Verified live via Playwright with seeded data for all four fixed modules
+  (screenshots of Bank's account modal, Personal Loans' and EMI's loan detail, Funds' fund
+  detail all confirmed the button now sits top-right of its heading) — zero console errors.
+  `npx tsc -b` / `npm run test` (255 tests, unchanged) / `npm run build` all clean.
 
 ## Live URLs
 

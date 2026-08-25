@@ -266,7 +266,23 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
        * trap, per the same rule every other module's rollout followed), but
        * the table + export controls below it split off cleanly into their
        * own collapsible section. */}
-      <CollapsibleCard title={<h4 style={{ margin: 0 }}>Repayment history</h4>} style={{ marginBottom: 16 }}>
+      <CollapsibleCard
+        title={<h4 style={{ margin: 0 }}>Repayment history</h4>}
+        headerExtra={
+          repayments.length > 0 ? (
+            <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <Field label="From (optional)">
+                <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+              </Field>
+              <Field label="To (optional)">
+                <TextInput type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+              </Field>
+              <button className="btn secondary" onClick={exportStatement}>Export CSV</button>
+            </div>
+          ) : undefined
+        }
+        style={{ marginBottom: 16 }}
+      >
         <div className="table-scroll">
           <table>
             <thead><tr><Th col="date">Date</Th><Th col="amount">Amount</Th><Th col="remaining">Remaining</Th><th>Source</th><th></th></tr></thead>
@@ -309,17 +325,6 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
             </tbody>
           </table>
         </div>
-        {repayments.length > 0 && (
-          <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginTop: 12 }}>
-            <Field label="From (optional)">
-              <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
-            </Field>
-            <Field label="To (optional)">
-              <TextInput type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
-            </Field>
-            <button className="btn secondary" onClick={exportStatement}>Export CSV</button>
-          </div>
-        )}
       </CollapsibleCard>
       <ImportRepaymentsSection loan={loan} />
     </div>

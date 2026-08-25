@@ -373,7 +373,22 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
         <button className="btn" onClick={submitTx}><PlusIcon />Add</button>
       </div>
 
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Transactions</h3>}>
+      <CollapsibleCard
+        title={<h3 style={{ margin: 0 }}>Transactions</h3>}
+        headerExtra={
+          txs.length > 0 ? (
+            <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <Field label="From (optional)">
+                <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+              </Field>
+              <Field label="To (optional)">
+                <TextInput type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+              </Field>
+              <button className="btn secondary" onClick={exportStatement}>Export CSV</button>
+            </div>
+          ) : undefined
+        }
+      >
       <div className="table-scroll">
         <table>
           <thead><tr><th>Date</th><th>Type</th><th>Units</th><th>NAV</th><th>Amount</th><th></th></tr></thead>
@@ -421,17 +436,6 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
           </tbody>
         </table>
       </div>
-      {txs.length > 0 && (
-        <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <Field label="From (optional)">
-            <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
-          </Field>
-          <Field label="To (optional)">
-            <TextInput type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
-          </Field>
-          <button className="btn secondary" onClick={exportStatement}>Export CSV</button>
-        </div>
-      )}
       </CollapsibleCard>
     </div>
   );

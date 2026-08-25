@@ -284,7 +284,12 @@ function AccountDetailModal({ account, onClose }: { account: BankAccount; onClos
          future SMS-based transaction-import feature. Nothing reads these
          yet — they're just captured here so that feature has somewhere to
          read from once built. */}
-      <h4 style={{ margin: '0 0 6px' }}>Account details</h4>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+        <h4 style={{ margin: 0 }}>Account details</h4>
+        <button className="btn secondary" onClick={saveMeta}>
+          <SaveIcon size={13} />Save details
+        </button>
+      </div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
         <Field label="Account number" width={160} title="However your bank shows it on statements/SMS — often partially masked, e.g. xxxx1234.">
           <TextInput value={meta.accountNumber} onChange={(e) => setMeta({ ...meta, accountNumber: e.target.value })} placeholder="e.g. xxxx1234" />
@@ -295,9 +300,6 @@ function AccountDetailModal({ account, onClose }: { account: BankAccount; onClos
         <Field label="SMS sender number" width={160} title="If your bank's alerts come from a full phone number instead of a short code.">
           <TextInput value={meta.smsSenderNumber} onChange={(e) => setMeta({ ...meta, smsSenderNumber: e.target.value })} placeholder="e.g. +923001234567" />
         </Field>
-        <button className="btn secondary" onClick={saveMeta}>
-          <SaveIcon size={13} />Save details
-        </button>
       </div>
 
       {upcoming.length > 0 && (
@@ -339,7 +341,10 @@ function AccountDetailModal({ account, onClose }: { account: BankAccount; onClos
         </table>
       </div>
 
-      <h4 style={{ margin: '0 0 6px' }}>Download statement</h4>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+        <h4 style={{ margin: 0 }}>Download statement</h4>
+        <button className="btn" onClick={exportStatement}>Export CSV</button>
+      </div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <Field label="From (optional)">
           <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
@@ -347,7 +352,6 @@ function AccountDetailModal({ account, onClose }: { account: BankAccount; onClos
         <Field label="To (optional)">
           <TextInput type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
         </Field>
-        <button className="btn" onClick={exportStatement}>Export CSV</button>
       </div>
     </Modal>
   );

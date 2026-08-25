@@ -317,7 +317,10 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
         )}
       </Card>
 
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Schedule (next 12 installments from today)</h3>}>
+      <CollapsibleCard
+        title={<h3 style={{ margin: 0 }}>Schedule (next 12 installments from today)</h3>}
+        headerExtra={<button className="btn secondary" onClick={exportSchedule}>Export full schedule CSV</button>}
+      >
       <div className="table-scroll">
         <table>
           <thead>
@@ -341,7 +344,6 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
           </tbody>
         </table>
       </div>
-      <button className="btn secondary" onClick={exportSchedule}>Export full schedule CSV</button>
       </CollapsibleCard>
     </div>
   );
