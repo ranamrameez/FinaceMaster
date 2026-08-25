@@ -1,4 +1,5 @@
 import type { FeeCalculator, Position, Transaction } from '../../types/workbook';
+import { sortTransactionsChronological } from './sortTransactions';
 
 /** Weighted-average-cost position rollup per ticker. Ported 1:1 from the
  * legacy `computePositions()` in index.html. Does not track individual buy
@@ -7,7 +8,7 @@ import type { FeeCalculator, Position, Transaction } from '../../types/workbook'
  * (README item 8, PSX-focused, deferred to Phase 2). */
 export function computePositions(transactions: Transaction[], calcFee: FeeCalculator): Position[] {
   const byTicker: Record<string, Position> = {};
-  const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date));
+  const sorted = sortTransactionsChronological(transactions);
 
   for (const tx of sorted) {
     const t = tx.ticker;

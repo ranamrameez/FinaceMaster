@@ -106,6 +106,23 @@ describe('computeFIFOPositions', () => {
     expect(p.realized).toBeCloseTo(15 * 20 - 10 * 10, 5);
   });
 
+  it('closes a same-day round trip correctly even when the SELL is entered before the matching BUY', () => {
+    // Same root-cause bug as computePositions' equivalent test: with no
+    // time-of-day on Transaction, a same-day SELL sitting before its
+    // matching BUY in the array must not be processed against an
+    // empty lot queue — this is exactly the user-reported scenario
+    // (buy 2, sell 2, same day) that should net to a fully closed position.
+    const sameDay: Transaction[] = [
+      { date: '2026-08-24', ticker: 'ROUNDTRIP', action: 'SELL', shares: 2, price: 334.5 },
+      { date: '2026-08-24', ticker: 'ROUNDTRIP', action: 'BUY', shares: 2, price: 330.5 },
+    ];
+    const { positions } = computeFIFOPositions(sameDay, noFee);
+    const p = positions.find((x) => x.ticker === 'ROUNDTRIP')!;
+    expect(p.shares).toBe(0);
+    expect(p.invested).toBe(0);
+    expect(p.realized).toBeCloseTo(669 - 661, 5);
+  });
+
   it('runs clean over the real PSX backup fixture and produces finite numbers', () => {
     const transactions = fixture.transactions as Transaction[];
     const calcFee = makePSXFeeCalculator(NO_FEE_SETTINGS, transactions);

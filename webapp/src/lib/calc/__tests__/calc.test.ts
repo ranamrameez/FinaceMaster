@@ -3,6 +3,7 @@ import fixture from './fixtures/qse-workbook-backup.json';
 import type { Transaction, Transfer, Adjustment } from '../../../types/workbook';
 import { makeQSEFeeCalculator, breakEvenPrice, roundTick } from '../fees';
 import { computePositions } from '../positions';
+import { computeRealizedPLTimeSeries } from '../realizedPL';
 import { buildCashLedger, totalTransferFees } from '../cashLedger';
 import { cashSummary } from '../cashSummary';
 
@@ -79,6 +80,40 @@ describe('computePositions (weighted-average cost)', () => {
     const qibk = byTicker.QIBK;
     expect(qibk.shares).toBe(0);
     expect(qibk.invested).toBe(0);
+  });
+
+  it('closes a same-day round trip correctly even when the SELL is entered before the matching BUY', () => {
+    // User-reported bug: a same-day buy+sell of equal quantity should net
+    // to a fully closed position (0 shares) regardless of which order the
+    // two rows happen to sit in the underlying array — `Transaction` has
+    // no time-of-day, so a stable sort on date alone would otherwise
+    // process the SELL first (against a not-yet-existent position),
+    // driving shares negative and silently clamping them to 0, then the
+    // BUY re-opens a position that should have already been closed.
+    const sameDay: Transaction[] = [
+      { date: '2026-08-24', ticker: 'ROUNDTRIP', action: 'SELL', shares: 2, price: 334.5 },
+      { date: '2026-08-24', ticker: 'ROUNDTRIP', action: 'BUY', shares: 2, price: 330.5 },
+    ];
+    const noFee = () => 0;
+    const [pos] = computePositions(sameDay, noFee);
+    expect(pos.shares).toBe(0);
+    expect(pos.invested).toBe(0);
+    // Real cost basis (2 * 330.5 = 661) subtracted from proceeds (2 * 334.5
+    // = 669), not the full 669 treated as cost-free profit.
+    expect(pos.realized).toBeCloseTo(669 - 661, 5);
+  });
+});
+
+describe('computeRealizedPLTimeSeries', () => {
+  it('attributes the correct cost basis to a same-day round trip even when the SELL is entered before the matching BUY', () => {
+    const sameDay: Transaction[] = [
+      { date: '2026-08-24', ticker: 'ROUNDTRIP', action: 'SELL', shares: 2, price: 334.5 },
+      { date: '2026-08-24', ticker: 'ROUNDTRIP', action: 'BUY', shares: 2, price: 330.5 },
+    ];
+    const noFee = () => 0;
+    const points = computeRealizedPLTimeSeries(sameDay, noFee);
+    expect(points).toHaveLength(1);
+    expect(points[0].value).toBeCloseTo(669 - 661, 5);
   });
 });
 

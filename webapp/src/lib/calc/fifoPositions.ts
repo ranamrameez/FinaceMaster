@@ -1,4 +1,5 @@
 import type { FeeCalculator, Position, RealizedPLPoint, Transaction } from '../../types/workbook';
+import { sortTransactionsChronological } from './sortTransactions';
 
 const EPSILON = 1e-7;
 
@@ -48,7 +49,7 @@ export interface FIFOResult {
  * as zero-cost-basis, same as `computePositions`' epsilon-clamp-to-zero. */
 export function computeFIFOPositions(transactions: Transaction[], calcFee: FeeCalculator): FIFOResult {
   const byTicker: Record<string, TickerState> = {};
-  const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date));
+  const sorted = sortTransactionsChronological(transactions);
   const realizedSeries: RealizedPLPoint[] = [];
   let runningRealized = 0;
 

@@ -1,4 +1,5 @@
 import type { FeeCalculator, RealizedPLPoint, Transaction } from '../../types/workbook';
+import { sortTransactionsChronological } from './sortTransactions';
 
 /** Chronological running total of realized P/L, one point per SELL — same
  * weighted-average-cost convention as computePositions, just tracked over
@@ -7,7 +8,7 @@ import type { FeeCalculator, RealizedPLPoint, Transaction } from '../../types/wo
 export function computeRealizedPLTimeSeries(transactions: Transaction[], calcFee: FeeCalculator): RealizedPLPoint[] {
   const byTicker: Record<string, { shares: number; cost: number }> = {};
   const points: RealizedPLPoint[] = [];
-  const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date));
+  const sorted = sortTransactionsChronological(transactions);
   let running = 0;
 
   sorted.forEach((tx) => {
