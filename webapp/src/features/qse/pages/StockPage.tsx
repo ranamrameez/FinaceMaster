@@ -33,8 +33,6 @@ function TickerTransactions({ ticker }: { ticker: string }) {
   const [priceInput, setPriceInput] = useState('');
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editRow, setEditRow] = useState<Transaction | null>(null);
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
 
   // Keep the original index into workbook.transactions so edit/delete hit
   // the right row — the displayed list is filtered to this ticker only.
@@ -42,27 +40,6 @@ function TickerTransactions({ ticker }: { ticker: string }) {
     .map((tx, i) => ({ tx, i }))
     .filter((r) => r.tx.ticker === ticker);
 
-  /** README item 40: extends Banking's statement-export pattern (Done
-   * item 58) to QSE's own primary record — a stock position's trade
-   * statement is its transaction history (the price-history log is
-   * exported separately, from PositionDetail's own "Recent updates"). */
-  const exportStatement = () => {
-    const exportRows = filteredRows
-      .filter((r) => (!fromDate || r.tx.date >= fromDate) && (!toDate || r.tx.date <= toDate))
-      .map((r) => r.tx)
-      .sort((a, b) => a.date.localeCompare(b.date));
-    const header = ['Date', 'Action', 'Shares', 'Price', 'Cost'];
-    const body = exportRows.map((tx) => [tx.date, tx.action, tx.shares, tx.price, tx.shares * tx.price]);
-    const blob = new Blob([toCSV([header, ...body])], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const suffix = fromDate || toDate ? `_${fromDate || 'start'}_to_${toDate || 'now'}` : '';
-    a.download = `${ticker}_statement${suffix}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast('Statement downloaded.');
-  };
   type Col = 'date' | 'action' | 'shares' | 'price' | 'cost';
   const sortValue = (r: (typeof filteredRows)[number], col: Col): number | string => {
     switch (col) {
@@ -160,19 +137,41 @@ function TickerTransactions({ ticker }: { ticker: string }) {
           </tbody>
         </table>
       </div>
-      {filteredRows.length > 0 && (
-        <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginTop: 12 }}>
-          <Field label="From (optional)">
-            <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
-          </Field>
-          <Field label="To (optional)">
-            <TextInput type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
-          </Field>
-          <button className="btn secondary" onClick={exportStatement}>Export CSV</button>
-        </div>
-      )}
     </div>
   );
+}
+
+/** Pending item 58's remainder: this button used to sit inside
+ * `TickerTransactions`'s own content, one level below where every other
+ * module's equivalent export button lives (Done item 121's `headerExtra`
+ * rollout) — `Tabs` had no per-tab `headerExtra` slot to hoist it into
+ * until now. Lifted out into its own hook so `StockPage` can build the
+ * header control at the `Tabs` call site while `TickerTransactions` keeps
+ * its own add/edit/delete concerns unchanged. */
+function useTickerExport(ticker: string) {
+  const { workbook } = useQSEDerived();
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const rows = workbook.transactions.filter((tx) => tx.ticker === ticker);
+
+  const exportStatement = () => {
+    const exportRows = rows
+      .filter((tx) => (!fromDate || tx.date >= fromDate) && (!toDate || tx.date <= toDate))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    const header = ['Date', 'Action', 'Shares', 'Price', 'Cost'];
+    const body = exportRows.map((tx) => [tx.date, tx.action, tx.shares, tx.price, tx.shares * tx.price]);
+    const blob = new Blob([toCSV([header, ...body])], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const suffix = fromDate || toDate ? `_${fromDate || 'start'}_to_${toDate || 'now'}` : '';
+    a.download = `${ticker}_statement${suffix}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('Statement downloaded.');
+  };
+
+  return { fromDate, setFromDate, toDate, setToDate, exportStatement, hasRows: rows.length > 0 };
 }
 
 export function StockPage() {
@@ -180,6 +179,7 @@ export function StockPage() {
   const ticker = (rawTicker || '').toUpperCase();
   const { tickerNames } = useQSEStockData();
   const name = tickerNames[ticker];
+  const { fromDate, setFromDate, toDate, setToDate, exportStatement, hasRows } = useTickerExport(ticker);
 
   return (
     <div>
@@ -190,7 +190,22 @@ export function StockPage() {
       <Tabs
         tabs={[
           { key: 'summary', label: 'Summary', content: <PositionDetail ticker={ticker} /> },
-          { key: 'transactions', label: 'Trades', content: <TickerTransactions ticker={ticker} /> },
+          {
+            key: 'transactions',
+            label: 'Trades',
+            content: <TickerTransactions ticker={ticker} />,
+            headerExtra: hasRows ? (
+              <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                <Field label="From (optional)">
+                  <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+                </Field>
+                <Field label="To (optional)">
+                  <TextInput type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+                </Field>
+                <button className="btn secondary" onClick={exportStatement}>Export CSV</button>
+              </div>
+            ) : undefined,
+          },
         ]}
       />
     </div>

@@ -5,6 +5,13 @@ export interface TabDef {
   key: string;
   label: string;
   content: ReactNode;
+  /** Pending item 58: lets one tab put a card-level action (an Export CSV
+   * button, a date-range filter, ...) in its own section's header,
+   * top-right, same as every other `CollapsibleCard`'s `headerExtra` slot
+   * — instead of that control sitting stranded inside the tab's own
+   * content, one level below where every other module's equivalent
+   * button already lives. */
+  headerExtra?: ReactNode;
 }
 
 /** Sub-navigation within a page. User-reported (item 1): the old version
@@ -58,6 +65,7 @@ export function Tabs({ tabs, defaultKey }: { tabs: TabDef[]; defaultKey?: string
         <div key={t.key} ref={(el) => { sectionRefs.current[t.key] = el; }} style={{ marginTop: 12 }}>
           <CollapsibleCard
             title={<h3 style={{ margin: 0 }}>{t.label}</h3>}
+            headerExtra={t.headerExtra}
             open={!!openKeys[t.key]}
             onToggle={(open) => setOpenKeys((prev) => ({ ...prev, [t.key]: open }))}
           >

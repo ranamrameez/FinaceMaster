@@ -2635,6 +2635,26 @@ not developer notes) continuously as features ship.
   zero console errors throughout. `npx tsc -b` / `npm run test` (271 tests, unchanged) / `npm
   run build` all clean.
 
+- **`Tabs` gained a per-tab `headerExtra` slot, closing Pending item 58's remainder
+  (2026-08-25) — see README Done item 132.** `TabDef.headerExtra` passes straight through to
+  the underlying `CollapsibleCard`'s own `headerExtra` prop — same mechanism as everywhere else
+  (Done item 121), just not reachable from inside a `Tabs` section before this. Used it for
+  QSE's/PSX's per-stock Trades tab (extracted a `useTickerExport(ticker)` hook so `StockPage`
+  builds the header control once, `TickerTransactions` untouched) and Rentals' Income &
+  expenses tab — the harder case, since the export scope depends on which property is picked,
+  and that picker lived inside `EntriesTab`'s own `usePropertyPicker()` call, invisible from
+  `RentalsPage` where `Tabs` is defined. Lifted `usePropertyPicker()` up to `RentalsPage`,
+  passed the picker state down into `EntriesTab` as props, added a matching
+  `useEntriesExport(property)` hook at the `RentalsPage` level. **Pattern worth repeating for
+  any future per-tab header control that depends on a sub-selection inside that tab's own
+  content**: the selection state has to live at the same level as the `Tabs` call, not inside
+  the tab's content component, or the header can't see it. Verified live via Playwright on all
+  three pages — Export CSV now sits top-right of its own section header instead of buried in
+  the content, zero console errors; PSX's Trades tab also confirmed Done item 130's fee
+  calibration live (10 shares @ 300 PKR showed Fee 7.26 PKR, matching 6.00 commission + 0.90
+  SST + 0.36 levies by hand). `npx tsc -b` / `npm run test` (271 tests, unchanged) / `npm run
+  build` all clean.
+
 ## Live URLs
 
 - New React app (QSE + PSX, `#/` and `#/psx`, now including a native Risk

@@ -633,21 +633,21 @@ function AddEntryForm({ propertyId, knownCategories }: { propertyId: string; kno
   );
 }
 
-function EntriesList({ property }: { property: Property }) {
+/** Pending item 58's remainder: this export button used to sit inside
+ * `EntriesList`'s own content, one level below where every other module's
+ * equivalent export button lives (Done item 121's `headerExtra` rollout)
+ * — `Tabs` had no per-tab `headerExtra` slot to hoist it into until now.
+ * Lifted out into its own hook (mirrors QSE/PSX's `useTickerExport`) so
+ * `RentalsPage` can build the header control at the `Tabs` call site,
+ * scoped to whichever property is currently picked. */
+function useEntriesExport(property: Property | null) {
   const allEntries = useRentalsWorkbookStore((s) => s.workbook.entries);
-  const updateEntry = useRentalsWorkbookStore((s) => s.updateEntry);
-  const deleteEntry = useRentalsWorkbookStore((s) => s.deleteEntry);
-  const [editId, setEditId] = useState<string | null>(null);
-  const [editRow, setEditRow] = useState<RentalEntry | null>(null);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const entries = useMemo(() => (property ? allEntries.filter((e) => e.propertyId === property.id) : []), [allEntries, property]);
 
-  const entries = useMemo(() => allEntries.filter((e) => e.propertyId === property.id), [allEntries, property.id]);
-
-  /** README item 40: extends Banking's statement-export pattern (Done
-   * item 58) to this module's own primary record — a property's
-   * "statement" is its income/expense entry history. */
   const exportStatement = () => {
+    if (!property) return;
     const rows = entries
       .filter((e) => (!fromDate || e.date >= fromDate) && (!toDate || e.date <= toDate))
       .slice()
@@ -664,6 +664,19 @@ function EntriesList({ property }: { property: Property }) {
     URL.revokeObjectURL(url);
     toast('Statement downloaded.');
   };
+
+  return { fromDate, setFromDate, toDate, setToDate, exportStatement, hasRows: entries.length > 0 };
+}
+
+function EntriesList({ property }: { property: Property }) {
+  const allEntries = useRentalsWorkbookStore((s) => s.workbook.entries);
+  const updateEntry = useRentalsWorkbookStore((s) => s.updateEntry);
+  const deleteEntry = useRentalsWorkbookStore((s) => s.deleteEntry);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editRow, setEditRow] = useState<RentalEntry | null>(null);
+
+  const entries = useMemo(() => allEntries.filter((e) => e.propertyId === property.id), [allEntries, property.id]);
+
   type Col = 'date' | 'type' | 'amount' | 'category';
   const sortValue = (e: RentalEntry, col: Col): number | string => {
     switch (col) {
@@ -737,17 +750,6 @@ function EntriesList({ property }: { property: Property }) {
           {!sorted.length && <tr><td colSpan={7} className="footer-note">No entries for this property yet.</td></tr>}
         </tbody>
       </table>
-      {entries.length > 0 && (
-        <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginTop: 12 }}>
-          <Field label="From (optional)">
-            <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
-          </Field>
-          <Field label="To (optional)">
-            <TextInput type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
-          </Field>
-          <button className="btn secondary" onClick={exportStatement}>Export CSV</button>
-        </div>
-      )}
     </div>
   );
 }
@@ -958,8 +960,17 @@ function CategoryAndRollup({ property }: { property: Property }) {
   );
 }
 
-function EntriesTab() {
-  const { properties, property, propertyId, setPropertyId } = usePropertyPicker();
+function EntriesTab({
+  properties,
+  property,
+  propertyId,
+  setPropertyId,
+}: {
+  properties: Property[];
+  property: Property | null;
+  propertyId: string;
+  setPropertyId: (id: string) => void;
+}) {
   const allEntries = useRentalsWorkbookStore((s) => s.workbook.entries);
   const knownCategories = useMemo(
     () => [...new Set(allEntries.filter((e) => e.propertyId === propertyId && e.type === 'EXPENSE').map((e) => e.category).filter((c): c is string => !!c))].sort(),
@@ -1113,6 +1124,9 @@ export function RentalsPage({
   cloudEmpty: boolean;
   uploadLocalToCloud: () => Promise<void>;
 }) {
+  const { properties, property, propertyId, setPropertyId } = usePropertyPicker();
+  const { fromDate, setFromDate, toDate, setToDate, exportStatement, hasRows } = useEntriesExport(property);
+
   return (
     <div>
       <h1 className="pagetitle">Rentals</h1>
@@ -1123,7 +1137,22 @@ export function RentalsPage({
       <Tabs
         tabs={[
           { key: 'properties', label: 'Properties', content: <PropertiesTab /> },
-          { key: 'entries', label: 'Income & expenses', content: <EntriesTab /> },
+          {
+            key: 'entries',
+            label: 'Income & expenses',
+            content: <EntriesTab properties={properties} property={property} propertyId={propertyId} setPropertyId={setPropertyId} />,
+            headerExtra: hasRows ? (
+              <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                <Field label="From (optional)">
+                  <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+                </Field>
+                <Field label="To (optional)">
+                  <TextInput type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+                </Field>
+                <button className="btn secondary" onClick={exportStatement}>Export CSV</button>
+              </div>
+            ) : undefined,
+          },
           { key: 'import', label: 'Import', content: <ImportTab /> },
           { key: 'analytics', label: 'Analytics', content: <AnalyticsTab /> },
           {

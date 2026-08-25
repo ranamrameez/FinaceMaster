@@ -2676,6 +2676,31 @@ FinanceManager live link:
        end to end, not just that the fields render — zero console errors on any of the three.
        `npx tsc -b` / `npm run test` (271 tests, unchanged — UI wiring onto already-tested store
        actions) / `npm run build` all clean.
+132. **`Tabs` gained a per-tab `headerExtra` slot, closing Pending item 58's remainder
+     (2026-08-25).** `TabDef` now accepts an optional `headerExtra: ReactNode`, passed straight
+     through to the underlying `CollapsibleCard`'s own `headerExtra` prop — the same mechanism
+     Done item 121 already used everywhere else, just not reachable from inside a `Tabs`-
+     rendered section until now. Used it to fix the two buried-Export-CSV cases item 58 named:
+     - **QSE's and PSX's per-stock Trades tab**: the from/to date-range + Export CSV controls
+       lived inside `TickerTransactions`'s own content. Extracted a `useTickerExport(ticker)`
+       hook (mirroring the existing `useTickerExport`-shaped hooks elsewhere in the app) that
+       `StockPage` calls once, builds the header control from, and passes into the `Tabs`
+       array's `headerExtra` — `TickerTransactions` itself is otherwise untouched.
+     - **Rentals' Income & expenses tab**: harder than QSE/PSX, since the export scope depends
+       on *which property* is currently picked, and that picker used to live inside
+       `EntriesTab`'s own `usePropertyPicker()` call — invisible from `RentalsPage`, where
+       `Tabs` is actually defined. Lifted `usePropertyPicker()` up to `RentalsPage` itself,
+       passed `properties`/`property`/`propertyId`/`setPropertyId` down into `EntriesTab` as
+       props instead, and added a new `useEntriesExport(property)` hook (same shape as
+       `useTickerExport`) called at the `RentalsPage` level so the header control always
+       reflects whichever property `EntriesTab` has picked.
+     Verified live via Playwright across all three pages with seeded data — Export CSV (plus
+     the date-range fields) now renders top-right of each section's own header instead of
+     buried in the content below, zero console errors, and PSX's Trades tab additionally
+     confirmed the fee-calibration change from Done item 130 live end to end (a seeded 10-share
+     @300 PKR buy showed Fee 7.26 PKR, matching commission 6.00 + SST 0.90 + levies 0.36 by
+     hand). `npx tsc -b` / `npm run test` (271 tests, unchanged — UI restructuring, no calc
+     logic touched) / `npm run build` all clean.
 
 ## Pending
 
@@ -2908,18 +2933,14 @@ item 103) — all three now fixed, see Done item 104:**
 **New Transfers-page feedback batch, remainder (2026-08-25) — see Done items 117-120 for
 what's already shipped from this same message**:
 
-58. Card action buttons (Edit/Delete/Save/Cancel/Export/etc.) should consistently sit at the
-    top-right corner of their card's header. **Partially done — see Done item 121.** Every
-    `CollapsibleCard` with a single stranded card-level action (Bank's account details/
-    statement export, Personal Loans' repayment export, EMI's schedule export, Funds'
-    transaction export) now uses the existing `headerExtra` slot. **Still open**: QSE's/PSX's
-    per-stock Trades tab and Rentals' Income & expenses tab both bury their own Export CSV
-    button inside a `Tabs`-rendered section (`Tabs`/`TabDef` has no per-tab `headerExtra` slot
-    yet, and each button's date-range state is local to its own component, not lifted to the
-    tab-definition call site) — needs `Tabs` extended first, a real but separate structural
-    change. QSE's/PSX's PositionDetail "Export price history CSV" also stays put on purpose —
-    it's nested inside a native `<details>` *within* a `CollapsibleCard`, one level too deep for
-    the outer card's header to correctly represent what it exports.
+58. ~~Card action buttons (Edit/Delete/Save/Cancel/Export/etc.) should consistently sit at the
+    top-right corner of their card's header.~~ **Done (2026-08-25) — see Done items 121/132.**
+    Every `CollapsibleCard` with a single stranded card-level action uses the `headerExtra`
+    slot; `Tabs` itself gained the same slot per tab, closing the QSE/PSX Trades-tab and
+    Rentals Income & expenses cases that needed it extended first. QSE's/PSX's PositionDetail
+    "Export price history CSV" stays put on purpose — it's nested inside a native `<details>`
+    *within* a `CollapsibleCard`, one level too deep for the outer card's header to correctly
+    represent what it exports.
 59. ~~Colored `<span>`/pill text-only backgrounds should become whole-card coloring instead.~~
     **Done (2026-08-25) — see Done item 122.** The actual bug wasn't a missing mechanism (both
     `StatCard`'s `hue` and `.pill-*` already existed and are correct) — it was roughly a dozen
