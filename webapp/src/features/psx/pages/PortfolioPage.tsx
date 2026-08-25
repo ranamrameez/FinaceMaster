@@ -108,6 +108,7 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
               </td>
               <td onClick={(e) => e.stopPropagation()}>
                 <input
+                  key={r.mp}
                   type="number"
                   step="0.01"
                   className="price-input"
