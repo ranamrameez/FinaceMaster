@@ -2880,6 +2880,20 @@ not developer notes) continuously as features ship.
   open**: this only lets existing grids use more width — it doesn't add new right-rail content
   (a contextual glossary, a live summary panel), which is the deeper, more judgment-heavy half
   of Pending item 54 and ties into item 49's IA question.
+- **Hover cross-highlighting, QSE/PSX Dashboard first pass (2026-08-25) — see README Done item
+  146.** A shared `hoveredTicker` page-level state links Dashboard's Allocation and P/L-by-
+  ticker charts: hovering either dims every other ticker in BOTH. New `dimColor()` in
+  `lib/chartLabels.ts` (alpha-suffix dim, not a background-mix — correct under any chart
+  background, unlike blending toward an assumed one). Hit the same TS-inference gap already
+  documented for Done item 137's click-navigation helper: factoring the `onHover`/`onClick`
+  handlers into a standalone `tickerHoverHandlers()` function loses react-chartjs-2's contextual
+  type inference for Chart.js's real event types, so the helper's params need `any` — this only
+  happens when the handler is written as a separate function, not inline in the `options` JSX
+  prop. Verified with real pixel sampling (not a visual guess): the non-hovered bar's canvas
+  alpha dropped from 255 to ~94 on hover, and the SAME hover measurably dimmed the doughnut's
+  pixels too (opaque count 43,988 → 23,555), confirming the two charts are genuinely linked.
+  **Still open**: Analytics' 6 ticker charts per exchange (12 total) aren't linked yet — a larger
+  follow-up, not attempted here.
 
 ## Live URLs
 

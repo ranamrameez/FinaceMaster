@@ -1,11 +1,11 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { CollapsibleCard, StatCard } from '../../../components/Card';
 import { Sparkline } from '../../../components/Sparkline';
 import { toast } from '../../../components/Toast';
 import { breakEvenPrice, getDailyPriceHistory } from '../../../lib/calc';
-import { dlBarV, dlDoughnut, dlLine, profitColor } from '../../../lib/chartLabels';
+import { dimColor, dlBarV, dlDoughnut, dlLine, profitColor } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
@@ -155,6 +155,29 @@ export function DashboardPage() {
   const totalInvestment = rows.reduce((s, r) => s + r.invested, 0);
   const portfolioROIPct = totalInvestment > 0 ? (summary.unrealizedPL / totalInvestment) * 100 : 0;
 
+  // Pending item 17's hover-cross-highlighting: hovering a ticker's slice/bar
+  // in either chart dims every OTHER ticker in BOTH charts, so the two
+  // per-ticker charts read as one linked view instead of two independent
+  // ones. Shared at the page level (not per-chart state) since it needs to
+  // affect both.
+  const [hoveredTicker, setHoveredTicker] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Chart.js's
+  // real ChartEvent/ActiveElement[] types only resolve via react-chartjs-2's
+  // contextual inference when the handler is written inline in the `options`
+  // JSX prop (as done for onClick/onHover elsewhere in this file); a
+  // standalone helper outside that context loses the inference entirely.
+  const tickerHoverHandlers = (chartRows: typeof rows) => ({
+    onClick: (_e: any, elements: any[]) => {
+      const i = elements[0]?.index;
+      if (i !== undefined && chartRows[i]) navigate(`/stock/${chartRows[i].ticker}`);
+    },
+    onHover: (e: any, elements: any[]) => {
+      if (e.native?.target) (e.native.target as HTMLElement).style.cursor = elements.length ? 'pointer' : 'default';
+      const i = elements[0]?.index;
+      setHoveredTicker(i !== undefined && chartRows[i] ? chartRows[i].ticker : null);
+    },
+  });
+
   // Auto-hide popup once per browser session on first Dashboard visit,
   // summarizing alerts — the persistent Alerts card further down stays
   // available any time after that.
@@ -195,13 +218,15 @@ export function DashboardPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
         <ChartCard title="Allocation by ticker (cost basis)" empty={!rows.length}>
           <Doughnut
-            data={{ labels: rows.map((r) => r.ticker), datasets: [{ data: rows.map((r) => r.invested), backgroundColor: INVEST_PALETTE }] }}
+            data={{
+              labels: rows.map((r) => r.ticker),
+              datasets: [{
+                data: rows.map((r) => r.invested),
+                backgroundColor: rows.map((r, i) => dimColor(INVEST_PALETTE[i % INVEST_PALETTE.length], !!hoveredTicker && hoveredTicker !== r.ticker)),
+              }],
+            }}
             options={{
-              onClick: (_e, elements) => {
-                const i = elements[0]?.index;
-                if (i !== undefined && rows[i]) navigate(`/stock/${rows[i].ticker}`);
-              },
-              onHover: (e, elements) => { if (e.native?.target) (e.native.target as HTMLElement).style.cursor = elements.length ? 'pointer' : 'default'; },
+              ...tickerHoverHandlers(rows),
               plugins: { datalabels: dlDoughnut((v) => fmt(v, 2)) },
             }}
           />
@@ -211,14 +236,13 @@ export function DashboardPage() {
           <Bar
             data={{
               labels: rows.map((r) => r.ticker),
-              datasets: [{ data: rows.map((r) => r.profit), backgroundColor: rows.map((r) => profitColor(r.profit)) }],
+              datasets: [{
+                data: rows.map((r) => r.profit),
+                backgroundColor: rows.map((r) => dimColor(profitColor(r.profit), !!hoveredTicker && hoveredTicker !== r.ticker)),
+              }],
             }}
             options={{
-              onClick: (_e, elements) => {
-                const i = elements[0]?.index;
-                if (i !== undefined && rows[i]) navigate(`/stock/${rows[i].ticker}`);
-              },
-              onHover: (e, elements) => { if (e.native?.target) (e.native.target as HTMLElement).style.cursor = elements.length ? 'pointer' : 'default'; },
+              ...tickerHoverHandlers(rows),
               plugins: { legend: { display: false }, datalabels: dlBarV((v) => fmt(v, 2)) },
             }}
           />

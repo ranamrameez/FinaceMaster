@@ -2977,6 +2977,30 @@ FinanceManager live link:
      CSS-only change) / `npm run build` all clean. **Deliberately scoped down**: this is the
      "let existing content breathe wider" half of the complaint, not the "add genuinely new
      right-rail content" half — see the updated Pending item 54 for what's still open.
+146. **Hover cross-highlighting between charts, first pass on QSE/PSX Dashboard (2026-08-25) —
+     see the updated Pending item 17.** Dashboard's two ticker-indexed charts (Allocation by
+     ticker, P/L by ticker) previously each highlighted independently (each already had its own
+     click-to-drill-down from Done item 134, unrelated). Added a page-level `hoveredTicker`
+     state shared between both charts' `onHover` handlers — hovering a slice/bar in either chart
+     now dims every ticker in BOTH charts except the hovered one, so the pair reads as one linked
+     view. New `dimColor()` in `lib/chartLabels.ts` (a plain alpha-suffix dim, not a background-
+     mix — correct regardless of what's underneath a given segment, unlike blending toward an
+     assumed background color) is shared by both exchanges' Dashboard. **A real TypeScript
+     inference gap hit while extracting the shared handler into `tickerHoverHandlers()`,
+     matching a lesson already documented for Done item 137's click-navigation helper**:
+     Chart.js's real `ChartEvent`/`ActiveElement[]` types only resolve through react-chartjs-2's
+     contextual inference when the handler is written inline in the `options` JSX prop — a
+     factored-out helper function loses that inference and needs `any` params instead. Verified
+     live via Playwright with a real pixel-level check, not a visual guess: sampled the bar
+     chart's own canvas pixels before/during a hover and confirmed the non-hovered bar's alpha
+     channel dropped from 255 (opaque) to ~94 (dimmed); separately confirmed the SAME hover (over
+     the bar chart) also measurably dimmed roughly half the doughnut canvas's opaque pixel count
+     (43,988 → 23,555) while its dim-alpha pixel count rose correspondingly (1,176 → 21,601) —
+     proving the two charts are genuinely linked, not just independently interactive. `npx tsc
+     -b` / `npm run test` (280 tests, unchanged) / `npm run build` all clean. **Deliberately
+     scoped down**: only Dashboard's 2 ticker charts per exchange are linked — Analytics' 6
+     ticker-indexed charts per exchange (12 total) are a separate, larger follow-up, not attempted
+     in this pass — see the updated Pending item 17.
 
 ## Pending
 
@@ -2999,10 +3023,12 @@ FinanceManager live link:
     done (2026-08-25) — see Done items 134/137**: every ticker-indexed chart in the app
     (Dashboard's Allocation/P-L-by-ticker, and Analytics' ROI%/Invested-vs-value/Total P&L/
     Holding period/Portfolio allocation/Dividend-by-ticker, on both QSE and PSX) now navigates
-    to that ticker's own stock page on click. Still open: hover cross-highlighting between
-    separate charts (e.g. hovering a ticker in one chart highlighting the same ticker in
-    another) — a materially different, more invasive feature than click-navigation, not
-    attempted here.
+    to that ticker's own stock page on click. **Hover cross-highlighting: first pass done
+    (2026-08-25) — see Done item 146**: QSE's and PSX's Dashboard now link their two ticker
+    charts (Allocation, P/L by ticker) — hovering a ticker's slice/bar in either one dims every
+    other ticker in BOTH. **Still open**: Analytics' own 6 ticker-indexed charts per exchange
+    aren't linked yet — a materially larger rollout (12 charts across two pages) than the
+    2-chart Dashboard case, tracked as a follow-up rather than attempted in the same pass.
 19. Cross-entity transaction linking beyond v1 scope (see Done item 29): Funds/Rentals/EMI/
     Personal Loans aren't wired into the Transfers page yet — only Cash↔Bank and
     Bank↔QSE/PSX. A real signed-in browser round-trip (create/edit/delete a link, confirm
