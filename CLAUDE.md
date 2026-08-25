@@ -2375,6 +2375,29 @@ not developer notes) continuously as features ship.
   (screenshots of Bank's account modal, Personal Loans' and EMI's loan detail, Funds' fund
   detail all confirmed the button now sits top-right of its heading) — zero console errors.
   `npx tsc -b` / `npm run test` (255 tests, unchanged) / `npm run build` all clean.
+  **Whole-card coloring instead of a redundant inner pill (2026-08-25) — see README Done item
+  122, closes Pending item 59.** Root cause wasn't a missing mechanism — `StatCard`'s
+  `--card-hue` and `.pill-*` badges are both already sanctioned, correct ways to color a whole
+  element. The actual bug was roughly a dozen stat-cards doing BOTH at once: `hueStyle(...)` on
+  the card (often an arbitrary rotating per-currency color, unrelated to the value's own sign)
+  PLUS `pill-buy`/`pill-sell` on the value text inside that same card — a colored badge floating
+  inside an already-differently-colored card, which is exactly what reads as "text has its own
+  red/green background" even though `.pill` itself is fine. Fixed by making the card's hue
+  itself carry the sign (`var(--profit)`/`var(--loss)`) and dropping the now-redundant pill:
+  Cash/Bank Balance cards, Personal Loans' Net position + Outstanding, Rentals' Net income,
+  Subscriptions' Monthly spend + Status, EMI's Outstanding (×2) + Interest-saved, Funds' Net
+  profit (×2), QSE/PSX Trade Calculator's Break-even/Current P/L (now colored only once a
+  current price is entered — nothing signed to color before that), and `RiskCalculator`'s
+  Current-net-P/L + stress-test cards (already correctly hued, just had the redundant pill).
+  **Left alone on purpose**: `.pill-buy`/`.pill-sell` inside actual table cells (Bank/Cash
+  ledgers, Subscriptions' Status column, etc.) — a colored badge in an otherwise-plain table row
+  is the correct, established use of `.pill`, not the "double-colored card" bug being fixed
+  here. Several files lost their now-unused `HUES` import as a result (`CashPage.tsx`,
+  `BankPage.tsx`, `PersonalLoansPage.tsx`, `RentalsPage.tsx`) — checked each for other `HUES[`
+  usages before removing the import; several (EMI, Funds, Subscriptions) still needed it for
+  unrelated cards and kept it. Verified live via Playwright across 6 modules plus a seeded QSE
+  position for the Trade Calculator/Risk Analysis cards — zero console errors. `npx tsc -b` /
+  `npm run test` (255 tests, unchanged) / `npm run build` all clean.
 
 ## Live URLs
 

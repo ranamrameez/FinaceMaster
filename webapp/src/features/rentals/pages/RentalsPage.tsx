@@ -3,7 +3,7 @@ import { useMemo, useRef, useState } from 'react';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
-import { HUES, hueStyle } from '../../../lib/statCardHues';
+import { hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { EditIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Modal } from '../../../components/Modal';
@@ -49,10 +49,10 @@ function NetIncomeSummary() {
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px,1fr))', gap: 8, marginBottom: 16 }}>
-      {codes.map((code, i) => (
-        <div key={code} className="stat-card card" style={hueStyle(HUES[i % HUES.length])}>
+      {codes.map((code) => (
+        <div key={code} className="stat-card card" style={hueStyle(totals[code] >= 0 ? 'var(--profit)' : 'var(--loss)')}>
           <div className="label">Net income ({code})</div>
-          <MoneyValue n={totals[code]} currency={code} className={`value ${totals[code] >= 0 ? 'pill-buy' : 'pill-sell'}`} />
+          <MoneyValue n={totals[code]} currency={code} />
         </div>
       ))}
     </div>

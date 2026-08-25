@@ -233,7 +233,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
         )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px,1fr))', gap: 8, marginTop: 12 }}>
           <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Monthly installment</div><MoneyValue n={sum.emi} currency={loan.currencyCode} /></div>
-          <div className="stat-card card" style={hueStyle(HUES[5])}><div className="label">Outstanding</div><MoneyValue n={sum.outstanding} currency={loan.currencyCode} className="value pill-sell" /></div>
+          <div className="stat-card card" style={hueStyle('var(--loss)')}><div className="label">Outstanding</div><MoneyValue n={sum.outstanding} currency={loan.currencyCode} /></div>
           <div className="stat-card card" style={hueStyle(HUES[2])}><div className="label">Paid so far</div><MoneyValue n={sum.paidSoFar} currency={loan.currencyCode} /></div>
           <div className="stat-card card" style={hueStyle(HUES[4])}>
             <div className="label">{loan.repaymentMode === 'fixedTotal' ? 'Markup so far' : 'Interest so far'}</div>
@@ -281,7 +281,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
             <div className="stat-card card" style={hueStyle(HUES[7])}><div className="label">New end date</div><div className="value" style={{ fontSize: 14 }}>{whatIf.newEndDate}</div></div>
             <div className="stat-card card" style={hueStyle('var(--profit)')}>
               <div className="label">{loan.repaymentMode === 'fixedTotal' ? 'Markup' : 'Interest'} saved</div>
-              <MoneyValue n={whatIf.interestSaved} currency={loan.currencyCode} className="value pill-buy" />
+              <MoneyValue n={whatIf.interestSaved} currency={loan.currencyCode} />
             </div>
           </div>
         )}
@@ -365,7 +365,7 @@ function OverallSummary() {
           <div className="footer-note" style={{ marginBottom: 6 }}>{code}</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px,1fr))', gap: 8 }}>
             <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Monthly total</div><MoneyValue n={totals[code].monthlyInstallment} currency={code} /></div>
-            <div className="stat-card card" style={hueStyle(HUES[5])}><div className="label">Outstanding</div><MoneyValue n={totals[code].outstanding} currency={code} className="value pill-sell" /></div>
+            <div className="stat-card card" style={hueStyle('var(--loss)')}><div className="label">Outstanding</div><MoneyValue n={totals[code].outstanding} currency={code} /></div>
             <div className="stat-card card" style={hueStyle(HUES[2])}><div className="label">Paid so far</div><MoneyValue n={totals[code].paidSoFar} currency={code} /></div>
           </div>
         </div>

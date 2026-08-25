@@ -242,7 +242,7 @@ export function RiskCalculator({
                 hue={HUES[4]}
                 labelTitle="How far the price needs to rise from here to reach break-even."
               />
-              <div className="stat-card card" style={hueStyle(currentMetrics.netPL >= 0 ? 'var(--profit)' : 'var(--loss)')}><div className="label">Current net P/L</div><div className={`value ${currentMetrics.netPL >= 0 ? 'pill-buy' : 'pill-sell'}`}>{fmtMoney(currentMetrics.netPL, currency)}</div></div>
+              <div className="stat-card card" style={hueStyle(currentMetrics.netPL >= 0 ? 'var(--profit)' : 'var(--loss)')}><div className="label">Current net P/L</div><div className="value">{fmtMoney(currentMetrics.netPL, currency)}</div></div>
               <StatCard
                 label="Risk ceiling"
                 value={fmtMoney(currentMetrics.ceiling, currency)}
@@ -331,7 +331,7 @@ export function RiskCalculator({
               {stress.map((p) => (
                 <div key={p.label} className="stat-card card" style={hueStyle(p.pl >= 0 ? 'var(--profit)' : 'var(--loss)')}>
                   <div className="label">{p.label}</div>
-                  <div className={`value ${p.pl >= 0 ? 'pill-buy' : 'pill-sell'}`}>{fmtMoney(p.pl, currency)}</div>
+                  <div className="value">{fmtMoney(p.pl, currency)}</div>
                 </div>
               ))}
             </div>

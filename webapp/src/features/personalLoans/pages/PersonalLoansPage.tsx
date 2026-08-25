@@ -4,7 +4,7 @@ import { Bar } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { HUES, hueStyle } from '../../../lib/statCardHues';
+import { hueStyle } from '../../../lib/statCardHues';
 import { EditIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
@@ -50,10 +50,10 @@ function NetPositionSummary() {
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px,1fr))', gap: 8, marginBottom: 16 }}>
-      {codes.map((code, i) => (
-        <div key={code} className="stat-card card" style={hueStyle(HUES[i % HUES.length])}>
+      {codes.map((code) => (
+        <div key={code} className="stat-card card" style={hueStyle(net[code] >= 0 ? 'var(--profit)' : 'var(--loss)')}>
           <div className="label">Net position ({code})</div>
-          <MoneyValue n={net[code]} currency={code} className={`value ${net[code] >= 0 ? 'pill-buy' : 'pill-sell'}`} />
+          <MoneyValue n={net[code]} currency={code} />
           <div className="sub">{net[code] >= 0 ? 'Net owed to you' : 'Net you owe'}</div>
         </div>
       ))}
@@ -547,9 +547,9 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
         )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 8, marginTop: 12 }}>
           <div className="stat-card card"><div className="label">Principal</div><MoneyValue n={loan.principal} currency={loan.currencyCode} /></div>
-          <div className={`stat-card card`}>
+          <div className="stat-card card" style={hueStyle(loan.direction === 'owed_to_me' ? 'var(--profit)' : 'var(--loss)')}>
             <div className="label">Outstanding</div>
-            <MoneyValue n={outstanding} currency={loan.currencyCode} className={`value ${loan.direction === 'owed_to_me' ? 'pill-buy' : 'pill-sell'}`} />
+            <MoneyValue n={outstanding} currency={loan.currencyCode} />
           </div>
         </div>
       </Card>

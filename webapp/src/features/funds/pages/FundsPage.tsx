@@ -145,7 +145,7 @@ function OverallSummary() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px,1fr))', gap: 8 }}>
               <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Invested</div><MoneyValue n={totals[code].invested} currency={code} /></div>
               <div className="stat-card card" style={hueStyle(HUES[6])}><div className="label">Current value</div><MoneyValue n={totals[code].value} currency={code} /></div>
-              <div className="stat-card card" style={hueStyle(profit >= 0 ? 'var(--profit)' : 'var(--loss)')}><div className="label">Net profit</div><MoneyValue n={profit} currency={code} className={`value ${profit >= 0 ? 'pill-buy' : 'pill-sell'}`} after={` (${profitPct.toFixed(1)}%)`} /></div>
+              <div className="stat-card card" style={hueStyle(profit >= 0 ? 'var(--profit)' : 'var(--loss)')}><div className="label">Net profit</div><MoneyValue n={profit} currency={code} after={` (${profitPct.toFixed(1)}%)`} /></div>
             </div>
           </div>
         );
@@ -350,7 +350,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
           <div className="stat-card card"><div className="label">Avg NAV cost</div><div className="value">{fmtPrice(avgNav)}</div></div>
           <div className="stat-card card"><div className="label">Invested</div><MoneyValue n={invested} currency={fund.currencyCode} /></div>
           <div className="stat-card card"><div className="label">Current value</div><MoneyValue n={currentValue} currency={fund.currencyCode} /></div>
-          <div className="stat-card card"><div className="label">Net profit</div><MoneyValue n={profit} currency={fund.currencyCode} className={`value ${profit >= 0 ? 'pill-buy' : 'pill-sell'}`} after={` (${profitPct.toFixed(1)}%)`} /></div>
+          <div className="stat-card card" style={hueStyle(profit >= 0 ? 'var(--profit)' : 'var(--loss)')}><div className="label">Net profit</div><MoneyValue n={profit} currency={fund.currencyCode} after={` (${profitPct.toFixed(1)}%)`} /></div>
           <div className="stat-card card"><div className="label">XIRR</div><div className="value">{rate !== null ? `${(rate * 100).toFixed(1)}%` : '—'}</div></div>
         </div>
       </Card>

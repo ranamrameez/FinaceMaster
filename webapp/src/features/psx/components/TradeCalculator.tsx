@@ -10,6 +10,7 @@ import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
 import { usePSXDerived } from '../hooks/usePSXDerived';
 import { usePSXStockData } from '../hooks/usePSXStockData';
+import { hueStyle } from '../../../lib/statCardHues';
 
 type Mode = 'BUY' | 'SELL' | 'CYCLE';
 
@@ -247,12 +248,12 @@ export function TradeCalculator({ initialTicker }: { initialTicker?: string } = 
           {position && (
             <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 8, flex: 1 }}>
               <div className="stat-card card"><div className="label">Avg cost</div><div className="value">{fmtPrice(avg)}</div></div>
-              <div className="stat-card card">
+              <div className="stat-card card" style={currentPrice > 0 ? hueStyle(currentPrice >= be ? 'var(--profit)' : 'var(--loss)') : undefined}>
                 <div className="label">Break-even</div>
-                <div className={`value ${currentPrice > 0 ? (currentPrice >= be ? 'pill-buy' : 'pill-sell') : ''}`}>{fmtPrice(be)}</div>
+                <div className="value">{fmtPrice(be)}</div>
               </div>
               <div className="stat-card card"><div className="label">Worth now</div><div className="value">{fmtMoney(worth, currency)}</div></div>
-              <div className="stat-card card"><div className="label">Current P/L</div><div className={`value ${currentPrice > 0 ? (currentPL >= 0 ? 'pill-buy' : 'pill-sell') : ''}`}>{fmtMoney(currentPL, currency)}</div></div>
+              <div className="stat-card card" style={currentPrice > 0 ? hueStyle(currentPL >= 0 ? 'var(--profit)' : 'var(--loss)') : undefined}><div className="label">Current P/L</div><div className="value">{fmtMoney(currentPL, currency)}</div></div>
               {currentPL > 0 && <div className="stat-card card"><div className="label">Est. CGT if sold now</div><div className="value">{fmtMoney(currentCGT, currency)}</div></div>}
             </div>
           )}

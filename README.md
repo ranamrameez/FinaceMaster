@@ -2301,6 +2301,36 @@ FinanceManager live link:
      zero console errors. `npx tsc -b` / `npm run test` (255 tests, unchanged) / `npm run build`
      all clean.
 
+122. **Whole-card coloring instead of a colored pill layered on top of an already-colored card
+     (2026-08-25) — closes Pending item 59.** The user's own framing: "Some texts have red/green
+     bgs. whole cards should be colored and text bg colors should be removed." Root cause,
+     confirmed via `grep` before touching anything: this app already has two sanctioned
+     whole-element coloring mechanisms (`StatCard`/`.stat-card`'s `--card-hue`, and the `.pill-*`
+     badge classes for table cells) — the actual bug was **stacking both on the same element**:
+     roughly a dozen stat-cards across the app set `hueStyle(...)` on the card (sometimes an
+     arbitrary rotating per-currency color, unrelated to the value's sign) AND ALSO applied
+     `pill-buy`/`pill-sell` to the value text inside that same card — a colored badge floating
+     inside an already-differently-colored card, which reads exactly like "text has its own
+     red/green background" even though the mechanism itself (`.pill`) is the app's own sanctioned
+     one. Fixed by making the card's own `hueStyle` carry the sign (`var(--profit)`/
+     `var(--loss)`) instead of an arbitrary/unrelated hue, and removing the now-redundant pill
+     class from the inner value everywhere this pattern showed up: Cash's/Bank's per-currency
+     Balance cards, Personal Loans' Net position (list) and Outstanding (loan detail) cards,
+     Rentals' Net income cards, Subscriptions' Monthly recurring spend and Status cards, EMI's
+     Outstanding cards (both loan-detail and overall-summary) and "Interest saved" what-if card,
+     Funds' Net profit cards (both per-currency and per-fund), QSE's/PSX's Trade Calculator
+     Break-even/Current P/L cards (previously plain, uncolored cards with only the inner pill —
+     now colored only once a current price is entered, since there's nothing signed to color
+     before that), and `RiskCalculator`'s Current net P/L and stress-test cards (these already
+     had the correct sign-driven hue; only the redundant pill needed removing). Left untouched
+     on purpose: `.pill-buy`/`.pill-sell` used in actual table cells (Bank/Cash ledgers, Personal
+     Loans repayments, Subscriptions' Status column, etc.) — a colored badge in a plain table row
+     is the correct, established use of `.pill`, not the "card already colored, badge redundant"
+     bug being fixed here. Verified live via Playwright with seeded data across 6 modules plus a
+     seeded QSE position for the Trade Calculator/Risk Analysis cards (screenshots confirm solid
+     whole-card fills with plain white/dark text, no separate inner badge) — zero console errors.
+     `npx tsc -b` / `npm run test` (255 tests, unchanged) / `npm run build` all clean.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`
@@ -2544,12 +2574,12 @@ what's already shipped from this same message**:
     change. QSE's/PSX's PositionDetail "Export price history CSV" also stays put on purpose —
     it's nested inside a native `<details>` *within* a `CollapsibleCard`, one level too deep for
     the outer card's header to correctly represent what it exports.
-59. Colored `<span>`/pill text-only backgrounds (red/green highlight behind a word or number)
-    should become whole-card coloring instead — the user's own framing: "whole cards should be
-    colored and text bg colors should be removed." Needs an audit for every remaining
-    inline-colored-text spot that isn't already going through `StatCard`'s `hue` prop or the
-    `.pill`/`.pill-*` classes (the two established "color the whole element" mechanisms per this
-    file's own 2026-08-24 standing UI/copy guidelines).
+59. ~~Colored `<span>`/pill text-only backgrounds should become whole-card coloring instead.~~
+    **Done (2026-08-25) — see Done item 122.** The actual bug wasn't a missing mechanism (both
+    `StatCard`'s `hue` and `.pill-*` already existed and are correct) — it was roughly a dozen
+    stat-cards stacking BOTH on the same element (a colored card with a redundant colored pill
+    inside it), which read as "text has its own bg" even though `.pill` itself is the sanctioned
+    mechanism. Fixed by making the card's own hue carry the sign and dropping the inner pill.
 60. Sidebar background/text contrast is reportedly still poor in some spots ("Menu bg and text
     contrast is still not visual at many places") — not yet investigated against real computed
     styles/screenshots across every theme; likely the same class of "a later CSS rule silently

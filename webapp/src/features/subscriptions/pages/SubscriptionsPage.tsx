@@ -121,10 +121,10 @@ function OverallSummary() {
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px,1fr))', gap: 8, marginBottom: 16 }}>
-      {codes.map((code, i) => (
-        <div key={code} className="stat-card card" style={hueStyle(HUES[i % HUES.length])}>
+      {codes.map((code) => (
+        <div key={code} className="stat-card card" style={hueStyle('var(--loss)')}>
           <div className="label">Monthly recurring spend ({code})</div>
-          <MoneyValue n={totals[code]} currency={code} className="value pill-sell" />
+          <MoneyValue n={totals[code]} currency={code} />
           <div className="sub">{fmtMoney(totals[code] * 12, code)} / year</div>
         </div>
       ))}
@@ -313,7 +313,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
           <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Monthly equivalent</div><MoneyValue n={monthlyEquivalent(sub)} currency={sub.currencyCode} /></div>
           <div className="stat-card card" style={hueStyle(HUES[2])}><div className="label">Yearly equivalent</div><MoneyValue n={monthlyEquivalent(sub) * 12} currency={sub.currencyCode} /></div>
           <div className="stat-card card" style={hueStyle(HUES[0])}><div className="label">Next renewal</div><div className="value" style={{ fontSize: 14 }}>{sub.active ? nextBillingDate(sub) : '—'}</div></div>
-          <div className="stat-card card" style={hueStyle(HUES[7])}><div className="label">Status</div><div className={`value ${sub.active ? 'pill-buy' : 'pill-sell'}`} style={{ fontSize: 14 }}>{sub.active ? 'Active' : 'Cancelled'}</div></div>
+          <div className="stat-card card" style={hueStyle(sub.active ? 'var(--profit)' : 'var(--loss)')}><div className="label">Status</div><div className="value" style={{ fontSize: 14 }}>{sub.active ? 'Active' : 'Cancelled'}</div></div>
         </div>
       </Card>
 

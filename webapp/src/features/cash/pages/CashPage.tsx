@@ -12,7 +12,7 @@ import { IconButton } from '../../../components/ui/IconButton';
 import { useAmountFormat } from '../../../hooks/useAmountFormat';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
-import { HUES, hueStyle } from '../../../lib/statCardHues';
+import { hueStyle } from '../../../lib/statCardHues';
 import { cashBalanceByCurrency, cashByCategory, cashMonthlyFlow, cashRunningLedger } from '../../../lib/calc/cashModule';
 import { plannedCashProjection } from '../../../lib/calc/plannedBalance';
 import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
@@ -111,13 +111,13 @@ function BalancesSummary() {
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px,1fr))', gap: 8, marginBottom: 16 }}>
-      {codes.map((code, i) => {
+      {codes.map((code) => {
         const pending = upcoming.filter((p) => p.currencyCode === code);
         const net = pending.reduce((s, p) => s + (p.type === 'IN' ? p.amount : -p.amount), 0);
         return (
-          <div key={code} className="stat-card card" style={hueStyle(HUES[i % HUES.length])}>
+          <div key={code} className="stat-card card" style={hueStyle(balances[code] >= 0 ? 'var(--profit)' : 'var(--loss)')}>
             <div className="label">Balance ({code})</div>
-            <MoneyValue n={balances[code]} currency={code} className={`value ${balances[code] >= 0 ? 'pill-buy' : 'pill-sell'}`} />
+            <MoneyValue n={balances[code]} currency={code} />
             {pending.length > 0 && (
               <div className="sub">
                 {pending.length} upcoming plan{pending.length > 1 ? 's' : ''} (net {net >= 0 ? '+' : ''}
