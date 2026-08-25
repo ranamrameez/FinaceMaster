@@ -2533,6 +2533,49 @@ not developer notes) continuously as features ship.
   same-day-related past fix already covers this** — the user is reporting it as currently
   broken against the live app with real, freshly-logged 24-08-2026 data.
 
+- **Critical, user-reported (2026-08-25): same-day buy+sell of equal quantity showed spurious
+  open shares — see README Done item 128.** `Transaction` has no time-of-day, only a date, so
+  `computePositions`/`computeFIFOPositions`/`computeRealizedPLTimeSeries` all sorted same-day
+  transactions by date string alone, relying on `Array.prototype.sort`'s stability to fall back
+  to array/entry order for ties. A same-day SELL landing before its matching BUY in that array
+  got processed against a not-yet-existent position: shares went negative and were silently
+  clamped/dropped, then the later BUY re-opened a position that should already have closed —
+  exactly the user's "bought and sell 2 shares same on 24-Aug... should be marked as closed
+  trades." Fixed with a new shared `lib/calc/sortTransactions.ts`'s
+  `sortTransactionsChronological()` (date, then BUY before SELL on a tie) wired into all three
+  functions — safe in general since a same-day sell can never legitimately precede the buy that
+  supplies its shares, and every other same-day ordering produces the same final totals either
+  way. **Rule for any future function that processes transactions in date order**: use this
+  shared helper, not a bare `.sort((a,b) => a.date.localeCompare(b.date))` — that bare pattern
+  is exactly what caused this bug three times over (once per function) before being fixed.
+  Verified against the user's own real 24-08-2026 OGDC data (2 buys + a matching 2-share sell,
+  entered sell-first) via Playwright: Portfolio now correctly shows "No open positions" instead
+  of a phantom 2-share OGDC holding. New tests in `calc.test.ts`/`fifoPositions.test.ts`
+  reproduce the exact scenario. `npx tsc -b` / `npm run test` (267 tests, 3 new) / `npm run
+  build` all clean.
+- **Critical, user-reported (2026-08-25): "I updated price from Calculator but it didn't
+  reflect on dashboard until i refresh" — see README Done item 129.** Dashboard's/Portfolio's
+  inline "Current price" cell (QSE+PSX, 4 files) is `<input defaultValue={r.mp || ''} .../>` —
+  deliberately uncontrolled so typing doesn't fight a controlled value re-snapping mid-
+  keystroke. `defaultValue` only sets the *initial* DOM value and never re-applies on a later
+  re-render, so a price saved elsewhere (the floating Trade Calculator, in this report) updated
+  the store and every other reactive stat immediately but left this one input stuck on its old
+  value until a full reload force-remounted it. Fixed with `key={r.mp}` on each of the 4 inputs
+  — forces a remount (picking up the new `defaultValue`) exactly when the price changes for a
+  reason other than the user's own typing. **Verification note, worth remembering for any
+  future sign-in-gated write bug**: writing a market price requires sign-in, and this project's
+  locked policy forbids creating even a throwaway account against the real production Firebase
+  project — confirmed this live in Playwright first (screenshotted the real Sign-in modal
+  appearing when the Calculator's "Save as market price" was clicked while signed out), then
+  fell back to a targeted regression test instead: `components/__tests__/
+  priceInputRemount.test.tsx` (the project's first `.tsx` test file, using
+  `@testing-library/react`) isolates the exact `defaultValue`+`key` pattern in a minimal
+  component and proves both the bug (without `key`, a rerender with a new price leaves the DOM
+  stale) and the fix (with `key`, it updates), plus that an unrelated same-price rerender
+  doesn't disturb in-progress typing. `npx tsc -b` / `npm run test` (270 tests, 3 new) / `npm
+  run build` all clean; a live Playwright sweep of all 4 affected pages showed correct seeded
+  values with zero console errors.
+
 ## Live URLs
 
 - New React app (QSE + PSX, `#/` and `#/psx`, now including a native Risk

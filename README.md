@@ -2544,6 +2544,59 @@ FinanceManager live link:
        page and the per-stock page now starts in Fee Mode "Auto" with nothing pre-checked, zero
        console errors.
 
+128. **CRITICAL, user-reported (2026-08-25): a same-day buy+sell of equal quantity showed
+     spurious open shares instead of a fully closed position — "trade timing is important...
+     those transactions should be marked as closed trades rather than cause the available
+     stocks to miscalculate."** Root cause: `Transaction` has no time-of-day, only a date, so
+     `computePositions`, `computeFIFOPositions`, and `computeRealizedPLTimeSeries` all sorted
+     same-day transactions by date string alone — a same-day tie fell back to
+     `Array.prototype.sort`'s stability, i.e. whatever order the transactions happened to sit
+     in the underlying array (entry order, not necessarily real trade order). If a same-day
+     SELL landed before its matching BUY in that array, it was processed against a position
+     that didn't exist yet: the running share count went negative and was silently clamped to
+     zero (`computePositions`) or found no lots to consume at all (`computeFIFOPositions`),
+     then the BUY that followed re-opened a position that should already have been fully
+     closed — exactly the user's report. New shared `lib/calc/sortTransactions.ts`'s
+     `sortTransactionsChronological()` sorts by date, then BUY before SELL on a tie, wired into
+     all three functions. This is a safe general fix, not a narrow hack for this one scenario:
+     you can never legitimately sell shares that don't exist yet without a same-day buy
+     providing them first, and for every other same-day ordering (a sell against an
+     already-open position, followed by an unrelated same-day buy) the final share count and
+     invested total come out identical regardless of which order they're summed in. New tests
+     in `calc.test.ts` and `fifoPositions.test.ts` reproduce the exact reported scenario (a
+     same-day SELL entered before its matching BUY) and confirm the position now correctly
+     shows 0 open shares with realized P/L computed against the real cost basis, not the full
+     sale treated as cost-free profit. Verified live via Playwright: seeded a PSX workbook with
+     OGDC's real 24-08-2026 data (2 buys then a matching 2-share sell, sell entered first in
+     the array) — Portfolio's Holdings tab now correctly shows "No open positions" for OGDC
+     instead of a phantom 2-share holding. `npx tsc -b` / `npm run test` (267 tests, 3 new) /
+     `npm run build` all clean.
+129. **Critical, user-reported (2026-08-25): "I updated price from Calculator but it didn't
+     reflect on dashboard until i refresh."** Root cause: the Dashboard's and Portfolio's
+     Holdings tables (QSE and PSX, 4 call sites total) render their inline "Current price" cell
+     as `<input defaultValue={r.mp || ''} .../>` — deliberately uncontrolled so free typing
+     doesn't fight a controlled `value` re-snapping mid-keystroke (same reasoning as the Trade
+     Calculator's own Amount-field fix, Done item 51). But `defaultValue` only sets the
+     *initial* DOM value; React does not re-apply it on a later re-render just because the prop
+     changed — so a price saved from the floating Trade Calculator (which correctly updates the
+     shared store, and every other reactive stat on the page updated immediately, confirmed via
+     the calculator's own live Worth-Now/P&L preview) left this one specific input showing its
+     stale value until a full page reload force-remounted it. Fixed with `key={r.mp}` on the
+     same input in all 4 files (`DashboardPage.tsx`/`PortfolioPage.tsx`, QSE and PSX) — forces
+     React to remount the element (picking up the new `defaultValue`) whenever the price
+     changes for a reason other than typing into the field itself, while an unrelated re-render
+     with the same price leaves in-progress typing untouched. **Verification note**: a fully
+     signed-in round trip through the real floating-Calculator UI couldn't be exercised in this
+     sandbox (writing a market price is sign-in-gated, and per this project's own locked policy
+     no throwaway account may be created against the real production Firebase project) — so a
+     new regression test, `components/__tests__/priceInputRemount.test.tsx`, isolates the exact
+     `defaultValue`+`key` pattern via `@testing-library/react` (the project's first `.tsx` test
+     file) and demonstrates both the bug (without the key, a rerender with a new price leaves
+     the DOM value stale) and the fix (with the key, it updates), plus a third case confirming
+     an unrelated same-price rerender doesn't disturb the field. A live Playwright sweep of all
+     4 pages confirmed each renders its seeded price correctly and with zero console errors.
+     `npx tsc -b` / `npm run test` (270 tests, 3 new) / `npm run build` all clean.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`
