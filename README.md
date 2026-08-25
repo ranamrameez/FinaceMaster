@@ -2786,6 +2786,31 @@ FinanceManager live link:
      currency (Bank/Rentals from their account/property's currency, Cash/Personal Loans/Funds
      from the workbook's own currency), zero console errors across all of them. `npx tsc -b` /
      `npm run test` (280 tests, unchanged) / `npm run build` all clean.
+137. **Click-to-drill-down extended to every ticker-indexed Analytics chart, QSE and PSX
+     (2026-08-25) — see README Done item 134 for the earlier Dashboard-only version, this
+     closes Pending item 17's click-navigation half in full.** New `tickerClickOptions(tickers,
+     navigate)` helper (duplicated once per `AnalyticsPage.tsx`, same reasoning as
+     `tickerClickHandlers`-style helpers elsewhere in the app — the two files aren't otherwise
+     shared) returns Chart.js `onClick`/`onHover` options mapping a clicked element's index back
+     into whatever ticker array fed that chart's own data, spread into 6 charts per exchange:
+     ROI % by ticker, Invested vs current value, Total P/L by symbol, Holding period — closed
+     positions, Portfolio allocation (market value), and Dividend income by ticker. Deliberately
+     left non-clickable: "Winners vs losers" (a win/loss count, not itself ticker-indexed even
+     though it's derived from `rows`) and every month-indexed or whole-portfolio chart (Cash
+     balance over time, Fees breakdown, Monthly trading activity, etc.) — clicking a month bar
+     or a portfolio-wide slice has no single ticker to navigate to. **TypeScript note**: the
+     helper's `onClick`/`onHover` parameters had to be typed `any` rather than Chart.js's own
+     `ChartEvent`/`ActiveElement[]` types — those types only resolve correctly through
+     `react-chartjs-2`'s own prop-level contextual inference (as in the inline arrow functions
+     Done item 134 used directly in the `options` prop), and a standalone helper function
+     outside that context doesn't get the same inference, producing real type-mismatch errors
+     the first time this was tried. Verified live via Playwright with seeded single-position
+     workbooks for both exchanges: the "ROI % by ticker" horizontal bar navigated on click, and
+     — reusing the same pixel-sampling technique Done item 134 established for hitting a
+     doughnut's actual ring rather than guessing screenshot coordinates — a precise scan of the
+     "Portfolio allocation" doughnut's canvas confirmed its ring click also navigates correctly
+     on PSX. Zero console errors. `npx tsc -b` / `npm run test` (280 tests, unchanged) / `npm
+     run build` all clean.
 
 ## Pending
 
@@ -2804,11 +2829,14 @@ FinanceManager live link:
     into our own database and serve the app from that store, same pattern already used for
     QSE's `stockData/QSE` node (item 1 above) and PSX's bundled `psxSeed.ts`.
 17. Charts could get more interactive beyond the ticker/month filters shipped in Done item 31
-    (e.g. click-to-drill-down, hover cross-highlighting between charts). **Partially done
-    (2026-08-25) — see Done item 134**: QSE's/PSX's Dashboard "Allocation by ticker"/"P/L by
-    ticker" charts now navigate to that ticker's own page on click. Still open: Analytics
-    page's ~18 charts (mostly month-indexed or whole-portfolio, lower drill-down value) and
-    hover cross-highlighting between charts.
+    (e.g. click-to-drill-down, hover cross-highlighting between charts). **Click-to-drill-down
+    done (2026-08-25) — see Done items 134/137**: every ticker-indexed chart in the app
+    (Dashboard's Allocation/P-L-by-ticker, and Analytics' ROI%/Invested-vs-value/Total P&L/
+    Holding period/Portfolio allocation/Dividend-by-ticker, on both QSE and PSX) now navigates
+    to that ticker's own stock page on click. Still open: hover cross-highlighting between
+    separate charts (e.g. hovering a ticker in one chart highlighting the same ticker in
+    another) — a materially different, more invasive feature than click-navigation, not
+    attempted here.
 19. Cross-entity transaction linking beyond v1 scope (see Done item 29): Funds/Rentals/EMI/
     Personal Loans aren't wired into the Transfers page yet — only Cash↔Bank and
     Bank↔QSE/PSX. A real signed-in browser round-trip (create/edit/delete a link, confirm

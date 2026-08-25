@@ -2741,6 +2741,21 @@ not developer notes) continuously as features ship.
   scenario for a time to resolve; forcing the field on anyway would just be inert UI. Verified
   live via Playwright with seeded data across all five modules — zero console errors. `npx tsc
   -b` / `npm run test` (280 tests, unchanged) / `npm run build` all clean.
+- **Click-to-drill-down extended to every ticker-indexed Analytics chart (2026-08-25) — see
+  README Done item 137, closes Pending item 17's click-navigation half.** Same idea as the
+  Dashboard version (Done item 134's `onClick`/`onHover` on the chart's `options`), factored
+  into a `tickerClickOptions(tickers, navigate)` helper duplicated once per exchange's own
+  `AnalyticsPage.tsx`, spread into 6 charts each: ROI %, Invested-vs-value, Total P/L, Holding
+  period, Portfolio allocation, Dividend-by-ticker. **TS gotcha worth remembering**: this
+  helper's `onClick`/`onHover` params needed `any`, not Chart.js's real `ChartEvent`/
+  `ActiveElement[]` types — those only resolve through `react-chartjs-2`'s contextual inference
+  when the handler is written inline in the `options` JSX prop (as Done item 134 did); a
+  standalone function outside that context loses the inference and throws real type errors.
+  Verified live via Playwright, including a precise canvas pixel-scan (same technique
+  Done item 134 established) to confirm a doughnut's actual ring — not a guessed screenshot
+  coordinate — navigates correctly. `npx tsc -b` / `npm run test` (280 tests, unchanged) /
+  `npm run build` all clean. Deliberately not done: hover cross-highlighting between separate
+  charts, a materially bigger feature than click-navigation.
 
 ## Live URLs
 

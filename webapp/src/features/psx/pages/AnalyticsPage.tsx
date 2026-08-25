@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { ChartFilterBar } from '../../../components/ChartFilterBar';
 import { Tabs } from '../../../components/Tabs';
@@ -23,11 +24,27 @@ import { useAppearanceStore } from '../../../store/appearanceStore';
 
 const chartGrid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 } as const;
 
+/** Pending item 17's remainder: click-to-drill-down on Analytics' own
+ * ticker-indexed charts (Dashboard's got this in Done item 134) — see the
+ * identical helper in QSE's AnalyticsPage.tsx for the full comment. */
+function tickerClickOptions(tickers: string[], navigate: ReturnType<typeof useNavigate>) {
+  return {
+    onClick: (_e: any, elements: any[]) => {
+      const i = elements[0]?.index;
+      if (i !== undefined && tickers[i]) navigate(`/psx/stock/${tickers[i]}`);
+    },
+    onHover: (e: any, elements: any[]) => {
+      if (e.native?.target) (e.native.target as HTMLElement).style.cursor = elements.length ? 'pointer' : 'default';
+    },
+  };
+}
+
 /** PSX's equivalent of the QSE AnalyticsPage. Omits the "Fundamentals"
  * card at the bottom — QSE has a shared EPS/DPS data source
  * (stockData/QSE, see lib/stockData/reader.ts); nothing equivalent exists
  * for PSX yet, so there's nothing to show there. */
 export function AnalyticsPage() {
+  const navigate = useNavigate();
   const { workbook, rows: allRows, summary, ledger } = usePSXDerived();
   useAppearanceStore((s) => s.appearance);
   applyChartTheme();
@@ -87,7 +104,7 @@ export function AnalyticsPage() {
                 <ChartCard title="ROI % by ticker" empty={!rows.length}>
                   <Bar
                     data={{ labels: rows.map((r) => r.ticker), datasets: [{ data: rows.map((r) => r.roiPct), backgroundColor: rows.map((r) => profitColor(r.roiPct)) }] }}
-                    options={{ indexAxis: 'y', plugins: { legend: { display: false }, datalabels: dlBarH((v) => v.toFixed(1) + '%') } }}
+                    options={{ indexAxis: 'y', plugins: { legend: { display: false }, datalabels: dlBarH((v) => v.toFixed(1) + '%') }, ...tickerClickOptions(rows.map((r) => r.ticker), navigate) }}
                   />
                 </ChartCard>
                 <ChartCard title="Winners vs losers" empty={!rows.length}>
@@ -105,6 +122,7 @@ export function AnalyticsPage() {
                         { label: 'Current value', data: rows.map((r) => r.value), backgroundColor: '#c9a35a' },
                       ],
                     }}
+                    options={tickerClickOptions(rows.map((r) => r.ticker), navigate)}
                   />
                 </ChartCard>
                 <ChartCard title="Total P/L by symbol (open + closed)" empty={!lifetimeRows.length}>
@@ -116,6 +134,7 @@ export function AnalyticsPage() {
                         datalabels: dlBarV((v) => fmt(v, 2)),
                         tooltip: { callbacks: { afterLabel: (ctx) => `Status: ${lifetimeRows[ctx.dataIndex].status}` } },
                       },
+                      ...tickerClickOptions(lifetimeRows.map((r) => r.ticker), navigate),
                     }}
                   />
                 </ChartCard>
@@ -128,7 +147,7 @@ export function AnalyticsPage() {
                 <ChartCard title="Holding period — closed positions" empty={!holdRows.length}>
                   <Bar
                     data={{ labels: holdRows.map((r) => r.ticker), datasets: [{ data: holdRows.map((r) => r.days), backgroundColor: holdRows.map((r) => tickerColor(r.ticker)) }] }}
-                    options={{ indexAxis: 'y', plugins: { legend: { display: false }, datalabels: dlBarH((v) => v.toFixed(0) + 'd') } }}
+                    options={{ indexAxis: 'y', plugins: { legend: { display: false }, datalabels: dlBarH((v) => v.toFixed(0) + 'd') }, ...tickerClickOptions(holdRows.map((r) => r.ticker), navigate) }}
                   />
                 </ChartCard>
               </div>
@@ -142,7 +161,7 @@ export function AnalyticsPage() {
                 <ChartCard title="Portfolio allocation (market value)" empty={!allocRows.length}>
                   <Doughnut
                     data={{ labels: allocRows.map((r) => r.ticker), datasets: [{ data: allocRows.map((r) => r.value), backgroundColor: allocRows.map((r) => tickerColor(r.ticker)) }] }}
-                    options={{ cutout: '55%', plugins: { datalabels: dlDoughnut((v) => ((v / allocTotal) * 100).toFixed(0) + '%') } }}
+                    options={{ cutout: '55%', plugins: { datalabels: dlDoughnut((v) => ((v / allocTotal) * 100).toFixed(0) + '%') }, ...tickerClickOptions(allocRows.map((r) => r.ticker), navigate) }}
                   />
                 </ChartCard>
                 <ChartCard title="Cash vs stocks split" unfiltered empty={summary.netWorth <= 0}>
@@ -210,7 +229,10 @@ export function AnalyticsPage() {
                   <Bar data={{ labels: divByMonth.months, datasets: [{ label: `Dividends (${currency})`, data: divByMonth.values, backgroundColor: '#c9a227' }] }} options={{ plugins: { legend: { display: false } } }} />
                 </ChartCard>
                 <ChartCard title="Dividend income by ticker" empty={!divByTicker.length}>
-                  <Doughnut data={{ labels: divByTicker.map(([t]) => t), datasets: [{ data: divByTicker.map(([, v]) => v), backgroundColor: divByTicker.map(([t]) => tickerColor(t)) }] }} options={{ cutout: '55%' }} />
+                  <Doughnut
+                    data={{ labels: divByTicker.map(([t]) => t), datasets: [{ data: divByTicker.map(([, v]) => v), backgroundColor: divByTicker.map(([t]) => tickerColor(t)) }] }}
+                    options={{ cutout: '55%', ...tickerClickOptions(divByTicker.map(([t]) => t), navigate) }}
+                  />
                 </ChartCard>
               </div>
             ),
