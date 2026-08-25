@@ -2869,6 +2869,36 @@ FinanceManager live link:
      correct explanatory text, zero console errors. `npx tsc -b` / `npm run test` (280 tests,
      unchanged) / `npm run build` all clean. **This is a first pass on the highest-traffic terms,
      not an exhaustive audit** — see the updated Pending item 55 for what's still open.
+141. **Funds "Snapshot Import" built — a new import shape, not the Bank/Cash "map these
+     columns" pattern (2026-08-25), user-requested against a real personal spreadsheet.** The
+     user's own tracking file (per-fund Total Invested/Withdrawn/Current Balance, not a dated
+     transaction log) doesn't fit the existing statement-import UI, which expects Date/Amount
+     rows — Funds' data model is buy/sell-at-a-NAV instead. New `lib/calc/
+     fundsSnapshotImport.ts` (`parseFundsSnapshotCSV`/`buildFundsImportPlan`/
+     `materializeFundsImport`, fully tested against the user's real — corrected — spreadsheet
+     data) reconstructs a synthetic BUY (and, if withdrawn, a SELL) dated on one shared "as of"
+     date per row, at whatever placeholder NAV reproduces the reported invested/withdrawn/
+     current-balance numbers exactly: a still-open position gets a NAV update so remaining
+     units × NAV = current balance; a fully-redeemed position (current balance = 0) sells 100%
+     of its units at NAV = withdrawn/invested, so realized P/L lands on withdrawn − invested —
+     confirmed this reconstruction reproduces the source spreadsheet's own real numbers, not
+     just internally self-consistent ones (see the test file's cross-check against the
+     spreadsheet's own "All Totals" row). New "Import" tab on `FundsPage.tsx`
+     (`SnapshotImportSection`): CSV upload, an editable preview table (platform/code/name are
+     inline-editable — real value, since the user's own source file had a mislabeled row caught
+     and fixed this way), a duplicate-fund-code warning (two rows can legitimately be the same
+     fund code as two separate real positions — flagged, not merged), and a sign-in-gated
+     "Import" button. Verified live via Playwright against the user's actual uploaded CSV: 8
+     rows parsed correctly stopping before the file's unrelated second bank-balance table (per
+     the user's explicit instruction to ignore that table for this import); the real mislabeled
+     row reproduced in the preview exactly as in the source file and was corrected inline; the
+     duplicate-code warning correctly fired for both the mistake (before fixing) and the
+     genuine ALHISF double-entry (after); Open/Closed status and computed NAV matched hand
+     calculations; clicking Import correctly hit the sign-in gate — this app never writes real
+     financial data without an explicit signed-in click, and no throwaway account was created
+     against the production Firebase project to go further than that, per this project's own
+     locked cloud-sync-safety principle. `npx tsc -b` / `npm run test` (288 tests, 8 new) /
+     `npm run build` all clean.
 
 ## Pending
 
