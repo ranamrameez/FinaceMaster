@@ -2655,6 +2655,39 @@ not developer notes) continuously as features ship.
   SST + 0.36 levies by hand). `npx tsc -b` / `npm run test` (271 tests, unchanged) / `npm run
   build` all clean.
 
+- **Real time-of-day + timezone support built (2026-08-25) — see README Done item 133, closes
+  the second half of Pending item 41.** User's own design answers when asked: backfill missing
+  time to noon, prefill a timezone selector linked to the record's market/currency (not force
+  a manual pick every time). New `lib/datetime.ts`: `toInstantMs(date, time?, timezone?)`
+  combines them into a real comparable epoch-ms instant — dependency-free, DST-aware via one
+  `Intl.DateTimeFormat` correction pass rather than pulling in date-fns-tz/luxon (consistent
+  with this project's existing "small hand-rolled utility over a new dependency" bias — see
+  Sparkline/csv.ts/xirr.ts). Missing `time` defaults to `'12:00'`, missing `timezone` defaults
+  to `'UTC'` — chosen deliberately (not the viewer's own local timezone) so two different
+  sessions looking at the same untimed old record always compute the identical instant; a
+  per-viewer fallback would make sort order viewer-dependent, which is worse than a fixed,
+  arbitrary-but-consistent one. `defaultTimezoneForMarket('QSE'|'PSX')` returns
+  `Asia/Qatar`/`Asia/Karachi`; `defaultTimezoneForCurrency(code)` maps ~25 common currencies to
+  a representative financial-center timezone, falling back to the browser's own timezone for
+  anything unlisted. **Rule for any future module wiring this in**: use `toInstantMs` for
+  sorting, never re-derive date math by hand — it's the one place that gets timezone offsets
+  right. `Transaction`/`Transfer`/`Adjustment`/`Dividend` gained optional `time`/`timezone`;
+  `sortTransactionsChronological` (positions/FIFO/realizedPL) and `buildCashLedger`'s own sort
+  both switched from date-string+heuristic to real-instant+heuristic-on-exact-tie — since two
+  untimed records always tie at the identical noon-UTC instant, every existing correct sort
+  order (including the same-day BUY-before-SELL fix from Done item 128) is preserved bit-for-
+  bit; confirmed by the full 280-test suite passing completely unchanged before any UI was
+  touched. New shared `components/ui/TimeZoneFields.tsx` (time input + timezone datalist field,
+  `commonTimezones()` sourced from the same lookup tables) rolled out to QSE's/PSX's Trade
+  Transactions add-forms (both the multi-row page and the per-stock `StockPage` add form) and
+  both exchanges' Cash Transfers form — deliberately the highest-value subset first, since
+  same-day ordering is exactly where a real time matters; Adjustments/Dividends and the six
+  non-exchange modules are a clearly-scoped mechanical follow-up (the hard design/engine
+  decisions are already made, just needs the same `TimeZoneFields` wiring repeated). Verified
+  live via Playwright: QSE prefills "Asia/Qatar", PSX prefills "Asia/Karachi", QSE's Transfer
+  form prefills "Asia/Qatar" from its QAR currency — zero console errors throughout. `npx tsc
+  -b` / `npm run test` (280 tests, 9 new) / `npm run build` all clean.
+
 ## Live URLs
 
 - New React app (QSE + PSX, `#/` and `#/psx`, now including a native Risk

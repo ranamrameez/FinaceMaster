@@ -2701,6 +2701,32 @@ FinanceManager live link:
      @300 PKR buy showed Fee 7.26 PKR, matching commission 6.00 + SST 0.90 + levies 0.36 by
      hand). `npx tsc -b` / `npm run test` (271 tests, unchanged — UI restructuring, no calc
      logic touched) / `npm run build` all clean.
+133. **Real time-of-day + timezone support built, closing the second half of Pending item 41
+     (2026-08-25) — user-confirmed design: backfill missing time to noon, prefill a timezone
+     selector linked to the record's market/currency.** New `lib/datetime.ts` is the one shared
+     place that knows how to turn a date + optional `time` ("HH:MM") + optional IANA `timezone`
+     into a real comparable instant (`toInstantMs`) — dependency-free, DST-aware (computes the
+     target zone's real UTC offset for that specific date via `Intl.DateTimeFormat`, one
+     correction pass, no library needed), and it maps QSE/PSX to their own market timezone
+     (`Asia/Qatar`/`Asia/Karachi`) plus ~25 other currencies to a representative financial-
+     center timezone for prefilling. `Transaction`/`Transfer`/`Adjustment`/`Dividend` gained
+     optional `time`/`timezone` fields; `sortTransactionsChronological` and `buildCashLedger`'s
+     sort now compare by real instant first, falling back to the existing BUY-before-SELL/
+     transfer-before-trade tiebreak only on an exact tie — which is what happens automatically
+     for any record still missing a time (both default to the same noon-UTC placeholder), so
+     this is a strict, backward-compatible upgrade: every existing test and every already-
+     correct sort order stayed identical, confirmed by the full suite passing unchanged (280
+     tests, 9 new for `datetime.ts` itself) before touching any UI. New shared
+     `components/ui/TimeZoneFields.tsx` pairs a `<input type="time">` with a timezone field
+     (backed by a `commonTimezones()` datalist) — wired into QSE's/PSX's Trade Transactions
+     (multi-row add form and the per-stock `StockPage` add form) and Cash Transfers forms, the
+     two places same-day ordering actually matters. Verified live via Playwright: QSE prefills
+     "Asia/Qatar", PSX prefills "Asia/Karachi", QSE's Cash Transfers form prefills from its QAR
+     currency to the same — zero console errors. `npx tsc -b` / `npm run test` (280 tests,
+     unchanged after the UI wiring) / `npm run build` all clean. **Deliberately scoped down**:
+     Adjustments/Dividends and the six non-exchange modules' own add-forms don't have the UI
+     fields yet — see the updated Pending item 41 for the remainder, now a mechanical rollout
+     with the hard design/engine work already done.
 
 ## Pending
 
@@ -2808,19 +2834,20 @@ already fixed; the rest tracked here**:
     (MODULES_PLAN.md §16) is now superseded and unused — left in the repo in case a real
     scheduled backend is wanted later, but the shipped dashboard doesn't depend on it.
 
-41. **Standing instruction, user-requested, not yet implemented: "All tables should be
-    sortable having index/id for chronological sorting. also, add time with all transaction
-    dates for true chronology."** The sortability half is done — every table in the app now
-    uses `useSortableRows`. The second half (adding a TIME component, not just a date, to
-    every transaction-like record — QSE/PSX `Transaction`/`Transfer`/`Adjustment`/
-    `Dividend`, Cash/Bank/Rentals/Personal-Loans entries, etc.) is a genuinely cross-cutting
-    data-model change deliberately **not** blindly applied given its scope: it touches the
-    core date field on nearly every record type across every module, and needs a
-    backward-compatible default (existing real user data has no time component recorded) —
-    e.g. same-day records currently tie-broken only by insertion order would need a real
-    decision on what time to backfill for old rows (midnight? noon? leave time optional and
-    fall back to insertion order when absent?). Needs either a narrower first-module scope
-    or explicit user confirmation on the backfill approach before implementing broadly.
+41. ~~Standing instruction: "All tables should be sortable having index/id for chronological
+    sorting. also, add time with all transaction dates for true chronology."~~ **Sortability
+    done earlier; the time-of-day half done (2026-08-25), user-confirmed backfill/timezone
+    approach — see Done item 133.** Missing time backfills to noon; a timezone selector
+    prefills from the record's market (QSE/PSX) or currency, always overridable. Calc-engine
+    side (real instant-based sorting) is wired in everywhere via `lib/datetime.ts`/
+    `sortTransactionsChronological`/`buildCashLedger`, so every module's same-day-ordering
+    already benefits regardless of whether that module's own add-form captures a time yet.
+    UI capture (an actual Time+Timezone input on the add-form) shipped for QSE's/PSX's Trade
+    Transactions and Cash Transfers forms — the highest-value case, since same-day ordering is
+    exactly where this matters. **Still open**: the UI fields haven't been rolled out to
+    Adjustments/Dividends (QSE/PSX) or any of the six non-exchange modules' own add-forms yet
+    — `TimeZoneFields`/`defaultTimezoneForCurrency` are ready to drop into any of them the same
+    way, this is now a mechanical per-module rollout, not a design question.
 42. ~~Roll out `CollapsibleCard` further, including chart cards on Analytics pages.~~ **Done —
     see Done items 74, 82, 101, and 107.** Chart cards across every Dashboard/Analytics page
     are collapsible (fixed once at the shared `ChartCard` component). Portfolio's Holdings/
