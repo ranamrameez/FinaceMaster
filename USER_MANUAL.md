@@ -528,6 +528,10 @@ sell shares at a price), so it shares the same underlying calculation engine.
   never manually updated a fund's NAV, its NAV-over-time chart stays empty until you do — but
   the Contribution vs. value chart still works, using the price from your buy/sell
   transactions themselves.
+- **Transfers tab**: cash moved into or out of your Funds account, separate from buying/
+  selling fund units — e.g. topping up before a purchase, or withdrawing after a redemption.
+  Log a deposit/withdrawal here, edit or delete one later, or check the linking checkbox to
+  create a matching entry in Bank/Cash at the same time (see §23 below).
 
 ---
 
@@ -652,6 +656,15 @@ the form tells you if a pairing isn't supported instead of silently doing someth
   before saving in that case, so you can back out and use the Transfers page instead if you
   want both sides to stay in sync. Deleting from either module is always safe either way — it
   cascades to both sides automatically, same as deleting from the Transfers page.
+- **A shortcut, right where you're already adding the record**: QSE/PSX's Cash Transfers
+  form, Rentals' add-entry form, Personal Loans' add-repayment row, and Funds' new Transfers
+  tab each have a **"Link this to a Bank account or Cash"** checkbox — check it and the form
+  swaps its normal Fee/Add controls for a module picker and a **Link & add** button that
+  creates the same linked pair this page does, without leaving that module's own screen. It's
+  a simpler version of the full form above (both sides always share one amount, no
+  cross-currency "different amount" option), so for a cross-currency link, use the full
+  Transfers page instead. It also remembers which account/loan/property you last linked to
+  from that same spot, so it's usually already picked for you next time.
 
 ---
 

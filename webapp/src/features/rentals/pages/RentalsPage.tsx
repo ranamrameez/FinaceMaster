@@ -18,7 +18,11 @@ import { generateLeaseRentPlans, nextPendingBalance, proposeRentCollection } fro
 import { parseCSV, toCSV } from '../../../lib/csv';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
-import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
+import { confirmAndDeleteLinkable, createLinkedTransfer, warnIfLinked } from '../../../lib/linkCascade';
+import { getLastTransferSource, rememberTransferSource } from '../../../hooks/useLastTransferSource';
+import type { LinkSideConfig } from '../../../types/interEntityTransfer';
+import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
+import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
 import { dlBarV, dlDoughnut } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar, tickerColor } from '../../../lib/cssVar';
@@ -508,17 +512,80 @@ function emptyEntry(propertyId: string): RentalEntry {
   return { id: '', propertyId, date: today(), type: 'RENT_INCOME', amount: 0, category: '', note: '' };
 }
 
+/** Pending item 62: the same direct transfer-link shortcut already built
+ * for PSX/QSE (see those pages' own `LinkedTransferFields`), now on
+ * Rentals' own add-entry form — reuses the exact same
+ * `createLinkedTransfer`/`useLastTransferSource` machinery, no parallel
+ * implementation. Which side of the link Rentals occupies depends on the
+ * entry's own type, per `interEntityLink.ts`'s documented Rentals
+ * exception (it has no real balance, so `from`/`to` doesn't map to a sign
+ * the way it does for every other module): a RENT_INCOME entry means real
+ * money is arriving on the OTHER side, so Rentals is `from` here; an
+ * EXPENSE means real money is leaving the other side, so Rentals is `to`. */
+function LinkedEntryFields({ propertyId, date, type, amount, onLinked }: { propertyId: string; date: string; type: RentalEntry['type']; amount: number; onLinked: () => void }) {
+  const ensureSignedIn = useEnsureSignedIn();
+  const bankAccounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
+  const cashCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
+  const rentalsSide: LinkSideConfig = { module: 'rentals', ref: propertyId };
+  const remembered = getLastTransferSource(rentalsSide);
+  const [otherModule, setOtherModule] = useState<'bank' | 'cash'>(remembered?.module === 'cash' ? 'cash' : 'bank');
+  const [otherAccountId, setOtherAccountId] = useState(remembered?.ref ?? bankAccounts[0]?.id ?? '');
+
+  const create = async () => {
+    if (amount <= 0) return toast('Enter an amount first.');
+    if (otherModule === 'bank' && !otherAccountId) return toast('Add a bank account on the Banking page first.');
+    if (!(await ensureSignedIn('Sign in to save transfers.'))) return;
+    const other: LinkSideConfig = otherModule === 'bank' ? { module: 'bank', ref: otherAccountId } : { module: 'cash', currencyCode: cashCurrency };
+    const input = {
+      date,
+      fromAmount: amount,
+      toAmount: amount,
+      from: type === 'RENT_INCOME' ? rentalsSide : other,
+      to: type === 'RENT_INCOME' ? other : rentalsSide,
+    };
+    const result = createLinkedTransfer(input);
+    if ('error' in result) return toast(result.error);
+    rememberTransferSource(rentalsSide, other);
+    toast('Linked entry added — also recorded on the other side.');
+    onLinked();
+  };
+
+  return (
+    <>
+      <select value={otherModule} onChange={(e) => setOtherModule(e.target.value as 'bank' | 'cash')}>
+        <option value="bank">Bank account</option>
+        <option value="cash">Cash</option>
+      </select>
+      {otherModule === 'bank' && (
+        bankAccounts.length ? (
+          <select value={otherAccountId} onChange={(e) => setOtherAccountId(e.target.value)}>
+            {bankAccounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.currencyCode})</option>)}
+          </select>
+        ) : (
+          <span className="footer-note">No bank accounts yet.</span>
+        )
+      )}
+      <button className="btn" onClick={create}>
+        <PlusIcon />Link &amp; add
+      </button>
+    </>
+  );
+}
+
 function AddEntryForm({ propertyId, knownCategories }: { propertyId: string; knownCategories: string[] }) {
   const addEntry = useRentalsWorkbookStore((s) => s.addEntry);
   const ensureSignedIn = useEnsureSignedIn();
   const [e, setE] = useState<RentalEntry>(() => emptyEntry(propertyId));
+  const [linkMode, setLinkMode] = useState(false);
+
+  const reset = () => setE(emptyEntry(propertyId));
 
   const submit = async () => {
     if (!e.amount || e.amount <= 0) return toast('Enter an amount.');
     if (!(await ensureSignedIn('Sign in to save rental entries.'))) return;
     addEntry({ ...e, id: uid(), propertyId, category: e.category?.trim() || undefined, note: e.note?.trim() || undefined });
     toast(`${e.type === 'RENT_INCOME' ? 'Rent income' : 'Expense'} logged.`);
-    setE(emptyEntry(propertyId));
+    reset();
   };
 
   return (
@@ -536,21 +603,32 @@ function AddEntryForm({ propertyId, knownCategories }: { propertyId: string; kno
         <Field label="Amount" width={110}>
           <TextInput type="number" step="0.01" value={e.amount || ''} onChange={(ev) => setE({ ...e, amount: Number(ev.target.value) })} />
         </Field>
-        {e.type === 'EXPENSE' && (
+        {!linkMode && e.type === 'EXPENSE' && (
           <Field label="Category (optional)" width={150}>
             <TextInput list="rentals-category-datalist" value={e.category} onChange={(ev) => setE({ ...e, category: ev.target.value })} placeholder="e.g. Maintenance" />
           </Field>
         )}
-        <Field label="Note (optional)" width={180}>
-          <TextInput value={e.note} onChange={(ev) => setE({ ...e, note: ev.target.value })} />
-        </Field>
+        {!linkMode && (
+          <Field label="Note (optional)" width={180}>
+            <TextInput value={e.note} onChange={(ev) => setE({ ...e, note: ev.target.value })} />
+          </Field>
+        )}
+        {linkMode && (
+          <LinkedEntryFields propertyId={propertyId} date={e.date} type={e.type} amount={e.amount} onLinked={reset} />
+        )}
       </div>
       <datalist id="rentals-category-datalist">
         {knownCategories.map((c) => <option key={c} value={c} />)}
       </datalist>
-      <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
-        <PlusIcon />Add entry
-      </button>
+      {!linkMode && (
+        <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
+          <PlusIcon />Add entry
+        </button>
+      )}
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)', marginTop: 12 }}>
+        <input type="checkbox" checked={linkMode} onChange={(ev) => setLinkMode(ev.target.checked)} />
+        Link this to a Bank account or Cash (creates a matching entry there too, instead of just here)
+      </label>
     </Card>
   );
 }

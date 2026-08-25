@@ -2612,6 +2612,29 @@ not developer notes) continuously as features ship.
   same-day-ordering fix alone makes a closed round-trip correctly classify as "Closed" too.
   `npx tsc -b` / `npm run test` (271 tests, 1 new) / `npm run build` all clean.
 
+- **Direct transfer-link shortcut extended to Rentals, Personal Loans, and Funds (2026-08-25)
+  — see README Done item 131, closes Pending item 62.** Reused `createLinkedTransfer`/
+  `useLastTransferSource` directly (no parallel implementation) via the same "Link this to a
+  Bank account or Cash" checkbox pattern QSE/PSX already had (Done item 125). Each module
+  needed its own short "what does linking mean here" answer: Rentals' `from`/`to` depends on
+  the entry's `type` (RENT_INCOME → Rentals is `from`, EXPENSE → Rentals is `to`, per the
+  already-documented no-real-balance exception in `interEntityLink.ts`); Personal Loans'
+  `PersonalLoanRepayment` itself ignores direction, but which side the real Bank/Cash account
+  occupies depends on the loan's own `direction` field (`owed_to_me` → Bank/Cash is `to`,
+  `i_owe` → Bank/Cash is `from`). **Funds needed more than a checkbox** — it had no native
+  add-form for its `transfers` field at all (confirmed via Done item 106's own note), only the
+  standalone Transfers page's generic form could create one. Built a new "Transfers" tab on
+  `FundsPage.tsx` (plain add/edit/delete list, near-verbatim copy of QSE/PSX's `TransferForm`/
+  `TransfersSection` since Funds reuses the exact same `Transfer` type via the shared
+  `createWorkbookStore` factory) with the link-checkbox built in from the start — closing the
+  standing gap and the linking ask in one change, since the shortcut needs a native form to
+  attach to. **EMI remains the only unlinkable module** (see Pending item 21) — no repayment
+  ledger exists there at all, a data-model gap. Verified live via Playwright across all three:
+  link-mode fields render correctly with a seeded Bank account selectable in each, plus a full
+  end-to-end check on Rentals (checkbox → amount → Link & add → real sign-in modal appears) —
+  zero console errors throughout. `npx tsc -b` / `npm run test` (271 tests, unchanged) / `npm
+  run build` all clean.
+
 ## Live URLs
 
 - New React app (QSE + PSX, `#/` and `#/psx`, now including a native Risk

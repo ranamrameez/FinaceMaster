@@ -8,6 +8,7 @@ import { confirmDialog } from '../../../components/ConfirmDialog';
 import { EditIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
+import { Tooltip } from '../../../components/Tooltip';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
@@ -16,6 +17,7 @@ import { getMarketPrice } from '../../../lib/calc';
 import { allocationByCategory, contributionVsValueSeries } from '../../../lib/calc/fundsModule';
 import { toCSV } from '../../../lib/csv';
 import { getDailyPriceHistory } from '../../../lib/calc/priceHistory';
+import { transferRunningBalance } from '../../../lib/calc/transferBalance';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { dlDoughnut, dlLine } from '../../../lib/chartLabels';
@@ -23,11 +25,16 @@ import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar, tickerColor } from '../../../lib/cssVar';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
+import { confirmAndDeleteLinkable, createLinkedTransfer, warnIfLinked } from '../../../lib/linkCascade';
+import { getLastTransferSource, rememberTransferSource } from '../../../hooks/useLastTransferSource';
+import type { LinkSideConfig } from '../../../types/interEntityTransfer';
+import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
+import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
 import { useAppearanceStore } from '../../../store/appearanceStore';
 import { createEmptyFundsWorkbook } from '../../../store/defaultFundsWorkbook';
 import { useFundsWorkbookStore } from '../../../store/fundsWorkbookStore';
 import type { Fund, FundsWorkbook } from '../../../types/fundsWorkbook';
-import type { Transaction } from '../../../types/workbook';
+import type { Transaction, Transfer } from '../../../types/workbook';
 import { useFundsDerived } from '../hooks/useFundsDerived';
 import { ChartCard } from '../../qse/components/ChartCard';
 
@@ -441,6 +448,210 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
   );
 }
 
+/* ============================== Transfers ============================== */
+
+/** Funds' `transfers` field is inherited from the shared `createWorkbookStore`
+ * factory (same shape as QSE/PSX's own Transfer, since Funds reuses that
+ * factory wholesale) but was never given a native add/edit UI — real
+ * deposits/withdrawals of cash into or out of a Funds account (as opposed
+ * to buying/selling fund units) had nowhere to go except the standalone
+ * Transfers page's generic linking form. This closes that gap, and folds
+ * in Pending item 62's direct-link shortcut at the same time — same
+ * pattern already built for QSE/PSX/Rentals/Personal Loans. */
+function FundsLinkedTransferFields({ date, type, gross, onLinked }: { date: string; type: Transfer['type']; gross: number; onLinked: () => void }) {
+  const ensureSignedIn = useEnsureSignedIn();
+  const bankAccounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
+  const cashCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
+  const fundsSide: LinkSideConfig = { module: 'funds' };
+  const remembered = getLastTransferSource(fundsSide);
+  const [otherModule, setOtherModule] = useState<'bank' | 'cash'>(remembered?.module === 'cash' ? 'cash' : 'bank');
+  const [otherAccountId, setOtherAccountId] = useState(remembered?.ref ?? bankAccounts[0]?.id ?? '');
+
+  const create = async () => {
+    if (gross <= 0) return toast('Enter an amount first.');
+    if (otherModule === 'bank' && !otherAccountId) return toast('Add a bank account on the Banking page first.');
+    if (!(await ensureSignedIn('Sign in to save transfers.'))) return;
+    const other: LinkSideConfig = otherModule === 'bank' ? { module: 'bank', ref: otherAccountId } : { module: 'cash', currencyCode: cashCurrency };
+    const input = {
+      date,
+      fromAmount: gross,
+      toAmount: gross,
+      from: type === 'DEPOSIT' ? other : fundsSide,
+      to: type === 'DEPOSIT' ? fundsSide : other,
+    };
+    const result = createLinkedTransfer(input);
+    if ('error' in result) return toast(result.error);
+    rememberTransferSource(fundsSide, other);
+    toast('Linked transfer added — also recorded on the other side.');
+    onLinked();
+  };
+
+  return (
+    <>
+      <select value={otherModule} onChange={(e) => setOtherModule(e.target.value as 'bank' | 'cash')}>
+        <option value="bank">Bank account</option>
+        <option value="cash">Cash</option>
+      </select>
+      {otherModule === 'bank' && (
+        bankAccounts.length ? (
+          <select value={otherAccountId} onChange={(e) => setOtherAccountId(e.target.value)}>
+            {bankAccounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.currencyCode})</option>)}
+          </select>
+        ) : (
+          <span className="footer-note">No bank accounts yet.</span>
+        )
+      )}
+      <button className="btn" onClick={create}>
+        <PlusIcon />Link &amp; add
+      </button>
+    </>
+  );
+}
+
+function FundsTransferForm() {
+  const addTransfer = useFundsWorkbookStore((s) => s.addTransfer);
+  const ensureSignedIn = useEnsureSignedIn();
+  const [t, setT] = useState<Omit<Transfer, 'id'>>({ date: today(), type: 'DEPOSIT', gross: 0, fee: 0 });
+  const [linkMode, setLinkMode] = useState(false);
+
+  const reset = () => setT({ date: today(), type: 'DEPOSIT', gross: 0, fee: 0 });
+
+  return (
+    <div>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+        <input type="date" value={t.date} onChange={(e) => setT({ ...t, date: e.target.value })} />
+        <select value={t.type} onChange={(e) => setT({ ...t, type: e.target.value as Transfer['type'] })}>
+          <option value="DEPOSIT">Deposit</option>
+          <option value="WITHDRAWAL">Withdrawal</option>
+        </select>
+        <input
+          type="number"
+          placeholder="Amount"
+          value={t.gross || ''}
+          onChange={(e) => setT({ ...t, gross: Number(e.target.value) })}
+          style={{ width: 100 }}
+        />
+        {linkMode ? (
+          <FundsLinkedTransferFields date={t.date} type={t.type} gross={t.gross} onLinked={reset} />
+        ) : (
+          <button
+            className="btn"
+            onClick={async () => {
+              if (t.gross <= 0) return toast('Enter an amount.');
+              if (!(await ensureSignedIn('Sign in to save transfers.'))) return;
+              addTransfer({ ...t, id: crypto.randomUUID() });
+              toast('Transfer added.');
+              reset();
+            }}
+          >
+            <PlusIcon />Add
+          </button>
+        )}
+      </div>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>
+        <input type="checkbox" checked={linkMode} onChange={(e) => setLinkMode(e.target.checked)} />
+        Link this to a Bank account or Cash (creates a matching entry there too, instead of just here)
+      </label>
+    </div>
+  );
+}
+
+function FundsTransfersSection() {
+  const workbook = useFundsWorkbookStore((s) => s.workbook);
+  const updateTransfer = useFundsWorkbookStore((s) => s.updateTransfer);
+  const deleteTransfer = useFundsWorkbookStore((s) => s.deleteTransfer);
+  const currency = workbook.settings.defaultCurrency;
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editRow, setEditRow] = useState<Transfer | null>(null);
+
+  const balances = useMemo(() => transferRunningBalance(workbook.transfers), [workbook.transfers]);
+
+  type TransferCol = 'date' | 'type' | 'gross' | 'fee' | 'balance';
+  const sortValue = (t: Transfer, col: TransferCol): number | string => {
+    switch (col) {
+      case 'type': return t.type;
+      case 'gross': return t.gross;
+      case 'fee': return t.fee;
+      case 'balance': return balances.get(t.id) ?? 0;
+      default: return t.date;
+    }
+  };
+  const { sorted, Th } = useSortableRows(workbook.transfers, sortValue, 'date', 'desc');
+
+  const startEdit = (t: Transfer) => { setEditId(t.id); setEditRow({ ...t }); };
+  const saveEdit = async () => {
+    if (editId === null || !editRow) return;
+    if (!(await warnIfLinked('funds', editId))) return;
+    updateTransfer(editId, editRow);
+    toast('Transfer updated.');
+    setEditId(null);
+    setEditRow(null);
+  };
+
+  return (
+    <div>
+      <p className="footer-note" style={{ marginBottom: 12 }}>
+        Cash moved into or out of this Funds account, separate from buying/selling fund units —
+        e.g. topping up before a purchase, or withdrawing after a redemption.
+      </p>
+      <FundsTransferForm />
+      <div className="table-scroll" style={{ marginTop: 8 }}>
+        <table>
+          <thead>
+            <tr>
+              <Th col="date">Date</Th>
+              <Th col="type">Type</Th>
+              <Th col="gross">Gross</Th>
+              <Th col="fee">Fee</Th>
+              <Th col="balance">Balance</Th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((t) =>
+              editId === t.id && editRow ? (
+                <tr key={t.id}>
+                  <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
+                  <td>
+                    <select value={editRow.type} onChange={(e) => setEditRow({ ...editRow, type: e.target.value as Transfer['type'] })}>
+                      <option value="DEPOSIT">Deposit</option>
+                      <option value="WITHDRAWAL">Withdrawal</option>
+                    </select>
+                  </td>
+                  <td><input type="number" value={editRow.gross} onChange={(e) => setEditRow({ ...editRow, gross: Number(e.target.value) })} style={{ width: 90 }} /></td>
+                  <td><input type="number" value={editRow.fee} onChange={(e) => setEditRow({ ...editRow, fee: Number(e.target.value) })} style={{ width: 70 }} /></td>
+                  <td></td>
+                  <td>
+                    <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
+                    <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditId(null)} />
+                  </td>
+                </tr>
+              ) : (
+                <tr key={t.id}>
+                  <td>{t.date}</td>
+                  <td>{t.type}</td>
+                  <td>{fmtMoney(t.gross, currency)}</td>
+                  <td>{fmtMoney(t.fee, currency)}</td>
+                  <td>
+                    <Tooltip text="Running net cash contributed, in date order.">
+                      <span>{fmtMoney(balances.get(t.id) ?? 0, currency)}</span>
+                    </Tooltip>
+                  </td>
+                  <td>
+                    <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(t)} />{' '}
+                    <IconButton label="Delete" icon={<TrashIcon size={13} />} align="right" onClick={() => confirmAndDeleteLinkable('funds', t.id, () => deleteTransfer(t.id))} />
+                  </td>
+                </tr>
+              ),
+            )}
+            {!sorted.length && <tr><td colSpan={6} className="footer-note">No transfers yet.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 /* ============================== Analytics ============================== */
 
 function AnalyticsTab() {
@@ -686,6 +897,7 @@ export function FundsPage({
                 </div>
               ),
             },
+            { key: 'transfers', label: 'Transfers', content: <FundsTransfersSection /> },
             { key: 'analytics', label: 'Analytics', content: <AnalyticsTab /> },
             {
               key: 'settings',

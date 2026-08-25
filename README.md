@@ -2643,6 +2643,39 @@ FinanceManager live link:
      round-trip correctly show 0 open shares automatically makes it classify as "Closed" too —
      no additional UI code was needed for this specific ask. `npx tsc -b` / `npm run test` (271
      tests, 1 new) / `npm run build` all clean.
+131. **Direct transfer-link shortcut extended to Rentals, Personal Loans, and Funds, closing
+     out Pending item 62 (2026-08-25).** The shortcut already built for QSE/PSX (Done item 125)
+     reuses `createLinkedTransfer`/`useLastTransferSource` directly — no parallel
+     implementation — via a "Link this to a Bank account or Cash" checkbox that swaps a native
+     add-form's plain submit controls for a module picker + "Link & add" button. Each of the
+     three remaining modules needed its own short "what does linking mean here" answer, per
+     this item's own standing note:
+     - **Rentals** (`AddEntryForm`): which side is `from`/`to` depends on the entry's own
+       `type`, mirroring `interEntityLink.ts`'s already-documented Rentals exception (no real
+       balance of its own) — RENT_INCOME means real money is arriving on the OTHER side
+       (Rentals = `from`), EXPENSE means real money is leaving the other side (Rentals = `to`).
+     - **Personal Loans** (`RepaymentsSection`): `PersonalLoanRepayment` itself ignores link
+       direction (always positive), but which side the real Bank/Cash account occupies still
+       depends on the loan's own `direction` field — `owed_to_me` means a repayment is money
+       arriving (Bank/Cash = `to`), `i_owe` means money leaving to pay someone back (Bank/Cash
+       = `from`).
+     - **Funds** — a real, separate gap found while scoping this: unlike the other three
+       modules, Funds had **no native add-form for its `transfers` field at all** (per Done
+       item 106's own note, "Funds has no native edit/delete UI for its `Transfer` field") —
+       the only way to create one was the standalone Transfers page's generic linking form.
+       Built a new "Transfers" tab on `FundsPage.tsx` (a plain add/edit/delete list, matching
+       QSE/PSX's own `TransferForm`/`TransfersSection` pattern almost verbatim, since Funds
+       reuses the exact same `Transfer` type via the shared `createWorkbookStore` factory) with
+       the same link-checkbox — this both closes item 62's remaining case and fixes that
+       standing gap in the same change, since a linking shortcut needs *something* to attach
+       to. **EMI remains the one module this can't reach** (see Pending item 21) — it has no
+       repayment ledger at all, a data-model gap, not a UI one. Verified live via Playwright
+       across all three (screenshots confirm the link-mode fields render correctly with a
+       seeded Bank account selectable) plus a full submit-to-sign-in-gate check on Rentals
+       confirming the whole flow (checkbox → fill amount → Link & add → sign-in modal) works
+       end to end, not just that the fields render — zero console errors on any of the three.
+       `npx tsc -b` / `npm run test` (271 tests, unchanged — UI wiring onto already-tested store
+       actions) / `npm run build` all clean.
 
 ## Pending
 
@@ -2907,14 +2940,12 @@ what's already shipped from this same message**:
 61. ~~Rentals: semi-automated rent-collection cycles.~~ **Done (2026-08-25) — see Done item
     124.** Built as a genuinely separate mechanism from `generateLeaseRentPlans()` (Done item
     60), per this item's own note that it needed its own design pass rather than a bolt-on.
-62. "We may give the option to all entities to directly link the transfers on its page (per
-    cycle, or regular, check feasibility)" — **built for PSX and QSE, see Done item 125; still
-    open for Rentals/Personal Loans/Funds/EMI.** Confirmed the approach works and is cheap to
-    repeat (reuses `createLinkedTransfer`/`useLastTransferSource` directly, no new
-    infrastructure, ~70 lines per module) — what's left is the same small addition on the other
-    4 modules' own add-entry forms, one at a time, each needing its own "what does linking mean
-    here" design check since none of them has a plain deposit/withdrawal record like QSE/PSX's
-    `Transfer`.
+62. ~~"We may give the option to all entities to directly link the transfers on its page (per
+    cycle, or regular, check feasibility)"~~ **Done (2026-08-25) — see Done items 125/131.**
+    Built for QSE/PSX first, then Rentals/Personal Loans/Funds, each with its own "what does
+    linking mean here" answer worked out. **EMI is the sole exception, and stays open** — it
+    has no repayment ledger at all to link into (see Pending item 21), a data-model gap that
+    needs its own design decision, not a UI-parity gap like the other four had.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

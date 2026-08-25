@@ -16,7 +16,11 @@ import { useSortableRows } from '../../../hooks/useSortableRows';
 import { CURRENCIES } from '../../../lib/currencies';
 import { parseCSV, toCSV } from '../../../lib/csv';
 import { fmtMoney } from '../../../lib/format';
-import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
+import { confirmAndDeleteLinkable, createLinkedTransfer, warnIfLinked } from '../../../lib/linkCascade';
+import { getLastTransferSource, rememberTransferSource } from '../../../hooks/useLastTransferSource';
+import type { LinkSideConfig } from '../../../types/interEntityTransfer';
+import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
+import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
 import {
   loanOutstanding,
   netPositionByCurrency,
@@ -184,6 +188,65 @@ function AddLoanForm() {
   );
 }
 
+/** Pending item 62: the direct transfer-link shortcut already on PSX/QSE/
+ * Rentals, now on a Personal Loans repayment add-form. `PersonalLoanRepayment`
+ * ignores link direction (always positive, see `interEntityLink.ts`'s own
+ * documented exception), but which side the REAL Bank/Cash account occupies
+ * still depends on the loan's own `direction`: `owed_to_me` means a
+ * repayment is money arriving from the other person (Bank/Cash = `to`,
+ * receiving), `i_owe` means it's money leaving to pay them back (Bank/Cash
+ * = `from`, paying). */
+function LinkedRepaymentFields({ loan, date, amount, onLinked }: { loan: PersonalLoan; date: string; amount: number; onLinked: () => void }) {
+  const ensureSignedIn = useEnsureSignedIn();
+  const bankAccounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
+  const cashCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
+  const loanSide: LinkSideConfig = { module: 'personalLoans', ref: loan.id };
+  const remembered = getLastTransferSource(loanSide);
+  const [otherModule, setOtherModule] = useState<'bank' | 'cash'>(remembered?.module === 'cash' ? 'cash' : 'bank');
+  const [otherAccountId, setOtherAccountId] = useState(remembered?.ref ?? bankAccounts[0]?.id ?? '');
+
+  const create = async () => {
+    if (amount <= 0) return toast('Enter an amount first.');
+    if (otherModule === 'bank' && !otherAccountId) return toast('Add a bank account on the Banking page first.');
+    if (!(await ensureSignedIn('Sign in to save transfers.'))) return;
+    const other: LinkSideConfig = otherModule === 'bank' ? { module: 'bank', ref: otherAccountId } : { module: 'cash', currencyCode: cashCurrency };
+    const otherReceives = loan.direction === 'owed_to_me';
+    const input = {
+      date,
+      fromAmount: amount,
+      toAmount: amount,
+      from: otherReceives ? loanSide : other,
+      to: otherReceives ? other : loanSide,
+    };
+    const result = createLinkedTransfer(input);
+    if ('error' in result) return toast(result.error);
+    rememberTransferSource(loanSide, other);
+    toast('Linked repayment added — also recorded on the other side.');
+    onLinked();
+  };
+
+  return (
+    <>
+      <select value={otherModule} onChange={(e) => setOtherModule(e.target.value as 'bank' | 'cash')}>
+        <option value="bank">Bank account</option>
+        <option value="cash">Cash</option>
+      </select>
+      {otherModule === 'bank' && (
+        bankAccounts.length ? (
+          <select value={otherAccountId} onChange={(e) => setOtherAccountId(e.target.value)}>
+            {bankAccounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.currencyCode})</option>)}
+          </select>
+        ) : (
+          <span className="footer-note">No bank accounts yet.</span>
+        )
+      )}
+      <button className="btn" onClick={create}>
+        <PlusIcon />Link &amp; add
+      </button>
+    </>
+  );
+}
+
 function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
   // Select the raw array (a stable reference from the store) and filter it
   // in a memo — filtering *inside* the zustand selector would return a new
@@ -201,17 +264,20 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
   const ensureSignedIn = useEnsureSignedIn();
   const [date, setDate] = useState(today());
   const [amount, setAmount] = useState(0);
+  const [linkMode, setLinkMode] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<PersonalLoanRepayment | null>(null);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+
+  const resetAdd = () => setAmount(0);
 
   const submit = async () => {
     if (!amount || amount <= 0) return toast('Enter a repayment amount.');
     if (!(await ensureSignedIn('Sign in to save repayments.'))) return;
     addRepayment({ id: crypto.randomUUID(), loanId: loan.id, date, amount });
     toast('Repayment logged.');
-    setAmount(0);
+    resetAdd();
   };
 
   /** README item 40: extends Banking's account-detail statement export
@@ -255,11 +321,19 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
         <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         <input type="number" step="0.01" placeholder="Amount" value={amount || ''} onChange={(e) => setAmount(Number(e.target.value))} style={{ width: 100 }} />
-        <button className="btn secondary" onClick={submit}><PlusIcon />Add repayment</button>
+        {linkMode ? (
+          <LinkedRepaymentFields loan={loan} date={date} amount={amount} onLinked={resetAdd} />
+        ) : (
+          <button className="btn secondary" onClick={submit}><PlusIcon />Add repayment</button>
+        )}
       </div>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
+        <input type="checkbox" checked={linkMode} onChange={(e) => setLinkMode(e.target.checked)} />
+        Link this to a Bank account or Cash (creates a matching entry there too, instead of just here)
+      </label>
       {/* README item 42's remainder: this component's add-form and list used
        * to have no clean seam for a CollapsibleCard — the form itself is
        * deliberately left outside it (collapsing a form mid-fill is a UX
