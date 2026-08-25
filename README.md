@@ -2900,6 +2900,20 @@ FinanceManager live link:
      checking the live GitHub Pages deployment, should confirm the 6 font options now look
      visually distinct and update this note once confirmed. `npx tsc -b` / `npm run test` (280
      tests, unchanged) / `npm run build` all clean.
+142. **Console density made genuinely information-different, not just smaller (2026-08-25) —
+     see the updated Pending item 50, density half.** Console density already had a real,
+     measurably-denser row height/font-size/padding (Done item 111), but every stat card's
+     secondary "sub" line (break-even color hint, avg/last sell price, "1 buys · 1 sells", etc.)
+     was still shown, just shrunk to 8.5px — matching the user's complaint almost exactly
+     ("just tighter padding," not a different information experience). Changed
+     `.stat-card .sub` to `display:none` under Console density instead of shrinking it, so
+     Console genuinely shows *less* — the primary value only — rather than the same information
+     at a smaller size. Verified live via Playwright with a real position: the same stat card's
+     `.sub` element is visible under Comfortable density and confirmed hidden (not just small)
+     under Console. **Scoped down deliberately**: this addresses density's half of the
+     complaint; the color-theme half (do Material vs. wine/ocean/etc. themes need genuinely
+     different visual treatment beyond a palette swap) remains open — see the updated Pending
+     item 50. `npx tsc -b` / `npm run test` (280 tests, unchanged) / `npm run build` all clean.
 
 ## Pending
 
@@ -3104,9 +3118,16 @@ than a guess folded into a mixed batch:
     landing as a redesigned `PositionDetail`/`StockPage`, not a CSS tweak — needs its own pass.
 50. "Themes and densities are deception" — the user's complaint is that switching a color theme
     or density mostly just recolors/respaces the same layout rather than being a genuinely
-    different reading experience. Worth scoping what a "meaningfully different" theme/density
-    would even look like (e.g. does Console density really need a different information
-    layout, not just tighter padding?) before writing any code.
+    different reading experience. **Density half addressed (2026-08-25) — see Done item 142**:
+    Console density now hides stat cards' secondary "sub" line entirely (break-even color hint,
+    avg/last sell price, etc.) rather than just shrinking it — a real "less information shown"
+    difference, not only smaller text. **Still open**: the color-theme half of the complaint
+    (do Material-family themes vs. the wine/ocean/forest/etc. color families need a genuinely
+    different visual treatment — different shadow/elevation conventions, different component
+    styling — beyond swapping CSS custom-property values?) hasn't been scoped or attempted; a
+    real answer needs deciding what "meaningfully different" means for a color theme
+    specifically, which is a more speculative design question than density's fairly literal
+    "hide vs. show information" framing.
 
 **Trade Planner follow-up, user-reported (2026-08-24, arrived mid-session right after Done
 item 103) — all three now fixed, see Done item 104:**

@@ -2825,6 +2825,16 @@ not developer notes) continuously as features ship.
   confirm what you can (the endpoint is live, the app has no new regressions) and flag the
   visual confirmation as owed to a future session with real browser access, rather than
   guessing at a workaround for a sandbox-specific network quirk.
+- **Console density made genuinely information-different, not just smaller (2026-08-25) — see
+  README Done item 142.** Console density already had real measurable spacing/font-size
+  differences (Done item 111), but every stat card's `.sub` secondary line (break-even color
+  hint, avg/last sell price, etc.) was still shown, just shrunk — exactly the "themes/densities
+  are just resizing, not a different experience" complaint. Changed `.stat-card .sub` to
+  `display:none` under Console density so it genuinely shows less information, not the same
+  information smaller. Verified live via Playwright: the same card's `.sub` element is visible
+  under Comfortable, hidden under Console. Deliberately scoped to density only — the color-theme
+  half of the same Pending item (item 50) is a more speculative design question and remains
+  open.
 
 ## Live URLs
 
