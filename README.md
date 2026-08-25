@@ -2749,6 +2749,19 @@ FinanceManager live link:
      **Deliberately scoped down**: Analytics page's ~18 charts (mostly month-indexed or
      whole-portfolio-wide, lower drill-down value than a ticker-indexed chart) and hover
      cross-highlighting between charts are still open — see the updated Pending item 17.
+135. **Time+Timezone fields rolled out to QSE's/PSX's Adjustments and Dividends forms
+     (2026-08-25), continuing Pending item 41's remainder.** Same `TimeZoneFields` component
+     and `defaultTimezoneForCurrency`/`defaultTimezoneForMarket` prefill logic already used by
+     the Trade Transactions/Cash Transfers forms (Done item 133), applied to the two remaining
+     QSE/PSX add-forms: `AdjustmentForm` (both exchanges' `TransactionsPage.tsx`) and
+     `AddDividendForm` (both exchanges' `DividendsSection.tsx`). `Adjustment`/`Dividend` already
+     had optional `time`/`timezone` fields from Done item 133's type changes, so this was purely
+     UI wiring — no calc-engine or type changes needed. Verified live via Playwright: the
+     timezone field on each of the 4 forms prefills correctly from the workbook's currency
+     (QAR→Asia/Qatar, PKR→Asia/Karachi), zero console errors. `npx tsc -b` / `npm run test`
+     (280 tests, unchanged) / `npm run build` all clean. **Still open**: the six non-exchange
+     modules' own add-forms (Cash, Bank, Personal Loans, Rentals, Funds, Subscriptions) — same
+     mechanical wiring, not yet done.
 
 ## Pending
 
@@ -2869,10 +2882,11 @@ already fixed; the rest tracked here**:
     already benefits regardless of whether that module's own add-form captures a time yet.
     UI capture (an actual Time+Timezone input on the add-form) shipped for QSE's/PSX's Trade
     Transactions and Cash Transfers forms — the highest-value case, since same-day ordering is
-    exactly where this matters. **Still open**: the UI fields haven't been rolled out to
-    Adjustments/Dividends (QSE/PSX) or any of the six non-exchange modules' own add-forms yet
-    — `TimeZoneFields`/`defaultTimezoneForCurrency` are ready to drop into any of them the same
-    way, this is now a mechanical per-module rollout, not a design question.
+    exactly where this matters. **QSE's/PSX's Adjustments and Dividends forms also done
+    (2026-08-25) — see Done item 135.** **Still open**: the six non-exchange modules' own
+    add-forms don't have the UI fields yet — `TimeZoneFields`/`defaultTimezoneForCurrency` are
+    ready to drop into any of them the same way, this is now a mechanical per-module rollout,
+    not a design question.
 42. ~~Roll out `CollapsibleCard` further, including chart cards on Analytics pages.~~ **Done —
     see Done items 74, 82, 101, and 107.** Chart cards across every Dashboard/Analytics page
     are collapsible (fixed once at the shared `ChartCard` component). Portfolio's Holdings/

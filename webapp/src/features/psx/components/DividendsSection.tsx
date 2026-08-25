@@ -3,7 +3,9 @@ import { PSX_TICKER_DATALIST_ID } from '../../../components/PSXTickerDatalist';
 import { EditIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { IconButton } from '../../../components/ui/IconButton';
+import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { fmt, fmtMoney } from '../../../lib/format';
+import { defaultTimezoneForCurrency } from '../../../lib/datetime';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
@@ -14,6 +16,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 function AddDividendForm() {
   const addDividend = usePSXWorkbookStore((s) => s.addDividend);
+  const currency = usePSXWorkbookStore((s) => s.workbook.settings.currency);
   const ensureSignedIn = useEnsureSignedIn();
   const { positions } = usePSXDerived();
   const [date, setDate] = useState(today());
@@ -22,6 +25,8 @@ function AddDividendForm() {
   const [shares, setShares] = useState(0);
   const [amount, setAmount] = useState(0);
   const [sharesTouched, setSharesTouched] = useState(false);
+  const [time, setTime] = useState<string | undefined>(undefined);
+  const [timezone, setTimezone] = useState<string | undefined>(() => defaultTimezoneForCurrency(currency));
 
   const onTickerChange = (v: string) => {
     const up = v.toUpperCase();
@@ -38,13 +43,14 @@ function AddDividendForm() {
     const finalAmount = amount || preview;
     if (!ticker || !finalAmount) return toast('Enter a ticker and an amount (or per-share + shares).');
     if (!(await ensureSignedIn('Sign in to save dividends.'))) return;
-    addDividend({ date, ticker, perShare: perShare || 0, shares: shares || 0, amount: finalAmount });
+    addDividend({ date, ticker, perShare: perShare || 0, shares: shares || 0, amount: finalAmount, time, timezone });
     toast(`Dividend logged for ${ticker}.`);
     setTicker('');
     setPerShare(0);
     setShares(0);
     setAmount(0);
     setSharesTouched(false);
+    setTime(undefined);
   };
 
   return (
@@ -63,6 +69,7 @@ function AddDividendForm() {
         style={{ width: 90 }}
       />
       <input type="number" step="0.01" placeholder={preview ? preview.toFixed(2) : 'Total received'} value={amount || ''} onChange={(e) => setAmount(Number(e.target.value))} style={{ width: 100 }} />
+      <TimeZoneFields time={time} timezone={timezone} onTimeChange={setTime} onTimezoneChange={setTimezone} />
       <button className="btn" onClick={submit}>Add</button>
       {preview > 0 && !amount && <span className="footer-note">{fmt(shares, 0)} shares × {perShare} = {preview.toFixed(2)}</span>}
     </div>

@@ -2714,6 +2714,16 @@ not developer notes) continuously as features ship.
   unchanged) / `npm run build` all clean. **Deliberately scoped down**: Analytics page's ~18
   charts (mostly month-indexed or whole-portfolio-wide, lower drill-down value than a
   ticker-indexed chart) and hover cross-highlighting between charts are still open.
+- **Time+Timezone fields rolled out to QSE/PSX Adjustments and Dividends forms (2026-08-25) —
+  see README Done item 135, continuing Pending item 41's remainder.** Purely mechanical UI
+  wiring — `Adjustment`/`Dividend` already had optional `time`/`timezone` from Done item 133's
+  type changes, so this just dropped the existing `TimeZoneFields` component + currency-based
+  prefill into `AdjustmentForm` and `AddDividendForm` (both exchanges, 4 forms total). Verified
+  live via Playwright: each form's timezone field correctly prefilled from workbook currency,
+  zero console errors. `npx tsc -b` / `npm run test` (280 tests, unchanged) / `npm run build`
+  all clean. **Next in this same rollout**: the six non-exchange modules' own add-forms (Cash,
+  Bank, Personal Loans, Rentals, Funds, Subscriptions) still don't capture a time — same
+  mechanical wiring, not yet done.
 
 ## Live URLs
 

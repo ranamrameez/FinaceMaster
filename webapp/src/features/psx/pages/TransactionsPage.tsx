@@ -268,8 +268,10 @@ function TransferForm() {
 
 function AdjustmentForm() {
   const addAdjustment = usePSXWorkbookStore((s) => s.addAdjustment);
+  const currency = usePSXWorkbookStore((s) => s.workbook.settings.currency);
   const ensureSignedIn = useEnsureSignedIn();
-  const [a, setA] = useState<Adjustment>({ date: today(), amount: 0, note: '' });
+  const emptyAdjustment = (): Adjustment => ({ date: today(), amount: 0, note: '', timezone: defaultTimezoneForCurrency(currency) });
+  const [a, setA] = useState<Adjustment>(emptyAdjustment);
 
   return (
     <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
@@ -283,6 +285,12 @@ function AdjustmentForm() {
         style={{ width: 100 }}
       />
       <input placeholder="Note" value={a.note} onChange={(e) => setA({ ...a, note: e.target.value })} />
+      <TimeZoneFields
+        time={a.time}
+        timezone={a.timezone}
+        onTimeChange={(time) => setA({ ...a, time })}
+        onTimezoneChange={(timezone) => setA({ ...a, timezone })}
+      />
       <button
         className="btn"
         onClick={async () => {
@@ -290,7 +298,7 @@ function AdjustmentForm() {
           if (!(await ensureSignedIn('Sign in to save adjustments.'))) return;
           addAdjustment(a);
           toast('Adjustment added.');
-          setA({ date: today(), amount: 0, note: '' });
+          setA(emptyAdjustment());
         }}
       >
         <PlusIcon />Add
