@@ -2894,6 +2894,31 @@ not developer notes) continuously as features ship.
   pixels too (opaque count 43,988 → 23,555), confirming the two charts are genuinely linked.
   **Still open**: Analytics' 6 ticker charts per exchange (12 total) aren't linked yet — a larger
   follow-up, not attempted here.
+- **Net Worth page 6-item feedback batch + Risk Analysis/Trade Transactions ticker links +
+  Portfolio's missing Value column, all 2026-08-25 — see README Done items 147/148/149.**
+  Net Worth: a real bug (not a design nit) was the "oddly showing text bg" report — the big
+  number was `<div className="stat-card" style={{padding:0}}>`, missing the `.card` class every
+  other stat card has, so `.stat-card`'s own `--card-hue` gradient background (which exists
+  independent of `.card`) rendered edge-to-edge with no inset/rounding once `padding:0` killed
+  the CSS's own padding — fixed by using the real `StatCard` component instead of hand-rolled
+  markup. **Rule reinforced**: always build a stat card through `StatCard`, never hand-roll
+  `<div className="stat-card">`-only markup — it's missing the `.card` class every real usage
+  needs. Also added a `breakdown: {module, amount}[]` field to `computeNetWorthByCurrency()` so
+  the UI can show which modules contributed to a currency's total, prefilled the Manual rate
+  override's Rate field from any already-known cached rate for the picked currency (previously
+  always blank), and put the per-currency `<details>` cards in a responsive grid instead of a
+  full-width stack. Risk Analysis: `RiskCalculator.tsx` gained an optional `stockPageUrl` prop
+  for a "TICKER's page →" link next to the ticker picker — passed by the two standalone
+  `RiskAnalysisPage.tsx` files, deliberately omitted from `StockPage.tsx`'s own embedded tab
+  (Done item 143) since that would link to itself. Trade Transactions: the ticker cell in both
+  exchanges' trade-list table is now a real `<Link>` to that stock's page. Portfolio: its
+  Holdings table (`OpenPositionsTable`) was missing the "Value" column (worth + invested + ▲/▼)
+  that Dashboard's own Holdings table already had from Done item 85 — added it directly rather
+  than via a popup (the user asked whether a popup would be safer; a direct column was simpler
+  since the underlying `gross`/`invested` values were already computed, just not surfaced).
+  Verified live via Playwright throughout (manual-rate prefill, breakdown text, grid layout,
+  both ticker links, and the new Value column's exact rendered text against a seeded position).
+  `npx tsc -b` / `npm run test` (281 tests, 1 new) / `npm run build` all clean.
 
 ## Live URLs
 

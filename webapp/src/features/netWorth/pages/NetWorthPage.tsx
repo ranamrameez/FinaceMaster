@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Card, MoneyValue } from '../../../components/Card';
+import { Card, MoneyValue, StatCard } from '../../../components/Card';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { toast } from '../../../components/Toast';
 import { cashBalanceByCurrency } from '../../../lib/calc/cashModule';
@@ -99,6 +99,17 @@ export function NetWorthPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Item 1/3 of a 2026-08-26 feedback batch: picking a currency here used to
+  // always start the Rate field blank, forcing the user to type a value from
+  // scratch even when a rate (auto-fetched or previously entered by hand) is
+  // already known for it — prefill with the current known value instead, so
+  // this reads as "edit the current rate" rather than "guess a new one".
+  const onManualCodeChange = (code: string) => {
+    setManualCode(code);
+    const known = code ? rates?.rates[code] : undefined;
+    setManualValue(typeof known === 'number' ? String(known) : '');
+  };
+
   const applyManualRate = () => {
     const value = Number(manualValue);
     if (!manualCode || !value || value <= 0) return toast('Enter a currency and a positive rate.');
@@ -121,45 +132,56 @@ export function NetWorthPage() {
     <div>
       <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
         <h1>Net Worth</h1>
-        <Field label="Show total in">
-          <Select value={preferredCurrency} onChange={(e) => setPreferredCurrency(e.target.value)} width={110}>
+        <Field label="Show total in" width={150}>
+          <Select value={preferredCurrency} onChange={(e) => setPreferredCurrency(e.target.value)} width={150}>
             {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>
       </div>
 
+      {/* Item 4/5 of a 2026-08-26 feedback batch: the big number used to be a
+          bare `.stat-card` missing the `.card` class (so its colored
+          gradient background filled edge-to-edge with the inline
+          `padding:0` it had, reading as a stray colored strip behind the
+          text) and the rate-management controls ran the full page width
+          below it. Now a two-column layout: the big number on the left
+          (using the real shared StatCard component, so it gets a proper
+          inset/rounded card like every other stat card in the app) and a
+          narrow, stacked "rates" panel pinned to the right instead of
+          spanning the width. */}
       <Card style={{ marginBottom: 16 }}>
-        <div className="stat-card" style={{ padding: 0 }}>
-          <div className="label">Estimated net worth ({preferredCurrency})</div>
-          <MoneyValue n={grandTotal} currency={preferredCurrency} />
-        </div>
-        {unconverted.length > 0 && (
-          <div className="footer-note" style={{ marginTop: 8 }}>
-            No {preferredCurrency} rate available for {unconverted.join(', ')} — those currencies' totals aren't
-            included above; see their own sections below for real figures.
+        <div className="row" style={{ gap: 20, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 240px', minWidth: 220 }}>
+            <StatCard label={`Estimated net worth (${preferredCurrency})`} value={fmtMoney(grandTotal, preferredCurrency)} hue={grandTotal >= 0 ? 'var(--profit)' : 'var(--loss)'} />
+            {unconverted.length > 0 && (
+              <div className="footer-note" style={{ marginTop: 8 }}>
+                No {preferredCurrency} rate available for {unconverted.join(', ')} — those currencies' totals
+                aren't included above; see their own sections below for real figures.
+              </div>
+            )}
           </div>
-        )}
-        <div className="footer-note" style={{ marginTop: 8 }}>
-          {rates
-            ? `Rates as of ${new Date(rates.fetchedAt).toLocaleString()} (${rates.source === 'api' ? 'auto-fetched' : 'manually entered'}).`
-            : 'No exchange rates loaded yet.'}
-          {fetchError && ` Auto-fetch failed: ${fetchError} — enter a rate manually below.`}
-          {' '}
-          <button type="button" className="btn-link" onClick={refresh} disabled={fetching} style={{ background: 'none', border: 'none', color: 'inherit', textDecoration: 'underline', cursor: 'pointer', padding: 0 }}>
-            {fetching ? 'Refreshing…' : 'Refresh rates'}
-          </button>
-        </div>
-        <div className="row" style={{ gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-          <Field label="Manual rate: 1 USD =" width={110}>
-            <Select value={manualCode} onChange={(e) => setManualCode(e.target.value)}>
-              <option value="">Currency…</option>
-              {CURRENCIES.filter((c) => c.code !== 'USD').map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
-            </Select>
-          </Field>
-          <Field label="Rate" width={110}>
-            <TextInput type="number" step="0.0001" value={manualValue} onChange={(e) => setManualValue(e.target.value)} />
-          </Field>
-          <button type="button" className="btn" style={{ alignSelf: 'flex-end' }} onClick={applyManualRate}>Save rate</button>
+          <div style={{ flex: '0 1 260px', minWidth: 220, maxWidth: 280 }}>
+            <div className="footer-note">
+              {rates
+                ? `Rates as of ${new Date(rates.fetchedAt).toLocaleString()} (${rates.source === 'api' ? 'auto-fetched' : 'manually entered'}).`
+                : 'No exchange rates loaded yet.'}
+              {fetchError && ` Auto-fetch failed: ${fetchError} — enter a rate manually below.`}
+            </div>
+            <button type="button" className="btn-link" onClick={refresh} disabled={fetching} style={{ background: 'none', border: 'none', color: 'inherit', textDecoration: 'underline', cursor: 'pointer', padding: 0, marginTop: 2 }}>
+              {fetching ? 'Refreshing…' : 'Refresh rates'}
+            </button>
+            <div style={{ marginTop: 10 }}>
+              <div className="footer-note" style={{ marginBottom: 4 }}>Manual rate override — 1 USD =</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <Select value={manualCode} onChange={(e) => onManualCodeChange(e.target.value)} width={150}>
+                  <option value="">Currency…</option>
+                  {CURRENCIES.filter((c) => c.code !== 'USD').map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+                </Select>
+                <TextInput type="number" step="0.0001" placeholder="Rate" value={manualValue} onChange={(e) => setManualValue(e.target.value)} style={{ width: 150 }} />
+                <button type="button" className="btn" style={{ width: 150 }} onClick={applyManualRate}>Save rate</button>
+              </div>
+            </div>
+          </div>
         </div>
       </Card>
 
@@ -167,29 +189,53 @@ export function NetWorthPage() {
         <Card><div className="footer-note">No balances recorded yet across any module.</div></Card>
       )}
 
-      {rows.map((r) => {
-        const converted = convertAmount(r.net, r.currency, preferredCurrency, rates);
-        return (
-          <details key={r.currency} open className="card" style={{ marginBottom: 12, padding: 16 }}>
-            <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: 16 }}>
-              {r.currency} — {fmtMoney(r.net, r.currency)}
-              {converted !== null && r.currency !== preferredCurrency && (
-                <span className="footer-note" style={{ marginLeft: 8, fontWeight: 400 }}>
-                  ≈ {fmtMoney(converted, preferredCurrency)}
-                </span>
+      {/* Item 6 (app-wide note): a fixed-column list of full-width cards
+          forces scrolling past mostly-blank space to see a handful of
+          numbers. A responsive grid lets 2-3 currency sections sit
+          side by side on a wide viewport instead of stacking one under
+          the other — this page is the first concrete instance of that
+          general principle; a fuller app-wide pass is tracked separately. */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 12 }}>
+        {rows.map((r) => {
+          const converted = convertAmount(r.net, r.currency, preferredCurrency, rates);
+          return (
+            <details key={r.currency} open className="card" style={{ padding: 16 }}>
+              <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: 16 }}>
+                {r.currency} — {fmtMoney(r.net, r.currency)}
+                {converted !== null && r.currency !== preferredCurrency && (
+                  <span className="footer-note" style={{ marginLeft: 8, fontWeight: 400 }}>
+                    ≈ {fmtMoney(converted, preferredCurrency)}
+                  </span>
+                )}
+              </summary>
+              <div className="row" style={{ gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
+                <div className="stat-card card"><div className="label">Assets</div><MoneyValue n={r.assets} currency={r.currency} /></div>
+                <div className="stat-card card"><div className="label">Liabilities</div><MoneyValue n={r.liabilities} currency={r.currency} /></div>
+                <div className="stat-card card"><div className="label">Net</div><MoneyValue n={r.net} currency={r.currency} /></div>
+              </div>
+              {/* Item 2: "grouped info of all finances" — which modules
+                  actually made up this currency's total, not just the
+                  summed Assets/Liabilities/Net. */}
+              {r.breakdown.length > 0 && (
+                <div style={{ marginTop: 12 }}>
+                  <div className="footer-note" style={{ marginBottom: 4 }}>By module</div>
+                  {r.breakdown.map((b) => (
+                    <div key={b.module} className="row" style={{ justifyContent: 'space-between', padding: '3px 0', borderBottom: '1px solid var(--border)' }}>
+                      <span className="footer-note">{b.module}</span>
+                      <span style={{ fontFamily: 'var(--mono)', color: b.amount >= 0 ? 'var(--profit)' : 'var(--loss)' }}>
+                        {fmtMoney(b.amount, r.currency)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               )}
-            </summary>
-            <div className="row" style={{ gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
-              <div className="stat-card card"><div className="label">Assets</div><MoneyValue n={r.assets} currency={r.currency} /></div>
-              <div className="stat-card card"><div className="label">Liabilities</div><MoneyValue n={r.liabilities} currency={r.currency} /></div>
-              <div className="stat-card card"><div className="label">Net</div><MoneyValue n={r.net} currency={r.currency} /></div>
-            </div>
-          </details>
-        );
-      })}
+            </details>
+          );
+        })}
+      </div>
 
       {Object.keys(rentalsNet).length > 0 && (
-        <Card style={{ marginTop: 4 }}>
+        <Card style={{ marginTop: 12 }}>
           <div className="label" style={{ marginBottom: 8 }}>Rental net income (informational — not included above)</div>
           <div className="footer-note" style={{ marginBottom: 8 }}>
             Property values aren't tracked in this app, and rental income already lands in whichever Cash/Bank

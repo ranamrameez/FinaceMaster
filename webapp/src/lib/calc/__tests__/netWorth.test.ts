@@ -83,6 +83,25 @@ describe('computeNetWorthByCurrency', () => {
     expect(rows.find((r) => r.currency === 'PKR')!.net).toBe(5000);
   });
 
+  it('breaks down a currency total by contributing module, omitting untouched ones', () => {
+    const rows = computeNetWorthByCurrency({
+      cash: { USD: 100 },
+      bank: { USD: 200 },
+      qse: {},
+      psx: {},
+      funds: {},
+      personalLoansNet: { USD: -50 },
+      emiOutstanding: { USD: 30 },
+    });
+    const usd = rows.find((r) => r.currency === 'USD')!;
+    expect(usd.breakdown).toEqual([
+      { module: 'Cash', amount: 100 },
+      { module: 'Bank', amount: 200 },
+      { module: 'Personal Loans (net)', amount: -50 },
+      { module: 'EMI/Loans (outstanding)', amount: -30 },
+    ]);
+  });
+
   it('returns an empty list when every input is empty', () => {
     const rows = computeNetWorthByCurrency({
       cash: {},
