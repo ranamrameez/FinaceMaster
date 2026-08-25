@@ -2466,6 +2466,72 @@ not developer notes) continuously as features ship.
   this was NOT auto-corrected (no safe way to guess which past records to touch, per this
   file's own cloud-sync-safety principle), so it needs the user's manual review. New links from
   this point on are correct.
+- **CRITICAL, root-caused against a real user-uploaded PSX workbook backup (2026-08-25) — see
+  README Done item 127, REVERTS Done item 67.** User reported app Cash Balance 471.42 PKR /
+  Portfolio Value 39,310.63 PKR vs. their real broker's Balance 442.47 / Portfolio 39,401.
+  Seeded the exact uploaded JSON into the app (Cash Balance matched exactly; Portfolio Value
+  had drifted slightly from the user's screenshot due to this session's own earlier unrelated
+  fixes) and ran the real calc engine against it directly via a scratch Vitest test to inspect
+  every computed fee, rather than guessing. **Portfolio Value's remaining gap is benign** —
+  `cashSummary.ts` deliberately nets an *estimated* sell fee off market value, while a broker's
+  own figure typically doesn't; the residual is ordinary price drift given this app's locked
+  no-live-market-data design. **Cash Balance's gap was a real, significant bug**: Done item 67
+  (2026-08-24) pre-checked "Same-day override" (`manualSameDay: true`) on every fresh BUY dated
+  today, on the theory it's probably about to close same-day. This is provably wrong —
+  PSX's real same-day rule (confirmed against a real broker, Done item 79) says the
+  LARGER-quantity side pays full commission with ties going to BUY, so the single most common
+  same-day round trip (buy X, later sell all X — a tie) needs the BUY to be the CHARGED side,
+  not the netted one — but the checkbox pre-checked the buy's override before the matching sell
+  even existed, and `isNettedLeg()` trusts an explicit `manualSameDay: true` unconditionally by
+  design (correct for its real, narrower purpose: a deliberate manual correction, not a
+  predictive default). Net effect once the sell was logged: BOTH legs came out netted (zero
+  commission on either), and an isolated same-day buy with no matching sell at all was also
+  wrongly zero-fee. Verified the exact magnitude by recomputing the user's real ledger with
+  every `manualSameDay` flag stripped to pure auto-detection: balance dropped 471.42 → 446.73
+  (a 24.69 PKR under-charge from 5 real transactions), closing the large majority of the 28.95
+  PKR gap to the broker's 442.47 — the small remainder is plausibly this profile's
+  NCCPL/SECP/PSX/CDC levy settings all being 0, a settings question for the user, not a code
+  bug. **Fix: reverted Done item 67's default entirely** — `TransactionsPage.tsx`'s
+  `emptyRow()` and the action/date `onChange` handlers no longer touch `manualSameDay` at all;
+  `StockPage.tsx`'s add form now starts in Fee Mode "Auto" (`feeMode` default changed
+  `'semi'`→`'auto'`, `manualSameDay` default `true`→`false`) with the `setManualSameDay` nudges
+  removed from its action-select/date-input/submit handlers. **Lesson for any future "smart
+  default" checkbox on a not-yet-fully-known outcome**: if the correct answer depends on data
+  that doesn't exist yet (here: the matching sell's eventual quantity), don't pre-set the flag
+  at all — let the real auto-detection run once both sides exist, exactly like this always
+  worked before Done item 67 tried to "help." **Not silently fixed — flagged for the user's
+  manual review, per this file's own locked cloud-sync-safety principle (never guess-correct
+  real financial data)**: any transaction that already has `manualSameDay: true` baked in from
+  the old default needs checking — in the user's own uploaded backup, specifically the BUY legs
+  of OGDC 1@330.5, OGDC 1@331.46, PPL 1@242.5, SNGP 1@102.61, and the isolated PSO 26@374 buy.
+  `npx tsc -b` / `npm run test` (264 tests, unchanged — a UI-default change, not a calc-engine
+  change) / `npm run build` all clean; verified live via Playwright that a fresh row on both
+  pages now starts in Fee Mode "Auto" with nothing pre-checked, zero console errors.
+- **User immediately followed up (2026-08-25), same discrepancy investigation, with a new
+  real broker statement (24-08-2026, JS Global Capital Limited / JSBL-ZINDIGI) plus three more
+  asks — IN PROGRESS, not yet done as of this note**: (1) extract that statement's rows and
+  append them to the repo's existing broker-statement artifacts — found via search:
+  `./psx/trades/trades.html` (406 lines) and `./psx/trades/trades_all.html` (136 lines, HTML
+  tables matching the real contract-note schema: Contract #/Market/Sett. Date/Symbol/Quantity/
+  Rate/Brok. Rate/Brok. Amount/Net Rate/SST Amount/Levies Charges/Amount, with per-symbol
+  "Total :" rows and a final `<tfoot>` grand-total row) and `./JS_Zindigi_SNGP_Trading_
+  Analysis.xlsx` (not yet inspected); (2) use this real data to cross-validate/calibrate the
+  exact fee formula in `lib/calc/psxFees.ts`'s `calcFeeBreakdown()` — user confirmed
+  `feePct=0.2`/`lowPriceFee=0.05` are the right commission rates, wants the SST/levies formula
+  checked against real per-transaction numbers; (3) already-covered by Done item 127 above —
+  user independently flagged the same same-day-netting bug as "most critical," confirming (not
+  newly reporting) what was already found and fixed; (4) a genuinely new, not-yet-investigated
+  bug report: "I bought and sell 2 shares same on 24-Aug, those transactions should marked as
+  closed trades rather than cause the available stocks to miscalculate" — same-day round-trip
+  trades (buy N, sell N of the same ticker, same day) should be recognized as a closed trade,
+  and something about trade ordering/timing is currently causing open-share-count
+  (`computePositions`) to miscalculate for this case. Root cause not yet found — candidates to
+  check: same-day transaction sort/tie-breaking order in `computePositions`, the Open/Closed
+  split logic (README Done item 73) keying off `shares > 0` at a stale snapshot, or whether
+  this only manifests under FIFO lot matching (though the user's own settings show
+  `costBasisMethod: 'average'`, not `'fifo'`). **Do not assume Done item 81 or any other
+  same-day-related past fix already covers this** — the user is reporting it as currently
+  broken against the live app with real, freshly-logged 24-08-2026 data.
 
 ## Live URLs
 

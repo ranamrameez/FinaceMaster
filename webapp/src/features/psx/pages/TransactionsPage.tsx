@@ -26,29 +26,7 @@ import { usePSXDerived } from '../hooks/usePSXDerived';
 const today = () => new Date().toISOString().slice(0, 10);
 
 function emptyRow(): Transaction {
-  // Auto-check "Same-day override" for a fresh row: it defaults to today's
-  // date + BUY, which is exactly the "I'm buying now, planning to close
-  // same-day" case a user reported — without this, the date-based
-  // auto-detection in psxFees.ts can't net the fee until a matching SELL
-  // leg is also logged the same day, so a lone same-day buy was charged
-  // full commission up front. Still just a default: the checkbox stays
-  // visible and editable, so an ordinary buy-and-hold is one click away
-  // from unchecking it.
-  return { date: today(), ticker: '', action: 'BUY', shares: 0, price: 0, manualSameDay: true };
-}
-
-/** For a row dated today: BUY defaults to netted (nothing to pair against
- * yet), and SELL is explicitly reset to false so it relies on the real
- * same-day auto-detection once both legs exist — critical fix, since a
- * fresh row defaults to BUY+today (netted) and simply toggling its action
- * to SELL without this reset left the stale `true` in place, so BOTH legs
- * came out unconditionally netted (0 fee each) instead of exactly one of
- * them, once the pair was saved. A non-today date is left exactly as the
- * user set it either way, since a backdated same-day override is a
- * deliberate manual call this code shouldn't second-guess. */
-function autoSameDay(date: string, action: 'BUY' | 'SELL', current?: boolean): boolean | undefined {
-  if (date !== today()) return current;
-  return action === 'BUY';
+  return { date: today(), ticker: '', action: 'BUY', shares: 0, price: 0 };
 }
 
 function TransactionRows() {
@@ -78,7 +56,7 @@ function TransactionRows() {
           <input
             type="date"
             value={r.date}
-            onChange={(e) => update(i, { date: e.target.value, manualSameDay: autoSameDay(e.target.value, r.action, r.manualSameDay) })}
+            onChange={(e) => update(i, { date: e.target.value })}
           />
           <input
             placeholder="Ticker"
@@ -89,10 +67,7 @@ function TransactionRows() {
           />
           <select
             value={r.action}
-            onChange={(e) => {
-              const action = e.target.value as 'BUY' | 'SELL';
-              update(i, { action, manualSameDay: autoSameDay(r.date, action, r.manualSameDay) });
-            }}
+            onChange={(e) => update(i, { action: e.target.value as 'BUY' | 'SELL' })}
           >
             <option value="BUY">BUY</option>
             <option value="SELL">SELL</option>
@@ -141,7 +116,7 @@ function TransactionRows() {
         Same-day round trips net automatically — the larger side pays full commission, the
         smaller side pays levies only.
         <Tooltip
-          text={'The "Fee mode" dropdown per row controls how much you want to override that: Auto leaves it fully computed, Semi lets you flip whether this specific leg counts as netted (use when your statement shows a same-day netting the recorded date doesn\'t line up with), and Manual lets you type the exact fee from your statement, bypassing computation entirely. A new BUY dated today starts in Semi mode with "Netted" pre-checked, since that\'s a buy you\'re most likely about to close out the same day — switch to Auto if you\'re actually opening a position you plan to hold.'}
+          text={'The "Fee mode" dropdown per row controls how much you want to override that: Auto leaves it fully computed, Semi lets you flip whether this specific leg counts as netted (use when your statement shows a same-day netting the recorded date doesn\'t line up with, or when you already know a same-day sell is coming before you\'ve logged it), and Manual lets you type the exact fee from your statement, bypassing computation entirely. Auto is the right choice for most trades, including a same-day round trip — once both legs are logged, the correct side nets automatically.'}
         >
           <span style={{ cursor: 'pointer', color: 'var(--muted)', display: 'inline-flex' }}>
             <InfoIcon size={13} />

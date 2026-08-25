@@ -34,14 +34,24 @@ function TickerTransactions({ ticker }: { ticker: string }) {
   const [date, setDate] = useState(today());
   const [sharesInput, setSharesInput] = useState('');
   const [priceInput, setPriceInput] = useState('');
-  // Semi mode + checked by default: the form's own defaults (today + BUY)
-  // mean this is most likely a same-day buy, which otherwise can't be
-  // netted until a matching SELL is also logged the same day, so it'd be
-  // charged full commission up front. Only ever nudged ON by the
-  // date/action handlers below, never forced off, so a user's manual
-  // uncheck survives editing another field.
-  const [feeMode, setFeeMode] = useState<FeeMode>('semi');
-  const [manualSameDay, setManualSameDay] = useState(true);
+  // Auto by default — the real same-day auto-detection in psxFees.ts
+  // correctly nets whichever side should be netted once both legs of a
+  // same-day round trip exist, with no manual flag needed. An earlier
+  // version of this form pre-checked "Same-day override" for every fresh
+  // BUY dated today, on the theory that it's "probably about to close
+  // same-day" — this was a real bug, confirmed against a real user's
+  // trade history: PSX's own same-day rule ties go to BUY (the side that
+  // should pay FULL commission), so pre-marking the BUY as netted made
+  // BOTH legs of the most common same-day pattern (buy some, sell it all
+  // same day) come out netted, silently under-charging real fees and
+  // overstating cash balance. There's also no way to know in advance
+  // whether a fresh buy will end up being the charged or netted side —
+  // that depends on the SELL's quantity, which doesn't exist yet. The
+  // checkbox stays available for its original, narrower purpose (the
+  // recorded date not lining up with the real same-day trade), just no
+  // longer pre-checked.
+  const [feeMode, setFeeMode] = useState<FeeMode>('auto');
+  const [manualSameDay, setManualSameDay] = useState(false);
   const [feeOverrideInput, setFeeOverrideInput] = useState<number | undefined>(undefined);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editRow, setEditRow] = useState<Transaction | null>(null);
@@ -99,10 +109,6 @@ function TickerTransactions({ ticker }: { ticker: string }) {
     toast(`${action} ${shares} ${ticker} @ ${fmtPrice(price)} logged.`);
     setSharesInput('');
     setPriceInput('');
-    // Re-derive for whatever action/date is still selected, same as the
-    // date/action onChange handlers above — otherwise a stale flag from
-    // this submission could carry into the next one.
-    if (date === today()) setManualSameDay(action === 'BUY');
   };
 
   const startEdit = (i: number, tx: Transaction) => {
@@ -120,30 +126,11 @@ function TickerTransactions({ ticker }: { ticker: string }) {
   return (
     <div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-        <select
-          value={action}
-          onChange={(e) => {
-            const next = e.target.value as 'BUY' | 'SELL';
-            setAction(next);
-            // Explicitly reset to false when leaving "BUY dated today" (not
-            // just skip setting true) — a stale true surviving a BUY->SELL
-            // toggle was a real bug: both legs ended up unconditionally
-            // netted (0 fee each) instead of exactly one of them once saved.
-            if (date === today()) setManualSameDay(next === 'BUY');
-          }}
-        >
+        <select value={action} onChange={(e) => setAction(e.target.value as 'BUY' | 'SELL')}>
           <option value="BUY">Buy</option>
           <option value="SELL">Sell</option>
         </select>
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => {
-            const next = e.target.value;
-            setDate(next);
-            if (next === today()) setManualSameDay(action === 'BUY');
-          }}
-        />
+        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         <input type="number" placeholder="Shares" value={sharesInput} onChange={(e) => setSharesInput(e.target.value)} style={{ width: 90 }} />
         <input type="number" step="0.01" placeholder="Price" value={priceInput} onChange={(e) => setPriceInput(e.target.value)} style={{ width: 90 }} />
         <FeeModeControl

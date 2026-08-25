@@ -1013,7 +1013,14 @@ FinanceManager live link:
     used at all — fixed by only including an exchange's contribution when its workbook has at
     least one transaction/transfer/adjustment. `npx tsc -b` / `npm run test` (197 tests, 19
     new) / `npm run build` all clean.
-67. **Critical, user-reported: PSX same-day (intraday) buys were charged full commission with
+67. **REVERTED 2026-08-25 — see Done item 127. This item's own "fix" turned out to be itself a
+    real, significant financial-correctness bug**, confirmed against a real user's actual trade
+    history: it silently under-charged commission on same-day round trips (in the common
+    tied-quantity case, on BOTH legs at once) and on an isolated same-day buy with no matching
+    sell at all that day. Original text kept below for the historical record — do not
+    re-introduce this pattern.
+
+    **Critical, user-reported: PSX same-day (intraday) buys were charged full commission with
     no way to net until a matching sell was also logged the same day — "we are trying to do
     same-day trade."** `sameDayChargedSide()` in `psxFees.ts` (unchanged, still correct) only
     detects a same-day round trip once BOTH a buy and a sell exist for that ticker+date — a
@@ -2470,6 +2477,72 @@ FinanceManager live link:
      entries and correct any with the wrong income/expense type by hand.** New links created
      from this point on are correct. `npx tsc -b` / `npm run test` (264 tests, 2 corrected) /
      `npm run build` all clean.
+
+127. **CRITICAL, root-caused against the user's own real uploaded PSX workbook backup
+     (2026-08-25): app cash balance and portfolio value didn't match the broker's own figures
+     — traced to Done item 67's "auto-check same-day override" default being a real,
+     significant fee-under-collection bug, not a cosmetic one.** The user reported the app
+     showed Cash Balance 471.42 PKR / Portfolio Value 39,310.63 PKR against their broker's own
+     Balance 442.47 / Portfolio 39,401, and attached their real workbook backup. Rather than
+     guess, seeded the exact uploaded JSON into the running app (confirmed it reproduces the
+     app's own numbers: Cash Balance 471.42 exactly, Portfolio Value 39,363.01 — this session's
+     own earlier fixes moved the Portfolio Value slightly from what the user originally saw, but
+     Cash Balance matches exactly) and separately ran the real calc engine directly against the
+     same data via a scratch test to inspect every computed fee. **Two independent causes found,
+     one benign, one a real bug**:
+     - **Portfolio Value vs. broker (benign, not a bug)**: the app's Portfolio Value
+       intentionally subtracts an *estimated* sell fee from raw market value (`cashSummary.ts`),
+       while a broker's own "Portfolio" figure is typically raw shares × current live price with
+       no assumed exit cost. The remaining gap after accounting for that is fully consistent
+       with ordinary intraday price movement between whenever the broker's app was checked and
+       whenever this app's `marketPrices.PSO` was last manually updated — expected, and already
+       covered by this app's own "Estimates only — verify against your official statement"
+       disclaimer, since there's no live market-data feed by design (locked decision, see this
+       file's own "Design decisions" section).
+     - **Cash Balance vs. broker (a real bug, now fixed)**: Done item 67's "pre-check the
+       'Same-day override' checkbox for every fresh BUY dated today" default is **provably
+       wrong** for the single most common case it was meant to help with. PSX's own same-day
+       netting rule (confirmed against a real broker, Done item 79) is "the LARGER-quantity side
+       pays full commission, the smaller side is netted" with ties going to BUY — meaning a
+       plain same-day round trip where you buy X shares and later sell all X of them (a tie) has
+       the BUY as the side that should pay full commission, not the side that gets netted. But
+       Done item 67 pre-checked the BUY's own override to netted=true *before the matching sell
+       even existed* — and `isNettedLeg()` trusts an explicit `manualSameDay: true` unconditionally
+       by design (correct for its original, narrower purpose: a deliberate manual correction for
+       a backdated trade). The result: once the matching sell was logged, BOTH legs of the round
+       trip came out netted (zero commission on either side) instead of exactly one paying full
+       commission — and an isolated same-day buy with no matching sell *at all* that day was
+       *also* wrongly charged zero fee, having nothing to actually net against. Verified by
+       recomputing the user's real cash ledger with every `manualSameDay` flag stripped back to
+       pure date-based auto-detection: the ledger's final balance dropped from 471.42 to 446.73
+       (a **24.69 PKR under-charge**, from exactly 5 real transactions in the user's own trade
+       history that were wrongly netted this way) — closing the large majority of the 28.95 PKR
+       gap to the broker's stated 442.47, with the small remainder plausibly explained by this
+       PSX profile's government-levy settings (NCCPL/SECP/PSX/CDC) all being configured to 0,
+       which is a settings/data question for the user to verify against their broker's real fee
+       schedule, not a code bug. **Fixed by reverting Done item 67's default entirely**: a fresh
+       BUY dated today no longer pre-checks "Same-day override" in either
+       `TransactionsPage.tsx`'s add-row form or `StockPage.tsx`'s per-stock add form (both now
+       default to Fee Mode "Auto"/unchecked) — the existing, already-correct date-based
+       auto-detection in `psxFees.ts` handles same-day netting automatically and correctly the
+       moment both legs of a real round trip exist, with no default flag needed at all, since
+       there's no way to know in advance whether a not-yet-matched buy will end up being the
+       charged or netted side (that depends on the sell's eventual quantity). The checkbox
+       itself is untouched and still available for its original, narrower, genuinely-manual
+       purpose (the recorded date not lining up with the real same-day trade) — just no longer
+       pre-checked by default. **Not silently fixed, flagging for the user's attention**: this
+       bug only affects the *default* going forward — any transaction in your real data that
+       already has `manualSameDay: true` baked in from this old default (in the uploaded backup:
+       specifically the BUY legs of OGDC 1@330.5, OGDC 1@331.46, PPL 1@242.5, SNGP 1@102.61, and
+       the isolated PSO 26@374 buy with no same-day sell) needs manual review — open each in Fee
+       Mode and switch it from "Semi" back to "Auto" (or uncheck "Netted") unless you deliberately
+       want it treated as netted for a real backdated-trade reason. There is no safe way to
+       auto-detect and correct these without risking a wrong guess on real financial data, per
+       this project's own locked cloud-sync-safety principle. `npx tsc -b` / `npm run test` (264
+       tests, unchanged — this is a UI-default change, not a calc-engine change) / `npm run
+       build` all clean; verified live via Playwright that a fresh row on both the Transactions
+       page and the per-stock page now starts in Fee Mode "Auto" with nothing pre-checked, zero
+       console errors.
 
 ## Pending
 
