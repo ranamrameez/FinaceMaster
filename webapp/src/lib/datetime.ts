@@ -55,6 +55,15 @@ const CURRENCY_TIMEZONES: Record<string, string> = {
   MXN: 'America/Mexico_City',
 };
 
+/** Every timezone this file already knows how to default to, deduped, for
+ * populating a `<datalist>` next to a free-text timezone field — a full
+ * ~400-entry IANA list would be more noise than help, so this sticks to
+ * the markets/currencies this app actually knows about, plus the viewer's
+ * own local timezone so it's always offered even for an unlisted currency. */
+export function commonTimezones(): string[] {
+  return [...new Set([...Object.values(MARKET_TIMEZONES), ...Object.values(CURRENCY_TIMEZONES), browserTimezone()])].sort();
+}
+
 function browserTimezone(): string {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';

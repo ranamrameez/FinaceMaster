@@ -14,6 +14,8 @@ import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
 import type { LinkSideConfig } from '../../../types/interEntityTransfer';
 import { transferRunningBalance } from '../../../lib/calc/transferBalance';
 import { IconButton } from '../../../components/ui/IconButton';
+import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
+import { defaultTimezoneForCurrency, defaultTimezoneForMarket } from '../../../lib/datetime';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { createEmptyWorkbook } from '../../../store/defaultWorkbook';
 import { useWorkbookStore } from '../../../store/workbookStore';
@@ -24,7 +26,7 @@ import { useQSEDerived } from '../hooks/useQSEDerived';
 const today = () => new Date().toISOString().slice(0, 10);
 
 function emptyRow(): Transaction {
-  return { date: today(), ticker: '', action: 'BUY', shares: 0, price: 0 };
+  return { date: today(), ticker: '', action: 'BUY', shares: 0, price: 0, timezone: defaultTimezoneForMarket('QSE') };
 }
 
 function TransactionRows() {
@@ -78,6 +80,12 @@ function TransactionRows() {
             value={r.price || ''}
             onChange={(e) => update(i, { price: Number(e.target.value) })}
             style={{ width: 90 }}
+          />
+          <TimeZoneFields
+            time={r.time}
+            timezone={r.timezone}
+            onTimeChange={(time) => update(i, { time })}
+            onTimezoneChange={(timezone) => update(i, { timezone })}
           />
           <button className="btn secondary small" onClick={() => setRows((rs) => rs.filter((_, idx) => idx !== i))}>
             <TrashIcon size={12} />Remove
@@ -154,11 +162,12 @@ function LinkedTransferFields({ date, type, gross, onLinked }: { date: string; t
 function TransferForm() {
   const addTransfer = useWorkbookStore((s) => s.addTransfer);
   const depositFee = useWorkbookStore((s) => s.workbook.settings.depositFee);
+  const currency = useWorkbookStore((s) => s.workbook.settings.currency);
   const ensureSignedIn = useEnsureSignedIn();
-  const [t, setT] = useState<Omit<Transfer, 'id'>>({ date: today(), type: 'DEPOSIT', gross: 0, fee: depositFee });
+  const [t, setT] = useState<Omit<Transfer, 'id'>>({ date: today(), type: 'DEPOSIT', gross: 0, fee: depositFee, timezone: defaultTimezoneForCurrency(currency) });
   const [linkMode, setLinkMode] = useState(false);
 
-  const reset = () => setT({ date: today(), type: 'DEPOSIT', gross: 0, fee: depositFee });
+  const reset = () => setT({ date: today(), type: 'DEPOSIT', gross: 0, fee: depositFee, timezone: defaultTimezoneForCurrency(currency) });
 
   return (
     <div>
@@ -185,6 +194,12 @@ function TransferForm() {
               value={t.fee || ''}
               onChange={(e) => setT({ ...t, fee: Number(e.target.value) })}
               style={{ width: 80 }}
+            />
+            <TimeZoneFields
+              time={t.time}
+              timezone={t.timezone}
+              onTimeChange={(time) => setT({ ...t, time })}
+              onTimezoneChange={(timezone) => setT({ ...t, timezone })}
             />
             <button
               className="btn"

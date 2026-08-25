@@ -7,7 +7,9 @@ import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
 import { Field, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
+import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { useSortableRows } from '../../../hooks/useSortableRows';
+import { defaultTimezoneForMarket } from '../../../lib/datetime';
 import { toCSV } from '../../../lib/csv';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { isNettedLeg } from '../../../lib/calc/psxFees';
@@ -53,6 +55,8 @@ function TickerTransactions({ ticker }: { ticker: string }) {
   const [feeMode, setFeeMode] = useState<FeeMode>('auto');
   const [manualSameDay, setManualSameDay] = useState(false);
   const [feeOverrideInput, setFeeOverrideInput] = useState<number | undefined>(undefined);
+  const [time, setTime] = useState<string | undefined>(undefined);
+  const [timezone, setTimezone] = useState<string | undefined>(defaultTimezoneForMarket('PSX'));
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editRow, setEditRow] = useState<Transaction | null>(null);
 
@@ -79,7 +83,7 @@ function TickerTransactions({ ticker }: { ticker: string }) {
     if (!shares || !price) return toast('Enter shares and price.');
     if (!(await ensureSignedIn('Sign in to save this transaction.'))) return;
     addTransaction({
-      date, ticker, action, shares, price,
+      date, ticker, action, shares, price, time, timezone,
       manualSameDay: feeMode === 'semi' ? manualSameDay : undefined,
       feeOverride: feeMode === 'manual' ? feeOverrideInput : undefined,
     });
@@ -118,6 +122,7 @@ function TickerTransactions({ ticker }: { ticker: string }) {
           feeOverride={feeOverrideInput}
           onFeeOverrideChange={setFeeOverrideInput}
         />
+        <TimeZoneFields time={time} timezone={timezone} onTimeChange={setTime} onTimezoneChange={setTimezone} />
         <button className="btn" onClick={submit}>Add {action === 'BUY' ? 'buy' : 'sell'}</button>
       </div>
 
