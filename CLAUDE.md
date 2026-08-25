@@ -2296,8 +2296,25 @@ not developer notes) continuously as features ship.
   -b` per file, `npm run test` (255 tests, unchanged), `npm run build`, a 23-page console-error
   sweep, and a live Playwright functional test on Personal Loans confirming the Edit button's
   tooltip and click behavior actually work, not just render.
-- Next up per the README's own Pending list, per the standing auto-commit instruction: any
-  Pending item — no specific priority order requested beyond what's already in the README.
+- **New Transfers-page feedback batch, IN PROGRESS (2026-08-25) — see README Done item 117 for
+  what's fixed so far.** User posted a Transfers-page screenshot plus a 10-item list. First two
+  fixed: (a) added a "Total Withdrawals" stat card to QSE/PSX Dashboard next to "Total
+  Deposits" — `summary.totalOutward` was already computed in `cashSummary.ts` but never shown
+  anywhere, so a user who both deposited and withdrew only saw the gross deposit figure. (b) A
+  real shared-component bug: `Field`'s wrapping `<label>` inherited the base
+  `label{margin-bottom:5px}` rule, and since `align-items:flex-end` aligns flex children by
+  their margin box, that inherited margin pushed every `Field` 5px above a bare (non-Field)
+  sibling in the same row — confirmed via Playwright measurement (a Field's label carried
+  `margin: 0px 0px 5px` computed) before fixing. Fixed with `marginBottom: 0` directly on
+  `Field`'s wrapping label — a one-line shared-component fix that corrects this wherever a
+  `Field` shares a row with a bare control, not just the Transfers page it was reported on.
+  **Still open, not yet started** (all from the same batch, several large): card-header
+  action-button alignment (top-right), whole-card coloring instead of colored text/pill
+  backgrounds, sidebar menu contrast, a bank-account-number + SMS-metadata field (for a future
+  SMS-based transaction-import feature the user is planning), an "expand all" chip on `Tabs`,
+  Rentals semi-automated rent collection (choose a cycle, propose a transaction for approval,
+  track partial payment), and remembering each entity's last-used/default transfer source.
+  Continue down this list per the standing auto-commit instruction.
 
 ## Live URLs
 

@@ -19,9 +19,20 @@ import { Tooltip } from '../Tooltip';
  * a one-line addition here gives any `Field` call site a real tooltip
  * for jargon-y labels (e.g. "Break-even", "CGT") without each page having
  * to wire up its own `Tooltip` around the label by hand. */
+/** `marginBottom: 0` overrides the base `label{margin-bottom:5px}` rule
+ * (meant for a plain caption sitting above unrelated content below it) —
+ * user-reported: a bare `<button>`/`<input>` sitting in the same
+ * `align-items:flex-end` row as a `Field` sat visibly higher than the
+ * Field's own input, since flexbox aligns by each item's MARGIN box, and
+ * the Field's inherited 5px bottom margin (this component's outer element
+ * is itself a `<label>`) pushed its whole box up from the row's true
+ * bottom edge by that same 5px — a margin-less sibling had nothing to
+ * offset it by and sat exactly on that edge instead. Confirmed via a real
+ * Playwright measurement (a "Note" Field's wrapping label carried
+ * `margin: 0px 0px 5px`, computed) before writing this fix. */
 export function Field({ label, children, width, title }: { label?: string; children: ReactNode; width?: number; title?: string }) {
   return (
-    <label style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 4, fontSize: 12, color: 'var(--muted)', width }}>
+    <label style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 4, fontSize: 12, color: 'var(--muted)', width, marginBottom: 0 }}>
       {title ? <Tooltip text={title}><span style={{ cursor: 'pointer' }}>{label}</span></Tooltip> : label}
       {children}
     </label>

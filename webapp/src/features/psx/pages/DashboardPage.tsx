@@ -172,6 +172,7 @@ export function DashboardPage() {
         <StatCard label="Unrealized P/L" value={money(summary.unrealizedPL, currency)} title={moneyTitle(summary.unrealizedPL)} hue={summary.unrealizedPL >= 0 ? 'var(--profit)' : 'var(--loss)'} />
         <StatCard label="Net P/L" value={money(summary.netPL, currency)} title={moneyTitle(summary.netPL)} hue={summary.netPL >= 0 ? 'var(--profit)' : 'var(--loss)'} />
         <StatCard label="Total Deposits" value={money(summary.totalInward, currency)} title={moneyTitle(summary.totalInward)} hue={INVEST_PALETTE[1]} />
+        <StatCard label="Total Withdrawals" value={money(summary.totalOutward, currency)} title={moneyTitle(summary.totalOutward)} hue={INVEST_PALETTE[5]} />
         <StatCard label="Total Fees" value={money(summary.totalCharges, currency)} title={moneyTitle(summary.totalCharges)} hue={INVEST_PALETTE[4]} />
         <StatCard label="Rewards" value={money(summary.totalRewards, currency)} title={moneyTitle(summary.totalRewards)} hue={INVEST_PALETTE[2]} />
         <StatCard label="Open Positions" value={fmt(rows.length, 0)} hue={INVEST_PALETTE[0]} title="Number of distinct tickers you currently hold shares in." />

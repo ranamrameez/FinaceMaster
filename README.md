@@ -2186,6 +2186,33 @@ FinanceManager live link:
      the Edit button shows the correct tooltip and clicking it actually enters edit mode with
      the expected form fields.
 
+117. **New Transfers-page feedback batch, first two items (2026-08-25).** (a) "Withdrawals are
+     ignored, making the stats ambiguous" — real gap, not a misreading: QSE's/PSX's Dashboard
+     showed a "Total Deposits" stat card (`summary.totalInward`) but `summary.totalOutward`
+     (already computed in `cashSummary.ts`, just never displayed) had no card anywhere in the
+     UI, so a user who'd both deposited and withdrawn saw only the gross deposit figure with no
+     way to see money that had left. Added a "Total Withdrawals" stat card right next to it on
+     both Dashboards. (b) "Input buttons, selectboxes etc still are different in height" — a
+     real, root-caused shared-component bug, confirmed via Playwright measurement before
+     touching anything: on the Transfers page's "New Linked Transfer" row, the Date/Amount/Note
+     `Field`s and the bare "Create link" button had identical CSS heights (38px) but different
+     screen positions — the button sat 5px lower. Cause: `Field`'s wrapping element is itself a
+     `<label>`, which inherits the base `label{margin-bottom:5px}` rule (meant for a plain
+     caption above unrelated content stacking below it) — `align-items:flex-end` aligns
+     flex children by their MARGIN box, so a Field's extra 5px bottom margin pushed its own
+     content 5px above the row's true bottom edge, while a margin-less bare button/input sibling
+     sat right on it. Fixed with `marginBottom: 0` on `Field`'s own wrapping label — a one-line
+     fix in the single shared component, so it corrects this misalignment everywhere `Field`
+     shares a row with a bare (non-Field) control, not just this page. Verified via the same
+     Playwright measurement after the fix (all four controls now share an identical top AND
+     bottom) plus a screenshot. `npx tsc -b` / `npm run test` (255 tests, unchanged) / `npm run
+     build` all clean; a 23-page console-error sweep found zero regressions. **Still open from
+     this batch**: card-header action-button alignment, whole-card coloring instead of colored
+     text/pill backgrounds, sidebar contrast, a bank-account-number/SMS-metadata field for
+     future SMS-based transaction import, an "expand all" chip, Rentals semi-automated rent
+     collection with partial-payment tracking, and per-entity default transfer source memory —
+     tracked as open work, several large enough to need their own design pass.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`
