@@ -2811,6 +2811,26 @@ FinanceManager live link:
      "Portfolio allocation" doughnut's canvas confirmed its ring click also navigates correctly
      on PSX. Zero console errors. `npx tsc -b` / `npm run test` (280 tests, unchanged) / `npm
      run build` all clean.
+138. **Re-audited Pending item 56 (Portfolio page overhaul) against the live app and fixed the
+     one real remaining bug: reference-line chart labels silently dropped (2026-08-25) — see
+     the updated Pending item 56 for the full re-audit of every sub-item.** QSE's/PSX's
+     `PositionDetail.tsx` "Current position" section already draws a horizontal bar chart with
+     4 reference points (Buy/Sold/Current/Break-even) — confirmed via a real seeded position
+     (buy, partial sell, current price) that all 4 bars render with correct values. The bug:
+     Chart.js's default `ticks.autoSkip` applies to a category y-axis too, not just linear/time
+     scales, and at the chart's original 110px/90px height it silently dropped the "Sold" and
+     "Break-even" axis labels while still drawing all 4 bars — exactly matching the user's
+     "chart is missing sold-price and break-even reference labels" report, which reads very
+     differently once you know the data was always there and only the labels were suppressed.
+     Fixed with `scales: { y: { ticks: { autoSkip: false } } }` plus a modest height bump
+     (110/90 → 150/115px) to give the now-unskippable labels room. Confirmed via a real
+     before/after screenshot (before: only "Buy"/"Current" visible on a 4-row chart; after: all
+     4 labels render) on both QSE and PSX. **Every other sub-item in this Pending entry was
+     checked live and found already correct or not reproducible** (CGT computing a genuine
+     non-zero value; the current-position card already showing its documented fields; the price
+     input already a fixed 150px, not full-width; stat cards already colored via Done item 88) —
+     see the updated Pending item 56 for the full item-by-item breakdown. `npx tsc -b` / `npm
+     run test` (280 tests, unchanged) / `npm run build` all clean.
 
 ## Pending
 
@@ -3035,18 +3055,29 @@ item 103) — all three now fixed, see Done item 104:**
     auditing labels/copy across every module for jargon that could be plain-language instead
     of just tooltipped, which hasn't been attempted yet.
 56. **Portfolio page overhaul (2026-08-24, item 12 of the original screenshot batch) — a real,
-    multi-part redesign, deliberately not attempted piecemeal.** The user's own list, verbatim:
-    no live market data makes the price chart too big/almost flat from scaling; CGT shows 0 in
-    the current-position card; the current-position card is missing some of the attributes it
-    should show; the chart is missing sold-price and break-even reference labels; the chart may
-    need resizing; charts and the "price range" stats should move to a right-hand stack while
-    other stats stay on the left; the "current price" input is full-width, which reads badly;
-    P/L and stat cards should be meaningful colored-background cards (this last part is now
-    partially covered by Done item 88's `--card-hue` rollout — worth re-checking against the
-    live page before assuming it's still a gap). This needs a real design pass against the live
-    Portfolio page (not a guess from the description alone) before touching layout — several of
-    these interact (e.g. moving stats to a right stack changes how much width the chart gets,
-    which changes whether it still looks "too big/flat").
+    multi-part redesign; re-audited against the live page (2026-08-25), most items already
+    resolved by later fixes in this same project, one real bug found and fixed — see Done item
+    138.** The user's own list, verbatim, with current status: (a) "no live market data makes
+    the price chart too big/almost flat" — the Daily Price chart is a compact fixed 130px height
+    and already handles real multi-point price history correctly (Done item 78's raw-price-
+    history fix); not reproduced against live data, no further action without a concrete repro.
+    (b) "CGT shows 0" — checked live with a real open+part-sold PSX position: CGT computes and
+    displays a correct non-zero value; a literal 0 only happens when the position is at a loss
+    or the workbook's own CGT rate setting is 0, both correct behavior, not a bug. (c) "current-
+    position card missing some attributes" — the card already shows Shares/Cost+break-even/
+    Invested/CGT (PSX) or Shares/Cost+break-even/Invested (QSE); vague without a specific
+    missing field named, no action taken. (d) **"chart missing sold-price and break-even
+    reference labels" — a REAL bug, found and fixed, see Done item 138**: the reference-line bar
+    chart already plotted all 4 bars (Buy/Sold/Current/Break-even) but Chart.js's default
+    `autoSkip` silently dropped 2 of the 4 category-axis labels since the chart was too short —
+    the bars were there, just visually unlabeled. (e) "chart may need resizing" — addressed as
+    part of (d)'s fix (110/90px → 150/115px, just enough for 4 unskipped labels, not a broader
+    resize). (f) "right-hand stack layout" — genuinely not done, still single-column
+    `CollapsibleCard`s top to bottom; the real structural ask remaining from this whole item.
+    (g) "current price input is full-width" — checked live: it's `width: 150`, not full-width;
+    not reproduced, no action taken. (h) "colored stat cards" — done, see Done item 88 (already
+    correctly noted as likely-resolved when this item was first written). **Remaining real scope
+    is just (f)**, the right-hand-stack layout — folds into Pending item 57's identical ask.
 57. Side-by-side layout instead of vertical scrolling (2026-08-24, item 11 of the original
     screenshot batch: "We can show UI components side by side instead of scrolling to see one
     by one"). Overlaps with Pending item 54's "utilize page space" right-rail idea and item 56's

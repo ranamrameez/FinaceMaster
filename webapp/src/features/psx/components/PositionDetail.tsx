@@ -169,7 +169,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
             )}
           </div>
           <div style={{ maxWidth: 380 }}>
-            <CompactChart height={lastSellPrice > 0 ? 110 : 90}>
+            <CompactChart height={lastSellPrice > 0 ? 150 : 115}>
               <Bar
                 data={{
                   labels: lastSellPrice > 0 ? ['Buy', 'Sold', 'Current', 'Break-even'] : ['Buy', 'Current', 'Break-even'],
@@ -183,7 +183,15 @@ export function PositionDetail({ ticker }: { ticker: string }) {
                     },
                   ],
                 }}
-                options={{ maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }}
+                options={{
+                  maintainAspectRatio: false,
+                  indexAxis: 'y',
+                  plugins: { legend: { display: false } },
+                  // See the identical comment in QSE's PositionDetail.tsx —
+                  // Chart.js's autoSkip was silently dropping "Sold"/
+                  // "Break-even" labels from this 4-row category axis.
+                  scales: { y: { ticks: { autoSkip: false } } },
+                }}
               />
             </CompactChart>
           </div>

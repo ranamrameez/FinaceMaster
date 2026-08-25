@@ -2756,6 +2756,26 @@ not developer notes) continuously as features ship.
   coordinate — navigates correctly. `npx tsc -b` / `npm run test` (280 tests, unchanged) /
   `npm run build` all clean. Deliberately not done: hover cross-highlighting between separate
   charts, a materially bigger feature than click-navigation.
+- **Portfolio page overhaul (Pending item 56) re-audited against the live app, one real bug
+  found and fixed (2026-08-25) — see README Done item 138.** This 8-item complaint list from
+  2026-08-24 was written against a version of the app several fix-rounds behind current — a
+  live re-check found most of it already resolved (colored stat cards from Done item 88, a
+  correctly non-zero CGT figure, a current-position card already showing its documented
+  fields, a price input that was never actually full-width) and one genuinely still-live bug:
+  the "Current position" reference-line bar chart (Buy/Sold/Current/Break-even,
+  `PositionDetail.tsx` both exchanges) always drew all 4 bars correctly, but Chart.js's
+  `ticks.autoSkip` — which applies to a category y-axis too, not just linear/time scales —
+  silently dropped 2 of the 4 axis labels at the chart's original 110/90px height. Fixed with
+  `scales: { y: { ticks: { autoSkip: false } } }` plus a small height bump. **Lesson worth
+  repeating for any future "is this still a real complaint" check**: a batched user complaint
+  list can go stale fast in a project this actively worked — re-verify each sub-item against
+  the live page rather than assuming the original report is still accurate, since several
+  unrelated fixes in between (Done items 78, 88, 109) had already resolved most of this one
+  without anyone tracking it back to this specific Pending item. **Remaining real scope**: the
+  right-hand-stack layout ask (moving charts/Price-range to a right column) is genuine and
+  unaddressed — folds into Pending item 57's identical structural request, not yet attempted.
+  Verified via real before/after screenshots (not assumed) showing all 4 bar labels rendering
+  correctly. `npx tsc -b` / `npm run test` (280 tests, unchanged) / `npm run build` all clean.
 
 ## Live URLs
 

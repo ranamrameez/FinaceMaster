@@ -159,7 +159,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
             <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Invested</div><div className="value">{fmtMoney(invested, currency)}</div></div>
           </div>
           <div style={{ maxWidth: 380 }}>
-            <CompactChart height={lastSellPrice > 0 ? 110 : 90}>
+            <CompactChart height={lastSellPrice > 0 ? 150 : 115}>
               <Bar
                 data={{
                   labels: lastSellPrice > 0 ? ['Buy', 'Sold', 'Current', 'Break-even'] : ['Buy', 'Current', 'Break-even'],
@@ -173,7 +173,20 @@ export function PositionDetail({ ticker }: { ticker: string }) {
                     },
                   ],
                 }}
-                options={{ maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }}
+                options={{
+                  maintainAspectRatio: false,
+                  indexAxis: 'y',
+                  plugins: { legend: { display: false } },
+                  // Real bug (user-reported "missing sold-price/break-even
+                  // reference labels"): Chart.js's default autoSkip applies
+                  // to a category y-axis too, not just linear/time scales —
+                  // with 4 short rows it silently dropped "Sold" and
+                  // "Break-even" from the axis while still drawing all 4
+                  // bars, making the chart unreadable. Disabling autoSkip
+                  // plus the taller CompactChart above (110/90 -> 150/115)
+                  // gives every label room to render.
+                  scales: { y: { ticks: { autoSkip: false } } },
+                }}
               />
             </CompactChart>
           </div>
