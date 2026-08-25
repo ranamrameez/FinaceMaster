@@ -2308,13 +2308,19 @@ not developer notes) continuously as features ship.
   `margin: 0px 0px 5px` computed) before fixing. Fixed with `marginBottom: 0` directly on
   `Field`'s wrapping label — a one-line shared-component fix that corrects this wherever a
   `Field` shares a row with a bare control, not just the Transfers page it was reported on.
+  **"All" chip added to `Tabs` (2026-08-25) — see README Done item 118.** A page with many
+  sub-sections needed one click per section to see everything since the earlier `Tabs` redesign
+  made each section its own collapsible card. New leading "All" chip in the single shared
+  `Tabs.tsx` opens every section at once, so every page using `Tabs` gets it for free. Verified
+  via Playwright: clicking it flipped every section from mixed open/closed to all-open.
   **Still open, not yet started** (all from the same batch, several large): card-header
   action-button alignment (top-right), whole-card coloring instead of colored text/pill
   backgrounds, sidebar menu contrast, a bank-account-number + SMS-metadata field (for a future
-  SMS-based transaction-import feature the user is planning), an "expand all" chip on `Tabs`,
-  Rentals semi-automated rent collection (choose a cycle, propose a transaction for approval,
-  track partial payment), and remembering each entity's last-used/default transfer source.
-  Continue down this list per the standing auto-commit instruction.
+  SMS-based transaction-import feature the user is planning), Rentals semi-automated rent
+  collection (choose a cycle, propose a transaction for approval, track partial payment), and
+  remembering each entity's last-used/default transfer source. Continue down this list per the
+  standing auto-commit instruction — the user explicitly asked to keep going until nothing is
+  pending.
 
 ## Live URLs
 

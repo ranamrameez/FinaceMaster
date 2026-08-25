@@ -2209,9 +2209,20 @@ FinanceManager live link:
      build` all clean; a 23-page console-error sweep found zero regressions. **Still open from
      this batch**: card-header action-button alignment, whole-card coloring instead of colored
      text/pill backgrounds, sidebar contrast, a bank-account-number/SMS-metadata field for
-     future SMS-based transaction import, an "expand all" chip, Rentals semi-automated rent
-     collection with partial-payment tracking, and per-entity default transfer source memory —
-     tracked as open work, several large enough to need their own design pass.
+     future SMS-based transaction import, Rentals semi-automated rent collection with
+     partial-payment tracking, and per-entity default transfer source memory — tracked as open
+     work, several large enough to need their own design pass.
+
+118. **"All" chip added to `Tabs`, third item of the same batch (2026-08-25).** A page with many
+     sub-sections (e.g. QSE/PSX Trade Transactions' 6 sections) needed one click per section to
+     see everything since the `Tabs` redesign (README Done item 103) made each section its own
+     collapsible card. New leading "All" chip (in the single shared `Tabs.tsx`, so every page
+     using it gets this at once) opens every section without scrolling anywhere — its own active
+     state reflects whether every section is already open, not which chip was clicked last.
+     Verified live via Playwright: clicking "All" flipped every section's `aria-expanded` from a
+     mixed true/false state to all-`true`, and the chip itself showed the active style. `npx tsc
+     -b` / `npm run test` (255 tests, unchanged) / `npm run build` all clean; a 23-page
+     console-error sweep found zero regressions.
 
 ## Pending
 

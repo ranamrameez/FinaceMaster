@@ -28,9 +28,21 @@ export function Tabs({ tabs, defaultKey }: { tabs: TabDef[]; defaultKey?: string
     });
   };
 
+  const allOpen = tabs.every((t) => openKeys[t.key]);
+  const expandAll = () => setOpenKeys(Object.fromEntries(tabs.map((t) => [t.key, true])));
+
   return (
     <div>
+      {/* User-requested: "Top chips should have an 'All' option to expand all
+         at once" — a page with many sections otherwise needs one click per
+         section to see everything. Doesn't scroll anywhere on click (there's
+         no single section to jump to); its own active state reflects
+         whether every section is already open, not which chip was last
+         clicked. */}
       <div className="chip-tabs subnav">
+        <button type="button" className={`chip${allOpen ? ' active' : ''}`} onClick={expandAll}>
+          All
+        </button>
         {tabs.map((t) => (
           <button
             key={t.key}
