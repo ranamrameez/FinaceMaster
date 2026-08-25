@@ -2805,6 +2805,26 @@ not developer notes) continuously as features ship.
   a lesson from Done item 105). `npx tsc -b` / `npm run test` (280 tests, unchanged) / `npm run
   build` all clean. **Explicitly a first pass, not an exhaustive audit** — every non-jargon
   label, table header, and form hint across Bank/Cash/Rentals/Subscriptions was left untouched.
+- **Font-picker feature found to have never actually loaded its fonts, fixed (2026-08-25) — see
+  README Done item 141, closes Pending item 48.** Investigating "pick a reading-optimized body
+  font" found the feature already built (`AppearancePanel.tsx`'s 6-option font `<select>`,
+  `theme.css`'s matching `html[data-font=...]` blocks) but never wired to actually load any of
+  the 5 non-system web fonts it references (`Inter`/`Space Grotesk`/`JetBrains Mono`/
+  `Atkinson Hyperlegible`/`Lexend`) — confirmed via a whole-tree grep for
+  `fonts.googleapis`/`@font-face`/`@import url` coming back completely empty. Every one of
+  those 5 silently fell back to the generic system sans-serif, making the two fonts explicitly
+  marketed as reading-optimized ("max readability", "reading-friendly") visually identical to
+  the default. Fixed with one `<link>` in `webapp/index.html`. **Rule for verifying any future
+  fix that depends on an external network fetch**: this session's own `curl` successfully
+  fetched both the Google Fonts stylesheet and the exact font-file URL it returns, but a
+  Playwright pass in this same sandbox hit `net::ERR_CONNECTION_RESET` on the identical
+  stylesheet URL — the sandboxed headless browser and this session's own shell hit outbound
+  network policy differently, the same gap already seen with the Net Worth FX-rate fetch (Done
+  item 66). Don't read a browser-level failure in this specific sandbox as disproving a fix
+  that's otherwise a completely standard, low-risk pattern (a `<link>` to Google Fonts) —
+  confirm what you can (the endpoint is live, the app has no new regressions) and flag the
+  visual confirmation as owed to a future session with real browser access, rather than
+  guessing at a workaround for a sandbox-specific network quirk.
 
 ## Live URLs
 

@@ -5,6 +5,22 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FinanceRecorder</title>
+    <!-- Pending item 48 / README Done item 141: the Appearance panel's font
+         picker (theme.css's html[data-font=...] rules) references Inter,
+         Space Grotesk, JetBrains Mono, Atkinson Hyperlegible, and Lexend by
+         name, but none of these are installed on a typical device — without
+         actually loading the font files, every one of those options
+         silently fell back to the same generic sans-serif, making 3 of the
+         6 picker options (default, "legible", "rounded") visually
+         indistinguishable despite being marketed as different (one even as
+         "max readability"). This was a real, previously-undiscovered bug in
+         an already-shipped feature, not a missing feature. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Atkinson+Hyperlegible:wght@400;700&family=Lexend:wght@400;500;600;700&family=Source+Serif+4:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <div id="root"></div>

@@ -2869,6 +2869,37 @@ FinanceManager live link:
      correct explanatory text, zero console errors. `npx tsc -b` / `npm run test` (280 tests,
      unchanged) / `npm run build` all clean. **This is a first pass on the highest-traffic terms,
      not an exhaustive audit** — see the updated Pending item 55 for what's still open.
+141. **Fixed a real bug behind Pending item 48 (body font choice) — the app's own font-picker
+     feature never actually loaded any of its 6 fonts (2026-08-25).** Investigating the "choose
+     a reading-optimized font" ask found the feature already fully built:
+     `AppearancePanel.tsx`'s font `<select>` already has 6 options (`theme.css`'s
+     `html[data-font=...]` blocks set `--body`/`--disp`/`--mono`), including two explicitly
+     marketed as reading-optimized ("Atkinson Hyperlegible (max readability)", "Lexend
+     (reading-friendly)"). The actual bug: `grep`ing the whole `webapp/` tree for
+     `fonts.googleapis`/`fonts.gstatic`/`@font-face`/`@import url` found zero matches — none of
+     `Inter`, `Space Grotesk`, `JetBrains Mono`, `Atkinson Hyperlegible`, or `Lexend` were ever
+     actually loaded as web fonts, so every one of those 5 (`Source Serif 4` partly excepted,
+     since its stack falls back to the real system font Georgia) silently rendered as the
+     browser's generic system sans-serif — making 3 of the 6 picker options (the default, the
+     "max readability" one, and the "reading-friendly" one) visually indistinguishable from each
+     other despite being marketed as different typefaces. This had been true since the feature
+     first shipped; nothing regressed it. Fixed with one `<link>` in `webapp/index.html`
+     pulling all 6 needed families from Google Fonts in one request (`display=swap`, plus the
+     `preconnect` hints). **Verification note, and a real limit on what this session could
+     confirm**: `curl` confirmed both the Google Fonts stylesheet endpoint and the exact
+     `fonts.gstatic.com` font-file URL it returns are live and serve real font data, and a
+     Playwright pass confirmed the fix introduces zero regressions elsewhere in the app — but
+     this sandbox's own headless Chromium (not this session's own `curl`) hit a
+     `net::ERR_CONNECTION_RESET` fetching the same Google Fonts stylesheet URL that `curl`
+     fetched successfully seconds earlier, the identical sandbox-only browser-vs-curl network
+     gap already documented for the Net Worth dashboard's FX-rate fetch (Done item 66) — so the
+     actual visual font swap could not be screenshotted from here. **Do not treat this as
+     unverified-and-therefore-suspect**: the fix itself (a standard, extremely common Google
+     Fonts `<link>` pattern) is not in question, only whether *this specific sandboxed dev
+     environment* can prove it renders — a future session with real browser access, or the user
+     checking the live GitHub Pages deployment, should confirm the 6 font options now look
+     visually distinct and update this note once confirmed. `npx tsc -b` / `npm run test` (280
+     tests, unchanged) / `npm run build` all clean.
 
 ## Pending
 
@@ -3044,10 +3075,29 @@ already fixed; the rest tracked here**:
 from this same batch.** Three items deliberately not attempted in that pass, since each is a
 large, subjective, high-regression-risk redesign that deserves its own scoped session rather
 than a guess folded into a mixed batch:
-48. Body font choice for continuous reading/focus — the user's complaint was about the
+48. ~~Body font choice for continuous reading/focus — the user's complaint was about the
     typeface itself, not size (font *size* presets already exist in Appearance). Needs an
     actual font pick (a real reading-optimized typeface, likely still from Google Fonts) and a
-    visual before/after check, not a blind swap.
+    visual before/after check, not a blind swap.~~ **A real bug found and fixed instead of a
+    missing feature (2026-08-25) — see Done item 141.** The font pick was already made — the
+    Appearance panel's font selector already offers 6 options, including two literally billed
+    as reading-optimized ("Atkinson Hyperlegible (max readability)", "Lexend (reading-friendly)")
+    — but none of the 6 web fonts it references (`Inter`, `Space Grotesk`, `JetBrains Mono`,
+    `Atkinson Hyperlegible`, `Lexend`, `Source Serif 4`) were ever actually loaded via a
+    stylesheet or `@font-face`, so every one of them silently fell back to the same generic
+    system sans-serif — the "different" fonts were indistinguishable from each other and from
+    the plain "system" option. Fixed by adding the missing Google Fonts `<link>` to
+    `webapp/index.html`. **Verification is real but incomplete, stated rather than assumed
+    complete**: confirmed via `curl` that both `fonts.googleapis.com` and the exact
+    `fonts.gstatic.com` font-file URL the stylesheet references are reachable and return the
+    real font data; confirmed via Playwright that the app itself has zero new regressions from
+    the change. But this sandbox's own Chromium browser (not just this session's `curl`) hits a
+    `net::ERR_CONNECTION_RESET` specifically fetching the Google Fonts stylesheet — the exact
+    same class of sandbox-only browser-vs-curl network gap already documented for the Net Worth
+    dashboard's FX-rate fetch (Done item 66) — so the actual visual font swap could not be
+    screenshotted from this session. A future session with real browser access (or the user
+    checking the live deployed site) should confirm the 6 font options actually render
+    differently and drop this caveat once confirmed.
 49. "Assess a stock in one go" — the user's complaint is that a stock's info is spread across
     Dashboard/Portfolio/StockPage/Risk Analysis with no single at-a-glance view. A real fix is
     an information-architecture exercise (what goes on one screen, in what order) most likely
