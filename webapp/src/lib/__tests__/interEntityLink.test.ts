@@ -90,7 +90,17 @@ describe('buildLinkedRecords', () => {
     if (to.module === 'cash') expect(to.record).toMatchObject({ amount: 140000, currencyCode: 'PKR' });
   });
 
-  it('maps Bank -> Rentals to RENT_INCOME on the property side', () => {
+  // Rentals has no real balance of its own — RENT_INCOME/EXPENSE just
+  // categorize what actually happened to the REAL (Bank/Cash) side, they
+  // don't follow the generic from='out'/to='in' opposite-polarity
+  // convention a transfer between two real money pools uses. Real rent
+  // landing in Bank and the property's own income going up are the SAME
+  // event, not money moving from one pool to another — so the two cases
+  // below are keyed off what happens to Bank's balance, not off which side
+  // is nominally "from" or "to". (README Done item 126 — this was inverted
+  // before that fix, see the comment on the `rentals` case in
+  // interEntityLink.ts for the full reasoning.)
+  it('maps a real money transfer OUT of Bank (Bank -> Rentals) to an EXPENSE on the property side', () => {
     const input: InterEntityTransferInput = {
       date: '2026-04-01',
       fromAmount: 800,
@@ -102,10 +112,10 @@ describe('buildLinkedRecords', () => {
     expect(from.module).toBe('bank');
     if (from.module === 'bank') expect(from.record.amount).toBe(-800);
     expect(to.module).toBe('rentals');
-    if (to.module === 'rentals') expect(to.record).toMatchObject({ propertyId: 'prop-1', type: 'RENT_INCOME', amount: 800 });
+    if (to.module === 'rentals') expect(to.record).toMatchObject({ propertyId: 'prop-1', type: 'EXPENSE', amount: 800 });
   });
 
-  it('maps Rentals -> Bank to an EXPENSE on the property side', () => {
+  it('maps a real money transfer INTO Bank (Rentals -> Bank) to RENT_INCOME on the property side', () => {
     const input: InterEntityTransferInput = {
       date: '2026-04-05',
       fromAmount: 150,
@@ -115,7 +125,7 @@ describe('buildLinkedRecords', () => {
     };
     const { from, to } = buildLinkedRecords(input, ids);
     expect(from.module).toBe('rentals');
-    if (from.module === 'rentals') expect(from.record).toMatchObject({ propertyId: 'prop-1', type: 'EXPENSE', amount: 150 });
+    if (from.module === 'rentals') expect(from.record).toMatchObject({ propertyId: 'prop-1', type: 'RENT_INCOME', amount: 150 });
     expect(to.module).toBe('bank');
     if (to.module === 'bank') expect(to.record.amount).toBe(150);
   });

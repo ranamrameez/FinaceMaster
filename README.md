@@ -2429,6 +2429,48 @@ FinanceManager live link:
      page" pass since none of them has a plain deposit/withdrawal record like QSE/PSX's
      `Transfer`.
 
+126. **CRITICAL, real financial-correctness bug found and fixed while designing the Rentals
+     link shortcut above (2026-08-25) — Bank/Cash↔Rentals linked transfers had an inverted
+     RENT_INCOME/EXPENSE sign since this pairing was first added (README Done item 34).**
+     Every other linkable pairing (Bank↔Cash, Bank↔QSE/PSX, Bank↔Funds) is a transfer between
+     two modules that each hold a REAL balance, where the shared `from`='out'/`to`='in'
+     convention is correct by construction — conservation of money means one side's balance
+     falls by exactly as much as the other's rises. **Rentals holds no real balance of its
+     own** — `RentalEntry.type` (RENT_INCOME/EXPENSE) just categorizes what a REAL Bank/Cash
+     event meant for that property's own performance tracking; it was never "money leaving or
+     entering a Rentals-held pool." Real rent landing in a bank account and the property's own
+     income going up are the *same* event moving the *same* direction, not money moving from
+     one pool to another — so applying the generic opposite-polarity convention to this pairing
+     produced the wrong type every time: linking "Bank → Rentals" (the natural choice when
+     paying an expense *from* Bank) gave Bank the correct outflow (-amount) but wrongly logged
+     the property side as **RENT_INCOME** instead of EXPENSE; linking "Rentals → Bank" (the
+     natural choice when rent *arrives* at Bank) gave Bank the correct inflow (+amount) but
+     wrongly logged the property side as **EXPENSE** instead of RENT_INCOME — backwards in both
+     of the pairing's two real documented use cases ("rent received, or an expense paid," per
+     this file's own `MODULES_PLAN.md` §7 description). This mirrors a class of bug the
+     `personalLoans` case in the same function already had a documented exception for
+     ("direction is intentionally unused... unlike every other module's side record") — Rentals
+     needed the identical kind of exception and didn't have one. Verified via an explicit
+     two-scenario walkthrough (not just intuition) before touching code, confirmed from two
+     independent angles (real-world cash-flow direction, and "which side actually holds the
+     real money and is it rising or falling") that agreed on the same fix. Fixed in
+     `lib/interEntityLink.ts`'s `buildSideRecord` (`case 'rentals'`) by swapping the ternary;
+     both existing tests in `lib/__tests__/interEntityLink.test.ts` had their expected values
+     (and misleading names) corrected to match, since they encoded the wrong behavior as
+     "correct." `updateLinkedTransfer` reuses the same `buildLinkedRecords` function, so editing
+     an existing linked Rentals transfer also now recomputes with the corrected mapping.
+     **Not done, and deliberately so — flagging for the user's attention, not silently
+     "fixing" their data**: this bug has been live since Rentals linking first shipped, so ANY
+     Bank/Cash↔Rentals linked transfer created before this fix has its RentalEntry's
+     RENT_INCOME/EXPENSE type backwards relative to what actually happened. There is no safe way
+     to auto-detect and silently correct those past records without risking a wrong guess on
+     real financial data, per this project's own locked cloud-sync-safety principle (never
+     mutate real financial data without an explicit, informed user action) — **if you have ever
+     created a linked transfer between Banking/Cash and a Rentals property, please review those
+     entries and correct any with the wrong income/expense type by hand.** New links created
+     from this point on are correct. `npx tsc -b` / `npm run test` (264 tests, 2 corrected) /
+     `npm run build` all clean.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`

@@ -60,6 +60,23 @@ function buildSideRecord(
         record: { id, date, type: direction === 'in' ? 'DEPOSIT' : 'WITHDRAWAL', gross: amount, fee: 0 },
       };
     case 'rentals':
+      // Unlike Bank/Cash/QSE/PSX/Funds, Rentals has no real balance of its
+      // own — RENT_INCOME/EXPENSE just categorize a real Bank/Cash event
+      // from the property's own performance-tracking side, they don't
+      // represent money "leaving" or "entering" a Rentals-held pool. So the
+      // generic from='out'/to='in' convention (correct for a genuine
+      // transfer between two real money pools, where one side's balance
+      // rises exactly as the other's falls) doesn't apply here: real rent
+      // landing in Bank/Cash means BOTH that account AND the property's own
+      // income figure go up together, not in opposite directions. If
+      // Rentals is picked as the `to` side, the real money is necessarily
+      // on the `from` side and is decreasing (money left that account to
+      // pay for something) — an EXPENSE. If Rentals is `from`, the real
+      // money is on `to` and increasing (money arrived) — RENT_INCOME. This
+      // was inverted until 2026-08-25 (README Done item 126) — the exact
+      // same class of "direction doesn't map to a sign for this module"
+      // exception the `personalLoans` case below already documents, just
+      // missed here originally.
       if (!cfg.ref) throw new Error('Rentals side of a linked transfer needs a property.');
       return {
         module: 'rentals',
@@ -67,7 +84,7 @@ function buildSideRecord(
           id,
           propertyId: cfg.ref,
           date,
-          type: direction === 'in' ? 'RENT_INCOME' : 'EXPENSE',
+          type: direction === 'in' ? 'EXPENSE' : 'RENT_INCOME',
           amount,
           note,
         },

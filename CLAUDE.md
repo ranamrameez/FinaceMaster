@@ -2449,6 +2449,23 @@ not developer notes) continuously as features ship.
   remembered Bank account, "Link & add" hit the sign-in gate — zero console errors on either.
   **Rentals/Personal Loans/Funds/EMI remain open** — each needs its own short design pass since
   none of them has a plain deposit/withdrawal record like QSE/PSX's `Transfer`.
+  **CRITICAL, real financial-correctness bug found and fixed while designing the above
+  (2026-08-25) — see README Done item 126, flagged prominently for the user since it can't be
+  silently auto-corrected.** Bank/Cash↔Rentals linked transfers had an INVERTED RENT_INCOME/
+  EXPENSE sign since this pairing first shipped (Done item 34) — every other linkable pairing
+  is between two modules holding a REAL balance, where the shared `from`='out'/`to`='in'
+  convention is correct (conservation of money: one side falls exactly as the other rises), but
+  Rentals holds no real balance of its own — `RentalEntry.type` just categorizes what a REAL
+  Bank/Cash event meant for the property's performance tracking, so applying the generic
+  opposite-polarity convention got it backwards in both of the pairing's real use cases ("rent
+  received" and "an expense paid"). Same class of issue the `personalLoans` case already had a
+  documented exception for — Rentals needed the identical exception and didn't have one. Fixed
+  in `lib/interEntityLink.ts`'s `buildSideRecord` (swapped the ternary); both existing tests
+  (which encoded the wrong behavior as correct) were corrected. **Any Bank/Cash↔Rentals linked
+  transfer created before this fix has the wrong income/expense type on the Rentals side** —
+  this was NOT auto-corrected (no safe way to guess which past records to touch, per this
+  file's own cloud-sync-safety principle), so it needs the user's manual review. New links from
+  this point on are correct.
 
 ## Live URLs
 
@@ -2566,6 +2583,26 @@ webapp/                                                              the new Rea
   (`uploadLocalToCloud`) to ever write when the cloud looks empty. **Do not
   reintroduce any "seed the cloud if it looks empty" pattern**, here or in
   the PSX equivalent or any future module.
+- **A linked-transfer pairing's `from`='out'/`to`='in' sign convention
+  (`lib/interEntityLink.ts`'s `buildSideRecord`) is only correct when BOTH
+  sides hold a real balance of their own** (Bank/Cash/QSE/PSX/Funds) —
+  conservation of money means one side's balance falls by exactly as much
+  as the other's rises, which is what makes opposite polarity correct.
+  **A module with no real balance of its own (Rentals, Personal Loans) is
+  a real exception, not an edge case to skip**: its own "type"/amount just
+  categorizes what the REAL side's event meant, so the real event's own
+  direction (not the from/to convention) decides it. `personalLoans`
+  already documents this exception (a repayment is always positive
+  regardless of direction); Rentals had the *identical* exception but
+  didn't get one, and had its RENT_INCOME/EXPENSE backwards for a full day
+  of shipped code before it was caught (README Done item 126) — a real
+  financial-correctness bug affecting real linked data, not auto-corrected
+  since there's no safe way to guess which past records to fix. **Any
+  future module added to this linking system that doesn't hold a real
+  balance needs the same explicit "what does the REAL side's direction
+  mean for MY type" reasoning walked through before shipping** — don't
+  assume the generic from/to convention applies just because it's already
+  used for the balance-holding modules.
 - **Firebase RTDB silently strips empty arrays/objects at any nesting
   depth, not just the top level.** `set()`ing a value tree where some
   nested field is `[]` or `{}` doesn't store an empty array/object at
