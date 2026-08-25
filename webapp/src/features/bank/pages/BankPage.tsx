@@ -11,10 +11,12 @@ import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
+import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { useAmountFormat } from '../../../hooks/useAmountFormat';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { hueStyle } from '../../../lib/statCardHues';
+import { defaultTimezoneForCurrency } from '../../../lib/datetime';
 import { accountBalance, accountByCategory, accountRunningLedger, bankMonthlyFlow, budgetVsActual, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
 import { plannedBankProjection } from '../../../lib/calc/plannedBalance';
 import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
@@ -376,14 +378,14 @@ function useAccountPicker() {
   return { accounts, account, accountId: account?.id ?? '', setAccountId };
 }
 
-function emptyTxRow(accountId: string): BankTransaction {
-  return { id: '', accountId, date: today(), amount: 0, description: '', category: '', source: 'manual' };
+function emptyTxRow(accountId: string, currencyCode?: string): BankTransaction {
+  return { id: '', accountId, date: today(), amount: 0, description: '', category: '', source: 'manual', timezone: defaultTimezoneForCurrency(currencyCode) };
 }
 
-function AddTransactionsForm({ accountId, knownCategories }: { accountId: string; knownCategories: string[] }) {
+function AddTransactionsForm({ accountId, currencyCode, knownCategories }: { accountId: string; currencyCode: string; knownCategories: string[] }) {
   const addTransactions = useBankWorkbookStore((s) => s.addTransactions);
   const ensureSignedIn = useEnsureSignedIn();
-  const [rows, setRows] = useState<BankTransaction[]>([emptyTxRow(accountId)]);
+  const [rows, setRows] = useState<BankTransaction[]>([emptyTxRow(accountId, currencyCode)]);
 
   const update = (i: number, patch: Partial<BankTransaction>) =>
     setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
@@ -394,7 +396,7 @@ function AddTransactionsForm({ accountId, knownCategories }: { accountId: string
     if (!(await ensureSignedIn('Sign in to save bank transactions.'))) return;
     addTransactions(valid.map((r) => ({ ...r, id: uid(), accountId, category: r.category?.trim() || undefined })));
     toast(`Added ${valid.length} transaction${valid.length > 1 ? 's' : ''}.`);
-    setRows([emptyTxRow(accountId)]);
+    setRows([emptyTxRow(accountId, currencyCode)]);
   };
 
   return (
@@ -418,6 +420,12 @@ function AddTransactionsForm({ accountId, knownCategories }: { accountId: string
             value={r.category}
             onChange={(e) => update(i, { category: e.target.value })}
             style={{ width: 130 }}
+          />
+          <TimeZoneFields
+            time={r.time}
+            timezone={r.timezone}
+            onTimeChange={(time) => update(i, { time })}
+            onTimezoneChange={(timezone) => update(i, { timezone })}
           />
           <button className="btn secondary small" onClick={() => setRows((rs) => rs.filter((_, idx) => idx !== i))}>
             <TrashIcon size={12} />Remove
@@ -571,7 +579,7 @@ function TransactionsTab() {
       </Field>
       {account && (
         <div style={{ marginTop: 12 }}>
-          <AddTransactionsForm accountId={account.id} knownCategories={knownCategories} />
+          <AddTransactionsForm accountId={account.id} currencyCode={account.currencyCode} knownCategories={knownCategories} />
           <div style={{ marginTop: 16 }}>
             <CategoryBreakdown account={account} />
             <TransactionsList account={account} />

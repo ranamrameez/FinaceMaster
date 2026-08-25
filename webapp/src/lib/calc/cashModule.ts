@@ -1,4 +1,5 @@
 import type { CashEntry } from '../../types/cashWorkbook';
+import { toInstantMs } from '../datetime';
 
 export interface CashLedgerRow {
   entry: CashEntry;
@@ -7,9 +8,14 @@ export interface CashLedgerRow {
 
 /** Running balance per currency, in chronological order — entries in
  * different currencies never mix into one balance (no live FX-rate source
- * to convert with). Ties on date keep original array order (stable sort). */
+ * to convert with). Sorted by real instant (date+time+timezone); two
+ * untimed entries always tie at the same noon-UTC instant, falling through
+ * to original array order (stable sort) exactly as before this field
+ * existed — a strict, backward-compatible upgrade. */
 export function cashRunningLedger(entries: CashEntry[]): CashLedgerRow[] {
-  const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
+  const sorted = [...entries].sort(
+    (a, b) => toInstantMs(a.date, a.time, a.timezone) - toInstantMs(b.date, b.time, b.timezone),
+  );
   const runningByCurrency: Record<string, number> = {};
   return sorted.map((entry) => {
     const delta = entry.type === 'IN' ? entry.amount : -entry.amount;

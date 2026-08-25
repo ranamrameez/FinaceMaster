@@ -2724,6 +2724,23 @@ not developer notes) continuously as features ship.
   all clean. **Next in this same rollout**: the six non-exchange modules' own add-forms (Cash,
   Bank, Personal Loans, Rentals, Funds, Subscriptions) still don't capture a time — same
   mechanical wiring, not yet done.
+- **Time+Timezone rollout completed for the remaining five non-exchange modules (2026-08-25) —
+  see README Done item 136, fully closes Pending item 41.** `CashEntry`/`BankTransaction`/
+  `PersonalLoanRepayment`/`RentalEntry` all gained optional `time`/`timezone`; `cashRunningLedger`/
+  `accountRunningLedger`/`repaymentRunningOutstanding` switched to `toInstantMs`-based sorting
+  (same backward-compatible pattern as Done item 133 — untimed records tie at noon-UTC, so
+  nothing's existing sort order changed). `TimeZoneFields` wired into Cash/Bank/Personal Loans/
+  Rentals/Funds' primary add-forms; Bank's `AddTransactionsForm` and Rentals' `AddEntryForm`
+  both needed a new `currencyCode` prop threaded from the selected account/property so the
+  timezone prefill has something to key off (a bank account or rental property's currency isn't
+  a single workbook-wide setting the way Cash/Personal Loans/Funds' is). Funds needed no type
+  change — it reuses the shared `Transaction` type, which already had these fields. **Rule
+  reinforced**: before adding a time field to a new record type, check whether it actually has
+  a per-entry chronology concern — Subscriptions was skipped because a `Subscription` is a
+  single object with a `startDate`, not a dated transaction log, so there's no same-day-ordering
+  scenario for a time to resolve; forcing the field on anyway would just be inert UI. Verified
+  live via Playwright with seeded data across all five modules — zero console errors. `npx tsc
+  -b` / `npm run test` (280 tests, unchanged) / `npm run build` all clean.
 
 ## Live URLs
 

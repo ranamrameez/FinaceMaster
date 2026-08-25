@@ -55,6 +55,11 @@ export interface RentalEntry {
   id: string;
   propertyId: string; // currency is implied by the property, not repeated per-entry
   date: string;
+  /** Optional time-of-day ("HH:MM"), defaults to noon when absent — see
+   * `lib/datetime.ts`. Lets same-day entries sort by real chronology. */
+  time?: string;
+  /** IANA timezone the `date`+`time` are in; defaults to UTC when absent. */
+  timezone?: string;
   type: 'RENT_INCOME' | 'EXPENSE';
   amount: number;
   /** Free-form, user-definable — never a fixed enum (locked decision,

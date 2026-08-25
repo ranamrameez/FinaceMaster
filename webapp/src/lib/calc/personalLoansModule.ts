@@ -1,4 +1,5 @@
 import type { PersonalLoan, PersonalLoanRepayment } from '../../types/personalLoansWorkbook';
+import { toInstantMs } from '../datetime';
 
 export function loanOutstanding(loan: PersonalLoan, repayments: PersonalLoanRepayment[]): number {
   const repaid = repayments.filter((r) => r.loanId === loan.id).reduce((s, r) => s + r.amount, 0);
@@ -17,7 +18,7 @@ export function repaymentRunningOutstanding(loan: PersonalLoan, repayments: Pers
   const forLoan = repayments
     .filter((r) => r.loanId === loan.id)
     .map((r, i) => ({ r, i }))
-    .sort((a, b) => a.r.date.localeCompare(b.r.date) || a.i - b.i);
+    .sort((a, b) => toInstantMs(a.r.date, a.r.time, a.r.timezone) - toInstantMs(b.r.date, b.r.time, b.r.timezone) || a.i - b.i);
   const out = new Map<string, number>();
   let remaining = loan.principal;
   for (const { r } of forLoan) {

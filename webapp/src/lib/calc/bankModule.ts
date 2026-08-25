@@ -1,15 +1,20 @@
 import type { BankAccount, BankTransaction } from '../../types/bankWorkbook';
+import { toInstantMs } from '../datetime';
 
 export interface BankLedgerRow {
   tx: BankTransaction;
   balance: number;
 }
 
-/** Running balance for one account, starting from its opening balance,
- * chronological order (ties keep original array order — stable sort). */
+/** Running balance for one account, starting from its opening balance, in
+ * real-instant chronological order (two untimed transactions always tie at
+ * the same noon-UTC instant, falling through to original array order —
+ * a strict, backward-compatible upgrade from the old date-string sort). */
 export function accountRunningLedger(account: BankAccount, transactions: BankTransaction[]): BankLedgerRow[] {
   const accountTxs = transactions.filter((t) => t.accountId === account.id);
-  const sorted = [...accountTxs].sort((a, b) => a.date.localeCompare(b.date));
+  const sorted = [...accountTxs].sort(
+    (a, b) => toInstantMs(a.date, a.time, a.timezone) - toInstantMs(b.date, b.time, b.timezone),
+  );
   let balance = account.openingBalance;
   return sorted.map((tx) => {
     balance += tx.amount;

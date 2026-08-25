@@ -25,6 +25,11 @@ export interface BankTransaction {
   id: string;
   accountId: string;
   date: string;
+  /** Optional time-of-day ("HH:MM"), defaults to noon when absent — see
+   * `lib/datetime.ts`. Lets same-day transactions sort by real chronology. */
+  time?: string;
+  /** IANA timezone the `date`+`time` are in; defaults to UTC when absent. */
+  timezone?: string;
   /** Signed: negative = debit/spend, positive = credit/deposit. */
   amount: number;
   description: string;

@@ -11,6 +11,8 @@ import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
+import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
+import { defaultTimezoneForCurrency } from '../../../lib/datetime';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { getMarketPrice } from '../../../lib/calc';
@@ -238,6 +240,8 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
   const [txDate, setTxDate] = useState(today());
   const [txUnits, setTxUnits] = useState(0);
   const [txNav, setTxNav] = useState(0);
+  const [txTime, setTxTime] = useState<string | undefined>(undefined);
+  const [txTimezone, setTxTimezone] = useState<string | undefined>(() => defaultTimezoneForCurrency(fund.currencyCode));
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editRow, setEditRow] = useState<Transaction | null>(null);
   const [fromDate, setFromDate] = useState('');
@@ -304,9 +308,10 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
   const submitTx = async () => {
     if (!txUnits || !txNav) return toast('Enter units and NAV.');
     if (!(await ensureSignedIn('Sign in to save this transaction.'))) return;
-    addTransaction({ date: txDate, ticker: fund.id, action: txAction, shares: txUnits, price: txNav });
+    addTransaction({ date: txDate, ticker: fund.id, action: txAction, shares: txUnits, price: txNav, time: txTime, timezone: txTimezone });
     toast(`${txAction === 'BUY' ? 'Invested' : 'Withdrew'} logged.`);
     setTxUnits(0);
+    setTxTime(undefined);
   };
 
   const startEdit = (i: number, t: Transaction) => { setEditIndex(i); setEditRow({ ...t }); };
@@ -377,6 +382,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
         <input type="date" value={txDate} onChange={(e) => setTxDate(e.target.value)} />
         <input type="number" placeholder="Units" value={txUnits || ''} onChange={(e) => setTxUnits(Number(e.target.value))} style={{ width: 100 }} />
         <input type="number" step="0.0001" placeholder="NAV" value={txNav || ''} onChange={(e) => setTxNav(Number(e.target.value))} style={{ width: 100 }} />
+        <TimeZoneFields time={txTime} timezone={txTimezone} onTimeChange={setTxTime} onTimezoneChange={setTxTimezone} />
         <button className="btn" onClick={submitTx}><PlusIcon />Add</button>
       </div>
 

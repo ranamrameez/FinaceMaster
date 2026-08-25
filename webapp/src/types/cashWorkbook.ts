@@ -4,6 +4,11 @@ export interface CashEntry {
    * survives other entries being added/edited/deleted around it. */
   id: string;
   date: string;
+  /** Optional time-of-day ("HH:MM"), defaults to noon when absent — see
+   * `lib/datetime.ts`. Lets same-day entries sort by real chronology. */
+  time?: string;
+  /** IANA timezone the `date`+`time` are in; defaults to UTC when absent. */
+  timezone?: string;
   type: 'IN' | 'OUT';
   amount: number;
   /** Per-entry, not per-module — see MODULES_PLAN.md's cross-cutting

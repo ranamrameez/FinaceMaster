@@ -2762,6 +2762,30 @@ FinanceManager live link:
      (280 tests, unchanged) / `npm run build` all clean. **Still open**: the six non-exchange
      modules' own add-forms (Cash, Bank, Personal Loans, Rentals, Funds, Subscriptions) — same
      mechanical wiring, not yet done.
+136. **Time+Timezone rollout completed for the five non-exchange modules that need it
+     (2026-08-25), fully closing Pending item 41.** `CashEntry`, `BankTransaction`, and
+     `PersonalLoanRepayment` all gained optional `time`/`timezone` fields (same shape as
+     `Transaction`/`Transfer`/`Adjustment`/`Dividend` before them); `RentalEntry` too, though it
+     has no running-balance calc to update (Rentals aggregates by category/month, never a
+     per-entry running total). `cashRunningLedger`, `accountRunningLedger`, and
+     `repaymentRunningOutstanding` all switched from a bare `date.localeCompare` sort to
+     `toInstantMs`-based real-instant sorting — the same backward-compatible upgrade pattern as
+     Done item 133 (two untimed records always tie at the same noon-UTC instant, so every
+     existing correct sort order is preserved). `TimeZoneFields` wired into each module's
+     primary add-form: Cash's `AddEntryForm`, Bank's `AddTransactionsForm` (now takes a
+     `currencyCode` prop from the selected account to prefill the right timezone), Personal
+     Loans' `RepaymentsSection` add-row, Rentals' `AddEntryForm` (same currencyCode-prop
+     pattern, from the property), and Funds' `FundDetail` transaction form (using the fund's own
+     `currencyCode` — no type change needed there since Funds reuses the shared `Transaction`
+     type that already had these fields from Done item 133). **Subscriptions deliberately
+     skipped**: a `Subscription` record has only a `startDate`/`cancelledDate` on the
+     subscription object itself, no per-transaction dated log the way every other module has —
+     there's no same-day-ordering scenario here for a time field to resolve, so adding one would
+     be inert UI with nothing behind it. Verified live via Playwright with seeded data for all
+     five modules: each add-form's timezone field correctly prefilled from the relevant
+     currency (Bank/Rentals from their account/property's currency, Cash/Personal Loans/Funds
+     from the workbook's own currency), zero console errors across all of them. `npx tsc -b` /
+     `npm run test` (280 tests, unchanged) / `npm run build` all clean.
 
 ## Pending
 
@@ -2883,10 +2907,15 @@ already fixed; the rest tracked here**:
     UI capture (an actual Time+Timezone input on the add-form) shipped for QSE's/PSX's Trade
     Transactions and Cash Transfers forms — the highest-value case, since same-day ordering is
     exactly where this matters. **QSE's/PSX's Adjustments and Dividends forms also done
-    (2026-08-25) — see Done item 135.** **Still open**: the six non-exchange modules' own
-    add-forms don't have the UI fields yet — `TimeZoneFields`/`defaultTimezoneForCurrency` are
-    ready to drop into any of them the same way, this is now a mechanical per-module rollout,
-    not a design question.
+    (2026-08-25) — see Done item 135. Now fully done (2026-08-25) — see Done item 136**: Cash,
+    Bank, Personal Loans, and Rentals' primary add-forms all have `TimeZoneFields` now, and each
+    module's own running-balance/ledger calc (`cashRunningLedger`/`accountRunningLedger`/
+    `repaymentRunningOutstanding`) sorts by real instant via `toInstantMs`, same upgrade pattern
+    as Done item 133. Funds reuses the shared `Transaction` type (already had `time`/`timezone`
+    from Done item 133), so it only needed the UI field, no type/calc change. Subscriptions is
+    deliberately skipped — a `Subscription` record has only a `startDate`/`cancelledDate` on
+    the subscription itself, no per-transaction dated log, so there's no same-day-ordering
+    scenario for a time field to resolve. This closes Pending item 41 in full.
 42. ~~Roll out `CollapsibleCard` further, including chart cards on Analytics pages.~~ **Done —
     see Done items 74, 82, 101, and 107.** Chart cards across every Dashboard/Analytics page
     are collapsible (fixed once at the shared `ChartCard` component). Portfolio's Holdings/

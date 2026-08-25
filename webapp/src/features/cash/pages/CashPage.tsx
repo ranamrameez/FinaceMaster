@@ -9,6 +9,7 @@ import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
+import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { useAmountFormat } from '../../../hooks/useAmountFormat';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
@@ -18,6 +19,7 @@ import { plannedCashProjection } from '../../../lib/calc/plannedBalance';
 import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar, tickerColor } from '../../../lib/cssVar';
+import { defaultTimezoneForCurrency } from '../../../lib/datetime';
 import { useAppearanceStore } from '../../../store/appearanceStore';
 import { ChartCard } from '../../qse/components/ChartCard';
 import { parseCSV } from '../../../lib/csv';
@@ -35,7 +37,10 @@ import type { PlannedCashEntry } from '../../../types/plannedCash';
 const today = () => new Date().toISOString().slice(0, 10);
 
 function emptyEntry(defaultCurrency: string): CashEntry {
-  return { id: crypto.randomUUID(), date: today(), type: 'IN', amount: 0, currencyCode: defaultCurrency, category: '', note: '', source: 'manual' };
+  return {
+    id: crypto.randomUUID(), date: today(), type: 'IN', amount: 0, currencyCode: defaultCurrency,
+    category: '', note: '', source: 'manual', timezone: defaultTimezoneForCurrency(defaultCurrency),
+  };
 }
 
 function AddEntryForm({ knownCategories }: { knownCategories: string[] }) {
@@ -69,7 +74,7 @@ function AddEntryForm({ knownCategories }: { knownCategories: string[] }) {
           <TextInput type="number" step="0.01" value={e.amount || ''} onChange={(ev) => setE({ ...e, amount: Number(ev.target.value) })} />
         </Field>
         <Field label="Currency" width={110}>
-          <Select value={e.currencyCode} onChange={(ev) => { setE({ ...e, currencyCode: ev.target.value }); setLastCurrency(ev.target.value); }}>
+          <Select value={e.currencyCode} onChange={(ev) => { setE({ ...e, currencyCode: ev.target.value, timezone: defaultTimezoneForCurrency(ev.target.value) }); setLastCurrency(ev.target.value); }}>
             {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>
@@ -84,6 +89,12 @@ function AddEntryForm({ knownCategories }: { knownCategories: string[] }) {
         <Field label="Note (optional)" width={180}>
           <TextInput value={e.note} onChange={(ev) => setE({ ...e, note: ev.target.value })} />
         </Field>
+        <TimeZoneFields
+          time={e.time}
+          timezone={e.timezone}
+          onTimeChange={(time) => setE({ ...e, time })}
+          onTimezoneChange={(timezone) => setE({ ...e, timezone })}
+        />
       </div>
       <datalist id="cash-category-datalist">
         {knownCategories.map((c) => <option key={c} value={c} />)}

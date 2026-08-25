@@ -11,9 +11,11 @@ import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
+import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { CURRENCIES } from '../../../lib/currencies';
+import { defaultTimezoneForCurrency } from '../../../lib/datetime';
 import { parseCSV, toCSV } from '../../../lib/csv';
 import { fmtMoney } from '../../../lib/format';
 import { confirmAndDeleteLinkable, createLinkedTransfer, warnIfLinked } from '../../../lib/linkCascade';
@@ -269,13 +271,15 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
   const [editRow, setEditRow] = useState<PersonalLoanRepayment | null>(null);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [time, setTime] = useState<string | undefined>(undefined);
+  const [timezone, setTimezone] = useState<string | undefined>(() => defaultTimezoneForCurrency(loan.currencyCode));
 
-  const resetAdd = () => setAmount(0);
+  const resetAdd = () => { setAmount(0); setTime(undefined); };
 
   const submit = async () => {
     if (!amount || amount <= 0) return toast('Enter a repayment amount.');
     if (!(await ensureSignedIn('Sign in to save repayments.'))) return;
-    addRepayment({ id: crypto.randomUUID(), loanId: loan.id, date, amount });
+    addRepayment({ id: crypto.randomUUID(), loanId: loan.id, date, amount, time, timezone });
     toast('Repayment logged.');
     resetAdd();
   };
@@ -324,6 +328,7 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
       <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
         <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         <input type="number" step="0.01" placeholder="Amount" value={amount || ''} onChange={(e) => setAmount(Number(e.target.value))} style={{ width: 100 }} />
+        <TimeZoneFields time={time} timezone={timezone} onTimeChange={setTime} onTimezoneChange={setTimezone} />
         {linkMode ? (
           <LinkedRepaymentFields loan={loan} date={date} amount={amount} onLinked={resetAdd} />
         ) : (

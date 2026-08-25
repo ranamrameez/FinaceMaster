@@ -19,6 +19,11 @@ export interface PersonalLoanRepayment {
   id: string;
   loanId: string;
   date: string;
+  /** Optional time-of-day ("HH:MM"), defaults to noon when absent — see
+   * `lib/datetime.ts`. Lets same-day repayments sort by real chronology. */
+  time?: string;
+  /** IANA timezone the `date`+`time` are in; defaults to UTC when absent. */
+  timezone?: string;
   amount: number;
   /** 'statement-import' added 2026-08-23 (README item 25 / MODULES_PLAN.md
    * §13's CSV-import scope) — same "transaction doesn't care about its

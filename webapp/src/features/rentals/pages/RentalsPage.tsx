@@ -11,6 +11,8 @@ import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
+import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
+import { defaultTimezoneForCurrency } from '../../../lib/datetime';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { netIncomeByCurrency, netIncomeByProperty, propertyByCategory, propertyMonthlyRollup, propertyNetIncome } from '../../../lib/calc/rentalsModule';
@@ -508,8 +510,8 @@ function AnalyticsTab() {
   );
 }
 
-function emptyEntry(propertyId: string): RentalEntry {
-  return { id: '', propertyId, date: today(), type: 'RENT_INCOME', amount: 0, category: '', note: '' };
+function emptyEntry(propertyId: string, currencyCode?: string): RentalEntry {
+  return { id: '', propertyId, date: today(), type: 'RENT_INCOME', amount: 0, category: '', note: '', timezone: defaultTimezoneForCurrency(currencyCode) };
 }
 
 /** Pending item 62: the same direct transfer-link shortcut already built
@@ -572,13 +574,13 @@ function LinkedEntryFields({ propertyId, date, type, amount, onLinked }: { prope
   );
 }
 
-function AddEntryForm({ propertyId, knownCategories }: { propertyId: string; knownCategories: string[] }) {
+function AddEntryForm({ propertyId, currencyCode, knownCategories }: { propertyId: string; currencyCode: string; knownCategories: string[] }) {
   const addEntry = useRentalsWorkbookStore((s) => s.addEntry);
   const ensureSignedIn = useEnsureSignedIn();
-  const [e, setE] = useState<RentalEntry>(() => emptyEntry(propertyId));
+  const [e, setE] = useState<RentalEntry>(() => emptyEntry(propertyId, currencyCode));
   const [linkMode, setLinkMode] = useState(false);
 
-  const reset = () => setE(emptyEntry(propertyId));
+  const reset = () => setE(emptyEntry(propertyId, currencyCode));
 
   const submit = async () => {
     if (!e.amount || e.amount <= 0) return toast('Enter an amount.');
@@ -616,6 +618,12 @@ function AddEntryForm({ propertyId, knownCategories }: { propertyId: string; kno
         {linkMode && (
           <LinkedEntryFields propertyId={propertyId} date={e.date} type={e.type} amount={e.amount} onLinked={reset} />
         )}
+        <TimeZoneFields
+          time={e.time}
+          timezone={e.timezone}
+          onTimeChange={(time) => setE({ ...e, time })}
+          onTimezoneChange={(timezone) => setE({ ...e, timezone })}
+        />
       </div>
       <datalist id="rentals-category-datalist">
         {knownCategories.map((c) => <option key={c} value={c} />)}
@@ -990,7 +998,7 @@ function EntriesTab({
       </Field>
       {property && (
         <div style={{ marginTop: 12 }}>
-          <AddEntryForm propertyId={property.id} knownCategories={knownCategories} />
+          <AddEntryForm propertyId={property.id} currencyCode={property.currencyCode} knownCategories={knownCategories} />
           <CategoryAndRollup property={property} />
           <EntriesList property={property} />
         </div>
