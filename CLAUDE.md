@@ -2398,6 +2398,26 @@ not developer notes) continuously as features ship.
   unrelated cards and kept it. Verified live via Playwright across 6 modules plus a seeded QSE
   position for the Trade Calculator/Risk Analysis cards — zero console errors. `npx tsc -b` /
   `npm run test` (255 tests, unchanged) / `npm run build` all clean.
+  **Sidebar menu contrast investigated + real bug fixed (2026-08-25) — see README Done item
+  123, closes Pending item 60.** Measured first, per this file's own "measure before fixing"
+  discipline: computed real WCAG contrast ratios for the sidebar's nav text across all 12 color
+  themes × light/dark (24 combos) — every one already passed AA (4.97–16.11:1), so the sidebar
+  itself was never the bug. A pixel-sampled screenshot check of the Appearance/Category dropdown
+  panels also confirmed correct theming — one screenshot's *visual* read looked wrong (panel
+  looked white in dark mode) but `PIL.Image.getpixel()` on the actual PNG proved it was the
+  correct dark navy, an optical illusion from sitting next to a near-black page background, not
+  a real bug. **The actual bug, found by checking what the app's own CSS can't reach**:
+  `color-scheme` was never set anywhere (`grep -r color-scheme` came back empty), so every
+  native browser-drawn control — a `<select>`'s own opened dropdown list chief among them —
+  rendered in the browser's default LIGHT palette regardless of this app's dark theme. That's a
+  real "menu" (literally a browser-native popup) with wrong contrast, at every single `<select>`
+  in the app — matches "many places" far better than a sidebar-specific theory the numbers had
+  already ruled out. Fixed with one CSS property each on `:root` (dark, the un-overridden
+  default) and `:root[data-theme="light"]`. **Lesson for any future "X still looks wrong"
+  report after the obvious CSS rule already checks out**: consider what the app's CSS
+  *structurally cannot* style at all — native browser chrome (`<select>` popups, date/number
+  spinners, scrollbars) needs `color-scheme`, not a color override, since the app has no DOM
+  access to that popup's own rendering.
 
 ## Live URLs
 

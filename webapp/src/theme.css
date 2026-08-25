@@ -1,4 +1,18 @@
 :root{
+    /* User-reported ("menu bg and text contrast is still not visual at
+       many places"): every native browser control — a <select>'s own
+       opened dropdown list, number/date input spinners, scrollbars — was
+       rendering in the browser's default LIGHT appearance regardless of
+       this app's own dark theme, since nothing ever told the browser a
+       dark palette was in use. `color-scheme` is exactly that hint; this
+       app's own CSS custom properties already carry the real palette, so
+       this doesn't change any app-drawn color — it only tells the browser
+       which built-in palette to use for the handful of controls it draws
+       itself that this app's CSS can't reach into (a select's own popup
+       list chief among them). Default here is dark since :root's own
+       un-overridden palette above is the dark one; the light override
+       right below flips it back. */
+    color-scheme:dark;
     /* User-reported: dark mode's page background and its panels sat too
        close in lightness to read as separate surfaces ("hard to distinct
        UI components"). Lifted all three a step while keeping the same
@@ -34,6 +48,7 @@
     --body:'Inter',sans-serif;
   }
   :root[data-theme="light"]{
+    color-scheme:light;
     /* Same reasoning as the dark palette above — a touch greyer than the
        previous near-white page background, so white panels stand out
        more clearly as distinct surfaces. */

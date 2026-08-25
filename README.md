@@ -2331,6 +2331,34 @@ FinanceManager live link:
      whole-card fills with plain white/dark text, no separate inner badge) — zero console errors.
      `npx tsc -b` / `npm run test` (255 tests, unchanged) / `npm run build` all clean.
 
+123. **Sidebar menu bg/text contrast investigated and the real bug found + fixed (2026-08-25) —
+     closes Pending item 60.** Measured before guessing: computed real WCAG contrast ratios (not
+     eyeballed) for `.navbtn` text vs. the sidebar background and `.navbtn.active` text vs. its
+     own background, across all 12 color themes × light/dark (24 combinations) — every single
+     one already passed AA comfortably (4.97–16.11:1). Also screenshotted the Category and
+     Appearance dropdown menus across 4 theme combinations and pixel-sampled the actual PNG
+     output directly (not just eyeballed it) after an initial visual read of one screenshot
+     looked wrong — the pixel sample proved the panel background WAS correctly dark, the "looks
+     white" impression was an optical illusion from viewing a medium-dark navy next to a
+     near-black page background, not a real bug. The actual bug was found by checking what the
+     app's CSS *couldn't* reach: `grep -r color-scheme` came back empty — the app never told the
+     browser which palette (light/dark) it was using, so every native browser-drawn control (a
+     `<select>`'s own OPENED dropdown list is the big one, plus number/date spinners and
+     scrollbars) rendered in the browser's default LIGHT appearance regardless of this app's own
+     dark theme. That's a real "menu" (literally, a browser-native `<select>` popup menu) with
+     wrong bg/text contrast, appearing at *every* `<select>` in the app — a far better match for
+     "many places" than a sidebar-specific theory the numbers had already ruled out. Fixed with
+     one CSS property: `color-scheme:dark` on the base `:root` (dark is the un-overridden
+     default palette) and `color-scheme:light` on `:root[data-theme="light"]` — doesn't change
+     any app-drawn color (those are already correct per the measurements above), only tells the
+     browser which built-in palette to use for controls it draws itself. Verified via Playwright:
+     `getComputedStyle(document.documentElement).colorScheme` correctly reads `"dark"`/`"light"`
+     per theme across a base theme and a Material theme, zero console errors. Native select
+     popups are OS-level overlays outside a page screenshot's reach in headless Chromium, so this
+     is verified via the browser-standard `color-scheme` mechanism taking effect (a well-documented
+     MDN-specified behavior), not a direct screenshot of an opened dropdown. `npx tsc -b` /
+     `npm run test` (255 tests, unchanged — a CSS-only fix) / `npm run build` all clean.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`
@@ -2580,11 +2608,17 @@ what's already shipped from this same message**:
     stat-cards stacking BOTH on the same element (a colored card with a redundant colored pill
     inside it), which read as "text has its own bg" even though `.pill` itself is the sanctioned
     mechanism. Fixed by making the card's own hue carry the sign and dropping the inner pill.
-60. Sidebar background/text contrast is reportedly still poor in some spots ("Menu bg and text
-    contrast is still not visual at many places") — not yet investigated against real computed
-    styles/screenshots across every theme; likely the same class of "a later CSS rule silently
-    overrides an earlier one" bug found repeatedly elsewhere in this file (chip contrast, stat-
-    card hue, checkbox-label uppercase), but unconfirmed until actually measured.
+60. ~~Sidebar background/text contrast is reportedly still poor in some spots.~~ **Done
+    (2026-08-25) — see Done item 123.** Investigated first, per this file's own standing
+    practice, rather than guessing: computed real WCAG contrast ratios for the sidebar's nav
+    text/active state across all 12 color themes × both light/dark — every single one already
+    passed AA (4.97–16.11:1), and a pixel-level screenshot check of the Appearance/Category
+    dropdown menus found their backgrounds correctly themed too. The actual bug was elsewhere:
+    `color-scheme` was never set anywhere in the app, so every native browser control (a
+    `<select>`'s own opened dropdown list chief among them) rendered in the browser's default
+    LIGHT appearance regardless of the app's dark theme — exactly a "menu" whose bg/text
+    contrast looks wrong, and it happens at literally every `<select>` in the app ("many
+    places"), matching the report far better than the sidebar theory did.
 61. Rentals: semi-automated rent-collection cycles. The user's own framing: pick a collection
     cycle (daily/weekly/monthly/annual) and a last collection day/date, then the app *proposes*
     a collection transaction for the user's final approval and date adjustment (never auto-
