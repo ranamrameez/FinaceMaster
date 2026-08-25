@@ -2436,18 +2436,19 @@ not developer notes) continuously as features ship.
   and fixed while verifying this feature** — worth reading if touching any page-level Modal that
   calls either of those from inside itself. `npx tsc -b` / `npm run test` (264 tests, 9 new) /
   `npm run build` all clean.
-  **Direct transfer-link shortcut prototyped on PSX (2026-08-25) — see README Done item 125,
-  partially closes Pending item 62.** New `LinkedTransferFields` component inside PSX's
-  `TransactionsPage.tsx` `TransferForm` — a "Link this to a Bank account or Cash" checkbox
-  swaps the plain Fee/Add controls for a module picker + "Link & add" button calling the exact
-  same `createLinkedTransfer()`/`useLastTransferSource` the Transfers page uses, no parallel
-  implementation. Deliberately simpler than the full Transfers page: both sides always share one
-  amount, no cross-currency "different amount" toggle (that still belongs on the full page).
-  Verified live: checking the box correctly pre-selected the remembered Bank account, "Link &
-  add" hit the sign-in gate — zero console errors. **Confirms the pattern is cheap to repeat**
-  (~70 lines, no new infra) — QSE is next (identical shape to PSX), then Rentals/Personal Loans/
-  Funds/EMI each need their own short design pass since none of them has a plain deposit/
-  withdrawal record like QSE/PSX's `Transfer`.
+  **Direct transfer-link shortcut built for PSX then QSE (2026-08-25) — see README Done item
+  125, partially closes Pending item 62.** New `LinkedTransferFields` component inside each
+  exchange's own `TransactionsPage.tsx` `TransferForm` — a "Link this to a Bank account or Cash"
+  checkbox swaps the plain Fee/Add controls for a module picker + "Link & add" button calling the
+  exact same `createLinkedTransfer()`/`useLastTransferSource` the Transfers page uses, no
+  parallel implementation. Deliberately simpler than the full Transfers page: both sides always
+  share one amount, no cross-currency "different amount" toggle (that still belongs on the full
+  page). Built on PSX first, then copied near-verbatim onto QSE once the prototype checked out —
+  not extracted into a shared component since the two pages' `TransferForm`s weren't shared to
+  begin with either. Verified live on both: checking the box correctly pre-selected the
+  remembered Bank account, "Link & add" hit the sign-in gate — zero console errors on either.
+  **Rentals/Personal Loans/Funds/EMI remain open** — each needs its own short design pass since
+  none of them has a plain deposit/withdrawal record like QSE/PSX's `Transfer`.
 
 ## Live URLs
 

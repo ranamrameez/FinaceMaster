@@ -2403,27 +2403,31 @@ FinanceManager live link:
      console errors. `npx tsc -b` / `npm run test` (264 tests, 9 new) / `npm run build` all
      clean.
 
-125. **Direct transfer-link shortcut prototyped on PSX (2026-08-25) — partially closes Pending
-     item 62; still open for the other 5 modules.** The user's own example: "PSX i can only use
-     Zindagi Account for Deposits & Withdrawls... check feasibility" of linking a transfer
-     straight from a module's own page instead of always needing the separate Transfers page.
-     PSX's "Cash Transfers" add-form gained a "Link this to a Bank account or Cash" checkbox —
-     checking it swaps the plain Fee input + Add button for a module picker (Bank account or
-     Cash) and a "Link & add" button that calls the exact same `createLinkedTransfer()` the
-     Transfers page itself uses (no parallel implementation), and reuses `useLastTransferSource`
-     for the same prefill-the-usual-source behavior Done item 120 already built — checking the
-     box for the first time on a PSX deposit correctly pre-selected "Zindagi (PKR)" in the
-     verification below, matching the user's own example exactly. Deliberately simpler than the
-     full Transfers page in one respect: both sides always share the same amount (no "different
-     amount on the other side" toggle) — a real cross-currency conversion still belongs on the
-     full Transfers page, which already has that control. Verified live via Playwright: checking
-     the box swaps in the Bank/Cash picker with the remembered account pre-selected, and
-     "Link & add" correctly hits the sign-in gate — zero console errors. `npx tsc -b` /
-     `npm run test` (264 tests, unchanged) / `npm run build` all clean. **This confirms the
-     approach is sound and cheap to repeat** (no new infrastructure, ~70 lines) — QSE mirrors
-     PSX exactly and is the natural next one; Rentals/Personal Loans/Funds/EMI each need their
-     own short "what does linking mean on this page" pass since their primary record isn't a
-     plain deposit/withdrawal like QSE/PSX's `Transfer`.
+125. **Direct transfer-link shortcut built for PSX and QSE (2026-08-25) — partially closes
+     Pending item 62; still open for Rentals/Personal Loans/Funds/EMI.** The user's own example:
+     "PSX i can only use Zindagi Account for Deposits & Withdrawls... check feasibility" of
+     linking a transfer straight from a module's own page instead of always needing the separate
+     Transfers page. Both exchanges' "Cash Transfers" add-form gained a "Link this to a Bank
+     account or Cash" checkbox — checking it swaps the plain Fee input + Add button for a module
+     picker (Bank account or Cash) and a "Link & add" button that calls the exact same
+     `createLinkedTransfer()` the Transfers page itself uses (no parallel implementation), and
+     reuses `useLastTransferSource` for the same prefill-the-usual-source behavior Done item 120
+     already built — checking the box for the first time on a PSX deposit correctly pre-selected
+     "Zindagi (PKR)" in the verification below, matching the user's own example exactly.
+     Deliberately simpler than the full Transfers page in one respect: both sides always share
+     the same amount (no "different amount on the other side" toggle) — a real cross-currency
+     conversion still belongs on the full Transfers page, which already has that control. Built
+     on PSX first as a prototype, then copied near-verbatim onto QSE (`LinkedTransferFields` in
+     each page's own `TransactionsPage.tsx` — not extracted into a shared component, since the
+     two pages' `TransferForm`s weren't shared to begin with either) once the prototype confirmed
+     the approach — QSE's own verification (a separate Bank account, a different currency)
+     matched PSX's behavior exactly. Verified live via Playwright on both exchanges: checking the
+     box swaps in the Bank/Cash picker with the remembered account pre-selected, and "Link & add"
+     correctly hits the sign-in gate — zero console errors on either. `npx tsc -b` /
+     `npm run test` (264 tests, unchanged) / `npm run build` all clean. **Rentals/Personal
+     Loans/Funds/EMI remain open** — each needs its own short "what does linking mean on this
+     page" pass since none of them has a plain deposit/withdrawal record like QSE/PSX's
+     `Transfer`.
 
 ## Pending
 
@@ -2689,13 +2693,13 @@ what's already shipped from this same message**:
     124.** Built as a genuinely separate mechanism from `generateLeaseRentPlans()` (Done item
     60), per this item's own note that it needed its own design pass rather than a bolt-on.
 62. "We may give the option to all entities to directly link the transfers on its page (per
-    cycle, or regular, check feasibility)" — **prototyped on PSX, see Done item 125; still open
-    for QSE/Rentals/Personal Loans/Funds/EMI.** The prototype confirmed the approach works
-    (reuses `createLinkedTransfer`/`useLastTransferSource` directly, no new infrastructure) —
-    what's left is repeating the same small addition on the other 5 modules' own add-transfer/
-    add-entry forms, one at a time, each needing its own "what does linking mean here" check
-    (QSE mirrors PSX exactly; Rentals/Personal Loans/Funds/EMI each have a different primary
-    record shape than a plain deposit/withdrawal).
+    cycle, or regular, check feasibility)" — **built for PSX and QSE, see Done item 125; still
+    open for Rentals/Personal Loans/Funds/EMI.** Confirmed the approach works and is cheap to
+    repeat (reuses `createLinkedTransfer`/`useLastTransferSource` directly, no new
+    infrastructure, ~70 lines per module) — what's left is the same small addition on the other
+    4 modules' own add-entry forms, one at a time, each needing its own "what does linking mean
+    here" design check since none of them has a plain deposit/withdrawal record like QSE/PSX's
+    `Transfer`.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank
