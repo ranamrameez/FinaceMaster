@@ -534,19 +534,39 @@ sell shares at a price), so it shares the same underlying calculation engine.
   selling fund units — e.g. topping up before a purchase, or withdrawing after a redemption.
   Log a deposit/withdrawal here, edit or delete one later, or check the linking checkbox to
   create a matching entry in Bank/Cash at the same time (see §23 below).
-- **Import tab**: for a spreadsheet that tracks each fund's Total Invested / Withdrawn /
-  Current Balance rather than individual dated trades (a common way to track mutual funds
-  manually). Choose the CSV file, set a single "as-of" date, currency, and default category
-  for any brand-new funds it introduces, then review the preview table before importing —
-  platform/code/name are editable right there, so a typo or a misfiled row in your source
-  file can be fixed without re-exporting it. Since a snapshot has no real per-trade dates,
-  this reconstructs one buy (and, if you've withdrawn from it, one sell) per fund dated on
-  your chosen as-of date, at whatever price reproduces your reported balances — it's an
-  approximation of your real history, not a replay of it. If the same fund code appears more
-  than once in the file, each row still becomes its own entry (useful if they're genuinely
-  two separate positions) with a warning shown so you can catch a real duplicate before
-  importing. Re-importing into a fund that already has transactions adds another entry
-  rather than replacing anything, so this is best used once, as a starting point.
+- **Import tab**: two different ways to load fund data, picked via the chip toggle at the top.
+  - **Daily history (XLSX)** — recommended if you track each fund's balance day by day (a
+    workbook with one sheet per fund, a row per update: Date / PrvBlc / NewBlc / Profit-Loss).
+    This is the richer option: it reconstructs your fund's real buy/sell/NAV path — separating
+    actual deposits and withdrawals from organic growth — so average monthly and annual P&L
+    are computed from your real update history, not guessed from a single ending number, and
+    holidays/off-days (where nothing was updated) correctly contribute nothing rather than
+    being smoothed over. Choose the .xlsx file; each recognized sheet gets its own preview card
+    showing the date range, detected deposits/withdrawals, reconstructed value vs. any matching
+    balance found on a Summary-style sheet in the same file, and average monthly/annual P&L.
+    Pick whether each sheet becomes a **new fund** (editable name/code/platform) or is matched
+    to a fund you **already have** — matching to an existing fund **replaces that fund's
+    transactions entirely** with the reconstructed history, which is the point (it stops
+    discarding your day-by-day data), but it is genuinely destructive to whatever was there
+    before, so a clear warning shows the exact number of transactions being replaced, and the
+    final Import click asks you to confirm before doing anything. When a sheet's ending balance
+    doesn't uniquely match one fund (e.g. two of your funds both closed at zero), the app
+    won't guess — it defaults to "create new fund" and lets you manually pick the right
+    existing one from the dropdown instead.
+  - **Snapshot (CSV)** — for a spreadsheet that only tracks each fund's Total Invested /
+    Withdrawn / Current Balance (no day-by-day history), a common lighter-weight way to track
+    mutual funds. Choose the CSV file, set a single "as-of" date, currency, and default
+    category for any brand-new funds it introduces, then review the preview table before
+    importing — platform/code/name are editable right there, so a typo or a misfiled row in
+    your source file can be fixed without re-exporting it. Since a snapshot has no real
+    per-trade dates, this reconstructs one buy (and, if you've withdrawn from it, one sell) per
+    fund dated on your chosen as-of date, at whatever price reproduces your reported balances —
+    it's an approximation of your real history, not a replay of it. If the same fund code
+    appears more than once in the file, each row still becomes its own entry (useful if they're
+    genuinely two separate positions) with a warning shown so you can catch a real duplicate
+    before importing. Re-importing into a fund that already has transactions adds another
+    entry rather than replacing anything — if you have the fuller daily-history file for a
+    fund, prefer the Daily History import instead, which replaces cleanly.
 
 ---
 
