@@ -3674,6 +3674,18 @@ not developer notes) continuously as features ship.
   icon button specifically still opens inline edit WITHOUT also opening the detail modal — zero
   console errors. `npx tsc -b` / `npm run test` (388 tests, unchanged) / `npm run build` all
   clean.
+- **Right-rail clipping bug fixed, same autonomous continuation (2026-08-26) — see README Done
+  item 186, closes the confirmed-bug half of Pending item 88.** Root-caused with a real
+  `getBoundingClientRect()` sweep, not guessed: `DashboardRail.tsx`'s two-item summary rows
+  used `className="row"`, and the app's shared `.row` CSS forces every direct child to
+  `min-width:160px` — two children at 160px each already meets or exceeds the rail's fixed
+  320px column, so they wrapped onto stacked lines instead of the intended single-line
+  space-between layout (a before/after screenshot with seeded long-text data confirmed the
+  visual difference). Fixed by dropping the `.row` class from those specific rows in favor of a
+  plain inline `display:flex` — `.row`'s min-width rule is meant for `Field`-style form
+  controls, not a two-span label/value pair. Left the rail's OTHER two asks (currency should
+  follow the current stock exchange; convert to a floating popup) untouched — both are real
+  design reversals the Pending item's own text says need confirming first.
 
 ## Live URLs
 

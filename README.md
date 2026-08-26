@@ -4074,6 +4074,30 @@ FinanceManager live link:
      inline edit row WITHOUT also opening the detail modal (stopPropagation working correctly,
      not a double-fire) — zero console errors throughout. `npx tsc -b` / `npm run test` (388
      tests, unchanged — UI-only) / `npm run build` all clean.
+186. **Right-rail clipping bug fixed (2026-08-26), the confirmed-real-bug half of Pending item
+     88.** Root-caused via `getBoundingClientRect()` measurement, not a screenshot guess:
+     `DashboardRail.tsx`'s Net Worth breakdown rows and Upcoming Plans rows both used
+     `className="row"` for a plain two-item "label ... value" space-between layout, but the
+     app's shared `.row` CSS (`.row > *{flex:1; min-width:160px}`) forces every DIRECT CHILD of
+     `.row` to at least 160px — two children forced to 160px each (320px) plus the row's own gap
+     already meets or exceeds the rail's fixed 320px column width, before any real content is
+     even measured. `.row` also sets `flex-wrap:wrap`, so instead of clipping past the edge the
+     two cells wrapped onto stacked lines — a real seeded-data before/after screenshot confirmed
+     this: before the fix, a breakdown row's label and value stacked as two separate lines
+     inside the narrow card (looks broken/"cut off"); after, dropping the `.row` class in favor
+     of a plain inline `display:flex` (which doesn't carry `.row`'s 160px-per-child rule, since
+     these aren't `Field`-style form controls that rule was written for) restored the intended
+     single-line space-between layout. Also added `minWidth:0`+`overflowWrap:anywhere` to the
+     Upcoming Plans label so a long category name wraps within its own space instead of pushing
+     the amount pill outside the card. **Deliberately not touched, per the item's own remaining
+     scope**: showing the rail's money figures in the current stock exchange's own currency
+     (QAR/PKR) instead of the biggest-exposure currency, and converting the rail from a docked
+     column to a floating popup — both are real design questions the item's own text says need
+     confirming before rebuilding, not assumed. Verified live via Playwright (seeded a long
+     category name + large numbers to stress-test the narrow column, 1600px viewport): zero
+     elements overflow the rail's own boundary, and a real screenshot confirms the clean
+     two-column layout — zero console errors. `npx tsc -b` / `npm run test` (388 tests,
+     unchanged — CSS/layout only) / `npm run build` all clean.
 
 ## Pending
 
@@ -4602,16 +4626,15 @@ everything below is started. Working down it in priority order across following 
     wordmark, per Done item 32's "FinanceRecorder" header) — needs an actual logo asset, which
     doesn't exist yet in this project (nothing to swap in without one being designed/sourced
     first).
-88. QSE/PSX Dashboard: the new right-rail's Net worth and Upcoming-plans cards (Done item 164)
-    are reported as visually CUTTING OFF/clipped — a real layout bug in the rail itself, not
-    just a design preference, needs investigating (likely the `.rail-split`'s fixed 320px
-    column being too narrow for some content, or a `MoneyValue`/pill overflowing its card).
-    Also requested: the rail's money figures should show in the CURRENT STOCK EXCHANGE's own
-    currency (QAR for QSE, PKR for PSX) rather than whatever `useNetWorthSummary()`'s
-    biggest-exposure currency happens to be — and the rail itself should become a floating
-    button + popup instead of a permanently-docked column (a bigger reversal of Done item
-    164's own "docked right-rail" design, worth confirming intent before rebuilding it as a
-    popup).
+88. ~~QSE/PSX Dashboard: the new right-rail's Net worth and Upcoming-plans cards (Done item 164)
+    are reported as visually CUTTING OFF/clipped.~~ **The layout-bug half is done (2026-08-26)
+    — see Done item 186.** Real cause: `.row`'s shared `min-width:160px`-per-child CSS forcing
+    a plain two-item row wider than the rail's own 320px column. **Still open**: the rail's
+    money figures should show in the CURRENT STOCK EXCHANGE's own currency (QAR for QSE, PKR
+    for PSX) rather than whatever `useNetWorthSummary()`'s biggest-exposure currency happens to
+    be — and the rail itself should become a floating button + popup instead of a
+    permanently-docked column (a bigger reversal of Done item 164's own "docked right-rail"
+    design, worth confirming intent before rebuilding it as a popup).
 89. ~~App-wide: every tooltip-bearing label should carry a small visible icon.~~ **Done
     (2026-08-26) — see Done item 169.** Fixed once in `Tooltip.tsx` itself.
 90. App-wide: "cards inside cards" — **re-audited (2026-08-26)**: checked every module's
