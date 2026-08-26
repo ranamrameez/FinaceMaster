@@ -3661,6 +3661,25 @@ FinanceManager live link:
      attempt hovering the whole heading missed the icon's actual bounding box — hovering the
      icon directly confirmed it works). `npx tsc -b` / `npm run test` (360 tests, unchanged —
      UI-only) / `npm run build` all clean.
+170. **Banking/Cash "Add" forms moved to FAB+popup + Branch/Account Type fields — closes
+     Pending items 81/82/86.** Banking's "Add account" form (previously a permanently-visible
+     `Card` at the top of the Accounts tab) is now a floating "+" button + popup, same pattern
+     already used for EMI's "Add a loan" (Done item 166) — the form itself is unchanged, just
+     moved behind `AddAccountFab`. `BankAccount` gained optional `branch`/`accountType` fields
+     (free-form text with a small suggestion datalist — `Savings`/`Current`/`Checking`/`Salary`/
+     `Business`/`Fixed deposit` — not a fixed enum, per this project's own locked "category
+     fields must be free-form" rule), wired into the add-account form, the accounts table's edit
+     row, a new "Type / Branch" table column, and `AccountDetailModal`'s existing account-detail
+     editor (closes item 82). Same FAB+popup treatment applied to both Banking's and Cash's
+     "Add a plan" forms on their respective Planning tabs (closes item 86). Verified live via
+     Playwright: the permanent forms are confirmed gone from all three tabs, each FAB opens a
+     working modal, a submitted account correctly hit the sign-in gate (no real account to
+     complete an end-to-end save with, same established verification limit as every other
+     sign-in-gated write in this project). `npx tsc -b` / `npm run test` (360 tests, unchanged)
+     / `npm run build` all clean. **Not done in this pass**: item 84 (leading the account-detail
+     modal with "add a transaction" instead of the edit-details form) and item 83 (a real routed
+     detail page vs. a modal) — both still need the larger architecture decision described in
+     their own Pending entries.
 
 ## Pending
 
@@ -4162,11 +4181,12 @@ everything below is started. Working down it in priority order across following 
     CONVERTED figures.~~ **Done (2026-08-26) — see Done item 168.** Renamed to "Accounts in
     CODE" with an explanatory tooltip, a lighter-touch fix than the user's own literal
     "Pakistani Banks Total Balance" suggestion (which assumes currency implies country).
-81. Banking: "Add account" shouldn't be a permanently-visible form (same "rare operation"
+81. ~~Banking: "Add account" shouldn't be a permanently-visible form (same "rare operation"
     reasoning already applied to EMI's own add-loan form, Done item 166's floating-FAB
-    pattern) — move to a floating "+" button + popup, mirroring EMI. Not started.
-82. Banking: `BankAccount` should carry Branch and/or Account Type fields — new fields, not
-    yet in the data model at all.
+    pattern) — move to a floating "+" button + popup, mirroring EMI.~~ **Done (2026-08-26) —
+    see Done item 170.**
+82. ~~Banking: `BankAccount` should carry Branch and/or Account Type fields — new fields, not
+    yet in the data model at all.~~ **Done (2026-08-26) — see Done item 170.**
 83. Banking / app-wide: clicking a Bank account (or Cash, or a Personal Loan) row should
     navigate to that item's own detail page rather than opening a popup/modal in place —
     Banking's `AccountDetailModal` is a MODAL today, not a real routed page. A real
@@ -4191,8 +4211,9 @@ everything below is started. Working down it in priority order across following 
     84) and Cash has no per-"account" concept to attach to in the first place (Cash is a
     single ledger, not multiple accounts) — needs auditing per-module rather than assumed to
     be one uniform fix.
-86. App-wide: "Add a plan" (Cash/Banking's Planning-tab add-form) shouldn't be permanently
-    visible either — same FAB+popup treatment as items 81/166. Not started.
+86. ~~App-wide: "Add a plan" (Cash/Banking's Planning-tab add-form) shouldn't be permanently
+    visible either — same FAB+popup treatment as items 81/166.~~ **Done (2026-08-26) — see
+    Done item 170.**
 87. App-wide: the FinanceRecorder app logo isn't in the navbar/sidebar at all (only the text
     wordmark, per Done item 32's "FinanceRecorder" header) — needs an actual logo asset, which
     doesn't exist yet in this project (nothing to swap in without one being designed/sourced

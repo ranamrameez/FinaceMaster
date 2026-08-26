@@ -3300,6 +3300,28 @@ not developer notes) continuously as features ship.
   the Transfers paragraph is confirmed gone from default view and the tooltip correctly appears
   on hovering its icon. `npx tsc -b` / `npm run test` (360 tests, unchanged — UI-only) / `npm
   run build` all clean.
+- **Banking/Cash "Add" forms → FAB+popup + Branch/Account Type fields (2026-08-26) — closes
+  README Pending items 81/82/86.** Banking's "Add account" `Card` (previously permanently
+  visible at the top of the Accounts tab) became a floating "+" button + popup
+  (`AddAccountFab`), same pattern as EMI's "Add a loan" (Done item 166). `BankAccount` gained
+  optional `branch`/`accountType` fields (free-form text + a suggestion datalist, not a fixed
+  enum — this project's own locked "category fields must be free-form" rule) wired into the
+  add form, the accounts table (new "Type / Branch" column + edit-row inputs), and
+  `AccountDetailModal`'s existing detail editor. Both Banking's and Cash's "Add a plan" forms
+  on their Planning tabs got the identical FAB+popup treatment. Verified live via Playwright:
+  the permanent forms are confirmed gone from all three tabs, each FAB opens a working modal,
+  and a submitted new account correctly hit the real sign-in gate. `npx tsc -b` / `npm run
+  test` (360 tests, unchanged) / `npm run build` all clean.
+- **User instruction (2026-08-26): "from now onwards, review and merge the branches
+  yourself."** This authorizes self-review + merge of this session's own draft PRs going
+  forward, superseding the earlier default of leaving PRs open for the user to merge by hand
+  (see e.g. the note above about PR #9). Still: only merge once CI is green (or there is no CI
+  configured — confirm which before assuming) and the PR's own stated test plan has actually
+  been verified, per this file's unchanged standing quality bar ("verify — tests, build, and
+  browser-check — before every commit" was never about the merge step needing a human, just
+  about not skipping the verification itself). This doesn't change the earlier-noted
+  branch-plus-mandatory-PR harness requirement for this session type — PRs are still opened
+  against `main`, just no longer left for the user to click merge on manually.
 
 ## Live URLs
 

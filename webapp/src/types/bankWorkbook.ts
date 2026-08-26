@@ -19,6 +19,13 @@ export interface BankAccount {
   accountNumber?: string;
   smsSenderId?: string;
   smsSenderNumber?: string;
+  /** README item 82 (2026-08-26 feedback): optional, free-form (not a fixed
+   * enum, per this project's own "category fields must be free-form" rule)
+   * — a branch name/code and a description like "Savings"/"Current"/
+   * "Checking" a user would recognize from their own bank, not a
+   * standardized list this app enforces. */
+  branch?: string;
+  accountType?: string;
 }
 
 export interface BankTransaction {
