@@ -3570,6 +3570,31 @@ not developer notes) continuously as features ship.
   import — this is CORRECT (see self-caught bug 1 above: they're two different real things, a
   loan's outstanding balance and a bank account's cash balance, not a duplicate), but is worth
   flagging to the user so they don't mistake it for one and manually delete either side.
+- **Critical, user-reported (2026-08-26): the import above actually didn't stick — "No
+  transaction imported!" — see README Done item 179.** The user tried the real import and
+  re-exported to show it reverted to the original, empty state. Root cause was a genuine race
+  condition between `AppDataPage.importAll()`'s `setWorkbook()` calls and every module's
+  globally-mounted `useWorkbookCloudSync` Firebase `onValue` listener, which unconditionally
+  re-applies whatever it reads on its first snapshot after a sign-in — including one that
+  fires (with the OLD real cloud data) shortly AFTER `ensureSignedIn()` resolves and the
+  import's own writes have already landed locally, silently clobbering them back. **Lesson for
+  any future write path that follows `ensureSignedIn()`**: a fresh sign-in's first cloud pull
+  is an independent async race against whatever you write right after — this is invisible for
+  a single ordinary write (the debounced 900ms push effect usually wins in practice) but became
+  reliably reproducible for a BULK import, since the import's writes land essentially instantly
+  (a synchronous loop) right as the sign-in promise resolves, maximizing overlap with the
+  competing pull. **Fix**: `importAll()` now also writes each imported module directly to its
+  own Firebase path (the real `users/{uid}/...` suffixes, matching each module's own
+  `use<Module>FirebaseSync.ts`), reading from the parsed import data rather than from the
+  store — since the store is exactly what the race can corrupt, reading from it to build the
+  cloud write would just re-push whatever got clobbered. This makes the fix self-healing rather
+  than fully eliminating the race: local view can still flicker to stale data briefly, but the
+  explicit cloud write's own `onValue` echo re-applies the correct data moments later. Could
+  not be end-to-end verified with a real signed-in account in this session (same limitation as
+  every other sign-in-gated write in this project) — the user re-trying the import is the real
+  confirmation needed. If it recurs, the next thing to check is whether the direct Firebase
+  write itself is failing silently (console `Failed to push imported ... to cloud` warnings)
+  rather than the race reappearing.
 
 ## Live URLs
 

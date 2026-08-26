@@ -1,9 +1,13 @@
+import { ref, set } from 'firebase/database';
 import { useRef, useState } from 'react';
 import { Card } from '../../../components/Card';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { Notice } from '../../../components/Notice';
 import { toast } from '../../../components/Toast';
+import { db, firebaseReady } from '../../../lib/firebase/client';
+import { useAuthState } from '../../../lib/firebase/useAuthState';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
+import { stripUndefinedDeep } from '../../../lib/firebase/useWorkbookCloudSync';
 import { useWorkbookStore } from '../../../store/workbookStore';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
@@ -39,8 +43,22 @@ const today = () => new Date().toISOString().slice(0, 10);
  * same call each module's own JSON import already makes — nothing new
  * about HOW a workbook gets loaded, only that this does it for every
  * module in one file/one click instead of 14. */
+/** Every module's real Firebase RTDB path suffix under `users/{uid}/...` —
+ * matches each module's own `use<Module>FirebaseSync.ts` call to
+ * `useWorkbookCloudSync(suffix, ...)`. QSE is the one irregular case: its
+ * store/module key is `qse` everywhere else in this app, but its actual
+ * cloud path (kept for backwards compatibility with the pre-rewrite legacy
+ * app) is `workbook`, not `qse`. */
+const CLOUD_PATH_SUFFIX = {
+  qse: 'workbook', psx: 'psx', bank: 'bank', cash: 'cash', emiLoans: 'emiLoans',
+  funds: 'funds', personalLoans: 'personalLoans', rentals: 'rentals', subscriptions: 'subscriptions',
+  plannedBank: 'plannedBank', plannedCash: 'plannedCash', plannedRentals: 'plannedRentals',
+  interEntityTransfers: 'interEntityTransfers', netWorthSnapshots: 'netWorthSnapshots',
+} as const;
+
 export function AppDataPage() {
   const ensureSignedIn = useEnsureSignedIn();
+  const { user } = useAuthState();
   const fileInput = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
 
@@ -113,6 +131,34 @@ export function AppDataPage() {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (stores[key].setWorkbook as (wb: any) => void)(parsed[key]);
         });
+        // Also push each imported module straight to its own Firebase path,
+        // not just local state. A real bug found via a user report: every
+        // module's cloud sync (`useWorkbookCloudSync`, mounted globally in
+        // App.tsx) keeps a LIVE `onValue` listener that re-fires whenever
+        // it reads the current cloud snapshot -- including the very first
+        // read right after `ensureSignedIn()` above completes a fresh sign-
+        // in. That listener's callback unconditionally calls the same
+        // store's `setWorkbook()`, so if it fires (with the OLD, real cloud
+        // data) after the `setWorkbook(parsed[key])` calls just above, it
+        // silently clobbers the just-imported local state back to whatever
+        // was already in the cloud -- exactly the "no transaction imported"
+        // symptom reported: import appeared to succeed, but the immediately
+        // following stale-cloud pull raced it and won. Writing the parsed
+        // data directly to Firebase here (independent of whatever the local
+        // store currently holds, so it can't itself be corrupted by that
+        // same race) means even a briefly-clobbered local view self-heals:
+        // this write's own `onValue` echo re-applies the correct imported
+        // data moments later.
+        if (firebaseReady && db && user) {
+          const database = db;
+          const uid = user.uid;
+          foundKeys.forEach((key) => {
+            const payload = stripUndefinedDeep({ ...(parsed[key] as object), _updated: new Date().toISOString() });
+            set(ref(database, `users/${uid}/${CLOUD_PATH_SUFFIX[key]}`), payload).catch((e) =>
+              console.warn(`Failed to push imported ${key} to cloud`, e),
+            );
+          });
+        }
         toast(`Imported ${foundKeys.length} module${foundKeys.length > 1 ? 's' : ''}.`);
       } finally {
         setBusy(false);
