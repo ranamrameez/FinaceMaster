@@ -48,7 +48,7 @@ function NetWorthRailCard() {
           <MoneyValue n={row.net} currency={row.currency} />
           <div style={{ marginTop: 10, display: 'grid', gap: 4 }}>
             {row.breakdown.map((b) => (
-              <div key={b.module} className="row" style={{ justifyContent: 'space-between', fontSize: 12, color: 'var(--muted)' }}>
+              <div key={b.module} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12, color: 'var(--muted)' }}>
                 <span>{b.module}</span>
                 <span>{b.amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
               </div>
@@ -107,12 +107,12 @@ function UpcomingPlansRailCard() {
       {upcoming.length ? (
         <div style={{ display: 'grid', gap: 8 }}>
           {upcoming.map((p, i) => (
-            <div key={i} className="row" style={{ justifyContent: 'space-between', gap: 8, fontSize: 12 }}>
-              <div>
-                <div>{p.label}</div>
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12 }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ overflowWrap: 'anywhere' }}>{p.label}</div>
                 <div className="footer-note">{p.date} · {p.module}</div>
               </div>
-              <div className={p.amount >= 0 ? 'pill-buy' : 'pill-sell'}>
+              <div className={p.amount >= 0 ? 'pill-buy' : 'pill-sell'} style={{ flexShrink: 0 }}>
                 {p.amount >= 0 ? '+' : ''}{p.amount.toLocaleString(undefined, { maximumFractionDigits: 0 })} {p.currencyCode}
               </div>
             </div>
