@@ -3917,6 +3917,32 @@ FinanceManager live link:
      Vitest fixture (unlike the existing QSE/PSX backups) — Bank/Cash/Subscriptions personal
      data is a new sensitivity category for this public repo, left for an explicit user
      decision rather than assumed.
+179. **Critical, user-reported (2026-08-26): whole-app import silently reverted itself — "No
+     transaction imported!" — a real race condition in `AppDataPage.tsx`'s import flow, not a
+     data problem.** The user actually tried importing item 178's file and then re-exported
+     their account to show the result: 0 bank transactions, 0 cash entries, only the original
+     1 subscription — as if nothing had happened. Root cause: `useWorkbookCloudSync` (mounted
+     globally for every module in `App.tsx`) keeps a LIVE Firebase `onValue` listener that
+     unconditionally calls that module's `setWorkbook()` on every snapshot it reads —
+     including the very first snapshot fired right after a fresh sign-in. `importAll()` calls
+     `ensureSignedIn()` and then immediately calls `setWorkbook(parsed[key])` for each module —
+     but that first post-sign-in cloud snapshot (the OLD real data) is an independent async
+     operation racing the same auth-state-change event, and if it resolves after the import's
+     own `setWorkbook()` calls, it silently clobbers the just-imported data back to whatever
+     was already in the cloud. This is a real bug in the interaction between two
+     already-correct pieces (the import flow, and the cloud-sync safety design), not a flaw in
+     either one alone. **Fix**: after the existing local `setWorkbook()` calls, `importAll()`
+     now ALSO writes each imported module directly to its own Firebase path (`users/{uid}/...`
+     — same suffixes each module's own `use<Module>FirebaseSync.ts` already uses), reading
+     straight from the parsed import data rather than from the store (which is exactly what
+     the race can corrupt) — so even if the stale pull briefly clobbers the local view, that
+     same write's own `onValue` echo re-applies the correct imported data moments later,
+     self-healing instead of losing the import. `npx tsc -b` / `npm run test` (388 tests,
+     unchanged) / `npm run build` all clean; verified via Playwright that the pre-import
+     confirm dialog and the sign-in gate both still work correctly (unchanged behavior) — the
+     actual race-condition fix itself can't be exercised by an automated test in this session
+     (no real signed-in Firebase account available here, same limitation noted throughout this
+     file), so the user re-trying the import is the real confirmation this needs.
 
 ## Pending
 
