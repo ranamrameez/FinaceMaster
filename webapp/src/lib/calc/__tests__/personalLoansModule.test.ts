@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PersonalLoan, PersonalLoanRepayment } from '../../../types/personalLoansWorkbook';
-import { loanOutstanding, netPositionByCurrency, outstandingByLoan, projectPayoff, repaymentRunningOutstanding, repaymentsByMonth } from '../personalLoansModule';
+import { loanBalanceHistory, loanOutstanding, netPositionByCurrency, outstandingByLoan, projectPayoff, repaymentRunningOutstanding, repaymentsByMonth } from '../personalLoansModule';
 
 const loan = (over: Partial<PersonalLoan>): PersonalLoan => ({
   id: 'l1',
@@ -153,5 +153,43 @@ describe('repaymentRunningOutstanding', () => {
     const remaining = repaymentRunningOutstanding(l, [later, early]);
     expect(remaining.get(early.id)).toBe(400);
     expect(remaining.get(later.id)).toBe(350);
+  });
+});
+
+describe('loanBalanceHistory', () => {
+  const repayment = (over: Partial<PersonalLoanRepayment>): PersonalLoanRepayment => ({
+    id: crypto.randomUUID(),
+    loanId: 'l1',
+    date: '2026-01-01',
+    amount: 0,
+    ...over,
+  });
+
+  it('starts at the loan\'s own principal on its own date, then steps down after each repayment', () => {
+    const l = loan({ principal: 500, date: '2026-01-01' });
+    const r1 = repayment({ date: '2026-01-05', amount: 100 });
+    const r2 = repayment({ date: '2026-01-10', amount: 150 });
+    const history = loanBalanceHistory(l, [r2, r1]); // deliberately out of order
+    expect(history).toEqual([
+      { date: '2026-01-01', balance: 500 },
+      { date: '2026-01-05', balance: 400 },
+      { date: '2026-01-10', balance: 250 },
+    ]);
+  });
+
+  it('is just the opening point when there are no repayments yet', () => {
+    const l = loan({ principal: 500, date: '2026-01-01' });
+    expect(loanBalanceHistory(l, [])).toEqual([{ date: '2026-01-01', balance: 500 }]);
+  });
+
+  it('clamps at 0 on an overpayment and ignores other loans\' repayments', () => {
+    const l = loan({ id: 'l1', principal: 100, date: '2026-01-01' });
+    const mine = repayment({ loanId: 'l1', date: '2026-01-05', amount: 150 });
+    const other = repayment({ loanId: 'l2', date: '2026-01-03', amount: 999 });
+    const history = loanBalanceHistory(l, [mine, other]);
+    expect(history).toEqual([
+      { date: '2026-01-01', balance: 100 },
+      { date: '2026-01-05', balance: 0 },
+    ]);
   });
 });

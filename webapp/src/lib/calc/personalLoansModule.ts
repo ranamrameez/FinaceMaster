@@ -28,6 +28,28 @@ export function repaymentRunningOutstanding(loan: PersonalLoan, repayments: Pers
   return out;
 }
 
+/** README item 99 (2026-08-26 feedback): a loan's own detail page had no
+ * chart at all — the per-portfolio "Outstanding by loan"/"Repayments by
+ * month" charts (Done item 45) only live on the LANDING page's Analytics
+ * tab, scoped across every loan, not this one loan's own history. Returns
+ * one point per date something happened to THIS loan (the loan's own
+ * start, then each repayment in order) so a line chart can show the
+ * balance actually stepping down over time, not just a single before/
+ * after number. */
+export function loanBalanceHistory(loan: PersonalLoan, repayments: PersonalLoanRepayment[]): { date: string; balance: number }[] {
+  const forLoan = repayments
+    .filter((r) => r.loanId === loan.id)
+    .map((r, i) => ({ r, i }))
+    .sort((a, b) => toInstantMs(a.r.date, a.r.time, a.r.timezone) - toInstantMs(b.r.date, b.r.time, b.r.timezone) || a.i - b.i);
+  const points: { date: string; balance: number }[] = [{ date: loan.date, balance: loan.principal }];
+  let remaining = loan.principal;
+  for (const { r } of forLoan) {
+    remaining = Math.max(0, remaining - r.amount);
+    points.push({ date: r.date, balance: remaining });
+  }
+  return points;
+}
+
 /** Net position per currency: positive means net owed *to* you, negative
  * means you owe net overall, in that currency. Never blended across
  * currencies — no live FX-rate source (see MODULES_PLAN.md). */

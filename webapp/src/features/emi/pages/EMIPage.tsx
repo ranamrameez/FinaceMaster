@@ -465,64 +465,31 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
   return (
     <div>
       <button className="btn secondary small" style={{ marginBottom: 12 }} onClick={onBack}>← All loans</button>
-      <Card style={{ marginBottom: 16 }}>
-        {editing ? (
-          <div>
-            <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-              <Field label="Loan name">
-                <TextInput value={editRow.name} onChange={(e) => setEditRow({ ...editRow, name: e.target.value })} />
-              </Field>
-              <Field label="Lender">
-                <TextInput value={editRow.lender} onChange={(e) => setEditRow({ ...editRow, lender: e.target.value })} />
-              </Field>
-              <Field label="Currency">
-                <Select value={editRow.currencyCode} onChange={(e) => setEditRow({ ...editRow, currencyCode: e.target.value })}>
-                  {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
-                </Select>
-              </Field>
-              <Field label="Principal">
-                <TextInput type="number" step="0.01" value={editRow.principal} onChange={(e) => setEditRow({ ...editRow, principal: Number(e.target.value) })} />
-              </Field>
-              <Field label="Repayment type">
-                <Select value={editRow.repaymentMode} onChange={(e) => setEditRow({ ...editRow, repaymentMode: e.target.value as EMILoan['repaymentMode'] })}>
-                  <option value="interest">Interest rate</option>
-                  <option value="fixedTotal">Fixed total</option>
-                </Select>
-              </Field>
-              {editRow.repaymentMode === 'interest' ? (
-                <Field label="Annual rate (%)">
-                  <TextInput type="number" step="0.01" value={editRow.annualRatePct ?? ''} onChange={(e) => setEditRow({ ...editRow, annualRatePct: Number(e.target.value) })} />
-                </Field>
-              ) : (
-                <Field label="Total to return">
-                  <TextInput type="number" step="0.01" value={editRow.totalToReturn ?? ''} onChange={(e) => setEditRow({ ...editRow, totalToReturn: Number(e.target.value) })} />
-                </Field>
-              )}
-              <Field label="Tenure (months)">
-                <TextInput type="number" value={editRow.tenureMonths} onChange={(e) => setEditRow({ ...editRow, tenureMonths: Number(e.target.value) })} />
-              </Field>
-              <Field label="Installment start date">
-                <TextInput type="date" value={editRow.startDate} onChange={(e) => setEditRow({ ...editRow, startDate: e.target.value })} />
-              </Field>
-              <Field label="Custom monthly payment (optional)">
-                <TextInput
-                  type="number"
-                  step="0.01"
-                  value={editRow.customMonthlyPayment ?? ''}
-                  onChange={(e) => setEditRow({ ...editRow, customMonthlyPayment: e.target.value ? Number(e.target.value) : undefined })}
-                />
-              </Field>
-              <Field label="Payment day of month (optional)">
-                <TextInput
-                  type="number"
-                  min={1}
-                  max={31}
-                  value={editRow.paymentDayOfMonth ?? ''}
-                  onChange={(e) => setEditRow({ ...editRow, paymentDayOfMonth: e.target.value ? Number(e.target.value) : undefined })}
-                />
-              </Field>
+      {/* README item 66 (2026-08-26 feedback): Save/Cancel (and Edit/Delete)
+         should sit at the card's top-right corner like every other single-
+         stranded-action card in the app (Done item 121) — this previously
+         swapped the WHOLE Card body (title included) between a display view
+         and an edit view, so the buttons ended up below the field grid
+         instead. Restructured onto CollapsibleCard's title/headerExtra
+         slots so the action buttons live in a fixed header position in
+         both modes, only the body content underneath changes. */}
+      <CollapsibleCard
+        style={{ marginBottom: 16 }}
+        title={
+          editing ? (
+            <h3 style={{ margin: 0 }}>Editing {loan.name}</h3>
+          ) : (
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 16 }}>{loan.name}</div>
+              <div className="footer-note" style={{ fontWeight: 400 }}>
+                {loan.lender} · {loan.currencyCode} · {loan.repaymentMode === 'fixedTotal' ? 'Fixed total (no interest)' : `${loan.annualRatePct}% p.a.`} · {loan.tenureMonths} months
+              </div>
             </div>
-            <div className="row" style={{ gap: 8, marginTop: 8 }}>
+          )
+        }
+        headerExtra={
+          editing ? (
+            <div className="row" style={{ gap: 8 }}>
               <IconButton
                 label="Save"
                 icon={<SaveIcon size={13} />}
@@ -535,15 +502,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
               />
               <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditing(false)} />
             </div>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 16 }}>{loan.name}</div>
-              <div className="footer-note">
-                {loan.lender} · {loan.currencyCode} · {loan.repaymentMode === 'fixedTotal' ? 'Fixed total (no interest)' : `${loan.annualRatePct}% p.a.`} · {loan.tenureMonths} months
-              </div>
-            </div>
+          ) : (
             <div className="row" style={{ gap: 8 }}>
               <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => { setEditRow(loan); setEditing(true); }} />
               <IconButton
@@ -558,10 +517,67 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                 }}
               />
             </div>
+          )
+        }
+      >
+        {editing && (
+          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+            <Field label="Loan name">
+              <TextInput value={editRow.name} onChange={(e) => setEditRow({ ...editRow, name: e.target.value })} />
+            </Field>
+            <Field label="Lender">
+              <TextInput value={editRow.lender} onChange={(e) => setEditRow({ ...editRow, lender: e.target.value })} />
+            </Field>
+            <Field label="Currency">
+              <Select value={editRow.currencyCode} onChange={(e) => setEditRow({ ...editRow, currencyCode: e.target.value })}>
+                {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+              </Select>
+            </Field>
+            <Field label="Principal">
+              <TextInput type="number" step="0.01" value={editRow.principal} onChange={(e) => setEditRow({ ...editRow, principal: Number(e.target.value) })} />
+            </Field>
+            <Field label="Repayment type">
+              <Select value={editRow.repaymentMode} onChange={(e) => setEditRow({ ...editRow, repaymentMode: e.target.value as EMILoan['repaymentMode'] })}>
+                <option value="interest">Interest rate</option>
+                <option value="fixedTotal">Fixed total</option>
+              </Select>
+            </Field>
+            {editRow.repaymentMode === 'interest' ? (
+              <Field label="Annual rate (%)">
+                <TextInput type="number" step="0.01" value={editRow.annualRatePct ?? ''} onChange={(e) => setEditRow({ ...editRow, annualRatePct: Number(e.target.value) })} />
+              </Field>
+            ) : (
+              <Field label="Total to return">
+                <TextInput type="number" step="0.01" value={editRow.totalToReturn ?? ''} onChange={(e) => setEditRow({ ...editRow, totalToReturn: Number(e.target.value) })} />
+              </Field>
+            )}
+            <Field label="Tenure (months)">
+              <TextInput type="number" value={editRow.tenureMonths} onChange={(e) => setEditRow({ ...editRow, tenureMonths: Number(e.target.value) })} />
+            </Field>
+            <Field label="Installment start date">
+              <TextInput type="date" value={editRow.startDate} onChange={(e) => setEditRow({ ...editRow, startDate: e.target.value })} />
+            </Field>
+            <Field label="Custom monthly payment (optional)">
+              <TextInput
+                type="number"
+                step="0.01"
+                value={editRow.customMonthlyPayment ?? ''}
+                onChange={(e) => setEditRow({ ...editRow, customMonthlyPayment: e.target.value ? Number(e.target.value) : undefined })}
+              />
+            </Field>
+            <Field label="Payment day of month (optional)">
+              <TextInput
+                type="number"
+                min={1}
+                max={31}
+                value={editRow.paymentDayOfMonth ?? ''}
+                onChange={(e) => setEditRow({ ...editRow, paymentDayOfMonth: e.target.value ? Number(e.target.value) : undefined })}
+              />
+            </Field>
           </div>
         )}
         <LoanStatZones loan={loan} sum={sum} loanRepayments={loanRepayments} />
-      </Card>
+      </CollapsibleCard>
 
       {/* README item 68 of a 2026-08-26 feedback batch: page order should be
          Stats → Schedule → Charts → What-if — the Amortization chart,

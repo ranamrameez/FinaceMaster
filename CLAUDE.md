@@ -3348,6 +3348,19 @@ not developer notes) continuously as features ship.
   example IBANs with known-valid checksums) / `npm run build` all clean; verified live via
   Playwright (required asterisk + legend render, invalid checksum caught locally before any
   network attempt, valid-but-unreachable IBAN shows the correct fallback message).
+- **EMI edit-form buttons → card header + Personal Loans balance chart (2026-08-26) — see
+  README Done item 172, closes Pending items 66/99.** EMI's `LoanDetail` previously swapped
+  its entire outer `Card` body (title included) between display and edit views, which is
+  exactly why Save/Cancel landed below the field grid instead of the top-right corner every
+  other single-action card uses (Done item 121) — restructured onto `CollapsibleCard`'s
+  `title`/`headerExtra` slots so the header (and its buttons) stay fixed across both modes.
+  Personal Loans' `LoanDetail` gained a "Balance over time" line chart (new
+  `loanBalanceHistory()` in `lib/calc/personalLoansModule.ts`, one point per date something
+  happened to that specific loan) between Repayments and the Payoff Planner — the landing
+  page's own Analytics tab (Done item 45) is portfolio-wide, not per-loan, so this was a real
+  gap, not a duplicate. `npx tsc -b` / `npm run test` (367 tests, 3 new) / `npm run build` all
+  clean; verified live via Playwright (chart canvas renders once repayments exist; EMI's Save
+  button measured above the field grid, was below it before).
 
 ## Live URLs
 
