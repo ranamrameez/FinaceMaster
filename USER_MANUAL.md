@@ -508,6 +508,21 @@ transactions) and Personal Loans (informal, no schedule).
   overridden month shows an "(custom)" tag; click the X next to it to reset that month back
   to the regular calculated installment. If a bigger payment pays off the loan completely,
   the schedule simply stops there — you won't see extra $0 installments after payoff.
+- **Custom monthly payment**: if you'd rather pay one fixed amount every month instead of
+  the computed installment — e.g. a round number that's easier to remember, or lower than
+  the "correct" EMI — set it in the **"Custom monthly payment"** field on the add-loan form
+  or in Edit. Every month charges that fixed amount, except the very last one: since a
+  round custom number usually doesn't divide the loan evenly, the final installment
+  automatically "true's up" to whatever's actually still left owing (shown with a
+  "(final payment)" tag) instead of repeating the custom amount and over- or under-paying.
+  You can still set a per-month custom installment (above) on top of this for any specific
+  month, including the final one — a manually-set month always wins over the automatic
+  final payment.
+- **Repayment log**: below the Schedule table, a list of every actual payment recorded
+  against this loan (the same data the Schedule table's pencil icon edits, shown here as one
+  reviewable list covering every month, not just the upcoming ones). Edit an amount or
+  delete an entry directly here. This is also what a linked Bank/Cash transfer (§23 below)
+  points to when you link a real payment to a specific installment.
 
 ---
 
@@ -672,19 +687,23 @@ record on both sides at once, and keeps them in sync afterward.
 
 **Supported so far**: Cash ↔ Banking, Banking ↔ your QSE or PSX cash balance (a deposit or
 withdrawal), Banking/Cash ↔ a specific Rentals property (rent received, or an expense paid),
-Banking/Cash ↔ a specific Personal Loan (a repayment logged against that loan), and
-Banking/Cash ↔ Funds (a deposit into or withdrawal from Funds' cash balance). Other pairings
-(e.g. Cash directly to a stock exchange, or anything involving EMI) aren't wired up yet —
-the form tells you if a pairing isn't supported instead of silently doing something wrong.
+Banking/Cash ↔ a specific Personal Loan (a repayment logged against that loan), Banking/Cash
+↔ Funds (a deposit into or withdrawal from Funds' cash balance), and Banking/Cash ↔ a
+specific EMI/Loans loan (a payment logged against that loan's next installment). Other
+pairings (e.g. Cash directly to a stock exchange) aren't wired up yet — the form tells you if
+a pairing isn't supported instead of silently doing something wrong.
 
 - **Create a link**: choose the **From** and **To** side (for Banking, also pick which
-  account; for Rentals, pick which property; for Personal Loans, pick which loan), an
-  amount, a date, and an optional note, then **Create link**. This adds a matching entry to
-  both modules' own ledgers — you'll see it appear in Cash's ledger, Banking's transaction
-  list, a property's income/expenses, a loan's repayment list, or Funds' own transaction
-  history, exactly like anything else you'd entered by hand there. A Personal Loans
-  repayment created this way is always a positive amount against the chosen loan, regardless
-  of which side of the link it's on.
+  account; for Rentals, pick which property; for Personal Loans or EMI/Loans, pick which
+  loan), an amount, a date, and an optional note, then **Create link**. This adds a matching
+  entry to both modules' own ledgers — you'll see it appear in Cash's ledger, Banking's
+  transaction list, a property's income/expenses, a loan's repayment list (Personal Loans'
+  or EMI/Loans' — see its Repayment log, §18), or Funds' own transaction history, exactly
+  like anything else you'd entered by hand there. A Personal Loans or EMI/Loans repayment
+  created this way is always a positive amount against the chosen loan, regardless of which
+  side of the link it's on — for EMI/Loans specifically, it always applies to whichever
+  installment is next due (not yet covered by an actual payment), matching your loan's own
+  schedule automatically rather than asking you to pick a month.
 - **Different currencies**: no live conversion happens automatically — but if the two sides
   use different currencies, check **"Different amount on the other side"** and enter the
   real converted amount yourself (from your bank's rate, a cash exchange receipt, etc.).
@@ -715,22 +734,41 @@ the form tells you if a pairing isn't supported instead of silently doing someth
 
 Pick **Net Worth** from the category dropdown — a single page summarizing everything you've
 recorded across every module. Each currency you use gets its own collapsible section (click
-its header to expand/collapse) showing your real, unconverted **Assets**, **Liabilities**,
-and **Net** total in that currency — Cash and Banking balances, your QSE/PSX portfolio value
-plus cash, Funds' current market value, and Personal Loans' net position all count as assets
-(or a liability, if you owe more than you're owed); EMI/Loans' outstanding balance always
-counts as a liability. **Rental income is shown separately below, not included in the total**
-— property values aren't tracked in this app, and the rent you've collected already landed in
-whichever Cash/Bank account you deposited it to, so adding it again here would count it twice.
+its header to expand/collapse, or use the responsive grid to see 2-3 side by side on a wide
+screen) showing your real, unconverted **Assets**, **Liabilities**, and **Net** total in that
+currency — plus a "By module" breakdown of exactly which modules contributed to it. Cash and
+Banking balances, your QSE/PSX portfolio value plus cash, Funds' current market value, and
+Personal Loans' net position all count as assets (or a liability, if you owe more than you're
+owed); EMI/Loans' outstanding balance always counts as a liability. **Rental income is shown
+separately below, not included in the total** — property values aren't tracked in this app,
+and the rent you've collected already landed in whichever Cash/Bank account you deposited it
+to, so adding it again here would count it twice.
 
-**One combined total, converted**: pick a currency in "Show total in" at the top, and every
-section with a known exchange rate gets converted and added into one grand total. Rates come
-from a free exchange-rate service, refreshed automatically at most once a day (never on every
-page load) and cached — click **Refresh rates** to force an update. If the automatic fetch
-ever fails (no internet, the service being unreachable), or a currency you use simply isn't
-covered, just enter the rate yourself under "Manual rate: 1 USD =" — the page works exactly
-the same either way, and it never blocks you from seeing your real per-currency totals even
-with no rate at all (only the one converted grand-total line depends on having a rate).
+- **Net worth summary card**: pick a currency in "Show total in", and every section with a
+  known exchange rate gets converted and added into one grand total, shown alongside **Total
+  debts**, **Today's net flow**, and **This month's net flow** (money moved in/out of Cash
+  and Banking) — all converted sums alongside the real per-currency figures, never a
+  replacement for them.
+- **Exchange rates card**: rates come from a free exchange-rate service, refreshed
+  automatically at most once a day (never on every page load) and cached — click **Refresh
+  rates** to force an update. If the automatic fetch ever fails (no internet, the service
+  being unreachable), or a currency you use simply isn't covered, set a rate yourself between
+  **any two of your own currencies** (not just against USD) — the page works exactly the same
+  either way, and it never blocks you from seeing your real per-currency totals even with no
+  rate at all (only the converted grand-total/debt/flow figures depend on having a rate). A
+  read-only table below shows every known rate between the currencies you actually hold.
+- **Capital split by currency chart**: each currency's net worth converted to your preferred
+  currency, shown as a doughnut for an at-a-glance comparison — a currency with negative net
+  worth doesn't get a slice (a doughnut can't show a negative value meaningfully) but is still
+  fully visible in its own card above.
+- **Save snapshot / net-worth-over-time chart**: click **Save snapshot** any time to log
+  today's net worth (in every currency you hold) — clicking it again later the same day
+  updates that day's entry instead of creating a duplicate. Once you have two or more
+  snapshots, a line chart appears showing your net worth's history in your currently-selected
+  "Show total in" currency. Nothing is snapshotted automatically — this is entirely on-demand,
+  so build up a history by clicking it whenever you want a data point (e.g. once a month). A
+  saved snapshot is a frozen record of that day — editing old transactions later never
+  rewrites a past snapshot's number, only your live current totals above change.
 
 ---
 
