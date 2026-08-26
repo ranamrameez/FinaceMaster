@@ -110,7 +110,12 @@ export function PositionDetail({ ticker }: { ticker: string }) {
     if (!(await ensureSignedIn('Sign in to save price updates.'))) return;
     setMarketPrice(ticker, val);
     toast(`${ticker} price saved: ${fmtPrice(val)}`);
-    setPriceInput('');
+    // User-reported bug: this used to reset to '', which blanked the input
+    // right after a successful save even though the price WAS saved
+    // correctly (every other stat on the page reflected it) — reads as
+    // "current price disappears after saving." Re-fill with what was just
+    // saved instead, so the field shows the value it actually holds now.
+    setPriceInput(String(val));
   };
 
   return (

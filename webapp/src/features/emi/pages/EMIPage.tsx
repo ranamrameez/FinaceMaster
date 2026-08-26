@@ -94,6 +94,13 @@ function AddLoanForm() {
         <Field label="Start date">
           <TextInput type="date" value={l.startDate} onChange={(e) => setL({ ...l, startDate: e.target.value })} />
         </Field>
+        <Field
+          label="Custom monthly payment (optional)"
+          width={180}
+          title="Pay a fixed amount every month instead of the computed installment above — whatever's still owed gets charged in full as a one-time final payment instead of repeating this amount past the point it fully covers the loan."
+        >
+          <TextInput type="number" step="0.01" value={l.customMonthlyPayment ?? ''} onChange={(e) => setL({ ...l, customMonthlyPayment: e.target.value ? Number(e.target.value) : undefined })} />
+        </Field>
       </div>
       <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
         <PlusIcon />Add loan
@@ -245,6 +252,13 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
               )}
               <TextInput type="number" value={editRow.tenureMonths} onChange={(e) => setEditRow({ ...editRow, tenureMonths: Number(e.target.value) })} placeholder="Tenure (months)" />
               <TextInput type="date" value={editRow.startDate} onChange={(e) => setEditRow({ ...editRow, startDate: e.target.value })} />
+              <TextInput
+                type="number"
+                step="0.01"
+                value={editRow.customMonthlyPayment ?? ''}
+                onChange={(e) => setEditRow({ ...editRow, customMonthlyPayment: e.target.value ? Number(e.target.value) : undefined })}
+                placeholder="Custom monthly payment (optional)"
+              />
             </div>
             <div className="row" style={{ gap: 8, marginTop: 8 }}>
               <IconButton
@@ -415,7 +429,15 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                   </td>
                 ) : (
                   <>
-                    <td>{fmtMoney(r.emi, loan.currencyCode)}{r.overridden && <span className="footer-note"> (custom)</span>}</td>
+                    <td>
+                      {fmtMoney(r.emi, loan.currencyCode)}
+                      {r.overridden && <span className="footer-note"> (custom)</span>}
+                      {r.isBalloon && (
+                        <Tooltip text="This final payment was automatically true'd up to whatever was actually still owed, since your custom monthly payment doesn't exactly clear the loan by the last month.">
+                          <span className="footer-note" style={{ cursor: 'pointer' }}> (final payment)</span>
+                        </Tooltip>
+                      )}
+                    </td>
                     <td>{fmtMoney(r.interest, loan.currencyCode)}</td>
                     <td>{fmtMoney(r.principalComp, loan.currencyCode)}</td>
                     <td>{fmtMoney(r.balance, loan.currencyCode)}</td>

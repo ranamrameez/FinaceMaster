@@ -22,6 +22,17 @@ export interface EMILoan {
    * month's balance/interest from whatever was actually paid, and stops
    * early if an override pays the loan off before its full tenure. */
   installmentOverrides?: Record<number, number>;
+  /** User-set fixed monthly payment, used for every month INSTEAD of the
+   * computed amortizing EMI — the tradeoff is that a fixed payment
+   * (unless it happens to exactly match the computed EMI) doesn't clear
+   * the loan to exactly zero by the last month, so `emiSchedule()` "true
+   * ups" the final installment to whatever's actually still owed (the
+   * remaining balance plus that month's interest/markup) instead of
+   * charging `customMonthlyPayment` again and either under- or
+   * over-paying. A per-month `installmentOverrides` entry still wins
+   * over this for whichever month it's set on, including the final one —
+   * this only fills in the months an override doesn't cover. */
+  customMonthlyPayment?: number;
 }
 
 /** A real, dated record of an actual payment made against a loan —

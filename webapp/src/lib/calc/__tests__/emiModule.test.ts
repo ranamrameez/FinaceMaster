@@ -91,6 +91,75 @@ describe('emiSchedule — installmentOverrides (README item 6, 2026-08-26)', () 
   });
 });
 
+describe('emiSchedule — customMonthlyPayment (user-requested: fixed monthly EMI, remainder charged in the final EMI)', () => {
+  it('charges the fixed amount every month except the last, which balloons to whatever is still owed (0% interest)', () => {
+    const l = loan({ principal: 1200, annualRatePct: 0, tenureMonths: 12, customMonthlyPayment: 50 });
+    const { emi, rows } = emiSchedule(l);
+    expect(emi).toBe(50); // "Monthly installment" reflects the custom amount, not the theoretical EMI
+    expect(rows).toHaveLength(12);
+    // Months 1-11 all pay exactly 50, none marked as a balloon.
+    rows.slice(0, 11).forEach((r) => {
+      expect(r.emi).toBe(50);
+      expect(r.isBalloon).toBeFalsy();
+      expect(r.overridden).toBeFalsy();
+    });
+    expect(rows[10].balance).toBeCloseTo(1200 - 11 * 50, 5); // 650
+    // Month 12 (final) true's up the remaining 650 instead of charging 50 again.
+    expect(rows[11].isBalloon).toBe(true);
+    expect(rows[11].emi).toBeCloseTo(650, 5);
+    expect(rows[11].balance).toBeCloseTo(0, 5);
+  });
+
+  it('balloons a real interest-bearing loan too, with the final payment covering balance + that month\'s interest', () => {
+    const l = loan({ principal: 1000, annualRatePct: 12, tenureMonths: 12, customMonthlyPayment: 50 });
+    const { rows } = emiSchedule(l);
+    expect(rows).toHaveLength(12);
+    rows.slice(0, 11).forEach((r) => expect(r.emi).toBe(50));
+    expect(rows[11].isBalloon).toBe(true);
+    expect(rows[11].balance).toBeCloseTo(0, 5);
+    // The final payment should exactly equal that month's own interest plus
+    // whatever principal balance remained going into it.
+    expect(rows[11].emi).toBeCloseTo(rows[11].interest + rows[11].principalComp, 5);
+  });
+
+  it('does not add a balloon row when the custom payment already pays the loan off before the final month', () => {
+    const l = loan({ principal: 1200, annualRatePct: 0, tenureMonths: 12, customMonthlyPayment: 300 });
+    const { rows } = emiSchedule(l);
+    expect(rows).toHaveLength(4); // 300/month clears 1200 in exactly 4 months
+    expect(rows.every((r) => !r.isBalloon)).toBe(true);
+    expect(rows[3].balance).toBeCloseTo(0, 5);
+  });
+
+  it('a manual override on the final month wins over the auto-balloon', () => {
+    const l = loan({
+      principal: 1200, annualRatePct: 0, tenureMonths: 12, customMonthlyPayment: 50,
+      installmentOverrides: { 12: 999 },
+    });
+    const { rows } = emiSchedule(l);
+    expect(rows[11].overridden).toBe(true);
+    expect(rows[11].isBalloon).toBeFalsy();
+    expect(rows[11].emi).toBe(999);
+  });
+
+  it('true-ups both remaining principal and remaining markup for a fixedTotal (no-interest) loan', () => {
+    const l = loan({ repaymentMode: 'fixedTotal', principal: 1000, totalToReturn: 1120, tenureMonths: 10, customMonthlyPayment: 80 });
+    const { rows } = emiSchedule(l);
+    expect(rows).toHaveLength(10);
+    rows.slice(0, 9).forEach((r) => expect(r.emi).toBe(80));
+    expect(rows[9].isBalloon).toBe(true);
+    // The whole loan's principal and markup must still sum to their true totals.
+    expect(rows.reduce((s, r) => s + r.principalComp, 0)).toBeCloseTo(1000, 5);
+    expect(rows.reduce((s, r) => s + r.interest, 0)).toBeCloseTo(120, 5);
+    expect(rows[9].balance).toBeCloseTo(0, 5);
+  });
+
+  it('whatIfExtraPayment stacks extra on top of the custom payment, not the theoretical EMI', () => {
+    const l = loan({ principal: 1200, annualRatePct: 0, tenureMonths: 12, customMonthlyPayment: 50 });
+    const result = whatIfExtraPayment(l, 50); // 50 (custom) + 50 (extra) = 100/month
+    expect(result.months).toBe(12); // matches the original 100/month schedule's own payoff time
+  });
+});
+
 describe('emiSummary', () => {
   it('reports full principal outstanding and zero elapsed before the start date', () => {
     const l = loan({ principal: 1000, startDate: '2026-06-01' });

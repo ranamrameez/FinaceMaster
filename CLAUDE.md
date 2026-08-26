@@ -3104,7 +3104,30 @@ not developer notes) continuously as features ship.
   branch `claude/pending-tasks-completion-sg0imx` rather than direct-to-`main`, per this
   specific session's own harness-level branch instructions — this doesn't supersede this
   file's own "commit into main directly" standing instruction for a normal local session,
-  it's how this particular remote/web session was invoked.
+  it's how this particular remote/web session was invoked. **PR #5 merged into `main`
+  same day (2026-08-26)** at the user's explicit request.
+- **Two follow-up user reports, same session, after PR #5 merged (2026-08-26) — see README
+  Done items 160/161.** (1) Critical bug: a stock's Current Price input on
+  `PositionDetail.tsx` (QSE + PSX both had the identical bug) visibly "disappeared" right
+  after saving — `commitPrice()` correctly called `setMarketPrice()` (confirmed by reading
+  the store: it persists correctly) but then reset the local `priceInput` state to `''`
+  instead of re-filling it with what was just saved, so the box looked empty even though the
+  save worked. Fixed by re-filling with the saved value. (2) New feature: EMI/Loans gained
+  `EMILoan.customMonthlyPayment` — a single fixed payment applied to every month, with the
+  schedule engine auto-"true-ing up" the final installment to whatever's actually still owed
+  (balance + that month's interest/markup) instead of repeating the custom amount and
+  over/under-paying. Distinct from and compatible with the existing per-month
+  `installmentOverrides` (a manual override on the final month still wins over the
+  auto-balloon). Implemented for both repayment modes. New `EMIScheduleRow.isBalloon` flag
+  shows "(final payment)" in the Schedule table, distinct from a manual "(custom)" override
+  tag. Verified live via Playwright (seeded 1200/12mo/0% loan, 50/month custom payment:
+  months 1-11 each 50.00, month 12 "650.00 USD (final payment)" — matches hand-traced test
+  expectations exactly) plus 8 new unit tests. `npx tsc -b` / `npm run test` (338 tests,
+  8 new total across both fixes) / `npm run build` all clean. Since this session's designated
+  branch (`claude/pending-tasks-completion-sg0imx`) was already merged as PR #5, this
+  follow-up work restarts that same branch from the latest `main` per this session's own
+  harness instructions (a merged PR can't be reused/reopened) and opens as a NEW pull
+  request, not a reopened PR #5.
 
 ## Live URLs
 
