@@ -3322,6 +3322,32 @@ not developer notes) continuously as features ship.
   about not skipping the verification itself). This doesn't change the earlier-noted
   branch-plus-mandatory-PR harness requirement for this session type — PRs are still opened
   against `main`, just no longer left for the user to click merge on manually.
+- **IBAN → bank name/BIC lookup + required-field marking (2026-08-26, user-requested) — see
+  README Done item 171.** New `lib/ibanLookup.ts` validates an IBAN's mod-97 checksum locally
+  first, then tries a chain of live providers (`IBAN_PROVIDERS`) for the bank name/BIC — only
+  ONE provider (openiban.com) is actually wired in; the user asked for two, but every other
+  commonly-cited "free" IBAN API needs a registered key even on its free tier, and guessing at
+  an unverified second endpoint would ship a dead code path — flagged this rather than
+  pretending otherwise, with the array structured so a real second provider drops in later
+  with no caller changes. `BankAccount` gained optional `iban`/`bankName`/`bic`; new
+  `IbanLookupFields` (IBAN input + "Look up bank" + Bank name/BIC, all hand-editable
+  regardless of outcome) wired into both the add-account form and `AccountDetailModal`. A
+  failed/unsupported lookup shows the user's own requested wording verbatim: "IBAN not
+  supported by the app (or the lookup service is unavailable right now) — enter the bank name
+  manually below." **This sandbox's network policy blocks the live openiban.com call itself**
+  (`ERR_CONNECTION_RESET` — same restriction already hit for Net Worth's FX-rate fetch and the
+  Google Fonts CDN), so only the graceful-failure path is actually verified here; a future
+  session with real browser network access should confirm a real IBAN returns a real bank name
+  before trusting the success path beyond the local-checksum unit tests. Separately, `Field`
+  gained a `required` prop (small red asterisk after the label, distinct from the
+  "(optional)" suffix several fields already spell out in text) — applied to Banking's
+  add-account form's two genuinely required fields (Account name, Currency) with a legend
+  line; this is the mechanism, not a full rollout — the user's "clearly mark required fields
+  in the app" is a real app-wide ask tracked as a new Pending item (103) rather than guessed at
+  everywhere in one pass. `npx tsc -b` / `npm run test` (364 tests, 4 new — real published
+  example IBANs with known-valid checksums) / `npm run build` all clean; verified live via
+  Playwright (required asterisk + legend render, invalid checksum caught locally before any
+  network attempt, valid-but-unreachable IBAN shows the correct fallback message).
 
 ## Live URLs
 

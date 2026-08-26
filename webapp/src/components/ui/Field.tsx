@@ -30,10 +30,26 @@ import { Tooltip } from '../Tooltip';
  * offset it by and sat exactly on that edge instead. Confirmed via a real
  * Playwright measurement (a "Note" Field's wrapping label carried
  * `margin: 0px 0px 5px`, computed) before writing this fix. */
-export function Field({ label, children, width, title }: { label?: string; children: ReactNode; width?: number; title?: string }) {
+/** `required` (user-requested, 2026-08-26: "clearly mark the required
+ * fields") renders a small red asterisk after the label — a quick visual
+ * scan distinct from an "(optional)" suffix baked into the label text
+ * itself (several fields already spell that out, e.g. "Account number
+ * (optional)"); this is the marker for the opposite case. Purely visual —
+ * doesn't add HTML `required` validation, since several "required" fields
+ * here are validated with a friendlier toast message on submit rather
+ * than the browser's own native validation UI. */
+export function Field({ label, children, width, title, required }: { label?: string; children: ReactNode; width?: number; title?: string; required?: boolean }) {
+  const labelContent = required ? (
+    <>
+      {label}
+      <span style={{ color: 'var(--loss)' }} aria-hidden="true"> *</span>
+    </>
+  ) : (
+    label
+  );
   return (
     <label style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 4, fontSize: 12, color: 'var(--muted)', width, marginBottom: 0 }}>
-      {title ? <Tooltip text={title}><span style={{ cursor: 'pointer' }}>{label}</span></Tooltip> : label}
+      {title ? <Tooltip text={title}><span style={{ cursor: 'pointer' }}>{labelContent}</span></Tooltip> : labelContent}
       {children}
     </label>
   );

@@ -26,6 +26,13 @@ export interface BankAccount {
    * standardized list this app enforces. */
   branch?: string;
   accountType?: string;
+  /** User-requested (2026-08-26): an optional IBAN, plus the bank name/BIC
+   * a lookup against it can fill in (see `lib/ibanLookup.ts`) — all still
+   * freely hand-editable, since lookup can fail or the account may not
+   * have an IBAN at all (many PKR/QAR accounts don't). */
+  iban?: string;
+  bankName?: string;
+  bic?: string;
 }
 
 export interface BankTransaction {

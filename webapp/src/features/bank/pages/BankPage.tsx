@@ -27,6 +27,7 @@ import { parseCSV, toCSV } from '../../../lib/csv';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
 import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
+import { isValidIbanFormat, lookupIban } from '../../../lib/ibanLookup';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
 import { useAppearanceStore } from '../../../store/appearanceStore';
@@ -87,6 +88,65 @@ function TotalBalances() {
   );
 }
 
+interface IbanLookupValue {
+  iban?: string;
+  bankName?: string;
+  bic?: string;
+}
+
+/** User-requested (2026-08-26): look up a bank's name/BIC from its IBAN
+ * instead of typing them by hand. See `lib/ibanLookup.ts` for the
+ * provider-chain design and why only one live provider is wired in today.
+ * All three fields stay freely hand-editable regardless of whether lookup
+ * succeeds — an account may have no IBAN at all (common for PKR/QAR
+ * accounts), or the lookup may simply fail, and that shouldn't block
+ * entering the bank name manually. */
+function IbanLookupFields({ value, onChange }: { value: IbanLookupValue; onChange: (patch: Partial<IbanLookupValue>) => void }) {
+  const [looking, setLooking] = useState(false);
+
+  const doLookup = async () => {
+    const iban = (value.iban ?? '').trim();
+    if (!iban) return toast('Enter an IBAN first.');
+    if (!isValidIbanFormat(iban)) {
+      toast("That doesn't look like a valid IBAN (checksum failed) — check for typos, or enter the bank name manually below.");
+      return;
+    }
+    setLooking(true);
+    try {
+      const result = await lookupIban(iban);
+      if (!result) {
+        toast("IBAN not supported by the app (or the lookup service is unavailable right now) — enter the bank name manually below.");
+        return;
+      }
+      onChange({ bankName: result.bankName ?? value.bankName, bic: result.bic ?? value.bic });
+      toast(`Found: ${result.bankName ?? result.bic ?? 'bank details'}.`);
+    } catch {
+      toast("IBAN not supported by the app (or the lookup service is unavailable right now) — enter the bank name manually below.");
+    } finally {
+      setLooking(false);
+    }
+  };
+
+  return (
+    <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+      <Field label="IBAN (optional)" width={220} title="International Bank Account Number, if your bank issues one — used only to look up the bank name/BIC below; not every country or account has one.">
+        <TextInput value={value.iban ?? ''} onChange={(e) => onChange({ iban: e.target.value || undefined })} placeholder="e.g. PK36SCBL0000001123456702" />
+      </Field>
+      <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 1 }}>
+        <button type="button" className="btn secondary small" disabled={looking} onClick={doLookup}>
+          {looking ? 'Looking up…' : 'Look up bank'}
+        </button>
+      </div>
+      <Field label="Bank name (optional)" width={180}>
+        <TextInput value={value.bankName ?? ''} onChange={(e) => onChange({ bankName: e.target.value || undefined })} placeholder="e.g. Standard Chartered" />
+      </Field>
+      <Field label="BIC / SWIFT (optional)" width={140}>
+        <TextInput value={value.bic ?? ''} onChange={(e) => onChange({ bic: e.target.value || undefined })} placeholder="e.g. SCBLPKKX" />
+      </Field>
+    </div>
+  );
+}
+
 /** README item 81 (2026-08-26 feedback): adding an account is a rare
  * operation, so it shouldn't permanently occupy the top of the page — same
  * round-FAB + popup pattern already used for EMI's "Add a loan" (Done item
@@ -134,15 +194,15 @@ function AddAccountForm({ onSaved }: { onSaved?: () => void }) {
   return (
     <div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-        <Field label="Account name" width={180}>
+        <Field label="Account name" width={180} required>
           <TextInput value={a.name} onChange={(e) => setA({ ...a, name: e.target.value })} placeholder="e.g. Meezan Checking" />
         </Field>
-        <Field label="Currency" width={100}>
+        <Field label="Currency" width={100} required>
           <Select value={a.currencyCode} onChange={(e) => { setA({ ...a, currencyCode: e.target.value }); setLastCurrency(e.target.value); }}>
             {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>
-        <Field label="Opening balance" width={140}>
+        <Field label="Opening balance (optional)" width={140}>
           <TextInput type="number" step="0.01" value={a.openingBalance || ''} onChange={(e) => setA({ ...a, openingBalance: Number(e.target.value) })} />
         </Field>
       </div>
@@ -157,6 +217,9 @@ function AddAccountForm({ onSaved }: { onSaved?: () => void }) {
           <TextInput list="bank-account-type-datalist" value={a.accountType ?? ''} onChange={(e) => setA({ ...a, accountType: e.target.value || undefined })} placeholder="e.g. Savings" />
         </Field>
       </div>
+      {/* User-requested: an IBAN lookup fills bank name/BIC automatically
+         when supported; all still hand-editable. */}
+      <IbanLookupFields value={a} onChange={(patch) => setA({ ...a, ...patch })} />
       {/* User-requested: save an account number + the SMS sender details a
          bank alert actually arrives from, for a future SMS-based
          transaction-import feature (nothing reads these yet — this just
@@ -179,6 +242,7 @@ function AddAccountForm({ onSaved }: { onSaved?: () => void }) {
       <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
         <PlusIcon />Add account
       </button>
+      <p className="footer-note" style={{ marginTop: 8 }}><span style={{ color: 'var(--loss)' }}>*</span> Required. Everything else on this form is optional.</p>
     </div>
   );
 }
@@ -291,6 +355,9 @@ function AccountDetailModal({ account, onClose }: { account: BankAccount; onClos
     smsSenderNumber: account.smsSenderNumber ?? '',
     branch: account.branch ?? '',
     accountType: account.accountType ?? '',
+    iban: account.iban ?? '',
+    bankName: account.bankName ?? '',
+    bic: account.bic ?? '',
   });
   const saveMeta = async () => {
     if (!(await ensureSignedIn('Sign in to save account details.'))) return;
@@ -301,6 +368,9 @@ function AccountDetailModal({ account, onClose }: { account: BankAccount; onClos
       smsSenderNumber: meta.smsSenderNumber.trim() || undefined,
       branch: meta.branch.trim() || undefined,
       accountType: meta.accountType.trim() || undefined,
+      iban: meta.iban.trim() || undefined,
+      bankName: meta.bankName.trim() || undefined,
+      bic: meta.bic.trim() || undefined,
     });
     toast('Account details saved.');
   };
@@ -361,7 +431,16 @@ function AccountDetailModal({ account, onClose }: { account: BankAccount; onClos
       <datalist id="bank-account-type-datalist-detail">
         {ACCOUNT_TYPES.map((t) => <option key={t} value={t} />)}
       </datalist>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+      <IbanLookupFields
+        value={meta}
+        onChange={(patch) => setMeta((m) => ({
+          ...m,
+          ...('iban' in patch ? { iban: patch.iban ?? '' } : {}),
+          ...('bankName' in patch ? { bankName: patch.bankName ?? '' } : {}),
+          ...('bic' in patch ? { bic: patch.bic ?? '' } : {}),
+        }))}
+      />
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 16, marginTop: 8 }}>
         <Field label="Account number" width={160} title="However your bank shows it on statements/SMS — often partially masked, e.g. xxxx1234.">
           <TextInput value={meta.accountNumber} onChange={(e) => setMeta({ ...meta, accountNumber: e.target.value })} placeholder="e.g. xxxx1234" />
         </Field>
