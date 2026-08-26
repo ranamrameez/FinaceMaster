@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { EMILoan } from '../../../types/emiWorkbook';
-import { emiSchedule, emiSummary, expectedEndDate, installmentDueDate, totalsByCurrency, whatIfExtraPayment } from '../emiModule';
+import type { EMILoan, EMIRepayment } from '../../../types/emiWorkbook';
+import { emiSchedule, emiSummary, expectedEndDate, generateBigEmiOverrides, installmentDueDate, resolvedDueDate, totalsByCurrency, whatIfExtraPayment } from '../emiModule';
 
 const loan = (over: Partial<EMILoan>): EMILoan => ({
   id: 'e1',
@@ -269,5 +269,98 @@ describe('whatIfExtraPayment', () => {
     expect(result.totalInterest).toBeLessThan(base);
     expect(result.interestSaved).toBeGreaterThan(0);
     expect(result.monthsSaved).toBeGreaterThan(0);
+  });
+});
+
+describe('installmentDueDate — paymentDayOfMonth', () => {
+  it('falls back to startDate\'s own day when unset', () => {
+    const l = loan({ startDate: '2026-01-15' });
+    expect(installmentDueDate(l, 1)).toBe('2026-02-15');
+  });
+
+  it('uses the configured day-of-month when the target month has that many days', () => {
+    const l = loan({ startDate: '2026-01-15', paymentDayOfMonth: 28 });
+    expect(installmentDueDate(l, 1)).toBe('2026-02-28');
+  });
+
+  it('clamps to the target month\'s actual last day when it has fewer days than the configured day', () => {
+    const l = loan({ startDate: '2026-01-01', paymentDayOfMonth: 31 });
+    expect(installmentDueDate(l, 3)).toBe('2026-04-30'); // April has 30 days
+  });
+});
+
+describe('resolvedDueDate', () => {
+  it('uses the computed due date when no repayment record exists for that month', () => {
+    const l = loan({ startDate: '2026-01-01' });
+    expect(resolvedDueDate(l, 3, [])).toBe(installmentDueDate(l, 3));
+  });
+
+  it('prefers a specific repayment record\'s own date when one is set for that month', () => {
+    const l = loan({ id: 'e1', startDate: '2026-01-01' });
+    const repayments: EMIRepayment[] = [{ id: 'r1', loanId: 'e1', month: 3, amount: 100, date: '2026-04-20' }];
+    expect(resolvedDueDate(l, 3, repayments)).toBe('2026-04-20');
+    expect(resolvedDueDate(l, 4, repayments)).toBe(installmentDueDate(l, 4));
+  });
+});
+
+describe('generateBigEmiOverrides', () => {
+  it('sets every Nth month to the typed amount alone in majorOnly mode, no reconciliation', () => {
+    const l = loan({ principal: 1200, tenureMonths: 12, repaymentMode: 'fixedTotal', totalToReturn: 1200 }); // regular = 100/mo
+    const result = generateBigEmiOverrides(l, 1, { intervalMonths: 6, amount: 300, mode: 'majorOnly', reconcileLastMonth: false });
+    expect(result).toEqual({ 6: 300, 12: 300 });
+  });
+
+  it('stacks the amount on top of the regular installment in regularPlusMajor mode', () => {
+    const l = loan({ principal: 1200, tenureMonths: 12, repaymentMode: 'fixedTotal', totalToReturn: 1200 }); // regular = 100/mo
+    const result = generateBigEmiOverrides(l, 1, { intervalMonths: 6, amount: 300, mode: 'regularPlusMajor', reconcileLastMonth: false });
+    expect(result).toEqual({ 6: 400, 12: 400 });
+  });
+
+  it('only generates majors from fromMonth onward (skips already-elapsed months)', () => {
+    const l = loan({ principal: 1200, tenureMonths: 12, repaymentMode: 'fixedTotal', totalToReturn: 1200 });
+    const result = generateBigEmiOverrides(l, 7, { intervalMonths: 6, amount: 300, mode: 'majorOnly', reconcileLastMonth: false });
+    expect(result).toEqual({ 12: 300 }); // month 6 is before fromMonth=7, skipped
+  });
+
+  it('reconciles the true remainder into the final month when majors under-pay vs. the regular schedule (fixedTotal, no markup)', () => {
+    // Hand-traced: principal=1200/tenure=12/no markup → regular=100/mo.
+    // Majors at months 6 and 12 pay only 50 (under the regular 100) —
+    // balance after month 11 (11 regular months minus the month-6 shortfall
+    // relative to a plain 100/mo schedule) is 150, so month 12 needs to pay
+    // exactly 150 to zero the loan out, not the flat 50 majorOnly amount.
+    const l = loan({ principal: 1200, tenureMonths: 12, repaymentMode: 'fixedTotal', totalToReturn: 1200 });
+    const result = generateBigEmiOverrides(l, 1, { intervalMonths: 6, amount: 50, mode: 'majorOnly', reconcileLastMonth: true });
+    expect(result).toEqual({ 6: 50, 12: 150 });
+    // Applying these overrides should exactly zero the balance at month 12.
+    const candidate: EMILoan = { ...l, installmentOverrides: result };
+    const schedule = emiSchedule(candidate);
+    expect(schedule.rows).toHaveLength(12);
+    expect(schedule.rows[11].balance).toBe(0);
+  });
+
+  it('leaves the final month alone when the majors are large enough that the loan already finishes early', () => {
+    // Same base loan, but a 300/6-months major pays off the loan by month 10
+    // on its own — nothing left owed by month 12 to reconcile.
+    const l = loan({ principal: 1200, tenureMonths: 12, repaymentMode: 'fixedTotal', totalToReturn: 1200 });
+    const result = generateBigEmiOverrides(l, 1, { intervalMonths: 6, amount: 300, mode: 'majorOnly', reconcileLastMonth: true });
+    expect(result[6]).toBe(300);
+    // month 12's entry (if any) is inert dead data since the schedule never
+    // reaches it — what matters is the loan is genuinely fully paid by then.
+    const candidate: EMILoan = { ...l, installmentOverrides: { 6: result[6] } };
+    expect(emiSchedule(candidate).rows.length).toBeLessThan(12);
+  });
+
+  it('reconciles a real interest-bearing loan\'s final month correctly', () => {
+    const l = loan({ principal: 1000, annualRatePct: 12, tenureMonths: 12 });
+    const result = generateBigEmiOverrides(l, 1, { intervalMonths: 6, amount: 20, mode: 'majorOnly', reconcileLastMonth: true });
+    const candidate: EMILoan = { ...l, installmentOverrides: result };
+    const schedule = emiSchedule(candidate);
+    expect(schedule.rows).toHaveLength(12);
+    expect(schedule.rows[11].balance).toBe(0);
+  });
+
+  it('returns nothing when fromMonth is already past the loan\'s tenure', () => {
+    const l = loan({ principal: 1200, tenureMonths: 12, repaymentMode: 'fixedTotal', totalToReturn: 1200 });
+    expect(generateBigEmiOverrides(l, 13, { intervalMonths: 6, amount: 300, mode: 'majorOnly', reconcileLastMonth: true })).toEqual({});
   });
 });

@@ -468,17 +468,28 @@ For a loan you're repaying on a fixed schedule — a mortgage, car financing, or
 **EMI / Loans** from the category dropdown. Distinct from Banking (which just tracks account
 transactions) and Personal Loans (informal, no schedule).
 
-- **Add a loan**: name, lender, currency, principal, tenure (months), start date, and one
+- **Add a loan**: click the floating **+** button (bottom-right of the page) to open the
+  add-loan popup — name, lender, currency, principal, tenure (months), start date, and one
   of two repayment types:
   - **Interest rate (reducing balance)** — the standard EMI calculation: enter an annual
     interest rate.
   - **Fixed total to return (no-interest / Sharia)** — enter the total amount your lender
     says you'll pay back overall instead of a rate; the markup is spread evenly across the
     tenure with straight-line principal reduction, not compounding.
-- **Open a loan** to see its full amortization schedule (the next 12 installments from
-  today: installment, interest/markup, principal, remaining balance) plus summary stats —
-  monthly installment, outstanding balance, paid so far, months remaining, lifetime
-  interest/markup, and expected end date.
+  - **Payment day of month (optional)**: which day of the month every installment is due on
+    (e.g. 28), independent of the start date's own day. Leave blank to use the start date's
+    day instead. A day that doesn't exist in a shorter month (like 31 in a 30-day month)
+    automatically clamps to that month's actual last day.
+- **Open a loan** to see its full amortization schedule (installment, interest/markup,
+  principal, remaining balance, due date, and status) plus summary stats — monthly
+  installment, outstanding balance, paid so far, months remaining, lifetime interest/markup,
+  and expected end date. The Schedule table shows the next 12 installments by default; check
+  **"Show the full schedule, start to end"** to see every installment from the loan's start
+  to its final month instead.
+- **Installment status**: each row in the Schedule table shows **Paid** (already past, based
+  on elapsed time since the start date), **Planned** (an upcoming installment with a
+  not-yet-done plan generated via **Link to bank**, below), or **Upcoming** (everything else
+  still ahead).
 - **Edit or delete** a loan any time; editing recalculates the whole schedule immediately.
 - **Link to bank**: pick one of your Banking accounts and click **Link to bank** to generate
   a planned entry (in that account's Planning tab) for every installment you haven't paid
@@ -502,12 +513,26 @@ transactions) and Personal Loans (informal, no schedule).
   spreadsheet file, with each installment's due date.
 - **Custom installments**: if your real loan isn't a flat amount every month — e.g. a
   property installment plan where you pay a bigger amount every 6th month — click the pencil
-  icon next to any upcoming installment in the Schedule table to set a different amount for
-  just that month. Every later month recalculates automatically from what you actually paid,
-  and the loan's remaining balance/months-remaining/end-date all update to match. An
-  overridden month shows an "(custom)" tag; click the X next to it to reset that month back
-  to the regular calculated installment. If a bigger payment pays off the loan completely,
-  the schedule simply stops there — you won't see extra $0 installments after payoff.
+  icon next to any upcoming installment in the Schedule table to set a different amount (and,
+  optionally, a different due date) for just that month. Every later month recalculates
+  automatically from what you actually paid, and the loan's remaining balance/months-
+  remaining/end-date all update to match. An overridden month shows an "(custom)" tag; click
+  the X next to it to reset that month back to the regular calculated installment/date. If a
+  bigger payment pays off the loan completely, the schedule simply stops there — you won't
+  see extra $0 installments after payoff. Check the **"Link this to a Bank account or Cash"**
+  box while setting an amount to also create a matching entry there at the same time (see §23
+  below).
+- **Big EMI every N months**: for a loan with an occasional bigger payment on a regular cycle
+  — e.g. a property installment plan with a larger payment every 6 months — open this section
+  (inside the Schedule card) instead of setting each big month by hand. Enter how often (every
+  N months, default 6) and the amount, and choose whether that amount is the *whole* payment
+  for that month or an *extra* amount stacked on top of the regular installment. Unlike the
+  "What if: extra payment" planner below, this keeps the loan's original tenure rather than
+  finishing it early — the **"Add unreconciled amount to last month"** checkbox (on by
+  default) automatically tops up the final installment with whatever's still owed once every
+  big payment is applied, so the loan still zeroes out exactly at its declared end date. Click
+  **Generate** to apply it — this uses the same per-month custom-installment mechanism above,
+  so every generated month can still be edited or reset individually afterward.
 - **Custom monthly payment**: if you'd rather pay one fixed amount every month instead of
   the computed installment — e.g. a round number that's easier to remember, or lower than
   the "correct" EMI — set it in the **"Custom monthly payment"** field on the add-loan form
@@ -719,8 +744,9 @@ a pairing isn't supported instead of silently doing something wrong.
   want both sides to stay in sync. Deleting from either module is always safe either way — it
   cascades to both sides automatically, same as deleting from the Transfers page.
 - **A shortcut, right where you're already adding the record**: QSE/PSX's Cash Transfers
-  form, Rentals' add-entry form, Personal Loans' add-repayment row, and Funds' new Transfers
-  tab each have a **"Link this to a Bank account or Cash"** checkbox — check it and the form
+  form, Rentals' add-entry form, Personal Loans' add-repayment row, EMI/Loans' Schedule table
+  pencil editor, and Funds' new Transfers tab each have a **"Link this to a Bank account or
+  Cash"** checkbox — check it and the form
   swaps its normal Fee/Add controls for a module picker and a **Link & add** button that
   creates the same linked pair this page does, without leaving that module's own screen. It's
   a simpler version of the full form above (both sides always share one amount, no

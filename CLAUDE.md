@@ -3128,6 +3128,42 @@ not developer notes) continuously as features ship.
   follow-up work restarts that same branch from the latest `main` per this session's own
   harness instructions (a merged PR can't be reused/reopened) and opens as a NEW pull
   request, not a reopened PR #5.
+- **EMI/Loans direct transfer-link shortcut, new session (2026-08-26) — see README Done item
+  162, closes Pending item 62 in full.** The last module without the inline "Link this to a
+  Bank account or Cash" shortcut every other linked module already had — EMI's own "add a
+  transaction" moment is the Schedule table's pencil-editor (`saveOverride`), not a blank
+  add-form, so the checkbox was wired into that inline row instead of a new form. Verified
+  live via Playwright: checking it reveals a module/account picker prefilled from the only
+  seeded bank account, and "Link & add" correctly hits the real sign-in gate. `npx tsc -b` /
+  `npm run test` (338 tests, unchanged) / `npm run build` all clean. This session's branch
+  (`claude/continuation-3m98ma`) started fresh at `main`'s latest merged commit (0a5ea88, PR
+  #7), per the "a merged PR can't be reused" rule already established above.
+  **Right after this, the user asked for a substantially bigger EMI scheduling feature
+  mid-turn (2026-08-26)** — full start-to-end schedule with dates (not just the next-12
+  window), a whole-loan default payment day-of-month plus per-installment override, a
+  Paid/Upcoming/Planned visual distinction, a recurring "bigger EMI every N months" pattern
+  (default 6), and an "add unreconciled amount to last month" checkbox. This has several real
+  design forks (how the recurring big-payment amount is specified, how it interacts with the
+  existing per-month `installmentOverrides` and the existing `customMonthlyPayment` balloon
+  logic from Done item 161) — being scoped/asked about before implementation, per this
+  file's own standing practice for genuine design forks (see Done item 154's identical
+  precedent, where the user was asked the same way about per-month overrides vs. a recurring
+  pattern and chose per-month overrides). **Built the same session — see README Done item
+  163.** User answers: the big-payment amount supports BOTH "major month pays this amount
+  alone" and "major month pays regular + this amount" (a toggle, since the user wanted both
+  options, not one fixed choice); tenure stays fixed rather than finishing early; the
+  unreconciled-remainder checkbox defaults on; "Planned" status means specifically a
+  not-yet-executed "Link to bank" plan. New `EMILoan.paymentDayOfMonth`, new
+  `generateBigEmiOverrides()` (pure, tested, reuses `emiSchedule()` rather than duplicating
+  the amortization loop), a Due-date + Status column on the Schedule table, a "show full
+  schedule" toggle, and per-installment date editing (reuses the already-existing
+  `EMIRepayment.date` field via new `resolvedDueDate()`). Right after that, the user also
+  asked for the EMI landing page to show stats+list first with the add-loan form moved behind
+  a floating "+" button (same FAB pattern as the Trade Calculator button) — done in the same
+  pass. `npx tsc -b` / `npm run test` (350 tests, 12 new) / `npm run build` all clean; verified
+  live via Playwright (payment-day-of-month reflected in every due date, pencil-editor date
+  field prefilled/editable, full-schedule toggle expanding correctly with accurate Paid/
+  Upcoming status pills, both new write actions hitting the real sign-in gate).
 
 ## Live URLs
 

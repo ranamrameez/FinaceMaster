@@ -3416,6 +3416,75 @@ FinanceManager live link:
      early-payoff-skips-balloon, override-wins-over-balloon, fixedTotal dual true-up, and
      `whatIfExtraPayment` stacking correctly on the custom base). `npx tsc -b` / `npm run test`
      (338 tests, 6 new) / `npm run build` all clean.
+162. **EMI/Loans direct transfer-link shortcut, closing Pending item 62's remainder
+     (2026-08-26).** The four other linked modules (QSE/PSX/Rentals/Personal Loans/Funds) each
+     got an inline "Link this to a Bank account or Cash" checkbox on their own add-form —
+     EMI was the sole holdout, since it has no blank add-form for a repayment: its "add a
+     transaction" moment is the Schedule table's inline pencil-editor (`saveOverride`, which
+     sets one specific month's actual payment). Wired the same checkbox into that editor row
+     instead: checking it swaps the Save button for a module (Bank/Cash) + account picker and
+     a "Link & add" button, calling the same `createLinkedTransfer`/`useLastTransferSource`
+     every other module's shortcut already uses — no parallel implementation. Since the
+     editor already knows exactly which month it's setting (`r.month`), the link is built
+     with that exact `emiMonth` directly, rather than needing the standalone Transfers page's
+     `nextUnpaidEmiMonth()` guess. EMI's repayment amount is always positive regardless of
+     link direction (same documented exception as `personalLoans`), but unlike Personal
+     Loans, the real Bank/Cash account is always the `from` (paying) side here — an
+     installment payment always leaves the account, there's no "owed to me" direction to flip
+     it. Verified live via Playwright with a seeded loan + bank account: the checkbox reveals
+     the module/account picker (correctly defaulting to the only seeded account), and
+     clicking "Link & add" correctly hits the real sign-in gate rather than silently writing
+     anything — zero real console errors (only the sandbox's known Google-Fonts
+     `ERR_CONNECTION_RESET`, see Done item 141). `npx tsc -b` / `npm run test` (338 tests,
+     unchanged — UI wiring onto already-tested store/link functions) / `npm run build` all
+     clean.
+163. **EMI/Loans: full-schedule + due-date editing + Paid/Upcoming/Planned status + recurring
+     "Big EMI every N months" generator + homepage restructure (2026-08-26, user-requested).**
+     Several real design forks here were resolved with the user via AskUserQuestion before
+     building, mirroring the precedent set by Done item 154's per-month-override decision:
+     the periodic bigger-payment amount supports BOTH "major month pays this amount alone"
+     and "major month pays regular + this amount" (a toggle, not a single fixed choice, per
+     the user's own clarification); the loan explicitly KEEPS its original tenure rather than
+     finishing early from the extra payments; "add unreconciled amount to last month" defaults
+     ON; and "Planned" status means specifically a not-yet-executed plan from the existing
+     "Link to bank" feature, not any override. New `EMILoan.paymentDayOfMonth?: number`
+     (whole-loan default day-of-month, e.g. 28th) feeds `installmentDueDate()`, with the same
+     day-doesn't-exist-in-target-month clamp the rest of this file's date math already
+     accepts. A single installment's own due date can still be pinned independently on top of
+     that default — reuses `EMIRepayment.date` (already existed) rather than a new override
+     map, via new `resolvedDueDate(loan, month, repayments)` which prefers a real repayment
+     record's own date when one's set. New `PlannedBankTransaction.sourceEmiMonth?: number`
+     (alongside the existing `sourceEmiLoanId`) lets the Schedule table match a row to its
+     plan by exact month instead of comparing computed date strings, which could drift once
+     `paymentDayOfMonth` exists. The Schedule table gained a "show full schedule, start to
+     end" checkbox (default off, keeping the existing "next 12" view as the default), a Due
+     date column, and a Status column (Paid/Planned/Upcoming pills) — Paid is
+     `month <= elapsed`, Planned checks for a matching not-yet-executed planned transaction,
+     Upcoming is everything else. New `generateBigEmiOverrides()` in `emiModule.ts` (pure,
+     tested — 7 new cases) computes the periodic major-month overrides plus, when
+     reconciliation is on, the true final-month payment needed to exactly zero the balance at
+     the loan's own declared tenure — reusing `emiSchedule()` itself to compute the
+     pre-reconciliation balances rather than duplicating the amortization loop. If the majors
+     are big enough that the loan already finishes early on the schedule's own existing
+     early-stop, there's genuinely no debt left to reconcile at the final month, so the
+     function leaves that case alone (same "can't force tenure past a real payoff" tradeoff
+     `customMonthlyPayment`'s balloon already accepts). The UI applies the computed overrides
+     through the same `addRepayment`/`updateRepayment` path a single manual override already
+     uses — no parallel write path. Separately, user feedback ("no one adds a EMI/Loan every
+     day") restructured the landing page: stats + loan list now render first, with the
+     add-loan form moved behind a floating round "+" button (same FAB pattern the Trade
+     Calculator button already uses) opening a popup instead of permanently occupying the top
+     of the page. Verified live via Playwright: the landing page shows the list with no
+     inline form; the FAB opens a modal with the new payment-day field; a seeded loan with
+     `paymentDayOfMonth: 28` correctly shows every due date landing on the 28th; the pencil
+     editor's new date input correctly prefills from the computed due date and accepts an
+     edit; the full-schedule toggle correctly expands from 12 (next-12 view) to the loan's
+     full 12-month tenure with 2 Paid / 10 Upcoming status pills on a seeded partially-elapsed
+     loan; and both the Big EMI generator's "Generate" and the pencil editor's "Save"
+     correctly hit the real sign-in gate rather than writing anything while signed out — zero
+     real console errors (only the sandbox's known Google-Fonts `ERR_CONNECTION_RESET`, see
+     Done item 141). `npx tsc -b` / `npm run test` (350 tests, 12 new) / `npm run build` all
+     clean.
 
 ## Pending
 
@@ -3769,12 +3838,11 @@ what's already shipped from this same message**:
     Built for QSE/PSX first, then Rentals/Personal Loans/Funds, each with its own "what does
     linking mean here" answer worked out. ~~EMI was the sole exception, blocked on having no
     repayment ledger to link into.~~ **Unblocked and done (2026-08-26) — see Done item 156.**
-    EMI now works through the standalone Transfers page like every other linked module;
-    a native inline "Link this to a Bank account or Cash" shortcut (the direct-from-its-own-
-    page shortcut QSE/PSX/Rentals/Personal Loans/Funds got) is not built for EMI specifically
-    — its "add a transaction" moment is the Schedule table's pencil-editor, a different shape
-    than a blank add-form, so this was deliberately left as the standalone-page path only; a
-    future session could still add it as a small follow-up if wanted.
+    EMI now works through the standalone Transfers page like every other linked module.
+    ~~A native inline "Link this to a Bank account or Cash" shortcut... is not built for EMI
+    specifically~~ **Done (2026-08-26) — see Done item 162.** The Schedule table's own
+    inline pencil-editor (a different shape than a blank add-form, but still EMI's real
+    "add a transaction" moment) now has the same checkbox, closing this item in full.
 
 **2026-08-25, Net Worth page feedback batch — see Done item 148 for what shipped from this
 same batch**:

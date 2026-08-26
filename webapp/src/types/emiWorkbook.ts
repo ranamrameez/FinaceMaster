@@ -33,6 +33,13 @@ export interface EMILoan {
    * over this for whichever month it's set on, including the final one —
    * this only fills in the months an override doesn't cover. */
   customMonthlyPayment?: number;
+  /** Whole-loan default day-of-month every installment is due on (e.g. 28),
+   * user-requested 2026-08-26 — independent of `startDate`'s own day.
+   * `installmentDueDate()` falls back to `startDate`'s day when unset, same
+   * as before this field existed. A specific month can still be pinned to a
+   * different date via that month's own `EMIRepayment.date` — see
+   * `resolvedDueDate()`. */
+  paymentDayOfMonth?: number;
 }
 
 /** A real, dated record of an actual payment made against a loan —

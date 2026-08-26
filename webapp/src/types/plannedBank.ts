@@ -20,6 +20,12 @@ export interface PlannedBankTransaction {
    * re-linking find and replace this loan's previously-generated,
    * not-yet-executed plans instead of piling up duplicates. */
   sourceEmiLoanId?: string;
+  /** The specific 1-indexed schedule month this plan represents, set
+   * alongside `sourceEmiLoanId` — lets the Schedule table's Paid/Upcoming/
+   * Planned status (2026-08-26) match a row to its plan exactly, instead of
+   * comparing computed due-date strings (which can drift out of sync if the
+   * loan's `paymentDayOfMonth` changes after the plan was generated). */
+  sourceEmiMonth?: number;
   /** Same idea as `sourceEmiLoanId`, for Subscriptions' "Generate renewal
    * plans" (README item 24) — lets regeneration replace only this
    * subscription's own not-yet-executed plans. */
