@@ -476,7 +476,8 @@ For a loan you're repaying on a fixed schedule — a mortgage, car financing, or
 transactions) and Personal Loans (informal, no schedule).
 
 - **Add a loan**: click the floating **+** button (bottom-right of the page) to open the
-  add-loan popup — name, lender, currency, principal, tenure (months), start date, and one
+  add-loan popup — name, lender, currency, principal, tenure (months), installment start date
+  (when the first installment is due, not necessarily when you took out the loan), and one
   of two repayment types:
   - **Interest rate (reducing balance)** — the standard EMI calculation: enter an annual
     interest rate.
@@ -497,8 +498,8 @@ transactions) and Personal Loans (informal, no schedule).
   - **Current status** — where things stand right now: net remaining (outstanding), net paid
     to date, and the current monthly EMI (can differ from the original if you've set a custom
     monthly payment or a per-month override).
-  - **Timeline** — what's coming: next due date, expected completion date, and remaining EMI
-    count.
+  - **Timeline** — what's coming and what's already happened: next due date, expected
+    completion date, and how many installments are paid vs. remaining.
 
   **"Net remaining (outstanding)" means something different depending on the loan type**: for
   an interest-rate loan it's the remaining principal only (future interest that hasn't

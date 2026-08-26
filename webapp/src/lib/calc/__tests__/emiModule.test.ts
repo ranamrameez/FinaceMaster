@@ -357,6 +357,24 @@ describe('installmentDueDate — paymentDayOfMonth', () => {
     const l = loan({ startDate: '2026-01-01', paymentDayOfMonth: 31 });
     expect(installmentDueDate(l, 3)).toBe('2026-04-30'); // April has 30 days
   });
+
+  it('never shifts the day by one, regardless of the runtime timezone — regression for the reported "28 becomes 27" bug (2026-08-26)', () => {
+    // The exact user report: startDate day 28, paymentDayOfMonth 28 — the
+    // OLD implementation mixed a UTC-parsed `new Date(startDate)` with
+    // LOCAL Date methods and `.toISOString()`, which silently shaved a
+    // day off in any positive-UTC-offset timezone (this sandbox runs in
+    // UTC, so the bug was invisible here — the fix itself is timezone-
+    // independent by construction, so this holds regardless of where the
+    // test suite runs).
+    const l28 = loan({ startDate: '2025-01-28', paymentDayOfMonth: 28 });
+    expect(installmentDueDate(l28, 1)).toBe('2025-02-28');
+    expect(installmentDueDate(l28, 2)).toBe('2025-03-28');
+
+    // Also reported: day 29 showing as 28.
+    const l29 = loan({ startDate: '2025-01-29', paymentDayOfMonth: 29 });
+    expect(installmentDueDate(l29, 1)).toBe('2025-02-28'); // clamped (Feb has 28 days in 2025)
+    expect(installmentDueDate(l29, 4)).toBe('2025-05-29'); // May has 31 days — no clamp needed
+  });
 });
 
 describe('resolvedDueDate', () => {

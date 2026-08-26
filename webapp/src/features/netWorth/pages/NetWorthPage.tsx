@@ -310,11 +310,18 @@ export function NetWorthPage({
               <div className="footer-note" style={{ marginBottom: 4 }}>Rates between your own currencies</div>
               {ownCurrencies.flatMap((a) =>
                 ownCurrencies.filter((b) => b > a).map((b) => {
-                  const r = effectiveRate(a, b, rates);
+                  const rAB = effectiveRate(a, b, rates);
+                  const rBA = effectiveRate(b, a, rates);
                   return (
-                    <div key={`${a}-${b}`} className="row" style={{ justifyContent: 'space-between', padding: '3px 0', borderBottom: '1px solid var(--border)' }}>
-                      <span className="footer-note">1 {a} =</span>
-                      <span style={{ fontFamily: 'var(--mono)' }}>{r !== null ? `${r.toFixed(4)} ${b}` : `— ${b} (no rate yet)`}</span>
+                    <div key={`${a}-${b}`} style={{ padding: '3px 0', borderBottom: '1px solid var(--border)' }}>
+                      <div className="row" style={{ justifyContent: 'space-between' }}>
+                        <span className="footer-note">1 {a} =</span>
+                        <span style={{ fontFamily: 'var(--mono)' }}>{rAB !== null ? `${rAB.toFixed(4)} ${b}` : `— ${b} (no rate yet)`}</span>
+                      </div>
+                      <div className="row" style={{ justifyContent: 'space-between' }}>
+                        <span className="footer-note">1 {b} =</span>
+                        <span style={{ fontFamily: 'var(--mono)' }}>{rBA !== null ? `${rBA.toFixed(4)} ${a}` : `— ${a} (no rate yet)`}</span>
+                      </div>
                     </div>
                   );
                 }),
