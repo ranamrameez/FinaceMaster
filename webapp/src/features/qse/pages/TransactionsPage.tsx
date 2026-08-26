@@ -14,6 +14,7 @@ import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
 import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
 import type { LinkSideConfig } from '../../../types/interEntityTransfer';
 import { transferRunningBalance } from '../../../lib/calc/transferBalance';
+import { Field } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { defaultTimezoneForCurrency, defaultTimezoneForMarket } from '../../../lib/datetime';
@@ -55,33 +56,43 @@ function TransactionRows() {
       {/* README item 10: enter multiple transactions at once, not just one row at a time. */}
       {rows.map((r, i) => (
         <div key={i} className="row" style={{ gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-          <input type="date" value={r.date} onChange={(e) => update(i, { date: e.target.value })} />
-          <input
-            placeholder="Ticker"
-            value={r.ticker}
-            onChange={(e) => update(i, { ticker: e.target.value.toUpperCase() })}
-            list={QSE_TICKER_DATALIST_ID}
-            style={{ width: 80 }}
-          />
-          <select value={r.action} onChange={(e) => update(i, { action: e.target.value as 'BUY' | 'SELL' })}>
-            <option value="BUY">BUY</option>
-            <option value="SELL">SELL</option>
-          </select>
-          <input
-            type="number"
-            placeholder="Shares"
-            value={r.shares || ''}
-            onChange={(e) => update(i, { shares: Number(e.target.value) })}
-            style={{ width: 90 }}
-          />
-          <input
-            type="number"
-            step="0.001"
-            placeholder="Price"
-            value={r.price || ''}
-            onChange={(e) => update(i, { price: Number(e.target.value) })}
-            style={{ width: 90 }}
-          />
+          <Field label={i === 0 ? 'Date' : undefined}>
+            <input type="date" value={r.date} onChange={(e) => update(i, { date: e.target.value })} />
+          </Field>
+          <Field label={i === 0 ? 'Ticker' : undefined}>
+            <input
+              placeholder="Ticker"
+              value={r.ticker}
+              onChange={(e) => update(i, { ticker: e.target.value.toUpperCase() })}
+              list={QSE_TICKER_DATALIST_ID}
+              style={{ width: 80 }}
+            />
+          </Field>
+          <Field label={i === 0 ? 'Action' : undefined}>
+            <select value={r.action} onChange={(e) => update(i, { action: e.target.value as 'BUY' | 'SELL' })}>
+              <option value="BUY">BUY</option>
+              <option value="SELL">SELL</option>
+            </select>
+          </Field>
+          <Field label={i === 0 ? 'Shares' : undefined}>
+            <input
+              type="number"
+              placeholder="Shares"
+              value={r.shares || ''}
+              onChange={(e) => update(i, { shares: Number(e.target.value) })}
+              style={{ width: 90 }}
+            />
+          </Field>
+          <Field label={i === 0 ? 'Price' : undefined}>
+            <input
+              type="number"
+              step="0.001"
+              placeholder="Price"
+              value={r.price || ''}
+              onChange={(e) => update(i, { price: Number(e.target.value) })}
+              style={{ width: 90 }}
+            />
+          </Field>
           <TimeZoneFields
             time={r.time}
             timezone={r.timezone}
@@ -173,29 +184,37 @@ function TransferForm() {
   return (
     <div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-        <input type="date" value={t.date} onChange={(e) => setT({ ...t, date: e.target.value })} />
-        <select value={t.type} onChange={(e) => setT({ ...t, type: e.target.value as Transfer['type'] })}>
-          <option value="DEPOSIT">Deposit</option>
-          <option value="WITHDRAWAL">Withdrawal</option>
-        </select>
-        <input
-          type="number"
-          placeholder="Amount"
-          value={t.gross || ''}
-          onChange={(e) => setT({ ...t, gross: Number(e.target.value) })}
-          style={{ width: 100 }}
-        />
+        <Field label="Date">
+          <input type="date" value={t.date} onChange={(e) => setT({ ...t, date: e.target.value })} />
+        </Field>
+        <Field label="Type">
+          <select value={t.type} onChange={(e) => setT({ ...t, type: e.target.value as Transfer['type'] })}>
+            <option value="DEPOSIT">Deposit</option>
+            <option value="WITHDRAWAL">Withdrawal</option>
+          </select>
+        </Field>
+        <Field label="Amount">
+          <input
+            type="number"
+            placeholder="Amount"
+            value={t.gross || ''}
+            onChange={(e) => setT({ ...t, gross: Number(e.target.value) })}
+            style={{ width: 100 }}
+          />
+        </Field>
         {linkMode ? (
           <LinkedTransferFields date={t.date} type={t.type} gross={t.gross} onLinked={reset} />
         ) : (
           <>
-            <input
-              type="number"
-              placeholder="Fee"
-              value={t.fee || ''}
-              onChange={(e) => setT({ ...t, fee: Number(e.target.value) })}
-              style={{ width: 80 }}
-            />
+            <Field label="Fee">
+              <input
+                type="number"
+                placeholder="Fee"
+                value={t.fee || ''}
+                onChange={(e) => setT({ ...t, fee: Number(e.target.value) })}
+                style={{ width: 80 }}
+              />
+            </Field>
             <TimeZoneFields
               time={t.time}
               timezone={t.timezone}
@@ -234,16 +253,22 @@ function AdjustmentForm() {
 
   return (
     <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-      <input type="date" value={a.date} onChange={(e) => setA({ ...a, date: e.target.value })} />
-      <input
-        type="number"
-        step="0.01"
-        placeholder="Amount"
-        value={a.amount || ''}
-        onChange={(e) => setA({ ...a, amount: Number(e.target.value) })}
-        style={{ width: 100 }}
-      />
-      <input placeholder="Note" value={a.note} onChange={(e) => setA({ ...a, note: e.target.value })} />
+      <Field label="Date">
+        <input type="date" value={a.date} onChange={(e) => setA({ ...a, date: e.target.value })} />
+      </Field>
+      <Field label="Amount">
+        <input
+          type="number"
+          step="0.01"
+          placeholder="Amount"
+          value={a.amount || ''}
+          onChange={(e) => setA({ ...a, amount: Number(e.target.value) })}
+          style={{ width: 100 }}
+        />
+      </Field>
+      <Field label="Note">
+        <input placeholder="Note" value={a.note} onChange={(e) => setA({ ...a, note: e.target.value })} />
+      </Field>
       <TimeZoneFields
         time={a.time}
         timezone={a.timezone}

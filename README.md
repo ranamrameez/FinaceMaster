@@ -4098,6 +4098,29 @@ FinanceManager live link:
      elements overflow the rail's own boundary, and a real screenshot confirms the clean
      two-column layout — zero console errors. `npx tsc -b` / `npm run test` (388 tests,
      unchanged — CSS/layout only) / `npm run build` all clean.
+187. **Unlabeled QSE/PSX add-forms fixed, closing part of Pending item 97's own suspicion
+     (2026-08-26).** Re-checked the earlier "table inline-add rows are already labeled by their
+     column header" reasoning (Pending item 103's own scoping note) against the real DOM rather
+     than assuming it held everywhere — it does hold for `TransactionsPage.tsx`'s multi-row
+     trade-entry `<tr>`s (a real `<thead>` sits directly above them), but several OTHER add-forms
+     in the same QSE/PSX files aren't table rows at all — they're standalone toolbar-style `.row`
+     divs with zero `<thead>` above them and, for the Action/Type `<select>` and Date `<input>`
+     specifically, no placeholder text either (a `<select>` can't have one). Fixed with `Field`
+     labels: QSE's and PSX's `StockPage.tsx` per-stock add-transaction toolbar (Action/Date/
+     Shares/Price); both files' `TransferForm` (Date/Type/Amount/Fee) and `AdjustmentForm` (Date/
+     Amount/Note) in `TransactionsPage.tsx`; and both files' `DividendsSection.tsx` add-dividend
+     row (Date/Ticker/Per share/Shares/Total received). The one MULTI-row case
+     (`TransactionsPage.tsx`'s own trade-entry rows, which can have several rows queued before
+     one submit) labels only the first row, matching a real table's `<thead>`-labels-every-row-
+     below-it convention, rather than repeating 5 labels on every row and adding visual clutter.
+     **Deliberately not a full app-wide `.row` sweep** — 114 `.row` usages exist across the app's
+     page components; this pass targeted the specific, confirmable class of gap the Pending
+     item's own text named (a genuinely un-labeled control, not every possible row), the same
+     bounded-not-exhaustive framing this item's own text used. Verified live via Playwright
+     across all 6 touched forms (QSE+PSX StockPage, TransactionsPage's Transfers/Adjustments/
+     Dividends sections): every field now shows a real visible label in the rendered DOM — zero
+     console errors. `npx tsc -b` / `npm run test` (388 tests, unchanged — UI-only) / `npm run
+     build` all clean.
 
 ## Pending
 
@@ -4684,12 +4707,16 @@ everything below is started. Working down it in priority order across following 
     timezone) — needs a concrete "which field, which page" example from the user to act on
     precisely rather than re-guess at an already-addressed item.
 97. App-wide, reinforced instruction: every remaining unlabeled input/form element. Done item
-    167 fixed EMI's/Personal Loans'/Subscriptions' detail-page edit forms specifically
-    (the confirmed-systemic gap found this session) — this is a repeated, broader ask that
-    likely still has real remaining gaps elsewhere (e.g. table inline-add rows without a
-    Field, which this session deliberately left alone as "already labeled by column header" —
-    that reasoning may not hold for every such row, worth re-checking against a real
-    screenshot rather than assumed correct everywhere).
+    167 fixed EMI's/Personal Loans'/Subscriptions' detail-page edit forms specifically. **Done
+    item 187 (2026-08-26) re-checked and fixed the "table inline-add rows without a Field"
+    gap this item itself flagged as unverified** — the reasoning held for `TransactionsPage.tsx`'s
+    real table rows (a genuine `<thead>` sits above them), but QSE/PSX's StockPage/Transfer/
+    Adjustment/Dividends toolbar-style add-forms turned out NOT to be table rows at all and had
+    zero labels — now fixed. **Still open**: this was a targeted pass on the QSE/PSX files
+    specifically named by the original gap, not an exhaustive sweep of all 114 `.row` usages
+    app-wide — a future pass could re-check the other modules' own standalone add-forms for the
+    same class of gap, though the required-field rollout (Done items 171/184) already confirms
+    those modules' primary add-forms use `Field` throughout.
 98. ~~App-wide: "Compact" density should be noticeably MORE space-saving than "Comfortable".~~
     **Done (2026-08-26) — see Done item 173.** Buttons/inputs/selects were the real gap —
     completely untouched by Compact before this fix.

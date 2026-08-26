@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { QSE_TICKER_DATALIST_ID } from '../../../components/TickerDatalist';
 import { EditIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
+import { Field } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { fmt, fmtMoney } from '../../../lib/format';
@@ -55,20 +56,30 @@ function AddDividendForm() {
 
   return (
     <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-      <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-      <input placeholder="Ticker" value={ticker} onChange={(e) => onTickerChange(e.target.value)} list={QSE_TICKER_DATALIST_ID} style={{ width: 90 }} />
-      <input type="number" step="0.001" placeholder="Per share" value={perShare || ''} onChange={(e) => setPerShare(Number(e.target.value))} style={{ width: 90 }} />
-      <input
-        type="number"
-        placeholder="Shares"
-        value={shares || ''}
-        onChange={(e) => {
-          setShares(Number(e.target.value));
-          setSharesTouched(true);
-        }}
-        style={{ width: 90 }}
-      />
-      <input type="number" step="0.01" placeholder={preview ? preview.toFixed(2) : 'Total received'} value={amount || ''} onChange={(e) => setAmount(Number(e.target.value))} style={{ width: 100 }} />
+      <Field label="Date">
+        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+      </Field>
+      <Field label="Ticker">
+        <input placeholder="Ticker" value={ticker} onChange={(e) => onTickerChange(e.target.value)} list={QSE_TICKER_DATALIST_ID} style={{ width: 90 }} />
+      </Field>
+      <Field label="Per share">
+        <input type="number" step="0.001" placeholder="Per share" value={perShare || ''} onChange={(e) => setPerShare(Number(e.target.value))} style={{ width: 90 }} />
+      </Field>
+      <Field label="Shares">
+        <input
+          type="number"
+          placeholder="Shares"
+          value={shares || ''}
+          onChange={(e) => {
+            setShares(Number(e.target.value));
+            setSharesTouched(true);
+          }}
+          style={{ width: 90 }}
+        />
+      </Field>
+      <Field label="Total received">
+        <input type="number" step="0.01" placeholder={preview ? preview.toFixed(2) : 'Total received'} value={amount || ''} onChange={(e) => setAmount(Number(e.target.value))} style={{ width: 100 }} />
+      </Field>
       <TimeZoneFields time={time} timezone={timezone} onTimeChange={setTime} onTimezoneChange={setTimezone} />
       <button className="btn" onClick={submit}>Add</button>
       {preview > 0 && !amount && <span className="footer-note">{fmt(shares, 0)} shares × {perShare} = {preview.toFixed(2)}</span>}
