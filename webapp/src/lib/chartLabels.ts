@@ -82,3 +82,17 @@ export function dlStack(formatter: (v: number) => string) {
 export function profitColor(v: number): string {
   return v >= 0 ? cssVar('--profit') || '#3ecf8e' : cssVar('--loss') || '#e5484d';
 }
+
+/** Pending item 17's hover-cross-highlighting: dims a hex/rgb color by
+ * appending a low-alpha suffix rather than blending toward a background
+ * color — a plain opacity drop looks correct on any chart background
+ * (the page bg, a themed chart-card panel) without needing to know what's
+ * underneath, unlike a background-mix approach. Only handles the 6/8-digit
+ * hex colors this app's own chart palettes use (`INVEST_PALETTE`,
+ * `profitColor`'s CSS-var hex output) — good enough for this call site,
+ * not a general color-parsing utility. */
+export function dimColor(hex: string, dim: boolean): string {
+  if (!dim || !hex.startsWith('#')) return hex;
+  const base = hex.length === 9 ? hex.slice(0, 7) : hex;
+  return `${base}40`;
+}

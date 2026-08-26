@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   closestScenario,
   computeAveragingScenarios,
@@ -38,6 +39,7 @@ export function RiskCalculator({
   tick,
   calcFee,
   initialTicker,
+  stockPageUrl,
 }: {
   rows: RiskCalculatorRow[];
   tickerNames: Record<string, string>;
@@ -49,6 +51,13 @@ export function RiskCalculator({
    * embed this calculator pre-scoped to that ticker, instead of only being
    * reachable as a separate whole-portfolio page with its own picker. */
   initialTicker?: string;
+  /** Item 7 of a 2026-08-26 feedback batch: the whole-portfolio Risk
+   * Analysis page lets you switch tickers via its own picker, with no way
+   * to jump to that ticker's own stock page from here — added a link next
+   * to the picker. Only passed by the two standalone RiskAnalysisPage.tsx
+   * call sites; StockPage.tsx's embedded tab omits it since the user is
+   * already on that ticker's own page (a link there would point at itself). */
+  stockPageUrl?: (ticker: string) => string;
 }) {
   const held = useMemo(() => [...rows].filter((r) => r.shares > 0).sort((a, b) => a.ticker.localeCompare(b.ticker)), [rows]);
   const [ticker, setTicker] = useState(initialTicker || '');
@@ -144,6 +153,13 @@ export function RiskCalculator({
               ))}
             </Select>
           </Field>
+          {stockPageUrl && ticker && (
+            <Field label=" ">
+              <Link to={stockPageUrl(ticker)} className="btn secondary" style={{ display: 'inline-block' }}>
+                {ticker}'s page →
+              </Link>
+            </Field>
+          )}
           <Field label="Risk mode" title="Only changes the suggested capital ceiling further down the page — it never changes the math or guarantees a recovery.">
             <Select value={riskMode} onChange={(e) => setRiskMode(e.target.value as RiskMode)}>
               <option value="conservative">Conservative</option>

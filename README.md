@@ -3007,7 +3007,102 @@ FinanceManager live link:
      against the production Firebase project to go further than that, per this project's own
      locked cloud-sync-safety principle. `npx tsc -b` / `npm run test` (288 tests, 8 new) /
      `npm run build` all clean.
-147. **Funds "Daily History Import" built (2026-08-26), user-corrected the Snapshot Import
+147. **Hover cross-highlighting between charts, first pass on QSE/PSX Dashboard (2026-08-25) —
+     see the updated Pending item 17.** Dashboard's two ticker-indexed charts (Allocation by
+     ticker, P/L by ticker) previously each highlighted independently (each already had its own
+     click-to-drill-down from Done item 134, unrelated). Added a page-level `hoveredTicker`
+     state shared between both charts' `onHover` handlers — hovering a slice/bar in either chart
+     now dims every ticker in BOTH charts except the hovered one, so the pair reads as one linked
+     view. New `dimColor()` in `lib/chartLabels.ts` (a plain alpha-suffix dim, not a background-
+     mix — correct regardless of what's underneath a given segment, unlike blending toward an
+     assumed background color) is shared by both exchanges' Dashboard. **A real TypeScript
+     inference gap hit while extracting the shared handler into `tickerHoverHandlers()`,
+     matching a lesson already documented for Done item 137's click-navigation helper**:
+     Chart.js's real `ChartEvent`/`ActiveElement[]` types only resolve through react-chartjs-2's
+     contextual inference when the handler is written inline in the `options` JSX prop — a
+     factored-out helper function loses that inference and needs `any` params instead. Verified
+     live via Playwright with a real pixel-level check, not a visual guess: sampled the bar
+     chart's own canvas pixels before/during a hover and confirmed the non-hovered bar's alpha
+     channel dropped from 255 (opaque) to ~94 (dimmed); separately confirmed the SAME hover (over
+     the bar chart) also measurably dimmed roughly half the doughnut canvas's opaque pixel count
+     (43,988 → 23,555) while its dim-alpha pixel count rose correspondingly (1,176 → 21,601) —
+     proving the two charts are genuinely linked, not just independently interactive. `npx tsc
+     -b` / `npm run test` (280 tests, unchanged) / `npm run build` all clean. **Deliberately
+     scoped down**: only Dashboard's 2 ticker charts per exchange are linked — Analytics' 6
+     ticker-indexed charts per exchange (12 total) are a separate, larger follow-up, not attempted
+     in this pass — see the updated Pending item 17.
+148. **Net Worth page 6-item feedback batch fixed (2026-08-25).** User posted a screenshot of
+     the page plus 6 numbered items. (1/3) "Use current values as default... exchange rates" +
+     "currency value should be editable/prefilled" — picking a currency in the Manual rate
+     override used to always start the Rate field blank even when a rate for that currency was
+     already known (auto-fetched or previously entered by hand); a new `onManualCodeChange()`
+     prefills it from `rates.rates[code]` when known, so this reads as "edit the current value"
+     rather than "guess a new one." (3, remainder) "Make Currency selector wider and right
+     pinned" — the "Show total in" `<Select>` widened 110px → 150px; it was already the
+     rightmost element in a `justify-content: space-between` row, so no further pinning was
+     needed once actually checked. (4) "Estimated net worth: oddly showing text bg" — a REAL bug,
+     not a design nit: the big number was hand-rolled as `<div className="stat-card"
+     style={{padding:0}}>`, missing the `card` class every other stat card in the app has —
+     `.stat-card` alone already carries its own `--card-hue`-driven gradient background
+     (`theme.css` line 433), so without the `.card` class's rounding/inset and with `padding:0`
+     inline overriding the CSS's own padding, that gradient rendered as a stray colored strip
+     flush with the parent card's edges instead of a proper inset stat card — replaced with the
+     real shared `StatCard` component, sign-colored via `hue`. (5) "Manual currency rate eating
+     too much space" — the rate-status text + manual-override form used to run the full page
+     width below the big number; restructured into a two-column layout (`Card`'s content split
+     into a `row`): the big number stays on the left, and a narrow (≤280px) stacked panel with
+     the "rates as of" line, "Refresh rates" link, and the manual-override mini-form (each field
+     stacked vertically, not side by side) sits on the right. (2) "Show grouped info of all
+     finances... for detailed view on a single page" — `computeNetWorthByCurrency()`
+     (`lib/calc/netWorth.ts`) gained a new `breakdown: {module, amount}[]` field per currency row
+     (zero-amount modules omitted), and each currency's `<details>` card now lists a "By module"
+     section underneath its Assets/Liabilities/Net row, showing exactly which of Cash/Bank/
+     Stocks (QSE)/Stocks (PSX)/Funds/Personal Loans/EMI contributed how much. (6, app-wide note)
+     "Cards in multiple columns... rather than eating whole page width with blank spaces" — the
+     per-currency `<details>` cards used to stack full-width one under another; wrapped them in a
+     `repeat(auto-fit, minmax(360px, 1fr))` CSS grid so 2-3 currency sections sit side by side on
+     a wide viewport instead of forcing a scroll past mostly-blank space to see a handful of
+     numbers — the first concrete instance of this general principle, not a full app-wide pass
+     (see the new Pending item 63 for the rest of the app). New test in
+     `lib/calc/__tests__/netWorth.test.ts` covers the new `breakdown` field. Verified live via
+     Playwright: manual-rate prefill confirmed showing the exact cached rate (e.g. "278.5" for
+     PKR) after picking a currency with a known rate; the big stat card renders as a proper
+     rounded green/red card, not a stray strip; the "By module" breakdown correctly listed "Cash
+     500.00 USD" / "Bank 250.00 USD" against seeded data; the currency-section grid genuinely
+     laid out 2 columns at a 1400px viewport. `npx tsc -b` / `npm run test` (281 tests, 1 new) /
+     `npm run build` all clean.
+149. **Risk Analysis and Trade Transactions: link a ticker to its own stock page (item 7 of the
+     same 2026-08-25 batch).** `RiskCalculator.tsx` gained an optional `stockPageUrl?: (ticker)
+     => string` prop — when provided, a "TICKER's page →" button renders next to the Stock
+     picker. Passed by both standalone `RiskAnalysisPage.tsx` files (QSE → `/stock/:ticker`,
+     PSX → `/psx/stock/:ticker`); deliberately NOT passed from `StockPage.tsx`'s own embedded
+     Risk Analysis tab (Done item 143) — the user is already on that ticker's own page there, so
+     the link would point at itself. Separately, QSE's and PSX's Trade Transactions pages had
+     their ticker column as plain text in the trade-list table — turned into a `<Link
+     to="/stock/:ticker">`/`<Link to="/psx/stock/:ticker">` so a specific trade row jumps straight
+     to that stock's page too. Verified live via Playwright: the Risk Analysis link renders and
+     points at `#/stock/QIBK` for the selected ticker; the Trade list's ticker cell is a real
+     link to the same URL once that (collapsible) section is expanded.
+150. **Portfolio's Holdings table was missing the Value column Dashboard's Holdings table has —
+     user-reported mid-session (2026-08-25).** Comparing QSE's/PSX's `PortfolioPage.tsx`
+     `OpenPositionsTable` against `DashboardPage.tsx`'s `HoldingsCard` (both list open positions,
+     but were built as two separate hand-rolled tables) found a real, concrete gap: Dashboard's
+     Holdings table has a grouped "Value" column (current market value + invested amount + a
+     ▲/▼ indicator, from Done item 85's column-grouping redesign) that Portfolio's own Holdings
+     table never got — Portfolio only showed Cost and P/L, leaving the actual current worth and
+     invested amount only inferable by mental math. The user asked whether a popup would be
+     safer/easier than adding another column; judged a direct column addition was actually the
+     simpler, lower-risk fix here, since Portfolio's table already computes the exact same
+     `gross`/`invested` values internally (just didn't surface them) and already has room for one
+     more grouped column matching its existing Stock/Trend/Shares/Cost/Market Price/P/L/Exit
+     targets/Status pattern — a popup would have been more code for a piece of data that fits the
+     existing row shape perfectly well. Added a `value` field to each row's computed data and a
+     "Value" column between Market Price and P/L, verbatim-matching Dashboard's own markup
+     (worth, invested, sign-colored arrow) for both QSE and PSX. Verified live via Playwright with
+     a seeded position: Value column correctly showed "1,200.00 QAR ▲ Inv 1,002.75 QAR" for a
+     100-share QIBK position bought at ~10.03 and priced at 12. `npx tsc -b` / `npm run test`
+     (281 tests, unchanged) / `npm run build` all clean.
+151. **Funds "Daily History Import" built (2026-08-26), user-corrected the Snapshot Import
      (item 146) the same day: "this csv importer has just picked the final balances... i have
      added all balance changes day by day. you cannot ignore them!"** The user attached a
      richer xlsx (one sheet per fund, a Date/PrvBlc/NewBlc/Profit-Loss row per real update) and
@@ -3083,10 +3178,12 @@ FinanceManager live link:
     done (2026-08-25) — see Done items 134/137**: every ticker-indexed chart in the app
     (Dashboard's Allocation/P-L-by-ticker, and Analytics' ROI%/Invested-vs-value/Total P&L/
     Holding period/Portfolio allocation/Dividend-by-ticker, on both QSE and PSX) now navigates
-    to that ticker's own stock page on click. Still open: hover cross-highlighting between
-    separate charts (e.g. hovering a ticker in one chart highlighting the same ticker in
-    another) — a materially different, more invasive feature than click-navigation, not
-    attempted here.
+    to that ticker's own stock page on click. **Hover cross-highlighting: first pass done
+    (2026-08-25) — see Done item 147**: QSE's and PSX's Dashboard now link their two ticker
+    charts (Allocation, P/L by ticker) — hovering a ticker's slice/bar in either one dims every
+    other ticker in BOTH. **Still open**: Analytics' own 6 ticker-indexed charts per exchange
+    aren't linked yet — a materially larger rollout (12 charts across two pages) than the
+    2-chart Dashboard case, tracked as a follow-up rather than attempted in the same pass.
 19. Cross-entity transaction linking beyond v1 scope (see Done item 29): Funds/Rentals/EMI/
     Personal Loans aren't wired into the Transfers page yet — only Cash↔Bank and
     Bank↔QSE/PSX. A real signed-in browser round-trip (create/edit/delete a link, confirm
@@ -3399,6 +3496,20 @@ what's already shipped from this same message**:
     linking mean here" answer worked out. **EMI is the sole exception, and stays open** — it
     has no repayment ledger at all to link into (see Pending item 21), a data-model gap that
     needs its own design decision, not a UI-parity gap like the other four had.
+
+**2026-08-25, Net Worth page feedback batch — see Done item 148 for what shipped from this
+same batch**:
+
+63. "Cards in multiple columns (2 or 3 depending upon the amount of data) to avoid scrolling,
+    rather than eating whole page width with blank spaces" (app-wide note attached to a Net
+    Worth page report). Net Worth's own per-currency `<details>` cards now do this (Done item
+    147, item 6) — a responsive `repeat(auto-fit, minmax(360px, 1fr))` grid instead of a
+    single-column stack. **Still open**: every other page that stacks several full-width cards
+    with room to spare (module landing pages' summary sections, Settings sub-cards, etc.) hasn't
+    had the same audit — this is a real, repeatable pattern worth applying elsewhere, not a
+    one-page fix, but doing it app-wide needs a per-page judgment call about which cards actually
+    make sense side-by-side vs. which genuinely need the full width (a wide table, for instance,
+    shouldn't be squeezed into a half-width grid cell).
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

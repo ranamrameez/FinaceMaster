@@ -1,4 +1,5 @@
 import { Fragment, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { PSX_TICKER_DATALIST_ID } from '../../../components/PSXTickerDatalist';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { EditIcon, ExportIcon, InfoIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
@@ -470,7 +471,7 @@ function TransactionList() {
                 ) : (
                   <tr key={i}>
                     <td>{tx.date}</td>
-                    <td>{tx.ticker}</td>
+                    <td><Link to={`/psx/stock/${tx.ticker}`}>{tx.ticker}</Link></td>
                     <td className={tx.action === 'BUY' ? 'pill-buy' : 'pill-sell'}>{tx.action}</td>
                     <td>{fmt(tx.shares, 0)}</td>
                     <td>{fmtPrice(tx.price)}</td>

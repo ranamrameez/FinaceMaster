@@ -12,7 +12,7 @@ import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
 import { usePSXDerived } from '../hooks/usePSXDerived';
 import { usePSXStockData } from '../hooks/usePSXStockData';
 
-type SortCol = 'ticker' | 'shares' | 'avgCost' | 'market' | 'net' | 'status';
+type SortCol = 'ticker' | 'shares' | 'avgCost' | 'market' | 'value' | 'net' | 'status';
 
 function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }) {
   const { workbook, positions, calcFee } = usePSXDerived();
@@ -52,7 +52,7 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
           }
 
           return {
-            ticker: p.ticker, shares: p.shares, invested: p.invested, avgCost, mp, hasMarket, sparkData,
+            ticker: p.ticker, shares: p.shares, invested: p.invested, avgCost, mp, hasMarket, sparkData, value: gross,
             be, net, netPct, t1: target(1), t2: target(2), t3: target(5),
             statusRank, statusLabel, statusClass,
           };
@@ -65,6 +65,7 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
       case 'shares': return r.shares;
       case 'avgCost': return r.avgCost;
       case 'market': return r.hasMarket ? r.mp : -Infinity;
+      case 'value': return r.hasMarket ? r.value : -Infinity;
       case 'net': return Number.isFinite(r.net) ? r.net : -Infinity;
       case 'status': return r.statusRank;
       default: return r.ticker;
@@ -84,6 +85,7 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
             <Th col="shares">Shares</Th>
             <Th col="avgCost">Cost</Th>
             <Th col="market">Market Price</Th>
+            <Th col="value">Value</Th>
             <Th col="net">P/L</Th>
             <th>Exit targets</th>
             <Th col="status">Status</Th>
@@ -127,6 +129,13 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
                     }
                   }}
                 />
+              </td>
+              <td onClick={() => onSelect(r.ticker)}>
+                <div>{r.hasMarket ? fmtMoney(r.value, currency) : '—'}</div>
+                <div className="footer-note">
+                  {r.hasMarket && (r.value >= r.invested ? <span style={{ color: 'var(--profit)' }}>▲</span> : <span style={{ color: 'var(--loss)' }}>▼</span>)}
+                  {' '}Inv {fmtMoney(r.invested, currency)}
+                </div>
               </td>
               <td onClick={() => onSelect(r.ticker)} className={Number.isFinite(r.net) ? (r.net >= 0 ? 'pill-buy' : 'pill-sell') : ''}>
                 <div>{Number.isFinite(r.net) ? fmtMoney(r.net, currency) : '—'}</div>

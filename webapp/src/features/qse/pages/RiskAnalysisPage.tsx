@@ -16,7 +16,15 @@ export function RiskAnalysisPage() {
         Model averaging down into an existing position — new average cost, break-even, and a stress test on the
         result. This is planning support, not a recovery guarantee.
       </p>
-      <RiskCalculator rows={rows} tickerNames={tickerNames} currency={currency} feePct={feePct} tick={tick} calcFee={calcFee} />
+      <RiskCalculator
+        rows={rows}
+        tickerNames={tickerNames}
+        currency={currency}
+        feePct={feePct}
+        tick={tick}
+        calcFee={calcFee}
+        stockPageUrl={(t) => `/stock/${t}`}
+      />
     </div>
   );
 }
