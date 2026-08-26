@@ -4020,6 +4020,22 @@ FinanceManager live link:
      modal, edited a transaction's description inline from inside it, and confirmed the edit
      landed in `localStorage`, not just the DOM. `npx tsc -b` / `npm run test` (388 tests,
      unchanged) / `npm run build` all clean.
+183. **Banking's `AccountDetailModal` reordered to lead with "Add a transaction," closing
+     Pending items 84/85 (2026-08-26, continuing autonomously per the standing "keep working
+     down the Pending list" instruction).** The modal previously showed the (rare)
+     account-metadata edit form prominently with no way to add a transaction at all — exactly
+     backwards from what a user wants when clicking into an account. Now leads with an inline
+     "Add a transaction" section (reuses `AddTransactionsForm`, the exact same component the
+     standalone Transactions tab already uses — no parallel implementation), and the
+     account-metadata form (Branch/Account type/IBAN lookup/credit-card fields/SMS-sender
+     fields) is demoted into a collapsed `CollapsibleCard` titled "Account details" with "Save
+     details" moved into its `headerExtra` slot, so it stays reachable but no longer leads.
+     Modal section order is now: balance → Add a transaction → Account details (collapsed) →
+     Upcoming plans → Transactions → Download statement. Verified live via Playwright: heading
+     order confirmed, the Account-details fields are genuinely hidden until the card is
+     expanded, and submitting the new transaction form correctly hits the real sign-in gate
+     (same verification depth as every other sign-in-gated write in this project). `npx tsc -b`
+     / `npm run test` (388 tests, unchanged) / `npm run build` all clean.
 
 ## Pending
 
@@ -4530,21 +4546,17 @@ everything below is started. Working down it in priority order across following 
     page") reads as wanting a real navigable page, not just a modal — but that's a bigger
     change than it sounds given Bank accounts don't currently have stable per-account routes
     at all.
-84. Banking: `AccountDetailModal` currently shows the (rare) account-EDIT form prominently and
-    has NO way to add a transaction from inside it at all — exactly backwards from what a user
-    actually wants when clicking into an account. Real, concrete UX bug — the modal should
-    lead with "add a transaction" (with its own FAB+popup per item 81's pattern, or at least a
-    prominent inline form) and demote the edit-account-details form to a secondary/collapsed
-    section. Not started.
-85. Banking / app-wide: a transaction/repayment/entry conceptually belongs to its parent
+84. ~~Banking: `AccountDetailModal` currently shows the (rare) account-EDIT form prominently and
+    has NO way to add a transaction from inside it at all.~~ **Done (2026-08-26) — see Done
+    item 183.** The modal now leads with an inline "Add a transaction" form (reusing
+    `AddTransactionsForm`); the account-metadata edit form is demoted into a collapsed
+    `CollapsibleCard` below it.
+85. ~~Banking / app-wide: a transaction/repayment/entry conceptually belongs to its parent
     Account/Fund/Loan, so it should be logged and reviewed from THAT item's own detail
-    page/view — not a separate page-level "add a transaction" flow disconnected from which
-    account it's for. This is largely already true for EMI/Personal Loans/Rentals/Funds
-    (their detail views already have their own transaction/repayment logs) — Banking is the
-    clearest outlier (its own `AccountDetailModal` doesn't support adding one at all, see item
-    84) and Cash has no per-"account" concept to attach to in the first place (Cash is a
-    single ledger, not multiple accounts) — needs auditing per-module rather than assumed to
-    be one uniform fix.
+    page/view.~~ **Banking's own gap closed (2026-08-26) — see Done item 183, same fix as item
+    84.** EMI/Personal Loans/Rentals/Funds already had their own transaction/repayment logs on
+    their detail views; Cash still has no per-"account" concept to attach to (a single ledger,
+    not multiple accounts) — not a gap, just not applicable there.
 86. ~~App-wide: "Add a plan" (Cash/Banking's Planning-tab add-form) shouldn't be permanently
     visible either — same FAB+popup treatment as items 81/166.~~ **Done (2026-08-26) — see
     Done item 170.**
