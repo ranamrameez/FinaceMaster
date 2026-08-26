@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Doughnut, Line } from 'react-chartjs-2';
+import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { Card, MoneyValue, StatCard } from '../../../components/Card';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { Notice } from '../../../components/Notice';
@@ -9,6 +9,7 @@ import { toast } from '../../../components/Toast';
 import { ChartCard } from '../../qse/components/ChartCard';
 import { netIncomeByCurrency as rentalsNetIncomeByCurrency } from '../../../lib/calc/rentalsModule';
 import { flowByCurrency } from '../../../lib/calc/netWorth';
+import { collectBudgetActivities, monthlyIncomeExpense, threeMonthWindow } from '../../../lib/calc/budgetPlanner';
 import { upcomingRenewals } from '../../../lib/calc/subscriptionsModule';
 import { useSubscriptionsWorkbookStore } from '../../../store/subscriptionsWorkbookStore';
 import { useNetWorthSummary } from '../hooks/useNetWorthSummary';
@@ -17,16 +18,19 @@ import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
-import { dlDoughnut, dlLine } from '../../../lib/chartLabels';
+import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar } from '../../../lib/cssVar';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { useAppearanceStore } from '../../../store/appearanceStore';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
+import { usePlannedCashWorkbookStore } from '../../../store/plannedCashWorkbookStore';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
+import { usePlannedBankWorkbookStore } from '../../../store/plannedBankWorkbookStore';
 import { useNetWorthSnapshotsWorkbookStore } from '../../../store/netWorthSnapshotsWorkbookStore';
 import { useRentalsWorkbookStore } from '../../../store/rentalsWorkbookStore';
+import { usePlannedRentalsWorkbookStore } from '../../../store/plannedRentalsWorkbookStore';
 
 /** Cross-module net worth summary (README item 39 / MODULES_PLAN.md §16).
  * Currency conversion is best-effort and NEVER blocks the page: rates come
@@ -48,14 +52,18 @@ export function NetWorthPage({
   uploadLocalToCloud: () => Promise<void>;
 }) {
   const cashEntries = useCashWorkbookStore((s) => s.workbook.entries);
+  const plannedCash = usePlannedCashWorkbookStore((s) => s.workbook.entries);
   const bank = useBankWorkbookStore((s) => s.workbook);
+  const plannedBank = usePlannedBankWorkbookStore((s) => s.workbook.entries);
   const rentals = useRentalsWorkbookStore((s) => s.workbook);
+  const plannedRentals = usePlannedRentalsWorkbookStore((s) => s.workbook.entries);
   const subscriptions = useSubscriptionsWorkbookStore((s) => s.workbook.entries);
   // User-requested (2026-08-26): renewal/expiry alerts on the "homepage" —
   // a 14-day glance window, broader than any one subscription's own
   // configured alert lead time (which might be shorter, or unset), so this
   // stays useful even for a subscription with no alerts configured at all.
   const renewalsSoon = upcomingRenewals(subscriptions, 14);
+
   // Charts on this page recompute their CSS-var-derived colors only when
   // this component re-renders — same reasoning as every other chart-bearing
   // page (Dashboard, Analytics, PositionDetail).
@@ -73,6 +81,30 @@ export function NetWorthPage({
   // default — falling back to 'USD' only when there's no data yet to judge by.
   const { rows, biggestExposureCurrency } = useNetWorthSummary();
   const [preferredCurrency, setPreferredCurrency] = useLastCurrency('net-worth-preferred', biggestExposureCurrency);
+
+  // User-requested (2026-08-26): "the app must display current, previous
+  // and next month's projected incomes and expenses" — this IS the
+  // primary home for that projection (the same numbers are also shown on
+  // the Budget Planner page, per the user's own follow-up: "3 months
+  // projection is for Net worth dashboard. But it can also be reflected
+  // in the planner."). See `lib/calc/budgetPlanner.ts` for the combine
+  // logic — real transactions plus each module's own not-yet-executed
+  // planned entries, unified across Cash/Bank/Rentals.
+  const budgetActivities = useMemo(
+    () => collectBudgetActivities({
+      cashEntries, plannedCash,
+      bankAccounts: bank.settings.accounts, bankTransactions: bank.transactions, plannedBank,
+      rentalProperties: rentals.settings.properties, rentalEntries: rentals.entries, plannedRentals,
+    }),
+    [cashEntries, plannedCash, bank, plannedBank, rentals, plannedRentals],
+  );
+  const projectionMonths = useMemo(() => threeMonthWindow(), []);
+  const monthlyProjection = useMemo(() => monthlyIncomeExpense(budgetActivities, projectionMonths), [budgetActivities, projectionMonths]);
+  const projectionCurrencies = useMemo(() => [...new Set(budgetActivities.map((a) => a.currencyCode))].sort(), [budgetActivities]);
+  const [projectionCurrency, setProjectionCurrency] = useLastCurrency('net-worth-projection', projectionCurrencies[0] ?? preferredCurrency);
+  const effectiveProjectionCurrency = projectionCurrencies.includes(projectionCurrency) ? projectionCurrency : (projectionCurrencies[0] ?? projectionCurrency);
+  const monthLabel = (m: string) => new Date(`${m}-01`).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+
   const [rates, setRates] = useState<FxRates | null>(() => loadCachedFxRates());
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [fetching, setFetching] = useState(false);
@@ -238,6 +270,39 @@ export function NetWorthPage({
           </div>
           <Link to="/subscriptions" className="footer-note" style={{ display: 'inline-block', marginTop: 6 }}>Manage subscriptions →</Link>
         </Notice>
+      )}
+
+      {/* User-requested (2026-08-26): "current, previous and next month's
+          projected incomes and expenses" — combines each module's real
+          transactions with its own not-yet-executed planned entries (see
+          `lib/calc/budgetPlanner.ts`), so "current month" already blends
+          what's actually happened with what's still expected. The same
+          view is also reachable (with an add-plan shortcut) from the
+          Budget Planner page — this is the summary; that page is where
+          you act on it. */}
+      {budgetActivities.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+        <ChartCard title="Income vs. expense — previous / current / next month">
+          {projectionCurrencies.length > 1 && (
+            <Field label="Currency" width={110}>
+              <Select value={effectiveProjectionCurrency} onChange={(e) => setProjectionCurrency(e.target.value)}>
+                {projectionCurrencies.map((c) => <option key={c} value={c}>{c}</option>)}
+              </Select>
+            </Field>
+          )}
+          <Bar
+            data={{
+              labels: projectionMonths.map(monthLabel),
+              datasets: [
+                { label: 'Income', data: monthlyProjection.map((m) => m.income[effectiveProjectionCurrency] ?? 0), backgroundColor: cssVar('--profit') || '#3ecf8e' },
+                { label: 'Expense', data: monthlyProjection.map((m) => m.expense[effectiveProjectionCurrency] ?? 0), backgroundColor: cssVar('--loss') || '#e5484d' },
+              ],
+            }}
+            options={{ plugins: { datalabels: dlBarV((v) => fmtMoney(v, effectiveProjectionCurrency)) } }}
+          />
+          <Link to="/budget" className="footer-note" style={{ display: 'inline-block', marginTop: 6 }}>Open Budget Planner →</Link>
+        </ChartCard>
+        </div>
       )}
 
       {/* Items 2/3/4/5 of a 2026-08-26 follow-up batch: the previous single

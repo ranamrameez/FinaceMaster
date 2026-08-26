@@ -51,6 +51,7 @@ import { useInterEntityTransfersFirebaseSync } from './lib/firebase/useInterEnti
 import { useNetWorthSnapshotsFirebaseSync } from './lib/firebase/useNetWorthSnapshotsFirebaseSync';
 import { LegalPage } from './pages/LegalPage';
 import { NetWorthPage } from './features/netWorth/pages/NetWorthPage';
+import { BudgetPlannerPage } from './features/budget/pages/BudgetPlannerPage';
 
 function useApplyAppearance() {
   const appearance = useAppearanceStore((s) => s.appearance);
@@ -254,6 +255,7 @@ function App() {
                   />
                 }
               />
+              <Route path="/budget" element={<BudgetPlannerPage />} />
               <Route path="/legal" element={<LegalPage />} />
             </Routes>
           </ErrorBoundary>
