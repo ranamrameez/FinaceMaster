@@ -3486,39 +3486,90 @@ not developer notes) continuously as features ship.
   `npm run build` all clean; verified live via Playwright including a real downloaded file
   read back and confirmed to contain the correct seeded values under exactly the 14 expected
   keys.
-- **User provided two real files, mid-session (2026-08-26), read and cross-referenced —
-  IN PROGRESS, no import performed yet.** (1) `QR.Expense.FY20252026_For__FinanceRecorder.xlsx`
-  — the user's real personal day-to-day finance tracker, one sheet per month from Oct.2024
-  through Sep.2026 (recent months far richer/more columns than older ones, confirmed by the
-  user's own note "Latest months has better featuring"), plus a `QR.Recharges` sheet that maps
-  EXACTLY onto the Subscriptions module's `billingCycle:'custom'`+`customDays` feature (5 SIM
-  cards with "Sim Expires in" day counts — real, ready-made seed/test data for that feature).
-  Each month sheet logs transactions with per-account signed deltas across 5 "accounts": DC,
-  Cash, GCC, Save, Misk — plus a monthly summary row (Net Worth, Total Debt, GCC Credit/Limit,
-  etc.) the app already computes itself, not something to import verbatim. (2)
-  `qseappdefaultrtdbexport.json` — the user's REAL PRODUCTION Firebase RTDB export for their
-  actual account (uid `7J99fOJgwfXrnQoG6Pt9RJgAGTB3`), already in this app's own per-module
-  JSON shape. **Cross-referencing the two resolved most of the Excel's ambiguous account
-  labels, not guessed at**: `bank.settings.accounts` in the real export shows "DC" = **QIB
-  Current**, "Save" = **QIB Savings**, "Misk" = **QIB Misk** (all real QAR accounts already in
-  the user's account) — but **"GCC" has NO matching Bank account yet** in the real data, so
-  it's a genuinely new liability account to create (the credit-card feature from Done item 175
-  is directly what it needs). Also confirmed via the real `emiLoans` entries: the Excel's "Car
-  QIB Installment" (3107) and "Hamza QIB Installment" (1392) transaction rows are the SAME
-  payments already tracked by the real "QIB Car Loan"/"QIB Hamza" EMI loans
-  (`customMonthlyPayment` matches exactly) — these must NOT be imported as plain Bank
-  transactions too, or they'd double-count against the EMI module's own repayment tracking.
-  Real open questions before generating any import file, not yet asked/resolved: what GCC's
-  actual card network/issuer is (for the credit-card fields, optional but nice to have
-  correct); whether the "Misk 1"/"Misk 2"/"Msk" large-number rows (e.g. 52822.35, tied to a
-  Misk-Balance column moving by ~1/100,000th of that) represent something to import as literal
-  transactions or should just drive the Misk account's balance directly (their true unit/scale
-  is unclear from the sheet alone); and confirmation that Cash-column entries (e.g. ATM
-  withdrawals) should become the user's very first real Cash-module data, since their real
-  account currently has none. **Nothing has been imported into anything yet** — this is
-  investigation only; the next step is asking the user these specific questions, not guessing,
-  given this is real financial data and a wrong guess here is a correctness bug in someone's
-  actual account, not just a UI nit.
+- **User provided two real files (2026-08-26): a 2-year personal Excel expense tracker
+  (`QR.Expense.FY20252026_For__FinanceRecorder.xlsx`) plus a real production RTDB export
+  (`qseappdefaultrtdbexport.json`), asked for one combined whole-app-import JSON built from
+  both, and asked for this data to double as future test/seed data — DONE, delivered to the
+  user as a file (not auto-applied — this session cannot sign in as the user, so the user
+  must import it themselves via `/app-data`). Full account-label cross-reference confirmed
+  "DC"=QIB Current, "Save"=QIB Savings, "Misk"=QIB Misk (decorative — see below), "GCC"/"PCC"
+  = two credit cards needing new liability `BankAccount`s (Done item 175's feature). Building
+  the parser surfaced a working discipline worth repeating on any future real-data import:
+  **cross-check every derived total against the sheet's OWN ground-truth summary row, using a
+  completely independent computation path, before trusting anything** — this caught 5 real,
+  substantive errors, 2 of them self-inflicted mid-session and disclosed to the user
+  immediately rather than silently corrected:
+  1. **Self-caught: EMI installment rows wrongly excluded from Bank.** An earlier
+     `AskUserQuestion` (reasoning: "EMI tracks the debt separately") led the user to pick
+     "skip these rows" — wrong: EMI tracks the LOAN's outstanding balance, a separate concern
+     from the BANK ACCOUNT's cash balance; the payment leaves the bank account for real in
+     both cases. Skipping inflated QIB Current by ~98,000 QAR. Reverted — installment rows
+     import as normal Bank transactions now, same as every other row.
+  2. **Self-caught: "Msk"-labeled rows' real co-located DC/GCC/Save deltas discarded.** The
+     user described Misk rows as "a hack to highlight values without impacting anything"
+     (decorative) — true for the Misk column ITSELF, but some Misk-labeled rows also carry a
+     real delta in another account's column on the same row (e.g. a real -11,000 QAR DC→Misk
+     transfer). Skipping the whole row on a Misk-label match discarded that. Fixed: only skip
+     a row on blank/month-boundary-marker grounds; a Misk label alone no longer skips it.
+  3. **Sept.2024 sheet excluded entirely, after proving it double-counts against Oct.2024.**
+     Every sheet's own internal running-balance columns (DC Balance/GCC Credit/PCC Credit/etc.)
+     were cross-checked against that sheet's own transaction-column sum — all 24 sheets
+     reconcile to the cent EXCEPT the Sept.2024→Oct.2024 boundary, where Oct.2024's own "Month
+     Start" row independently re-logs the same Sept 24-30 transactions (same descriptions,
+     same amounts) under its own disconnected balance chain — the two sheets overlap by
+     design, not a continuation. Excluded Sept.2024 from every account's import; Oct.2024's
+     own Month Start values (QIB Current 870.97, GCC Credit -7553.11, PCC Credit -2433.26, all
+     dated 2024-09-24) became the true opening anchors instead of the real account's current
+     `openingBalance` (which was almost certainly just "today's snapshot," not a 2-years-ago
+     starting point — confirmed correct because the resulting chain reconciles exactly to
+     Sep.2026's own summary row).
+  4. **6 real, unexplained +3000 QAR jumps in the source spreadsheet itself.** Chaining every
+     sheet's own opening value against the PRECEDING sheet's own closing value (both read
+     directly from the file) found 5 such jumps on the GCC balance and 1 on PCC, each at a
+     sheet boundary with no corresponding transaction row anywhere — most likely an unlogged
+     recurring minimum payment during that window. Not a parser bug (every other transition
+     chains perfectly; every sheet's own internal delta matches its own open/close exactly).
+     Recorded as 6 explicit, dated `category: 'Reconciliation adjustment'` transactions rather
+     than silently folding 18,000 QAR into an opening balance, so the user can verify each one.
+  5. **A spreadsheet "Total" footer row in `October.2024.PK` was being imported as a real
+     687,000 PKR Cash transaction.** The 2-sheet PK ledger (`October.2024.PK`/
+     `November.2024.PK`, tracking a Pakistan-side cash/BOP-ASTP/JazzCash period from Oct-Nov
+     2024) has a `Name: 'Total'`/`'Total Balance'` summary row baked into the same table as
+     real rows; now filtered out. **BOP-ASTP transactions from these 2 PK sheets were
+     deliberately excluded from the import entirely** (only JazzCash, a brand-new account, and
+     the mode-less rows as PKR Cash, were imported) — this ledger's own "Balance" column turned
+     out to be a BLENDED running total across BOP-ASTP and Jazzcash rows together, giving no
+     reliable way to derive BOP-ASTP's own opening anchor, and BOP_ASTP already has a real,
+     current `openingBalance` in the live account that ~2-year-old, disconnected Oct/Nov 2024
+     rows would corrupt if layered underneath with a ~21-month unexplained gap in between (no
+     further BOP-ASTP tracking exists in this file after Nov.2024).
+  Final reconciliation (every figure below independently recomputed from the finished merged
+  JSON, not just the intermediate parser output, and cross-checked against the sheet's own
+  Sep.2026 summary row): **QIB Current 1928.61 QAR, QIB Savings 10,000.00 QAR, GCC 0.00 QAR,
+  PCC 0.00 QAR (closed), Cash 0.00 QAR, Cash 30,000 PKR (matches October.2024.PK's own "Total
+  Balance" footer) — all exact matches.** JazzCash (-21,500 PKR) has no independent ground
+  truth to check against (a side effect of the blended-Balance-column issue above) and is
+  flagged to the user as the one lower-confidence figure in the whole import. The QR.Recharges
+  sheet's 5 SIM entries import as Subscriptions (`billingCycle:'custom'`) merged with the 1
+  real existing "Claude" subscription, untouched. All 11 other real modules (`qse`, `psx`,
+  `funds`, `personalLoans`, `emiLoans`, `plannedBank`, `plannedCash`, `plannedRentals`,
+  `rentals`, `interEntityTransfers`, `netWorthSnapshots`) pass through completely unchanged.
+  **Verified via Playwright, not just the standalone parser script**: importing the finished
+  file through the real `/app-data` flow correctly hits the sign-in gate (expected — this
+  session cannot sign in as the user); separately seeding the same finished JSON straight into
+  localStorage (bypassing the gate, to exercise the real calc engine) rendered Bank/Cash/
+  Net Worth pages correctly with the exact reconciled figures above and zero console errors.
+  **Not yet done, left for a future session or explicit user ask**: this real data was NOT
+  committed to the repo as a Vitest fixture (unlike `qse-workbook-backup.json`/
+  `psx-workbook-backup.json`, which are personal data too but already an accepted, established
+  pattern in this public repo) — Bank/Cash/Subscriptions personal data is a new sensitive
+  category for this repo and this session didn't judge that call to make unilaterally; ask the
+  user before committing it anywhere. The user's own real EMI loan repayment ledger (if they've
+  logged any inside the EMI module already) may now show the same "Car QIB Installment"/"Hamza
+  QIB Installment" payments as both a real EMI repayment AND a real Bank transaction after this
+  import — this is CORRECT (see self-caught bug 1 above: they're two different real things, a
+  loan's outstanding balance and a bank account's cash balance, not a duplicate), but is worth
+  flagging to the user so they don't mistake it for one and manually delete either side.
 
 ## Live URLs
 
