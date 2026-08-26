@@ -459,6 +459,19 @@
   html[data-density="compact"] .pagesub{margin-bottom:12px;}
   html[data-density="compact"] table, html[data-density="compact"] thead th, html[data-density="compact"] tbody td{font-size:12.5px;}
   html[data-density="compact"] tbody td{padding:7px 8px;}
+  /* README item 98 (2026-08-26 feedback): "Compact should be more space
+     saving" — measured first, per this file's own established discipline
+     (see the Console density fix above): Compact shrank cards/tables/
+     stat-cards, but never touched `.btn` or form inputs/selects at all —
+     the two most visually large, most frequently interacted controls on
+     every page, both left at their full Comfortable size (38px min-height)
+     under Compact. That's the real, measurable reason Compact reads as
+     "barely different." Sized strictly between Comfortable (38px) and
+     Console (26px) so the three tiers stay a genuine decreasing series. */
+  html[data-density="compact"] .btn{padding:6px 10px; font-size:12.5px; min-height:32px; min-width:32px;}
+  html[data-density="compact"] .btn.small{padding:4px 8px; font-size:11.5px; min-height:27px; min-width:27px;}
+  html[data-density="compact"] input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]),
+  html[data-density="compact"] select{padding:7px 9px; font-size:13px; min-height:32px; min-width:64px;}
 
   /* ---------- Compact / Terminal layout — a dense, table-driven look
      instead of card tiles, styled after real broker terminals: one thin
