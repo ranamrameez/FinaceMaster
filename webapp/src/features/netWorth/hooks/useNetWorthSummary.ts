@@ -1,5 +1,5 @@
 import { cashBalanceByCurrency } from '../../../lib/calc/cashModule';
-import { totalBalanceByCurrency } from '../../../lib/calc/bankModule';
+import { assetBalanceByCurrency, creditCardLiabilityByCurrency } from '../../../lib/calc/bankModule';
 import { netPositionByCurrency } from '../../../lib/calc/personalLoansModule';
 import { totalsByCurrency as emiTotalsByCurrency } from '../../../lib/calc/emiModule';
 import { fundsValueByCurrency } from '../../../lib/calc/fundsModule';
@@ -44,7 +44,8 @@ export function useNetWorthSummary(): NetWorthSummary {
   const psx = usePSXDerived();
 
   const cash = cashBalanceByCurrency(cashEntries);
-  const bankTotals = totalBalanceByCurrency(bank.settings.accounts, bank.transactions);
+  const bankTotals = assetBalanceByCurrency(bank.settings.accounts, bank.transactions);
+  const creditCards = creditCardLiabilityByCurrency(bank.settings.accounts, bank.transactions);
   const personalLoansNet = netPositionByCurrency(personalLoans.loans, personalLoans.repayments);
   const emiOutstanding: Record<string, number> = {};
   Object.entries(emiTotalsByCurrency(emiLoans)).forEach(([code, t]) => { emiOutstanding[code] = t.outstanding; });
@@ -65,6 +66,7 @@ export function useNetWorthSummary(): NetWorthSummary {
     funds: fundsValues,
     personalLoansNet,
     emiOutstanding,
+    creditCards,
   });
 
   const biggestExposureCurrency = rows.length

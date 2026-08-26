@@ -11,6 +11,7 @@ describe('computeNetWorthByCurrency', () => {
       funds: { USD: 50 },
       personalLoansNet: {},
       emiOutstanding: {},
+      creditCards: {},
     });
     const usd = rows.find((r) => r.currency === 'USD')!;
     expect(usd.assets).toBe(350);
@@ -29,6 +30,7 @@ describe('computeNetWorthByCurrency', () => {
       funds: {},
       personalLoansNet: { USD: 300 },
       emiOutstanding: {},
+      creditCards: {},
     });
     const usd = rows.find((r) => r.currency === 'USD')!;
     expect(usd.assets).toBe(300);
@@ -45,6 +47,7 @@ describe('computeNetWorthByCurrency', () => {
       funds: {},
       personalLoansNet: { USD: -300 },
       emiOutstanding: {},
+      creditCards: {},
     });
     const usd = rows.find((r) => r.currency === 'USD')!;
     expect(usd.assets).toBe(1000);
@@ -61,11 +64,30 @@ describe('computeNetWorthByCurrency', () => {
       funds: {},
       personalLoansNet: {},
       emiOutstanding: { USD: 400 },
+      creditCards: {},
     });
     const usd = rows.find((r) => r.currency === 'USD')!;
     expect(usd.assets).toBe(1000);
     expect(usd.liabilities).toBe(400);
     expect(usd.net).toBe(600);
+  });
+
+  it('always treats credit card debt as a liability, never blended into bank assets', () => {
+    const rows = computeNetWorthByCurrency({
+      cash: {},
+      bank: { USD: 1000 }, // asset accounts only — the card's own debt is NOT in here
+      qse: {},
+      psx: {},
+      funds: {},
+      personalLoansNet: {},
+      emiOutstanding: {},
+      creditCards: { USD: 150 },
+    });
+    const usd = rows.find((r) => r.currency === 'USD')!;
+    expect(usd.assets).toBe(1000);
+    expect(usd.liabilities).toBe(150);
+    expect(usd.net).toBe(850);
+    expect(usd.breakdown).toContainEqual({ module: 'Credit cards', amount: -150 });
   });
 
   it('never blends currencies together', () => {
@@ -77,6 +99,7 @@ describe('computeNetWorthByCurrency', () => {
       funds: {},
       personalLoansNet: {},
       emiOutstanding: {},
+      creditCards: {},
     });
     expect(rows).toHaveLength(2);
     expect(rows.find((r) => r.currency === 'USD')!.net).toBe(100);
@@ -92,6 +115,7 @@ describe('computeNetWorthByCurrency', () => {
       funds: {},
       personalLoansNet: { USD: -50 },
       emiOutstanding: { USD: 30 },
+      creditCards: {},
     });
     const usd = rows.find((r) => r.currency === 'USD')!;
     expect(usd.breakdown).toEqual([
@@ -111,6 +135,7 @@ describe('computeNetWorthByCurrency', () => {
       funds: {},
       personalLoansNet: {},
       emiOutstanding: {},
+      creditCards: {},
     });
     expect(rows).toEqual([]);
   });

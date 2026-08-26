@@ -3781,6 +3781,50 @@ FinanceManager live link:
      localStorage; the Net Worth notice renders the seeded subscription's name/amount/date; the
      detail page's alert chips hit the real sign-in gate. `npx tsc -b` / `npm run test` (375
      tests, 8 new) / `npm run build` all clean.
+175. **Credit card tracking as a Bank liability, user-requested (2026-08-26) — closes Pending
+     item 105.** Per the user's own explicit design answer, a credit card is its own
+     independent `BankAccount` (own balance, own transaction ledger — NOT tied to whichever
+     real account happens to pay its statement, since a card can be paid from any of several
+     accounts at the same bank, ad hoc each time). `BankAccount` gained `isLiability?: boolean`
+     plus the full field set the user asked for: `creditLimit`, `annualFee`, `statementDate`/
+     `paymentDueDate` (day-of-month), `lateFeeAfterDue`, `minPaymentAmount`, `cardNetwork`
+     (free-form + a Visa/Mastercard/Amex/etc. suggestion datalist), and `cardBin` (first 6-8
+     digits ONLY, never a full card number — same caution already applied to `accountNumber`).
+     **A real, useful realization while implementing this**: the existing signed-transaction
+     convention (negative = debit/spend, positive = credit/payment) already computes a credit
+     card's balance correctly with ZERO changes to `accountBalance`/`accountRunningLedger` — a
+     purchase drives the balance negative (money owed), a payment brings it back toward zero,
+     exactly like a real statement; the only genuinely new logic needed was where that balance
+     gets COUNTED. New `assetBalanceByCurrency()`/`creditCardLiabilityByCurrency()` in
+     `lib/calc/bankModule.ts` (tested) split accounts by `isLiability` — the existing
+     `totalBalanceByCurrency()` is untouched (still a blended net figure, used by Banking's own
+     "Accounts in CODE" stat card) — and `useNetWorthSummary.ts` now feeds asset-only accounts
+     into `bank` and card debt into a new `creditCards` field on `NetWorthInputs`
+     (`lib/calc/netWorth.ts`), so a card's debt is counted exactly once, as a liability, never
+     silently blended into (and understating) the asset-side "Bank" figure. Banking's accounts
+     table gained a "Credit card" badge and shows a liability account's balance as "$X owed"
+     instead of a confusing negative number; `AccountDetailModal` shows "Amount owed" plus
+     available credit when a limit is set. **Card-network detection, per the user's own
+     question**: new `lib/binLookup.ts` (same provider-chain shape as `lib/ibanLookup.ts`) —
+     entering the first 6-8 digits (a BIN/IIN, never the full card number) and clicking "Detect
+     network" calls the free, keyless `binlist.net` to fill in the network; same sandbox-
+     network-blocked caveat as the IBAN feature applies to the live success path. **Also
+     user-requested, same batch**: new `lib/bankDirectory.ts` — a prefilled suggestion list of
+     common Pakistani and Qatari banks and mobile-wallet apps (JazzCash, Easypaisa, NayaPay,
+     QNB, Doha Bank, etc.), wired as a datalist on the existing "Bank name" field (from Done
+     item 171's IBAN feature) in both the add-account form and account detail — free-form, not
+     a fixed list, exactly like every other suggestion datalist in this app. Verified live via
+     Playwright: the credit-card fields stay hidden until the toggle is checked; the bank-name
+     datalist includes HBL/JazzCash/QNB; an invalid BIN is caught locally before any network
+     call; Net Worth correctly shows a seeded $1000 checking account + a $150-owed credit card
+     as Assets 1k / Liabilities 150 / Net 850, with "Credit cards" appearing as its own
+     by-module breakdown line (confirmed via the raw computed text, not a screenshot guess);
+     the accounts table shows the "Credit card" badge and "150.00 USD owed"; the detail modal
+     shows "Amount owed" and correctly computed available credit. New tests:
+     `lib/calc/__tests__/bankModule.test.ts` (+3), `lib/calc/__tests__/netWorth.test.ts` (+1,
+     plus 7 existing cases updated for the new required `creditCards` input),
+     `lib/__tests__/binLookup.test.ts` (+3). `npx tsc -b` / `npm run test` (382 tests, 7 new) /
+     `npm run build` all clean.
 
 ## Pending
 
@@ -4415,14 +4459,11 @@ everything below is started. Working down it in priority order across following 
      unverified in this sandbox (network blocked) — a future session with real browser access
      should confirm a real IBAN actually returns a real bank name before trusting this beyond
      the local-checksum unit tests.
-105. Credit card spend tracking, linked to a Bank account, so Net Worth counts it accurately
-     (user-requested, 2026-08-26). `BankAccount` has no debt/liability concept today — every
-     account is a plain asset balance; a credit card needs to subtract from net worth (like
-     EMI/Personal Loans debt already does), not add. Real design question before building: a
-     new `accountType` value on the existing `BankAccount` with `computeNetWorthByCurrency()`
-     flipping its sign for that type (simplest, reuses the existing account list/ledger/
-     transactions UI), or a genuinely separate record type with its own statement/due-date/
-     credit-limit fields? Not started — needs deciding, not guessed at.
+105. ~~Credit card spend tracking, linked to a Bank account, so Net Worth counts it
+     accurately.~~ **Done (2026-08-26) — see Done item 175.** A credit card is its own
+     `BankAccount` with `isLiability: true`; Net Worth counts its debt separately from asset
+     accounts. Also delivered in the same batch: card-network detection from a BIN, and a
+     prefilled Pakistan/Qatar bank+wallet suggestion list.
 106. A cross-module "Budget Planner" (user-requested, 2026-08-26). Verbatim ask: show current/
      previous/next month's projected income and expenses; predefined AND custom expense/income
      categories; a page (on Net Worth and/or globally accessible) listing every planned

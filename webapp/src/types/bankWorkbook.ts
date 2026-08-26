@@ -33,6 +33,44 @@ export interface BankAccount {
   iban?: string;
   bankName?: string;
   bic?: string;
+  /** User-requested (2026-08-26): credit card tracking, "so we can truly
+   * count net worth." A credit card is its own independent `BankAccount`
+   * (own balance, own transaction ledger) — NOT tied to whichever real
+   * account happens to pay its statement, since the user explicitly noted
+   * a card can be paid from any of several accounts at the same bank, ad
+   * hoc each time (a manual debit-on-one-account + credit-on-the-card
+   * pair of transactions, same as any other inter-account movement in
+   * this app — no dedicated "linked payer" field). `isLiability` is the
+   * only thing that changes behavior: `lib/calc/bankModule.ts`'s
+   * `assetBalanceByCurrency`/`creditCardLiabilityByCurrency` split on it,
+   * and Net Worth counts a liability account's balance as debt instead of
+   * an asset. The existing signed-transaction convention (negative =
+   * debit/spend, positive = credit/payment) already works unmodified for
+   * a credit card — spending drives its balance negative (money owed),
+   * a payment brings it back toward zero, exactly like a real statement. */
+  isLiability?: boolean;
+  creditLimit?: number;
+  annualFee?: number;
+  /** Day of month (1-31) the billing cycle closes / statement generates. */
+  statementDate?: number;
+  /** Day of month (1-31) payment is due. */
+  paymentDueDate?: number;
+  /** Late-payment charge applied after `paymentDueDate` passes unpaid. */
+  lateFeeAfterDue?: number;
+  /** The minimum amount due on a statement (a fixed figure, not a %  —
+   * real cards vary here; a fixed minimum is what the user asked for). */
+  minPaymentAmount?: number;
+  /** Free-form (e.g. "Visa", "Mastercard") — never a fixed enum, per this
+   * project's own "category fields must be free-form" rule; a suggestion
+   * datalist covers the common ones. Optionally auto-filled from
+   * `cardBin` via `lib/binLookup.ts`. */
+  cardNetwork?: string;
+  /** First 6-8 digits of the card (a BIN/IIN) — enough to identify the
+   * issuing network/bank via a public lookup, deliberately never the full
+   * card number (this app never asks for or stores that, same caution
+   * already applied to `accountNumber`, which only ever holds a masked
+   * trailing few digits). */
+  cardBin?: string;
 }
 
 export interface BankTransaction {
