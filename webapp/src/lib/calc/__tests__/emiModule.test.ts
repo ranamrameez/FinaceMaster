@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { EMILoan, EMIRepayment } from '../../../types/emiWorkbook';
-import { emiSchedule, emiSummary, expectedEndDate, generateBigEmiOverrides, installmentDueDate, resolvedDueDate, totalsByCurrency, whatIfExtraPayment } from '../emiModule';
+import { emiSchedule, emiSummary, expectedEndDate, generateBigEmiOverrides, installmentDueDate, markupPercentage, resolvedDueDate, totalsByCurrency, whatIfExtraPayment } from '../emiModule';
 
 const loan = (over: Partial<EMILoan>): EMILoan => ({
   id: 'e1',
@@ -46,6 +46,41 @@ describe('emiSchedule — fixedTotal mode (no-interest/Sharia)', () => {
     expect(rows[0].interest).toBeCloseTo(12, 5); // (1120-1000)/10
     // Markup is flat across months (no compounding), unlike interest mode.
     expect(rows[5].interest).toBeCloseTo(rows[0].interest, 5);
+    expect(rows[9].balance).toBeCloseTo(0, 5);
+  });
+});
+
+describe('emiSchedule — fixedTotal balance tracks the full remaining obligation, not principal-only (bug fix 2026-08-24, user-reported with real numbers)', () => {
+  it('reproduces the exact reported case: principal 45046, total to return 50115.33, 36 months, EMI ~1392', () => {
+    const l = loan({
+      repaymentMode: 'fixedTotal', principal: 45046, totalToReturn: 50115.33, tenureMonths: 36,
+      customMonthlyPayment: 1392,
+    });
+    const { rows } = emiSchedule(l);
+    // Balance after the first installment must reflect the TOTAL still
+    // owed (50115.33 - 1392 = 48723.33), not the old, wrong principal-only
+    // reading (~43794.81) that silently dropped every future markup
+    // payment from the figure.
+    expect(rows[0].balance).toBeCloseTo(50115.33 - 1392, 2);
+    expect(rows[0].balance).not.toBeCloseTo(43794.81, 2);
+  });
+
+  it('balance decreases by the full payment each month, not just the principal component', () => {
+    const l = loan({ repaymentMode: 'fixedTotal', principal: 1000, totalToReturn: 1120, tenureMonths: 10 });
+    const { rows } = emiSchedule(l);
+    // Regular installment is 112/month; balance should start at the TOTAL
+    // (1120) and drop by 112 each month, not by the 100/month principal
+    // component alone.
+    expect(rows[0].balance).toBeCloseTo(1120 - 112, 5); // 1008
+    expect(rows[4].balance).toBeCloseTo(1120 - 5 * 112, 5); // 560
+    expect(rows[9].balance).toBeCloseTo(0, 5);
+  });
+
+  it('the final balloon payment is unaffected — same total either way, since a full payoff is invariant to how the balance is tracked in between', () => {
+    const l = loan({ repaymentMode: 'fixedTotal', principal: 1000, totalToReturn: 1120, tenureMonths: 10, customMonthlyPayment: 80 });
+    const { rows } = emiSchedule(l);
+    expect(rows[9].isBalloon).toBe(true);
+    expect(rows[9].emi).toBeCloseTo(1120 - 9 * 80, 5); // 400
     expect(rows[9].balance).toBeCloseTo(0, 5);
   });
 });
@@ -169,6 +204,24 @@ describe('emiSummary', () => {
     expect(sum.paidSoFar).toBe(0);
   });
 
+  it('reports the full total (not just principal) outstanding before anything is paid, for a fixedTotal loan', () => {
+    const l = loan({ repaymentMode: 'fixedTotal', principal: 45046, totalToReturn: 50115.33, tenureMonths: 36, startDate: '2026-06-01' });
+    const sum = emiSummary(l, new Date('2026-01-01')); // before the start date, nothing paid yet
+    expect(sum.elapsed).toBe(0);
+    expect(sum.outstanding).toBeCloseTo(50115.33, 2);
+  });
+
+  it('reflects the corrected full-remaining-total balance after one installment, for the exact reported case', () => {
+    const l = loan({
+      repaymentMode: 'fixedTotal', principal: 45046, totalToReturn: 50115.33, tenureMonths: 36, startDate: '2026-01-01',
+      customMonthlyPayment: 1392,
+    });
+    const sum = emiSummary(l, new Date('2026-02-01')); // 1 month elapsed
+    expect(sum.elapsed).toBe(1);
+    expect(sum.outstanding).toBeCloseTo(50115.33 - 1392, 2);
+    expect(sum.paidSoFar).toBeCloseTo(1392, 2);
+  });
+
   it('reads outstanding/paid-so-far off the schedule at the elapsed-months row', () => {
     const l = loan({ principal: 1200, annualRatePct: 0, tenureMonths: 12, startDate: '2026-01-01' });
     const sum = emiSummary(l, new Date('2026-04-01')); // 3 full months elapsed
@@ -183,6 +236,23 @@ describe('emiSummary', () => {
     expect(sum.elapsed).toBe(12);
     expect(sum.monthsRemaining).toBe(0);
     expect(sum.outstanding).toBeCloseTo(0, 5);
+  });
+
+  it('respects paymentDayOfMonth when deciding how many installments have actually come due — regression for the "wrong remaining balance" bug (2026-08-26)', () => {
+    // Started 2026-01-05, but every installment is really due on the 28th.
+    // A naive calendar-month subtraction (Aug - Jan = 7) would wrongly
+    // count month 7 (due 2026-08-28) as elapsed even though "today" is
+    // 2026-08-26, two days before that installment is actually due.
+    const l = loan({ principal: 1200, annualRatePct: 0, tenureMonths: 12, startDate: '2026-01-05', paymentDayOfMonth: 28 });
+    const sum = emiSummary(l, new Date('2026-08-26'));
+    expect(sum.elapsed).toBe(6); // months 1-6 (due Feb28..Jul28) have passed; month 7 (Aug28) hasn't yet
+    expect(sum.outstanding).toBeCloseTo(600, 5); // 1200 - 6*100
+    expect(sum.paidSoFar).toBeCloseTo(600, 5);
+
+    // Two days later, month 7's due date has now passed.
+    const sumLater = emiSummary(l, new Date('2026-08-28'));
+    expect(sumLater.elapsed).toBe(7);
+    expect(sumLater.outstanding).toBeCloseTo(500, 5);
   });
 
   it('clamps elapsed at the schedule length (not the original tenure) once an override pays it off early', () => {
@@ -300,6 +370,22 @@ describe('resolvedDueDate', () => {
     const repayments: EMIRepayment[] = [{ id: 'r1', loanId: 'e1', month: 3, amount: 100, date: '2026-04-20' }];
     expect(resolvedDueDate(l, 3, repayments)).toBe('2026-04-20');
     expect(resolvedDueDate(l, 4, repayments)).toBe(installmentDueDate(l, 4));
+  });
+});
+
+describe('markupPercentage', () => {
+  it('returns the annual rate directly for interest mode', () => {
+    expect(markupPercentage(loan({ repaymentMode: 'interest', annualRatePct: 12.5 }))).toBe(12.5);
+  });
+
+  it('derives an equivalent percentage from the markup lump sum for fixedTotal mode', () => {
+    const l = loan({ repaymentMode: 'fixedTotal', principal: 1000, totalToReturn: 1150 });
+    expect(markupPercentage(l)).toBeCloseTo(15, 5);
+  });
+
+  it('returns 0 for a fixedTotal loan with no markup at all', () => {
+    const l = loan({ repaymentMode: 'fixedTotal', principal: 1000, totalToReturn: 1000 });
+    expect(markupPercentage(l)).toBe(0);
   });
 });
 

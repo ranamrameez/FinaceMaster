@@ -488,11 +488,28 @@ transactions) and Personal Loans (informal, no schedule).
     day instead. A day that doesn't exist in a shorter month (like 31 in a 30-day month)
     automatically clamps to that month's actual last day.
 - **Open a loan** to see its full amortization schedule (installment, interest/markup,
-  principal, remaining balance, due date, and status) plus summary stats — monthly
-  installment, outstanding balance, paid so far, months remaining, lifetime interest/markup,
-  and expected end date. The Schedule table shows the next 12 installments by default; check
-  **"Show the full schedule, start to end"** to see every installment from the loan's start
-  to its final month instead.
+  principal, remaining balance, due date, and status) plus summary stats, grouped into three
+  zones:
+  - **Origination** — what was agreed at the start: total amount sanctioned, markup
+    percentage (the real annual rate for interest-rate loans; an equivalent derived
+    percentage for fixed-total loans, which have no rate at all), and net to return (the
+    total cost — principal plus every future markup payment).
+  - **Current status** — where things stand right now: net remaining (outstanding), net paid
+    to date, and the current monthly EMI (can differ from the original if you've set a custom
+    monthly payment or a per-month override).
+  - **Timeline** — what's coming: next due date, expected completion date, and remaining EMI
+    count.
+
+  **"Net remaining (outstanding)" means something different depending on the loan type**: for
+  an interest-rate loan it's the remaining principal only (future interest that hasn't
+  accrued yet isn't counted — the same way a bank reports an outstanding balance); for a
+  fixed-total (no-interest) loan it's the FULL remaining amount, including whatever markup is
+  still owed, since that kind of loan has no real interest-accrual concept to separate out.
+  Hover the label for a reminder of which applies.
+
+  The Schedule table shows the next 12 installments by default; check **"Show the full
+  schedule, start to end"** to see every installment from the loan's start to its final month
+  instead.
 - **Installment status**: each row in the Schedule table shows **Paid** (already past, based
   on elapsed time since the start date), **Planned** (an upcoming installment with a
   not-yet-done plan generated via **Link to bank**, below), or **Upcoming** (everything else

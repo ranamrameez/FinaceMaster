@@ -265,22 +265,36 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
         {editing ? (
           <div>
             <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-              <TextInput value={editRow.name} onChange={(e) => setEditRow({ ...editRow, name: e.target.value })} />
-              <TextInput type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} />
-              <Select value={editRow.currencyCode} onChange={(e) => setEditRow({ ...editRow, currencyCode: e.target.value })}>
-                {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
-              </Select>
-              <Select value={editRow.billingCycle} onChange={(e) => setEditRow({ ...editRow, billingCycle: e.target.value as Subscription['billingCycle'] })}>
-                <option value="monthly">Monthly</option>
-                <option value="yearly">Yearly</option>
-                <option value="weekly">Weekly</option>
-                <option value="custom">Custom (days)</option>
-              </Select>
+              <Field label="Name">
+                <TextInput value={editRow.name} onChange={(e) => setEditRow({ ...editRow, name: e.target.value })} />
+              </Field>
+              <Field label="Amount">
+                <TextInput type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} />
+              </Field>
+              <Field label="Currency">
+                <Select value={editRow.currencyCode} onChange={(e) => setEditRow({ ...editRow, currencyCode: e.target.value })}>
+                  {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+                </Select>
+              </Field>
+              <Field label="Billing cycle">
+                <Select value={editRow.billingCycle} onChange={(e) => setEditRow({ ...editRow, billingCycle: e.target.value as Subscription['billingCycle'] })}>
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="custom">Custom (days)</option>
+                </Select>
+              </Field>
               {editRow.billingCycle === 'custom' && (
-                <TextInput type="number" value={editRow.customDays ?? ''} onChange={(e) => setEditRow({ ...editRow, customDays: Number(e.target.value) })} placeholder="Every N days" />
+                <Field label="Every N days">
+                  <TextInput type="number" value={editRow.customDays ?? ''} onChange={(e) => setEditRow({ ...editRow, customDays: Number(e.target.value) })} />
+                </Field>
               )}
-              <TextInput type="date" value={editRow.startDate} onChange={(e) => setEditRow({ ...editRow, startDate: e.target.value })} />
-              <TextInput value={editRow.category ?? ''} onChange={(e) => setEditRow({ ...editRow, category: e.target.value })} placeholder="Category" />
+              <Field label="Start date">
+                <TextInput type="date" value={editRow.startDate} onChange={(e) => setEditRow({ ...editRow, startDate: e.target.value })} />
+              </Field>
+              <Field label="Category (optional)">
+                <TextInput value={editRow.category ?? ''} onChange={(e) => setEditRow({ ...editRow, category: e.target.value })} />
+              </Field>
             </div>
             <div className="row" style={{ gap: 8, marginTop: 8 }}>
               <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />

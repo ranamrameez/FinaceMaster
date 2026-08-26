@@ -3513,6 +3513,67 @@ FinanceManager live link:
      `npm run build` all clean. **Deliberately scoped down**: only QSE's/PSX's Dashboard got
      the rail this pass — Portfolio, module landing pages, and a third rail panel (e.g. a
      contextual glossary) are still open, tracked in Pending item 54's remainder below.
+165. **CRITICAL, user-reported with real numbers (2026-08-26): fixedTotal (no-interest) EMI
+     loans showed a badly wrong "remaining balance."** The user's exact repro: principal
+     45,046, total to return 50,115.33, 36 months, EMI ~1,392 — the app showed "Balance:
+     43,794.81" after just the first installment, when it should have been ~48,723.33
+     (50,115.33 − 1,392). Root cause: `emiSchedule()`'s fixedTotal branch tracked its running
+     `balance` as PRINCIPAL ONLY (via an internal `principalRatio` split used to break each
+     payment into a principal/markup pair for the "Interest/markup" column) — correct for an
+     interest-bearing loan (a bank's own "outstanding principal" genuinely excludes interest
+     that hasn't accrued yet), but wrong for fixedTotal mode, which has no real compounding or
+     interest-accrual concept at all: the principal/markup split there is purely an internal
+     display breakdown, not a genuinely separate debt, so a no-interest borrower's real
+     "how much do I still owe" is the FULL remaining total, not a principal-only subset of it.
+     Fixed by tracking `balance` as the total remaining obligation (starting at `total`,
+     decreasing by the full payment each month) for fixedTotal mode specifically — interest
+     mode's principal-only tracking is untouched, since it's actually correct there. Also
+     fixed the same bug in two places that inherited the old assumption: `emiSummary()`'s
+     `elapsed === 0` special case (used to always return `loan.principal` regardless of mode)
+     and `generateBigEmiOverrides()`'s reconciliation math (used to ADD remaining markup on
+     top of the balance, which double-counted it once the balance itself started including
+     markup). UI: the "Net remaining (outstanding)" tooltip is now mode-aware, since the two
+     modes genuinely mean different things by "outstanding" now (previously one tooltip text
+     — "not counting future interest/markup" — was simply wrong for fixedTotal loans).
+     **Found and fixed as part of the same 2026-08-26 EMI feedback batch that added the
+     zone-grouped stat cards (see Done item 166) — investigated FIRST, before touching any
+     layout, since a correctness bug always outranks a display redesign.** New regression
+     tests reproduce the user's exact numbers directly (`emiSchedule`/`emiSummary`, both
+     hand-traced against the real loan) — 5 new cases. `npx tsc -b` / `npm run test` (359
+     tests, 5 new) / `npm run build` all clean; verified live against the exact reported loan
+     — the app's own numbers now match hand-calculated expectations exactly at every point in
+     the schedule checked (month 1 via the unit test, month 7/8 via a live browser check).
+166. **EMI loan-detail stat cards regrouped into three zones, plus several missing figures
+     added — user-requested batch (2026-08-26), see Done item 165 for the correctness bug
+     found while investigating this same feedback.** Replaced the old flat 7-card list with
+     three explicitly labeled, grouped zones matching the user's own spec almost exactly:
+     **Origination** (Total amount sanctioned, Markup percentage, Net to return/total cost),
+     **Current status** (Net remaining/outstanding, Net paid to date, Monthly EMI), **Timeline**
+     (Next due date, Expected completion date, Remaining EMI count) — "Always group the
+     relevant info in one layout," per the user's own explicit note. New pure
+     `markupPercentage(loan)` (tested) gives a comparable percentage figure for both repayment
+     modes — the real annual rate for interest mode, an equivalent derived percentage (markup
+     ÷ principal) for fixedTotal mode, which has no rate at all. "Overdue Balance / Penalties"
+     — part of the user's original 3-zone request — was deliberately NOT built: asked the user
+     via AskUserQuestion first, since this app has zero missed-payment or penalty tracking at
+     all (every other figure already assumes on-schedule payment regardless of whether a
+     repayment was actually logged) — the user's own explicit choice was to skip it for now
+     rather than get a fake or internally-inconsistent version; a real "Overdue" figure needs
+     its own design pass. The old flat list's "Interest/markup so far" card was folded away
+     (its info is now implicit in Net to Return minus principal) rather than kept as a fourth
+     stray card outside any zone, per the user's own "group the relevant info" instruction.
+     **Same batch also fixed a real, separate, systemic labeling gap** (the user's first
+     numbered item: "Add labels on top of all form elements"): audited every module for the
+     "detail-page primary-record edit form" pattern (the `[editing, setEditing]` boolean
+     toggle, as opposed to a table's own per-row inline edit, which is already adequately
+     labeled by its column header) and found the SAME gap — a raw `.row` of unlabeled inputs
+     with only placeholder text, no real `<Field>` label — in three modules: EMI's own
+     edit-loan form, Personal Loans', and Subscriptions'. Fixed all three by wrapping every
+     field in the existing `Field` component (already used correctly by every module's own
+     ADD form — only the EDIT forms had drifted). Verified live via Playwright: all 9 new
+     stat-card fields render with the exact expected values against a seeded loan, the 3 zone
+     headers show, and the edit-loan form's fields are now all `Field`-labeled. `npx tsc -b` /
+     `npm run test` (359 tests, 4 new for `markupPercentage`) / `npm run build` all clean.
 
 ## Pending
 
@@ -3912,6 +3973,21 @@ same batch**:
     own Firebase node kept separate from every module's workbook, and a snapshot that's a
     frozen point-in-time copy never rewritten by later backdated data — and built a real
     net-worth-over-time line chart on top, for the currently-selected preferred currency.
+
+**2026-08-26, EMI stat-card feedback batch — see Done items 165/166 for what shipped**:
+
+65. EMI/Loans "Overdue Balance / Penalties" — part of the user's own 3-zone stat-card request,
+    explicitly deferred at the user's own choice (via AskUserQuestion) rather than built as a
+    fake or inconsistent figure. This app has no missed-payment or late-payment tracking
+    anywhere: every existing EMI figure (Outstanding, Paid so far, elapsed months) already
+    assumes on-schedule payment regardless of whether a repayment was actually logged in the
+    Repayment log. A real "Overdue" figure needs its own design pass — at minimum, deciding
+    whether "overdue" means "past-due with no matching Repayment-log entry" (computable from
+    existing data, but only meaningful for a user who logs repayments individually — someone
+    who doesn't would see every past-due installment flagged overdue, a false positive) or
+    something else. "Penalties" has no data model at all yet — not even a field to hold one.
+    Not started; needs the user's own direction on what "overdue"/"penalty" should mean before
+    any code, same bar this file always applies to a genuine design fork.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

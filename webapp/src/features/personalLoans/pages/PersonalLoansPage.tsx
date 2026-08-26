@@ -577,17 +577,29 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
         {editing ? (
           <div>
             <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-              <TextInput value={editRow.person} onChange={(e) => setEditRow({ ...editRow, person: e.target.value })} />
-              <Select value={editRow.direction} onChange={(e) => setEditRow({ ...editRow, direction: e.target.value as PersonalLoan['direction'] })}>
-                <option value="owed_to_me">Money I lent out</option>
-                <option value="i_owe">Money I owe</option>
-              </Select>
-              <Select value={editRow.currencyCode} onChange={(e) => setEditRow({ ...editRow, currencyCode: e.target.value })}>
-                {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
-              </Select>
-              <TextInput type="number" step="0.01" value={editRow.principal} onChange={(e) => setEditRow({ ...editRow, principal: Number(e.target.value) })} />
-              <TextInput type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} />
-              <TextInput value={editRow.note ?? ''} onChange={(e) => setEditRow({ ...editRow, note: e.target.value })} placeholder="Note" />
+              <Field label="Person / lender">
+                <TextInput value={editRow.person} onChange={(e) => setEditRow({ ...editRow, person: e.target.value })} />
+              </Field>
+              <Field label="Direction">
+                <Select value={editRow.direction} onChange={(e) => setEditRow({ ...editRow, direction: e.target.value as PersonalLoan['direction'] })}>
+                  <option value="owed_to_me">Money I lent out</option>
+                  <option value="i_owe">Money I owe</option>
+                </Select>
+              </Field>
+              <Field label="Currency">
+                <Select value={editRow.currencyCode} onChange={(e) => setEditRow({ ...editRow, currencyCode: e.target.value })}>
+                  {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+                </Select>
+              </Field>
+              <Field label="Principal">
+                <TextInput type="number" step="0.01" value={editRow.principal} onChange={(e) => setEditRow({ ...editRow, principal: Number(e.target.value) })} />
+              </Field>
+              <Field label="Date">
+                <TextInput type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} />
+              </Field>
+              <Field label="Note (optional)">
+                <TextInput value={editRow.note ?? ''} onChange={(e) => setEditRow({ ...editRow, note: e.target.value })} />
+              </Field>
             </div>
             <div className="row" style={{ gap: 8, marginTop: 8 }}>
               <IconButton
