@@ -3650,6 +3650,19 @@ not developer notes) continuously as features ship.
   "detail page" mean a genuine new route or is the modal fine as-is; item 91: is the softer
   stat-card gradient from Done item 153 being reversed on purpose) that this file's own
   standing practice says needs the user's direction before writing code, not a guess.
+- **Required-field marking rollout finished for 6 more modules, same autonomous continuation
+  (2026-08-26) — see README Done item 184, closes most of Pending item 103.** Cash/Personal
+  Loans/EMI/Rentals/Funds/Subscriptions' primary add-record forms all gained `Field`'s
+  `required` prop (Done item 171's mechanism, first applied to Banking only) on whichever
+  fields each form's own submit handler already toast-validates, plus any "Currency" select
+  (never toast-checked since it can't be blank, but always conceptually required — same
+  treatment Banking's own form already got). QSE/PSX's inline transaction-add-rows were
+  deliberately left out — they're raw `<input>`s, not `Field`-wrapped, so this would need a
+  bigger structural conversion first, tracked as the item's own remaining scope. Verified live
+  via Playwright across all 6 pages (EMI's form lives behind its "Add a loan" FAB — opened it
+  first, confirmed the asterisks render inside the popup too, not just on page load) — zero
+  new console errors. `npx tsc -b` / `npm run test` (388 tests, unchanged) / `npm run build`
+  all clean.
 
 ## Live URLs
 

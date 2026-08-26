@@ -4036,6 +4036,30 @@ FinanceManager live link:
      expanded, and submitting the new transaction form correctly hits the real sign-in gate
      (same verification depth as every other sign-in-gated write in this project). `npx tsc -b`
      / `npm run test` (388 tests, unchanged) / `npm run build` all clean.
+184. **Required-field marking rollout, 6 more modules (2026-08-26), continuing the same
+     autonomous "keep working down the Pending list" pass — see Pending item 103.** Following
+     the exact shape Done item 171 established for Banking's `AddAccountForm`, added `Field`'s
+     `required` prop (a small red asterisk after the label) to each remaining module's PRIMARY
+     "add a new record" form: Cash's `AddEntryForm` (Amount, Currency), Personal Loans'
+     `AddLoanForm` (Person/lender, Currency, Principal), EMI's `AddLoanForm` (Loan name,
+     Currency, Principal, Total amount to return / Tenure depending on repayment mode),
+     Rentals' `AddPropertyForm` (Property name, Currency), Funds' `AddFundForm` (Fund name,
+     Fund code, Currency), and Subscriptions' `AddSubscriptionForm` (Name, Amount, Currency,
+     the conditional "Every N days" field). Which fields count as "genuinely required" was
+     decided by grep-matching each submit handler's own `toast('Enter...'/'Fill...'/'Pick...')`
+     validation checks — a field with no such check but that can never be meaningfully blank
+     (every "Currency" select) was marked required too, consistent with how Banking's own form
+     already treated Currency. **Deliberately out of scope for this pass**: QSE/PSX's inline
+     table-add-row transaction forms (`TransactionsPage.tsx`) use raw `<input>`s not wrapped in
+     `Field` at all — adding `required` there needs converting them to `Field` first, a bigger
+     structural change than this rollout's own "just add a prop" scope, and Pending item 97
+     already documents why those rows are considered adequately labeled by their column headers
+     as-is. EMI's form lives behind its "Add a loan" FAB (Done item 166) rather than always on
+     the page — verified its asterisks render correctly once the FAB's popup is opened, not just
+     when the page loads. Verified live via Playwright across all 6 pages (EMI via its FAB) with
+     zero console errors (aside from the sandbox's already-documented Google Fonts
+     `ERR_CONNECTION_RESET`, unrelated to this change). `npx tsc -b` / `npm run test` (388 tests,
+     unchanged) / `npm run build` all clean.
 
 ## Pending
 
@@ -4647,14 +4671,14 @@ everything below is started. Working down it in priority order across following 
      The "New linked transfer" card's own explanatory paragraph moved behind a `Tooltip`; the
      two conditional warning paragraphs (unsupported pairing, currency mismatch) were left as
      plain text since they're only shown when directly relevant, not a permanent block.
-103. App-wide required-field marking rollout. `Field` gained a `required` prop (Done item 171)
-     and it's applied to Banking's add-account form — every OTHER module's add/edit form across
-     the app (Cash, Personal Loans, EMI, Rentals, Funds, Subscriptions, QSE/PSX trade forms,
-     etc.) still needs the same audit: which fields are actually required (today only enforced
-     via a toast-on-submit check, never visually marked) vs. genuinely optional, then the
-     `required` prop applied per form. A real, bounded rollout — same shape as the `IconButton`/
-     `CollapsibleCard`/`StatCard` hue rollouts before it — not a design decision, just needs
-     doing form by form.
+103. ~~App-wide required-field marking rollout.~~ **Mostly done (2026-08-26) — see Done items
+     171/184.** `Field`'s `required` prop is now applied to Banking's, Cash's, Personal Loans',
+     EMI's, Rentals', Funds', and Subscriptions' primary add-record forms. **Still open**:
+     QSE/PSX's inline table-add-row transaction forms (`TransactionsPage.tsx`) use raw
+     `<input>`s not wrapped in `Field` — needs converting those to `Field` first, a bigger
+     change than this rollout's own scope (see Done item 184's own note, and Pending item 97);
+     and this pass only covered each module's ADD form, not every edit-in-place form across the
+     app.
 104. A second, real, keyless IBAN-lookup provider for `lib/ibanLookup.ts`'s `IBAN_PROVIDERS`
      chain (see Done item 171 for why only one was confidently wired in) — needs a specific
      provider confirmed to have a genuinely public, no-registration endpoint before adding, not

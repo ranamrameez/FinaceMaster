@@ -160,7 +160,7 @@ function AddLoanForm() {
   return (
     <Card style={{ marginBottom: 16 }}>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-        <Field label="Person / lender" width={160}>
+        <Field label="Person / lender" width={160} required>
           <TextInput value={l.person} onChange={(e) => setL({ ...l, person: e.target.value })} placeholder="e.g. Bilal" />
         </Field>
         <Field label="Direction" width={160}>
@@ -169,12 +169,12 @@ function AddLoanForm() {
             <option value="i_owe">Money I owe</option>
           </Select>
         </Field>
-        <Field label="Currency" width={100}>
+        <Field label="Currency" width={100} required>
           <Select value={l.currencyCode} onChange={(e) => { setL({ ...l, currencyCode: e.target.value }); setLastCurrency(e.target.value); }}>
             {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>
-        <Field label="Principal" width={110} title="The original amount of the loan, before any repayments.">
+        <Field label="Principal" width={110} required title="The original amount of the loan, before any repayments.">
           <TextInput type="number" step="0.01" value={l.principal || ''} onChange={(e) => setL({ ...l, principal: Number(e.target.value) })} />
         </Field>
         <Field label="Date">

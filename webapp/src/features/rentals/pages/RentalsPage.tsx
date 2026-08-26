@@ -82,10 +82,10 @@ function AddPropertyForm() {
   return (
     <Card style={{ marginBottom: 16 }}>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-        <Field label="Property name" width={180}>
+        <Field label="Property name" width={180} required>
           <TextInput value={p.name} onChange={(e) => setP({ ...p, name: e.target.value })} placeholder="e.g. Apartment 4B" />
         </Field>
-        <Field label="Currency" width={100}>
+        <Field label="Currency" width={100} required>
           <Select value={p.currencyCode} onChange={(e) => { setP({ ...p, currencyCode: e.target.value }); setLastCurrency(e.target.value); }}>
             {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>

@@ -75,13 +75,13 @@ function AddSubscriptionForm() {
   return (
     <Card style={{ marginBottom: 16 }}>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-        <Field label="Name" width={160}>
+        <Field label="Name" width={160} required>
           <TextInput value={s.name} onChange={(e) => setS({ ...s, name: e.target.value })} placeholder="e.g. Netflix" />
         </Field>
-        <Field label="Amount" width={110}>
+        <Field label="Amount" width={110} required>
           <TextInput type="number" step="0.01" value={s.amount || ''} onChange={(e) => setS({ ...s, amount: Number(e.target.value) })} />
         </Field>
-        <Field label="Currency" width={100}>
+        <Field label="Currency" width={100} required>
           <Select value={s.currencyCode} onChange={(e) => { setS({ ...s, currencyCode: e.target.value }); setLastCurrency(e.target.value); }}>
             {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
@@ -95,7 +95,7 @@ function AddSubscriptionForm() {
           </Select>
         </Field>
         {s.billingCycle === 'custom' && (
-          <Field label="Every N days" width={110}>
+          <Field label="Every N days" width={110} required>
             <TextInput type="number" value={s.customDays ?? ''} onChange={(e) => setS({ ...s, customDays: Number(e.target.value) })} />
           </Field>
         )}
