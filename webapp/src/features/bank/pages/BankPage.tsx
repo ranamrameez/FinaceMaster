@@ -1,5 +1,5 @@
 import type { User } from 'firebase/auth';
-import { useMemo, useRef, useState } from 'react';
+import { Fragment, useMemo, useRef, useState } from 'react';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
@@ -377,12 +377,31 @@ function AccountsList() {
   };
   const { sorted, Th } = useSortableRows(accounts, sortValue, 'name', 'asc');
 
+  // User-requested (2026-08-26): "accounts should be categed by currency" —
+  // grouped into a sub-header row per currency rather than a flat list,
+  // while still respecting whatever column the user has sorted by within
+  // each group (grouping and sorting are independent: Th's own sort still
+  // reorders rows inside a currency, it just no longer mixes currencies
+  // together in one run).
+  const currencyGroups = useMemo(() => {
+    const byCurrency = new Map<string, BankAccount[]>();
+    for (const a of sorted) {
+      const list = byCurrency.get(a.currencyCode) ?? [];
+      list.push(a);
+      byCurrency.set(a.currencyCode, list);
+    }
+    return [...byCurrency.entries()].sort(([a], [b]) => a.localeCompare(b));
+  }, [sorted]);
+
   return (
     <div className="table-scroll">
       <table>
         <thead><tr><Th col="name">Name</Th><th>Type / Branch</th><Th col="currency">Currency</Th><Th col="opening">Opening balance</Th><Th col="current">Current balance</Th><th></th></tr></thead>
         <tbody>
-          {sorted.map((a) =>
+          {currencyGroups.map(([currency, group]) => (
+            <Fragment key={currency}>
+              <tr className="group-row"><td colSpan={6}>{currency}</td></tr>
+              {group.map((a) =>
             editId === a.id && editRow ? (
               <tr key={a.id}>
                 <td><input value={editRow.name} onChange={(e) => setEditRow({ ...editRow, name: e.target.value })} /></td>
@@ -430,7 +449,9 @@ function AccountsList() {
                 </td>
               </tr>
             ),
-          )}
+              )}
+            </Fragment>
+          ))}
           {!sorted.length && <tr><td colSpan={6} className="footer-note">No accounts yet — use the + button below to add one.</td></tr>}
         </tbody>
       </table>
@@ -607,23 +628,15 @@ function AccountDetailModal({ account, onClose }: { account: BankAccount; onClos
         </>
       )}
 
-      <h4 style={{ margin: '0 0 6px' }}>Recent transactions</h4>
-      <div className="table-scroll" style={{ marginBottom: 16, maxHeight: 260, overflowY: 'auto' }}>
-        <table>
-          <thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Amount</th><th>Balance</th></tr></thead>
-          <tbody>
-            {ledger.slice(0, 20).map((r) => (
-              <tr key={r.tx.id}>
-                <td>{r.tx.date}</td>
-                <td>{r.tx.description}</td>
-                <td>{r.tx.category || '—'}</td>
-                <td className={r.tx.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(r.tx.amount, account.currencyCode)}</td>
-                <td>{fmtMoney(r.balance, account.currencyCode)}</td>
-              </tr>
-            ))}
-            {!ledger.length && <tr><td colSpan={5} className="footer-note">No transactions yet.</td></tr>}
-          </tbody>
-        </table>
+      {/* User-requested (2026-08-26): "Transactions belong to an account so
+         should be on its detail page/popup and editable" — this used to be
+         a read-only 20-row preview; now reuses the same `TransactionsList`
+         the standalone Transactions tab already uses (full CRUD: sort,
+         inline edit, delete with the linked-record warning), so editing a
+         transaction no longer requires leaving the account's own modal. */}
+      <h4 style={{ margin: '0 0 6px' }}>Transactions</h4>
+      <div style={{ marginBottom: 16, maxHeight: 320, overflowY: 'auto' }}>
+        <TransactionsList account={account} />
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
