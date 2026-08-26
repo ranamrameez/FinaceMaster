@@ -2,6 +2,7 @@ import type { User } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 import { Card, CollapsibleCard } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
+import { Tooltip } from '../../../components/Tooltip';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { EditIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
@@ -222,12 +223,15 @@ function CreateLinkForm() {
 
   return (
     <Card style={{ marginBottom: 16 }}>
-      <h3 style={{ marginTop: 0 }}>New linked transfer</h3>
-      <p className="footer-note" style={{ marginTop: 0 }}>
-        Creates one record on each side and keeps them linked — editing or deleting this transfer later updates both.
-        No currency conversion happens; if the two sides use different currencies, enter the real converted amount
-        on each side yourself (your bank's rate, a cash exchange receipt, etc.) using "Different amount" below.
-      </p>
+      {/* README item 102 of a 2026-08-26 feedback batch: a permanent
+         explanatory paragraph ate page space — moved the fuller
+         explanation into a Tooltip, same pattern already used for the
+         PSX Fee-mode explainer (Done item 85), keeping one short sentence
+         visible. */}
+      <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+        New linked transfer
+        <Tooltip text="Creates one record on each side and keeps them linked — editing or deleting this transfer later updates both. No currency conversion happens; if the two sides use different currencies, enter the real converted amount on each side yourself (your bank's rate, a cash exchange receipt, etc.) using &quot;Different amount&quot; below." />
+      </h3>
       <div className="row" style={{ gap: 16, flexWrap: 'wrap', marginBottom: 8 }}>
         <SideFields label="From" cfg={from} onChange={setFrom} />
         <span style={{ alignSelf: 'center', fontSize: 18 }}>&rarr;</span>

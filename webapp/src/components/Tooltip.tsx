@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { InfoIcon } from './icons';
 
 interface Pos {
   top: number;
@@ -23,7 +24,7 @@ interface Pos {
  * then made visible. `position: fixed` (not `absolute`) so a trigger
  * inside a scrollable table/card never gets its tooltip clipped by the
  * container's own `overflow`. */
-export function Tooltip({ text, children, align = 'left' }: { text: string; children: ReactNode; align?: 'left' | 'right' }) {
+export function Tooltip({ text, children, align = 'left' }: { text: string; children?: ReactNode; align?: 'left' | 'right' }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<Pos | null>(null);
   const [measured, setMeasured] = useState(false);
@@ -67,6 +68,17 @@ export function Tooltip({ text, children, align = 'left' }: { text: string; chil
       onClick={() => setOpen((o) => !o)}
     >
       {children}
+      {/* README item 89 of a 2026-08-26 feedback batch: a Tooltip-wrapped
+         label had no visual sign it carried more info — a user had no way
+         to know to hover it without already knowing. This small icon is
+         the affordance, added once here so every existing Tooltip call
+         site gets it for free (same "fix once at the shared component"
+         pattern as MoneyValue/StatCard/Field). Muted color and a small
+         negative margin-top nudge it to sit inline with a text baseline
+         rather than a block's own vertical center. */}
+      <span style={{ display: 'inline-flex', marginLeft: 3, opacity: 0.55, verticalAlign: 'middle', flexShrink: 0 }}>
+        <InfoIcon size={11} />
+      </span>
       {open && pos && (
         <span
           ref={popupRef}

@@ -3265,6 +3265,41 @@ not developer notes) continuously as features ship.
   session (see that instruction's own existing carve-out, already noted earlier in this
   file) — flagged this to the user rather than silently complying or silently ignoring the
   request.
+- **Tooltip discoverability + 3 more quick wins from the same 2026-08-26 batch (same day) —
+  see README Done item 169, closes Pending items 75/79/89/102.** (a) The user's own item 3
+  ("anything having a tooltip must guide the user that it contains some info") was a real,
+  app-wide affordance gap — `Tooltip.tsx` gave zero visual sign a label carried more info, so a
+  user had no way to discover it without already knowing to hover. Fixed once in the shared
+  `Tooltip` component: a small muted `InfoIcon` now renders automatically after `{children}`,
+  so every existing call site across the app (Dashboard stat cards, Fee-mode explainer, etc.)
+  gets the affordance for free — the same "fix once at the shared component" pattern already
+  used for `MoneyValue`/`StatCard`/`Field`. Made `children` optional on `Tooltip`'s props so a
+  bare `<Tooltip text="..." />` (icon with no label at all) works too. **One real de-duplication
+  catch**: grepped the whole codebase for existing manual `InfoIcon` usage before shipping this
+  and found exactly one (PSX `TransactionsPage.tsx`'s Fee-mode explainer paragraph, which had
+  hand-wrapped its own `InfoIcon` inside a `Tooltip`) — would have rendered two icons back to
+  back if left alone; simplified that call site to a self-closing `<Tooltip text="..." />` and
+  dropped the now-unused `InfoIcon` import there. (b) Net Worth's "Net worth over time" chart
+  moved to render AFTER the per-currency summary cards instead of before — matches the user's
+  own requested reading order (totals first, trend after). (c) Net Worth's "By module"
+  breakdown converted from a list of plain `.row` divs to small `hueStyle()`-colored stat cards
+  (sign-based: profit-green/loss-red), consistent with the already-established "color the whole
+  card, not a stray span" rule (Design decisions section, item 2 of the 2026-08-24 standing
+  UI/copy guidelines). (d) Transfers page's permanent "New linked transfer" explanatory
+  paragraph — previously always visible, eating page space per the same batch's item 79
+  complaint — converted to a `Tooltip` next to the section heading, shown on demand instead of
+  always-on. **Playwright test-methodology note worth repeating** (this project's own recurring
+  lesson): an initial hover check on the Transfers tooltip read as broken because
+  `.hover()`'s default target is the whole `<h3>` element's bounding-box CENTER, which landed on
+  the word "linked" in the heading text, nowhere near the small icon at the end of it — a false
+  negative, not a real bug. Re-targeting the hover to the icon's own `<svg>` element directly
+  confirmed the tooltip works correctly. Verified live via Playwright across all 4 changes:
+  15 info-icon SVGs render on Dashboard stat cards; the PSX fee-mode paragraph shows exactly 1
+  icon (not 2); the Net Worth chart's Y-coordinate measured below the currency cards' Y-
+  coordinate via real `getBoundingClientRect()` comparison, with 8 by-module cards rendering;
+  the Transfers paragraph is confirmed gone from default view and the tooltip correctly appears
+  on hovering its icon. `npx tsc -b` / `npm run test` (360 tests, unchanged — UI-only) / `npm
+  run build` all clean.
 
 ## Live URLs
 

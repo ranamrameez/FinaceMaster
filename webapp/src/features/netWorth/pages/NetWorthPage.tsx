@@ -17,7 +17,7 @@ import { fmtMoney } from '../../../lib/format';
 import { dlDoughnut, dlLine } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar } from '../../../lib/cssVar';
-import { HUES } from '../../../lib/statCardHues';
+import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { useAppearanceStore } from '../../../store/appearanceStore';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
@@ -347,31 +347,6 @@ export function NetWorthPage({
         </ChartCard>
       )}
 
-      {/* README Pending item 64: net-worth-over-time, built on the explicit
-          "Save snapshot" button above rather than an automatic log — see
-          types/netWorthSnapshot.ts's own doc comment for why. Shown in the
-          currently-selected preferred currency only (no historical FX rates
-          are kept, so plotting several currencies converted to one would be
-          misleading); a currency with no snapshot history yet just doesn't
-          have a line. */}
-      <ChartCard title={`Net worth over time (${preferredCurrency})`} empty={history.length < 2}>
-        <div style={{ height: 220 }}>
-          <Line
-            data={{
-              labels: history.map((s) => s.date),
-              datasets: [{
-                label: preferredCurrency,
-                data: history.map((s) => s.byCurrency[preferredCurrency]),
-                borderColor: cssVar('--accent') || '#3ecf8e',
-                backgroundColor: cssVar('--accent') || '#3ecf8e',
-                tension: 0.2,
-              }],
-            }}
-            options={{ plugins: { datalabels: dlLine((v) => fmtMoney(v, preferredCurrency)) } }}
-          />
-        </div>
-      </ChartCard>
-
       {rows.length === 0 && (
         <Card><div className="footer-note">No balances recorded yet across any module.</div></Card>
       )}
@@ -402,24 +377,45 @@ export function NetWorthPage({
               </div>
               {/* Item 2: "grouped info of all finances" — which modules
                   actually made up this currency's total, not just the
-                  summed Assets/Liabilities/Net. */}
+                  summed Assets/Liabilities/Net. README item 79 (2026-08-26):
+                  small cards instead of long table-style rows. */}
               {r.breakdown.length > 0 && (
                 <div style={{ marginTop: 12 }}>
                   <div className="footer-note" style={{ marginBottom: 4 }}>By module</div>
-                  {r.breakdown.map((b) => (
-                    <div key={b.module} className="row" style={{ justifyContent: 'space-between', padding: '3px 0', borderBottom: '1px solid var(--border)' }}>
-                      <span className="footer-note">{b.module}</span>
-                      <span style={{ fontFamily: 'var(--mono)', color: b.amount >= 0 ? 'var(--profit)' : 'var(--loss)' }}>
-                        {fmtMoney(b.amount, r.currency)}
-                      </span>
-                    </div>
-                  ))}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 6 }}>
+                    {r.breakdown.map((b) => (
+                      <div key={b.module} className="stat-card card" style={hueStyle(b.amount >= 0 ? 'var(--profit)' : 'var(--loss)')}>
+                        <div className="label">{b.module}</div>
+                        <MoneyValue n={b.amount} currency={r.currency} />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </details>
           );
         })}
       </div>
+
+      {/* README item 75 of a 2026-08-26 feedback batch: this chart should
+          render AFTER the per-currency summaries above, not before them. */}
+      <ChartCard title={`Net worth over time (${preferredCurrency})`} empty={history.length < 2}>
+        <div style={{ height: 220 }}>
+          <Line
+            data={{
+              labels: history.map((s) => s.date),
+              datasets: [{
+                label: preferredCurrency,
+                data: history.map((s) => s.byCurrency[preferredCurrency]),
+                borderColor: cssVar('--accent') || '#3ecf8e',
+                backgroundColor: cssVar('--accent') || '#3ecf8e',
+                tension: 0.2,
+              }],
+            }}
+            options={{ plugins: { datalabels: dlLine((v) => fmtMoney(v, preferredCurrency)) } }}
+          />
+        </div>
+      </ChartCard>
 
       {Object.keys(rentalsNet).length > 0 && (
         <Card style={{ marginTop: 12 }}>

@@ -3637,6 +3637,30 @@ FinanceManager live link:
      generally true). Verified live via Playwright across all four pages (EMI, Personal Loans,
      Net Worth, Banking) with seeded data — zero real console errors. `npx tsc -b` / `npm run
      test` (360 tests, unchanged — no calc logic touched) / `npm run build` all clean.
+169. **Four more items from the same batch — closes Pending items 89/75/79/102 directly.**
+     (1) **App-wide**: `Tooltip` now renders a small muted info-icon affordance right after its
+     children, so a `Tooltip`-wrapped label visibly signals it has more info instead of relying
+     on a user already knowing to hover it — fixed once in the shared component, applying
+     everywhere at once (closes item 89). `children` was loosened to optional in the type,
+     since the icon alone can now be the whole trigger for an icon-only tooltip. One existing
+     call site (PSX's Fee-mode explainer, Done item 85) had manually wrapped its own `InfoIcon`
+     as `Tooltip`'s children — simplified to rely on the new automatic icon instead of showing
+     two icons back to back; audited the rest of the app and confirmed this was the only such
+     manual pattern. (2) Net Worth's "Net worth over time" chart now renders AFTER the
+     per-currency summary cards instead of before them (closes item 75). (3) Net Worth's
+     per-module "By module" breakdown (inside each currency's own card) now renders as small
+     colored stat cards instead of a list of table-style rows, reusing the same sign-colored-
+     card pattern (Done item 122) rather than a redundant inner pill (closes item 79). (4) The
+     Transfers page's permanent "New linked transfer" explanatory paragraph — the exact
+     "eating whole page space" pattern already fixed elsewhere via Done item 85 — moved behind
+     a `Tooltip` next to the heading, one short interaction instead of a permanent block
+     (closes item 102). Verified live via Playwright: icons render on Dashboard stat cards, the
+     PSX fee-mode tooltip shows exactly one icon (not two), the Net Worth chart's Y-position is
+     confirmed below the currency cards' via real bounding-box measurement, 8 by-module cards
+     render, and the Transfers tooltip correctly shows/hides on hovering its icon (a first test
+     attempt hovering the whole heading missed the icon's actual bounding box — hovering the
+     icon directly confirmed it works). `npx tsc -b` / `npm run test` (360 tests, unchanged —
+     UI-only) / `npm run build` all clean.
 
 ## Pending
 
@@ -4107,10 +4131,8 @@ everything below is started. Working down it in priority order across following 
     direction (A→B) — should show the reverse (B→A) alongside it.~~ **Done (2026-08-26) — see
     Done item 168.** `effectiveRate()` already derives either direction symmetrically, so this
     was purely a rendering change.
-75. Net Worth: "Net worth over time" chart should render AFTER the per-currency summary
-    sections, not before them (current order: summary+rates card pair, then the chart, then
-    per-currency breakdowns — user wants chart after the currency breakdowns specifically).
-    Reorder, not started.
+75. ~~Net Worth: "Net worth over time" chart should render AFTER the per-currency summary
+    sections, not before them.~~ **Done (2026-08-26) — see Done item 169.**
 76. Net Worth / app-wide: "Account Synced · [timestamp]" sync-status text is currently only
     shown inside a few modules' own "Account" sections, when cloud sync (and the account
     itself) is genuinely a cross-cutting, app-wide concept — should live in the sidebar/nav
@@ -4134,10 +4156,8 @@ everything below is started. Working down it in priority order across following 
     153 — this may be asking for more chart TYPES, e.g. a per-currency asset/liability
     breakdown, rather than none existing at all; needs clarifying which specific comparison is
     still missing).
-79. Net Worth: per-module contributions (the "By module: Bank / Stocks (PSX) / Funds / ..."
-    list currently shown as a plain list of rows inside each currency's `<details>`) should
-    render as small cards instead of long table-style rows. Straightforward visual change,
-    not started.
+79. ~~Net Worth: per-module contributions should render as small cards instead of long
+    table-style rows.~~ **Done (2026-08-26) — see Done item 169.**
 80. ~~Banking: the "Total balance (PKR)"/"(QAR)" stat-card labels read as if they're LIVE-
     CONVERTED figures.~~ **Done (2026-08-26) — see Done item 168.** Renamed to "Accounts in
     CODE" with an explanatory tooltip, a lighter-touch fix than the user's own literal
@@ -4187,12 +4207,8 @@ everything below is started. Working down it in priority order across following 
     button + popup instead of a permanently-docked column (a bigger reversal of Done item
     164's own "docked right-rail" design, worth confirming intent before rebuilding it as a
     popup).
-89. App-wide: every tooltip-bearing label should carry a small visible icon (e.g. an "ⓘ") next
-    to it, so a user can tell it has more info WITHOUT already knowing to hover it — today a
-    `Tooltip`-wrapped label has no visual affordance distinguishing it from plain text.
-    Straightforward, `Tooltip.tsx`-level fix that would apply everywhere at once (same
-    "fix once at the shared component" pattern as `MoneyValue`/`StatCard`/`Field`), not
-    started.
+89. ~~App-wide: every tooltip-bearing label should carry a small visible icon.~~ **Done
+    (2026-08-26) — see Done item 169.** Fixed once in `Tooltip.tsx` itself.
 90. App-wide: "cards inside cards" — several places nest a `Card`/`CollapsibleCard` directly
     inside another one (this file's own Done item 114 already fixed ONE specific instance of
     this exact pattern — QSE/PSX Settings' single-child nesting — so this is a real, repeating
@@ -4260,10 +4276,11 @@ everything below is started. Working down it in priority order across following 
      redesign ask without a specific target shape given; needs the user's own sense of what
      "better" looks like (a wireframe, or at least which specific elements feel wrong) before
      guessing at a full redesign.
-102. Transfers page: use info popups/tooltips to explain concepts instead of permanent
-     explanatory paragraphs eating page space — same "Tooltip over inline paragraph" pattern
-     already used elsewhere in the app (e.g. Done item 105's Risk Analysis jargon tooltips),
-     just not yet applied to this specific page's own explanatory text.
+102. ~~Transfers page: use info popups/tooltips to explain concepts instead of permanent
+     explanatory paragraphs eating page space.~~ **Done (2026-08-26) — see Done item 169.**
+     The "New linked transfer" card's own explanatory paragraph moved behind a `Tooltip`; the
+     two conditional warning paragraphs (unsupported pairing, currency mismatch) were left as
+     plain text since they're only shown when directly relevant, not a permanent block.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank
