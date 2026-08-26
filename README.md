@@ -3294,6 +3294,85 @@ FinanceManager live link:
      spans across `Tabs` sections, not just within one visible card grid. `npx tsc -b` / `npm
      run test` (322 tests, unchanged — pure UI wiring on the already-tested `dimColor`) / `npm
      run build` all clean.
+156. **EMI/Loans gains a real repayment ledger + becomes a linkable module, closing README
+     Pending items 21/62's long-standing remainder (2026-08-26).** EMI previously had no
+     addressable record of an actual payment — only the computed `emiSchedule()` and the
+     per-month `installmentOverrides` shortcut (a plain number, no id, nothing to reference).
+     New `EMIRepayment { id, loanId, month, amount, date, source?, statementRef? }`
+     (`types/emiWorkbook.ts`) plus a hand-written `emiWorkbookStore.ts` (EMI needed a second
+     array, same "doesn't fit `createEntryStore`'s single-array shape" reasoning that made
+     Personal Loans hand-written before it) whose `addRepayment`/`updateRepayment`/
+     `deleteRepayment` keep the new ledger and the existing `installmentOverrides` in sync as
+     one write — `emiSchedule()`'s calculation logic is completely untouched, this only adds
+     an addressable id/date/source on top of what it already read. EMI joined the
+     cross-entity-linking system (`LinkModule` gained `'emi'`, same "direction doesn't flip
+     the sign" exception as `personalLoans` — a payment always reduces what's owed regardless
+     of which side of the link it's on) via a new `emiMonth` field on `LinkSideConfig`,
+     resolved by the Transfers page as "the next not-yet-overridden installment" before
+     `buildLinkedRecords` runs (kept out of the pure `buildSideRecord` itself, which has no
+     store access). New "Repayment log" `CollapsibleCard` on each loan's detail view lists
+     every recorded repayment (not just the Schedule table's next-12-month window), with
+     inline edit/delete going through `warnIfLinked`/`confirmAndDeleteLinkable` like every
+     other linkable module's native edit/delete. **EMI is no longer the sole unlinked
+     module** — see MODULES_PLAN.md §8, now fully closed. Verified live via Playwright: the
+     EMI loan picker appears correctly on the Transfers page with the right currency and no
+     false "unsupported pair" warning, and both the pencil-editor save and the Transfers-page
+     link correctly hit the sign-in gate (a real signed-in round-trip against the production
+     Firebase project wasn't attempted, same standing reasoning as every other linked
+     module's own verification note). New tests: `store/__tests__/emiWorkbookStore.test.ts`
+     (4 cases covering the override-sync behavior) and 4 new cases in
+     `interEntityLink.test.ts`. `npx tsc -b` / `npm run test` (330 tests, 8 new) / `npm run
+     build` all clean.
+157. **Net Worth gains an on-demand snapshot + a real net-worth-over-time chart, closing
+     README Pending item 64 (2026-08-26).** Resolves the three open design questions that
+     item left explicitly unguessed-at: cadence is on-demand only (a "Save snapshot" button,
+     never automatic — clicking again the same day updates that day's entry instead of
+     duplicating it); storage is a new own-Firebase-path store
+     (`netWorthSnapshotsWorkbookStore`, `users/{uid}/netWorthSnapshots`), kept fully separate
+     from every module's own workbook so this carries zero migration risk; and a snapshot is
+     an explicitly FROZEN point-in-time copy (`types/netWorthSnapshot.ts`'s own doc comment)
+     — entering a backdated transaction later never rewrites a past snapshot, only the next
+     "Save snapshot" click captures a new current state. The new chart plots the currently-
+     selected preferred currency's own history only (no historical FX rates are kept, so
+     converting several currencies' history to one would be misleading) via `ChartCard`'s
+     existing `empty` gate (fewer than 2 points shows "Not enough data yet" instead of an
+     unreadable single-point line). Gained a standard "Account" cloud-sync section (same
+     pattern as every other module) rather than the lighter no-upload-UI treatment Rentals'
+     Planning feature uses, since a snapshot is real point-in-time history, not
+     regenerate-safe projection data. Verified live via Playwright with 3 seeded snapshots:
+     the chart rendered the correct dates/values (400 → 450 → 500 USD) with datalabels, and
+     "Save snapshot" correctly hit the sign-in gate. `npx tsc -b` / `npm run test` (included
+     in the 330/8-new count above) / `npm run build` all clean.
+158. **Critical, self-audited while building the above (2026-08-26): a real cross-account
+     data-leak gap in `resetAllLocalWorkbooks()`.** This function exists specifically to
+     prevent one account's local data surviving into the next signed-in account on the same
+     browser (see Design decisions above — a previous version of this exact bug already once
+     caused real data loss). Checking it before adding the two new stores above found it was
+     already stale: Subscriptions and all three Planned* stores (Cash/Bank/Rentals) were
+     added to the app after this function was last written and were never wired into it —
+     the exact bug class it exists to prevent, just for those four. Fixed by adding all four
+     plus the two new stores from today. New test coverage in `resetLocalData.test.ts` seeds
+     and asserts all 4 previously-missed stores are actually cleared, not just trusted by
+     inspection. **Lesson for any future new per-account local store**: add it to
+     `resetAllLocalWorkbooks()` at the same time it's created, not as an afterthought — this
+     is the second time this exact class of gap has been found only by an unrelated audit,
+     not by the module's own original build session.
+159. **PSX Settings' "Fees & amounts" tab regrouped into a responsive grid, one concrete
+     instance of README Pending item 63 (2026-08-26).** Its 4 sub-cards (Commission & fees,
+     Capital gains tax, Cost basis method, General) used to stack full-width one under
+     another despite each holding only a handful of fields — Commission & fees (by far the
+     largest, 10 fields) now spans both columns on its own row while the other 3 sit 2-3 per
+     row on a wide viewport, same `repeat(auto-fit, minmax(320px,1fr))` pattern the Net Worth
+     page's own two summary cards established. Audited every other module's Settings/landing
+     page for the same "several small full-width cards stacked with room to spare" shape
+     first — QSE's own Amount Settings is a single card (nothing to group), and every
+     non-exchange module's own page follows a form→list→Account shape where each card
+     serves a genuinely different purpose (a form next to a table would look wrong squeezed
+     into a half-width cell) — PSX's Fees & amounts tab was the one clear, safe match found.
+     Verified via a real screenshot at 1400px: the grid renders exactly as intended, no
+     visual regression. **Item 63 is not closed** — a full app-wide audit (Settings sub-cards
+     elsewhere, module landing pages) is still open, tracked as a per-page judgment call, same
+     as the item's own existing note.
 
 ## Pending
 
@@ -3332,9 +3411,10 @@ wave" section)**:
 
 21. ~~Cross-entity linking remainder: Funds needs its hidden `Transfer` field exposed in the
     UI.~~ **Done (2026-08-24) — see Done item 100.** Bank/Cash↔Funds now works, same pattern
-    as every other linked module pair. **Still open**: EMI has no repayment ledger at all to
-    link into — that's a data-model question (would need a real repayment-tracking feature
-    added to EMI/Loans first, not just UI wiring), not attempted.
+    as every other linked module pair. ~~EMI has no repayment ledger at all to link into.~~
+    **Done (2026-08-26) — see Done item 156.** A real, addressable `EMIRepayment` ledger now
+    exists and EMI is a fully linkable module — every module named in this project's linking
+    system is now wired in.
 22. Calculator button remainder: it's module-aware now (hidden outside Stock Exchanges, see
     Done item 32) — the longer-term goal of a *relevant* calculator per module (an EMI payoff
     calculator, a Cash quick-math tool, etc.) is now largely covered by each module's own
@@ -3458,13 +3538,22 @@ already fixed; the rest tracked here**:
     separate, much larger undertaking if wanted later — not tracked as a gap here.
 46. ~~A raw-vs-concise number display toggle in Appearance settings (1,000 vs 1k).~~ **Done —
     see Done item 83.**
-47. **Mostly done — see Done items 85/89/98.** `components/Tooltip.tsx` now backs
-    `StatCard`/`MoneyValue`/`FeeModeControl`'s tooltips, the Fee column's "(netted)"/
-    "(override)" tags, the Trade Planner's sync indicators, QSE's/PSX's `PositionDetail`
-    stat cards, and the per-transaction/per-repayment "Balance"/"Remaining" table cells.
-    What's left is CollapsibleCard headers, plus a handful of single-word `<select>` labels
-    and import-flow checkboxes deliberately left as native `title` (see Done item 98's own
-    reasoning) — not a broad unaudited remainder anymore.
+47. **Done — see Done items 85/89/98, plus a final audit (2026-08-26).** `components/
+    Tooltip.tsx` now backs `StatCard`/`MoneyValue`/`FeeModeControl`'s tooltips, the Fee
+    column's "(netted)"/"(override)" tags, the Trade Planner's sync indicators, QSE's/PSX's
+    `PositionDetail` stat cards, and the per-transaction/per-repayment "Balance"/"Remaining"
+    table cells. Re-grepped every remaining native `title=` attribute app-wide (2026-08-26):
+    the overwhelming majority turned out to already be `Field`'s own `title` prop (which
+    itself wraps the label in a real `Tooltip` — a naming coincidence, not a native-attribute
+    gap) or `ChartCard`'s `title` (a plain heading string, not a tooltip at all). The genuine
+    remaining native-attribute spots are all deliberate, reasoned exceptions, not oversights:
+    single-word `<select>` labels and import-flow "Flip sign" checkboxes (Done item 98's own
+    prior reasoning), the sidebar collapse/expand buttons (already self-explanatory one-word
+    labels, not jargon needing an explanatory popup), and the Watchlist/avatar-emoji inputs
+    (deliberately NOT wrapped in `Tooltip` — these are directly click-to-edit inputs, and
+    `Tooltip`'s own `onClick` toggle would pop a tooltip open every time a user clicks in to
+    type, a real UX regression the CollapsibleCard-header idea never had). Closing this out —
+    no further native-`title` gaps remain worth converting.
 
 **Design-system critique, remaining items (2026-08-24) — see Done item 103 for what shipped
 from this same batch.** Three items deliberately not attempted in that pass, since each is a
@@ -3635,9 +3724,14 @@ what's already shipped from this same message**:
 62. ~~"We may give the option to all entities to directly link the transfers on its page (per
     cycle, or regular, check feasibility)"~~ **Done (2026-08-25) — see Done items 125/131.**
     Built for QSE/PSX first, then Rentals/Personal Loans/Funds, each with its own "what does
-    linking mean here" answer worked out. **EMI is the sole exception, and stays open** — it
-    has no repayment ledger at all to link into (see Pending item 21), a data-model gap that
-    needs its own design decision, not a UI-parity gap like the other four had.
+    linking mean here" answer worked out. ~~EMI was the sole exception, blocked on having no
+    repayment ledger to link into.~~ **Unblocked and done (2026-08-26) — see Done item 156.**
+    EMI now works through the standalone Transfers page like every other linked module;
+    a native inline "Link this to a Bank account or Cash" shortcut (the direct-from-its-own-
+    page shortcut QSE/PSX/Rentals/Personal Loans/Funds got) is not built for EMI specifically
+    — its "add a transaction" moment is the Schedule table's pencil-editor, a different shape
+    than a blank add-form, so this was deliberately left as the standalone-page path only; a
+    future session could still add it as a small follow-up if wanted.
 
 **2026-08-25, Net Worth page feedback batch — see Done item 148 for what shipped from this
 same batch**:
@@ -3646,26 +3740,25 @@ same batch**:
     rather than eating whole page width with blank spaces" (app-wide note attached to a Net
     Worth page report). Net Worth's own per-currency `<details>` cards now do this (Done item
     147, item 6) — a responsive `repeat(auto-fit, minmax(360px, 1fr))` grid instead of a
-    single-column stack. **Still open**: every other page that stacks several full-width cards
-    with room to spare (module landing pages' summary sections, Settings sub-cards, etc.) hasn't
-    had the same audit — this is a real, repeatable pattern worth applying elsewhere, not a
-    one-page fix, but doing it app-wide needs a per-page judgment call about which cards actually
-    make sense side-by-side vs. which genuinely need the full width (a wide table, for instance,
-    shouldn't be squeezed into a half-width grid cell).
+    single-column stack. Net Worth's own "Net worth summary"/"Exchange rates" pair (Done item
+    153) and PSX Settings' "Fees & amounts" tab (Done item 159, 2026-08-26) followed the same
+    pattern. **Still open**: a full app-wide audit — every other module's landing/Settings
+    pages were checked in the Done item 159 pass and found to genuinely not fit (each card
+    serves a different purpose in a form→list→Account shape, or there's only one small card
+    to begin with) except PSX's, but that was one focused pass, not an exhaustive sweep of
+    every page in the app — this is a real, repeatable pattern worth re-checking whenever a
+    new page ships, not a one-time audit to close out.
 
 **2026-08-26, second Net Worth feedback batch — see Done item 153 for what shipped from this
 same batch**:
 
-64. "Add charts to view... worth difference by time" (item 4 of the same batch; the "capital
-    split per currency" half of this item is done — see Done item 153). A real net-worth-
-    over-time chart needs periodic historical snapshots this app has never taken — net worth is
-    always computed LIVE from each module's current data, nothing about it is logged over time
-    anywhere. Building this needs real design decisions first, not a guess: how often to
-    snapshot (on every app load? once a day? only on an explicit user action?), where to store
-    snapshots (a new Firebase node per user, local-only, both?), and what happens to a snapshot
-    once the underlying data it was computed from later changes (e.g. a backdated transaction
-    entered after the fact) — this is the same category of "needs a real design pass, not
-    guessed at" as Pending item 28's balance-reconciliation feature. Not started.
+64. ~~"Add charts to view... worth difference by time" (item 4 of the same batch; the "capital
+    split per currency" half of this item is done — see Done item 153).~~ **Done (2026-08-26)
+    — see Done item 157.** Locked the three open design decisions this item named (cadence,
+    storage, staleness) — an explicit on-demand "Save snapshot" button (never automatic), its
+    own Firebase node kept separate from every module's workbook, and a snapshot that's a
+    frozen point-in-time copy never rewritten by later backdated data — and built a real
+    net-worth-over-time line chart on top, for the currently-selected preferred currency.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

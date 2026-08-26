@@ -3068,6 +3068,43 @@ not developer notes) continuously as features ship.
   (identical pattern with OGDC/PPL/SNGP) — zero console errors on either. `npx tsc -b` / `npm
   run test` (322 tests, unchanged — pure UI wiring on the already-tested `dimColor`) / `npm
   run build` all clean.
+- **EMI/Loans gains a real repayment ledger + becomes linkable; Net Worth gains an on-demand
+  history snapshot + chart; a real cross-account data-leak bug fixed (2026-08-26) — see
+  README Done items 156-159, closing Pending items 21/62's remainder, 64, and part of 63.**
+  This work was picked up autonomously (a "continue until pending tasks completed" session,
+  not a new user report), working down the README's own Pending list per this file's standing
+  instruction. **EMI**: new `EMIRepayment` type + a hand-written `emiWorkbookStore.ts`
+  (converted from the old `createEntryStore`-based one, same "two arrays don't fit the
+  single-array shape" reasoning Personal Loans already established) that keeps a real,
+  addressable repayment log in sync with the existing `installmentOverrides` schedule
+  mechanism as one write — `emiSchedule()`'s own calculation logic is completely untouched.
+  EMI joined cross-entity linking (`LinkModule` gained `'emi'`) — the last module named in
+  MODULES_PLAN.md §8 to do so. **Net Worth**: locked the three design decisions Pending item
+  64 had explicitly left open (on-demand-only snapshot cadence, its own separate Firebase
+  node, frozen-never-retroactively-rewritten semantics) and built a real history line chart
+  on top. **The data-leak bug** was found by auditing `resetAllLocalWorkbooks()` before
+  adding to it — Subscriptions and all three Planned* stores (Cash/Bank/Rentals) had been
+  added to the app after that function was last written and were silently never wired in,
+  meaning switching accounts on the same browser leaked those 4 stores' data into the next
+  account. Fixed by adding all 4 plus the 2 new stores from this session. **Rule reinforced
+  for any future new per-account local store**: wire it into `resetAllLocalWorkbooks()` at
+  creation time, not as a later afterthought — this is the second time this exact gap class
+  was found only by an unrelated audit. Also: a responsive-grid pass on PSX Settings' "Fees &
+  amounts" tab (its 4 sub-cards used to stack full-width) as one concrete instance of Pending
+  item 63, after auditing every other module's landing/Settings page and finding they
+  genuinely don't fit the same pattern (each card serves a different purpose in a
+  form→list→Account shape). Also closed out Pending item 47 (Tooltip/native-`title` sweep)
+  with a final audit — the remaining native `title=` spots are all deliberate, reasoned
+  exceptions (self-explanatory one-word button labels, and inputs where wrapping in
+  `Tooltip` would pop a popup open on every click-to-edit), not oversights. Verified via
+  `npx tsc -b` / `npm run test` (330 tests, 8 new) / `npm run build`, all clean, plus live
+  Playwright checks (EMI's Transfers-page picker, EMI's repayment-save and Net Worth's
+  snapshot-save both correctly hitting the real sign-in gate rather than silently failing,
+  and a real before/after screenshot of the PSX Settings grid). Opened as PR #5 (draft) on
+  branch `claude/pending-tasks-completion-sg0imx` rather than direct-to-`main`, per this
+  specific session's own harness-level branch instructions — this doesn't supersede this
+  file's own "commit into main directly" standing instruction for a normal local session,
+  it's how this particular remote/web session was invoked.
 
 ## Live URLs
 
