@@ -2,7 +2,7 @@ import { Fragment, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PSX_TICKER_DATALIST_ID } from '../../../components/PSXTickerDatalist';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { EditIcon, ExportIcon, InfoIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { EditIcon, ExportIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { Tooltip } from '../../../components/Tooltip';
 import { toast } from '../../../components/Toast';
@@ -124,13 +124,12 @@ function TransactionRows() {
       <p className="footer-note" style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
         Same-day round trips net automatically — the larger side pays full commission, the
         smaller side pays levies only.
+        {/* Tooltip itself now renders an info-icon affordance (README item 89,
+           2026-08-26), so this no longer needs its own manually-wrapped
+           InfoIcon as children — that would now show two icons back to back. */}
         <Tooltip
           text={'The "Fee mode" dropdown per row controls how much you want to override that: Auto leaves it fully computed, Semi lets you flip whether this specific leg counts as netted (use when your statement shows a same-day netting the recorded date doesn\'t line up with, or when you already know a same-day sell is coming before you\'ve logged it), and Manual lets you type the exact fee from your statement, bypassing computation entirely. Auto is the right choice for most trades, including a same-day round trip — once both legs are logged, the correct side nets automatically.'}
-        >
-          <span style={{ cursor: 'pointer', color: 'var(--muted)', display: 'inline-flex' }}>
-            <InfoIcon size={13} />
-          </span>
-        </Tooltip>
+        />
       </p>
     </div>
   );
