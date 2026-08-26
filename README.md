@@ -3373,6 +3373,49 @@ FinanceManager live link:
      visual regression. **Item 63 is not closed** — a full app-wide audit (Settings sub-cards
      elsewhere, module landing pages) is still open, tracked as a per-page judgment call, same
      as the item's own existing note.
+160. **Critical, user-reported (2026-08-26): a stock's Current Price input on its detail page
+     appeared to "disappear" right after saving.** Root cause: `PositionDetail.tsx` (QSE and
+     PSX both had the identical bug) binds the "Update price" input to local `priceInput`
+     state, and `commitPrice()` — after correctly calling `setMarketPrice()` and updating
+     every other stat on the page — reset that local state to `''`, blanking the visible
+     field even though the price genuinely saved (confirmed by reading `setMarketPrice` in
+     `createWorkbookStore.ts`: it synchronously updates `marketPrices` and appends to
+     `priceHistory`, no bug in the actual persistence). Fixed by re-filling `priceInput`
+     with the value that was just saved instead of clearing it. New regression test
+     (`positionDetailPriceInput.test.tsx`, same isolated-harness pattern as Done item 129's
+     `priceInputRemount.test.tsx`) reproduces the bug and confirms the fix, since exercising
+     the real save flow live requires a signed-in account this project's own cloud-sync-safety
+     rule won't create against the production Firebase project. `npx tsc -b` / `npm run test`
+     (332 tests, 2 new) / `npm run build` all clean.
+161. **EMI/Loans: a custom fixed monthly payment with the remainder "balloon"-charged in the
+     final installment, user-requested (2026-08-26).** Distinct from the existing per-month
+     `installmentOverrides` (README item 6 of an earlier batch, which sets ONE specific
+     month's payment by hand): the new `EMILoan.customMonthlyPayment` field applies a single
+     fixed amount to every month automatically, and — since a fixed payment generally doesn't
+     divide the loan evenly by its tenure the way the real EMI formula does — the schedule
+     engine (`emiSchedule()`) automatically "true's up" the LAST month to whatever's actually
+     still owed (remaining balance plus that month's own interest/markup) instead of
+     repeating the custom amount and either leaving a residual balance or overshooting.
+     Implemented symmetrically for both repayment modes: interest mode's balloon is
+     `balance + that month's interest`; fixedTotal (no-interest/Sharia) mode's balloon closes
+     out both the remaining principal AND whatever markup hadn't yet been collected, so the
+     loan's grand total still equals `totalToReturn` regardless of how the custom payment
+     compared to the natural installment along the way. A per-month `installmentOverrides`
+     entry still wins over the auto-balloon on whichever month it's set on, including the
+     final one. New `EMIScheduleRow.isBalloon` flag distinguishes this auto-computed row from
+     a manual `overridden` one in the UI — the Schedule table shows "(final payment)" instead
+     of "(custom)" so it's clear the engine computed it, not the user. `emiSchedule()`'s
+     returned `emi` (used everywhere as "the monthly installment," including the landing
+     page's totals and `whatIfExtraPayment`'s own baseline) now reflects the custom amount
+     when set, so "extra payment" planning correctly stacks on top of it rather than the
+     theoretical EMI. New "Custom monthly payment (optional)" field added to both the add-loan
+     form and the edit-loan form. Verified live via Playwright with a seeded 1200/12-month/0%
+     loan and a 50/month custom payment: months 1-11 each showed exactly 50.00, and month 12
+     showed "650.00 USD (final payment)" — matching the hand-traced test expectations exactly.
+     New tests: `emiModule.test.ts` gained 6 cases (0%-rate balloon, interest-bearing balloon,
+     early-payoff-skips-balloon, override-wins-over-balloon, fixedTotal dual true-up, and
+     `whatIfExtraPayment` stacking correctly on the custom base). `npx tsc -b` / `npm run test`
+     (338 tests, 6 new) / `npm run build` all clean.
 
 ## Pending
 

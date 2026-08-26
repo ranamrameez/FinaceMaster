@@ -11,6 +11,11 @@ export interface EMIScheduleRow {
    * 2026-08-26 feedback batch — some loans have irregular real-world terms,
    * e.g. a bigger payment every 6th month). */
   overridden?: boolean;
+  /** True on the one auto-computed "true-up" final payment that closes out
+   * whatever `customMonthlyPayment` (see `EMILoan`'s own doc comment)
+   * happened to leave outstanding — distinct from `overridden`, since the
+   * user didn't type this specific amount in, the engine computed it. */
+  isBalloon?: boolean;
 }
 
 /** Amortization schedule for one loan, either repayment mode. Ported from
@@ -28,27 +33,60 @@ export interface EMIScheduleRow {
  * fixedTotal mode, an overridden payment keeps the SAME principal:markup
  * split ratio as the regular installment — there's no compounding to
  * recompute there, just a bigger/smaller slice of the same straight-line
- * split. */
+ * split.
+ *
+ * `loan.customMonthlyPayment` (user-reported request: "set custom monthly
+ * EMI, remaining amount charged in the final EMI") substitutes a single
+ * fixed payment for every month instead of the computed amortizing EMI —
+ * unlike `installmentOverrides`, which is set per month by hand, this is
+ * one number applied everywhere an override doesn't already win. Because a
+ * fixed payment generally doesn't divide the loan evenly by month `n`
+ * (it's not solved for like the real EMI formula is), the LAST month is a
+ * "balloon": the engine charges whatever's actually still owed — the
+ * remaining balance plus that month's own interest/markup — instead of
+ * repeating `customMonthlyPayment` and either leaving a residual balance
+ * or overshooting. If `customMonthlyPayment` already happens to fully
+ * amortize the loan before month `n` (or exactly at it), the existing
+ * `balance <= 0.01` early-stop fires first and there's no separate
+ * balloon row — the schedule just ends, same as any other early payoff. */
 export function emiSchedule(loan: EMILoan): { emi: number; rows: EMIScheduleRow[] } {
   const n = loan.tenureMonths;
   const overrides = loan.installmentOverrides;
+  const customPayment = loan.customMonthlyPayment;
   if (loan.repaymentMode === 'fixedTotal') {
     const total = loan.totalToReturn ?? loan.principal;
     const installment = total / n;
     const principalPerMonth = loan.principal / n;
     const principalRatio = installment > 0 ? principalPerMonth / installment : 1;
+    const totalMarkup = total - loan.principal;
     let balance = loan.principal;
+    let markupSoFar = 0;
     const rows: EMIScheduleRow[] = [];
     for (let m = 1; m <= n; m++) {
       const override = overrides?.[m];
-      const payment = override ?? installment;
-      const principalComp = payment * principalRatio;
-      const markup = payment - principalComp;
+      const isBalloon = override == null && customPayment != null && m === n;
+      let payment: number;
+      let principalComp: number;
+      let markup: number;
+      if (isBalloon) {
+        // True up: pay off whatever principal and markup are still
+        // outstanding, so the loan's grand total still equals `total`
+        // regardless of how `customMonthlyPayment` compared to the
+        // regular installment in every prior month.
+        principalComp = balance;
+        markup = totalMarkup - markupSoFar;
+        payment = principalComp + markup;
+      } else {
+        payment = override ?? customPayment ?? installment;
+        principalComp = payment * principalRatio;
+        markup = payment - principalComp;
+      }
       balance = Math.max(0, balance - principalComp);
-      rows.push({ month: m, emi: payment, interest: markup, principalComp, balance, overridden: override != null });
+      markupSoFar += markup;
+      rows.push({ month: m, emi: payment, interest: markup, principalComp, balance, overridden: override != null, isBalloon });
       if (balance <= 0.01) break;
     }
-    return { emi: installment, rows };
+    return { emi: customPayment ?? installment, rows };
   }
 
   const r = (loan.annualRatePct ?? 0) / 12 / 100;
@@ -58,13 +96,17 @@ export function emiSchedule(loan: EMILoan): { emi: number; rows: EMIScheduleRow[
   for (let m = 1; m <= n; m++) {
     const override = overrides?.[m];
     const interest = balance * r;
-    const payment = override ?? emi;
+    const isBalloon = override == null && customPayment != null && m === n;
+    // Balloon: closes the loan out exactly (balance + this month's own
+    // interest), rather than charging `customPayment` again and leaving a
+    // residual balance or overshooting past zero.
+    const payment = isBalloon ? balance + interest : (override ?? customPayment ?? emi);
     const principalComp = payment - interest;
     balance = Math.max(0, balance - principalComp);
-    rows.push({ month: m, emi: payment, interest, principalComp, balance, overridden: override != null });
+    rows.push({ month: m, emi: payment, interest, principalComp, balance, overridden: override != null, isBalloon });
     if (balance <= 0.01) break;
   }
-  return { emi, rows };
+  return { emi: customPayment ?? emi, rows };
 }
 
 export interface EMISummary {
