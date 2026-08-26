@@ -3014,6 +3014,40 @@ not developer notes) continuously as features ship.
   real net-worth-over-time chart — needs periodic historical snapshots this app has never taken,
   a genuine new design decision (cadence, storage) not guessed at here; see the new README
   Pending item 64.
+- **EMI per-month installment overrides — item 6 of the same 2026-08-26 batch (2026-08-26) —
+  see README Done item 154.** User's example: a property installment plan can have irregular
+  real terms ("Banks loan 10005 EMI 1000 and last one 1005," or a bigger payment every 6
+  months) a flat EMI can't represent. Asked via `AskUserQuestion` since this was a genuine
+  multi-way design fork with real correctness implications (recurring-pattern rule vs. per-
+  month override table vs. both); the user chose **per-month override table**. `EMILoan` gained
+  `installmentOverrides?: Record<number, number>` (1-indexed month → actual payment);
+  `emiSchedule()` substitutes it into both repayment modes and recalculates every later month
+  from what was actually paid — interest mode's existing sequential balance loop needed no new
+  state (`payment = overrides[m] ?? emi` before `principalComp = payment - interest`);
+  fixedTotal mode (no compounding) keeps the same principal:markup **ratio** as the regular
+  installment on an overridden month, so a bigger payment splits proportionally bigger on both
+  sides. **New: the schedule now stops early once balance clears** (same idea
+  `whatIfExtraPayment` already used), so a large override can finish a loan before its
+  original tenure — `emiSummary()`'s `elapsed`/`monthsRemaining` clamp against the actual
+  `rows.length` instead of `loan.tenureMonths` now, and `paidSoFar` sums each row's own real
+  payment instead of `elapsed * emi` (identical result when nothing's overridden, but
+  necessary once rows can differ). **Rule for any future schedule-engine change**: once a
+  per-row engine (interest mode was already one) needs to support an arbitrary payment
+  amount instead of a fixed one, check whether every *downstream* consumer of that schedule
+  (here: `emiSummary`) still assumes a fixed row count or a fixed per-row amount — both
+  assumptions were baked into `emiSummary` and both had to be fixed, not just `emiSchedule`
+  itself. UI: `EMIPage.tsx`'s existing "Schedule (next 12 installments from today)" table
+  gained a per-row pencil icon (inline amount input, Save/Cancel), an "(custom)" tag on an
+  overridden row, and an X to reset a month back to regular — scoped to the table's existing
+  upcoming-months window only, not past months (a planning tool, not a payment-history
+  editor). Uses `ensureSignedIn` before either write, per this file's locked sign-in-gated-
+  write rule — note this file's own existing "Edit loan" Save button in the same component
+  does NOT have that gate (a pre-existing gap, not introduced or fixed here). Verified live
+  via Playwright: a $1200/12-month 0%-interest loan with a 300 override at month 8 (vs. the
+  regular 100) showed the "(custom)" tag, correctly recalculated month 9 off the new lower
+  balance, and correctly stopped the schedule at month 10 (2 months early) — matching every
+  stat card and the amortization chart. New tests: `emiModule.test.ts` gained 5 cases. `npx
+  tsc -b` / `npm run test` (322 tests, 5 new) / `npm run build` all clean.
 
 ## Live URLs
 

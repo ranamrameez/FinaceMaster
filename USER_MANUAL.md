@@ -500,6 +500,14 @@ transactions) and Personal Loans (informal, no schedule).
 - **Export full schedule (CSV)**: below the Schedule table, click **Export full schedule
   CSV** to download every remaining installment (not just the next 12 shown on screen) as a
   spreadsheet file, with each installment's due date.
+- **Custom installments**: if your real loan isn't a flat amount every month — e.g. a
+  property installment plan where you pay a bigger amount every 6th month — click the pencil
+  icon next to any upcoming installment in the Schedule table to set a different amount for
+  just that month. Every later month recalculates automatically from what you actually paid,
+  and the loan's remaining balance/months-remaining/end-date all update to match. An
+  overridden month shows an "(custom)" tag; click the X next to it to reset that month back
+  to the regular calculated installment. If a bigger payment pays off the loan completely,
+  the schedule simply stops there — you won't see extra $0 installments after payoff.
 
 ---
 

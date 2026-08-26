@@ -50,6 +50,47 @@ describe('emiSchedule — fixedTotal mode (no-interest/Sharia)', () => {
   });
 });
 
+describe('emiSchedule — installmentOverrides (README item 6, 2026-08-26)', () => {
+  it('leaves the schedule unchanged when no overrides are set', () => {
+    const l = loan({ principal: 1200, annualRatePct: 0, tenureMonths: 12 });
+    const { rows } = emiSchedule(l);
+    expect(rows).toHaveLength(12);
+    expect(rows.every((r) => !r.overridden)).toBe(true);
+  });
+
+  it('recalculates every later month from a bigger one-off payment (interest mode)', () => {
+    const l = loan({ principal: 1200, annualRatePct: 0, tenureMonths: 12, installmentOverrides: { 6: 300 } });
+    const { rows } = emiSchedule(l);
+    // Regular EMI is 100/month; months 1-5 unaffected, month 6 pays 300.
+    expect(rows[4].balance).toBeCloseTo(1200 - 5 * 100, 5); // 700
+    expect(rows[5].overridden).toBe(true);
+    expect(rows[5].emi).toBe(300);
+    expect(rows[5].balance).toBeCloseTo(700 - 300, 5); // 400
+    // Month 7 resumes the regular 100 installment against the new balance.
+    expect(rows[6].overridden).toBeFalsy();
+    expect(rows[6].emi).toBeCloseTo(100, 5);
+    expect(rows[6].balance).toBeCloseTo(300, 5);
+  });
+
+  it('stops the schedule early once an override pays the loan off before its tenure', () => {
+    const l = loan({ principal: 1200, annualRatePct: 0, tenureMonths: 12, installmentOverrides: { 3: 1100 } });
+    const { rows } = emiSchedule(l);
+    // Months 1-2 at 100 each = 200 paid; month 3 pays the remaining 1000 in full via a 1100 override.
+    expect(rows).toHaveLength(3);
+    expect(rows[2].balance).toBeCloseTo(0, 5);
+  });
+
+  it('keeps the same principal:markup split ratio for an overridden month in fixedTotal mode', () => {
+    const l = loan({ repaymentMode: 'fixedTotal', principal: 1000, totalToReturn: 1120, tenureMonths: 10, installmentOverrides: { 5: 224 } });
+    const { rows } = emiSchedule(l);
+    // Regular installment is 112/month (100 principal + 12 markup) — a
+    // double-sized 224 payment should split 2x too: 200 principal, 24 markup.
+    expect(rows[4].overridden).toBe(true);
+    expect(rows[4].principalComp).toBeCloseTo(200, 5);
+    expect(rows[4].interest).toBeCloseTo(24, 5);
+  });
+});
+
 describe('emiSummary', () => {
   it('reports full principal outstanding and zero elapsed before the start date', () => {
     const l = loan({ principal: 1000, startDate: '2026-06-01' });
@@ -73,6 +114,18 @@ describe('emiSummary', () => {
     expect(sum.elapsed).toBe(12);
     expect(sum.monthsRemaining).toBe(0);
     expect(sum.outstanding).toBeCloseTo(0, 5);
+  });
+
+  it('clamps elapsed at the schedule length (not the original tenure) once an override pays it off early', () => {
+    const l = loan({
+      principal: 1200, annualRatePct: 0, tenureMonths: 12, startDate: '2020-01-01',
+      installmentOverrides: { 3: 1100 }, // clears the loan by month 3 (see emiSchedule tests)
+    });
+    const sum = emiSummary(l, new Date('2026-01-01')); // way past tenure
+    expect(sum.elapsed).toBe(3);
+    expect(sum.monthsRemaining).toBe(0);
+    expect(sum.outstanding).toBeCloseTo(0, 5);
+    expect(sum.paidSoFar).toBeCloseTo(100 + 100 + 1100, 5);
   });
 });
 

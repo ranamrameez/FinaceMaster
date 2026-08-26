@@ -3231,6 +3231,44 @@ FinanceManager live link:
      direct `localStorage` read, the doughnut chart rendering real proportional slices, and all
      three new stat cards showing correct seeded numbers. `npx tsc -b` / `npm run test` (300
      tests, 10 new) / `npm run build` all clean.
+154. **EMI per-month installment overrides — item 6 of the same 2026-08-26 batch (2026-08-26).**
+     The user's exact framing: a property installment plan can have irregular real-world terms
+     — "Banks loan 10005 EMI 1000 and last one 1005," or "1 big installment every 6 months" —
+     that a single flat EMI can't represent. Asked via `AskUserQuestion` which design to build
+     (a recurring-pattern rule, a per-month override table, or both) since this is a genuine
+     multi-way fork with real correctness implications for a persisted schedule; the user chose
+     **per-month override table**: keep the regular auto-calculated schedule as the default, let
+     any specific month be given a different actual payment, and recalculate every later month
+     from what was actually paid. `EMILoan` gained `installmentOverrides?: Record<number,
+     number>` (keyed by 1-indexed month); `emiSchedule()` substitutes an override for that
+     month's payment in both repayment modes — interest mode's already-sequential balance-
+     tracking loop needed no new state, just `payment = overrides[m] ?? emi` before computing
+     `principalComp`; fixedTotal mode (no compounding) keeps the SAME principal:markup split
+     *ratio* as the regular installment for an overridden month, so a bigger payment splits
+     proportionally bigger on both sides rather than all going to one or the other. **Early
+     payoff is a real, deliberate addition, not an afterthought**: the loop now stops once
+     balance clears (same idea `whatIfExtraPayment` already used for its own "what if" loop),
+     so a large override can finish a loan before its original tenure — `emiSummary()`'s
+     `elapsed`/`monthsRemaining` clamp against the actual (possibly shorter) `rows.length`
+     instead of `loan.tenureMonths`, and `paidSoFar` now sums each row's own real payment
+     instead of `elapsed * emi` (harmless when nothing's overridden — every row.emi already
+     equalled emi — but necessary once they can differ). UI: the existing "Schedule (next 12
+     installments from today)" table in `EMIPage.tsx`'s `LoanDetail` gained a per-row pencil
+     icon that opens an inline amount input (Save/Cancel), an "(custom)" tag on an overridden
+     row's Installment cell, and an X icon to reset a month back to the regular installment —
+     scoped to upcoming months only (the table's own existing window), not past ones, since this
+     is a planning tool, not a payment-history editor. Follows this project's locked sign-in-
+     gated-write rule (`ensureSignedIn` before either save or reset), even though the pre-
+     existing "Edit loan" Save button in this same file doesn't have that gate — a pre-existing
+     gap in unrelated code, not fixed here, but not repeated in this new code either. Verified
+     live via Playwright: a $1200/12-month 0%-interest loan with a 300-unit override at month 8
+     (vs. the regular 100) correctly showed the "(custom)" tag, correctly recalculated month 9's
+     balance off the new lower balance, and correctly stopped the schedule at month 10 once the
+     override's extra payment cleared the loan early — 2 months sooner than the original
+     12-month tenure, with the chart and every stat card reflecting the same numbers. New tests:
+     `lib/calc/__tests__/emiModule.test.ts` gained 5 cases (both repayment modes, plus the
+     early-payoff `emiSummary` clamp). `npx tsc -b` / `npm run test` (322 tests, 5 new) / `npm
+     run build` all clean.
 
 ## Pending
 

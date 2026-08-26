@@ -6,6 +6,11 @@ export interface EMIScheduleRow {
   interest: number; // "markup" in fixed-total mode
   principalComp: number;
   balance: number;
+  /** True when this month's payment came from `EMILoan.installmentOverrides`
+   * rather than the regular computed installment (README item 6 of a
+   * 2026-08-26 feedback batch — some loans have irregular real-world terms,
+   * e.g. a bigger payment every 6th month). */
+  overridden?: boolean;
 }
 
 /** Amortization schedule for one loan, either repayment mode. Ported from
@@ -13,19 +18,35 @@ export interface EMIScheduleRow {
  * formulas:
  * - interest mode: standard reducing-balance EMI.
  * - fixedTotal mode (no-interest/Sharia-compliant): straight-line
- *   principal reduction, markup spread evenly, no compounding. */
+ *   principal reduction, markup spread evenly, no compounding.
+ *
+ * `loan.installmentOverrides` (keyed by 1-indexed month) substitutes a
+ * different actual payment for a specific month — every later month's
+ * balance/interest recalculates from whatever was actually paid, and the
+ * loop stops early if an override pays the loan off before its full
+ * tenure (same early-stop idea `whatIfExtraPayment` already uses). In
+ * fixedTotal mode, an overridden payment keeps the SAME principal:markup
+ * split ratio as the regular installment — there's no compounding to
+ * recompute there, just a bigger/smaller slice of the same straight-line
+ * split. */
 export function emiSchedule(loan: EMILoan): { emi: number; rows: EMIScheduleRow[] } {
   const n = loan.tenureMonths;
+  const overrides = loan.installmentOverrides;
   if (loan.repaymentMode === 'fixedTotal') {
     const total = loan.totalToReturn ?? loan.principal;
     const installment = total / n;
     const principalPerMonth = loan.principal / n;
-    const markupPerMonth = (total - loan.principal) / n;
+    const principalRatio = installment > 0 ? principalPerMonth / installment : 1;
     let balance = loan.principal;
     const rows: EMIScheduleRow[] = [];
     for (let m = 1; m <= n; m++) {
-      balance = Math.max(0, balance - principalPerMonth);
-      rows.push({ month: m, emi: installment, interest: markupPerMonth, principalComp: principalPerMonth, balance });
+      const override = overrides?.[m];
+      const payment = override ?? installment;
+      const principalComp = payment * principalRatio;
+      const markup = payment - principalComp;
+      balance = Math.max(0, balance - principalComp);
+      rows.push({ month: m, emi: payment, interest: markup, principalComp, balance, overridden: override != null });
+      if (balance <= 0.01) break;
     }
     return { emi: installment, rows };
   }
@@ -35,10 +56,13 @@ export function emiSchedule(loan: EMILoan): { emi: number; rows: EMIScheduleRow[
   let balance = loan.principal;
   const rows: EMIScheduleRow[] = [];
   for (let m = 1; m <= n; m++) {
+    const override = overrides?.[m];
     const interest = balance * r;
-    const principalComp = emi - interest;
+    const payment = override ?? emi;
+    const principalComp = payment - interest;
     balance = Math.max(0, balance - principalComp);
-    rows.push({ month: m, emi, interest, principalComp, balance });
+    rows.push({ month: m, emi: payment, interest, principalComp, balance, overridden: override != null });
+    if (balance <= 0.01) break;
   }
   return { emi, rows };
 }
@@ -57,17 +81,21 @@ export interface EMISummary {
 /** Outstanding balance / paid-so-far / interest-so-far, read off the
  * schedule at the row for however many full months have elapsed since
  * `startDate` — assumes on-schedule payment (no missed/late-payment
- * tracking in v1, matching the reference prototype's own deferred scope). */
+ * tracking in v1, matching the reference prototype's own deferred scope).
+ * Clamps against `rows.length`, not `loan.tenureMonths` — with per-month
+ * overrides the schedule can now legitimately finish early, and
+ * `paidSoFar` sums each row's own actual payment (not `elapsed * emi`)
+ * so an overridden month is reflected correctly. */
 export function emiSummary(loan: EMILoan, asOf: Date = new Date()): EMISummary {
   const { emi, rows } = emiSchedule(loan);
   const start = new Date(loan.startDate);
   let elapsed = (asOf.getFullYear() - start.getFullYear()) * 12 + (asOf.getMonth() - start.getMonth());
-  elapsed = Math.max(0, Math.min(elapsed, loan.tenureMonths));
+  elapsed = Math.max(0, Math.min(elapsed, rows.length));
   const outstanding = elapsed === 0 ? loan.principal : rows[elapsed - 1].balance;
-  const paidSoFar = elapsed * emi;
+  const paidSoFar = rows.slice(0, elapsed).reduce((s, r) => s + r.emi, 0);
   const interestSoFar = rows.slice(0, elapsed).reduce((s, r) => s + r.interest, 0);
   const totalInterest = rows.reduce((s, r) => s + r.interest, 0);
-  const monthsRemaining = loan.tenureMonths - elapsed;
+  const monthsRemaining = rows.length - elapsed;
   return { emi, outstanding, paidSoFar, interestSoFar, totalInterest, monthsRemaining, elapsed, rows };
 }
 

@@ -113,6 +113,31 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
   const [extraPayment, setExtraPayment] = useState(0);
   const whatIf = whatIfExtraPayment(loan, extraPayment);
   const schedule = emiSchedule(loan);
+  const [overrideMonth, setOverrideMonth] = useState<number | null>(null);
+  const [overrideValue, setOverrideValue] = useState(0);
+
+  /** README item 6 of a 2026-08-26 feedback batch: some real loans aren't
+   * a flat EMI every month — e.g. a property installment plan with one
+   * bigger payment every 6th month. User's explicit design choice (via
+   * AskUserQuestion) was a per-month override table over a recurring-
+   * pattern rule: the regular schedule stays the default, and any single
+   * month can be given a different actual payment. */
+  const saveOverride = async (month: number, value: number) => {
+    if (!(value > 0)) return toast('Enter an amount greater than zero.');
+    if (!(await ensureSignedIn('Sign in to customize this loan\'s schedule.'))) return;
+    updateEntry(loan.id, { installmentOverrides: { ...(loan.installmentOverrides || {}), [month]: value } });
+    setOverrideMonth(null);
+    toast(`Month #${month} set to ${fmtMoney(value, loan.currencyCode)}.`);
+  };
+
+  const clearOverride = async (month: number) => {
+    if (!(await ensureSignedIn('Sign in to customize this loan\'s schedule.'))) return;
+    const overrides = { ...(loan.installmentOverrides || {}) };
+    delete overrides[month];
+    updateEntry(loan.id, { installmentOverrides: overrides });
+    setOverrideMonth(null);
+    toast(`Month #${month} reset to the regular installment.`);
+  };
 
   /** README item 40: extends Banking's statement-export pattern (Done
    * item 58) to this module's own primary record — a loan's "statement"
@@ -336,26 +361,50 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
         title={<h3 style={{ margin: 0 }}>Schedule (next 12 installments from today)</h3>}
         headerExtra={<button className="btn secondary" onClick={exportSchedule}>Export full schedule CSV</button>}
       >
+      <p className="footer-note" style={{ marginTop: 0 }}>
+        Click the pencil on any upcoming installment to set a different amount for just that month — e.g. a
+        bigger payment every 6 months. Every later month recalculates from what's actually paid.
+      </p>
       <div className="table-scroll">
         <table>
           <thead>
             <tr>
               <th>#</th><th>Installment</th>
               <th>{loan.repaymentMode === 'fixedTotal' ? 'Markup' : 'Interest'}</th>
-              <th>Principal</th><th>Balance</th>
+              <th>Principal</th><th>Balance</th><th></th>
             </tr>
           </thead>
           <tbody>
             {sum.rows.slice(sum.elapsed, sum.elapsed + 12).map((r) => (
               <tr key={r.month}>
                 <td>#{r.month}</td>
-                <td>{fmtMoney(r.emi, loan.currencyCode)}</td>
-                <td>{fmtMoney(r.interest, loan.currencyCode)}</td>
-                <td>{fmtMoney(r.principalComp, loan.currencyCode)}</td>
-                <td>{fmtMoney(r.balance, loan.currencyCode)}</td>
+                {overrideMonth === r.month ? (
+                  <td colSpan={4}>
+                    <div className="row" style={{ gap: 6, alignItems: 'flex-end' }}>
+                      <TextInput type="number" step="0.01" value={overrideValue || ''} onChange={(e) => setOverrideValue(Number(e.target.value))} style={{ width: 110 }} />
+                      <IconButton label="Save" icon={<SaveIcon size={13} />} onClick={() => saveOverride(r.month, overrideValue)} />
+                      <IconButton label="Cancel" icon={<XIcon size={13} />} onClick={() => setOverrideMonth(null)} />
+                    </div>
+                  </td>
+                ) : (
+                  <>
+                    <td>{fmtMoney(r.emi, loan.currencyCode)}{r.overridden && <span className="footer-note"> (custom)</span>}</td>
+                    <td>{fmtMoney(r.interest, loan.currencyCode)}</td>
+                    <td>{fmtMoney(r.principalComp, loan.currencyCode)}</td>
+                    <td>{fmtMoney(r.balance, loan.currencyCode)}</td>
+                  </>
+                )}
+                <td>
+                  {overrideMonth === r.month ? null : (
+                    <div className="row" style={{ gap: 4 }}>
+                      <IconButton label="Set a custom amount for this month" icon={<EditIcon size={13} />} align="right" onClick={() => { setOverrideMonth(r.month); setOverrideValue(r.emi); }} />
+                      {r.overridden && <IconButton label="Reset to the regular installment" icon={<XIcon size={13} />} align="right" onClick={() => clearOverride(r.month)} />}
+                    </div>
+                  )}
+                </td>
               </tr>
             ))}
-            {sum.elapsed >= loan.tenureMonths && <tr><td colSpan={5} className="footer-note">Loan fully repaid.</td></tr>}
+            {sum.elapsed >= sum.rows.length && <tr><td colSpan={6} className="footer-note">Loan fully repaid.</td></tr>}
           </tbody>
         </table>
       </div>
