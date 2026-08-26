@@ -271,7 +271,7 @@ function CGTSettings() {
   const updateSettings = usePSXWorkbookStore((s) => s.updateSettings);
 
   return (
-    <Card style={{ marginTop: 16 }}>
+    <Card>
       <h3 style={{ marginTop: 0 }}>Capital gains tax</h3>
       <p className="footer-note" style={{ marginTop: -4 }}>
         Applied to gains only (a loss generates neither a charge nor a rebate) — shown as an
@@ -300,7 +300,7 @@ function CostBasisSettings() {
   const updateSettings = usePSXWorkbookStore((s) => s.updateSettings);
 
   return (
-    <Card style={{ marginTop: 16 }}>
+    <Card>
       <h3 style={{ marginTop: 0 }}>Cost basis method</h3>
       <p className="footer-note" style={{ marginTop: -4 }}>
         Average cost blends every buy into one running average, so a sell can't be tied to a
@@ -324,12 +324,21 @@ function AmountSettings() {
   const settings = usePSXWorkbookStore((s) => s.workbook.settings);
   const updateSettings = usePSXWorkbookStore((s) => s.updateSettings);
 
+  // README Pending item 63: these 4 sub-cards used to stack full-width one
+  // under another (each is just a handful of fields, nowhere near needing
+  // the full page width) — a responsive grid lets 2 sit side by side on a
+  // wide viewport instead, same pattern the Net Worth page's own two
+  // summary cards already established. `FeeSettings` has the most fields
+  // by far, so it's left spanning both columns on its own row rather than
+  // forced narrow next to a 3-field card.
   return (
-    <div>
-      <FeeSettings />
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, alignItems: 'start' }}>
+      <div style={{ gridColumn: '1 / -1' }}>
+        <FeeSettings />
+      </div>
       <CGTSettings />
       <CostBasisSettings />
-      <Card style={{ marginTop: 16 }}>
+      <Card>
         <h3 style={{ marginTop: 0 }}>General</h3>
         <div className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
           <Field label="Tick size" width={90}>

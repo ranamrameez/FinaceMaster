@@ -1,5 +1,6 @@
 import type { BankTransaction } from '../types/bankWorkbook';
 import type { CashEntry } from '../types/cashWorkbook';
+import type { EMIRepayment } from '../types/emiWorkbook';
 import type { InterEntityTransfer, InterEntityTransferInput, LinkModule, LinkSideConfig } from '../types/interEntityTransfer';
 import type { PersonalLoanRepayment } from '../types/personalLoansWorkbook';
 import type { RentalEntry } from '../types/rentalsWorkbook';
@@ -13,7 +14,8 @@ export type LinkSideRecord =
   | { module: 'bank'; record: BankTransaction }
   | { module: 'qse' | 'psx' | 'funds'; record: Transfer }
   | { module: 'rentals'; record: RentalEntry }
-  | { module: 'personalLoans'; record: PersonalLoanRepayment };
+  | { module: 'personalLoans'; record: PersonalLoanRepayment }
+  | { module: 'emi'; record: EMIRepayment };
 
 function buildSideRecord(
   cfg: LinkSideConfig,
@@ -100,6 +102,19 @@ function buildSideRecord(
         module: 'personalLoans',
         record: { id, loanId: cfg.ref, date, amount },
       };
+    case 'emi':
+      // Same "direction doesn't flip the sign" exception as personalLoans
+      // above — an EMI installment payment always reduces what's owed
+      // regardless of which side of the link it's on. `emiMonth` is
+      // resolved by the picker UI (see LinkSideConfig's own doc comment)
+      // since this function has no store access to read the loan's
+      // current schedule.
+      if (!cfg.ref) throw new Error('EMI/Loans side of a linked transfer needs a loan.');
+      if (!cfg.emiMonth) throw new Error("Couldn't determine which installment this payment applies to.");
+      return {
+        module: 'emi',
+        record: { id, loanId: cfg.ref, month: cfg.emiMonth, amount, date },
+      };
   }
 }
 
@@ -153,6 +168,10 @@ export function isSupportedLinkPair(from: LinkModule, to: LinkModule): boolean {
     ['funds', 'bank'],
     ['cash', 'funds'],
     ['funds', 'cash'],
+    ['bank', 'emi'],
+    ['emi', 'bank'],
+    ['cash', 'emi'],
+    ['emi', 'cash'],
   ];
   return supported.some(([a, b]) => a === from && b === to);
 }

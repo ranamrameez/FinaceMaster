@@ -22,10 +22,11 @@ import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
+import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
 import { useEMIWorkbookStore } from '../../../store/emiWorkbookStore';
 import { usePlannedBankWorkbookStore } from '../../../store/plannedBankWorkbookStore';
-import type { EMILoan } from '../../../types/emiWorkbook';
+import type { EMILoan, EMIRepayment } from '../../../types/emiWorkbook';
 import type { PlannedBankTransaction } from '../../../types/plannedBank';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -104,6 +105,11 @@ function AddLoanForm() {
 function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: () => void; startInEditMode?: boolean }) {
   const deleteEntry = useEMIWorkbookStore((s) => s.deleteEntry);
   const updateEntry = useEMIWorkbookStore((s) => s.updateEntry);
+  const repayments = useEMIWorkbookStore((s) => s.workbook.repayments);
+  const addRepayment = useEMIWorkbookStore((s) => s.addRepayment);
+  const updateRepayment = useEMIWorkbookStore((s) => s.updateRepayment);
+  const deleteRepayment = useEMIWorkbookStore((s) => s.deleteRepayment);
+  const loanRepayments = repayments.filter((r) => r.loanId === loan.id);
   const [editing, setEditing] = useState(!!startInEditMode);
   const [editRow, setEditRow] = useState<EMILoan>(loan);
   const sum = emiSummary(loan);
@@ -121,20 +127,41 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
    * bigger payment every 6th month. User's explicit design choice (via
    * AskUserQuestion) was a per-month override table over a recurring-
    * pattern rule: the regular schedule stays the default, and any single
-   * month can be given a different actual payment. */
+   * month can be given a different actual payment.
+   *
+   * README Pending items 21/62's remainder (2026-08-26): this now goes
+   * through a real, addressable `EMIRepayment` record (`addRepayment`/
+   * `updateRepayment`/`deleteRepayment`, defined in `emiWorkbookStore.ts`)
+   * instead of writing `installmentOverrides` directly — those actions keep
+   * `installmentOverrides` in sync as a side effect, so the schedule engine
+   * itself is untouched, but the payment is now a real ledger row a
+   * Bank/Cash transfer can link to (see the Transfers page). */
   const saveOverride = async (month: number, value: number) => {
     if (!(value > 0)) return toast('Enter an amount greater than zero.');
     if (!(await ensureSignedIn('Sign in to customize this loan\'s schedule.'))) return;
-    updateEntry(loan.id, { installmentOverrides: { ...(loan.installmentOverrides || {}), [month]: value } });
+    const existing = loanRepayments.find((r) => r.month === month);
+    if (existing) {
+      if (!(await warnIfLinked('emi', existing.id))) return;
+      updateRepayment(existing.id, { amount: value });
+    } else {
+      addRepayment({ id: crypto.randomUUID(), loanId: loan.id, month, amount: value, date: installmentDueDate(loan, month), source: 'manual' });
+    }
     setOverrideMonth(null);
     toast(`Month #${month} set to ${fmtMoney(value, loan.currencyCode)}.`);
   };
 
   const clearOverride = async (month: number) => {
-    if (!(await ensureSignedIn('Sign in to customize this loan\'s schedule.'))) return;
-    const overrides = { ...(loan.installmentOverrides || {}) };
-    delete overrides[month];
-    updateEntry(loan.id, { installmentOverrides: overrides });
+    const existing = loanRepayments.find((r) => r.month === month);
+    if (existing) {
+      await confirmAndDeleteLinkable('emi', existing.id, () => deleteRepayment(existing.id));
+    } else if (loan.installmentOverrides?.[month] != null) {
+      // A pre-2026-08-26 override with no matching repayment record (real
+      // user data written before this feature existed) — clear it directly.
+      if (!(await ensureSignedIn('Sign in to customize this loan\'s schedule.'))) return;
+      const overrides = { ...(loan.installmentOverrides || {}) };
+      delete overrides[month];
+      updateEntry(loan.id, { installmentOverrides: overrides });
+    }
     setOverrideMonth(null);
     toast(`Month #${month} reset to the regular installment.`);
   };
@@ -409,7 +436,78 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
         </table>
       </div>
       </CollapsibleCard>
+
+      <RepaymentLog loan={loan} repayments={loanRepayments} />
     </div>
+  );
+}
+
+/** README Pending items 21/62's remainder: a real, addressable log of every
+ * actual payment recorded against this loan — the same underlying data the
+ * Schedule table's pencil icon edits (both read/write through
+ * `emiWorkbookStore.ts`'s `addRepayment`/`updateRepayment`/
+ * `deleteRepayment`), shown here as one reviewable list covering every
+ * month (past or upcoming), not just the Schedule table's next-12 window.
+ * This is also the addressable record Bank/Cash's Transfers-page linking
+ * now points at. */
+function RepaymentLog({ loan, repayments }: { loan: EMILoan; repayments: EMIRepayment[] }) {
+  const ensureSignedIn = useEnsureSignedIn();
+  const updateRepayment = useEMIWorkbookStore((s) => s.updateRepayment);
+  const deleteRepayment = useEMIWorkbookStore((s) => s.deleteRepayment);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editAmount, setEditAmount] = useState(0);
+  const sorted = [...repayments].sort((a, b) => a.month - b.month);
+
+  if (!sorted.length) return null;
+
+  const saveEdit = async (r: EMIRepayment) => {
+    if (!(editAmount > 0)) return toast('Enter an amount greater than zero.');
+    if (!(await ensureSignedIn('Sign in to edit this loan\'s repayments.'))) return;
+    if (!(await warnIfLinked('emi', r.id))) return;
+    updateRepayment(r.id, { amount: editAmount });
+    setEditId(null);
+    toast('Repayment updated.');
+  };
+
+  return (
+    <CollapsibleCard title={<h3 style={{ margin: 0 }}>Repayment log</h3>} style={{ marginBottom: 16 }}>
+      <p className="footer-note" style={{ marginTop: 0 }}>
+        Every actual payment recorded against this loan. A Bank/Cash entry on the Transfers page can link to one
+        of these — deleting a linked repayment here also removes the linked side there.
+      </p>
+      <div className="table-scroll">
+        <table>
+          <thead><tr><th>Month</th><th>Due date</th><th>Amount</th><th>Source</th><th></th></tr></thead>
+          <tbody>
+            {sorted.map((r) => (
+              <tr key={r.id}>
+                <td>#{r.month}</td>
+                <td>{installmentDueDate(loan, r.month)}</td>
+                <td>
+                  {editId === r.id ? (
+                    <TextInput type="number" step="0.01" value={editAmount || ''} onChange={(e) => setEditAmount(Number(e.target.value))} style={{ width: 100 }} />
+                  ) : fmtMoney(r.amount, loan.currencyCode)}
+                </td>
+                <td>{r.source === 'statement-import' ? 'Imported' : 'Manual'}</td>
+                <td>
+                  {editId === r.id ? (
+                    <div className="row" style={{ gap: 4 }}>
+                      <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={() => saveEdit(r)} />
+                      <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditId(null)} />
+                    </div>
+                  ) : (
+                    <div className="row" style={{ gap: 4 }}>
+                      <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => { setEditId(r.id); setEditAmount(r.amount); }} />
+                      <IconButton label="Delete" icon={<TrashIcon size={13} />} align="right" onClick={() => confirmAndDeleteLinkable('emi', r.id, () => deleteRepayment(r.id))} />
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </CollapsibleCard>
   );
 }
 

@@ -8,5 +8,6 @@ export function createEmptyEMIWorkbook(): EMIWorkbook {
   return {
     settings: { ...DEFAULT_EMI_SETTINGS },
     entries: [],
+    repayments: [],
   };
 }

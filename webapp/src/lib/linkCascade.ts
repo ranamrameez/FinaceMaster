@@ -1,6 +1,7 @@
 import { confirmDialog } from '../components/ConfirmDialog';
 import { useBankWorkbookStore } from '../store/bankWorkbookStore';
 import { useCashWorkbookStore } from '../store/cashWorkbookStore';
+import { useEMIWorkbookStore } from '../store/emiWorkbookStore';
 import { useFundsWorkbookStore } from '../store/fundsWorkbookStore';
 import { useInterEntityTransfersStore } from '../store/interEntityTransfersStore';
 import { usePersonalLoansWorkbookStore } from '../store/personalLoansWorkbookStore';
@@ -23,6 +24,7 @@ export function dispatchAdd(side: LinkSideRecord) {
     case 'funds': return useFundsWorkbookStore.getState().addTransfer(side.record);
     case 'rentals': return useRentalsWorkbookStore.getState().addEntry(side.record);
     case 'personalLoans': return usePersonalLoansWorkbookStore.getState().addRepayment(side.record);
+    case 'emi': return useEMIWorkbookStore.getState().addRepayment(side.record);
   }
 }
 
@@ -35,6 +37,7 @@ export function dispatchUpdate(side: LinkSideRecord) {
     case 'funds': return useFundsWorkbookStore.getState().updateTransfer(side.record.id, side.record);
     case 'rentals': return useRentalsWorkbookStore.getState().updateEntry(side.record.id, side.record);
     case 'personalLoans': return usePersonalLoansWorkbookStore.getState().updateRepayment(side.record.id, side.record);
+    case 'emi': return useEMIWorkbookStore.getState().updateRepayment(side.record.id, side.record);
   }
 }
 
@@ -47,6 +50,7 @@ export function dispatchRemove(module: LinkModule, id: string) {
     case 'funds': return useFundsWorkbookStore.getState().deleteTransfer(id);
     case 'rentals': return useRentalsWorkbookStore.getState().deleteEntry(id);
     case 'personalLoans': return usePersonalLoansWorkbookStore.getState().deleteRepayment(id);
+    case 'emi': return useEMIWorkbookStore.getState().deleteRepayment(id);
   }
 }
 

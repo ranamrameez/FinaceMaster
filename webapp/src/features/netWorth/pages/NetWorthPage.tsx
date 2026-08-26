@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Doughnut } from 'react-chartjs-2';
+import { Doughnut, Line } from 'react-chartjs-2';
 import { Card, MoneyValue, StatCard } from '../../../components/Card';
+import { confirmDialog } from '../../../components/ConfirmDialog';
+import { Notice } from '../../../components/Notice';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { toast } from '../../../components/Toast';
 import { ChartCard } from '../../qse/components/ChartCard';
@@ -12,15 +14,19 @@ import { netIncomeByCurrency as rentalsNetIncomeByCurrency } from '../../../lib/
 import { fundsValueByCurrency } from '../../../lib/calc/fundsModule';
 import { computeNetWorthByCurrency, flowByCurrency } from '../../../lib/calc/netWorth';
 import { convertAmount, effectiveRate, fetchFxRates, isFxStale, loadCachedFxRates, saveFxRates, setCrossRate, type FxRates } from '../../../lib/fx';
+import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
+import { firebaseReady } from '../../../lib/firebase/client';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
-import { dlDoughnut } from '../../../lib/chartLabels';
+import { dlDoughnut, dlLine } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
+import { cssVar } from '../../../lib/cssVar';
 import { HUES } from '../../../lib/statCardHues';
 import { useAppearanceStore } from '../../../store/appearanceStore';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
+import { useNetWorthSnapshotsWorkbookStore } from '../../../store/netWorthSnapshotsWorkbookStore';
 import { usePersonalLoansWorkbookStore } from '../../../store/personalLoansWorkbookStore';
 import { useEMIWorkbookStore } from '../../../store/emiWorkbookStore';
 import { useFundsWorkbookStore } from '../../../store/fundsWorkbookStore';
@@ -40,7 +46,15 @@ import { usePSXDerived } from '../../psx/hooks/usePSXDerived';
  * arbitrary outbound hosts; needs a real browser to confirm), every
  * per-currency section still renders in its own currency with zero
  * dependency on FX — only the single converted grand-total line degrades. */
-export function NetWorthPage() {
+export function NetWorthPage({
+  syncStatus,
+  cloudEmpty,
+  uploadLocalToCloud,
+}: {
+  syncStatus: string;
+  cloudEmpty: boolean;
+  uploadLocalToCloud: () => Promise<void>;
+}) {
   const cashEntries = useCashWorkbookStore((s) => s.workbook.entries);
   const bank = useBankWorkbookStore((s) => s.workbook);
   const personalLoans = usePersonalLoansWorkbookStore((s) => s.workbook);
@@ -211,6 +225,32 @@ export function NetWorthPage() {
 
   const ownCurrencies = [...new Set(rows.map((r) => r.currency))].sort();
 
+  // README Pending item 64: a real net-worth-over-time chart, built on an
+  // explicit on-demand snapshot (see types/netWorthSnapshot.ts's own doc
+  // comment for the locked design decisions — cadence/storage/staleness).
+  const snapshots = useNetWorthSnapshotsWorkbookStore((s) => s.workbook.entries);
+  const addSnapshot = useNetWorthSnapshotsWorkbookStore((s) => s.addEntry);
+  const updateSnapshot = useNetWorthSnapshotsWorkbookStore((s) => s.updateEntry);
+  const ensureSignedIn = useEnsureSignedIn();
+  const todaysSnapshot = snapshots.find((s) => s.date === today);
+
+  const saveSnapshot = async () => {
+    if (!(await ensureSignedIn('Sign in to save a net worth snapshot.'))) return;
+    const byCurrency: Record<string, number> = {};
+    rows.forEach((r) => { byCurrency[r.currency] = r.net; });
+    if (todaysSnapshot) {
+      updateSnapshot(todaysSnapshot.id, { byCurrency });
+      toast('Updated today\'s net worth snapshot.');
+    } else {
+      addSnapshot({ id: crypto.randomUUID(), date: today, byCurrency });
+      toast('Net worth snapshot saved.');
+    }
+  };
+
+  const history = [...snapshots]
+    .filter((s) => s.byCurrency[preferredCurrency] != null)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
   return (
     <div>
       <h1>Net Worth</h1>
@@ -236,6 +276,12 @@ export function NetWorthPage() {
           <div style={{ marginTop: 12 }}>
             <StatCard label={`Estimated net worth (${preferredCurrency})`} value={fmtMoney(grandTotal, preferredCurrency)} hue={grandTotal >= 0 ? 'var(--profit)' : 'var(--loss)'} />
           </div>
+          <button type="button" className="btn secondary small" style={{ marginTop: 8 }} onClick={saveSnapshot}>
+            {todaysSnapshot ? 'Update today\'s snapshot' : 'Save snapshot'}
+          </button>
+          <span className="footer-note" style={{ marginLeft: 8 }}>
+            {todaysSnapshot ? 'Already saved today — click again to overwrite with the current numbers.' : 'Logs today\'s net worth for the history chart below.'}
+          </span>
           {unconverted.length > 0 && (
             <div className="footer-note" style={{ marginTop: 8 }}>
               No {preferredCurrency} rate available for {unconverted.join(', ')} — those currencies' totals
@@ -321,13 +367,8 @@ export function NetWorthPage() {
         </Card>
       </div>
 
-      {/* Item 4: "add charts to view capital split per currency" — a
-          net-worth-over-time chart would need periodic snapshots this app
-          doesn't take yet (net worth is always computed live from current
-          data, nothing is logged historically) — that's a real design
-          decision (how often to snapshot, where to store it) not guessed
-          at here; tracked as its own Pending item instead. The split-by-
-          currency chart below needs no new storage, so it's built now. */}
+      {/* Item 4: "add charts to view capital split per currency" — the
+          split-by-currency chart below needs no new storage. */}
       {splitData.length > 1 && (
         <ChartCard title={`Capital split by currency (converted to ${preferredCurrency})`} empty={false}>
           <div style={{ height: 220 }}>
@@ -341,6 +382,31 @@ export function NetWorthPage() {
           </div>
         </ChartCard>
       )}
+
+      {/* README Pending item 64: net-worth-over-time, built on the explicit
+          "Save snapshot" button above rather than an automatic log — see
+          types/netWorthSnapshot.ts's own doc comment for why. Shown in the
+          currently-selected preferred currency only (no historical FX rates
+          are kept, so plotting several currencies converted to one would be
+          misleading); a currency with no snapshot history yet just doesn't
+          have a line. */}
+      <ChartCard title={`Net worth over time (${preferredCurrency})`} empty={history.length < 2}>
+        <div style={{ height: 220 }}>
+          <Line
+            data={{
+              labels: history.map((s) => s.date),
+              datasets: [{
+                label: preferredCurrency,
+                data: history.map((s) => s.byCurrency[preferredCurrency]),
+                borderColor: cssVar('--accent') || '#3ecf8e',
+                backgroundColor: cssVar('--accent') || '#3ecf8e',
+                tension: 0.2,
+              }],
+            }}
+            options={{ plugins: { datalabels: dlLine((v) => fmtMoney(v, preferredCurrency)) } }}
+          />
+        </div>
+      </ChartCard>
 
       {rows.length === 0 && (
         <Card><div className="footer-note">No balances recorded yet across any module.</div></Card>
@@ -403,6 +469,35 @@ export function NetWorthPage() {
               <div key={code} className="stat-card card"><div className="label">{code}</div><MoneyValue n={amount} currency={code} /></div>
             ))}
           </div>
+        </Card>
+      )}
+
+      {firebaseReady && (
+        <Card style={{ marginTop: 12 }}>
+          <h3 style={{ marginTop: 0 }}>Account</h3>
+          <p className="footer-note">{syncStatus}</p>
+          {cloudEmpty && (
+            <Notice tone="warning" style={{ marginTop: 8 }}>
+              <p style={{ marginTop: 0 }}>No net worth snapshots found in the cloud for this account. This won't upload automatically.</p>
+              <button
+                className="btn secondary"
+                onClick={async () => {
+                  const ok = await confirmDialog(
+                    'This will overwrite anything currently in the cloud (there is nothing there now, but confirming since this can\'t be undone).',
+                    `Upload ${snapshots.length} local snapshot${snapshots.length === 1 ? '' : 's'} to the cloud?`,
+                  );
+                  if (!ok) return;
+                  try {
+                    await uploadLocalToCloud();
+                  } catch (e) {
+                    toast(e instanceof Error ? e.message : 'Something went wrong.');
+                  }
+                }}
+              >
+                Upload local data to cloud ({snapshots.length} snapshot{snapshots.length === 1 ? '' : 's'})
+              </button>
+            </Notice>
+          )}
         </Card>
       )}
     </div>

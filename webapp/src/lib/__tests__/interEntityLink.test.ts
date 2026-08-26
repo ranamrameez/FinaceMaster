@@ -193,6 +193,56 @@ describe('buildLinkedRecords', () => {
     expect(() => buildLinkedRecords(input, ids)).toThrow();
   });
 
+  it('maps Bank -> EMI to a repayment against the chosen loan and month', () => {
+    const input: InterEntityTransferInput = {
+      date: '2026-07-01',
+      fromAmount: 250,
+      toAmount: 250,
+      from: { module: 'bank', ref: 'acct-1' },
+      to: { module: 'emi', ref: 'loan-1', emiMonth: 3 },
+    };
+    const { from, to } = buildLinkedRecords(input, ids);
+    expect(from.module).toBe('bank');
+    if (from.module === 'bank') expect(from.record.amount).toBe(-250);
+    expect(to.module).toBe('emi');
+    if (to.module === 'emi') expect(to.record).toMatchObject({ loanId: 'loan-1', month: 3, amount: 250, date: '2026-07-01' });
+  });
+
+  it('maps EMI -> Cash to a repayment with the same positive amount, direction ignored', () => {
+    const input: InterEntityTransferInput = {
+      date: '2026-07-02',
+      fromAmount: 100,
+      toAmount: 100,
+      from: { module: 'emi', ref: 'loan-2', emiMonth: 5 },
+      to: { module: 'cash', currencyCode: 'USD' },
+    };
+    const { from } = buildLinkedRecords(input, ids);
+    expect(from.module).toBe('emi');
+    if (from.module === 'emi') expect(from.record).toMatchObject({ loanId: 'loan-2', month: 5, amount: 100 });
+  });
+
+  it('throws for an EMI side missing a loan ref', () => {
+    const input: InterEntityTransferInput = {
+      date: '2026-07-01',
+      fromAmount: 10,
+      toAmount: 10,
+      from: { module: 'bank', ref: 'acct-1' },
+      to: { module: 'emi', emiMonth: 1 },
+    };
+    expect(() => buildLinkedRecords(input, ids)).toThrow();
+  });
+
+  it('throws for an EMI side missing a resolved month', () => {
+    const input: InterEntityTransferInput = {
+      date: '2026-07-01',
+      fromAmount: 10,
+      toAmount: 10,
+      from: { module: 'bank', ref: 'acct-1' },
+      to: { module: 'emi', ref: 'loan-1' },
+    };
+    expect(() => buildLinkedRecords(input, ids)).toThrow();
+  });
+
   it('maps Bank -> Funds to a WITHDRAWAL/DEPOSIT pair with zero fee, same as QSE/PSX', () => {
     const input: InterEntityTransferInput = {
       date: '2026-06-01',
@@ -260,6 +310,10 @@ describe('isSupportedLinkPair', () => {
     expect(isSupportedLinkPair('funds', 'bank')).toBe(true);
     expect(isSupportedLinkPair('cash', 'funds')).toBe(true);
     expect(isSupportedLinkPair('funds', 'cash')).toBe(true);
+    expect(isSupportedLinkPair('bank', 'emi')).toBe(true);
+    expect(isSupportedLinkPair('emi', 'bank')).toBe(true);
+    expect(isSupportedLinkPair('cash', 'emi')).toBe(true);
+    expect(isSupportedLinkPair('emi', 'cash')).toBe(true);
   });
 
   it('rejects pairs outside v1 scope', () => {
