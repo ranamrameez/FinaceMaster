@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 
 export type CategoryKey = 'netWorth' | 'stocks' | 'funds' | 'bank' | 'cash' | 'personalLoans' | 'emi' | 'rentals' | 'subscriptions' | 'transfers' | 'budget';
 
@@ -36,63 +35,32 @@ export function categoryForPath(pathname: string): CategoryKey {
   return 'stocks';
 }
 
-/** README item 18: generalizes the old QSE/PSX-only chip pair into a
- * dropdown across every module (Stock Exchanges, Funds, Banking, Cash,
- * Personal Loans, EMI/Loans, Rentals), highlighting the active one.
- * Stock Exchanges keeps its own QSE/PSX sub-switcher + page nav rendered
- * by the caller below this component; every other category is a single
- * page, so picking it just navigates there. */
+/** README item 18 originally generalized the old QSE/PSX-only chip pair
+ * into a dropdown across every module. User feedback (2026-08-26): opening
+ * a popup every time just to switch modules was "very hectic" — reworked
+ * into a plain always-visible list (same `.navbtn` styling every other
+ * sidebar nav item uses), so switching modules is one click instead of
+ * two. Active-state highlighting reuses `categoryForPath` (not React
+ * Router's own `NavLink` matching) so Stock Exchanges correctly stays
+ * highlighted across every `/psx/*` route too, not just the exact "/"
+ * match. Stock Exchanges keeps its own QSE/PSX sub-switcher + page nav
+ * rendered by the caller below this component; every other category is a
+ * single page, so picking it just navigates there. */
 export function CategoryNav({ onNavigate }: { onNavigate?: () => void }) {
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
-  const navigate = useNavigate();
   const active = categoryForPath(location.pathname);
-  const activeLabel = CATEGORIES.find((c) => c.key === active)?.label ?? 'Stock Exchanges';
-
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('mousedown', onPointerDown);
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('mousedown', onPointerDown);
-      document.removeEventListener('keydown', onKeyDown);
-    };
-  }, [open]);
-
   return (
-    <div className="category-popover" ref={containerRef}>
-      <button className="navbtn category-trigger" type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-        <span className="num">▤</span>
-        {activeLabel}
-        <span className="category-chevron">{open ? '▴' : '▾'}</span>
-      </button>
-      {open && (
-        <div className="category-panel">
-          <div className="category-panel-title">Categories</div>
-          {CATEGORIES.map((c) => (
-            <button
-              key={c.key}
-              type="button"
-              className={`category-option${c.key === active ? ' active' : ''}`}
-              onClick={() => {
-                setOpen(false);
-                navigate(c.to);
-                onNavigate?.();
-              }}
-            >
-              {c.label}
-              {c.key === active ? <span className="category-check">✓</span> : null}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+    <nav className="navlist category-list">
+      {CATEGORIES.map((c) => (
+        <NavLink
+          key={c.key}
+          to={c.to}
+          onClick={onNavigate}
+          className={`navbtn category-item${c.key === active ? ' active' : ''}`}
+        >
+          {c.label}
+        </NavLink>
+      ))}
+    </nav>
   );
 }

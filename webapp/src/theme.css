@@ -291,11 +291,23 @@
   .shell{display:flex; min-height:100vh;}
   .sidebar{
     width:220px; flex-shrink:0;
-    position:fixed; top:0; left:0; height:100vh; overflow-y:auto;
+    position:fixed; top:0; left:0; height:100vh;
+    display:flex; flex-direction:column;
     background:var(--panel);
     border-right:1px solid var(--border);
     padding:18px 10px;
   }
+  /* User feedback (2026-08-26): the account/backup/disclaimer footer used
+     to just be the last thing in the sidebar's own overflow:auto scroll —
+     on a page with a long nav list it could end up scrolled out of view
+     rather than staying anchored. `.sidebar` is now a flex column instead:
+     `.sidebar-scroll` (the nav content) is the only part that scrolls
+     (flex:1 + min-height:0, the min-height is what actually lets a flex
+     child shrink below its content size and scroll instead of pushing the
+     footer off-screen), `.sidebar-footer` sits after it and is never part
+     of that scroll region, so it's always visible at the bottom. */
+  .sidebar-scroll{flex:1; min-height:0; overflow-y:auto;}
+  .sidebar-footer{flex-shrink:0; padding-top:10px;}
   nav.navlist{display:flex; flex-direction:column; gap:2px;}
   .navbtn{
     display:flex; align-items:center; gap:10px;
@@ -723,6 +735,15 @@
   .chart-card .section-title{margin:0 0 10px 0; font-size:13px;}
   .chart-box{position:relative; height:220px; width:100%;}
   .chart-box canvas{max-height:220px;}
+  /* User-reported (2026-08-26): "No pie charts or other charts take more
+     than 35vh" — ChartCard's charts had no height cap at all, relying on
+     Chart.js's own default aspectRatio (2:1), which in a wide column
+     could render 500px+ tall. Paired with `ChartJS.defaults.
+     maintainAspectRatio = false` (chartSetup.ts) so the canvas actually
+     fills this container instead of computing its own height from the
+     ratio; `height` (not just `max-height`) is required for that fill to
+     have something definite to size against. */
+  .chart-canvas-wrap{position:relative; width:100%; height:min(35vh, 340px);}
   /* ---------- Info tooltip — compact "what is this / how is it computed"
      explainer. Pure CSS (no JS), so it's cheap to sprinkle everywhere a
      paragraph of explanation used to sit permanently under a heading. ---------- */
@@ -1300,35 +1321,25 @@ html.auth-signed-out #cloudSignedInBox{display:none !important;}
 .appearance-panel .btn{width:100%;padding:7px 10px;font-size:12px;}
 .sidebar-popover .appearance-trigger{width:100%; justify-content:flex-start; text-align:left;}
 
-/* Sidebar category dropdown (README item 18) — replaces the old flat
-   Stocks-heading + "More" link list with one switcher spanning every
-   module. Positioning follows the same position:fixed-with-no-offsets
-   trick as .appearance-panel above: it keeps the panel at the spot it
-   would occupy in normal flow while escaping the sidebar's own
-   overflow:auto clipping. */
-.category-popover{position:relative;width:100%;margin-bottom:10px;}
-.category-trigger{width:100%;display:flex;align-items:center;gap:6px;}
-.category-trigger .category-chevron{margin-left:auto;color:var(--muted);font-size:11px;}
-.category-panel{
-  position:fixed; z-index:1000;
-  width:220px;padding:6px;
-  background:var(--panel);border:1px solid var(--border);border-radius:10px;
-  box-shadow:var(--shadow-lg);
-  display:flex;flex-direction:column;gap:2px;
+/* Sidebar module list (README item 18, reworked 2026-08-26 per user
+   feedback). Originally a dropdown/popover you had to open every time to
+   switch modules — "very hectic" per the report — now a plain always-
+   visible list, same `.navbtn` styling as every other sidebar nav item, so
+   picking a module is one click instead of two. */
+.category-list{margin-bottom:6px; padding-bottom:6px; border-bottom:1px solid var(--border);}
+.category-item.active{background:var(--accent-soft); color:var(--on-accent-soft); font-weight:600;}
+
+/* Account section (2026-08-26 feedback): the sign-in state and the backup/
+   restore link used to be plain `.footer-note`-styled text links, easy to
+   miss as actual actions. Both are now real `.navbtn`s, grouped in a
+   bordered box so "Backup / restore all data" visually reads as part of
+   the account section, not an unrelated footer line. */
+.sidebar-account-group{
+  border:1px solid var(--border); border-radius:8px; padding:2px;
+  margin-top:12px; display:flex; flex-direction:column; gap:1px;
 }
-.category-panel-title{
-  font-family:var(--disp);font-weight:700;font-size:12px;
-  color:var(--muted);padding:4px 8px 6px;
-  text-transform:uppercase;letter-spacing:.04em;
-}
-.category-option{
-  display:flex;align-items:center;justify-content:space-between;gap:8px;
-  width:100%;padding:7px 9px;border-radius:7px;border:none;background:transparent;
-  color:var(--text);font-size:13px;text-align:left;cursor:pointer;
-}
-.category-option:hover{background:var(--panel-2);}
-.category-option.active{background:var(--accent-soft);color:var(--on-accent-soft);font-weight:600;}
-.category-check{color:var(--accent);font-size:12px;}
+.account-btn{font-weight:600;}
+.account-sub-btn{font-size:12px; color:var(--muted); padding-left:34px;}
 
 /* Phase 1 addition (README item 14): a super-compact "console" density on
  * top of the existing comfortable/compact tiers — tighter padding, smaller

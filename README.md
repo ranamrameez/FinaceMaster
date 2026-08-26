@@ -3943,6 +3943,68 @@ FinanceManager live link:
      actual race-condition fix itself can't be exercised by an automated test in this session
      (no real signed-in Firebase account available here, same limitation noted throughout this
      file), so the user re-trying the import is the real confirmation this needs.
+180. **Critical, user-reported same day (2026-08-26): the import STILL didn't stick after item
+     179's fix — the real bug, found this time.** The user tried again and re-exported: still
+     0 bank transactions. Item 179's race-condition fix was real and necessary but wasn't the
+     (only) blocker — diagnosed this one for certain rather than guessing again, by writing a
+     small Vitest harness that imports the actual store modules directly and calls
+     `setWorkbook()` on each with the real parsed file, outside any browser/Firebase
+     dependency. It threw immediately on `qse` (the first module processed): `createWorkbookStore.
+     ts`'s `normalize()` calls `wb.transactions.map(...)` (and the same for `transfers`/
+     `adjustments`/`dividends`/`tradePlans`) with NO guard that those fields exist on `wb` —
+     every OTHER caller of `setWorkbook` in this app (each module's own per-module JSON import
+     in its Settings tab, and every cloud-sync pull in `useWorkbookCloudSync`) already merges
+     the incoming data onto that module's own `createEmpty()` shape first, specifically because
+     Firebase RTDB strips an empty array from storage entirely at any nesting depth (documented
+     in this file's Design decisions) — a real production export can genuinely be missing a
+     field like `tradePlans` outright. `AppDataPage.importAll()` was the ONE caller that skipped
+     this merge. Since `qse` is processed first in iteration order and threw uncaught, the
+     entire `foundKeys.forEach` loop aborted immediately — NOTHING imported, not just `qse`,
+     exactly matching "no transaction imported" even with item 179's direct-Firebase-write
+     already in place (that write also read from the un-merged `parsed[key]`, so it never even
+     got a chance to run). **Fix**: `importAll()` now merges each module's parsed data onto its
+     own `createEmpty*Workbook()` (all 14 imported into `AppDataPage.tsx`) before either the
+     local `setWorkbook()` calls or the direct-to-cloud writes, matching the pattern every other
+     caller already uses. **Verified this one for real, not just by inspection**: re-ran the
+     same Vitest harness against the exact real file after the fix — all 14 modules' `setWorkbook`
+     now succeed with zero errors, and the resulting store state has the exact expected counts
+     (1790 bank transactions, 227 cash entries, 6 subscriptions, 39 QSE / 64 PSX transactions) —
+     the strongest confirmation available without a real signed-in browser session. `npx tsc -b`
+     / `npm run test` (388 tests, unchanged) / `npm run build` all clean.
+181. **UI/UX batch, user-reported (2026-08-26): sidebar navigation overhaul + chart height cap.**
+     Four related complaints from one message, all addressed: (1) "Nav should have proper
+     buttons for account & Account backup should be a part of it" — the sign-in state and
+     "Backup / restore all data" link were plain `.footer-note`-styled text; both are now real
+     `.navbtn`-styled buttons, visually grouped in a bordered box so backup reads as part of
+     the account section, not an unrelated footer line. (2) "Text should be pinned at the
+     bottom" — `.sidebar` is now a flex column with only the nav content (`.sidebar-scroll`)
+     scrolling internally; the account group + disclaimer + copyright (`.sidebar-footer`) sit
+     outside that scroll region so they're always anchored at the sidebar's bottom edge instead
+     of just being "the last thing in an `overflow:auto` block." (3) "Irritating to use 2 nav
+     menus... always opening the popup to switch... is very hectic" — `CategoryNav.tsx`
+     (README item 18's original dropdown/popover switcher across all 11 modules) is now a
+     plain always-visible list using the same `.navbtn` styling as every other sidebar nav
+     item, so switching modules is one click instead of open-then-click. (4) "No pie charts or
+     other charts take more than 35vh" — `ChartCard` (the shared wrapper every Dashboard/
+     Analytics/module chart uses) had no height cap at all, relying on Chart.js's default
+     `maintainAspectRatio: true` (a fixed 2:1 ratio that, in a wide column with no explicit
+     container height, could render 500px+ tall — exactly what the reported screenshot showed
+     on Budget Planner). Fixed at the shared layer, not per chart: `ChartJS.defaults.
+     maintainAspectRatio = false` set once in `chartSetup.ts` (same file that already sets
+     `layout.padding`/`scales.linear.grace` globally), paired with a new `.chart-canvas-wrap`
+     class (`height: min(35vh, 340px)`) wrapping `ChartCard`'s children in `theme.css` — every
+     chart that goes through `ChartCard` (the large majority: Dashboard, Analytics ×2, Cash,
+     Funds, Rentals, Banking, Personal Loans, Net Worth, Subscriptions, Budget Planner) is
+     capped in one place. The handful of charts that render directly without `ChartCard`
+     (QSE/PSX `PositionDetail`'s two charts, EMI's amortization chart) were checked and are
+     already well under the cap via their own explicit pixel heights (115-220px) — left
+     untouched. Verified live via Playwright with seeded QSE data: `chart-canvas-wrap` measured
+     exactly 315px at a 900px-tall viewport (35% precisely), the persistent module list shows
+     all 11 links with zero clicks needed, the account/backup group renders as real nav buttons,
+     the footer sits flush at the sidebar's bottom edge, and the mobile drawer (a separate,
+     pre-existing mechanism untouched by this change) still opens correctly with all 11 links
+     visible inside it — zero console errors throughout. `npx tsc -b` / `npm run test` (388
+     tests, unchanged — UI/CSS only) / `npm run build` all clean.
 
 ## Pending
 

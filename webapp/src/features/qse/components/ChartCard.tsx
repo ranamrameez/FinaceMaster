@@ -29,7 +29,7 @@ export function ChartCard({ title, empty, unfiltered, children }: { title: strin
         </h4>
       }
     >
-      {empty ? <p className="footer-note">Not enough data yet.</p> : children}
+      {empty ? <p className="footer-note">Not enough data yet.</p> : <div className="chart-canvas-wrap">{children}</div>}
     </CollapsibleCard>
   );
 }

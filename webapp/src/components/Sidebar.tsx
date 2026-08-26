@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useProfile } from '../lib/firebase/useProfile';
 import { AppearancePanel } from './AppearancePanel';
 import { CategoryNav, categoryForPath } from './CategoryNav';
-import { LogInIcon } from './icons';
+import { ExportIcon, LogInIcon } from './icons';
 import { requireSignIn } from './SignInModal';
 
 const QSE_NAV_ITEMS = [
@@ -73,49 +73,53 @@ export function Sidebar({
           </button>
         )}
       </div>
-      <CategoryNav onNavigate={onNavigate} />
 
-      {category === 'stocks' && (
-        <>
-          <ExchangeSwitcher exchange={exchange} />
-          <nav className="navlist">
-            {navItems.map((item) => (
-              <NavLink key={item.to} to={item.to} end onClick={onNavigate} className={({ isActive }) => `navbtn${isActive ? ' active' : ''}`}>
-                <span className="num">{item.num}</span>
-                {item.label}
-              </NavLink>
-            ))}
-          </nav>
-        </>
-      )}
+      <div className="sidebar-scroll">
+        <CategoryNav onNavigate={onNavigate} />
 
-      <AppearancePanel />
-
-      {user ? (
-        <NavLink to="/settings" className="footer-note" style={{ marginTop: 20, display: 'block', textDecoration: 'none' }}>
-          {profile.avatarEmoji || '●'} Signed in as <strong>{name}</strong>
-        </NavLink>
-      ) : (
-        <button
-          className="footer-note"
-          onClick={() => requireSignIn()}
-          style={{
-            marginTop: 20, display: 'flex', alignItems: 'center', gap: 6, width: '100%',
-            textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer',
-          }}
-        >
-          <LogInIcon size={12} />Not signed in — tap to sign in
-        </button>
-      )}
-      <div className="footer-note" style={{ marginTop: 6 }}>
-        <NavLink to="/app-data" style={{ color: 'inherit' }}>Backup / restore all data</NavLink>
+        {category === 'stocks' && (
+          <>
+            <ExchangeSwitcher exchange={exchange} />
+            <nav className="navlist">
+              {navItems.map((item) => (
+                <NavLink key={item.to} to={item.to} end onClick={onNavigate} className={({ isActive }) => `navbtn${isActive ? ' active' : ''}`}>
+                  <span className="num">{item.num}</span>
+                  {item.label}
+                </NavLink>
+              ))}
+            </nav>
+          </>
+        )}
       </div>
-      <div className="footer-note" style={{ marginTop: 6 }}>
-        Estimates only — verify against your official statement.{' '}
-        <NavLink to="/legal" style={{ color: 'inherit' }}>Disclaimer &amp; Privacy</NavLink>
-      </div>
-      <div className="footer-note" style={{ marginTop: 6 }}>
-        © {new Date().getFullYear()} FinanceRecorder
+
+      <div className="sidebar-footer">
+        <AppearancePanel />
+
+        <div className="sidebar-account-group">
+          {user ? (
+            <NavLink to="/settings" onClick={onNavigate} className="navbtn account-btn">
+              <span className="num">{profile.avatarEmoji || '●'}</span>
+              Signed in as <strong>&nbsp;{name}</strong>
+            </NavLink>
+          ) : (
+            <button type="button" className="navbtn account-btn" onClick={() => requireSignIn()}>
+              <span className="num"><LogInIcon size={13} /></span>
+              Not signed in — tap to sign in
+            </button>
+          )}
+          <NavLink to="/app-data" onClick={onNavigate} className="navbtn account-sub-btn">
+            <span className="num"><ExportIcon size={12} /></span>
+            Backup / restore all data
+          </NavLink>
+        </div>
+
+        <div className="footer-note" style={{ marginTop: 10 }}>
+          Estimates only — verify against your official statement.{' '}
+          <NavLink to="/legal" style={{ color: 'inherit' }}>Disclaimer &amp; Privacy</NavLink>
+        </div>
+        <div className="footer-note" style={{ marginTop: 6 }}>
+          © {new Date().getFullYear()} FinanceRecorder
+        </div>
       </div>
     </div>
   );

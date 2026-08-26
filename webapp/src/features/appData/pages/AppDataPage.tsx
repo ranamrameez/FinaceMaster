@@ -22,6 +22,20 @@ import { usePlannedCashWorkbookStore } from '../../../store/plannedCashWorkbookS
 import { usePlannedRentalsWorkbookStore } from '../../../store/plannedRentalsWorkbookStore';
 import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
 import { useNetWorthSnapshotsWorkbookStore } from '../../../store/netWorthSnapshotsWorkbookStore';
+import { createEmptyWorkbook } from '../../../store/defaultWorkbook';
+import { createEmptyPSXWorkbook } from '../../../store/defaultPsxWorkbook';
+import { createEmptyBankWorkbook } from '../../../store/defaultBankWorkbook';
+import { createEmptyCashWorkbook } from '../../../store/defaultCashWorkbook';
+import { createEmptyEMIWorkbook } from '../../../store/defaultEmiWorkbook';
+import { createEmptyFundsWorkbook } from '../../../store/defaultFundsWorkbook';
+import { createEmptyPersonalLoansWorkbook } from '../../../store/defaultPersonalLoansWorkbook';
+import { createEmptyRentalsWorkbook } from '../../../store/defaultRentalsWorkbook';
+import { createEmptySubscriptionsWorkbook } from '../../../store/defaultSubscriptionsWorkbook';
+import { createEmptyPlannedBankWorkbook } from '../../../store/defaultPlannedBankWorkbook';
+import { createEmptyPlannedCashWorkbook } from '../../../store/defaultPlannedCashWorkbook';
+import { createEmptyPlannedRentalsWorkbook } from '../../../store/defaultPlannedRentalsWorkbook';
+import { createEmptyInterEntityWorkbook } from '../../../store/defaultInterEntityWorkbook';
+import { createEmptyNetWorthSnapshotsWorkbook } from '../../../store/defaultNetWorthSnapshotsWorkbook';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -54,6 +68,34 @@ const CLOUD_PATH_SUFFIX = {
   funds: 'funds', personalLoans: 'personalLoans', rentals: 'rentals', subscriptions: 'subscriptions',
   plannedBank: 'plannedBank', plannedCash: 'plannedCash', plannedRentals: 'plannedRentals',
   interEntityTransfers: 'interEntityTransfers', netWorthSnapshots: 'netWorthSnapshots',
+} as const;
+
+/** Every module's own `createEmpty*Workbook()` — a real bug found via a
+ * user report: `setWorkbook()` (in `createWorkbookStore.ts`,
+ * `createEntryStore.ts`, and the hand-written stores alike) calls its own
+ * `normalize()` directly on whatever it's given, which assumes every array
+ * field is already present (`wb.transactions.map(...)`, etc. with no
+ * guard) — every OTHER caller of `setWorkbook` in this app (each module's
+ * own per-module JSON import in its Settings tab, and every cloud-sync
+ * pull in `useWorkbookCloudSync`) already merges onto `createEmpty()`
+ * first for exactly this reason, this whole-app import was the one path
+ * that skipped it. A real production RTDB export can genuinely be missing
+ * a field entirely: Firebase strips an empty array from storage at ANY
+ * nesting depth (see `createWorkbookStore.ts`'s own `normalize()` comment
+ * on `TradePlan.legs`), so a workbook that had e.g. `tradePlans: []` at
+ * some point has no `tradePlans` key at all in a real export. Without this
+ * merge, `qse` (processed first) threw immediately and silently aborted
+ * the entire `foundKeys.forEach` loop below it -- so NOTHING imported,
+ * not just `qse` -- exactly the "no transaction imported" symptom, even
+ * with the direct-Firebase-write fix from the previous round already in
+ * place. */
+const CREATE_EMPTY = {
+  qse: createEmptyWorkbook, psx: createEmptyPSXWorkbook, bank: createEmptyBankWorkbook,
+  cash: createEmptyCashWorkbook, emiLoans: createEmptyEMIWorkbook, funds: createEmptyFundsWorkbook,
+  personalLoans: createEmptyPersonalLoansWorkbook, rentals: createEmptyRentalsWorkbook,
+  subscriptions: createEmptySubscriptionsWorkbook, plannedBank: createEmptyPlannedBankWorkbook,
+  plannedCash: createEmptyPlannedCashWorkbook, plannedRentals: createEmptyPlannedRentalsWorkbook,
+  interEntityTransfers: createEmptyInterEntityWorkbook, netWorthSnapshots: createEmptyNetWorthSnapshotsWorkbook,
 } as const;
 
 export function AppDataPage() {
@@ -127,9 +169,19 @@ export function AppDataPage() {
       if (!(await ensureSignedIn('Sign in to import data.'))) return;
       setBusy(true);
       try {
+        // Merge each module's parsed data onto its own createEmpty() shape
+        // before doing anything with it -- see CREATE_EMPTY's own comment.
+        // Both the local setWorkbook() calls and the direct-to-Firebase
+        // writes below use this same merged object, so a partial/older
+        // export can't crash either path or leave a half-populated shape
+        // in the cloud.
+        const merged: Partial<Record<ModuleKey, unknown>> = {};
+        foundKeys.forEach((key) => {
+          merged[key] = { ...CREATE_EMPTY[key](), ...(parsed[key] as object) };
+        });
         foundKeys.forEach((key) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (stores[key].setWorkbook as (wb: any) => void)(parsed[key]);
+          (stores[key].setWorkbook as (wb: any) => void)(merged[key]);
         });
         // Also push each imported module straight to its own Firebase path,
         // not just local state. A real bug found via a user report: every
@@ -153,7 +205,7 @@ export function AppDataPage() {
           const database = db;
           const uid = user.uid;
           foundKeys.forEach((key) => {
-            const payload = stripUndefinedDeep({ ...(parsed[key] as object), _updated: new Date().toISOString() });
+            const payload = stripUndefinedDeep({ ...(merged[key] as object), _updated: new Date().toISOString() });
             set(ref(database, `users/${uid}/${CLOUD_PATH_SUFFIX[key]}`), payload).catch((e) =>
               console.warn(`Failed to push imported ${key} to cloud`, e),
             );

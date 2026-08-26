@@ -34,6 +34,16 @@ ChartJS.defaults.set('plugins.datalabels', { display: false });
 ChartJS.defaults.layout.padding = { top: 20, right: 16, bottom: 4, left: 4 };
 ChartJS.defaults.scales.linear.grace = '10%';
 
+/** User-reported (2026-08-26): "No pie charts or other charts take more
+ * than 35vh" — a real, app-wide layout complaint, not one chart. Chart.js
+ * defaults to `maintainAspectRatio: true` (a fixed width:height ratio,
+ * ignoring the container's own CSS height), which is exactly why a chart
+ * in a wide sidebar-adjacent column could render 500px+ tall with no cap.
+ * Set globally so no individual chart call site needs its own `options`
+ * override — `ChartCard`'s `.chart-canvas-wrap` (theme.css) then supplies
+ * the actual height/max-height every chart now respects. */
+ChartJS.defaults.maintainAspectRatio = false;
+
 /** Chart.js's own text (legend labels, axis ticks, tooltip title/body) uses
  * `ChartJS.defaults.color`/`borderColor`, not a CSS var — it defaults to a
  * fixed medium gray regardless of theme. Call this from a chart-bearing
