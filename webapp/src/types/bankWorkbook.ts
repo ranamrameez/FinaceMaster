@@ -19,6 +19,20 @@ export interface BankAccount {
   accountNumber?: string;
   smsSenderId?: string;
   smsSenderNumber?: string;
+  /** README item 82 (2026-08-26 feedback): optional, free-form (not a fixed
+   * enum, per this project's own "category fields must be free-form" rule)
+   * — a branch name/code and a description like "Savings"/"Current"/
+   * "Checking" a user would recognize from their own bank, not a
+   * standardized list this app enforces. */
+  branch?: string;
+  accountType?: string;
+  /** User-requested (2026-08-26): an optional IBAN, plus the bank name/BIC
+   * a lookup against it can fill in (see `lib/ibanLookup.ts`) — all still
+   * freely hand-editable, since lookup can fail or the account may not
+   * have an IBAN at all (many PKR/QAR accounts don't). */
+  iban?: string;
+  bankName?: string;
+  bic?: string;
 }
 
 export interface BankTransaction {

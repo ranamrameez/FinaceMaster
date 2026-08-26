@@ -3661,6 +3661,64 @@ FinanceManager live link:
      attempt hovering the whole heading missed the icon's actual bounding box — hovering the
      icon directly confirmed it works). `npx tsc -b` / `npm run test` (360 tests, unchanged —
      UI-only) / `npm run build` all clean.
+170. **Banking/Cash "Add" forms moved to FAB+popup + Branch/Account Type fields — closes
+     Pending items 81/82/86.** Banking's "Add account" form (previously a permanently-visible
+     `Card` at the top of the Accounts tab) is now a floating "+" button + popup, same pattern
+     already used for EMI's "Add a loan" (Done item 166) — the form itself is unchanged, just
+     moved behind `AddAccountFab`. `BankAccount` gained optional `branch`/`accountType` fields
+     (free-form text with a small suggestion datalist — `Savings`/`Current`/`Checking`/`Salary`/
+     `Business`/`Fixed deposit` — not a fixed enum, per this project's own locked "category
+     fields must be free-form" rule), wired into the add-account form, the accounts table's edit
+     row, a new "Type / Branch" table column, and `AccountDetailModal`'s existing account-detail
+     editor (closes item 82). Same FAB+popup treatment applied to both Banking's and Cash's
+     "Add a plan" forms on their respective Planning tabs (closes item 86). Verified live via
+     Playwright: the permanent forms are confirmed gone from all three tabs, each FAB opens a
+     working modal, a submitted account correctly hit the sign-in gate (no real account to
+     complete an end-to-end save with, same established verification limit as every other
+     sign-in-gated write in this project). `npx tsc -b` / `npm run test` (360 tests, unchanged)
+     / `npm run build` all clean. **Not done in this pass**: item 84 (leading the account-detail
+     modal with "add a transaction" instead of the edit-details form) and item 83 (a real routed
+     detail page vs. a modal) — both still need the larger architecture decision described in
+     their own Pending entries.
+171. **IBAN → bank name/BIC lookup + a "required fields" visual convention (2026-08-26,
+     user-requested).** New `lib/ibanLookup.ts`: `isValidIbanFormat()` validates an IBAN's own
+     mod-97 checksum locally (no network call for something obviously malformed), then
+     `lookupIban()` tries a chain of live providers, returning the first real hit or `null` if
+     every provider fails/has nothing for that IBAN. **Only one live provider is wired in**
+     (openiban.com, a well-established free/keyless public tool) — the user asked to "utilize
+     both API," but every other commonly-referenced "free" IBAN lookup service actually requires
+     a registered key even on its free tier, and hardcoding an unverified second endpoint risked
+     shipping a permanently-dead code path that looks like real redundancy but never fires.
+     `IBAN_PROVIDERS` is an array specifically so a second confirmed provider can be added later
+     without touching any caller — flagged here rather than silently claiming two working
+     providers. `BankAccount` gained optional `iban`/`bankName`/`bic` fields; a new
+     `IbanLookupFields` component (IBAN input + "Look up bank" button + Bank name/BIC fields,
+     all three independently hand-editable regardless of lookup outcome) is wired into both the
+     add-account form and `AccountDetailModal`'s detail editor. Per the user's own explicit
+     wording, a failed/unsupported lookup shows exactly that: "IBAN not supported by the app (or
+     the lookup service is unavailable right now) — enter the bank name manually below," never a
+     silent failure or a raw error. This sandbox's own network policy blocks the live
+     openiban.com call outright (`ERR_CONNECTION_RESET`, the same restriction already
+     encountered for Net Worth's FX-rate fetch and the Google Fonts CDN) — so the graceful-
+     failure path is what's actually verified here; the success path (a real IBAN returning a
+     real bank name) is unverified in this environment and should be confirmed by a future
+     session with real browser network access, same caveat pattern as those two earlier
+     features. Separately, `Field` gained an optional `required` prop (a small red asterisk
+     after the label) — a quick visual scan distinct from the "(optional)" suffix several fields
+     already spell out in their label text — applied to Banking's add-account form's two
+     genuinely required fields (Account name, Currency), with a "* Required. Everything else on
+     this form is optional." legend. **Scoped to Banking's add-account form only** — the user's
+     "clearly mark the required fields in the app" is a real app-wide ask (the same territory as
+     Pending item 97's "every remaining unlabeled input" audit); this establishes the `Field`
+     mechanism and applies it to the one form directly tied to the IBAN request, with the
+     broader rollout tracked as a new Pending item rather than guessed at everywhere in one
+     pass. Verified live via Playwright: the required-field asterisk and legend render; an
+     invalid-checksum IBAN is caught locally with a clear message before any network attempt;
+     a valid-checksum IBAN correctly shows the "not supported / unavailable" fallback message
+     once the (sandbox-blocked) live call fails; Bank name/BIC stay freely editable throughout.
+     New tests: `lib/__tests__/ibanLookup.test.ts` (4 cases, using real published example IBANs
+     with known-valid checksums). `npx tsc -b` / `npm run test` (364 tests, 4 new) / `npm run
+     build` all clean.
 
 ## Pending
 
@@ -4162,11 +4220,12 @@ everything below is started. Working down it in priority order across following 
     CONVERTED figures.~~ **Done (2026-08-26) — see Done item 168.** Renamed to "Accounts in
     CODE" with an explanatory tooltip, a lighter-touch fix than the user's own literal
     "Pakistani Banks Total Balance" suggestion (which assumes currency implies country).
-81. Banking: "Add account" shouldn't be a permanently-visible form (same "rare operation"
+81. ~~Banking: "Add account" shouldn't be a permanently-visible form (same "rare operation"
     reasoning already applied to EMI's own add-loan form, Done item 166's floating-FAB
-    pattern) — move to a floating "+" button + popup, mirroring EMI. Not started.
-82. Banking: `BankAccount` should carry Branch and/or Account Type fields — new fields, not
-    yet in the data model at all.
+    pattern) — move to a floating "+" button + popup, mirroring EMI.~~ **Done (2026-08-26) —
+    see Done item 170.**
+82. ~~Banking: `BankAccount` should carry Branch and/or Account Type fields — new fields, not
+    yet in the data model at all.~~ **Done (2026-08-26) — see Done item 170.**
 83. Banking / app-wide: clicking a Bank account (or Cash, or a Personal Loan) row should
     navigate to that item's own detail page rather than opening a popup/modal in place —
     Banking's `AccountDetailModal` is a MODAL today, not a real routed page. A real
@@ -4191,8 +4250,9 @@ everything below is started. Working down it in priority order across following 
     84) and Cash has no per-"account" concept to attach to in the first place (Cash is a
     single ledger, not multiple accounts) — needs auditing per-module rather than assumed to
     be one uniform fix.
-86. App-wide: "Add a plan" (Cash/Banking's Planning-tab add-form) shouldn't be permanently
-    visible either — same FAB+popup treatment as items 81/166. Not started.
+86. ~~App-wide: "Add a plan" (Cash/Banking's Planning-tab add-form) shouldn't be permanently
+    visible either — same FAB+popup treatment as items 81/166.~~ **Done (2026-08-26) — see
+    Done item 170.**
 87. App-wide: the FinanceRecorder app logo isn't in the navbar/sidebar at all (only the text
     wordmark, per Done item 32's "FinanceRecorder" header) — needs an actual logo asset, which
     doesn't exist yet in this project (nothing to swap in without one being designed/sourced
@@ -4281,6 +4341,21 @@ everything below is started. Working down it in priority order across following 
      The "New linked transfer" card's own explanatory paragraph moved behind a `Tooltip`; the
      two conditional warning paragraphs (unsupported pairing, currency mismatch) were left as
      plain text since they're only shown when directly relevant, not a permanent block.
+103. App-wide required-field marking rollout. `Field` gained a `required` prop (Done item 171)
+     and it's applied to Banking's add-account form — every OTHER module's add/edit form across
+     the app (Cash, Personal Loans, EMI, Rentals, Funds, Subscriptions, QSE/PSX trade forms,
+     etc.) still needs the same audit: which fields are actually required (today only enforced
+     via a toast-on-submit check, never visually marked) vs. genuinely optional, then the
+     `required` prop applied per form. A real, bounded rollout — same shape as the `IconButton`/
+     `CollapsibleCard`/`StatCard` hue rollouts before it — not a design decision, just needs
+     doing form by form.
+104. A second, real, keyless IBAN-lookup provider for `lib/ibanLookup.ts`'s `IBAN_PROVIDERS`
+     chain (see Done item 171 for why only one was confidently wired in) — needs a specific
+     provider confirmed to have a genuinely public, no-registration endpoint before adding, not
+     a repeat of the same guessing risk. Also: the openiban.com success path itself is
+     unverified in this sandbox (network blocked) — a future session with real browser access
+     should confirm a real IBAN actually returns a real bank name before trusting this beyond
+     the local-checksum unit tests.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

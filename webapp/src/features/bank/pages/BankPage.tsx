@@ -27,6 +27,7 @@ import { parseCSV, toCSV } from '../../../lib/csv';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
 import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
+import { isValidIbanFormat, lookupIban } from '../../../lib/ibanLookup';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
 import { useAppearanceStore } from '../../../store/appearanceStore';
@@ -42,6 +43,8 @@ const uid = () => crypto.randomUUID();
 function emptyAccount(defaultCurrency: string): Omit<BankAccount, 'id'> {
   return { name: '', currencyCode: defaultCurrency, openingBalance: 0 };
 }
+
+const ACCOUNT_TYPES = ['Savings', 'Current', 'Checking', 'Salary', 'Business', 'Fixed deposit'];
 
 /* ============================== Accounts ============================== */
 
@@ -85,7 +88,95 @@ function TotalBalances() {
   );
 }
 
-function AddAccountForm() {
+interface IbanLookupValue {
+  iban?: string;
+  bankName?: string;
+  bic?: string;
+}
+
+/** User-requested (2026-08-26): look up a bank's name/BIC from its IBAN
+ * instead of typing them by hand. See `lib/ibanLookup.ts` for the
+ * provider-chain design and why only one live provider is wired in today.
+ * All three fields stay freely hand-editable regardless of whether lookup
+ * succeeds — an account may have no IBAN at all (common for PKR/QAR
+ * accounts), or the lookup may simply fail, and that shouldn't block
+ * entering the bank name manually. */
+function IbanLookupFields({ value, onChange }: { value: IbanLookupValue; onChange: (patch: Partial<IbanLookupValue>) => void }) {
+  const [looking, setLooking] = useState(false);
+
+  const doLookup = async () => {
+    const iban = (value.iban ?? '').trim();
+    if (!iban) return toast('Enter an IBAN first.');
+    if (!isValidIbanFormat(iban)) {
+      toast("That doesn't look like a valid IBAN (checksum failed) — check for typos, or enter the bank name manually below.");
+      return;
+    }
+    setLooking(true);
+    try {
+      const result = await lookupIban(iban);
+      if (!result) {
+        toast("IBAN not supported by the app (or the lookup service is unavailable right now) — enter the bank name manually below.");
+        return;
+      }
+      onChange({ bankName: result.bankName ?? value.bankName, bic: result.bic ?? value.bic });
+      toast(`Found: ${result.bankName ?? result.bic ?? 'bank details'}.`);
+    } catch {
+      toast("IBAN not supported by the app (or the lookup service is unavailable right now) — enter the bank name manually below.");
+    } finally {
+      setLooking(false);
+    }
+  };
+
+  return (
+    <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+      <Field label="IBAN (optional)" width={220} title="International Bank Account Number, if your bank issues one — used only to look up the bank name/BIC below; not every country or account has one.">
+        <TextInput value={value.iban ?? ''} onChange={(e) => onChange({ iban: e.target.value || undefined })} placeholder="e.g. PK36SCBL0000001123456702" />
+      </Field>
+      <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 1 }}>
+        <button type="button" className="btn secondary small" disabled={looking} onClick={doLookup}>
+          {looking ? 'Looking up…' : 'Look up bank'}
+        </button>
+      </div>
+      <Field label="Bank name (optional)" width={180}>
+        <TextInput value={value.bankName ?? ''} onChange={(e) => onChange({ bankName: e.target.value || undefined })} placeholder="e.g. Standard Chartered" />
+      </Field>
+      <Field label="BIC / SWIFT (optional)" width={140}>
+        <TextInput value={value.bic ?? ''} onChange={(e) => onChange({ bic: e.target.value || undefined })} placeholder="e.g. SCBLPKKX" />
+      </Field>
+    </div>
+  );
+}
+
+/** README item 81 (2026-08-26 feedback): adding an account is a rare
+ * operation, so it shouldn't permanently occupy the top of the page — same
+ * round-FAB + popup pattern already used for EMI's "Add a loan" (Done item
+ * 166). */
+function AddAccountFab() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <div style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 500 }}>
+        <Tooltip text="Add an account" align="right">
+          <button
+            className="btn"
+            onClick={() => setOpen(true)}
+            aria-label="Add an account"
+            style={{ width: 52, height: 52, borderRadius: '50%', padding: 0, fontSize: 22, boxShadow: '0 4px 16px rgba(0,0,0,.25)' }}
+          >
+            <PlusIcon />
+          </button>
+        </Tooltip>
+      </div>
+      {open && (
+        <Modal title="Add an account" onClose={() => setOpen(false)}>
+          <AddAccountForm onSaved={() => setOpen(false)} />
+        </Modal>
+      )}
+    </>
+  );
+}
+
+function AddAccountForm({ onSaved }: { onSaved?: () => void }) {
   const addAccount = useBankWorkbookStore((s) => s.addAccount);
   const [lastCurrency, setLastCurrency] = useLastCurrency('bank-account', 'USD');
   const ensureSignedIn = useEnsureSignedIn();
@@ -97,23 +188,38 @@ function AddAccountForm() {
     addAccount({ ...a, id: uid(), name: a.name.trim() });
     toast(`Account "${a.name.trim()}" added.`);
     setA(emptyAccount(a.currencyCode));
+    onSaved?.();
   };
 
   return (
-    <Card style={{ marginBottom: 16 }}>
+    <div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-        <Field label="Account name" width={180}>
+        <Field label="Account name" width={180} required>
           <TextInput value={a.name} onChange={(e) => setA({ ...a, name: e.target.value })} placeholder="e.g. Meezan Checking" />
         </Field>
-        <Field label="Currency" width={100}>
+        <Field label="Currency" width={100} required>
           <Select value={a.currencyCode} onChange={(e) => { setA({ ...a, currencyCode: e.target.value }); setLastCurrency(e.target.value); }}>
             {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>
-        <Field label="Opening balance" width={140}>
+        <Field label="Opening balance (optional)" width={140}>
           <TextInput type="number" step="0.01" value={a.openingBalance || ''} onChange={(e) => setA({ ...a, openingBalance: Number(e.target.value) })} />
         </Field>
       </div>
+      {/* README item 82: branch/account-type, free-form (not a fixed enum) —
+         ACCOUNT_TYPES is just a datalist of common suggestions, any value is
+         accepted. */}
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+        <Field label="Branch (optional)" width={160}>
+          <TextInput value={a.branch ?? ''} onChange={(e) => setA({ ...a, branch: e.target.value || undefined })} placeholder="e.g. Gulberg Branch" />
+        </Field>
+        <Field label="Account type (optional)" width={160}>
+          <TextInput list="bank-account-type-datalist" value={a.accountType ?? ''} onChange={(e) => setA({ ...a, accountType: e.target.value || undefined })} placeholder="e.g. Savings" />
+        </Field>
+      </div>
+      {/* User-requested: an IBAN lookup fills bank name/BIC automatically
+         when supported; all still hand-editable. */}
+      <IbanLookupFields value={a} onChange={(patch) => setA({ ...a, ...patch })} />
       {/* User-requested: save an account number + the SMS sender details a
          bank alert actually arrives from, for a future SMS-based
          transaction-import feature (nothing reads these yet — this just
@@ -130,10 +236,14 @@ function AddAccountForm() {
           <TextInput value={a.smsSenderNumber ?? ''} onChange={(e) => setA({ ...a, smsSenderNumber: e.target.value || undefined })} placeholder="e.g. +923001234567" />
         </Field>
       </div>
+      <datalist id="bank-account-type-datalist">
+        {ACCOUNT_TYPES.map((t) => <option key={t} value={t} />)}
+      </datalist>
       <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
         <PlusIcon />Add account
       </button>
-    </Card>
+      <p className="footer-note" style={{ marginTop: 8 }}><span style={{ color: 'var(--loss)' }}>*</span> Required. Everything else on this form is optional.</p>
+    </div>
   );
 }
 
@@ -169,12 +279,16 @@ function AccountsList() {
   return (
     <div className="table-scroll">
       <table>
-        <thead><tr><Th col="name">Name</Th><Th col="currency">Currency</Th><Th col="opening">Opening balance</Th><Th col="current">Current balance</Th><th></th></tr></thead>
+        <thead><tr><Th col="name">Name</Th><th>Type / Branch</th><Th col="currency">Currency</Th><Th col="opening">Opening balance</Th><Th col="current">Current balance</Th><th></th></tr></thead>
         <tbody>
           {sorted.map((a) =>
             editId === a.id && editRow ? (
               <tr key={a.id}>
                 <td><input value={editRow.name} onChange={(e) => setEditRow({ ...editRow, name: e.target.value })} /></td>
+                <td>
+                  <input placeholder="Type" value={editRow.accountType ?? ''} onChange={(e) => setEditRow({ ...editRow, accountType: e.target.value || undefined })} style={{ width: 90, marginBottom: 4 }} />
+                  <input placeholder="Branch" value={editRow.branch ?? ''} onChange={(e) => setEditRow({ ...editRow, branch: e.target.value || undefined })} style={{ width: 90 }} />
+                </td>
                 <td>
                   <select value={editRow.currencyCode} onChange={(e) => setEditRow({ ...editRow, currencyCode: e.target.value })}>
                     {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
@@ -190,6 +304,7 @@ function AccountsList() {
             ) : (
               <tr key={a.id}>
                 <td>{a.name}</td>
+                <td className="footer-note">{[a.accountType, a.branch].filter(Boolean).join(' · ') || '—'}</td>
                 <td>{a.currencyCode}</td>
                 <td>{fmtMoney(a.openingBalance, a.currencyCode)}</td>
                 <td>{fmtMoney(accountBalance(a, transactions), a.currencyCode)}</td>
@@ -208,7 +323,7 @@ function AccountsList() {
               </tr>
             ),
           )}
-          {!sorted.length && <tr><td colSpan={5} className="footer-note">No accounts yet — add one above.</td></tr>}
+          {!sorted.length && <tr><td colSpan={6} className="footer-note">No accounts yet — use the + button below to add one.</td></tr>}
         </tbody>
       </table>
       {detailAccount && <AccountDetailModal account={detailAccount} onClose={() => setDetailAccount(null)} />}
@@ -238,6 +353,11 @@ function AccountDetailModal({ account, onClose }: { account: BankAccount; onClos
     accountNumber: account.accountNumber ?? '',
     smsSenderId: account.smsSenderId ?? '',
     smsSenderNumber: account.smsSenderNumber ?? '',
+    branch: account.branch ?? '',
+    accountType: account.accountType ?? '',
+    iban: account.iban ?? '',
+    bankName: account.bankName ?? '',
+    bic: account.bic ?? '',
   });
   const saveMeta = async () => {
     if (!(await ensureSignedIn('Sign in to save account details.'))) return;
@@ -246,6 +366,11 @@ function AccountDetailModal({ account, onClose }: { account: BankAccount; onClos
       accountNumber: meta.accountNumber.trim() || undefined,
       smsSenderId: meta.smsSenderId.trim() || undefined,
       smsSenderNumber: meta.smsSenderNumber.trim() || undefined,
+      branch: meta.branch.trim() || undefined,
+      accountType: meta.accountType.trim() || undefined,
+      iban: meta.iban.trim() || undefined,
+      bankName: meta.bankName.trim() || undefined,
+      bic: meta.bic.trim() || undefined,
     });
     toast('Account details saved.');
   };
@@ -295,7 +420,27 @@ function AccountDetailModal({ account, onClose }: { account: BankAccount; onClos
           <SaveIcon size={13} />Save details
         </button>
       </div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+        <Field label="Branch" width={160}>
+          <TextInput value={meta.branch} onChange={(e) => setMeta({ ...meta, branch: e.target.value })} placeholder="e.g. Gulberg Branch" />
+        </Field>
+        <Field label="Account type" width={160}>
+          <TextInput list="bank-account-type-datalist-detail" value={meta.accountType} onChange={(e) => setMeta({ ...meta, accountType: e.target.value })} placeholder="e.g. Savings" />
+        </Field>
+      </div>
+      <datalist id="bank-account-type-datalist-detail">
+        {ACCOUNT_TYPES.map((t) => <option key={t} value={t} />)}
+      </datalist>
+      <IbanLookupFields
+        value={meta}
+        onChange={(patch) => setMeta((m) => ({
+          ...m,
+          ...('iban' in patch ? { iban: patch.iban ?? '' } : {}),
+          ...('bankName' in patch ? { bankName: patch.bankName ?? '' } : {}),
+          ...('bic' in patch ? { bic: patch.bic ?? '' } : {}),
+        }))}
+      />
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 16, marginTop: 8 }}>
         <Field label="Account number" width={160} title="However your bank shows it on statements/SMS — often partially masked, e.g. xxxx1234.">
           <TextInput value={meta.accountNumber} onChange={(e) => setMeta({ ...meta, accountNumber: e.target.value })} placeholder="e.g. xxxx1234" />
         </Field>
@@ -366,8 +511,8 @@ function AccountsTab() {
   return (
     <div>
       <TotalBalances />
-      <AddAccountForm />
       <AccountsList />
+      <AddAccountFab />
     </div>
   );
 }
@@ -860,7 +1005,35 @@ function BalanceProjectionSummary() {
   );
 }
 
-function AddBankPlanForm({ accountId }: { accountId: string }) {
+/** README item 86 (2026-08-26 feedback): "Add a plan" shouldn't be
+ * permanently visible either — same FAB+popup treatment as "Add a loan"
+ * (Done item 166) and "Add an account" above. */
+function AddBankPlanFab({ accountId }: { accountId: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <div style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 500 }}>
+        <Tooltip text="Add a plan" align="right">
+          <button
+            className="btn"
+            onClick={() => setOpen(true)}
+            aria-label="Add a plan"
+            style={{ width: 52, height: 52, borderRadius: '50%', padding: 0, fontSize: 22, boxShadow: '0 4px 16px rgba(0,0,0,.25)' }}
+          >
+            <PlusIcon />
+          </button>
+        </Tooltip>
+      </div>
+      {open && (
+        <Modal title="Add a plan" onClose={() => setOpen(false)}>
+          <AddBankPlanForm accountId={accountId} onSaved={() => setOpen(false)} />
+        </Modal>
+      )}
+    </>
+  );
+}
+
+function AddBankPlanForm({ accountId, onSaved }: { accountId: string; onSaved?: () => void }) {
   const addPlan = usePlannedBankWorkbookStore((s) => s.addEntry);
   const ensureSignedIn = useEnsureSignedIn();
   const [p, setP] = useState<PlannedBankTransaction>(() => emptyBankPlan(accountId));
@@ -871,11 +1044,11 @@ function AddBankPlanForm({ accountId }: { accountId: string }) {
     addPlan({ ...p, id: crypto.randomUUID(), accountId, category: p.category?.trim() || undefined });
     toast('Plan added.');
     setP(emptyBankPlan(accountId));
+    onSaved?.();
   };
 
   return (
-    <Card style={{ marginBottom: 16 }}>
-      <h3 style={{ marginTop: 0 }}>Add a plan</h3>
+    <div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
         <Field label="Expected date">
           <TextInput type="date" value={p.date} onChange={(e) => setP({ ...p, date: e.target.value })} />
@@ -900,7 +1073,7 @@ function AddBankPlanForm({ accountId }: { accountId: string }) {
         <PlusIcon />Add plan
       </button>
       <p className="footer-note" style={{ marginTop: 8 }}>Negative amount = spend/debit, positive = deposit/credit.</p>
-    </Card>
+    </div>
   );
 }
 
@@ -1214,8 +1387,8 @@ function PlanningTab({
       </Field>
       {account && (
         <div style={{ marginTop: 12 }}>
-          <AddBankPlanForm accountId={account.id} />
           <BankPlanList account={account} />
+          <AddBankPlanFab accountId={account.id} />
         </div>
       )}
       <PlanningAccountSection syncStatus={plannedSyncStatus} cloudEmpty={plannedCloudEmpty} uploadLocalToCloud={uploadPlannedLocalToCloud} />

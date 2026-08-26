@@ -5,7 +5,9 @@ import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { EditIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { Modal } from '../../../components/Modal';
 import { Tabs } from '../../../components/Tabs';
+import { Tooltip } from '../../../components/Tooltip';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
@@ -568,7 +570,35 @@ function BalanceProjectionSummary() {
   );
 }
 
-function AddPlanForm() {
+/** README item 86 (2026-08-26 feedback): "Add a plan" shouldn't be
+ * permanently visible either — same FAB+popup treatment already used for
+ * EMI's "Add a loan" (Done item 166) and Banking's "Add an account". */
+function AddPlanFab() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <div style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 500 }}>
+        <Tooltip text="Add a plan" align="right">
+          <button
+            className="btn"
+            onClick={() => setOpen(true)}
+            aria-label="Add a plan"
+            style={{ width: 52, height: 52, borderRadius: '50%', padding: 0, fontSize: 22, boxShadow: '0 4px 16px rgba(0,0,0,.25)' }}
+          >
+            <PlusIcon />
+          </button>
+        </Tooltip>
+      </div>
+      {open && (
+        <Modal title="Add a plan" onClose={() => setOpen(false)}>
+          <AddPlanForm onSaved={() => setOpen(false)} />
+        </Modal>
+      )}
+    </>
+  );
+}
+
+function AddPlanForm({ onSaved }: { onSaved?: () => void }) {
   const addPlan = usePlannedCashWorkbookStore((s) => s.addEntry);
   const defaultCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
   const [lastCurrency, setLastCurrency] = useLastCurrency('cash', defaultCurrency);
@@ -581,11 +611,11 @@ function AddPlanForm() {
     addPlan({ ...p, id: crypto.randomUUID(), category: p.category?.trim() || undefined, note: p.note?.trim() || undefined });
     toast('Plan added.');
     setP(emptyPlan(p.currencyCode));
+    onSaved?.();
   };
 
   return (
-    <Card style={{ marginBottom: 16 }}>
-      <h3 style={{ marginTop: 0 }}>Add a plan</h3>
+    <div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
         <Field label="Expected date">
           <TextInput type="date" value={p.date} onChange={(e) => setP({ ...p, date: e.target.value })} />
@@ -614,7 +644,7 @@ function AddPlanForm() {
       <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
         <PlusIcon />Add plan
       </button>
-    </Card>
+    </div>
   );
 }
 
@@ -773,8 +803,8 @@ function PlanningTab({
   return (
     <div>
       <BalanceProjectionSummary />
-      <AddPlanForm />
       <PlanList />
+      <AddPlanFab />
       <PlanningAccountSection syncStatus={plannedSyncStatus} cloudEmpty={plannedCloudEmpty} uploadLocalToCloud={uploadPlannedLocalToCloud} />
     </div>
   );
