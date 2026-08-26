@@ -5,6 +5,7 @@ import { ConfirmDialogHost } from './components/ConfirmDialog';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PSXTickerDatalist } from './components/PSXTickerDatalist';
 import { SignInModalHost } from './components/SignInModal';
+import { SubscriptionAlertsPopup } from './components/SubscriptionAlertsPopup';
 import { TermsGateModal } from './components/TermsGateModal';
 import { TickerDatalist } from './components/TickerDatalist';
 import { Toast } from './components/Toast';
@@ -258,6 +259,7 @@ function App() {
           </ErrorBoundary>
         </AppShell>
         <CalculatorLauncher />
+        <SubscriptionAlertsPopup />
         <Toast />
         <TickerDatalist />
         <PSXTickerDatalist />
