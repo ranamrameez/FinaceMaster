@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Fund } from '../../../types/fundsWorkbook';
 import type { PricePoint, Transaction } from '../../../types/workbook';
-import { allocationByCategory, contributionVsValueSeries, fundsValueByCurrency } from '../fundsModule';
+import { allocationByCategory, contributionVsValueSeries, fundsValueByCurrency, organicPLByPeriod } from '../fundsModule';
+import { averagePeriodPL, reconstructFundDailyHistory } from '../fundsDailyHistoryImport';
 
 const funds: Fund[] = [
   { id: 'f1', name: 'US Growth', code: 'USG', platform: 'Fidelity', category: 'Equity', currencyCode: 'USD' },
@@ -92,5 +93,54 @@ describe('contributionVsValueSeries', () => {
     const series = contributionVsValueSeries('f1', txs, {});
     expect(series[1]).toEqual({ date: '2026-02-01', invested: 1000 - 480, value: 60 * 12 });
     expect(contributionVsValueSeries('nonexistent', txs, {})).toEqual([]);
+  });
+});
+
+describe('organicPLByPeriod', () => {
+  it('separates a deposit from organic growth within the same month', () => {
+    const txs: Transaction[] = [
+      { date: '2026-01-01', ticker: 'f1', action: 'BUY', shares: 1000, price: 1 }, // 1000 invested
+      { date: '2026-01-15', ticker: 'f1', action: 'BUY', shares: 500, price: 1 }, // +500 deposit, no growth yet
+    ];
+    // NAV rises to 1.1 by month end — 150 of organic growth on the 1500 units held.
+    const priceHistory: Record<string, PricePoint[]> = { f1: [{ date: '2026-01-31', price: 1.1 }] };
+    const monthly = organicPLByPeriod('f1', txs, priceHistory, 'month');
+    expect(monthly).toHaveLength(1);
+    expect(monthly[0].period).toBe('2026-01');
+    expect(monthly[0].total).toBeCloseTo(150, 6);
+  });
+
+  it('averages only real periods, and empty history returns nothing to average', () => {
+    expect(averagePeriodPL(organicPLByPeriod('nonexistent', [], {}, 'month'))).toBe(0);
+  });
+
+  it('cross-checks against the daily-history reconstruction: deriving monthly PL from stored transactions/priceHistory reproduces the same totals as deriving it directly from the source daily balance log', () => {
+    // Same real ALDDF rows used in fundsDailyHistoryImport.test.ts (no cash-flow gaps).
+    const rows = [
+      { date: '2026-07-07', prvBlc: 300000.0, newBlc: 301154.69, profitLoss: 1154.69 },
+      { date: '2026-07-08', prvBlc: 301154.69, newBlc: 301223.02, profitLoss: 68.33 },
+      { date: '2026-07-09', prvBlc: 301223.02, newBlc: 301351.12, profitLoss: 128.1 },
+      { date: '2026-07-13', prvBlc: 301351.12, newBlc: 301542.62, profitLoss: 191.5 },
+      { date: '2026-07-14', prvBlc: 301542.62, newBlc: 301607.03, profitLoss: 64.41 },
+      { date: '2026-07-27', prvBlc: 301607.03, newBlc: 301798.14, profitLoss: 191.11 },
+      { date: '2026-07-31', prvBlc: 301798.14, newBlc: 302688.31, profitLoss: 890.17 },
+      { date: '2026-08-14', prvBlc: 302688.31, newBlc: 303500.72, profitLoss: 812.41 },
+      { date: '2026-08-25', prvBlc: 303500.72, newBlc: 304143.43, profitLoss: 642.71 },
+    ];
+    const reconstruction = reconstructFundDailyHistory(rows);
+    const transactions: Transaction[] = reconstruction.transactions.map((t) => ({ ...t, ticker: 'aladdf' }));
+    const priceHistory: Record<string, PricePoint[]> = {
+      aladdf: reconstruction.navPoints.map((p) => ({ date: p.date, price: p.price })),
+    };
+
+    const derivedMonthly = organicPLByPeriod('aladdf', transactions, priceHistory, 'month');
+    // The source log's own monthly totals (computed directly from the raw
+    // Profit-Loss column, independent of any reconstruction).
+    expect(derivedMonthly.length).toBe(reconstruction.monthlyPL.length);
+    derivedMonthly.forEach((m, i) => {
+      expect(m.period).toBe(reconstruction.monthlyPL[i].month);
+      expect(m.total).toBeCloseTo(reconstruction.monthlyPL[i].total, 2);
+    });
+    expect(averagePeriodPL(derivedMonthly)).toBeCloseTo(averagePeriodPL(reconstruction.monthlyPL), 2);
   });
 });

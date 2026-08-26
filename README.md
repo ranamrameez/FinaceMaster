@@ -3102,6 +3102,60 @@ FinanceManager live link:
      a seeded position: Value column correctly showed "1,200.00 QAR ▲ Inv 1,002.75 QAR" for a
      100-share QIBK position bought at ~10.03 and priced at 12. `npx tsc -b` / `npm run test`
      (281 tests, unchanged) / `npm run build` all clean.
+151. **Funds "Daily History Import" built (2026-08-26), user-corrected the Snapshot Import
+     (item 146) the same day: "this csv importer has just picked the final balances... i have
+     added all balance changes day by day. you cannot ignore them!"** The user attached a
+     richer xlsx (one sheet per fund, a Date/PrvBlc/NewBlc/Profit-Loss row per real update) and
+     asked for average monthly/annual P&L computed from that real update history — confirmed
+     via `AskUserQuestion` first: (a) average = mean of real calendar-month/year totals, not a
+     naive per-calendar-day average or an XIRR-style rate (holidays genuinely have nothing to
+     sum, not missing data to interpolate), and (b) they'd already imported the CSV Snapshot
+     into their real account, so a sheet matching an existing fund must **replace** that fund's
+     transactions, not add alongside them. New `lib/calc/fundsDailyHistoryImport.ts`
+     (`reconstructFundDailyHistory`, tested against the user's own real ALHCMOF/ALDDF daily
+     rows) is the core: `PrvBlc` is the user's own manually-set opening balance for that
+     update — not necessarily the prior row's closing balance — so `NewBlc − PrvBlc` is already
+     pure organic growth; a gap between one row's `PrvBlc` and the previous row's `NewBlc`
+     is exactly how a real deposit/withdrawal gets detected and priced at the NAV implied
+     just before it, separating cash flow from growth without guessing. Verified end to end
+     against the user's real ALHCMOF data (9 real deposits, zero withdrawals): reconstructed
+     final value matched the reported balance (5,790,054.40) exactly. `lib/calc/
+     fundsModule.ts`'s new `organicPLByPeriod` makes monthly/annual P&L an ongoing capability,
+     not just an import-time number — derived from whatever `transactions`/`priceHistory` a
+     fund already has stored (works for any fund, not only ones imported this way), by isolating
+     each `contributionVsValueSeries` point's value change from its cash-flow change. **A real
+     bug caught by cross-checking the two derivations against each other, not by inspection**:
+     the first version silently dropped the very first data point's own same-day growth
+     whenever a fund's initial buy and its first NAV observation shared a date (the common
+     case) — a dedicated test comparing "monthly P&L derived from the raw daily log" against
+     "monthly P&L derived from the reconstructed transactions/priceHistory" caught a mismatch
+     immediately, well before this ever reached a real user's data. New "Import" tab UI
+     (`DailyHistoryImportSection.tsx`) sits behind a mode toggle next to the existing Snapshot
+     Import: parses every sheet in the uploaded xlsx, auto-suggests which fund each sheet
+     belongs to by matching its last real balance against the workbook's own Summary sheet
+     (falls back to "create new fund," never guesses, when two funds are indistinguishably
+     ambiguous — e.g. this user's own two same-coded, both-closed ALHISF positions), and shows
+     avg monthly/annual P&L plus a loud, explicit "will REPLACE N existing transactions" warning
+     before any matched-to-an-existing-fund import — confirmed via `confirmDialog`, never silent,
+     consistent with this project's locked cloud-sync-safety principle. **New dependency,
+     flagged rather than silently added**: needed a client-side .xlsx parser (the CSV importer's
+     own hand-rolled parser only handles one flat table, not multiple sheets) — added `xlsx`
+     (SheetJS community edition) at the last npm-published version (0.18.5); `npm audit` flags
+     one high-severity advisory in it with no fix available via npm (SheetJS moved later fixes to
+     their own CDN, which this sandbox's network policy can't reach to install from instead).
+     Weighed this against `exceljs` (heavier, ~90 extra transitive packages including several
+     deprecated ones, and still not vulnerability-free) and judged the realistic exposure
+     narrow for this specific use — the file is self-uploaded by the account's own owner, never
+     fetched from a third party or rendered to any other user, so the practical blast radius of
+     the known prototype-pollution/ReDoS advisories is a user attacking their own browser tab,
+     not a cross-account or stored-XSS path. Still worth a security-focused pass from a future
+     session if a non-npm-blocked path to a patched SheetJS build becomes available. Verified
+     live via Playwright against the user's real uploaded xlsx and a seeded pre-existing fund:
+     the auto-match correctly resolved to the seeded fund, the replace warning showed the
+     correct existing-transaction count, switching the currency picker updated the right
+     card, the confirm dialog carried the destructive wording, and the real sign-in gate fired
+     before any write — zero console errors. `npx tsc -b` / `npm run test` (305 tests, 17 new) /
+     `npm run build` all clean (bundle grew ~120KB gzipped from the new xlsx dependency).
 
 ## Pending
 

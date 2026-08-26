@@ -25,6 +25,7 @@ import {
   type FundSnapshotRow,
 } from '../../../lib/calc/fundsSnapshotImport';
 import { toCSV } from '../../../lib/csv';
+import { DailyHistoryImportSection } from '../components/DailyHistoryImportSection';
 import { getDailyPriceHistory } from '../../../lib/calc/priceHistory';
 import { transferRunningBalance } from '../../../lib/calc/transferBalance';
 import { CURRENCIES } from '../../../lib/currencies';
@@ -225,6 +226,32 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
           {!sorted.length && <tr><td colSpan={8} className="footer-note">No funds yet — add one above.</td></tr>}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+/* ============================== Import (mode switch) ============================== */
+
+/** Two structurally different import sources, so this just picks between
+ * two otherwise-independent sections rather than trying to unify them:
+ * Snapshot Import (one CSV row per fund, aggregate totals only) and Daily
+ * History Import (an xlsx with one sheet per fund, a full day-by-day
+ * balance log — see `DailyHistoryImportSection.tsx`'s own doc comment for
+ * why that's a meaningfully richer source, not just a different file
+ * format for the same data). */
+function ImportSection() {
+  const [mode, setMode] = useState<'snapshot' | 'daily'>('daily');
+  return (
+    <div>
+      <div className="row" style={{ gap: 8, marginBottom: 16 }}>
+        <button className={mode === 'daily' ? 'chip active' : 'chip'} onClick={() => setMode('daily')}>
+          Daily history (XLSX)
+        </button>
+        <button className={mode === 'snapshot' ? 'chip active' : 'chip'} onClick={() => setMode('snapshot')}>
+          Snapshot (CSV)
+        </button>
+      </div>
+      {mode === 'daily' ? <DailyHistoryImportSection /> : <SnapshotImportSection />}
     </div>
   );
 }
@@ -1077,7 +1104,7 @@ export function FundsPage({
               ),
             },
             { key: 'transfers', label: 'Transfers', content: <FundsTransfersSection /> },
-            { key: 'import', label: 'Import', content: <SnapshotImportSection /> },
+            { key: 'import', label: 'Import', content: <ImportSection /> },
             { key: 'analytics', label: 'Analytics', content: <AnalyticsTab /> },
             {
               key: 'settings',

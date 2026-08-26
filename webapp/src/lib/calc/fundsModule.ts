@@ -106,3 +106,43 @@ export function contributionVsValueSeries(
     return { date, invested, value: units * lastNav };
   });
 }
+
+export interface PeriodPL {
+  period: string; // "YYYY-MM" or "YYYY"
+  total: number;
+}
+
+/** Organic (cash-flow-neutral) profit/loss per calendar month or year —
+ * "how much did this fund actually earn/lose that period," separate from
+ * how much was deposited or withdrawn. Derived from the same
+ * `{date, invested, value}` series `contributionVsValueSeries` already
+ * computes: between two consecutive points, the change in `value` minus
+ * whatever was newly invested/withdrawn isolates pure growth, without
+ * needing a separately-stored "today's profit" figure. This works for any
+ * fund's stored transactions/priceHistory — not just one imported via
+ * `fundsDailyHistoryImport.ts` — and degrades gracefully to fewer, coarser
+ * points for a fund with sparse NAV history (e.g. only ever manually
+ * bought/sold with no separate "Update NAV" click). */
+export function organicPLByPeriod(
+  fundId: string,
+  transactions: Transaction[],
+  priceHistory: Record<string, PricePoint[]>,
+  periodLength: 'month' | 'year',
+): PeriodPL[] {
+  const points = contributionVsValueSeries(fundId, transactions, priceHistory);
+  const periods = new Map<string, number>();
+  for (let i = 0; i < points.length; i++) {
+    // Nothing existed before the first point — comparing against a zero
+    // baseline isolates that first point's own growth (value vs. cost
+    // basis) instead of silently dropping it. This matters whenever the
+    // very first buy and the first NAV observation share the same date
+    // (the common case for a freshly-imported fund), since that day's
+    // organic growth is baked into the first point itself.
+    const prev = i > 0 ? points[i - 1] : { value: 0, invested: 0 };
+    const curr = points[i];
+    const organic = curr.value - prev.value - (curr.invested - prev.invested);
+    const key = periodLength === 'month' ? curr.date.slice(0, 7) : curr.date.slice(0, 4);
+    periods.set(key, (periods.get(key) ?? 0) + organic);
+  }
+  return [...periods.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([period, total]) => ({ period, total }));
+}
