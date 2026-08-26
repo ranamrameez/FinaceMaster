@@ -59,7 +59,27 @@ export function emiSchedule(loan: EMILoan): { emi: number; rows: EMIScheduleRow[
     const principalPerMonth = loan.principal / n;
     const principalRatio = installment > 0 ? principalPerMonth / installment : 1;
     const totalMarkup = total - loan.principal;
-    let balance = loan.principal;
+    // BUG FIXED 2026-08-26, user-reported with real numbers (principal
+    // 45,046 / total to return 50,115.33 / 36 months): `balance` used to
+    // track ONLY the principal portion (via `principalRatio`'s split),
+    // dropping by `principalComp` each month while markup was tracked
+    // completely separately — so "Balance" after one installment read as
+    // "principal remaining," silently excluding every future markup
+    // payment still owed. For an INTEREST-bearing loan that's the
+    // textbook-correct definition (a bank's own "outstanding principal"
+    // genuinely excludes interest that hasn't accrued yet — see the
+    // interest-mode branch below, left unchanged). But fixedTotal mode has
+    // no real compounding or time-based accrual at all: `principalRatio`
+    // is purely an internal bookkeeping split for the "Interest/markup"
+    // column's per-row breakdown, not a real separate debt — so a
+    // no-interest installment-plan borrower's actual "how much do I still
+    // have to pay" is the FULL remaining total, not a principal-only
+    // subset of it. Fixed by tracking `balance` as the total remaining
+    // obligation (starting at `total`, decreasing by the full `payment`
+    // each month) instead of principal-only — `principalComp`/`markup` are
+    // still derived per row for the breakdown columns, just no longer used
+    // to drive the running balance itself.
+    let balance = total;
     let markupSoFar = 0;
     const rows: EMIScheduleRow[] = [];
     for (let m = 1; m <= n; m++) {
@@ -69,19 +89,22 @@ export function emiSchedule(loan: EMILoan): { emi: number; rows: EMIScheduleRow[
       let principalComp: number;
       let markup: number;
       if (isBalloon) {
-        // True up: pay off whatever principal and markup are still
-        // outstanding, so the loan's grand total still equals `total`
-        // regardless of how `customMonthlyPayment` compared to the
-        // regular installment in every prior month.
-        principalComp = balance;
+        // True up: pay off whatever's still owed in total, so the loan's
+        // grand total still equals `total` regardless of how
+        // `customMonthlyPayment` compared to the regular installment in
+        // every prior month. `markup` is still derived (remaining markup
+        // owed) so the principal/markup breakdown stays consistent with
+        // the totals — `principalComp` is just "whatever of this final
+        // payment isn't markup."
         markup = totalMarkup - markupSoFar;
-        payment = principalComp + markup;
+        payment = balance;
+        principalComp = payment - markup;
       } else {
         payment = override ?? customPayment ?? installment;
         principalComp = payment * principalRatio;
         markup = payment - principalComp;
       }
-      balance = Math.max(0, balance - principalComp);
+      balance = Math.max(0, balance - payment);
       markupSoFar += markup;
       rows.push({ month: m, emi: payment, interest: markup, principalComp, balance, overridden: override != null, isBalloon });
       if (balance <= 0.01) break;
@@ -121,19 +144,50 @@ export interface EMISummary {
 }
 
 /** Outstanding balance / paid-so-far / interest-so-far, read off the
- * schedule at the row for however many full months have elapsed since
- * `startDate` — assumes on-schedule payment (no missed/late-payment
- * tracking in v1, matching the reference prototype's own deferred scope).
- * Clamps against `rows.length`, not `loan.tenureMonths` — with per-month
- * overrides the schedule can now legitimately finish early, and
- * `paidSoFar` sums each row's own actual payment (not `elapsed * emi`)
- * so an overridden month is reflected correctly. */
+ * schedule at the row for however many installments' due dates have
+ * actually passed as of `asOf` — assumes on-schedule payment (no missed/
+ * late-payment tracking in v1, matching the reference prototype's own
+ * deferred scope).
+ *
+ * **`outstanding` means something different per mode, by design (see
+ * `emiSchedule`'s own 2026-08-24 fixedTotal bug-fix comment for the full
+ * reasoning)**: for an interest-bearing loan it's the remaining PRINCIPAL
+ * only (the textbook-correct "outstanding balance" a bank reports — future
+ * interest hasn't accrued yet, so it isn't "owed" in the same sense); for a
+ * fixedTotal (no-interest) loan it's the full remaining TOTAL (principal +
+ * whatever markup is still owed), since that mode has no real compounding
+ * or interest-accrual concept at all — the principal/markup split there is
+ * purely a display breakdown, not a genuinely separate debt.
+ *
+ * **Bug fixed 2026-08-26, user-reported ("wrong remaining balance on
+ * EMIs")**: this used to count elapsed months via a plain calendar
+ * year/month subtraction (`asOf`'s month minus `startDate`'s month),
+ * completely ignoring which DAY of the month either one fell on. That's
+ * always been a latent imprecision (a loan starting on the 28th read as
+ * "elapsed" the moment the calendar page turned, even on the 1st of the
+ * new month, 27 days before that installment was actually due) — but
+ * `EMILoan.paymentDayOfMonth` (added the same day as this bug was
+ * introduced/found) made it a routine, easily-hit bug rather than a rare
+ * edge case: a loan with `paymentDayOfMonth: 28` and a `startDate` early
+ * in the month would count an installment as paid up to 27 days before
+ * its real due date, understating Outstanding and overstating Paid so
+ * far. Fixed by counting how many of the schedule's own (`paymentDayOfMonth`-
+ * aware) due dates via `installmentDueDate()` actually fall on or before
+ * `asOf`, instead of a coarse month-only subtraction — this also
+ * automatically clamps at `rows.length`, not `loan.tenureMonths`, since a
+ * schedule that finished early (via an override) simply has fewer rows to
+ * count against. `paidSoFar` sums each row's own actual payment (not
+ * `elapsed * emi`) so an overridden month is reflected correctly. */
 export function emiSummary(loan: EMILoan, asOf: Date = new Date()): EMISummary {
   const { emi, rows } = emiSchedule(loan);
-  const start = new Date(loan.startDate);
-  let elapsed = (asOf.getFullYear() - start.getFullYear()) * 12 + (asOf.getMonth() - start.getMonth());
-  elapsed = Math.max(0, Math.min(elapsed, rows.length));
-  const outstanding = elapsed === 0 ? loan.principal : rows[elapsed - 1].balance;
+  const asOfStr = asOf.toISOString().slice(0, 10);
+  const elapsed = rows.filter((r) => installmentDueDate(loan, r.month) <= asOfStr).length;
+  // Before anything's paid, "outstanding" is the same starting point
+  // `emiSchedule()`'s own `balance` would begin at for this mode — the
+  // full total for fixedTotal, principal-only for interest mode (see this
+  // function's own doc comment for why the two modes differ).
+  const openingBalance = loan.repaymentMode === 'fixedTotal' ? (loan.totalToReturn ?? loan.principal) : loan.principal;
+  const outstanding = elapsed === 0 ? openingBalance : rows[elapsed - 1].balance;
   const paidSoFar = rows.slice(0, elapsed).reduce((s, r) => s + r.emi, 0);
   const interestSoFar = rows.slice(0, elapsed).reduce((s, r) => s + r.interest, 0);
   const totalInterest = rows.reduce((s, r) => s + r.interest, 0);
@@ -178,6 +232,23 @@ export function installmentDueDate(loan: EMILoan, month: number): string {
 export function resolvedDueDate(loan: EMILoan, month: number, repayments?: EMIRepayment[]): string {
   const custom = repayments?.find((r) => r.loanId === loan.id && r.month === month)?.date;
   return custom || installmentDueDate(loan, month);
+}
+
+/** The loan's markup/interest rate as one comparable percentage, for the
+ * "Origination" stat-card zone (2026-08-26 user feedback: the loan-detail
+ * stats were missing several basic figures). Interest mode already has a
+ * real annual rate to show directly; fixedTotal mode has no rate at
+ * all — its markup is a flat lump sum, so this derives an equivalent
+ * percentage (markup ÷ principal) purely for a comparable "how expensive
+ * is this loan" figure, not a real annualized rate (fixedTotal has no
+ * compounding/time dimension to annualize against). */
+export function markupPercentage(loan: EMILoan): number {
+  if (loan.repaymentMode === 'fixedTotal') {
+    if (!(loan.principal > 0)) return 0;
+    const total = loan.totalToReturn ?? loan.principal;
+    return ((total - loan.principal) / loan.principal) * 100;
+  }
+  return loan.annualRatePct ?? 0;
 }
 
 export function expectedEndDate(loan: EMILoan): string {
@@ -299,15 +370,18 @@ export function generateBigEmiOverrides(loan: EMILoan, fromMonth: number, opts: 
     const schedule = emiSchedule(candidate);
     if (schedule.rows.length >= n) {
       // Didn't finish early on its own — figure out what's still owed
-      // heading into the final month and true it up.
+      // heading into the final month and true it up. For fixedTotal mode,
+      // `.balance` already represents the FULL remaining obligation (see
+      // `emiSchedule`'s own 2026-08-26 bug-fix doc comment), so no separate
+      // markup add-on is needed here any more — this used to add remaining
+      // markup on top of a principal-only balance, which double-counted it
+      // once the balance itself started including markup.
       const beforeFinal = n === 1 ? undefined : schedule.rows[n - 2];
-      const balanceBeforeFinal = beforeFinal ? beforeFinal.balance : loan.principal;
+      const openingBalance = loan.repaymentMode === 'fixedTotal' ? (loan.totalToReturn ?? loan.principal) : loan.principal;
+      const balanceBeforeFinal = beforeFinal ? beforeFinal.balance : openingBalance;
       if (balanceBeforeFinal > 0.01) {
         if (loan.repaymentMode === 'fixedTotal') {
-          const total = loan.totalToReturn ?? loan.principal;
-          const totalMarkup = total - loan.principal;
-          const markupSoFar = n === 1 ? 0 : schedule.rows.slice(0, n - 1).reduce((s, r) => s + r.interest, 0);
-          overrides[n] = balanceBeforeFinal + (totalMarkup - markupSoFar);
+          overrides[n] = balanceBeforeFinal;
         } else {
           const r = (loan.annualRatePct ?? 0) / 12 / 100;
           overrides[n] = balanceBeforeFinal + balanceBeforeFinal * r;

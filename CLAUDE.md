@@ -3163,7 +3163,62 @@ not developer notes) continuously as features ship.
   pass. `npx tsc -b` / `npm run test` (350 tests, 12 new) / `npm run build` all clean; verified
   live via Playwright (payment-day-of-month reflected in every due date, pencil-editor date
   field prefilled/editable, full-schedule toggle expanding correctly with accurate Paid/
-  Upcoming status pills, both new write actions hitting the real sign-in gate).
+  Upcoming status pills, both new write actions hitting the real sign-in gate). PR #8 merged
+  into `main` the same day.
+- **New session (2026-08-26), started fresh at `main`'s latest (branch restarted per the
+  "merged PR can't be reused" rule) — small docs cleanup, then a right-rail feature per the
+  user's own pick — see README Done item 164.** First fixed a stale Pending item (19) that
+  still said Funds/Rentals/EMI/Personal Loans weren't wired into cross-entity linking, when
+  Done item 156 (the previous session) had already finished all eight modules — opened as
+  a tiny draft PR #9, merged. Then asked the user which open Pending item to prioritize next
+  (item 54's right-rail content, item 50's theme distinctiveness, or item 49's stock-page IA
+  rework — all three were flagged as needing genuine design judgment, not just code) via
+  AskUserQuestion; the user picked **right-rail content**. Built the first real slice: new
+  `useNetWorthSummary()` hook (extracted from `NetWorthPage.tsx`'s own data assembly, which
+  now calls the same hook — one source of truth, not two copies that could drift) backs a
+  new `components/DashboardRail.tsx` with a Net worth panel and an Upcoming plans panel
+  (merging Cash's and Banking's not-yet-executed Planning entries). New shared `.rail-split`
+  CSS grid (same collapse-on-narrow pattern as `PositionDetail`'s `.position-split`, Done
+  item 139) wraps QSE's and PSX's Dashboard pages — the highest-traffic pages, picked as a
+  working vertical slice before a wider rollout to Portfolio/module landing pages, same
+  incremental pattern this project always follows. Verified live via Playwright with real
+  bounding-box measurements (not a visual guess) confirming genuine side-by-side layout at
+  1600px and correct collapse at 500px, plus a seeded planned Cash entry rendering correctly
+  in the rail and the "Full breakdown →" link navigating to `/net-worth`. `npx tsc -b` /
+  `npm run test` (350 tests, unchanged) / `npm run build` all clean.
+- **User feedback on the EMI feature just shipped, same day (2026-08-26) — a critical
+  correctness bug found and fixed, plus the requested stat-card redesign — see README Done
+  items 165/166.** Investigated the "wrong remaining balance" report FIRST, before touching
+  any layout — found a real bug, not a display issue: `emiSchedule()`'s fixedTotal (no-
+  interest) branch tracked its running `balance` as PRINCIPAL ONLY, dropping every future
+  markup payment from the figure. That's the textbook-correct definition for an interest-
+  bearing loan (a bank's own "outstanding principal" genuinely excludes not-yet-accrued
+  interest — left untouched) but wrong for fixedTotal mode, which has no real interest-
+  accrual concept at all — the principal/markup split there is purely an internal display
+  breakdown, not a genuinely separate debt. Reproduced with the user's own exact numbers
+  (principal 45,046 / total 50,115.33 / 36 months / EMI ~1,392 — app showed "43,794.81"
+  after month 1, should be ~48,723.33) and fixed by tracking fixedTotal's balance as the
+  full remaining total instead. Two other spots inherited the same wrong assumption and
+  needed the same fix: `emiSummary()`'s `elapsed===0` special case, and
+  `generateBigEmiOverrides()`'s reconciliation math (which used to ADD remaining markup on
+  top of the balance — a double-count once the balance itself started including markup).
+  **Lesson worth repeating**: when a user reports "wrong number" with real figures, reproduce
+  their EXACT numbers as a test case before trusting a fix — a fix that only satisfies
+  existing tests (which, it turned out, never actually exercised fixedTotal mode's
+  intermediate balance values at all) can still be wrong for the real case that prompted the
+  report. Then built the requested 3-zone stat-card layout (Origination / Current status /
+  Timeline, matching the user's own spec) plus a new `markupPercentage()` calc function —
+  "Overdue Balance/Penalties" was explicitly deferred at the user's own choice (asked via
+  AskUserQuestion first, since this app has no missed-payment tracking at all to build it on
+  honestly). Also fixed a separate, confirmed-systemic labeling gap (the user's "add labels
+  on top of all form elements" ask): audited every module for the "detail-page primary-record
+  edit form" pattern and found the exact same "raw unlabeled inputs" gap in EMI's, Personal
+  Loans', and Subscriptions' edit-loan/edit-record forms — every module's own ADD form was
+  already correctly `Field`-labeled, only the EDIT forms had drifted. Table-row inline edits
+  (Bank/Cash/Rentals/etc.) were deliberately left alone — already adequately labeled by their
+  column headers, a different and already-correct pattern. `npx tsc -b` / `npm run test`
+  (359 tests, 9 new) / `npm run build` all clean; verified live against the user's exact
+  reported loan.
 
 ## Live URLs
 

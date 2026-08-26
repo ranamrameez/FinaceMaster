@@ -3485,6 +3485,95 @@ FinanceManager live link:
      real console errors (only the sandbox's known Google-Fonts `ERR_CONNECTION_RESET`, see
      Done item 141). `npx tsc -b` / `npm run test` (350 tests, 12 new) / `npm run build` all
      clean.
+164. **QSE/PSX Dashboard right-rail, first real content added — see Pending item 54's
+     remainder, partial (2026-08-26).** The earlier width bump (Done item 145) only let
+     existing grids breathe wider on a wide viewport; this adds genuine new right-rail
+     *content* the user asked for: a **Net worth** panel (the currency the user has the
+     biggest exposure in, its Net figure, and a per-module breakdown, linking to the full
+     `/net-worth` page) and an **Upcoming plans** panel (the next few not-yet-executed plans
+     from Cash's and Banking's Planning features, merged and sorted by date — previously only
+     visible as a stat-card sub-line on each module's own landing page, Done item 57, never
+     from anywhere else in the app). Both reuse existing calc functions with zero new
+     business logic — `useNetWorthSummary()` (new hook, extracted from `NetWorthPage.tsx`'s
+     own data assembly so both the page and the rail share one source of truth instead of
+     duplicating seven store subscriptions; `NetWorthPage.tsx` itself now calls this same
+     hook, confirmed unchanged behavior via the full test suite before touching any UI) and
+     the existing `PlannedCashEntry`/`PlannedBankTransaction` arrays, just sorted/merged in
+     the component. New shared `.rail-split` CSS grid (1fr + 320px, collapsing to one column
+     under 1000px — same pattern as `PositionDetail`'s `.position-split` from Done item 139)
+     wraps QSE's and PSX's Dashboard pages specifically, as a working vertical slice on the
+     highest-traffic pages before any wider rollout — same "ship one thing, verified" pattern
+     this project always follows (CollapsibleCard, StatCard hue, IconButton all started this
+     way). Verified live via Playwright at both a wide (1600px — confirmed genuine side-by-
+     side layout via bounding-box x-coordinates, not just a visual guess) and narrow (500px —
+     confirmed the rail collapses below the main content) viewport, with a seeded planned
+     Cash entry showing up correctly in the rail and the "Full breakdown →" link correctly
+     navigating to `/net-worth` — zero real console errors. `npx tsc -b` / `npm run test`
+     (350 tests, unchanged — a data-assembly extraction plus new UI, no calc logic changed) /
+     `npm run build` all clean. **Deliberately scoped down**: only QSE's/PSX's Dashboard got
+     the rail this pass — Portfolio, module landing pages, and a third rail panel (e.g. a
+     contextual glossary) are still open, tracked in Pending item 54's remainder below.
+165. **CRITICAL, user-reported with real numbers (2026-08-26): fixedTotal (no-interest) EMI
+     loans showed a badly wrong "remaining balance."** The user's exact repro: principal
+     45,046, total to return 50,115.33, 36 months, EMI ~1,392 — the app showed "Balance:
+     43,794.81" after just the first installment, when it should have been ~48,723.33
+     (50,115.33 − 1,392). Root cause: `emiSchedule()`'s fixedTotal branch tracked its running
+     `balance` as PRINCIPAL ONLY (via an internal `principalRatio` split used to break each
+     payment into a principal/markup pair for the "Interest/markup" column) — correct for an
+     interest-bearing loan (a bank's own "outstanding principal" genuinely excludes interest
+     that hasn't accrued yet), but wrong for fixedTotal mode, which has no real compounding or
+     interest-accrual concept at all: the principal/markup split there is purely an internal
+     display breakdown, not a genuinely separate debt, so a no-interest borrower's real
+     "how much do I still owe" is the FULL remaining total, not a principal-only subset of it.
+     Fixed by tracking `balance` as the total remaining obligation (starting at `total`,
+     decreasing by the full payment each month) for fixedTotal mode specifically — interest
+     mode's principal-only tracking is untouched, since it's actually correct there. Also
+     fixed the same bug in two places that inherited the old assumption: `emiSummary()`'s
+     `elapsed === 0` special case (used to always return `loan.principal` regardless of mode)
+     and `generateBigEmiOverrides()`'s reconciliation math (used to ADD remaining markup on
+     top of the balance, which double-counted it once the balance itself started including
+     markup). UI: the "Net remaining (outstanding)" tooltip is now mode-aware, since the two
+     modes genuinely mean different things by "outstanding" now (previously one tooltip text
+     — "not counting future interest/markup" — was simply wrong for fixedTotal loans).
+     **Found and fixed as part of the same 2026-08-26 EMI feedback batch that added the
+     zone-grouped stat cards (see Done item 166) — investigated FIRST, before touching any
+     layout, since a correctness bug always outranks a display redesign.** New regression
+     tests reproduce the user's exact numbers directly (`emiSchedule`/`emiSummary`, both
+     hand-traced against the real loan) — 5 new cases. `npx tsc -b` / `npm run test` (359
+     tests, 5 new) / `npm run build` all clean; verified live against the exact reported loan
+     — the app's own numbers now match hand-calculated expectations exactly at every point in
+     the schedule checked (month 1 via the unit test, month 7/8 via a live browser check).
+166. **EMI loan-detail stat cards regrouped into three zones, plus several missing figures
+     added — user-requested batch (2026-08-26), see Done item 165 for the correctness bug
+     found while investigating this same feedback.** Replaced the old flat 7-card list with
+     three explicitly labeled, grouped zones matching the user's own spec almost exactly:
+     **Origination** (Total amount sanctioned, Markup percentage, Net to return/total cost),
+     **Current status** (Net remaining/outstanding, Net paid to date, Monthly EMI), **Timeline**
+     (Next due date, Expected completion date, Remaining EMI count) — "Always group the
+     relevant info in one layout," per the user's own explicit note. New pure
+     `markupPercentage(loan)` (tested) gives a comparable percentage figure for both repayment
+     modes — the real annual rate for interest mode, an equivalent derived percentage (markup
+     ÷ principal) for fixedTotal mode, which has no rate at all. "Overdue Balance / Penalties"
+     — part of the user's original 3-zone request — was deliberately NOT built: asked the user
+     via AskUserQuestion first, since this app has zero missed-payment or penalty tracking at
+     all (every other figure already assumes on-schedule payment regardless of whether a
+     repayment was actually logged) — the user's own explicit choice was to skip it for now
+     rather than get a fake or internally-inconsistent version; a real "Overdue" figure needs
+     its own design pass. The old flat list's "Interest/markup so far" card was folded away
+     (its info is now implicit in Net to Return minus principal) rather than kept as a fourth
+     stray card outside any zone, per the user's own "group the relevant info" instruction.
+     **Same batch also fixed a real, separate, systemic labeling gap** (the user's first
+     numbered item: "Add labels on top of all form elements"): audited every module for the
+     "detail-page primary-record edit form" pattern (the `[editing, setEditing]` boolean
+     toggle, as opposed to a table's own per-row inline edit, which is already adequately
+     labeled by its column header) and found the SAME gap — a raw `.row` of unlabeled inputs
+     with only placeholder text, no real `<Field>` label — in three modules: EMI's own
+     edit-loan form, Personal Loans', and Subscriptions'. Fixed all three by wrapping every
+     field in the existing `Field` component (already used correctly by every module's own
+     ADD form — only the EDIT forms had drifted). Verified live via Playwright: all 9 new
+     stat-card fields render with the exact expected values against a seeded loan, the 3 zone
+     headers show, and the edit-loan form's fields are now all `Field`-labeled. `npx tsc -b` /
+     `npm run test` (359 tests, 4 new for `markupPercentage`) / `npm run build` all clean.
 
 ## Pending
 
@@ -3512,11 +3601,19 @@ FinanceManager live link:
     charts across both exchanges) done (2026-08-26) — see Done item 155**, closing this item
     in full: every ticker-indexed chart on QSE's/PSX's Analytics pages now dims every other
     ticker across every tab section when one is hovered, the same as Dashboard's pair.
-19. Cross-entity transaction linking beyond v1 scope (see Done item 29): Funds/Rentals/EMI/
+19. ~~Cross-entity transaction linking beyond v1 scope (see Done item 29): Funds/Rentals/EMI/
     Personal Loans aren't wired into the Transfers page yet — only Cash↔Bank and
-    Bank↔QSE/PSX. A real signed-in browser round-trip (create/edit/delete a link, confirm
-    both sides update) is also still needed — see item 29's verification note. **Expanded
-    2026-08-23 into item 21 below** (genuine multi-currency amounts, more module pairs).
+    Bank↔QSE/PSX.~~ **Superseded — see item 21 below, which is now fully done (Done item
+    156, 2026-08-26): every module this project supports (Cash, Bank, QSE, PSX, Funds,
+    Rentals, Personal Loans, EMI/Loans) is wired into cross-entity linking.** One real gap
+    from this item's original text is still genuinely open, tracked here rather than
+    silently dropped: **a real signed-in browser round-trip** (create/edit/delete a link,
+    confirm both sides update, across every module pair — not just the unit tests and
+    signed-out sign-in-gate checks every session so far has relied on) has never actually
+    been done, since every session so far has avoided creating even a throwaway account
+    against the real production Firebase project, per this project's own locked cloud-sync-
+    safety principle. This needs the user to either do it themselves once, or explicitly
+    authorize a throwaway test account for it.
 
 **New wave, 2026-08-23 (user-requested, full design detail in `MODULES_PLAN.md`'s "Next
 wave" section)**:
@@ -3750,10 +3847,16 @@ item 103) — all three now fixed, see Done item 104:**
     leave ~520px of dead space on a 1920px-wide viewport (sidebar 220px + content 1180px =
     1400px) on literally every page — bumped to 1600px, which the existing `repeat(auto-fit,
     minmax(...))` stat-card/chart grids already fill with extra columns for free, no per-page
-    layout work needed. **Still open**: a genuine right-rail *content* addition (a contextual
-    glossary, a live summary panel, etc.) beyond just letting existing grids breathe wider — that
-    ties into Pending item 49's "assess a stock in one go" IA rework and needs its own per-page
-    judgment call about what actually belongs there, not a blind width bump.
+    layout work needed. **A genuine right-rail content addition — first slice done (2026-08-26)
+    — see Done item 164**: QSE's and PSX's Dashboard pages now have a real right-rail (a "live
+    summary panel," per this item's own suggested direction) with a Net worth panel and an
+    Upcoming plans panel, both pulling in cross-module data that wasn't otherwise visible from
+    the Dashboard. **Still open**: this only covers Dashboard — Portfolio, module landing pages,
+    and a third rail panel (e.g. a contextual glossary, or the "today's movers" among held
+    positions idea considered but not built this pass) are all still a blank page each needing
+    its own per-page judgment call about what actually belongs there, same as before; this also
+    still ties into Pending item 49's "assess a stock in one go" IA rework for the per-stock page
+    specifically.
 55. Simplest-possible-language pass (2026-08-24 app-wide note, item 3 of the Risk Analysis
     batch) — Done item 105 added tooltips explaining jargon terms on the Risk Analysis page
     specifically. **First app-wide pass done (2026-08-25) — see Done item 140**: the highest-
@@ -3870,6 +3973,21 @@ same batch**:
     own Firebase node kept separate from every module's workbook, and a snapshot that's a
     frozen point-in-time copy never rewritten by later backdated data — and built a real
     net-worth-over-time line chart on top, for the currently-selected preferred currency.
+
+**2026-08-26, EMI stat-card feedback batch — see Done items 165/166 for what shipped**:
+
+65. EMI/Loans "Overdue Balance / Penalties" — part of the user's own 3-zone stat-card request,
+    explicitly deferred at the user's own choice (via AskUserQuestion) rather than built as a
+    fake or inconsistent figure. This app has no missed-payment or late-payment tracking
+    anywhere: every existing EMI figure (Outstanding, Paid so far, elapsed months) already
+    assumes on-schedule payment regardless of whether a repayment was actually logged in the
+    Repayment log. A real "Overdue" figure needs its own design pass — at minimum, deciding
+    whether "overdue" means "past-due with no matching Repayment-log entry" (computable from
+    existing data, but only meaningful for a user who logs repayments individually — someone
+    who doesn't would see every past-due installment flagged overdue, a false positive) or
+    something else. "Penalties" has no data model at all yet — not even a field to hold one.
+    Not started; needs the user's own direction on what "overdue"/"penalty" should mean before
+    any code, same bar this file always applies to a genuine design fork.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

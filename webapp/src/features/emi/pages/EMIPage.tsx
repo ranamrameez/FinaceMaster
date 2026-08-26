@@ -1,5 +1,5 @@
 import type { User } from 'firebase/auth';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Bar } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Modal } from '../../../components/Modal';
@@ -14,7 +14,7 @@ import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
-import { emiSchedule, emiSummary, expectedEndDate, generateBigEmiOverrides, installmentDueDate, resolvedDueDate, totalsByCurrency, whatIfExtraPayment } from '../../../lib/calc/emiModule';
+import { emiSchedule, emiSummary, expectedEndDate, generateBigEmiOverrides, installmentDueDate, markupPercentage, resolvedDueDate, totalsByCurrency, whatIfExtraPayment, type EMISummary } from '../../../lib/calc/emiModule';
 import { dlBarV } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar } from '../../../lib/cssVar';
@@ -207,6 +207,100 @@ function LinkedEMIRepaymentFields({ loan, month, amount, date, onLinked }: { loa
   );
 }
 
+/** Loan-detail stat cards, redesigned into three grouped zones (2026-08-26
+ * user feedback — the flat 7-card list was missing several basic figures
+ * and didn't group related ones together). Each zone answers one distinct
+ * question about the loan:
+ * - **Origination**: what was agreed at the start — never changes once the
+ *   loan is created (Total Amount Sanctioned, Markup Percentage, Net to
+ *   Return).
+ * - **Current Status**: where things stand right now (Net Remaining, Net
+ *   Paid, the current Monthly EMI — which CAN differ from origination if a
+ *   `customMonthlyPayment` or per-month override is set).
+ * - **Timeline**: what's coming (Next Due Date, Expected Completion Date,
+ *   Remaining EMI Count).
+ * "Overdue Balance / Penalties" (part of the user's original zone spec) is
+ * deliberately NOT included here — the user's own explicit call, via
+ * AskUserQuestion, was to skip it for now rather than build a fake or
+ * inconsistent version: this app has no missed-payment/penalty tracking at
+ * all (Outstanding/Paid so far already assume on-schedule payment
+ * regardless of whether a repayment was actually logged), so a real
+ * "Overdue" figure needs its own design pass, not a bolt-on here. */
+function LoanStatZones({ loan, sum, loanRepayments }: { loan: EMILoan; sum: EMISummary; loanRepayments: EMIRepayment[] }) {
+  const netToReturn = loan.principal + sum.totalInterest;
+  const nextDueRow = sum.rows[sum.elapsed];
+  const nextDueDate = nextDueRow ? resolvedDueDate(loan, nextDueRow.month, loanRepayments) : null;
+  const markupLabel = loan.repaymentMode === 'fixedTotal' ? 'Markup percentage' : 'Interest rate (annual)';
+
+  const zone = (title: string, cards: ReactNode) => (
+    <div>
+      <div className="footer-note" style={{ marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>{title}</div>
+      <div style={{ display: 'grid', gap: 8 }}>{cards}</div>
+    </div>
+  );
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px,1fr))', gap: 16, marginTop: 12 }}>
+      {zone('Origination', (
+        <>
+          <div className="stat-card card" style={hueStyle(HUES[3])}>
+            <div className="label">Total amount sanctioned</div>
+            <MoneyValue n={loan.principal} currency={loan.currencyCode} />
+          </div>
+          <div className="stat-card card" style={hueStyle(HUES[4])}>
+            <Tooltip text={loan.repaymentMode === 'fixedTotal' ? 'Equivalent markup, as a percentage of the principal — this loan has no annual rate, just a flat total to return.' : 'The annual interest rate this loan was agreed at.'}>
+              <div className="label" style={{ cursor: 'pointer' }}>{markupLabel}</div>
+            </Tooltip>
+            <div className="value">{markupPercentage(loan).toFixed(2)}%</div>
+          </div>
+          <div className="stat-card card" style={hueStyle(HUES[6])}>
+            <Tooltip text="Principal plus every interest/markup payment across the whole loan — the total amount you'll have paid by the time it's fully repaid.">
+              <div className="label" style={{ cursor: 'pointer' }}>Net to return (total cost)</div>
+            </Tooltip>
+            <MoneyValue n={netToReturn} currency={loan.currencyCode} />
+          </div>
+        </>
+      ))}
+      {zone('Current status', (
+        <>
+          <div className="stat-card card" style={hueStyle('var(--loss)')}>
+            <Tooltip text={loan.repaymentMode === 'fixedTotal' ? 'How much you still owe in total to fully repay this loan, including remaining markup.' : 'The remaining principal you still owe — doesn\'t include interest that hasn\'t accrued yet.'}>
+              <div className="label" style={{ cursor: 'pointer' }}>Net remaining (outstanding)</div>
+            </Tooltip>
+            <MoneyValue n={sum.outstanding} currency={loan.currencyCode} />
+          </div>
+          <div className="stat-card card" style={hueStyle(HUES[2])}>
+            <div className="label">Net paid (to date)</div>
+            <MoneyValue n={sum.paidSoFar} currency={loan.currencyCode} />
+          </div>
+          <div className="stat-card card" style={hueStyle(HUES[0])}>
+            <Tooltip text="The current effective installment — can differ from a plain origination EMI if a custom monthly payment or per-month override is set.">
+              <div className="label" style={{ cursor: 'pointer' }}>Monthly EMI</div>
+            </Tooltip>
+            <MoneyValue n={sum.emi} currency={loan.currencyCode} />
+          </div>
+        </>
+      ))}
+      {zone('Timeline', (
+        <>
+          <div className="stat-card card" style={hueStyle(HUES[1])}>
+            <div className="label">Next due date</div>
+            <div className="value" style={{ fontSize: 16 }}>{nextDueDate || 'Fully repaid'}</div>
+          </div>
+          <div className="stat-card card" style={hueStyle(HUES[7])}>
+            <div className="label">Expected completion date</div>
+            <div className="value" style={{ fontSize: 16 }}>{expectedEndDate(loan)}</div>
+          </div>
+          <div className="stat-card card" style={hueStyle(HUES[5])}>
+            <div className="label">Remaining EMI count</div>
+            <div className="value">{sum.monthsRemaining}</div>
+          </div>
+        </>
+      ))}
+    </div>
+  );
+}
+
 function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: () => void; startInEditMode?: boolean }) {
   const deleteEntry = useEMIWorkbookStore((s) => s.deleteEntry);
   const updateEntry = useEMIWorkbookStore((s) => s.updateEntry);
@@ -371,38 +465,58 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
         {editing ? (
           <div>
             <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-              <TextInput value={editRow.name} onChange={(e) => setEditRow({ ...editRow, name: e.target.value })} />
-              <TextInput value={editRow.lender} onChange={(e) => setEditRow({ ...editRow, lender: e.target.value })} />
-              <Select value={editRow.currencyCode} onChange={(e) => setEditRow({ ...editRow, currencyCode: e.target.value })}>
-                {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
-              </Select>
-              <TextInput type="number" step="0.01" value={editRow.principal} onChange={(e) => setEditRow({ ...editRow, principal: Number(e.target.value) })} />
-              <Select value={editRow.repaymentMode} onChange={(e) => setEditRow({ ...editRow, repaymentMode: e.target.value as EMILoan['repaymentMode'] })}>
-                <option value="interest">Interest rate</option>
-                <option value="fixedTotal">Fixed total</option>
-              </Select>
+              <Field label="Loan name">
+                <TextInput value={editRow.name} onChange={(e) => setEditRow({ ...editRow, name: e.target.value })} />
+              </Field>
+              <Field label="Lender">
+                <TextInput value={editRow.lender} onChange={(e) => setEditRow({ ...editRow, lender: e.target.value })} />
+              </Field>
+              <Field label="Currency">
+                <Select value={editRow.currencyCode} onChange={(e) => setEditRow({ ...editRow, currencyCode: e.target.value })}>
+                  {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+                </Select>
+              </Field>
+              <Field label="Principal">
+                <TextInput type="number" step="0.01" value={editRow.principal} onChange={(e) => setEditRow({ ...editRow, principal: Number(e.target.value) })} />
+              </Field>
+              <Field label="Repayment type">
+                <Select value={editRow.repaymentMode} onChange={(e) => setEditRow({ ...editRow, repaymentMode: e.target.value as EMILoan['repaymentMode'] })}>
+                  <option value="interest">Interest rate</option>
+                  <option value="fixedTotal">Fixed total</option>
+                </Select>
+              </Field>
               {editRow.repaymentMode === 'interest' ? (
-                <TextInput type="number" step="0.01" value={editRow.annualRatePct ?? ''} onChange={(e) => setEditRow({ ...editRow, annualRatePct: Number(e.target.value) })} placeholder="Annual rate %" />
+                <Field label="Annual rate (%)">
+                  <TextInput type="number" step="0.01" value={editRow.annualRatePct ?? ''} onChange={(e) => setEditRow({ ...editRow, annualRatePct: Number(e.target.value) })} />
+                </Field>
               ) : (
-                <TextInput type="number" step="0.01" value={editRow.totalToReturn ?? ''} onChange={(e) => setEditRow({ ...editRow, totalToReturn: Number(e.target.value) })} placeholder="Total to return" />
+                <Field label="Total to return">
+                  <TextInput type="number" step="0.01" value={editRow.totalToReturn ?? ''} onChange={(e) => setEditRow({ ...editRow, totalToReturn: Number(e.target.value) })} />
+                </Field>
               )}
-              <TextInput type="number" value={editRow.tenureMonths} onChange={(e) => setEditRow({ ...editRow, tenureMonths: Number(e.target.value) })} placeholder="Tenure (months)" />
-              <TextInput type="date" value={editRow.startDate} onChange={(e) => setEditRow({ ...editRow, startDate: e.target.value })} />
-              <TextInput
-                type="number"
-                step="0.01"
-                value={editRow.customMonthlyPayment ?? ''}
-                onChange={(e) => setEditRow({ ...editRow, customMonthlyPayment: e.target.value ? Number(e.target.value) : undefined })}
-                placeholder="Custom monthly payment (optional)"
-              />
-              <TextInput
-                type="number"
-                min={1}
-                max={31}
-                value={editRow.paymentDayOfMonth ?? ''}
-                onChange={(e) => setEditRow({ ...editRow, paymentDayOfMonth: e.target.value ? Number(e.target.value) : undefined })}
-                placeholder="Payment day of month (optional)"
-              />
+              <Field label="Tenure (months)">
+                <TextInput type="number" value={editRow.tenureMonths} onChange={(e) => setEditRow({ ...editRow, tenureMonths: Number(e.target.value) })} />
+              </Field>
+              <Field label="Start date">
+                <TextInput type="date" value={editRow.startDate} onChange={(e) => setEditRow({ ...editRow, startDate: e.target.value })} />
+              </Field>
+              <Field label="Custom monthly payment (optional)">
+                <TextInput
+                  type="number"
+                  step="0.01"
+                  value={editRow.customMonthlyPayment ?? ''}
+                  onChange={(e) => setEditRow({ ...editRow, customMonthlyPayment: e.target.value ? Number(e.target.value) : undefined })}
+                />
+              </Field>
+              <Field label="Payment day of month (optional)">
+                <TextInput
+                  type="number"
+                  min={1}
+                  max={31}
+                  value={editRow.paymentDayOfMonth ?? ''}
+                  onChange={(e) => setEditRow({ ...editRow, paymentDayOfMonth: e.target.value ? Number(e.target.value) : undefined })}
+                />
+              </Field>
             </div>
             <div className="row" style={{ gap: 8, marginTop: 8 }}>
               <IconButton
@@ -442,28 +556,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
             </div>
           </div>
         )}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px,1fr))', gap: 8, marginTop: 12 }}>
-          <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Monthly installment</div><MoneyValue n={sum.emi} currency={loan.currencyCode} /></div>
-          <div className="stat-card card" style={hueStyle('var(--loss)')}>
-            <Tooltip text="How much you still owe on this loan, not counting future interest/markup.">
-              <div className="label" style={{ cursor: 'pointer' }}>Outstanding</div>
-            </Tooltip>
-            <MoneyValue n={sum.outstanding} currency={loan.currencyCode} />
-          </div>
-          <div className="stat-card card" style={hueStyle(HUES[2])}><div className="label">Paid so far</div><MoneyValue n={sum.paidSoFar} currency={loan.currencyCode} /></div>
-          <div className="stat-card card" style={hueStyle(HUES[4])}>
-            <div className="label">{loan.repaymentMode === 'fixedTotal' ? 'Markup so far' : 'Interest so far'}</div>
-            <MoneyValue n={sum.interestSoFar} currency={loan.currencyCode} />
-          </div>
-          <div className="stat-card card" style={hueStyle(HUES[0])}><div className="label">Months remaining</div><div className="value">{sum.monthsRemaining}</div></div>
-          <div className="stat-card card" style={hueStyle(HUES[6])}>
-            <Tooltip text={`The total ${loan.repaymentMode === 'fixedTotal' ? 'markup' : 'interest'} you'll pay across the whole loan, from start to the final installment — not just what's accrued so far.`}>
-              <div className="label" style={{ cursor: 'pointer' }}>{loan.repaymentMode === 'fixedTotal' ? 'Total markup (life)' : 'Total interest (life)'}</div>
-            </Tooltip>
-            <MoneyValue n={sum.totalInterest} currency={loan.currencyCode} />
-          </div>
-          <div className="stat-card card" style={hueStyle(HUES[7])}><div className="label">Expected end date</div><div className="value">{expectedEndDate(loan)}</div></div>
-        </div>
+        <LoanStatZones loan={loan} sum={sum} loanRepayments={loanRepayments} />
       </Card>
 
       <CollapsibleCard
@@ -769,7 +862,7 @@ function OverallSummary() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px,1fr))', gap: 8 }}>
             <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Monthly total</div><MoneyValue n={totals[code].monthlyInstallment} currency={code} /></div>
             <div className="stat-card card" style={hueStyle('var(--loss)')}>
-              <Tooltip text="How much you still owe across your loans in this currency, not counting future interest/markup.">
+              <Tooltip text="How much you still owe across your loans in this currency — remaining principal only for interest-rate loans, the full remaining amount (including markup) for fixed-total loans.">
                 <div className="label" style={{ cursor: 'pointer' }}>Outstanding</div>
               </Tooltip>
               <MoneyValue n={totals[code].outstanding} currency={code} />
