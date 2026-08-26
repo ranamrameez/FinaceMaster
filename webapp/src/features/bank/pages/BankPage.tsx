@@ -28,6 +28,8 @@ import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
 import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import { isValidIbanFormat, lookupIban } from '../../../lib/ibanLookup';
+import { isValidBin, lookupBin } from '../../../lib/binLookup';
+import { PK_QA_BANKS_AND_WALLETS } from '../../../lib/bankDirectory';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
 import { useAppearanceStore } from '../../../store/appearanceStore';
@@ -45,6 +47,98 @@ function emptyAccount(defaultCurrency: string): Omit<BankAccount, 'id'> {
 }
 
 const ACCOUNT_TYPES = ['Savings', 'Current', 'Checking', 'Salary', 'Business', 'Fixed deposit'];
+const CARD_NETWORKS = ['Visa', 'Mastercard', 'American Express', 'UnionPay', 'Discover', 'JCB'];
+
+interface CreditCardValue {
+  isLiability?: boolean;
+  creditLimit?: number;
+  annualFee?: number;
+  statementDate?: number;
+  paymentDueDate?: number;
+  lateFeeAfterDue?: number;
+  minPaymentAmount?: number;
+  cardNetwork?: string;
+  cardBin?: string;
+}
+
+/** User-requested (2026-08-26): credit card tracking as a liability
+ * account — "Is this a credit card?" reveals card-specific fields (all
+ * optional beyond the toggle itself). `cardBin` (first 6-8 digits only,
+ * never a full card number — see `lib/binLookup.ts`) optionally
+ * auto-fills the network via a free public lookup; the network field
+ * stays a normal free-editable input either way. */
+function CreditCardFields({ value, onChange, datalistId }: { value: CreditCardValue; onChange: (patch: Partial<CreditCardValue>) => void; datalistId: string }) {
+  const [detecting, setDetecting] = useState(false);
+
+  const detectNetwork = async () => {
+    const bin = (value.cardBin ?? '').trim();
+    if (!bin) return toast('Enter the first 6-8 digits of the card first.');
+    if (!isValidBin(bin)) return toast('That should be 6-8 digits — never the full card number.');
+    setDetecting(true);
+    try {
+      const result = await lookupBin(bin);
+      if (!result) {
+        toast('Card network not detected — pick it manually below.');
+        return;
+      }
+      onChange({ cardNetwork: result.network ? result.network[0].toUpperCase() + result.network.slice(1) : value.cardNetwork });
+      toast(`Detected: ${result.network ?? 'unknown network'}${result.bankName ? ` (${result.bankName})` : ''}.`);
+    } catch {
+      toast('Card network not detected — pick it manually below.');
+    } finally {
+      setDetecting(false);
+    }
+  };
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <input type="checkbox" checked={!!value.isLiability} onChange={(e) => onChange({ isLiability: e.target.checked })} />
+        This is a credit card (counts as a debt in Net Worth, not a balance)
+      </label>
+      {value.isLiability && (
+        <div style={{ marginTop: 8 }}>
+          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+            <Field label="Credit limit (optional)" width={140}>
+              <TextInput type="number" step="0.01" value={value.creditLimit ?? ''} onChange={(e) => onChange({ creditLimit: e.target.value ? Number(e.target.value) : undefined })} />
+            </Field>
+            <Field label="Annual fee (optional)" width={130}>
+              <TextInput type="number" step="0.01" value={value.annualFee ?? ''} onChange={(e) => onChange({ annualFee: e.target.value ? Number(e.target.value) : undefined })} />
+            </Field>
+            <Field label="Statement day of month (optional)" width={110}>
+              <TextInput type="number" min={1} max={31} value={value.statementDate ?? ''} onChange={(e) => onChange({ statementDate: e.target.value ? Number(e.target.value) : undefined })} />
+            </Field>
+            <Field label="Payment due day of month (optional)" width={110}>
+              <TextInput type="number" min={1} max={31} value={value.paymentDueDate ?? ''} onChange={(e) => onChange({ paymentDueDate: e.target.value ? Number(e.target.value) : undefined })} />
+            </Field>
+          </div>
+          <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+            <Field label="Late fee after due date (optional)" width={150}>
+              <TextInput type="number" step="0.01" value={value.lateFeeAfterDue ?? ''} onChange={(e) => onChange({ lateFeeAfterDue: e.target.value ? Number(e.target.value) : undefined })} />
+            </Field>
+            <Field label="Minimum amount due (optional)" width={150}>
+              <TextInput type="number" step="0.01" value={value.minPaymentAmount ?? ''} onChange={(e) => onChange({ minPaymentAmount: e.target.value ? Number(e.target.value) : undefined })} />
+            </Field>
+            <Field label="Card network (optional)" width={140}>
+              <TextInput list={datalistId} value={value.cardNetwork ?? ''} onChange={(e) => onChange({ cardNetwork: e.target.value || undefined })} placeholder="e.g. Visa" />
+            </Field>
+            <Field label="First 6-8 digits (optional)" width={140} title="Never the full card number — just enough to detect the network/issuer.">
+              <TextInput value={value.cardBin ?? ''} onChange={(e) => onChange({ cardBin: e.target.value || undefined })} placeholder="e.g. 411111" />
+            </Field>
+            <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 1 }}>
+              <button type="button" className="btn secondary small" disabled={detecting} onClick={detectNetwork}>
+                {detecting ? 'Detecting…' : 'Detect network'}
+              </button>
+            </div>
+          </div>
+          <datalist id={datalistId}>
+            {CARD_NETWORKS.map((n) => <option key={n} value={n} />)}
+          </datalist>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /* ============================== Accounts ============================== */
 
@@ -101,7 +195,7 @@ interface IbanLookupValue {
  * succeeds — an account may have no IBAN at all (common for PKR/QAR
  * accounts), or the lookup may simply fail, and that shouldn't block
  * entering the bank name manually. */
-function IbanLookupFields({ value, onChange }: { value: IbanLookupValue; onChange: (patch: Partial<IbanLookupValue>) => void }) {
+function IbanLookupFields({ value, onChange, bankNameDatalistId }: { value: IbanLookupValue; onChange: (patch: Partial<IbanLookupValue>) => void; bankNameDatalistId: string }) {
   const [looking, setLooking] = useState(false);
 
   const doLookup = async () => {
@@ -137,12 +231,18 @@ function IbanLookupFields({ value, onChange }: { value: IbanLookupValue; onChang
           {looking ? 'Looking up…' : 'Look up bank'}
         </button>
       </div>
-      <Field label="Bank name (optional)" width={180}>
-        <TextInput value={value.bankName ?? ''} onChange={(e) => onChange({ bankName: e.target.value || undefined })} placeholder="e.g. Standard Chartered" />
+      <Field label="Bank name (optional)" width={180} title="Type to search — includes common Pakistani and Qatari banks/wallet apps, or type any other bank's name.">
+        <TextInput list={bankNameDatalistId} value={value.bankName ?? ''} onChange={(e) => onChange({ bankName: e.target.value || undefined })} placeholder="e.g. Standard Chartered" />
       </Field>
       <Field label="BIC / SWIFT (optional)" width={140}>
         <TextInput value={value.bic ?? ''} onChange={(e) => onChange({ bic: e.target.value || undefined })} placeholder="e.g. SCBLPKKX" />
       </Field>
+      {/* User-requested (2026-08-26): prefilled Pakistan/Qatar banks + mobile
+         wallet apps — a suggestion list, never a fixed enum; any other bank
+         name typed here is accepted exactly the same way. */}
+      <datalist id={bankNameDatalistId}>
+        {PK_QA_BANKS_AND_WALLETS.map((b) => <option key={b} value={b} />)}
+      </datalist>
     </div>
   );
 }
@@ -219,7 +319,8 @@ function AddAccountForm({ onSaved }: { onSaved?: () => void }) {
       </div>
       {/* User-requested: an IBAN lookup fills bank name/BIC automatically
          when supported; all still hand-editable. */}
-      <IbanLookupFields value={a} onChange={(patch) => setA({ ...a, ...patch })} />
+      <IbanLookupFields value={a} onChange={(patch) => setA({ ...a, ...patch })} bankNameDatalistId="bank-name-datalist-add" />
+      <CreditCardFields value={a} onChange={(patch) => setA({ ...a, ...patch })} datalistId="card-network-datalist-add" />
       {/* User-requested: save an account number + the SMS sender details a
          bank alert actually arrives from, for a future SMS-based
          transaction-import feature (nothing reads these yet — this just
@@ -303,11 +404,18 @@ function AccountsList() {
               </tr>
             ) : (
               <tr key={a.id}>
-                <td>{a.name}</td>
+                <td>
+                  {a.name}
+                  {a.isLiability && <span className="pill-sell" style={{ marginLeft: 6, fontSize: 10 }}>Credit card</span>}
+                </td>
                 <td className="footer-note">{[a.accountType, a.branch].filter(Boolean).join(' · ') || '—'}</td>
                 <td>{a.currencyCode}</td>
                 <td>{fmtMoney(a.openingBalance, a.currencyCode)}</td>
-                <td>{fmtMoney(accountBalance(a, transactions), a.currencyCode)}</td>
+                <td className={a.isLiability ? (accountBalance(a, transactions) < 0 ? 'pill-sell' : 'pill-buy') : undefined}>
+                  {a.isLiability
+                    ? `${fmtMoney(Math.max(0, -accountBalance(a, transactions)), a.currencyCode)} owed`
+                    : fmtMoney(accountBalance(a, transactions), a.currencyCode)}
+                </td>
                 <td>
                   <button className="btn secondary small" onClick={() => setDetailAccount(a)}>Details</button>{' '}
                   <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(a)} />{' '}
@@ -358,6 +466,15 @@ function AccountDetailModal({ account, onClose }: { account: BankAccount; onClos
     iban: account.iban ?? '',
     bankName: account.bankName ?? '',
     bic: account.bic ?? '',
+    isLiability: account.isLiability,
+    creditLimit: account.creditLimit,
+    annualFee: account.annualFee,
+    statementDate: account.statementDate,
+    paymentDueDate: account.paymentDueDate,
+    lateFeeAfterDue: account.lateFeeAfterDue,
+    minPaymentAmount: account.minPaymentAmount,
+    cardNetwork: account.cardNetwork,
+    cardBin: account.cardBin,
   });
   const saveMeta = async () => {
     if (!(await ensureSignedIn('Sign in to save account details.'))) return;
@@ -371,6 +488,15 @@ function AccountDetailModal({ account, onClose }: { account: BankAccount; onClos
       iban: meta.iban.trim() || undefined,
       bankName: meta.bankName.trim() || undefined,
       bic: meta.bic.trim() || undefined,
+      isLiability: meta.isLiability,
+      creditLimit: meta.creditLimit,
+      annualFee: meta.annualFee,
+      statementDate: meta.statementDate,
+      paymentDueDate: meta.paymentDueDate,
+      lateFeeAfterDue: meta.lateFeeAfterDue,
+      minPaymentAmount: meta.minPaymentAmount,
+      cardNetwork: meta.cardNetwork,
+      cardBin: meta.cardBin,
     });
     toast('Account details saved.');
   };
@@ -404,10 +530,13 @@ function AccountDetailModal({ account, onClose }: { account: BankAccount; onClos
   return (
     <Modal title={account.name} onClose={onClose}>
       <p className="footer-note" style={{ marginBottom: 12 }}>
-        Current balance:{' '}
-        <strong title={fmtMoney(accountBalance(account, transactions), account.currencyCode)}>
-          {num(accountBalance(account, transactions))} {account.currencyCode}
+        {account.isLiability ? 'Amount owed:' : 'Current balance:'}{' '}
+        <strong title={fmtMoney(account.isLiability ? Math.max(0, -accountBalance(account, transactions)) : accountBalance(account, transactions), account.currencyCode)}>
+          {num(account.isLiability ? Math.max(0, -accountBalance(account, transactions)) : accountBalance(account, transactions))} {account.currencyCode}
         </strong>
+        {account.isLiability && account.creditLimit ? (
+          <span className="footer-note"> · {num(Math.max(0, account.creditLimit - Math.max(0, -accountBalance(account, transactions))))} {account.currencyCode} available of {num(account.creditLimit)} limit</span>
+        ) : null}
       </p>
 
       {/* User-requested: save an account number + SMS sender details for a
@@ -439,6 +568,12 @@ function AccountDetailModal({ account, onClose }: { account: BankAccount; onClos
           ...('bankName' in patch ? { bankName: patch.bankName ?? '' } : {}),
           ...('bic' in patch ? { bic: patch.bic ?? '' } : {}),
         }))}
+        bankNameDatalistId="bank-name-datalist-detail"
+      />
+      <CreditCardFields
+        value={meta}
+        onChange={(patch) => setMeta((m) => ({ ...m, ...patch }))}
+        datalistId="card-network-datalist-detail"
       />
       <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 16, marginTop: 8 }}>
         <Field label="Account number" width={160} title="However your bank shows it on statements/SMS — often partially masked, e.g. xxxx1234.">

@@ -30,11 +30,45 @@ export function accountBalance(account: BankAccount, transactions: BankTransacti
 }
 
 /** Total balance across all accounts, grouped by currency — never
- * blended/converted (no live FX-rate source, see MODULES_PLAN.md). */
+ * blended/converted (no live FX-rate source, see MODULES_PLAN.md).
+ * Includes liability (credit card) accounts blended in with the rest —
+ * this is intentionally a NET figure (a card's negative balance already
+ * offsets a checking account's positive one when summed), used for
+ * Banking's own "Accounts in CODE" stat card. For a figure that separates
+ * assets from credit-card debt (e.g. Net Worth's own breakdown), use
+ * `assetBalanceByCurrency`/`creditCardLiabilityByCurrency` instead. */
 export function totalBalanceByCurrency(accounts: BankAccount[], transactions: BankTransaction[]): Record<string, number> {
   const out: Record<string, number> = {};
   accounts.forEach((a) => {
     out[a.currencyCode] = (out[a.currencyCode] || 0) + accountBalance(a, transactions);
+  });
+  return out;
+}
+
+/** Same as `totalBalanceByCurrency` but excludes liability (credit card)
+ * accounts — the pure-asset figure Net Worth should count as a plain
+ * positive contribution. */
+export function assetBalanceByCurrency(accounts: BankAccount[], transactions: BankTransaction[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  accounts.filter((a) => !a.isLiability).forEach((a) => {
+    out[a.currencyCode] = (out[a.currencyCode] || 0) + accountBalance(a, transactions);
+  });
+  return out;
+}
+
+/** How much is owed across liability (credit card) accounts, grouped by
+ * currency — always returned as a POSITIVE "amount owed" figure (a card's
+ * own `accountBalance` is negative while money is owed, following the
+ * same signed-transaction convention as every other account; this flips
+ * it to the positive-debt convention Net Worth's `emiOutstanding`/
+ * `personalLoansNet` liability inputs already use). A card that's paid
+ * off or in credit (a positive `accountBalance`) contributes 0, never a
+ * negative "liability." */
+export function creditCardLiabilityByCurrency(accounts: BankAccount[], transactions: BankTransaction[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  accounts.filter((a) => a.isLiability).forEach((a) => {
+    const owed = Math.max(0, -accountBalance(a, transactions));
+    if (owed > 0) out[a.currencyCode] = (out[a.currencyCode] || 0) + owed;
   });
   return out;
 }

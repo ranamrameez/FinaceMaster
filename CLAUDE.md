@@ -3419,6 +3419,33 @@ not developer notes) continuously as features ship.
   a new store of its own?) before starting, same as how the original Cash/Bank Planning
   feature's own design fork was resolved via `AskUserQuestion` before building (see this
   file's earlier entry on that).
+- **Credit card tracking built (2026-08-26) — see README Done item 175, closes Pending item
+  105.** Asked the user directly (`AskUserQuestion`) how to model it before building: a
+  liability-flagged Bank account (reusing the existing ledger/CSV import/Planning UI) vs. a
+  genuinely separate module with its own credit-limit/due-date mechanics — the user picked the
+  Bank-liability route, explicitly with the full field set (annual charges, limit, billing
+  date, minimum due date, bill due date, charges after due date, minimum billing amount, card
+  network) and asked whether card-network detection via an open API (like a Visa/Mastercard
+  BIN lookup) was feasible. It is — `lib/binLookup.ts` mirrors `lib/ibanLookup.ts`'s provider-
+  chain shape, using the free/keyless `binlist.net` against just the first 6-8 digits (a BIN),
+  never the full card number. **Real design insight surfaced while implementing, not assumed
+  up front**: the app's existing signed-transaction convention (negative=debit, positive=
+  credit) ALREADY computes a credit card's balance correctly with zero changes to
+  `accountBalance`/`accountRunningLedger` — a purchase drives the balance negative (owed), a
+  payment brings it back up, exactly like a real card. The only new logic needed was WHERE that
+  balance gets counted: new `assetBalanceByCurrency()`/`creditCardLiabilityByCurrency()` split
+  accounts by a new `BankAccount.isLiability` flag, feeding Net Worth's `bank` (assets) and new
+  `creditCards` (always-liability) inputs separately so a card's debt is counted exactly once.
+  The user separately clarified mid-build: a card is its own independent account, NOT tied to
+  one fixed paying account, since it can be paid from any of several accounts at the same bank
+  ad hoc — confirmed this was already the right model before writing any linking code. Also
+  shipped in the same batch, both user-requested: `lib/bankDirectory.ts` (a prefilled Pakistan/
+  Qatar bank+wallet suggestion datalist on the existing "Bank name" field from the IBAN
+  feature) and the UI showing a liability account as "$X owed" plus available credit instead
+  of a raw negative balance. `npx tsc -b` / `npm run test` (382 tests, 7 new) / `npm run build`
+  all clean; verified live via Playwright including the exact Net Worth numbers for a seeded
+  checking+card pair (Assets 1k / Liabilities 150 / Net 850, "Credit cards" its own breakdown
+  line).
 
 ## Live URLs
 

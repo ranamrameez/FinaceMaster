@@ -8,7 +8,11 @@
 
 export interface NetWorthInputs {
   /** Assets: Cash balance, Bank total balance, QSE/PSX net worth (cash +
-   * portfolio value, one currency each), Funds current market value. */
+   * portfolio value, one currency each), Funds current market value.
+   * `bank` here means ASSET accounts only (`assetBalanceByCurrency`) — a
+   * credit card's own debt is counted once, via `creditCards` below, not
+   * blended into this figure (that would double as an asset-side
+   * reduction AND get missed as its own liability line). */
   cash: Record<string, number>;
   bank: Record<string, number>;
   qse: Record<string, number>;
@@ -20,6 +24,10 @@ export interface NetWorthInputs {
   personalLoansNet: Record<string, number>;
   /** EMI's outstanding balance per currency — always a liability. */
   emiOutstanding: Record<string, number>;
+  /** Credit card debt per currency (`bankModule.ts`'s
+   * `creditCardLiabilityByCurrency`) — always a positive "amount owed"
+   * figure, always a liability. User-requested (2026-08-26). */
+  creditCards: Record<string, number>;
 }
 
 /** One module's contribution to a currency's net worth — surfaced so the UI
@@ -48,12 +56,13 @@ function mergeCurrencyKeys(...maps: Record<string, number>[]): string[] {
 }
 
 export function computeNetWorthByCurrency(inputs: NetWorthInputs): CurrencyNetWorth[] {
-  const { cash, bank, qse, psx, funds, personalLoansNet, emiOutstanding } = inputs;
-  const currencies = mergeCurrencyKeys(cash, bank, qse, psx, funds, personalLoansNet, emiOutstanding);
+  const { cash, bank, qse, psx, funds, personalLoansNet, emiOutstanding, creditCards } = inputs;
+  const currencies = mergeCurrencyKeys(cash, bank, qse, psx, funds, personalLoansNet, emiOutstanding, creditCards);
 
   return currencies.map((currency) => {
     const loanNet = personalLoansNet[currency] ?? 0;
     const emi = emiOutstanding[currency] ?? 0;
+    const cardDebt = creditCards[currency] ?? 0;
     const assets =
       (cash[currency] ?? 0) +
       (bank[currency] ?? 0) +
@@ -61,13 +70,14 @@ export function computeNetWorthByCurrency(inputs: NetWorthInputs): CurrencyNetWo
       (psx[currency] ?? 0) +
       (funds[currency] ?? 0) +
       Math.max(loanNet, 0);
-    const liabilities = emi + Math.max(-loanNet, 0);
+    const liabilities = emi + cardDebt + Math.max(-loanNet, 0);
     const breakdown: NetWorthBreakdownEntry[] = [
       { module: 'Cash', amount: cash[currency] ?? 0 },
       { module: 'Bank', amount: bank[currency] ?? 0 },
       { module: 'Stocks (QSE)', amount: qse[currency] ?? 0 },
       { module: 'Stocks (PSX)', amount: psx[currency] ?? 0 },
       { module: 'Funds', amount: funds[currency] ?? 0 },
+      { module: 'Credit cards', amount: cardDebt > 0 ? -cardDebt : 0 },
       { module: 'Personal Loans (net)', amount: loanNet },
       { module: 'EMI/Loans (outstanding)', amount: emi > 0 ? -emi : 0 },
     ].filter((b) => b.amount !== 0);

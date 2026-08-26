@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BankAccount, BankTransaction } from '../../../types/bankWorkbook';
-import { accountBalance, accountByCategory, accountRunningLedger, bankMonthlyFlow, budgetVsActual, totalBalanceByCurrency } from '../bankModule';
+import { accountBalance, accountByCategory, accountRunningLedger, assetBalanceByCurrency, bankMonthlyFlow, budgetVsActual, creditCardLiabilityByCurrency, totalBalanceByCurrency } from '../bankModule';
 
 const account = (over: Partial<BankAccount>): BankAccount => ({
   id: 'a1',
@@ -58,6 +58,27 @@ describe('totalBalanceByCurrency', () => {
     const totals = totalBalanceByCurrency(accounts, txs);
     expect(totals.USD).toBe(1400); // (1000-100) + 500
     expect(totals.PKR).toBe(10000);
+  });
+});
+
+describe('assetBalanceByCurrency / creditCardLiabilityByCurrency', () => {
+  it('splits a checking account and a credit card into asset vs. liability', () => {
+    const checking = account({ id: 'a1', currencyCode: 'USD', openingBalance: 1000 });
+    const card = account({ id: 'a2', currencyCode: 'USD', openingBalance: 0, isLiability: true });
+    const txs = [tx({ id: 't1', accountId: 'a2', amount: -150 })]; // a $150 purchase on the card
+    expect(assetBalanceByCurrency([checking, card], txs)).toEqual({ USD: 1000 });
+    expect(creditCardLiabilityByCurrency([checking, card], txs)).toEqual({ USD: 150 });
+  });
+
+  it('a paid-off or in-credit card contributes 0 liability, never a negative one', () => {
+    const card = account({ id: 'a1', currencyCode: 'USD', openingBalance: 0, isLiability: true });
+    const txs = [tx({ id: 't1', accountId: 'a1', amount: 50 })]; // overpaid — the card is now in credit
+    expect(creditCardLiabilityByCurrency([card], txs)).toEqual({});
+  });
+
+  it('assetBalanceByCurrency omits liability accounts entirely, even a currency only a card uses', () => {
+    const card = account({ id: 'a1', currencyCode: 'PKR', openingBalance: 0, isLiability: true });
+    expect(assetBalanceByCurrency([card], [])).toEqual({});
   });
 });
 
