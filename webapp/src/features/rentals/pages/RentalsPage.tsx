@@ -152,19 +152,20 @@ function PropertiesList() {
                 </td>
               </tr>
             ) : (
-              <tr key={p.id}>
+              <tr key={p.id} onClick={() => setDetailProperty(p)} style={{ cursor: 'pointer' }}>
                 <td>{p.name}</td>
                 <td>{p.currencyCode}</td>
                 <td>{p.purchasePrice ? fmtMoney(p.purchasePrice, p.currencyCode) : '—'}</td>
                 <td className={propertyNetIncome(p, entries) >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(propertyNetIncome(p, entries), p.currencyCode)}</td>
                 <td>
-                  <button className="btn secondary small" onClick={() => setDetailProperty(p)}>Details</button>{' '}
-                  <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(p)} />{' '}
+                  <button className="btn secondary small" onClick={(e) => { e.stopPropagation(); setDetailProperty(p); }}>Details</button>{' '}
+                  <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={(e) => { e.stopPropagation(); startEdit(p); }} />{' '}
                   <IconButton
                     label="Delete"
                     icon={<TrashIcon size={13} />}
                     align="right"
-                    onClick={async () => {
+                    onClick={async (e) => {
+                      e.stopPropagation();
                       if (await confirmDialog('This deletes the property and all its income/expense entries.', `Delete property "${p.name}"?`)) deleteProperty(p.id);
                     }}
                   />

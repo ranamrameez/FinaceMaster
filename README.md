@@ -4060,6 +4060,20 @@ FinanceManager live link:
      zero console errors (aside from the sandbox's already-documented Google Fonts
      `ERR_CONNECTION_RESET`, unrelated to this change). `npx tsc -b` / `npm run test` (388 tests,
      unchanged) / `npm run build` all clean.
+185. **Banking's and Rentals' list rows made whole-row clickable to their detail view
+     (2026-08-26), closing Pending item 92's named gap.** Personal Loans/EMI/Funds/
+     Subscriptions' own list rows already had `onClick={() => onSelect(...)}` +
+     `cursor:pointer` on the `<tr>` itself (in addition to an explicit "Open" button) — Banking's
+     account rows and Rentals' property rows were the two real outliers, only reachable via
+     their own "Details" button, not the row itself. Added the same `onClick`+`cursor:pointer`
+     pattern to both `<tr>`s, with `e.stopPropagation()` added to each row's Details/Edit/Delete
+     buttons so clicking one of those doesn't also fire the row's own open-detail handler.
+     Verified live via Playwright with seeded data: clicking anywhere on a Bank account row (not
+     just its "Details" button) opens `AccountDetailModal`; same for a Rentals property row and
+     `PropertyDetailModal`; separately confirmed clicking the Edit icon button still opens the
+     inline edit row WITHOUT also opening the detail modal (stopPropagation working correctly,
+     not a double-fire) — zero console errors throughout. `npx tsc -b` / `npm run test` (388
+     tests, unchanged — UI-only) / `npm run build` all clean.
 
 ## Pending
 
@@ -4616,10 +4630,11 @@ everything below is started. Working down it in priority order across following 
     for the OPPOSITE direction now (more solid color, not softer) — worth confirming this is a
     genuine reversal of that recent tuning pass before re-touching the same CSS again, same
     "flag the reversal" practice as item 73.
-92. App-wide: every table row / card representing a record that HAS a detail page should link
-    to it (this is already true in most places — QSE/PSX Holdings→stock page, Personal
-    Loans/EMI/Rentals/Funds list rows→their own detail view — Banking's account rows are the
-    clearest current gap per item 83).
+92. ~~App-wide: every table row / card representing a record that HAS a detail page should link
+    to it.~~ **Done (2026-08-26) — see Done item 185.** Banking's account rows and Rentals'
+    property rows were the two real gaps (Personal Loans/EMI/Funds/Subscriptions/QSE/PSX
+    already had it); both now open their detail modal on a row click, not just their "Details"
+    button.
 93. App-wide: "Plans" (the Cash/Banking Planning feature) should be part of the main nav/
     sub-nav, not buried inside each module's own tab set. A real navigation-structure
     decision: does this mean promoting Planning to its own `CategoryNav` entry (like

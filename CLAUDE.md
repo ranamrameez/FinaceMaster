@@ -3663,6 +3663,17 @@ not developer notes) continuously as features ship.
   first, confirmed the asterisks render inside the popup too, not just on page load) — zero
   new console errors. `npx tsc -b` / `npm run test` (388 tests, unchanged) / `npm run build`
   all clean.
+- **Banking/Rentals list rows made whole-row-clickable, same autonomous continuation
+  (2026-08-26) — see README Done item 185, closes Pending item 92.** Personal Loans/EMI/Funds/
+  Subscriptions' list rows already had `onClick`+`cursor:pointer` on the `<tr>` itself, in
+  addition to an "Open" button — Banking's account rows and Rentals' property rows were the
+  two outliers, reachable only via their own "Details" button. Added the same pattern to both,
+  with `e.stopPropagation()` on each row's own Details/Edit/Delete buttons so those don't
+  double-fire the row's new open-detail handler. Verified live via Playwright (seeded data):
+  clicking anywhere on a row opens the right detail modal on both pages, and clicking the Edit
+  icon button specifically still opens inline edit WITHOUT also opening the detail modal — zero
+  console errors. `npx tsc -b` / `npm run test` (388 tests, unchanged) / `npm run build` all
+  clean.
 
 ## Live URLs
 

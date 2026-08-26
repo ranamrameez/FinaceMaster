@@ -422,7 +422,7 @@ function AccountsList() {
                 </td>
               </tr>
             ) : (
-              <tr key={a.id}>
+              <tr key={a.id} onClick={() => setDetailAccount(a)} style={{ cursor: 'pointer' }}>
                 <td>
                   {a.name}
                   {a.isLiability && <span className="pill-sell" style={{ marginLeft: 6, fontSize: 10 }}>Credit card</span>}
@@ -436,13 +436,14 @@ function AccountsList() {
                     : fmtMoney(accountBalance(a, transactions), a.currencyCode)}
                 </td>
                 <td>
-                  <button className="btn secondary small" onClick={() => setDetailAccount(a)}>Details</button>{' '}
-                  <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(a)} />{' '}
+                  <button className="btn secondary small" onClick={(e) => { e.stopPropagation(); setDetailAccount(a); }}>Details</button>{' '}
+                  <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={(e) => { e.stopPropagation(); startEdit(a); }} />{' '}
                   <IconButton
                     label="Delete"
                     icon={<TrashIcon size={13} />}
                     align="right"
-                    onClick={async () => {
+                    onClick={async (e) => {
+                      e.stopPropagation();
                       if (await confirmDialog('This deletes the account and all its transactions.', `Delete account "${a.name}"?`)) deleteAccount(a.id);
                     }}
                   />
