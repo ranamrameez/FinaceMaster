@@ -3825,6 +3825,47 @@ FinanceManager live link:
      plus 7 existing cases updated for the new required `creditCards` input),
      `lib/__tests__/binLookup.test.ts` (+3). `npx tsc -b` / `npm run test` (382 tests, 7 new) /
      `npm run build` all clean.
+176. **Budget Planner built, user-requested (2026-08-26) — closes Pending item 106.** Asked the
+     user directly (`AskUserQuestion`) whether this should unify Cash/Bank/Rentals' EXISTING
+     Planning-tab planned entries into one cross-module view, or be a genuinely separate
+     category-budget system — the user picked unification. New `lib/calc/budgetPlanner.ts`:
+     `collectBudgetActivities()` normalizes each module's real transactions AND its own
+     not-yet-executed planned entries onto one common signed shape (positive = income, negative
+     = expense) — a Cash `IN`/`OUT`, a Bank signed `amount`, and a Rentals `RENT_INCOME`/
+     `EXPENSE` all map onto the same convention; an already-executed plan is deliberately
+     excluded (its real counterpart is already in the list, so including both would double-
+     count the same money movement). `monthlyIncomeExpense()` buckets the combined list by
+     calendar month per currency; `threeMonthWindow()` returns the previous/current/next month
+     strings the user asked for by name. **Per the user's own follow-up clarification** ("3
+     months projection is for Net worth dashboard. But it can also be reflected in the
+     planner."), the projection chart's primary home is Net Worth's homepage (a new "Income vs.
+     expense — previous / current / next month" `ChartCard`, right below the subscription-
+     renewals notice) — the exact same numbers also render on the new dedicated
+     `/budget` page, which is where the user acts on them. New `features/budget/pages/
+     BudgetPlannerPage.tsx`: the 3-month chart, a cross-module "All planned financial activity"
+     table (sortable, shows Module/Account-or-Property/Category/Amount/Actual-vs-Planned
+     status), and an "Add a plan" FAB+popup form — picking a financial source (Cash/a specific
+     Bank account/a specific Rental property) writes a real entry into THAT module's own
+     already-tested `addEntry` action, exactly as if the user had added it from that module's
+     own Planning tab; this page is a read+write CONVENIENCE layer, not a new parallel data
+     path, and nothing about the existing Planning tabs changed. Predefined income/expense
+     category suggestion lists (`PREDEFINED_INCOME_CATEGORIES`/`PREDEFINED_EXPENSE_CATEGORIES`)
+     back a datalist on the category field, switching list based on the picked Income/Expense
+     type — free-form, not a fixed enum, same rule as every other category field in this app.
+     New nav entry in `CategoryNav.tsx` ("Budget Planner," global access per the user's own
+     ask). Verified live via Playwright: the Net Worth chart and its "Open Budget Planner →"
+     link render correctly with seeded Cash+Bank activity; the Budget Planner page's activity
+     table correctly lists both a seeded Cash entry and a seeded Bank transaction; switching
+     the add-plan form's financial source to "Bank account" correctly reveals the account
+     picker (confirmed via a real select-element count check, not a label-text guess that a
+     CSS uppercase transform had already broken once); submitting hits the real sign-in gate.
+     New tests: `lib/calc/__tests__/budgetPlanner.test.ts` (6 cases). `npx tsc -b` / `npm run
+     test` (388 tests, 6 new) / `npm run build` all clean. **Deliberately not built yet**: the
+     user separately mentioned having a sample monthly-expense-tracker Excel sheet and wants
+     the app to answer "all the capabilities" it provides — explicitly held off building
+     anything against that ask until the real file is attached and reviewed, per this
+     project's own established "work from the real file, not an assumption" lesson (see the
+     Funds Daily History Import entry above for the precedent this follows).
 
 ## Pending
 
@@ -4464,22 +4505,20 @@ everything below is started. Working down it in priority order across following 
      `BankAccount` with `isLiability: true`; Net Worth counts its debt separately from asset
      accounts. Also delivered in the same batch: card-network detection from a BIN, and a
      prefilled Pakistan/Qatar bank+wallet suggestion list.
-106. A cross-module "Budget Planner" (user-requested, 2026-08-26). Verbatim ask: show current/
-     previous/next month's projected income and expenses; predefined AND custom expense/income
-     categories; a page (on Net Worth and/or globally accessible) listing every planned
-     financial activity across every module, with the ability to plan directly from within it
-     and link it to a financial source. **Significant overlap with already-built features,
-     confirmed by checking rather than assumed**: Cash/Bank's existing Planning tabs (Done item
-     43) already do "planned entry → real/planned balance projection, linked to an account,"
-     just siloed per-module (each module's own Planning tab, own Planned* store) rather than
-     one unified cross-module view — this request reads as wanting that unification, plus a
-     3-month income/expense projection view, plus predefined-category suggestion lists (several
-     modules, Cash/Bank included, have free-form category text inputs with no suggestion
-     datalist at all today — that specific piece is a small, concrete, buildable gap on its
-     own). Not started — needs real scoping (new page reusing every module's existing Planned*
-     stores? a new store of its own? which modules get a category-suggestion datalist and what
-     goes in it?) before building, same as how the original Cash/Bank Planning feature's own
-     design fork was resolved via `AskUserQuestion` first (see Done item 43).
+106. ~~A cross-module "Budget Planner".~~ **Done (2026-08-26) — see Done item 176.** Unifies
+     Cash/Bank/Rentals' existing planned entries into one view + a 3-month projection, with an
+     add-plan shortcut writing into whichever module's own store is picked.
+107. The user has a sample monthly-expense-tracker Excel sheet and wants the app to "show/
+     answer all the capabilities just like this sheet is providing," on top of Net Worth being
+     "capable to answer each finance's summary + user's worth in 3 months," with "detailed
+     calculation" of financial activity over time available on request. The Budget Planner
+     (Done item 176) and Net Worth's 3-month projection cover the general shape of this, but
+     the specific capabilities the user's own real sheet demonstrates are unknown until it's
+     actually attached — deliberately NOT guessed at, per this project's own established
+     "work from the real file" lesson (see the Funds Daily History Import entry). Pick this up
+     once the file arrives: import it into a scratch review, compare its actual columns/
+     formulas/views against what's already built, and build only the concrete gaps that
+     surface.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

@@ -3446,6 +3446,31 @@ not developer notes) continuously as features ship.
   all clean; verified live via Playwright including the exact Net Worth numbers for a seeded
   checking+card pair (Assets 1k / Liabilities 150 / Net 850, "Credit cards" its own breakdown
   line).
+- **Budget Planner built (2026-08-26) — see README Done item 176, closes Pending item 106.**
+  Asked the user directly (`AskUserQuestion`) whether this should unify Cash/Bank/Rentals'
+  EXISTING Planning-tab planned entries, or be a genuinely separate category-budget system —
+  picked unification. New `lib/calc/budgetPlanner.ts`'s `collectBudgetActivities()` normalizes
+  every module's real transactions AND not-yet-executed planned entries onto one common signed
+  shape (positive=income, negative=expense); an already-executed plan is excluded (its real
+  counterpart is already in the list — including both would double-count the same money
+  movement). `threeMonthWindow()`/`monthlyIncomeExpense()` back the "current/previous/next
+  month" projection the user asked for. **User's own follow-up clarification mid-build**: "3
+  months projection is for Net worth dashboard. But it can also be reflected in the planner" —
+  so the projection chart's PRIMARY home is Net Worth's homepage (a new `ChartCard` right below
+  the subscription-renewals notice), with the identical numbers also shown on the new `/budget`
+  page, which is where the user acts on them (an "Add a plan" form that writes into whichever
+  module's own store is picked — Cash/a specific Bank account/a specific Rental property — via
+  that module's own already-tested `addEntry`, not a new data path). New `CategoryNav` entry
+  for global access. `npx tsc -b` / `npm run test` (388 tests, 6 new) / `npm run build` all
+  clean; verified live via Playwright (chart + link render on Net Worth, activity table lists
+  both a seeded Cash and Bank entry on `/budget`, switching source to Bank correctly reveals
+  the account picker — confirmed via a real select-count check after a label-text guess was
+  broken by the same CSS-uppercase-transform gotcha this project has hit several times before,
+  submitting hits the real sign-in gate). **Deliberately not built**: the user separately
+  mentioned a real sample monthly-expense-tracker Excel sheet and wants the app to match its
+  capabilities — held off entirely until the file is actually attached, per this project's own
+  "work from the real file" lesson (see the Funds Daily History Import entry) — tracked as
+  README Pending item 107, do not guess at what that sheet shows.
 
 ## Live URLs
 
