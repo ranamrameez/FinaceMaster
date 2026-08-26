@@ -83,13 +83,21 @@ function TickerTransactions({ ticker }: { ticker: string }) {
   return (
     <div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-        <select value={action} onChange={(e) => setAction(e.target.value as 'BUY' | 'SELL')}>
-          <option value="BUY">Buy</option>
-          <option value="SELL">Sell</option>
-        </select>
-        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        <input type="number" placeholder="Shares" value={sharesInput} onChange={(e) => setSharesInput(e.target.value)} style={{ width: 90 }} />
-        <input type="number" step="0.001" placeholder="Price" value={priceInput} onChange={(e) => setPriceInput(e.target.value)} style={{ width: 90 }} />
+        <Field label="Action">
+          <select value={action} onChange={(e) => setAction(e.target.value as 'BUY' | 'SELL')}>
+            <option value="BUY">Buy</option>
+            <option value="SELL">Sell</option>
+          </select>
+        </Field>
+        <Field label="Date">
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        </Field>
+        <Field label="Shares">
+          <input type="number" placeholder="Shares" value={sharesInput} onChange={(e) => setSharesInput(e.target.value)} style={{ width: 90 }} />
+        </Field>
+        <Field label="Price">
+          <input type="number" step="0.001" placeholder="Price" value={priceInput} onChange={(e) => setPriceInput(e.target.value)} style={{ width: 90 }} />
+        </Field>
         <TimeZoneFields time={time} timezone={timezone} onTimeChange={setTime} onTimezoneChange={setTimezone} />
         <button className="btn" onClick={submit}>Add {action === 'BUY' ? 'buy' : 'sell'}</button>
       </div>

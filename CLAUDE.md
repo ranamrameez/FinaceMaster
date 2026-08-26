@@ -3686,6 +3686,20 @@ not developer notes) continuously as features ship.
   controls, not a two-span label/value pair. Left the rail's OTHER two asks (currency should
   follow the current stock exchange; convert to a floating popup) untouched — both are real
   design reversals the Pending item's own text says need confirming first.
+- **Unlabeled QSE/PSX add-forms fixed, same autonomous continuation (2026-08-26) — see README
+  Done item 187, closes part of Pending item 97.** Re-checked Pending item 103's own earlier
+  scoping note ("table inline-add rows are already labeled by column header") against the real
+  DOM rather than trusting it — it holds for `TransactionsPage.tsx`'s multi-row trade-entry
+  `<tr>`s (a real `<thead>` sits above them), but QSE's/PSX's `StockPage.tsx` add-transaction
+  toolbar, `TransactionsPage.tsx`'s `TransferForm`/`AdjustmentForm`, and both
+  `DividendsSection.tsx` files' add-dividend row are standalone `.row` toolbars with NO table
+  header above them and, for the Action/Type select and Date input specifically, no placeholder
+  either. Wrapped every field in `Field` — the multi-row trade-entry form only labels its FIRST
+  row (mirrors a real table's `<thead>`-labels-every-row-below convention, avoiding 5 repeated
+  labels per queued row). Deliberately not a full 114-instance `.row` sweep app-wide — scoped to
+  the specific class of gap the Pending item named. Verified live via Playwright across all 6
+  forms (QSE+PSX): every field renders a real visible label, zero console errors. `npx tsc -b` /
+  `npm run test` (388 tests, unchanged) / `npm run build` all clean.
 
 ## Live URLs
 
