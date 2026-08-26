@@ -3048,6 +3048,26 @@ not developer notes) continuously as features ship.
   balance, and correctly stopped the schedule at month 10 (2 months early) — matching every
   stat card and the amortization chart. New tests: `emiModule.test.ts` gained 5 cases. `npx
   tsc -b` / `npm run test` (322 tests, 5 new) / `npm run build` all clean.
+- **Hover cross-highlighting extended to Analytics' ticker charts, closing README Pending item
+  17 in full (2026-08-26) — see README Done item 155.** Done item 147 linked only Dashboard's
+  2 ticker charts per exchange; this pass does the deferred 12-chart (6 per exchange)
+  Analytics remainder. Both `AnalyticsPage.tsx` files gained the same page-level
+  `hoveredTicker` state Dashboard uses; the existing `tickerClickOptions()` click-to-drill-down
+  helper (Done item 137) gained a `setHovered` param so click and hover share one function
+  instead of two parallel ones. `dimColor()` applied to all 6 ticker charts per exchange — 3
+  in the "Performance" tab section, 1 in "Allocation," 1 in "Activity & dividends" — so
+  hovering a bar in one tab correctly dims a slice in a completely different tab section,
+  proving the cross-highlight spans `Tabs` boundaries, not just one visible card grid.
+  **Verification note worth repeating for any future Chart.js hover-target test**: a
+  horizontal bar chart's actual bar pixels can't be reliably guessed from a screenshot alone
+  (padding/legend/axis space eats into the canvas) — swept a grid of candidate points and
+  used the `cursor: pointer` style Chart.js's own `onHover` sets as the real signal for "this
+  point is actually on a bar," then hovered that exact point for the before/after screenshot
+  comparison. Confirmed on both QSE (hovering QIBK dimmed QNBK/CBQK in the same chart, in
+  "Total P/L by symbol," and in "Portfolio Allocation" one tab section over) and PSX
+  (identical pattern with OGDC/PPL/SNGP) — zero console errors on either. `npx tsc -b` / `npm
+  run test` (322 tests, unchanged — pure UI wiring on the already-tested `dimColor`) / `npm
+  run build` all clean.
 
 ## Live URLs
 

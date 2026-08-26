@@ -3269,6 +3269,31 @@ FinanceManager live link:
      `lib/calc/__tests__/emiModule.test.ts` gained 5 cases (both repayment modes, plus the
      early-payoff `emiSummary` clamp). `npx tsc -b` / `npm run test` (322 tests, 5 new) / `npm
      run build` all clean.
+155. **Hover cross-highlighting extended to Analytics' own ticker-indexed charts, closing
+     Pending item 17 in full (2026-08-26).** Done item 147 linked only Dashboard's 2 ticker
+     charts per exchange, deliberately deferring Analytics' larger 6-charts-per-exchange (12
+     total) case as a separate follow-up — this is that follow-up. Both exchanges'
+     `AnalyticsPage.tsx` gained the same page-level `hoveredTicker` state Dashboard already
+     uses; the existing `tickerClickOptions()` helper (Done item 137's click-to-drill-down)
+     gained a `setHovered` parameter so the same function now handles both click-navigation
+     and hover-driven dimming in one place, rather than adding a second parallel helper.
+     Applied `dimColor()` to all 6 ticker-indexed charts per exchange: ROI % by ticker,
+     Invested vs current value (both its "Invested" and "Current value" datasets), Total P/L
+     by symbol, Holding period, Portfolio allocation, and Dividend income by ticker — the
+     last three of which live in entirely different `Tabs` sections than the first three,
+     so hovering a bar in "Performance" correctly dims a slice in "Allocation" or "Activity &
+     dividends" too, the whole point of "cross-highlighting" rather than a same-chart-only
+     effect. Verified live via Playwright on both exchanges with a real pixel-level check
+     (not a visual guess): swept the "ROI % by ticker" chart's canvas for a coordinate that
+     actually registers a Chart.js hover (confirmed via `cursor: pointer`, since the exact
+     bar-vs-padding boundary can't be guessed reliably from a screenshot alone — a lesson
+     from Done item 134's own click-target verification, reapplied here), then confirmed via
+     before/after screenshots that hovering QIBK's (QSE) / OGDC's (PSX) bar dims every other
+     ticker's bars in the SAME chart, in "Total P/L by symbol" one card over, AND in "Portfolio
+     Allocation" — a doughnut in the separate "Allocation" tab section — proving the link
+     spans across `Tabs` sections, not just within one visible card grid. `npx tsc -b` / `npm
+     run test` (322 tests, unchanged — pure UI wiring on the already-tested `dimColor`) / `npm
+     run build` all clean.
 
 ## Pending
 
@@ -3286,17 +3311,16 @@ FinanceManager live link:
     the app itself (free/cheap tiers rate-limit fast). Fetch on a schedule (cron/worker)
     into our own database and serve the app from that store, same pattern already used for
     QSE's `stockData/QSE` node (item 1 above) and PSX's bundled `psxSeed.ts`.
-17. Charts could get more interactive beyond the ticker/month filters shipped in Done item 31
-    (e.g. click-to-drill-down, hover cross-highlighting between charts). **Click-to-drill-down
-    done (2026-08-25) — see Done items 134/137**: every ticker-indexed chart in the app
-    (Dashboard's Allocation/P-L-by-ticker, and Analytics' ROI%/Invested-vs-value/Total P&L/
-    Holding period/Portfolio allocation/Dividend-by-ticker, on both QSE and PSX) now navigates
-    to that ticker's own stock page on click. **Hover cross-highlighting: first pass done
-    (2026-08-25) — see Done item 147**: QSE's and PSX's Dashboard now link their two ticker
-    charts (Allocation, P/L by ticker) — hovering a ticker's slice/bar in either one dims every
-    other ticker in BOTH. **Still open**: Analytics' own 6 ticker-indexed charts per exchange
-    aren't linked yet — a materially larger rollout (12 charts across two pages) than the
-    2-chart Dashboard case, tracked as a follow-up rather than attempted in the same pass.
+17. ~~Charts could get more interactive beyond the ticker/month filters shipped in Done item 31
+    (e.g. click-to-drill-down, hover cross-highlighting between charts).~~ **Now fully done.**
+    Click-to-drill-down done (2026-08-25) — see Done items 134/137: every ticker-indexed chart
+    in the app (Dashboard's Allocation/P-L-by-ticker, and Analytics' ROI%/Invested-vs-value/
+    Total P&L/Holding period/Portfolio allocation/Dividend-by-ticker, on both QSE and PSX) now
+    navigates to that ticker's own stock page on click. Hover cross-highlighting: first pass on
+    Dashboard done (2026-08-25) — see Done item 147; **the deferred Analytics remainder (12
+    charts across both exchanges) done (2026-08-26) — see Done item 155**, closing this item
+    in full: every ticker-indexed chart on QSE's/PSX's Analytics pages now dims every other
+    ticker across every tab section when one is hovered, the same as Dashboard's pair.
 19. Cross-entity transaction linking beyond v1 scope (see Done item 29): Funds/Rentals/EMI/
     Personal Loans aren't wired into the Transfers page yet — only Cash↔Bank and
     Bank↔QSE/PSX. A real signed-in browser round-trip (create/edit/delete a link, confirm
