@@ -3595,6 +3595,33 @@ not developer notes) continuously as features ship.
   confirmation needed. If it recurs, the next thing to check is whether the direct Firebase
   write itself is failing silently (console `Failed to push imported ... to cloud` warnings)
   rather than the race reappearing.
+- **The import STILL didn't stick — the real bug, found this time (2026-08-26) — see README
+  Done item 180.** The race-condition fix above was real but not the whole story. Rather than
+  guess again, wrote a small Vitest harness that imports the actual store modules and calls
+  `setWorkbook()` directly with the real file, no browser/Firebase needed — it threw
+  immediately on `qse` (processed first): `createWorkbookStore.ts`'s `normalize()` calls
+  `wb.transactions.map(...)` etc. with no guard the fields exist, and `AppDataPage.importAll()`
+  was the ONE caller of `setWorkbook` in the whole app that skipped the `{...createEmpty(),
+  ...parsed}` merge every other caller (each module's own JSON import, every cloud-sync pull)
+  already does — a real production export can be missing a field outright (Firebase strips an
+  empty array from storage at any depth). Since `qse` threw uncaught, the entire import loop
+  aborted before touching bank/cash/anything else. Fixed by merging onto each module's own
+  `createEmpty*Workbook()` before either the local or cloud writes. **Lesson for any future
+  "did my fix actually work" doubt on a sign-in-gated feature this session can't fully
+  exercise**: don't stop at re-reading the code — write a tiny harness that calls the real
+  functions with the real data outside the browser/auth dependency if the bug might live there;
+  it found this in under a minute and gave a real pass/fail instead of another guess. Re-ran the
+  same harness after the fix: all 14 modules succeed, exact expected counts confirmed.
+- **Sidebar/chart UI overhaul (2026-08-26) — see README Done item 181.** Four-item batch:
+  account/backup as real grouped nav buttons, footer pinned via a flex-column `.sidebar` with
+  only `.sidebar-scroll` scrolling internally, `CategoryNav` converted from a popover to a
+  plain always-visible list (removing an entire open-then-click step from switching modules),
+  and every `ChartCard`-wrapped chart capped at `min(35vh, 340px)` via one global
+  `ChartJS.defaults.maintainAspectRatio = false` (chartSetup.ts) + one new `.chart-canvas-wrap`
+  CSS class — the same "fix once at the shared layer" pattern this project uses throughout
+  (`MoneyValue`/`StatCard`/`Field`/etc.), so no individual chart call site needed touching.
+  Direct (non-`ChartCard`) charts (PositionDetail ×2, EMI's amortization chart) were checked
+  and already have their own small pixel heights, untouched.
 
 ## Live URLs
 
