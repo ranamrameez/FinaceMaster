@@ -3485,6 +3485,34 @@ FinanceManager live link:
      real console errors (only the sandbox's known Google-Fonts `ERR_CONNECTION_RESET`, see
      Done item 141). `npx tsc -b` / `npm run test` (350 tests, 12 new) / `npm run build` all
      clean.
+164. **QSE/PSX Dashboard right-rail, first real content added — see Pending item 54's
+     remainder, partial (2026-08-26).** The earlier width bump (Done item 145) only let
+     existing grids breathe wider on a wide viewport; this adds genuine new right-rail
+     *content* the user asked for: a **Net worth** panel (the currency the user has the
+     biggest exposure in, its Net figure, and a per-module breakdown, linking to the full
+     `/net-worth` page) and an **Upcoming plans** panel (the next few not-yet-executed plans
+     from Cash's and Banking's Planning features, merged and sorted by date — previously only
+     visible as a stat-card sub-line on each module's own landing page, Done item 57, never
+     from anywhere else in the app). Both reuse existing calc functions with zero new
+     business logic — `useNetWorthSummary()` (new hook, extracted from `NetWorthPage.tsx`'s
+     own data assembly so both the page and the rail share one source of truth instead of
+     duplicating seven store subscriptions; `NetWorthPage.tsx` itself now calls this same
+     hook, confirmed unchanged behavior via the full test suite before touching any UI) and
+     the existing `PlannedCashEntry`/`PlannedBankTransaction` arrays, just sorted/merged in
+     the component. New shared `.rail-split` CSS grid (1fr + 320px, collapsing to one column
+     under 1000px — same pattern as `PositionDetail`'s `.position-split` from Done item 139)
+     wraps QSE's and PSX's Dashboard pages specifically, as a working vertical slice on the
+     highest-traffic pages before any wider rollout — same "ship one thing, verified" pattern
+     this project always follows (CollapsibleCard, StatCard hue, IconButton all started this
+     way). Verified live via Playwright at both a wide (1600px — confirmed genuine side-by-
+     side layout via bounding-box x-coordinates, not just a visual guess) and narrow (500px —
+     confirmed the rail collapses below the main content) viewport, with a seeded planned
+     Cash entry showing up correctly in the rail and the "Full breakdown →" link correctly
+     navigating to `/net-worth` — zero real console errors. `npx tsc -b` / `npm run test`
+     (350 tests, unchanged — a data-assembly extraction plus new UI, no calc logic changed) /
+     `npm run build` all clean. **Deliberately scoped down**: only QSE's/PSX's Dashboard got
+     the rail this pass — Portfolio, module landing pages, and a third rail panel (e.g. a
+     contextual glossary) are still open, tracked in Pending item 54's remainder below.
 
 ## Pending
 
@@ -3758,10 +3786,16 @@ item 103) — all three now fixed, see Done item 104:**
     leave ~520px of dead space on a 1920px-wide viewport (sidebar 220px + content 1180px =
     1400px) on literally every page — bumped to 1600px, which the existing `repeat(auto-fit,
     minmax(...))` stat-card/chart grids already fill with extra columns for free, no per-page
-    layout work needed. **Still open**: a genuine right-rail *content* addition (a contextual
-    glossary, a live summary panel, etc.) beyond just letting existing grids breathe wider — that
-    ties into Pending item 49's "assess a stock in one go" IA rework and needs its own per-page
-    judgment call about what actually belongs there, not a blind width bump.
+    layout work needed. **A genuine right-rail content addition — first slice done (2026-08-26)
+    — see Done item 164**: QSE's and PSX's Dashboard pages now have a real right-rail (a "live
+    summary panel," per this item's own suggested direction) with a Net worth panel and an
+    Upcoming plans panel, both pulling in cross-module data that wasn't otherwise visible from
+    the Dashboard. **Still open**: this only covers Dashboard — Portfolio, module landing pages,
+    and a third rail panel (e.g. a contextual glossary, or the "today's movers" among held
+    positions idea considered but not built this pass) are all still a blank page each needing
+    its own per-page judgment call about what actually belongs there, same as before; this also
+    still ties into Pending item 49's "assess a stock in one go" IA rework for the per-stock page
+    specifically.
 55. Simplest-possible-language pass (2026-08-24 app-wide note, item 3 of the Risk Analysis
     batch) — Done item 105 added tooltips explaining jargon terms on the Risk Analysis page
     specifically. **First app-wide pass done (2026-08-25) — see Done item 140**: the highest-

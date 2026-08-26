@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { CollapsibleCard, StatCard } from '../../../components/Card';
+import { DashboardRail } from '../../../components/DashboardRail';
 import { Sparkline } from '../../../components/Sparkline';
 import { toast } from '../../../components/Toast';
 import { breakEvenPrice, getDailyPriceHistory } from '../../../lib/calc';
@@ -207,89 +208,95 @@ export function DashboardPage() {
     <div>
       <h1 className="pagetitle">PSX Dashboard</h1>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
-        <StatCard label="Net Worth" value={money(summary.netWorth, currency)} title={moneyTitle(summary.netWorth)} hue={INVEST_PALETTE[3]} />
-        <StatCard label="Cash Balance" value={money(summary.cashBalance, currency)} title={moneyTitle(summary.cashBalance)} hue={INVEST_PALETTE[7]} />
-        <StatCard label="Portfolio Value" value={money(summary.portfolioValue, currency)} title={moneyTitle(summary.portfolioValue)} hue={INVEST_PALETTE[6]} />
-        <StatCard label="Realized P/L" value={money(summary.realizedPL, currency)} title={moneyTitle(summary.realizedPL)} hue={summary.realizedPL >= 0 ? 'var(--profit)' : 'var(--loss)'} labelTitle="Profit or loss already locked in — from stock you've fully sold." />
-        <StatCard label="Unrealized P/L" value={money(summary.unrealizedPL, currency)} title={moneyTitle(summary.unrealizedPL)} hue={summary.unrealizedPL >= 0 ? 'var(--profit)' : 'var(--loss)'} labelTitle="Profit or loss on paper only — from stock you still hold, based on its current price." />
-        <StatCard label="Net P/L" value={money(summary.netPL, currency)} title={moneyTitle(summary.netPL)} hue={summary.netPL >= 0 ? 'var(--profit)' : 'var(--loss)'} labelTitle="Realized plus unrealized P/L combined — your total profit or loss so far." />
-        <StatCard label="Total Deposits" value={money(summary.totalInward, currency)} title={moneyTitle(summary.totalInward)} hue={INVEST_PALETTE[1]} />
-        <StatCard label="Total Withdrawals" value={money(summary.totalOutward, currency)} title={moneyTitle(summary.totalOutward)} hue={INVEST_PALETTE[5]} />
-        <StatCard label="Total Fees" value={money(summary.totalCharges, currency)} title={moneyTitle(summary.totalCharges)} hue={INVEST_PALETTE[4]} />
-        <StatCard label="Rewards" value={money(summary.totalRewards, currency)} title={moneyTitle(summary.totalRewards)} hue={INVEST_PALETTE[2]} />
-        <StatCard label="Open Positions" value={fmt(rows.length, 0)} hue={INVEST_PALETTE[0]} title="Number of distinct tickers you currently hold shares in." />
-        <StatCard
-          label="Portfolio ROI"
-          value={`${portfolioROIPct.toFixed(1)}%`}
-          hue={portfolioROIPct >= 0 ? 'var(--profit)' : 'var(--loss)'}
-          title="Unrealized P/L divided by total invested capital in your open positions — doesn't include realized gains/losses from closed trades."
-        />
-      </div>
+      <div className="rail-split">
+        <div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
+            <StatCard label="Net Worth" value={money(summary.netWorth, currency)} title={moneyTitle(summary.netWorth)} hue={INVEST_PALETTE[3]} />
+            <StatCard label="Cash Balance" value={money(summary.cashBalance, currency)} title={moneyTitle(summary.cashBalance)} hue={INVEST_PALETTE[7]} />
+            <StatCard label="Portfolio Value" value={money(summary.portfolioValue, currency)} title={moneyTitle(summary.portfolioValue)} hue={INVEST_PALETTE[6]} />
+            <StatCard label="Realized P/L" value={money(summary.realizedPL, currency)} title={moneyTitle(summary.realizedPL)} hue={summary.realizedPL >= 0 ? 'var(--profit)' : 'var(--loss)'} labelTitle="Profit or loss already locked in — from stock you've fully sold." />
+            <StatCard label="Unrealized P/L" value={money(summary.unrealizedPL, currency)} title={moneyTitle(summary.unrealizedPL)} hue={summary.unrealizedPL >= 0 ? 'var(--profit)' : 'var(--loss)'} labelTitle="Profit or loss on paper only — from stock you still hold, based on its current price." />
+            <StatCard label="Net P/L" value={money(summary.netPL, currency)} title={moneyTitle(summary.netPL)} hue={summary.netPL >= 0 ? 'var(--profit)' : 'var(--loss)'} labelTitle="Realized plus unrealized P/L combined — your total profit or loss so far." />
+            <StatCard label="Total Deposits" value={money(summary.totalInward, currency)} title={moneyTitle(summary.totalInward)} hue={INVEST_PALETTE[1]} />
+            <StatCard label="Total Withdrawals" value={money(summary.totalOutward, currency)} title={moneyTitle(summary.totalOutward)} hue={INVEST_PALETTE[5]} />
+            <StatCard label="Total Fees" value={money(summary.totalCharges, currency)} title={moneyTitle(summary.totalCharges)} hue={INVEST_PALETTE[4]} />
+            <StatCard label="Rewards" value={money(summary.totalRewards, currency)} title={moneyTitle(summary.totalRewards)} hue={INVEST_PALETTE[2]} />
+            <StatCard label="Open Positions" value={fmt(rows.length, 0)} hue={INVEST_PALETTE[0]} title="Number of distinct tickers you currently hold shares in." />
+            <StatCard
+              label="Portfolio ROI"
+              value={`${portfolioROIPct.toFixed(1)}%`}
+              hue={portfolioROIPct >= 0 ? 'var(--profit)' : 'var(--loss)'}
+              title="Unrealized P/L divided by total invested capital in your open positions — doesn't include realized gains/losses from closed trades."
+            />
+          </div>
 
-      <HoldingsCard />
+          <HoldingsCard />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
-        <ChartCard title="Allocation by ticker (cost basis)" empty={!rows.length}>
-          <Doughnut
-            data={{
-              labels: rows.map((r) => r.ticker),
-              datasets: [{
-                data: rows.map((r) => r.invested),
-                backgroundColor: rows.map((r, i) => dimColor(INVEST_PALETTE[i % INVEST_PALETTE.length], !!hoveredTicker && hoveredTicker !== r.ticker)),
-              }],
-            }}
-            options={{
-              ...tickerHoverHandlers(rows),
-              plugins: { datalabels: dlDoughnut((v) => fmt(v, 2)) },
-            }}
-          />
-        </ChartCard>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
+            <ChartCard title="Allocation by ticker (cost basis)" empty={!rows.length}>
+              <Doughnut
+                data={{
+                  labels: rows.map((r) => r.ticker),
+                  datasets: [{
+                    data: rows.map((r) => r.invested),
+                    backgroundColor: rows.map((r, i) => dimColor(INVEST_PALETTE[i % INVEST_PALETTE.length], !!hoveredTicker && hoveredTicker !== r.ticker)),
+                  }],
+                }}
+                options={{
+                  ...tickerHoverHandlers(rows),
+                  plugins: { datalabels: dlDoughnut((v) => fmt(v, 2)) },
+                }}
+              />
+            </ChartCard>
 
-        <ChartCard title="P/L by ticker" empty={!rows.length}>
-          <Bar
-            data={{
-              labels: rows.map((r) => r.ticker),
-              datasets: [{
-                data: rows.map((r) => r.profit),
-                backgroundColor: rows.map((r) => dimColor(profitColor(r.profit), !!hoveredTicker && hoveredTicker !== r.ticker)),
-              }],
-            }}
-            options={{
-              ...tickerHoverHandlers(rows),
-              plugins: { legend: { display: false }, datalabels: dlBarV((v) => fmt(v, 2)) },
-            }}
-          />
-        </ChartCard>
+            <ChartCard title="P/L by ticker" empty={!rows.length}>
+              <Bar
+                data={{
+                  labels: rows.map((r) => r.ticker),
+                  datasets: [{
+                    data: rows.map((r) => r.profit),
+                    backgroundColor: rows.map((r) => dimColor(profitColor(r.profit), !!hoveredTicker && hoveredTicker !== r.ticker)),
+                  }],
+                }}
+                options={{
+                  ...tickerHoverHandlers(rows),
+                  plugins: { legend: { display: false }, datalabels: dlBarV((v) => fmt(v, 2)) },
+                }}
+              />
+            </ChartCard>
 
-        <ChartCard title="Realized P/L over time" empty={!realizedSeries.length}>
-          <Line
-            data={{
-              labels: realizedSeries.map((p) => p.date),
-              datasets: [
-                {
-                  label: `Realized P/L (${currency})`,
-                  data: realizedSeries.map((p) => p.value),
-                  borderColor: profitColor(realizedSeries[realizedSeries.length - 1]?.value || 0),
-                  backgroundColor: 'rgba(201,163,90,0.15)',
-                  fill: true,
-                  tension: 0.2,
-                },
-              ],
-            }}
-            options={{ plugins: { legend: { display: false }, datalabels: dlLine((v) => fmt(v, 2)) } }}
-          />
-        </ChartCard>
-      </div>
+            <ChartCard title="Realized P/L over time" empty={!realizedSeries.length}>
+              <Line
+                data={{
+                  labels: realizedSeries.map((p) => p.date),
+                  datasets: [
+                    {
+                      label: `Realized P/L (${currency})`,
+                      data: realizedSeries.map((p) => p.value),
+                      borderColor: profitColor(realizedSeries[realizedSeries.length - 1]?.value || 0),
+                      backgroundColor: 'rgba(201,163,90,0.15)',
+                      fill: true,
+                      tension: 0.2,
+                    },
+                  ],
+                }}
+                options={{ plugins: { legend: { display: false }, datalabels: dlLine((v) => fmt(v, 2)) } }}
+              />
+            </ChartCard>
+          </div>
 
-      <CollapsibleCard style={{ marginTop: 16 }} title={<h3 style={{ margin: 0 }}>Alerts</h3>} defaultOpen={false}>
-        <AlertsBox />
-      </CollapsibleCard>
+          <CollapsibleCard style={{ marginTop: 16 }} title={<h3 style={{ margin: 0 }}>Alerts</h3>} defaultOpen={false}>
+            <AlertsBox />
+          </CollapsibleCard>
 
-      <div style={{ marginTop: 16, textAlign: 'center' }}>
-        <Link to="/psx/analytics" className="btn secondary">
-          View full analytics →
-        </Link>
+          <div style={{ marginTop: 16, textAlign: 'center' }}>
+            <Link to="/psx/analytics" className="btn secondary">
+              View full analytics →
+            </Link>
+          </div>
+        </div>
+
+        <DashboardRail />
       </div>
     </div>
   );

@@ -88,6 +88,13 @@ underneath colored green/red against the current price), **Value** (current wort
 invested and a ▲/▼ indicator underneath), and **P/L** (amount, with the percentage
 underneath).
 
+On a wide enough screen, a right-hand rail sits alongside the Dashboard's main content with
+two cross-module panels: **Net worth** (your net worth in whichever currency you have the
+biggest exposure in, broken down by module, with a link to the full Net Worth page) and
+**Upcoming plans** (the next few not-yet-executed entries from Cash's and Banking's Planning
+features, merged together). On a narrower screen, this rail moves below the main content
+instead of squeezing beside it.
+
 ---
 
 ## 5. Portfolio

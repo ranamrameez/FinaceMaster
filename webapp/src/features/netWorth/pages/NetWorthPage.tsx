@@ -6,13 +6,9 @@ import { Notice } from '../../../components/Notice';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { toast } from '../../../components/Toast';
 import { ChartCard } from '../../qse/components/ChartCard';
-import { cashBalanceByCurrency } from '../../../lib/calc/cashModule';
-import { totalBalanceByCurrency } from '../../../lib/calc/bankModule';
-import { netPositionByCurrency } from '../../../lib/calc/personalLoansModule';
-import { totalsByCurrency as emiTotalsByCurrency } from '../../../lib/calc/emiModule';
 import { netIncomeByCurrency as rentalsNetIncomeByCurrency } from '../../../lib/calc/rentalsModule';
-import { fundsValueByCurrency } from '../../../lib/calc/fundsModule';
-import { computeNetWorthByCurrency, flowByCurrency } from '../../../lib/calc/netWorth';
+import { flowByCurrency } from '../../../lib/calc/netWorth';
+import { useNetWorthSummary } from '../hooks/useNetWorthSummary';
 import { convertAmount, effectiveRate, fetchFxRates, isFxStale, loadCachedFxRates, saveFxRates, setCrossRate, type FxRates } from '../../../lib/fx';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
@@ -27,14 +23,7 @@ import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
 import { useNetWorthSnapshotsWorkbookStore } from '../../../store/netWorthSnapshotsWorkbookStore';
-import { usePersonalLoansWorkbookStore } from '../../../store/personalLoansWorkbookStore';
-import { useEMIWorkbookStore } from '../../../store/emiWorkbookStore';
-import { useFundsWorkbookStore } from '../../../store/fundsWorkbookStore';
 import { useRentalsWorkbookStore } from '../../../store/rentalsWorkbookStore';
-import { useWorkbookStore } from '../../../store/workbookStore';
-import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
-import { useQSEDerived } from '../../qse/hooks/useQSEDerived';
-import { usePSXDerived } from '../../psx/hooks/usePSXDerived';
 
 /** Cross-module net worth summary (README item 39 / MODULES_PLAN.md §16).
  * Currency conversion is best-effort and NEVER blocks the page: rates come
@@ -57,44 +46,14 @@ export function NetWorthPage({
 }) {
   const cashEntries = useCashWorkbookStore((s) => s.workbook.entries);
   const bank = useBankWorkbookStore((s) => s.workbook);
-  const personalLoans = usePersonalLoansWorkbookStore((s) => s.workbook);
-  const emiLoans = useEMIWorkbookStore((s) => s.workbook.entries);
-  const funds = useFundsWorkbookStore((s) => s.workbook);
   const rentals = useRentalsWorkbookStore((s) => s.workbook);
-  const qseSettings = useWorkbookStore((s) => s.workbook.settings);
-  const psxSettings = usePSXWorkbookStore((s) => s.workbook.settings);
-  const qse = useQSEDerived();
-  const psx = usePSXDerived();
   // Charts on this page recompute their CSS-var-derived colors only when
   // this component re-renders — same reasoning as every other chart-bearing
   // page (Dashboard, Analytics, PositionDetail).
   useAppearanceStore((s) => s.appearance);
   applyChartTheme();
 
-  const cash = cashBalanceByCurrency(cashEntries);
-  const bankTotals = totalBalanceByCurrency(bank.settings.accounts, bank.transactions);
-  const personalLoansNet = netPositionByCurrency(personalLoans.loans, personalLoans.repayments);
-  const emiOutstanding: Record<string, number> = {};
-  Object.entries(emiTotalsByCurrency(emiLoans)).forEach(([code, t]) => { emiOutstanding[code] = t.outstanding; });
-  const fundsValues = fundsValueByCurrency(funds.funds, funds.transactions, funds.marketPrices);
   const rentalsNet = rentalsNetIncomeByCurrency(rentals.settings.properties, rentals.entries);
-
-  // Skip an exchange entirely if it's never been touched — otherwise an
-  // unused QSE/PSX account always contributes a spurious "0" row in its
-  // default currency, cluttering the dashboard for anyone who only uses
-  // one exchange (or neither).
-  const qseUsed = qse.workbook.transactions.length > 0 || qse.workbook.transfers.length > 0 || qse.workbook.adjustments.length > 0;
-  const psxUsed = psx.workbook.transactions.length > 0 || psx.workbook.transfers.length > 0 || psx.workbook.adjustments.length > 0;
-
-  const rows = computeNetWorthByCurrency({
-    cash,
-    bank: bankTotals,
-    qse: qseUsed ? { [qseSettings.currency]: qse.summary.netWorth } : {},
-    psx: psxUsed ? { [psxSettings.currency]: psx.summary.netWorth } : {},
-    funds: fundsValues,
-    personalLoansNet,
-    emiOutstanding,
-  });
 
   // Item 3 of a 2026-08-26 feedback batch: "Default currency should be
   // logical" — `useLastCurrency` already remembers whatever the user picks
@@ -103,9 +62,7 @@ export function NetWorthPage({
   // currency the user actually has the largest (absolute) net exposure in —
   // a much more likely "the one they care about" than an arbitrary global
   // default — falling back to 'USD' only when there's no data yet to judge by.
-  const biggestExposureCurrency = rows.length
-    ? [...rows].sort((a, b) => Math.abs(b.net) - Math.abs(a.net))[0].currency
-    : 'USD';
+  const { rows, biggestExposureCurrency } = useNetWorthSummary();
   const [preferredCurrency, setPreferredCurrency] = useLastCurrency('net-worth-preferred', biggestExposureCurrency);
   const [rates, setRates] = useState<FxRates | null>(() => loadCachedFxRates());
   const [fetchError, setFetchError] = useState<string | null>(null);

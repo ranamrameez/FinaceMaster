@@ -3163,7 +3163,29 @@ not developer notes) continuously as features ship.
   pass. `npx tsc -b` / `npm run test` (350 tests, 12 new) / `npm run build` all clean; verified
   live via Playwright (payment-day-of-month reflected in every due date, pencil-editor date
   field prefilled/editable, full-schedule toggle expanding correctly with accurate Paid/
-  Upcoming status pills, both new write actions hitting the real sign-in gate).
+  Upcoming status pills, both new write actions hitting the real sign-in gate). PR #8 merged
+  into `main` the same day.
+- **New session (2026-08-26), started fresh at `main`'s latest (branch restarted per the
+  "merged PR can't be reused" rule) — small docs cleanup, then a right-rail feature per the
+  user's own pick — see README Done item 164.** First fixed a stale Pending item (19) that
+  still said Funds/Rentals/EMI/Personal Loans weren't wired into cross-entity linking, when
+  Done item 156 (the previous session) had already finished all eight modules — opened as
+  a tiny draft PR #9, merged. Then asked the user which open Pending item to prioritize next
+  (item 54's right-rail content, item 50's theme distinctiveness, or item 49's stock-page IA
+  rework — all three were flagged as needing genuine design judgment, not just code) via
+  AskUserQuestion; the user picked **right-rail content**. Built the first real slice: new
+  `useNetWorthSummary()` hook (extracted from `NetWorthPage.tsx`'s own data assembly, which
+  now calls the same hook — one source of truth, not two copies that could drift) backs a
+  new `components/DashboardRail.tsx` with a Net worth panel and an Upcoming plans panel
+  (merging Cash's and Banking's not-yet-executed Planning entries). New shared `.rail-split`
+  CSS grid (same collapse-on-narrow pattern as `PositionDetail`'s `.position-split`, Done
+  item 139) wraps QSE's and PSX's Dashboard pages — the highest-traffic pages, picked as a
+  working vertical slice before a wider rollout to Portfolio/module landing pages, same
+  incremental pattern this project always follows. Verified live via Playwright with real
+  bounding-box measurements (not a visual guess) confirming genuine side-by-side layout at
+  1600px and correct collapse at 500px, plus a seeded planned Cash entry rendering correctly
+  in the rail and the "Full breakdown →" link navigating to `/net-worth`. `npx tsc -b` /
+  `npm run test` (350 tests, unchanged) / `npm run build` all clean.
 
 ## Live URLs
 
