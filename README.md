@@ -3719,6 +3719,27 @@ FinanceManager live link:
      New tests: `lib/__tests__/ibanLookup.test.ts` (4 cases, using real published example IBANs
      with known-valid checksums). `npx tsc -b` / `npm run test` (364 tests, 4 new) / `npm run
      build` all clean.
+172. **EMI edit-form buttons moved into the card header + a balance chart added to Personal
+     Loans' own loan-detail page — closes Pending items 66/99.** EMI's `LoanDetail`
+     (`features/emi/pages/EMIPage.tsx`) previously swapped its entire outer `Card` body
+     (title included) between a display view and an edit view, which is why Save/Cancel ended
+     up below the field grid instead of the card's top-right corner like every other single-
+     stranded-action card in the app (Done item 121). Restructured onto `CollapsibleCard`'s
+     `title`/`headerExtra` slots instead: the header (name+details, or an "Editing NAME"
+     heading) and the action buttons (Edit/Delete, or Save/Cancel) now live in a fixed position
+     regardless of mode — only the field grid underneath swaps. Separately, Personal Loans'
+     `LoanDetail` had no chart at all (the landing page's own Analytics tab charts, Done item
+     45, are scoped across every loan, not one loan's own history) — new
+     `loanBalanceHistory()` in `lib/calc/personalLoansModule.ts` (tested) returns one point per
+     date something happened to that specific loan (its own start, then each repayment in
+     order), rendered as a new "Balance over time" line chart (`LoanBalanceChart`) between the
+     Repayments table and the Payoff Planner — kept below Repayments per Done item 100's
+     already-established "real transactions before speculative content" ordering. Verified
+     live via Playwright: the Personal Loans chart canvas renders once repayments exist; EMI's
+     edit-mode Save button measured above the field grid's first input (was below it before
+     this fix). New tests: `lib/calc/__tests__/personalLoansModule.test.ts` gained 3
+     `loanBalanceHistory` cases. `npx tsc -b` / `npm run test` (367 tests, 3 new) / `npm run
+     build` all clean.
 
 ## Pending
 
@@ -4141,12 +4162,10 @@ list all these" instruction — genuinely too large for one sitting (dozens of i
 4+ pages plus several app-wide principles), so this is the full backlog, not a promise
 everything below is started. Working down it in priority order across following sessions.**
 
-66. EMI: buttons (Save/Cancel on the edit-loan form, and elsewhere) should sit at the card's
+66. ~~EMI: buttons (Save/Cancel on the edit-loan form, and elsewhere) should sit at the card's
     top-right corner, the same `headerExtra` pattern already used for single stranded actions
-    elsewhere in the app (Done item 121) — the edit-loan form's Save/Cancel currently sit
-    below the field grid instead. Not done — the edit form doesn't go through
-    `CollapsibleCard`'s `headerExtra` slot at all right now (it swaps the whole Card's body,
-    title included), so this needs restructuring that swap, not just moving two buttons.
+    elsewhere in the app (Done item 121).~~ **Done (2026-08-26) — see Done item 172.**
+    Restructured onto `CollapsibleCard`'s `title`/`headerExtra` slots.
 67. EMI: "Big EMI every N months" and "Link to bank" should be attached to the loan add/edit
     flow rather than living as separate always-visible cards on the loan-detail page. Real
     design question, not just a move: "Big EMI" needs a real schedule (with `elapsed` months
@@ -4323,12 +4342,10 @@ everything below is started. Working down it in priority order across following 
     report suggests Compact itself may not have gotten enough of a real cut, only Console did.
     Needs re-measuring (same "measure before fixing" discipline as Done item 111) rather than
     guessing at new CSS values.
-99. Personal Loans: no analytics charts visible on a loan's own DETAIL page. Real per-portfolio
-    Analytics (Outstanding by loan, Repayments by month, a Payoff planner) already exist on
-    the Personal Loans LANDING page's own Analytics tab (Done item 45) — this report is very
-    likely about the absence of any chart specifically on the loan-detail view (which only has
-    the Payoff Planner + Repayment log, no chart), not a claim that Done item 45 doesn't exist
-    at all. Needs confirming which specific view before assuming scope.
+99. ~~Personal Loans: no analytics charts visible on a loan's own DETAIL page.~~ **Done
+    (2026-08-26) — see Done item 172.** New `loanBalanceHistory()` + a "Balance over time"
+    line chart on `LoanDetail`, between Repayments and the Payoff Planner. The landing page's
+    own per-portfolio Analytics tab (Done item 45) is unaffected/unchanged.
 100. ~~Personal Loans: the Payoff Planner should come AFTER Repayments on a loan's detail page
      (transactions are more important) — currently Payoff Planner renders above Repayments.~~
      **Done (2026-08-26) — see Done item 168.**
