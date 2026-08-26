@@ -4005,6 +4005,21 @@ FinanceManager live link:
      pre-existing mechanism untouched by this change) still opens correctly with all 11 links
      visible inside it — zero console errors throughout. `npx tsc -b` / `npm run test` (388
      tests, unchanged — UI/CSS only) / `npm run build` all clean.
+182. **Banking accounts grouped by currency + transactions made editable from the account's own
+     detail modal, user-requested (2026-08-26).** (1) `AccountsList`'s table now inserts a
+     sub-header row (reusing the app's existing `.group-row` class, the same one QSE/PSX's
+     Transactions-tab grouping already uses) per currency, sorted alphabetically, with accounts
+     grouped underneath in whatever order the column sort currently specifies — grouping and
+     sorting are independent, grouping just stops different currencies from interleaving. (2)
+     `AccountDetailModal`'s "Recent transactions" section was a read-only 20-row preview;
+     replaced with the exact same `TransactionsList` component the standalone Transactions tab
+     already uses (full sort/inline-edit/delete, including the linked-record warning) — a
+     transaction now belongs to and is editable from its own account's detail view, no longer
+     read-only there or requiring a trip to a separate tab. Verified live via Playwright: two
+     currencies (QAR/PKR) rendered as two distinct group headers; opened an account's detail
+     modal, edited a transaction's description inline from inside it, and confirmed the edit
+     landed in `localStorage`, not just the DOM. `npx tsc -b` / `npm run test` (388 tests,
+     unchanged) / `npm run build` all clean.
 
 ## Pending
 

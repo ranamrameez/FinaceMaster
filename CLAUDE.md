@@ -3622,6 +3622,23 @@ not developer notes) continuously as features ship.
   (`MoneyValue`/`StatCard`/`Field`/etc.), so no individual chart call site needed touching.
   Direct (non-`ChartCard`) charts (PositionDetail ×2, EMI's amortization chart) were checked
   and already have their own small pixel heights, untouched.
+- **User-reported (2026-08-26): "you didn't import Misk data!" — a real, correctable gap in
+  the earlier real-data import (see this file's own big entry on that import above), not a
+  repeat of the already-settled "Misk is decorative" decision.** Re-investigated with the same
+  ground-truth cross-checking discipline as the rest of that import: the Misk COLUMN (as
+  opposed to a "Msk"/"Misk 1"/"Misk 2" ROW LABEL, which really is just decorative highlighting,
+  per the user's own earlier description) is a real account balance — every sheet from
+  August.2025 (its first appearance) through Sep.2026 reconciles to the cent, both internally
+  and across every sheet boundary, with ZERO unexplained jumps (unlike GCC/PCC's 6). Confirmed
+  the exact gap with a real example: Aug.2026 row 8 ("Msk", DC=-11000, Misk=+11000) is one real
+  transfer's two real legs — the DC/QIB-Current side was already being imported, the Misk side
+  never was, so the money looked like it vanished. Added `'Misk'` to the parser's
+  `ACCOUNT_COL_MAP`, mapped to the REAL existing QIB Misk account (already in the user's
+  account, `openingBalance` reset to 0.0 from August.2025's own true opening, same "full-
+  history import supersedes a stale current-balance placeholder" reasoning already used for
+  QIB Current/Savings). Final Misk balance reconciles to 10000.00 (sheet's own true value:
+  10000.006, rounds identically at 2dp) — regenerated and re-delivered the combined import
+  file to the user with this fix included.
 
 ## Live URLs
 
