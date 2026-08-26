@@ -2901,6 +2901,44 @@ not developer notes) continuously as features ship.
   correctly can't perform. **A future session should not assume this data has been imported** —
   check with the user, or check the Funds page's own fund list, before assuming this file's
   data already exists in their workbook.
+- **Funds "Daily History Import" built (2026-08-26) — see README Done item 147, supersedes
+  Snapshot Import as the primary way to load real fund data.** Same day as item 146 above, the
+  user pushed back hard: the CSV snapshot importer only captures a final balance, but they
+  track every fund's balance *day by day* ("i have added all balance changes day by day. you
+  cannot ignore them!") and specifically want average monthly/annual P&L computed from that
+  real history, correctly accounting for holidays contributing nothing (not to be smoothed
+  over with a naive per-calendar-day average). Asked two design questions via
+  `AskUserQuestion` before building — averaging method (mean of real month/year totals, not an
+  XIRR-style rate) and how this interacts with the Snapshot Import they'd *already run against
+  their real account* (answer: this must **replace** a matched fund's transactions, not stack
+  another set on top, closing the exact gap this file's earlier "Snapshot Import" note said
+  the app couldn't do). Full design in README Done item 147: `lib/calc/
+  fundsDailyHistoryImport.ts` reconstructs real buy/sell/NAV history from a
+  Date/PrvBlc/NewBlc/Profit-Loss log (the key insight: `PrvBlc` is the user's own manually-set
+  opening balance for that update, not necessarily the prior row's close — so a gap between
+  them is exactly how a real deposit/withdrawal announces itself, cleanly separated from
+  organic growth), and `lib/calc/fundsModule.ts`'s new `organicPLByPeriod` makes monthly/
+  annual P&L an ongoing derived stat from whatever a fund already has stored, not just a
+  one-time import-preview number — a cross-check test between the two independent derivations
+  (raw daily log vs. reconstructed transactions/priceHistory) caught a real bug (a dropped
+  first-day growth figure) before it ever reached real data. **New dependency added, with a
+  known tradeoff stated plainly, not hidden**: the `xlsx` (SheetJS) package, at the last
+  npm-published version (0.18.5) since newer fixed releases only ship from SheetJS's own CDN,
+  which this sandbox's network policy blocks — `npm audit` flags one high-severity advisory
+  with no npm-available fix. Judged the practical exposure narrow (a self-uploaded personal
+  file, never fetched from a third party or shown to any other user, so the realistic worst
+  case is a user attacking their own browser tab) against the heavier, still-not-fully-clean
+  alternative (`exceljs`, ~90 extra transitive packages) and proceeded, but this is flagged
+  here and in the README for a future security-focused pass if a way to reach SheetJS's
+  patched CDN build opens up. Verified live via Playwright against the user's real uploaded
+  xlsx (reconstructed values matched reported balances exactly for every identifiable fund)
+  plus a seeded pre-existing fund to exercise the replace path (correct auto-match, correct
+  existing-transaction count in the destructive-replace warning, correct confirm-dialog
+  wording, real sign-in gate fired before any write) — zero console errors. `npx tsc -b` /
+  `npm run test` (305 tests, 17 new) / `npm run build` all clean. **Same caveat as item 146**:
+  the actual import was never completed end-to-end into the user's real account (this session
+  cannot sign in as them) — a future session should confirm with the user or check the Funds
+  page directly rather than assuming this data has landed.
 
 ## Live URLs
 

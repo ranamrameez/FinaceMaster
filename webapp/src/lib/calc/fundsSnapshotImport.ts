@@ -20,36 +20,55 @@ export interface FundSnapshotRow {
   riskProfile: string;
 }
 
-function parseAmount(raw: string | undefined): number {
-  if (!raw) return 0;
+type Cell = string | number | Date | null | undefined;
+
+function parseAmount(raw: Cell): number {
+  if (typeof raw === 'number') return Number.isFinite(raw) ? raw : 0;
+  if (typeof raw !== 'string' || raw === '') return 0; // covers null/undefined/Date — none are amounts
   const n = parseFloat(raw.replace(/,/g, ''));
   return Number.isFinite(n) ? n : 0;
 }
 
-/** Stops at the first "All Totals" row (or a row missing a fund code/
- * name) — everything below that in this spreadsheet's real layout is an
- * unrelated bank-balance summary table, not fund data, and isn't parsed
- * here at all. */
-export function parseFundsSnapshotCSV(csvText: string): FundSnapshotRow[] {
-  const rows = parseCSV(csvText);
-  const headerIndex = rows.findIndex((r) => r.some((c) => c.trim().toLowerCase() === 'fundcode'));
+function cellText(raw: Cell): string {
+  return raw === null || raw === undefined ? '' : String(raw).trim();
+}
+
+/** Shared row-extraction for both the CSV export and the equivalent
+ * "Summary" sheet inside a fuller xlsx workbook (`fundsDailyHistoryImport.ts`)
+ * — xlsx cells arrive as native numbers, CSV cells as comma-formatted
+ * strings, so every field goes through `parseAmount`/`cellText` rather than
+ * assuming one or the other. Stops at the first "All Totals" row (or a row
+ * missing a fund code/name) — everything below that in this spreadsheet's
+ * real layout is an unrelated bank-balance summary table, not fund data. */
+function extractSnapshotRows(rows: Cell[][]): FundSnapshotRow[] {
+  const headerIndex = rows.findIndex((r) => r.some((c) => cellText(c).toLowerCase() === 'fundcode'));
   if (headerIndex === -1) return [];
   const out: FundSnapshotRow[] = [];
   for (let i = headerIndex + 1; i < rows.length; i++) {
     const [, bank, code, name, totalInvested, withdrawn, , currentBalance, pl, , riskProfile] = rows[i];
-    if (!code?.trim() || !name?.trim() || name.trim().toLowerCase() === 'all totals') break;
+    if (!cellText(code) || !cellText(name) || cellText(name).toLowerCase() === 'all totals') break;
     out.push({
-      bank: (bank || '').trim(),
-      code: code.trim().toUpperCase(),
-      name: name.trim(),
+      bank: cellText(bank),
+      code: cellText(code).toUpperCase(),
+      name: cellText(name),
       totalInvested: parseAmount(totalInvested),
       withdrawn: parseAmount(withdrawn),
       currentBalance: parseAmount(currentBalance),
       reportedPL: parseAmount(pl),
-      riskProfile: (riskProfile || '').trim(),
+      riskProfile: cellText(riskProfile),
     });
   }
   return out;
+}
+
+export function parseFundsSnapshotCSV(csvText: string): FundSnapshotRow[] {
+  return extractSnapshotRows(parseCSV(csvText));
+}
+
+/** Same parser, for a Summary sheet already extracted from an xlsx
+ * workbook as a 2D array of cell values (see `fundsDailyHistoryImport.ts`). */
+export function parseFundsSnapshotRows(rows: Cell[][]): FundSnapshotRow[] {
+  return extractSnapshotRows(rows);
 }
 
 export interface FundSnapshotPlanRow {
