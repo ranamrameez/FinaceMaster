@@ -3128,6 +3128,28 @@ not developer notes) continuously as features ship.
   follow-up work restarts that same branch from the latest `main` per this session's own
   harness instructions (a merged PR can't be reused/reopened) and opens as a NEW pull
   request, not a reopened PR #5.
+- **EMI/Loans direct transfer-link shortcut, new session (2026-08-26) — see README Done item
+  162, closes Pending item 62 in full.** The last module without the inline "Link this to a
+  Bank account or Cash" shortcut every other linked module already had — EMI's own "add a
+  transaction" moment is the Schedule table's pencil-editor (`saveOverride`), not a blank
+  add-form, so the checkbox was wired into that inline row instead of a new form. Verified
+  live via Playwright: checking it reveals a module/account picker prefilled from the only
+  seeded bank account, and "Link & add" correctly hits the real sign-in gate. `npx tsc -b` /
+  `npm run test` (338 tests, unchanged) / `npm run build` all clean. This session's branch
+  (`claude/continuation-3m98ma`) started fresh at `main`'s latest merged commit (0a5ea88, PR
+  #7), per the "a merged PR can't be reused" rule already established above.
+  **Right after this, the user asked for a substantially bigger EMI scheduling feature
+  mid-turn (2026-08-26)** — full start-to-end schedule with dates (not just the next-12
+  window), a whole-loan default payment day-of-month plus per-installment override, a
+  Paid/Upcoming/Planned visual distinction, a recurring "bigger EMI every N months" pattern
+  (default 6), and an "add unreconciled amount to last month" checkbox. This has several real
+  design forks (how the recurring big-payment amount is specified, how it interacts with the
+  existing per-month `installmentOverrides` and the existing `customMonthlyPayment` balloon
+  logic from Done item 161) — being scoped/asked about before implementation, per this
+  file's own standing practice for genuine design forks (see Done item 154's identical
+  precedent, where the user was asked the same way about per-month overrides vs. a recurring
+  pattern and chose per-month overrides). Not yet built as of this note — check this file's
+  own later entries or the README before assuming it's done.
 
 ## Live URLs
 

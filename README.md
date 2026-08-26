@@ -3416,6 +3416,28 @@ FinanceManager live link:
      early-payoff-skips-balloon, override-wins-over-balloon, fixedTotal dual true-up, and
      `whatIfExtraPayment` stacking correctly on the custom base). `npx tsc -b` / `npm run test`
      (338 tests, 6 new) / `npm run build` all clean.
+162. **EMI/Loans direct transfer-link shortcut, closing Pending item 62's remainder
+     (2026-08-26).** The four other linked modules (QSE/PSX/Rentals/Personal Loans/Funds) each
+     got an inline "Link this to a Bank account or Cash" checkbox on their own add-form —
+     EMI was the sole holdout, since it has no blank add-form for a repayment: its "add a
+     transaction" moment is the Schedule table's inline pencil-editor (`saveOverride`, which
+     sets one specific month's actual payment). Wired the same checkbox into that editor row
+     instead: checking it swaps the Save button for a module (Bank/Cash) + account picker and
+     a "Link & add" button, calling the same `createLinkedTransfer`/`useLastTransferSource`
+     every other module's shortcut already uses — no parallel implementation. Since the
+     editor already knows exactly which month it's setting (`r.month`), the link is built
+     with that exact `emiMonth` directly, rather than needing the standalone Transfers page's
+     `nextUnpaidEmiMonth()` guess. EMI's repayment amount is always positive regardless of
+     link direction (same documented exception as `personalLoans`), but unlike Personal
+     Loans, the real Bank/Cash account is always the `from` (paying) side here — an
+     installment payment always leaves the account, there's no "owed to me" direction to flip
+     it. Verified live via Playwright with a seeded loan + bank account: the checkbox reveals
+     the module/account picker (correctly defaulting to the only seeded account), and
+     clicking "Link & add" correctly hits the real sign-in gate rather than silently writing
+     anything — zero real console errors (only the sandbox's known Google-Fonts
+     `ERR_CONNECTION_RESET`, see Done item 141). `npx tsc -b` / `npm run test` (338 tests,
+     unchanged — UI wiring onto already-tested store/link functions) / `npm run build` all
+     clean.
 
 ## Pending
 
@@ -3769,12 +3791,11 @@ what's already shipped from this same message**:
     Built for QSE/PSX first, then Rentals/Personal Loans/Funds, each with its own "what does
     linking mean here" answer worked out. ~~EMI was the sole exception, blocked on having no
     repayment ledger to link into.~~ **Unblocked and done (2026-08-26) — see Done item 156.**
-    EMI now works through the standalone Transfers page like every other linked module;
-    a native inline "Link this to a Bank account or Cash" shortcut (the direct-from-its-own-
-    page shortcut QSE/PSX/Rentals/Personal Loans/Funds got) is not built for EMI specifically
-    — its "add a transaction" moment is the Schedule table's pencil-editor, a different shape
-    than a blank add-form, so this was deliberately left as the standalone-page path only; a
-    future session could still add it as a small follow-up if wanted.
+    EMI now works through the standalone Transfers page like every other linked module.
+    ~~A native inline "Link this to a Bank account or Cash" shortcut... is not built for EMI
+    specifically~~ **Done (2026-08-26) — see Done item 162.** The Schedule table's own
+    inline pencil-editor (a different shape than a blank add-form, but still EMI's real
+    "add a transaction" moment) now has the same checkbox, closing this item in full.
 
 **2026-08-25, Net Worth page feedback batch — see Done item 148 for what shipped from this
 same batch**:

@@ -22,10 +22,13 @@ import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
-import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
+import { confirmAndDeleteLinkable, createLinkedTransfer, warnIfLinked } from '../../../lib/linkCascade';
+import { getLastTransferSource, rememberTransferSource } from '../../../hooks/useLastTransferSource';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
+import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
 import { useEMIWorkbookStore } from '../../../store/emiWorkbookStore';
 import { usePlannedBankWorkbookStore } from '../../../store/plannedBankWorkbookStore';
+import type { LinkSideConfig } from '../../../types/interEntityTransfer';
 import type { EMILoan, EMIRepayment } from '../../../types/emiWorkbook';
 import type { PlannedBankTransaction } from '../../../types/plannedBank';
 
@@ -109,6 +112,56 @@ function AddLoanForm() {
   );
 }
 
+/** README Pending item 62's remainder: the direct transfer-link shortcut
+ * already on QSE/PSX/Rentals/Personal Loans/Funds, now on EMI's Schedule
+ * editor — the moment a specific month's installment amount is set is
+ * exactly EMI's "log a payment" moment (see `saveOverride`), so this hooks
+ * into the same inline editor row rather than a separate add-form. Like
+ * `personalLoans`, an EMI repayment's own amount always ignores link
+ * direction (see `interEntityLink.ts`'s documented exception) — but the
+ * REAL money always leaves the paying Bank/Cash account, so that side is
+ * always `from` here, unlike Personal Loans where direction varies. */
+function LinkedEMIRepaymentFields({ loan, month, amount, date, onLinked }: { loan: EMILoan; month: number; amount: number; date: string; onLinked: () => void }) {
+  const ensureSignedIn = useEnsureSignedIn();
+  const bankAccounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
+  const cashCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
+  const loanSide: LinkSideConfig = { module: 'emi', ref: loan.id, emiMonth: month };
+  const remembered = getLastTransferSource(loanSide);
+  const [otherModule, setOtherModule] = useState<'bank' | 'cash'>(remembered?.module === 'cash' ? 'cash' : 'bank');
+  const [otherAccountId, setOtherAccountId] = useState(remembered?.ref ?? bankAccounts[0]?.id ?? '');
+
+  const create = async () => {
+    if (!(amount > 0)) return toast('Enter an amount greater than zero.');
+    if (otherModule === 'bank' && !otherAccountId) return toast('Add a bank account on the Banking page first.');
+    if (!(await ensureSignedIn('Sign in to link this repayment.'))) return;
+    const other: LinkSideConfig = otherModule === 'bank' ? { module: 'bank', ref: otherAccountId } : { module: 'cash', currencyCode: cashCurrency };
+    const result = createLinkedTransfer({ date, fromAmount: amount, toAmount: amount, from: other, to: loanSide });
+    if ('error' in result) return toast(result.error);
+    rememberTransferSource(loanSide, other);
+    toast('Linked repayment added — also recorded on the other side.');
+    onLinked();
+  };
+
+  return (
+    <div className="row" style={{ gap: 6, alignItems: 'flex-end' }}>
+      <select value={otherModule} onChange={(e) => setOtherModule(e.target.value as 'bank' | 'cash')}>
+        <option value="bank">Bank account</option>
+        <option value="cash">Cash</option>
+      </select>
+      {otherModule === 'bank' && (
+        bankAccounts.length ? (
+          <select value={otherAccountId} onChange={(e) => setOtherAccountId(e.target.value)}>
+            {bankAccounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.currencyCode})</option>)}
+          </select>
+        ) : (
+          <span className="footer-note">No bank accounts yet.</span>
+        )
+      )}
+      <button className="btn small" onClick={create}>Link &amp; add</button>
+    </div>
+  );
+}
+
 function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: () => void; startInEditMode?: boolean }) {
   const deleteEntry = useEMIWorkbookStore((s) => s.deleteEntry);
   const updateEntry = useEMIWorkbookStore((s) => s.updateEntry);
@@ -128,6 +181,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
   const schedule = emiSchedule(loan);
   const [overrideMonth, setOverrideMonth] = useState<number | null>(null);
   const [overrideValue, setOverrideValue] = useState(0);
+  const [overrideLinkMode, setOverrideLinkMode] = useState(false);
 
   /** README item 6 of a 2026-08-26 feedback batch: some real loans aren't
    * a flat EMI every month — e.g. a property installment plan with one
@@ -421,11 +475,25 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                 <td>#{r.month}</td>
                 {overrideMonth === r.month ? (
                   <td colSpan={4}>
-                    <div className="row" style={{ gap: 6, alignItems: 'flex-end' }}>
+                    <div className="row" style={{ gap: 6, alignItems: 'flex-end', flexWrap: 'wrap' }}>
                       <TextInput type="number" step="0.01" value={overrideValue || ''} onChange={(e) => setOverrideValue(Number(e.target.value))} style={{ width: 110 }} />
-                      <IconButton label="Save" icon={<SaveIcon size={13} />} onClick={() => saveOverride(r.month, overrideValue)} />
-                      <IconButton label="Cancel" icon={<XIcon size={13} />} onClick={() => setOverrideMonth(null)} />
+                      {overrideLinkMode ? (
+                        <LinkedEMIRepaymentFields
+                          loan={loan}
+                          month={r.month}
+                          amount={overrideValue}
+                          date={installmentDueDate(loan, r.month)}
+                          onLinked={() => { setOverrideMonth(null); setOverrideLinkMode(false); }}
+                        />
+                      ) : (
+                        <IconButton label="Save" icon={<SaveIcon size={13} />} onClick={() => saveOverride(r.month, overrideValue)} />
+                      )}
+                      <IconButton label="Cancel" icon={<XIcon size={13} />} onClick={() => { setOverrideMonth(null); setOverrideLinkMode(false); }} />
                     </div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>
+                      <input type="checkbox" checked={overrideLinkMode} onChange={(e) => setOverrideLinkMode(e.target.checked)} />
+                      Link this to a Bank account or Cash (creates a matching entry there too, instead of just here)
+                    </label>
                   </td>
                 ) : (
                   <>
@@ -446,7 +514,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                 <td>
                   {overrideMonth === r.month ? null : (
                     <div className="row" style={{ gap: 4 }}>
-                      <IconButton label="Set a custom amount for this month" icon={<EditIcon size={13} />} align="right" onClick={() => { setOverrideMonth(r.month); setOverrideValue(r.emi); }} />
+                      <IconButton label="Set a custom amount for this month" icon={<EditIcon size={13} />} align="right" onClick={() => { setOverrideMonth(r.month); setOverrideValue(r.emi); setOverrideLinkMode(false); }} />
                       {r.overridden && <IconButton label="Reset to the regular installment" icon={<XIcon size={13} />} align="right" onClick={() => clearOverride(r.month)} />}
                     </div>
                   )}
