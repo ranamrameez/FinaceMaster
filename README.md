@@ -3866,6 +3866,31 @@ FinanceManager live link:
      anything against that ask until the real file is attached and reviewed, per this
      project's own established "work from the real file, not an assumption" lesson (see the
      Funds Daily History Import entry above for the precedent this follows).
+177. **Whole-app import/export, user-requested (2026-08-26) — closes Pending item 77.** Every
+     one of this app's 14 stores already exposes the exact same `{workbook, setWorkbook}`
+     shape (`MinimalWorkbookStore`, see this file's own design-decisions note) purely because
+     they were all built off the same two factories (`createWorkbookStore`/`createEntryStore`)
+     or hand-written to match that shape deliberately — which made a whole-app export/import
+     almost entirely "wiring," not new mechanics: `features/appData/pages/AppDataPage.tsx`
+     (new route `/app-data`, linked from the Sidebar footer as "Backup / restore all data")
+     reads `.workbook` from all 14 stores into one combined JSON object keyed by module name —
+     deliberately the SAME key names (`bank`, `cash`, `emiLoans`, `funds`, `personalLoans`,
+     `plannedBank`, `plannedCash`, `plannedRentals`, `psx`, `qse`, `rentals`, `subscriptions`,
+     `interEntityTransfers`, `netWorthSnapshots`) this app's own Firebase RTDB structure
+     already uses per account, so an exported file is directly comparable to (though not
+     byte-identical to, since this omits Firebase's own `_updated` timestamp) a raw RTDB
+     export for the same account. Import parses the file, confirms with the user BY NAME which
+     modules it found data for (never silently importing an unrecognized/partial file), then
+     calls each present module's own already-tested `setWorkbook()` — the exact same call each
+     module's own per-module JSON import already makes (still there, unchanged, in each
+     module's own Settings tab) — just for every module in one file instead of fourteen
+     separate ones. Sign-in-gated, same as every other write in this app. Verified live via
+     Playwright: exporting with seeded Bank/Subscriptions data produces a real downloaded file
+     with exactly the 14 expected keys and the correct seeded values inside; re-uploading that
+     same file correctly names "Banking"/"Subscriptions" in the pre-import confirm dialog and
+     hits the real sign-in gate after confirming; the Sidebar link renders. `npx tsc -b` /
+     `npm run test` (388 tests, unchanged — no calc logic, pure UI wiring onto already-tested
+     store actions) / `npm run build` all clean.
 
 ## Pending
 
@@ -4345,15 +4370,11 @@ everything below is started. Working down it in priority order across following 
     decision on what "one synced/not-synced indicator for N independent per-module sync
     hooks" should actually mean (worst-of-N? most-recent? a per-module breakdown popover?)
     before it can move to the nav.
-77. App-wide: whole-app import/export through Settings, AND per-module import/export, AND
-    every table should support exporting to JSON/CSV/Excel/HTML/PDF (not just the CSV export
-    already built per-module via Done item 58's pattern). A large, multi-part ask — CSV export
-    already exists broadly (see README item 40, fully done); JSON/Excel/HTML/PDF are all new
-    formats needing their own library/approach decisions (this project's own "xlsx" dependency
-    already exists for Funds' import, per Done item 151, but has a known unpatched high-
-    severity advisory flagged there — worth reconsidering before leaning on it further for
-    EXPORT too). A true "whole app export" also needs a decision on shape (one combined file?
-    one per module, zipped?). Needs real scoping before starting, not a small task.
+77. ~~App-wide: whole-app import/export through Settings.~~ **Done (2026-08-26) — see Done item
+    177.** One combined JSON file, all 14 modules. **Still open**: every table exporting to
+    Excel/HTML/PDF (only CSV/JSON exist today — see README item 40 for CSV, Done item 177 for
+    whole-app JSON); this project's own "xlsx" dependency has a known unpatched advisory
+    flagged at Done item 151, worth reconsidering before leaning on it further for EXPORT too.
 78. Net Worth: add charts comparing the distribution of finances, both per-currency and within
     one selected currency (a "capital split by currency" doughnut already exists per Done item
     153 — this may be asking for more chart TYPES, e.g. a per-currency asset/liability

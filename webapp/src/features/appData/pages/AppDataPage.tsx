@@ -1,0 +1,159 @@
+import { useRef, useState } from 'react';
+import { Card } from '../../../components/Card';
+import { confirmDialog } from '../../../components/ConfirmDialog';
+import { Notice } from '../../../components/Notice';
+import { toast } from '../../../components/Toast';
+import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
+import { useWorkbookStore } from '../../../store/workbookStore';
+import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
+import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
+import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
+import { useEMIWorkbookStore } from '../../../store/emiWorkbookStore';
+import { useFundsWorkbookStore } from '../../../store/fundsWorkbookStore';
+import { usePersonalLoansWorkbookStore } from '../../../store/personalLoansWorkbookStore';
+import { useRentalsWorkbookStore } from '../../../store/rentalsWorkbookStore';
+import { useSubscriptionsWorkbookStore } from '../../../store/subscriptionsWorkbookStore';
+import { usePlannedBankWorkbookStore } from '../../../store/plannedBankWorkbookStore';
+import { usePlannedCashWorkbookStore } from '../../../store/plannedCashWorkbookStore';
+import { usePlannedRentalsWorkbookStore } from '../../../store/plannedRentalsWorkbookStore';
+import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
+import { useNetWorthSnapshotsWorkbookStore } from '../../../store/netWorthSnapshotsWorkbookStore';
+
+const today = () => new Date().toISOString().slice(0, 10);
+
+/** README item 77 (user-requested, 2026-08-26): whole-app import/export,
+ * not just per-module — every module already exports/imports its own
+ * workbook as JSON from its own Settings tab (unchanged, still there);
+ * this is the same idea at the app level. Every one of this app's 14
+ * stores exposes the exact same `{workbook, setWorkbook}` shape
+ * (`MinimalWorkbookStore`, see CLAUDE.md's own design-decisions note), so
+ * a whole-app export is just "read `.workbook` from all 14 and combine
+ * into one object keyed by module name" — the SAME key names the app's
+ * own Firebase RTDB structure already uses (`bank`, `cash`, `emiLoans`,
+ * `funds`, `personalLoans`, `plannedBank`, `plannedCash`, `plannedRentals`,
+ * `psx`, `qse`, `rentals`, `subscriptions`, `interEntityTransfers`,
+ * `netWorthSnapshots`), so a file exported here is also directly
+ * comparable to (though not identical in shape to — this omits the
+ * `_updated` timestamp Firebase adds) a raw RTDB export for the same
+ * account. Import is a straight per-module `setWorkbook()`, exactly the
+ * same call each module's own JSON import already makes — nothing new
+ * about HOW a workbook gets loaded, only that this does it for every
+ * module in one file/one click instead of 14. */
+export function AppDataPage() {
+  const ensureSignedIn = useEnsureSignedIn();
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+
+  const qse = useWorkbookStore();
+  const psx = usePSXWorkbookStore();
+  const bank = useBankWorkbookStore();
+  const cash = useCashWorkbookStore();
+  const emiLoans = useEMIWorkbookStore();
+  const funds = useFundsWorkbookStore();
+  const personalLoans = usePersonalLoansWorkbookStore();
+  const rentals = useRentalsWorkbookStore();
+  const subscriptions = useSubscriptionsWorkbookStore();
+  const plannedBank = usePlannedBankWorkbookStore();
+  const plannedCash = usePlannedCashWorkbookStore();
+  const plannedRentals = usePlannedRentalsWorkbookStore();
+  const interEntityTransfers = useInterEntityTransfersStore();
+  const netWorthSnapshots = useNetWorthSnapshotsWorkbookStore();
+
+  const stores = {
+    qse, psx, bank, cash, emiLoans, funds, personalLoans, rentals, subscriptions,
+    plannedBank, plannedCash, plannedRentals, interEntityTransfers, netWorthSnapshots,
+  } as const;
+  type ModuleKey = keyof typeof stores;
+  const moduleLabels: Record<ModuleKey, string> = {
+    qse: 'QSE stocks', psx: 'PSX stocks', bank: 'Banking', cash: 'Cash', emiLoans: 'EMI/Loans',
+    funds: 'Funds', personalLoans: 'Personal Loans', rentals: 'Rentals', subscriptions: 'Subscriptions',
+    plannedBank: 'Bank Planning', plannedCash: 'Cash Planning', plannedRentals: 'Rentals Planning',
+    interEntityTransfers: 'Transfers', netWorthSnapshots: 'Net Worth history',
+  };
+
+  const exportAll = () => {
+    const combined: Record<string, unknown> = {};
+    (Object.keys(stores) as ModuleKey[]).forEach((key) => {
+      combined[key] = stores[key].workbook;
+    });
+    const blob = new Blob([JSON.stringify(combined, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `financerecorder-full-backup-${today()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('Full backup downloaded.');
+  };
+
+  const importAll = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      let parsed: Record<string, unknown>;
+      try {
+        parsed = JSON.parse(String(reader.result));
+      } catch {
+        toast('That file is not valid JSON.');
+        return;
+      }
+      const foundKeys = (Object.keys(stores) as ModuleKey[]).filter((key) => parsed[key] != null);
+      if (!foundKeys.length) {
+        toast('No recognized module data found in that file.');
+        return;
+      }
+      const ok = await confirmDialog(
+        `This overwrites local data for: ${foundKeys.map((k) => moduleLabels[k]).join(', ')}. This cannot be undone (export a backup first if unsure).`,
+        `Import ${foundKeys.length} module${foundKeys.length > 1 ? 's' : ''} from this file?`,
+      );
+      if (!ok) return;
+      if (!(await ensureSignedIn('Sign in to import data.'))) return;
+      setBusy(true);
+      try {
+        foundKeys.forEach((key) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (stores[key].setWorkbook as (wb: any) => void)(parsed[key]);
+        });
+        toast(`Imported ${foundKeys.length} module${foundKeys.length > 1 ? 's' : ''}.`);
+      } finally {
+        setBusy(false);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  return (
+    <div>
+      <h1 className="pagetitle">App Data</h1>
+      <p className="footer-note" style={{ marginBottom: 12 }}>
+        Backup or restore your ENTIRE FinanceRecorder account in one file — every module at once, instead of each
+        module's own Settings tab (still there, unchanged, for a per-module backup).
+      </p>
+      <Card style={{ marginBottom: 16 }}>
+        <h3 style={{ marginTop: 0 }}>Export everything</h3>
+        <p className="footer-note">Downloads one JSON file with every module's data.</p>
+        <button className="btn" onClick={exportAll}>Export full backup</button>
+      </Card>
+      <Card>
+        <h3 style={{ marginTop: 0 }}>Import everything</h3>
+        <Notice tone="warning" style={{ marginBottom: 12 }}>
+          This overwrites whichever modules are present in the file, for every one of THIS account's stores. Export
+          a backup first if you're not sure.
+        </Notice>
+        <button className="btn secondary" disabled={busy} onClick={() => fileInput.current?.click()}>
+          {busy ? 'Importing…' : 'Choose file to import'}
+        </button>
+        <input
+          ref={fileInput}
+          type="file"
+          accept="application/json"
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) importAll(file);
+            e.target.value = '';
+          }}
+        />
+      </Card>
+    </div>
+  );
+}

@@ -52,6 +52,7 @@ import { useNetWorthSnapshotsFirebaseSync } from './lib/firebase/useNetWorthSnap
 import { LegalPage } from './pages/LegalPage';
 import { NetWorthPage } from './features/netWorth/pages/NetWorthPage';
 import { BudgetPlannerPage } from './features/budget/pages/BudgetPlannerPage';
+import { AppDataPage } from './features/appData/pages/AppDataPage';
 
 function useApplyAppearance() {
   const appearance = useAppearanceStore((s) => s.appearance);
@@ -256,6 +257,7 @@ function App() {
                 }
               />
               <Route path="/budget" element={<BudgetPlannerPage />} />
+              <Route path="/app-data" element={<AppDataPage />} />
               <Route path="/legal" element={<LegalPage />} />
             </Routes>
           </ErrorBoundary>

@@ -108,6 +108,9 @@ export function Sidebar({
         </button>
       )}
       <div className="footer-note" style={{ marginTop: 6 }}>
+        <NavLink to="/app-data" style={{ color: 'inherit' }}>Backup / restore all data</NavLink>
+      </div>
+      <div className="footer-note" style={{ marginTop: 6 }}>
         Estimates only — verify against your official statement.{' '}
         <NavLink to="/legal" style={{ color: 'inherit' }}>Disclaimer &amp; Privacy</NavLink>
       </div>
