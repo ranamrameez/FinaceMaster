@@ -71,6 +71,20 @@ export function PositionDetail({ ticker }: { ticker: string }) {
   const estGain = grossValue > 0 ? grossValue - estSellFee - invested : 0;
   const estCGT = estGain > 0 ? calcCGT(estGain, workbook.settings) : 0;
 
+  // Item 1 of a 2026-08-26 feedback batch: see the identical comment in
+  // QSE's PositionDetail.tsx.
+  const exitTarget = (pct: number) =>
+    shares > 0 ? breakEvenPrice(invested * (1 + pct / 100), shares, workbook.settings.feePct, workbook.settings.tick, calcFee) : 0;
+  const netProfit = grossValue > 0 ? grossValue - estSellFee - invested : NaN;
+  let statusLabel = '';
+  let statusHue: string | undefined;
+  if (isOpen) {
+    if (!Number.isFinite(netProfit)) { statusLabel = 'PRICE NEEDED'; statusHue = undefined; }
+    else if (netProfit >= 0) { statusLabel = 'EXIT READY'; statusHue = 'var(--profit)'; }
+    else if ((netProfit / invested) * 100 > -3) { statusLabel = 'WATCH'; statusHue = undefined; }
+    else { statusLabel = 'HOLD / REVIEW'; statusHue = 'var(--loss)'; }
+  }
+
   /** README item 40: this ticker's price-history statement, separate from
    * the trade statement exported on the Transactions tab — exports the
    * full raw log (`stats.chronological`), not just the "recent" slice
@@ -129,6 +143,16 @@ export function PositionDetail({ ticker }: { ticker: string }) {
                 <div className="sub">{workbook.settings.filerStatus === 'filer' ? `${workbook.settings.cgtFilerPct}% filer rate` : `${workbook.settings.cgtNonFilerPct}% non-filer rate`}</div>
               </div>
             )}
+            <div className="stat-card card" style={hueStyle(HUES[6])}>
+              <div className="label">Exit targets</div>
+              <div className="value" style={{ fontSize: 13 }}>
+                +1% {fmtPrice(exitTarget(1))}<br />+2% {fmtPrice(exitTarget(2))}<br />+5% {fmtPrice(exitTarget(5))}
+              </div>
+            </div>
+            <div className="stat-card card" style={hueStyle(statusHue || HUES[7])}>
+              <div className="label">Status</div>
+              <div className="value" style={{ fontSize: 14 }}>{statusLabel}</div>
+            </div>
           </div>
         </CollapsibleCard>
       )}

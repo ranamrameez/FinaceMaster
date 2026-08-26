@@ -1,17 +1,23 @@
 import { useEffect, useState } from 'react';
+import { Doughnut } from 'react-chartjs-2';
 import { Card, MoneyValue, StatCard } from '../../../components/Card';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { toast } from '../../../components/Toast';
+import { ChartCard } from '../../qse/components/ChartCard';
 import { cashBalanceByCurrency } from '../../../lib/calc/cashModule';
 import { totalBalanceByCurrency } from '../../../lib/calc/bankModule';
 import { netPositionByCurrency } from '../../../lib/calc/personalLoansModule';
 import { totalsByCurrency as emiTotalsByCurrency } from '../../../lib/calc/emiModule';
 import { netIncomeByCurrency as rentalsNetIncomeByCurrency } from '../../../lib/calc/rentalsModule';
 import { fundsValueByCurrency } from '../../../lib/calc/fundsModule';
-import { computeNetWorthByCurrency } from '../../../lib/calc/netWorth';
-import { convertAmount, fetchFxRates, isFxStale, loadCachedFxRates, saveFxRates, setManualRate, type FxRates } from '../../../lib/fx';
+import { computeNetWorthByCurrency, flowByCurrency } from '../../../lib/calc/netWorth';
+import { convertAmount, effectiveRate, fetchFxRates, isFxStale, loadCachedFxRates, saveFxRates, setCrossRate, type FxRates } from '../../../lib/fx';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
+import { dlDoughnut } from '../../../lib/chartLabels';
+import { applyChartTheme } from '../../../lib/chartSetup';
+import { HUES } from '../../../lib/statCardHues';
+import { useAppearanceStore } from '../../../store/appearanceStore';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
@@ -45,6 +51,11 @@ export function NetWorthPage() {
   const psxSettings = usePSXWorkbookStore((s) => s.workbook.settings);
   const qse = useQSEDerived();
   const psx = usePSXDerived();
+  // Charts on this page recompute their CSS-var-derived colors only when
+  // this component re-renders — same reasoning as every other chart-bearing
+  // page (Dashboard, Analytics, PositionDetail).
+  useAppearanceStore((s) => s.appearance);
+  applyChartTheme();
 
   const cash = cashBalanceByCurrency(cashEntries);
   const bankTotals = totalBalanceByCurrency(bank.settings.accounts, bank.transactions);
@@ -71,12 +82,30 @@ export function NetWorthPage() {
     emiOutstanding,
   });
 
-  const [preferredCurrency, setPreferredCurrency] = useLastCurrency('net-worth-preferred', 'USD');
+  // Item 3 of a 2026-08-26 feedback batch: "Default currency should be
+  // logical" — `useLastCurrency` already remembers whatever the user picks
+  // for next time, but its FIRST-EVER default was a hardcoded 'USD' even
+  // for a user who's never touched USD at all. Default instead to whichever
+  // currency the user actually has the largest (absolute) net exposure in —
+  // a much more likely "the one they care about" than an arbitrary global
+  // default — falling back to 'USD' only when there's no data yet to judge by.
+  const biggestExposureCurrency = rows.length
+    ? [...rows].sort((a, b) => Math.abs(b.net) - Math.abs(a.net))[0].currency
+    : 'USD';
+  const [preferredCurrency, setPreferredCurrency] = useLastCurrency('net-worth-preferred', biggestExposureCurrency);
   const [rates, setRates] = useState<FxRates | null>(() => loadCachedFxRates());
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [fetching, setFetching] = useState(false);
-  const [manualCode, setManualCode] = useState('');
-  const [manualValue, setManualValue] = useState('');
+
+  // Item 3: FX entry used to be locked to "1 USD = X" — the internal rate
+  // table stays USD-anchored (unchanged, and correct — see setCrossRate's
+  // own comment for why), but the user can now set a rate between ANY two
+  // currencies they actually hold; From/To default to the two currencies
+  // most likely relevant (biggest exposure + preferred).
+  const currencyCodes = [...new Set([...rows.map((r) => r.currency), preferredCurrency, 'USD'])];
+  const [rateFrom, setRateFrom] = useState(currencyCodes[0] || 'USD');
+  const [rateTo, setRateTo] = useState(currencyCodes.find((c) => c !== rateFrom) || 'USD');
+  const [crossRateValue, setCrossRateValue] = useState('');
 
   const refresh = async () => {
     setFetching(true);
@@ -99,25 +128,34 @@ export function NetWorthPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Item 1/3 of a 2026-08-26 feedback batch: picking a currency here used to
-  // always start the Rate field blank, forcing the user to type a value from
-  // scratch even when a rate (auto-fetched or previously entered by hand) is
-  // already known for it — prefill with the current known value instead, so
-  // this reads as "edit the current rate" rather than "guess a new one".
-  const onManualCodeChange = (code: string) => {
-    setManualCode(code);
-    const known = code ? rates?.rates[code] : undefined;
-    setManualValue(typeof known === 'number' ? String(known) : '');
+  // Item 1/3 (earlier pass): picking a currency here used to always start
+  // the Rate field blank, forcing the user to type a value from scratch
+  // even when a rate (auto-fetched or previously entered by hand) is
+  // already known for it — prefill with the current known cross-rate
+  // between whatever From/To is currently selected.
+  const onRateFromChange = (code: string) => {
+    setRateFrom(code);
+    const known = effectiveRate(code, rateTo, rates);
+    setCrossRateValue(known !== null ? String(known) : '');
+  };
+  const onRateToChange = (code: string) => {
+    setRateTo(code);
+    const known = effectiveRate(rateFrom, code, rates);
+    setCrossRateValue(known !== null ? String(known) : '');
   };
 
-  const applyManualRate = () => {
-    const value = Number(manualValue);
-    if (!manualCode || !value || value <= 0) return toast('Enter a currency and a positive rate.');
-    const next = setManualRate(manualCode, value, rates);
+  const applyCrossRate = () => {
+    const value = Number(crossRateValue);
+    if (!rateFrom || !rateTo || rateFrom === rateTo || !value || value <= 0) {
+      return toast('Pick two different currencies and a positive rate.');
+    }
+    const next = setCrossRate(rateFrom, rateTo, value, rates);
+    if (!next) {
+      return toast(`No known rate for ${rateFrom} yet — set its rate against USD first, or pick USD as one side.`);
+    }
     saveFxRates(next);
     setRates(next);
-    setManualValue('');
-    toast(`${manualCode} rate saved.`);
+    toast(`Rate saved: 1 ${rateFrom} = ${value} ${rateTo}.`);
   };
 
   let grandTotal = 0;
@@ -128,62 +166,181 @@ export function NetWorthPage() {
     else grandTotal += converted;
   });
 
+  // Item 5 of a 2026-08-26 feedback batch: additional summary stats —
+  // total debts across every currency (converted where possible, same
+  // "skip what can't convert" degradation as the grand total above), plus
+  // today's and this month's net cash movement. All three, like the grand
+  // total, are only ever a converted SUM shown alongside the per-currency
+  // real figures — never a silent replacement for them.
+  let totalDebts = 0;
+  const debtsUnconverted: string[] = [];
+  rows.forEach((r) => {
+    if (!r.liabilities) return;
+    const converted = convertAmount(r.liabilities, r.currency, preferredCurrency, rates);
+    if (converted === null) debtsUnconverted.push(r.currency);
+    else totalDebts += converted;
+  });
+
+  const today = new Date().toISOString().slice(0, 10);
+  const monthStart = `${today.slice(0, 7)}-01`;
+  const todayFlow = flowByCurrency(cashEntries, bank.settings.accounts, bank.transactions, today, today);
+  const monthFlow = flowByCurrency(cashEntries, bank.settings.accounts, bank.transactions, monthStart, today);
+  const sumFlow = (flow: Record<string, number>) => {
+    let total = 0;
+    let anyUnconverted = false;
+    Object.entries(flow).forEach(([code, amount]) => {
+      const converted = convertAmount(amount, code, preferredCurrency, rates);
+      if (converted === null) anyUnconverted = true;
+      else total += converted;
+    });
+    return { total, anyUnconverted };
+  };
+  const todayFlowTotal = sumFlow(todayFlow);
+  const monthFlowTotal = sumFlow(monthFlow);
+
+  // Item 4: "capital split per currency" — each currency's net worth
+  // converted to the preferred currency for a like-for-like comparison
+  // (a currency that can't convert is omitted from the chart, same
+  // degradation as the grand total, rather than plotting a wrong number).
+  // A doughnut can't meaningfully show a negative slice, so a currency
+  // with negative net worth is left out of the chart specifically — it's
+  // still fully visible in the per-currency cards and breakdown below.
+  const splitData = rows
+    .map((r) => ({ currency: r.currency, converted: convertAmount(r.net, r.currency, preferredCurrency, rates) }))
+    .filter((r): r is { currency: string; converted: number } => r.converted !== null && r.converted > 0);
+
+  const ownCurrencies = [...new Set(rows.map((r) => r.currency))].sort();
+
   return (
     <div>
-      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-        <h1>Net Worth</h1>
-        <Field label="Show total in" width={150}>
-          <Select value={preferredCurrency} onChange={(e) => setPreferredCurrency(e.target.value)} width={150}>
-            {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
-          </Select>
-        </Field>
+      <h1>Net Worth</h1>
+
+      {/* Items 2/3/4/5 of a 2026-08-26 follow-up batch: the previous single
+          Card had the big number eating ~80% width with mostly blank space
+          while the rate controls were squeezed into a ~20% sliver, "Show
+          total in" sat in the page header disconnected from the number it
+          controls, and FX entry was locked to "1 USD = X". Now two
+          separate, roughly-equal Cards: "Net worth summary" (the currency
+          picker grouped directly with the big number it controls) and
+          "Exchange rates" (its own Card, with a From/To pair — any two of
+          the user's own currencies, not just vs. USD — plus a read-only
+          table of every rate between currencies the user actually holds). */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginBottom: 16, alignItems: 'start' }}>
+        <Card>
+          <h3 style={{ marginTop: 0 }}>Net worth summary</h3>
+          <Field label="Show total in" width={150}>
+            <Select value={preferredCurrency} onChange={(e) => setPreferredCurrency(e.target.value)} width={150}>
+              {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+            </Select>
+          </Field>
+          <div style={{ marginTop: 12 }}>
+            <StatCard label={`Estimated net worth (${preferredCurrency})`} value={fmtMoney(grandTotal, preferredCurrency)} hue={grandTotal >= 0 ? 'var(--profit)' : 'var(--loss)'} />
+          </div>
+          {unconverted.length > 0 && (
+            <div className="footer-note" style={{ marginTop: 8 }}>
+              No {preferredCurrency} rate available for {unconverted.join(', ')} — those currencies' totals
+              aren't included above; see their own sections below for real figures.
+            </div>
+          )}
+          {/* Item 5 of a 2026-08-26 feedback batch: "more useful info & stat
+              cards... Debts, inflow/outflow today, month". All three are a
+              converted SUM alongside the real per-currency figures below —
+              never a replacement for them. */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px,1fr))', gap: 8, marginTop: 12 }}>
+            <StatCard
+              label="Total debts"
+              value={fmtMoney(totalDebts, preferredCurrency)}
+              hue={totalDebts > 0 ? 'var(--loss)' : HUES[4]}
+              title={debtsUnconverted.length ? `Excludes ${debtsUnconverted.join(', ')} — no rate available.` : undefined}
+            />
+            <StatCard
+              label="Today's net flow"
+              value={fmtMoney(todayFlowTotal.total, preferredCurrency)}
+              hue={todayFlowTotal.total >= 0 ? 'var(--profit)' : 'var(--loss)'}
+              title={todayFlowTotal.anyUnconverted ? 'Some currencies excluded — no rate available.' : undefined}
+              labelTitle="Net money moved in/out of Cash and Bank today, converted to the preferred currency."
+            />
+            <StatCard
+              label="This month's net flow"
+              value={fmtMoney(monthFlowTotal.total, preferredCurrency)}
+              hue={monthFlowTotal.total >= 0 ? 'var(--profit)' : 'var(--loss)'}
+              title={monthFlowTotal.anyUnconverted ? 'Some currencies excluded — no rate available.' : undefined}
+              labelTitle="Net money moved in/out of Cash and Bank since the 1st of this month, converted to the preferred currency."
+            />
+          </div>
+        </Card>
+
+        <Card>
+          <h3 style={{ marginTop: 0 }}>Exchange rates</h3>
+          <div className="footer-note">
+            {rates
+              ? `Rates as of ${new Date(rates.fetchedAt).toLocaleString()} (${rates.source === 'api' ? 'auto-fetched' : 'manually entered'}).`
+              : 'No exchange rates loaded yet.'}
+            {fetchError && ` Auto-fetch failed: ${fetchError} — enter a rate manually below.`}
+          </div>
+          <button type="button" className="btn-link" onClick={refresh} disabled={fetching} style={{ background: 'none', border: 'none', color: 'inherit', textDecoration: 'underline', cursor: 'pointer', padding: 0, marginTop: 2 }}>
+            {fetching ? 'Refreshing…' : 'Refresh rates'}
+          </button>
+
+          <div style={{ marginTop: 12 }}>
+            <div className="footer-note" style={{ marginBottom: 4 }}>Set a rate between any two currencies</div>
+            <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <Field label="1 unit of">
+                <Select value={rateFrom} onChange={(e) => onRateFromChange(e.target.value)} width={110}>
+                  {currencyCodes.map((c) => <option key={c} value={c}>{c}</option>)}
+                </Select>
+              </Field>
+              <Field label="equals">
+                <TextInput type="number" step="0.0001" placeholder="Rate" value={crossRateValue} onChange={(e) => setCrossRateValue(e.target.value)} style={{ width: 100 }} />
+              </Field>
+              <Field label="of">
+                <Select value={rateTo} onChange={(e) => onRateToChange(e.target.value)} width={110}>
+                  {currencyCodes.map((c) => <option key={c} value={c}>{c}</option>)}
+                </Select>
+              </Field>
+              <button type="button" className="btn" onClick={applyCrossRate}>Save rate</button>
+            </div>
+          </div>
+
+          {ownCurrencies.length > 1 && (
+            <div style={{ marginTop: 14 }}>
+              <div className="footer-note" style={{ marginBottom: 4 }}>Rates between your own currencies</div>
+              {ownCurrencies.flatMap((a) =>
+                ownCurrencies.filter((b) => b > a).map((b) => {
+                  const r = effectiveRate(a, b, rates);
+                  return (
+                    <div key={`${a}-${b}`} className="row" style={{ justifyContent: 'space-between', padding: '3px 0', borderBottom: '1px solid var(--border)' }}>
+                      <span className="footer-note">1 {a} =</span>
+                      <span style={{ fontFamily: 'var(--mono)' }}>{r !== null ? `${r.toFixed(4)} ${b}` : `— ${b} (no rate yet)`}</span>
+                    </div>
+                  );
+                }),
+              )}
+            </div>
+          )}
+        </Card>
       </div>
 
-      {/* Item 4/5 of a 2026-08-26 feedback batch: the big number used to be a
-          bare `.stat-card` missing the `.card` class (so its colored
-          gradient background filled edge-to-edge with the inline
-          `padding:0` it had, reading as a stray colored strip behind the
-          text) and the rate-management controls ran the full page width
-          below it. Now a two-column layout: the big number on the left
-          (using the real shared StatCard component, so it gets a proper
-          inset/rounded card like every other stat card in the app) and a
-          narrow, stacked "rates" panel pinned to the right instead of
-          spanning the width. */}
-      <Card style={{ marginBottom: 16 }}>
-        <div className="row" style={{ gap: 20, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-          <div style={{ flex: '1 1 240px', minWidth: 220 }}>
-            <StatCard label={`Estimated net worth (${preferredCurrency})`} value={fmtMoney(grandTotal, preferredCurrency)} hue={grandTotal >= 0 ? 'var(--profit)' : 'var(--loss)'} />
-            {unconverted.length > 0 && (
-              <div className="footer-note" style={{ marginTop: 8 }}>
-                No {preferredCurrency} rate available for {unconverted.join(', ')} — those currencies' totals
-                aren't included above; see their own sections below for real figures.
-              </div>
-            )}
+      {/* Item 4: "add charts to view capital split per currency" — a
+          net-worth-over-time chart would need periodic snapshots this app
+          doesn't take yet (net worth is always computed live from current
+          data, nothing is logged historically) — that's a real design
+          decision (how often to snapshot, where to store it) not guessed
+          at here; tracked as its own Pending item instead. The split-by-
+          currency chart below needs no new storage, so it's built now. */}
+      {splitData.length > 1 && (
+        <ChartCard title={`Capital split by currency (converted to ${preferredCurrency})`} empty={false}>
+          <div style={{ height: 220 }}>
+            <Doughnut
+              data={{
+                labels: splitData.map((d) => d.currency),
+                datasets: [{ data: splitData.map((d) => d.converted), backgroundColor: HUES }],
+              }}
+              options={{ plugins: { datalabels: dlDoughnut((v) => fmtMoney(v, preferredCurrency)) } }}
+            />
           </div>
-          <div style={{ flex: '0 1 260px', minWidth: 220, maxWidth: 280 }}>
-            <div className="footer-note">
-              {rates
-                ? `Rates as of ${new Date(rates.fetchedAt).toLocaleString()} (${rates.source === 'api' ? 'auto-fetched' : 'manually entered'}).`
-                : 'No exchange rates loaded yet.'}
-              {fetchError && ` Auto-fetch failed: ${fetchError} — enter a rate manually below.`}
-            </div>
-            <button type="button" className="btn-link" onClick={refresh} disabled={fetching} style={{ background: 'none', border: 'none', color: 'inherit', textDecoration: 'underline', cursor: 'pointer', padding: 0, marginTop: 2 }}>
-              {fetching ? 'Refreshing…' : 'Refresh rates'}
-            </button>
-            <div style={{ marginTop: 10 }}>
-              <div className="footer-note" style={{ marginBottom: 4 }}>Manual rate override — 1 USD =</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <Select value={manualCode} onChange={(e) => onManualCodeChange(e.target.value)} width={150}>
-                  <option value="">Currency…</option>
-                  {CURRENCIES.filter((c) => c.code !== 'USD').map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
-                </Select>
-                <TextInput type="number" step="0.0001" placeholder="Rate" value={manualValue} onChange={(e) => setManualValue(e.target.value)} style={{ width: 150 }} />
-                <button type="button" className="btn" style={{ width: 150 }} onClick={applyManualRate}>Save rate</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Card>
+        </ChartCard>
+      )}
 
       {rows.length === 0 && (
         <Card><div className="footer-note">No balances recorded yet across any module.</div></Card>

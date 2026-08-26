@@ -42,8 +42,28 @@ function HoldingsCard() {
           const profit = mp > 0 ? value - sellFee - p.invested : NaN;
           const profitPct = mp > 0 && p.invested > 0 ? (profit / p.invested) * 100 : NaN;
           const be = breakEvenPrice(p.invested, p.shares, feePct, tick, calcFee);
+          const target = (pct: number) => breakEvenPrice(p.invested * (1 + pct / 100), p.shares, feePct, tick, calcFee);
           const sparkData = getDailyPriceHistory(p.ticker, workbook.priceHistory).map((pt) => pt.price);
-          return { ticker: p.ticker, shares: p.shares, avgCost, mp, value, invested: p.invested, profit, profitPct, be, sparkData };
+
+          // Item 1 of a 2026-08-26 feedback batch: see the identical comment
+          // in QSE's DashboardPage.tsx.
+          let statusRank: number;
+          let statusLabel: string;
+          let statusClass: string;
+          if (!Number.isFinite(profit)) {
+            statusRank = 3; statusLabel = 'PRICE NEEDED'; statusClass = '';
+          } else if (profit >= 0) {
+            statusRank = 0; statusLabel = 'EXIT READY'; statusClass = 'pill-buy';
+          } else if ((profit / p.invested) * 100 > -3) {
+            statusRank = 1; statusLabel = 'WATCH'; statusClass = '';
+          } else {
+            statusRank = 2; statusLabel = 'HOLD / REVIEW'; statusClass = 'pill-sell';
+          }
+
+          return {
+            ticker: p.ticker, shares: p.shares, avgCost, mp, value, invested: p.invested, profit, profitPct, be, sparkData,
+            t1: target(1), t2: target(2), t3: target(5), statusRank, statusLabel, statusClass,
+          };
         }),
     [positions, workbook.marketPrices, workbook.priceHistory, calcFee, feePct, tick],
   );
@@ -54,10 +74,11 @@ function HoldingsCard() {
   // current worth + invested + an up/down indicator together, "P/L" carries
   // the amount + percentage together — instead of five separate same-size
   // columns for numbers a reader mentally pairs up anyway.
-  type Col = 'ticker' | 'shares' | 'avgCost' | 'mp' | 'value' | 'profit';
+  type Col = 'ticker' | 'shares' | 'avgCost' | 'mp' | 'value' | 'profit' | 'status';
   const sortValue = (r: (typeof heldRaw)[number], col: Col): number | string => {
     if (col === 'profit') return Number.isFinite(r.profit) ? r.profit : 0;
     if (col === 'value') return r.value;
+    if (col === 'status') return r.statusRank;
     return r[col];
   };
   const { sorted: held, Th } = useSortableRows(heldRaw, sortValue, 'profit', 'desc');
@@ -72,7 +93,7 @@ function HoldingsCard() {
         <div className="table-scroll table-compact" style={{ marginTop: 8 }}>
           <table>
             <thead>
-              <tr><Th col="ticker">Stock</Th><th>Trend</th><Th col="shares">Shares</Th><Th col="avgCost">Cost</Th><Th col="mp">Current Price</Th><Th col="value">Value</Th><Th col="profit">P/L</Th></tr>
+              <tr><Th col="ticker">Stock</Th><th>Trend</th><Th col="shares">Shares</Th><Th col="avgCost">Cost</Th><Th col="mp">Current Price</Th><Th col="value">Value</Th><Th col="profit">P/L</Th><th>Exit targets</th><Th col="status">Status</Th></tr>
             </thead>
             <tbody>
               {held.map((r) => (
@@ -127,6 +148,10 @@ function HoldingsCard() {
                     <div>{Number.isFinite(r.profit) ? fmtMoney(r.profit, currency) : '—'}</div>
                     <div className="footer-note">{Number.isFinite(r.profitPct) ? `${r.profitPct >= 0 ? '+' : ''}${r.profitPct.toFixed(1)}%` : ''}</div>
                   </td>
+                  <td onClick={() => navigate(`/psx/stock/${r.ticker}`)} className="footer-note" style={{ whiteSpace: 'nowrap' }}>
+                    +1% {fmtPrice(r.t1)}<br />+2% {fmtPrice(r.t2)}<br />+5% {fmtPrice(r.t3)}
+                  </td>
+                  <td onClick={() => navigate(`/psx/stock/${r.ticker}`)} className={r.statusClass}>{r.statusLabel}</td>
                 </tr>
               ))}
             </tbody>

@@ -429,8 +429,17 @@
   /* Left-border accent removed (user-reported item 10: "left borders don't
      look good") — the colored gradient background + StatCard's own `hue`
      prop already carry the per-card color identity; a thin bar on top of
-     that read as visual clutter, not a second useful signal. */
-  .stat-card{padding:11px 13px; background:linear-gradient(135deg, color-mix(in srgb, var(--card-hue, var(--accent)) 16%, var(--panel)) 0%, var(--panel) 100%);}
+     that read as visual clutter, not a second useful signal.
+
+     Item 7 of a 2026-08-26 feedback batch: "bg gradients are making them
+     vague. minor glassy/shiny effect is enough" — the hue mix was 16%,
+     strong enough to muddy the value text's contrast on some hues/themes;
+     dropped to 7% (a whisper of color, not a wash) and layered a very
+     faint top-left highlight on top for a subtle glass sheen instead of a
+     saturated diagonal fill. The two `--card-hue` gradient overrides below
+     (non-wine, Material) use the same 7%-mix + sheen formula — keep all
+     three in sync if this changes again. */
+  .stat-card{padding:11px 13px; background:linear-gradient(135deg, rgba(255,255,255,.05) 0%, rgba(255,255,255,0) 35%), linear-gradient(135deg, color-mix(in srgb, var(--card-hue, var(--accent)) 7%, var(--panel)) 0%, var(--panel) 100%);}
   .stat-card .label{color:var(--muted); font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; line-height:1.25;}
   .stat-card .value{font-family:var(--mono); font-size:17px; font-weight:700; line-height:1.2;}
   .stat-card .sub{font-size:10.5px; margin-top:3px; color:var(--muted); line-height:1.3;}
@@ -1203,7 +1212,7 @@ html:not([data-color="wine"]) .card.chart-card{
 html:not([data-color="wine"]) .card.stat-card{
   border:0;
   box-shadow:var(--shadow-card);
-  background:linear-gradient(135deg, color-mix(in srgb, var(--card-hue, var(--accent)) 16%, var(--panel)) 0%, var(--panel) 100%);
+  background:linear-gradient(135deg, rgba(255,255,255,.05) 0%, rgba(255,255,255,0) 35%), linear-gradient(135deg, color-mix(in srgb, var(--card-hue, var(--accent)) 7%, var(--panel)) 0%, var(--panel) 100%);
 }
 html[data-color^="material-"][data-theme="light"] .card.chart-card,
 html[data-color^="material-"][data-theme="dark"] .card.chart-card{
@@ -1215,7 +1224,7 @@ html[data-color^="material-"][data-theme="light"] .card.stat-card,
 html[data-color^="material-"][data-theme="dark"] .card.stat-card{
   border:0;
   box-shadow:var(--shadow-card);
-  background:linear-gradient(135deg, color-mix(in srgb, var(--card-hue, var(--accent)) 16%, var(--panel)) 0%, var(--panel) 100%);
+  background:linear-gradient(135deg, rgba(255,255,255,.05) 0%, rgba(255,255,255,0) 35%), linear-gradient(135deg, color-mix(in srgb, var(--card-hue, var(--accent)) 7%, var(--panel)) 0%, var(--panel) 100%);
 }
 
 /* Fields get the same whisper of color the cards get — background only,

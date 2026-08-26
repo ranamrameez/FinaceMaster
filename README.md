@@ -3102,6 +3102,81 @@ FinanceManager live link:
      a seeded position: Value column correctly showed "1,200.00 QAR ▲ Inv 1,002.75 QAR" for a
      100-share QIBK position bought at ~10.03 and priced at 12. `npx tsc -b` / `npm run test`
      (281 tests, unchanged) / `npm run build` all clean.
+151. **Exit targets + Status brought to Dashboard's Holdings table and the per-stock detail
+     page — item 1 of a new 2026-08-26 feedback batch (2026-08-26).** The user's exact framing:
+     "Portfolio Holdings table is more complete it should [be] replicated on dashboard and also,
+     same info should be available on the item's details page" — a fair read of the situation,
+     since Portfolio's own table had grown two columns (Exit targets: +1%/+2%/+5% price targets;
+     Status: EXIT READY/WATCH/HOLD-REVIEW/PRICE NEEDED) that Dashboard's copy of the same table
+     never got, and neither existed on `PositionDetail.tsx` (the per-stock "Summary" tab) at all.
+     Added both to QSE's and PSX's `DashboardPage.tsx` `HoldingsCard` (same status-threshold
+     logic duplicated per the existing per-page-duplication convention this table already
+     follows, not factored into a shared helper) and to `PositionDetail.tsx`'s "Current
+     position" card as two new stat cards. **One real design decision**: `PositionDetail`'s new
+     "Status" stat card does NOT reuse the `.pill-buy`/`.pill-sell` classes Dashboard's/
+     Portfolio's *table cells* use for this — Done item 122 specifically fixed a "stat card +
+     inner pill = double-colored" anti-pattern, so the stat card's own hue (green for EXIT
+     READY, red for HOLD/REVIEW, the card's default color otherwise) carries the signal instead,
+     matching every other stat card in the app; `.pill-buy`/`.pill-sell` remain exactly right
+     for the *table* cells, which are a different, already-correct use per that same Done item's
+     own reasoning. Verified live via Playwright with a seeded 2-position portfolio (one up, one
+     down): Dashboard's Holdings table showed real EXIT READY (green) / HOLD REVIEW (red) values
+     with correct exit-target prices; StockPage's Current Position card showed the same for the
+     losing position with the stat card itself tinted red, not a redundant inner pill. `npx tsc
+     -b` / `npm run test` (299 tests, unchanged) / `npm run build` all clean.
+152. **Net Worth page redesigned, items 2/3/4/5/7 of the same 2026-08-26 batch (2026-08-26).**
+     A large follow-up round on the page shipped in Done item 148, addressing five more numbered
+     complaints from a real screenshot. (2/3) "One card 80% width with full blank area... FX
+     convert has set USD as standard... it should be [a] separate card at the right... Show
+     total in should be grouped with [the] info it controls... Default currency should be
+     logical": split the previous single Card into two side-by-side Cards of roughly equal
+     width — "Net worth summary" (the "Show total in" picker now lives directly inside it, right
+     above the big number it controls) and "Exchange rates" (its own full Card, not a squeezed
+     20%-width sidebar). `useLastCurrency`'s hardcoded `'USD'` first-ever fallback was replaced
+     with whichever currency the user has the largest absolute net exposure in (falls back to
+     `'USD'` only when there's no data yet to judge by) — a real "last chosen, else something
+     sensible" default instead of an arbitrary global one. The bigger technical piece: new
+     `effectiveRate()`/`setCrossRate()` in `lib/fx.ts` let the user set or view a rate between
+     ANY two currencies they hold (e.g. "1 QAR = 76.5 PKR" directly), not just "1 USD = X" —
+     the internal rate table stays USD-anchored (this was already technically correct for any
+     currency pair, exactly how `convertAmount` already converts non-USD-to-non-USD amounts;
+     the limitation was purely in the UI only ever offering USD as one side) — solving for
+     whichever leg isn't already anchored. A **real bug was caught live, not by the unit tests
+     first written for this**: the initial `setCrossRate` unconditionally solved for `to`'s
+     rate, which corrupted the shared USD anchor itself the moment `to === 'USD'` (e.g. "1 QAR =
+     0.3 USD" got written as `rates.USD = 1.092`, silently breaking every other currency's own
+     rate since they're all expressed relative to *1 USD = 1*) — caught via a real Playwright
+     round-trip (set a rate, read `localStorage` back) before this was ever committed, fixed by
+     special-casing `to === base` to solve for `from` instead, and a new regression test added
+     alongside the tests that didn't catch it. Also added a read-only "Rates between your own
+     currencies" table (every pairwise rate among currencies the user actually holds, computed
+     live). (4) "Add charts to view capital split per currency" — a new "Capital split by
+     currency" Doughnut chart (converted to the preferred currency; a currency that can't
+     convert, or has negative net worth — a doughnut can't show a negative slice — is left out
+     of the chart specifically, still fully visible in the per-currency cards below). The
+     "worth difference by time" half of this item was NOT built — a real net-worth-over-time
+     chart needs periodic historical snapshots this app has never taken (everything here is
+     computed live from current data, nothing is logged over time), which is a genuine new
+     design decision (how often to snapshot, where to store it) worth its own scoped pass, not
+     guessed at inside this one. (5) "More useful info & stat cards... Debts, inflow/outflow
+     today, month" — new `flowByCurrency()` in `lib/calc/netWorth.ts` (pure, tested) combines
+     Cash's unsigned `type: IN|OUT` entries and Bank's already-signed transactions by date range;
+     three new stat cards ("Total debts," "Today's net flow," "This month's net flow") sit
+     inside the summary card, each a converted sum alongside the real per-currency figures, never
+     a silent replacement for them. (7) "Cards bg gradients are making them vague... minor
+     glassy/shiny effect is enough" — `.stat-card`'s hue-gradient mix dropped from 16% to 7%
+     (a whisper of color, not a wash) plus a very faint top-left highlight layered on top for a
+     subtle glass sheen, applied once in the base rule and its two per-theme overrides
+     (non-wine, Material) so all three stay in sync. The "each theme should be different from
+     other" half of item 7 is the same still-open, more speculative color-theme question as
+     README Pending item 50 — not attempted here, tracked there. New tests:
+     `lib/__tests__/fx.test.ts` gained 6 cases (including the `setCrossRate` regression),
+     `lib/calc/__tests__/netWorth.test.ts` gained 4. Verified live via Playwright throughout:
+     the two-card layout, the default-currency logic actually picking the biggest-exposure
+     currency on a fresh profile, the cross-rate prefill and the corrected save round-trip via a
+     direct `localStorage` read, the doughnut chart rendering real proportional slices, and all
+     three new stat cards showing correct seeded numbers. `npx tsc -b` / `npm run test` (300
+     tests, 10 new) / `npm run build` all clean.
 
 ## Pending
 
@@ -3322,7 +3397,12 @@ than a guess folded into a mixed batch:
     styling — beyond swapping CSS custom-property values?) hasn't been scoped or attempted; a
     real answer needs deciding what "meaningfully different" means for a color theme
     specifically, which is a more speculative design question than density's fairly literal
-    "hide vs. show information" framing.
+    "hide vs. show information" framing. **The user repeated this specifically about stat-card
+    gradients on 2026-08-26** ("each theme should be different from other") right after the
+    gradient itself was made subtler (Done item 152, item 7's "glassy" half) — the subtler-
+    gradient fix is done, but it doesn't touch this still-open, larger "themes need structurally
+    different treatment" question; still the same speculative design work this note has always
+    described, not newly scoped by the repeat mention.
 
 **Trade Planner follow-up, user-reported (2026-08-24, arrived mid-session right after Done
 item 103) — all three now fixed, see Done item 104:**
@@ -3456,6 +3536,20 @@ same batch**:
     one-page fix, but doing it app-wide needs a per-page judgment call about which cards actually
     make sense side-by-side vs. which genuinely need the full width (a wide table, for instance,
     shouldn't be squeezed into a half-width grid cell).
+
+**2026-08-26, second Net Worth feedback batch — see Done item 152 for what shipped from this
+same batch**:
+
+64. "Add charts to view... worth difference by time" (item 4 of the same batch; the "capital
+    split per currency" half of this item is done — see Done item 152). A real net-worth-
+    over-time chart needs periodic historical snapshots this app has never taken — net worth is
+    always computed LIVE from each module's current data, nothing about it is logged over time
+    anywhere. Building this needs real design decisions first, not a guess: how often to
+    snapshot (on every app load? once a day? only on an explicit user action?), where to store
+    snapshots (a new Firebase node per user, local-only, both?), and what happens to a snapshot
+    once the underlying data it was computed from later changes (e.g. a backdated transaction
+    entered after the fact) — this is the same category of "needs a real design pass, not
+    guessed at" as Pending item 28's balance-reconciliation feature. Not started.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

@@ -2940,6 +2940,42 @@ not developer notes) continuously as features ship.
   Verified live via Playwright throughout (manual-rate prefill, breakdown text, grid layout,
   both ticker links, and the new Value column's exact rendered text against a seeded position).
   `npx tsc -b` / `npm run test` (281 tests, 1 new) / `npm run build` all clean.
+- **New 2026-08-26 batch, first half: Exit targets/Status brought to Dashboard + StockPage — see
+  README Done item 151.** Portfolio's own Holdings table had grown two columns (Exit targets,
+  Status) Dashboard's copy never got, and neither existed on `PositionDetail.tsx` at all — added
+  both in the same duplicated-per-page style this table already uses. **Rule from Done item
+  122 correctly applied here, not re-broken**: `PositionDetail`'s new Status stat card uses the
+  card's own `hue` (green/red) to signal state, NOT a `.pill-buy`/`.pill-sell` class stacked
+  inside it — that combo is exactly the "double-colored card" anti-pattern Done item 122 fixed;
+  the table-cell versions on Dashboard/Portfolio correctly keep using `.pill-buy`/`.pill-sell`
+  since a colored badge inside an otherwise-plain table row is the sanctioned use for *that*
+  context. Verified live via Playwright with a seeded up/down position pair.
+- **New 2026-08-26 batch, second half: Net Worth redesigned again — see README Done item 152.**
+  Split the previous single Card into two side-by-side ones ("Net worth summary" with the
+  currency picker moved inside it, "Exchange rates" as its own full Card). Replaced
+  `useLastCurrency`'s hardcoded `'USD'` fallback with "whichever currency has the largest
+  absolute net exposure." New `effectiveRate()`/`setCrossRate()` in `lib/fx.ts` let the user set
+  a rate between ANY two held currencies directly, solving for whichever leg isn't already
+  anchored to the internal USD base — the base itself never changes meaning, only the UI's
+  "USD-only" restriction was lifted. **A real bug caught live via Playwright before commit, not
+  by the unit tests written alongside it**: the first version of `setCrossRate` always solved
+  for `to`'s rate, which corrupted the shared USD anchor itself whenever `to === 'USD'` (e.g.
+  "1 QAR = 0.3 USD" got written as `rates.USD = 1.092`, silently breaking every other currency's
+  rate since they're all relative to *1 USD = 1*) — confirmed via a direct `localStorage`
+  read after saving, fixed by special-casing `to === base` to solve for `from` instead, with a
+  new regression test added. **Lesson**: a rate/unit-conversion function with a designated
+  "anchor" value needs an explicit test for "what happens when the thing being solved for IS the
+  anchor" — the obvious happy-path tests (each leg is a distinct non-anchor currency) don't
+  exercise this at all. Also added: a read-only pairwise-rate table for the user's own
+  currencies; a "Capital split by currency" Doughnut chart (skips a currency with negative net
+  worth — a doughnut can't show a negative slice); three new stat cards (Total debts, Today's/
+  This month's net flow, via new tested `flowByCurrency()` combining Cash's unsigned entries and
+  Bank's signed transactions by date range); and a global `.stat-card` gradient softening (16%
+  hue mix → 7% + a faint glass-sheen highlight, applied identically to the base rule and both
+  per-theme overrides so they can't drift out of sync again). **Deliberately not built**: a
+  real net-worth-over-time chart — needs periodic historical snapshots this app has never taken,
+  a genuine new design decision (cadence, storage) not guessed at here; see the new README
+  Pending item 64.
 
 ## Live URLs
 

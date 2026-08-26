@@ -85,3 +85,53 @@ export function setManualRate(code: string, unitsPerBase: number, existing: FxRa
   };
   return next;
 }
+
+/** The rate table is internally anchored to one base currency (USD), but
+ * item 3 of a 2026-08-26 feedback batch asked why FX entry only lets you
+ * set "1 USD = X" — the user holds several currencies and wants to view or
+ * set a rate between ANY two of them directly, not just each one's own
+ * USD leg. `effectiveRate` computes that cross-rate from the existing
+ * USD-anchored table (correct for any pair as long as both legs are known —
+ * this is exactly how `convertAmount` already converts non-USD-to-non-USD
+ * amounts, just exposed as a rate instead of a converted amount) — returns
+ * null, never a guess, when either leg is unknown. */
+export function effectiveRate(from: string, to: string, rates: FxRates | null): number | null {
+  if (from === to) return 1;
+  if (!rates) return null;
+  const fromRate = from === rates.base ? 1 : rates.rates[from];
+  const toRate = to === rates.base ? 1 : rates.rates[to];
+  if (typeof fromRate !== 'number' || typeof toRate !== 'number' || fromRate <= 0) return null;
+  return toRate / fromRate;
+}
+
+/** Sets a rate between any two currencies (not just "1 USD = X"), by
+ * solving for whichever leg isn't already anchored to `base` and leaving
+ * every other currency's own rate untouched. `value` means "1 unit of
+ * `from` = `value` units of `to`". Requires the SIDE THAT ISN'T being
+ * solved for to already have a known rate (itself, or being `base`) —
+ * returns null (asking the caller to pick a different pair, e.g. involving
+ * `base`) rather than silently guessing when neither side is anchored yet.
+ *
+ * `base`'s own rate is always fixed at 1 by definition — it can never be
+ * the thing solved for. A first version of this function solved for `to`
+ * unconditionally, which corrupted the WHOLE table's anchor the moment
+ * `to === base` (e.g. "1 QAR = 0.3 USD" was written as `rates.USD = 1.092`,
+ * silently breaking every other already-correct currency's rate, since
+ * they're all expressed relative to 1 USD = 1). Caught live via Playwright,
+ * not by the unit tests below, which is why there's now a regression test
+ * for exactly this case. */
+export function setCrossRate(from: string, to: string, value: number, existing: FxRates | null, base = 'USD'): FxRates | null {
+  const rates = { ...(existing?.base === base ? existing.rates : {}), [base]: 1 };
+  if (!value || value <= 0) return null;
+  if (to === base) {
+    // 1 `from` = value `base`, so 1 `base` = (1/value) `from`.
+    rates[from] = 1 / value;
+    return { base, rates, fetchedAt: new Date().toISOString(), source: 'manual' };
+  }
+  const fromRateUSD = from === base ? 1 : rates[from];
+  if (typeof fromRateUSD !== 'number' || fromRateUSD <= 0) return null;
+  // 1 `from` = value `to`, and 1 USD = fromRateUSD `from`, so
+  // 1 USD = fromRateUSD * value `to`.
+  rates[to] = fromRateUSD * value;
+  return { base, rates, fetchedAt: new Date().toISOString(), source: 'manual' };
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { convertAmount, isFxStale, setManualRate, type FxRates } from '../fx';
+import { convertAmount, effectiveRate, isFxStale, setCrossRate, setManualRate, type FxRates } from '../fx';
 
 const rates: FxRates = {
   base: 'USD',
@@ -60,5 +60,59 @@ describe('setManualRate', () => {
     const result = setManualRate('PKR', 285, rates);
     expect(result.rates.PKR).toBe(285);
     expect(result.rates.QAR).toBe(3.64);
+  });
+});
+
+describe('effectiveRate', () => {
+  it('returns 1 for the same currency, even with no rates loaded', () => {
+    expect(effectiveRate('PKR', 'PKR', null)).toBe(1);
+  });
+
+  it('computes a cross-rate between two non-base currencies', () => {
+    // 1 QAR = 280/3.64 PKR
+    expect(effectiveRate('QAR', 'PKR', rates)).toBeCloseTo(280 / 3.64, 5);
+  });
+
+  it('returns null when either leg is unknown', () => {
+    expect(effectiveRate('XYZ', 'PKR', rates)).toBeNull();
+  });
+});
+
+describe('setCrossRate', () => {
+  it('sets a rate directly against the base currency (equivalent to setManualRate)', () => {
+    const result = setCrossRate('USD', 'PKR', 280, null)!;
+    expect(result).not.toBeNull();
+    expect(result.rates.PKR).toBe(280);
+  });
+
+  it('solves the target leg from an already-known non-base "from" currency', () => {
+    // 1 QAR = 76.9 PKR, and 1 USD = 3.64 QAR already known, so
+    // 1 USD should become 3.64 * 76.9 PKR.
+    const result = setCrossRate('QAR', 'PKR', 76.9, rates)!;
+    expect(result).not.toBeNull();
+    expect(result.rates.PKR).toBeCloseTo(3.64 * 76.9, 5);
+    // Untouched currencies survive.
+    expect(result.rates.QAR).toBe(3.64);
+  });
+
+  it('returns null when the "from" currency has no known rate to anchor on', () => {
+    expect(setCrossRate('XYZ', 'PKR', 5, rates)).toBeNull();
+  });
+
+  it('returns null when starting from scratch with a non-base "from" currency', () => {
+    expect(setCrossRate('QAR', 'PKR', 76.9, null)).toBeNull();
+  });
+
+  it('solves the "from" leg instead of corrupting the base anchor when "to" is the base currency', () => {
+    // A real bug, caught live (not by an earlier version of this test
+    // suite): "1 QAR = 0.3 USD" was being written as rates.USD = 1.092,
+    // corrupting the shared anchor every other currency's own rate is
+    // expressed relative to. USD must always stay 1.
+    const result = setCrossRate('QAR', 'USD', 0.3, rates)!;
+    expect(result).not.toBeNull();
+    expect(result.rates.USD).toBe(1);
+    expect(result.rates.QAR).toBeCloseTo(1 / 0.3, 5);
+    // Untouched currencies survive.
+    expect(result.rates.PKR).toBe(280);
   });
 });

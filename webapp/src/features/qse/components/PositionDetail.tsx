@@ -45,6 +45,25 @@ export function PositionDetail({ ticker }: { ticker: string }) {
   const avg = shares > 0 ? invested / shares : 0;
   const mp = getMarketPrice(ticker, workbook.marketPrices, workbook.transactions);
   const be = shares > 0 ? breakEvenPrice(invested, shares, workbook.settings.feePct, workbook.settings.tick, calcFee) : 0;
+  // Item 1 of a 2026-08-26 feedback batch: Portfolio's/Dashboard's Holdings
+  // tables both show Exit targets + Status for an open position — this page
+  // (the "detail" view for a single stock) didn't have either, even though
+  // it's the most natural place to check a specific stock's own exit plan.
+  // Same status-threshold logic as those two tables, duplicated per the
+  // existing convention rather than factored into a shared helper.
+  const exitTarget = (pct: number) =>
+    shares > 0 ? breakEvenPrice(invested * (1 + pct / 100), shares, workbook.settings.feePct, workbook.settings.tick, calcFee) : 0;
+  const value = shares * mp;
+  const sellFee = isOpen && mp > 0 ? calcFee(value, false) : 0;
+  const profit = isOpen && mp > 0 ? value - sellFee - invested : NaN;
+  let statusLabel = '';
+  let statusHue: string | undefined;
+  if (isOpen) {
+    if (!Number.isFinite(profit)) { statusLabel = 'PRICE NEEDED'; statusHue = undefined; }
+    else if (profit >= 0) { statusLabel = 'EXIT READY'; statusHue = 'var(--profit)'; }
+    else if ((profit / invested) * 100 > -3) { statusLabel = 'WATCH'; statusHue = undefined; }
+    else { statusLabel = 'HOLD / REVIEW'; statusHue = 'var(--loss)'; }
+  }
 
   const [priceInput, setPriceInput] = useState(mp > 0 ? String(mp) : '');
   // Re-prefill from the stored price whenever the ticker changes (this
@@ -115,6 +134,16 @@ export function PositionDetail({ ticker }: { ticker: string }) {
               <div className="sub" style={{ color: mp > 0 ? (mp >= be ? 'var(--profit)' : 'var(--loss)') : undefined }}>BE {fmtPrice(be)}</div>
             </div>
             <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Invested</div><div className="value">{fmtMoney(invested, currency)}</div></div>
+            <div className="stat-card card" style={hueStyle(HUES[5])}>
+              <div className="label">Exit targets</div>
+              <div className="value" style={{ fontSize: 13 }}>
+                +1% {fmtPrice(exitTarget(1))}<br />+2% {fmtPrice(exitTarget(2))}<br />+5% {fmtPrice(exitTarget(5))}
+              </div>
+            </div>
+            <div className="stat-card card" style={hueStyle(statusHue || HUES[6])}>
+              <div className="label">Status</div>
+              <div className="value" style={{ fontSize: 14 }}>{statusLabel}</div>
+            </div>
           </div>
         </CollapsibleCard>
       )}

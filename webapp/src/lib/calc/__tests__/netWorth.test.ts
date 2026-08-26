@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeNetWorthByCurrency } from '../netWorth';
+import { computeNetWorthByCurrency, flowByCurrency } from '../netWorth';
 
 describe('computeNetWorthByCurrency', () => {
   it('sums assets across modules per currency', () => {
@@ -113,5 +113,36 @@ describe('computeNetWorthByCurrency', () => {
       emiOutstanding: {},
     });
     expect(rows).toEqual([]);
+  });
+});
+
+describe('flowByCurrency', () => {
+  const cashEntries = [
+    { date: '2026-08-01', type: 'IN' as const, amount: 500, currencyCode: 'USD' },
+    { date: '2026-08-15', type: 'OUT' as const, amount: 100, currencyCode: 'USD' },
+    { date: '2026-08-15', type: 'IN' as const, amount: 1000, currencyCode: 'PKR' },
+  ];
+  const bankAccounts = [{ id: 'a1', currencyCode: 'USD' }];
+  const bankTransactions = [
+    { accountId: 'a1', date: '2026-08-15', amount: -50 },
+    { accountId: 'a1', date: '2026-07-31', amount: 999 }, // outside range, ignored
+  ];
+
+  it('combines Cash (unsigned type+amount) and Bank (signed amount) within a date range', () => {
+    const out = flowByCurrency(cashEntries, bankAccounts, bankTransactions, '2026-08-15', '2026-08-15');
+    // USD: -100 (cash OUT) + -50 (bank debit) = -150; PKR: +1000 (cash IN)
+    expect(out.USD).toBe(-150);
+    expect(out.PKR).toBe(1000);
+  });
+
+  it('excludes transactions outside the date range', () => {
+    const out = flowByCurrency(cashEntries, bankAccounts, bankTransactions, '2026-08-01', '2026-08-01');
+    expect(out.USD).toBe(500);
+    expect(out.PKR).toBeUndefined();
+  });
+
+  it('ignores a bank transaction whose account is unknown', () => {
+    const out = flowByCurrency([], [], [{ accountId: 'missing', date: '2026-08-15', amount: 100 }], '2026-08-15', '2026-08-15');
+    expect(out).toEqual({});
   });
 });
