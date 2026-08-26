@@ -3639,6 +3639,17 @@ not developer notes) continuously as features ship.
   QIB Current/Savings). Final Misk balance reconciles to 10000.00 (sheet's own true value:
   10000.006, rounds identically at 2dp) — regenerated and re-delivered the combined import
   file to the user with this fix included.
+- **Banking's `AccountDetailModal` reordered, autonomous continuation (2026-08-26) — see
+  README Done item 183, closes Pending items 84/85.** Picked up from the standing "keep
+  working down the Pending list, defer only what needs user input" instruction rather than a
+  fresh user report. The modal used to lead with the rare account-metadata edit form and had
+  no way to add a transaction at all — reordered to lead with an inline "Add a transaction"
+  form (reusing `AddTransactionsForm`) and demoted the metadata form into a collapsed
+  `CollapsibleCard`. Many other Pending items (76, 83, 91, 93, 101, etc.) were read but
+  deliberately NOT touched — each names a real, unresolved design fork (e.g. item 83: does
+  "detail page" mean a genuine new route or is the modal fine as-is; item 91: is the softer
+  stat-card gradient from Done item 153 being reversed on purpose) that this file's own
+  standing practice says needs the user's direction before writing code, not a guess.
 
 ## Live URLs
 

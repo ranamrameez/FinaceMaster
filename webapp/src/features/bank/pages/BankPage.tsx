@@ -526,6 +526,10 @@ function AccountDetailModal({ account, onClose }: { account: BankAccount; onClos
     () => plannedEntries.filter((p) => p.accountId === account.id && !p.executed).sort((a, b) => a.date.localeCompare(b.date)),
     [plannedEntries, account.id],
   );
+  const knownCategories = useMemo(
+    () => [...new Set(transactions.filter((t) => t.accountId === account.id).map((t) => t.category).filter((c): c is string => !!c))].sort(),
+    [transactions, account.id],
+  );
 
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -560,53 +564,68 @@ function AccountDetailModal({ account, onClose }: { account: BankAccount; onClos
         ) : null}
       </p>
 
+      {/* User-requested (2026-08-26): "a transaction/repayment/entry
+         conceptually belongs to its parent Account... should be logged...
+         from THAT item's own detail page/view" — Banking's own detail modal
+         was the clearest gap (no way to add a transaction from inside it at
+         all), exactly backwards from what a user wants when clicking into
+         an account. Leads with this now; the account-metadata edit form
+         (rare to touch after setup) is demoted into a collapsed card below. */}
+      <h4 style={{ margin: '0 0 6px' }}>Add a transaction</h4>
+      <div style={{ marginBottom: 16 }}>
+        <AddTransactionsForm accountId={account.id} currencyCode={account.currencyCode} knownCategories={knownCategories} />
+      </div>
+
       {/* User-requested: save an account number + SMS sender details for a
          future SMS-based transaction-import feature. Nothing reads these
          yet — they're just captured here so that feature has somewhere to
-         read from once built. */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-        <h4 style={{ margin: 0 }}>Account details</h4>
-        <button className="btn secondary" onClick={saveMeta}>
-          <SaveIcon size={13} />Save details
-        </button>
-      </div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
-        <Field label="Branch" width={160}>
-          <TextInput value={meta.branch} onChange={(e) => setMeta({ ...meta, branch: e.target.value })} placeholder="e.g. Gulberg Branch" />
-        </Field>
-        <Field label="Account type" width={160}>
-          <TextInput list="bank-account-type-datalist-detail" value={meta.accountType} onChange={(e) => setMeta({ ...meta, accountType: e.target.value })} placeholder="e.g. Savings" />
-        </Field>
-      </div>
-      <datalist id="bank-account-type-datalist-detail">
-        {ACCOUNT_TYPES.map((t) => <option key={t} value={t} />)}
-      </datalist>
-      <IbanLookupFields
-        value={meta}
-        onChange={(patch) => setMeta((m) => ({
-          ...m,
-          ...('iban' in patch ? { iban: patch.iban ?? '' } : {}),
-          ...('bankName' in patch ? { bankName: patch.bankName ?? '' } : {}),
-          ...('bic' in patch ? { bic: patch.bic ?? '' } : {}),
-        }))}
-        bankNameDatalistId="bank-name-datalist-detail"
-      />
-      <CreditCardFields
-        value={meta}
-        onChange={(patch) => setMeta((m) => ({ ...m, ...patch }))}
-        datalistId="card-network-datalist-detail"
-      />
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 16, marginTop: 8 }}>
-        <Field label="Account number" width={160} title="However your bank shows it on statements/SMS — often partially masked, e.g. xxxx1234.">
-          <TextInput value={meta.accountNumber} onChange={(e) => setMeta({ ...meta, accountNumber: e.target.value })} placeholder="e.g. xxxx1234" />
-        </Field>
-        <Field label="SMS sender ID" width={160} title="The sender ID/short code your bank's alert SMS arrives from, e.g. a bank name or a numeric short code.">
-          <TextInput value={meta.smsSenderId} onChange={(e) => setMeta({ ...meta, smsSenderId: e.target.value })} placeholder="e.g. 8123 or MEEZAN" />
-        </Field>
-        <Field label="SMS sender number" width={160} title="If your bank's alerts come from a full phone number instead of a short code.">
-          <TextInput value={meta.smsSenderNumber} onChange={(e) => setMeta({ ...meta, smsSenderNumber: e.target.value })} placeholder="e.g. +923001234567" />
-        </Field>
-      </div>
+         read from once built. Collapsed by default (2026-08-26) — editing
+         an account's own metadata is rare, adding a transaction is the
+         common case, so this no longer leads the modal. */}
+      <CollapsibleCard
+        defaultOpen={false}
+        style={{ marginBottom: 16 }}
+        title={<h4 style={{ margin: 0 }}>Account details</h4>}
+        headerExtra={<button className="btn secondary" onClick={saveMeta}><SaveIcon size={13} />Save details</button>}
+      >
+        <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+          <Field label="Branch" width={160}>
+            <TextInput value={meta.branch} onChange={(e) => setMeta({ ...meta, branch: e.target.value })} placeholder="e.g. Gulberg Branch" />
+          </Field>
+          <Field label="Account type" width={160}>
+            <TextInput list="bank-account-type-datalist-detail" value={meta.accountType} onChange={(e) => setMeta({ ...meta, accountType: e.target.value })} placeholder="e.g. Savings" />
+          </Field>
+        </div>
+        <datalist id="bank-account-type-datalist-detail">
+          {ACCOUNT_TYPES.map((t) => <option key={t} value={t} />)}
+        </datalist>
+        <IbanLookupFields
+          value={meta}
+          onChange={(patch) => setMeta((m) => ({
+            ...m,
+            ...('iban' in patch ? { iban: patch.iban ?? '' } : {}),
+            ...('bankName' in patch ? { bankName: patch.bankName ?? '' } : {}),
+            ...('bic' in patch ? { bic: patch.bic ?? '' } : {}),
+          }))}
+          bankNameDatalistId="bank-name-datalist-detail"
+        />
+        <CreditCardFields
+          value={meta}
+          onChange={(patch) => setMeta((m) => ({ ...m, ...patch }))}
+          datalistId="card-network-datalist-detail"
+        />
+        <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+          <Field label="Account number" width={160} title="However your bank shows it on statements/SMS — often partially masked, e.g. xxxx1234.">
+            <TextInput value={meta.accountNumber} onChange={(e) => setMeta({ ...meta, accountNumber: e.target.value })} placeholder="e.g. xxxx1234" />
+          </Field>
+          <Field label="SMS sender ID" width={160} title="The sender ID/short code your bank's alert SMS arrives from, e.g. a bank name or a numeric short code.">
+            <TextInput value={meta.smsSenderId} onChange={(e) => setMeta({ ...meta, smsSenderId: e.target.value })} placeholder="e.g. 8123 or MEEZAN" />
+          </Field>
+          <Field label="SMS sender number" width={160} title="If your bank's alerts come from a full phone number instead of a short code.">
+            <TextInput value={meta.smsSenderNumber} onChange={(e) => setMeta({ ...meta, smsSenderNumber: e.target.value })} placeholder="e.g. +923001234567" />
+          </Field>
+        </div>
+      </CollapsibleCard>
 
       {upcoming.length > 0 && (
         <>
