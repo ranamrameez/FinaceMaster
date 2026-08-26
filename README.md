@@ -3512,11 +3512,19 @@ FinanceManager live link:
     charts across both exchanges) done (2026-08-26) — see Done item 155**, closing this item
     in full: every ticker-indexed chart on QSE's/PSX's Analytics pages now dims every other
     ticker across every tab section when one is hovered, the same as Dashboard's pair.
-19. Cross-entity transaction linking beyond v1 scope (see Done item 29): Funds/Rentals/EMI/
+19. ~~Cross-entity transaction linking beyond v1 scope (see Done item 29): Funds/Rentals/EMI/
     Personal Loans aren't wired into the Transfers page yet — only Cash↔Bank and
-    Bank↔QSE/PSX. A real signed-in browser round-trip (create/edit/delete a link, confirm
-    both sides update) is also still needed — see item 29's verification note. **Expanded
-    2026-08-23 into item 21 below** (genuine multi-currency amounts, more module pairs).
+    Bank↔QSE/PSX.~~ **Superseded — see item 21 below, which is now fully done (Done item
+    156, 2026-08-26): every module this project supports (Cash, Bank, QSE, PSX, Funds,
+    Rentals, Personal Loans, EMI/Loans) is wired into cross-entity linking.** One real gap
+    from this item's original text is still genuinely open, tracked here rather than
+    silently dropped: **a real signed-in browser round-trip** (create/edit/delete a link,
+    confirm both sides update, across every module pair — not just the unit tests and
+    signed-out sign-in-gate checks every session so far has relied on) has never actually
+    been done, since every session so far has avoided creating even a throwaway account
+    against the real production Firebase project, per this project's own locked cloud-sync-
+    safety principle. This needs the user to either do it themselves once, or explicitly
+    authorize a throwaway test account for it.
 
 **New wave, 2026-08-23 (user-requested, full design detail in `MODULES_PLAN.md`'s "Next
 wave" section)**:
