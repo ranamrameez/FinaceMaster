@@ -3740,6 +3740,16 @@ FinanceManager live link:
      this fix). New tests: `lib/calc/__tests__/personalLoansModule.test.ts` gained 3
      `loanBalanceHistory` cases. `npx tsc -b` / `npm run test` (367 tests, 3 new) / `npm run
      build` all clean.
+173. **Compact density made genuinely more space-saving — closes Pending item 98.** Measured
+     first, per this file's own established discipline (see Done item 111's identical approach
+     for Console): `.btn`/form inputs/`select` were completely untouched by
+     `data-density="compact"` — every card/table/stat-card rule shrank, but the two most
+     visually large, most frequently-interacted controls on every page stayed at full
+     Comfortable size (38px min-height) under Compact, which is the real, measurable reason it
+     read as "barely different." Added `.btn`/`.btn.small`/input/`select` overrides sized
+     strictly between Comfortable (38px) and Console (26px) — Compact now measures 32px,
+     keeping the three tiers a genuine decreasing series (confirmed live: 38 → 32 → 26px).
+     `npm run test` (367 tests, unchanged — a CSS-only fix) / `npm run build` all clean.
 
 ## Pending
 
@@ -4288,11 +4298,16 @@ everything below is started. Working down it in priority order across following 
     popup).
 89. ~~App-wide: every tooltip-bearing label should carry a small visible icon.~~ **Done
     (2026-08-26) — see Done item 169.** Fixed once in `Tooltip.tsx` itself.
-90. App-wide: "cards inside cards" — several places nest a `Card`/`CollapsibleCard` directly
-    inside another one (this file's own Done item 114 already fixed ONE specific instance of
-    this exact pattern — QSE/PSX Settings' single-child nesting — so this is a real, repeating
-    pattern worth another full sweep, not a one-time fix). Needs a fresh audit rather than
-    assuming Done item 114 already covered every instance.
+90. App-wide: "cards inside cards" — **re-audited (2026-08-26)**: checked every module's
+    `Tabs`-driven tab content for the exact Done-item-114 bug (a single inner `Card` whose own
+    heading duplicates its parent tab's label) — none found beyond the QSE/PSX Settings
+    instance already fixed; every module's Settings tab has 2+ distinctly-headed sub-cards,
+    every other single-content tab is a bare `<div>`. What's still open is the BROADER framing
+    ("cards inside cards are terrible" as a general visual complaint, not just literal
+    duplicate-heading text) — that's a more subjective design-judgment call (does a Card
+    visually nested inside another Card's border/shadow look bad even with different headings?)
+    that a code-level audit can't resolve alone; needs specific screenshot examples from the
+    user of what still looks wrong, rather than guessing at a redesign.
 91. App-wide: `StatCard`'s background is "still very vague" — try solid colors with a subtle
     shine/glassy effect instead. This directly follows up on Done item 153's "stat-card
     gradient softening" (16%→7% hue mix + a faint glass-sheen highlight) — the user is asking
@@ -4335,13 +4350,9 @@ everything below is started. Working down it in priority order across following 
     Field, which this session deliberately left alone as "already labeled by column header" —
     that reasoning may not hold for every such row, worth re-checking against a real
     screenshot rather than assumed correct everywhere).
-98. App-wide: "Compact" density should be noticeably MORE space-saving than "Comfortable" —
-    today it apparently reads as barely different. Ties directly into Done item 111's
-    "Console density made genuinely information-different" fix, which explicitly compared
-    Comfortable→Compact→Console as "a genuine strictly-decreasing series" at the time — this
-    report suggests Compact itself may not have gotten enough of a real cut, only Console did.
-    Needs re-measuring (same "measure before fixing" discipline as Done item 111) rather than
-    guessing at new CSS values.
+98. ~~App-wide: "Compact" density should be noticeably MORE space-saving than "Comfortable".~~
+    **Done (2026-08-26) — see Done item 173.** Buttons/inputs/selects were the real gap —
+    completely untouched by Compact before this fix.
 99. ~~Personal Loans: no analytics charts visible on a loan's own DETAIL page.~~ **Done
     (2026-08-26) — see Done item 172.** New `loanBalanceHistory()` + a "Balance over time"
     line chart on `LoanDetail`, between Repayments and the Payoff Planner. The landing page's

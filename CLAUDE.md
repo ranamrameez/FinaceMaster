@@ -3361,6 +3361,24 @@ not developer notes) continuously as features ship.
   gap, not a duplicate. `npx tsc -b` / `npm run test` (367 tests, 3 new) / `npm run build` all
   clean; verified live via Playwright (chart canvas renders once repayments exist; EMI's Save
   button measured above the field grid, was below it before).
+- **Compact density fixed to actually be more space-saving (2026-08-26) — see README Done item
+  173, closes Pending item 98.** Same "measure before fixing" discipline as the earlier
+  Console-density fix (Done item 111): `data-density="compact"` shrank cards/tables/stat-cards
+  but never touched `.btn`/inputs/`select` at all, so the two largest, most-interacted control
+  types on every page stayed full-size (38px) under Compact — confirmed via a real Playwright
+  computed-style measurement before writing any CSS. Added overrides sized strictly between
+  Comfortable (38px) and Console (26px): Compact now measures 32px, a genuine decreasing
+  series. `npm run test` (367 tests, unchanged — CSS-only) / `npm run build` all clean.
+- **Cards-in-cards audit (2026-08-26) — Pending item 90, partial result.** Checked every
+  module's `Tabs`-driven tab content for the exact bug Done item 114 fixed (a single inner
+  `Card` whose own heading duplicates its parent tab's label, causing the same text to render
+  twice) — none found beyond the QSE/PSX Settings instance already fixed. Every module's
+  Settings tab has 2+ distinct sub-cards (Account + Data management, not a duplicate-heading
+  single child); every other single-content tab renders a bare `<div>` wrapping components with
+  their own distinctly-worded headings. The item's broader framing ("cards inside cards are
+  terrible" as a general visual complaint, not just the specific duplicate-heading bug) is a
+  more subjective design judgment call that a code-level audit can't resolve on its own — left
+  open in README Pending item 90 rather than claimed fully done.
 
 ## Live URLs
 
