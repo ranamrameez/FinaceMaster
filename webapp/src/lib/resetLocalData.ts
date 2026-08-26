@@ -5,16 +5,26 @@ import { createEmptyCashWorkbook } from '../store/defaultCashWorkbook';
 import { createEmptyEMIWorkbook } from '../store/defaultEmiWorkbook';
 import { createEmptyFundsWorkbook } from '../store/defaultFundsWorkbook';
 import { createEmptyInterEntityWorkbook } from '../store/defaultInterEntityWorkbook';
+import { createEmptyNetWorthSnapshotsWorkbook } from '../store/defaultNetWorthSnapshotsWorkbook';
 import { createEmptyPersonalLoansWorkbook } from '../store/defaultPersonalLoansWorkbook';
+import { createEmptyPlannedBankWorkbook } from '../store/defaultPlannedBankWorkbook';
+import { createEmptyPlannedCashWorkbook } from '../store/defaultPlannedCashWorkbook';
+import { createEmptyPlannedRentalsWorkbook } from '../store/defaultPlannedRentalsWorkbook';
 import { createEmptyPSXWorkbook } from '../store/defaultPsxWorkbook';
 import { createEmptyRentalsWorkbook } from '../store/defaultRentalsWorkbook';
+import { createEmptySubscriptionsWorkbook } from '../store/defaultSubscriptionsWorkbook';
 import { createEmptyWorkbook } from '../store/defaultWorkbook';
 import { useEMIWorkbookStore } from '../store/emiWorkbookStore';
 import { useFundsWorkbookStore } from '../store/fundsWorkbookStore';
 import { useInterEntityTransfersStore } from '../store/interEntityTransfersStore';
+import { useNetWorthSnapshotsWorkbookStore } from '../store/netWorthSnapshotsWorkbookStore';
 import { usePersonalLoansWorkbookStore } from '../store/personalLoansWorkbookStore';
+import { usePlannedBankWorkbookStore } from '../store/plannedBankWorkbookStore';
+import { usePlannedCashWorkbookStore } from '../store/plannedCashWorkbookStore';
+import { usePlannedRentalsWorkbookStore } from '../store/plannedRentalsWorkbookStore';
 import { usePSXWorkbookStore } from '../store/psxWorkbookStore';
 import { useRentalsWorkbookStore } from '../store/rentalsWorkbookStore';
+import { useSubscriptionsWorkbookStore } from '../store/subscriptionsWorkbookStore';
 import { useWorkbookStore } from '../store/workbookStore';
 
 /** Critical fix: signing out used to leave every module's data sitting in
@@ -31,7 +41,16 @@ import { useWorkbookStore } from '../store/workbookStore';
  * Deliberately does NOT touch `appearanceStore`/`termsStore` — those are
  * global browser preferences (theme, font, terms acceptance), not
  * per-account data, per this app's existing design decision that
- * appearance must never live inside a per-account workbook. */
+ * appearance must never live inside a per-account workbook.
+ *
+ * Audited 2026-08-26 while adding the EMI repayment ledger and Net Worth
+ * snapshot stores: Subscriptions and all three Planned* stores (Cash/Bank/
+ * Rentals) had been added to the app after this list was last written and
+ * were never added here — the exact class of bug this function exists to
+ * prevent, just for those five stores. Fixed by adding them, plus the two
+ * new stores from today, rather than letting the gap grow further; if a
+ * future module adds a new per-account local store, it belongs in this
+ * list too. */
 export function resetAllLocalWorkbooks() {
   useWorkbookStore.getState().setWorkbook(createEmptyWorkbook());
   usePSXWorkbookStore.getState().setWorkbook(createEmptyPSXWorkbook());
@@ -42,4 +61,9 @@ export function resetAllLocalWorkbooks() {
   useFundsWorkbookStore.getState().setWorkbook(createEmptyFundsWorkbook());
   useRentalsWorkbookStore.getState().setWorkbook(createEmptyRentalsWorkbook());
   useInterEntityTransfersStore.getState().setWorkbook(createEmptyInterEntityWorkbook());
+  useSubscriptionsWorkbookStore.getState().setWorkbook(createEmptySubscriptionsWorkbook());
+  usePlannedCashWorkbookStore.getState().setWorkbook(createEmptyPlannedCashWorkbook());
+  usePlannedBankWorkbookStore.getState().setWorkbook(createEmptyPlannedBankWorkbook());
+  usePlannedRentalsWorkbookStore.getState().setWorkbook(createEmptyPlannedRentalsWorkbook());
+  useNetWorthSnapshotsWorkbookStore.getState().setWorkbook(createEmptyNetWorthSnapshotsWorkbook());
 }

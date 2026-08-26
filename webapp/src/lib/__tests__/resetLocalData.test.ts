@@ -5,9 +5,14 @@ import { useCashWorkbookStore } from '../../store/cashWorkbookStore';
 import { useEMIWorkbookStore } from '../../store/emiWorkbookStore';
 import { useFundsWorkbookStore } from '../../store/fundsWorkbookStore';
 import { useInterEntityTransfersStore } from '../../store/interEntityTransfersStore';
+import { useNetWorthSnapshotsWorkbookStore } from '../../store/netWorthSnapshotsWorkbookStore';
 import { usePersonalLoansWorkbookStore } from '../../store/personalLoansWorkbookStore';
+import { usePlannedBankWorkbookStore } from '../../store/plannedBankWorkbookStore';
+import { usePlannedCashWorkbookStore } from '../../store/plannedCashWorkbookStore';
+import { usePlannedRentalsWorkbookStore } from '../../store/plannedRentalsWorkbookStore';
 import { usePSXWorkbookStore } from '../../store/psxWorkbookStore';
 import { useRentalsWorkbookStore } from '../../store/rentalsWorkbookStore';
+import { useSubscriptionsWorkbookStore } from '../../store/subscriptionsWorkbookStore';
 import { useWorkbookStore } from '../../store/workbookStore';
 
 beforeEach(() => {
@@ -32,6 +37,16 @@ describe('resetAllLocalWorkbooks', () => {
       id: 'i', date: '2026-01-01', fromAmount: 10, toAmount: 10,
       from: { module: 'cash' }, to: { module: 'bank', ref: 'd' }, fromRecordId: 'x', toRecordId: 'y',
     });
+    // These four stores were added to the app after resetAllLocalWorkbooks
+    // was originally written and were never wired into it — the exact bug
+    // this function exists to prevent (see its own updated doc comment).
+    useSubscriptionsWorkbookStore.getState().addEntry({
+      id: 'j', name: 'Netflix', amount: 15, currencyCode: 'USD', billingCycle: 'monthly', startDate: '2026-01-01', active: true,
+    });
+    usePlannedCashWorkbookStore.getState().addEntry({ id: 'k', date: '2026-01-01', type: 'IN', amount: 100, currencyCode: 'USD' });
+    usePlannedBankWorkbookStore.getState().addEntry({ id: 'l', accountId: 'd', date: '2026-01-01', description: 'Rent', amount: -100 });
+    usePlannedRentalsWorkbookStore.getState().addEntry({ id: 'm', propertyId: 'h', date: '2026-01-01', type: 'RENT_INCOME', amount: 500 });
+    useNetWorthSnapshotsWorkbookStore.getState().addEntry({ id: 'n', date: '2026-01-01', byCurrency: { USD: 1000 } });
 
     expect(useWorkbookStore.getState().workbook.transfers).toHaveLength(1);
     expect(usePSXWorkbookStore.getState().workbook.transfers).toHaveLength(1);
@@ -42,6 +57,11 @@ describe('resetAllLocalWorkbooks', () => {
     expect(useFundsWorkbookStore.getState().workbook.funds).toHaveLength(1);
     expect(useRentalsWorkbookStore.getState().workbook.settings.properties).toHaveLength(1);
     expect(useInterEntityTransfersStore.getState().workbook.entries).toHaveLength(1);
+    expect(useSubscriptionsWorkbookStore.getState().workbook.entries).toHaveLength(1);
+    expect(usePlannedCashWorkbookStore.getState().workbook.entries).toHaveLength(1);
+    expect(usePlannedBankWorkbookStore.getState().workbook.entries).toHaveLength(1);
+    expect(usePlannedRentalsWorkbookStore.getState().workbook.entries).toHaveLength(1);
+    expect(useNetWorthSnapshotsWorkbookStore.getState().workbook.entries).toHaveLength(1);
 
     resetAllLocalWorkbooks();
 
@@ -54,6 +74,11 @@ describe('resetAllLocalWorkbooks', () => {
     expect(useFundsWorkbookStore.getState().workbook.funds).toHaveLength(0);
     expect(useRentalsWorkbookStore.getState().workbook.settings.properties).toHaveLength(0);
     expect(useInterEntityTransfersStore.getState().workbook.entries).toHaveLength(0);
+    expect(useSubscriptionsWorkbookStore.getState().workbook.entries).toHaveLength(0);
+    expect(usePlannedCashWorkbookStore.getState().workbook.entries).toHaveLength(0);
+    expect(usePlannedBankWorkbookStore.getState().workbook.entries).toHaveLength(0);
+    expect(usePlannedRentalsWorkbookStore.getState().workbook.entries).toHaveLength(0);
+    expect(useNetWorthSnapshotsWorkbookStore.getState().workbook.entries).toHaveLength(0);
 
     // Persisted to localStorage too, not just in-memory — a page reload
     // right after logout must not bring the old data back.

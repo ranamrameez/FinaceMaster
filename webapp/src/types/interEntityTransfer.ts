@@ -18,10 +18,14 @@
  * factory) needed no retrofit, so this is a plain module-list addition
  * mirroring QSE/PSX exactly (a currency, no per-fund `ref`, since a Funds
  * deposit/withdrawal is portfolio-level, not tied to one specific fund).
- * EMI still has no repayment ledger to link into at all. */
-export type LinkModule = 'cash' | 'bank' | 'qse' | 'psx' | 'rentals' | 'personalLoans' | 'funds';
+ * EMI still has no repayment ledger to link into at all — extended again
+ * 2026-08-26 once `EMIRepayment` (see `types/emiWorkbook.ts`) closed that
+ * gap: same shape as Personal Loans (pick a loan; amount is always
+ * positive regardless of link direction, since a payment always reduces
+ * what's owed). */
+export type LinkModule = 'cash' | 'bank' | 'qse' | 'psx' | 'rentals' | 'personalLoans' | 'funds' | 'emi';
 
-export const LINK_MODULES: LinkModule[] = ['cash', 'bank', 'qse', 'psx', 'rentals', 'personalLoans', 'funds'];
+export const LINK_MODULES: LinkModule[] = ['cash', 'bank', 'qse', 'psx', 'rentals', 'personalLoans', 'funds', 'emi'];
 
 export const LINK_MODULE_LABELS: Record<LinkModule, string> = {
   cash: 'Cash',
@@ -31,20 +35,28 @@ export const LINK_MODULE_LABELS: Record<LinkModule, string> = {
   rentals: 'Rentals',
   personalLoans: 'Personal Loans',
   funds: 'Funds',
+  emi: 'EMI / Loans',
 };
 
 export interface LinkSideConfig {
   module: LinkModule;
   /** A `BankAccount.id` when `module === 'bank'`, a `Property.id` when
-   * `module === 'rentals'`, or a `PersonalLoan.id` when
-   * `module === 'personalLoans'` — the sides with more than one sub-entity
-   * to choose from. Ignored otherwise. */
+   * `module === 'rentals'`, a `PersonalLoan.id` when
+   * `module === 'personalLoans'`, or an `EMILoan.id` when
+   * `module === 'emi'` — the sides with more than one sub-entity to choose
+   * from. Ignored otherwise. */
   ref?: string;
   /** A `CashEntry.currencyCode` when `module === 'cash'` — the only side
    * whose ledger record needs its own currency field (Bank/Rentals derive
    * it from the account/property, QSE/PSX from the exchange's single
    * settings.currency). */
   currencyCode?: string;
+  /** The 1-indexed schedule month an EMI repayment applies to, when
+   * `module === 'emi'` — resolved by the picker UI as "the next
+   * not-yet-overridden installment" (never manually chosen in v1, same
+   * simplicity as Personal Loans' plain loan picker) since `buildSideRecord`
+   * has no store access to compute it from the loan's own schedule. */
+  emiMonth?: number;
 }
 
 export interface InterEntityTransferInput {

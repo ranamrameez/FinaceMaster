@@ -24,6 +24,36 @@ export interface EMILoan {
   installmentOverrides?: Record<number, number>;
 }
 
+/** A real, dated record of an actual payment made against a loan —
+ * previously EMI had no such ledger, only the computed schedule
+ * (`emiSchedule`) and the per-month `installmentOverrides` shortcut, which
+ * has no id and can't be referenced by anything else (README Pending items
+ * 21/62's long-standing "EMI has no repayment ledger to link into" gap).
+ * Deliberately keyed by `month` (the 1-indexed schedule row it applies to,
+ * same indexing as `installmentOverrides`) rather than free-floating by
+ * date alone — `emiWorkbookStore.ts`'s `addRepayment`/`updateRepayment`/
+ * `deleteRepayment` keep this array and the matching loan's
+ * `installmentOverrides` in sync as one write, so `emiSchedule`'s
+ * calculation logic stays the single source of truth for the actual
+ * numbers and never has to be duplicated here — this type only adds an
+ * addressable id/date/source on top, for display, editing, and cross-entity
+ * linking (a Bank/Cash payment can now link to a specific loan's repayment,
+ * the same way Personal Loans' `PersonalLoanRepayment` already works). No
+ * time-of-day field, unlike Transaction/Transfer/etc. — at most one
+ * repayment exists per loan per month, so there's no same-day-ordering
+ * scenario a time would resolve. */
+export interface EMIRepayment {
+  id: string;
+  loanId: string;
+  month: number;
+  amount: number;
+  date: string;
+  /** 'statement-import' mirrors every other module's ledger source field —
+   * unset (implicitly manual) for now since EMI has no CSV import yet. */
+  source?: 'manual' | 'statement-import';
+  statementRef?: string;
+}
+
 export interface EMISettings {
   /** Pre-fills new entries only — never converts existing ones. */
   defaultCurrency: string;
@@ -31,8 +61,13 @@ export interface EMISettings {
 
 export interface EMIWorkbook {
   settings: EMISettings;
-  /** Named `entries` (not `loans`) so this module can reuse the generic
-   * `createEntryStore` factory (single-array shape) instead of a fourth
-   * hand-written store — see MODULES_PLAN.md §5. */
+  /** Named `entries` (not `loans`) — a holdover from when this module
+   * reused the generic `createEntryStore` factory (single-array shape).
+   * Adding `repayments` as a second array (below) needed a hand-written
+   * store instead (same reasoning as Personal Loans' loans+repayments
+   * shape — see `store/emiWorkbookStore.ts`), but the field itself was
+   * kept named `entries` rather than renamed to `loans`, to avoid a
+   * needless storage-shape migration for every existing user's real data. */
   entries: EMILoan[];
+  repayments: EMIRepayment[];
 }

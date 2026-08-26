@@ -47,6 +47,7 @@ import { SubscriptionsPage } from './features/subscriptions/pages/SubscriptionsP
 import { useSubscriptionsFirebaseSync } from './lib/firebase/useSubscriptionsFirebaseSync';
 import { TransferLinksPage } from './features/transfers/pages/TransferLinksPage';
 import { useInterEntityTransfersFirebaseSync } from './lib/firebase/useInterEntityTransfersFirebaseSync';
+import { useNetWorthSnapshotsFirebaseSync } from './lib/firebase/useNetWorthSnapshotsFirebaseSync';
 import { LegalPage } from './pages/LegalPage';
 import { NetWorthPage } from './features/netWorth/pages/NetWorthPage';
 
@@ -100,6 +101,7 @@ function App() {
   usePlannedRentalsFirebaseSync();
   const transfersSync = useInterEntityTransfersFirebaseSync();
   const subscriptionsSync = useSubscriptionsFirebaseSync();
+  const netWorthSnapshotsSync = useNetWorthSnapshotsFirebaseSync();
 
   return (
     <ErrorBoundary>
@@ -241,7 +243,16 @@ function App() {
                   />
                 }
               />
-              <Route path="/net-worth" element={<NetWorthPage />} />
+              <Route
+                path="/net-worth"
+                element={
+                  <NetWorthPage
+                    syncStatus={netWorthSnapshotsSync.status}
+                    cloudEmpty={netWorthSnapshotsSync.cloudEmpty}
+                    uploadLocalToCloud={netWorthSnapshotsSync.uploadLocalToCloud}
+                  />
+                }
+              />
               <Route path="/legal" element={<LegalPage />} />
             </Routes>
           </ErrorBoundary>
