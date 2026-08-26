@@ -1,4 +1,4 @@
-import type { Subscription } from '../../types/subscriptionsWorkbook';
+import type { Subscription, SubscriptionAlert } from '../../types/subscriptionsWorkbook';
 
 const MAX_HORIZON_MONTHS = 12;
 
@@ -105,6 +105,66 @@ export function spendByCategory(subs: Subscription[], currencyCode: string): Rec
       out[cat] = (out[cat] || 0) + monthlyEquivalent(s);
     });
   return out;
+}
+
+/** A `daysBefore` alert's trigger instant, re-evaluated against whatever
+ * this subscription's NEXT occurrence currently is — so an alert added
+ * once ("3 days before") automatically re-anchors to the following cycle
+ * once the current one passes, no re-entry needed. Fires at local midnight
+ * of that date (date-level precision — matches the rest of this module,
+ * which has no time-of-day concept; only `customAt` alerts carry a real
+ * time, since the user explicitly asked for date+time on those). Returns
+ * `null` for a malformed alert (neither `daysBefore` nor a parseable
+ * `customAt`). */
+export function alertTriggerMs(sub: Subscription, alert: SubscriptionAlert, asOf: Date = new Date()): number | null {
+  if (alert.customAt) {
+    const t = new Date(alert.customAt).getTime();
+    return Number.isNaN(t) ? null : t;
+  }
+  if (alert.daysBefore != null && alert.daysBefore >= 0) {
+    const next = new Date(nextBillingDate(sub, asOf));
+    next.setDate(next.getDate() - alert.daysBefore);
+    return next.getTime();
+  }
+  return null;
+}
+
+export interface DueAlert {
+  subscription: Subscription;
+  alert: SubscriptionAlert;
+  /** Stable per-occurrence key: dismissing THIS key only silences the
+   * alert for the current upcoming renewal/expiry — once that occurrence
+   * passes and `nextBillingDate` rolls forward, a `daysBefore` alert
+   * re-triggers with a fresh key for the new occurrence. A `customAt`
+   * alert's key never changes (it has no cycle to roll forward to). */
+  key: string;
+  triggerMs: number;
+}
+
+/** Every active subscription's alert whose trigger instant has already
+ * passed, and hasn't been dismissed for its current occurrence yet
+ * (`isDismissed` is injected so this stays a pure function — the actual
+ * dismissal state lives in a small localStorage-backed store, see
+ * `store/subscriptionAlertDismissalStore.ts`). A cancelled subscription's
+ * alerts never fire — nothing left to renew. */
+export function dueSubscriptionAlerts(
+  subs: Subscription[],
+  asOf: Date = new Date(),
+  isDismissed: (key: string) => boolean = () => false,
+): DueAlert[] {
+  const out: DueAlert[] = [];
+  for (const sub of subs) {
+    if (!sub.active) continue;
+    for (const alert of sub.alerts ?? []) {
+      const triggerMs = alertTriggerMs(sub, alert, asOf);
+      if (triggerMs == null || triggerMs > asOf.getTime()) continue;
+      const occurrenceTag = alert.customAt ? 'once' : nextBillingDate(sub, asOf);
+      const key = `${sub.id}:${alert.id}:${occurrenceTag}`;
+      if (isDismissed(key)) continue;
+      out.push({ subscription: sub, alert, key, triggerMs });
+    }
+  }
+  return out.sort((a, b) => a.triggerMs - b.triggerMs);
 }
 
 export interface RenewalOccurrence {

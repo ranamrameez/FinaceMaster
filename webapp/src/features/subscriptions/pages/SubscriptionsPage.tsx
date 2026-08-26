@@ -14,6 +14,7 @@ import { IconButton } from '../../../components/ui/IconButton';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import {
+  alertTriggerMs,
   generateRenewalOccurrences,
   monthlyEquivalent,
   nextBillingDate,
@@ -34,7 +35,7 @@ import { createEmptySubscriptionsWorkbook } from '../../../store/defaultSubscrip
 import { usePlannedBankWorkbookStore } from '../../../store/plannedBankWorkbookStore';
 import { usePlannedCashWorkbookStore } from '../../../store/plannedCashWorkbookStore';
 import { useSubscriptionsWorkbookStore } from '../../../store/subscriptionsWorkbookStore';
-import type { Subscription, SubscriptionsWorkbook } from '../../../types/subscriptionsWorkbook';
+import type { Subscription, SubscriptionAlert, SubscriptionsWorkbook } from '../../../types/subscriptionsWorkbook';
 import type { PlannedBankTransaction } from '../../../types/plannedBank';
 import type { PlannedCashEntry } from '../../../types/plannedCash';
 import { ChartCard } from '../../qse/components/ChartCard';
@@ -186,6 +187,92 @@ function SubscriptionList({ onSelect }: { onSelect: (sub: Subscription) => void 
 }
 
 /* ============================== Detail ============================== */
+
+const SUGGESTED_LEAD_DAYS = [3, 2, 1];
+
+/** User-requested (2026-08-26): renewal/expiry alerts, either a suggested
+ * lead time (3/2/1 days before the next occurrence, re-anchored each
+ * cycle automatically — see `alertTriggerMs`) or a one-off custom date
+ * and time, for something that doesn't follow a regular billing cycle at
+ * all (e.g. "remind me on this exact date my SIM expires"). Due alerts
+ * surface via `SubscriptionAlertsPopup` (App-root, auto-hiding) and the
+ * Net Worth page's own upcoming-renewals notice. */
+function AlertsSection({ sub }: { sub: Subscription }) {
+  const updateEntry = useSubscriptionsWorkbookStore((s) => s.updateEntry);
+  const ensureSignedIn = useEnsureSignedIn();
+  const [customAt, setCustomAt] = useState('');
+  const alerts = sub.alerts ?? [];
+
+  const addAlert = async (patch: Pick<SubscriptionAlert, 'daysBefore' | 'customAt'>) => {
+    if (!(await ensureSignedIn('Sign in to save alerts.'))) return;
+    updateEntry(sub.id, { alerts: [...alerts, { id: crypto.randomUUID(), ...patch }] });
+    toast('Alert added.');
+  };
+
+  const removeAlert = async (id: string) => {
+    if (!(await ensureSignedIn('Sign in to update alerts.'))) return;
+    updateEntry(sub.id, { alerts: alerts.filter((a) => a.id !== id) });
+  };
+
+  const describe = (a: SubscriptionAlert) => {
+    if (a.daysBefore != null) return `${a.daysBefore} day${a.daysBefore === 1 ? '' : 's'} before renewal`;
+    if (a.customAt) return `On ${new Date(a.customAt).toLocaleString()}`;
+    return 'Alert';
+  };
+
+  return (
+    <CollapsibleCard title={<h3 style={{ margin: 0 }}>Renewal / expiry alerts</h3>} style={{ marginBottom: 16 }}>
+      <p className="footer-note" style={{ marginTop: 0 }}>
+        Get reminded before this renews or expires — pick a suggested lead time, or set an exact date and time.
+      </p>
+      <div className="row" style={{ gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+        {SUGGESTED_LEAD_DAYS.map((d) => {
+          const already = alerts.some((a) => a.daysBefore === d);
+          return (
+            <button
+              key={d}
+              className={already ? 'chip active' : 'chip'}
+              disabled={already}
+              onClick={() => addAlert({ daysBefore: d })}
+            >
+              {d} day{d === 1 ? '' : 's'} before
+            </button>
+          );
+        })}
+        <TextInput type="datetime-local" value={customAt} onChange={(e) => setCustomAt(e.target.value)} style={{ width: 200 }} />
+        <button
+          className="btn secondary small"
+          onClick={async () => {
+            if (!customAt) return toast('Pick a date and time first.');
+            await addAlert({ customAt });
+            setCustomAt('');
+          }}
+        >
+          <PlusIcon size={12} />Add custom alert
+        </button>
+      </div>
+      {alerts.length > 0 ? (
+        <div className="table-scroll">
+          <table>
+            <tbody>
+              {alerts.map((a) => (
+                <tr key={a.id}>
+                  <td>{describe(a)}</td>
+                  <td className="footer-note">
+                    {sub.active ? new Date(alertTriggerMs(sub, a) ?? 0).toLocaleString() : 'Subscription cancelled'}
+                  </td>
+                  <td><IconButton label="Remove" icon={<TrashIcon size={13} />} align="right" onClick={() => removeAlert(a.id)} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="footer-note" style={{ marginBottom: 0 }}>No alerts configured yet.</p>
+      )}
+    </CollapsibleCard>
+  );
+}
 
 function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => void }) {
   const updateEntry = useSubscriptionsWorkbookStore((s) => s.updateEntry);
@@ -377,6 +464,8 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
           </button>
         </div>
       </Card>
+
+      <AlertsSection sub={sub} />
 
       <CollapsibleCard title={<h3 style={{ margin: 0 }}>Upcoming occurrences (next 12 months)</h3>}>
         <div className="table-scroll">

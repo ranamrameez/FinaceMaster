@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Subscription } from '../../../types/subscriptionsWorkbook';
 import {
+  alertTriggerMs,
+  dueSubscriptionAlerts,
   generateRenewalOccurrences,
   monthlyEquivalent,
   nextBillingDate,
@@ -117,5 +119,62 @@ describe('generateRenewalOccurrences', () => {
     const s = sub({ startDate: '2026-01-01', billingCycle: 'yearly', amount: 120 });
     const occurrences = generateRenewalOccurrences(s, new Date('2026-01-01'));
     expect(occurrences).toEqual([{ date: '2026-01-01', amount: 120 }]);
+  });
+});
+
+describe('alertTriggerMs', () => {
+  it('a daysBefore alert fires N days before the next occurrence', () => {
+    const s = sub({ startDate: '2026-01-01', billingCycle: 'monthly' });
+    const asOf = new Date('2026-01-05'); // next occurrence is 2026-02-01
+    const ms = alertTriggerMs(s, { id: 'a1', daysBefore: 3 }, asOf);
+    expect(new Date(ms!).toISOString().slice(0, 10)).toBe('2026-01-29');
+  });
+
+  it('a customAt alert fires at its own literal instant, independent of billing cycle', () => {
+    const s = sub({ startDate: '2026-01-01', billingCycle: 'custom', customDays: 180 });
+    const ms = alertTriggerMs(s, { id: 'a1', customAt: '2026-03-15T09:00' });
+    expect(ms).toBe(new Date('2026-03-15T09:00').getTime());
+  });
+
+  it('returns null for a malformed alert (neither daysBefore nor a parseable customAt)', () => {
+    const s = sub({});
+    expect(alertTriggerMs(s, { id: 'a1' })).toBeNull();
+    expect(alertTriggerMs(s, { id: 'a1', customAt: 'not a date' })).toBeNull();
+  });
+});
+
+describe('dueSubscriptionAlerts', () => {
+  it('includes an alert once its trigger instant has passed', () => {
+    const s = sub({ id: 's1', startDate: '2026-01-01', billingCycle: 'monthly', alerts: [{ id: 'a1', daysBefore: 3 }] });
+    // Next occurrence from 2026-01-30 is 2026-02-01 -> trigger is 2026-01-29, already passed.
+    const due = dueSubscriptionAlerts([s], new Date('2026-01-30'));
+    expect(due).toHaveLength(1);
+    expect(due[0].subscription.id).toBe('s1');
+  });
+
+  it('excludes an alert whose trigger instant is still in the future', () => {
+    const s = sub({ startDate: '2026-01-01', billingCycle: 'monthly', alerts: [{ id: 'a1', daysBefore: 3 }] });
+    // Next occurrence from 2026-01-10 is 2026-02-01, so the trigger is 2026-01-29 — still ahead of asOf.
+    const due = dueSubscriptionAlerts([s], new Date('2026-01-10'));
+    expect(due).toHaveLength(0);
+  });
+
+  it('excludes alerts on an inactive (cancelled) subscription', () => {
+    const s = sub({ active: false, startDate: '2026-01-01', billingCycle: 'monthly', alerts: [{ id: 'a1', daysBefore: 3 }] });
+    expect(dueSubscriptionAlerts([s], new Date('2026-01-30'))).toHaveLength(0);
+  });
+
+  it('respects an injected dismissal check, keyed per-occurrence', () => {
+    const s = sub({ id: 's1', startDate: '2026-01-01', billingCycle: 'monthly', alerts: [{ id: 'a1', daysBefore: 3 }] });
+    const dismissedKey = `s1:a1:${nextBillingDate(s, new Date('2026-01-30'))}`;
+    const due = dueSubscriptionAlerts([s], new Date('2026-01-30'), (key) => key === dismissedKey);
+    expect(due).toHaveLength(0);
+  });
+
+  it('a dismissed occurrence still lets the NEXT cycle re-trigger with a fresh key', () => {
+    const s = sub({ id: 's1', startDate: '2026-01-01', billingCycle: 'monthly', alerts: [{ id: 'a1', daysBefore: 3 }] });
+    const staleKey = 's1:a1:2026-02-01'; // dismissed for an earlier cycle
+    const due = dueSubscriptionAlerts([s], new Date('2026-02-28'), (key) => key === staleKey);
+    expect(due).toHaveLength(1); // now anchored to the March occurrence, a different key
   });
 });

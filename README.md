@@ -3750,6 +3750,37 @@ FinanceManager live link:
      strictly between Comfortable (38px) and Console (26px) — Compact now measures 32px,
      keeping the three tiers a genuine decreasing series (confirmed live: 38 → 32 → 26px).
      `npm run test` (367 tests, unchanged — a CSS-only fix) / `npm run build` all clean.
+174. **Subscription renewal/expiry alerts, user-requested (2026-08-26).** `Subscription` gained
+     `alerts?: SubscriptionAlert[]` — each alert is either a `daysBefore` lead time (re-anchored
+     to the subscription's own NEXT occurrence automatically each cycle, so "3 days before"
+     keeps working without re-entry) or a one-off `customAt` absolute date+time, for something
+     that doesn't follow a regular billing cycle at all. New pure `alertTriggerMs()`/
+     `dueSubscriptionAlerts()` in `lib/calc/subscriptionsModule.ts` (tested, 8 new cases) —
+     the latter takes an injected `isDismissed` check so it stays pure, with the actual
+     dismissal state living in a new small local-only `subscriptionAlertDismissalStore.ts`
+     (same idiom as `appearanceStore`/`termsStore` — a UI "seen this" marker, not financial
+     data, never synced to Firebase). Dismissal is keyed per-occurrence
+     (`subId:alertId:occurrenceTag`), so dismissing a `daysBefore` alert only silences the
+     CURRENT upcoming renewal — it re-triggers with a fresh key once that cycle passes and the
+     next one comes due. Two new surfaces: `SubscriptionAlertsPopup` (mounted once at the App
+     root, alongside `TermsGateModal`/`ConfirmDialogHost`, inside `HashRouter` so its
+     "Manage subscriptions →" link works) shows a snapshot of due alerts on app load, auto-
+     hides after 12s or on manual close, and lets each item be individually dismissed; Net
+     Worth's own "homepage" gained a `Notice` listing every subscription renewing within 14
+     days (a broader glance window than any one subscription's configured alert lead time, so
+     it stays useful even for a subscription with no alerts configured). The Subscriptions
+     page's own `SubscriptionDetail` gained a "Renewal / expiry alerts" `CollapsibleCard`:
+     suggested 3/2/1-day chips (disabled once already added) plus a `datetime-local` picker for
+     a custom alert, and a list of configured alerts with per-row removal. **The "custom
+     subscription period as a number input" half of the request was already built** — checked
+     before assuming it needed new code: `billingCycle: 'custom'` + `customDays` (an "Every N
+     days" number field) already exists and covers exactly the user's own examples (a 28-day
+     mobile package, a 180-day SIM validity). Verified live via Playwright: the popup correctly
+     shows for a genuinely-due alert (seeded so the next occurrence IS today, well within a
+     3-day lead) and correctly hides after Dismiss, with the dismissal persisted to
+     localStorage; the Net Worth notice renders the seeded subscription's name/amount/date; the
+     detail page's alert chips hit the real sign-in gate. `npx tsc -b` / `npm run test` (375
+     tests, 8 new) / `npm run build` all clean.
 
 ## Pending
 
@@ -4384,6 +4415,30 @@ everything below is started. Working down it in priority order across following 
      unverified in this sandbox (network blocked) — a future session with real browser access
      should confirm a real IBAN actually returns a real bank name before trusting this beyond
      the local-checksum unit tests.
+105. Credit card spend tracking, linked to a Bank account, so Net Worth counts it accurately
+     (user-requested, 2026-08-26). `BankAccount` has no debt/liability concept today — every
+     account is a plain asset balance; a credit card needs to subtract from net worth (like
+     EMI/Personal Loans debt already does), not add. Real design question before building: a
+     new `accountType` value on the existing `BankAccount` with `computeNetWorthByCurrency()`
+     flipping its sign for that type (simplest, reuses the existing account list/ledger/
+     transactions UI), or a genuinely separate record type with its own statement/due-date/
+     credit-limit fields? Not started — needs deciding, not guessed at.
+106. A cross-module "Budget Planner" (user-requested, 2026-08-26). Verbatim ask: show current/
+     previous/next month's projected income and expenses; predefined AND custom expense/income
+     categories; a page (on Net Worth and/or globally accessible) listing every planned
+     financial activity across every module, with the ability to plan directly from within it
+     and link it to a financial source. **Significant overlap with already-built features,
+     confirmed by checking rather than assumed**: Cash/Bank's existing Planning tabs (Done item
+     43) already do "planned entry → real/planned balance projection, linked to an account,"
+     just siloed per-module (each module's own Planning tab, own Planned* store) rather than
+     one unified cross-module view — this request reads as wanting that unification, plus a
+     3-month income/expense projection view, plus predefined-category suggestion lists (several
+     modules, Cash/Bank included, have free-form category text inputs with no suggestion
+     datalist at all today — that specific piece is a small, concrete, buildable gap on its
+     own). Not started — needs real scoping (new page reusing every module's existing Planned*
+     stores? a new store of its own? which modules get a category-suggestion datalist and what
+     goes in it?) before building, same as how the original Cash/Bank Planning feature's own
+     design fork was resolved via `AskUserQuestion` first (see Done item 43).
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

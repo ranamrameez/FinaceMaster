@@ -3379,6 +3379,46 @@ not developer notes) continuously as features ship.
   terrible" as a general visual complaint, not just the specific duplicate-heading bug) is a
   more subjective design judgment call that a code-level audit can't resolve on its own — left
   open in README Pending item 90 rather than claimed fully done.
+- **Subscription renewal/expiry alerts, user-requested (2026-08-26) — see README Done item
+  174.** `Subscription.alerts` (relative `daysBefore`, re-anchored each cycle automatically, or
+  a one-off absolute `customAt`); `dueSubscriptionAlerts()` in `lib/calc/subscriptionsModule.ts`
+  takes an injected `isDismissed` check to stay pure, backed by a new local-only
+  `subscriptionAlertDismissalStore.ts` (never synced — a UI marker, not financial data), keyed
+  per-occurrence so dismissing only silences the CURRENT cycle. Two surfaces: an auto-hiding
+  `SubscriptionAlertsPopup` mounted once at the App root (inside `HashRouter`, alongside
+  `CalculatorLauncher`, so its internal `Link` works — NOT alongside `TermsGateModal`/
+  `ConfirmDialogHost`, which sit OUTSIDE `HashRouter` and don't need Router context); and a
+  Net Worth "homepage" `Notice` listing renewals due within 14 days. **Confirmed before
+  building, not assumed**: the "custom subscription period as a number input" half of the
+  request was already fully built (`billingCycle: 'custom'` + `customDays`) — no new code
+  needed there. `npx tsc -b` / `npm run test` (375 tests, 8 new) / `npm run build` all clean;
+  verified live via Playwright (popup shows/dismisses correctly for a genuinely-due seeded
+  alert, dismissal persists to localStorage, Net Worth notice renders correctly).
+- **Two more feature requests received mid-session (2026-08-26), NOT yet started — tracked
+  here so a future session picks them up in order rather than losing them.** (1) Credit card
+  spend tracking, linked to a Bank account, so Net Worth can count it accurately — Banking's
+  `BankAccount` currently has no debt/liability concept at all, every account is treated as a
+  plain asset balance; a credit card needs to subtract from net worth the way EMI/Personal
+  Loans debt already does, not add like a normal account. Real design question before
+  building: is a credit card a new `accountType` value on the existing `BankAccount` (simplest,
+  reuses the existing account list/ledger) with `computeNetWorthByCurrency()` flipping its
+  sign, or a genuinely separate record type with its own statement/due-date/credit-limit
+  fields? Needs deciding, not guessed at. (2) A cross-module "Budget Planner" — user's own
+  wording: "current, previous and next month's projected incomes and expenses," predefined
+  *and* custom expense/income categories, and a page (on Net Worth and/or globally accessible)
+  that lists every planned financial activity across every module and lets the user plan
+  directly from within it, linked to a financial source. **Overlaps significantly with
+  already-built features, worth checking against before assuming this is all new**: Cash/
+  Bank's existing Planning tabs (Done item 43) already do "planned entry → real/planned
+  balance projection, linked to an account" per-module; this request reads as wanting one
+  UNIFIED cross-module view of that (today each module's Planning tab is siloed) plus a
+  three-month income/expense projection view plus predefined category suggestion lists
+  (several modules already have free-form category text inputs with NO suggestion datalist at
+  all — Cash/Bank included — that part is a concrete, buildable gap). Needs real scoping
+  (does this become a genuinely new page, reusing every module's existing Planned* stores, or
+  a new store of its own?) before starting, same as how the original Cash/Bank Planning
+  feature's own design fork was resolved via `AskUserQuestion` before building (see this
+  file's earlier entry on that).
 
 ## Live URLs
 

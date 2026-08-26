@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Doughnut, Line } from 'react-chartjs-2';
 import { Card, MoneyValue, StatCard } from '../../../components/Card';
 import { confirmDialog } from '../../../components/ConfirmDialog';
@@ -8,6 +9,8 @@ import { toast } from '../../../components/Toast';
 import { ChartCard } from '../../qse/components/ChartCard';
 import { netIncomeByCurrency as rentalsNetIncomeByCurrency } from '../../../lib/calc/rentalsModule';
 import { flowByCurrency } from '../../../lib/calc/netWorth';
+import { upcomingRenewals } from '../../../lib/calc/subscriptionsModule';
+import { useSubscriptionsWorkbookStore } from '../../../store/subscriptionsWorkbookStore';
 import { useNetWorthSummary } from '../hooks/useNetWorthSummary';
 import { convertAmount, effectiveRate, fetchFxRates, isFxStale, loadCachedFxRates, saveFxRates, setCrossRate, type FxRates } from '../../../lib/fx';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
@@ -47,6 +50,12 @@ export function NetWorthPage({
   const cashEntries = useCashWorkbookStore((s) => s.workbook.entries);
   const bank = useBankWorkbookStore((s) => s.workbook);
   const rentals = useRentalsWorkbookStore((s) => s.workbook);
+  const subscriptions = useSubscriptionsWorkbookStore((s) => s.workbook.entries);
+  // User-requested (2026-08-26): renewal/expiry alerts on the "homepage" —
+  // a 14-day glance window, broader than any one subscription's own
+  // configured alert lead time (which might be shorter, or unset), so this
+  // stays useful even for a subscription with no alerts configured at all.
+  const renewalsSoon = upcomingRenewals(subscriptions, 14);
   // Charts on this page recompute their CSS-var-derived colors only when
   // this component re-renders — same reasoning as every other chart-bearing
   // page (Dashboard, Analytics, PositionDetail).
@@ -211,6 +220,25 @@ export function NetWorthPage({
   return (
     <div>
       <h1>Net Worth</h1>
+
+      {/* User-requested (2026-08-26): subscription renewal/expiry alerts on
+          the "homepage" — a compact list, not the full per-subscription
+          detail (which lives on the Subscriptions page itself). */}
+      {renewalsSoon.length > 0 && (
+        <Notice tone="warning" style={{ marginBottom: 16 }}>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>
+            {renewalsSoon.length} subscription{renewalsSoon.length > 1 ? 's' : ''} renewing in the next 14 days
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+            {renewalsSoon.map((r) => (
+              <span key={r.subscription.id}>
+                {r.subscription.name} — {fmtMoney(r.subscription.amount, r.subscription.currencyCode)} on {r.date}
+              </span>
+            ))}
+          </div>
+          <Link to="/subscriptions" className="footer-note" style={{ display: 'inline-block', marginTop: 6 }}>Manage subscriptions →</Link>
+        </Notice>
+      )}
 
       {/* Items 2/3/4/5 of a 2026-08-26 follow-up batch: the previous single
           Card had the big number eating ~80% width with mostly blank space
