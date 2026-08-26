@@ -126,7 +126,7 @@ function AddLoanForm({ onSaved }: { onSaved?: () => void }) {
         <Field label="Tenure (months)" width={110} title="How many months the loan runs for, from the start date to when it's fully paid off.">
           <TextInput type="number" value={l.tenureMonths || ''} onChange={(e) => setL({ ...l, tenureMonths: Number(e.target.value) })} />
         </Field>
-        <Field label="Start date">
+        <Field label="Installment start date">
           <TextInput type="date" value={l.startDate} onChange={(e) => setL({ ...l, startDate: e.target.value })} />
         </Field>
         <Field
@@ -290,6 +290,10 @@ function LoanStatZones({ loan, sum, loanRepayments }: { loan: EMILoan; sum: EMIS
           <div className="stat-card card" style={hueStyle(HUES[7])}>
             <div className="label">Expected completion date</div>
             <div className="value" style={{ fontSize: 16 }}>{expectedEndDate(loan)}</div>
+          </div>
+          <div className="stat-card card" style={hueStyle(HUES[2])}>
+            <div className="label">Paid EMI count</div>
+            <div className="value">{sum.elapsed}</div>
           </div>
           <div className="stat-card card" style={hueStyle(HUES[5])}>
             <div className="label">Remaining EMI count</div>
@@ -497,7 +501,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
               <Field label="Tenure (months)">
                 <TextInput type="number" value={editRow.tenureMonths} onChange={(e) => setEditRow({ ...editRow, tenureMonths: Number(e.target.value) })} />
               </Field>
-              <Field label="Start date">
+              <Field label="Installment start date">
                 <TextInput type="date" value={editRow.startDate} onChange={(e) => setEditRow({ ...editRow, startDate: e.target.value })} />
               </Field>
               <Field label="Custom monthly payment (optional)">
@@ -559,82 +563,11 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
         <LoanStatZones loan={loan} sum={sum} loanRepayments={loanRepayments} />
       </Card>
 
-      <CollapsibleCard
-        title={
-          <Tooltip text="A month-by-month breakdown of each installment, showing how much of it pays down the principal vs. how much is interest/markup.">
-            <h3 style={{ margin: 0, cursor: 'pointer' }}>Amortization schedule</h3>
-          </Tooltip>
-        }
-        style={{ marginBottom: 16 }}
-      >
-        <div style={{ height: 220 }}>
-          <Bar
-            data={{
-              labels: schedule.rows.map((r) => r.month),
-              datasets: [
-                { label: 'Principal', data: schedule.rows.map((r) => r.principalComp), backgroundColor: cssVar('--profit') || '#3ecf8e', stack: 's' },
-                { label: loan.repaymentMode === 'fixedTotal' ? 'Markup' : 'Interest', data: schedule.rows.map((r) => r.interest), backgroundColor: cssVar('--loss') || '#e5484d', stack: 's' },
-              ],
-            }}
-            options={{
-              maintainAspectRatio: false,
-              scales: { x: { stacked: true, title: { display: true, text: 'Month' } }, y: { stacked: true } },
-              plugins: { datalabels: dlBarV((v) => fmtMoney(v, loan.currencyCode)) },
-            }}
-          />
-        </div>
-      </CollapsibleCard>
-
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>What if: extra payment</h3>} style={{ marginBottom: 16 }}>
-        <p className="footer-note" style={{ marginTop: 0 }}>
-          See how much sooner this loan clears — and how much {loan.repaymentMode === 'fixedTotal' ? 'markup' : 'interest'} you'd
-          save — by paying a fixed extra amount on top of the normal installment every month. A live estimate, nothing is saved.
-        </p>
-        <Field label={`Extra per month (${loan.currencyCode})`} width={160}>
-          <TextInput type="number" step="0.01" value={extraPayment || ''} onChange={(e) => setExtraPayment(Number(e.target.value))} />
-        </Field>
-        {extraPayment > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px,1fr))', gap: 8, marginTop: 12 }}>
-            <div className="stat-card card" style={hueStyle(HUES[0])}><div className="label">New months</div><div className="value">{whatIf.months}</div><div className="sub">{whatIf.monthsSaved} sooner</div></div>
-            <div className="stat-card card" style={hueStyle(HUES[7])}><div className="label">New end date</div><div className="value" style={{ fontSize: 14 }}>{whatIf.newEndDate}</div></div>
-            <div className="stat-card card" style={hueStyle('var(--profit)')}>
-              <div className="label">{loan.repaymentMode === 'fixedTotal' ? 'Markup' : 'Interest'} saved</div>
-              <MoneyValue n={whatIf.interestSaved} currency={loan.currencyCode} />
-            </div>
-          </div>
-        )}
-      </CollapsibleCard>
-
-      <Card style={{ marginBottom: 16 }}>
-        <h4 style={{ margin: '0 0 8px' }}>Link to bank</h4>
-        {linkedAccount ? (
-          <p className="footer-note" style={{ marginBottom: 8 }}>
-            Linked to <strong>{linkedAccount.name}</strong> — remaining installments are planned in its Planning tab.
-          </p>
-        ) : (
-          <p className="footer-note" style={{ marginBottom: 8 }}>
-            Not linked yet. Linking generates a planned (not-yet-done) entry for every remaining installment in the
-            chosen account's Planning tab, dated on this loan's own schedule.
-          </p>
-        )}
-        {accounts.length ? (
-          <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <Field label="Bank account">
-              <Select value={linkAccountId} onChange={(e) => setLinkAccountId(e.target.value)}>
-                {accounts.map((a) => (
-                  <option key={a.id} value={a.id}>{a.name} ({a.currencyCode})</option>
-                ))}
-              </Select>
-            </Field>
-            <button className="btn secondary" onClick={linkToBank}>
-              {linkedAccount ? 'Re-link / regenerate plans' : 'Link to bank'}
-            </button>
-          </div>
-        ) : (
-          <p className="footer-note">No bank accounts yet — add one on the Banking page first.</p>
-        )}
-      </Card>
-
+      {/* README item 68 of a 2026-08-26 feedback batch: page order should be
+         Stats → Schedule → Charts → What-if — the Amortization chart,
+         What-if planner, and Link-to-bank card (which don't have a named
+         target position in that request) all moved together as a group to
+         right after the Schedule, keeping their own relative order. */}
       <CollapsibleCard
         title={<h3 style={{ margin: 0 }}>Schedule {showFullSchedule ? '(full, start to end)' : '(next 12 installments from today)'}</h3>}
         headerExtra={<button className="btn secondary" onClick={exportSchedule}>Export full schedule CSV</button>}
@@ -770,6 +703,82 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
         </table>
       </div>
       </CollapsibleCard>
+
+      <CollapsibleCard
+        title={
+          <Tooltip text="A month-by-month breakdown of each installment, showing how much of it pays down the principal vs. how much is interest/markup.">
+            <h3 style={{ margin: 0, cursor: 'pointer' }}>Amortization schedule</h3>
+          </Tooltip>
+        }
+        style={{ marginBottom: 16 }}
+      >
+        <div style={{ height: 220 }}>
+          <Bar
+            data={{
+              labels: schedule.rows.map((r) => r.month),
+              datasets: [
+                { label: 'Principal', data: schedule.rows.map((r) => r.principalComp), backgroundColor: cssVar('--profit') || '#3ecf8e', stack: 's' },
+                { label: loan.repaymentMode === 'fixedTotal' ? 'Markup' : 'Interest', data: schedule.rows.map((r) => r.interest), backgroundColor: cssVar('--loss') || '#e5484d', stack: 's' },
+              ],
+            }}
+            options={{
+              maintainAspectRatio: false,
+              scales: { x: { stacked: true, title: { display: true, text: 'Month' } }, y: { stacked: true } },
+              plugins: { datalabels: dlBarV((v) => fmtMoney(v, loan.currencyCode)) },
+            }}
+          />
+        </div>
+      </CollapsibleCard>
+
+      <CollapsibleCard title={<h3 style={{ margin: 0 }}>What if: extra payment</h3>} style={{ marginBottom: 16 }}>
+        <p className="footer-note" style={{ marginTop: 0 }}>
+          See how much sooner this loan clears — and how much {loan.repaymentMode === 'fixedTotal' ? 'markup' : 'interest'} you'd
+          save — by paying a fixed extra amount on top of the normal installment every month. A live estimate, nothing is saved.
+        </p>
+        <Field label={`Extra per month (${loan.currencyCode})`} width={160}>
+          <TextInput type="number" step="0.01" value={extraPayment || ''} onChange={(e) => setExtraPayment(Number(e.target.value))} />
+        </Field>
+        {extraPayment > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px,1fr))', gap: 8, marginTop: 12 }}>
+            <div className="stat-card card" style={hueStyle(HUES[0])}><div className="label">New months</div><div className="value">{whatIf.months}</div><div className="sub">{whatIf.monthsSaved} sooner</div></div>
+            <div className="stat-card card" style={hueStyle(HUES[7])}><div className="label">New end date</div><div className="value" style={{ fontSize: 14 }}>{whatIf.newEndDate}</div></div>
+            <div className="stat-card card" style={hueStyle('var(--profit)')}>
+              <div className="label">{loan.repaymentMode === 'fixedTotal' ? 'Markup' : 'Interest'} saved</div>
+              <MoneyValue n={whatIf.interestSaved} currency={loan.currencyCode} />
+            </div>
+          </div>
+        )}
+      </CollapsibleCard>
+
+      <Card style={{ marginBottom: 16 }}>
+        <h4 style={{ margin: '0 0 8px' }}>Link to bank</h4>
+        {linkedAccount ? (
+          <p className="footer-note" style={{ marginBottom: 8 }}>
+            Linked to <strong>{linkedAccount.name}</strong> — remaining installments are planned in its Planning tab.
+          </p>
+        ) : (
+          <p className="footer-note" style={{ marginBottom: 8 }}>
+            Not linked yet. Linking generates a planned (not-yet-done) entry for every remaining installment in the
+            chosen account's Planning tab, dated on this loan's own schedule.
+          </p>
+        )}
+        {accounts.length ? (
+          <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <Field label="Bank account">
+              <Select value={linkAccountId} onChange={(e) => setLinkAccountId(e.target.value)}>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>{a.name} ({a.currencyCode})</option>
+                ))}
+              </Select>
+            </Field>
+            <button className="btn secondary" onClick={linkToBank}>
+              {linkedAccount ? 'Re-link / regenerate plans' : 'Link to bank'}
+            </button>
+          </div>
+        ) : (
+          <p className="footer-note">No bank accounts yet — add one on the Banking page first.</p>
+        )}
+      </Card>
 
       <RepaymentLog loan={loan} repayments={loanRepayments} />
     </div>

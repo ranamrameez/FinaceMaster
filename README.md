@@ -3574,6 +3574,69 @@ FinanceManager live link:
      stat-card fields render with the exact expected values against a seeded loan, the 3 zone
      headers show, and the edit-loan form's fields are now all `Field`-labeled. `npx tsc -b` /
      `npm run test` (359 tests, 4 new for `markupPercentage`) / `npm run build` all clean.
+167. **CRITICAL, user-reported same day (2026-08-26): `paymentDayOfMonth` shifted every due
+     date back by one day for a positive-UTC-offset user ("I placed 28 as day, while app fixes
+     27... same with 29").** Root cause: `installmentDueDate()` mixed a UTC-parsed
+     `new Date(startDate)` with LOCAL-timezone `Date` methods (`getMonth`/the
+     `new Date(y,m,d)` constructor/`setDate`) and then read the result back out via
+     `.toISOString()` (always UTC) — a classic JS Date trap. For Pakistan (UTC+5, matching
+     this user's own PKR loan), constructing a fresh LOCAL midnight for the target month and
+     calling `.toISOString()` on it converts that LOCAL midnight back to the PREVIOUS day in
+     UTC, silently shaving a day off. This sandbox's own dev/CI environment runs in UTC (zero
+     offset), which is exactly why every earlier "verified live" Playwright check for this
+     feature (Done item 163) never caught it — the bug is invisible at UTC+0 by construction.
+     Fixed by rewriting `installmentDueDate()` as plain integer year/month/day arithmetic —
+     no `Date` object ever represents the final calendar date, so there's no local/UTC
+     boundary left to cross; `Date.UTC(...)`/`getUTCDate()` are used ONLY to look up how many
+     days a target month has, both UTC consistently, so that lookup itself can't reintroduce
+     the same class of bug. New regression tests assert the exact reported values (day
+     28→28, day 29→28 when clamped) directly, timezone-independently — no need to simulate
+     UTC+5, since the fix no longer depends on runtime timezone at all. **Lesson for any
+     future date-math bug report from a real user**: this sandbox's own UTC-only dev
+     environment is a blind spot for exactly this class of bug (local/UTC Date mixing) —
+     don't trust "verified live" from this sandbox alone for date-sensitive features; prefer
+     timezone-independent implementations (plain arithmetic, or explicit UTC throughout) over
+     `Date` objects with mixed local/UTC access patterns as a rule, not just a fix-after-the-fact.
+     **Also fixed in the same pass**: renamed the "Start date" field label to "Installment
+     start date" on both the add-loan and edit-loan forms (the user's own suggested wording,
+     since "start date" alone was ambiguous with when the LOAN itself started vs. when
+     installments are due). **App-wide CSS fix, same user report** ("inputs have no min-width
+     to defend their text views... they should go the next line if viewport is small"): the
+     `.row > *{flex:1}` + `min-width`/`flex-wrap` fix that used to be gated behind
+     `@media(max-width:640px)` (mobile only) is now the unconditional BASE rule — a many-field
+     row (e.g. EMI's 10-field edit-loan form) was squeezing every field down to an unreadable
+     sliver on a full DESKTOP viewport too, since nothing outside the mobile media query
+     stopped `flex:1` from dividing the row's width evenly among however many fields happen to
+     be in it. Verified this doesn't regress icon-button or chip rows sharing the same `.row`
+     class: `.btn`'s own `min-width:38px`/`flex:0 0 auto` (already present, unchanged) wins
+     over the new base rule at equal specificity by later source order, and a live check of
+     both the QSE/PSX exchange-switcher chips and Funds' import-mode chips showed natural,
+     un-stretched widths — the fix only engages once a row is genuinely too crowded to fit at
+     a reasonable minimum width, the exact case it was meant to catch. Verified live via
+     Playwright: a seeded loan reproducing the user's exact PKR numbers showed every one of 36
+     schedule due dates correctly ending in the configured day (zero off-by-one dates), and
+     the edit-loan form's 10 fields now wrap across 4 rows at 174-265px each instead of one
+     crammed row. `npx tsc -b` / `npm run test` (360 tests, 1 new) / `npm run build` all clean.
+168. **Six more quick wins from the same 2026-08-26 batch — closes Pending items 71/100/74/80
+     directly; contributes toward 68/83.** (1) EMI Timeline zone gained "Paid EMI count"
+     (`sum.elapsed`, already computed) alongside the existing "Remaining EMI count" — closes
+     item 71. (2) EMI loan-detail page reordered to Stats → Schedule (with the nested Big EMI
+     generator) → Amortization chart → What-if planner → Link-to-bank, closing item 68's
+     literal request (the latter three moved as one group, keeping their own relative order,
+     since the user's own wording didn't specify where they land beyond "after Schedule").
+     (3) Personal Loans' loan-detail page reordered to Repayments → Payoff Planner (was the
+     reverse) — closes item 100. (4) Net Worth's "Rates between your own currencies" table now
+     shows both directions (1 A = X B, 1 B = Y A) instead of just one — closes item 74;
+     `effectiveRate()` already derives either direction symmetrically from the same
+     USD-anchored table, so no calc change was needed, just rendering both. (5) Banking's
+     "Total balance (CODE)" stat-card label — which read like a live-converted figure, when
+     it's actually just "your accounts that happen to use this currency, summed" — renamed to
+     "Accounts in CODE" with an explanatory tooltip spelling out the no-conversion caveat
+     directly; closes item 80 (a lighter-touch fix than the user's own literal "Pakistani
+     Banks Total Balance" suggestion, since that assumes currency implies country, which isn't
+     generally true). Verified live via Playwright across all four pages (EMI, Personal Loans,
+     Net Worth, Banking) with seeded data — zero real console errors. `npx tsc -b` / `npm run
+     test` (360 tests, unchanged — no calc logic touched) / `npm run build` all clean.
 
 ## Pending
 
@@ -3988,6 +4051,219 @@ same batch**:
     something else. "Penalties" has no data model at all yet — not even a field to hold one.
     Not started; needs the user's own direction on what "overdue"/"penalty" should mean before
     any code, same bar this file always applies to a genuine design fork.
+
+**2026-08-26, large cross-page UI/UX critique batch (screenshots of EMI/Net Worth/Banking) —
+right after Done item 167 shipped the date-off-by-one fix + row-wrap CSS fix from the same
+batch. Everything else below is tracked here per the user's own explicit "update docs and
+list all these" instruction — genuinely too large for one sitting (dozens of items across
+4+ pages plus several app-wide principles), so this is the full backlog, not a promise
+everything below is started. Working down it in priority order across following sessions.**
+
+66. EMI: buttons (Save/Cancel on the edit-loan form, and elsewhere) should sit at the card's
+    top-right corner, the same `headerExtra` pattern already used for single stranded actions
+    elsewhere in the app (Done item 121) — the edit-loan form's Save/Cancel currently sit
+    below the field grid instead. Not done — the edit form doesn't go through
+    `CollapsibleCard`'s `headerExtra` slot at all right now (it swaps the whole Card's body,
+    title included), so this needs restructuring that swap, not just moving two buttons.
+67. EMI: "Big EMI every N months" and "Link to bank" should be attached to the loan add/edit
+    flow rather than living as separate always-visible cards on the loan-detail page. Real
+    design question, not just a move: "Big EMI" needs a real schedule (with `elapsed` months
+    known) to generate against, so it doesn't obviously fit an ADD-loan form for a
+    brand-new loan with no elapsed history yet — plausibly this means "collapsed/tucked into
+    an 'Advanced' section of the edit form" rather than literally living in the add-loan
+    popup. Needs a concrete design before building, not guessed at.
+68. ~~EMI: reorder the loan-detail page to Stats → Schedule → Charts → What-if.~~ **Done
+    (2026-08-26) — see Done item 168.** The Amortization chart/What-if/Link-to-bank group
+    moved together, right after Schedule, keeping their own relative order.
+69. EMI Schedule table: reorder to `#, Due Date, Installment, (Net Paid + %), (Net Balance +
+    %), Breakdown (Principal + %, Markup + %), Status, Actions` — Markup/Principal are
+    "secondary info" per the user, should collapse into one "Breakdown" concept, and every
+    money figure should show a percentage-of-total alongside it. Needs new percentage-of-total
+    calc (paid/balance/principal/markup each as a % of `netToReturn`), not just a column
+    reorder. Not started.
+70. EMI: "Markup percentage" should also show the ANNUAL and MONTHLY equivalent, not just the
+    one lifetime figure. Trivial for interest mode (rate IS annual; monthly = rate/12) — needs
+    a real interpretation decision for fixedTotal mode first (a "monthly %" there most likely
+    means markup-per-month ÷ principal, but that's an assumption, not confirmed with the user).
+71. ~~EMI: add "Paid EMI count" to the Timeline zone (currently only "Remaining EMI count").~~
+    **Done (2026-08-26) — see Done item 168.**
+72. EMI: real charts showing loan history/progress — "multiple charts showing different
+    matrix." The existing Amortization-schedule stacked-bar chart + What-if planner (Done item
+    91) apparently reads as "no charts" to the user, either because it's positioned too far
+    down the page to notice (ties into item 68's reorder) or because they want a genuinely
+    different SET (e.g. balance-over-time line, paid-vs-remaining split) beyond the one
+    existing chart. Needs the user's own confirmation of which before assuming scope.
+73. Net Worth: daily snapshot should be automatic, not an on-demand button — this DIRECTLY
+    REVERSES a previously locked design decision (Done item 157: "an explicit on-demand 'Save
+    snapshot' button (never automatic)" was the user's own explicit choice at the time,
+    specifically to avoid an accidental/unwanted history point). Per this file's own "recent
+    instructions override older ones" rule, the newer ask wins — but flagging the reversal
+    explicitly here rather than silently overwriting a previously-deliberate decision, per
+    this file's own standing practice. A reasonable low-risk implementation: auto-save once
+    per calendar day on page load if no snapshot exists yet for today (idempotent, no
+    duplicate-spam risk) — not built yet, needs the "once per day, on page load" framing
+    confirmed rather than assumed.
+74. ~~Net Worth: the pairwise "Rates between your own currencies" table only shows one
+    direction (A→B) — should show the reverse (B→A) alongside it.~~ **Done (2026-08-26) — see
+    Done item 168.** `effectiveRate()` already derives either direction symmetrically, so this
+    was purely a rendering change.
+75. Net Worth: "Net worth over time" chart should render AFTER the per-currency summary
+    sections, not before them (current order: summary+rates card pair, then the chart, then
+    per-currency breakdowns — user wants chart after the currency breakdowns specifically).
+    Reorder, not started.
+76. Net Worth / app-wide: "Account Synced · [timestamp]" sync-status text is currently only
+    shown inside a few modules' own "Account" sections, when cloud sync (and the account
+    itself) is genuinely a cross-cutting, app-wide concept — should live in the sidebar/nav
+    instead of being "buried in a few modules." A real structural change: today, sync status
+    is computed per-module inside each page component (`syncStatus` prop threaded through
+    from `App.tsx`'s per-module hooks), not as one unified app-wide value — needs a design
+    decision on what "one synced/not-synced indicator for N independent per-module sync
+    hooks" should actually mean (worst-of-N? most-recent? a per-module breakdown popover?)
+    before it can move to the nav.
+77. App-wide: whole-app import/export through Settings, AND per-module import/export, AND
+    every table should support exporting to JSON/CSV/Excel/HTML/PDF (not just the CSV export
+    already built per-module via Done item 58's pattern). A large, multi-part ask — CSV export
+    already exists broadly (see README item 40, fully done); JSON/Excel/HTML/PDF are all new
+    formats needing their own library/approach decisions (this project's own "xlsx" dependency
+    already exists for Funds' import, per Done item 151, but has a known unpatched high-
+    severity advisory flagged there — worth reconsidering before leaning on it further for
+    EXPORT too). A true "whole app export" also needs a decision on shape (one combined file?
+    one per module, zipped?). Needs real scoping before starting, not a small task.
+78. Net Worth: add charts comparing the distribution of finances, both per-currency and within
+    one selected currency (a "capital split by currency" doughnut already exists per Done item
+    153 — this may be asking for more chart TYPES, e.g. a per-currency asset/liability
+    breakdown, rather than none existing at all; needs clarifying which specific comparison is
+    still missing).
+79. Net Worth: per-module contributions (the "By module: Bank / Stocks (PSX) / Funds / ..."
+    list currently shown as a plain list of rows inside each currency's `<details>`) should
+    render as small cards instead of long table-style rows. Straightforward visual change,
+    not started.
+80. ~~Banking: the "Total balance (PKR)"/"(QAR)" stat-card labels read as if they're LIVE-
+    CONVERTED figures.~~ **Done (2026-08-26) — see Done item 168.** Renamed to "Accounts in
+    CODE" with an explanatory tooltip, a lighter-touch fix than the user's own literal
+    "Pakistani Banks Total Balance" suggestion (which assumes currency implies country).
+81. Banking: "Add account" shouldn't be a permanently-visible form (same "rare operation"
+    reasoning already applied to EMI's own add-loan form, Done item 166's floating-FAB
+    pattern) — move to a floating "+" button + popup, mirroring EMI. Not started.
+82. Banking: `BankAccount` should carry Branch and/or Account Type fields — new fields, not
+    yet in the data model at all.
+83. Banking / app-wide: clicking a Bank account (or Cash, or a Personal Loan) row should
+    navigate to that item's own detail page rather than opening a popup/modal in place —
+    Banking's `AccountDetailModal` is a MODAL today, not a real routed page. A real
+    architectural question: does "detail page" mean a genuine new route per account (like
+    QSE/PSX's `/stock/:ticker`), or is the existing modal acceptable and just needs its
+    CONTENTS reordered (see item 84)? The user's wording ("should take the user its details
+    page") reads as wanting a real navigable page, not just a modal — but that's a bigger
+    change than it sounds given Bank accounts don't currently have stable per-account routes
+    at all.
+84. Banking: `AccountDetailModal` currently shows the (rare) account-EDIT form prominently and
+    has NO way to add a transaction from inside it at all — exactly backwards from what a user
+    actually wants when clicking into an account. Real, concrete UX bug — the modal should
+    lead with "add a transaction" (with its own FAB+popup per item 81's pattern, or at least a
+    prominent inline form) and demote the edit-account-details form to a secondary/collapsed
+    section. Not started.
+85. Banking / app-wide: a transaction/repayment/entry conceptually belongs to its parent
+    Account/Fund/Loan, so it should be logged and reviewed from THAT item's own detail
+    page/view — not a separate page-level "add a transaction" flow disconnected from which
+    account it's for. This is largely already true for EMI/Personal Loans/Rentals/Funds
+    (their detail views already have their own transaction/repayment logs) — Banking is the
+    clearest outlier (its own `AccountDetailModal` doesn't support adding one at all, see item
+    84) and Cash has no per-"account" concept to attach to in the first place (Cash is a
+    single ledger, not multiple accounts) — needs auditing per-module rather than assumed to
+    be one uniform fix.
+86. App-wide: "Add a plan" (Cash/Banking's Planning-tab add-form) shouldn't be permanently
+    visible either — same FAB+popup treatment as items 81/166. Not started.
+87. App-wide: the FinanceRecorder app logo isn't in the navbar/sidebar at all (only the text
+    wordmark, per Done item 32's "FinanceRecorder" header) — needs an actual logo asset, which
+    doesn't exist yet in this project (nothing to swap in without one being designed/sourced
+    first).
+88. QSE/PSX Dashboard: the new right-rail's Net worth and Upcoming-plans cards (Done item 164)
+    are reported as visually CUTTING OFF/clipped — a real layout bug in the rail itself, not
+    just a design preference, needs investigating (likely the `.rail-split`'s fixed 320px
+    column being too narrow for some content, or a `MoneyValue`/pill overflowing its card).
+    Also requested: the rail's money figures should show in the CURRENT STOCK EXCHANGE's own
+    currency (QAR for QSE, PKR for PSX) rather than whatever `useNetWorthSummary()`'s
+    biggest-exposure currency happens to be — and the rail itself should become a floating
+    button + popup instead of a permanently-docked column (a bigger reversal of Done item
+    164's own "docked right-rail" design, worth confirming intent before rebuilding it as a
+    popup).
+89. App-wide: every tooltip-bearing label should carry a small visible icon (e.g. an "ⓘ") next
+    to it, so a user can tell it has more info WITHOUT already knowing to hover it — today a
+    `Tooltip`-wrapped label has no visual affordance distinguishing it from plain text.
+    Straightforward, `Tooltip.tsx`-level fix that would apply everywhere at once (same
+    "fix once at the shared component" pattern as `MoneyValue`/`StatCard`/`Field`), not
+    started.
+90. App-wide: "cards inside cards" — several places nest a `Card`/`CollapsibleCard` directly
+    inside another one (this file's own Done item 114 already fixed ONE specific instance of
+    this exact pattern — QSE/PSX Settings' single-child nesting — so this is a real, repeating
+    pattern worth another full sweep, not a one-time fix). Needs a fresh audit rather than
+    assuming Done item 114 already covered every instance.
+91. App-wide: `StatCard`'s background is "still very vague" — try solid colors with a subtle
+    shine/glassy effect instead. This directly follows up on Done item 153's "stat-card
+    gradient softening" (16%→7% hue mix + a faint glass-sheen highlight) — the user is asking
+    for the OPPOSITE direction now (more solid color, not softer) — worth confirming this is a
+    genuine reversal of that recent tuning pass before re-touching the same CSS again, same
+    "flag the reversal" practice as item 73.
+92. App-wide: every table row / card representing a record that HAS a detail page should link
+    to it (this is already true in most places — QSE/PSX Holdings→stock page, Personal
+    Loans/EMI/Rentals/Funds list rows→their own detail view — Banking's account rows are the
+    clearest current gap per item 83).
+93. App-wide: "Plans" (the Cash/Banking Planning feature) should be part of the main nav/
+    sub-nav, not buried inside each module's own tab set. A real navigation-structure
+    decision: does this mean promoting Planning to its own `CategoryNav` entry (like
+    "Transfers" already got, Done item 100), or just making it more visible within Cash/
+    Banking's own existing nav? Needs the user's own preference before restructuring nav.
+94. App-wide: "maximize space usage by using grids instead of infinite scrolling" — a broad
+    principle in the same spirit as Pending item 54/63 (right-rail content, multi-column
+    cards) — not a single scoped task, tracked here as a standing direction to apply
+    opportunistically per-page rather than one big sweep.
+95. App-wide: data import should be "a well-planned operation" with a documented/discoverable
+    required file format and column-matching UI. This pattern ALREADY EXISTS for Bank/Cash/
+    Rentals/Personal Loans' CSV imports (map-your-columns UI, Done items 40/41) and Funds'
+    two import modes (Done items 146/151) — the gap is likely that none of these publish a
+    clear "here's the expected format" reference a user can check BEFORE attempting an import
+    (today they just have to try the mapper and see what happens), which is a real, addressable
+    documentation/UX gap distinct from "build column-matching" (already built). Needs
+    confirming which modules' import flows the user actually tried before assuming this is a
+    universal gap vs. a discoverability one.
+96. App-wide, reinforced instruction: autofill time/timezone/currency more aggressively.
+    Time/timezone autofill already exists on every module's primary add-form (Done items
+    133/135/136) and currency remembers the last pick (Done item 49) — this repeated ask
+    likely means either a module this session hasn't confirmed yet, or a stronger ask (e.g.
+    autofill the BROWSER's own current time as a live default, not just a remembered
+    timezone) — needs a concrete "which field, which page" example from the user to act on
+    precisely rather than re-guess at an already-addressed item.
+97. App-wide, reinforced instruction: every remaining unlabeled input/form element. Done item
+    167 fixed EMI's/Personal Loans'/Subscriptions' detail-page edit forms specifically
+    (the confirmed-systemic gap found this session) — this is a repeated, broader ask that
+    likely still has real remaining gaps elsewhere (e.g. table inline-add rows without a
+    Field, which this session deliberately left alone as "already labeled by column header" —
+    that reasoning may not hold for every such row, worth re-checking against a real
+    screenshot rather than assumed correct everywhere).
+98. App-wide: "Compact" density should be noticeably MORE space-saving than "Comfortable" —
+    today it apparently reads as barely different. Ties directly into Done item 111's
+    "Console density made genuinely information-different" fix, which explicitly compared
+    Comfortable→Compact→Console as "a genuine strictly-decreasing series" at the time — this
+    report suggests Compact itself may not have gotten enough of a real cut, only Console did.
+    Needs re-measuring (same "measure before fixing" discipline as Done item 111) rather than
+    guessing at new CSS values.
+99. Personal Loans: no analytics charts visible on a loan's own DETAIL page. Real per-portfolio
+    Analytics (Outstanding by loan, Repayments by month, a Payoff planner) already exist on
+    the Personal Loans LANDING page's own Analytics tab (Done item 45) — this report is very
+    likely about the absence of any chart specifically on the loan-detail view (which only has
+    the Payoff Planner + Repayment log, no chart), not a claim that Done item 45 doesn't exist
+    at all. Needs confirming which specific view before assuming scope.
+100. ~~Personal Loans: the Payoff Planner should come AFTER Repayments on a loan's detail page
+     (transactions are more important) — currently Payoff Planner renders above Repayments.~~
+     **Done (2026-08-26) — see Done item 168.**
+101. Transfers page: "terrible UI, arrange elements in grids for better UX" — a broad
+     redesign ask without a specific target shape given; needs the user's own sense of what
+     "better" looks like (a wireframe, or at least which specific elements feel wrong) before
+     guessing at a full redesign.
+102. Transfers page: use info popups/tooltips to explain concepts instead of permanent
+     explanatory paragraphs eating page space — same "Tooltip over inline paragraph" pattern
+     already used elsewhere in the app (e.g. Done item 105's Risk Analysis jargon tooltips),
+     just not yet applied to this specific page's own explanatory text.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

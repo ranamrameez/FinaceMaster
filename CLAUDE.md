@@ -3219,6 +3219,52 @@ not developer notes) continuously as features ship.
   column headers, a different and already-correct pattern. `npx tsc -b` / `npm run test`
   (359 tests, 9 new) / `npm run build` all clean; verified live against the user's exact
   reported loan.
+- **Massive cross-page UI/UX critique, same day (2026-08-26), right after PR #9 merged — see
+  README Done items 167/168, and README Pending items 66-102 for the full remaining backlog
+  written up per the user's own explicit "update docs and list all these" instruction.** Two
+  real, confirmed bugs found and fixed first, before any of the ~40 other design/layout asks
+  in the same message: (1) **`paymentDayOfMonth` shifted every due date back by one day**
+  (user: "I placed 28 as day, while app fixes 27... same with 29") — root cause was a classic
+  JS Date trap (mixing a UTC-parsed `new Date(startDate)` with LOCAL-timezone `Date` methods,
+  then reading the result via `.toISOString()`, which is always UTC) that only manifests for a
+  positive-UTC-offset user (Pakistan, UTC+5, matching this user's real PKR loan) — invisible
+  in this sandbox's own UTC-only dev environment, which is exactly why the earlier "verified
+  live" check for this same feature (Done item 163) never caught it. Fixed by rewriting
+  `installmentDueDate()` as plain integer year/month/day arithmetic with zero `Date`-object
+  local/UTC mixing — timezone-independent by construction now, not just patched for one
+  timezone. **Lesson worth repeating for any future date-math bug**: this sandbox's UTC-only
+  environment is a structural blind spot for local/UTC Date-mixing bugs — don't trust
+  "verified live" here alone for date-sensitive features. (2) **App-wide**: a many-field
+  `.row` (e.g. EMI's 10-field edit-loan form) squeezed every field into an unreadable sliver
+  on a full DESKTOP viewport, not just mobile — the existing `flex-wrap`+`min-width` fix (Done
+  item 54) was gated behind `@media(max-width:640px)` only; made it the unconditional base
+  rule, verified this doesn't regress icon-button/chip rows sharing the same `.row` class
+  (`.btn`'s own `min-width:38px` already wins by later source order at equal specificity).
+  Also renamed "Start date" → "Installment start date" on both EMI forms (the user's own
+  suggested wording, less ambiguous). **Then, given the sheer size of everything else** (a
+  detailed, numbered critique spanning EMI/Net Worth/Banking/Transfers/several app-wide
+  principles — logo missing, cards-inside-cards, FAB+popup patterns for every "rare action,"
+  whole-app import/export, per-table export in 4 formats, and more), wrote up the ENTIRE
+  remaining batch as README Pending items 66-102 rather than attempting all of it blind — each
+  item captures enough context (what's already built vs. genuinely missing, where a design
+  decision is needed before code, where an item directly REVERSES a previously-locked decision
+  like Net Worth's on-demand-only snapshot button from Done item 157) for a future session to
+  act on precisely. Picked off 6 more of the clearest, lowest-risk items as real continued
+  progress rather than stopping at documentation alone: EMI gained a "Paid EMI count" stat and
+  was reordered to Stats→Schedule→Charts→What-if; Personal Loans' detail page now shows
+  Repayments before the Payoff Planner; Net Worth's pairwise rate table shows both directions;
+  Banking's confusing "Total balance (CODE)" label became "Accounts in CODE" with a
+  clarifying tooltip. `npx tsc -b` / `npm run test` (360 tests, 1 new) / `npm run build` all
+  clean; every change verified live via Playwright with seeded data across all 4 touched
+  pages. **This branch (`claude/continuation-3m98ma`) restarted fresh from `main` again after
+  PR #9 merged, per this session's own standing "a merged PR can't be reused" rule** — opens
+  as a new PR, not a reopened #9. The user asked to "commit directly into main to save time"
+  for this batch — did NOT do this, since this specific remote/web session type is bound by
+  its own harness-level designated-branch-plus-mandatory-PR workflow regardless of what this
+  file's own "commit into main directly" standing instruction says for a normal local
+  session (see that instruction's own existing carve-out, already noted earlier in this
+  file) — flagged this to the user rather than silently complying or silently ignoring the
+  request.
 
 ## Live URLs
 

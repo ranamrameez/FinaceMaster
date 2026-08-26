@@ -370,20 +370,16 @@
 
   /* ---------- Mobile: form inputs/selects and stat cards ----------
      User-reported: inputs/selects felt cramped and got cut off on phones,
-     and stat-card numbers could overflow their card. Root cause for the
-     first: `.row > *{flex:1}` uses flex-basis:0%, so a `.row` with several
-     Fields (each carrying its own explicit `width` prop, e.g. the Trade
-     Calculator's Buy price/New shares/Amount/Target avg cost row) ignores
-     those widths entirely and divides the row's *actual* width evenly
-     instead — on a 390px phone with 4 fields in one row that's ~74px each,
-     nowhere near enough for a price/amount input. `min-width` below forces
-     an early wrap once more than ~2 fit per line, instead of squeezing an
-     unbounded number of fields onto one line. `font-size:16px` on inputs
-     also avoids iOS Safari's auto-zoom-on-focus (any input font-size under
-     16px triggers it), which reads as "the input behaves oddly" on a
-     phone even though nothing is actually broken. */
+     and stat-card numbers could overflow their card. The `.row` wrap +
+     min-width fix that used to live here is now the unconditional base
+     rule above (2026-08-26 — the squeeze wasn't mobile-specific, a
+     many-field row squeezed just as badly on desktop) — this block just
+     tightens the minimum a bit further for small screens and keeps the
+     iOS-zoom/stat-card-overflow fixes, which ARE mobile-specific.
+     `font-size:16px` on inputs avoids iOS Safari's auto-zoom-on-focus (any
+     input font-size under 16px triggers it), which reads as "the input
+     behaves oddly" on a phone even though nothing is actually broken. */
   @media(max-width:640px){
-    .row{flex-wrap:wrap;}
     .row > *{min-width:140px;}
     input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]), select, textarea{
       font-size:16px; padding:12px 12px;
@@ -622,8 +618,18 @@
      already aligns its own inner .row. Confirmed no `.row` in the app
      wraps Card/ChartCard/CollapsibleCard as a direct child, so this can't
      regress any equal-height card-grid layout. */
-  .row{display:flex; gap:12px; align-items:flex-end;}
-  .row > *{flex:1;}
+  /* User-reported 2026-08-26 ("inputs have no min-width to defend their
+     text views... should go the next line if viewport is small rather
+     than hiding their data"): the `flex-wrap`+`min-width` pair below used
+     to be gated behind `@media(max-width:640px)` only — a `.row` with
+     many fields (e.g. EMI's 10-field edit-loan form) squeezed every field
+     down to an unreadable sliver on a full DESKTOP viewport too, since
+     nothing stopped `.row > *{flex:1}` from dividing the row's width by
+     however many fields happen to be in it. Now unconditional: any row
+     wraps onto additional lines once its fields would otherwise drop
+     below a usable width, at any viewport size, not just mobile. */
+  .row{display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;}
+  .row > *{flex:1; min-width:160px;}
   .btn{
     display:inline-flex; align-items:center; justify-content:center; gap:6px; width:auto; flex:0 0 auto;
     background:color-mix(in srgb, var(--accent) 65%, #000); color:#fff; border:none; padding:8px 13px; border-radius:7px;

@@ -198,29 +198,35 @@ export function emiSummary(loan: EMILoan, asOf: Date = new Date()): EMISummary {
 /** Calendar date a given schedule row (1-indexed month) is due, and the
  * loan's overall expected end date (its last installment's due date) —
  * both derived from `startDate` the same way, so they stay consistent
- * with each other. `setMonth` naturally clamps a day that doesn't exist
- * in the target month (e.g. day 31 landing in February) to that month's
- * last day, which is an accepted simplification here, same tradeoff as
- * the reference prototype and the rest of this app's date-math (no
- * calendar library dependency). */
+ * with each other.
+ *
+ * **BUG FIXED 2026-08-26, user-reported: "I placed 28 as day, while app
+ * fixes 27 (-1 day) as due date!"** The old implementation mixed
+ * `new Date(isoString)` (parsed as UTC midnight) with LOCAL-timezone
+ * `Date` methods (`getMonth`/`setDate`/the `new Date(y, m, d)`
+ * constructor) and then read the result back out via `.toISOString()`
+ * (always UTC) — a classic JS Date trap. For any positive-UTC-offset
+ * timezone (e.g. Pakistan, UTC+5, matching this user's own PKR-currency
+ * loan), constructing a fresh LOCAL midnight for the target month and
+ * calling `.toISOString()` on it converts that LOCAL midnight back to the
+ * PREVIOUS day in UTC (LOCAL Feb 28 00:00 in UTC+5 = UTC Feb 27 19:00),
+ * silently shaving a day off `paymentDayOfMonth`. Fixed by doing the
+ * whole calculation in plain integer year/month/day arithmetic — no
+ * `Date` object ever represents the final calendar date, so there's no
+ * local/UTC boundary left to cross. `Date.UTC(...)`/`getUTCDate()` are
+ * used ONLY to look up how many days a given month has (both UTC,
+ * consistently, so that lookup itself can't reintroduce the same bug) —
+ * this also naturally clamps a day that doesn't exist in the target month
+ * (e.g. day 31 landing in February) to that month's actual last day. */
 export function installmentDueDate(loan: EMILoan, month: number): string {
-  const d = new Date(loan.startDate);
-  d.setMonth(d.getMonth() + month);
-  if (loan.paymentDayOfMonth) {
-    // Same day-doesn't-exist-in-target-month clamp `setMonth` already gives
-    // us for free (day 31 landing in February clamps to the 28th/29th) —
-    // setting the date AFTER the month has already rolled forward, on a
-    // fresh Date anchored to that target month's 1st, gets the same
-    // clamping behavior for a day-of-month that isn't `startDate`'s own.
-    const target = new Date(d.getFullYear(), d.getMonth(), 1);
-    target.setDate(loan.paymentDayOfMonth);
-    // setDate on the 1st with a day beyond that month's length rolls into
-    // the NEXT month instead of clamping — pull back to the target month's
-    // actual last day when that happens.
-    if (target.getMonth() !== d.getMonth()) target.setDate(0);
-    return target.toISOString().slice(0, 10);
-  }
-  return d.toISOString().slice(0, 10);
+  const [startYear, startMonth1, startDay] = loan.startDate.split('-').map(Number);
+  const totalMonths0 = startYear * 12 + (startMonth1 - 1) + month;
+  const targetYear = Math.floor(totalMonths0 / 12);
+  const targetMonth0 = ((totalMonths0 % 12) + 12) % 12;
+  const wantedDay = loan.paymentDayOfMonth ?? startDay;
+  const daysInTargetMonth = new Date(Date.UTC(targetYear, targetMonth0 + 1, 0)).getUTCDate();
+  const day = Math.min(wantedDay, daysInTargetMonth);
+  return `${targetYear}-${String(targetMonth0 + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
 /** The due date actually shown/exported for one schedule row — prefers a

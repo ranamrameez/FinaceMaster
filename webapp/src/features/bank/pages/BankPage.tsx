@@ -3,6 +3,7 @@ import { useMemo, useRef, useState } from 'react';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
+import { Tooltip } from '../../../components/Tooltip';
 import { ChartCard } from '../../qse/components/ChartCard';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { EditIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
@@ -67,7 +68,9 @@ function TotalBalances() {
         const net = pending.reduce((s, p) => s + p.amount, 0);
         return (
           <div key={code} className="stat-card card" style={hueStyle(totals[code] >= 0 ? 'var(--profit)' : 'var(--loss)')}>
-            <div className="label">Total balance ({code})</div>
+            <Tooltip text={`Sum of your bank accounts that use ${code} — no live currency conversion, just accounts that happen to share this currency.`}>
+              <div className="label" style={{ cursor: 'pointer' }}>Accounts in {code}</div>
+            </Tooltip>
             <MoneyValue n={totals[code]} currency={code} />
             {pending.length > 0 && (
               <div className="sub">

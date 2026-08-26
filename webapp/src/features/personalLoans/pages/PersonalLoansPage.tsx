@@ -651,9 +651,12 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
           </div>
         </div>
       </Card>
-      <PayoffPlanner loan={loan} outstanding={outstanding} />
+      {/* README item 100 of a 2026-08-26 feedback batch: repayments (real
+         transactions) are more important than the payoff planner (a "what
+         if" estimate), so they come first. */}
       <h3>Repayments</h3>
       <RepaymentsSection loan={loan} />
+      <PayoffPlanner loan={loan} outstanding={outstanding} />
     </div>
   );
 }
