@@ -3471,6 +3471,54 @@ not developer notes) continuously as features ship.
   capabilities — held off entirely until the file is actually attached, per this project's own
   "work from the real file" lesson (see the Funds Daily History Import entry) — tracked as
   README Pending item 107, do not guess at what that sheet shows.
+- **Whole-app import/export built (2026-08-26) — see README Done item 177, closes Pending item
+  77.** Every one of this app's 14 stores already exposes the exact same `{workbook,
+  setWorkbook}` shape (they're all built off the same two factories, or hand-written to match
+  on purpose) — a whole-app export/import turned out to be almost entirely wiring, not new
+  mechanics. New `features/appData/pages/AppDataPage.tsx` (route `/app-data`, linked from the
+  Sidebar footer) combines all 14 `.workbook`s into one JSON keyed by the SAME module names
+  this app's own Firebase RTDB structure already uses — an exported file is directly
+  comparable to a raw RTDB export for the same account (see the very next entry, which used
+  exactly this to cross-reference a real one). Import confirms BY NAME which modules it found
+  before writing anything, then calls each module's own already-tested `setWorkbook()` — same
+  call each module's own per-module JSON import already makes, just for all 14 in one file.
+  Sign-in-gated like every other write. `npx tsc -b` / `npm run test` (388 tests, unchanged) /
+  `npm run build` all clean; verified live via Playwright including a real downloaded file
+  read back and confirmed to contain the correct seeded values under exactly the 14 expected
+  keys.
+- **User provided two real files, mid-session (2026-08-26), read and cross-referenced —
+  IN PROGRESS, no import performed yet.** (1) `QR.Expense.FY20252026_For__FinanceRecorder.xlsx`
+  — the user's real personal day-to-day finance tracker, one sheet per month from Oct.2024
+  through Sep.2026 (recent months far richer/more columns than older ones, confirmed by the
+  user's own note "Latest months has better featuring"), plus a `QR.Recharges` sheet that maps
+  EXACTLY onto the Subscriptions module's `billingCycle:'custom'`+`customDays` feature (5 SIM
+  cards with "Sim Expires in" day counts — real, ready-made seed/test data for that feature).
+  Each month sheet logs transactions with per-account signed deltas across 5 "accounts": DC,
+  Cash, GCC, Save, Misk — plus a monthly summary row (Net Worth, Total Debt, GCC Credit/Limit,
+  etc.) the app already computes itself, not something to import verbatim. (2)
+  `qseappdefaultrtdbexport.json` — the user's REAL PRODUCTION Firebase RTDB export for their
+  actual account (uid `7J99fOJgwfXrnQoG6Pt9RJgAGTB3`), already in this app's own per-module
+  JSON shape. **Cross-referencing the two resolved most of the Excel's ambiguous account
+  labels, not guessed at**: `bank.settings.accounts` in the real export shows "DC" = **QIB
+  Current**, "Save" = **QIB Savings**, "Misk" = **QIB Misk** (all real QAR accounts already in
+  the user's account) — but **"GCC" has NO matching Bank account yet** in the real data, so
+  it's a genuinely new liability account to create (the credit-card feature from Done item 175
+  is directly what it needs). Also confirmed via the real `emiLoans` entries: the Excel's "Car
+  QIB Installment" (3107) and "Hamza QIB Installment" (1392) transaction rows are the SAME
+  payments already tracked by the real "QIB Car Loan"/"QIB Hamza" EMI loans
+  (`customMonthlyPayment` matches exactly) — these must NOT be imported as plain Bank
+  transactions too, or they'd double-count against the EMI module's own repayment tracking.
+  Real open questions before generating any import file, not yet asked/resolved: what GCC's
+  actual card network/issuer is (for the credit-card fields, optional but nice to have
+  correct); whether the "Misk 1"/"Misk 2"/"Msk" large-number rows (e.g. 52822.35, tied to a
+  Misk-Balance column moving by ~1/100,000th of that) represent something to import as literal
+  transactions or should just drive the Misk account's balance directly (their true unit/scale
+  is unclear from the sheet alone); and confirmation that Cash-column entries (e.g. ATM
+  withdrawals) should become the user's very first real Cash-module data, since their real
+  account currently has none. **Nothing has been imported into anything yet** — this is
+  investigation only; the next step is asking the user these specific questions, not guessing,
+  given this is real financial data and a wrong guess here is a correctness bug in someone's
+  actual account, not just a UI nit.
 
 ## Live URLs
 
