@@ -3891,6 +3891,32 @@ FinanceManager live link:
      hits the real sign-in gate after confirming; the Sidebar link renders. `npx tsc -b` /
      `npm run test` (388 tests, unchanged — no calc logic, pure UI wiring onto already-tested
      store actions) / `npm run build` all clean.
+178. **Real 2-year expense-tracker Excel + real RTDB export merged into one whole-app-import
+     file for the user (2026-08-26).** The user attached their real personal
+     `QR.Expense.FY20252026_For__FinanceRecorder.xlsx` (Oct.2024-Sep.2026, one sheet/month)
+     plus a real production RTDB export and asked for one combined import file using item
+     177's format. Full writeup, including 5 real errors found and fixed via independent
+     ground-truth cross-checking against the sheet's own summary rows (2 of them self-caught
+     mid-session and disclosed to the user), is in `CLAUDE.md`'s dedicated entry for this —
+     read that before touching this data again. Short version: excluded the oldest sheet
+     (Sept.2024) as a proven duplicate of Oct.2024's own re-logged data; recovered new "GCC"/
+     "PCC" credit-card liability accounts and a new JazzCash account; recorded 6 real,
+     unexplained +3000 QAR balance jumps in the source spreadsheet as explicit dated
+     reconciliation transactions rather than silently absorbing them; excluded a spreadsheet
+     "Total" footer row that was being imported as a fake 687,000 PKR transaction; deliberately
+     excluded BOP-ASTP history from a small 2-sheet Pakistan-side ledger to avoid corrupting
+     that account's real current balance with disconnected ~2-year-old data. Final numbers
+     reconcile exactly to the sheet's own Sep.2026 summary (QIB Current 1928.61 QAR, QIB
+     Savings 10,000 QAR, both credit cards 0, Cash 0 QAR / 30,000 PKR) — every other real
+     module passes through unchanged. Delivered to the user as a downloadable file with import
+     instructions, since this session cannot sign in as them to apply it directly; verified via
+     Playwright that importing it through the real `/app-data` flow correctly reaches the
+     sign-in gate, and that seeding the same finished file straight into the store (bypassing
+     the gate) renders Bank/Cash/Net Worth with the exact reconciled figures above and zero
+     console errors. **Not done as part of this**: the data was NOT committed to the repo as a
+     Vitest fixture (unlike the existing QSE/PSX backups) — Bank/Cash/Subscriptions personal
+     data is a new sensitivity category for this public repo, left for an explicit user
+     decision rather than assumed.
 
 ## Pending
 
