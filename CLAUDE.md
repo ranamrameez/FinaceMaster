@@ -3148,8 +3148,22 @@ not developer notes) continuously as features ship.
   logic from Done item 161) — being scoped/asked about before implementation, per this
   file's own standing practice for genuine design forks (see Done item 154's identical
   precedent, where the user was asked the same way about per-month overrides vs. a recurring
-  pattern and chose per-month overrides). Not yet built as of this note — check this file's
-  own later entries or the README before assuming it's done.
+  pattern and chose per-month overrides). **Built the same session — see README Done item
+  163.** User answers: the big-payment amount supports BOTH "major month pays this amount
+  alone" and "major month pays regular + this amount" (a toggle, since the user wanted both
+  options, not one fixed choice); tenure stays fixed rather than finishing early; the
+  unreconciled-remainder checkbox defaults on; "Planned" status means specifically a
+  not-yet-executed "Link to bank" plan. New `EMILoan.paymentDayOfMonth`, new
+  `generateBigEmiOverrides()` (pure, tested, reuses `emiSchedule()` rather than duplicating
+  the amortization loop), a Due-date + Status column on the Schedule table, a "show full
+  schedule" toggle, and per-installment date editing (reuses the already-existing
+  `EMIRepayment.date` field via new `resolvedDueDate()`). Right after that, the user also
+  asked for the EMI landing page to show stats+list first with the add-loan form moved behind
+  a floating "+" button (same FAB pattern as the Trade Calculator button) — done in the same
+  pass. `npx tsc -b` / `npm run test` (350 tests, 12 new) / `npm run build` all clean; verified
+  live via Playwright (payment-day-of-month reflected in every due date, pencil-editor date
+  field prefilled/editable, full-schedule toggle expanding correctly with accurate Paid/
+  Upcoming status pills, both new write actions hitting the real sign-in gate).
 
 ## Live URLs
 

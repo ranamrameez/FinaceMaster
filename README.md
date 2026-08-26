@@ -3438,6 +3438,53 @@ FinanceManager live link:
      `ERR_CONNECTION_RESET`, see Done item 141). `npx tsc -b` / `npm run test` (338 tests,
      unchanged — UI wiring onto already-tested store/link functions) / `npm run build` all
      clean.
+163. **EMI/Loans: full-schedule + due-date editing + Paid/Upcoming/Planned status + recurring
+     "Big EMI every N months" generator + homepage restructure (2026-08-26, user-requested).**
+     Several real design forks here were resolved with the user via AskUserQuestion before
+     building, mirroring the precedent set by Done item 154's per-month-override decision:
+     the periodic bigger-payment amount supports BOTH "major month pays this amount alone"
+     and "major month pays regular + this amount" (a toggle, not a single fixed choice, per
+     the user's own clarification); the loan explicitly KEEPS its original tenure rather than
+     finishing early from the extra payments; "add unreconciled amount to last month" defaults
+     ON; and "Planned" status means specifically a not-yet-executed plan from the existing
+     "Link to bank" feature, not any override. New `EMILoan.paymentDayOfMonth?: number`
+     (whole-loan default day-of-month, e.g. 28th) feeds `installmentDueDate()`, with the same
+     day-doesn't-exist-in-target-month clamp the rest of this file's date math already
+     accepts. A single installment's own due date can still be pinned independently on top of
+     that default — reuses `EMIRepayment.date` (already existed) rather than a new override
+     map, via new `resolvedDueDate(loan, month, repayments)` which prefers a real repayment
+     record's own date when one's set. New `PlannedBankTransaction.sourceEmiMonth?: number`
+     (alongside the existing `sourceEmiLoanId`) lets the Schedule table match a row to its
+     plan by exact month instead of comparing computed date strings, which could drift once
+     `paymentDayOfMonth` exists. The Schedule table gained a "show full schedule, start to
+     end" checkbox (default off, keeping the existing "next 12" view as the default), a Due
+     date column, and a Status column (Paid/Planned/Upcoming pills) — Paid is
+     `month <= elapsed`, Planned checks for a matching not-yet-executed planned transaction,
+     Upcoming is everything else. New `generateBigEmiOverrides()` in `emiModule.ts` (pure,
+     tested — 7 new cases) computes the periodic major-month overrides plus, when
+     reconciliation is on, the true final-month payment needed to exactly zero the balance at
+     the loan's own declared tenure — reusing `emiSchedule()` itself to compute the
+     pre-reconciliation balances rather than duplicating the amortization loop. If the majors
+     are big enough that the loan already finishes early on the schedule's own existing
+     early-stop, there's genuinely no debt left to reconcile at the final month, so the
+     function leaves that case alone (same "can't force tenure past a real payoff" tradeoff
+     `customMonthlyPayment`'s balloon already accepts). The UI applies the computed overrides
+     through the same `addRepayment`/`updateRepayment` path a single manual override already
+     uses — no parallel write path. Separately, user feedback ("no one adds a EMI/Loan every
+     day") restructured the landing page: stats + loan list now render first, with the
+     add-loan form moved behind a floating round "+" button (same FAB pattern the Trade
+     Calculator button already uses) opening a popup instead of permanently occupying the top
+     of the page. Verified live via Playwright: the landing page shows the list with no
+     inline form; the FAB opens a modal with the new payment-day field; a seeded loan with
+     `paymentDayOfMonth: 28` correctly shows every due date landing on the 28th; the pencil
+     editor's new date input correctly prefills from the computed due date and accepts an
+     edit; the full-schedule toggle correctly expands from 12 (next-12 view) to the loan's
+     full 12-month tenure with 2 Paid / 10 Upcoming status pills on a seeded partially-elapsed
+     loan; and both the Big EMI generator's "Generate" and the pencil editor's "Save"
+     correctly hit the real sign-in gate rather than writing anything while signed out — zero
+     real console errors (only the sandbox's known Google-Fonts `ERR_CONNECTION_RESET`, see
+     Done item 141). `npx tsc -b` / `npm run test` (350 tests, 12 new) / `npm run build` all
+     clean.
 
 ## Pending
 

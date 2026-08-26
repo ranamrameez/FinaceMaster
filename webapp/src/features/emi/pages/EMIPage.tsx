@@ -2,6 +2,7 @@ import type { User } from 'firebase/auth';
 import { useState } from 'react';
 import { Bar } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
+import { Modal } from '../../../components/Modal';
 import { Notice } from '../../../components/Notice';
 import { Tooltip } from '../../../components/Tooltip';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
@@ -13,7 +14,7 @@ import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
-import { emiSchedule, emiSummary, expectedEndDate, installmentDueDate, totalsByCurrency, whatIfExtraPayment } from '../../../lib/calc/emiModule';
+import { emiSchedule, emiSummary, expectedEndDate, generateBigEmiOverrides, installmentDueDate, resolvedDueDate, totalsByCurrency, whatIfExtraPayment } from '../../../lib/calc/emiModule';
 import { dlBarV } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar } from '../../../lib/cssVar';
@@ -41,7 +42,36 @@ function emptyLoan(defaultCurrency: string): EMILoan {
   };
 }
 
-function AddLoanForm() {
+/** Floating "add a loan" button (README user feedback 2026-08-26: adding a
+ * loan is rare, so it shouldn't permanently occupy the top of the page) —
+ * same round-FAB + popup pattern the Calculator button already uses
+ * elsewhere in the app. */
+function AddLoanFab() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <div style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 500 }}>
+        <Tooltip text="Add a loan" align="right">
+          <button
+            className="btn"
+            onClick={() => setOpen(true)}
+            aria-label="Add a loan"
+            style={{ width: 52, height: 52, borderRadius: '50%', padding: 0, fontSize: 22, boxShadow: '0 4px 16px rgba(0,0,0,.25)' }}
+          >
+            <PlusIcon />
+          </button>
+        </Tooltip>
+      </div>
+      {open && (
+        <Modal title="Add a loan" onClose={() => setOpen(false)}>
+          <AddLoanForm onSaved={() => setOpen(false)} />
+        </Modal>
+      )}
+    </>
+  );
+}
+
+function AddLoanForm({ onSaved }: { onSaved?: () => void }) {
   const addEntry = useEMIWorkbookStore((s) => s.addEntry);
   const defaultCurrency = useEMIWorkbookStore((s) => s.workbook.settings.defaultCurrency);
   const [lastCurrency, setLastCurrency] = useLastCurrency('emi', defaultCurrency);
@@ -53,14 +83,16 @@ function AddLoanForm() {
     if (!l.principal || l.principal <= 0) return toast('Enter a principal amount.');
     if (!l.tenureMonths || l.tenureMonths <= 0) return toast('Enter a tenure in months.');
     if (l.repaymentMode === 'fixedTotal' && (!l.totalToReturn || l.totalToReturn <= 0)) return toast('Enter the total amount to return.');
+    if (l.paymentDayOfMonth != null && (l.paymentDayOfMonth < 1 || l.paymentDayOfMonth > 31)) return toast('Payment day must be between 1 and 31.');
     if (!(await ensureSignedIn('Sign in to save loans.'))) return;
     addEntry({ ...l, id: crypto.randomUUID(), name: l.name.trim(), lender: l.lender.trim() });
     toast(`Loan "${l.name.trim()}" saved.`);
     setL(emptyLoan(l.currencyCode));
+    onSaved?.();
   };
 
   return (
-    <Card style={{ marginBottom: 16 }}>
+    <div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
         <Field label="Loan name" width={160}>
           <TextInput value={l.name} onChange={(e) => setL({ ...l, name: e.target.value })} placeholder="e.g. Home Mortgage" />
@@ -104,11 +136,24 @@ function AddLoanForm() {
         >
           <TextInput type="number" step="0.01" value={l.customMonthlyPayment ?? ''} onChange={(e) => setL({ ...l, customMonthlyPayment: e.target.value ? Number(e.target.value) : undefined })} />
         </Field>
+        <Field
+          label="Payment day of month (optional)"
+          width={180}
+          title="Which day each installment is due on (e.g. 28), regardless of the start date's own day. Falls back to the start date's day when left blank; a day that doesn't exist in a given month (like 31 in a 30-day month) clamps to that month's last day."
+        >
+          <TextInput
+            type="number"
+            min={1}
+            max={31}
+            value={l.paymentDayOfMonth ?? ''}
+            onChange={(e) => setL({ ...l, paymentDayOfMonth: e.target.value ? Number(e.target.value) : undefined })}
+          />
+        </Field>
       </div>
       <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
         <PlusIcon />Add loan
       </button>
-    </Card>
+    </div>
   );
 }
 
@@ -181,7 +226,16 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
   const schedule = emiSchedule(loan);
   const [overrideMonth, setOverrideMonth] = useState<number | null>(null);
   const [overrideValue, setOverrideValue] = useState(0);
+  const [overrideDate, setOverrideDate] = useState('');
   const [overrideLinkMode, setOverrideLinkMode] = useState(false);
+  const [showFullSchedule, setShowFullSchedule] = useState(false);
+  const [bigEmiInterval, setBigEmiInterval] = useState(6);
+  const [bigEmiAmount, setBigEmiAmount] = useState(0);
+  const [bigEmiMode, setBigEmiMode] = useState<'majorOnly' | 'regularPlusMajor'>('majorOnly');
+  const [bigEmiReconcile, setBigEmiReconcile] = useState(true);
+  const plannedBankEntries = usePlannedBankWorkbookStore((s) => s.workbook.entries);
+  const addPlannedEntries = usePlannedBankWorkbookStore((s) => s.addEntries);
+  const deletePlannedEntry = usePlannedBankWorkbookStore((s) => s.deleteEntry);
 
   /** README item 6 of a 2026-08-26 feedback batch: some real loans aren't
    * a flat EMI every month — e.g. a property installment plan with one
@@ -197,15 +251,16 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
    * `installmentOverrides` in sync as a side effect, so the schedule engine
    * itself is untouched, but the payment is now a real ledger row a
    * Bank/Cash transfer can link to (see the Transfers page). */
-  const saveOverride = async (month: number, value: number) => {
+  const saveOverride = async (month: number, value: number, date?: string) => {
     if (!(value > 0)) return toast('Enter an amount greater than zero.');
     if (!(await ensureSignedIn('Sign in to customize this loan\'s schedule.'))) return;
+    const dueDate = date || installmentDueDate(loan, month);
     const existing = loanRepayments.find((r) => r.month === month);
     if (existing) {
       if (!(await warnIfLinked('emi', existing.id))) return;
-      updateRepayment(existing.id, { amount: value });
+      updateRepayment(existing.id, { amount: value, date: dueDate });
     } else {
-      addRepayment({ id: crypto.randomUUID(), loanId: loan.id, month, amount: value, date: installmentDueDate(loan, month), source: 'manual' });
+      addRepayment({ id: crypto.randomUUID(), loanId: loan.id, month, amount: value, date: dueDate, source: 'manual' });
     }
     setOverrideMonth(null);
     toast(`Month #${month} set to ${fmtMoney(value, loan.currencyCode)}.`);
@@ -227,13 +282,42 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
     toast(`Month #${month} reset to the regular installment.`);
   };
 
+  /** "Big EMI every N months" (2026-08-26, user-requested — see
+   * `generateBigEmiOverrides`'s own doc comment for the resolved design).
+   * Applies the computed batch of month→amount overrides through the same
+   * addRepayment/updateRepayment path a single manual override already
+   * uses, so nothing here duplicates the calc engine's own logic — this
+   * function is purely "generate the numbers, then write them one month at
+   * a time." Only touches not-yet-elapsed months (`sum.elapsed + 1`
+   * onward), same as `linkToBank`'s own "remaining installments" scope. */
+  const applyBigEmi = async (opts: { intervalMonths: number; amount: number; mode: 'majorOnly' | 'regularPlusMajor'; reconcileLastMonth: boolean }) => {
+    if (!(opts.amount > 0)) return toast('Enter an amount greater than zero.');
+    if (!(opts.intervalMonths > 0)) return toast('Enter an interval of at least 1 month.');
+    if (!(await ensureSignedIn('Sign in to customize this loan\'s schedule.'))) return;
+    const overrides = generateBigEmiOverrides(loan, sum.elapsed + 1, opts);
+    const months = Object.keys(overrides).map(Number);
+    if (!months.length) return toast('No remaining months to apply this to.');
+    for (const month of months) {
+      const value = overrides[month];
+      const dueDate = installmentDueDate(loan, month);
+      const existing = loanRepayments.find((r) => r.month === month);
+      if (existing) {
+        if (!(await warnIfLinked('emi', existing.id))) continue;
+        updateRepayment(existing.id, { amount: value, date: existing.date || dueDate });
+      } else {
+        addRepayment({ id: crypto.randomUUID(), loanId: loan.id, month, amount: value, date: dueDate, source: 'manual' });
+      }
+    }
+    toast(`Applied a bigger installment to ${months.length} month${months.length > 1 ? 's' : ''}.`);
+  };
+
   /** README item 40: extends Banking's statement-export pattern (Done
    * item 58) to this module's own primary record — a loan's "statement"
    * is its full amortization schedule, not just the next-12 slice shown
    * on screen. */
   const exportSchedule = () => {
     const header = ['#', 'Due date', 'Installment', loan.repaymentMode === 'fixedTotal' ? 'Markup' : 'Interest', 'Principal', 'Balance'];
-    const body = schedule.rows.map((r) => [r.month, installmentDueDate(loan, r.month), r.emi, r.interest, r.principalComp, r.balance]);
+    const body = schedule.rows.map((r) => [r.month, resolvedDueDate(loan, r.month, loanRepayments), r.emi, r.interest, r.principalComp, r.balance]);
     const blob = new Blob([toCSV([header, ...body])], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -245,9 +329,6 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
   };
 
   const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
-  const plannedBankEntries = usePlannedBankWorkbookStore((s) => s.workbook.entries);
-  const addPlannedEntries = usePlannedBankWorkbookStore((s) => s.addEntries);
-  const deletePlannedEntry = usePlannedBankWorkbookStore((s) => s.deleteEntry);
   const [linkAccountId, setLinkAccountId] = useState(loan.linkedBankAccountId || accounts[0]?.id || '');
   const linkedAccount = accounts.find((a) => a.id === loan.linkedBankAccountId);
 
@@ -271,11 +352,12 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
     const newPlans: PlannedBankTransaction[] = remaining.map((r) => ({
       id: crypto.randomUUID(),
       accountId: account.id,
-      date: installmentDueDate(loan, r.month),
+      date: resolvedDueDate(loan, r.month, loanRepayments),
       description: `EMI: ${loan.name} (#${r.month}/${loan.tenureMonths})`,
       amount: -r.emi,
       executed: false,
       sourceEmiLoanId: loan.id,
+      sourceEmiMonth: r.month,
     }));
     addPlannedEntries(newPlans);
     updateEntry(loan.id, { linkedBankAccountId: account.id });
@@ -312,6 +394,14 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                 value={editRow.customMonthlyPayment ?? ''}
                 onChange={(e) => setEditRow({ ...editRow, customMonthlyPayment: e.target.value ? Number(e.target.value) : undefined })}
                 placeholder="Custom monthly payment (optional)"
+              />
+              <TextInput
+                type="number"
+                min={1}
+                max={31}
+                value={editRow.paymentDayOfMonth ?? ''}
+                onChange={(e) => setEditRow({ ...editRow, paymentDayOfMonth: e.target.value ? Number(e.target.value) : undefined })}
+                placeholder="Payment day of month (optional)"
               />
             </div>
             <div className="row" style={{ gap: 8, marginTop: 8 }}>
@@ -453,40 +543,89 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
       </Card>
 
       <CollapsibleCard
-        title={<h3 style={{ margin: 0 }}>Schedule (next 12 installments from today)</h3>}
+        title={<h3 style={{ margin: 0 }}>Schedule {showFullSchedule ? '(full, start to end)' : '(next 12 installments from today)'}</h3>}
         headerExtra={<button className="btn secondary" onClick={exportSchedule}>Export full schedule CSV</button>}
       >
       <p className="footer-note" style={{ marginTop: 0 }}>
-        Click the pencil on any upcoming installment to set a different amount for just that month — e.g. a
-        bigger payment every 6 months. Every later month recalculates from what's actually paid.
+        Click the pencil on any upcoming installment to set a different amount (and, optionally, a different due
+        date) for just that month. Every later month recalculates from what's actually paid.
       </p>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)', marginBottom: 10 }}>
+        <input type="checkbox" checked={showFullSchedule} onChange={(e) => setShowFullSchedule(e.target.checked)} />
+        Show the full schedule, start to end (instead of just the next 12 installments)
+      </label>
+
+      {/* "Big EMI every N months" (2026-08-26, user-requested): auto-generate
+         a batch of major-month overrides instead of setting each one by hand
+         via the pencil icon below. */}
+      <CollapsibleCard title={<h4 style={{ margin: 0 }}>Big EMI every N months</h4>} defaultOpen={false} style={{ marginBottom: 12 }}>
+        <p className="footer-note" style={{ marginTop: 0 }}>
+          For loans with an occasional bigger payment — e.g. a property installment plan with a larger payment
+          every 6 months. The loan keeps its original tenure; if the remainder checkbox is on, whatever's still
+          owed at the final month gets swept into that last installment.
+        </p>
+        <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <Field label="Every N months">
+            <TextInput type="number" min={1} value={bigEmiInterval || ''} onChange={(e) => setBigEmiInterval(Number(e.target.value))} style={{ width: 90 }} />
+          </Field>
+          <Field label="Amount" title="Either the whole payment for that month, or an extra amount stacked on top of the regular installment — pick which below.">
+            <TextInput type="number" step="0.01" value={bigEmiAmount || ''} onChange={(e) => setBigEmiAmount(Number(e.target.value))} style={{ width: 120 }} />
+          </Field>
+          <Field label="How the amount applies">
+            <Select value={bigEmiMode} onChange={(e) => setBigEmiMode(e.target.value as 'majorOnly' | 'regularPlusMajor')}>
+              <option value="majorOnly">Major month pays this amount only</option>
+              <option value="regularPlusMajor">Major month pays regular + this amount</option>
+            </Select>
+          </Field>
+          <button className="btn secondary" onClick={() => applyBigEmi({ intervalMonths: bigEmiInterval, amount: bigEmiAmount, mode: bigEmiMode, reconcileLastMonth: bigEmiReconcile })}>
+            Generate
+          </button>
+        </div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>
+          <input type="checkbox" checked={bigEmiReconcile} onChange={(e) => setBigEmiReconcile(e.target.checked)} />
+          Add unreconciled amount to last month
+        </label>
+      </CollapsibleCard>
+
       <div className="table-scroll">
         <table>
           <thead>
             <tr>
-              <th>#</th><th>Installment</th>
+              <th>#</th><th>Due date</th><th>Installment</th>
               <th>{loan.repaymentMode === 'fixedTotal' ? 'Markup' : 'Interest'}</th>
-              <th>Principal</th><th>Balance</th><th></th>
+              <th>Principal</th><th>Balance</th><th>Status</th><th></th>
             </tr>
           </thead>
           <tbody>
-            {sum.rows.slice(sum.elapsed, sum.elapsed + 12).map((r) => (
+            {(showFullSchedule ? sum.rows : sum.rows.slice(sum.elapsed, sum.elapsed + 12)).map((r) => {
+              const status = r.month <= sum.elapsed
+                ? 'paid'
+                : plannedBankEntries.some((p) => p.sourceEmiLoanId === loan.id && p.sourceEmiMonth === r.month && !p.executed)
+                  ? 'planned'
+                  : 'upcoming';
+              const canEdit = r.month > sum.elapsed;
+              return (
               <tr key={r.month}>
                 <td>#{r.month}</td>
                 {overrideMonth === r.month ? (
-                  <td colSpan={4}>
+                  <td colSpan={6}>
                     <div className="row" style={{ gap: 6, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                      <TextInput type="number" step="0.01" value={overrideValue || ''} onChange={(e) => setOverrideValue(Number(e.target.value))} style={{ width: 110 }} />
+                      <Field label="Amount">
+                        <TextInput type="number" step="0.01" value={overrideValue || ''} onChange={(e) => setOverrideValue(Number(e.target.value))} style={{ width: 110 }} />
+                      </Field>
+                      <Field label="Due date">
+                        <TextInput type="date" value={overrideDate} onChange={(e) => setOverrideDate(e.target.value)} style={{ width: 140 }} />
+                      </Field>
                       {overrideLinkMode ? (
                         <LinkedEMIRepaymentFields
                           loan={loan}
                           month={r.month}
                           amount={overrideValue}
-                          date={installmentDueDate(loan, r.month)}
+                          date={overrideDate || resolvedDueDate(loan, r.month, loanRepayments)}
                           onLinked={() => { setOverrideMonth(null); setOverrideLinkMode(false); }}
                         />
                       ) : (
-                        <IconButton label="Save" icon={<SaveIcon size={13} />} onClick={() => saveOverride(r.month, overrideValue)} />
+                        <IconButton label="Save" icon={<SaveIcon size={13} />} onClick={() => saveOverride(r.month, overrideValue, overrideDate)} />
                       )}
                       <IconButton label="Cancel" icon={<XIcon size={13} />} onClick={() => { setOverrideMonth(null); setOverrideLinkMode(false); }} />
                     </div>
@@ -497,6 +636,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                   </td>
                 ) : (
                   <>
+                    <td>{resolvedDueDate(loan, r.month, loanRepayments)}</td>
                     <td>
                       {fmtMoney(r.emi, loan.currencyCode)}
                       {r.overridden && <span className="footer-note"> (custom)</span>}
@@ -509,19 +649,30 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                     <td>{fmtMoney(r.interest, loan.currencyCode)}</td>
                     <td>{fmtMoney(r.principalComp, loan.currencyCode)}</td>
                     <td>{fmtMoney(r.balance, loan.currencyCode)}</td>
+                    <td>
+                      <span className={status === 'paid' ? 'pill-buy' : status === 'planned' ? 'pill-info' : 'pill-warn'}>
+                        {status === 'paid' ? 'Paid' : status === 'planned' ? 'Planned' : 'Upcoming'}
+                      </span>
+                    </td>
                   </>
                 )}
                 <td>
-                  {overrideMonth === r.month ? null : (
+                  {overrideMonth === r.month ? null : canEdit ? (
                     <div className="row" style={{ gap: 4 }}>
-                      <IconButton label="Set a custom amount for this month" icon={<EditIcon size={13} />} align="right" onClick={() => { setOverrideMonth(r.month); setOverrideValue(r.emi); setOverrideLinkMode(false); }} />
+                      <IconButton
+                        label="Set a custom amount/date for this month"
+                        icon={<EditIcon size={13} />}
+                        align="right"
+                        onClick={() => { setOverrideMonth(r.month); setOverrideValue(r.emi); setOverrideDate(resolvedDueDate(loan, r.month, loanRepayments)); setOverrideLinkMode(false); }}
+                      />
                       {r.overridden && <IconButton label="Reset to the regular installment" icon={<XIcon size={13} />} align="right" onClick={() => clearOverride(r.month)} />}
                     </div>
-                  )}
+                  ) : null}
                 </td>
               </tr>
-            ))}
-            {sum.elapsed >= sum.rows.length && <tr><td colSpan={6} className="footer-note">Loan fully repaid.</td></tr>}
+              );
+            })}
+            {sum.elapsed >= sum.rows.length && <tr><td colSpan={8} className="footer-note">Loan fully repaid.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -761,10 +912,16 @@ export function EMIPage({
         <LoanDetail loan={liveSelected} onBack={() => setSelected(null)} startInEditMode={editOnOpen} />
       ) : (
         <div>
+          {/* User-reported 2026-08-26: "no one adds a EMI/Loan every day" —
+             the add-loan form used to sit permanently at the top, pushing
+             the stats/list a full scroll down for the much more common
+             "check my loans" visit. Moved behind a floating add button
+             (same round-FAB pattern as the Calculator button) with the
+             form itself in a popup, and the stats+list now render first. */}
           <OverallSummary />
-          <AddLoanForm />
           <LoanList onSelect={openLoan} onEdit={editLoan} />
           <AccountSection syncStatus={syncStatus} cloudEmpty={cloudEmpty} uploadLocalToCloud={uploadLocalToCloud} />
+          <AddLoanFab />
         </div>
       )}
     </div>
