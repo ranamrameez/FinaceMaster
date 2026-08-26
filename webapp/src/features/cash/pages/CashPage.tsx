@@ -72,10 +72,10 @@ function AddEntryForm({ knownCategories }: { knownCategories: string[] }) {
             <option value="OUT">Cash out</option>
           </Select>
         </Field>
-        <Field label="Amount" width={110}>
+        <Field label="Amount" width={110} required>
           <TextInput type="number" step="0.01" value={e.amount || ''} onChange={(ev) => setE({ ...e, amount: Number(ev.target.value) })} />
         </Field>
-        <Field label="Currency" width={110}>
+        <Field label="Currency" width={110} required>
           <Select value={e.currencyCode} onChange={(ev) => { setE({ ...e, currencyCode: ev.target.value, timezone: defaultTimezoneForCurrency(ev.target.value) }); setLastCurrency(ev.target.value); }}>
             {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>

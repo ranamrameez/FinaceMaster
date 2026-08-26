@@ -86,10 +86,10 @@ function AddFundForm() {
   return (
     <Card style={{ marginBottom: 16 }}>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-        <Field label="Fund name" width={200}>
+        <Field label="Fund name" width={200} required>
           <TextInput value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="e.g. Vanguard Total World Stock ETF" />
         </Field>
-        <Field label="Fund code" width={100}>
+        <Field label="Fund code" width={100} required>
           <TextInput value={f.code} onChange={(e) => setF({ ...f, code: e.target.value.toUpperCase() })} placeholder="e.g. VT" />
         </Field>
         <Field label="Invested via" width={140}>
@@ -100,7 +100,7 @@ function AddFundForm() {
             {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
           </Select>
         </Field>
-        <Field label="Currency" width={100}>
+        <Field label="Currency" width={100} required>
           <Select value={f.currencyCode} onChange={(e) => { setF({ ...f, currencyCode: e.target.value }); setLastCurrency(e.target.value); }}>
             {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>

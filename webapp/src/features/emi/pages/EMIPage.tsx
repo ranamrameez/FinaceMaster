@@ -94,18 +94,18 @@ function AddLoanForm({ onSaved }: { onSaved?: () => void }) {
   return (
     <div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-        <Field label="Loan name" width={160}>
+        <Field label="Loan name" width={160} required>
           <TextInput value={l.name} onChange={(e) => setL({ ...l, name: e.target.value })} placeholder="e.g. Home Mortgage" />
         </Field>
         <Field label="Lender" width={140}>
           <TextInput value={l.lender} onChange={(e) => setL({ ...l, lender: e.target.value })} placeholder="e.g. Chase Bank" />
         </Field>
-        <Field label="Currency" width={100}>
+        <Field label="Currency" width={100} required>
           <Select value={l.currencyCode} onChange={(e) => { setL({ ...l, currencyCode: e.target.value }); setLastCurrency(e.target.value); }}>
             {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>
-        <Field label="Principal" width={120} title="The original loan amount, before any interest/markup or repayments.">
+        <Field label="Principal" width={120} required title="The original loan amount, before any interest/markup or repayments.">
           <TextInput type="number" step="0.01" value={l.principal || ''} onChange={(e) => setL({ ...l, principal: Number(e.target.value) })} />
         </Field>
         <Field label="Repayment type" width={220}>
@@ -119,11 +119,11 @@ function AddLoanForm({ onSaved }: { onSaved?: () => void }) {
             <TextInput type="number" step="0.01" value={l.annualRatePct ?? ''} onChange={(e) => setL({ ...l, annualRatePct: Number(e.target.value) })} />
           </Field>
         ) : (
-          <Field label="Total amount to return" width={160}>
+          <Field label="Total amount to return" width={160} required>
             <TextInput type="number" step="0.01" value={l.totalToReturn ?? ''} onChange={(e) => setL({ ...l, totalToReturn: Number(e.target.value) })} />
           </Field>
         )}
-        <Field label="Tenure (months)" width={110} title="How many months the loan runs for, from the start date to when it's fully paid off.">
+        <Field label="Tenure (months)" width={110} required title="How many months the loan runs for, from the start date to when it's fully paid off.">
           <TextInput type="number" value={l.tenureMonths || ''} onChange={(e) => setL({ ...l, tenureMonths: Number(e.target.value) })} />
         </Field>
         <Field label="Installment start date">
