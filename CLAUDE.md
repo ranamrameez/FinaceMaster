@@ -4161,11 +4161,17 @@ not developer notes) continuously as features ship.
   netting concept at all. Verified live via Playwright with the user's own real numbers (OGDC,
   1 share bought today at 327.80): same-day BE (328.63) correctly came out lower than other-day
   BE (329.39) — same relationship as the user's own hand-worked example. `npx tsc -b` / `npm
-  run test` (421 tests, unchanged) / `npm run build` all clean. **Deliberately scoped to the
-  per-stock detail page only** — the PSX Trade Calculator popup has its own separate
-  break-even display and could get the same treatment later, tracked as a follow-up rather than
-  attempted in the same pass (its layout already carries two BE figures — current position and
-  after a planned buy — and adding a third needs its own look at the layout first).
+  run test` (421 tests, unchanged) / `npm run build` all clean.
+- **Same scenario extended to the PSX Trade Calculator popup, same day (2026-08-27) — see
+  README Done item 207's update.** `TradeCalculator.tsx`'s "Break-even" stat card shows the
+  CURRENT open position's BE — the same figure the user's own worked example was about — and
+  is distinct from "New break-even" (an already-existing, separate figure for a hypothetical
+  ADDITIONAL buy, deliberately left untouched here since it's answering a different question).
+  Added the identical `nettedCalcFee`/`feeScenarios` pattern used in `PositionDetail.tsx`.
+  Verified live via Playwright with the same OGDC scenario, opening the calculator through its
+  real `aria-label="Trade calculator"` FAB button: the card showed "329.39 / other day ·
+  same-day 328.63" — matching `PositionDetail`'s own numbers exactly — zero new console
+  errors. `npx tsc -b` / `npm run test` (421 tests, unchanged) / `npm run build` all clean.
 
 ## Live URLs
 
