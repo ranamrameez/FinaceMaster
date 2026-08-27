@@ -4664,6 +4664,33 @@ FinanceManager live link:
      exactly on both QSE's flat-rate and PSX's itemized commission+SST+levies fee models — zero
      new console errors (only the pre-existing, documented sandbox network-block noise). `npx
      tsc -b` / `npm run test` (421 tests, 6 new) / `npm run build` all clean.
+207. **PSX per-stock page: "Break-even, same-day vs. other day" scenario card, closing the
+     accepted "do it" ask from the same 2026-08-27 trust conversation as Done item 204
+     (2026-08-27).** User's own worked example, walking through what they wanted: "BE would be
+     I sell 1@328.5 -> total commission... Buy is like 327.866 Sell 328.5" while also saying
+     "its good idea to see both Same day price & Other Day prices grouped together, do it."
+     `PositionDetail.tsx`'s existing `be` figure (fed into `breakEvenPrice` via `calcFee` called
+     with no `tx` context, same as `makePSXFeeCalculator`'s own `if (!tx) return ...total`
+     branch) already IS the "other day / full commission" scenario — nothing needed to change
+     there. New: a second break-even, computed via a small inline `FeeCalculator` that always
+     returns `feeScenarios()`'s `netted` figure (government levies only — the same same-day-
+     netting math the Trade Planner's `feeScenarios()`/`WhatIfExitCalculator` already used,
+     Done item 104), fed into the same `breakEvenPrice()` solver. New "BE: same-day vs. other
+     day" stat card in "Current position," with a tooltip explaining PSX's real same-day rule
+     (the smaller-quantity leg is netted, ties go to the buy) and the assumption this scenario
+     makes (that this sell nets against a same-day buy). PSX-only — QSE has no same-day netting
+     concept (a flat fee always), so this wasn't added there. Verified live via Playwright with
+     the user's own real numbers (OGDC, 1 share bought today at 327.80, default itemized
+     settings): the card correctly showed same-day BE (328.63) lower than other-day BE (329.39)
+     — same relationship and rough magnitude as the user's own hand-worked example — zero new
+     console errors. `npx tsc -b` / `npm run test` (421 tests, unchanged — a pure UI/derived-
+     value addition reusing already-tested `feeScenarios`/`breakEvenPrice`) / `npm run build`
+     all clean. **Deliberately scoped to the per-stock detail page only** — the PSX Trade
+     Calculator popup also computes its own break-even (`TradeCalculator.tsx`) and could get the
+     same side-by-side treatment later; not done in this pass since PositionDetail is the page
+     the user's own example was actually about (a real open position's BE), and the Trade
+     Calculator's two-BE-already (current position + after a planned buy) layout needs its own
+     look before bolting a third number on.
 
 ## Pending
 
