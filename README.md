@@ -4264,6 +4264,28 @@ FinanceManager live link:
      background (confirmed readable text/contrast held up in dark mode too, not just checked in
      light mode). `npx tsc -b` / `npm run test` (397 tests, unchanged — CSS-only) / `npm run
      build` all clean.
+195. **Two new Net Worth distribution charts built, resolving Pending item 78's own named
+     hypothesis (2026-08-27).** The item's own text guessed at the specific gap ("a per-currency
+     asset/liability breakdown, rather than none existing at all") since the existing "Capital
+     split by currency" doughnut only ever shows each currency's single NET figure — built
+     exactly that reading. New "Assets vs. liabilities by currency" grouped bar chart: unlike
+     the existing doughnut's `splitData` (which deliberately excludes any currency with net ≤ 0,
+     since a doughnut can't render a negative slice), this uses a separate `assetsLiabilitiesData`
+     array that includes every currency whose conversion succeeds regardless of sign — a
+     currency owing more than it holds shows fine as a shorter Assets bar next to a taller
+     Liabilities one. New "Breakdown within X, by module" horizontal bar chart: reuses the exact
+     same `r.breakdown` array Done item 169's small module-contribution CARDS already compute
+     and display — this adds a charted view of that SAME data for the currently-selected
+     currency, not a new calc function, matching the "reuse what's already computed"
+     precedent set by Rentals'/Personal Loans' own per-item bar charts (colored green/red by
+     sign, `indexAxis:'y'`, following that exact established pattern rather than inventing a
+     new chart shape). Verified live via Playwright with seeded multi-currency (USD/PKR) data
+     including a real EMI liability, plus real chart screenshots (not just a title-text check):
+     both charts render distinct, correctly-labeled, non-zero bars matching the seeded data —
+     zero new console errors (1 pre-existing, already-documented FX-fetch network-block error
+     from this page's own live-rate attempt, unrelated to this change). `npx tsc -b` / `npm run
+     test` (397 tests, unchanged — reuses already-computed `assets`/`liabilities`/`breakdown`
+     fields, no new calc logic) / `npm run build` all clean.
 
 ## Pending
 
@@ -4738,11 +4760,11 @@ everything below is started. Working down it in priority order across following 
     Excel/HTML/PDF (only CSV/JSON exist today — see README item 40 for CSV, Done item 177 for
     whole-app JSON); this project's own "xlsx" dependency has a known unpatched advisory
     flagged at Done item 151, worth reconsidering before leaning on it further for EXPORT too.
-78. Net Worth: add charts comparing the distribution of finances, both per-currency and within
-    one selected currency (a "capital split by currency" doughnut already exists per Done item
-    153 — this may be asking for more chart TYPES, e.g. a per-currency asset/liability
-    breakdown, rather than none existing at all; needs clarifying which specific comparison is
-    still missing).
+78. ~~Net Worth: add charts comparing the distribution of finances, both per-currency and within
+    one selected currency.~~ **Done (2026-08-27) — see Done item 195.** Built the item's own
+    named hypothesis: an Assets-vs-Liabilities-by-currency bar chart, and a per-module
+    Breakdown-within-one-currency bar chart (reusing Done item 169's already-computed
+    `breakdown` data, not a new calc function).
 79. ~~Net Worth: per-module contributions should render as small cards instead of long
     table-style rows.~~ **Done (2026-08-26) — see Done item 169.**
 80. ~~Banking: the "Total balance (PKR)"/"(QAR)" stat-card labels read as if they're LIVE-
