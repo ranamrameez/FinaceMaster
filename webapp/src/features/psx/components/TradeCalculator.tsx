@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { breakEvenPrice, requiredSellPrice, roundTick } from '../../../lib/calc';
-import { calcCGT } from '../../../lib/calc/psxFees';
+import { calcCGT, feeScenarios } from '../../../lib/calc/psxFees';
+import type { FeeCalculator } from '../../../types/workbook';
 import { PlusIcon, SaveIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { Field, TextInput } from '../../../components/ui/Field';
@@ -92,6 +93,16 @@ export function TradeCalculator({ initialTicker }: { initialTicker?: string } = 
   const mp = workbook.marketPrices[ticker] || 0;
   const currentPrice = priceOverride !== '' ? Number(priceOverride) || 0 : mp;
   const be = shares > 0 ? breakEvenPrice(invested, shares, feePct, tick, calcFee) : 0;
+  // README Done item 207: PositionDetail's same "same-day vs. other-day"
+  // break-even scenario, applied here too since this calculator's own
+  // "Break-even" card is the same current-position figure — `be` above
+  // already IS the "other day / full commission" scenario (calcFee is
+  // always called with no `tx` context, which makePSXFeeCalculator
+  // resolves to the full fee). This second figure assumes the sell nets
+  // against a same-day buy (government levies only).
+  const nettedCalcFee: FeeCalculator = (amount, isBuy, context) =>
+    feeScenarios(amount, isBuy, context?.shares ?? 0, workbook.settings).netted;
+  const beSameDay = shares > 0 ? breakEvenPrice(invested, shares, feePct, tick, nettedCalcFee) : 0;
   const sellFeeNow = currentPrice > 0 ? calcFee(shares * currentPrice, false, { shares }) : 0;
   const worth = currentPrice > 0 ? shares * currentPrice - sellFeeNow : 0;
   const currentPL = currentPrice > 0 ? worth - invested : 0;
@@ -249,8 +260,11 @@ export function TradeCalculator({ initialTicker }: { initialTicker?: string } = 
             <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 8, flex: 1 }}>
               <div className="stat-card card"><div className="label">Avg cost</div><div className="value">{fmtPrice(avg)}</div></div>
               <div className="stat-card card" style={currentPrice > 0 ? hueStyle(currentPrice >= be ? 'var(--profit)' : 'var(--loss)') : undefined}>
-                <div className="label">Break-even</div>
+                <Tooltip text="PSX nets commission when you buy and sell the same ticker on the same day — the smaller-quantity leg (ties go to the buy) pays no commission or SST, only government levies. 'Same-day' assumes this sell nets against a same-day buy; 'other day' assumes the full commission applies.">
+                  <div className="label" style={{ cursor: 'pointer' }}>Break-even</div>
+                </Tooltip>
                 <div className="value">{fmtPrice(be)}</div>
+                <div className="sub">other day · same-day {fmtPrice(beSameDay)}</div>
               </div>
               <div className="stat-card card"><div className="label">Worth now</div><div className="value">{fmtMoney(worth, currency)}</div></div>
               <div className="stat-card card" style={currentPrice > 0 ? hueStyle(currentPL >= 0 ? 'var(--profit)' : 'var(--loss)') : undefined}><div className="label">Current P/L</div><div className="value">{fmtMoney(currentPL, currency)}</div></div>

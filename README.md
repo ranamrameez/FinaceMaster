@@ -4685,12 +4685,16 @@ FinanceManager live link:
      — same relationship and rough magnitude as the user's own hand-worked example — zero new
      console errors. `npx tsc -b` / `npm run test` (421 tests, unchanged — a pure UI/derived-
      value addition reusing already-tested `feeScenarios`/`breakEvenPrice`) / `npm run build`
-     all clean. **Deliberately scoped to the per-stock detail page only** — the PSX Trade
-     Calculator popup also computes its own break-even (`TradeCalculator.tsx`) and could get the
-     same side-by-side treatment later; not done in this pass since PositionDetail is the page
-     the user's own example was actually about (a real open position's BE), and the Trade
-     Calculator's two-BE-already (current position + after a planned buy) layout needs its own
-     look before bolting a third number on.
+     all clean. **Extended to the PSX Trade Calculator popup the same day**, closing the
+     deferral above: `TradeCalculator.tsx`'s "Break-even" stat card for the CURRENT open
+     position (the same figure the user's own worked example was about — distinct from "New
+     break-even," a separate, already-existing figure for a *hypothetical additional buy*,
+     which was deliberately left untouched since it's a different question) now shows the same
+     same-day/other-day split via the identical `nettedCalcFee`/`feeScenarios` pattern.
+     Verified live via Playwright with the same OGDC scenario, opening the calculator through
+     its real `aria-label="Trade calculator"` FAB: the card showed "329.39 / other day ·
+     same-day 328.63" — matching PositionDetail's own numbers exactly — zero new console
+     errors. `npx tsc -b` / `npm run test` (421 tests, unchanged) / `npm run build` all clean.
 
 ## Pending
 
