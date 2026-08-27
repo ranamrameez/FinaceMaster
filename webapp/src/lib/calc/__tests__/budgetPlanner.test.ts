@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { collectBudgetActivities, monthlyIncomeExpense, threeMonthWindow } from '../budgetPlanner';
+import { collectBudgetActivities, currentMonth, monthlyIncomeExpense, monthRange, threeMonthWindow } from '../budgetPlanner';
 
 describe('collectBudgetActivities', () => {
   it('normalizes real Cash/Bank/Rentals entries onto one signed convention', () => {
@@ -73,5 +73,31 @@ describe('threeMonthWindow', () => {
   it('correctly rolls across a year boundary', () => {
     expect(threeMonthWindow(new Date(2026, 0, 15))).toEqual(['2025-12', '2026-01', '2026-02']);
     expect(threeMonthWindow(new Date(2026, 11, 15))).toEqual(['2026-11', '2026-12', '2027-01']);
+  });
+});
+
+describe('monthRange', () => {
+  it('returns a 6-month window: 3 past + current + 2 future, the Budget Planner default', () => {
+    expect(monthRange(-3, 2, new Date(2026, 5, 15))).toEqual([
+      '2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08',
+    ]);
+  });
+
+  it('rolls correctly across a year boundary at either end', () => {
+    expect(monthRange(-2, 1, new Date(2026, 0, 15))).toEqual(['2025-11', '2025-12', '2026-01', '2026-02']);
+  });
+
+  it('shifts by a windowOffset the same way scrolling the table would', () => {
+    // offset -1 (scroll one month earlier) on top of the same -3..2 window
+    expect(monthRange(-4, 1, new Date(2026, 5, 15))).toEqual([
+      '2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07',
+    ]);
+  });
+});
+
+describe('currentMonth', () => {
+  it('returns the calendar month of the given date', () => {
+    expect(currentMonth(new Date(2026, 2, 15))).toBe('2026-03');
+    expect(currentMonth(new Date(2026, 11, 31))).toBe('2026-12');
   });
 });

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Bar } from 'react-chartjs-2';
 import { Card, CollapsibleCard } from '../../../components/Card';
 import { Modal } from '../../../components/Modal';
@@ -9,13 +10,17 @@ import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import {
   collectBudgetActivities,
+  currentMonth as currentMonthOf,
   monthlyIncomeExpense,
-  threeMonthWindow,
+  monthRange,
   PREDEFINED_EXPENSE_CATEGORIES,
   PREDEFINED_INCOME_CATEGORIES,
   type BudgetActivity,
   type BudgetModule,
+  type MonthlyIncomeExpense,
 } from '../../../lib/calc/budgetPlanner';
+import { projectedNetWorthTrend, type MonthlyNetWorthPoint } from '../../../lib/calc/netWorthTrend';
+import { useNetWorthSummary } from '../../netWorth/hooks/useNetWorthSummary';
 import { dlBarV } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar } from '../../../lib/cssVar';
@@ -28,6 +33,8 @@ import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
 import { usePlannedBankWorkbookStore } from '../../../store/plannedBankWorkbookStore';
 import { useRentalsWorkbookStore } from '../../../store/rentalsWorkbookStore';
 import { usePlannedRentalsWorkbookStore } from '../../../store/plannedRentalsWorkbookStore';
+import { useEMIWorkbookStore } from '../../../store/emiWorkbookStore';
+import { useNetWorthSnapshotsWorkbookStore } from '../../../store/netWorthSnapshotsWorkbookStore';
 import { PlusIcon } from '../../../components/icons';
 import type { PlannedCashEntry } from '../../../types/plannedCash';
 import type { PlannedBankTransaction } from '../../../types/plannedBank';
@@ -63,6 +70,10 @@ export function BudgetPlannerPage() {
   const plannedRentals = usePlannedRentalsWorkbookStore((s) => s.workbook.entries);
   const addPlannedRentals = usePlannedRentalsWorkbookStore((s) => s.addEntry);
 
+  const emiLoans = useEMIWorkbookStore((s) => s.workbook.entries);
+  const netWorthSnapshots = useNetWorthSnapshotsWorkbookStore((s) => s.workbook.entries);
+  const netWorthSummary = useNetWorthSummary();
+
   useAppearanceStore((s) => s.appearance);
   applyChartTheme();
 
@@ -71,11 +82,32 @@ export function BudgetPlannerPage() {
     [cashEntries, plannedCash, bankAccounts, bankTransactions, plannedBank, rentalProperties, rentalEntries, plannedRentals],
   );
 
-  const months = useMemo(() => threeMonthWindow(), []);
+  // README item 107 (user-requested 2026-08-27): a scrollable window rather
+  // than a fixed 3 months — `windowStart` is the offset (in months from
+  // today) of the FIRST visible column; the window is always 6 months wide
+  // (`windowStart` .. `windowStart+5`), defaulting to 3 past + current + 2
+  // future, matching the user's own "at least 6 months history including
+  // future 2 months projection" wording. Scrolling shifts `windowStart` by
+  // 1 month at a time; "Today" resets it back to the default.
+  const [windowStart, setWindowStart] = useState(-3);
+  const months = useMemo(() => monthRange(windowStart, windowStart + 5), [windowStart]);
+  const nowMonth = useMemo(() => currentMonthOf(), []);
+  const todayISODate = useMemo(() => today(), []);
   const monthly = useMemo(() => monthlyIncomeExpense(activities, months), [activities, months]);
   const currencies = useMemo(() => [...new Set(activities.map((a) => a.currencyCode))].sort(), [activities]);
   const [currency, setCurrency] = useState(currencies[0] ?? 'USD');
   const effectiveCurrency = currencies.includes(currency) ? currency : (currencies[0] ?? currency);
+
+  const currentNetWorthByCurrency = useMemo(
+    () => Object.fromEntries(netWorthSummary.rows.map((r) => [r.currency, r.net])),
+    [netWorthSummary.rows],
+  );
+  const netWorthTrend = useMemo(
+    () => projectedNetWorthTrend({
+      months, currentMonth: nowMonth, todayISODate, currentNetWorthByCurrency, activities, emiLoans, snapshots: netWorthSnapshots,
+    }),
+    [months, nowMonth, todayISODate, currentNetWorthByCurrency, activities, emiLoans, netWorthSnapshots],
+  );
 
   const monthLabel = (m: string) => new Date(`${m}-01`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 
@@ -99,8 +131,21 @@ export function BudgetPlannerPage() {
               </Select>
             </Field>
           )}
+
+          <MonthlySummaryTable
+            months={months}
+            nowMonth={nowMonth}
+            monthLabel={monthLabel}
+            monthly={monthly}
+            netWorthTrend={netWorthTrend}
+            currency={effectiveCurrency}
+            onScrollEarlier={() => setWindowStart((w) => w - 1)}
+            onScrollLater={() => setWindowStart((w) => w + 1)}
+            onToday={() => setWindowStart(-3)}
+          />
+
           <div style={{ marginTop: 12, marginBottom: 16 }}>
-          <ChartCard title={`Projected income vs. expense — ${monthLabel(months[0])} to ${monthLabel(months[2])}`}>
+          <ChartCard title={`Income vs. expense — ${monthLabel(months[0])} to ${monthLabel(months[months.length - 1])}`}>
             <Bar
               data={{
                 labels: months.map(monthLabel),
@@ -123,6 +168,107 @@ export function BudgetPlannerPage() {
         rentalProperties={rentalProperties} addPlannedRentals={addPlannedRentals}
       />
     </div>
+  );
+}
+
+interface MonthlySummaryTableProps {
+  months: string[];
+  nowMonth: string;
+  monthLabel: (m: string) => string;
+  monthly: MonthlyIncomeExpense[];
+  netWorthTrend: MonthlyNetWorthPoint[];
+  currency: string;
+  onScrollEarlier: () => void;
+  onScrollLater: () => void;
+  onToday: () => void;
+}
+
+/** The scrollable multi-month summary table (README item 107, user-
+ * requested 2026-08-27: "It should be able to let the user scroll through
+ * months and see at least 6 months history including future 2 months
+ * projection" — modeled on the user's own reference Google Sheet, which
+ * has one big per-month summary table). Months are columns, same shape as
+ * that sheet; ◀/▶ shift the 6-month window one month at a time so it
+ * genuinely scrolls rather than being capped at a fixed range, and the
+ * native horizontal scrollbar on `.table-scroll` covers the visible window
+ * itself on a narrow viewport.
+ *
+ * The "Net worth" row is the concrete answer to the user's second point in
+ * the same message ("an EMI will take 36 months... I will always see my
+ * Net Worth negative... we must zoom in to see deeper picture") — see
+ * `netWorthTrend.ts`'s own doc comment for exactly how each month's figure
+ * is derived. It's a TRAJECTORY, not a re-stated headline: a past month
+ * with no saved snapshot yet shows "—" rather than a guessed number. */
+function MonthlySummaryTable({ months, nowMonth, monthLabel, monthly, netWorthTrend, currency, onScrollEarlier, onScrollLater, onToday }: MonthlySummaryTableProps) {
+  const monthlyByMonth = new Map(monthly.map((m) => [m.month, m]));
+  const trendByMonth = new Map(netWorthTrend.map((m) => [m.month, m]));
+
+  const statusFor = (m: string): 'Actual' | 'Current' | 'Projected' =>
+    m < nowMonth ? 'Actual' : m === nowMonth ? 'Current' : 'Projected';
+
+  return (
+    <CollapsibleCard title={<h3 style={{ margin: 0 }}>Monthly summary</h3>} style={{ marginBottom: 16 }}>
+      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+        <button className="btn secondary small" onClick={onScrollEarlier}>◀ Earlier</button>
+        <button className="btn secondary small" onClick={onToday}>Today</button>
+        <button className="btn secondary small" onClick={onScrollLater}>Later ▶</button>
+      </div>
+      <div className="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Month</th>
+              {months.map((m) => (
+                <th key={m} style={{ minWidth: 130 }}>
+                  {monthLabel(m)}<br />
+                  <span className="footer-note" style={{ fontWeight: statusFor(m) === 'Current' ? 700 : 400 }}>
+                    {statusFor(m)}
+                  </span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Income</td>
+              {months.map((m) => <td key={m}>{fmtMoney(monthlyByMonth.get(m)?.income[currency] ?? 0, currency)}</td>)}
+            </tr>
+            <tr>
+              <td>Expense</td>
+              {months.map((m) => <td key={m}>{fmtMoney(monthlyByMonth.get(m)?.expense[currency] ?? 0, currency)}</td>)}
+            </tr>
+            <tr>
+              <td>Net</td>
+              {months.map((m) => {
+                const row = monthlyByMonth.get(m);
+                const net = (row?.income[currency] ?? 0) - (row?.expense[currency] ?? 0);
+                return <td key={m} className={net >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(net, currency)}</td>;
+              })}
+            </tr>
+            <tr>
+              <td>
+                <Tooltip text="Today's real net worth, projected forward through each future month using Budget Planner's own planned income/expense plus each EMI loan's amortization schedule. Past months come from your saved Net Worth snapshots — shows as — where none exists yet.">
+                  Net worth
+                </Tooltip>
+              </td>
+              {months.map((m) => {
+                const value = trendByMonth.get(m)?.byCurrency[currency];
+                return (
+                  <td key={m} className={value === undefined ? 'footer-note' : value >= 0 ? 'pill-buy' : 'pill-sell'}>
+                    {value === undefined ? '—' : fmtMoney(value, currency)}
+                  </td>
+                );
+              })}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p className="footer-note" style={{ marginTop: 8, marginBottom: 0 }}>
+        Past months show Net worth only where a snapshot was saved for that period (Net Worth page auto-saves one
+        per day) — current/future months are projected from today's real figures. See{' '}
+        <Link to="/net-worth">the Net Worth page</Link> for the full breakdown.
+      </p>
+    </CollapsibleCard>
   );
 }
 
