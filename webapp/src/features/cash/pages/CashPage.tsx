@@ -791,7 +791,7 @@ function PlanningAccountSection({
   );
 }
 
-function PlanningTab({
+export function PlanningTab({
   plannedSyncStatus,
   plannedCloudEmpty,
   uploadPlannedLocalToCloud,

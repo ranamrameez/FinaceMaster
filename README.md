@@ -4203,6 +4203,24 @@ FinanceManager live link:
      cleanly and stays legible in both (a fixed-color badge doesn't need to react to theme the
      way in-app UI elements do) — zero console errors. `npx tsc -b` / `npm run test` (397 tests,
      unchanged — a static asset, no new logic) / `npm run build` all clean.
+192. **Planning promoted to its own top-level nav page, resolving Pending item 93's own named
+     design fork (2026-08-27).** The item posed the fork as "a real `CategoryNav` entry (like
+     Transfers, Done item 100) or just more visible inside Cash/Banking's own nav" — picked the
+     more literal reading of the user's own wording ("should be part of the main nav") and
+     followed the Transfers precedent it already named: a genuine unified cross-module page, not
+     just a repositioned tab. New `features/planning/pages/PlanningPage.tsx` reuses each
+     module's existing `PlanningTab` component completely unchanged (now exported from
+     `CashPage.tsx`/`BankPage.tsx` instead of being a private function) — no parallel
+     implementation of the balance-projection/plan-list logic, just two `CollapsibleCard`
+     sections wrapping the real thing. New `/planning` route in `App.tsx`, threaded the same
+     `plannedCashSync`/`plannedBankSync` status props the existing Cash/Bank routes already use.
+     `CategoryNav.tsx` gained a `'planning'` entry between Transfers and Budget Planner. Each
+     module's own "Planning" tab is left in place too — this adds a second way to reach it,
+     doesn't remove the first. Verified live via Playwright with seeded Cash/Bank data: the nav
+     entry renders and highlights correctly on `/planning`, and both modules' real
+     balance-projection numbers (Real: 500.00 USD / Real: 200.00 USD) render correctly inside
+     the new page — zero console errors. `npx tsc -b` / `npm run test` (397 tests, unchanged —
+     pure UI composition, reuses already-tested components) / `npm run build` all clean.
 
 ## Pending
 
@@ -4758,11 +4776,10 @@ everything below is started. Working down it in priority order across following 
     property rows were the two real gaps (Personal Loans/EMI/Funds/Subscriptions/QSE/PSX
     already had it); both now open their detail modal on a row click, not just their "Details"
     button.
-93. App-wide: "Plans" (the Cash/Banking Planning feature) should be part of the main nav/
-    sub-nav, not buried inside each module's own tab set. A real navigation-structure
-    decision: does this mean promoting Planning to its own `CategoryNav` entry (like
-    "Transfers" already got, Done item 100), or just making it more visible within Cash/
-    Banking's own existing nav? Needs the user's own preference before restructuring nav.
+93. ~~App-wide: "Plans" (the Cash/Banking Planning feature) should be part of the main nav.~~
+    **Done (2026-08-27) — see Done item 192.** Promoted to a real `CategoryNav` entry (like
+    Transfers, Done item 100), reusing each module's own `PlanningTab` unchanged rather than a
+    parallel implementation. Each module's own "Planning" tab still works too.
 94. App-wide: "maximize space usage by using grids instead of infinite scrolling" — a broad
     principle in the same spirit as Pending item 54/63 (right-rail content, multi-column
     cards) — not a single scoped task, tracked here as a standing direction to apply

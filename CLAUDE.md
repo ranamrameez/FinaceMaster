@@ -3763,6 +3763,19 @@ not developer notes) continuously as features ship.
   static favicon file. Dropped into `Sidebar.tsx`'s existing title row with zero CSS changes
   needed (`.sidebar-title-row` was already a flex row). Verified live via real screenshots in
   both light and dark theme — legible in both, zero console errors.
+- **Planning promoted to its own nav page, fourth item under the new standing instruction
+  (2026-08-27) — see README Done item 192, closes Pending item 93.** The item posed its own
+  design fork explicitly (a real `CategoryNav` entry vs. just more-visible-within-existing-nav)
+  — picked the more literal reading of "should be part of the main nav" and the Transfers
+  precedent the item itself named. New `features/planning/pages/PlanningPage.tsx` is genuinely
+  thin: exports each module's existing `PlanningTab` (previously a private function inside
+  `CashPage.tsx`/`BankPage.tsx`) unchanged and wraps both in `CollapsibleCard`s — zero
+  duplicated balance-projection/plan-list logic. New `/planning` route reuses the same
+  `plannedCashSync`/`plannedBankSync` props the existing `/cash`/`/bank` routes already thread
+  through `App.tsx`. Each module's own "Planning" tab is untouched — this adds a second way to
+  reach it, doesn't replace the first. Verified live via Playwright with seeded Cash/Bank data:
+  nav entry renders and highlights correctly, both modules' real balance numbers render inside
+  the new page — zero console errors.
 
 ## Live URLs
 
