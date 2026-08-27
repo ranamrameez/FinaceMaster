@@ -4448,6 +4448,43 @@ FinanceManager live link:
      including the `asOf`-default regression) and `budgetPlanner.test.ts` gained `monthRange`/
      `currentMonth` coverage. `npx tsc -b` / `npm run test` (404 tests, 7 new) / `npm run build`
      all clean.
+202. **New large UI/UX critique batch (2026-08-27), first slice — FAB rollout finished for the
+     remaining "Add entity" forms, closing Pending item 81/86's own precedent app-wide, plus a
+     confusing chart title + defensive chart-overflow hardening.** User's own screenshot-backed
+     complaint list: cramped/overlapping layout at reduced browser zoom, an "Assets vs.
+     Liabilities" chart that reads as showing only one currency, and a repeated ask that
+     "adding/editing an entity isn't a routine task" for every module, not just the ones already
+     converted. **Confirmed via a real audit (not assumed) that 4 modules still had a
+     permanently-visible "Add X" form**: Funds ("Add fund"), Personal Loans ("Add loan"),
+     Rentals ("Add property"), Subscriptions ("Add subscription") — Banking/EMI/Cash/Bank
+     Planning already had the FAB+popup treatment (Done items 166/170). Converted all 4 to the
+     identical established pattern (a fixed round button + `Tooltip` + `Modal`), leaving each
+     module's own routine per-record transaction/entry forms (buy/sell a fund, add a rent entry,
+     etc.) untouched — exactly the "transactions are daily, entity add/edit isn't" distinction
+     the user drew. **The "Assets vs. liabilities by currency" chart was investigated, not
+     assumed broken**: seeded a real 2-currency (QAR+PKR) scenario with known cross-rates and
+     confirmed via screenshot the chart already renders one bar-pair per currency correctly — the
+     confusion is real but was in the WORDING (`"...by currency (converted to X)"` reads as "this
+     is now one currency," when it means "each currency's own bars, heights normalized to X for
+     comparison"). Reworded the title to say that plainly rather than changing the chart's own
+     logic, which wasn't broken. **The reported card/chart overlap at 50% browser zoom could NOT
+     be reproduced in this session**, despite two attempts (a realistic multi-currency seed at
+     1280px, and a CSS-`zoom:0.5` simulation with a forced resize) — both rendered cleanly with
+     no overlap. Rather than claim a fix for a bug that couldn't be confirmed, added two
+     defensive hardening measures that are correct regardless: `.chart-canvas-wrap` gained
+     `overflow:hidden` (a safety net against any future canvas-sizing edge case bleeding past its
+     card) and the gap between Net Worth's "Income vs. expense" chart and the "Net Worth
+     Summary"/"Exchange Rates" cards below it was bumped from 16px to 24px. **This does not close
+     the overlap complaint** — see Pending item 108, which asks for the user's exact zoom
+     percentage/browser or a fresh screenshot at that zoom level to actually reproduce and fix it
+     properly, rather than guessing further. Several larger items from the same message — sidebar
+     nav re-nesting (a Settings/Exports/Accounts hierarchy, possibly reversing Done item 181's
+     earlier flattening), "prefer charts over tables," and "most tables still need horizontal
+     scroll" — are tracked as their own Pending items (109-111) rather than guessed at blind, per
+     this project's own standing practice for a genuine, high-risk-of-misreading design fork.
+     Verified live via Playwright: all 4 FABs render with the form hidden by default and showing
+     correctly on click, zero console errors. `npx tsc -b` / `npm run test` (404 tests,
+     unchanged — UI-only) / `npm run build` all clean.
 
 ## Pending
 
@@ -5089,6 +5126,56 @@ everything below is started. Working down it in priority order across following 
      already built remain unconfirmed without seeing that file's actual columns/formulas — per
      this project's own "work from the real file" lesson, still not guessed at further than
      what's now shipped.
+
+**New large UI/UX critique batch, 2026-08-27 (screenshot-backed) — see Done item 202 for what
+shipped from this same message. The items below need either the user's own reproduction detail
+or a design decision before more code, not guessed at further:**
+
+108. Card/chart overlap reported at 50% browser zoom (screenshot showed the "Income vs. expense"
+     chart's x-axis labels visually touching/overlapping "Net Worth Summary"/"Exchange Rates"
+     below it) — **could not be reproduced in this session** despite two real attempts: a
+     realistic 2-currency seed at a normal 1280px viewport, and a CSS `zoom:0.5` simulation with
+     a forced resize (the closest approximation Playwright/headless Chromium offers to a real
+     browser's Ctrl+- zoom, which isn't independently controllable via the automation API used
+     here). Both rendered cleanly. Two defensive hardening measures were still applied (Done item
+     202: `.chart-canvas-wrap{overflow:hidden}`, a wider gap below that one chart) since they're
+     correct regardless, but this does NOT confirm the actual bug is fixed. Needs either the
+     user's exact zoom percentage/browser+OS, or a fresh screenshot taken at that same zoom
+     level, to reproduce for real rather than guess again. "Charts going out of their boundaries"
+     (the same message's separate line) is very likely the same root cause — tracked together,
+     not as two separate bugs, until there's a real repro to tell them apart.
+109. Sidebar/nav restructuring: "Exports, Settings, Accounts... should belong to a separate Nav
+     page with sub navs nested in it, accessible whenever needed only... you dumped the subnav
+     menus right in the main nav rather than nesting them under their parent." Genuinely
+     ambiguous which concrete UI this refers to — the top-level category list (Net Worth, Stock
+     Exchanges, Funds, Banking, ...) is itself already a deliberate flat, always-visible list
+     (Done item 181, which explicitly REVERSED an earlier popover-dropdown design for exactly
+     this category nav) — re-nesting that would be a second reversal of a considered decision,
+     not a small tweak. The more literal match for "subnav dumped in main nav" is likely QSE/PSX
+     specifically: when Stock Exchanges is the active category, the sidebar also shows that
+     exchange's own numbered page list (01 Dashboard, 02 Portfolio, ... 07 Settings) inline,
+     permanently, which no other module does (every other module keeps its own Settings/Account/
+     Export behind its own in-page `Tabs`, not in the sidebar at all). Needs confirming which of
+     these (or something else entirely) the complaint actually targets before restructuring
+     navigation — a wrong guess here costs real rework, not just a wasted small edit.
+110. "Stacked column charts, line charts can well explain net worth/income/spending over
+     months... why stuff everything in tables, try slim cards/charts instead" — a real, broad
+     design preference (charts over tables as the default presentation) with no single named
+     target page. Partially in tension with the just-shipped Budget Planner monthly table (Done
+     item 201, built to the user's own explicit "big summary table for each month" spec the same
+     session) — worth flagging rather than silently reconciling, since it's not clear whether
+     this is a reversal of that specific ask or a general principle for OTHER tables app-wide.
+     Needs the user to name which table(s) should become a chart instead, or confirm the
+     principle applies broadly (in which case it's a large, multi-page work item, not a single
+     task).
+111. "Most tables need tiring horizontal scrolls, still unable to see a full row of data in one
+     go" — real and already partially addressed for several specific tables (Dashboard/Portfolio
+     Holdings column-grouping, Done items 85/86/97/etc.), but the user's own wording ("most
+     tables") suggests this is still true broadly. Needs either a specific table named, or
+     treating as a standing app-wide principle (like Pending items 94/95/96) to apply
+     opportunistically per-table rather than one blind sweep — column-grouping/dropping has
+     real information-loss tradeoffs per table that need individual judgment, not a mechanical
+     fix.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

@@ -2,6 +2,7 @@ import type { User } from 'firebase/auth';
 import { useMemo, useRef, useState } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
+import { Modal } from '../../../components/Modal';
 import { Notice } from '../../../components/Notice';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { hueStyle } from '../../../lib/statCardHues';
@@ -141,7 +142,35 @@ function AnalyticsTab() {
   );
 }
 
-function AddLoanForm() {
+/** Floating "add a loan" button (user feedback 2026-08-27: adding an entity
+ * isn't a routine task, use FABs — same pattern already established for
+ * EMI/Banking/Cash/Bank Planning, README Done items 166/170). */
+function AddLoanFab() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <div style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 500 }}>
+        <Tooltip text="Add a loan" align="right">
+          <button
+            className="btn"
+            onClick={() => setOpen(true)}
+            aria-label="Add a loan"
+            style={{ width: 52, height: 52, borderRadius: '50%', padding: 0, fontSize: 22, boxShadow: '0 4px 16px rgba(0,0,0,.25)' }}
+          >
+            <PlusIcon />
+          </button>
+        </Tooltip>
+      </div>
+      {open && (
+        <Modal title="Add a loan" onClose={() => setOpen(false)}>
+          <AddLoanForm onSaved={() => setOpen(false)} />
+        </Modal>
+      )}
+    </>
+  );
+}
+
+function AddLoanForm({ onSaved }: { onSaved?: () => void } = {}) {
   const addLoan = usePersonalLoansWorkbookStore((s) => s.addLoan);
   const defaultCurrency = usePersonalLoansWorkbookStore((s) => s.workbook.settings.defaultCurrency);
   const [lastCurrency, setLastCurrency] = useLastCurrency('personalLoans', defaultCurrency);
@@ -155,10 +184,11 @@ function AddLoanForm() {
     addLoan({ ...l, id: crypto.randomUUID(), person: l.person.trim(), note: l.note?.trim() || undefined });
     toast(`Loan with ${l.person.trim()} saved.`);
     setL(emptyLoan(l.currencyCode));
+    onSaved?.();
   };
 
   return (
-    <Card style={{ marginBottom: 16 }}>
+    <div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
         <Field label="Person / lender" width={160} required>
           <TextInput value={l.person} onChange={(e) => setL({ ...l, person: e.target.value })} placeholder="e.g. Bilal" />
@@ -187,7 +217,7 @@ function AddLoanForm() {
       <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
         <PlusIcon />Add loan
       </button>
-    </Card>
+    </div>
   );
 }
 
@@ -838,8 +868,8 @@ export function PersonalLoansPage({
                 content: (
                   <div>
                     <NetPositionSummary />
-                    <AddLoanForm />
                     <LoanList onSelect={openLoan} onEdit={editLoan} />
+                    <AddLoanFab />
                   </div>
                 ),
               },

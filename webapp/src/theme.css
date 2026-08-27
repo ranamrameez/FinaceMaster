@@ -743,7 +743,7 @@
      fills this container instead of computing its own height from the
      ratio; `height` (not just `max-height`) is required for that fill to
      have something definite to size against. */
-  .chart-canvas-wrap{position:relative; width:100%; height:min(35vh, 340px);}
+  .chart-canvas-wrap{position:relative; width:100%; height:min(35vh, 340px); overflow:hidden;}
   /* ---------- Info tooltip — compact "what is this / how is it computed"
      explainer. Pure CSS (no JS), so it's cheap to sprinkle everywhere a
      paragraph of explanation used to sit permanently under a heading. ---------- */
