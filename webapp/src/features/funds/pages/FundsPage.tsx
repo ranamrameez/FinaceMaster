@@ -18,6 +18,7 @@ import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { getMarketPrice } from '../../../lib/calc';
 import { allocationByCategory, contributionVsValueSeries } from '../../../lib/calc/fundsModule';
+import { impliedFundNav } from '../../../lib/calc/fundsDailyHistoryImport';
 import {
   buildFundsImportPlan,
   materializeFundsImport,
@@ -457,6 +458,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
   const [editingFund, setEditingFund] = useState(false);
   const [editFund, setEditFund] = useState<Fund>(fund);
   const [navInput, setNavInput] = useState('');
+  const [balanceInput, setBalanceInput] = useState('');
   const [txAction, setTxAction] = useState<'BUY' | 'SELL'>('BUY');
   const [txDate, setTxDate] = useState(today());
   const [txUnits, setTxUnits] = useState(0);
@@ -524,6 +526,30 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
     setMarketPrice(fund.id, val);
     toast(`${fund.code} NAV saved: ${fmtPrice(val)}`);
     setNavInput('');
+  };
+
+  /** User-reported, urgent (2026-08-27): "I only have info of daily balance
+   * update rather than NAV. so give me an option to update fund balance
+   * other than deposit and withdraw." Some funds are only ever tracked by
+   * their total balance (matches the Daily History Import's own per-row
+   * shape, Done item 151) — this is the same math as that importer's
+   * per-row NAV point (`newBlc / units`) for the no-cash-flow case, just as
+   * a single quick entry instead of a full spreadsheet: given today's total
+   * balance and the units already held, the implied per-unit NAV is
+   * `balance / units`, assuming no deposit/withdrawal happened since the
+   * last update (a real cash flow still goes through the existing Invest/
+   * Withdraw form below, same as today). Reuses `setMarketPrice` exactly
+   * as `commitNav` does — no new store action needed, since this only
+   * changes how the NAV number itself is computed, not how it's saved. */
+  const commitBalance = async () => {
+    const val = parseFloat(balanceInput);
+    if (!val || val <= 0) return toast('Enter a valid balance.');
+    const impliedNav = impliedFundNav(val, units);
+    if (impliedNav === null) return toast('Add an initial investment first — there are no units to divide this balance across yet.');
+    if (!(await ensureSignedIn('Sign in to save balance updates.'))) return;
+    setMarketPrice(fund.id, impliedNav);
+    toast(`${fund.code} balance saved: ${fmtMoney(val, fund.currencyCode)} → implied NAV ${fmtPrice(impliedNav)}`);
+    setBalanceInput('');
   };
 
   const submitTx = async () => {
@@ -598,10 +624,24 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
         </div>
       </Card>
 
-      <div className="row" style={{ gap: 8, marginBottom: 16 }}>
+      <div className="row" style={{ gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         <input type="number" step="0.0001" placeholder="Update NAV" value={navInput} onChange={(e) => setNavInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && commitNav()} style={{ width: 130 }} />
         <button className="btn secondary small" onClick={commitNav}><SaveIcon size={12} />Save NAV</button>
         <span className="footer-note">Current NAV: {currentNav ? fmtPrice(currentNav) : '—'}</span>
+        <span className="footer-note" style={{ margin: '0 4px' }}>or</span>
+        <Tooltip text="Don't know the per-unit NAV? Enter your fund's current total balance instead — the app computes the implied NAV from the units you already hold, assuming no deposit/withdrawal happened since your last update.">
+          <input
+            type="number"
+            step="0.01"
+            placeholder="Update balance"
+            value={balanceInput}
+            onChange={(e) => setBalanceInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && commitBalance()}
+            style={{ width: 140 }}
+            disabled={units <= 0}
+          />
+        </Tooltip>
+        <button className="btn secondary small" onClick={commitBalance} disabled={units <= 0}><SaveIcon size={12} />Save balance</button>
       </div>
 
       <h3>Add transaction</h3>

@@ -169,6 +169,18 @@ export function averagePeriodPL(periods: { total: number }[]): number {
   return periods.reduce((s, p) => s + p.total, 0) / periods.length;
 }
 
+/** Implied per-unit NAV from a fund's current total balance, given the
+ * units already held — the same formula `reconstructFundDailyHistory` uses
+ * per-row (`newBlc / units`) for a day with no detected deposit/withdrawal
+ * gap, exposed standalone for a single quick "update my balance" entry
+ * (see `FundsPage.tsx`'s `commitBalance`) rather than a full daily-history
+ * import. Returns `null` when there are no units to divide across (nothing
+ * held yet) — the caller should require an initial investment first. */
+export function impliedFundNav(balance: number, units: number): number | null {
+  if (units <= 0) return null;
+  return balance / units;
+}
+
 /** Suggests which existing fund identity (from the workbook's Summary
  * sheet/CSV, or the app's own saved funds) a daily-history sheet belongs
  * to, by matching its last real balance against a candidate's reported

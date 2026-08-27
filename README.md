@@ -4753,6 +4753,28 @@ FinanceManager live link:
      Verified via a real screenshot: a clean visible line separates the always-shown category
      list from the collapsed-then-expanded QSE/PSX section. `npx tsc -b` / `npm run test` (421
      tests, unchanged — CSS-only) / `npm run build` all clean.
+211. **Funds: "Update balance" quick action, urgent user request (2026-08-27).** "I only have
+     info of daily balance update rather than NAV. so give me an option to update fund balance
+     other than deposit and withdraw." Funds' existing "Update NAV" quick action requires a
+     per-unit price, which some funds are never tracked at — only a total balance (the same
+     shape the Daily History Import, Done item 151, already reconstructs from). New
+     `impliedFundNav(balance, units)` in `lib/calc/fundsDailyHistoryImport.ts` — the same
+     formula that importer's own per-row reconstruction uses for a no-cash-flow day
+     (`newBlc / units`), exposed standalone for a single quick entry rather than a full
+     spreadsheet: given today's total balance and the units already held, `balance / units` is
+     the implied per-unit NAV, on the assumption no deposit/withdrawal happened since the last
+     update (a real cash flow still goes through the existing Invest/Withdraw form, unchanged).
+     Returns `null` when no units are held yet, since there's nothing to divide across — the
+     new "Update balance" field (next to "Update NAV" in `FundsPage.tsx`'s `FundDetail`) is
+     disabled in that case with a toast explaining why. Reuses the existing `setMarketPrice`
+     action exactly as "Update NAV" does — no new store action needed, since this only changes
+     how the NAV number is computed, not how it's saved (so `priceHistory`/`marketPrices` stay
+     in sync the same way they always have). New tests: `fundsDailyHistoryImport.test.ts`
+     gained an `impliedFundNav` block (2 cases). Verified live via Playwright with a seeded
+     100-unit position: the sign-in gate correctly fires on save (same verification depth as
+     every other gated write in this project — a real end-to-end save needs a real signed-in
+     account this session can't create against the production Firebase project). `npx tsc -b`
+     / `npm run test` (423 tests, 2 new) / `npm run build` all clean.
 
 ## Pending
 

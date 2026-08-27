@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   averagePeriodPL,
+  impliedFundNav,
   mergeDailyImportIntoWorkbook,
   parseDailyBalanceRows,
   reconstructFundDailyHistory,
@@ -8,6 +9,17 @@ import {
   type DailyBalanceRow,
   type WorkbookSlice,
 } from '../fundsDailyHistoryImport';
+
+describe('impliedFundNav', () => {
+  it('divides balance by units held', () => {
+    expect(impliedFundNav(1150, 100)).toBeCloseTo(11.5, 8);
+  });
+
+  it('returns null when no units are held yet', () => {
+    expect(impliedFundNav(1150, 0)).toBeNull();
+    expect(impliedFundNav(1150, -1)).toBeNull();
+  });
+});
 
 /** Real daily rows from the user's own uploaded workbook
  * (Funds.PK.2026.ALDDF sheet) — no cash-flow gaps anywhere, a clean case

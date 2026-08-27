@@ -4210,6 +4210,33 @@ not developer notes) continuously as features ship.
   other-categories all behave correctly, plus a real screenshot confirming the divider and
   accordion render cleanly together. `npx tsc -b` / `npm run test` (421 tests, unchanged) /
   `npm run build` all clean.
+- **Workflow rule change (2026-08-27, user-stated, supersedes the earlier "continue
+  autonomously" standing instruction for anything beyond a single already-agreed task): "you
+  will plan & propose me the changes. After my approval you will continue your work until all
+  done."** After that same sidebar accordion change shipped, the user said it was "totally
+  wrong" — not because the mechanism was broken, but because it didn't match what they actually
+  wanted (see the next entry) — and asked to be shown a plan before code from here on. In
+  practice: for a request with real design/scope ambiguity, write out the concrete plan
+  (what changes, what stays, what's still undecided) and wait for explicit approval BEFORE
+  touching any file — do not treat "propose a plan" as optional context to skim past. Once a
+  plan is approved, execute it through to completion without re-asking at each step (matching
+  the original autonomous-execution instruction), flagging only genuinely new ambiguity that
+  surfaces mid-build. A single, narrow, already-agreed task (like this session's Funds balance
+  request below) doesn't need a fresh planning round each time — the rule is about not
+  guessing on open design questions, not about re-approving obviously-scoped work.
+- **Funds: "Update balance" quick action, urgent user request (2026-08-27) — see README Done
+  item 211.** "I only have info of daily balance update rather than NAV. so give me an option
+  to update fund balance other than deposit and withdraw." New `impliedFundNav(balance, units)`
+  in `lib/calc/fundsDailyHistoryImport.ts` — the same formula the Daily History Import (Done
+  item 151) already uses per-row for a no-cash-flow day (`newBlc / units`), exposed standalone
+  for a single quick entry instead of a full spreadsheet upload. Returns `null` when no units
+  are held yet (nothing to divide across); the new "Update balance" field next to "Update NAV"
+  in `FundsPage.tsx`'s `FundDetail` is disabled in that case. Reuses the existing
+  `setMarketPrice` action unchanged — this only changes how the NAV number gets computed, not
+  how it's saved, so `priceHistory`/`marketPrices` stay in sync exactly as they already did.
+  New tests: `fundsDailyHistoryImport.test.ts` gained 2 cases for `impliedFundNav`. Verified
+  live via Playwright with a seeded 100-unit position: sign-in gate correctly fires on save.
+  `npx tsc -b` / `npm run test` (423 tests, 2 new) / `npm run build` all clean.
 
 ## Live URLs
 
