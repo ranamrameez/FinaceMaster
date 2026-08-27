@@ -4043,6 +4043,38 @@ not developer notes) continuously as features ship.
   instead. **Do not assume this is resolved or that the flagged transactions have been checked**
   — a future session picking this up should wait for the user's answer rather than assuming the
   stale-flag theory is confirmed or ruled out.
+- **Resolution of the above, same session (2026-08-27) — see README Done item 204, "PSX Simple
+  fee mode."** The user's real screenshot showed OGDC's Cost at exactly 327.80 with no commission
+  reflected — confirming the manualSameDay-flag theory (a Manual/netted Fee Mode with no matching
+  sell yet). Suggested switching it back to Auto; the user pushed back hard: "Auto is totally
+  wrong... how can you add fee until the day end/market close?" This needed a real, honest
+  back-and-forth, not just restating the same position — walked through the CONCRETE evidence for
+  why Auto (charge immediately, net automatically once a real matching sell exists) is what it is:
+  it's the reversal of Done item 67, which tried exactly the user's own instinct (assume netted by
+  default) and was found — by checking against the user's OWN real broker backup, not in the
+  abstract — to under-count fees by 24.69 PKR across 5 transactions. That evidence held up; citing
+  it precisely (not just asserting "trust me") is what moved the conversation forward instead of
+  going in circles. **The user's actual ask, once it came out clearly, wasn't about the default at
+  all** — it was that reconciling 6 itemized fee fields by hand is unnecessary friction when their
+  real broker's effective rate is one number they already know from comparing against another app
+  (which took a single flat commission % and got a BE closer to what they consider correct). Built
+  `PSXSettings.feeMode: 'itemized' | 'simple'` + `allInFeePct` — Simple mode makes `calcFeeBreakdown`
+  compute one flat `amount × allInFeePct%` instead of the itemized commission+SST+levies chain,
+  stuffed into the existing `commission` field so `makePSXFeeCalculator`/`feeScenarios` (same-day
+  netting, tie-goes-to-BUY, etc.) needed ZERO changes — they already just read `.total` and the
+  (now-zeroed) levy fields, so Simple mode's netted leg automatically costs nothing extra, for
+  free, matching the user's own "levies are negligible" framing. Both new fields optional,
+  `undefined` behaves as itemized — no existing workbook silently changes. **Verified against the
+  user's own literal numbers, not synthetic ones**: seeded their exact OGDC scenario (1@327.80,
+  0.021% all-in, their own stated rate) and hand-confirmed every downstream figure via Playwright
+  — Fees paid 0.07, Cost 327.87, BE 327.94, P/L -0.14 — a BE much closer to raw price, the exact
+  effect they described from the comparison app. **Lesson for any future "the user is pushing back
+  on an explanation" moment**: don't just repeat the position more firmly — find the SPECIFIC
+  historical evidence (a real number, a real prior investigation) that either confirms or
+  overturns it, and lead with that; here it turned out both things were true at once — Auto's
+  default was correctly evidenced AND the user had a real, legitimate, previously-unbuilt need
+  (automation via one flat rate) that a mode toggle solves without touching the validated default
+  at all. `npx tsc -b` / `npm run test` (411 tests, 5 new) / `npm run build` all clean.
 
 ## Live URLs
 

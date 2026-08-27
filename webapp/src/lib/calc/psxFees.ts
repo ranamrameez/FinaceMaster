@@ -24,6 +24,17 @@ export function calcFeeBreakdown(amount: number, isBuy: boolean, shares: number,
   const zero: PSXFeeBreakdown = { commission: 0, taxOnCommission: 0, psxFee: 0, nccplFee: 0, secpLevy: 0, cdc: 0, cvt: 0, total: 0 };
   if (amount <= 0) return zero;
 
+  // Simple/flat fee mode (see PSXSettings.feeMode's own doc comment): one
+  // all-in % instead of the itemized breakdown below. Put the whole
+  // charge in `commission` (for a consistent return shape) and leave
+  // everything else 0 — which also makes a NETTED leg automatically pay
+  // nothing extra, since `makePSXFeeCalculator`'s netted-side figure is
+  // exactly "everything except commission/SST" from this same breakdown.
+  if (settings.feeMode === 'simple') {
+    const total = Math.max(round2(amount * ((settings.allInFeePct ?? 0) / 100)), settings.minFee || 0);
+    return { ...zero, commission: total, total };
+  }
+
   let commission: number;
   if (shares > 0) {
     const price = amount / shares;

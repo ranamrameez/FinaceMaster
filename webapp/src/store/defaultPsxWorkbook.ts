@@ -30,6 +30,12 @@ export const DEFAULT_PSX_SETTINGS: PSXSettings = {
   cgtNonFilerPct: 30,
   filerStatus: 'filer',
   costBasisMethod: 'average',
+  // Itemized stays the default for every new workbook — see PSXSettings'
+  // own doc comment for why. allInFeePct starts at 0 rather than a guessed
+  // number so a user opting into Simple mode has to type their own real
+  // observed rate, never inherit an unverified default.
+  feeMode: 'itemized',
+  allInFeePct: 0,
 };
 
 export function createEmptyPSXWorkbook(): PSXWorkbook {
