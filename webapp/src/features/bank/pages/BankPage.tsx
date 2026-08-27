@@ -1530,7 +1530,7 @@ function AnalyticsTab() {
   );
 }
 
-function PlanningTab({
+export function PlanningTab({
   plannedSyncStatus,
   plannedCloudEmpty,
   uploadPlannedLocalToCloud,

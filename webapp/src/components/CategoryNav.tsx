@@ -1,6 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 
-export type CategoryKey = 'netWorth' | 'stocks' | 'funds' | 'bank' | 'cash' | 'personalLoans' | 'emi' | 'rentals' | 'subscriptions' | 'transfers' | 'budget';
+export type CategoryKey = 'netWorth' | 'stocks' | 'funds' | 'bank' | 'cash' | 'personalLoans' | 'emi' | 'rentals' | 'subscriptions' | 'transfers' | 'planning' | 'budget';
 
 const CATEGORIES: { key: CategoryKey; label: string; to: string }[] = [
   { key: 'netWorth', label: 'Net Worth', to: '/net-worth' },
@@ -13,6 +13,7 @@ const CATEGORIES: { key: CategoryKey; label: string; to: string }[] = [
   { key: 'rentals', label: 'Rentals', to: '/rentals' },
   { key: 'subscriptions', label: 'Subscriptions', to: '/subscriptions' },
   { key: 'transfers', label: 'Transfers', to: '/transfers' },
+  { key: 'planning', label: 'Planning', to: '/planning' },
   { key: 'budget', label: 'Budget Planner', to: '/budget' },
 ];
 
@@ -31,6 +32,7 @@ export function categoryForPath(pathname: string): CategoryKey {
   if (pathname.startsWith('/rentals')) return 'rentals';
   if (pathname.startsWith('/subscriptions')) return 'subscriptions';
   if (pathname.startsWith('/transfers')) return 'transfers';
+  if (pathname.startsWith('/planning')) return 'planning';
   if (pathname.startsWith('/budget')) return 'budget';
   return 'stocks';
 }
