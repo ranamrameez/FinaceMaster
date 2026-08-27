@@ -4119,6 +4119,37 @@ not developer notes) continuously as features ship.
   session) should confirm the success path lands back on the app correctly signed in. New
   tests: `friendlyAuthError.test.ts` (4 cases). `npx tsc -b` / `npm run test` (415 tests, 4
   new) / `npm run build` all clean.
+- **QSE/PSX "Closed trades" ledger, closing point #1 of the same 5-item critique (2026-08-27) —
+  see README Done item 206.** User's own words: "Individual stock should be marker as open/
+  close with its own buy & selling price, B&S taxes, net Buy/sale — so that sold/closed shares
+  do not ruin the calcs." Investigated `computePositions`/`computeFIFOPositions` first, not
+  guessed at: both aggregate rollups are already correct (a fully closed round-trip cleanly
+  zeroes out before a later buy starts fresh; FIFO already tracks each buy as its own lot) — the
+  real gap was that nothing surfaced a per-trade, itemized "here's exactly what this closed
+  round-trip cost and made" view anywhere. The existing Open/Closed split on Trade Transactions
+  (Done item 73) groups by TICKER, not by trade, so a ticker with any open shares shows every
+  past transaction for it (including old closed round-trips) mixed under "Open." New
+  `lib/calc/closedTrades.ts`'s `computeClosedTrades()` reconstructs a per-trade ledger via FIFO
+  matching — deliberately independent of `PSXSettings.costBasisMethod`, since it's a reporting
+  ledger only that never feeds back into either position calc: each sold share matches the
+  oldest open buy lot, and every match becomes its own record with that specific buy/sell date/
+  price, each leg's own prorated fee, net P&L, and days held. A sell draining more than one buy
+  lot produces one record per lot touched (not blended into an average); a buy lot split across
+  multiple sells produces one record per sell that touched it, each with its own prorated share
+  of that buy's fee. New "Closed trades (realized round-trips)" collapsible section on both
+  QSE's and PSX's Trade Transactions → Trade list tab, below the existing Open/Closed-by-ticker
+  sections (kept unchanged for raw browsing), sortable and respecting the page's ticker filter.
+  New tests: `closedTrades.test.ts` (6 cases: simple match, partial sell, split-across-two-lots
+  with independent fee proration, cross-ticker independence, unmatched buy → no record, same-day
+  round trip). Verified live via Playwright on both exchanges with a seeded 2-lot/1-sell scenario
+  (5@100 + 5@120, sold 8@130): confirmed the 2-record split (5 from the older lot, 3 from the
+  newer) with hand-checked fee/net-P&L math matching exactly under both QSE's flat-rate and
+  PSX's itemized commission+SST+levies models — zero new console errors. `npx tsc -b` / `npm run
+  test` (421 tests, 6 new) / `npm run build` all clean. **Still outstanding from the same
+  message**: the "show both Same-day/Other-day price scenarios" feature (bringing the Trade
+  Planner's existing `feeScenarios()` — full-commission vs. same-day-netted side by side — to
+  the regular Transactions/StockPage views for an open same-day position), which the user
+  explicitly accepted ("do it") — not yet built.
 
 ## Live URLs
 
