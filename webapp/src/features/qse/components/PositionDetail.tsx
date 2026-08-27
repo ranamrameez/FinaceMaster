@@ -90,7 +90,12 @@ export function PositionDetail({ ticker }: { ticker: string }) {
   // didn't actually bring over here — same data source those tables use.
   const sparkData = getDailyPriceHistory(ticker, workbook.priceHistory).map((p) => p.price);
 
-  const recentRows = stats?.recent ?? [];
+  // User-reported (2026-08-27): "current price updates are shown upto
+  // recent 8, no view to see them all" — see the identical comment in
+  // PSX's PositionDetail.tsx for why swapping the source array is safe
+  // for the existing edit/delete `rawHistory.indexOf(p)` resolution.
+  const [showAllPrices, setShowAllPrices] = useState(false);
+  const recentRows = showAllPrices ? [...(stats?.chronological ?? [])].reverse() : (stats?.recent ?? []);
   type RecentCol = 'when' | 'price';
   const recentSortValue = (p: (typeof recentRows)[number], col: RecentCol): number | string =>
     col === 'price' ? p.price : (p.time ?? p.date);
@@ -343,7 +348,18 @@ export function PositionDetail({ ticker }: { ticker: string }) {
             <div className="stat-card card" style={hueStyle(HUES[2])}><div className="label">Highest</div><div className="value">{fmtPrice(stats.max)}</div><div className="sub">{stats.maxDate}</div></div>
           </div>
           <details>
-            <summary className="footer-note" style={{ cursor: 'pointer' }}>Recent updates ({stats.recent.length})</summary>
+            <summary className="footer-note" style={{ cursor: 'pointer' }}>
+              {showAllPrices ? `All updates (${stats.totalUpdates})` : `Recent updates (${stats.recent.length} of ${stats.totalUpdates})`}
+            </summary>
+            {stats.totalUpdates > stats.recent.length && (
+              <button
+                className="btn secondary small"
+                style={{ marginTop: 8 }}
+                onClick={() => setShowAllPrices((v) => !v)}
+              >
+                {showAllPrices ? 'Show recent 8 only' : `Show all ${stats.totalUpdates} updates`}
+              </button>
+            )}
             <div className="table-scroll" style={{ marginTop: 8 }}>
               <table>
                 <thead><tr><RecentTh col="when">When</RecentTh><RecentTh col="price">Price</RecentTh><th></th></tr></thead>
