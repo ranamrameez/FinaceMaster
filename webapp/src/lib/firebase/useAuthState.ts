@@ -1,8 +1,9 @@
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { create } from 'zustand';
+import { toast } from '../../components/Toast';
 import { resetAllLocalWorkbooks } from '../resetLocalData';
 import { auth, firebaseReady } from './client';
-import { completeEmailLinkSignInIfPresent } from './auth';
+import { completeEmailLinkSignInIfPresent, completeGoogleSignInRedirect } from './auth';
 
 interface AuthState {
   user: User | null;
@@ -33,6 +34,14 @@ export function useAuthState(): AuthState {
   if (!started && firebaseReady && auth) {
     started = true;
     completeEmailLinkSignInIfPresent().catch((e) => console.warn('Email-link sign-in failed', e));
+    // Picks up a Google sign-in that finished via `signInWithRedirect` (see
+    // that function's own doc comment) — `onAuthStateChanged` below fires
+    // independently once this resolves with a real user, so this is only
+    // responsible for user-facing feedback: a toast either way, since a
+    // redirect-based sign-in has no modal left open to show one itself.
+    completeGoogleSignInRedirect()
+      .then(({ signedIn }) => { if (signedIn) toast('Signed in with Google.'); })
+      .catch((e) => toast(e instanceof Error ? e.message : 'Google sign-in failed.'));
     onAuthStateChanged(auth, (user) => {
       const uid = user?.uid ?? null;
       // Critical fix: a sign-out (or switching to a different account)
