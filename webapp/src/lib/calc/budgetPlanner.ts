@@ -47,6 +47,13 @@ export interface BudgetActivity {
    * below (its real counterpart is already included as `executed: true`,
    * so including both would double-count the same money movement). */
   executed: boolean;
+  /** Passthrough of `PlannedBankTransaction.sourceEmiLoanId` — set only for
+   * a not-yet-executed EMI "Link to bank" installment plan. Exists so
+   * `netWorthTrend.ts`'s monthly projection can exclude these from its
+   * cash-flow term (their effect on Net Worth is already captured via the
+   * EMI schedule's own liability reduction — counting both would double-
+   * count the payment, see that file's own doc comment). */
+  sourceEmiLoanId?: string;
 }
 
 function normalizeCash(entries: CashEntry[], plans: PlannedCashEntry[]): BudgetActivity[] {
@@ -81,6 +88,7 @@ function normalizeBank(accounts: BankAccount[], transactions: BankTransaction[],
       id: p.id, module: 'bank' as const, sourceLabel: account.name, date: p.date,
       amount: p.amount, currencyCode: account.currencyCode,
       category: p.category, description: p.description, executed: false,
+      sourceEmiLoanId: p.sourceEmiLoanId,
     }];
   });
   return [...real, ...planned];
@@ -147,14 +155,29 @@ export function monthlyIncomeExpense(activities: BudgetActivity[], months: strin
   });
 }
 
+/** Calendar month strings ("YYYY-MM") from `asOf + startOffset` through
+ * `asOf + endOffset` months, inclusive — the general form both
+ * `threeMonthWindow` and the Budget Planner's own scrollable window
+ * (README item 107, 2026-08-27) build on. */
+export function monthRange(startOffset: number, endOffset: number, asOf: Date = new Date()): string[] {
+  const out: string[] = [];
+  for (let offset = startOffset; offset <= endOffset; offset++) {
+    const d = new Date(asOf.getFullYear(), asOf.getMonth() + offset, 1);
+    out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
+  return out;
+}
+
 /** Previous/current/next calendar month strings ("YYYY-MM"), anchored to
  * `asOf` (defaults to today) — the exact 3-month window the user asked
  * for by name. */
 export function threeMonthWindow(asOf: Date = new Date()): string[] {
-  return [-1, 0, 1].map((offset) => {
-    const d = new Date(asOf.getFullYear(), asOf.getMonth() + offset, 1);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-  });
+  return monthRange(-1, 1, asOf);
+}
+
+/** The current calendar month string ("YYYY-MM"), anchored to `asOf`. */
+export function currentMonth(asOf: Date = new Date()): string {
+  return `${asOf.getFullYear()}-${String(asOf.getMonth() + 1).padStart(2, '0')}`;
 }
 
 /** Predefined category suggestions (income and expense kept separate,

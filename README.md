@@ -4387,6 +4387,67 @@ FinanceManager live link:
      StockPage (once its collapsed "Trades" section is expanded) shows `SHARES*`/`PRICE*` —
      zero console errors. `npx tsc -b` / `npm run test` (397 tests, unchanged — UI-only) / `npm
      run build` all clean.
+201. **Budget Planner: 6-month scrollable summary table + a Net Worth trend row, closing the
+     remainder of README item 107 (2026-08-27), user-requested with two design confirmations
+     via `AskUserQuestion`.** The user clarified item 107 was about the app's own UI capability
+     (their real Excel data was already imported earlier, see Done item 178), specifically a
+     scrollable multi-month summary table matching their reference Google Sheet's per-month
+     table layout, and separately raised that an EMI's own 36-month debt makes Net Worth look
+     "always negative" with no way to "zoom in" and see the real trajectory. Confirmed to extend
+     the existing Budget Planner page (not a new one) and to answer the Net Worth complaint with
+     a per-month trend row in the same table, rather than a currency-exclusion toggle or new
+     asset-tracking. New `monthRange(startOffset, endOffset, asOf)` in `budgetPlanner.ts`
+     generalizes the existing `threeMonthWindow` (kept, now built on top of it, used unchanged
+     by Net Worth's own 3-month projection). `BudgetPlannerPage.tsx` gained a `windowStart`
+     state driving a 6-month sliding window (default 3 past + current + 2 future, matching the
+     user's own "at least 6 months history including future 2 months projection" wording) with
+     ◀ Earlier/Today/Later ▶ controls, plus the table's own native horizontal scroll for the
+     visible window. New `MonthlySummaryTable` shows Income/Expense/Net/Net worth as rows,
+     months as columns (matching the spreadsheet's own shape) — **no reference image was
+     actually available in this session to match pixel-for-pixel** (the user referenced one
+     shared earlier that had scrolled out of visible context); built from their text description
+     instead, flagged to the user as needing their own visual confirmation once they can
+     re-share it.
+     **The Net Worth trend row is the substantial new piece — new `lib/calc/netWorthTrend.ts`'s
+     `projectedNetWorthTrend()`.** Two different sources depending on whether a month is past or
+     present/future: past months read from real `NetWorthSnapshot`s (the existing on-demand/
+     daily-auto history feature, Done items 157/193) — the latest snapshot at or before that
+     month, or `undefined`/"—" if none was ever saved, never a guessed number. Current/future
+     months are PROJECTED as today's real Net Worth (from `useNetWorthSummary()`, already
+     shared with the Net Worth page and Dashboard rail) plus two additive terms: (1) cumulative
+     non-EMI net cash flow from Budget Planner's own activities strictly after today through
+     that month, and (2) the change in EMI/Loans' own outstanding balance between today and that
+     month, reusing `emiModule.ts`'s existing `totalsByCurrency(loans, asOf)` — the exact
+     function Net Worth's own "today" figure already calls, just with a different `asOf` date.
+     **Term (1) deliberately excludes any Budget Planner activity tagged
+     `sourceEmiLoanId`** (a new passthrough field added to `BudgetActivity`, set from
+     `PlannedBankTransaction.sourceEmiLoanId` for EMI's own "Link to bank" auto-generated
+     installment plans) — without this exclusion, an EMI installment's cash outflow would be
+     double-counted: once as a full expense against term (1)'s flow, and again by NOT crediting
+     back the principal portion that same installment actually pays down in term (2)'s schedule-
+     based liability reduction. This is the same "blend real cash flow with liability data
+     without excluding what's already accounted for" double-counting shape this project hit
+     before with the Trade Planner's executed-leg handling (README Done item 64) — caught here
+     by design, not after the fact, specifically because that earlier bug was already a known
+     pattern to watch for. **A real bug WAS still caught by the tests, not just designed
+     around**: the first implementation called `totalsByCurrency(emiLoans)` for "today's" EMI
+     outstanding with no explicit `asOf`, silently defaulting to `new Date()` (the REAL current
+     date) instead of the function's own `todayISODate` parameter — invisible in production
+     (where "today" always literally is today) but caught immediately by a hand-traced unit test
+     using a fictional date, which is exactly why the test used one instead of the real date.
+     Fixed by passing `new Date(todayISODate)` explicitly. **Verified live via Playwright with
+     seeded Cash/Bank/EMI/snapshot data, hand-checked against the rendered numbers, not just a
+     "renders without error" check**: default window showed May–October 2026 (3 Actual + 1
+     Current + 2 Projected); August's Net worth (850.00 USD) matched 1,350 assets − 500 EMI
+     outstanding by hand; September's projection (750.00) matched 850 + (−200 planned expense)
+     + 100 (EMI paid down another 100 by month-end); October's projection (850.00) matched 850
+     + (−200 cumulative) + 200 (EMI paid down 200 by month-end) — the debt-paydown term visibly
+     pulling the trend back up over time, exactly the "zoom in and see it's improving" effect
+     the user asked for. Clicking "◀ Earlier" correctly shifted the whole window back one month
+     (April–September). Zero console errors. New tests: `netWorthTrend.test.ts` (3 cases,
+     including the `asOf`-default regression) and `budgetPlanner.test.ts` gained `monthRange`/
+     `currentMonth` coverage. `npx tsc -b` / `npm run test` (404 tests, 7 new) / `npm run build`
+     all clean.
 
 ## Pending
 
@@ -5011,14 +5072,23 @@ everything below is started. Working down it in priority order across following 
 107. The user has a sample monthly-expense-tracker Excel sheet and wants the app to "show/
      answer all the capabilities just like this sheet is providing," on top of Net Worth being
      "capable to answer each finance's summary + user's worth in 3 months," with "detailed
-     calculation" of financial activity over time available on request. The Budget Planner
-     (Done item 176) and Net Worth's 3-month projection cover the general shape of this, but
-     the specific capabilities the user's own real sheet demonstrates are unknown until it's
-     actually attached — deliberately NOT guessed at, per this project's own established
-     "work from the real file" lesson (see the Funds Daily History Import entry). Pick this up
-     once the file arrives: import it into a scratch review, compare its actual columns/
-     formulas/views against what's already built, and build only the concrete gaps that
-     surface.
+     calculation" of financial activity over time available on request. **The concrete UI half
+     is done (2026-08-27) — see Done item 201.** The user clarified this specifically meant a
+     scrollable multi-month summary table (their real data was already imported earlier, Done
+     item 178) matching their reference Google Sheet's per-month table layout — Budget Planner
+     now has one, 6 months by default (3 past + current + 2 future) and scrollable further in
+     either direction via ◀/▶. Also raised in the same message: an EMI's own 36-month
+     amortization makes Net Worth look permanently negative with no way to "zoom in" on the real
+     trajectory — answered with a new Net Worth trend row in the same table (see Done item 201
+     for the full calc design). **Still open**: the reference Google Sheet image itself was
+     never actually available in this session (it scrolled out of visible context before this
+     request), so the table was built from the user's text description alone — needs the user's
+     own visual confirmation once they can re-share that image, in case the exact column/row
+     layout should match it more closely. The broader "detailed calculation... available on
+     request" wording and any other capability specific to the user's real sheet beyond what's
+     already built remain unconfirmed without seeing that file's actual columns/formulas — per
+     this project's own "work from the real file" lesson, still not guessed at further than
+     what's now shipped.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

@@ -3893,6 +3893,48 @@ not developer notes) continuously as features ship.
   reads as "field not found" when it's really just hidden) shows `SHARES*`/`PRICE*` — zero
   console errors. `npx tsc -b` / `npm run test` (397 tests, unchanged) / `npm run build` all
   clean.
+- **Budget Planner: 6-month scrollable summary table + a Net Worth trend row (2026-08-27) —
+  see README Done item 201, closes README item 107's remaining UI half.** User clarified item
+  107 wanted a scrollable multi-month table matching their reference Google Sheet (their real
+  data was already imported, Done item 178), plus a way to "zoom in" on Net Worth's trajectory
+  rather than just a permanently-negative headline while a 36-month EMI runs. Confirmed via
+  `AskUserQuestion` (recommended options both picked): extend Budget Planner rather than a new
+  page, and add a per-month Net Worth trend row to the same table rather than a currency-
+  exclusion toggle or new asset-tracking. New `monthRange(startOffset, endOffset, asOf)` in
+  `budgetPlanner.ts` generalizes `threeMonthWindow` (kept, now built on it). New
+  `MonthlySummaryTable` in `BudgetPlannerPage.tsx`: 6-month sliding window (default 3 past +
+  current + 2 future), ◀ Earlier/Today/Later ▶ controls, Income/Expense/Net/Net worth as rows.
+  **No reference image was actually available in this session** (the one the user mentioned
+  earlier had scrolled out of visible context) — built from their text description, flagged for
+  their own visual confirmation once they can re-share it.
+  **The Net Worth trend row is the substantial new calc** — new `lib/calc/netWorthTrend.ts`'s
+  `projectedNetWorthTrend()`: past months read from real `NetWorthSnapshot`s (Done items
+  157/193) — undefined/"—" where none was ever saved, never guessed; current/future months
+  project today's real Net Worth (`useNetWorthSummary()`) plus (1) cumulative non-EMI cash flow
+  from Budget Planner's own activities after today through that month, and (2) the EMI
+  outstanding-balance delta between today and that month, reusing `emiModule.ts`'s existing
+  `totalsByCurrency(loans, asOf)` unchanged. **Term (1) deliberately excludes any activity
+  tagged `sourceEmiLoanId`** (new passthrough field on `BudgetActivity`) — without it, an EMI
+  installment plan would double-count: once as a full cash expense, again by not crediting back
+  the principal portion term (2) already credits via the schedule. Same double-counting shape
+  as the Trade Planner's executed-leg bug (Done item 64) — designed around up front here, not
+  fixed after the fact. **A real bug was still caught by a hand-traced test, not just avoided by
+  design**: the first cut called `totalsByCurrency(emiLoans)` for "today's" EMI figure with no
+  explicit `asOf`, silently defaulting to the real wall-clock `new Date()` instead of the
+  function's own `todayISODate` param — invisible in production (today always literally is
+  today) but caught immediately by a test using a fictional date, exactly why that test used
+  one. Fixed by passing `new Date(todayISODate)` explicitly. **Rule worth repeating for any
+  future pure function that takes a `todayISODate`/`asOf`-shaped param and then calls another
+  function with its OWN default-`new Date()` fallback**: always pass the param through
+  explicitly — a default that reads real wall-clock time inside an otherwise-pure function is a
+  latent test-only bug waiting to happen. Verified live via Playwright with seeded Cash/Bank/
+  EMI/snapshot data, hand-checked against the rendered numbers: August's Net worth (850.00 USD)
+  matched 1,350 assets − 500 EMI outstanding by hand; September's projection (750.00) matched
+  850 + (−200 planned expense) + 100 (EMI paid down another 100 by month-end); October's
+  (850.00) matched 850 + (−200 cumulative) + 200 — the debt-paydown term visibly pulling the
+  trend back up over time, the exact effect asked for. Clicking "◀ Earlier" shifted the window
+  back one month correctly. Zero console errors. `npx tsc -b` / `npm run test` (404 tests, 7
+  new) / `npm run build` all clean.
 
 ## Live URLs
 
