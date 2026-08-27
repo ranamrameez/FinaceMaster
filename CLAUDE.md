@@ -4186,6 +4186,30 @@ not developer notes) continuously as features ship.
   and — the case most likely to silently break — editing a row from beyond the original 8
   correctly resolved to that exact row's own date/price. `npx tsc -b` / `npm run test` (421
   tests, unchanged) / `npm run build` all clean.
+- **Sidebar restructured, closing README Pending items 109/112/113 (2026-08-27) — see README
+  Done items 209/210.** Two independent complaints ("subnav dumped in main nav" and "side nav
+  poorly arranged") converged on the same real outlier: Stock Exchanges' numbered page list
+  (01 Dashboard...08 Settings) rendered permanently inline in the sidebar, unlike every other
+  module (which keeps Settings/Account/Export behind in-page `Tabs`, not the sidebar). Both
+  README items explicitly said this needed the user's own confirmation first — collapsing the
+  app's primary QSE/PSX navigation is architecturally significant, not a small tweak, and a
+  wrong guess costs real rework. Asked via `AskUserQuestion` (collapse into an accordion vs.
+  just a visual separator vs. leave it alone) — user picked collapse. New `usePagesOpen()`
+  hook in `Sidebar.tsx`: a "▸ Pages" toggle (same rotate-90 chevron convention as
+  `CollapsibleCard`, but not wrapped in an actual `Card` — a sidebar nav section shouldn't
+  carry card styling) collapses the list by default, persisted to `localStorage`
+  (`financerecorder_stock_pages_open_v1`, same try/catch pattern as `AppShell.tsx`'s existing
+  whole-sidebar collapse) so once expanded it stays expanded across reloads. Also picked up
+  the smaller companion item (a visual separator between the category list and the exchange
+  block) in the same pass without asking again, since it's pure CSS with no navigation-
+  behavior change: a `1px solid var(--border)` top border now makes that boundary explicit.
+  **Verification note worth repeating**: an initial Playwright check for "collapsed by
+  default" read as a false failure (count of 1, not 0) because `CategoryNav` itself also uses
+  the `.navlist` class — refined the selector to `nav.navlist:not(.category-list)` to
+  distinguish the two, then confirmed collapsed/expanded/persisted-across-reload/hidden-on-
+  other-categories all behave correctly, plus a real screenshot confirming the divider and
+  accordion render cleanly together. `npx tsc -b` / `npm run test` (421 tests, unchanged) /
+  `npm run build` all clean.
 
 ## Live URLs
 
