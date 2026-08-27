@@ -75,6 +75,10 @@ export interface BankAccount {
 
 export interface BankTransaction {
   id: string;
+  /** Stable per-transaction sequence number, the definitive tie-breaker
+   * when two transactions land on the exact same instant — see
+   * `Transaction.seq` in `types/workbook.ts` for the full reasoning. */
+  seq?: number;
   accountId: string;
   date: string;
   /** Optional time-of-day ("HH:MM"), defaults to noon when absent — see

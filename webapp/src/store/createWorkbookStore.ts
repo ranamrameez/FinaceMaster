@@ -1,5 +1,17 @@
 import { create, type UseBoundStore, type StoreApi } from 'zustand';
+import { toInstantMs } from '../lib/datetime';
+import { backfillSeq, nextSeq } from '../lib/seq';
+import { sortTransactionsChronological } from '../lib/calc/sortTransactions';
 import type { Adjustment, Dividend, PricePoint, Transaction, TradePlan, Transfer, WatchlistItem } from '../types/workbook';
+
+/** Chronological order for a record type with `date`/`time`/`timezone` but
+ * no `action` field (Transfer/Adjustment/Dividend) — used only to decide
+ * `seq` assignment order when backfilling; not a general-purpose export
+ * since `sortTransactionsChronological` already covers the one type
+ * (`Transaction`) that needs the extra BUY-before-SELL domain rule. */
+function chronologicalByInstant<T extends { date: string; time?: string; timezone?: string }>(records: T[]): T[] {
+  return [...records].sort((a, b) => toInstantMs(a.date, a.time, a.timezone) - toInstantMs(b.date, b.time, b.timezone));
+}
 
 export interface BaseWorkbook<TSettings> {
   settings: TSettings;
@@ -105,12 +117,16 @@ export function createWorkbookStore<TWorkbook extends BaseWorkbook<unknown>>(
    * the last leg of a plan, the debounced push round-trips through Firebase,
    * and the next pulled snapshot has a leg-less plan. */
   function normalize(wb: TWorkbook): TWorkbook {
+    const transactionsWithId = wb.transactions.map((t) => (t.id ? t : { ...t, id: crypto.randomUUID() }));
+    const transfersWithId = wb.transfers.map((t) => (t.id ? t : { ...t, id: crypto.randomUUID() }));
+    const adjustmentsWithId = wb.adjustments.map((a) => (a.id ? a : { ...a, id: crypto.randomUUID() }));
+    const dividendsWithId = wb.dividends.map((d) => (d.id ? d : { ...d, id: crypto.randomUUID() }));
     return {
       ...wb,
-      transactions: wb.transactions.map((t) => (t.id ? t : { ...t, id: crypto.randomUUID() })),
-      transfers: wb.transfers.map((t) => (t.id ? t : { ...t, id: crypto.randomUUID() })),
-      adjustments: wb.adjustments.map((a) => (a.id ? a : { ...a, id: crypto.randomUUID() })),
-      dividends: wb.dividends.map((d) => (d.id ? d : { ...d, id: crypto.randomUUID() })),
+      transactions: backfillSeq(transactionsWithId, sortTransactionsChronological(transactionsWithId)),
+      transfers: backfillSeq(transfersWithId, chronologicalByInstant(transfersWithId)),
+      adjustments: backfillSeq(adjustmentsWithId, chronologicalByInstant(adjustmentsWithId)),
+      dividends: backfillSeq(dividendsWithId, chronologicalByInstant(dividendsWithId)),
       tradePlans: wb.tradePlans.map((p) => (p.legs ? p : { ...p, legs: [] })),
     };
   }
@@ -151,9 +167,15 @@ export function createWorkbookStore<TWorkbook extends BaseWorkbook<unknown>>(
         if (!opts?.skipPersist) persist(next);
       },
 
-      addTransaction: (tx) => mutate((wb) => ({ ...wb, transactions: [...wb.transactions, tx] })),
+      addTransaction: (tx) =>
+        mutate((wb) => ({ ...wb, transactions: [...wb.transactions, tx.seq !== undefined ? tx : { ...tx, seq: nextSeq(wb.transactions) }] })),
 
-      addTransactions: (txs) => mutate((wb) => ({ ...wb, transactions: [...wb.transactions, ...txs] })),
+      addTransactions: (txs) =>
+        mutate((wb) => {
+          let seq = nextSeq(wb.transactions) - 1;
+          const withSeq = txs.map((t) => (t.seq !== undefined ? t : { ...t, seq: ++seq }));
+          return { ...wb, transactions: [...wb.transactions, ...withSeq] };
+        }),
 
       updateTransaction: (index, patch) =>
         mutate((wb) => ({
@@ -164,14 +186,19 @@ export function createWorkbookStore<TWorkbook extends BaseWorkbook<unknown>>(
       deleteTransaction: (index) =>
         mutate((wb) => ({ ...wb, transactions: wb.transactions.filter((_, i) => i !== index) })),
 
-      addTransfer: (t) => mutate((wb) => ({ ...wb, transfers: [...wb.transfers, t] })),
+      addTransfer: (t) =>
+        mutate((wb) => ({ ...wb, transfers: [...wb.transfers, t.seq !== undefined ? t : { ...t, seq: nextSeq(wb.transfers) }] })),
 
       updateTransfer: (id, patch) =>
         mutate((wb) => ({ ...wb, transfers: wb.transfers.map((t) => (t.id === id ? { ...t, ...patch } : t)) })),
 
       deleteTransfer: (id) => mutate((wb) => ({ ...wb, transfers: wb.transfers.filter((t) => t.id !== id) })),
 
-      addAdjustment: (a) => mutate((wb) => ({ ...wb, adjustments: [...wb.adjustments, a.id ? a : { ...a, id: crypto.randomUUID() }] })),
+      addAdjustment: (a) =>
+        mutate((wb) => {
+          const withId = a.id ? a : { ...a, id: crypto.randomUUID() };
+          return { ...wb, adjustments: [...wb.adjustments, withId.seq !== undefined ? withId : { ...withId, seq: nextSeq(wb.adjustments) }] };
+        }),
 
       updateAdjustment: (index, patch) =>
         mutate((wb) => ({ ...wb, adjustments: wb.adjustments.map((a, i) => (i === index ? { ...a, ...patch } : a)) })),
@@ -223,7 +250,11 @@ export function createWorkbookStore<TWorkbook extends BaseWorkbook<unknown>>(
           };
         }),
 
-      addDividend: (d) => mutate((wb) => ({ ...wb, dividends: [...wb.dividends, d.id ? d : { ...d, id: crypto.randomUUID() }] })),
+      addDividend: (d) =>
+        mutate((wb) => {
+          const withId = d.id ? d : { ...d, id: crypto.randomUUID() };
+          return { ...wb, dividends: [...wb.dividends, withId.seq !== undefined ? withId : { ...withId, seq: nextSeq(wb.dividends) }] };
+        }),
 
       updateDividend: (index, patch) =>
         mutate((wb) => ({ ...wb, dividends: wb.dividends.map((d, i) => (i === index ? { ...d, ...patch } : d)) })),
@@ -254,6 +285,7 @@ export function createWorkbookStore<TWorkbook extends BaseWorkbook<unknown>>(
           if (!plan || !leg || leg.executed) return wb;
           const tx: Transaction = {
             id: crypto.randomUUID(),
+            seq: nextSeq(wb.transactions),
             date: leg.date || new Date().toISOString().slice(0, 10),
             ticker: leg.ticker,
             action: leg.action,

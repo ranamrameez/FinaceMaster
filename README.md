@@ -4775,6 +4775,54 @@ FinanceManager live link:
      every other gated write in this project — a real end-to-end save needs a real signed-in
      account this session can't create against the production Firebase project). `npx tsc -b`
      / `npm run test` (423 tests, 2 new) / `npm run build` all clean.
+212. **Stable per-record sequence numbers (`seq`), app-wide, closing a critical user-reported
+     correctness gap (2026-08-27): "auto generate unique int ids for each single item so that
+     even matching dates cannot stop us from loosing the correct order of the data. in
+     transactions, correct order is everything."** Ordering relied on comparing a real instant
+     (date+time+timezone) and, on an exact tie (the common case for an untimed record, which
+     defaults to a fixed noon-UTC placeholder), falling back to `Array.prototype.sort`'s
+     stability — implicitly trusting whatever order records happened to sit in the underlying
+     array. That's fragile: it silently breaks the moment a record is deleted and re-added,
+     reordered by an import, or merged from a different source, none of which preserve "the
+     order a human actually entered the data in." New `lib/seq.ts`: `nextSeq(existing)` (one
+     more than the highest `seq` already in an array — the assignment every "add a new record"
+     action now uses) and `backfillSeq(records, chronological)` (fills in `seq` on real
+     pre-existing data missing it, walking a caller-supplied best-available chronological order
+     so historical data gets a sensible assignment instead of raw insertion order, while leaving
+     the records' own stored array order untouched). `seq?: number` added to every record type
+     that participates in chronological ordering: `Transaction`/`Transfer`/`Adjustment`/
+     `Dividend` (`types/workbook.ts`, shared by QSE/PSX/Funds via `createWorkbookStore.ts`),
+     `CashEntry` (via the generic `createEntryStore.ts`, backfilled in array order since that
+     factory has no structural guarantee of a `date` field), `BankTransaction`,
+     `PersonalLoanRepayment`, and `RentalEntry` (each hand-written store, own `normalize()`
+     backfill added). **Deliberately scoped out, after checking rather than assuming**: EMI's
+     `EMIRepayment` (addressed by `month`, an inherently unique installment index with no
+     same-date-tie scenario possible — verified no chronological sort exists for it at all);
+     `PricePoint` (a price observation, not a money movement — a different, lower-stakes kind of
+     record with no stable id of its own today either, a bigger separate change); `TradePlanLeg`
+     (addressed by index within its own plan, already noted as narrower-scope in an earlier id
+     retrofit); `WatchlistItem` (keyed by its own natural key, `ticker`). Every relevant sort
+     comparator updated to use `seq` as the tie-breaker AFTER any real domain rule that must
+     stay first for financial correctness — `sortTransactionsChronological`'s BUY-before-SELL
+     rule (Done item 128: a same-day sell must be processed after its matching buy) and
+     `buildCashLedger`'s transfer-before-trade rule both still win a tie before `seq` is ever
+     consulted, so this change is additive to those fixes, not a replacement for them. Sorts
+     updated: `sortTransactionsChronological`, `buildCashLedger`, `cashRunningLedger`,
+     `accountRunningLedger`, `personalLoansModule.ts`'s `repaymentRunningOutstanding`/
+     `loanBalanceHistory`, `transferBalance.ts`'s `transferRunningBalance` (also upgraded from a
+     plain date-string compare to real-instant, matching the rest of the app's time/timezone
+     convention while already touching the file), and `getMarketPrice`'s same-day-buys
+     fallback. New tests: `lib/__tests__/seq.test.ts` (6 cases for the two core primitives),
+     `sortTransactions.test.ts` (4, new file), `cashLedger.test.ts` (3, new file), plus seq-tie
+     regression cases added to `cashModule.test.ts`/`bankModule.test.ts`/
+     `personalLoansModule.test.ts`/`transferBalance.test.ts`/`createWorkbookStore.test.ts` (2
+     new there: backfill-in-date-order-not-array-order, and increasing seq on
+     `addTransaction`) — 19 new tests total. Verified live via Playwright: a seeded QSE
+     workbook with two same-day BUYs stored in reverse chronological order loaded and computed
+     correctly with zero console errors (position math for same-type merges is associative, so
+     this primarily confirms nothing crashes on real backfilled data, not a visible ordering
+     difference — the ordering correctness itself is what the 19 new unit tests directly prove).
+     `npx tsc -b` / `npm run test` (442 tests, 19 new) / `npm run build` all clean.
 
 ## Pending
 

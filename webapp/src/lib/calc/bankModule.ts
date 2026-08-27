@@ -7,14 +7,17 @@ export interface BankLedgerRow {
 }
 
 /** Running balance for one account, starting from its opening balance, in
- * real-instant chronological order (two untimed transactions always tie at
- * the same noon-UTC instant, falling through to original array order —
- * a strict, backward-compatible upgrade from the old date-string sort). */
+ * real-instant chronological order; two transactions tied at the same
+ * instant (the common case for untimed records, which default to the
+ * same noon-UTC placeholder) are then ordered by `seq` — a stable,
+ * persisted per-transaction counter (see `BankTransaction.seq`'s doc
+ * comment) — rather than relying on `Array.prototype.sort`'s stability. */
 export function accountRunningLedger(account: BankAccount, transactions: BankTransaction[]): BankLedgerRow[] {
   const accountTxs = transactions.filter((t) => t.accountId === account.id);
-  const sorted = [...accountTxs].sort(
-    (a, b) => toInstantMs(a.date, a.time, a.timezone) - toInstantMs(b.date, b.time, b.timezone),
-  );
+  const sorted = [...accountTxs].sort((a, b) => {
+    const byInstant = toInstantMs(a.date, a.time, a.timezone) - toInstantMs(b.date, b.time, b.timezone);
+    return byInstant !== 0 ? byInstant : (a.seq ?? 0) - (b.seq ?? 0);
+  });
   let balance = account.openingBalance;
   return sorted.map((tx) => {
     balance += tx.amount;

@@ -93,6 +93,37 @@ describe('createWorkbookStore normalize', () => {
     expect(useStore.getState().workbook.transactions[0].id).toBeTruthy();
   });
 
+  it('backfills seq onto real pre-existing data missing it, in date order (not raw array order)', () => {
+    // Stored (original) array order is out of chronological order —
+    // simulates a real workbook where the array itself doesn't reflect
+    // true entry history.
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...createEmptyTestWorkbook(),
+        transactions: [
+          { id: 'later', date: '2026-08-05', ticker: 'QGTS', action: 'BUY', shares: 1, price: 10 },
+          { id: 'earlier', date: '2026-08-01', ticker: 'QGTS', action: 'BUY', shares: 1, price: 10 },
+        ],
+      }),
+    );
+    const useStore = createWorkbookStore(STORAGE_KEY, createEmptyTestWorkbook);
+    const txs = useStore.getState().workbook.transactions;
+    const byId = Object.fromEntries(txs.map((t) => [t.id, t.seq]));
+    expect(byId.earlier).toBeLessThan(byId.later as number);
+    // Original stored array order is untouched — only the missing field
+    // gets filled in, this must not silently reorder anything.
+    expect(txs.map((t) => t.id)).toEqual(['later', 'earlier']);
+  });
+
+  it('addTransaction assigns an increasing seq to each new transaction', () => {
+    const useStore = createWorkbookStore(STORAGE_KEY, createEmptyTestWorkbook);
+    useStore.getState().addTransaction({ date: '2026-08-01', ticker: 'QGTS', action: 'BUY', shares: 1, price: 10 });
+    useStore.getState().addTransaction({ date: '2026-08-01', ticker: 'QGTS', action: 'BUY', shares: 1, price: 10 });
+    const [first, second] = useStore.getState().workbook.transactions;
+    expect(second.seq).toBe((first.seq as number) + 1);
+  });
+
   it('executeTradePlanLeg links the leg to the transaction it creates, so a later edit stays visible from the plan', () => {
     const useStore = createWorkbookStore(STORAGE_KEY, createEmptyTestWorkbook);
     const leg = { date: '2026-08-01', ticker: 'QGTS', action: 'BUY' as const, shares: 100, price: 10 };

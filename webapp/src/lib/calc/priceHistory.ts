@@ -14,7 +14,9 @@ export function getMarketPrice(
     (t) => t.ticker.toUpperCase() === ticker.toUpperCase() && t.action === 'BUY' && Number(t.price) > 0,
   );
   if (buys.length) {
-    buys.sort((a, b) => a.date.localeCompare(b.date));
+    // `seq` (see `Transaction.seq`'s doc comment) breaks a same-date tie by
+    // real entry order, not array position.
+    buys.sort((a, b) => a.date.localeCompare(b.date) || (a.seq ?? 0) - (b.seq ?? 0));
     return Number(buys[buys.length - 1].price);
   }
   return 0;

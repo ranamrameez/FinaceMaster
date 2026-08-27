@@ -4237,6 +4237,52 @@ not developer notes) continuously as features ship.
   New tests: `fundsDailyHistoryImport.test.ts` gained 2 cases for `impliedFundNav`. Verified
   live via Playwright with a seeded 100-unit position: sign-in gate correctly fires on save.
   `npx tsc -b` / `npm run test` (423 tests, 2 new) / `npm run build` all clean.
+- **Stable per-record sequence numbers (`seq`), app-wide, closing a critical user-reported gap
+  (2026-08-27) — see README Done item 212.** "auto generate unique int ids for each single
+  item so that even matching dates cannot stop us from loosing the correct order of the data.
+  in transactions, correct order is everything." Ordering relied on comparing a real instant
+  and, on an exact tie (the common case for an untimed record, which defaults to noon UTC),
+  falling back to `Array.prototype.sort`'s stability — implicitly trusting array order, which
+  doesn't survive a delete-and-re-add, an import reordering the array, or a merge from another
+  source. New `lib/seq.ts`: `nextSeq(existing)` (one more than the highest `seq` already
+  present — used by every "add a new record" action) and `backfillSeq(records, chronological)`
+  (fills in `seq` on real pre-existing data missing it, walking a caller-supplied best-available
+  chronological order, without touching the records' own stored array order). `seq?: number`
+  added to every record type that participates in chronological ordering:
+  `Transaction`/`Transfer`/`Adjustment`/`Dividend` (shared by QSE/PSX/Funds via
+  `createWorkbookStore.ts`), `CashEntry` (via the generic `createEntryStore.ts`, backfilled in
+  array order since that factory can't assume a `date` field), `BankTransaction`,
+  `PersonalLoanRepayment`, `RentalEntry` (each hand-written store, own `normalize()` backfill
+  added). **Deliberately scoped out, after checking rather than assuming**: EMI's
+  `EMIRepayment` (addressed by `month`, an inherently unique index — verified no chronological
+  sort exists for it); `PricePoint` (a price observation, not a money movement, with no stable
+  id of its own today either — a bigger separate change); `TradePlanLeg` (already narrower-
+  scope, addressed by index within its own plan); `WatchlistItem` (keyed by its own natural
+  key). Every relevant comparator updated to use `seq` as the tie-breaker AFTER any real domain
+  rule that must stay first for financial correctness — `sortTransactionsChronological`'s
+  BUY-before-SELL rule (Done item 128) and `buildCashLedger`'s transfer-before-trade rule both
+  still win a tie before `seq` is consulted, so this is additive to those fixes, not a
+  replacement. Sorts updated: `sortTransactionsChronological`, `buildCashLedger`,
+  `cashRunningLedger`, `accountRunningLedger`, `personalLoansModule.ts`'s
+  `repaymentRunningOutstanding`/`loanBalanceHistory`, `transferBalance.ts`'s
+  `transferRunningBalance` (also upgraded from a plain date-string compare to real-instant,
+  matching the rest of the app's convention while already in the file), and `getMarketPrice`'s
+  same-day-buys fallback. **A real "weak type" TypeScript gotcha hit repeatedly while wiring
+  this into the generic store factories**: a plain object type with all-optional properties
+  (like `{seq?: number}`) is rejected by TS when assigned a concrete object with ZERO
+  properties in common (e.g. `{id: string, date: string}`), even though structurally an
+  absent optional property should satisfy it — worth remembering for any future optional-field
+  helper generic over an unconstrained `T`: either widen the constraint explicitly or cast at
+  the call site, plain structural typing isn't enough. New tests: `lib/__tests__/seq.test.ts`
+  (6), `sortTransactions.test.ts` (4, new file), `cashLedger.test.ts` (3, new file), plus
+  seq-tie regression cases in `cashModule.test.ts`/`bankModule.test.ts`/
+  `personalLoansModule.test.ts`/`transferBalance.test.ts`/`createWorkbookStore.test.ts` — 19
+  new tests total. Verified live via Playwright: a seeded QSE workbook with two same-day BUYs
+  stored in reverse chronological order loaded and computed correctly with zero console
+  errors — same-type position merges are associative, so this mainly confirms nothing crashes
+  on real backfilled data; the ordering correctness itself is what the 19 new unit tests
+  directly prove. `npx tsc -b` / `npm run test` (442 tests, 19 new) / `npm run build` all
+  clean.
 
 ## Live URLs
 

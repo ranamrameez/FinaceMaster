@@ -17,8 +17,8 @@ export function loanOutstanding(loan: PersonalLoan, repayments: PersonalLoanRepa
 export function repaymentRunningOutstanding(loan: PersonalLoan, repayments: PersonalLoanRepayment[]): Map<string, number> {
   const forLoan = repayments
     .filter((r) => r.loanId === loan.id)
-    .map((r, i) => ({ r, i }))
-    .sort((a, b) => toInstantMs(a.r.date, a.r.time, a.r.timezone) - toInstantMs(b.r.date, b.r.time, b.r.timezone) || a.i - b.i);
+    .sort((a, b) => toInstantMs(a.date, a.time, a.timezone) - toInstantMs(b.date, b.time, b.timezone) || (a.seq ?? 0) - (b.seq ?? 0))
+    .map((r) => ({ r }));
   const out = new Map<string, number>();
   let remaining = loan.principal;
   for (const { r } of forLoan) {
@@ -39,8 +39,8 @@ export function repaymentRunningOutstanding(loan: PersonalLoan, repayments: Pers
 export function loanBalanceHistory(loan: PersonalLoan, repayments: PersonalLoanRepayment[]): { date: string; balance: number }[] {
   const forLoan = repayments
     .filter((r) => r.loanId === loan.id)
-    .map((r, i) => ({ r, i }))
-    .sort((a, b) => toInstantMs(a.r.date, a.r.time, a.r.timezone) - toInstantMs(b.r.date, b.r.time, b.r.timezone) || a.i - b.i);
+    .sort((a, b) => toInstantMs(a.date, a.time, a.timezone) - toInstantMs(b.date, b.time, b.timezone) || (a.seq ?? 0) - (b.seq ?? 0))
+    .map((r) => ({ r }));
   const points: { date: string; balance: number }[] = [{ date: loan.date, balance: loan.principal }];
   let remaining = loan.principal;
   for (const { r } of forLoan) {

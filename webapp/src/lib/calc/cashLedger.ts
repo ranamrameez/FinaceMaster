@@ -8,7 +8,11 @@ import { toInstantMs } from '../datetime';
  * `time`/`timezone` on each record, see `lib/datetime.ts`); on an exact
  * tie (the common case for untimed records, which all default to the same
  * noon-UTC placeholder) transfers still go before trades, since that's how
- * money usually has to arrive before you can spend it.
+ * money usually has to arrive before you can spend it — a domain rule, not
+ * an ordering preference, so it's checked first. When that rule doesn't
+ * disambiguate (two events of the SAME kind at the same instant), `seq`
+ * (carried through from whichever record produced the event — see
+ * `Transaction.seq`'s doc comment) decides real entry order.
  * Ported 1:1 from the legacy `buildCashLedger()` in index.html. */
 export function buildCashLedger(
   transactions: Transaction[],
@@ -26,6 +30,7 @@ export function buildCashLedger(
       date: tx.date,
       time: tx.time,
       timezone: tx.timezone,
+      seq: tx.seq,
       kind: 'trade',
       action: tx.action,
       label: `${tx.action} ${fmt(tx.shares, 0)} ${tx.ticker} @ ${fmt(tx.price, 3)}`,
@@ -40,6 +45,7 @@ export function buildCashLedger(
       date: t.date,
       time: t.time,
       timezone: t.timezone,
+      seq: t.seq,
       kind: 'transfer',
       action: t.type,
       label: t.type === 'DEPOSIT' ? 'Deposit' : 'Withdrawal',
@@ -53,6 +59,7 @@ export function buildCashLedger(
       date: a.date,
       time: a.time,
       timezone: a.timezone,
+      seq: a.seq,
       kind: 'adjustment',
       action: a.amount >= 0 ? 'REWARD' : 'CORRECTION',
       label: a.note || (a.amount >= 0 ? 'Trading reward' : 'Adjustment'),
@@ -64,7 +71,9 @@ export function buildCashLedger(
   events.sort((a, b) => {
     const byInstant = toInstantMs(a.date, a.time, a.timezone) - toInstantMs(b.date, b.time, b.timezone);
     if (byInstant !== 0) return byInstant;
-    return (a.kind === 'transfer' ? -1 : 1) - (b.kind === 'transfer' ? -1 : 1);
+    const byKind = (a.kind === 'transfer' ? -1 : 1) - (b.kind === 'transfer' ? -1 : 1);
+    if (byKind !== 0) return byKind;
+    return (a.seq ?? 0) - (b.seq ?? 0);
   });
 
   let balance = 0;

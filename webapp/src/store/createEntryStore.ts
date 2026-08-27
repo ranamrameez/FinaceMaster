@@ -30,6 +30,27 @@ function ensureIds<T extends { id?: string }>(items: T[]): (T & { id: string })[
   return items.map((item) => (item.id ? (item as T & { id: string }) : { ...item, id: crypto.randomUUID() }));
 }
 
+/** Backfills `seq` (see `lib/seq.ts`) onto any entry missing it, in
+ * ARRAY order — this generic factory has no structural guarantee its
+ * `TEntry` carries a `date` field to sort by first (some instantiations,
+ * like the inter-entity-transfer links store, genuinely don't), so unlike
+ * `createWorkbookStore.ts`'s date-aware backfill this uses plain array
+ * position as the best-available chronological guess for pre-existing
+ * data — no worse than what every sort relying on array-stability was
+ * already implicitly assuming before this field existed, and strictly
+ * more robust going forward once every new entry gets a real `seq`. */
+function ensureSeq<T extends { seq?: number }>(items: T[]): T[] {
+  let seq = items.reduce((max, r) => Math.max(max, r.seq ?? 0), 0);
+  return items.map((item) => (item.seq !== undefined ? item : { ...item, seq: ++seq }));
+}
+
+/** Same "one more than the highest existing seq" rule as `lib/seq.ts`'s
+ * `nextSeq`, duplicated locally so the generic `TEntry` here (unconstrained
+ * on `seq`) doesn't need a structural-typing cast at every call site. */
+function nextSeqOf(entries: { seq?: number }[]): number {
+  return entries.reduce((max, r) => Math.max(max, r.seq ?? 0), 0) + 1;
+}
+
 /** Generic store factory for simple modules that are just "a settings
  * object plus one array of editable, dated entries" — Cash, EMI/Loans, and
  * similar. `createWorkbookStore` covers the stock-exchange shape
@@ -44,7 +65,8 @@ export function createEntryStore<TSettings, TEntry extends { id: string }>(
   createEmpty: () => BaseEntryWorkbook<TSettings, TEntry>,
 ): UseBoundStore<StoreApi<EntryStoreState<TSettings, TEntry>>> {
   function normalize(wb: BaseEntryWorkbook<TSettings, TEntry>): BaseEntryWorkbook<TSettings, TEntry> {
-    return { ...wb, entries: ensureIds(wb.entries) };
+    const withIds = ensureIds(wb.entries);
+    return { ...wb, entries: ensureSeq(withIds as unknown as { seq?: number }[]) as unknown as TEntry[] };
   }
 
   function loadFromLocalStorage(): BaseEntryWorkbook<TSettings, TEntry> {
@@ -81,9 +103,22 @@ export function createEntryStore<TSettings, TEntry extends { id: string }>(
         if (!opts?.skipPersist) persist(next);
       },
 
-      addEntry: (entry) => mutate((wb) => ({ ...wb, entries: [...wb.entries, entry] })),
+      addEntry: (entry) =>
+        mutate((wb) => {
+          const seqed = entry as TEntry & { seq?: number };
+          const withSeq = seqed.seq !== undefined ? entry : ({ ...entry, seq: nextSeqOf(wb.entries as unknown as { seq?: number }[]) } as TEntry);
+          return { ...wb, entries: [...wb.entries, withSeq] };
+        }),
 
-      addEntries: (entries) => mutate((wb) => ({ ...wb, entries: [...wb.entries, ...entries] })),
+      addEntries: (entries) =>
+        mutate((wb) => {
+          let seq = nextSeqOf(wb.entries as unknown as { seq?: number }[]) - 1;
+          const withSeq = entries.map((e) => {
+            const seqed = e as TEntry & { seq?: number };
+            return seqed.seq !== undefined ? e : ({ ...e, seq: ++seq } as TEntry);
+          });
+          return { ...wb, entries: [...wb.entries, ...withSeq] };
+        }),
 
       updateEntry: (id, patch) =>
         mutate((wb) => ({
