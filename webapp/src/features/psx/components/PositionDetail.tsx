@@ -8,7 +8,8 @@ import { IconButton } from '../../../components/ui/IconButton';
 import { Sparkline } from '../../../components/Sparkline';
 import { toast } from '../../../components/Toast';
 import { breakEvenPrice, computePriceStats, getMarketPrice } from '../../../lib/calc';
-import { calcCGT } from '../../../lib/calc/psxFees';
+import { calcCGT, feeScenarios } from '../../../lib/calc/psxFees';
+import type { FeeCalculator } from '../../../types/workbook';
 import { getDailyPriceHistory } from '../../../lib/calc/priceHistory';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { toCSV } from '../../../lib/csv';
@@ -46,6 +47,22 @@ export function PositionDetail({ ticker }: { ticker: string }) {
   const avg = shares > 0 ? invested / shares : 0;
   const mp = getMarketPrice(ticker, workbook.marketPrices, workbook.transactions);
   const be = shares > 0 ? breakEvenPrice(invested, shares, workbook.settings.feePct, workbook.settings.tick, calcFee) : 0;
+  // User's own worked example (2026-08-27 trust conversation): "I bought
+  // today 1@327.8... no commission until market close... small levies
+  // negligible. BE would be [sold same-day, netted] ~327.87, vs. [sold a
+  // different day, full commission] ~328.5" — asked to see both scenarios
+  // side by side rather than pick one. `calcFee` (passed with no `tx`
+  // context, as `breakEvenPrice` always calls it) already only ever returns
+  // the FULL fee — see `makePSXFeeCalculator`'s own `if (!tx) return ...
+  // .total` branch — so the existing `be` above already IS the "different
+  // day" scenario. This second calc reuses `feeScenarios()`'s `netted`
+  // figure (government levies only, no commission/SST — the Trade Planner's
+  // existing same-day-netting math, README Done item 104) to answer the
+  // other half: what BE would be if this sell nets against a same-day buy
+  // instead.
+  const nettedCalcFee: FeeCalculator = (amount, isBuy, context) =>
+    feeScenarios(amount, isBuy, context?.shares ?? 0, workbook.settings).netted;
+  const beSameDay = shares > 0 ? breakEvenPrice(invested, shares, workbook.settings.feePct, workbook.settings.tick, nettedCalcFee) : 0;
 
   const [priceInput, setPriceInput] = useState(mp > 0 ? String(mp) : '');
   useEffect(() => setPriceInput(mp > 0 ? String(mp) : ''), [ticker]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -180,6 +197,13 @@ export function PositionDetail({ ticker }: { ticker: string }) {
               </Tooltip>
               <div className="value">{fmtPrice(avg)}</div>
               <div className="sub" style={{ color: mp > 0 ? (mp >= be ? 'var(--profit)' : 'var(--loss)') : undefined }}>BE {fmtPrice(be)}</div>
+            </div>
+            <div className="stat-card card" style={hueStyle(HUES[1])}>
+              <Tooltip text="PSX nets commission when you buy and sell the same ticker on the same day — the smaller-quantity leg (ties go to the buy) pays no commission or SST, only government levies. 'Same-day' assumes this sell nets against a same-day buy; 'Other day' assumes the full commission applies, same as a regular trade.">
+                <div className="label" style={{ cursor: 'pointer' }}>BE: same-day vs. other day</div>
+              </Tooltip>
+              <div className="value" style={{ fontSize: 14 }}>{fmtPrice(beSameDay)}</div>
+              <div className="sub">same-day · other day {fmtPrice(be)}</div>
             </div>
             <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Invested</div><div className="value">{fmtMoney(invested, currency)}</div></div>
             <div className="stat-card card" style={hueStyle(HUES[4])}>
