@@ -4172,6 +4172,20 @@ not developer notes) continuously as features ship.
   real `aria-label="Trade calculator"` FAB button: the card showed "329.39 / other day ·
   same-day 328.63" — matching `PositionDetail`'s own numbers exactly — zero new console
   errors. `npx tsc -b` / `npm run test` (421 tests, unchanged) / `npm run build` all clean.
+- **QSE/PSX "Show all" price-update history, user-reported (2026-08-27) — see README Done item
+  208.** "Current price updates are shown upto recent 8. no view to see them all." The "Recent
+  updates" table in `PositionDetail.tsx`'s "Price range" card was hard-capped to
+  `computePriceStats()`'s `stats.recent` (last 8, newest-first) with no in-app way to see the
+  rest (only the CSV export button reached full history). Added a `showAllPrices` toggle that
+  swaps the table's source between `stats.recent` and the full `stats.chronological` (also
+  newest-first) — safe for the existing edit/delete `rawHistory.indexOf(p)` row resolution
+  since `computePriceStats()` builds both arrays from the SAME `PricePoint` object references,
+  never clones. Toggle button only renders when there's actually more than 8 to show; summary
+  line always states both counts. Verified live via Playwright on both exchanges with 12-15
+  seeded updates: collapsed shows exactly 8, expanding shows the full count in correct order,
+  and — the case most likely to silently break — editing a row from beyond the original 8
+  correctly resolved to that exact row's own date/price. `npx tsc -b` / `npm run test` (421
+  tests, unchanged) / `npm run build` all clean.
 
 ## Live URLs
 

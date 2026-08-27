@@ -87,7 +87,16 @@ export function PositionDetail({ ticker }: { ticker: string }) {
   };
   const { sorted: sortedLots, Th: LotTh } = useSortableRows(lotRows, lotSortValue, 'buyDate', 'asc');
 
-  const recentRows = stats?.recent ?? [];
+  // User-reported (2026-08-27): "current price updates are shown upto
+  // recent 8, no view to see them all" — `stats.recent` is deliberately
+  // capped at 8 (computePriceStats' own doc comment), with the only other
+  // access to full history being the CSV export button below. This toggle
+  // swaps the table's source to the full `stats.chronological` (still
+  // newest-first) on demand — both arrays hold the exact same PricePoint
+  // object references as `rawHistory`, so `rawHistory.indexOf(p)` below
+  // (used for edit/delete) resolves correctly either way.
+  const [showAllPrices, setShowAllPrices] = useState(false);
+  const recentRows = showAllPrices ? [...(stats?.chronological ?? [])].reverse() : (stats?.recent ?? []);
   type RecentCol = 'when' | 'price';
   const recentSortValue = (p: (typeof recentRows)[number], col: RecentCol): number | string =>
     col === 'price' ? p.price : (p.time ?? p.date);
@@ -387,7 +396,18 @@ export function PositionDetail({ ticker }: { ticker: string }) {
             <div className="stat-card card" style={hueStyle(HUES[2])}><div className="label">Highest</div><div className="value">{fmtPrice(stats.max)}</div><div className="sub">{stats.maxDate}</div></div>
           </div>
           <details>
-            <summary className="footer-note" style={{ cursor: 'pointer' }}>Recent updates ({stats.recent.length})</summary>
+            <summary className="footer-note" style={{ cursor: 'pointer' }}>
+              {showAllPrices ? `All updates (${stats.totalUpdates})` : `Recent updates (${stats.recent.length} of ${stats.totalUpdates})`}
+            </summary>
+            {stats.totalUpdates > stats.recent.length && (
+              <button
+                className="btn secondary small"
+                style={{ marginTop: 8 }}
+                onClick={() => setShowAllPrices((v) => !v)}
+              >
+                {showAllPrices ? 'Show recent 8 only' : `Show all ${stats.totalUpdates} updates`}
+              </button>
+            )}
             <div className="table-scroll" style={{ marginTop: 8 }}>
               <table>
                 <thead><tr><RecentTh col="when">When</RecentTh><RecentTh col="price">Price</RecentTh><th></th></tr></thead>

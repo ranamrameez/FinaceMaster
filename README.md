@@ -4695,6 +4695,26 @@ FinanceManager live link:
      its real `aria-label="Trade calculator"` FAB: the card showed "329.39 / other day ·
      same-day 328.63" — matching PositionDetail's own numbers exactly — zero new console
      errors. `npx tsc -b` / `npm run test` (421 tests, unchanged) / `npm run build` all clean.
+208. **QSE/PSX per-stock page: "Show all" price-update history, user-reported (2026-08-27) —
+     "current price updates are shown upto recent 8. no view to see them all."** The "Recent
+     updates" table in "Price range" (`PositionDetail.tsx`, both exchanges) was hard-capped to
+     `stats.recent` (`computePriceStats()`'s own last-8-newest-first slice), with the only other
+     access to the rest being the "Export price history CSV" button — no in-app way to browse
+     older updates. Added a `showAllPrices` toggle: unchecked (default, unchanged behavior)
+     shows the same 8-row `stats.recent`; checked swaps the table's source to the full
+     `stats.chronological` (also newest-first). Safe for the existing edit/delete row resolution
+     (`rawHistory.indexOf(p)`) because `computePriceStats()` builds both `recent` and
+     `chronological` by sorting the SAME raw `PricePoint` object references, never cloning them
+     — an object pulled from the full list resolves to the correct index exactly like one from
+     the 8-row slice always did. Summary line now always shows both counts ("Recent updates (8
+     of 15)" / "All updates (15)"), and the toggle button itself is only shown when there
+     actually are more than 8 updates to reveal. Verified live via Playwright on both exchanges
+     with 12-15 seeded updates: collapsed view showed exactly 8, the toggle correctly expanded
+     to the full count in the right newest-first order, and — the case most likely to silently
+     break — clicking Edit on a row from BEYOND the original 8 (the oldest, last-in-list one)
+     correctly prefilled that exact row's date/price, confirming the index resolution survives
+     the swap. `npx tsc -b` / `npm run test` (421 tests, unchanged — a pure UI change over
+     already-existing, already-tested data) / `npm run build` all clean.
 
 ## Pending
 
