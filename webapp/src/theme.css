@@ -451,7 +451,14 @@
      saturated diagonal fill. The two `--card-hue` gradient overrides below
      (non-wine, Material) use the same 7%-mix + sheen formula — keep all
      three in sync if this changes again. */
-  .stat-card{padding:11px 13px; background:linear-gradient(135deg, rgba(255,255,255,.05) 0%, rgba(255,255,255,0) 35%), linear-gradient(135deg, color-mix(in srgb, var(--card-hue, var(--accent)) 24%, var(--panel)) 0%, var(--panel) 100%);}
+  /* User-reported (2026-08-27): "gradient is giving perception like cards
+     are going to fade... card colors should be solid, specially border
+     (without borders). use minor radial gradient in card's middle." The
+     old diagonal fade-to-`--panel` read as unfinished/washed-out at the
+     far edge of every card. Now a flat, solid hue-mix fill (no fade to
+     panel color anywhere) plus one small, subtle radial highlight
+     centered near the top — a "minor" spotlight, not a second fade. */
+  .stat-card{padding:11px 13px; border:0; background:radial-gradient(circle at 50% 30%, color-mix(in srgb, white 12%, transparent) 0%, transparent 55%), color-mix(in srgb, var(--card-hue, var(--accent)) 22%, var(--panel));}
   .stat-card .label{color:var(--muted); font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; line-height:1.25;}
   .stat-card .value{font-family:var(--mono); font-size:17px; font-weight:700; line-height:1.2;}
   .stat-card .sub{font-size:10.5px; margin-top:3px; color:var(--muted); line-height:1.3;}
@@ -468,6 +475,14 @@
   .entity-card{cursor:pointer; transition:transform .12s ease, box-shadow .12s ease; padding:13px 15px;}
   .entity-card:hover{transform:translateY(-2px); box-shadow:var(--shadow-lg);}
   .entity-card-title{font-weight:700; font-size:14px; line-height:1.3; overflow-wrap:anywhere;}
+
+  /* Shared floating "+" action button (components/ui/Fab.tsx) — a real
+     lift+scale on hover/press so the app reads as interactive, not a
+     static page (user-reported, 2026-08-27: "Hover animation is
+     excellent... UI should be more interactive and animated"). */
+  .fab-btn{width:52px; height:52px; min-width:52px; border-radius:50%; padding:0; font-size:22px; box-shadow:0 4px 16px rgba(0,0,0,.25); transition:transform .15s ease, box-shadow .15s ease;}
+  .fab-btn:hover{transform:scale(1.08) translateY(-2px); box-shadow:0 6px 22px rgba(0,0,0,.32);}
+  .fab-btn:active{transform:scale(.94);}
 
   /* ---------- Density: Compact — an even tighter pass for people who want
      to see as much data as possible with minimal scrolling. Comfortable
@@ -671,7 +686,17 @@
      wraps onto additional lines once its fields would otherwise drop
      below a usable width, at any viewport size, not just mobile. */
   .row{display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;}
-  .row > *{flex:1; min-width:160px;}
+  /* User-reported (2026-08-27): "Input sizes still inconsistent and taking
+     whole 100% width." Root cause: `flex:1` (flex-basis:0%) ignores each
+     field's own explicit `width` prop entirely and instead divides the
+     row's full width evenly among however many children happen to be in
+     it — so a Field with `width={160}` and one with no width prop at all
+     rendered identically wide, and a short row (2-3 fields) stretched to
+     fill the entire container regardless of what any field actually
+     needed. `flex:0 1 auto` uses each child's own width/content as its
+     real size (shrinking only if the row is too narrow, per `min-width`
+     below), so fields size themselves instead of splitting the row. */
+  .row > *{flex:0 1 auto; min-width:160px;}
   .btn{
     display:inline-flex; align-items:center; justify-content:center; gap:6px; width:auto; flex:0 0 auto;
     background:color-mix(in srgb, var(--accent) 65%, #000); color:#fff; border:none; padding:8px 13px; border-radius:7px;
@@ -834,8 +859,15 @@
     overflow-y:auto;
   }
   .modal-overlay.show{display:flex;}
+  /* User-reported (2026-08-27): "use similar color for making gradients
+     rather than pure white which is fogging it" — `--panel` in the light
+     theme IS pure white (#fff), so a modal sitting on a dimmed backdrop
+     read as a stark, foggy rectangle. Same accent-tinted diagonal gradient
+     `.card` already uses, so a modal reads as part of the same visual
+     system instead of a flat white popup. */
   .modal-box{
-    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    background:linear-gradient(165deg, color-mix(in srgb, var(--accent) 6%, var(--panel)) 0%, var(--panel) 55%);
+    border:1px solid var(--border); border-radius:12px;
     padding:26px 30px; width:100%; max-width:920px; box-shadow:0 20px 60px rgba(0,0,0,.5);
     animation:fadein .16s ease; max-height:92vh; overflow-y:auto;
   }
@@ -1289,7 +1321,7 @@ html:not([data-color="wine"]) .card.chart-card{
 html:not([data-color="wine"]) .card.stat-card{
   border:0;
   box-shadow:var(--shadow-card);
-  background:linear-gradient(135deg, rgba(255,255,255,.05) 0%, rgba(255,255,255,0) 35%), linear-gradient(135deg, color-mix(in srgb, var(--card-hue, var(--accent)) 24%, var(--panel)) 0%, var(--panel) 100%);
+  background:radial-gradient(circle at 50% 30%, color-mix(in srgb, white 12%, transparent) 0%, transparent 55%), color-mix(in srgb, var(--card-hue, var(--accent)) 22%, var(--panel));
 }
 html[data-color^="material-"][data-theme="light"] .card.chart-card,
 html[data-color^="material-"][data-theme="dark"] .card.chart-card{
@@ -1301,7 +1333,7 @@ html[data-color^="material-"][data-theme="light"] .card.stat-card,
 html[data-color^="material-"][data-theme="dark"] .card.stat-card{
   border:0;
   box-shadow:var(--shadow-card);
-  background:linear-gradient(135deg, rgba(255,255,255,.05) 0%, rgba(255,255,255,0) 35%), linear-gradient(135deg, color-mix(in srgb, var(--card-hue, var(--accent)) 24%, var(--panel)) 0%, var(--panel) 100%);
+  background:radial-gradient(circle at 50% 30%, color-mix(in srgb, white 12%, transparent) 0%, transparent 55%), color-mix(in srgb, var(--card-hue, var(--accent)) 22%, var(--panel));
 }
 
 /* Fields get the same whisper of color the cards get — background only,
@@ -1372,26 +1404,31 @@ html.auth-signed-out #cloudSignedInBox{display:none !important;}
 .category-list{margin-bottom:6px; padding-bottom:6px; border-bottom:1px solid var(--border);}
 .category-item.active{background:var(--accent-soft); color:var(--on-accent-soft); font-weight:600;}
 
-/* Account section (2026-08-26 feedback): the sign-in state and the backup/
-   restore link used to be plain `.footer-note`-styled text links, easy to
-   miss as actual actions. Both are now real `.navbtn`s, grouped in a
-   bordered box so "Backup / restore all data" visually reads as part of
-   the account section, not an unrelated footer line. */
+/* Account section (2026-08-26 feedback): the sign-in state used to be a
+   plain `.footer-note`-styled text link, easy to miss as an actual action
+   — now a real `.navbtn`, grouped in a bordered box.
+
+   2026-08-27, second round: "Signed in as [long name]" wrapped across 3
+   lines and visibly ate space in the sidebar — a real regression, not a
+   styling nitpick. Rebuilt as a strict single line: a small round avatar,
+   the name truncated with an ellipsis rather than wrapping (the full name
+   still reaches the user via the row's own `title` tooltip), and a small
+   settings-gear icon pinned to the right as the "this opens account
+   settings" affordance — matching the user's own spec ("show user name,
+   avatar and settings logo only, with smaller text"). */
 .sidebar-account-group{
   border:1px solid var(--border); border-radius:8px; padding:2px;
   margin-top:12px; display:flex; flex-direction:column; gap:1px;
 }
-/* User-reported 2026-08-27: "Account and backups ui inconsistent" — real,
-   measurable cause: `.account-sub-btn` (Backup/Sync rows) overrides
-   `padding-left` to 34px to visually indent them under the account row,
-   but `.account-btn` (the "Signed in as X" row) never got the same
-   treatment — its icon+text sat 22px further left than its own siblings'
-   icon+text, a genuine column misalignment across the three stacked rows,
-   not just a subjective styling gripe. Giving `.account-btn` the identical
-   padding-left lines up every icon and every text baseline in one shared
-   column. */
-.account-btn{font-weight:600; padding-left:34px;}
-.account-sub-btn{font-size:12px; color:var(--muted); padding-left:34px;}
+.account-btn{font-size:12.5px; gap:8px;}
+.account-avatar{
+  flex:0 0 22px; width:22px; height:22px; border-radius:50%;
+  background:var(--accent-soft); color:var(--on-accent-soft);
+  display:flex; align-items:center; justify-content:center;
+  font-size:12px; font-weight:700; line-height:1;
+}
+.account-name{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.account-btn svg{flex-shrink:0; color:var(--muted);}
 
 /* Phase 1 addition (README item 14): a super-compact "console" density on
  * top of the existing comfortable/compact tiers — tighter padding, smaller

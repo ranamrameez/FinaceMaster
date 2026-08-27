@@ -46,7 +46,7 @@ interface CurrencyContext {
  * simplicity as Personal Loans' plain loan picker. Clamped to the
  * schedule's own length so a fully-repaid loan doesn't produce an
  * out-of-range month. */
-function nextUnpaidEmiMonth(loan: EMILoan): number {
+export function nextUnpaidEmiMonth(loan: EMILoan): number {
   const sum = emiSummary(loan);
   return Math.min(sum.elapsed + 1, sum.rows.length);
 }
@@ -78,7 +78,7 @@ function resolveCurrency(cfg: LinkSideConfig, ctx: CurrencyContext): string | nu
  * (no live FX-rate source, per MODULES_PLAN.md's cross-cutting decision),
  * so a mismatch here means the two ledger rows won't reconcile in the same
  * units even though the app treats the number as equal on both sides. */
-function useSideCurrency(cfg: LinkSideConfig): string | null {
+export function useSideCurrency(cfg: LinkSideConfig): string | null {
   const cashCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
   const bankAccounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
   const qseCurrency = useWorkbookStore((s) => s.workbook.settings.currency);
@@ -90,7 +90,7 @@ function useSideCurrency(cfg: LinkSideConfig): string | null {
   return resolveCurrency(cfg, { cashCurrency, bankAccounts, qseCurrency, psxCurrency, fundsCurrency, properties, loans, emiLoans });
 }
 
-function SideFields({ label, cfg, onChange }: { label: string; cfg: LinkSideConfig; onChange: (cfg: LinkSideConfig) => void }) {
+export function SideFields({ label, cfg, onChange }: { label: string; cfg: LinkSideConfig; onChange: (cfg: LinkSideConfig) => void }) {
   const bankAccounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
   const properties = useRentalsWorkbookStore((s) => s.workbook.settings.properties);
   const loans = usePersonalLoansWorkbookStore((s) => s.workbook.loans);

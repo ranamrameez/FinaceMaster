@@ -7,6 +7,7 @@ import { Tooltip } from '../../../components/Tooltip';
 import { toast } from '../../../components/Toast';
 import { ChartCard } from '../../qse/components/ChartCard';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { FabButton } from '../../../components/ui/Fab';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import {
   collectBudgetActivities,
@@ -334,18 +335,7 @@ function AddPlanFab(props: AddPlanFabProps) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <div style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 500 }}>
-        <Tooltip text="Add a plan" align="right">
-          <button
-            className="btn"
-            onClick={() => setOpen(true)}
-            aria-label="Add a plan"
-            style={{ width: 52, height: 52, borderRadius: '50%', padding: 0, fontSize: 22, boxShadow: '0 4px 16px rgba(0,0,0,.25)' }}
-          >
-            <PlusIcon />
-          </button>
-        </Tooltip>
-      </div>
+      <FabButton label="Add a plan" onClick={() => setOpen(true)}><PlusIcon /></FabButton>
       {open && (
         <Modal title="Add a plan" onClose={() => setOpen(false)}>
           <AddPlanForm {...props} onSaved={() => setOpen(false)} />

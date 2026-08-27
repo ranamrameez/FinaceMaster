@@ -4871,6 +4871,84 @@ FinanceManager live link:
      114's own remaining scope**: rolling the same `EntityCard`/read-only-detail-page/Settings-
      hub-linking pattern out to the other 12 modules, and the separate, higher-risk Credit-card/
      Bank-normalization migration — see that Pending item for the full remaining plan.
+214. **Large real-usage critique of the Banking pilot, most of it fixed same day (2026-08-27) —
+     see CLAUDE.md for the full list this responds to.** The user tested the just-shipped pilot
+     live (with real imported UBL/QIB Misk data) and reported it as still "a pure mess" — several
+     genuine regressions/gaps, not taste calls. **Real bugs fixed**: the Modal close button
+     rendered as a wide oval, not a circle — root cause was the app-wide `.row > *{min-width:
+     140px}` rule (added for a mobile field-wrap fix) overriding the button's own inline
+     `width:28` — fixed by giving it an explicit `minWidth:28`, and while investigating this,
+     found and fixed the SAME general bug for `.row`'s treatment of every other field: `.row > *
+     {flex:1}` was ignoring each field's own explicit `width` prop entirely and instead dividing
+     the row's full width evenly among however many children happened to be in it — exactly the
+     "input sizes inconsistent, taking whole 100% width" complaint — changed to `flex:0 1 auto`
+     so fields size to their own content/width instead of stretching. Sidebar's "Signed in as
+     [long name]" wrapped across 3 lines and ate real vertical space — rebuilt as a strict single
+     line (small round avatar + name truncated with an ellipsis + a new `SettingsIcon` affordance)
+     per the user's own spec ("show user name, avatar and settings logo only, with smaller
+     text"). Double-scroll in the Transactions view — `AccountDetailPage` had wrapped
+     `TransactionsList` (which already has its own horizontal `.table-scroll`) in a SECOND,
+     vertically-scrolling box — removed the outer wrapper entirely. **Real gaps closed**: a new
+     shared `FabButton` component (`components/ui/Fab.tsx`) — was 9 byte-identical copies of the
+     same floating "+" button across every module — now also gets a real hover-lift/press
+     animation (the user's own "hover animation is excellent... I wanted it actually, UI should
+     be more interactive"). Stat cards switched from a diagonal fade-to-panel gradient to a flat
+     solid hue-mix fill with one small centered radial highlight, borders removed everywhere
+     (not just non-wine/Material themes) — "gradient is giving perception like cards are going to
+     fade... card colors should be solid... use minor radial gradient in card's middle." The
+     Modal background switched from flat `--panel` (pure white in the light theme) to the same
+     accent-tinted gradient `.card` already uses — "use similar color for making gradients rather
+     than pure white which is fogging it." Bank transactions' Category field only suggested
+     categories from the SAME account's own past history (nothing for a fresh account) — new
+     `GENERIC_CATEGORIES` constant + `bankCategorySuggestions()` unions a generic starter list
+     with every category used across ALL of the user's accounts. The Time field genuinely is
+     optional by design (falls back to noon UTC) but a blank default reads as "not autofilling" —
+     now prefills the real current time (`nowTime()`) while staying fully editable/clearable.
+     Required-field asterisks added to Date/Description/Amount on the add-transaction form. Save/
+     Add-row buttons right-aligned (`justifyContent:'flex-end'`) instead of left-aligned. A new
+     "#" (sequence) column added to the Transactions table, surfacing the existing `seq` field
+     (Done item 212) as a stable per-transaction reference number — "Transaction Id missing,
+     terrible account statement sequence!" **Structural fixes matching explicit "you ignored my
+     UI instructions" complaints**: the standalone "Transactions" and "Import statement" tabs
+     (each with their own account-picker `<select>`) were DELETED entirely — both were exactly
+     the "DO NOT ask the user on the main screen to use selectboxes to alter info; single-item
+     actions belong on the detail page" anti-pattern, and both were fully redundant with
+     `AccountDetailPage`, which already has its own "Add a transaction" + transactions list.
+     `ImportTab`'s CSV-mapping logic was ported into a new account-scoped `ImportStatementSection`
+     embedded in `AccountDetailPage` instead (no picker needed — the account is already known).
+     The Settings tab's "Account" card (often nearly empty — just a sync-status line) and "Data
+     management" card (three buttons) were exactly the "nested cards... empty Account card...
+     big card with just one button" complaint — both un-cardified into plain sub-sections inside
+     the Settings tab's own single outer card (no card-in-card anywhere on that tab anymore).
+     Banking's homepage entity cards lost their Edit/Delete icons entirely (added a "Transactions"
+     quick-link instead, new `ListIcon`) — "Delete and Edit are rare operations, they should [be]
+     on details page only, with delete as a red danger button" — `AccountDetailPage` gained a red
+     `.btn.danger` "Delete account" button in its own header instead. **New feature**: "No option
+     to link a transaction to other finance" — every OTHER module already had an inline "link
+     this to Bank/Cash" shortcut (Done items 125/131/162), but Bank itself never got the reverse;
+     exported `SideFields`/`useSideCurrency`/`nextUnpaidEmiMonth` from the standalone Transfers
+     page (previously private) and built a new `LinkTransactionSection` reusing them directly —
+     Bank can now link a transaction to Cash/QSE/PSX/Rentals/Personal Loans/Funds/EMI/another
+     Bank account without leaving the account's own page, using the exact same
+     `createLinkedTransfer` engine (`isSupportedLinkPair` already allowed every one of these
+     pairs at the data layer — this was purely a missing UI). Verified live via Playwright +
+     real screenshots throughout (entity-card colors, close-button squareness measured in
+     pixels, no nested `.card` elements inside the Settings section, the link form's currency-
+     mismatch warning firing correctly). `npx tsc -b` / `npm run test` (442 tests, unchanged) /
+     `npm run build` all clean. **Explicitly NOT attempted this round, flagged to the user
+     rather than guessed at** (real schema-level restructuring on their live imported data,
+     matching this project's own "ask before touching real financial data structure"
+     discipline): (1) Bank as a normalized parent entity with multiple accounts underneath (the
+     user's own example: "user may have multiple accounts with same bank... add bank first and
+     then on its details page give ability to add extra accounts, and see the total balance with
+     that bank"); (2) the same pattern for Funds/brokerages ("I have 4 brokerage... i want to see
+     my amounts with each broker... and overall sums"); (3) entity active/inactive + favorite +
+     a visible Sr#/Index# for Bank accounts (and other entity types) — a real, well-specified ask
+     ("Option to make an entity active or Inactive/Closed... Ability to favorite an entity, to
+     view it on top") not yet built, tracked as a new Pending item; (4) hybrid line+bar,
+     date-range-filterable Analytics charts for Banking specifically (the existing Analytics
+     charts elsewhere in the app already support date-range filtering per Done item 31 — Bank's
+     own Analytics tab was never audited against that pattern this round).
 
 ## Pending
 
@@ -5596,6 +5674,30 @@ or a design decision before more code, not guessed at further:**
      Card/Bank/Branch normalization migration (flagged as its own track in CLAUDE.md, not to be
      bundled into the general UI rollout — it touches the user's real imported GCC/PCC
      credit-card-as-liability-account data and needs its own focused session).
+115. **Real structural asks from the same 2026-08-27 critique, NOT yet built — see CLAUDE.md's
+     "App-wide UI/UX redesign" section and Done item 214 for context.** (a) **Bank as a
+     normalized parent entity** — the user's own words: "A bank is main entity. User may have
+     multiple accounts with same bank. so we must add bank first and then on its details page,
+     give ability to add extra accounts. and see the total balance with that bank. and on
+     Banking homepage see their breakdown and summary." Real schema surgery on the user's actual
+     imported accounts (UBL, GCC, PCC, QIB Misk, etc.) — needs a proposed `Bank`/`Branch` type
+     design confirmed with the user BEFORE any migration code, per this project's own locked
+     "ask before touching real financial data structure" rule (same precedent as the still-
+     pending Credit Card normalization, Pending item 114's own remaining scope — these two are
+     closely related and may end up as one combined migration, not two separate ones). (b) **The
+     same pattern for Funds/brokerages** — "Same should happen with Funds and others like I have
+     4 brokerage and i want to seem my amounts with each broker/investment firm. and then i want
+     to see break-down and overall sums for all the firms" — a `Broker` parent entity for Funds,
+     mirroring (a)'s design once that's settled. (c) **Entity active/inactive + favorite + a
+     visible Sr#/Index#** — "Option to make an entity active or Inactive/Closed like a bank/
+     fund/Credit Card, so that we can focus on the active one rather than seeing dead ones. Add
+     active check, numeric sequence Id with each entity which is present as Index# or Sr.# for
+     correct data ordering. Ability to favorite an entity, to view it on top." Well-specified,
+     lower-risk than (a)/(b) (an additive field, not a restructuring) — a reasonable next
+     concrete step across Bank/Funds/Personal Loans/EMI/Rentals/Subscriptions entity lists.
+     (d) Bank's own Analytics tab was never audited against the date-range-filterable chart
+     pattern other Analytics pages already have (Done item 31) — "charts should be interactive...
+     right now they are dumping lifetime data all at once."
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

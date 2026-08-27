@@ -33,8 +33,9 @@ export function Modal({
             onClick={onClose}
             style={{
               background: 'transparent', border: 'none', color: 'var(--muted)', cursor: 'pointer',
-              width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 28, height: 28, minWidth: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
               borderRadius: '50%', fontSize: 18, lineHeight: 1, flex: '0 0 28px', padding: 0,
+              transition: 'background .12s ease, transform .12s ease',
             }}
             onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--panel-2)')}
             onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
