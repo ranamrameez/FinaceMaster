@@ -4,9 +4,8 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useProfile } from '../lib/firebase/useProfile';
 import { AppearancePanel } from './AppearancePanel';
 import { CategoryNav, categoryForPath } from './CategoryNav';
-import { ExportIcon, LogInIcon, LogoMark } from './icons';
+import { LogInIcon, LogoMark } from './icons';
 import { requireSignIn } from './SignInModal';
-import { SyncStatusIndicator, type ModuleSyncStatus } from './SyncStatusIndicator';
 
 const QSE_NAV_ITEMS = [
   { num: '01', label: 'Dashboard', to: '/' },
@@ -86,13 +85,11 @@ export function Sidebar({
   className = '',
   onNavigate,
   onCollapse,
-  syncStatuses = [],
 }: {
   user: User | null;
   className?: string;
   onNavigate?: () => void;
   onCollapse?: () => void;
-  syncStatuses?: ModuleSyncStatus[];
 }) {
   const profile = useProfile(user);
   const name = profile.displayName || user?.email || user?.phoneNumber || 'account';
@@ -157,9 +154,16 @@ export function Sidebar({
       <div className="sidebar-footer">
         <AppearancePanel />
 
+        {/* Redesign 2026-08-27 (Main/Often/Rare — see CLAUDE.md): Import/
+           export, sync status, and the disclaimer paragraph used to sit
+           here permanently ("plenty of stuff down there... making it still
+           positioned in the middle" — a direct user complaint) — all three
+           are Rare-tier content now living on the one /account hub page
+           this button links to, so the footer itself stays down to a
+           single account row + a compact legal line. */}
         <div className="sidebar-account-group">
           {user ? (
-            <NavLink to="/settings" onClick={onNavigate} className="navbtn account-btn">
+            <NavLink to="/account" onClick={onNavigate} className="navbtn account-btn">
               <span className="num">{profile.avatarEmoji || '●'}</span>
               Signed in as <strong>&nbsp;{name}</strong>
             </NavLink>
@@ -169,19 +173,11 @@ export function Sidebar({
               Not signed in — tap to sign in
             </button>
           )}
-          <NavLink to="/app-data" onClick={onNavigate} className="navbtn account-sub-btn">
-            <span className="num"><ExportIcon size={12} /></span>
-            Backup / restore all data
-          </NavLink>
-          {user && <SyncStatusIndicator modules={syncStatuses} />}
         </div>
 
-        <div className="footer-note" style={{ marginTop: 10 }}>
-          Estimates only — verify against your official statement.{' '}
-          <NavLink to="/legal" style={{ color: 'inherit' }}>Disclaimer &amp; Privacy</NavLink>
-        </div>
-        <div className="footer-note" style={{ marginTop: 6 }}>
-          © {new Date().getFullYear()} FinanceRecorder
+        <div className="footer-note" style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>© {new Date().getFullYear()} FinanceRecorder</span>
+          <NavLink to="/legal" style={{ color: 'inherit' }}>Legal</NavLink>
         </div>
       </div>
     </div>

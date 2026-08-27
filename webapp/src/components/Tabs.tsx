@@ -62,7 +62,7 @@ export function Tabs({ tabs, defaultKey }: { tabs: TabDef[]; defaultKey?: string
         ))}
       </div>
       {tabs.map((t) => (
-        <div key={t.key} ref={(el) => { sectionRefs.current[t.key] = el; }} style={{ marginTop: 12 }}>
+        <div key={t.key} ref={(el) => { sectionRefs.current[t.key] = el; }} style={{ marginTop: 20 }}>
           <CollapsibleCard
             title={<h3 style={{ margin: 0 }}>{t.label}</h3>}
             headerExtra={t.headerExtra}

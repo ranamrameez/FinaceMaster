@@ -144,6 +144,63 @@ export function StatCard({
   );
 }
 
+/** A clickable summary card for one "entity" record (a bank account, a
+ * loan, a property, ...) — the redesign's "Main" tier calls for entity
+ * lists shown as cards in a wrap-flex grid instead of a long table (rules
+ * 1/3). Not a `StatCard` (a single number+label) — this is a small
+ * multi-line record summary, with the same `--card-hue` solid background
+ * `StatCard` uses, an optional badge line, and `actions` pinned top-right
+ * (rule 7) that stop their own clicks from also firing the card's
+ * `onClick` (usually "navigate to this record's detail page"). Pair with
+ * the `.entity-card-grid` CSS class on the wrapping `<div>`. */
+export function EntityCard({
+  title,
+  subtitle,
+  badge,
+  statLabel,
+  stat,
+  hue,
+  onClick,
+  actions,
+}: {
+  title: ReactNode;
+  subtitle?: ReactNode;
+  badge?: ReactNode;
+  statLabel?: string;
+  stat?: ReactNode;
+  hue?: string;
+  onClick?: () => void;
+  actions?: ReactNode;
+}) {
+  return (
+    <div
+      className="card stat-card entity-card"
+      style={hue ? ({ '--card-hue': hue } as CSSProperties) : undefined}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+        <div style={{ minWidth: 0 }}>
+          <div className="entity-card-title">{title}</div>
+          {subtitle && <div className="footer-note" style={{ marginTop: 2 }}>{subtitle}</div>}
+        </div>
+        {actions && (
+          <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+            {actions}
+          </div>
+        )}
+      </div>
+      {badge && <div style={{ marginTop: 6 }}>{badge}</div>}
+      {stat !== undefined && (
+        <div style={{ marginTop: 10 }}>
+          {statLabel && <div className="label">{statLabel}</div>}
+          {stat}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** A money amount rendered in a stat-card `.value` div: the visible text is
  * either the compact/abbreviated form (`fmtMoneyCompact`, e.g. "12.35M
  * PKR") or the full un-abbreviated number, per the user's Appearance →
