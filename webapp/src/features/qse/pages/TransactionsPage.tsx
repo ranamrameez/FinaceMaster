@@ -8,6 +8,7 @@ import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
+import { computeClosedTrades } from '../../../lib/calc/closedTrades';
 import { confirmAndDeleteLinkable, createLinkedTransfer, warnIfLinked } from '../../../lib/linkCascade';
 import { getLastTransferSource, rememberTransferSource } from '../../../hooks/useLastTransferSource';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
@@ -353,6 +354,40 @@ function TransactionList() {
   const openGroups = useMemo(() => groupRows(openSorted), [openSorted, groupBy]);
   const closedGroups = useMemo(() => groupRows(closedSorted), [closedSorted, groupBy]);
 
+  // User's own words: "Individual stock should be marker as open/close with
+  // its own buy & selling price, B&S taxes, net Buy/sale, so that sold/
+  // closed shares do not ruin the calcs." The Open/Closed split above still
+  // groups by ticker — a ticker with an open position shows every past
+  // transaction (including old, already-closed round trips) under "Open".
+  // This ledger instead reconstructs each individual closed round-trip via
+  // FIFO matching, with its own buy price/sell price/fees/net P&L, entirely
+  // independent of the aggregate position calc (computeClosedTrades never
+  // feeds back into computePositions).
+  const closedTrades = useMemo(
+    () =>
+      computeClosedTrades(
+        filterTicker === 'ALL' ? workbook.transactions : workbook.transactions.filter((t) => t.ticker === filterTicker),
+        calcFee,
+      ),
+    [workbook.transactions, calcFee, filterTicker],
+  );
+  type CTCol = 'ticker' | 'buyDate' | 'buyPrice' | 'sellDate' | 'sellPrice' | 'shares' | 'buyFee' | 'sellFee' | 'netPL' | 'holdingDays';
+  const ctSortValue = (t: (typeof closedTrades)[number], col: CTCol): number | string => {
+    switch (col) {
+      case 'ticker': return t.ticker;
+      case 'buyPrice': return t.buyPrice;
+      case 'sellDate': return t.sellDate;
+      case 'sellPrice': return t.sellPrice;
+      case 'shares': return t.shares;
+      case 'buyFee': return t.buyFee;
+      case 'sellFee': return t.sellFee;
+      case 'netPL': return t.netPL;
+      case 'holdingDays': return t.holdingDays;
+      default: return t.buyDate;
+    }
+  };
+  const { sorted: sortedClosedTrades, Th: CTTh } = useSortableRows(closedTrades, ctSortValue, 'sellDate', 'desc');
+
   const startEdit = (i: number, tx: Transaction) => {
     setEditIndex(i);
     setEditRow({ ...tx });
@@ -494,6 +529,52 @@ function TransactionList() {
           Closed positions — {closedSorted.length} txns
         </summary>
         {renderTable(closedGroups, 'No transactions for a fully closed position yet.')}
+      </details>
+
+      <details style={{ marginTop: 16 }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 700, marginBottom: 8 }}>
+          <Tooltip text="Each fully or partially closed round-trip, matched buy-to-sell via FIFO, with its own buy price, sell price, fees on both legs, and net P/L — so a closed trade's own numbers stay separate from whatever the currently-open position shows.">
+            Closed trades (realized round-trips)
+          </Tooltip>{' '}
+          — {sortedClosedTrades.length}
+        </summary>
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <CTTh col="ticker">Ticker</CTTh>
+                <CTTh col="buyDate">Buy date</CTTh>
+                <CTTh col="buyPrice">Buy price</CTTh>
+                <CTTh col="sellDate">Sell date</CTTh>
+                <CTTh col="sellPrice">Sell price</CTTh>
+                <CTTh col="shares">Shares</CTTh>
+                <CTTh col="buyFee">Buy fee</CTTh>
+                <CTTh col="sellFee">Sell fee</CTTh>
+                <CTTh col="netPL">Net P/L</CTTh>
+                <CTTh col="holdingDays">Days held</CTTh>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedClosedTrades.map((t, i) => (
+                <tr key={i}>
+                  <td><Link to={`/stock/${t.ticker}`}>{t.ticker}</Link></td>
+                  <td>{t.buyDate}</td>
+                  <td>{fmtPrice(t.buyPrice)}</td>
+                  <td>{t.sellDate}</td>
+                  <td>{fmtPrice(t.sellPrice)}</td>
+                  <td>{fmt(t.shares, 0)}</td>
+                  <td>{fmtMoney(t.buyFee, currency)}</td>
+                  <td>{fmtMoney(t.sellFee, currency)}</td>
+                  <td className={t.netPL >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(t.netPL, currency)}</td>
+                  <td>{t.holdingDays}</td>
+                </tr>
+              ))}
+              {!sortedClosedTrades.length && (
+                <tr><td colSpan={10} className="footer-note">No closed round-trips yet.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </details>
     </div>
   );
