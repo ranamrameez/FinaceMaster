@@ -3700,6 +3700,19 @@ not developer notes) continuously as features ship.
   the specific class of gap the Pending item named. Verified live via Playwright across all 6
   forms (QSE+PSX): every field renders a real visible label, zero console errors. `npx tsc -b` /
   `npm run test` (388 tests, unchanged) / `npm run build` all clean.
+- **EMI Schedule table reordered per the user's own exact spec (2026-08-27) — see README Done
+  item 188, closes Pending item 69.** Unlike most of the other still-open EMI Pending items
+  nearby (67/70/72), this one's own text already fully specified the target column layout, so
+  it was buildable without asking first. New percentage math computed inline (no new
+  `lib/calc` function — a handful of one-line divisions against the already-computed
+  `netToReturn`): `paidSoFar = netToReturn - r.balance` so Net Paid % + Net Balance % always
+  sum to 100% as a built-in sanity check; Principal/Markup are each a row's own component as a
+  % of the WHOLE loan's `netToReturn` (per the item's explicit wording), not of that row's own
+  installment, and collapse into one "Breakdown" cell instead of two separate columns.
+  Verified live via Playwright with a seeded $10,000/12-month/12%-p.a. loan: Net Paid + Net
+  Balance summed to exactly 100.0% and Principal + Markup summed back to the row's own
+  Installment — checked as real arithmetic on the rendered numbers. `npx tsc -b` / `npm run
+  test` (388 tests, unchanged) / `npm run build` all clean.
 
 ## Live URLs
 
