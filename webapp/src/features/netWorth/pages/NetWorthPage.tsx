@@ -315,7 +315,7 @@ export function NetWorthPage({
           Budget Planner page — this is the summary; that page is where
           you act on it. */}
       {budgetActivities.length > 0 && (
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom: 24 }}>
         <ChartCard title="Income vs. expense — previous / current / next month">
           {projectionCurrencies.length > 1 && (
             <Field label="Currency" width={110}>
@@ -479,7 +479,10 @@ export function NetWorthPage({
           named as the likely gap: assets vs. liabilities across every
           currency, and a breakdown of just the currently-selected one. */}
       {assetsLiabilitiesData.length > 0 && (
-        <ChartCard title={`Assets vs. liabilities by currency (converted to ${preferredCurrency})`} empty={false}>
+        <ChartCard
+          title={`Assets vs. liabilities — one bar pair per currency you hold, values shown in ${preferredCurrency} so they're comparable`}
+          empty={false}
+        >
           <div style={{ height: 220 }}>
             <Bar
               data={{

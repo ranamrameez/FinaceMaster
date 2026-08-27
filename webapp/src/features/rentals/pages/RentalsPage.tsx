@@ -9,6 +9,7 @@ import { EditIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../compone
 import { Modal } from '../../../components/Modal';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
+import { Tooltip } from '../../../components/Tooltip';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
@@ -65,7 +66,35 @@ function NetIncomeSummary() {
   );
 }
 
-function AddPropertyForm() {
+/** Floating "add a property" button (user feedback 2026-08-27: adding an
+ * entity isn't a routine task, use FABs — same pattern already established
+ * for EMI/Banking/Cash/Bank Planning, README Done items 166/170). */
+function AddPropertyFab() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <div style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 500 }}>
+        <Tooltip text="Add a property" align="right">
+          <button
+            className="btn"
+            onClick={() => setOpen(true)}
+            aria-label="Add a property"
+            style={{ width: 52, height: 52, borderRadius: '50%', padding: 0, fontSize: 22, boxShadow: '0 4px 16px rgba(0,0,0,.25)' }}
+          >
+            <PlusIcon />
+          </button>
+        </Tooltip>
+      </div>
+      {open && (
+        <Modal title="Add a property" onClose={() => setOpen(false)}>
+          <AddPropertyForm onSaved={() => setOpen(false)} />
+        </Modal>
+      )}
+    </>
+  );
+}
+
+function AddPropertyForm({ onSaved }: { onSaved?: () => void } = {}) {
   const addProperty = useRentalsWorkbookStore((s) => s.addProperty);
   const [lastCurrency, setLastCurrency] = useLastCurrency('rentals', 'USD');
   const ensureSignedIn = useEnsureSignedIn();
@@ -77,10 +106,11 @@ function AddPropertyForm() {
     addProperty({ ...p, id: uid(), name: p.name.trim() });
     toast(`Property "${p.name.trim()}" added.`);
     setP(emptyProperty(p.currencyCode));
+    onSaved?.();
   };
 
   return (
-    <Card style={{ marginBottom: 16 }}>
+    <div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
         <Field label="Property name" width={180} required>
           <TextInput value={p.name} onChange={(e) => setP({ ...p, name: e.target.value })} placeholder="e.g. Apartment 4B" />
@@ -97,7 +127,7 @@ function AddPropertyForm() {
       <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
         <PlusIcon />Add property
       </button>
-    </Card>
+    </div>
   );
 }
 
@@ -403,8 +433,8 @@ function PropertiesTab() {
   return (
     <div>
       <NetIncomeSummary />
-      <AddPropertyForm />
       <PropertiesList />
+      <AddPropertyFab />
     </div>
   );
 }

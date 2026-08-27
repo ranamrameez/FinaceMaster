@@ -2,6 +2,7 @@ import type { User } from 'firebase/auth';
 import { useMemo, useRef, useState } from 'react';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
+import { Modal } from '../../../components/Modal';
 import { Notice } from '../../../components/Notice';
 import { Tooltip } from '../../../components/Tooltip';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
@@ -55,7 +56,36 @@ function emptySubscription(defaultCurrency: string): Subscription {
 
 /* ============================== Add subscription ============================== */
 
-function AddSubscriptionForm() {
+/** Floating "add a subscription" button (user feedback 2026-08-27: adding
+ * an entity isn't a routine task, use FABs — same pattern already
+ * established for EMI/Banking/Cash/Bank Planning, README Done items
+ * 166/170). */
+function AddSubscriptionFab() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <div style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 500 }}>
+        <Tooltip text="Add a subscription" align="right">
+          <button
+            className="btn"
+            onClick={() => setOpen(true)}
+            aria-label="Add a subscription"
+            style={{ width: 52, height: 52, borderRadius: '50%', padding: 0, fontSize: 22, boxShadow: '0 4px 16px rgba(0,0,0,.25)' }}
+          >
+            <PlusIcon />
+          </button>
+        </Tooltip>
+      </div>
+      {open && (
+        <Modal title="Add a subscription" onClose={() => setOpen(false)}>
+          <AddSubscriptionForm onSaved={() => setOpen(false)} />
+        </Modal>
+      )}
+    </>
+  );
+}
+
+function AddSubscriptionForm({ onSaved }: { onSaved?: () => void } = {}) {
   const addEntry = useSubscriptionsWorkbookStore((s) => s.addEntry);
   const defaultCurrency = useSubscriptionsWorkbookStore((s) => s.workbook.settings.defaultCurrency);
   const [lastCurrency, setLastCurrency] = useLastCurrency('subscriptions', defaultCurrency);
@@ -70,10 +100,11 @@ function AddSubscriptionForm() {
     addEntry({ ...s, id: crypto.randomUUID(), name: s.name.trim(), category: s.category?.trim() || undefined });
     toast(`Subscription "${s.name.trim()}" added.`);
     setS(emptySubscription(s.currencyCode));
+    onSaved?.();
   };
 
   return (
-    <Card style={{ marginBottom: 16 }}>
+    <div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
         <Field label="Name" width={160} required>
           <TextInput value={s.name} onChange={(e) => setS({ ...s, name: e.target.value })} placeholder="e.g. Netflix" />
@@ -109,7 +140,7 @@ function AddSubscriptionForm() {
       <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
         <PlusIcon />Add subscription
       </button>
-    </Card>
+    </div>
   );
 }
 
@@ -710,8 +741,8 @@ export function SubscriptionsPage({
               content: (
                 <div>
                   <OverallSummary />
-                  <AddSubscriptionForm />
                   <SubscriptionList onSelect={setSelected} />
+                  <AddSubscriptionFab />
                 </div>
               ),
             },

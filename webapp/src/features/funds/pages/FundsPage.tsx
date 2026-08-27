@@ -2,6 +2,7 @@ import type { User } from 'firebase/auth';
 import { useMemo, useRef, useState } from 'react';
 import { Doughnut, Line } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
+import { Modal } from '../../../components/Modal';
 import { Notice } from '../../../components/Notice';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
@@ -58,7 +59,36 @@ function emptyFund(defaultCurrency: string): Fund {
 
 /* ============================== Add fund ============================== */
 
-function AddFundForm() {
+/** Floating "add a fund" button (user feedback 2026-08-27: "who adds
+ * Funds... daily? [entity add/edit] isn't a routine task, use FABs" — same
+ * round-FAB + popup pattern already established for EMI/Banking/Cash/Bank
+ * Planning, README Done items 166/170). */
+function AddFundFab() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <div style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 500 }}>
+        <Tooltip text="Add a fund" align="right">
+          <button
+            className="btn"
+            onClick={() => setOpen(true)}
+            aria-label="Add a fund"
+            style={{ width: 52, height: 52, borderRadius: '50%', padding: 0, fontSize: 22, boxShadow: '0 4px 16px rgba(0,0,0,.25)' }}
+          >
+            <PlusIcon />
+          </button>
+        </Tooltip>
+      </div>
+      {open && (
+        <Modal title="Add a fund" onClose={() => setOpen(false)}>
+          <AddFundForm onSaved={() => setOpen(false)} />
+        </Modal>
+      )}
+    </>
+  );
+}
+
+function AddFundForm({ onSaved }: { onSaved?: () => void } = {}) {
   const workbook = useFundsWorkbookStore((s) => s.workbook);
   const setWorkbook = useFundsWorkbookStore((s) => s.setWorkbook);
   const addTransaction = useFundsWorkbookStore((s) => s.addTransaction);
@@ -81,10 +111,11 @@ function AddFundForm() {
     toast(`Fund "${f.name.trim()}" added.`);
     setF(emptyFund(f.currencyCode));
     setInitialAmount(0);
+    onSaved?.();
   };
 
   return (
-    <Card style={{ marginBottom: 16 }}>
+    <div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
         <Field label="Fund name" width={200} required>
           <TextInput value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="e.g. Vanguard Total World Stock ETF" />
@@ -121,7 +152,7 @@ function AddFundForm() {
       <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
         <PlusIcon />Add fund
       </button>
-    </Card>
+    </div>
   );
 }
 
@@ -1098,8 +1129,8 @@ export function FundsPage({
               content: (
                 <div>
                   <OverallSummary />
-                  <AddFundForm />
                   <FundList onSelect={setSelected} />
+                  <AddFundFab />
                 </div>
               ),
             },

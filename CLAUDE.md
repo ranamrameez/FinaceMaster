@@ -3935,6 +3935,52 @@ not developer notes) continuously as features ship.
   trend back up over time, the exact effect asked for. Clicking "◀ Earlier" shifted the window
   back one month correctly. Zero console errors. `npx tsc -b` / `npm run test` (404 tests, 7
   new) / `npm run build` all clean.
+- **Large UI/UX critique batch received mid-turn, 2026-08-27, screenshot-backed — see README
+  Done item 202 for what shipped, Pending items 108-111 for what's tracked but not started.**
+  User's screenshot showed the Net Worth page with what looked like a real card/chart overlap
+  at their own "50% browser zoom" (their words), plus a list of complaints: an "Assets vs.
+  Liabilities" chart that reads as one-currency-only, and a repeated push that adding/editing an
+  ENTITY (Bank, EMI, Fund, Property...) isn't a routine task and shouldn't live permanently on
+  the main screen — use FABs, matching the pattern already built for EMI/Banking/Cash-Bank
+  Planning (Done items 166/170). **Audited before acting, found 4 real remaining gaps**: Funds
+  ("Add fund"), Personal Loans ("Add loan"), Rentals ("Add property"), Subscriptions ("Add
+  subscription") still had a permanently-visible add-form — converted all 4 to the identical
+  FAB+`Modal`+`Tooltip` pattern, verified live via Playwright (FAB present, form hidden by
+  default, shows correctly on click) across all 4, zero console errors. Left each module's own
+  routine per-record transaction/entry forms alone — exactly the daily-vs-rare distinction the
+  user drew.
+  **Investigated the "Assets vs. Liabilities" complaint rather than assuming it — seeded a real
+  2-currency (QAR+PKR) scenario with known cross-rates and confirmed via screenshot the chart
+  ALREADY renders one bar-pair per currency correctly.** The real problem was the title's
+  wording: `"...by currency (converted to X)"` reads as "reduced to one currency," when it
+  actually means "each currency's own bars, heights normalized to X so they're comparable on one
+  axis." Reworded the title rather than touching chart logic that wasn't broken — a case worth
+  remembering for any future "X only shows 1 of my Y currencies" report: verify the actual
+  rendered data before assuming the calc is wrong, since here the data was already correct and
+  only the label was misleading.
+  **The reported overlap itself could NOT be reproduced**, despite two real attempts: a
+  realistic multi-currency seed at 1280px (clean, no overlap) and a CSS `document.documentElement
+  .style.zoom = '0.5'` simulation with a forced resize afterward (also clean) — the closest
+  approximation to a real browser's native Ctrl+- zoom available through this session's
+  automation tooling, which has no direct API for that specific browser-chrome feature. Rather
+  than claim a fix for an unreproduced bug, added two defensive-only hardening measures that are
+  correct regardless of whether they're the actual cause: `.chart-canvas-wrap{overflow:hidden}`
+  (theme.css) as a safety net against any future canvas-sizing edge case bleeding past its card,
+  and bumped the specific gap between Net Worth's "Income vs. expense" chart and the "Net Worth
+  Summary"/"Exchange Rates" cards below it from 16px to 24px. **This is explicitly flagged as NOT
+  closing the complaint** (README Pending item 108) — needs the user's real zoom percentage/
+  browser or a fresh screenshot at that zoom to actually chase down, rather than another blind
+  guess.
+  **Three larger items from the same message were deliberately NOT attempted, tracked as Pending
+  items 109-111 instead**: sidebar nav re-nesting (genuinely ambiguous which concrete UI element
+  "subnav dumped in main nav" refers to — the top-level category list is a deliberate, already-
+  reversed-once design per Done item 181, so guessing wrong here means a SECOND reversal and real
+  rework, not a small tweak; the more literal candidate is QSE/PSX's own inline numbered page
+  list, which no other module has); "prefer charts over tables" (a real, broad preference, in
+  some tension with the very Budget Planner table just shipped the same session to the user's own
+  explicit spec — flagged rather than silently reconciled); and "most tables need horizontal
+  scroll" (real, but too broad to act on without a named table or treating it as a standing
+  per-table principle like Pending items 94-96 already are).
 
 ## Live URLs
 
