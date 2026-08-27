@@ -4075,6 +4075,50 @@ not developer notes) continuously as features ship.
   default was correctly evidenced AND the user had a real, legitimate, previously-unbuilt need
   (automation via one flat rate) that a mode toggle solves without touching the validated default
   at all. `npx tsc -b` / `npm run test` (411 tests, 5 new) / `npm run build` all clean.
+- **Critical sign-in flow bug fixed, user-reported (2026-08-27) — see README Done item 205.**
+  "Sign in with Google somehow becomes successful in opening google popup but after, window may
+  stay or disappear, no status update... You are not logged in!" — plus Signup/Forgot Password
+  "not working" and general UI inconsistency ("designed by a junior student"). **Root cause,
+  found by reading the actual code, not guessed**: `signInWithPopup` needs a `postMessage`
+  bridge between the popup and opener window across DIFFERENT origins (authDomain
+  `qse-app.firebaseapp.com` vs. the app's own `ranamrameez.github.io`) — exactly the cross-
+  origin popup case modern Chrome's COOP defaults and third-party storage partitioning are
+  documented to break. Firebase's own fix (a `Cross-Origin-Opener-Policy:
+  same-origin-allow-popups` response header) isn't available on GitHub Pages' static hosting.
+  **Fix: switched to `signInWithRedirect` + `getRedirectResult()`** (called once on app load in
+  `useAuthState.ts`, same spot as the existing email-link handler) — a full-page nav to Google
+  and back, sidestepping the popup/postMessage mechanism entirely. **Real, stated tradeoff**: a
+  redirect tears down the page, so a `requireSignIn()` promise a gated write was waiting on
+  can't resolve in that page load — the user returns already signed in and has to retry
+  whatever write they were doing (succeeds immediately, no re-prompt). Judged strictly better
+  than the popup hanging forever with zero resolution.
+  **A second real gap found WHILE testing this fix in this session's own sandbox, kept
+  regardless of root cause**: every Firebase auth call (`signInWithRedirect`,
+  `signInWithEmailAndPassword`, `resetPassword`) makes a real network request that can HANG
+  rather than fail fast on a bad connection — reproduced live here, since this sandbox's own
+  network policy blocks the Firebase domain, so every one of these calls sat pending forever
+  with the busy button never reverting (the exact "no status update, stuck forever" bug being
+  fixed, caught red-handed reproducing itself). Added a shared `withTimeout()` (12s) in
+  `SignInModal.tsx` racing every auth call — worst case for a real user is now "a clear error
+  after 12s and a clickable button again," never silence.
+  **Two more concrete fixes from the same report**: (1) "Forgot password not working" —
+  the button was silently `disabled` whenever the email field was empty, with zero visual
+  explanation; a disabled button with no reason shown reads exactly like "broken." Made it
+  always clickable, validating on click with a toast instead. (2) UI consistency — the modal
+  used raw unstyled `<input>`s with no labels, the only form in the whole app that did; swapped
+  in the same `Field`/`TextInput` components everywhere else uses, added real busy-state button
+  labels ("Signing in…"/"Opening Google…"/etc.) instead of just a disabled cursor, and mapped
+  the handful of Firebase auth error codes a user actually hits to plain language via a new
+  exported `friendlyAuthError()` instead of surfacing Firebase's raw SDK message text.
+  **Verification note worth repeating**: the 12s-timeout Playwright check wasn't just testing
+  the timeout code in isolation — because this sandbox's network policy genuinely blocks the
+  Firebase call, watching the button get stuck and then correctly recover at the 12s mark WAS a
+  live reproduction of the exact bug being fixed, not a synthetic test. **Not verified, flagged
+  rather than assumed**: an actual successful Google-redirect-and-back round trip needs a real
+  Google account and real network access, neither available here — the user (or a future
+  session) should confirm the success path lands back on the app correctly signed in. New
+  tests: `friendlyAuthError.test.ts` (4 cases). `npx tsc -b` / `npm run test` (415 tests, 4
+  new) / `npm run build` all clean.
 
 ## Live URLs
 

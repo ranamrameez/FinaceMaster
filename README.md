@@ -4578,6 +4578,57 @@ FinanceManager live link:
      `feeScenarios`, `makePSXFeeCalculator`'s tie-goes-to-BUY behavior still holding in Simple
      mode, and the undefined-means-itemized backward-compatibility guarantee). `npx tsc -b` /
      `npm run test` (411 tests, 5 new) / `npm run build` all clean.
+205. **Critical, user-reported (2026-08-27): the sign-in flow could hang indefinitely with zero
+     status feedback — "Sign in with Google somehow becomes successful in opening google popup
+     but after, window may stay or disappear, no status update... dismiss them... You are not
+     logged in!"** Root-caused, not guessed at: `signInWithGoogle()` used `signInWithPopup`,
+     which depends on a `postMessage` bridge (plus polling `popup.closed`) between the popup
+     and the opener window, across DIFFERENT origins (`authDomain` = `qse-app.firebaseapp.com`
+     vs. the app's own `ranamrameez.github.io`) — exactly the cross-origin popup case modern
+     Chrome's Cross-Origin-Opener-Policy defaults and third-party storage partitioning are
+     documented to silently break. Firebase's own fix is a `Cross-Origin-Opener-Policy:
+     same-origin-allow-popups` response header on the app's own origin — not available here
+     since this app is static-hosted on GitHub Pages, which doesn't expose custom response
+     headers. **Fix**: switched to `signInWithRedirect` (a full-page navigation to Google and
+     back, using the same storage/cookie context throughout — no popup, no postMessage bridge,
+     not subject to the same breakage) + `getRedirectResult()` called once on app load
+     (`useAuthState.ts`, alongside the existing email-link handler) to pick up the result and
+     toast either way. **Real, stated tradeoff**: unlike the popup flow, a redirect tears down
+     the current page — a `requireSignIn()` promise a gated write was waiting on can't resolve
+     in that same page load, so the user returns already signed in and needs to retry whatever
+     write they were doing (which now succeeds immediately, no re-prompt) — a real UX cost, but
+     strictly better than the popup hanging forever with no way to complete at all.
+     **A second real gap found while testing this in this session's own sandbox — worth keeping
+     regardless of root cause**: `signInWithRedirect`/`signInWithEmailAndPassword`/
+     `resetPassword` all make a real network call, and a slow or blocked connection makes them
+     HANG rather than fail fast — reproduced live (this sandbox's own network policy blocks the
+     Firebase domain, so every one of these calls sat pending indefinitely with the busy button
+     never reverting). Added a shared `withTimeout()` (12s) racing every auth call in
+     `SignInModal.tsx` — the worst case for a real user on a bad connection is now "a clear
+     error after 12 seconds and a clickable button again," never silence, regardless of what's
+     actually failing. **Two more concrete gaps from the same report, both real, both fixed**:
+     (1) "Forgot password? not working" — the button was silently `disabled` whenever the email
+     field was empty, with zero explanation; a disabled button with no visible reason IS
+     indistinguishable from "broken." Made it always clickable, validating on click with a
+     clear toast ("Enter your email above first.") instead. (2) "UI not consistent... designed
+     by a junior student" — the modal used raw unstyled `<input>`s with no labels, unlike every
+     other form in the app; converted to the same `Field`/`TextInput` components used
+     everywhere else, added a real busy-state label per button ("Signing in…"/"Creating
+     account…"/"Opening Google…"/"Sending…" instead of just a disabled cursor), and mapped the
+     handful of Firebase auth error codes a real user actually hits (wrong password, email
+     already in use, weak password, too many attempts, etc.) to plain-language messages via a
+     new `friendlyAuthError()` instead of surfacing Firebase's raw SDK message text. **Verified
+     live via Playwright, including the specific failure-mode timing this bug was ABOUT, not
+     just a static render check**: confirmed the busy label appears immediately on click for
+     both Google and email sign-in, and confirmed both correctly revert to a clickable button
+     with a clear toast at the 12s timeout mark (this sandbox's own network policy makes the
+     real Firebase call hang, so this doubled as a live reproduction of the exact "hangs with no
+     feedback" bug being fixed) — zero console errors throughout. **Not verified, and flagged
+     rather than assumed**: an actual successful end-to-end Google-redirect-and-back round trip
+     needs a real Google account and real browser network access, neither available in this
+     sandbox — a future session or the user's own testing should confirm the success path lands
+     back on the app correctly signed in. New tests: `friendlyAuthError.test.ts` (4 cases). `npx
+     tsc -b` / `npm run test` (415 tests, 4 new) / `npm run build` all clean.
 
 ## Pending
 
