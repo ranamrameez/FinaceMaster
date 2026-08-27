@@ -4187,6 +4187,22 @@ FinanceManager live link:
      12.00% main / Annual equiv.: 12.00% · Monthly equiv.: 1.00% (matching hand-calculated
      expectations exactly) — zero console errors. `npx tsc -b` / `npm run test` (397 tests, 4
      new) / `npm run build` all clean.
+191. **A real FinanceRecorder logo mark designed and added, closing Pending item 87
+     (2026-08-27).** The item itself confirmed no logo asset existed at all — `public/
+     favicon.svg` turned out to be Vite's own leftover generic scaffold art (a purple/blue
+     abstract shape, unrelated to this app), never actually replaced since the project's first
+     commit. New `LogoMark` in `components/icons.tsx`: three ascending bars (evoking a growth/
+     portfolio chart, thematically apt for a finance tracker) on a deep-navy rounded badge —
+     fixed brand colors, not `currentColor`, the same deliberate exception this file already
+     makes for `GoogleIcon` (a real logo should read as a stable identity independent of
+     whichever of the app's 12 in-app color themes the viewer has picked, not reskin with it).
+     `public/favicon.svg` is the identical mark as a static file for the browser tab. Placed
+     next to the existing "FinanceRecorder" text wordmark in `Sidebar.tsx`'s title row — no CSS
+     changes needed, `.sidebar-title-row` was already a flex row with room for it. Verified live
+     via Playwright with real screenshots in both light and dark theme: the mark renders
+     cleanly and stays legible in both (a fixed-color badge doesn't need to react to theme the
+     way in-app UI elements do) — zero console errors. `npx tsc -b` / `npm run test` (397 tests,
+     unchanged — a static asset, no new logic) / `npm run build` all clean.
 
 ## Pending
 
@@ -4706,10 +4722,10 @@ everything below is started. Working down it in priority order across following 
 86. ~~App-wide: "Add a plan" (Cash/Banking's Planning-tab add-form) shouldn't be permanently
     visible either — same FAB+popup treatment as items 81/166.~~ **Done (2026-08-26) — see
     Done item 170.**
-87. App-wide: the FinanceRecorder app logo isn't in the navbar/sidebar at all (only the text
-    wordmark, per Done item 32's "FinanceRecorder" header) — needs an actual logo asset, which
-    doesn't exist yet in this project (nothing to swap in without one being designed/sourced
-    first).
+87. ~~App-wide: the FinanceRecorder app logo isn't in the navbar/sidebar at all.~~ **Done
+    (2026-08-27) — see Done item 191.** A real designed mark now exists (`LogoMark` in
+    `icons.tsx` + `public/favicon.svg`), replacing the browser tab's leftover generic Vite
+    scaffold art too.
 88. ~~QSE/PSX Dashboard: the new right-rail's Net worth and Upcoming-plans cards (Done item 164)
     are reported as visually CUTTING OFF/clipped.~~ **The layout-bug half is done (2026-08-26)
     — see Done item 186.** Real cause: `.row`'s shared `min-width:160px`-per-child CSS forcing

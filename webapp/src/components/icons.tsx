@@ -88,6 +88,29 @@ export function LogInIcon({ size = 14 }: IconProps) {
   );
 }
 
+/** The FinanceRecorder app logo mark (README Pending item 87) — until now
+ * the sidebar/browser tab only ever had the "FinanceRecorder" text
+ * wordmark (Done item 32) plus `public/favicon.svg`'s leftover generic
+ * Vite scaffold art, never a real designed asset. Fixed brand colors (not
+ * currentColor, same deliberate exception as `GoogleIcon` below) — a
+ * logo mark is meant to read as a stable, recognizable brand identity
+ * independent of whichever of the app's 12 in-app color themes the
+ * viewer happens to have picked, the same way a real app's logo doesn't
+ * reskin with the user's own UI theme. Three ascending bars evoke a
+ * growth/portfolio chart, on a deep navy badge chosen to read clearly on
+ * both the light and dark sidebar background. `public/favicon.svg` is the
+ * same mark as a static file, for the browser tab. */
+export function LogoMark({ size = 22 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden>
+      <rect width="32" height="32" rx="8" fill="#1f3a5f" />
+      <rect x="7" y="18" width="4.5" height="8" rx="1.5" fill="#ffffff" />
+      <rect x="13.75" y="13" width="4.5" height="13" rx="1.5" fill="#ffffff" />
+      <rect x="20.5" y="7" width="4.5" height="19" rx="1.5" fill="#ffffff" />
+    </svg>
+  );
+}
+
 /** Google's official "G" mark — fixed brand colors (not currentColor, since
  * this one is genuinely 4-color), used only on the "Sign in with Google"
  * button. Everything else in this file is a stroke icon that inherits the
