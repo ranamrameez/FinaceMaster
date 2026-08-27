@@ -1321,6 +1321,20 @@ html.auth-signed-out #cloudSignedInBox{display:none !important;}
 .appearance-panel .btn{width:100%;padding:7px 10px;font-size:12px;}
 .sidebar-popover .appearance-trigger{width:100%; justify-content:flex-start; text-align:left;}
 
+/* App-wide sync-status indicator (README Pending item 76) — same
+   position:fixed-with-no-explicit-offsets trick as .appearance-panel,
+   kept as its own class pair since it's a third independent trigger/panel,
+   not a variant of Appearance's or Category's own popovers. */
+.sync-status-popover{position:relative;width:100%;}
+.sync-status-panel{
+  position:fixed; z-index:1000;
+  display:flex;flex-direction:column;gap:6px;
+  width:255px;padding:10px;
+  background:var(--panel);border:1px solid var(--border);border-radius:10px;
+  box-shadow:var(--shadow-lg);
+}
+.sync-status-row{display:flex;align-items:center;gap:6px;font-size:12px;}
+
 /* Sidebar module list (README item 18, reworked 2026-08-26 per user
    feedback). Originally a dropdown/popover you had to open every time to
    switch modules — "very hectic" per the report — now a plain always-

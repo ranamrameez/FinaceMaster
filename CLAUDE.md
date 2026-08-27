@@ -3713,6 +3713,31 @@ not developer notes) continuously as features ship.
   Balance summed to exactly 100.0% and Principal + Markup summed back to the row's own
   Installment — checked as real arithmetic on the rendered numbers. `npx tsc -b` / `npm run
   test` (388 tests, unchanged) / `npm run build` all clean.
+- **Standing instruction update (2026-08-27): "continue your work untill all pending items are
+  completed."** This explicitly supersedes the earlier default of deferring any Pending item
+  that names an open design fork — from here on, pick the most reasonable interpretation
+  myself (documenting the choice clearly in both README.md and here, per this file's own
+  long-standing "flag a reversal, don't silently guess" practice) rather than stopping to ask.
+  Still hard-blocked, not guessable around: item 104 (a second IBAN provider needs a real,
+  confirmed, keyless endpoint — fabricating one would ship a dead/wrong code path) and item 107
+  (blocked entirely on the user's own sample Excel file, not yet attached). Items 94/95/96 are
+  standing app-wide principles, not single scoped tasks, so "complete" for those means keep
+  applying them opportunistically per-page rather than a one-shot close-out.
+- **App-wide sync-status indicator, first item under the new standing instruction (2026-08-27)
+  — see README Done item 189, closes Pending item 76.** The item itself posed 3 options
+  (worst-of-N / most-recent / per-module popover) as an open design fork — picked worst-of-N
+  as the headline (a single failing module is exactly what a unified indicator exists to catch;
+  most-recent-wins would hide it) PLUS the popover breakdown, combining two of the three
+  options rather than picking one. New `SyncStatusIndicator.tsx` classifies each module's
+  existing free-text status string into 4 ranked tiers, reusing `AppearancePanel`'s own
+  `position:fixed` popover trick via new separate `.sync-status-*` CSS. Threaded through
+  `App.tsx`→`AppShell.tsx`→`Sidebar.tsx`, covering all 11 primary sync hooks (deliberately
+  excludes the 3 "planned" secondary stores, same reasoning as their own upload-to-cloud
+  affordance). Only renders once signed in. **Verification pattern worth repeating for any
+  future sign-in-gated UI logic this session can't exercise live**: added a direct isolated
+  component test (`SyncStatusIndicator.test.tsx`, 5 cases) rather than only a live signed-out
+  smoke check — same approach `priceInputRemount.test.tsx` already established. `npx tsc -b` /
+  `npm run test` (393 tests, 5 new) / `npm run build` all clean.
 
 ## Live URLs
 

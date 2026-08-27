@@ -2,6 +2,7 @@ import type { User } from 'firebase/auth';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
+import type { ModuleSyncStatus } from './SyncStatusIndicator';
 
 const COLLAPSE_KEY = 'financerecorder_sidebar_collapsed_v1';
 
@@ -12,7 +13,7 @@ const COLLAPSE_KEY = 'financerecorder_sidebar_collapsed_v1';
  * above 860px the sidebar is open by default and can be slid off-screen
  * on demand, remembered across reloads via localStorage. Distinct from
  * the mobile drawer, which is closed by default and opens on demand. */
-export function AppShell({ user, children }: { user: User | null; children: ReactNode }) {
+export function AppShell({ user, children, syncStatuses = [] }: { user: User | null; children: ReactNode; syncStatuses?: ModuleSyncStatus[] }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(() => {
     try {
@@ -48,6 +49,7 @@ export function AppShell({ user, children }: { user: User | null; children: Reac
         className={`${mobileOpen ? 'open' : ''} ${desktopCollapsed ? 'desktop-collapsed' : ''}`.trim()}
         onNavigate={() => setMobileOpen(false)}
         onCollapse={toggleDesktopCollapsed}
+        syncStatuses={syncStatuses}
       />
       <div className={`mobile-backdrop${mobileOpen ? ' open' : ''}`} onClick={() => setMobileOpen(false)} />
       <button

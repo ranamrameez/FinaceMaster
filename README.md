@@ -4141,6 +4141,35 @@ FinanceManager live link:
      own Breakdown cell summed back to that row's own Installment amount — both checked as real
      arithmetic on the rendered numbers, not just visually. `npx tsc -b` / `npm run test` (388
      tests, unchanged — UI math only) / `npm run build` all clean.
+189. **App-wide sync-status indicator built, resolving the "worst-of-N vs most-recent vs
+     breakdown-popover" design fork Pending item 76 itself named (2026-08-27).** Chose
+     worst-of-N as the headline (a single failing/stuck module is exactly what a unified
+     indicator should surface immediately — a most-recent-wins design would hide it behind
+     whatever synced last) PLUS a click-to-expand popover breaking down every module's own real
+     status text (the third option named), rather than picking only one. New
+     `components/SyncStatusIndicator.tsx` classifies each module's free-text status string
+     (`"Synced · ..."`, `"Syncing…"`, `"No cloud data found..."`, `"Sync error..."`, etc. — the
+     exact strings `useWorkbookCloudSync.ts` already sets) into one of 4 ranked tiers and shows
+     the worst tier present as a colored-dot + label in the Sidebar's account section, reusing
+     `AppearancePanel`'s own `position:fixed`-with-no-explicit-offsets popover trick (see
+     `theme.css`'s existing comment on why) via new, deliberately separate `.sync-status-*` CSS
+     rather than coupling to `.appearance-*`. Threaded a new `syncStatuses` array through
+     `App.tsx` → `AppShell.tsx` → `Sidebar.tsx` covering all 11 primary module sync hooks —
+     deliberately EXCLUDES the 3 "planned" secondary stores (Cash/Bank/Rentals Planning), same
+     "not irreplaceable primary data" reasoning this file already applies to their own
+     upload-local-to-cloud affordance. Only renders once signed in, since the Sidebar's existing
+     "Not signed in — tap to sign in" row already covers that state clearly — duplicating it
+     here would be redundant. **Verification note**: this sits behind the same sign-in gate as
+     every other per-account feature, so a live multi-module real-status check isn't possible in
+     this sandbox (see this file's own cloud-sync-safety policy against throwaway accounts) —
+     instead added a direct isolated component test,
+     `components/__tests__/SyncStatusIndicator.test.tsx` (5 cases: empty-state, all-healthy,
+     worst-status-wins over first/last, syncing-ranks-between-healthy-and-error, and the popover
+     opening with every module's real name+status text) — the same "test the isolated component
+     directly" pattern already established by `priceInputRemount.test.tsx` for this exact class
+     of sign-in-gated-feature verification gap. Also verified live via Playwright that the
+     signed-out state correctly shows nothing (no regression), zero console errors. `npx tsc -b`
+     / `npm run test` (393 tests, 5 new) / `npm run build` all clean.
 
 ## Pending
 
@@ -4608,15 +4637,12 @@ everything below is started. Working down it in priority order across following 
     was purely a rendering change.
 75. ~~Net Worth: "Net worth over time" chart should render AFTER the per-currency summary
     sections, not before them.~~ **Done (2026-08-26) — see Done item 169.**
-76. Net Worth / app-wide: "Account Synced · [timestamp]" sync-status text is currently only
-    shown inside a few modules' own "Account" sections, when cloud sync (and the account
-    itself) is genuinely a cross-cutting, app-wide concept — should live in the sidebar/nav
-    instead of being "buried in a few modules." A real structural change: today, sync status
-    is computed per-module inside each page component (`syncStatus` prop threaded through
-    from `App.tsx`'s per-module hooks), not as one unified app-wide value — needs a design
-    decision on what "one synced/not-synced indicator for N independent per-module sync
-    hooks" should actually mean (worst-of-N? most-recent? a per-module breakdown popover?)
-    before it can move to the nav.
+76. ~~Net Worth / app-wide: "Account Synced · [timestamp]" sync-status text is currently only
+    shown inside a few modules' own "Account" sections... should live in the sidebar/nav
+    instead of being "buried in a few modules."~~ **Done (2026-08-27) — see Done item 189.**
+    Picked worst-of-N as the headline plus a click-to-expand per-module breakdown popover,
+    rather than one or the other. Each module's own "Account" section still shows its own
+    status text too — this adds the unified nav view, doesn't replace the per-module detail.
 77. ~~App-wide: whole-app import/export through Settings.~~ **Done (2026-08-26) — see Done item
     177.** One combined JSON file, all 14 modules. **Still open**: every table exporting to
     Excel/HTML/PDF (only CSV/JSON exist today — see README item 40 for CSV, Done item 177 for
