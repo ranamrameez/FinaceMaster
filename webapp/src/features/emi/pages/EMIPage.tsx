@@ -586,6 +586,80 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
             </Field>
           </div>
         )}
+        {/* README Pending item 67: "Big EMI every N months" and "Link to
+           bank" used to live as separate always-visible cards on the loan-
+           detail page — moved here, into an "Advanced" section of the
+           EDIT form specifically (not the add-loan form), per the item's
+           own proposed design: "Big EMI" needs a real schedule (elapsed
+           months known) to generate against, so it doesn't fit a brand-new
+           loan with no history yet. Only shown while editing an EXISTING
+           loan — a plain sub-section, not another nested Card, since
+           stacking a second card border/shadow inside this one would be
+           exactly the "cards inside cards" complaint tracked separately as
+           Pending item 90. */}
+        {editing && (
+          <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+            <div className="footer-note" style={{ marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Advanced</div>
+            <div style={{ marginBottom: 16 }}>
+              <h4 style={{ margin: '0 0 4px' }}>Big EMI every N months</h4>
+              <p className="footer-note" style={{ marginTop: 0 }}>
+                For loans with an occasional bigger payment — e.g. a property installment plan with a larger payment
+                every 6 months. The loan keeps its original tenure; if the remainder checkbox is on, whatever's
+                still owed at the final month gets swept into that last installment.
+              </p>
+              <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                <Field label="Every N months">
+                  <TextInput type="number" min={1} value={bigEmiInterval || ''} onChange={(e) => setBigEmiInterval(Number(e.target.value))} style={{ width: 90 }} />
+                </Field>
+                <Field label="Amount" title="Either the whole payment for that month, or an extra amount stacked on top of the regular installment — pick which below.">
+                  <TextInput type="number" step="0.01" value={bigEmiAmount || ''} onChange={(e) => setBigEmiAmount(Number(e.target.value))} style={{ width: 120 }} />
+                </Field>
+                <Field label="How the amount applies">
+                  <Select value={bigEmiMode} onChange={(e) => setBigEmiMode(e.target.value as 'majorOnly' | 'regularPlusMajor')}>
+                    <option value="majorOnly">Major month pays this amount only</option>
+                    <option value="regularPlusMajor">Major month pays regular + this amount</option>
+                  </Select>
+                </Field>
+                <button className="btn secondary" onClick={() => applyBigEmi({ intervalMonths: bigEmiInterval, amount: bigEmiAmount, mode: bigEmiMode, reconcileLastMonth: bigEmiReconcile })}>
+                  Generate
+                </button>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>
+                <input type="checkbox" checked={bigEmiReconcile} onChange={(e) => setBigEmiReconcile(e.target.checked)} />
+                Add unreconciled amount to last month
+              </label>
+            </div>
+            <div>
+              <h4 style={{ margin: '0 0 4px' }}>Link to bank</h4>
+              {linkedAccount ? (
+                <p className="footer-note" style={{ marginBottom: 8 }}>
+                  Linked to <strong>{linkedAccount.name}</strong> — remaining installments are planned in its Planning tab.
+                </p>
+              ) : (
+                <p className="footer-note" style={{ marginBottom: 8 }}>
+                  Not linked yet. Linking generates a planned (not-yet-done) entry for every remaining installment in
+                  the chosen account's Planning tab, dated on this loan's own schedule.
+                </p>
+              )}
+              {accounts.length ? (
+                <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                  <Field label="Bank account">
+                    <Select value={linkAccountId} onChange={(e) => setLinkAccountId(e.target.value)}>
+                      {accounts.map((a) => (
+                        <option key={a.id} value={a.id}>{a.name} ({a.currencyCode})</option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <button className="btn secondary" onClick={linkToBank}>
+                    {linkedAccount ? 'Re-link / regenerate plans' : 'Link to bank'}
+                  </button>
+                </div>
+              ) : (
+                <p className="footer-note">No bank accounts yet — add one on the Banking page first.</p>
+              )}
+            </div>
+          </div>
+        )}
         <LoanStatZones loan={loan} sum={sum} loanRepayments={loanRepayments} />
       </CollapsibleCard>
 
@@ -606,38 +680,6 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
         <input type="checkbox" checked={showFullSchedule} onChange={(e) => setShowFullSchedule(e.target.checked)} />
         Show the full schedule, start to end (instead of just the next 12 installments)
       </label>
-
-      {/* "Big EMI every N months" (2026-08-26, user-requested): auto-generate
-         a batch of major-month overrides instead of setting each one by hand
-         via the pencil icon below. */}
-      <CollapsibleCard title={<h4 style={{ margin: 0 }}>Big EMI every N months</h4>} defaultOpen={false} style={{ marginBottom: 12 }}>
-        <p className="footer-note" style={{ marginTop: 0 }}>
-          For loans with an occasional bigger payment — e.g. a property installment plan with a larger payment
-          every 6 months. The loan keeps its original tenure; if the remainder checkbox is on, whatever's still
-          owed at the final month gets swept into that last installment.
-        </p>
-        <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <Field label="Every N months">
-            <TextInput type="number" min={1} value={bigEmiInterval || ''} onChange={(e) => setBigEmiInterval(Number(e.target.value))} style={{ width: 90 }} />
-          </Field>
-          <Field label="Amount" title="Either the whole payment for that month, or an extra amount stacked on top of the regular installment — pick which below.">
-            <TextInput type="number" step="0.01" value={bigEmiAmount || ''} onChange={(e) => setBigEmiAmount(Number(e.target.value))} style={{ width: 120 }} />
-          </Field>
-          <Field label="How the amount applies">
-            <Select value={bigEmiMode} onChange={(e) => setBigEmiMode(e.target.value as 'majorOnly' | 'regularPlusMajor')}>
-              <option value="majorOnly">Major month pays this amount only</option>
-              <option value="regularPlusMajor">Major month pays regular + this amount</option>
-            </Select>
-          </Field>
-          <button className="btn secondary" onClick={() => applyBigEmi({ intervalMonths: bigEmiInterval, amount: bigEmiAmount, mode: bigEmiMode, reconcileLastMonth: bigEmiReconcile })}>
-            Generate
-          </button>
-        </div>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>
-          <input type="checkbox" checked={bigEmiReconcile} onChange={(e) => setBigEmiReconcile(e.target.checked)} />
-          Add unreconciled amount to last month
-        </label>
-      </CollapsibleCard>
 
       <div className="table-scroll">
         <table>
@@ -783,36 +825,6 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
           </div>
         )}
       </CollapsibleCard>
-
-      <Card style={{ marginBottom: 16 }}>
-        <h4 style={{ margin: '0 0 8px' }}>Link to bank</h4>
-        {linkedAccount ? (
-          <p className="footer-note" style={{ marginBottom: 8 }}>
-            Linked to <strong>{linkedAccount.name}</strong> — remaining installments are planned in its Planning tab.
-          </p>
-        ) : (
-          <p className="footer-note" style={{ marginBottom: 8 }}>
-            Not linked yet. Linking generates a planned (not-yet-done) entry for every remaining installment in the
-            chosen account's Planning tab, dated on this loan's own schedule.
-          </p>
-        )}
-        {accounts.length ? (
-          <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <Field label="Bank account">
-              <Select value={linkAccountId} onChange={(e) => setLinkAccountId(e.target.value)}>
-                {accounts.map((a) => (
-                  <option key={a.id} value={a.id}>{a.name} ({a.currencyCode})</option>
-                ))}
-              </Select>
-            </Field>
-            <button className="btn secondary" onClick={linkToBank}>
-              {linkedAccount ? 'Re-link / regenerate plans' : 'Link to bank'}
-            </button>
-          </div>
-        ) : (
-          <p className="footer-note">No bank accounts yet — add one on the Banking page first.</p>
-        )}
-      </Card>
 
       <RepaymentLog loan={loan} repayments={loanRepayments} />
     </div>

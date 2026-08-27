@@ -3817,6 +3817,20 @@ not developer notes) continuously as features ship.
   currency (USD/PKR) data including a real EMI liability, plus real chart screenshots (not
   just checking the title text renders) — both charts showed distinct, correctly-labeled,
   non-zero bars matching the seeded data.
+- **EMI's "Big EMI"/"Link to bank" moved into an Advanced edit-form section, eighth item under
+  the new standing instruction (2026-08-27) — see README Done item 196, closes Pending item
+  67.** The item itself had already proposed the concrete design (tuck into a collapsed
+  "Advanced" section of the EDIT form, not the add-loan form, since Big EMI needs a real
+  schedule with elapsed months known) — built exactly that. **Real trap worth remembering for
+  any future "move X into a section of Y" request where Y is already a Card**: a naive nested
+  `CollapsibleCard` inside `LoanDetail`'s own outer `CollapsibleCard` would have reintroduced
+  the exact "cards inside cards" visual pattern Pending item 90 separately complains about —
+  used a plain bordered `<div>` sub-section instead (uppercase label + top border, matching
+  this file's own `zone()` heading convention), not a second nested card. All underlying
+  state/handlers unchanged, purely a JSX relocation. Verified live via Playwright: confirmed
+  both controls are genuinely absent before entering Edit mode (not just collapsed), appear
+  correctly once Edit is clicked, and the moved "Generate" button still hits the real sign-in
+  gate — zero console errors.
 
 ## Live URLs
 
