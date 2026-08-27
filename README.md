@@ -4823,6 +4823,54 @@ FinanceManager live link:
      this primarily confirms nothing crashes on real backfilled data, not a visible ordering
      difference — the ordering correctness itself is what the 19 new unit tests directly prove).
      `npx tsc -b` / `npm run test` (442 tests, 19 new) / `npm run build` all clean.
+213. **App-wide redesign, Phase 1 (shared foundation) + Banking pilot (2026-08-27) — first real
+     slice of README Pending item 114/CLAUDE.md's "App-wide UI/UX redesign" plan, built after
+     confirming the pilot module (Banking), the Settings hub's "Security" scope (sign-in summary
+     only), and dropping the older `?section=` sidebar-children idea via `AskUserQuestion` per
+     the standing plan-and-propose rule.** **Phase 1, applied app-wide**: `--shadow-card`/
+     `--shadow-lg` lightened roughly by half (rule 4); `Tabs`' inter-section spacing bumped
+     12px→20px (rule 2); new `.entity-card-grid`/`.entity-card` CSS + a shared `EntityCard`
+     component (`components/Card.tsx`) — a `StatCard`-styled, `--card-hue`-colored, clickable
+     summary card with a top-right `actions` slot, for the "Main tier: entity items as cards, not
+     tables" rule; confirmed rule 9's "don't force a zero baseline" was already satisfied
+     app-wide (no `beginAtZero`/`min:0` anywhere in the codebase, `ChartJS.defaults.scales.linear
+     .grace` already auto-pads around real data) — no code change needed there. New global
+     **Account hub** (`features/account/pages/AccountPage.tsx`, route `/account`) consolidates
+     Profile (moved `ProfileEditor` out of QSE's/PSX's SettingsPage.tsx, which had two byte-
+     identical copies, into a new shared `components/ProfileEditor.tsx`), Security (sign-in
+     method summary read from `user.providerData`, Sign out, a new "Switch account" flow), Sync
+     status (reuses the existing `SyncStatusIndicator`), Appearance (extracted `AppearanceFields`
+     out of `AppearancePanel.tsx` so the sidebar popover and this full page render the same
+     controls against the same store), a Data card linking to `/app-data`, and a Disclaimer
+     link. Sidebar footer trimmed to match — "Signed in as X" now correctly points at `/account`
+     instead of QSE's own `/settings` (a real, previously-flagged mislink bug); the permanent
+     disclaimer paragraph, the "Backup / restore" link, and the sync-status popover all moved
+     into the hub, leaving just the account row + a compact "© year · Legal" line — directly
+     answering the user's original "plenty of stuff down there... we must move all these inside
+     a standard setting page" complaint. **Banking pilot, full Main/Often/Rare pass**: Accounts
+     tab's `AccountsList` rewritten from a sortable table to an `EntityCard` grid (still grouped
+     by currency, a real kept feature) — a sortable-column header deliberately does NOT carry
+     over, since rule 1 explicitly asks for cards "rather than long tables with custom reordering
+     options." `AccountDetailPage`'s "Account details" section converted from an always-open
+     editable form to true **read-only display + Edit icon** (new shared `components/ui/
+     AttributeList.tsx`, a label/value grid that skips any attribute with no value — nothing is
+     dropped from what CAN show, an empty optional field just doesn't earn a blank row); Save/
+     Cancel appear in the card header only while editing, matching every other IconButton-driven
+     card action in the app. Stray permanent paragraphs on Banking's page title, Import tab, and
+     Balance projection card converted to `Tooltip`s (rule 8). Banking's Settings tab now leads
+     with a link to `/account` for the global stuff, keeping only what's genuinely per-module
+     (its own cloud-sync-empty upload affordance, its own JSON export/import/clear). **Verified
+     live via Playwright + real screenshots**: entity cards render correctly colored by sign
+     (green asset / red owed-credit-card), clicking a card navigates to its detail page, the
+     Account details card starts read-only with the Edit icon revealing the form only on click,
+     the Settings tab links to `/account`, and the hub page itself renders all its sections with
+     the sign-in prompt correctly gating Sign in/Sign out — zero new console errors (the one
+     `ERR_CONNECTION_RESET` is the same pre-existing Firebase-blocked-in-this-sandbox limitation
+     noted throughout this file). `npx tsc -b` / `npm run test` (442 tests, unchanged — no calc
+     logic touched) / `npm run build` all clean. **Not yet done, tracked as README Pending item
+     114's own remaining scope**: rolling the same `EntityCard`/read-only-detail-page/Settings-
+     hub-linking pattern out to the other 12 modules, and the separate, higher-risk Credit-card/
+     Bank-normalization migration — see that Pending item for the full remaining plan.
 
 ## Pending
 
@@ -5517,28 +5565,37 @@ or a design decision before more code, not guessed at further:**
 113. ~~Sidebar visual grouping: the top-level category list and the QSE/PSX chip switcher +
      "Pages" accordion below it have no clear visual separator.~~ **Done (2026-08-27) — see
      Done item 210.** A top border + spacing now makes the boundary explicit.
-114. **App-wide UI/UX redesign, top priority, NOT YET STARTED (2026-08-27) — full design spec
-     lives in `CLAUDE.md`'s "Redesign decision" and "App-wide UI/UX redesign" sections, read
-     those before starting any of this.** The user reframed the whole app's UI around one
-     content model — **Main** (frequent: stats/charts/entity cards/FAB-add-transaction),
-     **Often** (occasional: FAB-add-entity, click an entity → a dedicated READ-ONLY detail page
-     with an Edit icon, showing every single attribute), **Rare** (Account/Settings/Backup/
-     Disclaimer, one Settings submenu) — plus 9 concrete UI rules (no nested cards; generous
-     vertical spacing; wrap-flex grids over shrinking; lighter shadows; solid-color stat cards
-     with little gradient; vertical-not-full-width form layout; action buttons grouped top-
-     right; descriptions → tooltips; consistent chart height with no forced zero-baseline).
-     Confirmed: **no fork/new repo/new codebase** — redesign happens in place in this same repo
-     (a cosmetic rebrand later is a separate, cheap, not-yet-requested step); entity-detail
-     views are dedicated PAGES (matching Portfolio's own per-stock page pattern), not popups,
-     and must never drop an attribute in the move. Also folds in: consolidating "relevant info
-     in one place," auditing (not necessarily rebuilding) inline cross-entity linking per
-     module, and — flagged as the highest-risk piece, since it touches the user's real imported
-     credit-card/bank data — splitting Credit Card into its own entity linked to a normalized
-     Bank/Branch reference model, replacing today's `BankAccount.isLiability` flag. **New
-     standing rule for this and future ambiguous work**: plan and get explicit approval before
-     building, then execute the approved plan to completion. Still open before code starts:
-     confirm Settings hub's "Security"/"Defaults" scope, and whether the earlier `?section=`
-     sidebar-children-from-Tabs idea is superseded by this model or still wanted alongside it.
+114. **App-wide UI/UX redesign, top priority, IN PROGRESS (2026-08-27) — Phase 1 (shared
+     foundation) + a full Banking pilot are done, see Done item 213; full design spec lives in
+     `CLAUDE.md`'s "Redesign decision" and "App-wide UI/UX redesign" sections, read those before
+     continuing this.** The user reframed the whole app's UI around one content model — **Main**
+     (frequent: stats/charts/entity cards/FAB-add-transaction), **Often** (occasional: FAB-add-
+     entity, click an entity → a dedicated READ-ONLY detail page with an Edit icon, showing every
+     single attribute), **Rare** (Account/Settings/Backup/Disclaimer, one Settings submenu) —
+     plus 9 concrete UI rules (no nested cards; generous vertical spacing; wrap-flex grids over
+     shrinking; lighter shadows; solid-color stat cards with little gradient; vertical-not-full-
+     width form layout; action buttons grouped top-right; descriptions → tooltips; consistent
+     chart height with no forced zero-baseline). Confirmed via `AskUserQuestion` before starting:
+     pilot module is **Banking**; Settings hub's Security section is sign-in summary only (no
+     new account-security feature); the older `?section=` sidebar-children idea is dropped,
+     superseded by this model. Confirmed earlier: **no fork/new repo/new codebase** — redesign
+     happens in place in this same repo; entity-detail views are dedicated PAGES (matching
+     Portfolio's own per-stock page pattern), not popups, and must never drop an attribute in the
+     move. **Done in Done item 213**: the shared CSS/component foundation (lighter shadows,
+     `Tabs` spacing, `EntityCard`, confirmed rule 9's zero-baseline concern was already satisfied
+     app-wide) and a global `/account` hub (Profile/Security/Sync status/Appearance/Data/
+     Disclaimer, replacing the sidebar's scattered footer content and its mislinked "Signed in
+     as X"), plus Banking's own full pass (entity-card Accounts grid, read-only+Edit-icon
+     `AccountDetailPage`, tooltip-ified stray paragraphs, Settings tab linking to the hub).
+     **Still open**: roll the same `EntityCard`/read-only-detail-page/hub-linking pattern out to
+     the other 12 modules one at a time (verify each live before moving to the next, same
+     incremental style as everything else in this project); audit (don't blindly rebuild) each
+     module's existing inline cross-entity-linking coverage against the "each module should link
+     without leaving its own page" ask — most already have this per Done items 125/131/156, so
+     this is a verification pass, not new construction; and the separate, higher-risk Credit
+     Card/Bank/Branch normalization migration (flagged as its own track in CLAUDE.md, not to be
+     bundled into the general UI rollout — it touches the user's real imported GCC/PCC
+     credit-card-as-liability-account data and needs its own focused session).
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

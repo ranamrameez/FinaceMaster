@@ -4311,15 +4311,16 @@ on open design questions, not about re-approving already-scoped work.
 
 ## App-wide UI/UX redesign — the Main/Often/Rare model + 9 design rules (2026-08-27)
 
-**This is the active, top-priority, not-yet-started redesign initiative for the whole app.**
-The user gave this as a full reframing after a long back-and-forth about scattered nav/footer
-content ("plenty of stuff down there like import/export, synced status, disclaimer... side +
-top chips menu is also scattered... use arrow signs for open/collapsed status") — rather than
-patch those individually, redesign around one content model applied everywhere. **Explicit
-instruction: "Audit this app page by page and update the app as per guidance" — this has NOT
-been started yet (zero code written toward it as of this note).** A future session should treat
-this as the standing top-of-backlog item, ahead of the numbered README Pending list, until it's
-done or the user redirects.
+**This is the active, top-priority redesign initiative for the whole app — Phase 1 (shared
+foundation) and a full Banking pilot are DONE as of 2026-08-27; see the "Progress" note below
+before assuming anything here is unstarted.** The user gave this as a full reframing after a
+long back-and-forth about scattered nav/footer content ("plenty of stuff down there like
+import/export, synced status, disclaimer... side + top chips menu is also scattered... use
+arrow signs for open/collapsed status") — rather than patch those individually, redesign around
+one content model applied everywhere. **Explicit instruction: "Audit this app page by page and
+update the app as per guidance."** A future session should treat rolling this out to the
+remaining modules as the standing top-of-backlog item, ahead of the numbered README Pending
+list, until it's done or the user redirects.
 
 ### The Main/Often/Rare content model (user's own definitions, verbatim — do not paraphrase
 away the distinctions)
@@ -4410,45 +4411,67 @@ dropped when migrating a module's existing modal (e.g. Banking's `AccountDetailP
   correctly post-migration — a credit card must keep counting as a liability, never flip to
   being silently double-counted or dropped.
 
-### Still-open / unconfirmed pieces (do not guess at these — ask, or treat as separately scoped)
+### Progress (2026-08-27) — Phase 1 + Banking pilot DONE, see README Done item 213 for the full
+write-up. Read this before assuming any of the below is still "not started."
 
-- **Unified Settings hub** ("Rare" tier): consolidate Account (sign in/out, profile), Appearance
-  (currently the sidebar-footer popover), Data/Import-Export (currently `/app-data`), a
-  Security section (scope was PROPOSED — sign-out/switch-account + a summary of sign-in
-  method(s) used — but never confirmed by the user), and a Disclaimer/T&C/Privacy link. Also
-  fixes a real, already-confirmed pre-existing bug/confusion: the sidebar's "Signed in as X"
-  currently links to QSE's own `/settings` page, not a real account hub.
+- **Phase 1 shared foundation, done**: `--shadow-card`/`--shadow-lg` lightened (rule 4);
+  `Tabs`' inter-section spacing bumped 12px→20px (rule 2); new `.entity-card-grid`/
+  `.entity-card` CSS + a shared `EntityCard` component (`components/Card.tsx`) for "Main tier:
+  entity items as cards, not tables" (rule 1/3); rule 9's "no forced zero baseline" was already
+  satisfied app-wide (confirmed via grep — no `beginAtZero`/`min:0` anywhere, `ChartJS.defaults
+  .scales.linear.grace` already auto-pads), no code change needed there. New global **Account
+  hub** at `/account` (`features/account/pages/AccountPage.tsx`) — Profile (new shared
+  `components/ProfileEditor.tsx`, deduplicating what used to be two byte-identical copies in
+  QSE's/PSX's SettingsPage.tsx), Security (sign-in method summary from `user.providerData`,
+  Sign out, a new "Switch account" flow — this settles the Security-scope question below),
+  Sync status (reuses `SyncStatusIndicator`), Appearance (new shared `AppearanceFields`,
+  extracted from `AppearancePanel.tsx` so the sidebar popover and this page share one
+  implementation), a Data card linking to `/app-data`, and a Disclaimer link. Sidebar's
+  "Signed in as X" now correctly points at `/account` (the mislink bug is fixed); the footer's
+  permanent disclaimer paragraph, "Backup/restore" link, and sync-status popover all moved into
+  the hub, leaving just the account row + a compact "© year · Legal" line.
+- **Banking pilot, done, full Main/Often/Rare pass**: `AccountsList` rewritten from a sortable
+  table to an `EntityCard` grid (still grouped by currency — the sortable-column header does
+  NOT carry over on purpose, rule 1 explicitly asks for cards instead of a table with its own
+  reorder controls). `AccountDetailPage`'s "Account details" section converted to true
+  **read-only + Edit icon** (new shared `components/ui/AttributeList.tsx` — skips attributes
+  with no value, shows every populated one). Stray permanent paragraphs converted to
+  `Tooltip`s (rule 8). Settings tab now links to `/account` for the global stuff, keeping only
+  Banking-specific content (its own cloud-sync-empty upload affordance, its own JSON export/
+  import/clear). Verified live via Playwright + real screenshots — see README Done item 213.
+- **Confirmed via `AskUserQuestion` before starting** (both questions below are now settled,
+  not still open): pilot module = **Banking**; Settings hub's **Security section = sign-in
+  summary only** (no new account-security feature — exactly what got built); the older
+  `?section=`-URL-param sidebar-children idea is **dropped, superseded** by the Main/Often/Rare
+  model — do not build it.
+
+### Still-open / unconfirmed (genuinely open — ask, don't guess)
+
 - **"Defaults" scope** (mentioned in the very first nav-redesign message, "Import/Export...
   signs ins, security, defaults, all at one place") — still unclear what "defaults" refers to.
   My own standing proposal (never confirmed): fold it into Appearance only, since this app's
   own locked design deliberately keeps currency per-module/per-entity, not a single global
   default currency (no live FX source to convert against) — needs the user's explicit sign-off
   before treating this as settled.
-- **Whether the earlier `?section=`-URL-param "fold each single-page module's `<Tabs>` sections
-  into sidebar children" plan is still wanted.** This was proposed (and never approved) BEFORE
-  the Main/Often/Rare reframing arrived; the new model likely supersedes it in spirit (a Tabs
-  section becomes either inline Main content, an Often-tier FAB+detail-page, or a Rare-tier
-  Settings submenu item — not necessarily a sidebar child at all) but this was never explicitly
-  reconciled with the user. A future session should either re-propose this folded into the
-  Main/Often/Rare plan, or drop it — don't silently build either without saying so.
 
 ### Suggested phased execution order for whichever session picks this up next
 
-1. This documentation (already done, this section) — a stable design reference so the rules
-   don't have to be re-derived or re-asked for every time.
-2. Propose (plan-and-propose rule) and build the shared mechanics ONCE: an entity-card-grid
-   component (replacing ad hoc long tables for "Main" tier lists), a standard "Often"-tier
-   FAB+detail-page pattern (most modules already have pieces of this — audit and unify rather
-   than rebuild), and any new shared CSS tokens the 9 rules imply (shadow weight, stat-card
-   solid-color treatment, standard chart height/no-forced-zero-baseline).
-3. Pilot the full pattern on ONE module end-to-end (a good candidate: Cash or Bank, both
-   already fairly close to this shape) and verify it live via Playwright before rolling out
-   further — this project's own repeated lesson (see the many "measure before fixing"/"verify
-   live" notes throughout this file) is that a pattern that looks right in isolation can still
-   have real, only-visible-when-tested gaps.
-4. Roll out to the rest of the modules one at a time, in the same incremental,
-   verify-before-commit style this whole project has followed throughout — do not attempt a
-   single giant all-modules-at-once change.
+1. This documentation (done) — a stable design reference so the rules don't have to be
+   re-derived or re-asked for every time.
+2. Shared mechanics (done — see "Progress" above): `EntityCard`, the `/account` hub,
+   `AttributeList`, the lightened-shadow/spacing CSS tokens.
+3. The Banking pilot (done — see "Progress" above), verified live via Playwright before
+   rolling out further — this project's own repeated lesson (see the many "measure before
+   fixing"/"verify live" notes throughout this file) is that a pattern that looks right in
+   isolation can still have real, only-visible-when-tested gaps.
+4. **Next up**: roll out to the rest of the modules (Cash, Personal Loans, EMI/Loans, Funds,
+   Rentals, Subscriptions, QSE/PSX's own entity-ish lists if any apply, Transfers, Planning,
+   Budget Planner, Net Worth) one at a time, in the same incremental, verify-before-commit
+   style this whole project has followed throughout — do not attempt a single giant
+   all-modules-at-once change. Each module's own "Settings" tab should link to `/account` for
+   the global bits, same as Banking's now does. Also worth doing per-module: audit (don't
+   blindly rebuild) whether that module already has inline cross-entity linking from its own
+   native add/edit flow — most do (Done items 125/131/156) — before assuming it needs building.
 5. The Credit-card/Bank-normalization migration is its own separate, higher-risk track — do
    not bundle it into the same PR/session as the general UI reshuffle; it touches real stored
    financial data and needs its own focused review.

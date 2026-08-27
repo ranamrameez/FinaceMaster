@@ -54,6 +54,7 @@ import { LegalPage } from './pages/LegalPage';
 import { NetWorthPage } from './features/netWorth/pages/NetWorthPage';
 import { BudgetPlannerPage } from './features/budget/pages/BudgetPlannerPage';
 import { AppDataPage } from './features/appData/pages/AppDataPage';
+import { AccountPage } from './features/account/pages/AccountPage';
 
 function useApplyAppearance() {
   const appearance = useAppearanceStore((s) => s.appearance);
@@ -134,7 +135,7 @@ function App() {
       <ConfirmDialogHost />
       <SignInModalHost />
       <HashRouter>
-        <AppShell user={user} syncStatuses={syncStatuses}>
+        <AppShell user={user}>
           <ErrorBoundary>
             <Routes>
               <Route path="/" element={<DashboardPage />} />
@@ -294,6 +295,7 @@ function App() {
               />
               <Route path="/budget" element={<BudgetPlannerPage />} />
               <Route path="/app-data" element={<AppDataPage />} />
+              <Route path="/account" element={<AccountPage syncStatuses={syncStatuses} />} />
               <Route path="/legal" element={<LegalPage />} />
             </Routes>
           </ErrorBoundary>

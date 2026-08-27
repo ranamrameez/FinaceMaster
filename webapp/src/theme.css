@@ -40,8 +40,12 @@
        wine/material/light/dark blocks (user-reported item 4, "shadows are
        inconsistent"). Every card-family shadow below now references one
        of these two tokens instead of inventing its own numbers. */
-    --shadow-card:0 1px 2px rgba(0,0,0,.18), 0 4px 14px rgba(0,0,0,.16);
-    --shadow-lg:0 8px 24px rgba(0,0,0,.4);
+    /* Lightened 2026-08-27 (redesign rule 4, "lighter shadows to make UI
+       less dense") — roughly half the previous opacity/spread on both
+       layers, still enough separation to read as "elevated" without the
+       heavier look every card on every page previously had. */
+    --shadow-card:0 1px 1px rgba(0,0,0,.10), 0 2px 8px rgba(0,0,0,.09);
+    --shadow-lg:0 6px 16px rgba(0,0,0,.24);
     --on-accent-soft:#fff;
     --mono:'JetBrains Mono',monospace;
     --disp:'Space Grotesk',sans-serif;
@@ -68,8 +72,8 @@
     --loss:#c8302f;
     --warn:#a9790a;
     --on-accent-soft:var(--accent);
-    --shadow-card:0 1px 2px rgba(20,20,30,.06), 0 4px 14px rgba(20,20,30,.07);
-    --shadow-lg:0 14px 35px rgba(20,20,30,.16);
+    --shadow-card:0 1px 1px rgba(20,20,30,.04), 0 2px 8px rgba(20,20,30,.04);
+    --shadow-lg:0 8px 20px rgba(20,20,30,.10);
   }
   :root[data-theme="light"] input[type=text],
   :root[data-theme="light"] input[type=number],
@@ -451,6 +455,19 @@
   .stat-card .label{color:var(--muted); font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; line-height:1.25;}
   .stat-card .value{font-family:var(--mono); font-size:17px; font-weight:700; line-height:1.2;}
   .stat-card .sub{font-size:10.5px; margin-top:3px; color:var(--muted); line-height:1.3;}
+
+  /* ---------- Entity cards (redesign 2026-08-27) — the "Main" tier's
+     replacement for a long entity table (an account, a loan, a property):
+     a small clickable summary card, same solid `--card-hue` background
+     `StatCard` already uses, laid out in a wrap-flex grid (rule 3) instead
+     of shrinking to fit a row. `.entity-card-grid` is the grid wrapper;
+     `.entity-card` is a `StatCard`-shaped card with a hover lift so it
+     reads as clickable, and a title row that leaves room for top-right
+     action icons (rule 7) without them ever colliding with long names. ---------- */
+  .entity-card-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(230px,1fr)); gap:12px; margin-bottom:16px;}
+  .entity-card{cursor:pointer; transition:transform .12s ease, box-shadow .12s ease; padding:13px 15px;}
+  .entity-card:hover{transform:translateY(-2px); box-shadow:var(--shadow-lg);}
+  .entity-card-title{font-weight:700; font-size:14px; line-height:1.3; overflow-wrap:anywhere;}
 
   /* ---------- Density: Compact — an even tighter pass for people who want
      to see as much data as possible with minimal scrolling. Comfortable

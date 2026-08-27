@@ -1,8 +1,8 @@
 import type { User } from 'firebase/auth';
-import { Fragment, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
-import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
+import { Card, CollapsibleCard, EntityCard, MoneyValue } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
 import { Tooltip } from '../../../components/Tooltip';
 import { ChartCard } from '../../qse/components/ChartCard';
@@ -13,6 +13,7 @@ import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
+import { AttributeList } from '../../../components/ui/AttributeList';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { useAmountFormat } from '../../../hooks/useAmountFormat';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
@@ -349,6 +350,15 @@ function AddAccountForm({ onSaved }: { onSaved?: () => void }) {
   );
 }
 
+/** Redesign 2026-08-27 (Main/Often/Rare, rule 1: "entity items as cards
+ * rather than long tables with custom reordering options") — replaces the
+ * old sortable table with an `EntityCard` grid, one card per account,
+ * still grouped by currency (a real user-requested feature, kept). A
+ * sortable-column header doesn't carry over on purpose: the model
+ * explicitly asks for cards instead of a table with its own reorder
+ * controls, and currency grouping is a more useful default ordering here
+ * than a sort a user would have to re-apply every visit. Editing an
+ * account switches its card to a stacked vertical form (rule 6) in place. */
 function AccountsList() {
   const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
   const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
@@ -367,96 +377,87 @@ function AccountsList() {
     setEditRow(null);
   };
 
-  type Col = 'name' | 'currency' | 'opening' | 'current';
-  const sortValue = (a: BankAccount, col: Col): number | string => {
-    switch (col) {
-      case 'currency': return a.currencyCode;
-      case 'opening': return a.openingBalance;
-      case 'current': return accountBalance(a, transactions);
-      default: return a.name;
-    }
-  };
-  const { sorted, Th } = useSortableRows(accounts, sortValue, 'name', 'asc');
-
-  // User-requested (2026-08-26): "accounts should be categed by currency" —
-  // grouped into a sub-header row per currency rather than a flat list,
-  // while still respecting whatever column the user has sorted by within
-  // each group (grouping and sorting are independent: Th's own sort still
-  // reorders rows inside a currency, it just no longer mixes currencies
-  // together in one run).
   const currencyGroups = useMemo(() => {
     const byCurrency = new Map<string, BankAccount[]>();
-    for (const a of sorted) {
+    for (const a of accounts) {
       const list = byCurrency.get(a.currencyCode) ?? [];
       list.push(a);
       byCurrency.set(a.currencyCode, list);
     }
     return [...byCurrency.entries()].sort(([a], [b]) => a.localeCompare(b));
-  }, [sorted]);
+  }, [accounts]);
+
+  if (!accounts.length) {
+    return <p className="footer-note">No accounts yet — use the + button below to add one.</p>;
+  }
 
   return (
-    <div className="table-scroll">
-      <table>
-        <thead><tr><Th col="name">Name</Th><th>Type / Branch</th><Th col="currency">Currency</Th><Th col="opening">Opening balance</Th><Th col="current">Current balance</Th><th></th></tr></thead>
-        <tbody>
-          {currencyGroups.map(([currency, group]) => (
-            <Fragment key={currency}>
-              <tr className="group-row"><td colSpan={6}>{currency}</td></tr>
-              {group.map((a) =>
-            editId === a.id && editRow ? (
-              <tr key={a.id}>
-                <td><input value={editRow.name} onChange={(e) => setEditRow({ ...editRow, name: e.target.value })} /></td>
-                <td>
-                  <input placeholder="Type" value={editRow.accountType ?? ''} onChange={(e) => setEditRow({ ...editRow, accountType: e.target.value || undefined })} style={{ width: 90, marginBottom: 4 }} />
-                  <input placeholder="Branch" value={editRow.branch ?? ''} onChange={(e) => setEditRow({ ...editRow, branch: e.target.value || undefined })} style={{ width: 90 }} />
-                </td>
-                <td>
-                  <select value={editRow.currencyCode} onChange={(e) => setEditRow({ ...editRow, currencyCode: e.target.value })}>
-                    {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
-                  </select>
-                </td>
-                <td><input type="number" step="0.01" value={editRow.openingBalance} onChange={(e) => setEditRow({ ...editRow, openingBalance: Number(e.target.value) })} style={{ width: 110 }} /></td>
-                <td></td>
-                <td>
-                  <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
-                  <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditId(null)} />
-                </td>
-              </tr>
-            ) : (
-              <tr key={a.id} onClick={() => navigate(`/bank/account/${a.id}`)} style={{ cursor: 'pointer' }}>
-                <td>
-                  {a.name}
-                  {a.isLiability && <span className="pill-sell" style={{ marginLeft: 6, fontSize: 10 }}>Credit card</span>}
-                </td>
-                <td className="footer-note">{[a.accountType, a.branch].filter(Boolean).join(' · ') || '—'}</td>
-                <td>{a.currencyCode}</td>
-                <td>{fmtMoney(a.openingBalance, a.currencyCode)}</td>
-                <td className={a.isLiability ? (accountBalance(a, transactions) < 0 ? 'pill-sell' : 'pill-buy') : undefined}>
-                  {a.isLiability
-                    ? `${fmtMoney(Math.max(0, -accountBalance(a, transactions)), a.currencyCode)} owed`
-                    : fmtMoney(accountBalance(a, transactions), a.currencyCode)}
-                </td>
-                <td>
-                  <button className="btn secondary small" onClick={(e) => { e.stopPropagation(); navigate(`/bank/account/${a.id}`); }}>Details</button>{' '}
-                  <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={(e) => { e.stopPropagation(); startEdit(a); }} />{' '}
-                  <IconButton
-                    label="Delete"
-                    icon={<TrashIcon size={13} />}
-                    align="right"
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      if (await confirmDialog('This deletes the account and all its transactions.', `Delete account "${a.name}"?`)) deleteAccount(a.id);
-                    }}
-                  />
-                </td>
-              </tr>
-            ),
-              )}
-            </Fragment>
-          ))}
-          {!sorted.length && <tr><td colSpan={6} className="footer-note">No accounts yet — use the + button below to add one.</td></tr>}
-        </tbody>
-      </table>
+    <div>
+      {currencyGroups.map(([currency, group]) => (
+        <div key={currency} style={{ marginBottom: 20 }}>
+          <div className="footer-note" style={{ marginBottom: 8, fontWeight: 700, textTransform: 'uppercase', fontSize: 11, letterSpacing: '.04em' }}>
+            {currency}
+          </div>
+          <div className="entity-card-grid">
+            {group.map((a) =>
+              editId === a.id && editRow ? (
+                <Card key={a.id} style={{ padding: 13 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <Field label="Name"><TextInput style={{ width: '100%' }} value={editRow.name} onChange={(e) => setEditRow({ ...editRow, name: e.target.value })} /></Field>
+                    <Field label="Type"><TextInput style={{ width: '100%' }} placeholder="e.g. Savings" value={editRow.accountType ?? ''} onChange={(e) => setEditRow({ ...editRow, accountType: e.target.value || undefined })} /></Field>
+                    <Field label="Branch"><TextInput style={{ width: '100%' }} placeholder="e.g. Gulberg Branch" value={editRow.branch ?? ''} onChange={(e) => setEditRow({ ...editRow, branch: e.target.value || undefined })} /></Field>
+                    <Field label="Currency">
+                      <select style={{ width: '100%' }} value={editRow.currencyCode} onChange={(e) => setEditRow({ ...editRow, currencyCode: e.target.value })}>
+                        {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+                      </select>
+                    </Field>
+                    <Field label="Opening balance">
+                      <TextInput style={{ width: '100%' }} type="number" step="0.01" value={editRow.openingBalance} onChange={(e) => setEditRow({ ...editRow, openingBalance: Number(e.target.value) })} />
+                    </Field>
+                    <div className="row" style={{ gap: 6, justifyContent: 'flex-end' }}>
+                      <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />
+                      <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditId(null)} />
+                    </div>
+                  </div>
+                </Card>
+              ) : (
+                <EntityCard
+                  key={a.id}
+                  title={a.name}
+                  subtitle={[a.accountType, a.branch].filter(Boolean).join(' · ') || undefined}
+                  badge={a.isLiability ? <span className="pill-sell" style={{ fontSize: 10 }}>Credit card</span> : undefined}
+                  statLabel={a.isLiability ? 'Owed' : 'Balance'}
+                  stat={
+                    <MoneyValue
+                      n={a.isLiability ? Math.max(0, -accountBalance(a, transactions)) : accountBalance(a, transactions)}
+                      currency={a.currencyCode}
+                    />
+                  }
+                  hue={
+                    a.isLiability
+                      ? (accountBalance(a, transactions) < 0 ? 'var(--loss)' : 'var(--profit)')
+                      : (accountBalance(a, transactions) >= 0 ? 'var(--profit)' : 'var(--loss)')
+                  }
+                  onClick={() => navigate(`/bank/account/${a.id}`)}
+                  actions={
+                    <>
+                      <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(a)} />
+                      <IconButton
+                        label="Delete"
+                        icon={<TrashIcon size={13} />}
+                        align="right"
+                        onClick={async () => {
+                          if (await confirmDialog('This deletes the account and all its transactions.', `Delete account "${a.name}"?`)) deleteAccount(a.id);
+                        }}
+                      />
+                    </>
+                  }
+                />
+              ),
+            )}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -548,6 +549,34 @@ export function AccountDetailPage() {
 
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  // Redesign 2026-08-27 (Often tier: "read-only by default, an Edit icon
+  // switches into the same form"). Cancelling resets the draft back to the
+  // account's own last-saved values, so a discarded edit doesn't leave
+  // stale text sitting in the form the next time it's opened.
+  const [editingMeta, setEditingMeta] = useState(false);
+  const cancelMetaEdit = () => {
+    if (!account) return;
+    setMeta({
+      accountNumber: account.accountNumber ?? '',
+      smsSenderId: account.smsSenderId ?? '',
+      smsSenderNumber: account.smsSenderNumber ?? '',
+      branch: account.branch ?? '',
+      accountType: account.accountType ?? '',
+      iban: account.iban ?? '',
+      bankName: account.bankName ?? '',
+      bic: account.bic ?? '',
+      isLiability: account.isLiability,
+      creditLimit: account.creditLimit,
+      annualFee: account.annualFee,
+      statementDate: account.statementDate,
+      paymentDueDate: account.paymentDueDate,
+      lateFeeAfterDue: account.lateFeeAfterDue,
+      minPaymentAmount: account.minPaymentAmount,
+      cardNetwork: account.cardNetwork,
+      cardBin: account.cardBin,
+    });
+    setEditingMeta(false);
+  };
 
   const exportStatement = () => {
     if (!account) return;
@@ -613,45 +642,79 @@ export function AccountDetailPage() {
         defaultOpen={false}
         style={{ marginBottom: 16 }}
         title={<h4 style={{ margin: 0 }}>Account details</h4>}
-        headerExtra={<button className="btn secondary" onClick={saveMeta}><SaveIcon size={13} />Save details</button>}
+        headerExtra={
+          editingMeta ? (
+            <>
+              <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={() => { saveMeta(); setEditingMeta(false); }} />
+              <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={cancelMetaEdit} />
+            </>
+          ) : (
+            <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => setEditingMeta(true)} />
+          )
+        }
       >
-        <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
-          <Field label="Branch" width={160}>
-            <TextInput value={meta.branch} onChange={(e) => setMeta({ ...meta, branch: e.target.value })} placeholder="e.g. Gulberg Branch" />
-          </Field>
-          <Field label="Account type" width={160}>
-            <TextInput list="bank-account-type-datalist-detail" value={meta.accountType} onChange={(e) => setMeta({ ...meta, accountType: e.target.value })} placeholder="e.g. Savings" />
-          </Field>
-        </div>
-        <datalist id="bank-account-type-datalist-detail">
-          {ACCOUNT_TYPES.map((t) => <option key={t} value={t} />)}
-        </datalist>
-        <IbanLookupFields
-          value={meta}
-          onChange={(patch) => setMeta((m) => ({
-            ...m,
-            ...('iban' in patch ? { iban: patch.iban ?? '' } : {}),
-            ...('bankName' in patch ? { bankName: patch.bankName ?? '' } : {}),
-            ...('bic' in patch ? { bic: patch.bic ?? '' } : {}),
-          }))}
-          bankNameDatalistId="bank-name-datalist-detail"
-        />
-        <CreditCardFields
-          value={meta}
-          onChange={(patch) => setMeta((m) => ({ ...m, ...patch }))}
-          datalistId="card-network-datalist-detail"
-        />
-        <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-          <Field label="Account number" width={160} title="However your bank shows it on statements/SMS — often partially masked, e.g. xxxx1234.">
-            <TextInput value={meta.accountNumber} onChange={(e) => setMeta({ ...meta, accountNumber: e.target.value })} placeholder="e.g. xxxx1234" />
-          </Field>
-          <Field label="SMS sender ID" width={160} title="The sender ID/short code your bank's alert SMS arrives from, e.g. a bank name or a numeric short code.">
-            <TextInput value={meta.smsSenderId} onChange={(e) => setMeta({ ...meta, smsSenderId: e.target.value })} placeholder="e.g. 8123 or MEEZAN" />
-          </Field>
-          <Field label="SMS sender number" width={160} title="If your bank's alerts come from a full phone number instead of a short code.">
-            <TextInput value={meta.smsSenderNumber} onChange={(e) => setMeta({ ...meta, smsSenderNumber: e.target.value })} placeholder="e.g. +923001234567" />
-          </Field>
-        </div>
+        {!editingMeta ? (
+          <AttributeList
+            items={[
+              { label: 'Branch', value: account.branch },
+              { label: 'Account type', value: account.accountType },
+              { label: 'IBAN', value: account.iban },
+              { label: 'Bank name', value: account.bankName },
+              { label: 'BIC', value: account.bic },
+              { label: 'Credit limit', value: account.creditLimit !== undefined ? fmtMoney(account.creditLimit, account.currencyCode) : undefined },
+              { label: 'Annual fee', value: account.annualFee !== undefined ? fmtMoney(account.annualFee, account.currencyCode) : undefined },
+              { label: 'Statement day of month', value: account.statementDate },
+              { label: 'Payment due day of month', value: account.paymentDueDate },
+              { label: 'Late fee after due date', value: account.lateFeeAfterDue !== undefined ? fmtMoney(account.lateFeeAfterDue, account.currencyCode) : undefined },
+              { label: 'Minimum amount due', value: account.minPaymentAmount !== undefined ? fmtMoney(account.minPaymentAmount, account.currencyCode) : undefined },
+              { label: 'Card network', value: account.cardNetwork },
+              { label: 'Card BIN', value: account.cardBin },
+              { label: 'Account number', value: account.accountNumber },
+              { label: 'SMS sender ID', value: account.smsSenderId },
+              { label: 'SMS sender number', value: account.smsSenderNumber },
+            ]}
+          />
+        ) : (
+          <>
+            <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+              <Field label="Branch" width={160}>
+                <TextInput value={meta.branch} onChange={(e) => setMeta({ ...meta, branch: e.target.value })} placeholder="e.g. Gulberg Branch" />
+              </Field>
+              <Field label="Account type" width={160}>
+                <TextInput list="bank-account-type-datalist-detail" value={meta.accountType} onChange={(e) => setMeta({ ...meta, accountType: e.target.value })} placeholder="e.g. Savings" />
+              </Field>
+            </div>
+            <datalist id="bank-account-type-datalist-detail">
+              {ACCOUNT_TYPES.map((t) => <option key={t} value={t} />)}
+            </datalist>
+            <IbanLookupFields
+              value={meta}
+              onChange={(patch) => setMeta((m) => ({
+                ...m,
+                ...('iban' in patch ? { iban: patch.iban ?? '' } : {}),
+                ...('bankName' in patch ? { bankName: patch.bankName ?? '' } : {}),
+                ...('bic' in patch ? { bic: patch.bic ?? '' } : {}),
+              }))}
+              bankNameDatalistId="bank-name-datalist-detail"
+            />
+            <CreditCardFields
+              value={meta}
+              onChange={(patch) => setMeta((m) => ({ ...m, ...patch }))}
+              datalistId="card-network-datalist-detail"
+            />
+            <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+              <Field label="Account number" width={160} title="However your bank shows it on statements/SMS — often partially masked, e.g. xxxx1234.">
+                <TextInput value={meta.accountNumber} onChange={(e) => setMeta({ ...meta, accountNumber: e.target.value })} placeholder="e.g. xxxx1234" />
+              </Field>
+              <Field label="SMS sender ID" width={160} title="The sender ID/short code your bank's alert SMS arrives from, e.g. a bank name or a numeric short code.">
+                <TextInput value={meta.smsSenderId} onChange={(e) => setMeta({ ...meta, smsSenderId: e.target.value })} placeholder="e.g. 8123 or MEEZAN" />
+              </Field>
+              <Field label="SMS sender number" width={160} title="If your bank's alerts come from a full phone number instead of a short code.">
+                <TextInput value={meta.smsSenderNumber} onChange={(e) => setMeta({ ...meta, smsSenderNumber: e.target.value })} placeholder="e.g. +923001234567" />
+              </Field>
+            </div>
+          </>
+        )}
       </CollapsibleCard>
 
       {upcoming.length > 0 && (
@@ -1013,10 +1076,10 @@ function ImportTab() {
 
   return (
     <div>
-      <p className="footer-note" style={{ marginBottom: 12 }}>
-        Import a CSV export from your bank. This is a simple "map these columns" tool, not a per-bank-format
-        parser — pick which column is which below, since every bank's export looks a little different.
-      </p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+        <span className="footer-note">Import a CSV export from your bank.</span>
+        <Tooltip text={'This is a simple "map these columns" tool, not a per-bank-format parser — pick which column is which below, since every bank\'s export looks a little different.'} />
+      </div>
       <Field label="Import into account" width={220}>
         <Select value={accountId} onChange={(e) => setAccountId(e.target.value)}>
           {accounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.currencyCode})</option>)}
@@ -1168,11 +1231,14 @@ function BalanceProjectionSummary() {
   const codes = Object.keys(projection);
 
   return (
-    <CollapsibleCard title={<h3 style={{ margin: 0 }}>Balance projection</h3>} style={{ marginBottom: 16 }}>
-      <p className="footer-note" style={{ marginTop: 0 }}>
-        See what your total balance would look like if every plan below actually happened — a reality check
-        before you spend. Choose what you want to see:
-      </p>
+    <CollapsibleCard
+      title={
+        <Tooltip text="See what your total balance would look like if every plan below actually happened — a reality check before you spend.">
+          <h3 style={{ margin: 0, cursor: 'pointer' }}>Balance projection</h3>
+        </Tooltip>
+      }
+      style={{ marginBottom: 16 }}
+    >
       <div className="row" style={{ gap: 16, marginBottom: 12 }}>
         <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <input type="checkbox" checked={settings.showRealBalance} onChange={(e) => updateSettings({ showRealBalance: e.target.checked })} />
@@ -1674,11 +1740,10 @@ export function BankPage({
 }) {
   return (
     <div>
-      <h1 className="pagetitle">Banking</h1>
-      <p className="footer-note" style={{ marginBottom: 12 }}>
-        Bank account balances and transaction history, entered manually or imported from a CSV statement — no
-        live bank connection (see Disclaimer &amp; Privacy for why).
-      </p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+        <h1 className="pagetitle" style={{ margin: 0 }}>Banking</h1>
+        <Tooltip text="Bank account balances and transaction history, entered manually or imported from a CSV statement — no live bank connection (see Disclaimer & Privacy for why)." />
+      </div>
       <Tabs
         tabs={[
           { key: 'accounts', label: 'Accounts', content: <AccountsTab /> },
@@ -1701,6 +1766,10 @@ export function BankPage({
             label: 'Settings',
             content: (
               <div>
+                <p className="footer-note" style={{ marginTop: 0 }}>
+                  Sign-in, profile, appearance, and a whole-app backup live on the{' '}
+                  <Link to="/account">Account page →</Link>. What's below is specific to Banking.
+                </p>
                 <AccountSection syncStatus={syncStatus} cloudEmpty={cloudEmpty} uploadLocalToCloud={uploadLocalToCloud} />
                 <DataManagement />
               </div>
