@@ -4528,6 +4528,56 @@ FinanceManager live link:
      verification depth as every other sign-in-gated write in this project); Value/P&L stat cards
      rendered correct hand-verified numbers on both exchanges — zero console errors throughout.
      `npx tsc -b` / `npm run test` (406 tests, 2 new) / `npm run build` all clean.
+204. **PSX "Simple" (all-in %) fee mode, user-requested 2026-08-27 after a real trust/correctness
+     conversation about PSX Break-even.** The user reported "your PSX calcs are wrong, it caused
+     me losses" and asked how BE is computed — walked through `breakEvenPrice()` (`lib/calc/
+     fees.ts`, an iterative solver: nudges a sell price until net proceeds after the real fee
+     schedule equal cost basis) and the itemized fee schedule it iterates against
+     (`calcFeeBreakdown()`), hand-traced against their own real OGDC screenshot (1 share @327.80,
+     shown BE 328.56) — the formula itself checked out against the itemized default settings.
+     **A real, concrete finding along the way**: their screenshot's "Cost 327.80" (no commission
+     reflected) only makes sense if that buy's Fee Mode is Manual/same-day-netted — pointed at the
+     exact tickers (OGDC, PSO) README Done item 127 had already flagged as needing the user's own
+     manual review for a stale `manualSameDay` flag left over from a since-reverted default (Done
+     item 67). The user pushed back hard on the suggested fix (switching to Auto): their own
+     mental model is that a real broker doesn't finalize commission on an OPEN same-day position
+     until market close, so charging full commission immediately (Auto's behavior) is what's
+     wrong, not the netted flag. Explained the countervailing evidence directly rather than just
+     asserting it: Auto's "charge immediately, net automatically once a matching sell exists" was
+     the FIX for exactly this same idea tried once before (Done item 67), reverted (Done item 127)
+     after checking it against the user's own real broker backup and finding it under-counted fees
+     by 24.69 PKR across 5 transactions — i.e., "assume netted before a matching sell exists" was
+     empirically tested against their own real numbers and came out wrong, not just theoretically
+     risky. **The user's actual ask, once fully articulated**: not a different default, but real
+     automation — same-day netting fully auto-detected from Buy/Sell/date (already true, see
+     above), PLUS a way to enter their own observed effective commission rate directly (percentage
+     or lump sum) instead of reconciling several itemized fields by hand, because a different app
+     that just takes one flat commission % gave them a BE closer to what they consider correct.
+     **Built exactly that** rather than changing any default: `PSXSettings` gained optional
+     `feeMode?: 'itemized' | 'simple'` and `allInFeePct?: number` (both optional so no existing
+     workbook is silently switched — `undefined` behaves as `'itemized'`, confirmed by a dedicated
+     test). `calcFeeBreakdown()` gained one new branch: in Simple mode, the whole fee is
+     `amount × allInFeePct%`, stuffed into the existing `commission` field with everything else
+     zeroed — which, for free, makes a NETTED same-day leg automatically pay nothing extra (no
+     separate "government levies" figure exists to net down to in this mode), matching the user's
+     own stated approximation that levies are negligible. `makePSXFeeCalculator`/`feeScenarios`
+     needed zero changes — both already just call `calcFeeBreakdown` and read `.total`/the levy
+     fields, so the new mode flows through automatically. New Settings UI (PSX Settings → "Fees &
+     amounts"): a "Fee calculation" selector (Itemized/Simple) and, when Simple is picked, one
+     "All-in commission %" field — the itemized fields stay visible-but-dimmed rather than hidden,
+     since switching back to Itemized reuses whatever was already there. Itemized stays the
+     default for every new and existing workbook — it's still the one calibrated against a real
+     broker contract note (Done item 130), not being replaced, just no longer the only option.
+     **Verified end-to-end against the user's own real numbers, not just unit tests**: seeded the
+     exact OGDC scenario (1 share @327.80, Simple mode, 0.021% all-in — the user's own stated
+     rate) via Playwright and confirmed every downstream figure hand-traced correctly: Fees paid
+     0.07 PKR (327.80 × 0.021%), Cost 327.87, BE 327.94 (solves to net 327.87 after a 0.021% sell
+     fee), P/L -0.14 — a BE much closer to the raw price than the itemized default, exactly the
+     effect the user described from their comparison app. New tests: `psxFees.test.ts` gained 5
+     cases (the flat-rate calculation, `minFee` still applied as a floor, a netted leg paying 0 via
+     `feeScenarios`, `makePSXFeeCalculator`'s tie-goes-to-BUY behavior still holding in Simple
+     mode, and the undefined-means-itemized backward-compatibility guarantee). `npx tsc -b` /
+     `npm run test` (411 tests, 5 new) / `npm run build` all clean.
 
 ## Pending
 

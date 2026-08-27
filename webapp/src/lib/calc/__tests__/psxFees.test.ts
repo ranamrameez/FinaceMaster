@@ -73,6 +73,50 @@ describe('calcFeeBreakdown', () => {
   });
 });
 
+describe('calcFeeBreakdown — Simple (all-in %) fee mode, user-requested 2026-08-27', () => {
+  const SIMPLE_SETTINGS: PSXSettings = { ...BASE_SETTINGS, feeMode: 'simple', allInFeePct: 0.021 };
+
+  it('charges exactly amount * allInFeePct, ignoring every itemized field', () => {
+    // Matches the user's own worked example: 1 share @ 328.5, 0.021% all-in.
+    const fb = calcFeeBreakdown(328.5, false, 1, SIMPLE_SETTINGS);
+    expect(fb.total).toBeCloseTo(328.5 * 0.00021, 2);
+    expect(fb.commission).toBe(fb.total);
+    expect(fb.taxOnCommission).toBe(0);
+    expect(fb.psxFee).toBe(0);
+    expect(fb.nccplFee).toBe(0);
+    expect(fb.secpLevy).toBe(0);
+    expect(fb.cdc).toBe(0);
+    expect(fb.cvt).toBe(0);
+  });
+
+  it('still respects minFee as a floor', () => {
+    const settings = { ...SIMPLE_SETTINGS, minFee: 10 };
+    const fb = calcFeeBreakdown(100, true, 5, settings);
+    expect(fb.total).toBe(10);
+  });
+
+  it('feeScenarios shows a netted leg paying nothing extra, since Simple mode has no separate levies figure', () => {
+    const scenarios = feeScenarios(328.5, false, 1, SIMPLE_SETTINGS);
+    expect(scenarios.full).toBeCloseTo(328.5 * 0.00021, 2);
+    expect(scenarios.netted).toBe(0);
+  });
+
+  it('makePSXFeeCalculator charges the full all-in rate on a charged leg and nothing on a netted one', () => {
+    const buy: Transaction = { date: '2026-08-27', ticker: 'OGDC', action: 'BUY', shares: 1, price: 327.8 };
+    const sell: Transaction = { date: '2026-08-27', ticker: 'OGDC', action: 'SELL', shares: 1, price: 328.5 };
+    const calc = makePSXFeeCalculator(SIMPLE_SETTINGS, [buy, sell]);
+    // Tie on quantity (1 vs 1) — ties go to BUY being the charged side (README item 79).
+    expect(calc(327.8, true, { shares: 1, tx: buy })).toBeCloseTo(327.8 * 0.00021, 2);
+    expect(calc(328.5, false, { shares: 1, tx: sell })).toBe(0);
+  });
+
+  it('an undefined feeMode behaves exactly like itemized — no existing account is silently switched', () => {
+    const withUndefined = { ...BASE_SETTINGS, feeMode: undefined };
+    const fb = calcFeeBreakdown(10294, false, 100, withUndefined);
+    expect(fb.commission).toBeCloseTo(10294 * 0.002, 2);
+  });
+});
+
 describe('feeScenarios', () => {
   it('full matches calcFeeBreakdown, netted matches levies-only sum', () => {
     const amount = 100 * 102.94;

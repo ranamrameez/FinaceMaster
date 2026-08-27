@@ -216,15 +216,40 @@ function DataManagement() {
 function FeeSettings() {
   const settings = usePSXWorkbookStore((s) => s.workbook.settings);
   const updateSettings = usePSXWorkbookStore((s) => s.updateSettings);
+  const feeMode = settings.feeMode ?? 'itemized';
 
   return (
     <Card>
       <h3 style={{ marginTop: 0 }}>Commission &amp; fees</h3>
-      <p className="footer-note" style={{ marginTop: -4 }}>
-        Government levies (PSX/NCCPL/SECP/CVT) default to 0 since they vary by broker — check your
-        account statement and fill in what your broker actually charges.
-      </p>
-      <div className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
+      {/* User-requested 2026-08-27: an alternative to reconciling several
+          itemized fields by hand — one all-in % you've observed from your
+          own statement, applied automatically (same-day netting still
+          auto-detected from Buy/Sell/date, same as itemized mode). */}
+      <div className="row" style={{ gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+        <Field label="Fee calculation" width={160}>
+          <Select value={feeMode} onChange={(e) => updateSettings({ feeMode: e.target.value as 'itemized' | 'simple' })}>
+            <option value="itemized">Itemized (commission + SST + levies)</option>
+            <option value="simple">Simple (one all-in %)</option>
+          </Select>
+        </Field>
+        {feeMode === 'simple' && (
+          <Field label="All-in commission %" width={130} title="Your broker's total effective rate — commission, SST, and levies combined into one number, applied to the charged side of every trade. The netted side of a same-day pair pays nothing extra.">
+            <TextInput type="number" step="0.001" value={settings.allInFeePct ?? 0} onChange={(e) => updateSettings({ allInFeePct: Number(e.target.value) })} />
+          </Field>
+        )}
+      </div>
+      {feeMode === 'simple' ? (
+        <p className="footer-note" style={{ marginTop: -4 }}>
+          Simple mode replaces the itemized fields below — they're kept (and used again) if you
+          switch back to Itemized, but have no effect while Simple is selected.
+        </p>
+      ) : (
+        <p className="footer-note" style={{ marginTop: -4 }}>
+          Government levies (PSX/NCCPL/SECP/CVT) default to 0 since they vary by broker — check your
+          account statement and fill in what your broker actually charges.
+        </p>
+      )}
+      <div className="row" style={{ gap: 12, flexWrap: 'wrap', opacity: feeMode === 'simple' ? 0.5 : 1 }}>
         <Field label="Commission %" width={90}>
           <TextInput type="number" step="0.001" value={settings.feePct} onChange={(e) => updateSettings({ feePct: Number(e.target.value) })} />
         </Field>
