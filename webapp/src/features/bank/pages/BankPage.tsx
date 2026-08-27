@@ -745,24 +745,31 @@ function AddTransactionsForm({ accountId, currencyCode, knownCategories }: { acc
     <div>
       {rows.map((r, i) => (
         <div key={i} className="row" style={{ gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-          <input type="date" value={r.date} onChange={(e) => update(i, { date: e.target.value })} />
-          <input placeholder="Description" value={r.description} onChange={(e) => update(i, { description: e.target.value })} style={{ width: 160 }} />
-          <input
-            type="number"
-            step="0.01"
-            placeholder="Amount (+/-)"
-            value={r.amount || ''}
-            onChange={(e) => update(i, { amount: Number(e.target.value) })}
-            style={{ width: 110 }}
-            title="Negative = spend/debit, positive = deposit/credit"
-          />
-          <input
-            list="bank-category-datalist"
-            placeholder="Category (optional)"
-            value={r.category}
-            onChange={(e) => update(i, { category: e.target.value })}
-            style={{ width: 130 }}
-          />
+          <Field label={i === 0 ? 'Date' : undefined}>
+            <input type="date" value={r.date} onChange={(e) => update(i, { date: e.target.value })} />
+          </Field>
+          <Field label={i === 0 ? 'Description' : undefined}>
+            <input placeholder="Description" value={r.description} onChange={(e) => update(i, { description: e.target.value })} style={{ width: 160 }} />
+          </Field>
+          <Field label={i === 0 ? 'Amount' : undefined} title="Negative = spend/debit, positive = deposit/credit">
+            <input
+              type="number"
+              step="0.01"
+              placeholder="Amount (+/-)"
+              value={r.amount || ''}
+              onChange={(e) => update(i, { amount: Number(e.target.value) })}
+              style={{ width: 110 }}
+            />
+          </Field>
+          <Field label={i === 0 ? 'Category' : undefined}>
+            <input
+              list="bank-category-datalist"
+              placeholder="Category (optional)"
+              value={r.category}
+              onChange={(e) => update(i, { category: e.target.value })}
+              style={{ width: 130 }}
+            />
+          </Field>
           <TimeZoneFields
             time={r.time}
             timezone={r.timezone}
