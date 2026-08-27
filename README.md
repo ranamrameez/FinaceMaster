@@ -4324,6 +4324,34 @@ FinanceManager live link:
      real chart screenshot (not just a title-text check): a genuine declining balance curve from
      ~9,000 down to 0 across the tenure — zero console errors. `npx tsc -b` / `npm run test`
      (397 tests, unchanged — reuses already-computed schedule data) / `npm run build` all clean.
+198. **Banking account rows now navigate to a real routed detail page, resolving Pending item
+     83's own named architecture question with the reading its own text favored (2026-08-27).**
+     The item posed the fork itself (a genuine new route, like QSE/PSX's `/stock/:ticker`, vs.
+     the existing modal just needing its contents reordered) and then said the user's own
+     wording ("should take the user to its details page") reads as wanting a real navigable
+     page — built that reading. `AccountDetailModal` (a `{account, onClose}` component wrapped
+     in `<Modal>`) became `AccountDetailPage` (no props, resolves the account itself from
+     `useParams()`'s `:id` against the live store) at a new `/bank/account/:id` route — the
+     SAME content (balance line, Add-a-transaction form, collapsed Account-details section,
+     Upcoming plans, Transactions list, Download-statement) just rendered as a page instead of
+     a modal, with a "← Back to Banking" link matching QSE/PSX StockPage's own back-link
+     convention. **A real rules-of-hooks constraint worth remembering for any future
+     prop→route-param conversion of a component that assumes its subject always exists**: since
+     the account now comes from a URL param instead of a guaranteed prop, it can be `undefined`
+     (a stale bookmark, a typo'd id) — but React requires every hook to run unconditionally on
+     every render, so the "account not found" early-return has to come AFTER every `useState`/
+     `useMemo` call, not before; each of those hooks needed an `account ? ... : fallback` guard
+     instead of assuming a defined `account`, and the two write handlers (`saveMeta`/
+     `exportStatement`) each gained their own `if (!account) return;` guard at the top. Scoped to
+     Banking only for this pass — Cash's and Personal Loans' own detail views still use their
+     existing modal pattern, matching this project's own repeated "ship one page first, verified,
+     before a wider rollout" precedent (e.g. Done item 58's own "v1 for Banking only"). Verified
+     live via Playwright: clicking an account row navigates to a real URL with no modal overlay
+     present, the page shows correct real content (accurate balance math, real seeded
+     transaction), the back link correctly returns to `/bank`, and direct navigation to a
+     nonexistent account id shows a graceful "Account not found" instead of crashing — zero
+     console errors. `npx tsc -b` / `npm run test` (397 tests, unchanged — restructured an
+     existing component, no new calc logic) / `npm run build` all clean.
 
 ## Pending
 
@@ -4811,15 +4839,12 @@ everything below is started. Working down it in priority order across following 
     see Done item 170.**
 82. ~~Banking: `BankAccount` should carry Branch and/or Account Type fields — new fields, not
     yet in the data model at all.~~ **Done (2026-08-26) — see Done item 170.**
-83. Banking / app-wide: clicking a Bank account (or Cash, or a Personal Loan) row should
-    navigate to that item's own detail page rather than opening a popup/modal in place —
-    Banking's `AccountDetailModal` is a MODAL today, not a real routed page. A real
-    architectural question: does "detail page" mean a genuine new route per account (like
-    QSE/PSX's `/stock/:ticker`), or is the existing modal acceptable and just needs its
-    CONTENTS reordered (see item 84)? The user's wording ("should take the user its details
-    page") reads as wanting a real navigable page, not just a modal — but that's a bigger
-    change than it sounds given Bank accounts don't currently have stable per-account routes
-    at all.
+83. ~~Banking / app-wide: clicking a Bank account (or Cash, or a Personal Loan) row should
+    navigate to that item's own detail page rather than opening a popup/modal in place.~~
+    **Done for Banking (2026-08-27) — see Done item 198.** A real `/bank/account/:id` route,
+    matching QSE/PSX's `/stock/:ticker` precedent. **Still open**: Cash and Personal Loans still
+    use their own modal pattern — scoped to Banking first as a verified working instance before
+    a wider rollout, same "ship one first" precedent this project always follows.
 84. ~~Banking: `AccountDetailModal` currently shows the (rare) account-EDIT form prominently and
     has NO way to add a transaction from inside it at all.~~ **Done (2026-08-26) — see Done
     item 183.** The modal now leads with an inline "Add a transaction" form (reusing
