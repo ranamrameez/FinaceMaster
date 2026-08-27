@@ -316,6 +316,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
   const [editing, setEditing] = useState(!!startInEditMode);
   const [editRow, setEditRow] = useState<EMILoan>(loan);
   const sum = emiSummary(loan);
+  const netToReturn = loan.principal + sum.totalInterest;
   const ensureSignedIn = useEnsureSignedIn();
   useAppearanceStore((s) => s.appearance);
   applyChartTheme();
@@ -634,8 +635,8 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
           <thead>
             <tr>
               <th>#</th><th>Due date</th><th>Installment</th>
-              <th>{loan.repaymentMode === 'fixedTotal' ? 'Markup' : 'Interest'}</th>
-              <th>Principal</th><th>Balance</th><th>Status</th><th></th>
+              <th>Net paid</th><th>Net balance</th>
+              <th>Breakdown</th><th>Status</th><th></th>
             </tr>
           </thead>
           <tbody>
@@ -646,6 +647,11 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                   ? 'planned'
                   : 'upcoming';
               const canEdit = r.month > sum.elapsed;
+              const paidSoFar = netToReturn - r.balance;
+              const paidPct = netToReturn > 0 ? (paidSoFar / netToReturn) * 100 : 0;
+              const balancePct = netToReturn > 0 ? (r.balance / netToReturn) * 100 : 0;
+              const principalPct = netToReturn > 0 ? (r.principalComp / netToReturn) * 100 : 0;
+              const markupPct = netToReturn > 0 ? (r.interest / netToReturn) * 100 : 0;
               return (
               <tr key={r.month}>
                 <td>#{r.month}</td>
@@ -688,9 +694,12 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                         </Tooltip>
                       )}
                     </td>
-                    <td>{fmtMoney(r.interest, loan.currencyCode)}</td>
-                    <td>{fmtMoney(r.principalComp, loan.currencyCode)}</td>
-                    <td>{fmtMoney(r.balance, loan.currencyCode)}</td>
+                    <td>{fmtMoney(paidSoFar, loan.currencyCode)} ({paidPct.toFixed(1)}%)</td>
+                    <td>{fmtMoney(r.balance, loan.currencyCode)} ({balancePct.toFixed(1)}%)</td>
+                    <td>
+                      <div className="footer-note">Principal: {fmtMoney(r.principalComp, loan.currencyCode)} ({principalPct.toFixed(1)}%)</div>
+                      <div className="footer-note">{loan.repaymentMode === 'fixedTotal' ? 'Markup' : 'Interest'}: {fmtMoney(r.interest, loan.currencyCode)} ({markupPct.toFixed(1)}%)</div>
+                    </td>
                     <td>
                       <span className={status === 'paid' ? 'pill-buy' : status === 'planned' ? 'pill-info' : 'pill-warn'}>
                         {status === 'paid' ? 'Paid' : status === 'planned' ? 'Planned' : 'Upcoming'}

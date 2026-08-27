@@ -4121,6 +4121,26 @@ FinanceManager live link:
      Dividends sections): every field now shows a real visible label in the rendered DOM — zero
      console errors. `npx tsc -b` / `npm run test` (388 tests, unchanged — UI-only) / `npm run
      build` all clean.
+188. **EMI Schedule table reordered/regrouped per the user's own exact spec, closing Pending
+     item 69 (2026-08-27).** The item's own text already fully specified the target layout —
+     `#, Due Date, Installment, (Net Paid + %), (Net Balance + %), Breakdown (Principal + %,
+     Markup + %), Status, Actions` — so this was buildable without further clarification, unlike
+     most of the other still-open EMI items nearby (67/70/72), which explicitly need a design
+     decision first. New percentage-of-total math computed inline in `LoanDetail` (no new
+     `lib/calc` function — this is a handful of one-line divisions against the already-computed
+     `netToReturn`, the same "straightforward derived value, not new calc logic" precedent
+     Funds' own inline percentage math already set): `paidSoFar = netToReturn - r.balance` (so
+     Net Paid % + Net Balance % always sum to exactly 100%, a built-in sanity check), and
+     `principalPct`/`markupPct` are each that row's own Principal/Markup component as a % of
+     the WHOLE loan's `netToReturn` — per the item's own explicit "each as a % of netToReturn"
+     instruction, not as a % of that row's own installment. Principal/Markup collapse into one
+     "Breakdown" cell (two stacked lines) instead of two separate columns, matching the user's
+     "Markup/Principal are secondary info... collapse into one Breakdown concept" framing.
+     Verified live via Playwright with a seeded $10,000/12-month/12%-p.a. loan: Net Paid +
+     Net Balance summed to exactly 100.0% on every row, and Principal + Markup within a row's
+     own Breakdown cell summed back to that row's own Installment amount — both checked as real
+     arithmetic on the rendered numbers, not just visually. `npx tsc -b` / `npm run test` (388
+     tests, unchanged — UI math only) / `npm run build` all clean.
 
 ## Pending
 
@@ -4557,12 +4577,9 @@ everything below is started. Working down it in priority order across following 
 68. ~~EMI: reorder the loan-detail page to Stats → Schedule → Charts → What-if.~~ **Done
     (2026-08-26) — see Done item 168.** The Amortization chart/What-if/Link-to-bank group
     moved together, right after Schedule, keeping their own relative order.
-69. EMI Schedule table: reorder to `#, Due Date, Installment, (Net Paid + %), (Net Balance +
-    %), Breakdown (Principal + %, Markup + %), Status, Actions` — Markup/Principal are
-    "secondary info" per the user, should collapse into one "Breakdown" concept, and every
-    money figure should show a percentage-of-total alongside it. Needs new percentage-of-total
-    calc (paid/balance/principal/markup each as a % of `netToReturn`), not just a column
-    reorder. Not started.
+69. ~~EMI Schedule table: reorder to `#, Due Date, Installment, (Net Paid + %), (Net Balance +
+    %), Breakdown (Principal + %, Markup + %), Status, Actions`.~~ **Done (2026-08-27) — see
+    Done item 188.**
 70. EMI: "Markup percentage" should also show the ANNUAL and MONTHLY equivalent, not just the
     one lifetime figure. Trivial for interest mode (rate IS annual; monthly = rate/12) — needs
     a real interpretation decision for fixedTotal mode first (a "monthly %" there most likely
