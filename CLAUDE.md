@@ -3802,6 +3802,21 @@ not developer notes) continuously as features ship.
   than either prior state. Left the glassy sheen overlay completely untouched, since the user's
   own wording explicitly wanted that kept. Verified with real after screenshots across the same
   4 combinations — clearly saturated now, text/contrast still readable in dark mode.
+- **Two new Net Worth distribution charts, seventh item under the new standing instruction
+  (2026-08-27) — see README Done item 195, closes Pending item 78.** The item's own text
+  guessed at the likely gap (a per-currency asset/liability breakdown, since the existing
+  doughnut only shows net) — built exactly that. New "Assets vs. liabilities by currency" bar
+  chart deliberately uses a SEPARATE data array from the existing doughnut's `splitData` — the
+  doughnut excludes any currency with net ≤ 0 (can't render a negative slice), but an
+  Assets-vs-Liabilities bar chart handles that fine, so including it would have silently hidden
+  exactly the currencies most worth showing this comparison for. New "Breakdown within X, by
+  module" bar chart reuses Done item 169's already-computed `r.breakdown` array unchanged — a
+  charted view of the same data the small module cards already show, not new calc logic.
+  Followed Personal Loans'/Rentals' own established horizontal-bar-colored-by-sign pattern
+  rather than inventing a new chart shape. Verified live via Playwright with seeded multi-
+  currency (USD/PKR) data including a real EMI liability, plus real chart screenshots (not
+  just checking the title text renders) — both charts showed distinct, correctly-labeled,
+  non-zero bars matching the seeded data.
 
 ## Live URLs
 

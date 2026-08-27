@@ -222,6 +222,20 @@ export function NetWorthPage({
     .map((r) => ({ currency: r.currency, converted: convertAmount(r.net, r.currency, preferredCurrency, rates) }))
     .filter((r): r is { currency: string; converted: number } => r.converted !== null && r.converted > 0);
 
+  // README Pending item 78: unlike splitData above, a currency with more
+  // liabilities than assets (net <= 0) still belongs here — an Assets vs.
+  // Liabilities bar chart shows that fine (Assets bar shorter than
+  // Liabilities), only a doughnut's single net-value slice can't.
+  const assetsLiabilitiesData = rows
+    .map((r) => ({
+      currency: r.currency,
+      assets: convertAmount(r.assets, r.currency, preferredCurrency, rates),
+      liabilities: convertAmount(r.liabilities, r.currency, preferredCurrency, rates),
+    }))
+    .filter((r): r is { currency: string; assets: number; liabilities: number } => r.assets !== null && r.liabilities !== null);
+
+  const selectedCurrencyRow = rows.find((r) => r.currency === preferredCurrency);
+
   const ownCurrencies = [...new Set(rows.map((r) => r.currency))].sort();
 
   // README Pending item 64: a real net-worth-over-time chart, built on an
@@ -455,6 +469,46 @@ export function NetWorthPage({
                 datasets: [{ data: splitData.map((d) => d.converted), backgroundColor: HUES }],
               }}
               options={{ plugins: { datalabels: dlDoughnut((v) => fmtMoney(v, preferredCurrency)) } }}
+            />
+          </div>
+        </ChartCard>
+      )}
+
+      {/* README Pending item 78: the doughnut above only ever shows the NET
+          per currency — this adds the two comparisons the item itself
+          named as the likely gap: assets vs. liabilities across every
+          currency, and a breakdown of just the currently-selected one. */}
+      {assetsLiabilitiesData.length > 0 && (
+        <ChartCard title={`Assets vs. liabilities by currency (converted to ${preferredCurrency})`} empty={false}>
+          <div style={{ height: 220 }}>
+            <Bar
+              data={{
+                labels: assetsLiabilitiesData.map((d) => d.currency),
+                datasets: [
+                  { label: 'Assets', data: assetsLiabilitiesData.map((d) => d.assets), backgroundColor: cssVar('--profit') || '#3ecf8e' },
+                  { label: 'Liabilities', data: assetsLiabilitiesData.map((d) => d.liabilities), backgroundColor: cssVar('--loss') || '#e5484d' },
+                ],
+              }}
+              options={{ plugins: { datalabels: dlBarV((v) => fmtMoney(v, preferredCurrency)) } }}
+            />
+          </div>
+        </ChartCard>
+      )}
+
+      {selectedCurrencyRow && selectedCurrencyRow.breakdown.length > 0 && (
+        <ChartCard title={`Breakdown within ${preferredCurrency}, by module`} empty={false}>
+          <div style={{ height: Math.max(160, selectedCurrencyRow.breakdown.length * 32) }}>
+            <Bar
+              data={{
+                labels: selectedCurrencyRow.breakdown.map((b) => b.module),
+                datasets: [
+                  {
+                    data: selectedCurrencyRow.breakdown.map((b) => b.amount),
+                    backgroundColor: selectedCurrencyRow.breakdown.map((b) => (b.amount >= 0 ? cssVar('--profit') || '#3ecf8e' : cssVar('--loss') || '#e5484d')),
+                  },
+                ],
+              }}
+              options={{ indexAxis: 'y', plugins: { legend: { display: false }, datalabels: dlBarV((v) => fmtMoney(v, preferredCurrency)) } }}
             />
           </div>
         </ChartCard>
