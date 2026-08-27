@@ -4243,6 +4243,27 @@ FinanceManager live link:
      live-FX-rate fetch, blocked by this sandbox's network policy, not a regression from this
      change). `npx tsc -b` / `npm run test` (397 tests, unchanged — a guarded side effect, not
      new calc logic) / `npm run build` all clean.
+194. **`StatCard` background made more solid again, resolving Pending item 91's own named
+     reversal exactly as it framed it (2026-08-27).** The item explicitly named this as a
+     direct reversal of Done item 153's own "softening" tuning pass (16%→7% hue-mix ratio) —
+     flagged again here per this file's standing practice, same as items 73/93 before it in
+     this same pass. Measured before touching anything: a real before/after screenshot at the
+     old 7% ratio showed the stat-card background reading as barely-tinted white/near-panel
+     color in every theme checked (default, ocean, dark, material-blue dark) — genuinely
+     matching "vague," not just a subjective complaint. Bumped the shared `color-mix()` ratio
+     from 7% to 24% across all three identical `.stat-card` background rules in `theme.css`
+     (the base rule plus its two per-theme duplicates, kept in sync per Done item 115's own
+     "these three rules must stay identical or hue differentiation breaks per-theme again"
+     lesson) — deliberately well above even the ORIGINAL pre-softening 16%, since the user's
+     wording ("solid colors," not just "less soft") asked for more saturation than either prior
+     state, not a plain revert. The existing glassy sheen overlay (the separate
+     `rgba(255,255,255,.05)→0` gradient layer) was left completely untouched — the user's own
+     wording explicitly wanted to KEEP the "subtle shine/glassy effect," just paired with a
+     more solid base color underneath, not lose it. Verified with real after screenshots across
+     the same 4 theme combinations: every card now shows a clearly saturated, visibly colored
+     background (confirmed readable text/contrast held up in dark mode too, not just checked in
+     light mode). `npx tsc -b` / `npm run test` (397 tests, unchanged — CSS-only) / `npm run
+     build` all clean.
 
 ## Pending
 
@@ -4782,12 +4803,11 @@ everything below is started. Working down it in priority order across following 
     visually nested inside another Card's border/shadow look bad even with different headings?)
     that a code-level audit can't resolve alone; needs specific screenshot examples from the
     user of what still looks wrong, rather than guessing at a redesign.
-91. App-wide: `StatCard`'s background is "still very vague" — try solid colors with a subtle
-    shine/glassy effect instead. This directly follows up on Done item 153's "stat-card
-    gradient softening" (16%→7% hue mix + a faint glass-sheen highlight) — the user is asking
-    for the OPPOSITE direction now (more solid color, not softer) — worth confirming this is a
-    genuine reversal of that recent tuning pass before re-touching the same CSS again, same
-    "flag the reversal" practice as item 73.
+91. ~~App-wide: `StatCard`'s background is "still very vague" — try solid colors with a subtle
+    shine/glassy effect instead.~~ **Done (2026-08-27) — see Done item 194.** Bumped the hue-mix
+    ratio from Done item 153's softened 7% to 24% (above even the original pre-softening 16%,
+    since the user asked for MORE solid than either prior state) — the glassy sheen overlay
+    itself was left untouched, keeping the part of the ask that wanted it kept.
 92. ~~App-wide: every table row / card representing a record that HAS a detail page should link
     to it.~~ **Done (2026-08-26) — see Done item 185.** Banking's account rows and Rentals'
     property rows were the two real gaps (Personal Loans/EMI/Funds/Subscriptions/QSE/PSX
