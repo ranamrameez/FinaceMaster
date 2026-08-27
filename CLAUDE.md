@@ -3776,6 +3776,22 @@ not developer notes) continuously as features ship.
   reach it, doesn't replace the first. Verified live via Playwright with seeded Cash/Bank data:
   nav entry renders and highlights correctly, both modules' real balance numbers render inside
   the new page — zero console errors.
+- **Net Worth's daily snapshot made automatic, fifth item under the new standing instruction
+  (2026-08-27) — see README Done item 193, closes Pending item 73.** This DIRECTLY REVERSES a
+  previously locked decision (Done item 157's own explicit on-demand-only choice) — flagged
+  prominently in both README.md and here, per this file's own long-standing practice, rather
+  than silently changing behavior. Built exactly the "reasonable low-risk implementation" the
+  Pending item's own text had already proposed: a `useEffect` in `NetWorthPage.tsx` auto-saves
+  once per calendar day, guarded to be idempotent (skips once today's snapshot exists) and to
+  NEVER fire for a signed-out visitor — checks `useAuthState()`'s real `user`, not the
+  write-time `ensureSignedIn()` gate the manual button uses, since an automatic effect popping
+  a sign-in modal with no user gesture behind it would be a genuine new UX regression, not just
+  a cadence reversal. `types/netWorthSnapshot.ts`'s own doc comment (the actual source of the
+  original locked decisions) updated in place, not just the two markdown docs — future sessions
+  reading that file directly see the reversal, not stale "locked" language. Verified live via
+  Playwright signed-out (this sandbox can't sign in as the user): confirmed no snapshot gets
+  auto-created and no sign-in modal pops on page load, zero NEW console errors (2 pre-existing
+  FX-fetch network-block errors, already documented, unrelated to this change).
 
 ## Live URLs
 
