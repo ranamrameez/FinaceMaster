@@ -4485,6 +4485,49 @@ FinanceManager live link:
      Verified live via Playwright: all 4 FABs render with the form hidden by default and showing
      correctly on click, zero console errors. `npx tsc -b` / `npm run test` (404 tests,
      unchanged — UI-only) / `npm run build` all clean.
+203. **Editable price-history entries + Trend/Value/P&L stat cards on the per-stock detail page,
+     plus two real layout bugs found and fixed — items 1/2/3/4/5 of a 2026-08-27 feedback batch
+     (screenshot-backed).** Items 1/2 were genuine gaps, confirmed against the live code before
+     writing anything: (1) `setMarketPrice` only ever appended a new point for TODAY — there was
+     no way to correct a mistaken PAST price-history entry. New `updatePricePoint`/
+     `deletePricePoint` actions in the shared `createWorkbookStore.ts` (so QSE/PSX/Funds all get
+     them at once) address by array index within `priceHistory[ticker]` (no stable id on
+     `PricePoint`, same convention `updateAdjustment` already uses) — and, worth remembering for
+     any future two-related-fields write, re-sync `marketPrices[ticker]` (the separate cached
+     "current price" figure) from the updated history whenever the edited/deleted point WAS the
+     chronologically latest one, so the two fields can't drift apart. New
+     `PositionDetail.tsx`'s (both exchanges) "Recent updates" table gained Edit/Delete
+     `IconButton`s per row, matching each row back to its real store index via `indexOf` (object
+     identity survives `computePriceStats`'s sort/slice/reverse chain, confirmed by reading it,
+     not assumed). (2) The Holdings table's Trend/Value/P/L columns had never actually made it
+     onto the per-stock detail page despite an earlier Done item's claim of parity — added all
+     three as new stat cards in the "Current position" card (Trend reuses the same `Sparkline` +
+     `getDailyPriceHistory` combo the Holdings table itself uses, Value/P&L reuse figures the
+     page already computed internally but never surfaced). (3) The user's specific "side nav
+     poorly arranged" complaint stayed genuinely ambiguous even after investigation — tracked as
+     Pending item 112 rather than guessed at. (4) "Account and backups ui inconsistent" was a
+     REAL, measurable bug, not a subjective gripe: `.account-sub-btn` overrides `padding-left` to
+     34px to indent the Backup/Sync rows under the account row, but `.account-btn` itself never
+     got the same treatment — measured via Playwright bounding boxes, a genuine 22px misalignment
+     between the "Signed in as X" row's icon and its own siblings' icons (25px vs 47px). One-line
+     fix, verified both broken (before) and fixed (after) via the same measurement. (5) The
+     Dashboard's right-rail (Net worth/Upcoming plans panel, Done item 164) got visibly clipped
+     at the viewport edge on a smaller display — real cause, verified via Playwright bounding
+     boxes both ways: `.rail-split`'s `1fr` grid track has an implicit `min-width:auto`, so its
+     wide left-column content (many stat cards / the Holdings table) refused to shrink and
+     instead pushed the WHOLE grid — including the fixed 320px rail column — past the viewport's
+     right edge, rather than the wide content activating its own horizontal scroll. Fixed with
+     `min-width:0` on both `.rail-split` and `.position-split` children (the latter audited
+     proactively since it's the exact same grid shape, now carrying an even wider stat-card row
+     after this same item's own additions) — confirmed via a real before/after bounding-box
+     measurement at 1200px: the rail's right edge sat at 1385px (past the 1200px viewport) before
+     the fix, 1170px (safely inside) after. New tests: `createWorkbookStore.test.ts` gained 2
+     cases for the new price-point actions, including the marketPrices-resync behavior on both
+     "edit the latest point" and "delete down to zero points" paths. Verified live via
+     Playwright: editing/deleting a price entry correctly hits the real sign-in gate (same
+     verification depth as every other sign-in-gated write in this project); Value/P&L stat cards
+     rendered correct hand-verified numbers on both exchanges — zero console errors throughout.
+     `npx tsc -b` / `npm run test` (406 tests, 2 new) / `npm run build` all clean.
 
 ## Pending
 
@@ -5176,6 +5219,17 @@ or a design decision before more code, not guessed at further:**
      opportunistically per-table rather than one blind sweep — column-grouping/dropping has
      real information-loss tradeoffs per table that need individual judgment, not a mechanical
      fix.
+112. "Side nav poorly arranged" (2026-08-27, screenshot-backed, item 3 of the same batch as Done
+     item 203) — investigated but stayed genuinely ambiguous even with the screenshot in hand.
+     Two real candidates, not yet distinguished: (a) when Stock Exchanges is the active category,
+     the sidebar shows that exchange's own numbered page list (01 Dashboard ... 08 Settings)
+     permanently inline — no other module does this (every other module keeps its own Settings/
+     Account/Export behind its own in-page `Tabs`), so it's a real structural outlier worth
+     collapsing/nesting; (b) the visual grouping/spacing between the top-level category list
+     (Net Worth, Banking, Cash, ...) and the QSE/PSX chip switcher + numbered list right below it
+     has no clear visual separator, reading as one undifferentiated block. Needs the user to say
+     which (or confirm both) before restructuring — same reasoning as Pending item 109, which
+     this may turn out to be a duplicate/clarification of rather than a wholly separate item.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

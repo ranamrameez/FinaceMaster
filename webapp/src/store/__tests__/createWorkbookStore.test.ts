@@ -114,4 +114,58 @@ describe('createWorkbookStore normalize', () => {
     expect(updatedTx?.shares).toBe(150);
     expect(updatedTx?.price).toBe(12);
   });
+
+  it('updatePricePoint corrects a past entry and re-syncs marketPrices when it was the latest', () => {
+    const useStore = createWorkbookStore(STORAGE_KEY, createEmptyTestWorkbook);
+    useStore.getState().setWorkbook({
+      ...createEmptyTestWorkbook(),
+      priceHistory: {
+        QGTS: [
+          { date: '2026-08-01', time: '2026-08-01T09:00:00.000Z', price: 10 },
+          { date: '2026-08-02', time: '2026-08-02T09:00:00.000Z', price: 11 },
+        ],
+      },
+      marketPrices: { QGTS: 11 },
+    });
+
+    // Correct the LATEST point (index 1) — marketPrices should follow it.
+    useStore.getState().updatePricePoint('QGTS', 1, { price: 12 });
+    let state = useStore.getState();
+    expect(state.workbook.priceHistory.QGTS[1].price).toBe(12);
+    expect(state.workbook.marketPrices.QGTS).toBe(12);
+
+    // Correct an OLDER point (index 0) — marketPrices (still driven by the
+    // now-12 latest point) should be unaffected.
+    useStore.getState().updatePricePoint('QGTS', 0, { price: 9 });
+    state = useStore.getState();
+    expect(state.workbook.priceHistory.QGTS[0].price).toBe(9);
+    expect(state.workbook.marketPrices.QGTS).toBe(12);
+  });
+
+  it('deletePricePoint removes an entry and re-syncs marketPrices, clearing it if history becomes empty', () => {
+    const useStore = createWorkbookStore(STORAGE_KEY, createEmptyTestWorkbook);
+    useStore.getState().setWorkbook({
+      ...createEmptyTestWorkbook(),
+      priceHistory: {
+        QGTS: [
+          { date: '2026-08-01', time: '2026-08-01T09:00:00.000Z', price: 10 },
+          { date: '2026-08-02', time: '2026-08-02T09:00:00.000Z', price: 11 },
+        ],
+      },
+      marketPrices: { QGTS: 11 },
+    });
+
+    // Delete the latest point — the remaining point (10) becomes latest.
+    useStore.getState().deletePricePoint('QGTS', 1);
+    let state = useStore.getState();
+    expect(state.workbook.priceHistory.QGTS).toHaveLength(1);
+    expect(state.workbook.marketPrices.QGTS).toBe(10);
+
+    // Delete the last remaining point — marketPrices for this ticker clears
+    // entirely rather than leaving a stale cached price.
+    useStore.getState().deletePricePoint('QGTS', 0);
+    state = useStore.getState();
+    expect(state.workbook.priceHistory.QGTS).toHaveLength(0);
+    expect(state.workbook.marketPrices.QGTS).toBeUndefined();
+  });
 });
