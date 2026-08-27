@@ -4476,6 +4476,56 @@ write-up. Read this before assuming any of the below is still "not started."
    not bundle it into the same PR/session as the general UI reshuffle; it touches real stored
    financial data and needs its own focused review.
 
+## Redesign progress update (2026-08-27) — large real-usage critique of the Banking pilot
+
+The user tested the Phase-1/Banking-pilot work above live, with real imported data (UBL, GCC
+Card, QIB Misk), and reported it back as "ridiculous... pure mess" with a long, specific list.
+**Most of it is fixed — see README Done item 214 for the full accounting.** Highlights: two
+real app-wide CSS bugs found and fixed (the `.row > *{min-width:140px}` rule was stretching the
+Modal's circular close button into an oval; `.row > *{flex:1}` was ignoring every field's own
+`width` prop and dividing row width evenly among children — root cause of "input sizes
+inconsistent, taking whole 100% width"); the sidebar's "Signed in as [name]" rebuilt as a
+strict single line (was wrapping 3 lines); a new shared `FabButton` (`components/ui/Fab.tsx`)
+replacing 9 duplicated FAB implementations, now with a real hover/press animation; stat cards
+switched from a fading diagonal gradient to a solid fill + one small radial highlight, borders
+removed; the Modal background switched off flat `--panel` (pure white) to the same tinted
+gradient `.card` uses; the standalone "Transactions" and "Import statement" tabs (each with
+their own account-picker `<select>`) were DELETED — both were the exact "don't ask the user to
+pick an entity on the module homepage" anti-pattern the user called out, and both were fully
+redundant with `AccountDetailPage`; the Settings tab's nested "Account"/"Data management" cards
+were un-cardified into plain sub-sections (no card-in-card left on that tab); Banking's
+homepage entity cards lost Edit/Delete (moved to the detail page, Delete now a real `.btn.danger`
+button); and a new inline "link this transaction to another module" flow was added to Bank's own
+add-transaction flow (Bank was the one module missing the reverse of the "link to Bank/Cash"
+shortcut every other module already had — reused the exact same `createLinkedTransfer` engine,
+just exported `SideFields`/`useSideCurrency` out of the standalone Transfers page instead of
+duplicating them).
+
+**Explicitly NOT built this round, flagged rather than guessed at — see README Pending item
+115 for the full writeup, read it before starting any of this:**
+1. **Bank as a normalized parent entity, multiple accounts per bank.** The user's own words:
+   "A bank is main entity... add bank first and then on its details page, give ability to add
+   extra accounts... see the total balance with that bank." This is real schema surgery on the
+   user's actual live imported accounts (UBL, GCC, PCC, QIB Misk, etc.) — needs a proposed
+   `Bank`/`Branch` type design CONFIRMED with the user before any migration code is written,
+   same "ask before touching real financial data structure" discipline this file already
+   applies to the still-pending Credit Card normalization (see the "App-wide UI/UX redesign"
+   section above) — these two migrations likely overlap (a `Bank` entity that both plain
+   accounts and credit cards belong to) and may end up designed together, not as two separate
+   passes.
+2. **The same parent-entity pattern for Funds/brokerages** — "I have 4 brokerage... i want to
+   see my amounts with each broker... and overall sums" — mirrors (1)'s design once settled.
+3. **Entity active/inactive + favorite + a visible Sr#/Index#**, across Bank/Funds/Personal
+   Loans/EMI/Rentals/Subscriptions — additive fields, not a restructuring, so lower-risk than
+   (1)/(2) and a reasonable concrete next step. Not yet built.
+4. Bank's own Analytics tab was never audited against the date-range-filterable chart pattern
+   other Analytics pages already have.
+
+A future session picking this up should read README Pending item 115's own text (kept in sync
+with this note) before starting, and should propose the `Bank`/`Broker` entity design and get
+it confirmed before writing any migration code — per this project's own standing plan-and-
+propose rule for exactly this class of change.
+
 ## Live URLs
 
 - New React app (QSE + PSX, `#/` and `#/psx`, now including a native Risk

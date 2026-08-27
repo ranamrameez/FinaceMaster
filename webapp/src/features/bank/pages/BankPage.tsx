@@ -7,17 +7,19 @@ import { Notice } from '../../../components/Notice';
 import { Tooltip } from '../../../components/Tooltip';
 import { ChartCard } from '../../qse/components/ChartCard';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { EditIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { EditIcon, ExportIcon, ListIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Modal } from '../../../components/Modal';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
 import { AttributeList } from '../../../components/ui/AttributeList';
+import { FabButton } from '../../../components/ui/Fab';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { useAmountFormat } from '../../../hooks/useAmountFormat';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
+import { getLastTransferSource, rememberTransferSource } from '../../../hooks/useLastTransferSource';
 import { hueStyle } from '../../../lib/statCardHues';
 import { defaultTimezoneForCurrency } from '../../../lib/datetime';
 import { accountBalance, accountByCategory, accountRunningLedger, bankMonthlyFlow, budgetVsActual, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
@@ -28,7 +30,8 @@ import { cssVar, tickerColor } from '../../../lib/cssVar';
 import { parseCSV, toCSV } from '../../../lib/csv';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
-import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
+import { isSupportedLinkPair } from '../../../lib/interEntityLink';
+import { confirmAndDeleteLinkable, createLinkedTransfer, warnIfLinked } from '../../../lib/linkCascade';
 import { isValidIbanFormat, lookupIban } from '../../../lib/ibanLookup';
 import { isValidBin, lookupBin } from '../../../lib/binLookup';
 import { PK_QA_BANKS_AND_WALLETS } from '../../../lib/bankDirectory';
@@ -37,9 +40,12 @@ import { firebaseReady } from '../../../lib/firebase/client';
 import { useAppearanceStore } from '../../../store/appearanceStore';
 import { createEmptyBankWorkbook } from '../../../store/defaultBankWorkbook';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
+import { useEMIWorkbookStore } from '../../../store/emiWorkbookStore';
 import { usePlannedBankWorkbookStore } from '../../../store/plannedBankWorkbookStore';
+import { SideFields, useSideCurrency, nextUnpaidEmiMonth } from '../../transfers/pages/TransferLinksPage';
 import type { BankAccount, BankTransaction, BankWorkbook } from '../../../types/bankWorkbook';
 import type { PlannedBankTransaction } from '../../../types/plannedBank';
+import type { LinkSideConfig } from '../../../types/interEntityTransfer';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const uid = () => crypto.randomUUID();
@@ -49,6 +55,24 @@ function emptyAccount(defaultCurrency: string): Omit<BankAccount, 'id'> {
 }
 
 const ACCOUNT_TYPES = ['Savings', 'Current', 'Checking', 'Salary', 'Business', 'Fixed deposit'];
+
+/** User-requested (2026-08-27): "you already have categories from my data.
+ * add those and some more generic categs as suggestions." — a brand-new
+ * or lightly-used account had nothing to suggest since the datalist was
+ * built only from that ONE account's own past transactions. `bankCategorySuggestions()`
+ * below unions this fixed generic list with every category actually used
+ * across ALL of the user's bank accounts, so a fresh account still gets a
+ * useful starting list on day one. */
+const GENERIC_CATEGORIES = [
+  'Salary', 'Income', 'Groceries', 'Utilities', 'Rent', 'Transport', 'Fuel', 'Dining',
+  'Entertainment', 'Shopping', 'Healthcare', 'Insurance', 'Education', 'Travel',
+  'Subscriptions', 'Fees & charges', 'Transfer', 'Investment', 'Loan repayment', 'Other',
+];
+
+function bankCategorySuggestions(allTransactions: BankTransaction[]): string[] {
+  const used = allTransactions.map((t) => t.category).filter((c): c is string => !!c);
+  return [...new Set([...used, ...GENERIC_CATEGORIES])].sort((a, b) => a.localeCompare(b));
+}
 const CARD_NETWORKS = ['Visa', 'Mastercard', 'American Express', 'UnionPay', 'Discover', 'JCB'];
 
 interface CreditCardValue {
@@ -257,18 +281,7 @@ function AddAccountFab() {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <div style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 500 }}>
-        <Tooltip text="Add an account" align="right">
-          <button
-            className="btn"
-            onClick={() => setOpen(true)}
-            aria-label="Add an account"
-            style={{ width: 52, height: 52, borderRadius: '50%', padding: 0, fontSize: 22, boxShadow: '0 4px 16px rgba(0,0,0,.25)' }}
-          >
-            <PlusIcon />
-          </button>
-        </Tooltip>
-      </div>
+      <FabButton label="Add an account" onClick={() => setOpen(true)}><PlusIcon /></FabButton>
       {open && (
         <Modal title="Add an account" onClose={() => setOpen(false)}>
           <AddAccountForm onSaved={() => setOpen(false)} />
@@ -359,23 +372,16 @@ function AddAccountForm({ onSaved }: { onSaved?: () => void }) {
  * controls, and currency grouping is a more useful default ordering here
  * than a sort a user would have to re-apply every visit. Editing an
  * account switches its card to a stacked vertical form (rule 6) in place. */
+/** User-reported (2026-08-27): "Banking homepage: Delete and Edit are rare
+ * operations they should [be] on details page only... with delete as a red
+ * danger button. You may add a button for transactions." Edit/Delete were
+ * both moved to `AccountDetailPage` (its own Account Details card's Edit
+ * icon, and a dedicated red "Delete account" button) — this card no longer
+ * mutates anything itself, it's a pure Main-tier summary + navigation. */
 function AccountsList() {
   const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
   const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
-  const updateAccount = useBankWorkbookStore((s) => s.updateAccount);
-  const deleteAccount = useBankWorkbookStore((s) => s.deleteAccount);
   const navigate = useNavigate();
-  const [editId, setEditId] = useState<string | null>(null);
-  const [editRow, setEditRow] = useState<BankAccount | null>(null);
-
-  const startEdit = (a: BankAccount) => { setEditId(a.id); setEditRow({ ...a }); };
-  const saveEdit = () => {
-    if (!editId || !editRow) return;
-    updateAccount(editId, editRow);
-    toast('Account updated.');
-    setEditId(null);
-    setEditRow(null);
-  };
 
   const currencyGroups = useMemo(() => {
     const byCurrency = new Map<string, BankAccount[]>();
@@ -399,62 +405,35 @@ function AccountsList() {
             {currency}
           </div>
           <div className="entity-card-grid">
-            {group.map((a) =>
-              editId === a.id && editRow ? (
-                <Card key={a.id} style={{ padding: 13 }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <Field label="Name"><TextInput style={{ width: '100%' }} value={editRow.name} onChange={(e) => setEditRow({ ...editRow, name: e.target.value })} /></Field>
-                    <Field label="Type"><TextInput style={{ width: '100%' }} placeholder="e.g. Savings" value={editRow.accountType ?? ''} onChange={(e) => setEditRow({ ...editRow, accountType: e.target.value || undefined })} /></Field>
-                    <Field label="Branch"><TextInput style={{ width: '100%' }} placeholder="e.g. Gulberg Branch" value={editRow.branch ?? ''} onChange={(e) => setEditRow({ ...editRow, branch: e.target.value || undefined })} /></Field>
-                    <Field label="Currency">
-                      <select style={{ width: '100%' }} value={editRow.currencyCode} onChange={(e) => setEditRow({ ...editRow, currencyCode: e.target.value })}>
-                        {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
-                      </select>
-                    </Field>
-                    <Field label="Opening balance">
-                      <TextInput style={{ width: '100%' }} type="number" step="0.01" value={editRow.openingBalance} onChange={(e) => setEditRow({ ...editRow, openingBalance: Number(e.target.value) })} />
-                    </Field>
-                    <div className="row" style={{ gap: 6, justifyContent: 'flex-end' }}>
-                      <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />
-                      <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditId(null)} />
-                    </div>
-                  </div>
-                </Card>
-              ) : (
-                <EntityCard
-                  key={a.id}
-                  title={a.name}
-                  subtitle={[a.accountType, a.branch].filter(Boolean).join(' · ') || undefined}
-                  badge={a.isLiability ? <span className="pill-sell" style={{ fontSize: 10 }}>Credit card</span> : undefined}
-                  statLabel={a.isLiability ? 'Owed' : 'Balance'}
-                  stat={
-                    <MoneyValue
-                      n={a.isLiability ? Math.max(0, -accountBalance(a, transactions)) : accountBalance(a, transactions)}
-                      currency={a.currencyCode}
-                    />
-                  }
-                  hue={
-                    a.isLiability
-                      ? (accountBalance(a, transactions) < 0 ? 'var(--loss)' : 'var(--profit)')
-                      : (accountBalance(a, transactions) >= 0 ? 'var(--profit)' : 'var(--loss)')
-                  }
-                  onClick={() => navigate(`/bank/account/${a.id}`)}
-                  actions={
-                    <>
-                      <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(a)} />
-                      <IconButton
-                        label="Delete"
-                        icon={<TrashIcon size={13} />}
-                        align="right"
-                        onClick={async () => {
-                          if (await confirmDialog('This deletes the account and all its transactions.', `Delete account "${a.name}"?`)) deleteAccount(a.id);
-                        }}
-                      />
-                    </>
-                  }
-                />
-              ),
-            )}
+            {group.map((a) => (
+              <EntityCard
+                key={a.id}
+                title={a.name}
+                subtitle={[a.accountType, a.branch].filter(Boolean).join(' · ') || undefined}
+                badge={a.isLiability ? <span className="pill-sell" style={{ fontSize: 10 }}>Credit card</span> : undefined}
+                statLabel={a.isLiability ? 'Owed' : 'Balance'}
+                stat={
+                  <MoneyValue
+                    n={a.isLiability ? Math.max(0, -accountBalance(a, transactions)) : accountBalance(a, transactions)}
+                    currency={a.currencyCode}
+                  />
+                }
+                hue={
+                  a.isLiability
+                    ? (accountBalance(a, transactions) < 0 ? 'var(--loss)' : 'var(--profit)')
+                    : (accountBalance(a, transactions) >= 0 ? 'var(--profit)' : 'var(--loss)')
+                }
+                onClick={() => navigate(`/bank/account/${a.id}`)}
+                actions={
+                  <IconButton
+                    label="Transactions"
+                    icon={<ListIcon size={13} />}
+                    align="right"
+                    onClick={() => navigate(`/bank/account/${a.id}`)}
+                  />
+                }
+              />
+            ))}
           </div>
         </div>
       ))}
@@ -480,10 +459,12 @@ function AccountsList() {
  * follows (see e.g. Done item 58's own "v1 for Banking only" precedent). */
 export function AccountDetailPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
   const account = accounts.find((a) => a.id === id);
   const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
   const updateAccount = useBankWorkbookStore((s) => s.updateAccount);
+  const deleteAccount = useBankWorkbookStore((s) => s.deleteAccount);
   const ensureSignedIn = useEnsureSignedIn();
   const plannedEntries = usePlannedBankWorkbookStore((s) => s.workbook.entries);
   const { num } = useAmountFormat();
@@ -542,10 +523,7 @@ export function AccountDetailPage() {
     () => (account ? plannedEntries.filter((p) => p.accountId === account.id && !p.executed).sort((a, b) => a.date.localeCompare(b.date)) : []),
     [plannedEntries, account],
   );
-  const knownCategories = useMemo(
-    () => (account ? [...new Set(transactions.filter((t) => t.accountId === account.id).map((t) => t.category).filter((c): c is string => !!c))].sort() : []),
-    [transactions, account],
-  );
+  const knownCategories = useMemo(() => bankCategorySuggestions(transactions), [transactions]);
 
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -606,11 +584,28 @@ export function AccountDetailPage() {
     );
   }
 
+  const deleteThisAccount = async () => {
+    if (!(await confirmDialog('This deletes the account and all its transactions — this cannot be undone.', `Delete "${account.name}"?`))) return;
+    deleteAccount(account.id);
+    toast('Account deleted.');
+    navigate('/bank');
+  };
+
   return (
     <div>
       <Link to="/bank" className="footer-note">← Back to Banking</Link>
-      <h1 className="pagetitle" style={{ marginTop: 8 }}>{account.name}</h1>
-      <p className="footer-note" style={{ marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
+        <h1 className="pagetitle" style={{ margin: 0 }}>{account.name}</h1>
+        {/* User-requested (2026-08-27): "Delete and Edit are rare operations
+           they should [be] on details page only... with delete as a red
+           danger button." Edit already lives on the Account Details card
+           below (its own Edit icon); this is the account's own delete,
+           moved off the homepage entity card entirely. */}
+        <button className="btn danger small" onClick={deleteThisAccount}>
+          <TrashIcon size={13} />Delete account
+        </button>
+      </div>
+      <p className="footer-note" style={{ marginBottom: 16 }}>
         {account.isLiability ? 'Amount owed:' : 'Current balance:'}{' '}
         <strong title={fmtMoney(account.isLiability ? Math.max(0, -accountBalance(account, transactions)) : accountBalance(account, transactions), account.currencyCode)}>
           {num(account.isLiability ? Math.max(0, -accountBalance(account, transactions)) : accountBalance(account, transactions))} {account.currencyCode}
@@ -626,11 +621,27 @@ export function AccountDetailPage() {
          was the clearest gap (no way to add a transaction from inside it at
          all), exactly backwards from what a user wants when clicking into
          an account. Leads with this now; the account-metadata edit form
-         (rare to touch after setup) is demoted into a collapsed card below. */}
-      <h4 style={{ margin: '0 0 6px' }}>Add a transaction</h4>
-      <div style={{ marginBottom: 16 }}>
+         (rare to touch after setup) is demoted into a collapsed card below.
+
+         2026-08-27: wrapped in a real Card — it used to be bare content
+         under a plain `<h4>`, the one section on this page that didn't
+         match Account Details' own card treatment (a real "pure mess"
+         contributor: 3 of 4 sections bare, 1 boxed, no consistent
+         boundary anywhere on the page). */}
+      <Card style={{ marginBottom: 16 }}>
+        <h3 style={{ marginTop: 0 }}>Add a transaction</h3>
         <AddTransactionsForm accountId={account.id} currencyCode={account.currencyCode} knownCategories={knownCategories} />
-      </div>
+      </Card>
+
+      {/* User-requested (2026-08-27): "No option to link a transaction to
+         other finance." Every other module already links inline to
+         Bank/Cash; this is the reverse — Bank linking out to another
+         module — using the exact same engine the standalone Transfers
+         page uses. Collapsed by default since most transactions aren't
+         cross-entity transfers. */}
+      <CollapsibleCard defaultOpen={false} style={{ marginBottom: 16 }} title={<h3 style={{ margin: 0 }}>Link a transaction to another module</h3>}>
+        <LinkTransactionSection account={account} />
+      </CollapsibleCard>
 
       {/* User-requested: save an account number + SMS sender details for a
          future SMS-based transaction-import feature. Nothing reads these
@@ -718,9 +729,9 @@ export function AccountDetailPage() {
       </CollapsibleCard>
 
       {upcoming.length > 0 && (
-        <>
-          <h4 style={{ margin: '0 0 6px' }}>Upcoming plans ({upcoming.length})</h4>
-          <div className="table-scroll" style={{ marginBottom: 16 }}>
+        <Card style={{ marginBottom: 16 }}>
+          <h3 style={{ marginTop: 0 }}>Upcoming plans ({upcoming.length})</h3>
+          <div className="table-scroll">
             <table>
               <thead><tr><th>Date</th><th>Description</th><th>Amount</th></tr></thead>
               <tbody>
@@ -734,32 +745,56 @@ export function AccountDetailPage() {
               </tbody>
             </table>
           </div>
-        </>
+        </Card>
       )}
+
+      <CollapsibleCard defaultOpen={false} style={{ marginBottom: 16 }} title={<h3 style={{ margin: 0 }}>By category</h3>}>
+        <CategoryBreakdownBody account={account} />
+      </CollapsibleCard>
 
       {/* User-requested (2026-08-26): "Transactions belong to an account so
          should be on its detail page/popup and editable" — this used to be
          a read-only 20-row preview; now reuses the same `TransactionsList`
-         the standalone Transactions tab already uses (full CRUD: sort,
+         the standalone Transactions tab already used (full CRUD: sort,
          inline edit, delete with the linked-record warning), so editing a
-         transaction no longer requires leaving the account's own modal. */}
-      <h4 style={{ margin: '0 0 6px' }}>Transactions</h4>
-      <div style={{ marginBottom: 16, maxHeight: 320, overflowY: 'auto' }}>
-        <TransactionsList account={account} />
-      </div>
+         transaction no longer requires leaving the account's own page.
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-        <h4 style={{ margin: 0 }}>Download statement</h4>
-        <button className="btn" onClick={exportStatement}>Export CSV</button>
-      </div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-        <Field label="From (optional)">
-          <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
-        </Field>
-        <Field label="To (optional)">
-          <TextInput type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
-        </Field>
-      </div>
+         2026-08-27: "Double scroller in transactions view, not good" — a
+         real bug, not a style nitpick: this used to sit inside its own
+         `maxHeight:320, overflowY:'auto'` box ON TOP of `TransactionsList`'s
+         own `.table-scroll` (a horizontal scroll region) — two independent
+         scrollable regions nested inside each other. Dropped the outer
+         box entirely; the table now just grows with the page (one scroll
+         axis: the page itself), with `.table-scroll` still handling
+         horizontal overflow on a narrow viewport as it always did. */}
+      <Card style={{ marginBottom: 16 }}>
+        <h3 style={{ marginTop: 0 }}>Transactions</h3>
+        <TransactionsList account={account} />
+      </Card>
+
+      {/* User-requested (2026-08-27): "Import CSV should belong an account" —
+         moved in from the old standalone tab (see ImportStatementSection's
+         own comment). Collapsed by default — importing a statement is rare
+         once an account's history is caught up. */}
+      <CollapsibleCard defaultOpen={false} style={{ marginBottom: 16 }} title={<h3 style={{ margin: 0 }}>Import statement</h3>}>
+        <ImportStatementSection account={account} />
+      </CollapsibleCard>
+
+      <CollapsibleCard
+        defaultOpen={false}
+        style={{ marginBottom: 16 }}
+        title={<h3 style={{ margin: 0 }}>Download statement</h3>}
+        headerExtra={<button className="btn" onClick={exportStatement}><ExportIcon size={13} />Export CSV</button>}
+      >
+        <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <Field label="From (optional)">
+            <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+          </Field>
+          <Field label="To (optional)">
+            <TextInput type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+          </Field>
+        </div>
+      </CollapsibleCard>
     </div>
   );
 }
@@ -783,8 +818,17 @@ function useAccountPicker() {
   return { accounts, account, accountId: account?.id ?? '', setAccountId };
 }
 
+/** User-reported (2026-08-27): "Autofillable fields are still empty (eg.
+ * .time)." The Time field genuinely IS optional by design (an untimed
+ * record safely falls back to noon UTC for sorting — see
+ * `lib/datetime.ts`), but for a brand-new row "right now" is a strictly
+ * more accurate default than leaving it blank, so prefill it with the
+ * actual current time; the field stays fully editable/clearable either
+ * way. */
+const nowTime = () => new Date().toTimeString().slice(0, 5);
+
 function emptyTxRow(accountId: string, currencyCode?: string): BankTransaction {
-  return { id: '', accountId, date: today(), amount: 0, description: '', category: '', source: 'manual', timezone: defaultTimezoneForCurrency(currencyCode) };
+  return { id: '', accountId, date: today(), amount: 0, description: '', category: '', source: 'manual', time: nowTime(), timezone: defaultTimezoneForCurrency(currencyCode) };
 }
 
 function AddTransactionsForm({ accountId, currencyCode, knownCategories }: { accountId: string; currencyCode: string; knownCategories: string[] }) {
@@ -808,13 +852,13 @@ function AddTransactionsForm({ accountId, currencyCode, knownCategories }: { acc
     <div>
       {rows.map((r, i) => (
         <div key={i} className="row" style={{ gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-          <Field label={i === 0 ? 'Date' : undefined}>
+          <Field label={i === 0 ? 'Date' : undefined} required={i === 0}>
             <input type="date" value={r.date} onChange={(e) => update(i, { date: e.target.value })} />
           </Field>
-          <Field label={i === 0 ? 'Description' : undefined}>
+          <Field label={i === 0 ? 'Description' : undefined} required={i === 0}>
             <input placeholder="Description" value={r.description} onChange={(e) => update(i, { description: e.target.value })} style={{ width: 160 }} />
           </Field>
-          <Field label={i === 0 ? 'Amount' : undefined} title="Negative = spend/debit, positive = deposit/credit">
+          <Field label={i === 0 ? 'Amount' : undefined} required={i === 0} title="Negative = spend/debit, positive = deposit/credit">
             <input
               type="number"
               step="0.01"
@@ -847,7 +891,7 @@ function AddTransactionsForm({ accountId, currencyCode, knownCategories }: { acc
       <datalist id="bank-category-datalist">
         {knownCategories.map((c) => <option key={c} value={c} />)}
       </datalist>
-      <div className="row" style={{ gap: 8 }}>
+      <div className="row" style={{ gap: 8, justifyContent: 'flex-end' }}>
         <button className="btn secondary" onClick={() => setRows((rs) => [...rs, emptyTxRow(accountId)])}>
           <PlusIcon />Add row
         </button>
@@ -856,6 +900,91 @@ function AddTransactionsForm({ accountId, currencyCode, knownCategories }: { acc
         </button>
       </div>
       <p className="footer-note" style={{ marginTop: 8 }}>Negative amount = spend/debit, positive = deposit/credit.</p>
+    </div>
+  );
+}
+
+/** User-reported (2026-08-27): "No option to link a transaction to other
+ * finance." Every OTHER module (QSE/PSX/Rentals/Personal Loans/Funds/EMI)
+ * already has an inline "link this to a Bank account or Cash" shortcut on
+ * its own add-form (Done items 125/131/162) — Bank itself never got the
+ * reverse: a way to record a bank transaction that's really a transfer
+ * to/from another module, without leaving this page. `isSupportedLinkPair`
+ * already allows bank↔{cash,qse,psx,rentals,personalLoans,funds,emi,bank}
+ * (see `lib/interEntityLink.ts`) — this reuses that engine directly via
+ * the same `SideFields`/`createLinkedTransfer` the standalone Transfers
+ * page uses, just with this account pre-selected as one side. Kept as its
+ * own small single-record form (not folded into the multi-row batch
+ * `AddTransactionsForm` above) since a link is inherently one record with
+ * one specific other side, not a batch. */
+function LinkTransactionSection({ account }: { account: BankAccount }) {
+  const ensureSignedIn = useEnsureSignedIn();
+  const emiLoans = useEMIWorkbookStore((s) => s.workbook.entries);
+  const [date, setDate] = useState(today());
+  const [amount, setAmount] = useState(0);
+  const [description, setDescription] = useState('');
+  const bankSide: LinkSideConfig = { module: 'bank', ref: account.id };
+  const [other, setOther] = useState<LinkSideConfig>(() => getLastTransferSource(bankSide) ?? { module: 'cash' });
+
+  const otherCurrency = useSideCurrency(other);
+  const currencyMismatch = !!(otherCurrency && otherCurrency !== account.currencyCode);
+  const pairSupported = isSupportedLinkPair('bank', other.module) && isSupportedLinkPair(other.module, 'bank');
+  const sameBankAccount = other.module === 'bank' && other.ref === account.id;
+
+  const create = async () => {
+    if (amount === 0) return toast('Enter a non-zero amount first.');
+    if (!description.trim()) return toast('Enter a description first.');
+    if (sameBankAccount) return toast('Pick a different bank account — this is already that account.');
+    if (!pairSupported) return toast(`Linking Banking with this module isn't supported yet.`);
+    if (!(await ensureSignedIn('Sign in to save linked transactions.'))) return;
+    const abs = Math.abs(amount);
+    // Bank's own sign convention (negative = spend/debit, positive =
+    // deposit/credit) already tells us the direction: a positive amount
+    // means money is arriving INTO this account (bank = "to"), negative
+    // means it's leaving (bank = "from") — same "from"='out'/"to"='in'
+    // convention every other linked pair already uses.
+    const emiLoan = other.module === 'emi' ? emiLoans.find((l) => l.id === other.ref) : undefined;
+    const resolvedOther = emiLoan ? { ...other, emiMonth: nextUnpaidEmiMonth(emiLoan) } : other;
+    const input = {
+      date,
+      fromAmount: abs,
+      toAmount: abs,
+      from: amount >= 0 ? resolvedOther : bankSide,
+      to: amount >= 0 ? bankSide : resolvedOther,
+      note: description.trim(),
+    };
+    const result = createLinkedTransfer(input);
+    if ('error' in result) return toast(`Couldn't create the linked transaction: ${result.error}`);
+    rememberTransferSource(bankSide, other);
+    toast('Linked transaction added — also recorded on the other side.');
+    setAmount(0);
+    setDescription('');
+  };
+
+  return (
+    <div>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+        <Field label="Date" required>
+          <TextInput type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        </Field>
+        <Field label="Description" required>
+          <TextInput placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} style={{ width: 160 }} />
+        </Field>
+        <Field label="Amount" required title="Negative = spend/debit, positive = deposit/credit">
+          <TextInput type="number" step="0.01" placeholder="Amount (+/-)" value={amount || ''} onChange={(e) => setAmount(Number(e.target.value))} style={{ width: 110 }} />
+        </Field>
+      </div>
+      <SideFields label="Link to" cfg={other} onChange={setOther} />
+      {currencyMismatch && (
+        <Notice tone="warning" style={{ marginTop: 8 }}>
+          <p style={{ margin: 0 }}>{account.currencyCode} vs. {otherCurrency} — no live conversion, both sides record the same numeric amount.</p>
+        </Notice>
+      )}
+      <div className="row" style={{ marginTop: 8, justifyContent: 'flex-end' }}>
+        <button className="btn" onClick={create}>
+          <PlusIcon />Link &amp; add
+        </button>
+      </div>
     </div>
   );
 }
@@ -895,6 +1024,12 @@ function TransactionsList({ account }: { account: BankAccount }) {
       <table>
         <thead>
           <tr>
+            {/* User-reported (2026-08-27): "Transaction Id missing, terrible
+               account statement sequence!" — `seq` (Done item 212) is
+               already the app-wide stable per-record ordering primitive;
+               surfacing it as a plain "#" column gives a real, stable
+               reference number per transaction, not just a truncated uuid. */}
+            <th title="Sequence number — a stable reference for this transaction, in the order it was actually entered.">#</th>
             <Th col="date">Date</Th>
             <Th col="description">Description</Th>
             <Th col="amount">Amount</Th>
@@ -908,6 +1043,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
           {sorted.map(({ tx, balance }) =>
             editId === tx.id && editRow ? (
               <tr key={tx.id}>
+                <td className="footer-note">{tx.seq ?? '—'}</td>
                 <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
                 <td><input value={editRow.description} onChange={(e) => setEditRow({ ...editRow, description: e.target.value })} /></td>
                 <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 100 }} /></td>
@@ -921,6 +1057,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
               </tr>
             ) : (
               <tr key={tx.id}>
+                <td className="footer-note">{tx.seq ?? '—'}</td>
                 <td>{tx.date}</td>
                 <td>{tx.description}</td>
                 <td className={tx.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(tx.amount, account.currencyCode)}</td>
@@ -939,21 +1076,23 @@ function TransactionsList({ account }: { account: BankAccount }) {
               </tr>
             ),
           )}
-          {!sorted.length && <tr><td colSpan={7} className="footer-note">No transactions for this account yet.</td></tr>}
+          {!sorted.length && <tr><td colSpan={8} className="footer-note">No transactions for this account yet.</td></tr>}
         </tbody>
       </table>
     </div>
   );
 }
 
-function CategoryBreakdown({ account }: { account: BankAccount }) {
+/** Renders just the category table (no card wrapper of its own) — the
+ * caller (`AccountDetailPage`) supplies the `CollapsibleCard` so this
+ * never nests a card inside a card (rule 1). */
+function CategoryBreakdownBody({ account }: { account: BankAccount }) {
   const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
   const byCategory = accountByCategory(account, transactions);
   const cats = Object.keys(byCategory);
-  if (!cats.length) return null;
+  if (!cats.length) return <p className="footer-note" style={{ margin: 0 }}>No categorized transactions yet.</p>;
 
   return (
-    <CollapsibleCard title={<h3 style={{ margin: 0 }}>By category</h3>} style={{ marginBottom: 16 }}>
       <div className="table-scroll">
         <table>
           <tbody>
@@ -966,46 +1105,19 @@ function CategoryBreakdown({ account }: { account: BankAccount }) {
           </tbody>
         </table>
       </div>
-    </CollapsibleCard>
-  );
-}
-
-function TransactionsTab() {
-  const { accounts, account, accountId, setAccountId } = useAccountPicker();
-  const allTransactions = useBankWorkbookStore((s) => s.workbook.transactions);
-  const knownCategories = useMemo(
-    () => [...new Set(allTransactions.filter((t) => t.accountId === accountId).map((t) => t.category).filter((c): c is string => !!c))].sort(),
-    [allTransactions, accountId],
-  );
-
-  if (!accounts.length) {
-    return <p className="footer-note">Add a bank account first (Accounts tab) before logging transactions.</p>;
-  }
-
-  return (
-    <div>
-      <Field label="Account" width={220}>
-        <Select value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-          {accounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.currencyCode})</option>)}
-        </Select>
-      </Field>
-      {account && (
-        <div style={{ marginTop: 12 }}>
-          <AddTransactionsForm accountId={account.id} currencyCode={account.currencyCode} knownCategories={knownCategories} />
-          <div style={{ marginTop: 16 }}>
-            <CategoryBreakdown account={account} />
-            <TransactionsList account={account} />
-          </div>
-        </div>
-      )}
-    </div>
   );
 }
 
 /* ============================== Statement import ============================== */
 
-function ImportTab() {
-  const { accounts, account, accountId, setAccountId } = useAccountPicker();
+/** User-reported (2026-08-27): "Import CSV should belong an account, rather
+ * than hey look here, i am a very big card with just one button! DO NOT DO
+ * THAT!" — this used to be its own top-level tab with its own account
+ * picker (exactly the "DO NOT ask user on the main screen to use
+ * selectboxes to alter info" pattern the user separately called out).
+ * Scoped to the account whose detail page it's embedded in — no picker,
+ * since there's nothing to pick, the account is already known. */
+function ImportStatementSection({ account }: { account: BankAccount }) {
   const addTransactions = useBankWorkbookStore((s) => s.addTransactions);
   const ensureSignedIn = useEnsureSignedIn();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -1045,7 +1157,6 @@ function ImportTab() {
   }));
 
   const doImport = async () => {
-    if (!account) return toast('Add and select a bank account first.');
     if (!dateCol || !descCol || !amountCol) return toast('Map all three columns (date, description, amount).');
     if (!(await ensureSignedIn('Sign in to import transactions.'))) return;
     const di = colIndex(dateCol);
@@ -1070,22 +1181,13 @@ function ImportTab() {
     setFileName('');
   };
 
-  if (!accounts.length) {
-    return <p className="footer-note">Add a bank account first (Accounts tab) before importing a statement.</p>;
-  }
-
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-        <span className="footer-note">Import a CSV export from your bank.</span>
+        <span className="footer-note">Import a CSV export from your bank into {account.name}.</span>
         <Tooltip text={'This is a simple "map these columns" tool, not a per-bank-format parser — pick which column is which below, since every bank\'s export looks a little different.'} />
       </div>
-      <Field label="Import into account" width={220}>
-        <Select value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-          {accounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.currencyCode})</option>)}
-        </Select>
-      </Field>
-      <div style={{ marginTop: 8 }}>
+      <div>
         <button className="btn secondary" onClick={() => fileInput.current?.click()}>Choose CSV file</button>
         <input
           ref={fileInput}
@@ -1102,8 +1204,7 @@ function ImportTab() {
       </div>
 
       {headers.length > 0 && (
-        <Card style={{ marginTop: 12 }}>
-          <h3 style={{ marginTop: 0 }}>Map columns</h3>
+        <div style={{ marginTop: 12 }}>
           <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
             <Field label="Date column" width={160}>
               <Select value={dateCol} onChange={(e) => setDateCol(e.target.value)}>
@@ -1135,16 +1236,18 @@ function ImportTab() {
                   <tr key={i}>
                     <td>{r.date}</td>
                     <td>{r.description}</td>
-                    <td className={r.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{account ? fmtMoney(r.amount, account.currencyCode) : r.amount}</td>
+                    <td className={r.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(r.amount, account.currencyCode)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <button className="btn" style={{ marginTop: 12 }} onClick={doImport}>
-            <PlusIcon />Import {rows.length} transaction{rows.length > 1 ? 's' : ''}
-          </button>
-        </Card>
+          <div className="row" style={{ marginTop: 12, justifyContent: 'flex-end' }}>
+            <button className="btn" onClick={doImport}>
+              <PlusIcon />Import {rows.length} transaction{rows.length > 1 ? 's' : ''}
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -1164,18 +1267,16 @@ function AccountSection({
   const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
   const [busy, setBusy] = useState(false);
 
+  // User-reported (2026-08-27): "nested cards... empty Account card." This
+  // used to be its own `<Card>` nested inside the Settings tab's own
+  // outer card (rule 1: no nested cards) — plain content now, the outer
+  // Tabs-provided card is the only card boundary here.
   if (!firebaseReady) {
-    return (
-      <Card>
-        <h3 style={{ marginTop: 0 }}>Account</h3>
-        <p className="footer-note">Cloud sync is unavailable — Firebase failed to load in this browser.</p>
-      </Card>
-    );
+    return <p className="footer-note">Cloud sync is unavailable — Firebase failed to load in this browser.</p>;
   }
   return (
-    <Card style={{ marginBottom: 16 }}>
-      <h3 style={{ marginTop: 0 }}>Account</h3>
-      <p className="footer-note">{syncStatus}</p>
+    <div>
+      <p className="footer-note" style={{ marginTop: 0 }}>{syncStatus}</p>
       {cloudEmpty && (
         <Notice tone="warning" style={{ marginTop: 8 }}>
           <p style={{ marginTop: 0 }}>
@@ -1204,7 +1305,7 @@ function AccountSection({
           </button>
         </Notice>
       )}
-    </Card>
+    </div>
   );
 }
 
@@ -1279,18 +1380,7 @@ function AddBankPlanFab({ accountId }: { accountId: string }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <div style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 500 }}>
-        <Tooltip text="Add a plan" align="right">
-          <button
-            className="btn"
-            onClick={() => setOpen(true)}
-            aria-label="Add a plan"
-            style={{ width: 52, height: 52, borderRadius: '50%', padding: 0, fontSize: 22, boxShadow: '0 4px 16px rgba(0,0,0,.25)' }}
-          >
-            <PlusIcon />
-          </button>
-        </Tooltip>
-      </div>
+      <FabButton label="Add a plan" onClick={() => setOpen(true)}><PlusIcon /></FabButton>
       {open && (
         <Modal title="Add a plan" onClose={() => setOpen(false)}>
           <AddBankPlanForm accountId={accountId} onSaved={() => setOpen(false)} />
@@ -1700,8 +1790,10 @@ function DataManagement() {
   };
 
   return (
-    <Card>
-      <h3 style={{ marginTop: 0 }}>Data management</h3>
+    <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, marginTop: 12 }}>
+      <div className="footer-note" style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: 11, letterSpacing: '.04em', marginBottom: 8 }}>
+        Data management
+      </div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
         <button className="btn secondary" onClick={exportJSON}>Export JSON</button>
         <button className="btn secondary" onClick={() => fileInput.current?.click()}>Import JSON</button>
@@ -1716,9 +1808,9 @@ function DataManagement() {
             e.target.value = '';
           }}
         />
-        <button className="btn secondary" onClick={clearAll}><TrashIcon size={12} />Clear all data</button>
+        <button className="btn danger" onClick={clearAll}><TrashIcon size={12} />Clear all data</button>
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -1747,7 +1839,6 @@ export function BankPage({
       <Tabs
         tabs={[
           { key: 'accounts', label: 'Accounts', content: <AccountsTab /> },
-          { key: 'transactions', label: 'Transactions', content: <TransactionsTab /> },
           { key: 'analytics', label: 'Analytics', content: <AnalyticsTab /> },
           {
             key: 'planning',
@@ -1760,7 +1851,6 @@ export function BankPage({
               />
             ),
           },
-          { key: 'import', label: 'Import statement', content: <ImportTab /> },
           {
             key: 'settings',
             label: 'Settings',

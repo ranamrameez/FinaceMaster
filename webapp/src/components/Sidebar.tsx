@@ -4,7 +4,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useProfile } from '../lib/firebase/useProfile';
 import { AppearancePanel } from './AppearancePanel';
 import { CategoryNav, categoryForPath } from './CategoryNav';
-import { LogInIcon, LogoMark } from './icons';
+import { LogInIcon, LogoMark, SettingsIcon } from './icons';
 import { requireSignIn } from './SignInModal';
 
 const QSE_NAV_ITEMS = [
@@ -160,17 +160,28 @@ export function Sidebar({
            positioned in the middle" — a direct user complaint) — all three
            are Rare-tier content now living on the one /account hub page
            this button links to, so the footer itself stays down to a
-           single account row + a compact legal line. */}
+           single account row + a compact legal line.
+
+           2026-08-27, second round: "Signed in as [long name]" wrapped
+           across 3 lines and ate real vertical space — a genuine
+           regression, not a taste call. User's own ask: "Show user name,
+           avatar and settings logo only with smaller text." Rebuilt as a
+           single-line row — small round avatar, name truncated with an
+           ellipsis (never wraps; the full name is still in a native
+           `title` tooltip for anyone who needs it), a settings gear icon
+           on the right as the visual "this opens account settings"
+           affordance. */}
         <div className="sidebar-account-group">
           {user ? (
-            <NavLink to="/account" onClick={onNavigate} className="navbtn account-btn">
-              <span className="num">{profile.avatarEmoji || '●'}</span>
-              Signed in as <strong>&nbsp;{name}</strong>
+            <NavLink to="/account" onClick={onNavigate} className="navbtn account-btn" title={name}>
+              <span className="account-avatar" aria-hidden="true">{profile.avatarEmoji || name.charAt(0).toUpperCase()}</span>
+              <span className="account-name">{name}</span>
+              <SettingsIcon size={14} />
             </NavLink>
           ) : (
             <button type="button" className="navbtn account-btn" onClick={() => requireSignIn()}>
-              <span className="num"><LogInIcon size={13} /></span>
-              Not signed in — tap to sign in
+              <span className="account-avatar" aria-hidden="true"><LogInIcon size={13} /></span>
+              <span className="account-name">Not signed in — tap to sign in</span>
             </button>
           )}
         </div>

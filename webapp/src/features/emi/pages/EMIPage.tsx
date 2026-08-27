@@ -12,6 +12,7 @@ import { toast } from '../../../components/Toast';
 import { toCSV } from '../../../lib/csv';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
+import { FabButton } from '../../../components/ui/Fab';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { emiSchedule, emiSummary, expectedEndDate, generateBigEmiOverrides, installmentDueDate, markupPercentage, markupRateEquivalents, resolvedDueDate, totalsByCurrency, whatIfExtraPayment, type EMISummary } from '../../../lib/calc/emiModule';
@@ -50,18 +51,7 @@ function AddLoanFab() {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <div style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 500 }}>
-        <Tooltip text="Add a loan" align="right">
-          <button
-            className="btn"
-            onClick={() => setOpen(true)}
-            aria-label="Add a loan"
-            style={{ width: 52, height: 52, borderRadius: '50%', padding: 0, fontSize: 22, boxShadow: '0 4px 16px rgba(0,0,0,.25)' }}
-          >
-            <PlusIcon />
-          </button>
-        </Tooltip>
-      </div>
+      <FabButton label="Add a loan" onClick={() => setOpen(true)}><PlusIcon /></FabButton>
       {open && (
         <Modal title="Add a loan" onClose={() => setOpen(false)}>
           <AddLoanForm onSaved={() => setOpen(false)} />
