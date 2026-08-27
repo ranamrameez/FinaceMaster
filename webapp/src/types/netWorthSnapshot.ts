@@ -4,9 +4,18 @@
  * history chart needs an explicit snapshot mechanism. Design decisions
  * locked for v1 (documented here since the Pending item that named them as
  * open questions is now closed by this file existing):
- * - Snapshot cadence: on-demand only, via a "Save snapshot" button on the
- *   Net Worth page — never automatic on page load, which would silently
- *   spam a snapshot per visit.
+ * - Snapshot cadence: **REVERSED (README Pending item 73, 2026-08-27)** —
+ *   originally on-demand only via a "Save snapshot" button (see below,
+ *   still available), specifically to avoid an accidental/unwanted history
+ *   point. The user later asked for it to be automatic instead, an
+ *   explicit reversal of that earlier choice (per this project's own
+ *   "recent instructions override older ones" rule) — `NetWorthPage.tsx`
+ *   now also auto-saves once per calendar day on page load, guarded so
+ *   it's idempotent (never fires if today's snapshot already exists) and
+ *   never prompts a signed-out visitor to sign in (only fires when
+ *   `useAuthState()` already reports a signed-in user — an automatic
+ *   action popping a sign-in modal with no user gesture behind it would be
+ *   a real regression, not just a reversal of the cadence decision).
  * - Storage: its own Firebase node (`users/{uid}/netWorthSnapshots`), same
  *   pattern as every other simple entry-store module (Cash/EMI/etc.) — kept
  *   separate from every module's own workbook so this carries zero

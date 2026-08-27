@@ -15,6 +15,7 @@ import { useSubscriptionsWorkbookStore } from '../../../store/subscriptionsWorkb
 import { useNetWorthSummary } from '../hooks/useNetWorthSummary';
 import { convertAmount, effectiveRate, fetchFxRates, isFxStale, loadCachedFxRates, saveFxRates, setCrossRate, type FxRates } from '../../../lib/fx';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
+import { useAuthState } from '../../../lib/firebase/useAuthState';
 import { firebaseReady } from '../../../lib/firebase/client';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
@@ -230,7 +231,26 @@ export function NetWorthPage({
   const addSnapshot = useNetWorthSnapshotsWorkbookStore((s) => s.addEntry);
   const updateSnapshot = useNetWorthSnapshotsWorkbookStore((s) => s.updateEntry);
   const ensureSignedIn = useEnsureSignedIn();
+  const { user } = useAuthState();
   const todaysSnapshot = snapshots.find((s) => s.date === today);
+
+  // README Pending item 73: automatic once-per-calendar-day snapshot,
+  // reversing the earlier on-demand-only design (see
+  // types/netWorthSnapshot.ts's own doc comment for the full reasoning).
+  // Idempotent (skips once today's snapshot already exists) and only ever
+  // fires for an ALREADY signed-in user — never pops a sign-in prompt on
+  // its own, since that would be a surprising side effect of just loading
+  // a page. `rows` is deliberately left out of the dependency array: it's
+  // a live-derived value that can change on every render, and this effect
+  // only needs to run once per (user, day, existing-snapshot) combination,
+  // not every time the underlying totals recompute.
+  useEffect(() => {
+    if (!user || todaysSnapshot || !rows.length) return;
+    const byCurrency: Record<string, number> = {};
+    rows.forEach((r) => { byCurrency[r.currency] = r.net; });
+    addSnapshot({ id: crypto.randomUUID(), date: today, byCurrency });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, todaysSnapshot, today]);
 
   const saveSnapshot = async () => {
     if (!(await ensureSignedIn('Sign in to save a net worth snapshot.'))) return;

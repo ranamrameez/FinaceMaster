@@ -4221,6 +4221,28 @@ FinanceManager live link:
      balance-projection numbers (Real: 500.00 USD / Real: 200.00 USD) render correctly inside
      the new page — zero console errors. `npx tsc -b` / `npm run test` (397 tests, unchanged —
      pure UI composition, reuses already-tested components) / `npm run build` all clean.
+193. **Net Worth's daily snapshot made automatic, resolving Pending item 73's own named
+     reversal exactly as the item itself specified (2026-08-27).** The item DIRECTLY REVERSES a
+     previously locked decision (Done item 157: on-demand-only, explicitly to avoid an
+     accidental history point) — flagged prominently both in the item's own text and again
+     here, per this file's standing "flag a reversal, don't silently overwrite" practice, rather
+     than quietly changing behavior. Implemented exactly the "reasonable low-risk
+     implementation" the item's own text already proposed: a `useEffect` in
+     `NetWorthPage.tsx` auto-saves once per calendar day on page load, guarded to be idempotent
+     (skips entirely once today's snapshot already exists — never spam-saves on every visit) AND
+     to never fire for a signed-out visitor (`useAuthState()`'s real `user`, not the
+     write-time `ensureSignedIn()` gate the manual button uses — an automatic effect popping a
+     sign-in modal with no user gesture behind it would be a real UX regression, not just a
+     cadence change). The manual "Save snapshot" button is untouched and still works exactly as
+     before. `types/netWorthSnapshot.ts`'s own doc comment (the original source of the locked
+     design decisions) updated in place to document the reversal, not just the two markdown
+     docs. Verified live via Playwright (signed out, since this sandbox can't sign in as the
+     user): confirmed NO snapshot gets auto-created and NO sign-in modal pops on page load —
+     exactly the guard's intended signed-out behavior — zero new console errors (2 pre-existing,
+     already-documented `ERR_TUNNEL_CONNECTION_FAILED` entries from this page's own unrelated
+     live-FX-rate fetch, blocked by this sandbox's network policy, not a regression from this
+     change). `npx tsc -b` / `npm run test` (397 tests, unchanged — a guarded side effect, not
+     new calc logic) / `npm run build` all clean.
 
 ## Pending
 
@@ -4673,16 +4695,11 @@ everything below is started. Working down it in priority order across following 
     down the page to notice (ties into item 68's reorder) or because they want a genuinely
     different SET (e.g. balance-over-time line, paid-vs-remaining split) beyond the one
     existing chart. Needs the user's own confirmation of which before assuming scope.
-73. Net Worth: daily snapshot should be automatic, not an on-demand button — this DIRECTLY
-    REVERSES a previously locked design decision (Done item 157: "an explicit on-demand 'Save
-    snapshot' button (never automatic)" was the user's own explicit choice at the time,
-    specifically to avoid an accidental/unwanted history point). Per this file's own "recent
-    instructions override older ones" rule, the newer ask wins — but flagging the reversal
-    explicitly here rather than silently overwriting a previously-deliberate decision, per
-    this file's own standing practice. A reasonable low-risk implementation: auto-save once
-    per calendar day on page load if no snapshot exists yet for today (idempotent, no
-    duplicate-spam risk) — not built yet, needs the "once per day, on page load" framing
-    confirmed rather than assumed.
+73. ~~Net Worth: daily snapshot should be automatic, not an on-demand button.~~ **Done
+    (2026-08-27) — see Done item 193.** This DIRECTLY REVERSES Done item 157's own locked
+    decision (on-demand-only, to avoid an accidental history point) — implemented exactly as
+    this item's own text proposed: auto-save once per calendar day on page load, idempotent,
+    and never firing for a signed-out visitor. The manual button still works too.
 74. ~~Net Worth: the pairwise "Rates between your own currencies" table only shows one
     direction (A→B) — should show the reverse (B→A) alongside it.~~ **Done (2026-08-26) — see
     Done item 168.** `effectiveRate()` already derives either direction symmetrically, so this
