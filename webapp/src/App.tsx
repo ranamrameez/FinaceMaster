@@ -106,13 +106,34 @@ function App() {
   const subscriptionsSync = useSubscriptionsFirebaseSync();
   const netWorthSnapshotsSync = useNetWorthSnapshotsFirebaseSync();
 
+  // README Pending item 76: one worst-of-N sync-status indicator in the
+  // Sidebar instead of each module's own status buried in its own
+  // "Account" section — see SyncStatusIndicator.tsx for the full design
+  // reasoning. Deliberately excludes the "planned" secondary stores
+  // (plannedCashSync/plannedBankSync/plannedRentalsSync) — same "not
+  // irreplaceable primary data" reasoning already applied to their own
+  // upload-local-to-cloud affordance elsewhere in this file.
+  const syncStatuses = [
+    { name: 'QSE', status },
+    { name: 'PSX', status: psxSync.status },
+    { name: 'Cash', status: cashSync.status },
+    { name: 'Personal Loans', status: personalLoansSync.status },
+    { name: 'Banking', status: bankSync.status },
+    { name: 'EMI / Loans', status: emiSync.status },
+    { name: 'Funds', status: fundsSync.status },
+    { name: 'Rentals', status: rentalsSync.status },
+    { name: 'Transfers', status: transfersSync.status },
+    { name: 'Subscriptions', status: subscriptionsSync.status },
+    { name: 'Net Worth Snapshots', status: netWorthSnapshotsSync.status },
+  ];
+
   return (
     <ErrorBoundary>
       <TermsGateModal />
       <ConfirmDialogHost />
       <SignInModalHost />
       <HashRouter>
-        <AppShell user={user}>
+        <AppShell user={user} syncStatuses={syncStatuses}>
           <ErrorBoundary>
             <Routes>
               <Route path="/" element={<DashboardPage />} />

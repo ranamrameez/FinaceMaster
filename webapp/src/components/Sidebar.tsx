@@ -5,6 +5,7 @@ import { AppearancePanel } from './AppearancePanel';
 import { CategoryNav, categoryForPath } from './CategoryNav';
 import { ExportIcon, LogInIcon } from './icons';
 import { requireSignIn } from './SignInModal';
+import { SyncStatusIndicator, type ModuleSyncStatus } from './SyncStatusIndicator';
 
 const QSE_NAV_ITEMS = [
   { num: '01', label: 'Dashboard', to: '/' },
@@ -50,11 +51,13 @@ export function Sidebar({
   className = '',
   onNavigate,
   onCollapse,
+  syncStatuses = [],
 }: {
   user: User | null;
   className?: string;
   onNavigate?: () => void;
   onCollapse?: () => void;
+  syncStatuses?: ModuleSyncStatus[];
 }) {
   const profile = useProfile(user);
   const name = profile.displayName || user?.email || user?.phoneNumber || 'account';
@@ -111,6 +114,7 @@ export function Sidebar({
             <span className="num"><ExportIcon size={12} /></span>
             Backup / restore all data
           </NavLink>
+          {user && <SyncStatusIndicator modules={syncStatuses} />}
         </div>
 
         <div className="footer-note" style={{ marginTop: 10 }}>
