@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useProfile } from '../lib/firebase/useProfile';
 import { AppearancePanel } from './AppearancePanel';
 import { CategoryNav, categoryForPath } from './CategoryNav';
-import { ExportIcon, LogInIcon } from './icons';
+import { ExportIcon, LogInIcon, LogoMark } from './icons';
 import { requireSignIn } from './SignInModal';
 import { SyncStatusIndicator, type ModuleSyncStatus } from './SyncStatusIndicator';
 
@@ -69,7 +69,10 @@ export function Sidebar({
   return (
     <div className={`sidebar ${className}`.trim()}>
       <div className="sidebar-title-row">
-        <span style={{ fontWeight: 700, fontSize: 18, letterSpacing: '.01em' }}>FinanceRecorder</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 18, letterSpacing: '.01em' }}>
+          <LogoMark />
+          FinanceRecorder
+        </span>
         {onCollapse && (
           <button type="button" className="sidebar-collapse-btn" onClick={onCollapse} aria-label="Hide sidebar" title="Hide sidebar">
             «

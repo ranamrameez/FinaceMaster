@@ -3751,6 +3751,18 @@ not developer notes) continuously as features ship.
   confirmed this isn't a coincidence hiding a bug by also adding a dedicated "uneven tenure"
   unit test where they don't). `npx tsc -b` / `npm run test` (397 tests, 4 new) / `npm run
   build` all clean.
+- **A real app logo designed, third item under the new standing instruction (2026-08-27) — see
+  README Done item 191, closes Pending item 87.** Checked `public/favicon.svg` before assuming
+  "no asset exists at all" from the Pending item's own wording — it turned out to BE a file, but
+  Vite's own leftover generic scaffold art (purple/blue abstract shape), never actually
+  replaced since the project's first commit, so the item's underlying claim held. New
+  `LogoMark` in `icons.tsx`: 3 ascending bars (growth-chart motif) on a deep-navy badge, fixed
+  brand colors rather than `currentColor` — same deliberate exception this file already makes
+  for `GoogleIcon`, since a real logo should read as a stable identity independent of the
+  viewer's own chosen in-app color theme, not reskin with it. Same mark duplicated as the
+  static favicon file. Dropped into `Sidebar.tsx`'s existing title row with zero CSS changes
+  needed (`.sidebar-title-row` was already a flex row). Verified live via real screenshots in
+  both light and dark theme — legible in both, zero console errors.
 
 ## Live URLs
 
