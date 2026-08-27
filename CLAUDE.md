@@ -3869,6 +3869,30 @@ not developer notes) continuously as features ship.
   instance, not a partial fix leaving others unchecked. Same first-row-only labeling convention
   as the QSE/PSX fix. Verified live on the account detail page (its newer of two call sites):
   every field shows a real visible label, zero console errors.
+- **Required-field marking rollout closed for QSE/PSX's trade-entry forms, closing README
+  Pending item 103 in full (2026-08-27) — see README Done item 200.** Picked up while auditing
+  what's left in the Pending backlog after draining the notification queue from the prior PRs
+  (#28-#39, all merged clean, nothing actionable). Item 103's own "still open" note claimed
+  these forms used raw `<input>`s not wrapped in `Field` — checking the live code found that
+  claim stale: Done item 187 (2026-08-26) had already `Field`-wrapped
+  `TransactionsPage.tsx`'s multi-row add table and `StockPage.tsx`'s per-stock add-trade
+  toolbar for labeling purposes, just without the `required` prop itself. Added `required` to
+  exactly what each form's own submit-time validation checks (`ticker && shares>0 &&
+  price>0`): Ticker/Shares/Price on `TransactionsPage.tsx`'s first row (QSE+PSX), Shares/Price
+  on `StockPage.tsx`'s toolbar (QSE+PSX — Ticker's fixed by the route there, not a field).
+  **Lesson reinforced**: a Pending item's own "still open" reasoning can go stale when an
+  unrelated later fix incidentally covers part of the ground it named — worth re-checking the
+  live code before trusting a Pending item's stated reason, not just its existence, the same
+  "check git history before assuming it needs work" discipline already noted elsewhere in this
+  file. Edit-in-place forms deliberately excluded, same reasoning as Done item 199's labeling
+  fix — they share the same `<table>`/`<thead>` as their own add-row. Verified live via
+  Playwright with real seeded data: QSE/PSX Transactions show `TICKER*`/`SHARES*`/`PRICE*` on
+  row one; QSE StockPage (after expanding its collapsed "Trades" section — a reminder that
+  every section on a `StockPage`/similar `Tabs`-driven page now renders collapsed-by-default
+  behind an accordion, so a verification script needs to expand the right section first or it
+  reads as "field not found" when it's really just hidden) shows `SHARES*`/`PRICE*` — zero
+  console errors. `npx tsc -b` / `npm run test` (397 tests, unchanged) / `npm run build` all
+  clean.
 
 ## Live URLs
 

@@ -92,10 +92,10 @@ function TickerTransactions({ ticker }: { ticker: string }) {
         <Field label="Date">
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </Field>
-        <Field label="Shares">
+        <Field label="Shares" required>
           <input type="number" placeholder="Shares" value={sharesInput} onChange={(e) => setSharesInput(e.target.value)} style={{ width: 90 }} />
         </Field>
-        <Field label="Price">
+        <Field label="Price" required>
           <input type="number" step="0.001" placeholder="Price" value={priceInput} onChange={(e) => setPriceInput(e.target.value)} style={{ width: 90 }} />
         </Field>
         <TimeZoneFields time={time} timezone={timezone} onTimeChange={setTime} onTimezoneChange={setTimezone} />
