@@ -5517,6 +5517,28 @@ or a design decision before more code, not guessed at further:**
 113. ~~Sidebar visual grouping: the top-level category list and the QSE/PSX chip switcher +
      "Pages" accordion below it have no clear visual separator.~~ **Done (2026-08-27) — see
      Done item 210.** A top border + spacing now makes the boundary explicit.
+114. **App-wide UI/UX redesign, top priority, NOT YET STARTED (2026-08-27) — full design spec
+     lives in `CLAUDE.md`'s "Redesign decision" and "App-wide UI/UX redesign" sections, read
+     those before starting any of this.** The user reframed the whole app's UI around one
+     content model — **Main** (frequent: stats/charts/entity cards/FAB-add-transaction),
+     **Often** (occasional: FAB-add-entity, click an entity → a dedicated READ-ONLY detail page
+     with an Edit icon, showing every single attribute), **Rare** (Account/Settings/Backup/
+     Disclaimer, one Settings submenu) — plus 9 concrete UI rules (no nested cards; generous
+     vertical spacing; wrap-flex grids over shrinking; lighter shadows; solid-color stat cards
+     with little gradient; vertical-not-full-width form layout; action buttons grouped top-
+     right; descriptions → tooltips; consistent chart height with no forced zero-baseline).
+     Confirmed: **no fork/new repo/new codebase** — redesign happens in place in this same repo
+     (a cosmetic rebrand later is a separate, cheap, not-yet-requested step); entity-detail
+     views are dedicated PAGES (matching Portfolio's own per-stock page pattern), not popups,
+     and must never drop an attribute in the move. Also folds in: consolidating "relevant info
+     in one place," auditing (not necessarily rebuilding) inline cross-entity linking per
+     module, and — flagged as the highest-risk piece, since it touches the user's real imported
+     credit-card/bank data — splitting Credit Card into its own entity linked to a normalized
+     Bank/Branch reference model, replacing today's `BankAccount.isLiability` flag. **New
+     standing rule for this and future ambiguous work**: plan and get explicit approval before
+     building, then execute the approved plan to completion. Still open before code starts:
+     confirm Settings hub's "Security"/"Defaults" scope, and whether the earlier `?section=`
+     sidebar-children-from-Tabs idea is superseded by this model or still wanted alongside it.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank
