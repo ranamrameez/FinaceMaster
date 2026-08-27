@@ -4368,6 +4368,25 @@ FinanceManager live link:
      unchecked. Verified live via Playwright on the account detail page specifically (the newer
      of its two call sites): every field renders a real visible label — zero console errors.
      `npx tsc -b` / `npm run test` (397 tests, unchanged — UI-only) / `npm run build` all clean.
+200. **Required-field marking rollout closed for QSE/PSX's trade-entry forms, closing Pending
+     item 103 in full (2026-08-27).** Re-checking item 103's own "still open" note against the
+     live code found it was stale: Done item 187 (2026-08-26) had already wrapped
+     `TransactionsPage.tsx`'s multi-row add table and `StockPage.tsx`'s per-stock add-trade
+     toolbar in `Field` for labeling — the only thing actually missing was the `required` prop
+     itself (the red asterisk), not the `Field` wrapping the note claimed was absent. Added
+     `required` to exactly the fields each form's own submit-time toast validation already
+     checks (`ticker && shares > 0 && price > 0`): Ticker/Shares/Price on
+     `TransactionsPage.tsx`'s first queued row (matching that table's existing first-row-only
+     label convention), and Shares/Price on `StockPage.tsx`'s toolbar (Ticker isn't a field
+     there — it's fixed by the route). Action/Date aren't required (both always have a valid
+     default). **Edit-in-place forms deliberately excluded**, same reasoning Done item 199
+     already established for labeling: they render inside the same `<table>`/`<thead>` as their
+     own add-row, so the column headers already convey what's expected without needing a
+     duplicate per-cell label. Verified live via Playwright with real seeded data: QSE's and
+     PSX's Transactions pages both show `TICKER*`/`SHARES*`/`PRICE*` on the first row; QSE's
+     StockPage (once its collapsed "Trades" section is expanded) shows `SHARES*`/`PRICE*` —
+     zero console errors. `npx tsc -b` / `npm run test` (397 tests, unchanged — UI-only) / `npm
+     run build` all clean.
 
 ## Pending
 
@@ -4961,14 +4980,19 @@ everything below is started. Working down it in priority order across following 
      The "New linked transfer" card's own explanatory paragraph moved behind a `Tooltip`; the
      two conditional warning paragraphs (unsupported pairing, currency mismatch) were left as
      plain text since they're only shown when directly relevant, not a permanent block.
-103. ~~App-wide required-field marking rollout.~~ **Mostly done (2026-08-26) — see Done items
-     171/184.** `Field`'s `required` prop is now applied to Banking's, Cash's, Personal Loans',
-     EMI's, Rentals', Funds', and Subscriptions' primary add-record forms. **Still open**:
-     QSE/PSX's inline table-add-row transaction forms (`TransactionsPage.tsx`) use raw
-     `<input>`s not wrapped in `Field` — needs converting those to `Field` first, a bigger
-     change than this rollout's own scope (see Done item 184's own note, and Pending item 97);
-     and this pass only covered each module's ADD form, not every edit-in-place form across the
-     app.
+103. ~~App-wide required-field marking rollout.~~ **Done (2026-08-27) — see Done items
+     171/184/200.** `Field`'s `required` prop is applied to Banking's, Cash's, Personal Loans',
+     EMI's, Rentals', Funds', and Subscriptions' primary add-record forms, plus (Done item 200)
+     QSE's/PSX's trade-entry forms: `TransactionsPage.tsx`'s multi-row add table (Ticker/Shares/
+     Price, first row only, matching that table's own first-row-only label convention from Done
+     item 187) and `StockPage.tsx`'s per-stock add-trade toolbar (Shares/Price — Ticker isn't a
+     field there, it's fixed by the route). This item's own "still open" note about these forms
+     using raw `<input>`s not wrapped in `Field` turned out to be stale by the time it was
+     re-checked — Done item 187 (2026-08-26) had already Field-wrapped them for labeling
+     purposes, just without `required`; only the asterisk was actually missing. **Edit-in-place
+     forms remain intentionally out of scope**: they sit inside the same `<table>`/`<thead>` as
+     their own add-row, so the column headers already convey what's expected — the same
+     established convention Done item 199 already relied on for labeling.
 104. A second, real, keyless IBAN-lookup provider for `lib/ibanLookup.ts`'s `IBAN_PROVIDERS`
      chain (see Done item 171 for why only one was confidently wired in) — needs a specific
      provider confirmed to have a genuinely public, no-registration endpoint before adding, not

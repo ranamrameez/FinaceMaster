@@ -59,7 +59,7 @@ function TransactionRows() {
           <Field label={i === 0 ? 'Date' : undefined}>
             <input type="date" value={r.date} onChange={(e) => update(i, { date: e.target.value })} />
           </Field>
-          <Field label={i === 0 ? 'Ticker' : undefined}>
+          <Field label={i === 0 ? 'Ticker' : undefined} required={i === 0}>
             <input
               placeholder="Ticker"
               value={r.ticker}
@@ -74,7 +74,7 @@ function TransactionRows() {
               <option value="SELL">SELL</option>
             </select>
           </Field>
-          <Field label={i === 0 ? 'Shares' : undefined}>
+          <Field label={i === 0 ? 'Shares' : undefined} required={i === 0}>
             <input
               type="number"
               placeholder="Shares"
@@ -83,7 +83,7 @@ function TransactionRows() {
               style={{ width: 90 }}
             />
           </Field>
-          <Field label={i === 0 ? 'Price' : undefined}>
+          <Field label={i === 0 ? 'Price' : undefined} required={i === 0}>
             <input
               type="number"
               step="0.001"
