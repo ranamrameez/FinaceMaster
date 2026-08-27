@@ -3842,6 +3842,23 @@ not developer notes) continuously as features ship.
   Schedule → Charts → What-if page order (Done item 168) rather than a new zone. Verified live
   via a real chart screenshot with a seeded $10,000/12-month/12%-p.a. loan: a genuine declining
   curve from ~9,000 to 0 across the tenure, zero console errors.
+- **Banking account rows navigate to a real routed page, tenth item under the new standing
+  instruction (2026-08-27) — see README Done item 198, closes Pending item 83 for Banking.**
+  The item posed the fork itself and said the user's own wording favored a real navigable page
+  over the existing modal — built that reading. `AccountDetailModal({account, onClose})` became
+  `AccountDetailPage()` at a new `/bank/account/:id` route, resolving the account from
+  `useParams()` against the live store — same content, just a page instead of a modal, with a
+  back link matching QSE/PSX StockPage's own convention. **Real rules-of-hooks trap worth
+  remembering for any future prop→route-param conversion of a component that assumed its
+  subject always exists**: the account can now be `undefined` (stale bookmark, typo'd id), but
+  React requires every hook to run unconditionally every render — so the "not found" early
+  return has to come AFTER every `useState`/`useMemo` call, not before; each of those needed an
+  `account ? ... : fallback` guard, and the two write handlers each got their own `if (!account)
+  return;` guard. Scoped to Banking only — Cash/Personal Loans still use their own modal
+  pattern, same "ship one page first" precedent as Done item 58. Verified live via Playwright:
+  real URL navigation with no modal overlay, correct balance math and real transaction data on
+  the page, working back link, and a graceful "Account not found" for a bad id instead of
+  crashing — zero console errors.
 
 ## Live URLs
 

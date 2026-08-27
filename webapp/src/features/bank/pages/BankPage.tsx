@@ -1,5 +1,6 @@
 import type { User } from 'firebase/auth';
 import { Fragment, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
@@ -353,9 +354,9 @@ function AccountsList() {
   const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
   const updateAccount = useBankWorkbookStore((s) => s.updateAccount);
   const deleteAccount = useBankWorkbookStore((s) => s.deleteAccount);
+  const navigate = useNavigate();
   const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<BankAccount | null>(null);
-  const [detailAccount, setDetailAccount] = useState<BankAccount | null>(null);
 
   const startEdit = (a: BankAccount) => { setEditId(a.id); setEditRow({ ...a }); };
   const saveEdit = () => {
@@ -422,7 +423,7 @@ function AccountsList() {
                 </td>
               </tr>
             ) : (
-              <tr key={a.id} onClick={() => setDetailAccount(a)} style={{ cursor: 'pointer' }}>
+              <tr key={a.id} onClick={() => navigate(`/bank/account/${a.id}`)} style={{ cursor: 'pointer' }}>
                 <td>
                   {a.name}
                   {a.isLiability && <span className="pill-sell" style={{ marginLeft: 6, fontSize: 10 }}>Credit card</span>}
@@ -436,7 +437,7 @@ function AccountsList() {
                     : fmtMoney(accountBalance(a, transactions), a.currencyCode)}
                 </td>
                 <td>
-                  <button className="btn secondary small" onClick={(e) => { e.stopPropagation(); setDetailAccount(a); }}>Details</button>{' '}
+                  <button className="btn secondary small" onClick={(e) => { e.stopPropagation(); navigate(`/bank/account/${a.id}`); }}>Details</button>{' '}
                   <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={(e) => { e.stopPropagation(); startEdit(a); }} />{' '}
                   <IconButton
                     label="Delete"
@@ -456,7 +457,6 @@ function AccountsList() {
           {!sorted.length && <tr><td colSpan={6} className="footer-note">No accounts yet — use the + button below to add one.</td></tr>}
         </tbody>
       </table>
-      {detailAccount && <AccountDetailModal account={detailAccount} onClose={() => setDetailAccount(null)} />}
     </div>
   );
 }
@@ -468,37 +468,51 @@ function AccountsList() {
  * directly; the same pattern (a modal fed by that module's own ledger +
  * planned-entries hooks) is the template to extend to other modules'
  * primary record type (a loan, a fund, a property) later. */
-function AccountDetailModal({ account, onClose }: { account: BankAccount; onClose: () => void }) {
+/** README Pending item 83: clicking an account row used to open a modal
+ * in place — the user's own wording ("should take the user to its
+ * details page") read as wanting a real navigable page, matching the
+ * precedent QSE/PSX's `/stock/:ticker` already set, not just the modal's
+ * contents reordered (that narrower reading was already done separately,
+ * see Done item 183/Pending item 84's own history). Scoped to Banking
+ * first, as a working instance to verify before any wider Cash/Personal
+ * Loans rollout — same "ship one page first" pattern this project always
+ * follows (see e.g. Done item 58's own "v1 for Banking only" precedent). */
+export function AccountDetailPage() {
+  const { id } = useParams();
+  const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
+  const account = accounts.find((a) => a.id === id);
   const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
   const updateAccount = useBankWorkbookStore((s) => s.updateAccount);
   const ensureSignedIn = useEnsureSignedIn();
   const plannedEntries = usePlannedBankWorkbookStore((s) => s.workbook.entries);
   const { num } = useAmountFormat();
   // Local draft state (same pattern as Rentals' PropertyDetailModal) rather
-  // than editing the passed-in `account` prop directly — that prop is a
-  // point-in-time snapshot from AccountsList's own `detailAccount` state,
-  // not a live store subscription, so writing straight to it wouldn't be
-  // reflected back into what this modal displays.
+  // than editing `account` directly — see the fallback values below: all
+  // hooks must run unconditionally on every render (rules of hooks), so
+  // the "account not found" guard has to come AFTER every hook call, not
+  // before — these `?.` fallbacks just keep the initial render safe for
+  // an id that doesn't resolve, before that guard renders instead.
   const [meta, setMeta] = useState({
-    accountNumber: account.accountNumber ?? '',
-    smsSenderId: account.smsSenderId ?? '',
-    smsSenderNumber: account.smsSenderNumber ?? '',
-    branch: account.branch ?? '',
-    accountType: account.accountType ?? '',
-    iban: account.iban ?? '',
-    bankName: account.bankName ?? '',
-    bic: account.bic ?? '',
-    isLiability: account.isLiability,
-    creditLimit: account.creditLimit,
-    annualFee: account.annualFee,
-    statementDate: account.statementDate,
-    paymentDueDate: account.paymentDueDate,
-    lateFeeAfterDue: account.lateFeeAfterDue,
-    minPaymentAmount: account.minPaymentAmount,
-    cardNetwork: account.cardNetwork,
-    cardBin: account.cardBin,
+    accountNumber: account?.accountNumber ?? '',
+    smsSenderId: account?.smsSenderId ?? '',
+    smsSenderNumber: account?.smsSenderNumber ?? '',
+    branch: account?.branch ?? '',
+    accountType: account?.accountType ?? '',
+    iban: account?.iban ?? '',
+    bankName: account?.bankName ?? '',
+    bic: account?.bic ?? '',
+    isLiability: account?.isLiability,
+    creditLimit: account?.creditLimit,
+    annualFee: account?.annualFee,
+    statementDate: account?.statementDate,
+    paymentDueDate: account?.paymentDueDate,
+    lateFeeAfterDue: account?.lateFeeAfterDue,
+    minPaymentAmount: account?.minPaymentAmount,
+    cardNetwork: account?.cardNetwork,
+    cardBin: account?.cardBin,
   });
   const saveMeta = async () => {
+    if (!account) return;
     if (!(await ensureSignedIn('Sign in to save account details.'))) return;
     updateAccount(account.id, {
       ...account,
@@ -522,20 +536,21 @@ function AccountDetailModal({ account, onClose }: { account: BankAccount; onClos
     });
     toast('Account details saved.');
   };
-  const ledger = useMemo(() => [...accountRunningLedger(account, transactions)].reverse(), [account, transactions]);
+  const ledger = useMemo(() => (account ? [...accountRunningLedger(account, transactions)].reverse() : []), [account, transactions]);
   const upcoming = useMemo(
-    () => plannedEntries.filter((p) => p.accountId === account.id && !p.executed).sort((a, b) => a.date.localeCompare(b.date)),
-    [plannedEntries, account.id],
+    () => (account ? plannedEntries.filter((p) => p.accountId === account.id && !p.executed).sort((a, b) => a.date.localeCompare(b.date)) : []),
+    [plannedEntries, account],
   );
   const knownCategories = useMemo(
-    () => [...new Set(transactions.filter((t) => t.accountId === account.id).map((t) => t.category).filter((c): c is string => !!c))].sort(),
-    [transactions, account.id],
+    () => (account ? [...new Set(transactions.filter((t) => t.accountId === account.id).map((t) => t.category).filter((c): c is string => !!c))].sort() : []),
+    [transactions, account],
   );
 
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
 
   const exportStatement = () => {
+    if (!account) return;
     const rows = ledger
       .filter((r) => (!fromDate || r.tx.date >= fromDate) && (!toDate || r.tx.date <= toDate))
       .slice()
@@ -553,8 +568,19 @@ function AccountDetailModal({ account, onClose }: { account: BankAccount; onClos
     toast('Statement downloaded.');
   };
 
+  if (!account) {
+    return (
+      <div>
+        <Link to="/bank" className="footer-note">← Back to Banking</Link>
+        <p className="footer-note" style={{ marginTop: 12 }}>Account not found.</p>
+      </div>
+    );
+  }
+
   return (
-    <Modal title={account.name} onClose={onClose}>
+    <div>
+      <Link to="/bank" className="footer-note">← Back to Banking</Link>
+      <h1 className="pagetitle" style={{ marginTop: 8 }}>{account.name}</h1>
       <p className="footer-note" style={{ marginBottom: 12 }}>
         {account.isLiability ? 'Amount owed:' : 'Current balance:'}{' '}
         <strong title={fmtMoney(account.isLiability ? Math.max(0, -accountBalance(account, transactions)) : accountBalance(account, transactions), account.currencyCode)}>
@@ -671,7 +697,7 @@ function AccountDetailModal({ account, onClose }: { account: BankAccount; onClos
           <TextInput type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
         </Field>
       </div>
-    </Modal>
+    </div>
   );
 }
 
