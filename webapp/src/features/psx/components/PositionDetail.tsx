@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
 import { CollapsibleCard } from '../../../components/Card';
+import { confirmDialog } from '../../../components/ConfirmDialog';
 import { Tooltip } from '../../../components/Tooltip';
-import { SaveIcon } from '../../../components/icons';
+import { EditIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { IconButton } from '../../../components/ui/IconButton';
+import { Sparkline } from '../../../components/Sparkline';
 import { toast } from '../../../components/Toast';
 import { breakEvenPrice, computePriceStats, getMarketPrice } from '../../../lib/calc';
 import { calcCGT } from '../../../lib/calc/psxFees';
+import { getDailyPriceHistory } from '../../../lib/calc/priceHistory';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { toCSV } from '../../../lib/csv';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
@@ -14,6 +18,7 @@ import { useSortableRows } from '../../../hooks/useSortableRows';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { useAppearanceStore } from '../../../store/appearanceStore';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
+import type { PricePoint } from '../../../types/workbook';
 import { usePSXDerived } from '../hooks/usePSXDerived';
 
 function CompactChart({ height, children }: { height: number; children: React.ReactNode }) {
@@ -27,6 +32,8 @@ function CompactChart({ height, children }: { height: number; children: React.Re
 export function PositionDetail({ ticker }: { ticker: string }) {
   const { workbook, positions, calcFee, lots } = usePSXDerived();
   const setMarketPrice = usePSXWorkbookStore((s) => s.setMarketPrice);
+  const updatePricePoint = usePSXWorkbookStore((s) => s.updatePricePoint);
+  const deletePricePoint = usePSXWorkbookStore((s) => s.deletePricePoint);
   const ensureSignedIn = useEnsureSignedIn();
   const currency = workbook.settings.currency;
   useAppearanceStore((s) => s.appearance);
@@ -51,6 +58,9 @@ export function PositionDetail({ ticker }: { ticker: string }) {
     : 0;
 
   const stats = computePriceStats(ticker, workbook.priceHistory);
+  // README item 2 of a 2026-08-27 feedback batch: see the identical comment
+  // in QSE's PositionDetail.tsx.
+  const sparkData = getDailyPriceHistory(ticker, workbook.priceHistory).map((p) => p.price);
 
   const lotRows = lots[ticker] ?? [];
   type LotCol = 'buyDate' | 'buyPrice' | 'remainingShares' | 'costPerShare';
@@ -65,6 +75,35 @@ export function PositionDetail({ ticker }: { ticker: string }) {
   const recentSortValue = (p: (typeof recentRows)[number], col: RecentCol): number | string =>
     col === 'price' ? p.price : (p.time ?? p.date);
   const { sorted: sortedRecent, Th: RecentTh } = useSortableRows(recentRows, recentSortValue, 'when', 'desc');
+
+  // README item 1 of the same batch: see the identical comment in QSE's
+  // PositionDetail.tsx.
+  const [editPriceIndex, setEditPriceIndex] = useState<number | null>(null);
+  const [editPriceRow, setEditPriceRow] = useState<PricePoint | null>(null);
+  const rawHistory = workbook.priceHistory[ticker] ?? [];
+
+  const startEditPrice = (rawIndex: number, point: PricePoint) => {
+    setEditPriceIndex(rawIndex);
+    setEditPriceRow({ ...point });
+  };
+  const cancelEditPrice = () => {
+    setEditPriceIndex(null);
+    setEditPriceRow(null);
+  };
+  const saveEditPrice = async () => {
+    if (editPriceIndex === null || !editPriceRow) return;
+    if (!editPriceRow.price || editPriceRow.price <= 0) return toast('Enter a valid price.');
+    if (!(await ensureSignedIn('Sign in to edit price history.'))) return;
+    updatePricePoint(ticker, editPriceIndex, editPriceRow);
+    toast('Price entry updated.');
+    cancelEditPrice();
+  };
+  const removePricePoint = async (rawIndex: number) => {
+    if (!(await confirmDialog('Delete this price entry? This cannot be undone.'))) return;
+    if (!(await ensureSignedIn('Sign in to edit price history.'))) return;
+    deletePricePoint(ticker, rawIndex);
+    toast('Price entry deleted.');
+  };
 
   const grossValue = isOpen && mp > 0 ? shares * mp : 0;
   const estSellFee = grossValue > 0 ? calcFee(grossValue, false, { shares }) : 0;
@@ -130,6 +169,10 @@ export function PositionDetail({ ticker }: { ticker: string }) {
       {isOpen && (
         <CollapsibleCard title={<h4 style={{ margin: 0 }}>Current position</h4>} style={{ marginBottom: 12 }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px,1fr))', gap: 8 }}>
+            <div className="stat-card card" style={hueStyle(HUES[2])}>
+              <div className="label">Trend</div>
+              <div className="value"><Sparkline data={sparkData} formatValue={fmtPrice} /></div>
+            </div>
             <div className="stat-card card" style={hueStyle(HUES[0])}><div className="label">Shares</div><div className="value">{fmt(shares, 0)}</div></div>
             <div className="stat-card card" style={hueStyle(HUES[1])}>
               <Tooltip text="Cost: what you paid per share on average. BE (break-even): the price you'd need to sell at to get your money back, including fees.">
@@ -139,6 +182,15 @@ export function PositionDetail({ ticker }: { ticker: string }) {
               <div className="sub" style={{ color: mp > 0 ? (mp >= be ? 'var(--profit)' : 'var(--loss)') : undefined }}>BE {fmtPrice(be)}</div>
             </div>
             <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Invested</div><div className="value">{fmtMoney(invested, currency)}</div></div>
+            <div className="stat-card card" style={hueStyle(HUES[4])}>
+              <div className="label">Value</div>
+              <div className="value">{mp > 0 ? fmtMoney(grossValue, currency) : '—'}</div>
+            </div>
+            <div className="stat-card card" style={hueStyle(Number.isFinite(netProfit) ? (netProfit >= 0 ? 'var(--profit)' : 'var(--loss)') : HUES[7])}>
+              <div className="label">P/L</div>
+              <div className="value">{Number.isFinite(netProfit) ? fmtMoney(netProfit, currency) : '—'}</div>
+              <div className="sub">{Number.isFinite(netProfit) && invested > 0 ? `${((netProfit / invested) * 100).toFixed(1)}%` : ''}</div>
+            </div>
             {grossValue > 0 && (
               <div className="stat-card card" style={hueStyle(HUES[5])}>
                 <Tooltip text="CGT = Capital Gains Tax, a government tax on profit from selling stock. This is only an estimate of what you'd owe if you sold at today's price — it's not withheld automatically.">
@@ -314,11 +366,30 @@ export function PositionDetail({ ticker }: { ticker: string }) {
             <summary className="footer-note" style={{ cursor: 'pointer' }}>Recent updates ({stats.recent.length})</summary>
             <div className="table-scroll" style={{ marginTop: 8 }}>
               <table>
-                <thead><tr><RecentTh col="when">When</RecentTh><RecentTh col="price">Price</RecentTh></tr></thead>
+                <thead><tr><RecentTh col="when">When</RecentTh><RecentTh col="price">Price</RecentTh><th></th></tr></thead>
                 <tbody>
-                  {sortedRecent.map((p, i) => (
-                    <tr key={i}><td>{p.time ? new Date(p.time).toLocaleString() : p.date}</td><td>{fmtPrice(p.price)}</td></tr>
-                  ))}
+                  {sortedRecent.map((p) => {
+                    const rawIndex = rawHistory.indexOf(p);
+                    return editPriceIndex === rawIndex && editPriceRow ? (
+                      <tr key={rawIndex}>
+                        <td><input type="date" value={editPriceRow.date} onChange={(e) => setEditPriceRow({ ...editPriceRow, date: e.target.value })} style={{ width: 130 }} /></td>
+                        <td><input type="number" step="0.01" value={editPriceRow.price} onChange={(e) => setEditPriceRow({ ...editPriceRow, price: Number(e.target.value) })} style={{ width: 90 }} /></td>
+                        <td>
+                          <IconButton label="Save" icon={<SaveIcon size={12} />} onClick={saveEditPrice} />
+                          <IconButton label="Cancel" icon={<XIcon size={12} />} onClick={cancelEditPrice} />
+                        </td>
+                      </tr>
+                    ) : (
+                      <tr key={rawIndex}>
+                        <td>{p.time ? new Date(p.time).toLocaleString() : p.date}</td>
+                        <td>{fmtPrice(p.price)}</td>
+                        <td>
+                          <IconButton label="Edit" icon={<EditIcon size={12} />} onClick={() => startEditPrice(rawIndex, p)} />
+                          <IconButton label="Delete" icon={<TrashIcon size={12} />} onClick={() => removePricePoint(rawIndex)} />
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

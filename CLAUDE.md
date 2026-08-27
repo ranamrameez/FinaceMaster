@@ -3981,6 +3981,68 @@ not developer notes) continuously as features ship.
   explicit spec — flagged rather than silently reconciled); and "most tables need horizontal
   scroll" (real, but too broad to act on without a named table or treating it as a standing
   per-table principle like Pending items 94-96 already are).
+- **Editable price-history entries + Trend/Value/P&L stat cards + two real layout bugs
+  (2026-08-27) — see README Done item 203.** Same-day follow-up batch, screenshot-backed. Items
+  1/2 were confirmed as real gaps by reading the live code first, not assumed from the user's
+  framing alone: `setMarketPrice` only ever appends a new point dated TODAY, with no way to
+  correct a mistaken PAST entry (item 1); the Holdings table's Trend/Value/P&L columns had never
+  actually landed on the per-stock detail page (item 2), despite Done item 152's own text
+  claiming parity — it only added Exit targets/Status, not these three.
+  **New `updatePricePoint`/`deletePricePoint` in `createWorkbookStore.ts`** (shared by QSE/PSX/
+  Funds at once) — addressed by array index within `priceHistory[ticker]` (no stable id on
+  `PricePoint`), and **re-syncing `marketPrices[ticker]`** (the separate cached "current price"
+  `getMarketPrice()` prefers) whenever the edited/deleted point was the chronologically latest
+  one, so the two fields can't drift apart — the same "keep two related fields in sync in one
+  write" discipline used throughout this project. `PositionDetail.tsx` (both exchanges)
+  now has Edit/Delete `IconButton`s on its "Recent updates" rows, matched back to their real
+  store index via `indexOf` on the displayed row object (object identity survives
+  `computePriceStats`'s sort/slice/reverse chain — verified by reading it, not assumed). Trend/
+  Value/P&L added as three new stat cards in "Current position," reusing the exact `Sparkline`+
+  `getDailyPriceHistory` combo the Holdings table itself already uses for Trend.
+  **Two real, measured-not-guessed layout bugs from the same batch (items 4/5)**:
+  (4) "Account and backups ui inconsistent" — `.account-sub-btn` overrides `padding-left` to
+  34px to indent the Backup/Sync rows under the account row, but `.account-btn` never got the
+  same treatment; measured via Playwright bounding boxes: a real 22px icon misalignment (25px vs
+  47px) between the "Signed in as X" row and its own siblings. One-line CSS fix, confirmed broken
+  before and fixed after via the identical measurement — the same "measure, don't guess"
+  discipline this file has repeated many times over. (5) The Dashboard right-rail (Done item 164)
+  visibly clipped at the viewport edge on a smaller display — root cause: `.rail-split`'s `1fr`
+  grid track has an implicit `min-width:auto`, so its wide left-column content (many stat cards,
+  the Holdings table) refuses to shrink and instead pushes the WHOLE grid, fixed-width rail
+  column included, past the viewport's right edge. **Classic CSS Grid trap worth remembering for
+  any future `1fr` + fixed-width-column layout**: an `1fr` track's minimum size defaults to its
+  content's own intrinsic width, not 0 — a wide child needs an explicit `min-width:0` on the
+  grid item to actually let it shrink and hand overflow to its OWN internal scroll container
+  instead of blowing out the whole grid. Fixed on both `.rail-split` and `.position-split` (the
+  latter audited proactively — same grid shape, now carrying an even wider stat-card row after
+  this same item's own Trend/Value/P&L additions) with `min-width:0` on the grid children.
+  Confirmed via a real before/after bounding-box measurement at 1200px: rail's right edge at
+  1385px (past viewport) before, 1170px (safely inside) after. Item 3 ("side nav poorly
+  arranged") stayed genuinely ambiguous even after investigation — tracked as README Pending item
+  112 rather than guessed at, likely overlapping with Pending item 109's own open nav question.
+  New tests: `createWorkbookStore.test.ts` gained 2 cases (edit-the-latest-point resync,
+  delete-down-to-zero resync). Verified live via Playwright throughout — sign-in gate fires
+  correctly on price-history edit/delete (same verification depth as every other gated write in
+  this project), Value/P&L numbers hand-checked correct on both exchanges, zero console errors.
+  `npx tsc -b` / `npm run test` (406 tests, 2 new) / `npm run build` all clean.
+- **Mid-turn, urgent trust/correctness question (2026-08-27, not yet resolved): user says PSX
+  calculations are wrong and caused real financial losses, asked specifically how Break-even is
+  computed.** Read `breakEvenPrice()` (`lib/calc/fees.ts`) and `calcFeeBreakdown()`/
+  `makePSXFeeCalculator()` (`lib/calc/psxFees.ts`) directly rather than explaining from memory —
+  confirmed the algorithm itself is a legitimate iterative solver (converges P such that net sell
+  proceeds after the REAL fee schedule equal total cost basis) and hand-traced it against the
+  user's own real OGDC position numbers from their screenshot (327.80 cost → ~328.6 BE using
+  default settings, close to their shown 328.56) — the formula is not obviously broken.
+  **Noted a strong, concrete lead, not yet confirmed**: the exact two tickers in the user's own
+  screenshot, OGDC and PSO, are the SAME tickers Done item 127 already identified as needing
+  manual review for a stale `manualSameDay: true` flag left over from the old (reverted) same-day
+  default-checking bug (Done item 67) — that item explicitly said this couldn't be auto-corrected
+  and needed the user's own check. Asked the user: (1) whether they've checked those specific
+  OGDC/PSO buy transactions' Fee Mode for a wrongly-set manual same-day flag, (2) their real
+  Settings → Fees & CGT values, (3) which specific number looks wrong and what they expect
+  instead. **Do not assume this is resolved or that the flagged transactions have been checked**
+  — a future session picking this up should wait for the user's answer rather than assuming the
+  stale-flag theory is confirmed or ruled out.
 
 ## Live URLs
 

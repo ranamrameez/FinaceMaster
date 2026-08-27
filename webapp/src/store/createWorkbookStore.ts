@@ -31,6 +31,19 @@ export interface WorkbookStoreState<TWorkbook extends BaseWorkbook<unknown>> {
   updateWatchlistItem: (ticker: string, patch: Partial<WatchlistItem>) => void;
   removeWatchlistItem: (ticker: string) => void;
   setMarketPrice: (ticker: string, price: number) => void;
+  /** Corrects a specific PAST price-history entry (user-requested
+   * 2026-08-27: "the option to change the past current prices" — `setMarketPrice`
+   * only ever appends a new point for *today*, with no way to fix a mistake
+   * already on record). `PricePoint` has no stable id (unlike `Transaction`/
+   * `Transfer`), so this addresses by array index within `priceHistory[ticker]`,
+   * same convention as `updateAdjustment`. If the edited point was the
+   * chronologically LATEST for that ticker, `marketPrices[ticker]` (the
+   * separate cached "current price" `getMarketPrice()` prefers) is
+   * recomputed from the updated history so the two never drift apart. */
+  updatePricePoint: (ticker: string, index: number, patch: Partial<PricePoint>) => void;
+  /** Same addressing/resync rule as `updatePricePoint`, for removing a
+   * mistaken entry entirely rather than correcting it. */
+  deletePricePoint: (ticker: string, index: number) => void;
   addDividend: (d: Dividend) => void;
   updateDividend: (index: number, patch: Partial<Dividend>) => void;
   removeDividend: (index: number) => void;
@@ -45,6 +58,24 @@ export interface WorkbookStoreState<TWorkbook extends BaseWorkbook<unknown>> {
    * re-typed into the Transactions tab. No-op if the plan/leg doesn't exist
    * or the leg is already executed. */
   executeTradePlanLeg: (planId: string, legIndex: number) => void;
+}
+
+/** Recomputes `marketPrices[ticker]` (the cached "current price"
+ * `getMarketPrice()` prefers over deriving one from transactions) from
+ * whatever's chronologically latest in an UPDATED `priceHistory[ticker]` —
+ * used by `updatePricePoint`/`deletePricePoint` so editing or removing the
+ * point that WAS the latest can't leave a stale cached price behind. Same
+ * `(a.time || a.date)` sort key `computePriceStats` uses, so "latest"
+ * means the same thing everywhere. Leaves every OTHER ticker's cached
+ * price untouched. */
+function syncLatestMarketPrice(marketPrices: Record<string, number>, ticker: string, history: PricePoint[]): Record<string, number> {
+  if (!history.length) {
+    const next = { ...marketPrices };
+    delete next[ticker];
+    return next;
+  }
+  const latest = [...history].sort((a, b) => (a.time || a.date).localeCompare(b.time || b.date)).pop()!;
+  return { ...marketPrices, [ticker]: latest.price };
 }
 
 /** One implementation of the "local-first, cloud-synced trading workbook"
@@ -165,6 +196,30 @@ export function createWorkbookStore<TWorkbook extends BaseWorkbook<unknown>>(
             ...wb,
             marketPrices: { ...wb.marketPrices, [ticker]: price },
             priceHistory: { ...wb.priceHistory, [ticker]: [...history, point] },
+          };
+        }),
+
+      updatePricePoint: (ticker, index, patch) =>
+        mutate((wb) => {
+          const history = wb.priceHistory[ticker] || [];
+          if (index < 0 || index >= history.length) return wb;
+          const nextHistory = history.map((p, i) => (i === index ? { ...p, ...patch } : p));
+          return {
+            ...wb,
+            priceHistory: { ...wb.priceHistory, [ticker]: nextHistory },
+            marketPrices: syncLatestMarketPrice(wb.marketPrices, ticker, nextHistory),
+          };
+        }),
+
+      deletePricePoint: (ticker, index) =>
+        mutate((wb) => {
+          const history = wb.priceHistory[ticker] || [];
+          if (index < 0 || index >= history.length) return wb;
+          const nextHistory = history.filter((_, i) => i !== index);
+          return {
+            ...wb,
+            priceHistory: { ...wb.priceHistory, [ticker]: nextHistory },
+            marketPrices: syncLatestMarketPrice(wb.marketPrices, ticker, nextHistory),
           };
         }),
 

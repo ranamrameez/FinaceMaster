@@ -721,7 +721,18 @@
      Collapses back to a single column on narrow viewports (mobile order:
      left-column content first, then right-column — an accepted tradeoff,
      see PositionDetail.tsx's own comment for why). */
+  /* min-width:0 on both children (user-reported 2026-08-27: the right-rail
+     panel's own text was truncated/cut off at the viewport edge on a
+     smaller display) — a CSS Grid `1fr` track's implicit min-width is
+     `auto` (its content's own intrinsic width), not 0, so a wide child
+     (a many-column stat-card grid or table) refuses to shrink and instead
+     pushes the WHOLE grid — including the fixed-width sidebar column —
+     past the viewport's right edge, rather than the wide child activating
+     its own `.table-scroll`/wrapping the way it would on its own. Applies
+     to both children, not just the wide one, since either side can end up
+     being the wide one depending on the page. */
   .position-split{display:grid; grid-template-columns:1fr 380px; gap:16px; align-items:start;}
+  .position-split > *{min-width:0;}
   @media(max-width:900px){.position-split{grid-template-columns:1fr;}}
   /* Generic main-content + right-rail split (README Pending item 54: wide
      viewports had real unused space — a persistent right-rail panel with
@@ -730,6 +741,7 @@
      separate class since it's a different, reusable pairing (any page's
      main content + a summary rail), not specific to a stock position. */
   .rail-split{display:grid; grid-template-columns:1fr 320px; gap:16px; align-items:start;}
+  .rail-split > *{min-width:0;}
   @media(max-width:1000px){.rail-split{grid-template-columns:1fr;}}
   .chart-card{padding:16px 16px 12px 16px;}
   .chart-card .section-title{margin:0 0 10px 0; font-size:13px;}
@@ -1352,7 +1364,16 @@ html.auth-signed-out #cloudSignedInBox{display:none !important;}
   border:1px solid var(--border); border-radius:8px; padding:2px;
   margin-top:12px; display:flex; flex-direction:column; gap:1px;
 }
-.account-btn{font-weight:600;}
+/* User-reported 2026-08-27: "Account and backups ui inconsistent" — real,
+   measurable cause: `.account-sub-btn` (Backup/Sync rows) overrides
+   `padding-left` to 34px to visually indent them under the account row,
+   but `.account-btn` (the "Signed in as X" row) never got the same
+   treatment — its icon+text sat 22px further left than its own siblings'
+   icon+text, a genuine column misalignment across the three stacked rows,
+   not just a subjective styling gripe. Giving `.account-btn` the identical
+   padding-left lines up every icon and every text baseline in one shared
+   column. */
+.account-btn{font-weight:600; padding-left:34px;}
 .account-sub-btn{font-size:12px; color:var(--muted); padding-left:34px;}
 
 /* Phase 1 addition (README item 14): a super-compact "console" density on
