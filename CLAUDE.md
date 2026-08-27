@@ -4284,6 +4284,175 @@ not developer notes) continuously as features ship.
   directly prove. `npx tsc -b` / `npm run test` (442 tests, 19 new) / `npm run build` all
   clean.
 
+## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
+
+**Locked, final decision — read this before touching anything below.** The user floated a
+genuine question ("maybe we develop this as a fresh 'MoneyTracer' codebase in a new folder/
+new GitHub repo, since the current themes/density/font system is fundamentally shallow — 'same
+jokers in different color costumes'") and then explicitly closed it out themselves: *"I know
+rename app is no effort. i just proposed new codebase to let this app work without any issues.
+If redesigning is safe, no need to go for new efforts. we will work with this same repo."*
+**No fork. No new repo. No new codebase folder.** Every redesign step below happens in place,
+in this same `FinaceMaster`/`FinanceRecorder` repo, on real production data, under this file's
+existing cloud-sync-safety and "commit into main directly / verify before every commit"
+standing rules. A cosmetic rename/rebrand (e.g. to "MoneyTracer") remains cheap to do LATER,
+once the redesign has actually landed and stabilized — it is not a prerequisite and nobody has
+asked for it yet; don't preemptively rename anything.
+
+**A NEW standing workflow rule was set the same day, superseding blanket autonomy for
+anything with real design ambiguity** (verbatim): *"you will plan & propose me the changes.
+After my approval you will continue your work until all done."* In practice: for a change with
+genuine scope/design ambiguity, write the concrete plan and get explicit approval BEFORE
+touching any file; once approved, execute the whole approved plan to completion without
+re-asking at each step (the original full-autonomy instruction still applies for execution
+once a plan is approved); flag only NEW ambiguity that surfaces mid-build. A single, narrow,
+already-agreed task doesn't need its own fresh planning round — this rule is about not guessing
+on open design questions, not about re-approving already-scoped work.
+
+## App-wide UI/UX redesign — the Main/Often/Rare model + 9 design rules (2026-08-27)
+
+**This is the active, top-priority, not-yet-started redesign initiative for the whole app.**
+The user gave this as a full reframing after a long back-and-forth about scattered nav/footer
+content ("plenty of stuff down there like import/export, synced status, disclaimer... side +
+top chips menu is also scattered... use arrow signs for open/collapsed status") — rather than
+patch those individually, redesign around one content model applied everywhere. **Explicit
+instruction: "Audit this app page by page and update the app as per guidance" — this has NOT
+been started yet (zero code written toward it as of this note).** A future session should treat
+this as the standing top-of-backlog item, ahead of the numbered README Pending list, until it's
+done or the user redirects.
+
+### The Main/Often/Rare content model (user's own definitions, verbatim — do not paraphrase
+away the distinctions)
+
+- **Main** (frequent data — lives directly on the module's landing page): stats, charts, Entity
+  items as CARDS rather than long tables with custom reordering options, FAB(+) + popups for
+  adding a single or a batch of new transactions, and any other relevant frequent
+  data/components.
+- **Often** (used sometimes, not every visit — reached via a FAB or a light click, never
+  permanently on-screen): FAB + popup for adding a new Entity Item (a Bank account, an EMI
+  loan, a Rental property, etc. — the "rare to create, but you do look at the list often"
+  layer). Clicking an existing item opens its own detail view, READ-ONLY by default with an
+  Edit icon to switch into editing. **The detail view must show every single attribute of that
+  entity, every transaction, every chart — nothing may be dropped in the move.**
+- **Rare** (settings-shaped, visited occasionally): Account, general & per-module settings,
+  backup & recovery, disclaimers, T&C, privacy policy links — all living under one Settings
+  submenu, not scattered across page footers/toolbars.
+
+### Entity-detail decision (resolved, locked)
+
+Asked whether "Often" tier entity detail should be a popup or a dedicated page — user's answer:
+**a dedicated PAGE is fine, even preferred**, explicitly because it matches the pattern
+Portfolio's own per-stock detail already uses (`/stock/:ticker`, `/psx/stock/:ticker`) — no
+need to force everything into a popup. The one hard constraint, repeated for emphasis by the
+user: **the detail page must show every attribute the entity has — none may be silently
+dropped when migrating a module's existing modal (e.g. Banking's `AccountDetailPage`, Rentals'
+`PropertyDetailModal`) into this pattern.**
+
+### The 9 UI design rules (verbatim, apply to every page as the redesign reaches it)
+
+1. Never use nested cards (a card whose only child is another card with its own border/shadow
+   — already partially fixed once, Done item 114/Pending item 90, but treat as a standing rule
+   for all new/touched UI, not just that one historical fix).
+2. Leave good vertical space between UI components.
+3. Use wrap flex grids instead of shrinking UI to fit.
+4. Use lighter shadows to make UI less dense.
+5. Stat cards should have concrete, solid-color backgrounds with clear (unvague) boundaries and
+   only a little gradient effect — note this directly informs Done item 194's already-shipped
+   7%→24% `--card-hue` bump; keep that direction, don't re-soften it.
+6. Arrange UI/form components vertically rather than spreading across the full page width.
+7. Action buttons belong at the top-right corner of their card/section, grouped together
+   adjacent to each other — not scattered inconsistently across a page (this is the existing
+   `headerExtra`/`IconButton` pattern from Done items 121/113/196 — the rule now is to finish
+   applying it everywhere, not invent a new mechanism).
+8. Move descriptions/explanatory text into tooltips rather than permanent on-page paragraphs —
+   they make the UI dense and cluttered (same direction as the existing `Tooltip` rollout, Done
+   items 85/89/105/140/144/169 — again, keep applying, don't reinvent).
+9. Charts should share a consistent size/height across the app (the existing
+   `.chart-canvas-wrap` cap from Done item 181 is a start, audit for stragglers), and should NOT
+   always force the Y-axis to start at 0 — use a relative/appropriate scale instead so real
+   variation is visible (this is a reversal of the OPPOSITE historical fix in Done item 138,
+   which forced `autoSkip:false` on a category axis, not a value-axis zero-baseline — those are
+   different concerns, don't confuse them; check `ChartJS.defaults` and each chart's own
+   `scales.y.beginAtZero` before changing anything).
+
+### Other standing rules from the same conversation, still to apply app-wide
+
+- **"Relevant info should be present in one place rather than sifting through UI puzzle
+  pieces."** A general instruction to consolidate, not a specific page — apply it as each page
+  gets touched during the audit.
+- **"Each financial module should have the right to create, see, or update its own
+  transactions. Link it with other financial entities rather than going to a [separate]
+  page just to link itself with others."** This means every module should be able to do inline
+  cross-entity linking from its own native add/edit flow, not just via the standalone
+  `/transfers` page. **Before building anything here: audit what's already done.** Per this
+  file's own existing history, most modules likely already have exactly this (QSE/PSX Done
+  item 125, Rentals/Personal Loans/Funds Done item 131, EMI Done item 162) — verify against the
+  live code module-by-module and only build what's genuinely still missing, rather than
+  assuming a rebuild is needed.
+- **Credit card as its own normalized entity, linked to a Bank; Bank/Branch/Account-type
+  become real normalized reference data.** Currently: a credit card is modeled as
+  `BankAccount.isLiability=true` (Done item 175) with `bankName`/`branch`/`accountType` as
+  free-text fields with a suggestion datalist (Done items 82/171) — the user wants this
+  upgraded to real, structured entities: a `Bank` (with its own `Branch` list) that both bank
+  accounts AND credit cards point to, and `CreditCard` split out as a genuinely distinct record
+  type belonging to (linked to) one bank. **This is flagged as the single highest-risk piece of
+  the whole redesign** — real production data (the user's actual imported GCC/PCC credit-card-
+  as-liability-account records from the big real-data import, Done item 178) is at stake. A
+  migration for this must, at minimum: (a) design the new `Bank`/`Branch`/`CreditCard` types
+  first and get them reviewed/approved per the new plan-and-propose rule before writing any
+  migration code; (b) write a one-time, idempotent conversion from any existing
+  `isLiability: true` `BankAccount` into a real linked `CreditCard` record, preserving every
+  transaction and the account's own running balance calculation unchanged; (c) verify the
+  migration against a REAL copy of the user's actual data (the same discipline already
+  established for the Excel/RTDB import work, Done items 178-180) before it ever runs against
+  the user's real signed-in account; (d) keep `computeNetWorthByCurrency`'s existing
+  `assetBalanceByCurrency`/`creditCardLiabilityByCurrency` split (Done item 175) working
+  correctly post-migration — a credit card must keep counting as a liability, never flip to
+  being silently double-counted or dropped.
+
+### Still-open / unconfirmed pieces (do not guess at these — ask, or treat as separately scoped)
+
+- **Unified Settings hub** ("Rare" tier): consolidate Account (sign in/out, profile), Appearance
+  (currently the sidebar-footer popover), Data/Import-Export (currently `/app-data`), a
+  Security section (scope was PROPOSED — sign-out/switch-account + a summary of sign-in
+  method(s) used — but never confirmed by the user), and a Disclaimer/T&C/Privacy link. Also
+  fixes a real, already-confirmed pre-existing bug/confusion: the sidebar's "Signed in as X"
+  currently links to QSE's own `/settings` page, not a real account hub.
+- **"Defaults" scope** (mentioned in the very first nav-redesign message, "Import/Export...
+  signs ins, security, defaults, all at one place") — still unclear what "defaults" refers to.
+  My own standing proposal (never confirmed): fold it into Appearance only, since this app's
+  own locked design deliberately keeps currency per-module/per-entity, not a single global
+  default currency (no live FX source to convert against) — needs the user's explicit sign-off
+  before treating this as settled.
+- **Whether the earlier `?section=`-URL-param "fold each single-page module's `<Tabs>` sections
+  into sidebar children" plan is still wanted.** This was proposed (and never approved) BEFORE
+  the Main/Often/Rare reframing arrived; the new model likely supersedes it in spirit (a Tabs
+  section becomes either inline Main content, an Often-tier FAB+detail-page, or a Rare-tier
+  Settings submenu item — not necessarily a sidebar child at all) but this was never explicitly
+  reconciled with the user. A future session should either re-propose this folded into the
+  Main/Often/Rare plan, or drop it — don't silently build either without saying so.
+
+### Suggested phased execution order for whichever session picks this up next
+
+1. This documentation (already done, this section) — a stable design reference so the rules
+   don't have to be re-derived or re-asked for every time.
+2. Propose (plan-and-propose rule) and build the shared mechanics ONCE: an entity-card-grid
+   component (replacing ad hoc long tables for "Main" tier lists), a standard "Often"-tier
+   FAB+detail-page pattern (most modules already have pieces of this — audit and unify rather
+   than rebuild), and any new shared CSS tokens the 9 rules imply (shadow weight, stat-card
+   solid-color treatment, standard chart height/no-forced-zero-baseline).
+3. Pilot the full pattern on ONE module end-to-end (a good candidate: Cash or Bank, both
+   already fairly close to this shape) and verify it live via Playwright before rolling out
+   further — this project's own repeated lesson (see the many "measure before fixing"/"verify
+   live" notes throughout this file) is that a pattern that looks right in isolation can still
+   have real, only-visible-when-tested gaps.
+4. Roll out to the rest of the modules one at a time, in the same incremental,
+   verify-before-commit style this whole project has followed throughout — do not attempt a
+   single giant all-modules-at-once change.
+5. The Credit-card/Bank-normalization migration is its own separate, higher-risk track — do
+   not bundle it into the same PR/session as the general UI reshuffle; it touches real stored
+   financial data and needs its own focused review.
+
 ## Live URLs
 
 - New React app (QSE + PSX, `#/` and `#/psx`, now including a native Risk
