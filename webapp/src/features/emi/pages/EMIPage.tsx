@@ -14,7 +14,7 @@ import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
-import { emiSchedule, emiSummary, expectedEndDate, generateBigEmiOverrides, installmentDueDate, markupPercentage, resolvedDueDate, totalsByCurrency, whatIfExtraPayment, type EMISummary } from '../../../lib/calc/emiModule';
+import { emiSchedule, emiSummary, expectedEndDate, generateBigEmiOverrides, installmentDueDate, markupPercentage, markupRateEquivalents, resolvedDueDate, totalsByCurrency, whatIfExtraPayment, type EMISummary } from '../../../lib/calc/emiModule';
 import { dlBarV } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar } from '../../../lib/cssVar';
@@ -252,6 +252,15 @@ function LoanStatZones({ loan, sum, loanRepayments }: { loan: EMILoan; sum: EMIS
               <div className="label" style={{ cursor: 'pointer' }}>{markupLabel}</div>
             </Tooltip>
             <div className="value">{markupPercentage(loan).toFixed(2)}%</div>
+            {loan.repaymentMode === 'fixedTotal' ? (
+              <Tooltip text="Assumes the flat lifetime markup is spread evenly across the tenure — not a real compounding rate, just a comparable run-rate since this loan has no annual rate of its own.">
+                <div className="sub" style={{ cursor: 'pointer' }}>
+                  Annual equiv.: {markupRateEquivalents(loan).annual.toFixed(2)}% · Monthly equiv.: {markupRateEquivalents(loan).monthly.toFixed(2)}%
+                </div>
+              </Tooltip>
+            ) : (
+              <div className="sub">Monthly: {markupRateEquivalents(loan).monthly.toFixed(2)}%</div>
+            )}
           </div>
           <div className="stat-card card" style={hueStyle(HUES[6])}>
             <Tooltip text="Principal plus every interest/markup payment across the whole loan — the total amount you'll have paid by the time it's fully repaid.">

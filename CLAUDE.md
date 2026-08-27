@@ -3738,6 +3738,19 @@ not developer notes) continuously as features ship.
   component test (`SyncStatusIndicator.test.tsx`, 5 cases) rather than only a live signed-out
   smoke check — same approach `priceInputRemount.test.tsx` already established. `npx tsc -b` /
   `npm run test` (393 tests, 5 new) / `npm run build` all clean.
+- **EMI markup annual/monthly equivalents, second item under the new standing instruction
+  (2026-08-27) — see README Done item 190, closes Pending item 69's neighbor, item 70.** Item's
+  own text already named the most-likely fixedTotal interpretation (markup-per-month ÷
+  principal) as an unconfirmed assumption — built it as exactly that, flagged both in the new
+  `markupRateEquivalents()` function's own doc comment and in the UI's tooltip, so nobody reads
+  it as a real lender rate later. `fixedTotal`'s "annual" is always derived as monthly×12, never
+  independently — a built-in consistency guarantee, same "make the two figures unable to
+  contradict each other" instinct as Done item 188's Net Paid/Net Balance summing to 100%.
+  Verified live via Playwright with a 12%-p.a. interest loan and a 1000/1120-fixedTotal loan
+  (both over 12 months, chosen so their annual-equivalent numbers happen to coincide at 12% —
+  confirmed this isn't a coincidence hiding a bug by also adding a dedicated "uneven tenure"
+  unit test where they don't). `npx tsc -b` / `npm run test` (397 tests, 4 new) / `npm run
+  build` all clean.
 
 ## Live URLs
 

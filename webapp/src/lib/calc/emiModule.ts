@@ -257,6 +257,33 @@ export function markupPercentage(loan: EMILoan): number {
   return loan.annualRatePct ?? 0;
 }
 
+export interface MarkupRateEquivalents {
+  annual: number;
+  monthly: number;
+}
+
+/** Annual/monthly equivalents of the lifetime `markupPercentage()` figure
+ * (README Pending item 70). Trivial for interest mode — the rate IS
+ * already annual, monthly is just annual/12. fixedTotal mode has no real
+ * rate at all (see `markupPercentage`'s own doc comment: no compounding/
+ * time dimension to annualize against), so "monthly" here is the specific
+ * ASSUMED interpretation the Pending item itself named as most likely —
+ * the flat lifetime markup divided evenly across the tenure, as a % of
+ * principal — not a claim about any real lender's actual monthly cost.
+ * "Annual" for fixedTotal is just that monthly figure x12, a comparable
+ * run-rate, not a genuine annualized rate. */
+export function markupRateEquivalents(loan: EMILoan): MarkupRateEquivalents {
+  if (loan.repaymentMode === 'fixedTotal') {
+    if (!(loan.principal > 0) || !(loan.tenureMonths > 0)) return { annual: 0, monthly: 0 };
+    const total = loan.totalToReturn ?? loan.principal;
+    const markupPerMonth = (total - loan.principal) / loan.tenureMonths;
+    const monthly = (markupPerMonth / loan.principal) * 100;
+    return { annual: monthly * 12, monthly };
+  }
+  const annual = loan.annualRatePct ?? 0;
+  return { annual, monthly: annual / 12 };
+}
+
 export function expectedEndDate(loan: EMILoan): string {
   return installmentDueDate(loan, loan.tenureMonths);
 }

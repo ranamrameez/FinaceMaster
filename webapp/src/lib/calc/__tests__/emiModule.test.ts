@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { EMILoan, EMIRepayment } from '../../../types/emiWorkbook';
-import { emiSchedule, emiSummary, expectedEndDate, generateBigEmiOverrides, installmentDueDate, markupPercentage, resolvedDueDate, totalsByCurrency, whatIfExtraPayment } from '../emiModule';
+import { emiSchedule, emiSummary, expectedEndDate, generateBigEmiOverrides, installmentDueDate, markupPercentage, markupRateEquivalents, resolvedDueDate, totalsByCurrency, whatIfExtraPayment } from '../emiModule';
 
 const loan = (over: Partial<EMILoan>): EMILoan => ({
   id: 'e1',
@@ -404,6 +404,33 @@ describe('markupPercentage', () => {
   it('returns 0 for a fixedTotal loan with no markup at all', () => {
     const l = loan({ repaymentMode: 'fixedTotal', principal: 1000, totalToReturn: 1000 });
     expect(markupPercentage(l)).toBe(0);
+  });
+});
+
+describe('markupRateEquivalents', () => {
+  it('interest mode: annual is the rate itself, monthly is annual/12', () => {
+    const l = loan({ repaymentMode: 'interest', annualRatePct: 12 });
+    expect(markupRateEquivalents(l)).toEqual({ annual: 12, monthly: 1 });
+  });
+
+  it('fixedTotal mode: monthly is the lifetime markup spread evenly across the tenure', () => {
+    // 1000 principal, 1120 total -> 120 lifetime markup over 12 months = 10/mo,
+    // 10/1000 = 1% monthly, x12 = 12% annual run-rate.
+    const l = loan({ repaymentMode: 'fixedTotal', principal: 1000, totalToReturn: 1120, tenureMonths: 12 });
+    const result = markupRateEquivalents(l);
+    expect(result.monthly).toBeCloseTo(1, 5);
+    expect(result.annual).toBeCloseTo(12, 5);
+  });
+
+  it('fixedTotal mode: annual is always exactly 12x monthly, even for an uneven tenure', () => {
+    const l = loan({ repaymentMode: 'fixedTotal', principal: 1000, totalToReturn: 1150, tenureMonths: 10 });
+    const result = markupRateEquivalents(l);
+    expect(result.annual).toBeCloseTo(result.monthly * 12, 10);
+  });
+
+  it('fixedTotal mode: returns zero for a loan with no principal or no tenure', () => {
+    expect(markupRateEquivalents(loan({ repaymentMode: 'fixedTotal', principal: 0, tenureMonths: 12 }))).toEqual({ annual: 0, monthly: 0 });
+    expect(markupRateEquivalents(loan({ repaymentMode: 'fixedTotal', principal: 1000, tenureMonths: 0 }))).toEqual({ annual: 0, monthly: 0 });
   });
 });
 

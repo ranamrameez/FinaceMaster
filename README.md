@@ -4170,6 +4170,23 @@ FinanceManager live link:
      of sign-in-gated-feature verification gap. Also verified live via Playwright that the
      signed-out state correctly shows nothing (no regression), zero console errors. `npx tsc -b`
      / `npm run test` (393 tests, 5 new) / `npm run build` all clean.
+190. **EMI markup annual/monthly equivalents built, resolving Pending item 70's own named
+     interpretation question (2026-08-27).** Interest mode was trivial (rate IS already annual,
+     monthly = annual/12); fixedTotal mode had no real rate at all to begin with — picked the
+     item's own stated most-likely reading (lifetime markup spread evenly across the tenure, as
+     a % of principal) rather than leaving it unbuilt. New `markupRateEquivalents()` in
+     `lib/calc/emiModule.ts` (4 tests), explicitly documented in its own doc comment as an
+     assumed run-rate for comparison, not a real annualized/compounding rate — `fixedTotal`'s
+     "annual" is always exactly monthly×12, never independently derived, so the two figures can
+     never contradict each other. UI: a new `.sub` line under the existing "Markup percentage"/
+     "Interest rate" stat card — interest mode shows just the new Monthly figure (Annual would
+     be redundant with the existing main value); fixedTotal mode shows both Annual equiv. and
+     Monthly equiv., each with a tooltip spelling out the assumption. Verified live via
+     Playwright with two seeded loans (a 12%-p.a. interest loan and a 1000/1120-fixedTotal loan
+     over 12 months): interest loan showed 12.00% main / Monthly: 1.00%; fixedTotal loan showed
+     12.00% main / Annual equiv.: 12.00% · Monthly equiv.: 1.00% (matching hand-calculated
+     expectations exactly) — zero console errors. `npx tsc -b` / `npm run test` (397 tests, 4
+     new) / `npm run build` all clean.
 
 ## Pending
 
@@ -4609,10 +4626,11 @@ everything below is started. Working down it in priority order across following 
 69. ~~EMI Schedule table: reorder to `#, Due Date, Installment, (Net Paid + %), (Net Balance +
     %), Breakdown (Principal + %, Markup + %), Status, Actions`.~~ **Done (2026-08-27) — see
     Done item 188.**
-70. EMI: "Markup percentage" should also show the ANNUAL and MONTHLY equivalent, not just the
-    one lifetime figure. Trivial for interest mode (rate IS annual; monthly = rate/12) — needs
-    a real interpretation decision for fixedTotal mode first (a "monthly %" there most likely
-    means markup-per-month ÷ principal, but that's an assumption, not confirmed with the user).
+70. ~~EMI: "Markup percentage" should also show the ANNUAL and MONTHLY equivalent, not just the
+    one lifetime figure.~~ **Done (2026-08-27) — see Done item 190.** fixedTotal mode's
+    interpretation went with the item's own stated most-likely reading (markup-per-month ÷
+    principal) — flagged as an assumption both in the code's own doc comment and in the UI's
+    tooltip, not silently presented as a real rate.
 71. ~~EMI: add "Paid EMI count" to the Timeline zone (currently only "Remaining EMI count").~~
     **Done (2026-08-26) — see Done item 168.**
 72. EMI: real charts showing loan history/progress — "multiple charts showing different
