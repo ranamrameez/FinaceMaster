@@ -37,6 +37,18 @@ describe('cashRunningLedger', () => {
     expect(rows.map((r) => r.entry.date)).toEqual(['2026-01-01', '2026-02-01', '2026-03-01']);
     expect(rows.map((r) => r.balance)).toEqual([20, 25, 35]);
   });
+
+  it('breaks a same-instant tie by seq, not array position', () => {
+    // Two untimed same-day entries default to the identical noon-UTC
+    // instant — deliberately placed in the array in the OPPOSITE order
+    // their seq implies, a real reorder (edit/delete-and-re-add/import)
+    // that array-position-based tie-breaking would get wrong.
+    const first = entry({ date: '2026-01-01', type: 'IN', amount: 5, seq: 1 });
+    const second = entry({ date: '2026-01-01', type: 'IN', amount: 10, seq: 2 });
+    const rows = cashRunningLedger([second, first]);
+    expect(rows.map((r) => r.entry.amount)).toEqual([5, 10]);
+    expect(rows.map((r) => r.balance)).toEqual([5, 15]);
+  });
 });
 
 describe('cashBalanceByCurrency', () => {

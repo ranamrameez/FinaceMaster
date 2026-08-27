@@ -3,6 +3,13 @@ export interface CashEntry {
    * transfer links (README item 19) can reference a specific entry that
    * survives other entries being added/edited/deleted around it. */
   id: string;
+  /** Stable per-entry sequence number, the definitive tie-breaker when two
+   * entries land on the exact same instant — see `Transaction.seq` in
+   * `types/workbook.ts` for the full reasoning. Assigned/backfilled
+   * generically by `createEntryStore.ts` (this type has no bespoke store
+   * of its own), in array order since that factory has no structural
+   * guarantee of a `date` field to sort by first. */
+  seq?: number;
   date: string;
   /** Optional time-of-day ("HH:MM"), defaults to noon when absent — see
    * `lib/datetime.ts`. Lets same-day entries sort by real chronology. */

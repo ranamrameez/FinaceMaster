@@ -45,6 +45,17 @@ describe('accountRunningLedger', () => {
     expect(rows.map((r) => r.tx.id)).toEqual(['t1', 't2']);
     expect(rows.map((r) => r.balance)).toEqual([950, 1150]);
   });
+
+  it('breaks a same-instant tie by seq, not array position', () => {
+    const a = account({ openingBalance: 1000 });
+    // Same date, no time -> identical noon-UTC instant. Placed in the
+    // array in the OPPOSITE order their seq implies.
+    const first = tx({ id: 't1', date: '2026-01-01', amount: -50, seq: 1 });
+    const second = tx({ id: 't2', date: '2026-01-01', amount: 200, seq: 2 });
+    const rows = accountRunningLedger(a, [second, first]);
+    expect(rows.map((r) => r.tx.id)).toEqual(['t1', 't2']);
+    expect(rows.map((r) => r.balance)).toEqual([950, 1150]);
+  });
 });
 
 describe('totalBalanceByCurrency', () => {

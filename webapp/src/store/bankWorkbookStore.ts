@@ -1,8 +1,22 @@
 import { create } from 'zustand';
+import { toInstantMs } from '../lib/datetime';
+import { backfillSeq, nextSeq } from '../lib/seq';
 import { createEmptyBankWorkbook } from './defaultBankWorkbook';
 import type { BankAccount, BankTransaction, BankWorkbook } from '../types/bankWorkbook';
 
 const STORAGE_KEY = 'financerecorder_bank_workbook_v1';
+
+/** Backfills `seq` (see `BankTransaction.seq`'s doc comment) onto any
+ * transaction missing it, in real-instant chronological order — same
+ * pattern as `createWorkbookStore.ts`'s `normalize()`. Applied on every
+ * path data can enter the store (local load and `setWorkbook`, which also
+ * covers the Firebase pull in `useBankFirebaseSync`). */
+function normalize(wb: BankWorkbook): BankWorkbook {
+  const chronological = [...wb.transactions].sort(
+    (a, b) => toInstantMs(a.date, a.time, a.timezone) - toInstantMs(b.date, b.time, b.timezone),
+  );
+  return { ...wb, transactions: backfillSeq(wb.transactions, chronological) };
+}
 
 /** Banking has accounts (nested under settings) plus transactions — a
  * different shape again from Cash's single entries array and Personal
@@ -28,7 +42,7 @@ interface BankStoreState {
 function loadFromLocalStorage(): BankWorkbook {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return { ...createEmptyBankWorkbook(), ...JSON.parse(raw) };
+    if (raw) return normalize({ ...createEmptyBankWorkbook(), ...JSON.parse(raw) });
   } catch (e) {
     console.warn('Failed to load workbook from localStorage', e);
   }
@@ -54,8 +68,9 @@ export const useBankWorkbookStore = create<BankStoreState>((set, get) => {
     workbook: loadFromLocalStorage(),
 
     setWorkbook: (wb, opts) => {
-      set({ workbook: wb });
-      if (!opts?.skipPersist) persist(wb);
+      const next = normalize(wb);
+      set({ workbook: next });
+      if (!opts?.skipPersist) persist(next);
     },
 
     addAccount: (account) =>
@@ -74,9 +89,15 @@ export const useBankWorkbookStore = create<BankStoreState>((set, get) => {
         transactions: wb.transactions.filter((t) => t.accountId !== id),
       })),
 
-    addTransaction: (tx) => mutate((wb) => ({ ...wb, transactions: [...wb.transactions, tx] })),
+    addTransaction: (tx) =>
+      mutate((wb) => ({ ...wb, transactions: [...wb.transactions, tx.seq !== undefined ? tx : { ...tx, seq: nextSeq(wb.transactions) }] })),
 
-    addTransactions: (txs) => mutate((wb) => ({ ...wb, transactions: [...wb.transactions, ...txs] })),
+    addTransactions: (txs) =>
+      mutate((wb) => {
+        let seq = nextSeq(wb.transactions) - 1;
+        const withSeq = txs.map((t) => (t.seq !== undefined ? t : { ...t, seq: ++seq }));
+        return { ...wb, transactions: [...wb.transactions, ...withSeq] };
+      }),
 
     updateTransaction: (id, patch) =>
       mutate((wb) => ({ ...wb, transactions: wb.transactions.map((t) => (t.id === id ? { ...t, ...patch } : t)) })),

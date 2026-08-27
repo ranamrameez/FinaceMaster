@@ -1,8 +1,22 @@
 import { create } from 'zustand';
+import { toInstantMs } from '../lib/datetime';
+import { backfillSeq, nextSeq } from '../lib/seq';
 import { createEmptyRentalsWorkbook } from './defaultRentalsWorkbook';
 import type { Property, RentalEntry, RentalsWorkbook } from '../types/rentalsWorkbook';
 
 const STORAGE_KEY = 'financerecorder_rentals_workbook_v1';
+
+/** Backfills `seq` (see `RentalEntry.seq`'s doc comment) onto any entry
+ * missing it, in real-instant chronological order — same pattern as
+ * `createWorkbookStore.ts`'s `normalize()`. Applied on every path data can
+ * enter the store (local load and `setWorkbook`, which also covers the
+ * Firebase pull in `useRentalsFirebaseSync`). */
+function normalize(wb: RentalsWorkbook): RentalsWorkbook {
+  const chronological = [...wb.entries].sort(
+    (a, b) => toInstantMs(a.date, a.time, a.timezone) - toInstantMs(b.date, b.time, b.timezone),
+  );
+  return { ...wb, entries: backfillSeq(wb.entries, chronological) };
+}
 
 /** Same shape as Banking (properties nested under settings, entries
  * top-level) — hand-written following the identical idiom (mutate/
@@ -25,7 +39,7 @@ interface RentalsStoreState {
 function loadFromLocalStorage(): RentalsWorkbook {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return { ...createEmptyRentalsWorkbook(), ...JSON.parse(raw) };
+    if (raw) return normalize({ ...createEmptyRentalsWorkbook(), ...JSON.parse(raw) });
   } catch (e) {
     console.warn('Failed to load workbook from localStorage', e);
   }
@@ -51,8 +65,9 @@ export const useRentalsWorkbookStore = create<RentalsStoreState>((set, get) => {
     workbook: loadFromLocalStorage(),
 
     setWorkbook: (wb, opts) => {
-      set({ workbook: wb });
-      if (!opts?.skipPersist) persist(wb);
+      const next = normalize(wb);
+      set({ workbook: next });
+      if (!opts?.skipPersist) persist(next);
     },
 
     addProperty: (property) =>
@@ -71,9 +86,15 @@ export const useRentalsWorkbookStore = create<RentalsStoreState>((set, get) => {
         entries: wb.entries.filter((e) => e.propertyId !== id),
       })),
 
-    addEntry: (entry) => mutate((wb) => ({ ...wb, entries: [...wb.entries, entry] })),
+    addEntry: (entry) =>
+      mutate((wb) => ({ ...wb, entries: [...wb.entries, entry.seq !== undefined ? entry : { ...entry, seq: nextSeq(wb.entries) }] })),
 
-    addEntries: (entries) => mutate((wb) => ({ ...wb, entries: [...wb.entries, ...entries] })),
+    addEntries: (entries) =>
+      mutate((wb) => {
+        let seq = nextSeq(wb.entries) - 1;
+        const withSeq = entries.map((e) => (e.seq !== undefined ? e : { ...e, seq: ++seq }));
+        return { ...wb, entries: [...wb.entries, ...withSeq] };
+      }),
 
     updateEntry: (id, patch) =>
       mutate((wb) => ({ ...wb, entries: wb.entries.map((e) => (e.id === id ? { ...e, ...patch } : e)) })),

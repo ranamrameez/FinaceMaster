@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { toInstantMs } from '../lib/datetime';
+import { backfillSeq, nextSeq } from '../lib/seq';
 import { createEmptyPersonalLoansWorkbook } from './defaultPersonalLoansWorkbook';
 import type { PersonalLoan, PersonalLoanRepayment, PersonalLoansWorkbook } from '../types/personalLoansWorkbook';
 
@@ -37,7 +39,11 @@ function ensureRepaymentIds(repayments: PersonalLoanRepayment[]): PersonalLoanRe
 }
 
 function normalize(wb: PersonalLoansWorkbook): PersonalLoansWorkbook {
-  return { ...wb, repayments: ensureRepaymentIds(wb.repayments) };
+  const withIds = ensureRepaymentIds(wb.repayments);
+  const chronological = [...withIds].sort(
+    (a, b) => toInstantMs(a.date, a.time, a.timezone) - toInstantMs(b.date, b.time, b.timezone),
+  );
+  return { ...wb, repayments: backfillSeq(withIds, chronological) };
 }
 
 function loadFromLocalStorage(): PersonalLoansWorkbook {
@@ -86,9 +92,18 @@ export const usePersonalLoansWorkbookStore = create<PersonalLoansStoreState>((se
         repayments: wb.repayments.filter((r) => r.loanId !== id),
       })),
 
-    addRepayment: (repayment) => mutate((wb) => ({ ...wb, repayments: [...wb.repayments, repayment] })),
+    addRepayment: (repayment) =>
+      mutate((wb) => ({
+        ...wb,
+        repayments: [...wb.repayments, repayment.seq !== undefined ? repayment : { ...repayment, seq: nextSeq(wb.repayments) }],
+      })),
 
-    addRepayments: (repayments) => mutate((wb) => ({ ...wb, repayments: [...wb.repayments, ...repayments] })),
+    addRepayments: (repayments) =>
+      mutate((wb) => {
+        let seq = nextSeq(wb.repayments) - 1;
+        const withSeq = repayments.map((r) => (r.seq !== undefined ? r : { ...r, seq: ++seq }));
+        return { ...wb, repayments: [...wb.repayments, ...withSeq] };
+      }),
 
     updateRepayment: (id, patch) =>
       mutate((wb) => ({ ...wb, repayments: wb.repayments.map((r) => (r.id === id ? { ...r, ...patch } : r)) })),

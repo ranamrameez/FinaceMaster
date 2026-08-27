@@ -29,10 +29,20 @@ describe('transferRunningBalance', () => {
     expect(balancesReversed.get(later.id)).toBe(150);
   });
 
-  it('keeps original entry order for same-day transfers (stable tie-break)', () => {
+  it('keeps original entry order for same-day, un-seq-ed transfers (falls through to array stability)', () => {
     const first = t({ date: '2026-01-01', type: 'DEPOSIT', gross: 100, fee: 0 });
     const second = t({ date: '2026-01-01', type: 'WITHDRAWAL', gross: 30, fee: 0 });
     const balances = transferRunningBalance([first, second]);
+    expect(balances.get(first.id)).toBe(100);
+    expect(balances.get(second.id)).toBe(70);
+  });
+
+  it('breaks a same-instant tie by seq, not array position, once seq is set', () => {
+    // Same date, no time -> identical noon-UTC instant. Placed in the
+    // array in the OPPOSITE order their seq implies.
+    const first = t({ date: '2026-01-01', type: 'DEPOSIT', gross: 100, fee: 0, seq: 1 });
+    const second = t({ date: '2026-01-01', type: 'WITHDRAWAL', gross: 30, fee: 0, seq: 2 });
+    const balances = transferRunningBalance([second, first]);
     expect(balances.get(first.id)).toBe(100);
     expect(balances.get(second.id)).toBe(70);
   });

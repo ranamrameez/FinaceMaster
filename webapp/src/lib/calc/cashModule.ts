@@ -9,13 +9,16 @@ export interface CashLedgerRow {
 /** Running balance per currency, in chronological order — entries in
  * different currencies never mix into one balance (no live FX-rate source
  * to convert with). Sorted by real instant (date+time+timezone); two
- * untimed entries always tie at the same noon-UTC instant, falling through
- * to original array order (stable sort) exactly as before this field
- * existed — a strict, backward-compatible upgrade. */
+ * untimed entries falling on the same instant are then ordered by `seq`
+ * (a stable, persisted per-entry counter — see `Transaction.seq`'s doc
+ * comment) rather than relying on `Array.prototype.sort`'s stability,
+ * which doesn't survive an edit, a delete-and-re-add, or an import
+ * reordering the array. */
 export function cashRunningLedger(entries: CashEntry[]): CashLedgerRow[] {
-  const sorted = [...entries].sort(
-    (a, b) => toInstantMs(a.date, a.time, a.timezone) - toInstantMs(b.date, b.time, b.timezone),
-  );
+  const sorted = [...entries].sort((a, b) => {
+    const byInstant = toInstantMs(a.date, a.time, a.timezone) - toInstantMs(b.date, b.time, b.timezone);
+    return byInstant !== 0 ? byInstant : (a.seq ?? 0) - (b.seq ?? 0);
+  });
   const runningByCurrency: Record<string, number> = {};
   return sorted.map((entry) => {
     const delta = entry.type === 'IN' ? entry.amount : -entry.amount;

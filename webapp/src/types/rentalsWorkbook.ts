@@ -53,6 +53,10 @@ export interface Property {
 
 export interface RentalEntry {
   id: string;
+  /** Stable per-entry sequence number, the definitive tie-breaker when two
+   * entries land on the exact same instant — see `Transaction.seq` in
+   * `types/workbook.ts` for the full reasoning. */
+  seq?: number;
   propertyId: string; // currency is implied by the property, not repeated per-entry
   date: string;
   /** Optional time-of-day ("HH:MM"), defaults to noon when absent — see

@@ -154,6 +154,17 @@ describe('repaymentRunningOutstanding', () => {
     expect(remaining.get(early.id)).toBe(400);
     expect(remaining.get(later.id)).toBe(350);
   });
+
+  it('breaks a same-instant tie by seq, not array position', () => {
+    const l = loan({ principal: 500 });
+    // Same date, no time -> identical noon-UTC instant. Placed in the
+    // array in the OPPOSITE order their seq implies.
+    const first = repayment({ date: '2026-01-01', amount: 100, seq: 1 });
+    const second = repayment({ date: '2026-01-01', amount: 50, seq: 2 });
+    const remaining = repaymentRunningOutstanding(l, [second, first]);
+    expect(remaining.get(first.id)).toBe(400);
+    expect(remaining.get(second.id)).toBe(350);
+  });
 });
 
 describe('loanBalanceHistory', () => {

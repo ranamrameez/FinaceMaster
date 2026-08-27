@@ -17,6 +17,10 @@ export interface PersonalLoanRepayment {
    * deleted around it, same reasoning as `Transfer`/`CashEntry`'s earlier
    * id retrofits. */
   id: string;
+  /** Stable per-repayment sequence number, the definitive tie-breaker when
+   * two repayments land on the exact same instant — see `Transaction.seq`
+   * in `types/workbook.ts` for the full reasoning. */
+  seq?: number;
   loanId: string;
   date: string;
   /** Optional time-of-day ("HH:MM"), defaults to noon when absent — see

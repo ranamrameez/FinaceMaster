@@ -9,6 +9,20 @@ export interface Transaction {
    * by `createWorkbookStore.ts`'s `normalize()`, same pattern as
    * `Transfer.id`. */
   id?: string;
+  /** User-reported (2026-08-27): "auto generate unique int ids for each
+   * single item so that even matching dates cannot stop us from loosing
+   * the correct order of the data." A monotonically increasing per-array
+   * counter assigned once at creation (`lib/seq.ts`'s `nextSeq`) — the
+   * definitive tie-breaker for two records at the exact same instant,
+   * used instead of implicitly relying on array position (which doesn't
+   * survive an edit, a delete-and-re-add, or an import reordering the
+   * array). `sortTransactionsChronological` still checks BUY-before-SELL
+   * first on a tied instant (a real financial-correctness rule, not an
+   * ordering preference — see that function's own comment), falling back
+   * to `seq` only when that domain rule doesn't fully resolve the tie
+   * (e.g. two same-day BUYs). Retrofitted onto existing data by
+   * `createWorkbookStore.ts`'s `normalize()`, same pattern as `id`. */
+  seq?: number;
   date: string;
   /** Pending item 41: optional time-of-day, "HH:MM" 24-hour, alongside
    * `date` — see `lib/datetime.ts`. Missing time backfills to noon for
@@ -44,6 +58,8 @@ export interface Transfer {
    * transfer links (README item 19) can reference a specific transfer that
    * survives other transfers being added/edited/deleted around it. */
   id: string;
+  /** Same reasoning and retrofit pattern as `Transaction.seq` above. */
+  seq?: number;
   date: string;
   /** Pending item 41 — see `Transaction.time`/`timezone` above for the
    * shared reasoning; same optional, backfill-to-noon fields here. */
@@ -64,6 +80,8 @@ export interface Adjustment {
    * needs to reference a specific adjustment the way linking needs
    * `Transfer.id`, so this is the groundwork, not a full addressing switch. */
   id?: string;
+  /** Same reasoning and retrofit pattern as `Transaction.seq` above. */
+  seq?: number;
   date: string;
   /** Pending item 41 — same optional time/timezone fields as `Transaction`. */
   time?: string;
@@ -125,6 +143,8 @@ export interface WatchlistItem {
 export interface Dividend {
   /** Stable id — same reasoning as `Adjustment.id` above (README item 51). */
   id?: string;
+  /** Same reasoning and retrofit pattern as `Transaction.seq` above. */
+  seq?: number;
   date: string;
   /** Pending item 41 — same optional time/timezone fields as `Transaction`. */
   time?: string;
@@ -216,6 +236,10 @@ export interface CashLedgerEvent {
    * event, for real chronological sorting and (optionally) display. */
   time?: string;
   timezone?: string;
+  /** Carried through from the source record's own `seq` (see
+   * `Transaction.seq`'s doc comment) — the tie-breaker `buildCashLedger`
+   * falls back to for two events of the SAME `kind` at the same instant. */
+  seq?: number;
   kind: 'trade' | 'transfer' | 'adjustment';
   action: string;
   label: string;
