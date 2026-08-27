@@ -3859,6 +3859,16 @@ not developer notes) continuously as features ship.
   real URL navigation with no modal overlay, correct balance math and real transaction data on
   the page, working back link, and a graceful "Account not found" for a bad id instead of
   crashing — zero console errors.
+- **Banking's `AddTransactionsForm` labeled, closing item 97's remaining scope (2026-08-27) —
+  see README Done item 199.** Found while working on the account-detail-page conversion above:
+  Banking's own multi-row `AddTransactionsForm` is the exact same "toolbar `.row`, no `<thead>`,
+  no labels" pattern Done item 187 already fixed for QSE/PSX. Audited the other 6 non-exchange
+  modules FIRST before assuming Banking was the only remaining gap — none of them has a
+  multi-row toolbar-style add form at all, each adds one record at a time already `Field`-
+  wrapped per the required-field rollout — so this really was the one genuine remaining
+  instance, not a partial fix leaving others unchecked. Same first-row-only labeling convention
+  as the QSE/PSX fix. Verified live on the account detail page (its newer of two call sites):
+  every field shows a real visible label, zero console errors.
 
 ## Live URLs
 

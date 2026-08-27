@@ -4352,6 +4352,22 @@ FinanceManager live link:
      nonexistent account id shows a graceful "Account not found" instead of crashing — zero
      console errors. `npx tsc -b` / `npm run test` (397 tests, unchanged — restructured an
      existing component, no new calc logic) / `npm run build` all clean.
+199. **Banking's own multi-row `AddTransactionsForm` labeled, closing the remaining scope
+     Pending item 97 itself named (2026-08-27).** Discovered while working on Done item 198
+     (Banking's account rows → real page): Banking's `AddTransactionsForm` (used both from the
+     standalone Transactions tab and, since Done item 183, from inside the account detail view)
+     is the exact same class of gap Done item 187 already fixed for QSE/PSX — a multi-row
+     `.row` toolbar with raw `<input>`s, no `<thead>` above it, so "already labeled by column
+     header" never applied. Wrapped Date/Description/Amount/Category in `Field`, labeling only
+     the first queued row (same convention as the QSE/PSX fix). **Audited the other 6 modules
+     for the same pattern first, not assumed clean**: none of them (Cash/Personal Loans/Rentals/
+     Funds/Subscriptions/EMI) has a multi-row toolbar-style add form at all — each adds one
+     record at a time through its own `AddXForm`, already confirmed `Field`-wrapped throughout
+     during the required-field rollout (Done items 171/184) — so Banking's form was genuinely
+     the one remaining instance of this specific gap, not a partial sweep leaving others
+     unchecked. Verified live via Playwright on the account detail page specifically (the newer
+     of its two call sites): every field renders a real visible label — zero console errors.
+     `npx tsc -b` / `npm run test` (397 tests, unchanged — UI-only) / `npm run build` all clean.
 
 ## Pending
 
@@ -4918,17 +4934,14 @@ everything below is started. Working down it in priority order across following 
     autofill the BROWSER's own current time as a live default, not just a remembered
     timezone) — needs a concrete "which field, which page" example from the user to act on
     precisely rather than re-guess at an already-addressed item.
-97. App-wide, reinforced instruction: every remaining unlabeled input/form element. Done item
-    167 fixed EMI's/Personal Loans'/Subscriptions' detail-page edit forms specifically. **Done
-    item 187 (2026-08-26) re-checked and fixed the "table inline-add rows without a Field"
-    gap this item itself flagged as unverified** — the reasoning held for `TransactionsPage.tsx`'s
-    real table rows (a genuine `<thead>` sits above them), but QSE/PSX's StockPage/Transfer/
-    Adjustment/Dividends toolbar-style add-forms turned out NOT to be table rows at all and had
-    zero labels — now fixed. **Still open**: this was a targeted pass on the QSE/PSX files
-    specifically named by the original gap, not an exhaustive sweep of all 114 `.row` usages
-    app-wide — a future pass could re-check the other modules' own standalone add-forms for the
-    same class of gap, though the required-field rollout (Done items 171/184) already confirms
-    those modules' primary add-forms use `Field` throughout.
+97. ~~App-wide, reinforced instruction: every remaining unlabeled input/form element.~~ **Done
+    (2026-08-27) — see Done items 167/187/199.** Done item 199 closed out this item's own named
+    remaining scope: audited the other 6 non-exchange modules for the same "toolbar-style
+    multi-row add form with no Field" class of gap Done item 187 fixed for QSE/PSX — none of
+    them has one (each adds one record at a time, already `Field`-wrapped per the required-field
+    rollout) — Banking's own `AddTransactionsForm` was the one genuine remaining instance, now
+    fixed. Not claimed as an exhaustive sweep of every one of the 114 `.row` usages app-wide,
+    but the specific gap class this item named is now closed everywhere it was found to exist.
 98. ~~App-wide: "Compact" density should be noticeably MORE space-saving than "Comfortable".~~
     **Done (2026-08-26) — see Done item 173.** Buttons/inputs/selects were the real gap —
     completely untouched by Compact before this fix.
