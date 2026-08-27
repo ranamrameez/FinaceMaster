@@ -1,6 +1,6 @@
 import type { User } from 'firebase/auth';
 import { useState, type ReactNode } from 'react';
-import { Bar } from 'react-chartjs-2';
+import { Bar, Line } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Modal } from '../../../components/Modal';
 import { Notice } from '../../../components/Notice';
@@ -15,7 +15,7 @@ import { IconButton } from '../../../components/ui/IconButton';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { emiSchedule, emiSummary, expectedEndDate, generateBigEmiOverrides, installmentDueDate, markupPercentage, markupRateEquivalents, resolvedDueDate, totalsByCurrency, whatIfExtraPayment, type EMISummary } from '../../../lib/calc/emiModule';
-import { dlBarV } from '../../../lib/chartLabels';
+import { dlBarV, dlLine } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar } from '../../../lib/cssVar';
 import { useAppearanceStore } from '../../../store/appearanceStore';
@@ -802,6 +802,35 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
               scales: { x: { stacked: true, title: { display: true, text: 'Month' } }, y: { stacked: true } },
               plugins: { datalabels: dlBarV((v) => fmtMoney(v, loan.currencyCode)) },
             }}
+          />
+        </div>
+      </CollapsibleCard>
+
+      {/* README Pending item 72: EMI "read as no charts" beyond the
+         Amortization stacked bar above — this adds the specific alternate
+         view the item itself named as most likely wanted (a balance-over-
+         time line, matching Personal Loans' own equivalent chart, Done
+         item 172). Reuses `schedule.rows`/`resolvedDueDate` the Schedule
+         table already computes — no new calc function, since the whole
+         projected balance curve is already known from day 1 for an
+         amortizing loan (unlike Personal Loans, where balance-over-time
+         depends on actual sparse repayment events that haven't all
+         happened yet). */}
+      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Balance over time</h3>} style={{ marginBottom: 16 }}>
+        <div style={{ height: 220 }}>
+          <Line
+            data={{
+              labels: schedule.rows.map((r) => resolvedDueDate(loan, r.month, loanRepayments)),
+              datasets: [{
+                label: 'Balance',
+                data: schedule.rows.map((r) => r.balance),
+                borderColor: '#5aa9c9',
+                backgroundColor: '#5aa9c933',
+                fill: true,
+                tension: 0.2,
+              }],
+            }}
+            options={{ maintainAspectRatio: false, plugins: { legend: { display: false }, datalabels: dlLine((v) => fmtMoney(v, loan.currencyCode)) } }}
           />
         </div>
       </CollapsibleCard>

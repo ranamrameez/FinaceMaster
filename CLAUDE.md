@@ -3831,6 +3831,17 @@ not developer notes) continuously as features ship.
   both controls are genuinely absent before entering Edit mode (not just collapsed), appear
   correctly once Edit is clicked, and the moved "Generate" button still hits the real sign-in
   gate — zero console errors.
+- **EMI "Balance over time" chart, ninth item under the new standing instruction (2026-08-27) —
+  see README Done item 197, closes Pending item 72.** The item named its own likely candidate
+  (a balance-over-time line, matching Personal Loans' equivalent from Done item 172) — built
+  exactly that, no guessing at a different chart set. No new calc function: unlike Personal
+  Loans' repayment-event-driven `loanBalanceHistory()`, an EMI loan's entire balance curve is
+  already known from day 1 via the amortization formula, so this just reuses
+  `schedule.rows`/`resolvedDueDate`, the same data the Schedule table already displays. Placed
+  directly after the existing Amortization chart, inside the already-established Stats →
+  Schedule → Charts → What-if page order (Done item 168) rather than a new zone. Verified live
+  via a real chart screenshot with a seeded $10,000/12-month/12%-p.a. loan: a genuine declining
+  curve from ~9,000 to 0 across the tenure, zero console errors.
 
 ## Live URLs
 

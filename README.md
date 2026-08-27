@@ -4308,6 +4308,22 @@ FinanceManager live link:
      "Advanced" section once Edit is clicked, and the moved "Generate" button still correctly
      hits the real sign-in gate — zero console errors. `npx tsc -b` / `npm run test` (397 tests,
      unchanged — pure relocation, no logic changed) / `npm run build` all clean.
+197. **EMI "Balance over time" line chart built, resolving Pending item 72's own named
+     hypothesis (2026-08-27).** The item guessed the existing Amortization stacked-bar chart +
+     What-if planner "reads as no charts" either because it's positioned too far down the page
+     (already fixed separately by Done item 168's reorder) or because a genuinely different
+     chart type was wanted — named "balance-over-time line" as the specific likely candidate,
+     matching Personal Loans' own equivalent chart (Done item 172). Built exactly that. No new
+     calc function needed: unlike Personal Loans' `loanBalanceHistory()` (which depends on
+     actual, sparse repayment EVENTS that haven't all happened yet), an EMI loan's whole balance
+     curve is already fully known from day 1 via the amortization formula — reuses
+     `schedule.rows`/`resolvedDueDate`, the exact same data the Schedule table already computes
+     and displays. Placed directly after the Amortization chart, inside the existing Stats →
+     Schedule → Charts → What-if ordering (Done item 168) — a new chart within "Charts," not a
+     new zone. Verified live via Playwright with a seeded $10,000/12-month/12%-p.a. loan, via a
+     real chart screenshot (not just a title-text check): a genuine declining balance curve from
+     ~9,000 down to 0 across the tenure — zero console errors. `npx tsc -b` / `npm run test`
+     (397 tests, unchanged — reuses already-computed schedule data) / `npm run build` all clean.
 
 ## Pending
 
@@ -4752,12 +4768,10 @@ everything below is started. Working down it in priority order across following 
     tooltip, not silently presented as a real rate.
 71. ~~EMI: add "Paid EMI count" to the Timeline zone (currently only "Remaining EMI count").~~
     **Done (2026-08-26) — see Done item 168.**
-72. EMI: real charts showing loan history/progress — "multiple charts showing different
-    matrix." The existing Amortization-schedule stacked-bar chart + What-if planner (Done item
-    91) apparently reads as "no charts" to the user, either because it's positioned too far
-    down the page to notice (ties into item 68's reorder) or because they want a genuinely
-    different SET (e.g. balance-over-time line, paid-vs-remaining split) beyond the one
-    existing chart. Needs the user's own confirmation of which before assuming scope.
+72. ~~EMI: real charts showing loan history/progress.~~ **Done (2026-08-27) — see Done item
+    197.** Built the item's own named candidate: a "Balance over time" line chart, matching
+    Personal Loans' equivalent (Done item 172), placed right after the existing Amortization
+    chart.
 73. ~~Net Worth: daily snapshot should be automatic, not an on-demand button.~~ **Done
     (2026-08-27) — see Done item 193.** This DIRECTLY REVERSES Done item 157's own locked
     decision (on-demand-only, to avoid an accidental history point) — implemented exactly as
