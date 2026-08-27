@@ -3792,6 +3792,16 @@ not developer notes) continuously as features ship.
   Playwright signed-out (this sandbox can't sign in as the user): confirmed no snapshot gets
   auto-created and no sign-in modal pops on page load, zero NEW console errors (2 pre-existing
   FX-fetch network-block errors, already documented, unrelated to this change).
+- **`StatCard` background made more solid, sixth item under the new standing instruction
+  (2026-08-27) — see README Done item 194, closes Pending item 91.** Explicitly named as a
+  reversal of Done item 153's own softening pass — flagged again here, third reversal in this
+  same continuation (after items 73/93). Measured first: a real before screenshot at the old 7%
+  hue-mix ratio confirmed the "vague" complaint was accurate across 4 theme combinations, not
+  just subjective. Bumped all three identical `.stat-card` background rules from 7% to 24% —
+  deliberately past even the ORIGINAL pre-softening 16%, since "solid colors" asked for more
+  than either prior state. Left the glassy sheen overlay completely untouched, since the user's
+  own wording explicitly wanted that kept. Verified with real after screenshots across the same
+  4 combinations — clearly saturated now, text/contrast still readable in dark mode.
 
 ## Live URLs
 
