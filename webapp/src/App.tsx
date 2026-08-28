@@ -46,7 +46,6 @@ import { useRentalsFirebaseSync } from './lib/firebase/useRentalsFirebaseSync';
 import { usePlannedRentalsFirebaseSync } from './lib/firebase/usePlannedRentalsFirebaseSync';
 import { SubscriptionsPage } from './features/subscriptions/pages/SubscriptionsPage';
 import { useSubscriptionsFirebaseSync } from './lib/firebase/useSubscriptionsFirebaseSync';
-import { TransferLinksPage } from './features/transfers/pages/TransferLinksPage';
 import { PlanningPage } from './features/planning/pages/PlanningPage';
 import { useInterEntityTransfersFirebaseSync } from './lib/firebase/useInterEntityTransfersFirebaseSync';
 import { useNetWorthSnapshotsFirebaseSync } from './lib/firebase/useNetWorthSnapshotsFirebaseSync';
@@ -245,17 +244,6 @@ function App() {
                     syncStatus={rentalsSync.status}
                     cloudEmpty={rentalsSync.cloudEmpty}
                     uploadLocalToCloud={rentalsSync.uploadLocalToCloud}
-                  />
-                }
-              />
-              <Route
-                path="/transfers"
-                element={
-                  <TransferLinksPage
-                    user={user}
-                    syncStatus={transfersSync.status}
-                    cloudEmpty={transfersSync.cloudEmpty}
-                    uploadLocalToCloud={transfersSync.uploadLocalToCloud}
                   />
                 }
               />

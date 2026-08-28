@@ -487,10 +487,34 @@
   /* Shared floating "+" action button (components/ui/Fab.tsx) — a real
      lift+scale on hover/press so the app reads as interactive, not a
      static page (user-reported, 2026-08-27: "Hover animation is
-     excellent... UI should be more interactive and animated"). */
-  .fab-btn{width:52px; height:52px; min-width:52px; border-radius:50%; padding:0; font-size:22px; box-shadow:0 4px 16px rgba(0,0,0,.25); transition:transform .15s ease, box-shadow .15s ease;}
-  .fab-btn:hover{transform:scale(1.08) translateY(-2px); box-shadow:0 6px 22px rgba(0,0,0,.32);}
-  .fab-btn:active{transform:scale(.94);}
+     excellent... UI should be more interactive and animated"). Compound
+     `.btn.fab-btn` selector (not bare `.fab-btn`) so this reliably beats
+     the base `.btn{}` rule further down this file on specificity (0,2,0 >
+     0,1,0) regardless of which one happens to sit later in the source —
+     a bare `.fab-btn` here previously lost every property it shares with
+     `.btn` (width/min-width/border-radius/padding) to that later, more
+     generic rule, silently flattening every floating button back down to
+     a small ~40px non-round default shape. Found while adding the
+     width-consistency rule below, which hit the exact same trap. */
+  .btn.fab-btn{width:52px; height:52px; min-width:52px; border-radius:50%; padding:0; font-size:22px; box-shadow:0 4px 16px rgba(0,0,0,.25); transition:transform .15s ease, box-shadow .15s ease;}
+  .btn.fab-btn:hover{transform:scale(1.08) translateY(-2px); box-shadow:0 6px 22px rgba(0,0,0,.32);}
+  .btn.fab-btn:active{transform:scale(.94);}
+  /* `FabPanel` (components/ui/Fab.tsx) — the secondary actions that fan out
+     above the main toggle on a page with more than one FAB action (a
+     module's own "add entity" action plus the new app-wide "Transfers"
+     action). Slightly smaller than the main button so the primary toggle
+     stays visually dominant, with a small pop-in on appear. */
+  .btn.fab-btn-secondary{width:44px; height:44px; min-width:44px; font-size:18px; animation:fabPop .15s ease;}
+  @keyframes fabPop{from{transform:scale(.4); opacity:0;} to{transform:scale(1); opacity:1;}}
+
+  /* User-reported (2026-08-28): "Description and Source are making the
+     table too large to read." The base `tbody td{white-space:nowrap}` rule
+     lets a long free-text cell (Description/Note/Source) blow the whole
+     table out horizontally with no cap — this is the targeted override for
+     exactly those columns: still single-line, but capped and truncated
+     with an ellipsis, with the full text available as a native `title`
+     hover tooltip on the cell itself. */
+  .cell-clip{max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 
   /* ---------- Density: Compact — an even tighter pass for people who want
      to see as much data as possible with minimal scrolling. Comfortable
@@ -705,10 +729,31 @@
      real size (shrinking only if the row is too narrow, per `min-width`
      below), so fields size themselves instead of splitting the row. */
   .row > *{flex:0 1 auto; min-width:160px;}
+  /* User-reported (2026-08-28): "give same width (maybe 20%) to all form
+     elements app wide... Buttons with text (100px maybe with 100% on
+     mobiles?) for best UI consistency." `min-width:100px` (was 38px) here
+     is a shared minimum so short-label buttons ("Save", "Add row") stop
+     being inconsistently sized relative to each other — see `Field.tsx`'s
+     own default `width` for the input/select half of this (a CSS rule on
+     the input itself would fight every `Field width={N}` call site that
+     already relies on its own explicit, deliberately-chosen width — this
+     only needed to be a shared *default* for the common case where no
+     width is set at all, which belongs in the component, not a CSS
+     override). Set directly on this base rule, not a separate `.btn{}`
+     block elsewhere in the file — a same-specificity `.btn` selector
+     placed earlier in this file loses every property it shares with this
+     one, since equal-specificity CSS rules resolve by source order (see
+     `.btn.fab-btn` above for a real regression that trap caused). An
+     icon-only utility button (`.btn.small`, `.btn.fab-btn`) correctly
+     keeps its own smaller minimum below via higher selector specificity
+     (0,2,0 beats this rule's 0,1,0), regardless of source order. */
   .btn{
     display:inline-flex; align-items:center; justify-content:center; gap:6px; width:auto; flex:0 0 auto;
     background:color-mix(in srgb, var(--accent) 65%, #000); color:#fff; border:none; padding:8px 13px; border-radius:7px;
-    font-weight:600; font-size:13px; cursor:pointer; font-family:var(--body); min-height:38px; min-width:38px;
+    font-weight:600; font-size:13px; cursor:pointer; font-family:var(--body); min-height:38px; min-width:100px;
+  }
+  @media(max-width:640px){
+    .btn{width:100%;}
   }
   .btn svg{flex-shrink:0;}
   .btn:hover{filter:brightness(1.1);}

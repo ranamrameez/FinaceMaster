@@ -1,7 +1,12 @@
 import { NavLink, useLocation } from 'react-router-dom';
 
-export type CategoryKey = 'netWorth' | 'stocks' | 'funds' | 'bank' | 'cash' | 'personalLoans' | 'emi' | 'rentals' | 'subscriptions' | 'transfers' | 'planning' | 'budget';
+export type CategoryKey = 'netWorth' | 'stocks' | 'funds' | 'bank' | 'cash' | 'personalLoans' | 'emi' | 'rentals' | 'subscriptions' | 'planning' | 'budget';
 
+// User-requested (2026-08-28): "This entirely removes the transfers page
+// and the problem of duplicated transaction cards" — the standalone
+// Transfers page/route/nav entry is gone, replaced by an app-wide
+// "Transfers" FAB (`components/ui/Fab.tsx`'s `FabPanel`) reachable from
+// every module page.
 const CATEGORIES: { key: CategoryKey; label: string; to: string }[] = [
   { key: 'netWorth', label: 'Net Worth', to: '/net-worth' },
   { key: 'stocks', label: 'Stock Exchanges', to: '/' },
@@ -12,7 +17,6 @@ const CATEGORIES: { key: CategoryKey; label: string; to: string }[] = [
   { key: 'emi', label: 'EMI / Loans', to: '/emi-loans' },
   { key: 'rentals', label: 'Rentals', to: '/rentals' },
   { key: 'subscriptions', label: 'Subscriptions', to: '/subscriptions' },
-  { key: 'transfers', label: 'Transfers', to: '/transfers' },
   { key: 'planning', label: 'Planning', to: '/planning' },
   { key: 'budget', label: 'Budget Planner', to: '/budget' },
 ];
@@ -31,7 +35,6 @@ export function categoryForPath(pathname: string): CategoryKey {
   if (pathname.startsWith('/emi-loans')) return 'emi';
   if (pathname.startsWith('/rentals')) return 'rentals';
   if (pathname.startsWith('/subscriptions')) return 'subscriptions';
-  if (pathname.startsWith('/transfers')) return 'transfers';
   if (pathname.startsWith('/planning')) return 'planning';
   if (pathname.startsWith('/budget')) return 'budget';
   return 'stocks';

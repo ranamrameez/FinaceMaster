@@ -7,21 +7,19 @@ import { Notice } from '../../../components/Notice';
 import { Tooltip } from '../../../components/Tooltip';
 import { ChartCard } from '../../qse/components/ChartCard';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { EditIcon, ExportIcon, ListIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { EditIcon, ExportIcon, ListIcon, PlusIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Modal } from '../../../components/Modal';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
 import { AttributeList } from '../../../components/ui/AttributeList';
-import { FabButton } from '../../../components/ui/Fab';
-import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
+import { FabButton, FabPanel } from '../../../components/ui/Fab';
+import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
 import { useAmountFormat } from '../../../hooks/useAmountFormat';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
-import { getLastTransferSource, rememberTransferSource } from '../../../hooks/useLastTransferSource';
 import { hueStyle } from '../../../lib/statCardHues';
-import { defaultTimezoneForCurrency } from '../../../lib/datetime';
 import { accountBalance, accountByCategory, accountRunningLedger, bankMonthlyFlow, budgetVsActual, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
 import { plannedBankProjection } from '../../../lib/calc/plannedBalance';
 import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
@@ -30,8 +28,7 @@ import { cssVar, tickerColor } from '../../../lib/cssVar';
 import { parseCSV, toCSV } from '../../../lib/csv';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
-import { isSupportedLinkPair } from '../../../lib/interEntityLink';
-import { confirmAndDeleteLinkable, createLinkedTransfer, warnIfLinked } from '../../../lib/linkCascade';
+import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import { isValidIbanFormat, lookupIban } from '../../../lib/ibanLookup';
 import { isValidBin, lookupBin } from '../../../lib/binLookup';
 import { PK_QA_BANKS_AND_WALLETS } from '../../../lib/bankDirectory';
@@ -40,12 +37,11 @@ import { firebaseReady } from '../../../lib/firebase/client';
 import { useAppearanceStore } from '../../../store/appearanceStore';
 import { createEmptyBankWorkbook } from '../../../store/defaultBankWorkbook';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
-import { useEMIWorkbookStore } from '../../../store/emiWorkbookStore';
 import { usePlannedBankWorkbookStore } from '../../../store/plannedBankWorkbookStore';
-import { SideFields, useSideCurrency, nextUnpaidEmiMonth } from '../../transfers/pages/TransferLinksPage';
+import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
+import { linkTargetPath } from '../../transfers/pages/TransferLinksPage';
 import type { BankAccount, BankTransaction, BankWorkbook } from '../../../types/bankWorkbook';
 import type { PlannedBankTransaction } from '../../../types/plannedBank';
-import type { LinkSideConfig } from '../../../types/interEntityTransfer';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const uid = () => crypto.randomUUID();
@@ -56,23 +52,6 @@ function emptyAccount(defaultCurrency: string): Omit<BankAccount, 'id'> {
 
 const ACCOUNT_TYPES = ['Savings', 'Current', 'Checking', 'Salary', 'Business', 'Fixed deposit'];
 
-/** User-requested (2026-08-27): "you already have categories from my data.
- * add those and some more generic categs as suggestions." — a brand-new
- * or lightly-used account had nothing to suggest since the datalist was
- * built only from that ONE account's own past transactions. `bankCategorySuggestions()`
- * below unions this fixed generic list with every category actually used
- * across ALL of the user's bank accounts, so a fresh account still gets a
- * useful starting list on day one. */
-const GENERIC_CATEGORIES = [
-  'Salary', 'Income', 'Groceries', 'Utilities', 'Rent', 'Transport', 'Fuel', 'Dining',
-  'Entertainment', 'Shopping', 'Healthcare', 'Insurance', 'Education', 'Travel',
-  'Subscriptions', 'Fees & charges', 'Transfer', 'Investment', 'Loan repayment', 'Other',
-];
-
-function bankCategorySuggestions(allTransactions: BankTransaction[]): string[] {
-  const used = allTransactions.map((t) => t.category).filter((c): c is string => !!c);
-  return [...new Set([...used, ...GENERIC_CATEGORIES])].sort((a, b) => a.localeCompare(b));
-}
 const CARD_NETWORKS = ['Visa', 'Mastercard', 'American Express', 'UnionPay', 'Discover', 'JCB'];
 
 interface CreditCardValue {
@@ -277,16 +256,27 @@ function IbanLookupFields({ value, onChange, bankNameDatalistId }: { value: Iban
  * operation, so it shouldn't permanently occupy the top of the page — same
  * round-FAB + popup pattern already used for EMI's "Add a loan" (Done item
  * 166). */
-function AddAccountFab() {
-  const [open, setOpen] = useState(false);
+/** User-requested (2026-08-28): a single app-wide "Transfers" FAB, fanning
+ * out alongside each module's own entity-add FAB from one expandable panel
+ * (`FabPanel`) instead of each page showing its own single always-visible
+ * button. Bank's "Add an account" action stays exactly as it was — only
+ * the wrapper changed. */
+function AccountsFab() {
+  const [open, setOpen] = useState<'account' | 'transfer' | null>(null);
   return (
     <>
-      <FabButton label="Add an account" onClick={() => setOpen(true)}><PlusIcon /></FabButton>
-      {open && (
-        <Modal title="Add an account" onClose={() => setOpen(false)}>
-          <AddAccountForm onSaved={() => setOpen(false)} />
+      <FabPanel
+        actions={[
+          { label: 'Add an account', icon: <PlusIcon />, onClick: () => setOpen('account') },
+          { label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen('transfer') },
+        ]}
+      />
+      {open === 'account' && (
+        <Modal title="Add an account" onClose={() => setOpen(null)}>
+          <AddAccountForm onSaved={() => setOpen(null)} />
         </Modal>
       )}
+      {open === 'transfer' && <TransactionEntryModal onClose={() => setOpen(null)} />}
     </>
   );
 }
@@ -368,19 +358,28 @@ function AccountFormFields({
   );
 }
 
-function AddAccountForm({ onSaved }: { onSaved?: () => void }) {
+/** `initialCurrency` (2026-08-28) lets a caller outside this module's own
+ * FAB pre-seed the new account's currency — used by the shared "+" quick-
+ * add in `SideFields` (via `TransactionEntryModal`), which already knows
+ * which currency the picker was filtered to when "no account matches"
+ * prompted the add. `onSaved` now reports the created account's id back to
+ * the caller (still optional, still fires with no meaningful argument for
+ * the existing `AddAccountFab` caller, which only used it to close its own
+ * modal) so that same picker can auto-select the new account immediately. */
+export function AddAccountForm({ onSaved, initialCurrency }: { onSaved?: (id: string) => void; initialCurrency?: string }) {
   const addAccount = useBankWorkbookStore((s) => s.addAccount);
   const [lastCurrency, setLastCurrency] = useLastCurrency('bank-account', 'USD');
   const ensureSignedIn = useEnsureSignedIn();
-  const [a, setA] = useState(() => emptyAccount(lastCurrency));
+  const [a, setA] = useState(() => emptyAccount(initialCurrency ?? lastCurrency));
 
   const submit = async () => {
     if (!a.name.trim()) return toast('Enter an account name.');
     if (!(await ensureSignedIn('Sign in to save bank accounts.'))) return;
-    addAccount({ ...a, id: uid(), name: a.name.trim() });
+    const id = uid();
+    addAccount({ ...a, id, name: a.name.trim() });
     toast(`Account "${a.name.trim()}" added.`);
     setA(emptyAccount(a.currencyCode));
-    onSaved?.();
+    onSaved?.(id);
   };
 
   return (
@@ -563,8 +562,6 @@ export function AccountDetailPage() {
     () => (account ? plannedEntries.filter((p) => p.accountId === account.id && !p.executed).sort((a, b) => a.date.localeCompare(b.date)) : []),
     [plannedEntries, account],
   );
-  const knownCategories = useMemo(() => bankCategorySuggestions(transactions), [transactions]);
-
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   // Redesign 2026-08-27 (Often tier: "read-only by default, an Edit icon
@@ -638,60 +635,60 @@ export function AccountDetailPage() {
       </p>
 
       {/* User-reported (2026-08-28): "UI ordering still pathetic. Account
-         details buried in middle instead of showing on top." Moved ahead
-         of "Add a transaction" — an entity's own identity/attributes read
-         first, frequent actions follow.
-
-         Also (same report): "I asked to use grids to utilize space
-         properly. But you are still obsessed with 100% width cards instead
-         of making small side by side cards." Account details/Upcoming
-         plans/By category are all naturally narrower content (an attribute
-         list, a short table, a chart) — wrapped in a responsive grid
-         (design rule 3: wrap flex grids instead of shrinking UI to fit) so
-         they sit side by side on a wide screen instead of each claiming
-         the full page width for a fraction of it. */}
-      <div className="detail-grid" style={{ marginBottom: 16 }}>
-        <CollapsibleCard
-          defaultOpen={false}
-          title={<h3 style={{ margin: 0 }}>Account details</h3>}
-          headerExtra={
-            editingMeta ? (
-              <>
-                <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={() => { saveMeta(); setEditingMeta(false); }} />
-                <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={cancelMetaEdit} />
-              </>
-            ) : (
-              <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => setEditingMeta(true)} />
-            )
-          }
-        >
-          {!editingMeta ? (
-            <AttributeList
-              items={[
-                { label: 'Name', value: account.name },
-                { label: 'Currency', value: account.currencyCode },
-                { label: 'Opening balance', value: fmtMoney(account.openingBalance, account.currencyCode) },
-                { label: 'Branch', value: account.branch },
-                { label: 'Account type', value: account.accountType },
-                { label: 'IBAN', value: account.iban },
-                { label: 'Bank name', value: account.bankName },
-                { label: 'BIC', value: account.bic },
-                { label: 'Credit limit', value: account.creditLimit !== undefined ? fmtMoney(account.creditLimit, account.currencyCode) : undefined },
-                { label: 'Annual fee', value: account.annualFee !== undefined ? fmtMoney(account.annualFee, account.currencyCode) : undefined },
-                { label: 'Statement day of month', value: account.statementDate },
-                { label: 'Payment due day of month', value: account.paymentDueDate },
-                { label: 'Late fee after due date', value: account.lateFeeAfterDue !== undefined ? fmtMoney(account.lateFeeAfterDue, account.currencyCode) : undefined },
-                { label: 'Minimum amount due', value: account.minPaymentAmount !== undefined ? fmtMoney(account.minPaymentAmount, account.currencyCode) : undefined },
-                { label: 'Card network', value: account.cardNetwork },
-                { label: 'Card BIN', value: account.cardBin },
-                { label: 'Account number', value: account.accountNumber },
-                { label: 'SMS sender ID', value: account.smsSenderId },
-                { label: 'SMS sender number', value: account.smsSenderNumber },
-              ]}
-            />
+         details buried in middle instead of showing on top" — full-width,
+         alone, ahead of everything else: an entity's own identity/
+         attributes read first. */}
+      <CollapsibleCard
+        defaultOpen={false}
+        style={{ marginBottom: 16 }}
+        title={<h3 style={{ margin: 0 }}>Account details</h3>}
+        headerExtra={
+          editingMeta ? (
+            <>
+              <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={() => { saveMeta(); setEditingMeta(false); }} />
+              <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={cancelMetaEdit} />
+            </>
           ) : (
-            <AccountFormFields value={meta} onChange={(patch) => setMeta((m) => ({ ...m, ...patch }))} idSuffix="detail" />
-          )}
+            <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => setEditingMeta(true)} />
+          )
+        }
+      >
+        {!editingMeta ? (
+          <AttributeList
+            items={[
+              { label: 'Name', value: account.name },
+              { label: 'Currency', value: account.currencyCode },
+              { label: 'Opening balance', value: fmtMoney(account.openingBalance, account.currencyCode) },
+              { label: 'Branch', value: account.branch },
+              { label: 'Account type', value: account.accountType },
+              { label: 'IBAN', value: account.iban },
+              { label: 'Bank name', value: account.bankName },
+              { label: 'BIC', value: account.bic },
+              { label: 'Credit limit', value: account.creditLimit !== undefined ? fmtMoney(account.creditLimit, account.currencyCode) : undefined },
+              { label: 'Annual fee', value: account.annualFee !== undefined ? fmtMoney(account.annualFee, account.currencyCode) : undefined },
+              { label: 'Statement day of month', value: account.statementDate },
+              { label: 'Payment due day of month', value: account.paymentDueDate },
+              { label: 'Late fee after due date', value: account.lateFeeAfterDue !== undefined ? fmtMoney(account.lateFeeAfterDue, account.currencyCode) : undefined },
+              { label: 'Minimum amount due', value: account.minPaymentAmount !== undefined ? fmtMoney(account.minPaymentAmount, account.currencyCode) : undefined },
+              { label: 'Card network', value: account.cardNetwork },
+              { label: 'Card BIN', value: account.cardBin },
+              { label: 'Account number', value: account.accountNumber },
+              { label: 'SMS sender ID', value: account.smsSenderId },
+              { label: 'SMS sender number', value: account.smsSenderNumber },
+            ]}
+          />
+        ) : (
+          <AccountFormFields value={meta} onChange={(patch) => setMeta((m) => ({ ...m, ...patch }))} idSuffix="detail" />
+        )}
+      </CollapsibleCard>
+
+      {/* User-reported (2026-08-28): "Add Trc & Ctegs should be side by
+         side" — now that "Add a transaction" is gone (replaced by the
+         Transfers FAB below), this grid holds By category + Upcoming plans
+         side by side instead of either claiming the full page width. */}
+      <div className="detail-grid" style={{ marginBottom: 16 }}>
+        <CollapsibleCard defaultOpen={false} title={<h3 style={{ margin: 0 }}>By category</h3>}>
+          <CategoryBreakdownBody account={account} />
         </CollapsibleCard>
 
         {upcoming.length > 0 && (
@@ -712,28 +709,14 @@ export function AccountDetailPage() {
             </div>
           </CollapsibleCard>
         )}
-
-        <CollapsibleCard defaultOpen={false} title={<h3 style={{ margin: 0 }}>By category</h3>}>
-          <CategoryBreakdownBody account={account} />
-        </CollapsibleCard>
       </div>
 
-      {/* User-requested (2026-08-26): "a transaction/repayment/entry
-         conceptually belongs to its parent Account... should be logged...
-         from THAT item's own detail page/view" — Banking's own detail modal
-         was the clearest gap (no way to add a transaction from inside it at
-         all), exactly backwards from what a user wants when clicking into
-         an account.
-
-         2026-08-27: wrapped in a real Card — it used to be bare content
-         under a plain `<h4>`, the one section on this page that didn't
-         match Account Details' own card treatment (a real "pure mess"
-         contributor: 3 of 4 sections bare, 1 boxed, no consistent
-         boundary anywhere on the page). */}
-      <Card style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0 }}>Add a transaction</h3>
-        <AddTransactionsForm accountId={account.id} currencyCode={account.currencyCode} knownCategories={knownCategories} />
-      </Card>
+      {/* User-requested (2026-08-28): "Adding Trc UI can be removed from
+         all, that's why we are doing it one button action" — the
+         per-account "Add a transaction" card (built 2026-08-26, see the
+         history in git blame if needed) is gone; a Transfers FAB reachable
+         from this page, defaulting to THIS account, replaces it. */}
+      <AccountTransfersFab accountId={account.id} currencyCode={account.currencyCode} />
 
       {/* User-requested (2026-08-26): "Transactions belong to an account so
          should be on its detail page/popup and editable" — this used to be
@@ -787,7 +770,7 @@ function AccountsTab() {
     <div>
       <TotalBalances />
       <AccountsList />
-      <AddAccountFab />
+      <AccountsFab />
     </div>
   );
 }
@@ -801,179 +784,43 @@ function useAccountPicker() {
   return { accounts, account, accountId: account?.id ?? '', setAccountId };
 }
 
-/** User-reported (2026-08-27): "Autofillable fields are still empty (eg.
- * .time)." The Time field genuinely IS optional by design (an untimed
- * record safely falls back to noon UTC for sorting — see
- * `lib/datetime.ts`), but for a brand-new row "right now" is a strictly
- * more accurate default than leaving it blank, so prefill it with the
- * actual current time; the field stays fully editable/clearable either
- * way. */
-const nowTime = () => new Date().toTimeString().slice(0, 5);
-
-function emptyTxRow(accountId: string, currencyCode?: string): BankTransaction {
-  return { id: '', accountId, date: today(), amount: 0, description: '', category: '', source: 'manual', time: nowTime(), timezone: defaultTimezoneForCurrency(currencyCode) };
-}
-
-/** User-reported (2026-08-27, then again 2026-08-28 after the first cut
- * landed as its own separate card): "linking should be a part of the
- * transaction, not a separate card! Use 'Transferred to or from'." Every
- * OTHER module (QSE/PSX/Rentals/Personal Loans/Funds/EMI) already has this
- * as an inline toggle on its own add-form (Done items 125/131/162), never
- * a separate section — Bank's own first cut broke that convention. Folded
- * directly into `AddTransactionsForm`: a "Transferred to or from another
- * module" checkbox next to the Save button swaps Category+Time/Timezone
- * for the same `SideFields`/`createLinkedTransfer` picker the standalone
- * Transfers page uses. Scoped to the form's first (or only) row — linking
- * is inherently one record with one specific other side, so switching
- * link mode on also drops any extra queued rows. */
-function AddTransactionsForm({ accountId, currencyCode, knownCategories }: { accountId: string; currencyCode: string; knownCategories: string[] }) {
-  const addTransactions = useBankWorkbookStore((s) => s.addTransactions);
-  const ensureSignedIn = useEnsureSignedIn();
-  const emiLoans = useEMIWorkbookStore((s) => s.workbook.entries);
-  const [rows, setRows] = useState<BankTransaction[]>([emptyTxRow(accountId, currencyCode)]);
-  const [linkMode, setLinkMode] = useState(false);
-  const bankSide: LinkSideConfig = { module: 'bank', ref: accountId };
-  // User-reported (2026-08-28): "Link To always shows USD instead of
-  // filling default currency of the source/destination" — default the
-  // Cash side's currency to THIS account's own currency (the most likely
-  // real match) instead of leaving it unset, which used to silently fall
-  // through to a hardcoded 'USD' in `buildSideRecord`.
-  const [other, setOther] = useState<LinkSideConfig>(() => getLastTransferSource(bankSide) ?? { module: 'cash', currencyCode });
-
-  const update = (i: number, patch: Partial<BankTransaction>) =>
-    setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
-
-  const otherCurrency = useSideCurrency(other);
-  const currencyMismatch = !!(otherCurrency && otherCurrency !== currencyCode);
-  const pairSupported = isSupportedLinkPair('bank', other.module) && isSupportedLinkPair(other.module, 'bank');
-  const sameBankAccount = other.module === 'bank' && other.ref === accountId;
-
-  const submit = async () => {
-    const valid = rows.filter((r) => r.amount !== 0 && r.description.trim());
-    if (!valid.length) return toast('Fill in at least one complete row (description + non-zero amount).');
-    if (!(await ensureSignedIn('Sign in to save bank transactions.'))) return;
-    addTransactions(valid.map((r) => ({ ...r, id: uid(), accountId, category: r.category?.trim() || undefined })));
-    toast(`Added ${valid.length} transaction${valid.length > 1 ? 's' : ''}.`);
-    setRows([emptyTxRow(accountId, currencyCode)]);
-  };
-
-  const submitLink = async () => {
-    const r = rows[0];
-    if (r.amount === 0) return toast('Enter a non-zero amount first.');
-    if (!r.description.trim()) return toast('Enter a description first.');
-    if (sameBankAccount) return toast('Pick a different bank account — this is already that account.');
-    if (!pairSupported) return toast(`Linking Banking with this module isn't supported yet.`);
-    if (!(await ensureSignedIn('Sign in to save linked transactions.'))) return;
-    const abs = Math.abs(r.amount);
-    const emiLoan = other.module === 'emi' ? emiLoans.find((l) => l.id === other.ref) : undefined;
-    const resolvedOther = emiLoan ? { ...other, emiMonth: nextUnpaidEmiMonth(emiLoan) } : other;
-    // Bank's own sign convention (negative = spend/debit, positive =
-    // deposit/credit) already tells us the direction: a positive amount
-    // means money is arriving INTO this account (bank = "to"), negative
-    // means it's leaving (bank = "from") — the same "from"='out'/"to"='in'
-    // convention every other linked pair already uses.
-    const result = createLinkedTransfer({
-      date: r.date,
-      fromAmount: abs,
-      toAmount: abs,
-      from: r.amount >= 0 ? resolvedOther : bankSide,
-      to: r.amount >= 0 ? bankSide : resolvedOther,
-      note: r.description.trim(),
-    });
-    if ('error' in result) return toast(`Couldn't create the linked transaction: ${result.error}`);
-    rememberTransferSource(bankSide, other);
-    toast('Linked transaction added — also recorded on the other side.');
-    setRows([emptyTxRow(accountId, currencyCode)]);
-  };
-
+/** User-requested (2026-08-28): the account's own "Transfers" FAB — a
+ * single-action `FabPanel` (falls back to a plain `FabButton` visually)
+ * replacing the "Add a transaction" card that used to sit here. Opens
+ * `TransactionEntryModal` defaulted to THIS account, the same modal every
+ * other module's own Transfers FAB opens. */
+function AccountTransfersFab({ accountId, currencyCode }: { accountId: string; currencyCode: string }) {
+  const [open, setOpen] = useState(false);
   return (
-    <div>
-      {rows.map((r, i) =>
-        linkMode && i > 0 ? null : (
-          <div key={i} className="row" style={{ gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-            <Field label={i === 0 ? 'Date' : undefined} required={i === 0}>
-              <input type="date" value={r.date} onChange={(e) => update(i, { date: e.target.value })} />
-            </Field>
-            <Field label={i === 0 ? 'Description' : undefined} required={i === 0}>
-              <input placeholder="Description" value={r.description} onChange={(e) => update(i, { description: e.target.value })} style={{ width: 160 }} />
-            </Field>
-            <Field label={i === 0 ? 'Amount' : undefined} required={i === 0} title="Negative = spend/debit, positive = deposit/credit">
-              <input
-                type="number"
-                step="0.01"
-                placeholder="Amount (+/-)"
-                value={r.amount || ''}
-                onChange={(e) => update(i, { amount: Number(e.target.value) })}
-                style={{ width: 110 }}
-              />
-            </Field>
-            {linkMode ? (
-              <SideFields label="Transferred to or from" cfg={other} onChange={setOther} />
-            ) : (
-              <>
-                <Field label={i === 0 ? 'Category' : undefined}>
-                  <input
-                    list="bank-category-datalist"
-                    placeholder="Category (optional)"
-                    value={r.category}
-                    onChange={(e) => update(i, { category: e.target.value })}
-                    style={{ width: 130 }}
-                  />
-                </Field>
-                <TimeZoneFields
-                  time={r.time}
-                  timezone={r.timezone}
-                  onTimeChange={(time) => update(i, { time })}
-                  onTimezoneChange={(timezone) => update(i, { timezone })}
-                />
-                <button className="btn secondary small" onClick={() => setRows((rs) => rs.filter((_, idx) => idx !== i))}>
-                  <TrashIcon size={12} />Remove
-                </button>
-              </>
-            )}
-          </div>
-        ),
-      )}
-      <datalist id="bank-category-datalist">
-        {knownCategories.map((c) => <option key={c} value={c} />)}
-      </datalist>
-      {linkMode && currencyMismatch && (
-        <Notice tone="warning" style={{ marginBottom: 8 }}>
-          <p style={{ margin: 0 }}>{currencyCode} vs. {otherCurrency} — no live conversion, both sides record the same numeric amount.</p>
-        </Notice>
-      )}
-      <div className="row" style={{ gap: 8, alignItems: 'center' }}>
-        <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <input
-            type="checkbox"
-            checked={linkMode}
-            onChange={(e) => { setLinkMode(e.target.checked); setRows((rs) => [rs[0] ?? emptyTxRow(accountId, currencyCode)]); }}
-          />
-          Transferred to or from another module
-        </label>
-        <div style={{ flex: 1 }} />
-        {!linkMode && (
-          <button className="btn secondary" onClick={() => setRows((rs) => [...rs, emptyTxRow(accountId)])}>
-            <PlusIcon />Add row
-          </button>
-        )}
-        <button className="btn" onClick={linkMode ? submitLink : submit}>
-          <SaveIcon />
-          {linkMode ? 'Link & add' : `Save ${rows.length > 1 ? `${rows.length} transactions` : 'transaction'}`}
-        </button>
-      </div>
-      {!linkMode && <p className="footer-note" style={{ marginTop: 8 }}>Negative amount = spend/debit, positive = deposit/credit.</p>}
-    </div>
+    <>
+      <FabPanel actions={[{ label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen(true) }]} />
+      {open && <TransactionEntryModal defaultFinance={{ module: 'bank', ref: accountId, currencyCode }} onClose={() => setOpen(false)} />}
+    </>
   );
 }
+
 function TransactionsList({ account }: { account: BankAccount }) {
   const allTransactions = useBankWorkbookStore((s) => s.workbook.transactions);
   const updateTransaction = useBankWorkbookStore((s) => s.updateTransaction);
   const deleteTransaction = useBankWorkbookStore((s) => s.deleteTransaction);
+  const links = useInterEntityTransfersStore((s) => s.workbook.entries);
   const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<BankTransaction | null>(null);
 
   const ledger = useMemo(() => accountRunningLedger(account, allTransactions), [account, allTransactions]);
+
+  // User-requested (2026-08-28): "Tag/Mark and also add nav link between the
+  // linked trcs" — a recordId -> link map, built once per render (not
+  // re-scanned per row via `findLinkForRecord`'s own O(n) lookup), so a
+  // linked transaction can show a small tag pointing at the other side.
+  const linkByRecordId = useMemo(() => {
+    const map = new Map<string, (typeof links)[number]>();
+    for (const l of links) {
+      if (l.from.module === 'bank') map.set(l.fromRecordId, l);
+      if (l.to.module === 'bank') map.set(l.toRecordId, l);
+    }
+    return map;
+  }, [links]);
 
   type Col = 'date' | 'description' | 'amount' | 'category';
   const sortValue = (r: (typeof ledger)[number], col: Col): number | string => {
@@ -1008,25 +855,34 @@ function TransactionsList({ account }: { account: BankAccount }) {
                reference number per transaction, not just a truncated uuid. */}
             <th title="Sequence number — a stable reference for this transaction, in the order it was actually entered.">#</th>
             <Th col="date">Date</Th>
+            {/* User-reported (2026-08-28): "Description and Source are
+               making the table too large to read" + "Credit/Debit and
+               balance should be next to each other. Categories can be
+               marked as labels" — Description/Source clipped with a hover
+               tooltip for the full text; Category rendered as a colored
+               `.pill-info` label instead of plain text; Amount and Balance
+               moved next to each other at the end, ahead of actions. */}
             <Th col="description">Description</Th>
-            <Th col="amount">Amount</Th>
             <Th col="category">Category</Th>
-            <th>Source</th>
+            <Th col="amount">Amount</Th>
             <th>Balance</th>
+            <th>Source</th>
             <th></th>
           </tr>
         </thead>
         <tbody>
-          {sorted.map(({ tx, balance }) =>
-            editId === tx.id && editRow ? (
+          {sorted.map(({ tx, balance }) => {
+            const link = linkByRecordId.get(tx.id);
+            const otherSide = link ? (link.from.module === 'bank' && link.fromRecordId === tx.id ? link.to : link.from) : undefined;
+            return editId === tx.id && editRow ? (
               <tr key={tx.id}>
                 <td className="footer-note">{tx.seq ?? '—'}</td>
                 <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
                 <td><input value={editRow.description} onChange={(e) => setEditRow({ ...editRow, description: e.target.value })} /></td>
-                <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 100 }} /></td>
                 <td><input value={editRow.category ?? ''} onChange={(e) => setEditRow({ ...editRow, category: e.target.value })} style={{ width: 100 }} /></td>
-                <td>{editRow.source}</td>
+                <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 100 }} /></td>
                 <td></td>
+                <td>{editRow.source}</td>
                 <td>
                   <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
                   <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditId(null)} />
@@ -1036,11 +892,20 @@ function TransactionsList({ account }: { account: BankAccount }) {
               <tr key={tx.id}>
                 <td className="footer-note">{tx.seq ?? '—'}</td>
                 <td>{tx.date}</td>
-                <td>{tx.description}</td>
+                <td className="cell-clip" title={tx.description}>
+                  {tx.description}
+                  {otherSide && (
+                    <Link to={linkTargetPath(otherSide)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
+                      🔗 Linked
+                    </Link>
+                  )}
+                </td>
+                <td>{tx.category ? <span className="pill-info">{tx.category}</span> : '—'}</td>
                 <td className={tx.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(tx.amount, account.currencyCode)}</td>
-                <td>{tx.category || '—'}</td>
-                <td className="footer-note">{tx.source === 'statement-import' ? `Import${tx.statementRef ? ` (${tx.statementRef})` : ''}` : 'Manual'}</td>
                 <td>{fmtMoney(balance, account.currencyCode)}</td>
+                <td className="footer-note cell-clip" title={tx.source === 'statement-import' ? `Import${tx.statementRef ? ` (${tx.statementRef})` : ''}` : 'Manual'}>
+                  {tx.source === 'statement-import' ? `Import${tx.statementRef ? ` (${tx.statementRef})` : ''}` : 'Manual'}
+                </td>
                 <td>
                   <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(tx)} />{' '}
                   <IconButton
@@ -1051,9 +916,9 @@ function TransactionsList({ account }: { account: BankAccount }) {
                   />
                 </td>
               </tr>
-            ),
-          )}
-          {!sorted.length && <tr><td colSpan={8} className="footer-note">No transactions for this account yet.</td></tr>}
+            );
+          })}
+          {!sorted.length && <tr><td colSpan={7} className="footer-note">No transactions for this account yet.</td></tr>}
         </tbody>
       </table>
     </div>

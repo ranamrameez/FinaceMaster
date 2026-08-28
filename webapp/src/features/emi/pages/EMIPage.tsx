@@ -1,5 +1,6 @@
 import type { User } from 'firebase/auth';
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { Bar, Line } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Modal } from '../../../components/Modal';
@@ -7,12 +8,13 @@ import { Notice } from '../../../components/Notice';
 import { Tooltip } from '../../../components/Tooltip';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { EditIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { EditIcon, PlusIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { toCSV } from '../../../lib/csv';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
-import { FabButton } from '../../../components/ui/Fab';
+import { FabPanel } from '../../../components/ui/Fab';
+import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { emiSchedule, emiSummary, expectedEndDate, generateBigEmiOverrides, installmentDueDate, markupPercentage, markupRateEquivalents, resolvedDueDate, totalsByCurrency, whatIfExtraPayment, type EMISummary } from '../../../lib/calc/emiModule';
@@ -30,6 +32,8 @@ import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
 import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
 import { useEMIWorkbookStore } from '../../../store/emiWorkbookStore';
 import { usePlannedBankWorkbookStore } from '../../../store/plannedBankWorkbookStore';
+import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
+import { linkTargetPath } from '../../transfers/pages/TransferLinksPage';
 import type { LinkSideConfig } from '../../../types/interEntityTransfer';
 import type { EMILoan, EMIRepayment } from '../../../types/emiWorkbook';
 import type { PlannedBankTransaction } from '../../../types/plannedBank';
@@ -46,27 +50,44 @@ function emptyLoan(defaultCurrency: string): EMILoan {
 /** Floating "add a loan" button (README user feedback 2026-08-26: adding a
  * loan is rare, so it shouldn't permanently occupy the top of the page) —
  * same round-FAB + popup pattern the Calculator button already uses
- * elsewhere in the app. */
+ * elsewhere in the app.
+ *
+ * User-requested (2026-08-28): the app-wide "Transfers" action joins this
+ * FAB's own panel — EMI is the one module that keeps its existing add-UI
+ * (`saveOverride`'s inline schedule-pencil-edit, plus its own
+ * `LinkedEMIRepaymentFields` shortcut) untouched, since it's already MORE
+ * precise than the generic modal (any specific month, not just "the next
+ * unpaid one") — Transfers is offered here as an additional, simpler entry
+ * point, not a replacement. */
 function AddLoanFab() {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState<'loan' | 'transfer' | null>(null);
   return (
     <>
-      <FabButton label="Add a loan" onClick={() => setOpen(true)}><PlusIcon /></FabButton>
-      {open && (
-        <Modal title="Add a loan" onClose={() => setOpen(false)}>
-          <AddLoanForm onSaved={() => setOpen(false)} />
+      <FabPanel
+        actions={[
+          { label: 'Add a loan', icon: <PlusIcon />, onClick: () => setOpen('loan') },
+          { label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen('transfer') },
+        ]}
+      />
+      {open === 'loan' && (
+        <Modal title="Add a loan" onClose={() => setOpen(null)}>
+          <AddLoanForm onSaved={() => setOpen(null)} />
         </Modal>
       )}
+      {open === 'transfer' && <TransactionEntryModal onClose={() => setOpen(null)} />}
     </>
   );
 }
 
-function AddLoanForm({ onSaved }: { onSaved?: () => void }) {
+/** `initialCurrency`/`onSaved(id)` — see `AddAccountForm`'s own comment
+ * (`features/bank/pages/BankPage.tsx`) for why: the shared "+" quick-add in
+ * `SideFields` reuses this exact form from `TransactionEntryModal`. */
+export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: string) => void; initialCurrency?: string }) {
   const addEntry = useEMIWorkbookStore((s) => s.addEntry);
   const defaultCurrency = useEMIWorkbookStore((s) => s.workbook.settings.defaultCurrency);
   const [lastCurrency, setLastCurrency] = useLastCurrency('emi', defaultCurrency);
   const ensureSignedIn = useEnsureSignedIn();
-  const [l, setL] = useState<EMILoan>(() => emptyLoan(lastCurrency));
+  const [l, setL] = useState<EMILoan>(() => emptyLoan(initialCurrency ?? lastCurrency));
 
   const submit = async () => {
     if (!l.name.trim()) return toast('Enter a loan name.');
@@ -75,10 +96,11 @@ function AddLoanForm({ onSaved }: { onSaved?: () => void }) {
     if (l.repaymentMode === 'fixedTotal' && (!l.totalToReturn || l.totalToReturn <= 0)) return toast('Enter the total amount to return.');
     if (l.paymentDayOfMonth != null && (l.paymentDayOfMonth < 1 || l.paymentDayOfMonth > 31)) return toast('Payment day must be between 1 and 31.');
     if (!(await ensureSignedIn('Sign in to save loans.'))) return;
-    addEntry({ ...l, id: crypto.randomUUID(), name: l.name.trim(), lender: l.lender.trim() });
+    const id = crypto.randomUUID();
+    addEntry({ ...l, id, name: l.name.trim(), lender: l.lender.trim() });
     toast(`Loan "${l.name.trim()}" saved.`);
     setL(emptyLoan(l.currencyCode));
-    onSaved?.();
+    onSaved?.(id);
   };
 
   return (
@@ -862,9 +884,19 @@ function RepaymentLog({ loan, repayments }: { loan: EMILoan; repayments: EMIRepa
   const ensureSignedIn = useEnsureSignedIn();
   const updateRepayment = useEMIWorkbookStore((s) => s.updateRepayment);
   const deleteRepayment = useEMIWorkbookStore((s) => s.deleteRepayment);
+  const links = useInterEntityTransfersStore((s) => s.workbook.entries);
   const [editId, setEditId] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState(0);
   const sorted = [...repayments].sort((a, b) => a.month - b.month);
+
+  const linkByRecordId = useMemo(() => {
+    const map = new Map<string, (typeof links)[number]>();
+    for (const l of links) {
+      if (l.from.module === 'emi') map.set(l.fromRecordId, l);
+      if (l.to.module === 'emi') map.set(l.toRecordId, l);
+    }
+    return map;
+  }, [links]);
 
   if (!sorted.length) return null;
 
@@ -880,21 +912,33 @@ function RepaymentLog({ loan, repayments }: { loan: EMILoan; repayments: EMIRepa
   return (
     <CollapsibleCard title={<h3 style={{ margin: 0 }}>Repayment log</h3>} style={{ marginBottom: 16 }}>
       <p className="footer-note" style={{ marginTop: 0 }}>
-        Every actual payment recorded against this loan. A Bank/Cash entry on the Transfers page can link to one
-        of these — deleting a linked repayment here also removes the linked side there.
+        Every actual payment recorded against this loan. Linking it to a Bank/Cash account (via the "Link" option
+        next to a schedule row, or the Transfers action) keeps deleting one side in sync with the other.
       </p>
       <div className="table-scroll">
         <table>
           <thead><tr><th>Month</th><th>Due date</th><th>Amount</th><th>Source</th><th></th></tr></thead>
           <tbody>
-            {sorted.map((r) => (
+            {sorted.map((r) => {
+              const link = linkByRecordId.get(r.id);
+              const otherSide = link ? (link.from.module === 'emi' && link.fromRecordId === r.id ? link.to : link.from) : undefined;
+              return (
               <tr key={r.id}>
                 <td>#{r.month}</td>
                 <td>{installmentDueDate(loan, r.month)}</td>
                 <td>
                   {editId === r.id ? (
                     <TextInput type="number" step="0.01" value={editAmount || ''} onChange={(e) => setEditAmount(Number(e.target.value))} style={{ width: 100 }} />
-                  ) : fmtMoney(r.amount, loan.currencyCode)}
+                  ) : (
+                    <>
+                      {fmtMoney(r.amount, loan.currencyCode)}
+                      {otherSide && (
+                        <Link to={linkTargetPath(otherSide)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
+                          🔗 Linked
+                        </Link>
+                      )}
+                    </>
+                  )}
                 </td>
                 <td>{r.source === 'statement-import' ? 'Imported' : 'Manual'}</td>
                 <td>
@@ -911,7 +955,8 @@ function RepaymentLog({ loan, repayments }: { loan: EMILoan; repayments: EMIRepa
                   )}
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

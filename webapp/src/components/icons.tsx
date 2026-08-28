@@ -144,3 +144,15 @@ export function GoogleIcon({ size = 16 }: IconProps) {
     </svg>
   );
 }
+
+/** Two stacked opposite-direction arrows — the universal "Transfers" FAB
+ * action icon (user-requested: "left right stacked arrows"), reused
+ * app-wide by every module's `FabPanel` for the shared transaction-entry
+ * modal. */
+export function TransferIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base} aria-hidden>
+      <path d="M7 7h13l-4-4M17 17H4l4 4" />
+    </svg>
+  );
+}

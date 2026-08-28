@@ -294,7 +294,7 @@ function ActivityList({ activities }: { activities: BudgetActivity[] }) {
         <table>
           <thead>
             <tr>
-              <Th col="date">Date</Th><Th col="module">Module</Th><Th col="source">Account/Property</Th>
+              <Th col="date">Date</Th><Th col="module">Account</Th><Th col="source">Account/Property</Th>
               <th>Description</th><Th col="category">Category</Th><Th col="amount">Amount</Th><Th col="status">Status</Th>
             </tr>
           </thead>

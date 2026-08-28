@@ -4999,6 +4999,67 @@ FinanceManager live link:
      sandbox Firebase-block noted throughout this file), plus a direct tooltip-position
      measurement confirming the fix (692px/233px off → 59px/48px off). `npx tsc -b` / `npm run
      test` (442 tests, unchanged — no calc logic touched) / `npm run build` all clean.
+216. **App-wide "Transfers" FAB replaces every module's own add-transaction UI, per the user's
+     own design (2026-08-28).** The user's own framing: "single Transfers button... opens a
+     popup... entirely removes the transfers page and the problem of duplicated transaction
+     cards." Confirmed scope via `AskUserQuestion` first (everything including QSE/PSX/Funds;
+     replace each module's own add-UI but keep existing transaction lists for now; fold in the
+     rest of a smaller pending batch too). New shared `TransactionEntryModal`
+     (`components/TransactionEntryModal.tsx`), opened via a new `TransferIcon` action inside
+     each module's `FabPanel` (`components/ui/Fab.tsx` — new component: a page with more than
+     one FAB action now fans out on click instead of only ever showing one button; a
+     single-action page renders exactly like the old plain `FabButton`). Each modal row picks a
+     Finance (module → currency → entity, defaulting to whichever entity the calling page is
+     already showing via `defaultFinance`) and optionally a second Finance to make it a linked
+     transfer, reusing `createLinkedTransfer` unchanged. Removed: Bank's batch-row
+     `AddTransactionsForm`, Cash's/Rentals' single-row add-forms, Personal Loans' inline
+     repayment mini-form, and QSE/PSX/Funds' Transfers-tab add-forms — 7 modules' worth of
+     duplicated add-UI folded into one. EMI is the one deliberate exception: its existing
+     schedule pencil-editor (`saveOverride`, able to target ANY specific installment month) is
+     already MORE precise than the generic modal's "next unpaid month only," so it stays fully
+     intact — Transfers is offered as an *additional*, simpler entry point on EMI's FAB, not a
+     replacement. The standalone `/transfers` page and its `CategoryNav` entry are gone;
+     `TransferLinksPage.tsx` is now a shared-utilities-only module (`SideFields`,
+     `useSideCurrency`, `resolveCurrency`, `nextUnpaidEmiMonth`, new `linkTargetPath`) imported
+     by the new modal and by every module page that needs an inline linker. Every module's own
+     transaction/entry list gains a "🔗 Linked" tag with a working nav link to the other side —
+     the removed page's own "Linked transfers" list has no direct replacement, but this is
+     arguably better discoverability (right where the record already is). Also carried forward
+     from the smaller pending batch this was folded into: Net Worth's "By module"
+     breakdown-chart title/empty-state text and Budget Planner's "Module" table column now read
+     "account", matching how a user actually experiences these entities (the literal word
+     "module" stays where it genuinely means one of the app's 14 internal feature areas — the
+     whole-app import/export page, the Account page's sync-status blurb — not a linked
+     financial entity). **A real, pre-existing CSS cascade bug was found and fixed along the
+     way, not introduced by this change but made newly relevant by it**: the floating FAB
+     buttons' CSS used bare `.fab-btn`/`.fab-btn-secondary` selectors, which — being the same
+     specificity as the base `.btn` rule and positioned earlier in `theme.css` — silently lost
+     every property they share with that later rule (width, min-width, border-radius),
+     flattening every round 52px FAB down to a ~40px non-round default shape; confirmed via a
+     real `getComputedStyle` check before assuming, not guessed. This also fully neutralized
+     the brand-new button-width-consistency rule this same change was adding (item 11 of the
+     batch, "give buttons a consistent ~100px minimum width") — a separate `.btn{min-width:
+     100px}` block earlier in the file was silently overridden by the same later base `.btn`
+     rule and had zero effect. Fixed both at once: compound `.btn.fab-btn`/
+     `.btn.fab-btn-secondary` selectors (specificity 0,2,0 beats the base rule's 0,1,0,
+     correct regardless of source order — a more robust fix than just reordering the CSS) and
+     folded `min-width:100px` directly into the base `.btn{}` rule instead of a separate,
+     shadowed block. Verified with real before/after `getComputedStyle` checks: the FAB now
+     measures the correct 52px/round shape, a plain text button correctly measures
+     `min-width:100px`, and `.btn.small`/`IconButton`'s existing 30px minimum is confirmed
+     unaffected (already safe via its own higher specificity, independent of source order).
+     `npx tsc -b` / `npm run test` (442 tests, unchanged — no calc-engine code touched) / `npm
+     run build` all clean. Verified live via Playwright: every removed form confirmed gone; the
+     FabPanel opens the modal with the correct `defaultFinance` (module/currency/ref) prefilled
+     on Bank's account-detail page; a plain save and a linked save both correctly hit the real
+     sign-in gate (this app never allows a signed-out write, so this — not a completed write —
+     is the correct thing to verify, same depth as every other gated write in this project's
+     history); the linked-mode Finance-2 picker correctly defaults to Cash/USD; EMI's schedule
+     editor and QSE/PSX Buy/Sell trade entry are completely unaffected; a 16-page console-error
+     sweep across every touched route came back with zero real errors (only the same
+     already-documented Firebase/Google-Fonts network-block noise this sandbox always shows).
+     Opened as PR #57 (draft, self-reviewed and merged per the user's own standing "review and
+     merge yourself" instruction).
 
 ## Pending
 

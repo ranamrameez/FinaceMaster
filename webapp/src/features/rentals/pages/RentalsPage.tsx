@@ -6,15 +6,14 @@ import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
 import { hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { EditIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { EditIcon, PlusIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Modal } from '../../../components/Modal';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
-import { FabButton } from '../../../components/ui/Fab';
-import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
-import { defaultTimezoneForCurrency } from '../../../lib/datetime';
+import { FabButton, FabPanel } from '../../../components/ui/Fab';
+import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { netIncomeByCurrency, netIncomeByProperty, propertyByCategory, propertyMonthlyRollup, propertyNetIncome } from '../../../lib/calc/rentalsModule';
@@ -22,11 +21,7 @@ import { generateLeaseRentPlans, nextPendingBalance, proposeRentCollection } fro
 import { parseCSV, toCSV } from '../../../lib/csv';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
-import { confirmAndDeleteLinkable, createLinkedTransfer, warnIfLinked } from '../../../lib/linkCascade';
-import { getLastTransferSource, rememberTransferSource } from '../../../hooks/useLastTransferSource';
-import type { LinkSideConfig } from '../../../types/interEntityTransfer';
-import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
-import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
+import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import { dlBarV, dlDoughnut } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar, tickerColor } from '../../../lib/cssVar';
@@ -35,6 +30,8 @@ import { firebaseReady } from '../../../lib/firebase/client';
 import { useAppearanceStore } from '../../../store/appearanceStore';
 import { createEmptyRentalsWorkbook } from '../../../store/defaultRentalsWorkbook';
 import { useRentalsWorkbookStore } from '../../../store/rentalsWorkbookStore';
+import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
+import { linkTargetPath } from '../../transfers/pages/TransferLinksPage';
 import { usePlannedRentalsWorkbookStore } from '../../../store/plannedRentalsWorkbookStore';
 import type { Property, RentalEntry, RentalsWorkbook } from '../../../types/rentalsWorkbook';
 import { ChartCard } from '../../qse/components/ChartCard';
@@ -84,19 +81,23 @@ function AddPropertyFab() {
   );
 }
 
-function AddPropertyForm({ onSaved }: { onSaved?: () => void } = {}) {
+/** `initialCurrency`/`onSaved(id)` — see `AddAccountForm`'s own comment
+ * (`features/bank/pages/BankPage.tsx`) for why: the shared "+" quick-add in
+ * `SideFields` reuses this exact form from `TransactionEntryModal`. */
+export function AddPropertyForm({ onSaved, initialCurrency }: { onSaved?: (id: string) => void; initialCurrency?: string } = {}) {
   const addProperty = useRentalsWorkbookStore((s) => s.addProperty);
   const [lastCurrency, setLastCurrency] = useLastCurrency('rentals', 'USD');
   const ensureSignedIn = useEnsureSignedIn();
-  const [p, setP] = useState(() => emptyProperty(lastCurrency));
+  const [p, setP] = useState(() => emptyProperty(initialCurrency ?? lastCurrency));
 
   const submit = async () => {
     if (!p.name.trim()) return toast('Enter a property name.');
     if (!(await ensureSignedIn('Sign in to save rental properties.'))) return;
-    addProperty({ ...p, id: uid(), name: p.name.trim() });
+    const id = uid();
+    addProperty({ ...p, id, name: p.name.trim() });
     toast(`Property "${p.name.trim()}" added.`);
     setP(emptyProperty(p.currencyCode));
-    onSaved?.();
+    onSaved?.(id);
   };
 
   return (
@@ -531,136 +532,21 @@ function AnalyticsTab() {
   );
 }
 
-function emptyEntry(propertyId: string, currencyCode?: string): RentalEntry {
-  return { id: '', propertyId, date: today(), type: 'RENT_INCOME', amount: 0, category: '', note: '', timezone: defaultTimezoneForCurrency(currencyCode) };
-}
-
-/** Pending item 62: the same direct transfer-link shortcut already built
- * for PSX/QSE (see those pages' own `LinkedTransferFields`), now on
- * Rentals' own add-entry form — reuses the exact same
- * `createLinkedTransfer`/`useLastTransferSource` machinery, no parallel
- * implementation. Which side of the link Rentals occupies depends on the
- * entry's own type, per `interEntityLink.ts`'s documented Rentals
- * exception (it has no real balance, so `from`/`to` doesn't map to a sign
- * the way it does for every other module): a RENT_INCOME entry means real
- * money is arriving on the OTHER side, so Rentals is `from` here; an
- * EXPENSE means real money is leaving the other side, so Rentals is `to`. */
-function LinkedEntryFields({ propertyId, date, type, amount, onLinked }: { propertyId: string; date: string; type: RentalEntry['type']; amount: number; onLinked: () => void }) {
-  const ensureSignedIn = useEnsureSignedIn();
-  const bankAccounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
-  const cashCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
-  const rentalsSide: LinkSideConfig = { module: 'rentals', ref: propertyId };
-  const remembered = getLastTransferSource(rentalsSide);
-  const [otherModule, setOtherModule] = useState<'bank' | 'cash'>(remembered?.module === 'cash' ? 'cash' : 'bank');
-  const [otherAccountId, setOtherAccountId] = useState(remembered?.ref ?? bankAccounts[0]?.id ?? '');
-
-  const create = async () => {
-    if (amount <= 0) return toast('Enter an amount first.');
-    if (otherModule === 'bank' && !otherAccountId) return toast('Add a bank account on the Banking page first.');
-    if (!(await ensureSignedIn('Sign in to save transfers.'))) return;
-    const other: LinkSideConfig = otherModule === 'bank' ? { module: 'bank', ref: otherAccountId } : { module: 'cash', currencyCode: cashCurrency };
-    const input = {
-      date,
-      fromAmount: amount,
-      toAmount: amount,
-      from: type === 'RENT_INCOME' ? rentalsSide : other,
-      to: type === 'RENT_INCOME' ? other : rentalsSide,
-    };
-    const result = createLinkedTransfer(input);
-    if ('error' in result) return toast(result.error);
-    rememberTransferSource(rentalsSide, other);
-    toast('Linked entry added — also recorded on the other side.');
-    onLinked();
-  };
-
+/** User-requested (2026-08-28): the property's own "Transfers" FAB,
+ * replacing the old always-visible add-entry card AND its own bank/cash-
+ * only `LinkedEntryFields` shortcut — the shared `TransactionEntryModal`
+ * supersedes both (it links to any module, not just Bank/Cash), defaulted
+ * to THIS property. */
+function EntriesFab({ propertyId, currencyCode }: { propertyId: string; currencyCode: string }) {
+  const [open, setOpen] = useState(false);
   return (
     <>
-      <select value={otherModule} onChange={(e) => setOtherModule(e.target.value as 'bank' | 'cash')}>
-        <option value="bank">Bank account</option>
-        <option value="cash">Cash</option>
-      </select>
-      {otherModule === 'bank' && (
-        bankAccounts.length ? (
-          <select value={otherAccountId} onChange={(e) => setOtherAccountId(e.target.value)}>
-            {bankAccounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.currencyCode})</option>)}
-          </select>
-        ) : (
-          <span className="footer-note">No bank accounts yet.</span>
-        )
-      )}
-      <button className="btn" onClick={create}>
-        <PlusIcon />Link &amp; add
-      </button>
+      <FabPanel actions={[{ label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen(true) }]} />
+      {open && <TransactionEntryModal defaultFinance={{ module: 'rentals', ref: propertyId, currencyCode }} onClose={() => setOpen(false)} />}
     </>
   );
 }
 
-function AddEntryForm({ propertyId, currencyCode, knownCategories }: { propertyId: string; currencyCode: string; knownCategories: string[] }) {
-  const addEntry = useRentalsWorkbookStore((s) => s.addEntry);
-  const ensureSignedIn = useEnsureSignedIn();
-  const [e, setE] = useState<RentalEntry>(() => emptyEntry(propertyId, currencyCode));
-  const [linkMode, setLinkMode] = useState(false);
-
-  const reset = () => setE(emptyEntry(propertyId, currencyCode));
-
-  const submit = async () => {
-    if (!e.amount || e.amount <= 0) return toast('Enter an amount.');
-    if (!(await ensureSignedIn('Sign in to save rental entries.'))) return;
-    addEntry({ ...e, id: uid(), propertyId, category: e.category?.trim() || undefined, note: e.note?.trim() || undefined });
-    toast(`${e.type === 'RENT_INCOME' ? 'Rent income' : 'Expense'} logged.`);
-    reset();
-  };
-
-  return (
-    <Card style={{ marginBottom: 16 }}>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-        <Field label="Date">
-          <TextInput type="date" value={e.date} onChange={(ev) => setE({ ...e, date: ev.target.value })} />
-        </Field>
-        <Field label="Type">
-          <Select value={e.type} onChange={(ev) => setE({ ...e, type: ev.target.value as RentalEntry['type'] })} width={130}>
-            <option value="RENT_INCOME">Rent income</option>
-            <option value="EXPENSE">Expense</option>
-          </Select>
-        </Field>
-        <Field label="Amount" width={110}>
-          <TextInput type="number" step="0.01" value={e.amount || ''} onChange={(ev) => setE({ ...e, amount: Number(ev.target.value) })} />
-        </Field>
-        {!linkMode && e.type === 'EXPENSE' && (
-          <Field label="Category (optional)" width={150}>
-            <TextInput list="rentals-category-datalist" value={e.category} onChange={(ev) => setE({ ...e, category: ev.target.value })} placeholder="e.g. Maintenance" />
-          </Field>
-        )}
-        {!linkMode && (
-          <Field label="Note (optional)" width={180}>
-            <TextInput value={e.note} onChange={(ev) => setE({ ...e, note: ev.target.value })} />
-          </Field>
-        )}
-        {linkMode && (
-          <LinkedEntryFields propertyId={propertyId} date={e.date} type={e.type} amount={e.amount} onLinked={reset} />
-        )}
-        <TimeZoneFields
-          time={e.time}
-          timezone={e.timezone}
-          onTimeChange={(time) => setE({ ...e, time })}
-          onTimezoneChange={(timezone) => setE({ ...e, timezone })}
-        />
-      </div>
-      <datalist id="rentals-category-datalist">
-        {knownCategories.map((c) => <option key={c} value={c} />)}
-      </datalist>
-      {!linkMode && (
-        <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
-          <PlusIcon />Add entry
-        </button>
-      )}
-      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)', marginTop: 12 }}>
-        <input type="checkbox" checked={linkMode} onChange={(ev) => setLinkMode(ev.target.checked)} />
-        Link this to a Bank account or Cash (creates a matching entry there too, instead of just here)
-      </label>
-    </Card>
-  );
-}
 
 /** Pending item 58's remainder: this export button used to sit inside
  * `EntriesList`'s own content, one level below where every other module's
@@ -701,10 +587,19 @@ function EntriesList({ property }: { property: Property }) {
   const allEntries = useRentalsWorkbookStore((s) => s.workbook.entries);
   const updateEntry = useRentalsWorkbookStore((s) => s.updateEntry);
   const deleteEntry = useRentalsWorkbookStore((s) => s.deleteEntry);
+  const links = useInterEntityTransfersStore((s) => s.workbook.entries);
   const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<RentalEntry | null>(null);
 
   const entries = useMemo(() => allEntries.filter((e) => e.propertyId === property.id), [allEntries, property.id]);
+  const linkByRecordId = useMemo(() => {
+    const map = new Map<string, (typeof links)[number]>();
+    for (const l of links) {
+      if (l.from.module === 'rentals') map.set(l.fromRecordId, l);
+      if (l.to.module === 'rentals') map.set(l.toRecordId, l);
+    }
+    return map;
+  }, [links]);
 
   type Col = 'date' | 'type' | 'amount' | 'category';
   const sortValue = (e: RentalEntry, col: Col): number | string => {
@@ -737,8 +632,10 @@ function EntriesList({ property }: { property: Property }) {
           </tr>
         </thead>
         <tbody>
-          {sorted.map((e) =>
-            editId === e.id && editRow ? (
+          {sorted.map((e) => {
+            const link = linkByRecordId.get(e.id);
+            const otherSide = link ? (link.from.module === 'rentals' && link.fromRecordId === e.id ? link.to : link.from) : undefined;
+            return editId === e.id && editRow ? (
               <tr key={e.id}>
                 <td><input type="date" value={editRow.date} onChange={(ev) => setEditRow({ ...editRow, date: ev.target.value })} style={{ width: 130 }} /></td>
                 <td>
@@ -761,9 +658,18 @@ function EntriesList({ property }: { property: Property }) {
                 <td>{e.date}</td>
                 <td className={e.type === 'RENT_INCOME' ? 'pill-buy' : 'pill-sell'}>{e.type === 'RENT_INCOME' ? 'Rent income' : 'Expense'}</td>
                 <td className={e.type === 'RENT_INCOME' ? 'pill-buy' : 'pill-sell'}>{fmtMoney(e.type === 'RENT_INCOME' ? e.amount : -e.amount, property.currencyCode)}</td>
-                <td>{e.type === 'RENT_INCOME' ? '—' : e.category || '—'}</td>
-                <td>{e.note}</td>
-                <td className="footer-note">{e.source === 'statement-import' ? `Import${e.statementRef ? ` (${e.statementRef})` : ''}` : 'Manual'}</td>
+                <td>{e.type === 'RENT_INCOME' ? '—' : e.category ? <span className="pill-info">{e.category}</span> : '—'}</td>
+                <td className="cell-clip" title={e.note}>
+                  {e.note}
+                  {otherSide && (
+                    <Link to={linkTargetPath(otherSide)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
+                      🔗 Linked
+                    </Link>
+                  )}
+                </td>
+                <td className="footer-note cell-clip" title={e.source === 'statement-import' ? `Import${e.statementRef ? ` (${e.statementRef})` : ''}` : 'Manual'}>
+                  {e.source === 'statement-import' ? `Import${e.statementRef ? ` (${e.statementRef})` : ''}` : 'Manual'}
+                </td>
                 <td>
                   <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(e)} />{' '}
                   <IconButton
@@ -774,8 +680,8 @@ function EntriesList({ property }: { property: Property }) {
                   />
                 </td>
               </tr>
-            ),
-          )}
+            );
+          })}
           {!sorted.length && <tr><td colSpan={7} className="footer-note">No entries for this property yet.</td></tr>}
         </tbody>
       </table>
@@ -1000,12 +906,6 @@ function EntriesTab({
   propertyId: string;
   setPropertyId: (id: string) => void;
 }) {
-  const allEntries = useRentalsWorkbookStore((s) => s.workbook.entries);
-  const knownCategories = useMemo(
-    () => [...new Set(allEntries.filter((e) => e.propertyId === propertyId && e.type === 'EXPENSE').map((e) => e.category).filter((c): c is string => !!c))].sort(),
-    [allEntries, propertyId],
-  );
-
   if (!properties.length) {
     return <p className="footer-note">Add a property first (Properties tab) before logging income/expenses.</p>;
   }
@@ -1019,9 +919,9 @@ function EntriesTab({
       </Field>
       {property && (
         <div style={{ marginTop: 12 }}>
-          <AddEntryForm propertyId={property.id} currencyCode={property.currencyCode} knownCategories={knownCategories} />
           <CategoryAndRollup property={property} />
           <EntriesList property={property} />
+          <EntriesFab propertyId={property.id} currencyCode={property.currencyCode} />
         </div>
       )}
     </div>
