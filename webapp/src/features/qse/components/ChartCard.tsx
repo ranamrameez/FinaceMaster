@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { CollapsibleCard } from '../../../components/Card';
+import { Tooltip } from '../../../components/Tooltip';
 
 /** Shared wrapper for every chart across every module's Dashboard/Analytics
  * page (QSE/PSX plus every non-exchange module's Analytics tab all import
@@ -32,12 +33,23 @@ import { CollapsibleCard } from '../../../components/Card';
  * own detail view). */
 export function ChartCard({
   title,
+  titleTooltip,
   empty,
   unfiltered,
   flat,
   children,
 }: {
   title: string;
+  /** Same idea as `StatCard`'s own `labelTitle` — a short heading plus an
+   * on-demand explanation, rather than the whole caveat baked into the
+   * title string itself. Added after a real title (Net Worth's "Assets
+   * vs. liabilities — one bar pair per currency you hold, values shown in
+   * X so they're comparable") turned out to be a full sentence, which the
+   * app-wide `.card h4{text-transform:capitalize}` rule (meant for short
+   * headings) then title-cased into an awkward run-on — this rule 8
+   * ("descriptions belong in a tooltip, not permanent text") applies to a
+   * chart's own title exactly as much as it does to a stat card's label. */
+  titleTooltip?: string;
   empty?: boolean;
   unfiltered?: boolean;
   flat?: boolean;
@@ -45,7 +57,7 @@ export function ChartCard({
 }) {
   const heading = (
     <h4 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-      {title}
+      {titleTooltip ? <Tooltip text={titleTooltip}><span style={{ cursor: 'pointer' }}>{title}</span></Tooltip> : title}
       {unfiltered && <span className="footer-note" style={{ fontWeight: 400, textTransform: 'none' }}>(whole portfolio — not filtered)</span>}
     </h4>
   );

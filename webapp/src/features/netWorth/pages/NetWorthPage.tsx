@@ -479,7 +479,8 @@ export function NetWorthPage({
           currency, and a breakdown of just the currently-selected one. */}
       {assetsLiabilitiesData.length > 0 && (
         <ChartCard
-          title={`Assets vs. liabilities — one bar pair per currency you hold, values shown in ${preferredCurrency} so they're comparable`}
+          title="Assets vs. liabilities by currency"
+          titleTooltip={`One bar pair per currency you hold. Values are shown in ${preferredCurrency} so different currencies are comparable side by side.`}
           empty={false}
         >
           <div style={{ height: 220 }}>
@@ -539,10 +540,19 @@ export function NetWorthPage({
                   </span>
                 )}
               </summary>
+              {/* Colored consistently with every other stat card app-wide (the
+                  "By account" cards right below already were) — these three
+                  used to be the one plain, uncolored trio on an otherwise
+                  fully-hued page, a real inconsistency a user reported as
+                  "Net Worth UI gaps." Liabilities is always >= 0 by
+                  construction, so it gets EMI's own established fixed-loss
+                  tint for an always-nonnegative "bad" figure (see EMI's
+                  Outstanding card) rather than a sign check that would never
+                  actually flip. */}
               <div className="row" style={{ gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
-                <div className="stat-card card"><div className="label">Assets</div><MoneyValue n={r.assets} currency={r.currency} /></div>
-                <div className="stat-card card"><div className="label">Liabilities</div><MoneyValue n={r.liabilities} currency={r.currency} /></div>
-                <div className="stat-card card"><div className="label">Net</div><MoneyValue n={r.net} currency={r.currency} /></div>
+                <div className="stat-card card" style={hueStyle(r.assets >= 0 ? 'var(--profit)' : 'var(--loss)')}><div className="label">Assets</div><MoneyValue n={r.assets} currency={r.currency} /></div>
+                <div className="stat-card card" style={hueStyle('var(--loss)')}><div className="label">Liabilities</div><MoneyValue n={r.liabilities} currency={r.currency} /></div>
+                <div className="stat-card card" style={hueStyle(r.net >= 0 ? 'var(--profit)' : 'var(--loss)')}><div className="label">Net</div><MoneyValue n={r.net} currency={r.currency} /></div>
               </div>
               {/* Item 2: "grouped info of all finances" — which modules
                   actually made up this currency's total, not just the
