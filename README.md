@@ -5124,6 +5124,40 @@ FinanceManager live link:
      which works but doesn't itemize it); a possible new module (or Personal Loans extension) for
      tracking money lent to OTHER people who repay via their own EMI-style schedule; a future
      Calendar widget for day/month/year expense/income-by-category views.
+218. **Follow-up round, same day (2026-08-28) — user (correctly) called out that item 217 only
+     chased the surface symptoms of the EMI report and left the actual named asks undone.**
+     Three concrete gaps closed: (a) the Add-loan form gained its own "Big EMI every N months
+     (optional)" section — item 217 only made the EDIT form's version reachable sooner (via
+     navigate-to-edit-mode after saving) instead of putting it where the user explicitly asked
+     for it ("Add form was missing the big installment... options which should have been
+     there"). Computed via the same pure `generateBigEmiOverrides()` the edit form's Advanced
+     section already uses, set directly as `installmentOverrides` on the loan object at
+     CREATION time — simpler than the edit-flow version since there's no existing loan id or
+     `EMIRepayment` ledger to reconcile against yet. (b) `EMIRepayment` gained a real, itemized
+     `fine?: number` field — deliberately NOT folded into `amount` and NOT written into
+     `installmentOverrides`, so a late fee/penalty never affects `emiSchedule()`'s own balance/
+     interest calculation; purely a display/record-keeping figure shown alongside the real
+     installment (a "+ X fine" note under the Installment cell). Wired into the Schedule table's
+     pencil-edit row (a new "Fine (optional)" field) and `saveOverride()`. (c) Net Worth: a
+     second, more thorough pass (reading the whole file against the app's own 9 design rules,
+     not just a quick surface check) found a real rule-1 violation the first pass missed — the
+     cloud-sync-empty upload prompt wrapped its `Notice` in its own `<Card>`, while the
+     renewals-alert `Notice` earlier in the SAME file was already correctly rendered standalone
+     (a `Notice` already carries its own tinted background/border, so wrapping it in a `Card`
+     nests one bordered box inside another). Fixed to match the page's own already-correct
+     convention. **Deliberately NOT touched, after checking rather than assuming it was
+     wrong**: the per-currency `<details className="card">` sections nesting `.stat-card.card`
+     elements inside them — this looked like the same nested-card pattern at first glance, but
+     grepping EMI's `OverallSummary` found the identical structure already used there (a
+     per-currency `.card` wrapping several `.stat-card.card` totals) — an established, accepted
+     convention across multiple modules, not a Net-Worth-specific gap; "fixing" it here would
+     have made this page inconsistent with EMI instead of fixing an inconsistency. Verified live
+     via Playwright: the Add-loan form's Big EMI section renders and expands correctly, the
+     Schedule table's Fine field is present and editable, zero console errors on Net Worth after
+     the Notice fix. `npx tsc -b` / `npm run test` (442 tests, unchanged) / `npm run build` all
+     clean. **Still open, unchanged from item 217**: the lending-to-others module (the user
+     asked "how to handle?" directly — see this session's own reply for a concrete
+     recommendation, not yet built) and the future Calendar widget.
 
 ## Pending
 

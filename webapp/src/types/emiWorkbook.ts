@@ -70,6 +70,14 @@ export interface EMIRepayment {
    * unset (implicitly manual) for now since EMI has no CSV import yet. */
   source?: 'manual' | 'statement-import';
   statementRef?: string;
+  /** A late fee/penalty paid ALONGSIDE this month's own installment
+   * (user-reported 2026-08-28: "show actual payments as well as any fines
+   * paid"). Deliberately NOT folded into `amount` and NOT written into
+   * `installmentOverrides` — a fine is a penalty charge, not a payment
+   * against the loan's own principal/markup, so it must never affect
+   * `emiSchedule()`'s balance/interest calculation. Purely a display/
+   * record-keeping figure alongside the real installment. */
+  fine?: number;
 }
 
 export interface EMISettings {

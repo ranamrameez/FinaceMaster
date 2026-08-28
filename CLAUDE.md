@@ -4367,6 +4367,33 @@ not developer notes) continuously as features ship.
   month's own `amount`, which works but isn't broken out separately — a real design decision,
   not guessed at); the new lending-to-others module question (item 5 above); the future
   Calendar widget.
+- **User called out (2026-08-28, same day): the round above only chased surface symptoms and
+  left the actual named asks undone — a fair criticism, worth remembering the shape of.**
+  Three real gaps closed as a direct follow-up (README Done item 218 has the full writeup):
+  (a) Big EMI now lives on the ADD-loan form itself, not just reachable-sooner on the edit
+  form — computed via the same pure `generateBigEmiOverrides()`, set as `installmentOverrides`
+  directly on the loan object at creation (no existing id/ledger needed at that point, so this
+  is actually simpler than the edit-flow version). (b) `EMIRepayment` gained a real `fine?:
+  number` field, deliberately kept OUT of `amount`/`installmentOverrides` so a penalty never
+  distorts the loan's own balance/interest math — shown as a "+ X fine" note, editable from the
+  Schedule table's pencil-edit row. (c) A second, more thorough Net Worth pass (reading the
+  whole file against the 9 design rules, not a quick surface check) found a real rule-1
+  violation the first pass missed: the cloud-sync-empty prompt wrapped its `Notice` in its own
+  `Card`, inconsistent with the SAME file's own renewals-alert `Notice` rendered standalone —
+  fixed to match. Deliberately did NOT touch the per-currency `<details className="card">`
+  sections nesting `.stat-card.card` totals inside them, even though that looked like the same
+  nested-card pattern at first glance — grepped EMI's `OverallSummary` first and found the
+  identical structure already used there, an accepted cross-module convention, not a
+  Net-Worth-specific gap. **Lesson worth repeating for any future "you didn't actually fix
+  this" report**: a fix that only removes the loudest symptom (an old loan's stuck schedule)
+  while leaving the literal thing asked for (options on the ADD form itself) unbuilt reads as
+  "nothing happened" to the person who asked, even when real bugs did get fixed — match the
+  literal ask, not just a workaround that produces a similar outcome. Verified live via
+  Playwright: Add-loan form's Big EMI section renders/expands correctly, the Fine field is
+  present and editable on the Schedule table, zero console errors on Net Worth post-fix. `npx
+  tsc -b` / `npm run test` (442 tests, unchanged) / `npm run build` all clean. **Still open**:
+  the lending-to-others module (see this session's own reply to the user for a concrete
+  recommendation, not yet built pending their go-ahead) and the future Calendar widget.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

@@ -97,17 +97,40 @@ export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: strin
   const ensureSignedIn = useEnsureSignedIn();
   const [l, setL] = useState<EMILoan>(() => emptyLoan(initialCurrency ?? lastCurrency));
 
+  /** User-reported (2026-08-28, repeated after an earlier round only added
+   * a "jump to edit mode after saving" workaround instead of what was
+   * actually asked for): "Add form was missing the big installment,
+   * custom EMI etc. options which should have been there." Big EMI now
+   * lives directly on the add form too — computed via the same pure
+   * `generateBigEmiOverrides()` the edit form's Advanced section uses, set
+   * as `installmentOverrides` on the loan object at CREATION time. This is
+   * simpler here than in the edit flow: there's no existing loan id or
+   * `EMIRepayment` ledger to reconcile against yet, so there's nothing to
+   * write beyond the loan record itself. */
+  const [bigEmiEnabled, setBigEmiEnabled] = useState(false);
+  const [bigEmiInterval, setBigEmiInterval] = useState(6);
+  const [bigEmiAmount, setBigEmiAmount] = useState(0);
+  const [bigEmiMode, setBigEmiMode] = useState<'majorOnly' | 'regularPlusMajor'>('majorOnly');
+  const [bigEmiStartMonth, setBigEmiStartMonth] = useState(1);
+  const [bigEmiReconcile, setBigEmiReconcile] = useState(true);
+
   const submit = async () => {
     if (!l.name.trim()) return toast('Enter a loan name.');
     if (!l.principal || l.principal <= 0) return toast('Enter a principal amount.');
     if (!l.tenureMonths || l.tenureMonths <= 0) return toast('Enter a tenure in months.');
     if (l.repaymentMode === 'fixedTotal' && (!l.totalToReturn || l.totalToReturn <= 0)) return toast('Enter the total amount to return.');
     if (l.paymentDayOfMonth != null && (l.paymentDayOfMonth < 1 || l.paymentDayOfMonth > 31)) return toast('Payment day must be between 1 and 31.');
+    if (bigEmiEnabled && !(bigEmiAmount > 0)) return toast('Enter a Big EMI amount, or turn that section off.');
+    if (bigEmiEnabled && !(bigEmiInterval > 0)) return toast('Enter a Big EMI interval of at least 1 month.');
     if (!(await ensureSignedIn('Sign in to save loans.'))) return;
     const id = crypto.randomUUID();
-    addEntry({ ...l, id, name: l.name.trim(), lender: l.lender.trim() });
-    toast(`Loan "${l.name.trim()}" saved.`);
+    const installmentOverrides = bigEmiEnabled
+      ? generateBigEmiOverrides(l, bigEmiStartMonth, { intervalMonths: bigEmiInterval, amount: bigEmiAmount, mode: bigEmiMode, reconcileLastMonth: bigEmiReconcile })
+      : undefined;
+    addEntry({ ...l, id, name: l.name.trim(), lender: l.lender.trim(), installmentOverrides });
+    toast(`Loan "${l.name.trim()}" saved${bigEmiEnabled ? ` with ${Object.keys(installmentOverrides ?? {}).length} Big EMI month(s)` : ''}.`);
     setL(emptyLoan(l.currencyCode));
+    setBigEmiEnabled(false);
     onSaved?.(id);
   };
 
@@ -170,7 +193,45 @@ export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: strin
           />
         </Field>
       </div>
-      <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
+
+      <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <input type="checkbox" checked={bigEmiEnabled} onChange={(e) => setBigEmiEnabled(e.target.checked)} />
+          <span style={{ fontWeight: 600 }}>Big EMI every N months (optional)</span>
+        </label>
+        <p className="footer-note" style={{ marginTop: 4, marginBottom: bigEmiEnabled ? 8 : 0 }}>
+          For loans with an occasional bigger payment — e.g. a property installment plan with a larger payment every
+          6 months. The loan keeps its original tenure; if the remainder checkbox is on, whatever's still owed at
+          the final month gets swept into that last installment.
+        </p>
+        {bigEmiEnabled && (
+          <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <Field label="Every N months">
+              <TextInput type="number" min={1} value={bigEmiInterval || ''} onChange={(e) => setBigEmiInterval(Number(e.target.value))} style={{ width: 90 }} />
+            </Field>
+            <Field label="Amount" title="Either the whole payment for that month, or an extra amount stacked on top of the regular installment — pick which below.">
+              <TextInput type="number" step="0.01" value={bigEmiAmount || ''} onChange={(e) => setBigEmiAmount(Number(e.target.value))} style={{ width: 120 }} />
+            </Field>
+            <Field label="How the amount applies">
+              <Select value={bigEmiMode} onChange={(e) => setBigEmiMode(e.target.value as 'majorOnly' | 'regularPlusMajor')}>
+                <option value="majorOnly">Major month pays this amount only</option>
+                <option value="regularPlusMajor">Major month pays regular + this amount</option>
+              </Select>
+            </Field>
+            <Field label="Start from month #" title="1 covers the whole loan from its own start. A later month number only applies from there onward.">
+              <TextInput type="number" min={1} value={bigEmiStartMonth || ''} onChange={(e) => setBigEmiStartMonth(Math.max(1, Number(e.target.value)))} style={{ width: 90 }} />
+            </Field>
+          </div>
+        )}
+        {bigEmiEnabled && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>
+            <input type="checkbox" checked={bigEmiReconcile} onChange={(e) => setBigEmiReconcile(e.target.checked)} />
+            Add unreconciled amount to last month
+          </label>
+        )}
+      </div>
+
+      <button className="btn" style={{ marginTop: 16 }} onClick={submit}>
         <PlusIcon />Add loan
       </button>
     </div>
@@ -355,6 +416,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
   const [overrideMonth, setOverrideMonth] = useState<number | null>(null);
   const [overrideValue, setOverrideValue] = useState(0);
   const [overrideDate, setOverrideDate] = useState('');
+  const [overrideFine, setOverrideFine] = useState(0);
   const [overrideLinkMode, setOverrideLinkMode] = useState(false);
   const [showFullSchedule, setShowFullSchedule] = useState(false);
   const [bigEmiInterval, setBigEmiInterval] = useState(6);
@@ -391,19 +453,20 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
    * `installmentOverrides` in sync as a side effect, so the schedule engine
    * itself is untouched, but the payment is now a real ledger row a
    * Bank/Cash transfer can link to (see the Transfers page). */
-  const saveOverride = async (month: number, value: number, date?: string) => {
+  const saveOverride = async (month: number, value: number, date?: string, fine?: number) => {
     if (!(value > 0)) return toast('Enter an amount greater than zero.');
     if (!(await ensureSignedIn('Sign in to customize this loan\'s schedule.'))) return;
     const dueDate = date || installmentDueDate(loan, month);
+    const fineValue = fine && fine > 0 ? fine : undefined;
     const existing = loanRepayments.find((r) => r.month === month);
     if (existing) {
       if (!(await warnIfLinked('emi', existing.id))) return;
-      updateRepayment(existing.id, { amount: value, date: dueDate });
+      updateRepayment(existing.id, { amount: value, date: dueDate, fine: fineValue });
     } else {
-      addRepayment({ id: crypto.randomUUID(), loanId: loan.id, month, amount: value, date: dueDate, source: 'manual' });
+      addRepayment({ id: crypto.randomUUID(), loanId: loan.id, month, amount: value, date: dueDate, source: 'manual', fine: fineValue });
     }
     setOverrideMonth(null);
-    toast(`Month #${month} set to ${fmtMoney(value, loan.currencyCode)}.`);
+    toast(`Month #${month} set to ${fmtMoney(value, loan.currencyCode)}${fineValue ? ` + ${fmtMoney(fineValue, loan.currencyCode)} fine` : ''}.`);
   };
 
   const clearOverride = async (month: number) => {
@@ -756,6 +819,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
               const balancePct = netToReturn > 0 ? (r.balance / netToReturn) * 100 : 0;
               const principalPct = netToReturn > 0 ? (r.principalComp / netToReturn) * 100 : 0;
               const markupPct = netToReturn > 0 ? (r.interest / netToReturn) * 100 : 0;
+              const rowRepayment = loanRepayments.find((rp) => rp.month === r.month);
               return (
               <tr key={r.month}>
                 <td>#{r.month}</td>
@@ -768,6 +832,9 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                       <Field label="Due date">
                         <TextInput type="date" value={overrideDate} onChange={(e) => setOverrideDate(e.target.value)} style={{ width: 140 }} />
                       </Field>
+                      <Field label="Fine (optional)" title="A late fee/penalty paid alongside this month's installment — tracked separately and shown alongside the payment, but never counted against the loan's own balance.">
+                        <TextInput type="number" step="0.01" value={overrideFine || ''} onChange={(e) => setOverrideFine(Number(e.target.value))} style={{ width: 100 }} />
+                      </Field>
                       {overrideLinkMode ? (
                         <LinkedEMIRepaymentFields
                           loan={loan}
@@ -777,7 +844,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                           onLinked={() => { setOverrideMonth(null); setOverrideLinkMode(false); }}
                         />
                       ) : (
-                        <IconButton label="Save" icon={<SaveIcon size={13} />} onClick={() => saveOverride(r.month, overrideValue, overrideDate)} />
+                        <IconButton label="Save" icon={<SaveIcon size={13} />} onClick={() => saveOverride(r.month, overrideValue, overrideDate, overrideFine)} />
                       )}
                       <IconButton label="Cancel" icon={<XIcon size={13} />} onClick={() => { setOverrideMonth(null); setOverrideLinkMode(false); }} />
                     </div>
@@ -795,6 +862,11 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                       {r.isBalloon && (
                         <Tooltip text="This final payment was automatically true'd up to whatever was actually still owed, since your custom monthly payment doesn't exactly clear the loan by the last month.">
                           <span className="footer-note" style={{ cursor: 'pointer' }}> (final payment)</span>
+                        </Tooltip>
+                      )}
+                      {!!rowRepayment?.fine && (
+                        <Tooltip text="A late fee/penalty paid alongside this installment — not counted against the loan's own balance.">
+                          <div className="footer-note" style={{ cursor: 'pointer' }}>+ {fmtMoney(rowRepayment.fine, loan.currencyCode)} fine</div>
                         </Tooltip>
                       )}
                     </td>
@@ -818,7 +890,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                         label="Set a custom amount/date for this month"
                         icon={<EditIcon size={13} />}
                         align="right"
-                        onClick={() => { setOverrideMonth(r.month); setOverrideValue(r.emi); setOverrideDate(resolvedDueDate(loan, r.month, loanRepayments)); setOverrideLinkMode(false); }}
+                        onClick={() => { setOverrideMonth(r.month); setOverrideValue(r.emi); setOverrideDate(resolvedDueDate(loan, r.month, loanRepayments)); setOverrideFine(rowRepayment?.fine ?? 0); setOverrideLinkMode(false); }}
                       />
                       {r.overridden && <IconButton label="Reset to the regular installment" icon={<XIcon size={13} />} align="right" onClick={() => clearOverride(r.month)} />}
                     </div>
