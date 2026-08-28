@@ -2,17 +2,15 @@ import { Fragment, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PSX_TICKER_DATALIST_ID } from '../../../components/PSXTickerDatalist';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { EditIcon, ExportIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { EditIcon, ExportIcon, PlusIcon, SaveIcon, TrashIcon, TransferIcon, XIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { Tooltip } from '../../../components/Tooltip';
 import { toast } from '../../../components/Toast';
+import { FabPanel } from '../../../components/ui/Fab';
+import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
-import { confirmAndDeleteLinkable, createLinkedTransfer, warnIfLinked } from '../../../lib/linkCascade';
-import { getLastTransferSource, rememberTransferSource } from '../../../hooks/useLastTransferSource';
-import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
-import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
-import type { LinkSideConfig } from '../../../types/interEntityTransfer';
+import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import { computeClosedTrades } from '../../../lib/calc/closedTrades';
 import { isNettedLeg } from '../../../lib/calc/psxFees';
 import { transferRunningBalance } from '../../../lib/calc/transferBalance';
@@ -24,6 +22,8 @@ import { defaultTimezoneForCurrency, defaultTimezoneForMarket } from '../../../l
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { createEmptyPSXWorkbook } from '../../../store/defaultPsxWorkbook';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
+import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
+import { linkTargetPath } from '../../transfers/pages/TransferLinksPage';
 import type { Adjustment, Transaction, Transfer } from '../../../types/workbook';
 import { DividendsSection } from '../components/DividendsSection';
 import { usePSXDerived } from '../hooks/usePSXDerived';
@@ -147,142 +147,16 @@ function TransactionRows() {
   );
 }
 
-/** README item 62 / Pending item 62's "check feasibility" ask: let PSX's own
- * Transfers form create a linked Bank/Cash transfer directly, instead of
- * needing the separate Transfers page for the exact case the user gave as
- * their own example ("PSX i can only use Zindagi Account for Deposits &
- * Withdrawals"). Prototyped here first, on one module, before deciding
- * whether it's worth generalizing to Rentals/Personal Loans/Funds/EMI too —
- * see this file's own README Done item for the reasoning. Reuses the exact
- * same `createLinkedTransfer`/`useLastTransferSource` machinery the
- * Transfers page itself uses, not a parallel implementation. Deliberately
- * simpler than the full Transfers page in one respect: both sides always
- * share the same amount (no "different amount on the other side" toggle) —
- * a real cross-currency conversion still belongs on the full Transfers page,
- * which already has that control; this shortcut is for the common
- * same-currency case its own worked example describes. */
-function LinkedTransferFields({ date, type, gross, onLinked }: { date: string; type: Transfer['type']; gross: number; onLinked: () => void }) {
-  const ensureSignedIn = useEnsureSignedIn();
-  const bankAccounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
-  const cashCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
-  const psxSide: LinkSideConfig = { module: 'psx' };
-  const remembered = getLastTransferSource(psxSide);
-  const [otherModule, setOtherModule] = useState<'bank' | 'cash'>(remembered?.module === 'cash' ? 'cash' : 'bank');
-  const [otherAccountId, setOtherAccountId] = useState(remembered?.ref ?? bankAccounts[0]?.id ?? '');
-
-  const create = async () => {
-    if (gross <= 0) return toast('Enter an amount first.');
-    if (otherModule === 'bank' && !otherAccountId) return toast('Add a bank account on the Banking page first.');
-    if (!(await ensureSignedIn('Sign in to save transfers.'))) return;
-    const other: LinkSideConfig = otherModule === 'bank' ? { module: 'bank', ref: otherAccountId } : { module: 'cash', currencyCode: cashCurrency };
-    // A PSX deposit means money flows FROM the other source INTO PSX; a
-    // withdrawal is the reverse.
-    const input = {
-      date,
-      fromAmount: gross,
-      toAmount: gross,
-      from: type === 'DEPOSIT' ? other : psxSide,
-      to: type === 'DEPOSIT' ? psxSide : other,
-    };
-    const result = createLinkedTransfer(input);
-    if ('error' in result) return toast(result.error);
-    rememberTransferSource(psxSide, other);
-    toast('Linked transfer added — also recorded on the other side.');
-    onLinked();
-  };
-
+/** User-requested (2026-08-28): the module's own "Transfers" FAB, replacing
+ * the old always-visible add-transfer form — opens the shared
+ * `TransactionEntryModal` defaulted to this exchange's own workbook. */
+function TransfersFab() {
+  const [open, setOpen] = useState(false);
   return (
     <>
-      <select value={otherModule} onChange={(e) => setOtherModule(e.target.value as 'bank' | 'cash')}>
-        <option value="bank">Bank account</option>
-        <option value="cash">Cash</option>
-      </select>
-      {otherModule === 'bank' && (
-        bankAccounts.length ? (
-          <select value={otherAccountId} onChange={(e) => setOtherAccountId(e.target.value)}>
-            {bankAccounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.currencyCode})</option>)}
-          </select>
-        ) : (
-          <span className="footer-note">No bank accounts yet.</span>
-        )
-      )}
-      <button className="btn" onClick={create}>
-        <PlusIcon />Link &amp; add
-      </button>
+      <FabPanel actions={[{ label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen(true) }]} />
+      {open && <TransactionEntryModal defaultFinance={{ module: 'psx' }} onClose={() => setOpen(false)} />}
     </>
-  );
-}
-
-function TransferForm() {
-  const addTransfer = usePSXWorkbookStore((s) => s.addTransfer);
-  const depositFee = usePSXWorkbookStore((s) => s.workbook.settings.depositFee);
-  const currency = usePSXWorkbookStore((s) => s.workbook.settings.currency);
-  const ensureSignedIn = useEnsureSignedIn();
-  const [t, setT] = useState<Omit<Transfer, 'id'>>({ date: today(), type: 'DEPOSIT', gross: 0, fee: depositFee, timezone: defaultTimezoneForCurrency(currency) });
-  const [linkMode, setLinkMode] = useState(false);
-
-  const reset = () => setT({ date: today(), type: 'DEPOSIT', gross: 0, fee: depositFee, timezone: defaultTimezoneForCurrency(currency) });
-
-  return (
-    <div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-        <Field label="Date">
-          <input type="date" value={t.date} onChange={(e) => setT({ ...t, date: e.target.value })} />
-        </Field>
-        <Field label="Type">
-          <select value={t.type} onChange={(e) => setT({ ...t, type: e.target.value as Transfer['type'] })}>
-            <option value="DEPOSIT">Deposit</option>
-            <option value="WITHDRAWAL">Withdrawal</option>
-          </select>
-        </Field>
-        <Field label="Amount">
-          <input
-            type="number"
-            placeholder="Amount"
-            value={t.gross || ''}
-            onChange={(e) => setT({ ...t, gross: Number(e.target.value) })}
-            style={{ width: 100 }}
-          />
-        </Field>
-        {linkMode ? (
-          <LinkedTransferFields date={t.date} type={t.type} gross={t.gross} onLinked={reset} />
-        ) : (
-          <>
-            <Field label="Fee">
-              <input
-                type="number"
-                placeholder="Fee"
-                value={t.fee || ''}
-                onChange={(e) => setT({ ...t, fee: Number(e.target.value) })}
-                style={{ width: 80 }}
-              />
-            </Field>
-            <TimeZoneFields
-              time={t.time}
-              timezone={t.timezone}
-              onTimeChange={(time) => setT({ ...t, time })}
-              onTimezoneChange={(timezone) => setT({ ...t, timezone })}
-            />
-            <button
-              className="btn"
-              onClick={async () => {
-                if (t.gross <= 0) return toast('Enter an amount.');
-                if (!(await ensureSignedIn('Sign in to save transfers.'))) return;
-                addTransfer({ ...t, id: crypto.randomUUID() });
-                toast('Transfer added.');
-                reset();
-              }}
-            >
-              <PlusIcon />Add
-            </button>
-          </>
-        )}
-      </div>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>
-        <input type="checkbox" checked={linkMode} onChange={(e) => setLinkMode(e.target.checked)} />
-        Link this to a Bank account or Cash (creates a matching entry there too, instead of just here)
-      </label>
-    </div>
   );
 }
 
@@ -660,8 +534,18 @@ function TransfersSection() {
   const updateTransfer = usePSXWorkbookStore((s) => s.updateTransfer);
   const deleteTransfer = usePSXWorkbookStore((s) => s.deleteTransfer);
   const currency = workbook.settings.currency;
+  const links = useInterEntityTransfersStore((s) => s.workbook.entries);
   const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<Transfer | null>(null);
+
+  const linkByRecordId = useMemo(() => {
+    const map = new Map<string, (typeof links)[number]>();
+    for (const l of links) {
+      if (l.from.module === 'psx') map.set(l.fromRecordId, l);
+      if (l.to.module === 'psx') map.set(l.toRecordId, l);
+    }
+    return map;
+  }, [links]);
 
   // Computed independently of the table's own sort order (which the user
   // can flip to any column) so "Balance" always reflects the true
@@ -693,7 +577,7 @@ function TransfersSection() {
 
   return (
     <div>
-      <TransferForm />
+      <TransfersFab />
       <div className="table-scroll" style={{ marginTop: 8 }}>
         <table>
           <thead>
@@ -707,8 +591,10 @@ function TransfersSection() {
             </tr>
           </thead>
           <tbody>
-            {sorted.map((t) =>
-              editId === t.id && editRow ? (
+            {sorted.map((t) => {
+              const link = linkByRecordId.get(t.id);
+              const otherSide = link ? (link.from.module === 'psx' && link.fromRecordId === t.id ? link.to : link.from) : undefined;
+              return editId === t.id && editRow ? (
                 <tr key={t.id}>
                   <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
                   <td>
@@ -728,7 +614,14 @@ function TransfersSection() {
               ) : (
                 <tr key={t.id}>
                   <td>{t.date}</td>
-                  <td>{t.type}</td>
+                  <td>
+                    {t.type}
+                    {otherSide && (
+                      <Link to={linkTargetPath(otherSide)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
+                        🔗 Linked
+                      </Link>
+                    )}
+                  </td>
                   <td>{fmtMoney(t.gross, currency)}</td>
                   <td>{fmtMoney(t.fee, currency)}</td>
                   <td>
@@ -741,8 +634,8 @@ function TransfersSection() {
                     <IconButton label="Delete" icon={<TrashIcon size={13} />} align="right" onClick={() => confirmAndDeleteLinkable('psx', t.id, () => deleteTransfer(t.id))} />
                   </td>
                 </tr>
-              ),
-            )}
+              );
+            })}
             {!sorted.length && <tr><td colSpan={6} className="footer-note">No transfers yet.</td></tr>}
           </tbody>
         </table>

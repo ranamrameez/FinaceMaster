@@ -38,7 +38,17 @@ import { Tooltip } from '../Tooltip';
  * doesn't add HTML `required` validation, since several "required" fields
  * here are validated with a friendlier toast message on submit rather
  * than the browser's own native validation UI. */
-export function Field({ label, children, width, title, required }: { label?: string; children: ReactNode; width?: number; title?: string; required?: boolean }) {
+/** `width` defaults to 180 (2026-08-28, user-reported: "give same width
+ * ...to all form elements app wide...for best UI consistency") — most
+ * `Field` call sites across the app either pass their own considered width
+ * (a short Currency code, a wide Description) or pass none at all, in
+ * which case the wrapping label — and, via flex's default `align-items:
+ * stretch`, the input/select inside it — used to size itself off native
+ * browser defaults, which is exactly the "inconsistent" sizing being
+ * reported. A shared default here fixes every no-width call site at once
+ * without touching the ones that already pass their own `width` for a real
+ * reason (an explicit `width` prop always wins, same as before). */
+export function Field({ label, children, width = 180, title, required }: { label?: string; children: ReactNode; width?: number; title?: string; required?: boolean }) {
   const labelContent = required ? (
     <>
       {label}

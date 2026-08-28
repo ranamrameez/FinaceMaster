@@ -498,7 +498,7 @@ export function NetWorthPage({
       )}
 
       {selectedCurrencyRow && selectedCurrencyRow.breakdown.length > 0 && (
-        <ChartCard title={`Breakdown within ${preferredCurrency}, by module`} empty={false}>
+        <ChartCard title={`Breakdown within ${preferredCurrency}, by account`} empty={false}>
           <div style={{ height: Math.max(160, selectedCurrencyRow.breakdown.length * 32) }}>
             <Bar
               data={{
@@ -517,7 +517,7 @@ export function NetWorthPage({
       )}
 
       {rows.length === 0 && (
-        <Card><div className="footer-note">No balances recorded yet across any module.</div></Card>
+        <Card><div className="footer-note">No balances recorded yet across any account.</div></Card>
       )}
 
       {/* Item 6 (app-wide note): a fixed-column list of full-width cards
@@ -550,7 +550,7 @@ export function NetWorthPage({
                   small cards instead of long table-style rows. */}
               {r.breakdown.length > 0 && (
                 <div style={{ marginTop: 12 }}>
-                  <div className="footer-note" style={{ marginBottom: 4 }}>By module</div>
+                  <div className="footer-note" style={{ marginBottom: 4 }}>By account</div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 6 }}>
                     {r.breakdown.map((b) => (
                       <div key={b.module} className="stat-card card" style={hueStyle(b.amount >= 0 ? 'var(--profit)' : 'var(--loss)')}>

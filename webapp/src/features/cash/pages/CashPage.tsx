@@ -5,14 +5,14 @@ import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { EditIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { EditIcon, PlusIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Modal } from '../../../components/Modal';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
-import { FabButton } from '../../../components/ui/Fab';
-import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
+import { FabButton, FabPanel } from '../../../components/ui/Fab';
+import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
 import { useAmountFormat } from '../../../hooks/useAmountFormat';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
@@ -22,7 +22,6 @@ import { plannedCashProjection } from '../../../lib/calc/plannedBalance';
 import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar, tickerColor } from '../../../lib/cssVar';
-import { defaultTimezoneForCurrency } from '../../../lib/datetime';
 import { useAppearanceStore } from '../../../store/appearanceStore';
 import { ChartCard } from '../../qse/components/ChartCard';
 import { parseCSV } from '../../../lib/csv';
@@ -34,78 +33,24 @@ import { firebaseReady } from '../../../lib/firebase/client';
 import { createEmptyCashWorkbook } from '../../../store/defaultCashWorkbook';
 import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
 import { usePlannedCashWorkbookStore } from '../../../store/plannedCashWorkbookStore';
+import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
+import { linkTargetPath } from '../../transfers/pages/TransferLinksPage';
 import type { CashEntry, CashWorkbook } from '../../../types/cashWorkbook';
 import type { PlannedCashEntry } from '../../../types/plannedCash';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-function emptyEntry(defaultCurrency: string): CashEntry {
-  return {
-    id: crypto.randomUUID(), date: today(), type: 'IN', amount: 0, currencyCode: defaultCurrency,
-    category: '', note: '', source: 'manual', timezone: defaultTimezoneForCurrency(defaultCurrency),
-  };
-}
-
-function AddEntryForm({ knownCategories }: { knownCategories: string[] }) {
-  const addEntry = useCashWorkbookStore((s) => s.addEntry);
+/** User-requested (2026-08-28): the module's own "Transfers" FAB, replacing
+ * the old always-visible "Add entry" card — opens the shared
+ * `TransactionEntryModal` defaulted to Cash's own default currency. */
+function LedgerFab() {
+  const [open, setOpen] = useState(false);
   const defaultCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
-  const [lastCurrency, setLastCurrency] = useLastCurrency('cash', defaultCurrency);
-  const ensureSignedIn = useEnsureSignedIn();
-  const [e, setE] = useState<CashEntry>(() => emptyEntry(lastCurrency));
-
-  const submit = async () => {
-    if (!e.amount || e.amount <= 0) return toast('Enter an amount.');
-    if (!(await ensureSignedIn('Sign in to save cash entries.'))) return;
-    addEntry({ ...e, category: e.category?.trim() || undefined, note: e.note?.trim() || undefined });
-    toast(`${e.type === 'IN' ? 'Cash in' : 'Cash out'} logged.`);
-    setE(emptyEntry(e.currencyCode));
-  };
-
   return (
-    <Card style={{ marginBottom: 16 }}>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-        <Field label="Date">
-          <TextInput type="date" value={e.date} onChange={(ev) => setE({ ...e, date: ev.target.value })} />
-        </Field>
-        <Field label="Type">
-          <Select value={e.type} onChange={(ev) => setE({ ...e, type: ev.target.value as 'IN' | 'OUT' })} width={90}>
-            <option value="IN">Cash in</option>
-            <option value="OUT">Cash out</option>
-          </Select>
-        </Field>
-        <Field label="Amount" width={110} required>
-          <TextInput type="number" step="0.01" value={e.amount || ''} onChange={(ev) => setE({ ...e, amount: Number(ev.target.value) })} />
-        </Field>
-        <Field label="Currency" width={110} required>
-          <Select value={e.currencyCode} onChange={(ev) => { setE({ ...e, currencyCode: ev.target.value, timezone: defaultTimezoneForCurrency(ev.target.value) }); setLastCurrency(ev.target.value); }}>
-            {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
-          </Select>
-        </Field>
-        <Field label="Category (optional)" width={140}>
-          <TextInput
-            list="cash-category-datalist"
-            value={e.category}
-            onChange={(ev) => setE({ ...e, category: ev.target.value })}
-            placeholder="e.g. Gift, Misc"
-          />
-        </Field>
-        <Field label="Note (optional)" width={180}>
-          <TextInput value={e.note} onChange={(ev) => setE({ ...e, note: ev.target.value })} />
-        </Field>
-        <TimeZoneFields
-          time={e.time}
-          timezone={e.timezone}
-          onTimeChange={(time) => setE({ ...e, time })}
-          onTimezoneChange={(timezone) => setE({ ...e, timezone })}
-        />
-      </div>
-      <datalist id="cash-category-datalist">
-        {knownCategories.map((c) => <option key={c} value={c} />)}
-      </datalist>
-      <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
-        <PlusIcon />Add entry
-      </button>
-    </Card>
+    <>
+      <FabPanel actions={[{ label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen(true) }]} />
+      {open && <TransactionEntryModal defaultFinance={{ module: 'cash', currencyCode: defaultCurrency }} onClose={() => setOpen(false)} />}
+    </>
   );
 }
 
@@ -178,10 +123,21 @@ function EntryList() {
   const entries = useCashWorkbookStore((s) => s.workbook.entries);
   const updateEntry = useCashWorkbookStore((s) => s.updateEntry);
   const deleteEntry = useCashWorkbookStore((s) => s.deleteEntry);
+  const links = useInterEntityTransfersStore((s) => s.workbook.entries);
   const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<CashEntry | null>(null);
 
   const ledger = useMemo(() => cashRunningLedger(entries), [entries]);
+  // User-requested (2026-08-28): "Tag/Mark and also add nav link between
+  // the linked trcs" — same recordId -> link map as Bank's TransactionsList.
+  const linkByRecordId = useMemo(() => {
+    const map = new Map<string, (typeof links)[number]>();
+    for (const l of links) {
+      if (l.from.module === 'cash') map.set(l.fromRecordId, l);
+      if (l.to.module === 'cash') map.set(l.toRecordId, l);
+    }
+    return map;
+  }, [links]);
   type Col = 'date' | 'type' | 'amount' | 'category';
   const sortValue = (r: (typeof ledger)[number], col: Col): number | string => {
     switch (col) {
@@ -210,17 +166,23 @@ function EntryList() {
           <tr>
             <Th col="date">Date</Th>
             <Th col="type">Type</Th>
-            <Th col="amount">Amount</Th>
-            <Th col="category">Category</Th>
+            {/* User-reported (2026-08-28): "Description and Source are
+               making the table too large to read" + "Credit/Debit and
+               balance should be next to each other. Categories can be
+               marked as labels." */}
             <th>Note</th>
+            <Th col="category">Category</Th>
+            <Th col="amount">Amount</Th>
             <th>Balance</th>
             <th>Source</th>
             <th></th>
           </tr>
         </thead>
         <tbody>
-          {sorted.map(({ entry, balance }) =>
-            editId === entry.id && editRow ? (
+          {sorted.map(({ entry, balance }) => {
+            const link = linkByRecordId.get(entry.id);
+            const otherSide = link ? (link.from.module === 'cash' && link.fromRecordId === entry.id ? link.to : link.from) : undefined;
+            return editId === entry.id && editRow ? (
               <tr key={entry.id}>
                 <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
                 <td>
@@ -229,9 +191,9 @@ function EntryList() {
                     <option value="OUT">Cash out</option>
                   </select>
                 </td>
-                <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 90 }} /></td>
-                <td><input value={editRow.category ?? ''} onChange={(e) => setEditRow({ ...editRow, category: e.target.value })} style={{ width: 100 }} /></td>
                 <td><input value={editRow.note ?? ''} onChange={(e) => setEditRow({ ...editRow, note: e.target.value })} /></td>
+                <td><input value={editRow.category ?? ''} onChange={(e) => setEditRow({ ...editRow, category: e.target.value })} style={{ width: 100 }} /></td>
+                <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 90 }} /></td>
                 <td></td>
                 <td className="footer-note">{entry.source === 'statement-import' ? `Import${entry.statementRef ? ` (${entry.statementRef})` : ''}` : 'Manual'}</td>
                 <td>
@@ -243,11 +205,20 @@ function EntryList() {
               <tr key={entry.id}>
                 <td>{entry.date}</td>
                 <td className={entry.type === 'IN' ? 'pill-buy' : 'pill-sell'}>{entry.type === 'IN' ? 'Cash in' : 'Cash out'}</td>
+                <td className="cell-clip" title={entry.note}>
+                  {entry.note}
+                  {otherSide && (
+                    <Link to={linkTargetPath(otherSide)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
+                      🔗 Linked
+                    </Link>
+                  )}
+                </td>
+                <td>{entry.category ? <span className="pill-info">{entry.category}</span> : '—'}</td>
                 <td>{fmtMoney(entry.amount, entry.currencyCode)}</td>
-                <td>{entry.category || '—'}</td>
-                <td>{entry.note}</td>
                 <td>{fmtMoney(balance, entry.currencyCode)}</td>
-                <td className="footer-note">{entry.source === 'statement-import' ? `Import${entry.statementRef ? ` (${entry.statementRef})` : ''}` : 'Manual'}</td>
+                <td className="footer-note cell-clip" title={entry.source === 'statement-import' ? `Import${entry.statementRef ? ` (${entry.statementRef})` : ''}` : 'Manual'}>
+                  {entry.source === 'statement-import' ? `Import${entry.statementRef ? ` (${entry.statementRef})` : ''}` : 'Manual'}
+                </td>
                 <td>
                   <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(entry)} />{' '}
                   <IconButton
@@ -258,8 +229,8 @@ function EntryList() {
                   />
                 </td>
               </tr>
-            ),
-          )}
+            );
+          })}
           {!sorted.length && <tr><td colSpan={8} className="footer-note">No cash entries yet.</td></tr>}
         </tbody>
       </table>
@@ -268,18 +239,12 @@ function EntryList() {
 }
 
 function LedgerTab() {
-  const entries = useCashWorkbookStore((s) => s.workbook.entries);
-  const knownCategories = useMemo(
-    () => [...new Set(entries.map((e) => e.category).filter((c): c is string => !!c))].sort(),
-    [entries],
-  );
-
   return (
     <div>
-      <AddEntryForm knownCategories={knownCategories} />
       <BalancesSummary />
       <CategoryBreakdown />
       <EntryList />
+      <LedgerFab />
     </div>
   );
 }

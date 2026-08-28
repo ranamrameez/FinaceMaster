@@ -1,30 +1,26 @@
 import type { User } from 'firebase/auth';
 import { useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Bar, Line } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Modal } from '../../../components/Modal';
 import { Notice } from '../../../components/Notice';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { hueStyle } from '../../../lib/statCardHues';
-import { EditIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { EditIcon, PlusIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
-import { FabButton } from '../../../components/ui/Fab';
-import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
+import { FabButton, FabPanel } from '../../../components/ui/Fab';
+import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { CURRENCIES } from '../../../lib/currencies';
-import { defaultTimezoneForCurrency } from '../../../lib/datetime';
 import { parseCSV, toCSV } from '../../../lib/csv';
 import { fmtMoney } from '../../../lib/format';
-import { confirmAndDeleteLinkable, createLinkedTransfer, warnIfLinked } from '../../../lib/linkCascade';
-import { getLastTransferSource, rememberTransferSource } from '../../../hooks/useLastTransferSource';
-import type { LinkSideConfig } from '../../../types/interEntityTransfer';
-import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
-import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
+import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import {
   loanBalanceHistory,
   loanOutstanding,
@@ -41,6 +37,8 @@ import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
 import { useAppearanceStore } from '../../../store/appearanceStore';
 import { usePersonalLoansWorkbookStore } from '../../../store/personalLoansWorkbookStore';
+import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
+import { linkTargetPath } from '../../transfers/pages/TransferLinksPage';
 import type { PersonalLoan, PersonalLoanRepayment } from '../../../types/personalLoansWorkbook';
 import { ChartCard } from '../../qse/components/ChartCard';
 
@@ -160,21 +158,25 @@ function AddLoanFab() {
   );
 }
 
-function AddLoanForm({ onSaved }: { onSaved?: () => void } = {}) {
+/** `initialCurrency`/`onSaved(id)` — see `AddAccountForm`'s own comment
+ * (`features/bank/pages/BankPage.tsx`) for why: the shared "+" quick-add in
+ * `SideFields` reuses this exact form from `TransactionEntryModal`. */
+export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: string) => void; initialCurrency?: string } = {}) {
   const addLoan = usePersonalLoansWorkbookStore((s) => s.addLoan);
   const defaultCurrency = usePersonalLoansWorkbookStore((s) => s.workbook.settings.defaultCurrency);
   const [lastCurrency, setLastCurrency] = useLastCurrency('personalLoans', defaultCurrency);
   const ensureSignedIn = useEnsureSignedIn();
-  const [l, setL] = useState<PersonalLoan>(() => emptyLoan(lastCurrency));
+  const [l, setL] = useState<PersonalLoan>(() => emptyLoan(initialCurrency ?? lastCurrency));
 
   const submit = async () => {
     if (!l.person.trim()) return toast('Enter a person/lender name.');
     if (!l.principal || l.principal <= 0) return toast('Enter a principal amount.');
     if (!(await ensureSignedIn('Sign in to save personal loans.'))) return;
-    addLoan({ ...l, id: crypto.randomUUID(), person: l.person.trim(), note: l.note?.trim() || undefined });
+    const id = crypto.randomUUID();
+    addLoan({ ...l, id, person: l.person.trim(), note: l.note?.trim() || undefined });
     toast(`Loan with ${l.person.trim()} saved.`);
     setL(emptyLoan(l.currencyCode));
-    onSaved?.();
+    onSaved?.(id);
   };
 
   return (
@@ -219,53 +221,16 @@ function AddLoanForm({ onSaved }: { onSaved?: () => void } = {}) {
  * repayment is money arriving from the other person (Bank/Cash = `to`,
  * receiving), `i_owe` means it's money leaving to pay them back (Bank/Cash
  * = `from`, paying). */
-function LinkedRepaymentFields({ loan, date, amount, onLinked }: { loan: PersonalLoan; date: string; amount: number; onLinked: () => void }) {
-  const ensureSignedIn = useEnsureSignedIn();
-  const bankAccounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
-  const cashCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
-  const loanSide: LinkSideConfig = { module: 'personalLoans', ref: loan.id };
-  const remembered = getLastTransferSource(loanSide);
-  const [otherModule, setOtherModule] = useState<'bank' | 'cash'>(remembered?.module === 'cash' ? 'cash' : 'bank');
-  const [otherAccountId, setOtherAccountId] = useState(remembered?.ref ?? bankAccounts[0]?.id ?? '');
-
-  const create = async () => {
-    if (amount <= 0) return toast('Enter an amount first.');
-    if (otherModule === 'bank' && !otherAccountId) return toast('Add a bank account on the Banking page first.');
-    if (!(await ensureSignedIn('Sign in to save transfers.'))) return;
-    const other: LinkSideConfig = otherModule === 'bank' ? { module: 'bank', ref: otherAccountId } : { module: 'cash', currencyCode: cashCurrency };
-    const otherReceives = loan.direction === 'owed_to_me';
-    const input = {
-      date,
-      fromAmount: amount,
-      toAmount: amount,
-      from: otherReceives ? loanSide : other,
-      to: otherReceives ? other : loanSide,
-    };
-    const result = createLinkedTransfer(input);
-    if ('error' in result) return toast(result.error);
-    rememberTransferSource(loanSide, other);
-    toast('Linked repayment added — also recorded on the other side.');
-    onLinked();
-  };
-
+/** User-requested (2026-08-28): the loan's own "Transfers" FAB, replacing
+ * the old always-visible add-repayment row AND its own bank/cash-only
+ * `LinkedRepaymentFields` shortcut — the shared `TransactionEntryModal`
+ * supersedes both, defaulted to THIS loan. */
+function RepaymentsFab({ loan }: { loan: PersonalLoan }) {
+  const [open, setOpen] = useState(false);
   return (
     <>
-      <select value={otherModule} onChange={(e) => setOtherModule(e.target.value as 'bank' | 'cash')}>
-        <option value="bank">Bank account</option>
-        <option value="cash">Cash</option>
-      </select>
-      {otherModule === 'bank' && (
-        bankAccounts.length ? (
-          <select value={otherAccountId} onChange={(e) => setOtherAccountId(e.target.value)}>
-            {bankAccounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.currencyCode})</option>)}
-          </select>
-        ) : (
-          <span className="footer-note">No bank accounts yet.</span>
-        )
-      )}
-      <button className="btn" onClick={create}>
-        <PlusIcon />Link &amp; add
-      </button>
+      <FabPanel actions={[{ label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen(true) }]} />
+      {open && <TransactionEntryModal defaultFinance={{ module: 'personalLoans', ref: loan.id, currencyCode: loan.currencyCode }} onClose={() => setOpen(false)} />}
     </>
   );
 }
@@ -281,29 +246,22 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
   // transferRunningBalance — "Remaining" must reflect the true
   // chronological running total regardless of how rows are displayed.
   const remaining = useMemo(() => repaymentRunningOutstanding(loan, allRepayments), [loan, allRepayments]);
-  const addRepayment = usePersonalLoansWorkbookStore((s) => s.addRepayment);
   const updateRepayment = usePersonalLoansWorkbookStore((s) => s.updateRepayment);
   const deleteRepayment = usePersonalLoansWorkbookStore((s) => s.deleteRepayment);
-  const ensureSignedIn = useEnsureSignedIn();
-  const [date, setDate] = useState(today());
-  const [amount, setAmount] = useState(0);
-  const [linkMode, setLinkMode] = useState(false);
+  const links = useInterEntityTransfersStore((s) => s.workbook.entries);
   const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<PersonalLoanRepayment | null>(null);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
-  const [time, setTime] = useState<string | undefined>(undefined);
-  const [timezone, setTimezone] = useState<string | undefined>(() => defaultTimezoneForCurrency(loan.currencyCode));
 
-  const resetAdd = () => { setAmount(0); setTime(undefined); };
-
-  const submit = async () => {
-    if (!amount || amount <= 0) return toast('Enter a repayment amount.');
-    if (!(await ensureSignedIn('Sign in to save repayments.'))) return;
-    addRepayment({ id: crypto.randomUUID(), loanId: loan.id, date, amount, time, timezone });
-    toast('Repayment logged.');
-    resetAdd();
-  };
+  const linkByRecordId = useMemo(() => {
+    const map = new Map<string, (typeof links)[number]>();
+    for (const l of links) {
+      if (l.from.module === 'personalLoans') map.set(l.fromRecordId, l);
+      if (l.to.module === 'personalLoans') map.set(l.toRecordId, l);
+    }
+    return map;
+  }, [links]);
 
   /** README item 40: extends Banking's account-detail statement export
    * (Done item 58) to this module's own primary record — a loan's
@@ -346,20 +304,6 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
-        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        <input type="number" step="0.01" placeholder="Amount" value={amount || ''} onChange={(e) => setAmount(Number(e.target.value))} style={{ width: 100 }} />
-        <TimeZoneFields time={time} timezone={timezone} onTimeChange={setTime} onTimezoneChange={setTimezone} />
-        {linkMode ? (
-          <LinkedRepaymentFields loan={loan} date={date} amount={amount} onLinked={resetAdd} />
-        ) : (
-          <button className="btn secondary" onClick={submit}><PlusIcon />Add repayment</button>
-        )}
-      </div>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
-        <input type="checkbox" checked={linkMode} onChange={(e) => setLinkMode(e.target.checked)} />
-        Link this to a Bank account or Cash (creates a matching entry there too, instead of just here)
-      </label>
       {/* README item 42's remainder: this component's add-form and list used
        * to have no clean seam for a CollapsibleCard — the form itself is
        * deliberately left outside it (collapsing a form mid-fill is a UX
@@ -387,13 +331,15 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
           <table>
             <thead><tr><Th col="date">Date</Th><Th col="amount">Amount</Th><Th col="remaining">Remaining</Th><th>Source</th><th></th></tr></thead>
             <tbody>
-              {sorted.map((r) =>
-                editId === r.id && editRow ? (
+              {sorted.map((r) => {
+                const link = linkByRecordId.get(r.id);
+                const otherSide = link ? (link.from.module === 'personalLoans' && link.fromRecordId === r.id ? link.to : link.from) : undefined;
+                return editId === r.id && editRow ? (
                   <tr key={r.id}>
                     <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
                     <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 90 }} /></td>
                     <td></td>
-                    <td className="footer-note">{r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}</td>
+                    <td className="footer-note cell-clip">{r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}</td>
                     <td>
                       <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
                       <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditId(null)} />
@@ -402,13 +348,22 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                 ) : (
                   <tr key={r.id}>
                     <td>{r.date}</td>
-                    <td>{fmtMoney(r.amount, loan.currencyCode)}</td>
+                    <td>
+                      {fmtMoney(r.amount, loan.currencyCode)}
+                      {otherSide && (
+                        <Link to={linkTargetPath(otherSide)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
+                          🔗 Linked
+                        </Link>
+                      )}
+                    </td>
                     <td>
                       <Tooltip text="Loan balance still remaining after this repayment, in date order.">
                         <span>{fmtMoney(remaining.get(r.id) ?? 0, loan.currencyCode)}</span>
                       </Tooltip>
                     </td>
-                    <td className="footer-note">{r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}</td>
+                    <td className="footer-note cell-clip" title={r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}>
+                      {r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}
+                    </td>
                     <td>
                       <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(r)} />{' '}
                       <IconButton
@@ -419,14 +374,15 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                       />
                     </td>
                   </tr>
-                ),
-              )}
+                );
+              })}
               {!sorted.length && <tr><td colSpan={5} className="footer-note">No repayments logged yet.</td></tr>}
             </tbody>
           </table>
         </div>
       </CollapsibleCard>
       <ImportRepaymentsSection loan={loan} />
+      <RepaymentsFab loan={loan} />
     </div>
   );
 }

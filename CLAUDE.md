@@ -4283,6 +4283,54 @@ not developer notes) continuously as features ship.
   on real backfilled data; the ordering correctness itself is what the 19 new unit tests
   directly prove. `npx tsc -b` / `npm run test` (442 tests, 19 new) / `npm run build` all
   clean.
+- **App-wide "Transfers" FAB replaces every module's own add-transaction UI (2026-08-28) — see
+  README Done item 216.** User's own design, entered via plan mode: a single "Transfers" FAB
+  (opens an expandable `FabPanel` when a page also has its own "add entity" action) reachable
+  from every module, opening one shared `TransactionEntryModal` — "This entirely removes the
+  transfers page and the problem of duplicated transaction cards." Removed 7 modules' own
+  separate add-transaction UI (Bank/Cash/Rentals/Personal Loans/Funds/QSE/PSX) in favor of the
+  one shared modal; EMI's own more-precise schedule pencil-editor is deliberately untouched,
+  gaining Transfers only as an additional entry point. The standalone `/transfers` page and its
+  `CategoryNav` entry are gone — `TransferLinksPage.tsx` is now a shared-utilities-only module
+  (`SideFields`/`useSideCurrency`/`linkTargetPath`) imported by the new modal and by every
+  module page. Every module's own transaction list gained a "🔗 Linked" tag with a nav link to
+  the other side, replacing the removed page's own links list. **Found and fixed a real
+  pre-existing CSS cascade bug while building this, not caused by it but made newly relevant**:
+  `.fab-btn`/`.fab-btn-secondary` were bare single-class selectors, same specificity as (and
+  positioned before) the base `.btn` rule in `theme.css` — equal-specificity CSS resolves by
+  source order, so `.btn`'s later width/min-width/border-radius silently won, flattening every
+  round 52px FAB button down to a ~40px non-round default shape the whole time (confirmed via a
+  real `getComputedStyle` check, not assumed). This also fully neutralized the new
+  button-width-consistency rule this same change was adding. Fixed both with compound
+  `.btn.fab-btn`/`.btn.fab-btn-secondary` selectors (specificity 0,2,0 beats 0,1,0, correct
+  regardless of file order) and folded the new `min-width:100px` directly into the base `.btn{}`
+  rule rather than a separate block the same trap would have shadowed again. **Lesson for any
+  future CSS class meant to override a shared base class**: check whether it's a bare
+  single-class selector at the SAME specificity as what it's overriding — if so, it only wins
+  by accident of file position, not by design; a compound selector (or `:where()`/`!important`
+  if compounding isn't possible) is the robust fix. `npx tsc -b` / `npm run test` (442 tests,
+  unchanged) / `npm run build` all clean. Opened as PR #57 (draft), self-reviewed and merged
+  per the user's standing "review and merge yourself" instruction.
+- **New feedback received mid-session (2026-08-28), NOT yet started — explicitly deferred by
+  agreement with the user until the Transfers-FAB work above was finished and verified.** (1) A
+  future Calendar widget (day/month/year expense-income-by-category view) — not yet scoped. (2)
+  EMI's add-loan popup has no fields for irregular/custom installment plans — a real user
+  scenario: a plot bought on installments in 2024 with a partial booking payment, a recurring
+  "major EMI" every 6 months, and randomly-timed real payments (after 5, 3, 6 months). Needs:
+  the 6-month major-installment generator to actually work for an OLDER start date (currently
+  doesn't), the ability to edit dates/amounts on an existing custom schedule, recording actual/
+  irregular payments (including fines) while the regular schedule stays intact, a "link this
+  payment to a finance" option in the add/edit flow, and each loan remembering its own default/
+  last-used finance. (3) Net Worth page: "UI gaps inconsistent" — vague, needs investigation to
+  find what's actually meant before doing anything. (4) Funds/Mutual Funds: a way to log
+  Invest/Withdraw by AMOUNT ALONE, since the user doesn't know NAV/units — check against the
+  existing "Update balance" quick-action (Done item 211) before assuming this is a from-scratch
+  gap; it may already partially cover this. (5) An open design question, not a decided feature:
+  whether to build a new module (or extend Personal Loans) for tracking money the user has LENT
+  to OTHER people who repay via their own EMI-style schedule — "TRUE Wealth tracker should do
+  that," per the user's own words. None of these are scoped/planned yet — per this file's
+  standing "plan & propose" rule, each needs real clarifying questions (especially 2 and 5)
+  before any code gets written.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 
