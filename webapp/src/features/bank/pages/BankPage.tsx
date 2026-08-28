@@ -735,10 +735,6 @@ export function AccountDetailPage() {
         <AddTransactionsForm accountId={account.id} currencyCode={account.currencyCode} knownCategories={knownCategories} />
       </Card>
 
-      <CollapsibleCard defaultOpen={false} style={{ marginBottom: 16 }} title={<h3 style={{ margin: 0 }}>By category</h3>}>
-        <CategoryBreakdownBody account={account} />
-      </CollapsibleCard>
-
       {/* User-requested (2026-08-26): "Transactions belong to an account so
          should be on its detail page/popup and editable" — this used to be
          a read-only 20-row preview; now reuses the same `TransactionsList`
