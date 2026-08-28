@@ -34,6 +34,15 @@ function buildSideRecord(
           date,
           type: direction === 'in' ? 'IN' : 'OUT',
           amount,
+          // `cfg.currencyCode` should always be set by the time this runs —
+          // every real caller (SideFields' own module picker, each
+          // module's inline "link to Cash" shortcut) sets it explicitly,
+          // Cash having no fixed currency of its own the way a Bank
+          // account does. The 'USD' fallback is defensive-only, for a
+          // theoretical caller that skips that step — it used to be
+          // silently reachable in practice before those callers were
+          // fixed (README Done item: "Link To always shows USD instead of
+          // filling default currency").
           currencyCode: cfg.currencyCode || 'USD',
           category: 'Transfer',
           note,

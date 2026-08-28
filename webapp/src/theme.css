@@ -476,6 +476,14 @@
   .entity-card:hover{transform:translateY(-2px); box-shadow:var(--shadow-lg);}
   .entity-card-title{font-weight:700; font-size:14px; line-height:1.3; overflow-wrap:anywhere;}
 
+  /* User-reported (2026-08-28): "I asked to use grids to utilize space
+     properly. But you are still obsessed with 100% width cards instead of
+     making small side by side cards." A detail page's own narrower
+     sections (an attribute list, a short table, a small chart) don't need
+     the full page width the way a long table does — wraps them into a
+     responsive grid (design rule 3) instead of each stacking full-width. */
+  .detail-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(320px,1fr)); gap:16px; align-items:start;}
+
   /* Shared floating "+" action button (components/ui/Fab.tsx) — a real
      lift+scale on hover/press so the app reads as interactive, not a
      static page (user-reported, 2026-08-27: "Hover animation is

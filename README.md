@@ -4949,6 +4949,56 @@ FinanceManager live link:
      date-range-filterable Analytics charts for Banking specifically (the existing Analytics
      charts elsewhere in the app already support date-range filtering per Done item 31 — Bank's
      own Analytics tab was never audited against that pattern this round).
+215. **Second real-usage critique of the Banking pilot, all fixed same day (2026-08-28).** The
+     user tested live again with a real screenshot showing a tooltip rendering ~690px/230px away
+     from its trigger, plus a fresh 9-item list. **Tooltip bug, root-caused via Playwright
+     measurement**: `.entity-card:hover{transform:translateY(-2px)}` (the hover-lift animation
+     added the round before) makes the card establish a new CSS containing block for any
+     `position:fixed` descendant per spec — a tooltip opened from inside a hovered card was
+     positioning itself relative to the transformed CARD instead of the viewport. Fixed by
+     portaling the popup straight to `document.body` (`components/Tooltip.tsx`) — the standard
+     fix for this exact CSS interaction. **"linking should be a part of the transaction, not a
+     separate card"**: merged the standalone `LinkTransactionSection` card into
+     `AddTransactionsForm` itself as an inline "Transferred to or from another module" checkbox
+     that swaps Category+time fields for a module/account picker on the same row. **"Link To
+     always shows USD"**: `SideFields`' Cash option had no currency picker at all — every
+     caller silently defaulted `cfg.currencyCode` to `undefined`, which `buildSideRecord`'s Cash
+     case then fell back to `'USD'` unconditionally. Added a real currency `<Select>` for Cash
+     (every other module already resolves its currency from its own account/entity picker) —
+     "even hand to hand cash currency exchange can happen, so make all finance combos
+     choosable." **"UI ordering... Account details buried in middle"**: reordered
+     `AccountDetailPage` so "Account details" renders first, ahead of "Add a transaction."
+     **"Make Create/Edit form same... it's a loophole now"**: found this was a REAL regression,
+     not just inconsistent styling — the prior round's move of Edit off the homepage cards onto
+     the detail page's own "Account details" edit form never carried Name/Currency/Opening
+     balance into that form's draft state, so those three fields had become completely
+     uneditable on an existing account. Fixed with a new shared `AccountFormFields` component
+     used by both `AddAccountForm` and the detail page's edit mode, so the two structurally
+     cannot diverge again. **"use grids... small side by side cards instead of 100% width
+     cards"**: new `.detail-grid` CSS (`theme.css`, `repeat(auto-fit, minmax(320px,1fr))`,
+     same pattern as the existing `.entity-card-grid`/`.rail-split`) wraps Account
+     details/Upcoming plans/By category — three naturally narrower sections that no longer each
+     claim the full page width. **"nested cards (Analytics -> carded charts... who would
+     collapse individual chart when whole section is collapsible)"**: `Tabs` already wraps every
+     tab's content in its own `CollapsibleCard` — a `ChartCard` (itself built on
+     `CollapsibleCard`) rendered inside an Analytics tab was a real card-inside-a-card, each
+     with its own redundant collapse toggle (design rule 1). New `flat` prop on `ChartCard`
+     renders just a heading + chart with no card chrome; applied to Banking's 3 Analytics
+     charts as the pilot instance (other modules' Analytics tabs have the identical structure
+     and are tracked as a follow-up rollout, not fixed blind in this pass). **"Settings & 'Plans
+     — account Synced...' still present, although clearly mentioned multiple times to move into
+     single page"**: this turned out to be a genuinely app-wide bug, not just Banking's — grepped
+     for the pattern and found the identical redundant sync-status-text card in EVERY module
+     (Cash, Personal Loans, Rentals, Funds, EMI, Subscriptions, Transfers, Net Worth, and QSE/PSX
+     Settings), each duplicating the global `/account` hub's own Sync status section. Fixed once
+     per module: the always-visible status line/heading is gone, the card renders nothing at all
+     unless there's an actual cloud-empty upload prompt to show; every module with a Settings tab
+     also gained the same "Sign-in, profile, appearance... live on the Account page →" link
+     Banking already had. Verified live via Playwright across all 14 routed pages in the app —
+     zero new console errors anywhere (the one `ERR_CONNECTION_RESET` is the same pre-existing
+     sandbox Firebase-block noted throughout this file), plus a direct tooltip-position
+     measurement confirming the fix (692px/233px off → 59px/48px off). `npx tsc -b` / `npm run
+     test` (442 tests, unchanged — no calc logic touched) / `npm run build` all clean.
 
 ## Pending
 

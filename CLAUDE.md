@@ -4526,6 +4526,49 @@ with this note) before starting, and should propose the `Bank`/`Broker` entity d
 it confirmed before writing any migration code — per this project's own standing plan-and-
 propose rule for exactly this class of change.
 
+## Redesign progress update (2026-08-28) — second real-usage critique, all fixed same day
+
+The user tested live again and posted a real screenshot showing a tooltip rendering nowhere
+near its trigger (measured via Playwright before fixing: ~690px/230px off), plus a fresh
+9-item list. **All fixed same day — see README Done item 215 for the full accounting.**
+Highlights: the tooltip bug's real root cause was CSS, not the position math — `.entity-card:
+hover{transform:translateY(-2px)}` (the hover-lift animation from the previous round) makes the
+hovered card establish a new containing block for any `position:fixed` descendant per the CSS
+spec, so `Tooltip.tsx` now portals its popup straight to `document.body`; "linking should be a
+part of the transaction, not a separate card" was fixed by merging the standalone
+`LinkTransactionSection` card into `AddTransactionsForm` itself as an inline "Transferred to or
+from another module" checkbox; "Link To always shows USD" was a real gap — Cash had no currency
+picker at all in `SideFields`, only ever fell back to a hardcoded `'USD'` in
+`buildSideRecord` — fixed with a real `<Select>` there; "Account details buried in middle" was
+fixed by reordering `AccountDetailPage`; "Make Create/Edit form same, it's a loophole" turned
+out to be a REAL regression (not just cosmetic) — the prior round's move of Edit onto the
+detail page never carried Name/Currency/Opening-balance into that edit form's draft state, so
+those three fields had become completely uneditable on an existing account — fixed with a new
+shared `AccountFormFields` component used by both Add and Edit so they structurally can't
+diverge again; "use grids... small side by side cards" got a new `.detail-grid` CSS class
+wrapping Account details/Upcoming plans/By category; the "nested cards (Analytics -> carded
+charts)" complaint was fixed with a new `flat` prop on `ChartCard` (renders just a heading +
+chart, no `CollapsibleCard` chrome) applied to Banking's 3 Analytics charts, since `Tabs`
+already wraps every tab's content in its own `CollapsibleCard` — a `ChartCard` inside it was a
+genuine card-inside-a-card. **The biggest single item turned out to be app-wide, not
+Banking-specific**: "Settings & 'Plans — account Synced...' still present... clearly mentioned
+multiple times to move into single page" — grepped the whole codebase for the pattern and found
+the identical redundant sync-status-text card duplicated in literally every module (Cash,
+Personal Loans, Rentals, Funds, EMI, Subscriptions, Transfers, Net Worth, QSE/PSX Settings), not
+just Banking. Fixed once per module: the card now renders nothing at all unless there's an
+actual cloud-empty upload prompt, and every module with a Settings tab gained the same "...live
+on the Account page →" link Banking already had. **Lesson reinforced (this is at least the
+third time this exact shape of gap has shown up in this project)**: when a user's complaint
+sounds like it's about one page, grep for the underlying pattern across the whole app before
+declaring the fix done — a fix applied to only the reported instance, while real sibling
+instances of the identical bug sit elsewhere untouched, is exactly what re-triggers the same
+complaint in a later round. Verified live via Playwright across all 14 routed pages in the
+app — zero new console errors anywhere. `npx tsc -b` / `npm run test` (442 tests, unchanged) /
+`npm run build` all clean. **Still open, unchanged from the round before**: README Pending item
+115's four structural items (Bank-as-parent-entity, Funds/broker-as-parent-entity, entity
+active/favorite/Sr#, Bank's Analytics date-range filtering) — none of this round's fixes
+touched those.
+
 ## Live URLs
 
 - New React app (QSE + PSX, `#/` and `#/psx`, now including a native Risk

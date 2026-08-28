@@ -44,7 +44,6 @@ import { usePlannedRentalsWorkbookStore } from '../../../store/plannedRentalsWor
  * per-currency section still renders in its own currency with zero
  * dependency on FX — only the single converted grand-total line degrades. */
 export function NetWorthPage({
-  syncStatus,
   cloudEmpty,
   uploadLocalToCloud,
 }: {
@@ -602,10 +601,12 @@ export function NetWorthPage({
         </Card>
       )}
 
-      {firebaseReady && (
+      {/* User-reported (2026-08-27, then again 2026-08-28): duplicated the
+         global /account hub's own Sync status section — dropped the status
+         text/heading here, same fix already applied app-wide (see
+         BankPage.tsx for the fullest write-up). */}
+      {firebaseReady && cloudEmpty && (
         <Card style={{ marginTop: 12 }}>
-          <h3 style={{ marginTop: 0 }}>Account</h3>
-          <p className="footer-note">{syncStatus}</p>
           {cloudEmpty && (
             <Notice tone="warning" style={{ marginTop: 8 }}>
               <p style={{ marginTop: 0 }}>No net worth snapshots found in the cloud for this account. This won't upload automatically.</p>

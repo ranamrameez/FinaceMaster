@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { InfoIcon } from './icons';
 
 interface Pos {
@@ -23,7 +24,22 @@ interface Pos {
  * above the trigger only if that measured height actually fits there,
  * then made visible. `position: fixed` (not `absolute`) so a trigger
  * inside a scrollable table/card never gets its tooltip clipped by the
- * container's own `overflow`. */
+ * container's own `overflow`.
+ *
+ * User-reported (2026-08-28): hovering one account's "Transactions" icon
+ * on the Banking homepage popped the tooltip up nowhere near it (measured:
+ * ~690px off horizontally, ~230px off vertically) — root cause was CSS,
+ * not the position math: `.entity-card:hover{transform:translateY(-2px)}`
+ * (the hover-lift animation) makes the card establish a NEW containing
+ * block for any `position:fixed` descendant per the CSS spec (any
+ * `transform` on an ancestor does this) — so once a trigger inside a
+ * hovered card opened its tooltip, the tooltip's own "fixed" position
+ * became relative to the now-transformed CARD instead of the viewport,
+ * even though the coordinates themselves were computed correctly. Fixed
+ * by rendering the popup through a portal straight to `document.body`,
+ * so it's never a DOM descendant of anything that might apply a
+ * transform — the standard fix for this exact CSS interaction, not
+ * something specific to this one card. */
 export function Tooltip({ text, children, align = 'left' }: { text: string; children?: ReactNode; align?: 'left' | 'right' }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<Pos | null>(null);
@@ -79,7 +95,7 @@ export function Tooltip({ text, children, align = 'left' }: { text: string; chil
       <span style={{ display: 'inline-flex', marginLeft: 3, opacity: 0.55, verticalAlign: 'middle', flexShrink: 0 }}>
         <InfoIcon size={11} />
       </span>
-      {open && pos && (
+      {open && pos && createPortal(
         <span
           ref={popupRef}
           role="tooltip"
@@ -117,7 +133,8 @@ export function Tooltip({ text, children, align = 'left' }: { text: string; chil
           }}
         >
           {text}
-        </span>
+        </span>,
+        document.body,
       )}
     </span>
   );

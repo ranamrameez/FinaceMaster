@@ -1,5 +1,6 @@
 import type { User } from 'firebase/auth';
 import { useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Modal } from '../../../components/Modal';
@@ -586,30 +587,23 @@ function AnalyticsTab() {
 
 /* ============================== Settings ============================== */
 
+// User-reported (2026-08-27, then again 2026-08-28): duplicated the global
+// /account hub's own Sync status section — dropped the status text/heading
+// here, same fix already applied app-wide (see BankPage.tsx's own
+// AccountSection for the fullest write-up of this fix).
 function AccountSection({
-  syncStatus,
   cloudEmpty,
   uploadLocalToCloud,
 }: {
-  syncStatus: string;
   cloudEmpty: boolean;
   uploadLocalToCloud: () => Promise<void>;
 }) {
   const subs = useSubscriptionsWorkbookStore((s) => s.workbook.entries);
   const [busy, setBusy] = useState(false);
 
-  if (!firebaseReady) {
-    return (
-      <Card>
-        <h3 style={{ marginTop: 0 }}>Account</h3>
-        <p className="footer-note">Cloud sync is unavailable — Firebase failed to load in this browser.</p>
-      </Card>
-    );
-  }
+  if (!firebaseReady || !cloudEmpty) return null;
   return (
     <Card style={{ marginBottom: 16 }}>
-      <h3 style={{ marginTop: 0 }}>Account</h3>
-      <p className="footer-note">{syncStatus}</p>
       {cloudEmpty && (
         <Notice tone="warning" style={{ marginTop: 8 }}>
           <p style={{ marginTop: 0 }}>No data found in the cloud for this account's Subscriptions workbook. This won't upload automatically.</p>
@@ -700,7 +694,6 @@ function DataManagement() {
 }
 
 export function SubscriptionsPage({
-  syncStatus,
   cloudEmpty,
   uploadLocalToCloud,
 }: {
@@ -742,7 +735,11 @@ export function SubscriptionsPage({
               label: 'Settings',
               content: (
                 <div>
-                  <AccountSection syncStatus={syncStatus} cloudEmpty={cloudEmpty} uploadLocalToCloud={uploadLocalToCloud} />
+                  <p className="footer-note" style={{ marginTop: 0 }}>
+                    Sign-in, profile, appearance, and a whole-app backup live on the{' '}
+                    <Link to="/account">Account page →</Link>. What's below is specific to Subscriptions.
+                  </p>
+                  <AccountSection cloudEmpty={cloudEmpty} uploadLocalToCloud={uploadLocalToCloud} />
                   <DataManagement />
                 </div>
               ),
