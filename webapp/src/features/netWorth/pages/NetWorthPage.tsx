@@ -614,32 +614,34 @@ export function NetWorthPage({
       {/* User-reported (2026-08-27, then again 2026-08-28): duplicated the
          global /account hub's own Sync status section — dropped the status
          text/heading here, same fix already applied app-wide (see
-         BankPage.tsx for the fullest write-up). */}
+         BankPage.tsx for the fullest write-up).
+         Also fixed while re-investigating "UI gaps inconsistent" (2026-08-28,
+         round 2): this used to wrap the Notice in its own `<Card>` — a real
+         nested-card violation (design rule 1), since `Notice` already
+         renders its own tinted background/border. The renewals Notice near
+         the top of this same file was never wrapped this way; this one now
+         matches that already-correct convention. */}
       {firebaseReady && cloudEmpty && (
-        <Card style={{ marginTop: 12 }}>
-          {cloudEmpty && (
-            <Notice tone="warning" style={{ marginTop: 8 }}>
-              <p style={{ marginTop: 0 }}>No net worth snapshots found in the cloud for this account. This won't upload automatically.</p>
-              <button
-                className="btn secondary"
-                onClick={async () => {
-                  const ok = await confirmDialog(
-                    'This will overwrite anything currently in the cloud (there is nothing there now, but confirming since this can\'t be undone).',
-                    `Upload ${snapshots.length} local snapshot${snapshots.length === 1 ? '' : 's'} to the cloud?`,
-                  );
-                  if (!ok) return;
-                  try {
-                    await uploadLocalToCloud();
-                  } catch (e) {
-                    toast(e instanceof Error ? e.message : 'Something went wrong.');
-                  }
-                }}
-              >
-                Upload local data to cloud ({snapshots.length} snapshot{snapshots.length === 1 ? '' : 's'})
-              </button>
-            </Notice>
-          )}
-        </Card>
+        <Notice tone="warning" style={{ marginTop: 12 }}>
+          <p style={{ marginTop: 0 }}>No net worth snapshots found in the cloud for this account. This won't upload automatically.</p>
+          <button
+            className="btn secondary"
+            onClick={async () => {
+              const ok = await confirmDialog(
+                'This will overwrite anything currently in the cloud (there is nothing there now, but confirming since this can\'t be undone).',
+                `Upload ${snapshots.length} local snapshot${snapshots.length === 1 ? '' : 's'} to the cloud?`,
+              );
+              if (!ok) return;
+              try {
+                await uploadLocalToCloud();
+              } catch (e) {
+                toast(e instanceof Error ? e.message : 'Something went wrong.');
+              }
+            }}
+          >
+            Upload local data to cloud ({snapshots.length} snapshot{snapshots.length === 1 ? '' : 's'})
+          </button>
+        </Notice>
       )}
     </div>
   );
