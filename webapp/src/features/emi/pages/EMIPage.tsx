@@ -59,7 +59,15 @@ function emptyLoan(defaultCurrency: string): EMILoan {
  * precise than the generic modal (any specific month, not just "the next
  * unpaid one") — Transfers is offered here as an additional, simpler entry
  * point, not a replacement. */
-function AddLoanFab() {
+/** `onLoanCreated` (user-reported 2026-08-28: "Add form was missing the
+ * big installment, custom EMI etc. options" — those live in the EDIT
+ * form's Advanced section, per Done item 196's own reasoning that Big EMI
+ * needs a real loan record to generate against). Rather than duplicate
+ * Big EMI/custom-payment UI into the add-form too, saving now jumps
+ * straight into the new loan's own detail view in EDIT mode — Advanced is
+ * one click away instead of Save → find the loan in the list → open →
+ * Edit. */
+function AddLoanFab({ onLoanCreated }: { onLoanCreated: (id: string) => void }) {
   const [open, setOpen] = useState<'loan' | 'transfer' | null>(null);
   return (
     <>
@@ -71,7 +79,7 @@ function AddLoanFab() {
       />
       {open === 'loan' && (
         <Modal title="Add a loan" onClose={() => setOpen(null)}>
-          <AddLoanForm onSaved={() => setOpen(null)} />
+          <AddLoanForm onSaved={(id) => { setOpen(null); onLoanCreated(id); }} />
         </Modal>
       )}
       {open === 'transfer' && <TransactionEntryModal onClose={() => setOpen(null)} />}
@@ -353,6 +361,18 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
   const [bigEmiAmount, setBigEmiAmount] = useState(0);
   const [bigEmiMode, setBigEmiMode] = useState<'majorOnly' | 'regularPlusMajor'>('majorOnly');
   const [bigEmiReconcile, setBigEmiReconcile] = useState(true);
+  /** User-reported (2026-08-28): "due to older dates app didn't generate 6
+   * months major EMI." Root cause: `applyBigEmi` used to hardcode
+   * `sum.elapsed + 1` as the starting month, on the theory this mirrors
+   * "Link to bank"'s own "remaining installments only" scope — but for a
+   * loan that started well in the past (this feature's own primary use
+   * case: a real installment plan with years of history), almost every
+   * 6-month interval already falls before that point and got silently
+   * skipped, so "Generate" backfilled nothing. Defaults to month 1 (a full
+   * backfill from the loan's own start) so the reported case works with
+   * zero extra configuration; still editable for the "only apply going
+   * forward on a loan I'm setting up prospectively" case. */
+  const [bigEmiStartMonth, setBigEmiStartMonth] = useState(1);
   const plannedBankEntries = usePlannedBankWorkbookStore((s) => s.workbook.entries);
   const addPlannedEntries = usePlannedBankWorkbookStore((s) => s.addEntries);
   const deletePlannedEntry = usePlannedBankWorkbookStore((s) => s.deleteEntry);
@@ -408,13 +428,14 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
    * addRepayment/updateRepayment path a single manual override already
    * uses, so nothing here duplicates the calc engine's own logic — this
    * function is purely "generate the numbers, then write them one month at
-   * a time." Only touches not-yet-elapsed months (`sum.elapsed + 1`
-   * onward), same as `linkToBank`'s own "remaining installments" scope. */
+   * a time." Starts from `bigEmiStartMonth` (user-editable, defaults to 1 —
+   * see that state's own doc comment for why "only future months" was the
+   * wrong default). */
   const applyBigEmi = async (opts: { intervalMonths: number; amount: number; mode: 'majorOnly' | 'regularPlusMajor'; reconcileLastMonth: boolean }) => {
     if (!(opts.amount > 0)) return toast('Enter an amount greater than zero.');
     if (!(opts.intervalMonths > 0)) return toast('Enter an interval of at least 1 month.');
     if (!(await ensureSignedIn('Sign in to customize this loan\'s schedule.'))) return;
-    const overrides = generateBigEmiOverrides(loan, sum.elapsed + 1, opts);
+    const overrides = generateBigEmiOverrides(loan, bigEmiStartMonth, opts);
     const months = Object.keys(overrides).map(Number);
     if (!months.length) return toast('No remaining months to apply this to.');
     for (const month of months) {
@@ -632,6 +653,12 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                     <option value="regularPlusMajor">Major month pays regular + this amount</option>
                   </Select>
                 </Field>
+                <Field
+                  label="Start from month #"
+                  title="1 backfills the whole loan from its own start (fixes an older loan that never got its historical majors recorded). A later month number only applies going forward from there, leaving earlier months untouched."
+                >
+                  <TextInput type="number" min={1} value={bigEmiStartMonth || ''} onChange={(e) => setBigEmiStartMonth(Math.max(1, Number(e.target.value)))} style={{ width: 90 }} />
+                </Field>
                 <button className="btn secondary" onClick={() => applyBigEmi({ intervalMonths: bigEmiInterval, amount: bigEmiAmount, mode: bigEmiMode, reconcileLastMonth: bigEmiReconcile })}>
                   Generate
                 </button>
@@ -709,7 +736,21 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                 : plannedBankEntries.some((p) => p.sourceEmiLoanId === loan.id && p.sourceEmiMonth === r.month && !p.executed)
                   ? 'planned'
                   : 'upcoming';
-              const canEdit = r.month > sum.elapsed;
+              // User-reported (2026-08-28): "didn't allow me to change the
+              // dates, amount and other data" — a past (already-"elapsed")
+              // month used to be locked from editing entirely, on the
+              // apparent assumption that history is fixed once due-dated in
+              // the past. That's backwards for this feature's actual
+              // purpose: recording what ACTUALLY happened (irregular real
+              // payment timing, a bigger amount that included a fine, a
+              // corrected date) is exactly as valid for a past month as a
+              // future one — `saveOverride`/`clearOverride` already just
+              // write to the same `installmentOverrides`/`EMIRepayment`
+              // records regardless of month, so there was no structural
+              // reason to gate this by elapsed status. Every row is
+              // editable now; "Show the full schedule" still needs to be
+              // checked to see past months at all (unchanged).
+              const canEdit = true;
               const paidSoFar = netToReturn - r.balance;
               const paidPct = netToReturn > 0 ? (paidSoFar / netToReturn) * 100 : 0;
               const balancePct = netToReturn > 0 ? (r.balance / netToReturn) * 100 : 0;
@@ -1125,7 +1166,12 @@ export function EMIPage({
           <OverallSummary />
           <LoanList onSelect={openLoan} onEdit={editLoan} />
           <AccountSection cloudEmpty={cloudEmpty} uploadLocalToCloud={uploadLocalToCloud} />
-          <AddLoanFab />
+          <AddLoanFab
+            onLoanCreated={(id) => {
+              const loan = useEMIWorkbookStore.getState().workbook.entries.find((l) => l.id === id);
+              if (loan) editLoan(loan);
+            }}
+          />
         </div>
       )}
     </div>

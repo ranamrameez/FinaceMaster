@@ -5060,6 +5060,70 @@ FinanceManager live link:
      already-documented Firebase/Google-Fonts network-block noise this sandbox always shows).
      Opened as PR #57 (draft, self-reviewed and merged per the user's own standing "review and
      merge yourself" instruction).
+217. **Deferred feedback batch, picked up (2026-08-28): Net Worth "UI gaps," Funds Invest/
+     Withdraw by amount alone, and 4 real EMI bugs found by reading the live code, not
+     guessed at.** Net Worth: the Assets/Liabilities/Net trio on each currency's own card was
+     the one plain, uncolored stat-card group on an otherwise fully-hued page — a real,
+     concrete inconsistency, fixed with `hueStyle` (sign-based for Assets/Net, a fixed loss
+     tint for Liabilities since it's always >= 0 by construction, same convention EMI's own
+     Outstanding card already uses). Also found the "Assets vs. liabilities" chart's title was
+     a full explanatory sentence, which the app-wide `.card h4{text-transform:capitalize}` rule
+     (meant for short headings) then title-cased into an awkward run-on — `ChartCard` gained a
+     new `titleTooltip` prop (mirrors `StatCard.labelTitle`) so the title itself stays short and
+     the caveat moves into an on-demand tooltip, the same rule-8 treatment already applied
+     everywhere else. Funds: the Add-transaction form only ever accepted Units+NAV, with no way
+     to log "I invested this AMOUNT, I don't know units/NAV" — added a third, string-backed
+     Amount field using the exact 3-way-linked pattern already established by
+     `RiskCalculator`'s Target buy price/shares/amount trio (editing any of NAV/Units/Amount
+     recomputes the third from NAV), with NAV auto-prefilled from the fund's own last known
+     price so a user who only types an amount gets units computed with zero extra input. Also
+     wrapped this form's previously-unlabeled raw inputs in `Field` while touching it (Action/
+     Date/NAV/Units/Amount), closing a small labeling gap the same pass surfaced.
+     **EMI, the largest piece — a real, previously-undiscovered bug chain found by reading
+     `EMIPage.tsx`/`emiModule.ts` directly rather than assuming the user's report was already
+     covered by earlier EMI work**: (a) "6 months major EMI didn't generate for older dates" —
+     `applyBigEmi` hardcoded `sum.elapsed + 1` as the Big-EMI generator's starting month, on the
+     theory this should mirror "Link to bank"'s own "remaining installments only" scope; but for
+     a loan that started well in the past (this feature's own primary real-world use case),
+     nearly every 6-month interval already falls before that point and got silently skipped, so
+     "Generate" backfilled nothing for an old loan. Fixed with a new user-editable "Start from
+     month #" field defaulting to 1 (a full backfill), replacing the hardcoded expression — the
+     underlying `generateBigEmiOverrides()` calc function was already correctly tested for
+     `fromMonth=1`, so this was purely a UI-wiring bug, not a calc-engine one. (b) "didn't allow
+     me to change the dates, amount and other data" — the Schedule table's pencil-edit button
+     was gated by `canEdit = r.month > sum.elapsed`, locking EVERY past ("elapsed") month from
+     editing entirely, on the apparent assumption history is fixed once due-dated in the past.
+     That's backwards for what this feature is actually for: recording what ACTUALLY happened
+     (irregular real payment timing, a corrected date, a bigger amount that included a fine) is
+     exactly as valid for a past month as a future one, and `saveOverride`/`clearOverride`
+     already write to the same records regardless of month — there was no structural reason for
+     the gate. Fixed by making every row editable. (c) "No option to link them to a finance" —
+     turned out to be a direct consequence of (b): the "Link this to a Bank account or Cash"
+     checkbox lives inside the same pencil-edit row that was locked for past months, so fixing
+     (b) fixes this too, for free. (d) "each EMI may be paid by different means, but should have
+     1 default/Last Used finance" — checked `useLastTransferSource.ts`'s key function before
+     assuming this was broken: `entityKey()` only reads `.module`/`.ref`, not the `emiMonth`
+     field `EMIPage.tsx`'s `loanSide` object also carries, so a remembered finance is ALREADY
+     correctly shared across every month of the same loan — no bug here, confirmed via code
+     reading rather than guessed. (e) A related usability gap surfaced while investigating (a):
+     "Add form was missing the big installment, custom EMI etc. options" makes more sense now
+     that Big EMI no longer strictly needs elapsed history to generate against (fix (a) removed
+     that dependency) — rather than duplicate the Advanced section's UI into the add-form too,
+     saving a new loan now navigates straight into its own detail view in EDIT mode, so Advanced
+     (Big EMI + Link to bank) is one click away instead of Save → find in list → open → Edit.
+     Verified live via Playwright throughout: Funds' NAV/Units/Amount trio computes correctly in
+     both directions with a real seeded fund; Net Worth's before/after screenshots confirm the
+     hue fix and the shortened chart title; EMI's "Start from month #" defaults to 1, a past
+     ("Paid") month now shows a working pencil-edit button with the link-checkbox available, and
+     the sign-in gate correctly fires on both the Big-EMI Generate button and Add-loan Save (this
+     app never allows a signed-out write) — zero real console errors across all three pages.
+     `npx tsc -b` / `npm run test` (442 tests, unchanged — no calc-engine code touched, per (a)'s
+     own finding that the bug was UI-only) / `npm run build` all clean. **Still open, not
+     attempted here — genuine design decisions, not guessed at**: a separate "fine paid" field on
+     an `EMIRepayment` (today, a fine is just folded into that month's own actual `amount`,
+     which works but doesn't itemize it); a possible new module (or Personal Loans extension) for
+     tracking money lent to OTHER people who repay via their own EMI-style schedule; a future
+     Calendar widget for day/month/year expense/income-by-category views.
 
 ## Pending
 

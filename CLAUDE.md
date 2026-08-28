@@ -4331,6 +4331,42 @@ not developer notes) continuously as features ship.
   that," per the user's own words. None of these are scoped/planned yet — per this file's
   standing "plan & propose" rule, each needs real clarifying questions (especially 2 and 5)
   before any code gets written.
+- **Picked up 3 of the 5 deferred items above (2026-08-28) — see README Done item 217 for the
+  full writeup.** Net Worth's Assets/Liabilities/Net stat-card trio was the one uncolored group
+  on an otherwise fully-hued page (fixed with `hueStyle`, sign-based for Assets/Net, fixed loss
+  tint for Liabilities matching EMI's own Outstanding convention); the "Assets vs. liabilities"
+  chart's title was a full sentence getting mangled by the app-wide title-case CSS rule, fixed
+  with a new `ChartCard.titleTooltip` prop (mirrors `StatCard.labelTitle`). Funds' Add-
+  transaction form gained a 3-way-linked Amount field (NAV/Units/Amount, editing any one
+  recomputes the third — same pattern as `RiskCalculator`'s Target price/shares/amount trio),
+  with NAV auto-prefilled from the fund's own last known price. **EMI turned out to have 3 real
+  bugs behind items 2's own listed symptoms, found by reading the live code rather than
+  assuming**: `applyBigEmi` hardcoded its Big-EMI generator to start from `sum.elapsed + 1`
+  ("remaining months only"), which for an old loan (this feature's actual primary use case)
+  meant nearly every historical major interval was already before that point and silently
+  skipped — fixed with a user-editable "Start from month #" field defaulting to 1. The Schedule
+  table's pencil-edit button was gated `canEdit = r.month > sum.elapsed`, locking every PAST
+  month from editing at all — backwards for a feature whose whole point is recording what
+  actually happened; fixed by making every row editable, which also fixes "no option to link a
+  past payment to a finance" as a free side effect (the link checkbox lives inside that same
+  row). Checked `useLastTransferSource.ts` before assuming "1 default finance per EMI" was
+  broken — it isn't: `entityKey()` only reads `.module`/`.ref`, ignoring the `emiMonth` field
+  `loanSide` also carries, so the remembered finance already correctly spans every month of one
+  loan. Also: saving a new loan now jumps straight into its own detail view in EDIT mode (Big
+  EMI no longer needs elapsed history per the fix above, so this closes the "add form is
+  missing these options" gap without duplicating Advanced's UI into the add-form itself). **Rule
+  worth repeating**: three of these four EMI findings were real, previously-undiscovered bugs
+  sitting underneath a user complaint that read, on its surface, like a request for a brand-new
+  feature — reading the actual calc/UI code before assuming "not built yet" found root causes a
+  guess would have missed entirely. Verified live via Playwright with a seeded 2024-started
+  36-month loan matching the user's own described scenario (plot bought on installments) —
+  "Start from month #" defaults to 1, a "Paid" (past) month shows a working pencil-edit + link
+  checkbox, sign-in gate fires correctly on both Generate and Add loan. `npx tsc -b` / `npm run
+  test` (442 tests, unchanged) / `npm run build` all clean. **Still genuinely open, not
+  attempted**: a separate itemized "fine paid" field (today a fine just gets folded into that
+  month's own `amount`, which works but isn't broken out separately — a real design decision,
+  not guessed at); the new lending-to-others module question (item 5 above); the future
+  Calendar widget.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

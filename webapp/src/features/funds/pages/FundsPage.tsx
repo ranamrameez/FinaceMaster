@@ -1,5 +1,5 @@
 import type { User } from 'firebase/auth';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Doughnut, Line } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
@@ -453,6 +453,15 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
   const [txDate, setTxDate] = useState(today());
   const [txUnits, setTxUnits] = useState(0);
   const [txNav, setTxNav] = useState(0);
+  // User-reported (2026-08-28): "I only have info of the amount, not
+  // NAV/units — what should I do?" A third, string-backed Amount field
+  // (same 3-way-linked pattern already established by RiskCalculator's
+  // Target buy price/shares/amount trio) lets a transaction be entered from
+  // whichever two of {units, NAV, amount} are actually known; editing any
+  // one recomputes the third from NAV. Kept as a string, not a number, for
+  // the same reason RiskCalculator's targetAmountInput is — a controlled
+  // number input re-formats on every keystroke and fights typing.
+  const [txAmountInput, setTxAmountInput] = useState('');
   const [txTime, setTxTime] = useState<string | undefined>(undefined);
   const [txTimezone, setTxTimezone] = useState<string | undefined>(() => defaultTimezoneForCurrency(fund.currencyCode));
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -469,6 +478,15 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
   const profit = currentValue - invested;
   const profitPct = invested > 0 ? (profit / invested) * 100 : 0;
   const rate = fundXIRR(fund.id);
+
+  // Prefills the Add-transaction NAV field with this fund's own last known
+  // price once, so a user who only knows today's AMOUNT (not NAV) gets
+  // units auto-computed from a reasonable default with zero extra typing —
+  // still fully editable if the real NAV differs. Only fires while the NAV
+  // field is untouched (0), so it never clobbers what the user typed.
+  useEffect(() => {
+    if (currentNav > 0 && txNav === 0) setTxNav(currentNav);
+  }, [currentNav, txNav]);
 
   const txs = workbook.transactions.map((t, i) => ({ t, i })).filter((r) => r.t.ticker === fund.id).sort((a, b) => b.t.date.localeCompare(a.t.date));
 
@@ -543,11 +561,13 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
   };
 
   const submitTx = async () => {
-    if (!txUnits || !txNav) return toast('Enter units and NAV.');
+    if (!txNav) return toast('Enter a NAV (or an amount, once a NAV is known).');
+    if (!txUnits) return toast('Enter units, or an amount to compute them from the NAV.');
     if (!(await ensureSignedIn('Sign in to save this transaction.'))) return;
     addTransaction({ date: txDate, ticker: fund.id, action: txAction, shares: txUnits, price: txNav, time: txTime, timezone: txTimezone });
     toast(`${txAction === 'BUY' ? 'Invested' : 'Withdrew'} logged.`);
     setTxUnits(0);
+    setTxAmountInput('');
     setTxTime(undefined);
   };
 
@@ -636,13 +656,52 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
 
       <h3>Add transaction</h3>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-        <select value={txAction} onChange={(e) => setTxAction(e.target.value as 'BUY' | 'SELL')}>
-          <option value="BUY">Invest</option>
-          <option value="SELL">Withdraw</option>
-        </select>
-        <input type="date" value={txDate} onChange={(e) => setTxDate(e.target.value)} />
-        <input type="number" placeholder="Units" value={txUnits || ''} onChange={(e) => setTxUnits(Number(e.target.value))} style={{ width: 100 }} />
-        <input type="number" step="0.0001" placeholder="NAV" value={txNav || ''} onChange={(e) => setTxNav(Number(e.target.value))} style={{ width: 100 }} />
+        <Field label="Action">
+          <Select value={txAction} onChange={(e) => setTxAction(e.target.value as 'BUY' | 'SELL')}>
+            <option value="BUY">Invest</option>
+            <option value="SELL">Withdraw</option>
+          </Select>
+        </Field>
+        <Field label="Date">
+          <TextInput type="date" value={txDate} onChange={(e) => setTxDate(e.target.value)} />
+        </Field>
+        <Field label="NAV">
+          <TextInput
+            type="number"
+            step="0.0001"
+            value={txNav || ''}
+            onChange={(e) => {
+              const nav = Number(e.target.value);
+              setTxNav(nav);
+              if (txUnits) setTxAmountInput(nav > 0 ? (txUnits * nav).toFixed(2) : '');
+            }}
+            style={{ width: 100 }}
+          />
+        </Field>
+        <Field label="Units">
+          <TextInput
+            type="number"
+            value={txUnits || ''}
+            onChange={(e) => {
+              const u = Number(e.target.value);
+              setTxUnits(u);
+              setTxAmountInput(txNav > 0 && u ? (u * txNav).toFixed(2) : '');
+            }}
+            style={{ width: 100 }}
+          />
+        </Field>
+        <Field label="or Amount" title="Only know the amount, not the units? Enter it here — units are computed automatically from the NAV above (pre-filled with this fund's last known NAV, editable if today's is different).">
+          <TextInput
+            type="number"
+            step="0.01"
+            value={txAmountInput}
+            onChange={(e) => {
+              setTxAmountInput(e.target.value);
+              setTxUnits(txNav > 0 ? Number(e.target.value) / txNav : 0);
+            }}
+            style={{ width: 110 }}
+          />
+        </Field>
         <TimeZoneFields time={txTime} timezone={txTimezone} onTimeChange={setTxTime} onTimezoneChange={setTxTimezone} />
         <button className="btn" onClick={submitTx}><PlusIcon />Add</button>
       </div>
