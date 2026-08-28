@@ -19,17 +19,46 @@ import { CollapsibleCard } from '../../../components/Card';
  * paragraph in the filter bar itself, easy to miss once scrolled past; a
  * small per-chart badge keeps the distinction visible at the point where
  * it's actually confusing. */
-export function ChartCard({ title, empty, unfiltered, children }: { title: string; empty?: boolean; unfiltered?: boolean; children: ReactNode }) {
-  return (
-    <CollapsibleCard
-      title={
-        <h4 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-          {title}
-          {unfiltered && <span className="footer-note" style={{ fontWeight: 400, textTransform: 'none' }}>(whole portfolio — not filtered)</span>}
-        </h4>
-      }
-    >
-      {empty ? <p className="footer-note">Not enough data yet.</p> : <div className="chart-canvas-wrap">{children}</div>}
-    </CollapsibleCard>
+/** `flat` renders the chart WITHOUT its own `CollapsibleCard` chrome — just
+ * a heading + the chart. User-reported (2026-08-28): "you are still using
+ * nested cards (Analytics -> carded charts. who would collapse individual
+ * chart when whole section is collapsible" — `Tabs` already wraps every
+ * tab's content in its own `CollapsibleCard`, so an Analytics tab full of
+ * regular (non-`flat`) `ChartCard`s was a card-inside-a-card, each with its
+ * own redundant collapse control (design rule 1: never nest cards). Pass
+ * `flat` for any `ChartCard` rendered inside a `Tabs` section; the plain
+ * (non-flat) mode stays the default for the few places a chart genuinely
+ * stands alone outside a `Tabs`-driven page (e.g. inside a loan/property's
+ * own detail view). */
+export function ChartCard({
+  title,
+  empty,
+  unfiltered,
+  flat,
+  children,
+}: {
+  title: string;
+  empty?: boolean;
+  unfiltered?: boolean;
+  flat?: boolean;
+  children: ReactNode;
+}) {
+  const heading = (
+    <h4 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+      {title}
+      {unfiltered && <span className="footer-note" style={{ fontWeight: 400, textTransform: 'none' }}>(whole portfolio — not filtered)</span>}
+    </h4>
   );
+  const body = empty ? <p className="footer-note">Not enough data yet.</p> : <div className="chart-canvas-wrap">{children}</div>;
+
+  if (flat) {
+    return (
+      <div style={{ marginBottom: 20 }}>
+        {heading}
+        <div style={{ marginTop: 10 }}>{body}</div>
+      </div>
+    );
+  }
+
+  return <CollapsibleCard title={heading}>{body}</CollapsibleCard>;
 }

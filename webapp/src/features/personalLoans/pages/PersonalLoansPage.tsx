@@ -764,30 +764,23 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: PersonalLoan) => void
   );
 }
 
+// User-reported (2026-08-27, then again 2026-08-28): duplicated the global
+// /account hub's own Sync status section — dropped the status text/heading
+// here, same fix already applied app-wide (see BankPage.tsx for the
+// fullest write-up).
 function AccountSection({
-  syncStatus,
   cloudEmpty,
   uploadLocalToCloud,
 }: {
-  syncStatus: string;
   cloudEmpty: boolean;
   uploadLocalToCloud: () => Promise<void>;
 }) {
   const loans = usePersonalLoansWorkbookStore((s) => s.workbook.loans);
   const [busy, setBusy] = useState(false);
 
-  if (!firebaseReady) {
-    return (
-      <Card>
-        <h3 style={{ marginTop: 0 }}>Account</h3>
-        <p className="footer-note">Cloud sync is unavailable — Firebase failed to load in this browser.</p>
-      </Card>
-    );
-  }
+  if (!firebaseReady || !cloudEmpty) return null;
   return (
     <Card>
-      <h3 style={{ marginTop: 0 }}>Account</h3>
-      <p className="footer-note">{syncStatus}</p>
       {cloudEmpty && (
         <Notice tone="warning" style={{ marginTop: 8 }}>
           <p style={{ marginTop: 0 }}>
@@ -821,7 +814,6 @@ function AccountSection({
 }
 
 export function PersonalLoansPage({
-  syncStatus,
   cloudEmpty,
   uploadLocalToCloud,
 }: {
@@ -867,7 +859,7 @@ export function PersonalLoansPage({
             ]}
           />
           <div style={{ marginTop: 16 }}>
-            <AccountSection syncStatus={syncStatus} cloudEmpty={cloudEmpty} uploadLocalToCloud={uploadLocalToCloud} />
+            <AccountSection cloudEmpty={cloudEmpty} uploadLocalToCloud={uploadLocalToCloud} />
           </div>
         </div>
       )}

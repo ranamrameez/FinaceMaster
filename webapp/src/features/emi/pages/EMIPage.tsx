@@ -996,30 +996,23 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: EMILoan) => void; onE
   );
 }
 
+// User-reported (2026-08-27, then again 2026-08-28): duplicated the global
+// /account hub's own Sync status section — dropped the status text/heading
+// here, same fix already applied app-wide (see BankPage.tsx for the
+// fullest write-up).
 function AccountSection({
-  syncStatus,
   cloudEmpty,
   uploadLocalToCloud,
 }: {
-  syncStatus: string;
   cloudEmpty: boolean;
   uploadLocalToCloud: () => Promise<void>;
 }) {
   const loans = useEMIWorkbookStore((s) => s.workbook.entries);
   const [busy, setBusy] = useState(false);
 
-  if (!firebaseReady) {
-    return (
-      <Card>
-        <h3 style={{ marginTop: 0 }}>Account</h3>
-        <p className="footer-note">Cloud sync is unavailable — Firebase failed to load in this browser.</p>
-      </Card>
-    );
-  }
+  if (!firebaseReady || !cloudEmpty) return null;
   return (
     <Card style={{ marginTop: 16 }}>
-      <h3 style={{ marginTop: 0 }}>Account</h3>
-      <p className="footer-note">{syncStatus}</p>
       {cloudEmpty && (
         <Notice tone="warning" style={{ marginTop: 8 }}>
           <p style={{ marginTop: 0 }}>No data found in the cloud for this account's EMI/Loans workbook. This won't upload automatically.</p>
@@ -1051,7 +1044,6 @@ function AccountSection({
 }
 
 export function EMIPage({
-  syncStatus,
   cloudEmpty,
   uploadLocalToCloud,
 }: {
@@ -1087,7 +1079,7 @@ export function EMIPage({
              form itself in a popup, and the stats+list now render first. */}
           <OverallSummary />
           <LoanList onSelect={openLoan} onEdit={editLoan} />
-          <AccountSection syncStatus={syncStatus} cloudEmpty={cloudEmpty} uploadLocalToCloud={uploadLocalToCloud} />
+          <AccountSection cloudEmpty={cloudEmpty} uploadLocalToCloud={uploadLocalToCloud} />
           <AddLoanFab />
         </div>
       )}

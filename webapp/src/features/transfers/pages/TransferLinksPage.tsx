@@ -13,6 +13,7 @@ import { useSortableRows } from '../../../hooks/useSortableRows';
 import { emiSummary } from '../../../lib/calc/emiModule';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
+import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
 import { isSupportedLinkPair } from '../../../lib/interEntityLink';
 import { createLinkedTransfer, deleteLinkCascade, updateLinkedTransfer } from '../../../lib/linkCascade';
@@ -57,7 +58,7 @@ export function nextUnpaidEmiMonth(loan: EMILoan): number {
  * component instead of once per row. */
 function resolveCurrency(cfg: LinkSideConfig, ctx: CurrencyContext): string | null {
   switch (cfg.module) {
-    case 'cash': return ctx.cashCurrency;
+    case 'cash': return cfg.currencyCode || ctx.cashCurrency;
     case 'bank': return ctx.bankAccounts.find((a) => a.id === cfg.ref)?.currencyCode ?? null;
     case 'qse': return ctx.qseCurrency;
     case 'psx': return ctx.psxCurrency;
@@ -152,7 +153,23 @@ export function SideFields({ label, cfg, onChange }: { label: string; cfg: LinkS
           </Select>
         </Field>
       )}
-      {currency && <span className="footer-note">{currency}</span>}
+      {/* User-reported (2026-08-28): "Link To always shows USD instead of
+         filling default currency... even hand to hand cash currency
+         exchange can happen. so make all finance combos choosable!" —
+         Cash has no single fixed currency the way a Bank account does (a
+         Cash entry can be logged in any currency), so it needs a real
+         picker here rather than silently assuming `settings.defaultCurrency`
+         — this is also what fixes `buildSideRecord`'s own currencyCode
+         actually being populated instead of falling back to a hardcoded
+         'USD' (see that function's own comment). */}
+      {cfg.module === 'cash' && (
+        <Field label="Currency">
+          <Select value={cfg.currencyCode ?? cashCurrency} onChange={(e) => onChange({ ...cfg, currencyCode: e.target.value })}>
+            {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+          </Select>
+        </Field>
+      )}
+      {currency && cfg.module !== 'cash' && <span className="footer-note">{currency}</span>}
     </div>
   );
 }
@@ -394,12 +411,11 @@ function LinksList() {
 }
 
 export function TransferLinksPage({
-  syncStatus,
   cloudEmpty,
   uploadLocalToCloud,
 }: {
   user: User | null;
-  syncStatus: string;
+  syncStatus?: string;
   cloudEmpty: boolean;
   uploadLocalToCloud: () => Promise<void>;
 }) {
@@ -420,10 +436,13 @@ export function TransferLinksPage({
       <CollapsibleCard title={<h3 style={{ margin: 0 }}>Linked transfers</h3>}>
         <LinksList />
       </CollapsibleCard>
-      {firebaseReady && (
+      {/* User-reported (2026-08-27, then again 2026-08-28): duplicated the
+         global /account hub's own Sync status section — dropped the status
+         text/heading, renders nothing unless there's an actual cloud-empty
+         upload prompt to show (same fix as every other module's identical
+         AccountSection, see BankPage.tsx for the fullest write-up). */}
+      {firebaseReady && cloudEmpty && (
         <Card style={{ marginTop: 16 }}>
-          <h3 style={{ marginTop: 0 }}>Account</h3>
-          <p className="footer-note">{syncStatus}</p>
           {cloudEmpty && (
             <Notice tone="warning" style={{ marginTop: 8 }}>
               <p style={{ marginTop: 0 }}>

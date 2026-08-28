@@ -291,6 +291,83 @@ function AddAccountFab() {
   );
 }
 
+/** User-reported (2026-08-28): "Make Create/Edit form same so that data
+ * lists can be populated all the time. its a loop hole now." Confirmed a
+ * real, concrete instance of the "loophole": when Edit/Delete moved off
+ * the homepage cards onto this page's own "Account details" edit form
+ * (2026-08-27), that edit form's own draft state never gained Name/
+ * Currency/Opening balance — so after that change there was NO way to
+ * edit those three fields on an existing account at all, a real
+ * regression, not just visual duplication. Fixed at the root: ONE shared
+ * field-rendering component used by both the Add form and the Edit form,
+ * so they structurally cannot diverge again — a field added to one is a
+ * field added to both, and every datalist (account type, bank name, card
+ * network) is always populated regardless of which form is open.
+ * `idSuffix` keeps each form's `<datalist>` ids unique since both can be
+ * mounted in the DOM at once (Add via the homepage FAB, Edit via the
+ * detail page). */
+function AccountFormFields({
+  value,
+  onChange,
+  idSuffix,
+}: {
+  value: Omit<BankAccount, 'id'>;
+  onChange: (patch: Partial<BankAccount>) => void;
+  idSuffix: string;
+}) {
+  return (
+    <div>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+        <Field label="Account name" width={180} required>
+          <TextInput value={value.name} onChange={(e) => onChange({ name: e.target.value })} placeholder="e.g. Meezan Checking" />
+        </Field>
+        <Field label="Currency" width={100} required>
+          <Select value={value.currencyCode} onChange={(e) => onChange({ currencyCode: e.target.value })}>
+            {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+          </Select>
+        </Field>
+        <Field label="Opening balance (optional)" width={140}>
+          <TextInput type="number" step="0.01" value={value.openingBalance || ''} onChange={(e) => onChange({ openingBalance: Number(e.target.value) })} />
+        </Field>
+      </div>
+      {/* README item 82: branch/account-type, free-form (not a fixed enum) —
+         ACCOUNT_TYPES is just a datalist of common suggestions, any value is
+         accepted. */}
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+        <Field label="Branch (optional)" width={160}>
+          <TextInput value={value.branch ?? ''} onChange={(e) => onChange({ branch: e.target.value || undefined })} placeholder="e.g. Gulberg Branch" />
+        </Field>
+        <Field label="Account type (optional)" width={160}>
+          <TextInput list={`bank-account-type-datalist-${idSuffix}`} value={value.accountType ?? ''} onChange={(e) => onChange({ accountType: e.target.value || undefined })} placeholder="e.g. Savings" />
+        </Field>
+      </div>
+      {/* User-requested: an IBAN lookup fills bank name/BIC automatically
+         when supported; all still hand-editable. */}
+      <IbanLookupFields value={value} onChange={onChange} bankNameDatalistId={`bank-name-datalist-${idSuffix}`} />
+      <CreditCardFields value={value} onChange={onChange} datalistId={`card-network-datalist-${idSuffix}`} />
+      {/* User-requested: save an account number + the SMS sender details a
+         bank alert actually arrives from, for a future SMS-based
+         transaction-import feature (nothing reads these yet — this just
+         gives that feature somewhere to read from). All optional, so
+         skipping them changes nothing about today's add-account flow. */}
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+        <Field label="Account number (optional)" width={160} title="However your bank shows it on statements/SMS — often partially masked, e.g. xxxx1234.">
+          <TextInput value={value.accountNumber ?? ''} onChange={(e) => onChange({ accountNumber: e.target.value || undefined })} placeholder="e.g. xxxx1234" />
+        </Field>
+        <Field label="SMS sender ID (optional)" width={160} title="The sender ID/short code your bank's alert SMS arrives from, e.g. a bank name or a numeric short code.">
+          <TextInput value={value.smsSenderId ?? ''} onChange={(e) => onChange({ smsSenderId: e.target.value || undefined })} placeholder="e.g. 8123 or MEEZAN" />
+        </Field>
+        <Field label="SMS sender number (optional)" width={160} title="If your bank's alerts come from a full phone number instead of a short code.">
+          <TextInput value={value.smsSenderNumber ?? ''} onChange={(e) => onChange({ smsSenderNumber: e.target.value || undefined })} placeholder="e.g. +923001234567" />
+        </Field>
+      </div>
+      <datalist id={`bank-account-type-datalist-${idSuffix}`}>
+        {ACCOUNT_TYPES.map((t) => <option key={t} value={t} />)}
+      </datalist>
+    </div>
+  );
+}
+
 function AddAccountForm({ onSaved }: { onSaved?: () => void }) {
   const addAccount = useBankWorkbookStore((s) => s.addAccount);
   const [lastCurrency, setLastCurrency] = useLastCurrency('bank-account', 'USD');
@@ -308,53 +385,14 @@ function AddAccountForm({ onSaved }: { onSaved?: () => void }) {
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-        <Field label="Account name" width={180} required>
-          <TextInput value={a.name} onChange={(e) => setA({ ...a, name: e.target.value })} placeholder="e.g. Meezan Checking" />
-        </Field>
-        <Field label="Currency" width={100} required>
-          <Select value={a.currencyCode} onChange={(e) => { setA({ ...a, currencyCode: e.target.value }); setLastCurrency(e.target.value); }}>
-            {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
-          </Select>
-        </Field>
-        <Field label="Opening balance (optional)" width={140}>
-          <TextInput type="number" step="0.01" value={a.openingBalance || ''} onChange={(e) => setA({ ...a, openingBalance: Number(e.target.value) })} />
-        </Field>
-      </div>
-      {/* README item 82: branch/account-type, free-form (not a fixed enum) —
-         ACCOUNT_TYPES is just a datalist of common suggestions, any value is
-         accepted. */}
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-        <Field label="Branch (optional)" width={160}>
-          <TextInput value={a.branch ?? ''} onChange={(e) => setA({ ...a, branch: e.target.value || undefined })} placeholder="e.g. Gulberg Branch" />
-        </Field>
-        <Field label="Account type (optional)" width={160}>
-          <TextInput list="bank-account-type-datalist" value={a.accountType ?? ''} onChange={(e) => setA({ ...a, accountType: e.target.value || undefined })} placeholder="e.g. Savings" />
-        </Field>
-      </div>
-      {/* User-requested: an IBAN lookup fills bank name/BIC automatically
-         when supported; all still hand-editable. */}
-      <IbanLookupFields value={a} onChange={(patch) => setA({ ...a, ...patch })} bankNameDatalistId="bank-name-datalist-add" />
-      <CreditCardFields value={a} onChange={(patch) => setA({ ...a, ...patch })} datalistId="card-network-datalist-add" />
-      {/* User-requested: save an account number + the SMS sender details a
-         bank alert actually arrives from, for a future SMS-based
-         transaction-import feature (nothing reads these yet — this just
-         gives that feature somewhere to read from). All optional, so
-         skipping them changes nothing about today's add-account flow. */}
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-        <Field label="Account number (optional)" width={160} title="However your bank shows it on statements/SMS — often partially masked, e.g. xxxx1234.">
-          <TextInput value={a.accountNumber ?? ''} onChange={(e) => setA({ ...a, accountNumber: e.target.value || undefined })} placeholder="e.g. xxxx1234" />
-        </Field>
-        <Field label="SMS sender ID (optional)" width={160} title="The sender ID/short code your bank's alert SMS arrives from, e.g. a bank name or a numeric short code.">
-          <TextInput value={a.smsSenderId ?? ''} onChange={(e) => setA({ ...a, smsSenderId: e.target.value || undefined })} placeholder="e.g. 8123 or MEEZAN" />
-        </Field>
-        <Field label="SMS sender number (optional)" width={160} title="If your bank's alerts come from a full phone number instead of a short code.">
-          <TextInput value={a.smsSenderNumber ?? ''} onChange={(e) => setA({ ...a, smsSenderNumber: e.target.value || undefined })} placeholder="e.g. +923001234567" />
-        </Field>
-      </div>
-      <datalist id="bank-account-type-datalist">
-        {ACCOUNT_TYPES.map((t) => <option key={t} value={t} />)}
-      </datalist>
+      <AccountFormFields
+        value={a}
+        onChange={(patch) => {
+          setA((prev) => ({ ...prev, ...patch }));
+          if (patch.currencyCode) setLastCurrency(patch.currencyCode);
+        }}
+        idSuffix="add"
+      />
       <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
         <PlusIcon />Add account
       </button>
@@ -474,47 +512,49 @@ export function AccountDetailPage() {
   // the "account not found" guard has to come AFTER every hook call, not
   // before — these `?.` fallbacks just keep the initial render safe for
   // an id that doesn't resolve, before that guard renders instead.
-  const [meta, setMeta] = useState({
-    accountNumber: account?.accountNumber ?? '',
-    smsSenderId: account?.smsSenderId ?? '',
-    smsSenderNumber: account?.smsSenderNumber ?? '',
-    branch: account?.branch ?? '',
-    accountType: account?.accountType ?? '',
-    iban: account?.iban ?? '',
-    bankName: account?.bankName ?? '',
-    bic: account?.bic ?? '',
-    isLiability: account?.isLiability,
-    creditLimit: account?.creditLimit,
-    annualFee: account?.annualFee,
-    statementDate: account?.statementDate,
-    paymentDueDate: account?.paymentDueDate,
-    lateFeeAfterDue: account?.lateFeeAfterDue,
-    minPaymentAmount: account?.minPaymentAmount,
-    cardNetwork: account?.cardNetwork,
-    cardBin: account?.cardBin,
+  //
+  // Shaped as the FULL `Omit<BankAccount, 'id'>` (matches `AccountFormFields`'
+  // `value` prop exactly) — see that component's own doc comment for why:
+  // a narrower draft shape here is exactly what silently dropped Name/
+  // Currency/Opening-balance editing entirely in an earlier round.
+  const accountToFormValue = (a: BankAccount | undefined): Omit<BankAccount, 'id'> => ({
+    name: a?.name ?? '',
+    currencyCode: a?.currencyCode ?? 'USD',
+    openingBalance: a?.openingBalance ?? 0,
+    accountNumber: a?.accountNumber,
+    smsSenderId: a?.smsSenderId,
+    smsSenderNumber: a?.smsSenderNumber,
+    branch: a?.branch,
+    accountType: a?.accountType,
+    iban: a?.iban,
+    bankName: a?.bankName,
+    bic: a?.bic,
+    isLiability: a?.isLiability,
+    creditLimit: a?.creditLimit,
+    annualFee: a?.annualFee,
+    statementDate: a?.statementDate,
+    paymentDueDate: a?.paymentDueDate,
+    lateFeeAfterDue: a?.lateFeeAfterDue,
+    minPaymentAmount: a?.minPaymentAmount,
+    cardNetwork: a?.cardNetwork,
+    cardBin: a?.cardBin,
   });
+  const [meta, setMeta] = useState<Omit<BankAccount, 'id'>>(() => accountToFormValue(account));
   const saveMeta = async () => {
     if (!account) return;
+    if (!meta.name.trim()) return toast('Enter an account name.');
     if (!(await ensureSignedIn('Sign in to save account details.'))) return;
     updateAccount(account.id, {
-      ...account,
-      accountNumber: meta.accountNumber.trim() || undefined,
-      smsSenderId: meta.smsSenderId.trim() || undefined,
-      smsSenderNumber: meta.smsSenderNumber.trim() || undefined,
-      branch: meta.branch.trim() || undefined,
-      accountType: meta.accountType.trim() || undefined,
-      iban: meta.iban.trim() || undefined,
-      bankName: meta.bankName.trim() || undefined,
-      bic: meta.bic.trim() || undefined,
-      isLiability: meta.isLiability,
-      creditLimit: meta.creditLimit,
-      annualFee: meta.annualFee,
-      statementDate: meta.statementDate,
-      paymentDueDate: meta.paymentDueDate,
-      lateFeeAfterDue: meta.lateFeeAfterDue,
-      minPaymentAmount: meta.minPaymentAmount,
-      cardNetwork: meta.cardNetwork,
-      cardBin: meta.cardBin,
+      ...meta,
+      name: meta.name.trim(),
+      accountNumber: meta.accountNumber?.trim() || undefined,
+      smsSenderId: meta.smsSenderId?.trim() || undefined,
+      smsSenderNumber: meta.smsSenderNumber?.trim() || undefined,
+      branch: meta.branch?.trim() || undefined,
+      accountType: meta.accountType?.trim() || undefined,
+      iban: meta.iban?.trim() || undefined,
+      bankName: meta.bankName?.trim() || undefined,
+      bic: meta.bic?.trim() || undefined,
     });
     toast('Account details saved.');
   };
@@ -534,25 +574,7 @@ export function AccountDetailPage() {
   const [editingMeta, setEditingMeta] = useState(false);
   const cancelMetaEdit = () => {
     if (!account) return;
-    setMeta({
-      accountNumber: account.accountNumber ?? '',
-      smsSenderId: account.smsSenderId ?? '',
-      smsSenderNumber: account.smsSenderNumber ?? '',
-      branch: account.branch ?? '',
-      accountType: account.accountType ?? '',
-      iban: account.iban ?? '',
-      bankName: account.bankName ?? '',
-      bic: account.bic ?? '',
-      isLiability: account.isLiability,
-      creditLimit: account.creditLimit,
-      annualFee: account.annualFee,
-      statementDate: account.statementDate,
-      paymentDueDate: account.paymentDueDate,
-      lateFeeAfterDue: account.lateFeeAfterDue,
-      minPaymentAmount: account.minPaymentAmount,
-      cardNetwork: account.cardNetwork,
-      cardBin: account.cardBin,
-    });
+    setMeta(accountToFormValue(account));
     setEditingMeta(false);
   };
 
@@ -615,13 +637,93 @@ export function AccountDetailPage() {
         ) : null}
       </p>
 
+      {/* User-reported (2026-08-28): "UI ordering still pathetic. Account
+         details buried in middle instead of showing on top." Moved ahead
+         of "Add a transaction" — an entity's own identity/attributes read
+         first, frequent actions follow.
+
+         Also (same report): "I asked to use grids to utilize space
+         properly. But you are still obsessed with 100% width cards instead
+         of making small side by side cards." Account details/Upcoming
+         plans/By category are all naturally narrower content (an attribute
+         list, a short table, a chart) — wrapped in a responsive grid
+         (design rule 3: wrap flex grids instead of shrinking UI to fit) so
+         they sit side by side on a wide screen instead of each claiming
+         the full page width for a fraction of it. */}
+      <div className="detail-grid" style={{ marginBottom: 16 }}>
+        <CollapsibleCard
+          defaultOpen={false}
+          title={<h3 style={{ margin: 0 }}>Account details</h3>}
+          headerExtra={
+            editingMeta ? (
+              <>
+                <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={() => { saveMeta(); setEditingMeta(false); }} />
+                <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={cancelMetaEdit} />
+              </>
+            ) : (
+              <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => setEditingMeta(true)} />
+            )
+          }
+        >
+          {!editingMeta ? (
+            <AttributeList
+              items={[
+                { label: 'Name', value: account.name },
+                { label: 'Currency', value: account.currencyCode },
+                { label: 'Opening balance', value: fmtMoney(account.openingBalance, account.currencyCode) },
+                { label: 'Branch', value: account.branch },
+                { label: 'Account type', value: account.accountType },
+                { label: 'IBAN', value: account.iban },
+                { label: 'Bank name', value: account.bankName },
+                { label: 'BIC', value: account.bic },
+                { label: 'Credit limit', value: account.creditLimit !== undefined ? fmtMoney(account.creditLimit, account.currencyCode) : undefined },
+                { label: 'Annual fee', value: account.annualFee !== undefined ? fmtMoney(account.annualFee, account.currencyCode) : undefined },
+                { label: 'Statement day of month', value: account.statementDate },
+                { label: 'Payment due day of month', value: account.paymentDueDate },
+                { label: 'Late fee after due date', value: account.lateFeeAfterDue !== undefined ? fmtMoney(account.lateFeeAfterDue, account.currencyCode) : undefined },
+                { label: 'Minimum amount due', value: account.minPaymentAmount !== undefined ? fmtMoney(account.minPaymentAmount, account.currencyCode) : undefined },
+                { label: 'Card network', value: account.cardNetwork },
+                { label: 'Card BIN', value: account.cardBin },
+                { label: 'Account number', value: account.accountNumber },
+                { label: 'SMS sender ID', value: account.smsSenderId },
+                { label: 'SMS sender number', value: account.smsSenderNumber },
+              ]}
+            />
+          ) : (
+            <AccountFormFields value={meta} onChange={(patch) => setMeta((m) => ({ ...m, ...patch }))} idSuffix="detail" />
+          )}
+        </CollapsibleCard>
+
+        {upcoming.length > 0 && (
+          <CollapsibleCard defaultOpen={false} title={<h3 style={{ margin: 0 }}>Upcoming plans ({upcoming.length})</h3>}>
+            <div className="table-scroll">
+              <table>
+                <thead><tr><th>Date</th><th>Description</th><th>Amount</th></tr></thead>
+                <tbody>
+                  {upcoming.map((p) => (
+                    <tr key={p.id}>
+                      <td>{p.date}</td>
+                      <td>{p.description}</td>
+                      <td className={p.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(p.amount, account.currencyCode)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CollapsibleCard>
+        )}
+
+        <CollapsibleCard defaultOpen={false} title={<h3 style={{ margin: 0 }}>By category</h3>}>
+          <CategoryBreakdownBody account={account} />
+        </CollapsibleCard>
+      </div>
+
       {/* User-requested (2026-08-26): "a transaction/repayment/entry
          conceptually belongs to its parent Account... should be logged...
          from THAT item's own detail page/view" — Banking's own detail modal
          was the clearest gap (no way to add a transaction from inside it at
          all), exactly backwards from what a user wants when clicking into
-         an account. Leads with this now; the account-metadata edit form
-         (rare to touch after setup) is demoted into a collapsed card below.
+         an account.
 
          2026-08-27: wrapped in a real Card — it used to be bare content
          under a plain `<h4>`, the one section on this page that didn't
@@ -632,125 +734,6 @@ export function AccountDetailPage() {
         <h3 style={{ marginTop: 0 }}>Add a transaction</h3>
         <AddTransactionsForm accountId={account.id} currencyCode={account.currencyCode} knownCategories={knownCategories} />
       </Card>
-
-      {/* User-requested (2026-08-27): "No option to link a transaction to
-         other finance." Every other module already links inline to
-         Bank/Cash; this is the reverse — Bank linking out to another
-         module — using the exact same engine the standalone Transfers
-         page uses. Collapsed by default since most transactions aren't
-         cross-entity transfers. */}
-      <CollapsibleCard defaultOpen={false} style={{ marginBottom: 16 }} title={<h3 style={{ margin: 0 }}>Link a transaction to another module</h3>}>
-        <LinkTransactionSection account={account} />
-      </CollapsibleCard>
-
-      {/* User-requested: save an account number + SMS sender details for a
-         future SMS-based transaction-import feature. Nothing reads these
-         yet — they're just captured here so that feature has somewhere to
-         read from once built. Collapsed by default (2026-08-26) — editing
-         an account's own metadata is rare, adding a transaction is the
-         common case, so this no longer leads the modal. */}
-      <CollapsibleCard
-        defaultOpen={false}
-        style={{ marginBottom: 16 }}
-        title={<h4 style={{ margin: 0 }}>Account details</h4>}
-        headerExtra={
-          editingMeta ? (
-            <>
-              <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={() => { saveMeta(); setEditingMeta(false); }} />
-              <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={cancelMetaEdit} />
-            </>
-          ) : (
-            <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => setEditingMeta(true)} />
-          )
-        }
-      >
-        {!editingMeta ? (
-          <AttributeList
-            items={[
-              { label: 'Branch', value: account.branch },
-              { label: 'Account type', value: account.accountType },
-              { label: 'IBAN', value: account.iban },
-              { label: 'Bank name', value: account.bankName },
-              { label: 'BIC', value: account.bic },
-              { label: 'Credit limit', value: account.creditLimit !== undefined ? fmtMoney(account.creditLimit, account.currencyCode) : undefined },
-              { label: 'Annual fee', value: account.annualFee !== undefined ? fmtMoney(account.annualFee, account.currencyCode) : undefined },
-              { label: 'Statement day of month', value: account.statementDate },
-              { label: 'Payment due day of month', value: account.paymentDueDate },
-              { label: 'Late fee after due date', value: account.lateFeeAfterDue !== undefined ? fmtMoney(account.lateFeeAfterDue, account.currencyCode) : undefined },
-              { label: 'Minimum amount due', value: account.minPaymentAmount !== undefined ? fmtMoney(account.minPaymentAmount, account.currencyCode) : undefined },
-              { label: 'Card network', value: account.cardNetwork },
-              { label: 'Card BIN', value: account.cardBin },
-              { label: 'Account number', value: account.accountNumber },
-              { label: 'SMS sender ID', value: account.smsSenderId },
-              { label: 'SMS sender number', value: account.smsSenderNumber },
-            ]}
-          />
-        ) : (
-          <>
-            <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
-              <Field label="Branch" width={160}>
-                <TextInput value={meta.branch} onChange={(e) => setMeta({ ...meta, branch: e.target.value })} placeholder="e.g. Gulberg Branch" />
-              </Field>
-              <Field label="Account type" width={160}>
-                <TextInput list="bank-account-type-datalist-detail" value={meta.accountType} onChange={(e) => setMeta({ ...meta, accountType: e.target.value })} placeholder="e.g. Savings" />
-              </Field>
-            </div>
-            <datalist id="bank-account-type-datalist-detail">
-              {ACCOUNT_TYPES.map((t) => <option key={t} value={t} />)}
-            </datalist>
-            <IbanLookupFields
-              value={meta}
-              onChange={(patch) => setMeta((m) => ({
-                ...m,
-                ...('iban' in patch ? { iban: patch.iban ?? '' } : {}),
-                ...('bankName' in patch ? { bankName: patch.bankName ?? '' } : {}),
-                ...('bic' in patch ? { bic: patch.bic ?? '' } : {}),
-              }))}
-              bankNameDatalistId="bank-name-datalist-detail"
-            />
-            <CreditCardFields
-              value={meta}
-              onChange={(patch) => setMeta((m) => ({ ...m, ...patch }))}
-              datalistId="card-network-datalist-detail"
-            />
-            <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-              <Field label="Account number" width={160} title="However your bank shows it on statements/SMS — often partially masked, e.g. xxxx1234.">
-                <TextInput value={meta.accountNumber} onChange={(e) => setMeta({ ...meta, accountNumber: e.target.value })} placeholder="e.g. xxxx1234" />
-              </Field>
-              <Field label="SMS sender ID" width={160} title="The sender ID/short code your bank's alert SMS arrives from, e.g. a bank name or a numeric short code.">
-                <TextInput value={meta.smsSenderId} onChange={(e) => setMeta({ ...meta, smsSenderId: e.target.value })} placeholder="e.g. 8123 or MEEZAN" />
-              </Field>
-              <Field label="SMS sender number" width={160} title="If your bank's alerts come from a full phone number instead of a short code.">
-                <TextInput value={meta.smsSenderNumber} onChange={(e) => setMeta({ ...meta, smsSenderNumber: e.target.value })} placeholder="e.g. +923001234567" />
-              </Field>
-            </div>
-          </>
-        )}
-      </CollapsibleCard>
-
-      {upcoming.length > 0 && (
-        <Card style={{ marginBottom: 16 }}>
-          <h3 style={{ marginTop: 0 }}>Upcoming plans ({upcoming.length})</h3>
-          <div className="table-scroll">
-            <table>
-              <thead><tr><th>Date</th><th>Description</th><th>Amount</th></tr></thead>
-              <tbody>
-                {upcoming.map((p) => (
-                  <tr key={p.id}>
-                    <td>{p.date}</td>
-                    <td>{p.description}</td>
-                    <td className={p.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(p.amount, account.currencyCode)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      )}
-
-      <CollapsibleCard defaultOpen={false} style={{ marginBottom: 16 }} title={<h3 style={{ margin: 0 }}>By category</h3>}>
-        <CategoryBreakdownBody account={account} />
-      </CollapsibleCard>
 
       {/* User-requested (2026-08-26): "Transactions belong to an account so
          should be on its detail page/popup and editable" — this used to be
@@ -831,13 +814,39 @@ function emptyTxRow(accountId: string, currencyCode?: string): BankTransaction {
   return { id: '', accountId, date: today(), amount: 0, description: '', category: '', source: 'manual', time: nowTime(), timezone: defaultTimezoneForCurrency(currencyCode) };
 }
 
+/** User-reported (2026-08-27, then again 2026-08-28 after the first cut
+ * landed as its own separate card): "linking should be a part of the
+ * transaction, not a separate card! Use 'Transferred to or from'." Every
+ * OTHER module (QSE/PSX/Rentals/Personal Loans/Funds/EMI) already has this
+ * as an inline toggle on its own add-form (Done items 125/131/162), never
+ * a separate section — Bank's own first cut broke that convention. Folded
+ * directly into `AddTransactionsForm`: a "Transferred to or from another
+ * module" checkbox next to the Save button swaps Category+Time/Timezone
+ * for the same `SideFields`/`createLinkedTransfer` picker the standalone
+ * Transfers page uses. Scoped to the form's first (or only) row — linking
+ * is inherently one record with one specific other side, so switching
+ * link mode on also drops any extra queued rows. */
 function AddTransactionsForm({ accountId, currencyCode, knownCategories }: { accountId: string; currencyCode: string; knownCategories: string[] }) {
   const addTransactions = useBankWorkbookStore((s) => s.addTransactions);
   const ensureSignedIn = useEnsureSignedIn();
+  const emiLoans = useEMIWorkbookStore((s) => s.workbook.entries);
   const [rows, setRows] = useState<BankTransaction[]>([emptyTxRow(accountId, currencyCode)]);
+  const [linkMode, setLinkMode] = useState(false);
+  const bankSide: LinkSideConfig = { module: 'bank', ref: accountId };
+  // User-reported (2026-08-28): "Link To always shows USD instead of
+  // filling default currency of the source/destination" — default the
+  // Cash side's currency to THIS account's own currency (the most likely
+  // real match) instead of leaving it unset, which used to silently fall
+  // through to a hardcoded 'USD' in `buildSideRecord`.
+  const [other, setOther] = useState<LinkSideConfig>(() => getLastTransferSource(bankSide) ?? { module: 'cash', currencyCode });
 
   const update = (i: number, patch: Partial<BankTransaction>) =>
     setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+
+  const otherCurrency = useSideCurrency(other);
+  const currencyMismatch = !!(otherCurrency && otherCurrency !== currencyCode);
+  const pairSupported = isSupportedLinkPair('bank', other.module) && isSupportedLinkPair(other.module, 'bank');
+  const sameBankAccount = other.module === 'bank' && other.ref === accountId;
 
   const submit = async () => {
     const valid = rows.filter((r) => r.amount !== 0 && r.description.trim());
@@ -848,147 +857,115 @@ function AddTransactionsForm({ accountId, currencyCode, knownCategories }: { acc
     setRows([emptyTxRow(accountId, currencyCode)]);
   };
 
-  return (
-    <div>
-      {rows.map((r, i) => (
-        <div key={i} className="row" style={{ gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-          <Field label={i === 0 ? 'Date' : undefined} required={i === 0}>
-            <input type="date" value={r.date} onChange={(e) => update(i, { date: e.target.value })} />
-          </Field>
-          <Field label={i === 0 ? 'Description' : undefined} required={i === 0}>
-            <input placeholder="Description" value={r.description} onChange={(e) => update(i, { description: e.target.value })} style={{ width: 160 }} />
-          </Field>
-          <Field label={i === 0 ? 'Amount' : undefined} required={i === 0} title="Negative = spend/debit, positive = deposit/credit">
-            <input
-              type="number"
-              step="0.01"
-              placeholder="Amount (+/-)"
-              value={r.amount || ''}
-              onChange={(e) => update(i, { amount: Number(e.target.value) })}
-              style={{ width: 110 }}
-            />
-          </Field>
-          <Field label={i === 0 ? 'Category' : undefined}>
-            <input
-              list="bank-category-datalist"
-              placeholder="Category (optional)"
-              value={r.category}
-              onChange={(e) => update(i, { category: e.target.value })}
-              style={{ width: 130 }}
-            />
-          </Field>
-          <TimeZoneFields
-            time={r.time}
-            timezone={r.timezone}
-            onTimeChange={(time) => update(i, { time })}
-            onTimezoneChange={(timezone) => update(i, { timezone })}
-          />
-          <button className="btn secondary small" onClick={() => setRows((rs) => rs.filter((_, idx) => idx !== i))}>
-            <TrashIcon size={12} />Remove
-          </button>
-        </div>
-      ))}
-      <datalist id="bank-category-datalist">
-        {knownCategories.map((c) => <option key={c} value={c} />)}
-      </datalist>
-      <div className="row" style={{ gap: 8, justifyContent: 'flex-end' }}>
-        <button className="btn secondary" onClick={() => setRows((rs) => [...rs, emptyTxRow(accountId)])}>
-          <PlusIcon />Add row
-        </button>
-        <button className="btn" onClick={submit}>
-          <SaveIcon />Save {rows.length > 1 ? `${rows.length} transactions` : 'transaction'}
-        </button>
-      </div>
-      <p className="footer-note" style={{ marginTop: 8 }}>Negative amount = spend/debit, positive = deposit/credit.</p>
-    </div>
-  );
-}
-
-/** User-reported (2026-08-27): "No option to link a transaction to other
- * finance." Every OTHER module (QSE/PSX/Rentals/Personal Loans/Funds/EMI)
- * already has an inline "link this to a Bank account or Cash" shortcut on
- * its own add-form (Done items 125/131/162) — Bank itself never got the
- * reverse: a way to record a bank transaction that's really a transfer
- * to/from another module, without leaving this page. `isSupportedLinkPair`
- * already allows bank↔{cash,qse,psx,rentals,personalLoans,funds,emi,bank}
- * (see `lib/interEntityLink.ts`) — this reuses that engine directly via
- * the same `SideFields`/`createLinkedTransfer` the standalone Transfers
- * page uses, just with this account pre-selected as one side. Kept as its
- * own small single-record form (not folded into the multi-row batch
- * `AddTransactionsForm` above) since a link is inherently one record with
- * one specific other side, not a batch. */
-function LinkTransactionSection({ account }: { account: BankAccount }) {
-  const ensureSignedIn = useEnsureSignedIn();
-  const emiLoans = useEMIWorkbookStore((s) => s.workbook.entries);
-  const [date, setDate] = useState(today());
-  const [amount, setAmount] = useState(0);
-  const [description, setDescription] = useState('');
-  const bankSide: LinkSideConfig = { module: 'bank', ref: account.id };
-  const [other, setOther] = useState<LinkSideConfig>(() => getLastTransferSource(bankSide) ?? { module: 'cash' });
-
-  const otherCurrency = useSideCurrency(other);
-  const currencyMismatch = !!(otherCurrency && otherCurrency !== account.currencyCode);
-  const pairSupported = isSupportedLinkPair('bank', other.module) && isSupportedLinkPair(other.module, 'bank');
-  const sameBankAccount = other.module === 'bank' && other.ref === account.id;
-
-  const create = async () => {
-    if (amount === 0) return toast('Enter a non-zero amount first.');
-    if (!description.trim()) return toast('Enter a description first.');
+  const submitLink = async () => {
+    const r = rows[0];
+    if (r.amount === 0) return toast('Enter a non-zero amount first.');
+    if (!r.description.trim()) return toast('Enter a description first.');
     if (sameBankAccount) return toast('Pick a different bank account — this is already that account.');
     if (!pairSupported) return toast(`Linking Banking with this module isn't supported yet.`);
     if (!(await ensureSignedIn('Sign in to save linked transactions.'))) return;
-    const abs = Math.abs(amount);
+    const abs = Math.abs(r.amount);
+    const emiLoan = other.module === 'emi' ? emiLoans.find((l) => l.id === other.ref) : undefined;
+    const resolvedOther = emiLoan ? { ...other, emiMonth: nextUnpaidEmiMonth(emiLoan) } : other;
     // Bank's own sign convention (negative = spend/debit, positive =
     // deposit/credit) already tells us the direction: a positive amount
     // means money is arriving INTO this account (bank = "to"), negative
-    // means it's leaving (bank = "from") — same "from"='out'/"to"='in'
+    // means it's leaving (bank = "from") — the same "from"='out'/"to"='in'
     // convention every other linked pair already uses.
-    const emiLoan = other.module === 'emi' ? emiLoans.find((l) => l.id === other.ref) : undefined;
-    const resolvedOther = emiLoan ? { ...other, emiMonth: nextUnpaidEmiMonth(emiLoan) } : other;
-    const input = {
-      date,
+    const result = createLinkedTransfer({
+      date: r.date,
       fromAmount: abs,
       toAmount: abs,
-      from: amount >= 0 ? resolvedOther : bankSide,
-      to: amount >= 0 ? bankSide : resolvedOther,
-      note: description.trim(),
-    };
-    const result = createLinkedTransfer(input);
+      from: r.amount >= 0 ? resolvedOther : bankSide,
+      to: r.amount >= 0 ? bankSide : resolvedOther,
+      note: r.description.trim(),
+    });
     if ('error' in result) return toast(`Couldn't create the linked transaction: ${result.error}`);
     rememberTransferSource(bankSide, other);
     toast('Linked transaction added — also recorded on the other side.');
-    setAmount(0);
-    setDescription('');
+    setRows([emptyTxRow(accountId, currencyCode)]);
   };
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
-        <Field label="Date" required>
-          <TextInput type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        </Field>
-        <Field label="Description" required>
-          <TextInput placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} style={{ width: 160 }} />
-        </Field>
-        <Field label="Amount" required title="Negative = spend/debit, positive = deposit/credit">
-          <TextInput type="number" step="0.01" placeholder="Amount (+/-)" value={amount || ''} onChange={(e) => setAmount(Number(e.target.value))} style={{ width: 110 }} />
-        </Field>
-      </div>
-      <SideFields label="Link to" cfg={other} onChange={setOther} />
-      {currencyMismatch && (
-        <Notice tone="warning" style={{ marginTop: 8 }}>
-          <p style={{ margin: 0 }}>{account.currencyCode} vs. {otherCurrency} — no live conversion, both sides record the same numeric amount.</p>
+      {rows.map((r, i) =>
+        linkMode && i > 0 ? null : (
+          <div key={i} className="row" style={{ gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+            <Field label={i === 0 ? 'Date' : undefined} required={i === 0}>
+              <input type="date" value={r.date} onChange={(e) => update(i, { date: e.target.value })} />
+            </Field>
+            <Field label={i === 0 ? 'Description' : undefined} required={i === 0}>
+              <input placeholder="Description" value={r.description} onChange={(e) => update(i, { description: e.target.value })} style={{ width: 160 }} />
+            </Field>
+            <Field label={i === 0 ? 'Amount' : undefined} required={i === 0} title="Negative = spend/debit, positive = deposit/credit">
+              <input
+                type="number"
+                step="0.01"
+                placeholder="Amount (+/-)"
+                value={r.amount || ''}
+                onChange={(e) => update(i, { amount: Number(e.target.value) })}
+                style={{ width: 110 }}
+              />
+            </Field>
+            {linkMode ? (
+              <SideFields label="Transferred to or from" cfg={other} onChange={setOther} />
+            ) : (
+              <>
+                <Field label={i === 0 ? 'Category' : undefined}>
+                  <input
+                    list="bank-category-datalist"
+                    placeholder="Category (optional)"
+                    value={r.category}
+                    onChange={(e) => update(i, { category: e.target.value })}
+                    style={{ width: 130 }}
+                  />
+                </Field>
+                <TimeZoneFields
+                  time={r.time}
+                  timezone={r.timezone}
+                  onTimeChange={(time) => update(i, { time })}
+                  onTimezoneChange={(timezone) => update(i, { timezone })}
+                />
+                <button className="btn secondary small" onClick={() => setRows((rs) => rs.filter((_, idx) => idx !== i))}>
+                  <TrashIcon size={12} />Remove
+                </button>
+              </>
+            )}
+          </div>
+        ),
+      )}
+      <datalist id="bank-category-datalist">
+        {knownCategories.map((c) => <option key={c} value={c} />)}
+      </datalist>
+      {linkMode && currencyMismatch && (
+        <Notice tone="warning" style={{ marginBottom: 8 }}>
+          <p style={{ margin: 0 }}>{currencyCode} vs. {otherCurrency} — no live conversion, both sides record the same numeric amount.</p>
         </Notice>
       )}
-      <div className="row" style={{ marginTop: 8, justifyContent: 'flex-end' }}>
-        <button className="btn" onClick={create}>
-          <PlusIcon />Link &amp; add
+      <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+        <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <input
+            type="checkbox"
+            checked={linkMode}
+            onChange={(e) => { setLinkMode(e.target.checked); setRows((rs) => [rs[0] ?? emptyTxRow(accountId, currencyCode)]); }}
+          />
+          Transferred to or from another module
+        </label>
+        <div style={{ flex: 1 }} />
+        {!linkMode && (
+          <button className="btn secondary" onClick={() => setRows((rs) => [...rs, emptyTxRow(accountId)])}>
+            <PlusIcon />Add row
+          </button>
+        )}
+        <button className="btn" onClick={linkMode ? submitLink : submit}>
+          <SaveIcon />
+          {linkMode ? 'Link & add' : `Save ${rows.length > 1 ? `${rows.length} transactions` : 'transaction'}`}
         </button>
       </div>
+      {!linkMode && <p className="footer-note" style={{ marginTop: 8 }}>Negative amount = spend/debit, positive = deposit/credit.</p>}
     </div>
   );
 }
-
 function TransactionsList({ account }: { account: BankAccount }) {
   const allTransactions = useBankWorkbookStore((s) => s.workbook.transactions);
   const updateTransaction = useBankWorkbookStore((s) => s.updateTransaction);
@@ -1256,27 +1233,28 @@ function ImportStatementSection({ account }: { account: BankAccount }) {
 /* ============================== Settings ============================== */
 
 function AccountSection({
-  syncStatus,
   cloudEmpty,
   uploadLocalToCloud,
 }: {
-  syncStatus: string;
   cloudEmpty: boolean;
   uploadLocalToCloud: () => Promise<void>;
 }) {
   const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
   const [busy, setBusy] = useState(false);
 
-  // User-reported (2026-08-27): "nested cards... empty Account card." This
-  // used to be its own `<Card>` nested inside the Settings tab's own
-  // outer card (rule 1: no nested cards) — plain content now, the outer
-  // Tabs-provided card is the only card boundary here.
-  if (!firebaseReady) {
-    return <p className="footer-note">Cloud sync is unavailable — Firebase failed to load in this browser.</p>;
-  }
+  // User-reported (2026-08-27, then again 2026-08-28: "Settings & 'Plans —
+  // account Synced...' still present, although clearly mentioned multiple
+  // times to move into single page... why are you making things
+  // [not] centralized and well-organized"): the sync-status TEXT itself
+  // (not just its card wrapper, already fixed once) duplicated what the
+  // global /account hub's Sync status section already shows — dropped
+  // entirely here. Only the actionable cloud-empty-upload warning stays,
+  // since that genuinely can't live on the hub (it needs Banking's own
+  // uploadLocalToCloud) — this whole section now renders nothing at all
+  // once there's nothing to act on, rather than a redundant status line.
+  if (!firebaseReady || !cloudEmpty) return null;
   return (
     <div>
-      <p className="footer-note" style={{ marginTop: 0 }}>{syncStatus}</p>
       {cloudEmpty && (
         <Notice tone="warning" style={{ marginTop: 8 }}>
           <p style={{ marginTop: 0 }}>
@@ -1523,50 +1501,49 @@ function BankPlanList({ account }: { account: BankAccount }) {
   );
 }
 
+// User-reported (2026-08-27, then again 2026-08-28: "Settings & 'Plans —
+// account Synced...' still present, although clearly mentioned multiple
+// times to move into single page"): this used to always render a card with
+// a redundant sync-status line (duplicating the global /account hub's own
+// Sync status section) even when there was nothing actionable to do. Now
+// renders nothing unless the cloud genuinely looks empty and needs the
+// user's explicit upload confirmation — same pattern as AccountSection.
 function PlanningAccountSection({
-  syncStatus,
   cloudEmpty,
   uploadLocalToCloud,
 }: {
-  syncStatus: string;
   cloudEmpty: boolean;
   uploadLocalToCloud: () => Promise<void>;
 }) {
   const plans = usePlannedBankWorkbookStore((s) => s.workbook.entries);
   const [busy, setBusy] = useState(false);
 
-  if (!firebaseReady) return null;
+  if (!firebaseReady || !cloudEmpty) return null;
   return (
-    <Card style={{ marginTop: 16 }}>
-      <h3 style={{ marginTop: 0 }}>Plans — account</h3>
-      <p className="footer-note">{syncStatus}</p>
-      {cloudEmpty && (
-        <Notice tone="warning" style={{ marginTop: 8 }}>
-          <p style={{ marginTop: 0 }}>No data found in the cloud for this account's plans. This won't upload automatically.</p>
-          <button
-            className="btn secondary"
-            disabled={busy}
-            onClick={async () => {
-              const ok = await confirmDialog(
-                `This will overwrite anything currently in the cloud for this account's plans (there is nothing there now, but confirming since this can't be undone).`,
-                `Upload ${plans.length} local plan${plans.length === 1 ? '' : 's'} to the cloud?`,
-              );
-              if (!ok) return;
-              setBusy(true);
-              try {
-                await uploadLocalToCloud();
-              } catch (e) {
-                toast(e instanceof Error ? e.message : 'Something went wrong.');
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            Upload local data to cloud ({plans.length} plans)
-          </button>
-        </Notice>
-      )}
-    </Card>
+    <Notice tone="warning" style={{ marginTop: 16 }}>
+      <p style={{ marginTop: 0 }}>No data found in the cloud for this account's plans. This won't upload automatically.</p>
+      <button
+        className="btn secondary"
+        disabled={busy}
+        onClick={async () => {
+          const ok = await confirmDialog(
+            `This will overwrite anything currently in the cloud for this account's plans (there is nothing there now, but confirming since this can't be undone).`,
+            `Upload ${plans.length} local plan${plans.length === 1 ? '' : 's'} to the cloud?`,
+          );
+          if (!ok) return;
+          setBusy(true);
+          try {
+            await uploadLocalToCloud();
+          } catch (e) {
+            toast(e instanceof Error ? e.message : 'Something went wrong.');
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        Upload local data to cloud ({plans.length} plans)
+      </button>
+    </Notice>
   );
 }
 
@@ -1617,7 +1594,7 @@ function AnalyticsTab() {
       {account && (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginTop: 12 }}>
-            <ChartCard title="Balance over time" empty={!balanceOverTime.length}>
+            <ChartCard flat title="Balance over time" empty={!balanceOverTime.length}>
               <Line
                 data={{
                   labels: balanceOverTime.map((r) => r.tx.date),
@@ -1626,7 +1603,7 @@ function AnalyticsTab() {
                 options={{ plugins: { legend: { display: false }, datalabels: dlLine((v) => fmtMoney(v, account.currencyCode)) } }}
               />
             </ChartCard>
-            <ChartCard title="Category breakdown (spend)" empty={!categories.length}>
+            <ChartCard flat title="Category breakdown (spend)" empty={!categories.length}>
               <Doughnut
                 data={{
                   labels: categories,
@@ -1635,7 +1612,7 @@ function AnalyticsTab() {
                 options={{ cutout: '55%', plugins: { datalabels: dlDoughnut((v) => fmtMoney(v, account.currencyCode)) } }}
               />
             </ChartCard>
-            <ChartCard title="Income vs. spend by month" empty={!monthlyFlow.length}>
+            <ChartCard flat title="Income vs. spend by month" empty={!monthlyFlow.length}>
               <Bar
                 data={{
                   labels: monthlyFlow.map((f) => f.month),
@@ -1720,11 +1697,10 @@ function AnalyticsTab() {
 }
 
 export function PlanningTab({
-  plannedSyncStatus,
   plannedCloudEmpty,
   uploadPlannedLocalToCloud,
 }: {
-  plannedSyncStatus: string;
+  plannedSyncStatus?: string;
   plannedCloudEmpty: boolean;
   uploadPlannedLocalToCloud: () => Promise<void>;
 }) {
@@ -1748,7 +1724,7 @@ export function PlanningTab({
           <AddBankPlanFab accountId={account.id} />
         </div>
       )}
-      <PlanningAccountSection syncStatus={plannedSyncStatus} cloudEmpty={plannedCloudEmpty} uploadLocalToCloud={uploadPlannedLocalToCloud} />
+      <PlanningAccountSection cloudEmpty={plannedCloudEmpty} uploadLocalToCloud={uploadPlannedLocalToCloud} />
     </div>
   );
 }
@@ -1815,10 +1791,8 @@ function DataManagement() {
 }
 
 export function BankPage({
-  syncStatus,
   cloudEmpty,
   uploadLocalToCloud,
-  plannedSyncStatus,
   plannedCloudEmpty,
   uploadPlannedLocalToCloud,
 }: {
@@ -1845,7 +1819,6 @@ export function BankPage({
             label: 'Planning',
             content: (
               <PlanningTab
-                plannedSyncStatus={plannedSyncStatus}
                 plannedCloudEmpty={plannedCloudEmpty}
                 uploadPlannedLocalToCloud={uploadPlannedLocalToCloud}
               />
@@ -1860,7 +1833,7 @@ export function BankPage({
                   Sign-in, profile, appearance, and a whole-app backup live on the{' '}
                   <Link to="/account">Account page →</Link>. What's below is specific to Banking.
                 </p>
-                <AccountSection syncStatus={syncStatus} cloudEmpty={cloudEmpty} uploadLocalToCloud={uploadLocalToCloud} />
+                <AccountSection cloudEmpty={cloudEmpty} uploadLocalToCloud={uploadLocalToCloud} />
                 <DataManagement />
               </div>
             ),

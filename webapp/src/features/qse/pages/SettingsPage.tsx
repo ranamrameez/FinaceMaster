@@ -16,12 +16,10 @@ import type { Workbook } from '../../../types/workbook';
 
 function AccountSection({
   user,
-  syncStatus,
   cloudEmpty,
   uploadLocalToCloud,
 }: {
   user: User | null;
-  syncStatus: string;
   cloudEmpty: boolean;
   uploadLocalToCloud: () => Promise<void>;
 }) {
@@ -49,7 +47,6 @@ function AccountSection({
     return (
       <>
         <ProfileEditor user={user} />
-        <p className="footer-note" style={{ marginTop: 8 }}>{syncStatus}</p>
         {cloudEmpty && (
           <Notice tone="warning" style={{ marginTop: 8 }}>
             <p style={{ marginTop: 0 }}>
@@ -82,12 +79,9 @@ function AccountSection({
   }
 
   return (
-    <>
-      <p className="footer-note">{syncStatus}</p>
-      <button className="btn" style={{ marginTop: 8 }} onClick={() => requireSignIn()}>
-        <LogInIcon />Sign in
-      </button>
-    </>
+    <button className="btn" style={{ marginTop: 8 }} onClick={() => requireSignIn()}>
+      <LogInIcon />Sign in
+    </button>
   );
 }
 
@@ -180,7 +174,6 @@ function AmountSettings() {
 
 export function SettingsPage({
   user,
-  syncStatus,
   cloudEmpty,
   uploadLocalToCloud,
 }: {
@@ -197,7 +190,7 @@ export function SettingsPage({
           {
             key: 'account',
             label: 'Account',
-            content: <AccountSection user={user} syncStatus={syncStatus} cloudEmpty={cloudEmpty} uploadLocalToCloud={uploadLocalToCloud} />,
+            content: <AccountSection user={user} cloudEmpty={cloudEmpty} uploadLocalToCloud={uploadLocalToCloud} />,
           },
           { key: 'data', label: 'Data management', content: <DataManagement /> },
           { key: 'amounts', label: 'Amount settings', content: <AmountSettings /> },

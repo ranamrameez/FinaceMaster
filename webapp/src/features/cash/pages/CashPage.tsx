@@ -1,5 +1,6 @@
 import type { User } from 'firebase/auth';
 import { useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
@@ -733,59 +734,56 @@ function PlanList() {
   );
 }
 
+// User-reported (2026-08-27, then again 2026-08-28: "Settings & 'Plans —
+// account Synced...' still present, although clearly mentioned multiple
+// times to move into single page"): same redundant sync-status-text bug
+// as Banking's identical component — dropped the always-visible status
+// line/heading, renders nothing unless there's an actual cloud-empty
+// upload prompt to show. See BankPage.tsx's own PlanningAccountSection.
 function PlanningAccountSection({
-  syncStatus,
   cloudEmpty,
   uploadLocalToCloud,
 }: {
-  syncStatus: string;
   cloudEmpty: boolean;
   uploadLocalToCloud: () => Promise<void>;
 }) {
   const plans = usePlannedCashWorkbookStore((s) => s.workbook.entries);
   const [busy, setBusy] = useState(false);
 
-  if (!firebaseReady) return null;
+  if (!firebaseReady || !cloudEmpty) return null;
   return (
-    <Card style={{ marginTop: 16 }}>
-      <h3 style={{ marginTop: 0 }}>Plans — account</h3>
-      <p className="footer-note">{syncStatus}</p>
-      {cloudEmpty && (
-        <Notice tone="warning" style={{ marginTop: 8 }}>
-          <p style={{ marginTop: 0 }}>No data found in the cloud for this account's plans. This won't upload automatically.</p>
-          <button
-            className="btn secondary"
-            disabled={busy}
-            onClick={async () => {
-              const ok = await confirmDialog(
-                `This will overwrite anything currently in the cloud for this account's plans (there is nothing there now, but confirming since this can't be undone).`,
-                `Upload ${plans.length} local plan${plans.length === 1 ? '' : 's'} to the cloud?`,
-              );
-              if (!ok) return;
-              setBusy(true);
-              try {
-                await uploadLocalToCloud();
-              } catch (e) {
-                toast(e instanceof Error ? e.message : 'Something went wrong.');
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            Upload local data to cloud ({plans.length} plans)
-          </button>
-        </Notice>
-      )}
-    </Card>
+    <Notice tone="warning" style={{ marginTop: 16 }}>
+      <p style={{ marginTop: 0 }}>No data found in the cloud for this account's plans. This won't upload automatically.</p>
+      <button
+        className="btn secondary"
+        disabled={busy}
+        onClick={async () => {
+          const ok = await confirmDialog(
+            `This will overwrite anything currently in the cloud for this account's plans (there is nothing there now, but confirming since this can't be undone).`,
+            `Upload ${plans.length} local plan${plans.length === 1 ? '' : 's'} to the cloud?`,
+          );
+          if (!ok) return;
+          setBusy(true);
+          try {
+            await uploadLocalToCloud();
+          } catch (e) {
+            toast(e instanceof Error ? e.message : 'Something went wrong.');
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        Upload local data to cloud ({plans.length} plans)
+      </button>
+    </Notice>
   );
 }
 
 export function PlanningTab({
-  plannedSyncStatus,
   plannedCloudEmpty,
   uploadPlannedLocalToCloud,
 }: {
-  plannedSyncStatus: string;
+  plannedSyncStatus?: string;
   plannedCloudEmpty: boolean;
   uploadPlannedLocalToCloud: () => Promise<void>;
 }) {
@@ -794,7 +792,7 @@ export function PlanningTab({
       <BalanceProjectionSummary />
       <PlanList />
       <AddPlanFab />
-      <PlanningAccountSection syncStatus={plannedSyncStatus} cloudEmpty={plannedCloudEmpty} uploadLocalToCloud={uploadPlannedLocalToCloud} />
+      <PlanningAccountSection cloudEmpty={plannedCloudEmpty} uploadLocalToCloud={uploadPlannedLocalToCloud} />
     </div>
   );
 }
@@ -869,30 +867,22 @@ function DataManagement() {
   );
 }
 
+// User-reported (2026-08-27, then again 2026-08-28): duplicated the global
+// /account hub's own Sync status section — dropped the status text/heading
+// here, same fix already applied to Banking's identical component.
 function AccountSection({
-  syncStatus,
   cloudEmpty,
   uploadLocalToCloud,
 }: {
-  syncStatus: string;
   cloudEmpty: boolean;
   uploadLocalToCloud: () => Promise<void>;
 }) {
   const entries = useCashWorkbookStore((s) => s.workbook.entries);
   const [busy, setBusy] = useState(false);
 
-  if (!firebaseReady) {
-    return (
-      <Card>
-        <h3 style={{ marginTop: 0 }}>Account</h3>
-        <p className="footer-note">Cloud sync is unavailable — Firebase failed to load in this browser.</p>
-      </Card>
-    );
-  }
+  if (!firebaseReady || !cloudEmpty) return null;
   return (
     <Card style={{ marginBottom: 16 }}>
-      <h3 style={{ marginTop: 0 }}>Account</h3>
-      <p className="footer-note">{syncStatus}</p>
       {cloudEmpty && (
         <Notice tone="warning" style={{ marginTop: 8 }}>
           <p style={{ marginTop: 0 }}>
@@ -928,10 +918,8 @@ function AccountSection({
 }
 
 export function CashPage({
-  syncStatus,
   cloudEmpty,
   uploadLocalToCloud,
-  plannedSyncStatus,
   plannedCloudEmpty,
   uploadPlannedLocalToCloud,
 }: {
@@ -959,7 +947,6 @@ export function CashPage({
             label: 'Planning',
             content: (
               <PlanningTab
-                plannedSyncStatus={plannedSyncStatus}
                 plannedCloudEmpty={plannedCloudEmpty}
                 uploadPlannedLocalToCloud={uploadPlannedLocalToCloud}
               />
@@ -971,7 +958,11 @@ export function CashPage({
             label: 'Settings',
             content: (
               <div>
-                <AccountSection syncStatus={syncStatus} cloudEmpty={cloudEmpty} uploadLocalToCloud={uploadLocalToCloud} />
+                <p className="footer-note" style={{ marginTop: 0 }}>
+                  Sign-in, profile, appearance, and a whole-app backup live on the{' '}
+                  <Link to="/account">Account page →</Link>. What's below is specific to Cash.
+                </p>
+                <AccountSection cloudEmpty={cloudEmpty} uploadLocalToCloud={uploadLocalToCloud} />
                 <DataManagement />
               </div>
             ),
