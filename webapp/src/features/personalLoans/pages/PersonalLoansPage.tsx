@@ -13,7 +13,7 @@ import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
-import { FabButton, FabPanel } from '../../../components/ui/Fab';
+import { FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
@@ -143,17 +143,32 @@ function AnalyticsTab() {
 
 /** Floating "add a loan" button (user feedback 2026-08-27: adding an entity
  * isn't a routine task, use FABs — same pattern already established for
- * EMI/Banking/Cash/Bank Planning, README Done items 166/170). */
+ * EMI/Banking/Cash/Bank Planning, README Done items 166/170).
+ *
+ * User-reported (2026-08-28, real audit after "you're ignoring what's
+ * asked for"): Bank's and EMI's landing FABs shipped with Transfers
+ * alongside "Add [entity]," but Personal Loans/Rentals/Funds only ever got
+ * Transfers on a specific record's own detail view — contradicting the
+ * original ask for one Transfers button reachable everywhere. Matches
+ * Bank's/EMI's landing-FAB shape exactly now: Transfers with no `ref`
+ * pre-filled, still choosable from `SideFields`' own dropdown inside the
+ * modal. */
 function AddLoanFab() {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState<'loan' | 'transfer' | null>(null);
   return (
     <>
-      <FabButton label="Add a loan" onClick={() => setOpen(true)}><PlusIcon /></FabButton>
-      {open && (
-        <Modal title="Add a loan" onClose={() => setOpen(false)}>
-          <AddLoanForm onSaved={() => setOpen(false)} />
+      <FabPanel
+        actions={[
+          { label: 'Add a loan', icon: <PlusIcon />, onClick: () => setOpen('loan') },
+          { label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen('transfer') },
+        ]}
+      />
+      {open === 'loan' && (
+        <Modal title="Add a loan" onClose={() => setOpen(null)}>
+          <AddLoanForm onSaved={() => setOpen(null)} />
         </Modal>
       )}
+      {open === 'transfer' && <TransactionEntryModal defaultFinance={{ module: 'personalLoans' }} onClose={() => setOpen(null)} />}
     </>
   );
 }

@@ -513,8 +513,7 @@ function TransfersSection() {
 
   return (
     <div>
-      <TransfersFab />
-      <div className="table-scroll" style={{ marginTop: 8 }}>
+      <div className="table-scroll">
         <table>
           <thead>
             <tr>
@@ -702,6 +701,17 @@ export function TransactionsPage() {
   return (
     <div>
       <h1 className="pagetitle">Trade Transactions</h1>
+      {/* User-reported (2026-08-28, real audit after "you're ignoring what's
+         asked for"): the Transfers FAB used to live inside `TransfersSection`
+         — content of the "Cash transfers" tab below, which `CollapsibleCard`
+         doesn't even mount into the DOM until that specific tab is expanded
+         (see `Card.tsx`: `{open && <div>{children}</div>}`, not a CSS hide).
+         Since `TransfersFab` is a `position:fixed` floating button, that
+         meant it silently didn't exist at all until the user happened to
+         open that one tab — every other module has it always visible from
+         page load. Moved to the page's own top level so it's mounted
+         unconditionally, matching every other module. */}
+      <TransfersFab />
       <Tabs
         tabs={[
           { key: 'add', label: 'Add trades', content: <TransactionRows /> },

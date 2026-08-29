@@ -4394,6 +4394,42 @@ not developer notes) continuously as features ship.
   tsc -b` / `npm run test` (442 tests, unchanged) / `npm run build` all clean. **Still open**:
   the lending-to-others module (see this session's own reply to the user for a concrete
   recommendation, not yet built pending their go-ahead) and the future Calendar widget.
+- **User pushed back again ("verify last 3 PRs, they are ignoring what is asked for") — this
+  time the right response was a real audit, not another apology-plus-small-fix cycle. See
+  README Done item 219 for the full writeup; worth internalizing the METHOD here, since it's
+  what actually found the bug the previous two rounds both missed.** Wrote a live Playwright
+  script that checked, for every one of the 8 `LinkModule` pages, whether "Transfers" was
+  reachable ON PAGE LOAD with zero extra navigation — the literal original ask ("add it to our
+  FAB panel in the whole app," one button reachable everywhere) — rather than re-reading my own
+  code and reassuring myself it looked right. **This found a real, confirmed gap**:
+  Rentals/Personal Loans/Funds' landing pages only ever had "Add [entity]," with Transfers
+  reachable only after drilling into a specific record's own detail view — genuinely
+  contradicting the ask, not a misunderstanding of it. Fixed by giving their landing FABs the
+  same 2-action shape Bank's/EMI's already correctly had. **A second, independently-real bug
+  surfaced investigating the first**: QSE's and PSX's Transfers FAB — `position:fixed`, meant to
+  float over the whole page — lived inside `TransfersSection`, which is `Tabs`/`CollapsibleCard`
+  content that literally isn't mounted into the DOM until that specific tab (third in the list,
+  not first) is expanded (`{open && <div>{children}</div>}`, not a CSS visibility toggle) — so
+  the floating button silently didn't exist anywhere on the page by default. Fixed by lifting it
+  to the page's own top level. **A third instance of the identical bug** (Funds' own per-section
+  `FundsTransfersFab`, same "nested in a non-first tab" placement) turned out to be a pure
+  duplicate of the just-fixed landing FAB (byte-identical `defaultFinance`) — deleted rather than
+  relocated, since fixing both would leave two floating "+" buttons stacked in the same corner.
+  **Lesson for any future "did I actually build what was asked" doubt, especially after being
+  told directly that something isn't right**: don't re-read your own code for reassurance — write
+  a script that exercises the literal, exact wording of the original ask ("reachable... in the
+  whole app," "on load," etc.) against the live running app, across every instance the claim
+  covers, not just the ones already spot-checked. A `grep` confirming a component is imported
+  everywhere proves it EXISTS everywhere, not that it's actually REACHABLE everywhere — those are
+  different claims, and this session's own earlier verification (Done items 216/217/218) had only
+  ever checked the former. Rentals' own per-property `EntriesFab` has the same "nested in a
+  non-first tab" placement and was deliberately left as-is (not purely redundant — it pre-fills a
+  specific property, a real convenience the landing fix doesn't replace) — flagged as a known,
+  lower-priority remainder, not silently dropped. Verified live via Playwright (twice, after the
+  first broad script hit this sandbox's own dev-server/HMR flakiness under repeated sequential
+  browser launches — confirmed unrelated to the code by isolating and re-running each check):
+  all 8 modules now show a real, clickable Transfers control on first load, zero real console
+  errors. `npx tsc -b` / `npm run test` (442 tests, unchanged) / `npm run build` all clean.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 
