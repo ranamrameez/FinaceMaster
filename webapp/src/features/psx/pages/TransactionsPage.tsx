@@ -577,8 +577,7 @@ function TransfersSection() {
 
   return (
     <div>
-      <TransfersFab />
-      <div className="table-scroll" style={{ marginTop: 8 }}>
+      <div className="table-scroll">
         <table>
           <thead>
             <tr>
@@ -766,6 +765,13 @@ export function TransactionsPage() {
   return (
     <div>
       <h1 className="pagetitle">PSX Trade Transactions</h1>
+      {/* User-reported (2026-08-28, real audit after "you're ignoring what's
+         asked for") — same fix as QSE's identical structure: the Transfers
+         FAB used to live inside the "Cash transfers" tab's own content,
+         which `CollapsibleCard` doesn't mount into the DOM until that tab
+         is expanded — a `position:fixed` FAB inside it silently didn't
+         exist at all until then. Moved to the page's top level. */}
+      <TransfersFab />
       <Tabs
         tabs={[
           { key: 'add', label: 'Add trades', content: <TransactionRows /> },

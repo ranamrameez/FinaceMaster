@@ -13,7 +13,7 @@ import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
-import { FabButton, FabPanel } from '../../../components/ui/Fab';
+import { FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { defaultTimezoneForCurrency } from '../../../lib/datetime';
@@ -65,16 +65,31 @@ function emptyFund(defaultCurrency: string): Fund {
  * Funds... daily? [entity add/edit] isn't a routine task, use FABs" — same
  * round-FAB + popup pattern already established for EMI/Banking/Cash/Bank
  * Planning, README Done items 166/170). */
+/** User-reported (2026-08-28, real audit after "you're ignoring what's
+ * asked for"): Bank's and EMI's landing FABs shipped with Transfers
+ * alongside "Add [entity]," but Funds/Rentals/Personal Loans only ever got
+ * Transfers on a specific record's own detail view — contradicting the
+ * original ask for one Transfers button reachable everywhere. Matches
+ * Bank's/EMI's landing-FAB shape exactly now: Transfers with no `ref`
+ * pre-filled, still choosable from `SideFields`' own dropdown inside the
+ * modal. */
 function AddFundFab() {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState<'fund' | 'transfer' | null>(null);
+  const defaultCurrency = useFundsWorkbookStore((s) => s.workbook.settings.defaultCurrency);
   return (
     <>
-      <FabButton label="Add a fund" onClick={() => setOpen(true)}><PlusIcon /></FabButton>
-      {open && (
-        <Modal title="Add a fund" onClose={() => setOpen(false)}>
-          <AddFundForm onSaved={() => setOpen(false)} />
+      <FabPanel
+        actions={[
+          { label: 'Add a fund', icon: <PlusIcon />, onClick: () => setOpen('fund') },
+          { label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen('transfer') },
+        ]}
+      />
+      {open === 'fund' && (
+        <Modal title="Add a fund" onClose={() => setOpen(null)}>
+          <AddFundForm onSaved={() => setOpen(null)} />
         </Modal>
       )}
+      {open === 'transfer' && <TransactionEntryModal defaultFinance={{ module: 'funds', currencyCode: defaultCurrency }} onClose={() => setOpen(null)} />}
     </>
   );
 }
@@ -788,17 +803,15 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
 /** User-requested (2026-08-28): Funds' own "Transfers" FAB, replacing the
  * old always-visible add-form AND its bank/cash-only `FundsLinkedTransferFields`
  * shortcut — the shared `TransactionEntryModal` supersedes both. */
-function FundsTransfersFab() {
-  const [open, setOpen] = useState(false);
-  const defaultCurrency = useFundsWorkbookStore((s) => s.workbook.settings.defaultCurrency);
-  return (
-    <>
-      <FabPanel actions={[{ label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen(true) }]} />
-      {open && <TransactionEntryModal defaultFinance={{ module: 'funds', currencyCode: defaultCurrency }} onClose={() => setOpen(false)} />}
-    </>
-  );
-}
-
+/** User-reported (2026-08-28, real audit after "you're ignoring what's
+ * asked for"): this per-section Transfers FAB lived inside the "Transfers"
+ * tab's own content, which `CollapsibleCard` doesn't mount into the DOM
+ * until that tab is expanded — the same bug found on QSE/PSX. Since Funds'
+ * landing FAB (`AddFundFab`, on the always-open first tab) now offers the
+ * exact same Transfers action with the identical `defaultFinance`, this
+ * was purely a redundant, buggy duplicate — removed rather than fixed in
+ * place, since fixing its placement too would leave two floating "+"
+ * buttons stacked in the same corner whenever both were mounted. */
 function FundsTransfersSection() {
   const workbook = useFundsWorkbookStore((s) => s.workbook);
   const updateTransfer = useFundsWorkbookStore((s) => s.updateTransfer);
@@ -908,7 +921,6 @@ function FundsTransfersSection() {
           </tbody>
         </table>
       </div>
-      <FundsTransfersFab />
     </div>
   );
 }

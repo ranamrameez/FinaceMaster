@@ -12,7 +12,7 @@ import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
-import { FabButton, FabPanel } from '../../../components/ui/Fab';
+import { FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
@@ -66,17 +66,34 @@ function NetIncomeSummary() {
 
 /** Floating "add a property" button (user feedback 2026-08-27: adding an
  * entity isn't a routine task, use FABs — same pattern already established
- * for EMI/Banking/Cash/Bank Planning, README Done items 166/170). */
+ * for EMI/Banking/Cash/Bank Planning, README Done items 166/170).
+ *
+ * User-reported (2026-08-28, real audit after "you're ignoring what's
+ * asked for"): the Transfers FAB shipped on Bank's and EMI's LANDING pages
+ * (both actions in one panel) but Rentals/Personal Loans/Funds only ever
+ * got it on a specific record's own detail view — their landing page was
+ * still "Add [entity]" alone, contradicting the original ask ("add it to
+ * our FAB panel in the WHOLE app," a single button reachable everywhere).
+ * Fixed by matching Bank's/EMI's own landing-FAB shape exactly: Transfers
+ * with no `ref` pre-filled — `SideFields` inside the modal still lets the
+ * user pick which property from its own dropdown, same "still choosable"
+ * design the modal was always built for. */
 function AddPropertyFab() {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState<'property' | 'transfer' | null>(null);
   return (
     <>
-      <FabButton label="Add a property" onClick={() => setOpen(true)}><PlusIcon /></FabButton>
-      {open && (
-        <Modal title="Add a property" onClose={() => setOpen(false)}>
-          <AddPropertyForm onSaved={() => setOpen(false)} />
+      <FabPanel
+        actions={[
+          { label: 'Add a property', icon: <PlusIcon />, onClick: () => setOpen('property') },
+          { label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen('transfer') },
+        ]}
+      />
+      {open === 'property' && (
+        <Modal title="Add a property" onClose={() => setOpen(null)}>
+          <AddPropertyForm onSaved={() => setOpen(null)} />
         </Modal>
       )}
+      {open === 'transfer' && <TransactionEntryModal defaultFinance={{ module: 'rentals' }} onClose={() => setOpen(null)} />}
     </>
   );
 }

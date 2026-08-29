@@ -5158,6 +5158,47 @@ FinanceManager live link:
      clean. **Still open, unchanged from item 217**: the lending-to-others module (the user
      asked "how to handle?" directly — see this session's own reply for a concrete
      recommendation, not yet built) and the future Calendar widget.
+219. **User pushback ("verify last 3 PRs, they are ignoring what is asked for") triggered a real
+     audit, not a reassurance pass — and it found a real, confirmed gap (2026-08-28).** Rather
+     than re-explain the prior 3 PRs, ran a live Playwright script against every module the
+     Transfers-FAB rollout (item 216) was supposed to cover, checking whether "Transfers" was
+     actually reachable ON LOAD, no extra navigation — exactly the original ask ("add it to our
+     FAB panel in the WHOLE app," a single button reachable everywhere). **Found it genuinely
+     wasn't, for 3 of 8 modules**: Rentals/Personal Loans/Funds' landing pages only ever offered
+     "Add [entity]" — Transfers was real and working, but only reachable after drilling into one
+     specific property/loan/fund's own detail view first. Bank/EMI/Cash/QSE/PSX all correctly had
+     it on load; these three didn't. Fixed by matching Bank's/EMI's own landing-FAB shape exactly:
+     each landing "Add [entity]" FAB became a 2-action `FabPanel` with Transfers alongside it, no
+     `ref` pre-filled — `SideFields` inside the modal still lets the user pick which property/
+     loan/fund from its own dropdown, the same "still choosable from the dropdown" design the
+     modal was always built for. **A second, related bug found investigating the first**: QSE's
+     and PSX's Transfers FAB — a `position:fixed` floating button — lived inside `TransfersSection`,
+     the CONTENT of the "Cash transfers" tab (third in the list, not first) on the Trade
+     Transactions page. `CollapsibleCard` (what every `Tabs` section renders through) doesn't just
+     CSS-hide a collapsed section's content, it doesn't mount it into the DOM at all
+     (`{open && <div>{children}</div>}`) — so that fixed-position FAB genuinely didn't exist
+     anywhere on the page until the user happened to expand that one specific tab. Fixed by
+     lifting `<TransfersFab />` out of the tab content to the page's own top level, where it's
+     unconditionally mounted regardless of which tab is open — matching every other module.
+     **A third instance of the identical bug was found and removed, not fixed in place**: Funds
+     had its own per-section `FundsTransfersFab` nested inside its "Transfers" tab (also not
+     first) — same invisible-until-expanded bug. But by the time this was found, Funds' landing
+     FAB (fixed moments earlier in this same pass) already offered the byte-for-byte identical
+     `defaultFinance`, making the nested one purely a redundant duplicate — deleted instead of
+     relocated, since fixing its placement too would have left two floating "+" buttons stacked
+     in the same screen corner whenever both were mounted. **Rentals' own per-property
+     `EntriesFab`** has the same "nested inside a non-first tab" placement and is NOT purely
+     redundant (it pre-fills a specific `ref: propertyId`, saving a dropdown click) — flagged as
+     a known, lower-priority remainder rather than silently left broken: the landing-page fix
+     already makes Transfers reachable for Rentals (the core, previously-broken requirement), so
+     this is a discoverability nicety needing real state-lifting work, not a "the feature is
+     unreachable" gap. Verified live via Playwright, twice (a first broad multi-module script hit
+     this sandbox's own dev-server/HMR flakiness under repeated sequential browser launches,
+     confirmed unrelated to the code changes by isolating and re-running each check individually):
+     every one of the 8 modules now shows a real, clickable "Transfers" control (direct button or
+     via the "Open actions" panel toggle) on first page load, with zero real console errors across
+     all 8. `npx tsc -b` / `npm run test` (442 tests, unchanged — no calc-engine code touched) /
+     `npm run build` all clean.
 
 ## Pending
 
