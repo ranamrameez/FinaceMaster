@@ -835,7 +835,7 @@
      collapse-to-one-column behavior as .position-split, kept as a
      separate class since it's a different, reusable pairing (any page's
      main content + a summary rail), not specific to a stock position. */
-  .rail-split{display:grid; grid-template-columns:1fr 320px; gap:16px; align-items:start;}
+  .rail-split{display:grid; /*grid-template-columns:1fr 320px;*/ gap:16px; align-items:start;}
   .rail-split > *{min-width:0;}
   @media(max-width:1000px){.rail-split{grid-template-columns:1fr;}}
   .chart-card{padding:16px 16px 12px 16px;}
