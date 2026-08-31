@@ -289,14 +289,16 @@ export function DashboardPage() {
             <AlertsBox />
           </CollapsibleCard>
 
-          <div style={{ marginTop: 16, textAlign: 'center' }}>
+          <div style={{ marginTop: 16, marginBottom:16, textAlign: 'center' }}>
             <Link to="/psx/analytics" className="btn secondary">
               View full analytics →
             </Link>
           </div>
+
+          <DashboardRail />
+
         </div>
 
-        <DashboardRail />
       </div>
     </div>
   );
