@@ -1255,7 +1255,7 @@
      --accent/--accent-soft vary per theme here.
      ================================================================ */
   html[data-color^="material-"][data-theme="light"] {
-    --bg:#ecece7; --panel:#fff; --panel-2:#F1F1F2; --border:#E3E3E5; --text:#1B1B1D; --muted:#6B6B6F;
+    --bg:#f9f9f9; --panel:#fff; --panel-2:#fcfcfc; --border:#E3E3E5; --text:#1B1B1D; --muted:#6B6B6F;
     --accent: var(--material-accent, #6750A4);
     --accent-soft: var(--material-accent-soft, #E8DEF8);
   }
