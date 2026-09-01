@@ -430,7 +430,7 @@
   }
   .card:not(.stat-card){
     margin-bottom: 15px !important;
-    background: #fff;
+    background: #fff !important;
   }
   /* User-reported (item 7): card section headings read as regular
      sentence-case description text instead of titles. Scoped to h3/h4
@@ -553,8 +553,8 @@
   html[data-density="compact"] input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]),
   html[data-density="compact"] select{padding:7px 9px; font-size:13px; min-height:32px; min-width:64px;}
 .table-scroll {
-    border-radius: 1rem;
-    background: #eaeaea;
+    border-radius: 0.5rem;
+    background: #fff;
 }
   /* ---------- Compact / Terminal layout — a dense, table-driven look
      instead of card tiles, styled after real broker terminals: one thin
