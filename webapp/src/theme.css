@@ -429,7 +429,8 @@
     box-shadow:var(--shadow-card);
   }
   .card:not(.stat-card){
-    margin-bottom: 15px;
+    margin-bottom: 15px !important;
+    background: #fff;
   }
   /* User-reported (item 7): card section headings read as regular
      sentence-case description text instead of titles. Scoped to h3/h4
@@ -1188,7 +1189,8 @@
 	position: sticky;
 	top: 0;
 	z-index: 30;
-	background: var(--bg);
+	/* background: var(--bg); */
+	background:#fff;
 	padding: 14px 0 12px 12px;
 	margin: 8px -5px 20px -5px;
 	border-bottom: 1px solid var(--border);
