@@ -56,7 +56,7 @@
     /* Same reasoning as the dark palette above — a touch greyer than the
        previous near-white page background, so white panels stand out
        more clearly as distinct surfaces. */
-    --bg:#e6e9ed;
+    --bg:#ecece7;
     --panel:#ffffff;
     --panel-2:#f4f5f7;
     --border:#d3d8de;
@@ -428,6 +428,9 @@
     padding:18px;
     box-shadow:var(--shadow-card);
   }
+  .card:not(.stat-card){
+    margin-bottom: 15px;
+  }
   /* User-reported (item 7): card section headings read as regular
      sentence-case description text instead of titles. Scoped to h3/h4
      specifically (not `.card` text generally) since those are always a
@@ -548,7 +551,10 @@
   html[data-density="compact"] .btn.small{padding:4px 8px; font-size:11.5px; min-height:27px; min-width:27px;}
   html[data-density="compact"] input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]),
   html[data-density="compact"] select{padding:7px 9px; font-size:13px; min-height:32px; min-width:64px;}
-
+.table-scroll {
+    border-radius: 1rem;
+    background: #eaeaea;
+}
   /* ---------- Compact / Terminal layout — a dense, table-driven look
      instead of card tiles, styled after real broker terminals: one thin
      stat bar up top, a plain data table for holdings (qty pill, colored
@@ -1247,7 +1253,7 @@
      --accent/--accent-soft vary per theme here.
      ================================================================ */
   html[data-color^="material-"][data-theme="light"] {
-    --bg:#FAFAFA; --panel:#FFFFFF; --panel-2:#F1F1F2; --border:#E3E3E5; --text:#1B1B1D; --muted:#6B6B6F;
+    --bg:#ecece7; --panel:#ededed; --panel-2:#F1F1F2; --border:#E3E3E5; --text:#1B1B1D; --muted:#6B6B6F;
     --accent: var(--material-accent, #6750A4);
     --accent-soft: var(--material-accent-soft, #E8DEF8);
   }
