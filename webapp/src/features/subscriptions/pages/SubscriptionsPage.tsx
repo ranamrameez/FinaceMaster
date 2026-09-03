@@ -304,6 +304,11 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
   const [editRow, setEditRow] = useState<Subscription>(sub);
 
   const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
+  // Archived accounts stay findable (so an already-linked archived account
+  // still shows its real name, not "a removed account") but are hidden from
+  // the "pick where to generate NEW plans" picker below — same rule as
+  // `AccountsList`'s own filter; see `BankAccount.isActive`'s doc comment.
+  const activeAccounts = accounts.filter((a) => a.isActive !== false);
   const plannedBankEntries = usePlannedBankWorkbookStore((s) => s.workbook.entries);
   const addPlannedBankEntries = usePlannedBankWorkbookStore((s) => s.addEntries);
   const deletePlannedBankEntry = usePlannedBankWorkbookStore((s) => s.deleteEntry);
@@ -312,7 +317,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
   const deletePlannedCashEntry = usePlannedCashWorkbookStore((s) => s.deleteEntry);
 
   const [linkModule, setLinkModule] = useState<'bank' | 'cash'>(sub.paidVia?.module ?? 'bank');
-  const [linkAccountId, setLinkAccountId] = useState(sub.paidVia?.module === 'bank' ? sub.paidVia.ref || accounts[0]?.id || '' : accounts[0]?.id || '');
+  const [linkAccountId, setLinkAccountId] = useState(sub.paidVia?.module === 'bank' ? sub.paidVia.ref || activeAccounts[0]?.id || '' : activeAccounts[0]?.id || '');
 
   const occurrences = generateRenewalOccurrences(sub);
   const linkedLabel = sub.paidVia
@@ -471,17 +476,17 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
             </Select>
           </Field>
           {linkModule === 'bank' && (
-            accounts.length ? (
+            activeAccounts.length ? (
               <Field label="Bank account">
                 <Select value={linkAccountId} onChange={(e) => setLinkAccountId(e.target.value)}>
-                  {accounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.currencyCode})</option>)}
+                  {activeAccounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.currencyCode})</option>)}
                 </Select>
               </Field>
             ) : (
-              <p className="footer-note">No bank accounts yet — add one on the Banking page first.</p>
+              <p className="footer-note">No active bank accounts — add or unarchive one on the Banking page first.</p>
             )
           )}
-          <button className="btn" onClick={generatePlans} disabled={linkModule === 'bank' && !accounts.length}>
+          <button className="btn" onClick={generatePlans} disabled={linkModule === 'bank' && !activeAccounts.length}>
             {linkedLabel ? 'Re-link / regenerate plans' : 'Generate renewal plans'}
           </button>
         </div>

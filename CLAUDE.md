@@ -4503,6 +4503,27 @@ not developer notes) continuously as features ship.
   file's 82 IN / 143 OUT exactly) plus 2 new regression tests reproducing the bug directly by
   loading raw legacy-shaped objects with no `isDeposit` key. `npx tsc -b` / `npm run test` (466
   tests, 21 new) / `npm run build` all clean.
+- **`BankAccount.isActive` — archive accounts, user-requested (2026-09-03) — see README Done
+  item 222, the first slice of README Pending item 115(c).** Optional
+  (`isActive?: boolean`, absent = active) — zero-migration, same as every other optional
+  `BankAccount` field. Archiving only affects VISIBILITY, never a total: hidden from
+  `AccountsList`'s default `EntityCard` grid (new "Show archived (N)" toggle + an "Archived"
+  pill badge) and from every "pick where a NEW transaction/plan goes" picker
+  (`SideFields`'s bank case in `TransferLinksPage.tsx`, Banking's own `useAccountPicker` for
+  its Planning tab, EMI's "Link to bank" picker, Subscriptions' "Pays via" picker) — but
+  `totalBalanceByCurrency`/`assetBalanceByCurrency`/Net Worth all keep counting an archived
+  account's balance unchanged. **A real distinction worth remembering for any future "hide
+  from pickers" feature**: a picker resolving an *already-linked* record's display name (EMI's
+  `linkedAccount`, Subscriptions' `linkedLabel`) must read the FULL unfiltered account list —
+  only the "choose a NEW target" picker filters — otherwise an already-archived-but-still-
+  linked account would wrongly render as "a removed account." New Archive/Restore button
+  (`ArchiveIcon`/`RestoreIcon`, new icons) on `AccountDetailPage`, grouped top-right next to
+  Delete (rule 7) — reversible and non-destructive, so it only needs the standard sign-in gate,
+  no confirm dialog. Verified live via Playwright: a seeded archived account is hidden by
+  default and reappears with its badge under "Show archived"; Net Worth's total for a seeded
+  Checking(1200 USD)+archived-Savings(450 USD) pair still read exactly 1,650 USD, confirming
+  the "never touch a total" guarantee holds. `npx tsc -b` / `npm run test` (466 tests,
+  unchanged) / `npm run build` all clean.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

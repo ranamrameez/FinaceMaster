@@ -156,3 +156,26 @@ export function TransferIcon({ size = 14 }: IconProps) {
     </svg>
   );
 }
+
+/** A storage box — "Archive" action (user-requested 2026-09-03: "isActive
+ * flag to archive accounts"), a reversible, non-destructive alternative to
+ * `TrashIcon`'s Delete. */
+export function ArchiveIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base} aria-hidden>
+      <path d="M21 8H3v13h18V8Z" />
+      <path d="M1 3h22v5H1zM10 12h4" />
+    </svg>
+  );
+}
+
+/** A counter-clockwise arrow — "Restore" (un-archive), pairs with
+ * `ArchiveIcon`. */
+export function RestoreIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base} aria-hidden>
+      <path d="M3 12a9 9 0 1 0 3-6.7" />
+      <path d="M3 4v5h5" />
+    </svg>
+  );
+}

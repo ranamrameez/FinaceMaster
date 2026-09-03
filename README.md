@@ -5274,6 +5274,29 @@ FinanceManager live link:
      Bank Description field works, zero new console errors beyond this sandbox's own already-
      documented FX/font `ERR_CONNECTION_RESET` noise. `npx tsc -b` / `npm run test` (466 tests,
      21 new) / `npm run build` all clean.
+222. **`BankAccount.isActive` — archive accounts, user-requested (2026-09-03), the first slice
+     of Pending item 115(c).** Optional (`isActive?: boolean`, absent = active) — real existing
+     accounts have no such field and must not need a migration or suddenly disappear, same
+     zero-migration-required approach as every other optional field added to `BankAccount`
+     (`branch`/`iban`/`isLiability`/etc.). Archiving is a **visibility choice only** — an
+     archived account is hidden from `AccountsList`'s default grid (a "Show archived (N)"
+     toggle reveals it, with an "Archived" pill badge) and from every "pick where a NEW
+     transaction/plan goes" picker (`SideFields`'s Bank case, Banking's own Planning-tab
+     `useAccountPicker`, EMI's "Link to bank" picker, Subscriptions' "Pays via" picker) — but
+     never from a total: `totalBalanceByCurrency`/`assetBalanceByCurrency`/Net Worth all keep
+     counting an archived account's balance unchanged, and any picker that needs to keep
+     showing an *already-linked* archived account's real name (not "a removed account") reads
+     the full, unfiltered account list for that lookup while only the "add new" picker itself
+     filters — verified this distinction explicitly in EMI's/Subscriptions' own linked-label
+     resolution. New Archive/Restore button (new `ArchiveIcon`/`RestoreIcon` in `icons.tsx`) on
+     `AccountDetailPage`, grouped top-right next to the existing Delete button (rule 7) — a
+     safer, reversible, non-destructive alternative, so unlike Delete it needs no confirm
+     dialog, just the standard sign-in gate. Verified live via Playwright: an account with
+     `isActive:false` seeded directly is hidden by default, "Show archived (1)" reveals it with
+     the badge, and — the case most likely to have been silently wrong — Net Worth's total for
+     a seeded Checking(1200)+archived-Savings(450) pair still read exactly 1,650 USD, confirming
+     archiving never touches a real total. `npx tsc -b` / `npm run test` (466 tests, unchanged —
+     a UI-only additive feature) / `npm run build` all clean.
 
 ## Pending
 
@@ -6020,6 +6043,11 @@ or a design decision before more code, not guessed at further:**
      correct data ordering. Ability to favorite an entity, to view it on top." Well-specified,
      lower-risk than (a)/(b) (an additive field, not a restructuring) — a reasonable next
      concrete step across Bank/Funds/Personal Loans/EMI/Rentals/Subscriptions entity lists.
+     **The "active/inactive" half is now done for Bank** (`BankAccount.isActive`, 2026-09-03 —
+     see Done item 222): archive/restore an account, hidden from the default list + every
+     "add new" picker, never from totals. **Still open**: the same archive treatment for
+     Funds/Personal Loans/EMI/Rentals/Subscriptions' own entity lists, plus favorite/pin and a
+     visible Sr#/Index# column anywhere (Bank included) — none of that is built yet.
      (d) Bank's own Analytics tab was never audited against the date-range-filterable chart
      pattern other Analytics pages already have (Done item 31) — "charts should be interactive...
      right now they are dumping lifetime data all at once."

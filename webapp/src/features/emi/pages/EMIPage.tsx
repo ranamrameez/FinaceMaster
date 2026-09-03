@@ -533,7 +533,12 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
   };
 
   const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
-  const [linkAccountId, setLinkAccountId] = useState(loan.linkedBankAccountId || accounts[0]?.id || '');
+  // `linkedAccount` deliberately reads the FULL `accounts` list (an
+  // already-linked archived account still shows its real name), but the
+  // picker below only offers active ones — same rule as everywhere else
+  // this trade-off comes up; see `BankAccount.isActive`'s doc comment.
+  const activeAccounts = accounts.filter((a) => a.isActive !== false);
+  const [linkAccountId, setLinkAccountId] = useState(loan.linkedBankAccountId || activeAccounts[0]?.id || '');
   const linkedAccount = accounts.find((a) => a.id === loan.linkedBankAccountId);
 
   const linkToBank = async () => {
@@ -743,11 +748,11 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                   the chosen account's Planning tab, dated on this loan's own schedule.
                 </p>
               )}
-              {accounts.length ? (
+              {activeAccounts.length ? (
                 <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
                   <Field label="Bank account">
                     <Select value={linkAccountId} onChange={(e) => setLinkAccountId(e.target.value)}>
-                      {accounts.map((a) => (
+                      {activeAccounts.map((a) => (
                         <option key={a.id} value={a.id}>{a.name} ({a.currencyCode})</option>
                       ))}
                     </Select>
@@ -757,7 +762,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                   </button>
                 </div>
               ) : (
-                <p className="footer-note">No bank accounts yet — add one on the Banking page first.</p>
+                <p className="footer-note">No active bank accounts — add or unarchive one on the Banking page first.</p>
               )}
             </div>
           </div>
