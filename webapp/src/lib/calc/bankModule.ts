@@ -1,3 +1,5 @@
+import { categoryName } from '../categories';
+import type { Category } from '../../types/finance';
 import type { BankAccount, BankTransaction } from '../../types/bankWorkbook';
 import { toInstantMs } from '../datetime';
 
@@ -9,14 +11,15 @@ export interface BankLedgerRow {
 /** Running balance for one account, starting from its opening balance, in
  * real-instant chronological order; two transactions tied at the same
  * instant (the common case for untimed records, which default to the
- * same noon-UTC placeholder) are then ordered by `seq` — a stable,
- * persisted per-transaction counter (see `BankTransaction.seq`'s doc
- * comment) — rather than relying on `Array.prototype.sort`'s stability. */
+ * same noon-UTC placeholder) are then ordered by `serialNumber` — a
+ * stable, persisted per-transaction counter (see `Finance.serialNumber`'s
+ * doc comment) — rather than relying on `Array.prototype.sort`'s
+ * stability. */
 export function accountRunningLedger(account: BankAccount, transactions: BankTransaction[]): BankLedgerRow[] {
   const accountTxs = transactions.filter((t) => t.accountId === account.id);
   const sorted = [...accountTxs].sort((a, b) => {
     const byInstant = toInstantMs(a.date, a.time, a.timezone) - toInstantMs(b.date, b.time, b.timezone);
-    return byInstant !== 0 ? byInstant : (a.seq ?? 0) - (b.seq ?? 0);
+    return byInstant !== 0 ? byInstant : (a.serialNumber ?? 0) - (b.serialNumber ?? 0);
   });
   let balance = account.openingBalance;
   return sorted.map((tx) => {
@@ -77,13 +80,15 @@ export function creditCardLiabilityByCurrency(accounts: BankAccount[], transacti
 }
 
 /** Category breakdown for one account (net credit minus debit per
- * category). */
-export function accountByCategory(account: BankAccount, transactions: BankTransaction[]): Record<string, number> {
+ * category). Keyed by category NAME (resolved from `categoryID` via the
+ * shared registry), not the id itself — every existing caller/chart
+ * already expects a display-ready name as the key. */
+export function accountByCategory(account: BankAccount, transactions: BankTransaction[], categories: Category[]): Record<string, number> {
   const out: Record<string, number> = {};
   transactions
     .filter((t) => t.accountId === account.id)
     .forEach((t) => {
-      const cat = t.category?.trim() || 'Uncategorized';
+      const cat = categoryName(t.categoryID, categories);
       out[cat] = (out[cat] || 0) + t.amount;
     });
   return out;
@@ -139,17 +144,18 @@ export function budgetVsActual(
   accountIds: string[],
   budgets: Record<string, number>,
   month: string,
+  categories: Category[],
 ): BudgetRow[] {
   const ids = new Set(accountIds);
   const actualByCategory: Record<string, number> = {};
   transactions
     .filter((t) => ids.has(t.accountId) && t.date.slice(0, 7) === month && t.amount < 0)
     .forEach((t) => {
-      const cat = t.category?.trim() || 'Uncategorized';
+      const cat = categoryName(t.categoryID, categories);
       actualByCategory[cat] = (actualByCategory[cat] || 0) - t.amount;
     });
-  const categories = new Set([...Object.keys(budgets), ...Object.keys(actualByCategory)]);
-  return [...categories]
+  const categoryNames = new Set([...Object.keys(budgets), ...Object.keys(actualByCategory)]);
+  return [...categoryNames]
     .sort()
     .map((category) => ({ category, budget: budgets[category] || 0, actual: actualByCategory[category] || 0 }));
 }

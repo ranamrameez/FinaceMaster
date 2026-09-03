@@ -9,7 +9,7 @@ describe('plannedCashProjection', () => {
   const entry = (over: Partial<CashEntry>): CashEntry => ({
     id: 'e1',
     date: '2026-01-01',
-    type: 'IN',
+    isDeposit: true,
     amount: 100,
     currencyCode: 'USD',
     source: 'manual',
@@ -25,21 +25,21 @@ describe('plannedCashProjection', () => {
   });
 
   it('real equals the current balance and planned adds not-yet-executed plans', () => {
-    const entries = [entry({ id: 'e1', type: 'IN', amount: 500 })];
+    const entries = [entry({ id: 'e1', isDeposit: true, amount: 500 })];
     const planned = [plan({ id: 'p1', type: 'OUT', amount: 200 })];
     const result = plannedCashProjection(entries, planned);
     expect(result.USD).toEqual({ real: 500, planned: 300 });
   });
 
   it('excludes executed plans from the planned delta (already counted in real)', () => {
-    const entries = [entry({ id: 'e1', type: 'IN', amount: 500 })];
+    const entries = [entry({ id: 'e1', isDeposit: true, amount: 500 })];
     const planned = [plan({ id: 'p1', type: 'OUT', amount: 200, executed: true })];
     const result = plannedCashProjection(entries, planned);
     expect(result.USD).toEqual({ real: 500, planned: 500 });
   });
 
   it('keeps currencies separate', () => {
-    const entries = [entry({ id: 'e1', type: 'IN', amount: 500, currencyCode: 'USD' })];
+    const entries = [entry({ id: 'e1', isDeposit: true, amount: 500, currencyCode: 'USD' })];
     const planned = [plan({ id: 'p1', type: 'OUT', amount: 100, currencyCode: 'PKR' })];
     const result = plannedCashProjection(entries, planned);
     expect(result.USD).toEqual({ real: 500, planned: 500 });
@@ -47,7 +47,7 @@ describe('plannedCashProjection', () => {
   });
 
   it('a planned IN increases the projected balance', () => {
-    const entries = [entry({ id: 'e1', type: 'OUT', amount: 100 })];
+    const entries = [entry({ id: 'e1', isDeposit: false, amount: 100 })];
     const planned = [plan({ id: 'p1', type: 'IN', amount: 300 })];
     const result = plannedCashProjection(entries, planned);
     expect(result.USD).toEqual({ real: -100, planned: 200 });
@@ -67,6 +67,7 @@ describe('plannedBankProjection', () => {
     accountId: 'acct-1',
     date: '2026-01-01',
     amount: -100,
+    isDeposit: false,
     description: 'Groceries',
     source: 'manual',
     ...over,

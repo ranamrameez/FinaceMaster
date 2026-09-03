@@ -1,21 +1,41 @@
 import { create } from 'zustand';
 import { toInstantMs } from '../lib/datetime';
-import { backfillSeq, nextSeq } from '../lib/seq';
+import { backfillSerialNumber, nextSerialNumber } from '../lib/financeSerial';
+import { resolveLegacyCategoryId } from '../lib/financeMigration';
 import { createEmptyBankWorkbook } from './defaultBankWorkbook';
 import type { BankAccount, BankTransaction, BankWorkbook } from '../types/bankWorkbook';
 
 const STORAGE_KEY = 'financerecorder_bank_workbook_v1';
 
-/** Backfills `seq` (see `BankTransaction.seq`'s doc comment) onto any
- * transaction missing it, in real-instant chronological order — same
- * pattern as `createWorkbookStore.ts`'s `normalize()`. Applied on every
- * path data can enter the store (local load and `setWorkbook`, which also
+/** `BankTransaction` extends `Finance` (2026-09-03 restructure) — `amount`
+ * stays the SIGNED source of truth (see `types/finance.ts`'s file-level
+ * comment on why), so `isDeposit` is always just its sign, recomputed here
+ * rather than trusted from storage: never let it drift from the amount
+ * that's actually authoritative. */
+function withDerivedFields(tx: BankTransaction): BankTransaction {
+  return {
+    ...tx,
+    isDeposit: tx.amount >= 0,
+    categoryID: tx.categoryID ?? resolveLegacyCategoryId(tx.category),
+    timestamp: tx.timestamp ?? new Date().toISOString(),
+  };
+}
+
+/** Backfills `serialNumber` (see `Finance.serialNumber`'s doc comment) onto
+ * any transaction missing it, in real-instant chronological order — same
+ * pattern as `createWorkbookStore.ts`'s `normalize()`, just under this
+ * class's own field name (`lib/financeSerial.ts`). Also derives
+ * `isDeposit`/`categoryID`/`timestamp` on every record so pre-existing
+ * local/cloud data (written before this migration) resolves correctly the
+ * moment it's loaded, not just on the next edit. Applied on every path
+ * data can enter the store (local load and `setWorkbook`, which also
  * covers the Firebase pull in `useBankFirebaseSync`). */
 function normalize(wb: BankWorkbook): BankWorkbook {
-  const chronological = [...wb.transactions].sort(
+  const withFields = wb.transactions.map(withDerivedFields);
+  const chronological = [...withFields].sort(
     (a, b) => toInstantMs(a.date, a.time, a.timezone) - toInstantMs(b.date, b.time, b.timezone),
   );
-  return { ...wb, transactions: backfillSeq(wb.transactions, chronological) };
+  return { ...wb, transactions: backfillSerialNumber(withFields, chronological) };
 }
 
 /** Banking has accounts (nested under settings) plus transactions — a
@@ -90,17 +110,27 @@ export const useBankWorkbookStore = create<BankStoreState>((set, get) => {
       })),
 
     addTransaction: (tx) =>
-      mutate((wb) => ({ ...wb, transactions: [...wb.transactions, tx.seq !== undefined ? tx : { ...tx, seq: nextSeq(wb.transactions) }] })),
+      mutate((wb) => {
+        const withFields = withDerivedFields(tx);
+        const withSerial = withFields.serialNumber !== undefined ? withFields : { ...withFields, serialNumber: nextSerialNumber(wb.transactions) };
+        return { ...wb, transactions: [...wb.transactions, withSerial] };
+      }),
 
     addTransactions: (txs) =>
       mutate((wb) => {
-        let seq = nextSeq(wb.transactions) - 1;
-        const withSeq = txs.map((t) => (t.seq !== undefined ? t : { ...t, seq: ++seq }));
-        return { ...wb, transactions: [...wb.transactions, ...withSeq] };
+        let serial = nextSerialNumber(wb.transactions) - 1;
+        const withFields = txs.map((t) => {
+          const derived = withDerivedFields(t);
+          return derived.serialNumber !== undefined ? derived : { ...derived, serialNumber: ++serial };
+        });
+        return { ...wb, transactions: [...wb.transactions, ...withFields] };
       }),
 
     updateTransaction: (id, patch) =>
-      mutate((wb) => ({ ...wb, transactions: wb.transactions.map((t) => (t.id === id ? { ...t, ...patch } : t)) })),
+      mutate((wb) => ({
+        ...wb,
+        transactions: wb.transactions.map((t) => (t.id === id ? withDerivedFields({ ...t, ...patch }) : t)),
+      })),
 
     deleteTransaction: (id) => mutate((wb) => ({ ...wb, transactions: wb.transactions.filter((t) => t.id !== id) })),
 

@@ -28,6 +28,7 @@ import { cssVar } from '../../../lib/cssVar';
 import { fmtMoney } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { useAppearanceStore } from '../../../store/appearanceStore';
+import { useCategoryStore } from '../../../store/categoryStore';
 import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
 import { usePlannedCashWorkbookStore } from '../../../store/plannedCashWorkbookStore';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
@@ -74,13 +75,14 @@ export function BudgetPlannerPage() {
   const emiLoans = useEMIWorkbookStore((s) => s.workbook.entries);
   const netWorthSnapshots = useNetWorthSnapshotsWorkbookStore((s) => s.workbook.entries);
   const netWorthSummary = useNetWorthSummary();
+  const categories = useCategoryStore((s) => s.workbook.categories);
 
   useAppearanceStore((s) => s.appearance);
   applyChartTheme();
 
   const activities = useMemo(
-    () => collectBudgetActivities({ cashEntries, plannedCash, bankAccounts, bankTransactions, plannedBank, rentalProperties, rentalEntries, plannedRentals }),
-    [cashEntries, plannedCash, bankAccounts, bankTransactions, plannedBank, rentalProperties, rentalEntries, plannedRentals],
+    () => collectBudgetActivities({ cashEntries, plannedCash, bankAccounts, bankTransactions, plannedBank, rentalProperties, rentalEntries, plannedRentals, categories }),
+    [cashEntries, plannedCash, bankAccounts, bankTransactions, plannedBank, rentalProperties, rentalEntries, plannedRentals, categories],
   );
 
   // README item 107 (user-requested 2026-08-27): a scrollable window rather

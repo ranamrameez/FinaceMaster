@@ -143,9 +143,9 @@ describe('computeNetWorthByCurrency', () => {
 
 describe('flowByCurrency', () => {
   const cashEntries = [
-    { date: '2026-08-01', type: 'IN' as const, amount: 500, currencyCode: 'USD' },
-    { date: '2026-08-15', type: 'OUT' as const, amount: 100, currencyCode: 'USD' },
-    { date: '2026-08-15', type: 'IN' as const, amount: 1000, currencyCode: 'PKR' },
+    { date: '2026-08-01', isDeposit: true, amount: 500, currencyCode: 'USD' },
+    { date: '2026-08-15', isDeposit: false, amount: 100, currencyCode: 'USD' },
+    { date: '2026-08-15', isDeposit: true, amount: 1000, currencyCode: 'PKR' },
   ];
   const bankAccounts = [{ id: 'a1', currencyCode: 'USD' }];
   const bankTransactions = [
@@ -153,7 +153,7 @@ describe('flowByCurrency', () => {
     { accountId: 'a1', date: '2026-07-31', amount: 999 }, // outside range, ignored
   ];
 
-  it('combines Cash (unsigned type+amount) and Bank (signed amount) within a date range', () => {
+  it('combines Cash (unsigned isDeposit+amount) and Bank (signed amount) within a date range', () => {
     const out = flowByCurrency(cashEntries, bankAccounts, bankTransactions, '2026-08-15', '2026-08-15');
     // USD: -100 (cash OUT) + -50 (bank debit) = -150; PKR: +1000 (cash IN)
     expect(out.USD).toBe(-150);

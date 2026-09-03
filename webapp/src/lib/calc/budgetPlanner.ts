@@ -16,6 +16,8 @@
  * each module's own type stays completely untouched; this is a pure
  * read-side combine, same spirit as `netWorth.ts`. */
 
+import { categoryName } from '../categories';
+import type { Category } from '../../types/finance';
 import type { CashEntry } from '../../types/cashWorkbook';
 import type { PlannedCashEntry } from '../../types/plannedCash';
 import type { BankAccount, BankTransaction } from '../../types/bankWorkbook';
@@ -56,11 +58,18 @@ export interface BudgetActivity {
   sourceEmiLoanId?: string;
 }
 
-function normalizeCash(entries: CashEntry[], plans: PlannedCashEntry[]): BudgetActivity[] {
+/** Real entries resolve their display category from `categoryID` via the
+ * shared registry; planned entries (`PlannedCashEntry`/
+ * `PlannedBankTransaction`/`PlannedRentalEntry`) still carry the old
+ * free-text `category` field unchanged — the 2026-09-03 Finance/Category
+ * restructure was deliberately scoped to the 3 primary record types, not
+ * their Planned* counterparts (see `types/finance.ts`'s file-level
+ * comment), so this is a real, documented asymmetry, not an oversight. */
+function normalizeCash(entries: CashEntry[], plans: PlannedCashEntry[], categories: Category[]): BudgetActivity[] {
   const real: BudgetActivity[] = entries.map((e) => ({
     id: e.id, module: 'cash', sourceLabel: 'Cash', date: e.date,
-    amount: e.type === 'IN' ? e.amount : -e.amount, currencyCode: e.currencyCode,
-    category: e.category, description: e.note || (e.type === 'IN' ? 'Cash in' : 'Cash out'), executed: true,
+    amount: e.isDeposit ? e.amount : -e.amount, currencyCode: e.currencyCode,
+    category: categoryName(e.categoryID, categories), description: e.note || (e.isDeposit ? 'Cash in' : 'Cash out'), executed: true,
   }));
   const planned: BudgetActivity[] = plans.filter((p) => !p.executed).map((p) => ({
     id: p.id, module: 'cash', sourceLabel: 'Cash', date: p.date,
@@ -70,7 +79,7 @@ function normalizeCash(entries: CashEntry[], plans: PlannedCashEntry[]): BudgetA
   return [...real, ...planned];
 }
 
-function normalizeBank(accounts: BankAccount[], transactions: BankTransaction[], plans: PlannedBankTransaction[]): BudgetActivity[] {
+function normalizeBank(accounts: BankAccount[], transactions: BankTransaction[], plans: PlannedBankTransaction[], categories: Category[]): BudgetActivity[] {
   const accountById = new Map(accounts.map((a) => [a.id, a]));
   const real: BudgetActivity[] = transactions.flatMap((t) => {
     const account = accountById.get(t.accountId);
@@ -78,7 +87,7 @@ function normalizeBank(accounts: BankAccount[], transactions: BankTransaction[],
     return [{
       id: t.id, module: 'bank' as const, sourceLabel: account.name, date: t.date,
       amount: t.amount, currencyCode: account.currencyCode,
-      category: t.category, description: t.description, executed: true,
+      category: categoryName(t.categoryID, categories), description: t.description, executed: true,
     }];
   });
   const planned: BudgetActivity[] = plans.filter((p) => !p.executed).flatMap((p) => {
@@ -94,15 +103,15 @@ function normalizeBank(accounts: BankAccount[], transactions: BankTransaction[],
   return [...real, ...planned];
 }
 
-function normalizeRentals(properties: Property[], entries: RentalEntry[], plans: PlannedRentalEntry[]): BudgetActivity[] {
+function normalizeRentals(properties: Property[], entries: RentalEntry[], plans: PlannedRentalEntry[], categories: Category[]): BudgetActivity[] {
   const propertyById = new Map(properties.map((p) => [p.id, p]));
   const real: BudgetActivity[] = entries.flatMap((e) => {
     const property = propertyById.get(e.propertyId);
     if (!property) return [];
     return [{
       id: e.id, module: 'rentals' as const, sourceLabel: property.name, date: e.date,
-      amount: e.type === 'RENT_INCOME' ? e.amount : -e.amount, currencyCode: property.currencyCode,
-      category: e.category, description: e.note || (e.type === 'RENT_INCOME' ? 'Rent income' : 'Expense'), executed: true,
+      amount: e.isDeposit ? e.amount : -e.amount, currencyCode: property.currencyCode,
+      category: categoryName(e.categoryID, categories), description: e.note || (e.isDeposit ? 'Rent income' : 'Expense'), executed: true,
     }];
   });
   const planned: BudgetActivity[] = plans.filter((p) => !p.executed).flatMap((p) => {
@@ -121,11 +130,12 @@ export function collectBudgetActivities(inputs: {
   cashEntries: CashEntry[]; plannedCash: PlannedCashEntry[];
   bankAccounts: BankAccount[]; bankTransactions: BankTransaction[]; plannedBank: PlannedBankTransaction[];
   rentalProperties: Property[]; rentalEntries: RentalEntry[]; plannedRentals: PlannedRentalEntry[];
+  categories: Category[];
 }): BudgetActivity[] {
   return [
-    ...normalizeCash(inputs.cashEntries, inputs.plannedCash),
-    ...normalizeBank(inputs.bankAccounts, inputs.bankTransactions, inputs.plannedBank),
-    ...normalizeRentals(inputs.rentalProperties, inputs.rentalEntries, inputs.plannedRentals),
+    ...normalizeCash(inputs.cashEntries, inputs.plannedCash, inputs.categories),
+    ...normalizeBank(inputs.bankAccounts, inputs.bankTransactions, inputs.plannedBank, inputs.categories),
+    ...normalizeRentals(inputs.rentalProperties, inputs.rentalEntries, inputs.plannedRentals, inputs.categories),
   ].sort((a, b) => a.date.localeCompare(b.date));
 }
 

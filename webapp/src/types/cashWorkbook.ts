@@ -1,31 +1,29 @@
-export interface CashEntry {
-  /** Stable id, not the entry's array position — needed so cross-entity
-   * transfer links (README item 19) can reference a specific entry that
-   * survives other entries being added/edited/deleted around it. */
-  id: string;
-  /** Stable per-entry sequence number, the definitive tie-breaker when two
-   * entries land on the exact same instant — see `Transaction.seq` in
-   * `types/workbook.ts` for the full reasoning. Assigned/backfilled
-   * generically by `createEntryStore.ts` (this type has no bespoke store
-   * of its own), in array order since that factory has no structural
-   * guarantee of a `date` field to sort by first. */
-  seq?: number;
-  date: string;
-  /** Optional time-of-day ("HH:MM"), defaults to noon when absent — see
-   * `lib/datetime.ts`. Lets same-day entries sort by real chronology. */
-  time?: string;
-  /** IANA timezone the `date`+`time` are in; defaults to UTC when absent. */
-  timezone?: string;
-  type: 'IN' | 'OUT';
-  amount: number;
+import type { Finance } from './finance';
+
+/** Extends the shared `Finance` base (2026-09-03 restructure — see
+ * `types/finance.ts`'s file-level comment) — `id`/`serialNumber`/`title`/
+ * `amount`/`isDeposit`/`categoryID`/`note`/`timestamp`/`date`/`time`/
+ * `timezone`/`isLinked` all now come from there; only what's genuinely
+ * Cash-specific stays declared here. */
+export interface CashEntry extends Finance {
   /** Per-entry, not per-module — see MODULES_PLAN.md's cross-cutting
    * currency decision. Aggregates group by this rather than converting. */
   currencyCode: string;
-  /** Free-form, user-definable — never a fixed enum (locked decision,
-   * MODULES_PLAN.md). The UI offers autocomplete over previously-used
-   * categories for convenience, not a hardcoded list. */
+  /** @deprecated superseded by `Finance.categoryID`. Kept optional, never
+   * written by new code — only read as a fallback by
+   * `lib/financeMigration.ts` for a record that hasn't been migrated onto
+   * `categoryID` yet (e.g. data pulled from Firebase before this field
+   * existed), so display never breaks while the one-time migration catches
+   * up. */
   category?: string;
-  note?: string;
+  /** @deprecated superseded by `Finance.isDeposit`. Kept optional, never
+   * written by new code — real pre-restructure data has this field and NO
+   * `isDeposit` at all, so `cashWorkbookStore.ts`'s own migration reads
+   * this as a fallback the same way `category` above does. Without this,
+   * every existing "IN" entry would silently read as `isDeposit: undefined`
+   * (falsy) and render/behave as an OUT — a real regression caught via live
+   * testing against real data, not a hypothetical. */
+  type?: 'IN' | 'OUT';
   /** 'statement-import' added 2026-08-23 (README item 25 / MODULES_PLAN.md
    * §13's CSV-import scope) — a CSV export doesn't map cleanly to "a
    * statement" for physical cash, but the same simple column-mapping

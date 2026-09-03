@@ -87,7 +87,7 @@ export function computeNetWorthByCurrency(inputs: NetWorthInputs): CurrencyNetWo
 
 /** Item 5 of a 2026-08-26 feedback batch: "inflow/outflow today, month
  * etc." — a per-currency net cash movement over a date range, combining
- * Cash's unsigned `type: IN|OUT` entries and Bank's already-signed
+ * Cash's unsigned `isDeposit`-flagged entries and Bank's already-signed
  * transactions (mapped to their account's currency). Date strings compare
  * lexicographically the same as chronologically ('YYYY-MM-DD'), so plain
  * string comparison is enough — no Date parsing needed. Deliberately only
@@ -96,7 +96,7 @@ export function computeNetWorthByCurrency(inputs: NetWorthInputs): CurrencyNetWo
  * "money moved today" concept in the same sense (a trade isn't a deposit/
  * withdrawal from the user's own pocket the same way). */
 export function flowByCurrency(
-  cashEntries: { date: string; type: 'IN' | 'OUT'; amount: number; currencyCode: string }[],
+  cashEntries: { date: string; isDeposit: boolean; amount: number; currencyCode: string }[],
   bankAccounts: { id: string; currencyCode: string }[],
   bankTransactions: { accountId: string; date: string; amount: number }[],
   fromDate: string,
@@ -105,7 +105,7 @@ export function flowByCurrency(
   const out: Record<string, number> = {};
   cashEntries.forEach((e) => {
     if (e.date < fromDate || e.date > toDate) return;
-    const delta = e.type === 'IN' ? e.amount : -e.amount;
+    const delta = e.isDeposit ? e.amount : -e.amount;
     out[e.currencyCode] = (out[e.currencyCode] ?? 0) + delta;
   });
   const accountCurrency = new Map(bankAccounts.map((a) => [a.id, a.currencyCode]));

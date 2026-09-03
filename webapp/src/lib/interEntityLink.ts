@@ -1,3 +1,4 @@
+import { TRANSFER_CATEGORY_ID } from './categories';
 import type { BankTransaction } from '../types/bankWorkbook';
 import type { CashEntry } from '../types/cashWorkbook';
 import type { EMIRepayment } from '../types/emiWorkbook';
@@ -32,7 +33,7 @@ function buildSideRecord(
         record: {
           id,
           date,
-          type: direction === 'in' ? 'IN' : 'OUT',
+          isDeposit: direction === 'in',
           amount,
           // `cfg.currencyCode` should always be set by the time this runs —
           // every real caller (SideFields' own module picker, each
@@ -44,7 +45,7 @@ function buildSideRecord(
           // fixed (README Done item: "Link To always shows USD instead of
           // filling default currency").
           currencyCode: cfg.currencyCode || 'USD',
-          category: 'Transfer',
+          categoryID: TRANSFER_CATEGORY_ID,
           note,
           source: 'manual',
         },
@@ -57,9 +58,13 @@ function buildSideRecord(
           id,
           accountId: cfg.ref,
           date,
+          // Bank's own amount stays signed (see `types/finance.ts`) —
+          // `isDeposit` is derived from this sign by the store itself, not
+          // set independently here.
           amount: direction === 'in' ? amount : -amount,
+          isDeposit: direction === 'in',
           description: note || 'Linked transfer',
-          category: 'Transfer',
+          categoryID: TRANSFER_CATEGORY_ID,
           source: 'manual',
         },
       };
@@ -95,7 +100,12 @@ function buildSideRecord(
           id,
           propertyId: cfg.ref,
           date,
-          type: direction === 'in' ? 'EXPENSE' : 'RENT_INCOME',
+          // EXPENSE (isDeposit=false) when direction==='in', RENT_INCOME
+          // (isDeposit=true) when direction==='out' — preserves the exact
+          // same real mapping as the old `type` enum (see the comment
+          // above this switch case for why direction doesn't flip
+          // "normally" here).
+          isDeposit: direction !== 'in',
           amount,
           note,
         },
