@@ -73,6 +73,18 @@ export interface BankAccount {
    * already applied to `accountNumber`, which only ever holds a masked
    * trailing few digits). */
   cardBin?: string;
+  /** User-requested (2026-09-03): "isActive flag to archive accounts."
+   * Optional, defaults to active (true) when absent — real existing
+   * accounts have no such field today and must not suddenly disappear or
+   * need a migration. Archiving is a VISIBILITY choice only: an archived
+   * account is hidden from `AccountsList`'s default grid and from the
+   * Transfers/`SideFields` account picker, but its balance still counts
+   * toward every total (`totalBalanceByCurrency`/`assetBalanceByCurrency`/
+   * Net Worth) — archiving must never silently change a real financial
+   * figure, only what's shown by default. Same "archive, don't delete"
+   * precedent as `Subscription.active`, just optional here instead of
+   * required, for zero-migration backward compatibility. */
+  isActive?: boolean;
 }
 
 /** Extends the shared `Finance` base (2026-09-03 restructure — see

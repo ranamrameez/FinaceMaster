@@ -142,7 +142,11 @@ export function SideFields({ label, cfg, onChange }: { label: string; cfg: LinkS
 
   const entitiesForModule = (module: LinkModule): { id: string; label: string; currencyCode: string }[] => {
     switch (module) {
-      case 'bank': return bankAccounts.map((a) => ({ id: a.id, label: `${a.name} (${a.currencyCode})`, currencyCode: a.currencyCode }));
+      // Archived accounts are hidden from this "pick where a NEW linked
+      // transaction goes" list (2026-09-03) — same "hide from pickers for
+      // new activity, never from totals" rule as `AccountsList`'s own
+      // filter; see `BankAccount.isActive`'s own doc comment.
+      case 'bank': return bankAccounts.filter((a) => a.isActive !== false).map((a) => ({ id: a.id, label: `${a.name} (${a.currencyCode})`, currencyCode: a.currencyCode }));
       case 'rentals': return properties.map((p) => ({ id: p.id, label: `${p.name} (${p.currencyCode})`, currencyCode: p.currencyCode }));
       case 'personalLoans': return loans.map((l) => ({ id: l.id, label: `${l.person} (${l.currencyCode})`, currencyCode: l.currencyCode }));
       case 'emi': return emiLoans.map((l) => ({ id: l.id, label: `${l.name} (${l.currencyCode})`, currencyCode: l.currencyCode }));

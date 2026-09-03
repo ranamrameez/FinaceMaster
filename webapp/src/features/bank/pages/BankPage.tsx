@@ -7,7 +7,7 @@ import { Notice } from '../../../components/Notice';
 import { Tooltip } from '../../../components/Tooltip';
 import { ChartCard } from '../../qse/components/ChartCard';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { EditIcon, ExportIcon, ListIcon, PlusIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { ArchiveIcon, EditIcon, ExportIcon, ListIcon, PlusIcon, RestoreIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Modal } from '../../../components/Modal';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
@@ -420,20 +420,34 @@ export function AddAccountForm({ onSaved, initialCurrency }: { onSaved?: (id: st
  * both moved to `AccountDetailPage` (its own Account Details card's Edit
  * icon, and a dedicated red "Delete account" button) — this card no longer
  * mutates anything itself, it's a pure Main-tier summary + navigation. */
+/** User-requested (2026-09-03): "isActive flag to archive accounts." An
+ * archived account is hidden from this default grid (and from every
+ * "pick where a NEW transaction/plan goes" picker elsewhere — see
+ * `SideFields`/`useAccountPicker`/EMI's/Subscriptions' own "Link to bank"
+ * pickers) but its balance always keeps counting toward every total — see
+ * `BankAccount.isActive`'s own doc comment for why. Archiving is purely a
+ * visibility choice, not a "this account/money doesn't exist" claim. */
 function AccountsList() {
   const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
   const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
   const navigate = useNavigate();
+  const [showArchived, setShowArchived] = useState(false);
+
+  const archivedCount = useMemo(() => accounts.filter((a) => a.isActive === false).length, [accounts]);
+  const visibleAccounts = useMemo(
+    () => (showArchived ? accounts : accounts.filter((a) => a.isActive !== false)),
+    [accounts, showArchived],
+  );
 
   const currencyGroups = useMemo(() => {
     const byCurrency = new Map<string, BankAccount[]>();
-    for (const a of accounts) {
+    for (const a of visibleAccounts) {
       const list = byCurrency.get(a.currencyCode) ?? [];
       list.push(a);
       byCurrency.set(a.currencyCode, list);
     }
     return [...byCurrency.entries()].sort(([a], [b]) => a.localeCompare(b));
-  }, [accounts]);
+  }, [visibleAccounts]);
 
   if (!accounts.length) {
     return <p className="footer-note">No accounts yet — use the + button below to add one.</p>;
@@ -441,6 +455,18 @@ function AccountsList() {
 
   return (
     <div>
+      {archivedCount > 0 && (
+        <button
+          className="btn secondary small"
+          style={{ marginBottom: 12 }}
+          onClick={() => setShowArchived((v) => !v)}
+        >
+          {showArchived ? 'Hide' : 'Show'} archived ({archivedCount})
+        </button>
+      )}
+      {!visibleAccounts.length && (
+        <p className="footer-note">Every account is archived — click "Show archived" above to see them.</p>
+      )}
       {currencyGroups.map(([currency, group]) => (
         <div key={currency} style={{ marginBottom: 20 }}>
           <div className="footer-note" style={{ marginBottom: 8, fontWeight: 700, textTransform: 'uppercase', fontSize: 11, letterSpacing: '.04em' }}>
@@ -452,7 +478,14 @@ function AccountsList() {
                 key={a.id}
                 title={a.name}
                 subtitle={[a.accountType, a.branch].filter(Boolean).join(' · ') || undefined}
-                badge={a.isLiability ? <span className="pill-sell" style={{ fontSize: 10 }}>Credit card</span> : undefined}
+                badge={
+                  a.isLiability || a.isActive === false ? (
+                    <span style={{ display: 'flex', gap: 4 }}>
+                      {a.isLiability && <span className="pill-sell" style={{ fontSize: 10 }}>Credit card</span>}
+                      {a.isActive === false && <span className="pill-warn" style={{ fontSize: 10 }}>Archived</span>}
+                    </span>
+                  ) : undefined
+                }
                 statLabel={a.isLiability ? 'Owed' : 'Balance'}
                 stat={
                   <MoneyValue
@@ -615,19 +648,39 @@ export function AccountDetailPage() {
     navigate('/bank');
   };
 
+  // User-requested (2026-09-03): "isActive flag to archive accounts" — a
+  // safer, reversible alternative to Delete. Archiving only hides the
+  // account from the default list and from pickers for NEW activity; its
+  // balance keeps counting toward every total (see `BankAccount.isActive`'s
+  // own doc comment) — so unlike Delete, this needs no destructive warning.
+  const toggleArchived = async () => {
+    if (!(await ensureSignedIn(account.isActive === false ? 'Sign in to restore this account.' : 'Sign in to archive this account.'))) return;
+    updateAccount(account.id, { isActive: account.isActive === false ? true : false });
+    toast(account.isActive === false ? 'Account restored.' : 'Account archived.');
+  };
+
   return (
     <div>
       <Link to="/bank" className="footer-note">← Back to Banking</Link>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
-        <h1 className="pagetitle" style={{ margin: 0 }}>{account.name}</h1>
+        <h1 className="pagetitle" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+          {account.name}
+          {account.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Archived</span>}
+        </h1>
         {/* User-requested (2026-08-27): "Delete and Edit are rare operations
            they should [be] on details page only... with delete as a red
            danger button." Edit already lives on the Account Details card
-           below (its own Edit icon); this is the account's own delete,
-           moved off the homepage entity card entirely. */}
-        <button className="btn danger small" onClick={deleteThisAccount}>
-          <TrashIcon size={13} />Delete account
-        </button>
+           below (its own Edit icon); Delete/Archive are the account's own
+           destructive/reversible actions, both moved off the homepage
+           entity card entirely and grouped together here (rule 7). */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn secondary small" onClick={toggleArchived}>
+            {account.isActive === false ? <><RestoreIcon size={13} />Restore account</> : <><ArchiveIcon size={13} />Archive account</>}
+          </button>
+          <button className="btn danger small" onClick={deleteThisAccount}>
+            <TrashIcon size={13} />Delete account
+          </button>
+        </div>
       </div>
       <p className="footer-note" style={{ marginBottom: 16 }}>
         {account.isLiability ? 'Amount owed:' : 'Current balance:'}{' '}
@@ -782,8 +835,13 @@ function AccountsTab() {
 
 /* ============================== Transactions ============================== */
 
+/** Used by the Planning tab — "which account should this new plan belong
+ * to." Archived accounts are excluded here too (2026-09-03): planning a
+ * new future payment against an archived account doesn't make sense, same
+ * "hide from pickers for new activity" rule as `AccountsList`/`SideFields`. */
 function useAccountPicker() {
-  const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
+  const allAccounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
+  const accounts = useMemo(() => allAccounts.filter((a) => a.isActive !== false), [allAccounts]);
   const [accountId, setAccountId] = useState<string>(accounts[0]?.id ?? '');
   const account = accounts.find((a) => a.id === accountId) ?? accounts[0] ?? null;
   return { accounts, account, accountId: account?.id ?? '', setAccountId };
