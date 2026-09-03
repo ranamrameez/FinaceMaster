@@ -1,9 +1,22 @@
 import type { Fund } from '../../types/fundsWorkbook';
-import type { PricePoint, Transaction } from '../../types/workbook';
+import type { Position, PricePoint, Transaction } from '../../types/workbook';
 import { computePositions } from './positions';
 import { getDailyPriceHistory, getMarketPrice } from './priceHistory';
 
 const calcFee = () => 0; // NAV is already net of fund fees — see FundsWorkbook's doc comment
+
+/** A fund's true Net P/L: realized profit locked in by every past sell/
+ * withdrawal, PLUS unrealized profit on whatever units are still held.
+ * `Position.invested` (from `computePositions`) is only the cost basis of
+ * the REMAINING position — a withdrawal reduces it, so `value - invested`
+ * alone silently drops every past withdrawal's own profit. This is the
+ * same `realizedPL + unrealizedPL` shape `cashSummary()`'s app-wide `netPL`
+ * already uses, just for one ticker instead of the whole portfolio.
+ * Real user-reported bug (2026-09-03): after 3 withdrawals, JCSLM's true
+ * Net P/L (~269 PKR) showed as only ~31 PKR — the unrealized-only figure. */
+export function fundNetProfit(position: Position | undefined, currentValue: number): number {
+  return (position?.realized ?? 0) + (currentValue - (position?.invested ?? 0));
+}
 
 /** Current market value per fund currency — mirrors the per-fund value
  * computation already inline in FundsPage.tsx's `FundsSummary`, factored

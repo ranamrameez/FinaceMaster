@@ -20,7 +20,7 @@ import { defaultTimezoneForCurrency } from '../../../lib/datetime';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { getMarketPrice } from '../../../lib/calc';
-import { allocationByCategory, contributionVsValueSeries } from '../../../lib/calc/fundsModule';
+import { allocationByCategory, contributionVsValueSeries, fundNetProfit } from '../../../lib/calc/fundsModule';
 import { impliedFundNav } from '../../../lib/calc/fundsDailyHistoryImport';
 import {
   buildFundsImportPlan,
@@ -174,16 +174,17 @@ function OverallSummary() {
   const funds = useFundsWorkbookStore((s) => s.workbook.funds);
   const { positions, workbook } = useFundsDerived();
 
-  const totals: Record<string, { invested: number; value: number }> = {};
+  const totals: Record<string, { invested: number; value: number; profit: number }> = {};
   funds.forEach((fund) => {
     const p = positions.find((pos) => pos.ticker === fund.id);
     const invested = p?.invested ?? 0;
     const units = p?.shares ?? 0;
     const nav = getMarketPrice(fund.id, workbook.marketPrices, workbook.transactions);
     const value = units * nav;
-    if (!totals[fund.currencyCode]) totals[fund.currencyCode] = { invested: 0, value: 0 };
+    if (!totals[fund.currencyCode]) totals[fund.currencyCode] = { invested: 0, value: 0, profit: 0 };
     totals[fund.currencyCode].invested += invested;
     totals[fund.currencyCode].value += value;
+    totals[fund.currencyCode].profit += fundNetProfit(p, value);
   });
   const codes = Object.keys(totals);
   if (!codes.length) return null;
@@ -191,7 +192,7 @@ function OverallSummary() {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px,1fr))', gap: 8, marginBottom: 16 }}>
       {codes.map((code) => {
-        const profit = totals[code].value - totals[code].invested;
+        const profit = totals[code].profit;
         const profitPct = totals[code].invested > 0 ? (profit / totals[code].invested) * 100 : 0;
         return (
           <div key={code} className="card" style={{ padding: 12 }}>
@@ -219,7 +220,7 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
     const invested = p?.invested ?? 0;
     const nav = getMarketPrice(fund.id, workbook.marketPrices, workbook.transactions);
     const value = units * nav;
-    const profit = value - invested;
+    const profit = fundNetProfit(p, value);
     const profitPct = invested > 0 ? (profit / invested) * 100 : 0;
     const rate = fundXIRR(fund.id);
     return { fund, units, invested, value, profit, profitPct, xirrPct: rate !== null ? rate * 100 : null };
@@ -490,7 +491,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
   const avgNav = units > 0 ? invested / units : 0;
   const currentNav = getMarketPrice(fund.id, workbook.marketPrices, workbook.transactions);
   const currentValue = units * currentNav;
-  const profit = currentValue - invested;
+  const profit = fundNetProfit(position, currentValue);
   const profitPct = invested > 0 ? (profit / invested) * 100 : 0;
   const rate = fundXIRR(fund.id);
 
@@ -639,7 +640,12 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
           </div>
           <div className="stat-card card"><div className="label">Invested</div><MoneyValue n={invested} currency={fund.currencyCode} /></div>
           <div className="stat-card card"><div className="label">Current value</div><MoneyValue n={currentValue} currency={fund.currencyCode} /></div>
-          <div className="stat-card card" style={hueStyle(profit >= 0 ? 'var(--profit)' : 'var(--loss)')}><div className="label">Net profit</div><MoneyValue n={profit} currency={fund.currencyCode} after={` (${profitPct.toFixed(1)}%)`} /></div>
+          <div className="stat-card card" style={hueStyle(profit >= 0 ? 'var(--profit)' : 'var(--loss)')}>
+            <Tooltip text="Realized profit from every past withdrawal/sell, plus unrealized profit on units still held — your true total gain, not just what's sitting in the fund right now.">
+              <div className="label" style={{ cursor: 'pointer' }}>Net profit</div>
+            </Tooltip>
+            <MoneyValue n={profit} currency={fund.currencyCode} after={` (${profitPct.toFixed(1)}%)`} />
+          </div>
           <div className="stat-card card">
             <Tooltip text="XIRR: your annualized rate of return, accounting for the exact dates and amounts of every purchase — a fairer comparison than a flat percentage when you've invested at different times.">
               <div className="label" style={{ cursor: 'pointer' }}>XIRR</div>
