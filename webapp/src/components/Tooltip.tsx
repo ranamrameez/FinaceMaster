@@ -78,6 +78,7 @@ export function Tooltip({ text, children, align = 'left' }: { text: string; chil
   return (
     <span
       ref={triggerRef}
+      className="tooltip-trigger"
       style={{ position: 'relative', display: 'inline-flex' }}
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}

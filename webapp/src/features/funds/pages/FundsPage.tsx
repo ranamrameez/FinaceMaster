@@ -19,8 +19,8 @@ import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { defaultTimezoneForCurrency } from '../../../lib/datetime';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
-import { computePriceStats, getMarketPrice } from '../../../lib/calc';
-import { allocationByCategory, contributionVsValueSeries, expectedPLRate, fundNetProfit } from '../../../lib/calc/fundsModule';
+import { getMarketPrice } from '../../../lib/calc';
+import { allocationByCategory, balanceUpdateHistory, contributionVsValueSeries, expectedPLRate, fundNetProfit } from '../../../lib/calc/fundsModule';
 import { impliedFundNav } from '../../../lib/calc/fundsDailyHistoryImport';
 import {
   buildFundsImportPlan,
@@ -535,15 +535,19 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
   const [typeFilter, setTypeFilter] = useState<'all' | 'BUY' | 'SELL'>('all');
 
   // Balance Update History — user-requested (2026-09-03): "ability to see
-  // balance updates." Every NAV/balance update on record (`setMarketPrice`'s
-  // own writes, both `commitNav`'s and `commitBalance`'s) with edit/delete,
-  // same "recent 8 + show all" + raw-array-index-resolution pattern already
-  // established for QSE/PSX's PositionDetail (Done items 203/208) — Funds
-  // reuses the exact same `priceHistory`/`updatePricePoint`/`deletePricePoint`
-  // store shape via `createWorkbookStore`, so nothing new was needed there.
-  const stats = computePriceStats(fund.id, workbook.priceHistory);
+  // balance updates," then (same day) "missing crucial data. Add all data
+  // like Index, Date, prv balnce + NAV, new balance + NAV, change + %age,
+  // Actions etc." `balanceUpdateHistory()` computes the real before/after
+  // balance+NAV pair and the change between them for every update on
+  // record — same "recent 8 + show all" + raw-array-index-resolution
+  // pattern already established for QSE/PSX's PositionDetail (Done items
+  // 203/208), just backed by richer per-row data.
+  const balanceRows = useMemo(
+    () => balanceUpdateHistory(fund.id, workbook.transactions, workbook.priceHistory),
+    [fund.id, workbook.transactions, workbook.priceHistory],
+  );
   const [showAllUpdates, setShowAllUpdates] = useState(false);
-  const updateRows = showAllUpdates ? [...(stats?.chronological ?? [])].reverse() : (stats?.recent ?? []);
+  const updateRows = showAllUpdates ? [...balanceRows].reverse() : balanceRows.slice(-8).reverse();
   const rawPriceHistory = workbook.priceHistory[fund.id] ?? [];
   const [editUpdateIndex, setEditUpdateIndex] = useState<number | null>(null);
   const [editUpdateRow, setEditUpdateRow] = useState<{ date: string; price: number } | null>(null);
@@ -568,10 +572,17 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
     toast('Update deleted.');
   };
   const exportBalanceHistory = () => {
-    if (!stats) return;
-    const rows = [...stats.chronological].sort((a, b) => (a.time || a.date).localeCompare(b.time || b.date));
-    const header = ['When', 'NAV'];
-    const body = rows.map((p) => [p.time ? new Date(p.time).toLocaleString() : p.date, p.price]);
+    const header = ['Index', 'Date', 'Prev Balance', 'Prev NAV', 'New Balance', 'New NAV', 'Change', 'Change %'];
+    const body = balanceRows.map((r) => [
+      r.index,
+      r.time ? new Date(r.time).toLocaleString() : r.date,
+      r.prevBalance,
+      r.prevNav,
+      r.newBalance,
+      r.newNav,
+      r.change,
+      r.changePct.toFixed(2),
+    ]);
     const blob = new Blob([toCSV([header, ...body])], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -582,6 +593,22 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
     toast('Balance history downloaded.');
   };
   const plRate = expectedPLRate(fund.id, workbook.transactions, workbook.priceHistory);
+
+  // User-requested (2026-09-03): "Fund INfo card: add a chart to view
+  // periodic growth with balance & PL indications over time." Reuses the
+  // exact same {date, invested, value} series and Invested-vs-Value line
+  // pair the Analytics tab's own "Contribution vs. value" chart already
+  // shows — the vertical gap between the two lines IS the P&L indication
+  // at each point, so a second dataset does the job rather than a
+  // separate P&L-only series. Charts read CSS-var-derived colors, so this
+  // subscribes to appearance the same way every other chart-bearing page
+  // does, to re-render (and recompute those colors) on a live theme switch.
+  useAppearanceStore((s) => s.appearance);
+  applyChartTheme();
+  const contribution = useMemo(
+    () => contributionVsValueSeries(fund.id, workbook.transactions, workbook.priceHistory),
+    [fund.id, workbook.transactions, workbook.priceHistory],
+  );
 
   const position = positions.find((p) => p.ticker === fund.id);
   const units = position?.shares ?? 0;
@@ -716,16 +743,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
     <div>
       <button className="btn secondary small" style={{ marginBottom: 12 }} onClick={onBack}>← All funds</button>
 
-      {/* User-requested layout (2026-09-03): "Grid 3 col -> 2 col: Account
-          info stats cards stacked. 1 col: Stacked Balance Update Card +
-          Transfers card." Reuses the same `.position-split` grid QSE/PSX's
-          PositionDetail already established (2/3-width main column + a
-          fixed-width right rail, collapsing to one column under 900px) —
-          rather than a new class, since it's the exact same "wide info
-          block + narrow action rail" shape. */}
-      <div className="position-split">
-        <div>
-          <Card style={{ marginBottom: 16 }}>
+      <Card style={{ marginBottom: 16 }}>
             {editingFund ? (
               <div>
                 <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
@@ -802,38 +820,23 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                 <div className="value">{plRate ? <>{fmtMoney(plRate.monthlyAmount, fund.currencyCode)} <span style={{ fontSize: 12 }}>({plRate.monthlyPct.toFixed(2)}%)</span></> : '—'}</div>
               </div>
             </div>
-          </Card>
-        </div>
-
-        <div>
-          <Card style={{ marginBottom: 12 }}>
-            <h3 style={{ marginTop: 0 }}>Update balance</h3>
-            <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-              <input type="number" step="0.0001" placeholder="Update NAV" value={navInput} onChange={(e) => setNavInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && commitNav()} style={{ width: 130 }} />
-              <button className="btn secondary small" onClick={commitNav}><SaveIcon size={12} />Save NAV</button>
-            </div>
-            <p className="footer-note" style={{ margin: '8px 0' }}>Current NAV: {currentNav ? fmtPrice(currentNav) : '—'}</p>
-            <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-              <Tooltip text="Don't know the per-unit NAV? Enter your fund's current total balance instead — the app computes the implied NAV from the units you already hold, assuming no deposit/withdrawal happened since your last update.">
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="Update balance"
-                  value={balanceInput}
-                  onChange={(e) => setBalanceInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && commitBalance()}
-                  style={{ width: 140 }}
-                  disabled={units <= 0}
+            {/* User-requested (2026-09-03): "add a chart to view periodic
+                growth with balance & PL indications over time." */}
+            <div style={{ marginTop: 12 }}>
+              <ChartCard title="Growth over time" empty={!contribution.length}>
+                <Line
+                  data={{
+                    labels: contribution.map((c) => c.date),
+                    datasets: [
+                      { label: 'Invested', data: contribution.map((c) => c.invested), borderColor: cssVar('--warn') || '#e8a23d', backgroundColor: 'transparent', tension: 0.2 },
+                      { label: 'Value', data: contribution.map((c) => c.value), borderColor: cssVar('--profit') || '#3ecf8e', backgroundColor: 'transparent', tension: 0.2 },
+                    ],
+                  }}
+                  options={{ plugins: { datalabels: dlLine((v) => fmtMoney(v, fund.currencyCode)) } }}
                 />
-              </Tooltip>
-              <button className="btn secondary small" onClick={commitBalance} disabled={units <= 0}><SaveIcon size={12} />Save balance</button>
+              </ChartCard>
             </div>
-          </Card>
-          <CollapsibleCard title={<h3 style={{ margin: 0 }}>Transfers</h3>} defaultOpen={false}>
-            <FundsTransfersSection />
-          </CollapsibleCard>
-        </div>
-      </div>
+      </Card>
 
       <h3>Add transaction</h3>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
@@ -886,6 +889,32 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
         <TimeZoneFields time={txTime} timezone={txTimezone} onTimeChange={setTxTime} onTimezoneChange={setTxTimezone} />
         <button className="btn" onClick={submitTx}><PlusIcon />Add</button>
       </div>
+
+      {/* User-requested (2026-09-03): "I asked to stack update Balance +
+          OR update NAV and stacked below Add transaction form" — corrects
+          the earlier round's right-rail placement (also removed: a
+          "Transfers" card here, redundant with the Transactions table
+          right below). Two stacked options, "OR" between them, not two
+          side-by-side rows. */}
+      <Card style={{ marginBottom: 16 }}>
+        <h3 style={{ marginTop: 0 }}>Update balance or NAV</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <Field label="Update NAV" width={140}>
+              <TextInput type="number" step="0.0001" value={navInput} onChange={(e) => setNavInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && commitNav()} />
+            </Field>
+            <button className="btn secondary small" onClick={commitNav}><SaveIcon size={12} />Save NAV</button>
+            <span className="footer-note">Current NAV: {currentNav ? fmtPrice(currentNav) : '—'}</span>
+          </div>
+          <div className="footer-note" style={{ textAlign: 'center' }}>OR</div>
+          <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <Field label="Update balance" width={150} title="Don't know the per-unit NAV? Enter your fund's current total balance instead — the app computes the implied NAV from the units you already hold, assuming no deposit/withdrawal happened since your last update.">
+              <TextInput type="number" step="0.01" value={balanceInput} onChange={(e) => setBalanceInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && commitBalance()} disabled={units <= 0} />
+            </Field>
+            <button className="btn secondary small" onClick={commitBalance} disabled={units <= 0}><SaveIcon size={12} />Save balance</button>
+          </div>
+        </div>
+      </Card>
 
       <CollapsibleCard
         title={<h3 style={{ margin: 0 }}>Transactions</h3>}
@@ -967,30 +996,42 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
       </div>
       </CollapsibleCard>
 
-      {/* User-requested (2026-09-03): "ability to see balance updates." */}
+      {/* User-requested (2026-09-03): "ability to see balance updates,"
+          then "missing crucial data. Add all data like Index, Date, prv
+          balnce + NAV, new balance + NAV, change + %age, Actions etc." */}
       <CollapsibleCard
         title={<h3 style={{ margin: 0 }}>Balance Update History</h3>}
         style={{ marginTop: 16 }}
-        headerExtra={stats && stats.totalUpdates > 0 ? <button className="btn secondary" onClick={exportBalanceHistory}>Export CSV</button> : undefined}
+        headerExtra={balanceRows.length > 0 ? <button className="btn secondary" onClick={exportBalanceHistory}>Export CSV</button> : undefined}
       >
-        {!stats && <p className="footer-note">No balance/NAV updates recorded yet — use "Update balance" above.</p>}
-        {stats && (
+        {!balanceRows.length && <p className="footer-note">No balance/NAV updates recorded yet — use "Update balance or NAV" above.</p>}
+        {balanceRows.length > 0 && (
           <>
-            {stats.totalUpdates > stats.recent.length && (
+            {balanceRows.length > 8 && (
               <button className="btn secondary small" style={{ marginBottom: 8 }} onClick={() => setShowAllUpdates((v) => !v)}>
-                {showAllUpdates ? 'Show recent 8 only' : `Show all ${stats.totalUpdates} updates`}
+                {showAllUpdates ? 'Show recent 8 only' : `Show all ${balanceRows.length} updates`}
               </button>
             )}
             <div className="table-scroll">
               <table>
-                <thead><tr><th>When</th><th>NAV</th><th></th></tr></thead>
+                <thead>
+                  <tr>
+                    <th>#</th><th>Date</th><th>Prev Balance</th><th>Prev NAV</th><th>New Balance</th><th>New NAV</th><th>Change</th><th>%</th><th></th>
+                  </tr>
+                </thead>
                 <tbody>
-                  {updateRows.map((p) => {
-                    const rawIndex = rawPriceHistory.indexOf(p);
+                  {updateRows.map((r) => {
+                    const rawIndex = rawPriceHistory.indexOf(r.point);
                     return editUpdateIndex === rawIndex && editUpdateRow ? (
                       <tr key={rawIndex}>
+                        <td className="footer-note">{r.index}</td>
                         <td><input type="date" value={editUpdateRow.date} onChange={(e) => setEditUpdateRow({ ...editUpdateRow, date: e.target.value })} style={{ width: 130 }} /></td>
+                        <td>{fmtMoney(r.prevBalance, fund.currencyCode)}</td>
+                        <td>{fmtPrice(r.prevNav)}</td>
+                        <td className="footer-note">—</td>
                         <td><input type="number" step="0.0001" value={editUpdateRow.price} onChange={(e) => setEditUpdateRow({ ...editUpdateRow, price: Number(e.target.value) })} style={{ width: 90 }} /></td>
+                        <td className="footer-note">—</td>
+                        <td className="footer-note">—</td>
                         <td>
                           <IconButton label="Save" icon={<SaveIcon size={12} />} align="right" onClick={saveEditUpdate} />
                           <IconButton label="Cancel" icon={<XIcon size={12} />} align="right" onClick={() => { setEditUpdateIndex(null); setEditUpdateRow(null); }} />
@@ -998,10 +1039,16 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                       </tr>
                     ) : (
                       <tr key={rawIndex}>
-                        <td>{p.time ? new Date(p.time).toLocaleString() : p.date}</td>
-                        <td>{fmtPrice(p.price)}</td>
+                        <td className="footer-note">{r.index}</td>
+                        <td>{r.time ? new Date(r.time).toLocaleString() : r.date}</td>
+                        <td>{fmtMoney(r.prevBalance, fund.currencyCode)}</td>
+                        <td>{fmtPrice(r.prevNav)}</td>
+                        <td>{fmtMoney(r.newBalance, fund.currencyCode)}</td>
+                        <td>{fmtPrice(r.newNav)}</td>
+                        <td className={r.change >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(r.change, fund.currencyCode)}</td>
+                        <td className={r.change >= 0 ? 'pill-buy' : 'pill-sell'}>{r.changePct.toFixed(2)}%</td>
                         <td>
-                          <IconButton label="Edit" icon={<EditIcon size={12} />} align="right" onClick={() => startEditUpdate(rawIndex, p)} />
+                          <IconButton label="Edit" icon={<EditIcon size={12} />} align="right" onClick={() => startEditUpdate(rawIndex, r.point)} />
                           <IconButton label="Delete" icon={<TrashIcon size={12} />} align="right" onClick={() => removeUpdate(rawIndex)} />
                         </td>
                       </tr>

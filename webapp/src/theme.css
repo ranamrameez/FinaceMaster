@@ -736,6 +736,25 @@
      real size (shrinking only if the row is too narrow, per `min-width`
      below), so fields size themselves instead of splitting the row. */
   .row > *{flex:0 1 auto; min-width:160px;}
+  /* User-reported (2026-09-03): "small buttons but expanding all over the
+     page with very large white space." Root cause: an icon-only button
+     wrapped in `Tooltip` (the entire card-header Edit/Delete/Save/Cancel
+     action-button pattern app-wide) sits inside a `.row` as
+     `<Tooltip><button class="btn small">...</button></Tooltip>` — `.row`'s
+     actual DIRECT CHILD is `Tooltip`'s own wrapper `<span>`, not the
+     button itself, and that span carries no class of its own, so the
+     160px minimum above was the ONLY rule touching it (`.btn.small`'s own
+     smaller minimum, further below, never gets a chance to apply — it
+     targets the button, a grandchild of `.row`, which this selector can't
+     see). Every small icon button in a `.row` was silently stretched to
+     160px, all button text/icon centered inside a mostly-empty box.
+     `min-width:0` here doesn't remove sizing — it just stops the WRAPPER
+     from imposing its own minimum on top of whatever its actual child
+     (a button, an input, a label) already specifies, so `.btn.small`'s
+     real 30px minimum (or a `Field`-wrapped input's own width) takes over
+     correctly. Specificity 0,2,0 beats `.row > *`'s 0,1,0, so this wins
+     regardless of source order. */
+  .row > .tooltip-trigger{min-width:0;}
   /* User-reported (2026-08-28): "give same width (maybe 20%) to all form
      elements app wide... Buttons with text (100px maybe with 100% on
      mobiles?) for best UI consistency." `min-width:100px` (was 38px) here
