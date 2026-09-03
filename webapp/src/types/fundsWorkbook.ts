@@ -8,6 +8,15 @@ export interface Fund {
   category: 'Equity' | 'Debt' | 'Hybrid' | 'International' | 'Other';
   /** Per-fund, not per-module. */
   currencyCode: string;
+  /** User-requested (2026-09-03): "Funds can also be closed!" — same
+   * archive/restore pattern as `BankAccount.isActive` (see that field's
+   * own doc comment for the full reasoning). Optional, absent = active,
+   * zero-migration for real existing funds. Visibility only: hidden from
+   * the default fund list and from "add a NEW transaction into" pickers,
+   * never from a total (positions/Net Worth keep counting a closed fund's
+   * value unchanged — a closed fund isn't a claim that its money vanished,
+   * just that it's no longer being actively contributed to). */
+  isActive?: boolean;
 }
 
 export interface FundsSettings {

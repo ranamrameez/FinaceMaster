@@ -6,7 +6,7 @@ import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
 import { hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { EditIcon, PlusIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { ArchiveIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Modal } from '../../../components/Modal';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
@@ -145,13 +145,25 @@ export function AddPropertyForm({ onSaved, initialCurrency }: { onSaved?: (id: s
 }
 
 function PropertiesList() {
-  const properties = useRentalsWorkbookStore((s) => s.workbook.settings.properties);
+  const allProperties = useRentalsWorkbookStore((s) => s.workbook.settings.properties);
   const entries = useRentalsWorkbookStore((s) => s.workbook.entries);
   const updateProperty = useRentalsWorkbookStore((s) => s.updateProperty);
   const deleteProperty = useRentalsWorkbookStore((s) => s.deleteProperty);
+  const ensureSignedIn = useEnsureSignedIn();
   const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<Property | null>(null);
   const [detailProperty, setDetailProperty] = useState<Property | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+  const archivedCount = useMemo(() => allProperties.filter((p) => p.isActive === false).length, [allProperties]);
+  const properties = useMemo(() => (showArchived ? allProperties : allProperties.filter((p) => p.isActive !== false)), [allProperties, showArchived]);
+
+  // User-requested (2026-09-03): "add isActive flag to all modules where
+  // applicable" — same archive/restore pattern as `BankAccount.isActive`.
+  const toggleArchived = async (p: Property) => {
+    if (!(await ensureSignedIn(p.isActive === false ? 'Sign in to restore this property.' : 'Sign in to archive this property.'))) return;
+    updateProperty(p.id, { isActive: p.isActive === false ? true : false });
+    toast(p.isActive === false ? 'Property restored.' : 'Property archived.');
+  };
 
   const startEdit = (p: Property) => { setEditId(p.id); setEditRow({ ...p }); };
   const saveEdit = () => {
@@ -174,7 +186,13 @@ function PropertiesList() {
   const { sorted, Th } = useSortableRows(properties, sortValue, 'name', 'asc');
 
   return (
-    <div className="table-scroll">
+    <div>
+      {archivedCount > 0 && (
+        <button className="btn secondary small" style={{ marginBottom: 8 }} onClick={() => setShowArchived((v) => !v)}>
+          {showArchived ? 'Hide' : 'Show'} archived ({archivedCount})
+        </button>
+      )}
+      <div className="table-scroll">
       <table>
         <thead><tr><Th col="name">Name</Th><Th col="currency">Currency</Th><Th col="purchasePrice">Purchase price</Th><Th col="netIncome">Net income (all time)</Th><th></th></tr></thead>
         <tbody>
@@ -196,13 +214,22 @@ function PropertiesList() {
               </tr>
             ) : (
               <tr key={p.id} onClick={() => setDetailProperty(p)} style={{ cursor: 'pointer' }}>
-                <td>{p.name}</td>
+                <td>
+                  {p.name}
+                  {p.isActive === false && <span className="pill-warn" style={{ fontSize: 10, marginLeft: 6 }}>Archived</span>}
+                </td>
                 <td>{p.currencyCode}</td>
                 <td>{p.purchasePrice ? fmtMoney(p.purchasePrice, p.currencyCode) : '—'}</td>
                 <td className={propertyNetIncome(p, entries) >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(propertyNetIncome(p, entries), p.currencyCode)}</td>
                 <td>
                   <button className="btn secondary small" onClick={(e) => { e.stopPropagation(); setDetailProperty(p); }}>Details</button>{' '}
                   <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={(e) => { e.stopPropagation(); startEdit(p); }} />{' '}
+                  <IconButton
+                    label={p.isActive === false ? 'Restore' : 'Archive'}
+                    icon={p.isActive === false ? <RestoreIcon size={13} /> : <ArchiveIcon size={13} />}
+                    align="right"
+                    onClick={(e) => { e.stopPropagation(); toggleArchived(p); }}
+                  />{' '}
                   <IconButton
                     label="Delete"
                     icon={<TrashIcon size={13} />}
@@ -216,10 +243,17 @@ function PropertiesList() {
               </tr>
             ),
           )}
-          {!sorted.length && <tr><td colSpan={5} className="footer-note">No properties yet — add one above.</td></tr>}
+          {!sorted.length && (
+            <tr>
+              <td colSpan={5} className="footer-note">
+                {allProperties.length ? 'Every property is archived — click "Show archived" above to see them.' : 'No properties yet — add one above.'}
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
       {detailProperty && <PropertyDetailModal property={detailProperty} onClose={() => setDetailProperty(null)} />}
+      </div>
     </div>
   );
 }
@@ -454,8 +488,14 @@ function PropertiesTab() {
 
 /* ============================== Entries ============================== */
 
+/** Used by the Entries/Import tabs — "which property should this new entry
+ * belong to." Archived properties are excluded (2026-09-03), same rule as
+ * Banking's own `useAccountPicker`: hide from pickers for new activity,
+ * never from a total (the property's own already-logged entries keep
+ * counting toward Net Worth/summary totals unchanged either way). */
 function usePropertyPicker() {
-  const properties = useRentalsWorkbookStore((s) => s.workbook.settings.properties);
+  const allProperties = useRentalsWorkbookStore((s) => s.workbook.settings.properties);
+  const properties = useMemo(() => allProperties.filter((p) => p.isActive !== false), [allProperties]);
   const [propertyId, setPropertyId] = useState<string>(properties[0]?.id ?? '');
   const property = properties.find((p) => p.id === propertyId) ?? properties[0] ?? null;
   return { properties, property, propertyId: property?.id ?? '', setPropertyId };

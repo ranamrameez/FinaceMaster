@@ -4524,6 +4524,55 @@ not developer notes) continuously as features ship.
   Checking(1200 USD)+archived-Savings(450 USD) pair still read exactly 1,650 USD, confirming
   the "never touch a total" guarantee holds. `npx tsc -b` / `npm run test` (466 tests,
   unchanged) / `npm run build` all clean.
+- **`isActive` extended to Funds/Personal Loans/EMI/Rentals, user-requested (2026-09-03) — see
+  README Done item 223, closes README Pending item 115(c) in full.** "Funds can also be
+  closed! add isActive flag to all modules where applicable." Mechanical repeat of Done item
+  222's exact Bank pattern on the other four entity-holding modules — `Fund`/`PersonalLoan`/
+  `EMILoan`/`Property` each gained the identical optional `isActive?: boolean`. Subscriptions
+  deliberately untouched — it already has equivalent functionality via its own pre-existing
+  `active: boolean` (required) + `cancelledDate`, the original precedent this pattern is
+  modeled on; renaming an already-required field for cosmetic consistency would be a real
+  migration risk with no user-facing benefit. Each module needed its own small structural
+  decision for WHERE the Archive/Restore control lives, since none of the four share Bank's
+  exact `EntityCard`-grid + dedicated-detail-PAGE shape: Funds' `FundList` is a plain table
+  (not `EntityCard`), so it got a "Show closed (N)" toggle + pill, with the Archive/Restore
+  `IconButton` on `FundDetail`'s existing Edit/Delete row; Personal Loans' `LoanDetail` uses a
+  plain `Card` (not `CollapsibleCard`), so the button sits in that Card's own action row;
+  EMI's `LoanDetail` already had its header restructured onto `CollapsibleCard`'s
+  `title`/`headerExtra` slots by Done item 172, so the archive button dropped straight into
+  that existing `headerExtra` group; Rentals' `Property` has no dedicated detail PAGE at all,
+  only `PropertyDetailModal`, and `Modal`'s own `title` prop is a plain string with no
+  header-action slot — rather than change that shared component for one module, the
+  Archive/Restore button went into `PropertiesList`'s existing per-row action group
+  (Edit/Delete), the same place every other action on that list already lives. **Every "pick
+  where a NEW thing goes" picker for these four entity types got the same filter, reusing Done
+  item 222's own established split (already-linked lookups stay unfiltered; only "add new"
+  pickers filter)**: `TransferLinksPage.tsx`'s `SideFields`/`entitiesForModule` (rentals/
+  personalLoans/emi cases — `resolveCurrency`/`useSideCurrency`'s own `.find()` lookups
+  deliberately left reading the full list, so an already-linked archived entity still resolves
+  its real name), Rentals' `usePropertyPicker()` (shared by both the Entries and Import
+  tabs — matches Bank's `useAccountPicker` precedent, since both are "add new" pickers, not
+  "view any history" ones like an Analytics tab's own separate, deliberately-unfiltered
+  picker), and Budget Planner's `AddPlanForm` (`bankAccounts`/`rentalProperties` filtered only
+  at the `AddPlanFab` call site — `collectBudgetActivities` right above it keeps reading the
+  full unfiltered lists, so an archived account/property's own past activity still shows in
+  the projection table; this is the same "filter only the specific prop feeding the picker,
+  not the shared data feeding the calc" pattern already established for the Analytics tabs).
+  **Verified live via Playwright with seeded active+archived pairs for all four modules** —
+  each list correctly hid the archived entity by default and revealed it (with its badge) via
+  the toggle; a real methodology trap worth repeating: an initial `getByText('Bob', {exact:
+  true})` check read as a false negative, because the badge span renders as a sibling text
+  node right after the name with no separator (`<td>Bob<span>Archived</span></td>`), so the
+  `<td>`'s own full text is "BobArchived," not "Bob" — a real screenshot caught this
+  immediately where the exact-text assertion couldn't. Personal Loans' Net position (800 =
+  500+300) and Rentals' Net income (3k = 1k+2k) both confirmed the archived entity's own data
+  still counts toward every total unchanged; Funds' and Personal Loans' detail-page
+  Archive/Close buttons both correctly hit the real sign-in gate; the Rentals Transfers-FAB's
+  property `<select>` correctly listed only the one active property, confirmed by reading
+  every `<select>`'s live option list on the open modal rather than guessing — the same "read
+  real values, don't guess coordinates/text" discipline this file has repeated many times
+  before. Zero console errors throughout. `npx tsc -b` / `npm run test` (466 tests, unchanged)
+  / `npm run build` all clean.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

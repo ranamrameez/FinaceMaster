@@ -7,7 +7,7 @@ import { Modal } from '../../../components/Modal';
 import { Notice } from '../../../components/Notice';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { EditIcon, PlusIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { ArchiveIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
@@ -209,9 +209,16 @@ function OverallSummary() {
   );
 }
 
+/** User-requested (2026-09-03): "Funds can also be closed!" — closed funds
+ * hidden from this default list behind a "Show closed" toggle, same
+ * archive/restore pattern as `AccountsList` (see `Fund.isActive`'s doc
+ * comment); their positions still contribute to every total unchanged. */
 function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
-  const funds = useFundsWorkbookStore((s) => s.workbook.funds);
+  const allFunds = useFundsWorkbookStore((s) => s.workbook.funds);
   const { positions, fundXIRR, workbook } = useFundsDerived();
+  const [showClosed, setShowClosed] = useState(false);
+  const closedCount = useMemo(() => allFunds.filter((f) => f.isActive === false).length, [allFunds]);
+  const funds = useMemo(() => (showClosed ? allFunds : allFunds.filter((f) => f.isActive !== false)), [allFunds, showClosed]);
 
   type Row = { fund: Fund; units: number; invested: number; value: number; profit: number; profitPct: number; xirrPct: number | null };
   const rows: Row[] = funds.map((fund) => {
@@ -240,7 +247,13 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
   const { sorted, Th } = useSortableRows(rows, sortValue, 'name', 'asc');
 
   return (
-    <div className="table-scroll">
+    <div>
+      {closedCount > 0 && (
+        <button className="btn secondary small" style={{ marginBottom: 12 }} onClick={() => setShowClosed((v) => !v)}>
+          {showClosed ? 'Hide' : 'Show'} closed ({closedCount})
+        </button>
+      )}
+      <div className="table-scroll">
       <table>
         <thead>
           <tr>
@@ -251,7 +264,10 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
         <tbody>
           {sorted.map((r) => (
             <tr key={r.fund.id} onClick={() => onSelect(r.fund)} style={{ cursor: 'pointer' }}>
-              <td>{r.fund.name}</td>
+              <td>
+                {r.fund.name}
+                {r.fund.isActive === false && <span className="pill-warn" style={{ fontSize: 10, marginLeft: 6 }}>Closed</span>}
+              </td>
               <td>{r.fund.code}</td>
               <td>{r.fund.category}</td>
               <td>{fmt(r.units, 2)}</td>
@@ -261,9 +277,16 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
               <td><button className="btn secondary small" onClick={(e) => { e.stopPropagation(); onSelect(r.fund); }}>Open</button></td>
             </tr>
           ))}
-          {!sorted.length && <tr><td colSpan={8} className="footer-note">No funds yet — add one above.</td></tr>}
+          {!sorted.length && (
+            <tr>
+              <td colSpan={8} className="footer-note">
+                {allFunds.length ? 'Every fund is closed — click "Show closed" above to see them.' : 'No funds yet — add one above.'}
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
@@ -543,6 +566,17 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
     onBack();
   };
 
+  // User-requested (2026-09-03): "Funds can also be closed!" — a safer,
+  // reversible alternative to Delete, same pattern as `BankAccount.isActive`
+  // (see that field's own doc comment). Archiving only hides the fund from
+  // the default list and from "add a NEW transaction into" pickers; its
+  // position/value keep counting toward every total unchanged.
+  const toggleArchived = async () => {
+    if (!(await ensureSignedIn(fund.isActive === false ? 'Sign in to reopen this fund.' : 'Sign in to close this fund.'))) return;
+    setWorkbook({ ...workbook, funds: workbook.funds.map((f) => (f.id === fund.id ? { ...f, isActive: f.isActive === false ? true : false } : f)) });
+    toast(fund.isActive === false ? 'Fund reopened.' : 'Fund closed.');
+  };
+
   const commitNav = async () => {
     const val = parseFloat(navInput);
     if (!val || val <= 0) return;
@@ -621,11 +655,20 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
         ) : (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 16 }}>{fund.name}</div>
+              <div style={{ fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                {fund.name}
+                {fund.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Closed</span>}
+              </div>
               <div className="footer-note">{fund.code} · {fund.platform} · {fund.category} · {fund.currencyCode}</div>
             </div>
             <div className="row" style={{ gap: 8 }}>
               <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => { setEditFund(fund); setEditingFund(true); }} />
+              <IconButton
+                label={fund.isActive === false ? 'Reopen' : 'Close'}
+                icon={fund.isActive === false ? <RestoreIcon size={13} /> : <ArchiveIcon size={13} />}
+                align="right"
+                onClick={toggleArchived}
+              />
               <IconButton label="Delete" icon={<TrashIcon size={13} />} align="right" onClick={deleteFund} />
             </div>
           </div>

@@ -51,6 +51,14 @@ export interface Property {
    * negative — an overpayment simply clears it rather than tracking a
    * credit balance, an accepted simplification for v1. */
   pendingRentBalance?: number;
+
+  /** User-requested (2026-09-03): "add isActive flag to all modules where
+   * applicable" — same archive/restore pattern as `BankAccount.isActive`.
+   * Optional, absent = active. Visibility only: hidden from the default
+   * property list and from "add a NEW entry into" pickers, never from a
+   * total (a sold/inactive property's past income/expense entries keep
+   * counting toward Net Worth/summary totals unchanged). */
+  isActive?: boolean;
 }
 
 /** Extends the shared `Finance` base (2026-09-03 restructure — see
