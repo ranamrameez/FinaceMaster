@@ -280,7 +280,22 @@ function MonthlySummaryTable({ months, nowMonth, monthLabel, monthly, netWorthTr
   );
 }
 
+/** User-requested (2026-09-03): "add filters to other tables as well." */
 function ActivityList({ activities }: { activities: BudgetActivity[] }) {
+  const moduleLabel: Record<BudgetModule, string> = { cash: 'Cash', bank: 'Banking', rentals: 'Rentals' };
+  const [moduleFilter, setModuleFilter] = useState<'all' | BudgetModule>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'actual' | 'planned'>('all');
+
+  const filtered = useMemo(
+    () => activities.filter((a) => {
+      if (moduleFilter !== 'all' && a.module !== moduleFilter) return false;
+      if (statusFilter === 'actual' && !a.executed) return false;
+      if (statusFilter === 'planned' && a.executed) return false;
+      return true;
+    }),
+    [activities, moduleFilter, statusFilter],
+  );
+
   type Col = 'date' | 'module' | 'source' | 'category' | 'amount' | 'status';
   const sortValue = (a: BudgetActivity, col: Col): number | string => {
     switch (col) {
@@ -292,11 +307,27 @@ function ActivityList({ activities }: { activities: BudgetActivity[] }) {
       default: return a.date;
     }
   };
-  const { sorted, Th } = useSortableRows(activities, sortValue, 'date', 'desc');
-  const moduleLabel: Record<BudgetModule, string> = { cash: 'Cash', bank: 'Banking', rentals: 'Rentals' };
+  const { sorted, Th } = useSortableRows(filtered, sortValue, 'date', 'desc');
 
   return (
     <CollapsibleCard title={<h3 style={{ margin: 0 }}>All planned financial activity</h3>} style={{ marginBottom: 16 }}>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+        <Field label="Account" width={130}>
+          <Select value={moduleFilter} onChange={(e) => setModuleFilter(e.target.value as typeof moduleFilter)}>
+            <option value="all">All</option>
+            <option value="cash">Cash</option>
+            <option value="bank">Banking</option>
+            <option value="rentals">Rentals</option>
+          </Select>
+        </Field>
+        <Field label="Status" width={130}>
+          <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}>
+            <option value="all">All</option>
+            <option value="actual">Actual</option>
+            <option value="planned">Planned</option>
+          </Select>
+        </Field>
+      </div>
       <div className="table-scroll">
         <table>
           <thead>
@@ -317,6 +348,13 @@ function ActivityList({ activities }: { activities: BudgetActivity[] }) {
                 <td className="footer-note">{a.executed ? 'Actual' : 'Planned'}</td>
               </tr>
             ))}
+            {!sorted.length && (
+              <tr>
+                <td colSpan={7} className="footer-note">
+                  {activities.length ? 'No activity matches these filters.' : 'No planned activity yet.'}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

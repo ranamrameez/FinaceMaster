@@ -5388,6 +5388,53 @@ FinanceManager live link:
      FAB still renders unaffected — zero console errors throughout. `npx tsc -b` / `npm run
      test` (466 tests, unchanged — UI-only restructuring, no calc logic touched) / `npm run
      build` all clean.
+225. **Filters extended to every other module's main tables, same day (2026-09-03) — the user
+     corrected item 224's own "deliberately scoped to the Cash page" note: "i exactly asked to
+     add filters to other tables as well."** Read literally, "all tables should have filter
+     options" was an app-wide ask, not a Cash-page-specific one — this rolled the same pattern
+     out everywhere else it applies, mirroring the shape item 224 already established (a filter
+     `useState` per dimension, a `useMemo`-derived filtered array feeding the table/
+     `useSortableRows`, a `Field`/`Select` control row, and an empty-state message that
+     distinguishes "no data at all" from "no data matches this filter"). Per module:
+     QSE's/PSX's `TransactionsPage.tsx` — the trade list's ticker/group-by controls gained a
+     third Action filter (Buy only/Sell only), the Transfers section gained a Type filter
+     (Deposit/Withdrawal), the Cash ledger section gained a Kind filter (Trade/Transfer/
+     Adjustment); QSE's/PSX's `DividendsSection.tsx` gained a per-ticker filter on the dividend
+     log (and "Total collected" now reflects whatever's currently filtered, not the lifetime
+     total, so the number on screen always matches what's visible). Banking's `AccountDetailPage`
+     transaction list gained Type (money in/out) + Category filters. Funds' `FundDetail`
+     transaction list gained a Buy/Sell type filter (its CSV export deliberately still exports
+     the full unfiltered log — a statement export shouldn't silently drop rows because the
+     on-screen view happens to be filtered). Personal Loans' `RepaymentsSection` gained a Source
+     filter (Manual/Statement import). EMI's Schedule table gained a Status filter (Paid/
+     Planned/Upcoming) alongside the existing "show full schedule" toggle. Rentals'
+     `EntriesList` gained Type (Rent income/Expense) + Category filters. Subscriptions' list
+     gained Status (Active/Cancelled) + Category filters. Budget Planner's activity table
+     (previously with no empty-state row at all) gained Account (Cash/Banking/Rentals) + Status
+     (Actual/Planned) filters and a real empty-state message. **Deliberately left unfiltered,
+     with a reason each**: QSE's/PSX's Adjustments section (no meaningful filter dimension
+     beyond date/amount/note — nothing to group by); per-ticker `StockPage.tsx` transaction
+     tables, Watchlist, Portfolio's Holdings/Closed-positions tables, and Trade Planner's leg
+     tables (each already scoped to one ticker or one plan — a filter control would have nothing
+     meaningful left to narrow); every entity LIST (`AccountsList`, `FundList`, `LoanList`,
+     `PropertiesList`, etc.) already gained a filter dimension via the prior session's "Show
+     archived"/"Show closed" toggle (Done items 222/223) and wasn't touched again here.
+     **Not done in this pass, a separate and bigger UX decision not raised by the correcting
+     message**: the correction used the word "filters" specifically, so this pass did not also
+     flip every table's own default sort DIRECTION to ascending/FIFO — that was item 224's own
+     Cash-specific "correct transaction order!" fix, not repeated blindly everywhere else.
+     **Lesson worth repeating for any future "did I scope this right" moment**: item 224's own
+     write-up had defaulted to the narrowest plausible reading of a blanket-sounding
+     instruction ("all tables should have filter options") rather than taking it at face value
+     — worth erring toward the literal, broader reading next time a request uses "all"/"every"
+     language, rather than assuming the surrounding context narrows it. Verified live via
+     Playwright across every touched page (QSE's full Transactions page with all sections
+     expanded via its own "All" chip, PSX's mirrored equivalent, Bank's account detail page,
+     Funds' fund detail, Personal Loans' repayments section, EMI's schedule table — including a
+     genuine Status=Paid/Upcoming filter check against a real seeded schedule — Rentals'
+     entries list, Subscriptions' list, and Budget Planner's activity table with two seeded
+     rows correctly narrowed by Account/Status) — zero console errors on any page. `npx tsc -b`
+     / `npm run test` (466 tests, unchanged — UI-only) / `npm run build` all clean.
 
 ## Pending
 
