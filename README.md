@@ -5543,6 +5543,61 @@ FinanceManager live link:
      real X once opened, zero console errors; every touched store's add-record path re-verified
      against the full 479-test suite with zero regressions. `npx tsc -b` / `npm run test` (479
      tests, 8 new across the two files) / `npm run build` all clean.
+228. **Real CSS bug fixed app-wide (a `Tooltip`-wrapped button/label stretching to 160px), Funds
+     detail page redesign corrected, Balance Update History given real columns, a growth chart
+     added (2026-09-03).** User's own words: "Bad idea for Card header action buttons:
+     .row>* {min-width: 160px;} They are small buttons but expanding all over the page with
+     very large white space." **Root-caused, not just patched**: `.row > *{min-width:160px}`
+     (Done item 202) is correctly overridden by `.btn.small`'s own smaller minimum (specificity
+     0,2,0 beats 0,1,0) for a plain button — but `IconButton` (every card-header Edit/Delete/
+     Save/Cancel action) wraps its `<button>` in `Tooltip`, and `Tooltip`'s own outer `<span>`
+     — the ACTUAL direct child of `.row` — carries no class of its own, so `.row`'s 160px
+     minimum was the only rule that could touch it (`.btn.small`'s rule targets the button, a
+     GRANDCHILD of `.row`, invisible to that selector). Every icon-only action button in a
+     `.row` was silently stretched to 160px. Fixed with one class (`tooltip-trigger`) on
+     `Tooltip`'s wrapper span and a compound-selector override (`.row > .tooltip-trigger{min-
+     width:0}`, 0,2,0 — wins regardless of source order) that lets the wrapped element's own
+     sizing take over instead of the wrapper imposing a second, unwanted minimum. Verified live
+     via Playwright: a card-header Edit button measured 33px (was previously stretching to
+     160px per the bug's own mechanism, confirmed by reading the cascade, not re-tested against
+     the old code). **Not attempted in this pass**: the user's broader complaint — "this app's
+     css is very bad. we need to remove all hardcoded css and use proper & generic classes for
+     each element on the page" — is a real, large, standing direction (this app has extensive
+     inline `style={{}}` throughout), tracked as its own Pending item (116) rather than a blind
+     app-wide sweep in the same turn as a single confirmed bug fix.
+     **Funds detail page, three corrections to the previous round's layout (item 226)**: (1)
+     "Transfers is redundant with Transactions (remove it!)" — the right-rail "Transfers" card
+     added last round is gone; the module-level "Transfers" tab (a portfolio-wide ledger,
+     reachable from the Funds page's own top nav, not tied to one fund) is untouched, since the
+     complaint reads as being about the single fund's OWN detail page specifically, not a
+     demand to remove the cross-entity-linking feature from the app. (2) "I asked to stack
+     update Balance + OR update NAV and stacked below Add transaction form" — the whole
+     `.position-split` 2-column/1-column grid is gone (nothing was left for the rail once
+     Transfers and Update-balance both moved out of it); a single "Update balance or NAV" card
+     now sits directly below "Add transaction," with its two options stacked vertically and an
+     "OR" divider between them, rewritten onto `Field`/`TextInput` instead of raw `<input
+     style={{width:...}}>` elements. (3) "Balance Update History missing crucial data. Add all
+     data like Index, Date, prv balnce + NAV, new balance + NAV, change + %age, Actions etc." —
+     new `balanceUpdateHistory()` (`lib/calc/fundsModule.ts`) walks the fund's chronological
+     price-update log, computing units-held-as-of-each-update's-date (from the transaction log)
+     to derive a REAL balance per update (a raw `PricePoint` only ever stored a NAV, not a
+     balance) — the table now shows #/Date/Prev Balance/Prev NAV/New Balance/New NAV/Change/%/
+     Actions, hand-traced in 4 new tests including a case where units change BETWEEN two
+     updates (a deposit in between), confirming the balance isn't naively `units-now × old-NAV`.
+     (4) "Fund INfo card: add a chart to view periodic growth with balance & PL indications
+     over time" — a new "Growth over time" chart inside the fund's info card, reusing the exact
+     Invested-vs-Value line pair the Analytics tab's own "Contribution vs. value" chart already
+     shows (the vertical gap between the two lines IS the P&L indication at each point — no new
+     chart type needed, just embedding the existing validated pattern in a second place).
+     Verified live via Playwright with seeded 3-update price history: `.position-split` count
+     is 0 (confirms the rail is gone), the page body no longer mentions "transfers" at all, the
+     h3 heading order reads "Add transaction → Update Balance Or NAV → Transactions → Balance
+     Update History" (confirms both the removal and the new position), the growth chart renders
+     a canvas, the Balance Update History table's 3 rows matched the hand-traced test exactly
+     (index 3: prev 1,100.00/11.00 → new 900.00/9.000, change -200.00/-18.18%), and both new
+     write actions (Save NAV, and the history table's Edit→Save) correctly hit the real sign-in
+     gate — zero console errors throughout. `npx tsc -b` / `npm run test` (483 tests, 4 new) /
+     `npm run build` all clean.
 
 ## Pending
 
@@ -6300,6 +6355,23 @@ or a design decision before more code, not guessed at further:**
      (d) Bank's own Analytics tab was never audited against the date-range-filterable chart
      pattern other Analytics pages already have (Done item 31) — "charts should be interactive...
      right now they are dumping lifetime data all at once."
+116. **App-wide CSS cleanup — remove hardcoded/inline styles, use proper generic classes
+     (2026-09-03).** User's own words: "this app's css is very bad. we need to remove all hard
+     coded css and use proper & generic classes for each element on the page!" A real, valid,
+     standing direction — this app has extensive inline `style={{}}` scattered across nearly
+     every page, a pattern that's produced at least 3 confirmed real bugs this project has
+     already hit (the `.row > *` min-width cascade trap fixed in Done item 228, the `flex:1`
+     row-sizing bug from Done item 54, and the `min-width:0` CSS-grid-shrink trap from Done item
+     203) — each one only found by tracing a specific reported symptom back through a maze of
+     ad hoc inline styles competing with global rules. **Not something to attempt as one blind
+     sweep** — a full inline-style-to-classes refactor touches literally every page in the app
+     and needs its own scoped, incremental pass (module by module, verified live each time,
+     matching this project's own established pattern for every other large refactor) rather
+     than one giant unreviewable diff. A reasonable starting point for a future session: audit
+     one module's page for its most-repeated inline style patterns (stat-card grids, `.row`
+     gap/wrap combos, button spacing) and extract them into real theme.css classes first, then
+     repeat per module — the exact same incremental discipline already used for the Main/Often/
+     Rare redesign (see the "App-wide UI/UX redesign" section above).
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

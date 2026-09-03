@@ -1,7 +1,7 @@
 import type { Fund } from '../../types/fundsWorkbook';
 import type { Position, PricePoint, Transaction } from '../../types/workbook';
 import { computePositions } from './positions';
-import { getDailyPriceHistory, getMarketPrice } from './priceHistory';
+import { getDailyPriceHistory, getMarketPrice, getPriceHistory } from './priceHistory';
 
 const calcFee = () => 0; // NAV is already net of fund fees — see FundsWorkbook's doc comment
 
@@ -221,4 +221,71 @@ export function organicPLByPeriod(
     periods.set(key, (periods.get(key) ?? 0) + organic);
   }
   return [...periods.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([period, total]) => ({ period, total }));
+}
+
+export interface BalanceUpdateRow {
+  /** 1-based position in this fund's OWN chronological update history —
+   * a stable ordinal ("this was my Nth balance update"), independent of
+   * whatever order the caller later displays rows in (newest-first, etc). */
+  index: number;
+  point: PricePoint;
+  date: string;
+  time?: string;
+  prevBalance: number;
+  prevNav: number;
+  newBalance: number;
+  newNav: number;
+  change: number;
+  changePct: number;
+}
+
+/** User-requested (2026-09-03): "Balance Update History missing crucial
+ * data. Add all data like Index, Date, prv balnce + NAV, new balance +
+ * NAV, change + %age, Actions etc." A raw `PricePoint` only ever stored a
+ * NAV — it has no "balance" of its own, since that depends on how many
+ * units were actually held on that date, which changes over time as
+ * transactions happen. This walks the fund's chronological price-update
+ * log once, computing units-held-as-of-that-date (every BUY/SELL with
+ * `date <= p.date`) to derive each update's own real balance, then a
+ * before/after balance+NAV pair and the change between them — the same
+ * "what actually happened between two consecutive points" question
+ * `organicPLByPeriod`/`expectedPLRate` already ask, just at per-update
+ * granularity instead of monthly buckets or a whole-history average.
+ * `point` carries the underlying raw `PricePoint` through so a caller can
+ * still resolve `rawPriceHistory.indexOf(row.point)` for edit/delete,
+ * exactly like `computePriceStats`'s own rows already do. */
+export function balanceUpdateHistory(
+  fundId: string,
+  transactions: Transaction[],
+  priceHistory: Record<string, PricePoint[]>,
+): BalanceUpdateRow[] {
+  const raw = [...getPriceHistory(fundId, priceHistory)].sort((a, b) => (a.time || a.date).localeCompare(b.time || b.date));
+  const txs = transactions.filter((t) => t.ticker === fundId);
+
+  let prevBalance = 0;
+  let prevNav = 0;
+  return raw.map((point, i) => {
+    const units = txs
+      .filter((t) => t.date <= point.date)
+      .reduce((s, t) => s + (t.action === 'BUY' ? t.shares : -t.shares), 0);
+    const newBalance = units * point.price;
+    const newNav = point.price;
+    const change = newBalance - prevBalance;
+    const changePct = prevBalance > 0 ? (change / prevBalance) * 100 : 0;
+    const row: BalanceUpdateRow = {
+      index: i + 1,
+      point,
+      date: point.date,
+      time: point.time,
+      prevBalance,
+      prevNav,
+      newBalance,
+      newNav,
+      change,
+      changePct,
+    };
+    prevBalance = newBalance;
+    prevNav = newNav;
+    return row;
+  });
 }

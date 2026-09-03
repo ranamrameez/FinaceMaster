@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Fund } from '../../../types/fundsWorkbook';
 import type { PricePoint, Transaction } from '../../../types/workbook';
-import { allocationByCategory, contributionVsValueSeries, expectedPLRate, fundNetProfit, fundsValueByCurrency, organicPLByPeriod } from '../fundsModule';
+import { allocationByCategory, balanceUpdateHistory, contributionVsValueSeries, expectedPLRate, fundNetProfit, fundsValueByCurrency, organicPLByPeriod } from '../fundsModule';
 import { averagePeriodPL, reconstructFundDailyHistory } from '../fundsDailyHistoryImport';
 import { computePositions } from '../positions';
 
@@ -171,6 +171,53 @@ describe('expectedPLRate', () => {
     const priceHistory: Record<string, PricePoint[]> = { f1: [{ date: '2026-01-11', price: 10 }] };
     const rate = expectedPLRate('f1', txs, priceHistory);
     expect(rate).toEqual({ dailyAmount: 0, dailyPct: 0, monthlyAmount: 0, monthlyPct: 0 });
+  });
+});
+
+describe('balanceUpdateHistory', () => {
+  it('returns nothing for a fund with no price-history updates', () => {
+    expect(balanceUpdateHistory('f1', [], {})).toEqual([]);
+  });
+
+  it('hand-traced: 100 units bought at NAV 10, two later NAV updates, no further cash flow', () => {
+    const txs: Transaction[] = [{ date: '2026-01-01', ticker: 'f1', action: 'BUY', shares: 100, price: 10 }];
+    const priceHistory: Record<string, PricePoint[]> = {
+      f1: [
+        { date: '2026-01-01', price: 10 }, // balance 1000
+        { date: '2026-01-11', price: 11 }, // balance 1100 (+100, +10%)
+        { date: '2026-01-21', price: 9 }, // balance 900 (-200, ~-18.18%)
+      ],
+    };
+    const rows = balanceUpdateHistory('f1', txs, priceHistory);
+    expect(rows).toHaveLength(3);
+
+    expect(rows[0]).toMatchObject({ index: 1, date: '2026-01-01', prevBalance: 0, prevNav: 0, newBalance: 1000, newNav: 10, change: 1000, changePct: 0 });
+    expect(rows[1]).toMatchObject({ index: 2, date: '2026-01-11', prevBalance: 1000, prevNav: 10, newBalance: 1100, newNav: 11, change: 100 });
+    expect(rows[1].changePct).toBeCloseTo(10, 6);
+    expect(rows[2]).toMatchObject({ index: 3, date: '2026-01-21', prevBalance: 1100, prevNav: 11, newBalance: 900, newNav: 9, change: -200 });
+    expect(rows[2].changePct).toBeCloseTo((-200 / 1100) * 100, 6);
+  });
+
+  it('accounts for units changing between updates (a deposit/withdrawal in between)', () => {
+    const txs: Transaction[] = [
+      { date: '2026-01-01', ticker: 'f1', action: 'BUY', shares: 100, price: 10 }, // 1000 balance
+      { date: '2026-01-15', ticker: 'f1', action: 'BUY', shares: 50, price: 11 }, // +550 invested, 150 units now
+    ];
+    const priceHistory: Record<string, PricePoint[]> = {
+      f1: [
+        { date: '2026-01-01', price: 10 }, // 100 units * 10 = 1000
+        { date: '2026-01-20', price: 12 }, // 150 units (both buys applied by then) * 12 = 1800
+      ],
+    };
+    const rows = balanceUpdateHistory('f1', txs, priceHistory);
+    expect(rows[0].newBalance).toBeCloseTo(1000, 6);
+    expect(rows[1].newBalance).toBeCloseTo(1800, 6); // not 150*12 miscounted, and not just organic growth
+  });
+
+  it('point on each row resolves back to the exact raw PricePoint object for edit/delete addressing', () => {
+    const priceHistory: Record<string, PricePoint[]> = { f1: [{ date: '2026-01-01', price: 10 }] };
+    const rows = balanceUpdateHistory('f1', [], priceHistory);
+    expect(priceHistory.f1.indexOf(rows[0].point)).toBe(0);
   });
 });
 
