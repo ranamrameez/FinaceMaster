@@ -5338,6 +5338,56 @@ FinanceManager live link:
      sign-in gate; the Rentals Transfers-FAB's property picker correctly listed only the one
      active property, excluding the archived one — zero console errors throughout. `npx tsc -b`
      / `npm run test` (466 tests, unchanged) / `npm run build` all clean.
+224. **Cash page restructure, user-reported (2026-09-03): "All currencies' data is dumped into
+     1 table. Very bad. No FAB for logging Cash Transfer!"** Root-caused both as real bugs
+     before touching layout. (1) `EntryList` ran every currency's entries through ONE mixed
+     table sorted by date — `cashRunningLedger()` itself already tracked a correct, separate
+     running balance per currency, but interleaving two currencies' rows in one table made the
+     Balance column read as nonsense (a USD balance next to a PKR balance in the same column).
+     Split into `CashStatementTable` (one table per currency) + `CashStatementGrid` (a
+     `.detail-grid` of them, reusing the `.detail-grid` CSS class from Bank's own account-detail
+     page). (2) The "Transfers" FAB (`LedgerFab`) lived inside the old "Ledger" tab's own
+     `Tabs`-driven `CollapsibleCard` content — which genuinely UNMOUNTS while its section is
+     collapsed (`CollapsibleCard`'s `{open && <div>{children}</div>}`), so the FAB could
+     silently not exist anywhere on the page — the same bug class already found and fixed for
+     other modules (Done item 219). Fixed by combining Transfers + Add-a-plan into one
+     page-level `CashPageFab` (a `FabPanel`, always mounted). This also meant `PlanningTab`'s
+     own `AddPlanFab` (reused unchanged by the standalone `/planning` page) needed a new
+     `showFab` prop (default `true`, `CashPage` passes `false`) so the two don't stack when
+     viewed from Cash's own "Plans" tab, while `/planning`'s own embedded FAB is untouched —
+     verified live that it still renders there. Also requested: (3) "Move Ledger by Categs to
+     down. and make it a grid by currencies." — `CategoryBreakdown` promoted to its own
+     top-level "Categories" tab (moved to the end of the order, out from inside the old combined
+     "Ledger" tab), its own `CollapsibleCard` wrapper dropped since `Tabs` already supplies one
+     (rule 1: no nested cards), and its per-currency blocks converted from a stacked vertical
+     list into the same `.detail-grid` layout, plus a category-name filter. (4) "Order: Cash
+     statement (correct transaction order!), Plans, Analytics, Categs.." — tabs reordered to
+     exactly that (Import/Settings, not named, stay after, unchanged); "Planning" tab's label
+     changed to "Plans" (its exported function name stayed `PlanningTab`, reused by
+     `PlanningPage.tsx` — only the display string changed). (5) "Correct transaction order!" —
+     `EntryList`'s default sort was `'date','desc'` (newest first) while `cashRunningLedger()`
+     accumulates its running balance chronologically FORWARD (oldest first) — displaying newest-
+     first made the Balance column appear to run backwards. Fixed by defaulting every table on
+     this page to ascending/FIFO order, matching the user's own "sort data by natural order
+     (FIFO?)" ask; verified live that a seeded 3-entry USD sequence (1000 in, 200 out, 500 in)
+     showed Balance exactly 1,000.00 → 800.00 → 1,300.00 in that oldest-first order, confirming
+     the fix. (6) "All
+     tables should have filter options" — `CashStatementTable` gained Type/Category filters,
+     `PlanList` gained Status/Type filters (plus real sortable column headers via
+     `useSortableRows`, which it previously lacked entirely — only a fixed date-ascending
+     `.sort()` with no UI). **Deliberately scoped to the Cash page** — the user's message was
+     entirely about Cash Ledger, and "all tables"/"FIFO" read as describing the standard this
+     page's own tables should meet, not a literal instruction to re-audit every table in every
+     other module in the same pass; extending the same filter/sort-order treatment elsewhere is
+     a reasonable next step if asked, not assumed here. Verified live via Playwright with a
+     seeded 2-currency (USD/PKR) workbook: tab order and labels correct, 2 statement cards
+     render side by side, Balance column values correct in ascending order, Type filter reduces
+     visible rows correctly, the FAB survives collapsing the Cash-statement section (the exact
+     scenario that used to make it vanish), Categories tab renders its own grid, Plans table
+     shows sortable headers + working filters, and the standalone `/planning` page's own Cash
+     FAB still renders unaffected — zero console errors throughout. `npx tsc -b` / `npm run
+     test` (466 tests, unchanged — UI-only restructuring, no calc logic touched) / `npm run
+     build` all clean.
 
 ## Pending
 

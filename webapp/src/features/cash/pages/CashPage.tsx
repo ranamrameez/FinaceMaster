@@ -22,7 +22,7 @@ import { useSortableRows } from '../../../hooks/useSortableRows';
 import { hueStyle } from '../../../lib/statCardHues';
 import { categoryName, UNCATEGORIZED_ID } from '../../../lib/categories';
 import { useCategoryStore } from '../../../store/categoryStore';
-import { cashBalanceByCurrency, cashByCategory, cashMonthlyFlow, cashRunningLedger } from '../../../lib/calc/cashModule';
+import { cashBalanceByCurrency, cashByCategory, cashMonthlyFlow, cashRunningLedger, type CashLedgerRow } from '../../../lib/calc/cashModule';
 import { plannedCashProjection } from '../../../lib/calc/plannedBalance';
 import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
@@ -45,16 +45,43 @@ import type { PlannedCashEntry } from '../../../types/plannedCash';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-/** User-requested (2026-08-28): the module's own "Transfers" FAB, replacing
- * the old always-visible "Add entry" card — opens the shared
- * `TransactionEntryModal` defaulted to Cash's own default currency. */
-function LedgerFab() {
-  const [open, setOpen] = useState(false);
+/** User-requested (2026-09-03): "No FAB for logging Cash Transfer!" — the
+ * old `LedgerFab` lived inside `LedgerTab`'s own content, which is
+ * `Tabs`-driven `CollapsibleCard` content that genuinely UNMOUNTS from the
+ * DOM while its section is collapsed (`Tabs.tsx`'s own doc comment; see
+ * `CollapsibleCard`'s `{open && <div>{children}</div>}`) — so the
+ * "Transfers" button silently didn't exist on the page at all once the
+ * user collapsed that section, or once the page's tab order changed so
+ * that section wasn't the default-open one. Exactly the same bug class
+ * already found and fixed for other modules (README Done item 219) — this
+ * closes it for Cash specifically by mounting ONE page-level `FabPanel`
+ * combining Transfers + Add a plan, always present regardless of which tab
+ * section is open/collapsed. `PlanningTab`'s own `AddPlanFab` (used
+ * unchanged by the standalone `/planning` page — see `showFab` below) is
+ * suppressed when rendered from here, so the two don't stack. */
+function CashPageFab() {
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [planOpen, setPlanOpen] = useState(false);
   const defaultCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
   return (
     <>
-      <FabPanel actions={[{ label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen(true) }]} />
-      {open && <TransactionEntryModal defaultFinance={{ module: 'cash', currencyCode: defaultCurrency }} onClose={() => setOpen(false)} />}
+      <FabPanel
+        actions={[
+          { label: 'Transfers', icon: <TransferIcon />, onClick: () => setTransferOpen(true) },
+          { label: 'Add a plan', icon: <PlusIcon />, onClick: () => setPlanOpen(true) },
+        ]}
+      />
+      {transferOpen && (
+        <TransactionEntryModal
+          defaultFinance={{ module: 'cash', currencyCode: defaultCurrency }}
+          onClose={() => setTransferOpen(false)}
+        />
+      )}
+      {planOpen && (
+        <Modal title="Add a plan" onClose={() => setPlanOpen(false)}>
+          <AddPlanForm onSaved={() => setPlanOpen(false)} />
+        </Modal>
+      )}
     </>
   );
 }
@@ -95,33 +122,57 @@ function BalancesSummary() {
   );
 }
 
+/** User-requested (2026-09-03): "Move Ledger by Categs to down. and make it
+ * a grid by currencies." Promoted to its own top-level "Categories" tab
+ * (previously embedded inside the old combined "Ledger" tab, ahead of the
+ * statement itself) and moved to the end of the tab order — `Tabs` already
+ * wraps this in its own `CollapsibleCard`, so this returns plain content,
+ * not a second nested card (rule 1) — the old self-wrapping
+ * `CollapsibleCard` here is gone. Each currency's breakdown now gets its
+ * own card side by side in a responsive `.detail-grid`, replacing the old
+ * stacked-vertically list. Also gained a category-name filter, per "All
+ * tables should have filter options to view filtered table data." */
 function CategoryBreakdown() {
   const entries = useCashWorkbookStore((s) => s.workbook.entries);
   const categories = useCategoryStore((s) => s.workbook.categories);
   const byCategory = cashByCategory(entries, categories);
   const currencies = Object.keys(byCategory);
-  if (!currencies.length) return null;
+  const [search, setSearch] = useState('');
+
+  if (!currencies.length) return <p className="footer-note">No cash entries yet.</p>;
+
+  const q = search.trim().toLowerCase();
+  const filtered = currencies.map((code) => ({
+    code,
+    rows: Object.entries(byCategory[code]).filter(([cat]) => !q || cat.toLowerCase().includes(q)),
+  }));
 
   return (
-    <CollapsibleCard title={<h3 style={{ margin: 0 }}>By category</h3>} style={{ marginBottom: 16 }}>
-      {currencies.map((code) => (
-        <div key={code} style={{ marginBottom: 12 }}>
-          <div className="footer-note" style={{ marginBottom: 4 }}>{code}</div>
-          <div className="table-scroll">
-            <table>
-              <tbody>
-                {Object.entries(byCategory[code]).map(([cat, amount]) => (
-                  <tr key={cat}>
-                    <td>{cat}</td>
-                    <td className={amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(amount, code)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ))}
-    </CollapsibleCard>
+    <div>
+      <Field label="Filter by category" width={220}>
+        <TextInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="e.g. Rent" />
+      </Field>
+      <div className="detail-grid" style={{ marginTop: 12 }}>
+        {filtered.map(({ code, rows }) => (
+          <Card key={code}>
+            <h4 style={{ marginTop: 0 }}>{code}</h4>
+            <div className="table-scroll">
+              <table>
+                <tbody>
+                  {rows.map(([cat, amount]) => (
+                    <tr key={cat}>
+                      <td>{cat}</td>
+                      <td className={amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(amount, code)}</td>
+                    </tr>
+                  ))}
+                  {!rows.length && <tr><td className="footer-note">No matching categories.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -176,14 +227,21 @@ function EditEntryModal({ entry, onClose }: { entry: CashEntry; onClose: () => v
   );
 }
 
-function EntryList() {
-  const entries = useCashWorkbookStore((s) => s.workbook.entries);
+/** One currency's own statement table — user-reported (2026-09-03):
+ * "correct transaction order!" Defaults to ASCENDING date order (oldest
+ * first, FIFO), matching how `cashRunningLedger`'s running Balance column
+ * was actually accumulated (chronologically forward) — the old default of
+ * newest-first meant the Balance column read backwards as you scrolled
+ * down. Also gained Type/Category filters, per "All tables should have
+ * filter options to view filtered table data." */
+function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashLedgerRow[] }) {
   const deleteEntry = useCashWorkbookStore((s) => s.deleteEntry);
   const categories = useCategoryStore((s) => s.workbook.categories);
   const links = useInterEntityTransfersStore((s) => s.workbook.entries);
   const [editingEntry, setEditingEntry] = useState<CashEntry | null>(null);
+  const [typeFilter, setTypeFilter] = useState<'all' | 'in' | 'out'>('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
 
-  const ledger = useMemo(() => cashRunningLedger(entries), [entries]);
   // User-requested (2026-08-28): "Tag/Mark and also add nav link between
   // the linked trcs" — same recordId -> link map as Bank's TransactionsList.
   const linkByRecordId = useMemo(() => {
@@ -194,8 +252,24 @@ function EntryList() {
     }
     return map;
   }, [links]);
+
+  const categoryOptions = useMemo(
+    () => [...new Set(allRows.map((r) => categoryName(r.entry.categoryID, categories)))].sort(),
+    [allRows, categories],
+  );
+
+  const rows = useMemo(
+    () => allRows.filter((r) => {
+      if (typeFilter === 'in' && !r.entry.isDeposit) return false;
+      if (typeFilter === 'out' && r.entry.isDeposit) return false;
+      if (categoryFilter !== 'all' && categoryName(r.entry.categoryID, categories) !== categoryFilter) return false;
+      return true;
+    }),
+    [allRows, typeFilter, categoryFilter, categories],
+  );
+
   type Col = 'date' | 'type' | 'amount' | 'category';
-  const sortValue = (r: (typeof ledger)[number], col: Col): number | string => {
+  const sortValue = (r: (typeof rows)[number], col: Col): number | string => {
     switch (col) {
       case 'type': return r.entry.isDeposit ? 1 : 0;
       case 'amount': return r.entry.amount;
@@ -203,76 +277,121 @@ function EntryList() {
       default: return r.entry.date;
     }
   };
-  const { sorted, Th } = useSortableRows(ledger, sortValue, 'date', 'desc');
+  const { sorted, Th } = useSortableRows(rows, sortValue, 'date', 'asc');
 
   return (
-    <div className="table-scroll">
-      <table>
-        <thead>
-          <tr>
-            <Th col="date">Date</Th>
-            <Th col="type">Type</Th>
-            {/* User-reported (2026-08-28): "Description and Source are
-               making the table too large to read" + "Credit/Debit and
-               balance should be next to each other. Categories can be
-               marked as labels." */}
-            <th>Note</th>
-            <Th col="category">Category</Th>
-            <Th col="amount">Amount</Th>
-            <th>Balance</th>
-            <th>Source</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map(({ entry, balance }) => {
-            const link = linkByRecordId.get(entry.id);
-            const otherSide = link ? (link.from.module === 'cash' && link.fromRecordId === entry.id ? link.to : link.from) : undefined;
-            return (
-              <tr key={entry.id}>
-                <td>{entry.date}</td>
-                <td className={entry.isDeposit ? 'pill-buy' : 'pill-sell'}>{entry.isDeposit ? 'Cash in' : 'Cash out'}</td>
-                <td className="cell-clip" title={entry.note}>
-                  {entry.note}
-                  {otherSide && (
-                    <Link to={linkTargetPath(otherSide)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
-                      🔗 Linked
-                    </Link>
-                  )}
-                </td>
-                <td><span className="pill-info">{categoryName(entry.categoryID, categories)}</span></td>
-                <td>{fmtMoney(entry.amount, entry.currencyCode)}</td>
-                <td>{fmtMoney(balance, entry.currencyCode)}</td>
-                <td className="footer-note cell-clip" title={entry.source === 'statement-import' ? `Import${entry.statementRef ? ` (${entry.statementRef})` : ''}` : 'Manual'}>
-                  {entry.source === 'statement-import' ? `Import${entry.statementRef ? ` (${entry.statementRef})` : ''}` : 'Manual'}
-                </td>
-                <td>
-                  <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => setEditingEntry(entry)} />{' '}
-                  <IconButton
-                    label="Delete"
-                    icon={<TrashIcon size={13} />}
-                    align="right"
-                    onClick={() => confirmAndDeleteLinkable('cash', entry.id, () => deleteEntry(entry.id))}
-                  />
-                </td>
-              </tr>
-            );
-          })}
-          {!sorted.length && <tr><td colSpan={8} className="footer-note">No cash entries yet.</td></tr>}
-        </tbody>
-      </table>
+    <Card>
+      <h4 style={{ marginTop: 0 }}>{code}</h4>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+        <Field label="Type" width={120}>
+          <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
+            <option value="all">All</option>
+            <option value="in">Cash in</option>
+            <option value="out">Cash out</option>
+          </Select>
+        </Field>
+        <Field label="Category" width={170}>
+          <Select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+            <option value="all">All categories</option>
+            {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+          </Select>
+        </Field>
+      </div>
+      <div className="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <Th col="date">Date</Th>
+              <Th col="type">Type</Th>
+              {/* User-reported (2026-08-28): "Description and Source are
+                 making the table too large to read" + "Credit/Debit and
+                 balance should be next to each other. Categories can be
+                 marked as labels." */}
+              <th>Note</th>
+              <Th col="category">Category</Th>
+              <Th col="amount">Amount</Th>
+              <th>Balance</th>
+              <th>Source</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map(({ entry, balance }) => {
+              const link = linkByRecordId.get(entry.id);
+              const otherSide = link ? (link.from.module === 'cash' && link.fromRecordId === entry.id ? link.to : link.from) : undefined;
+              return (
+                <tr key={entry.id}>
+                  <td>{entry.date}</td>
+                  <td className={entry.isDeposit ? 'pill-buy' : 'pill-sell'}>{entry.isDeposit ? 'Cash in' : 'Cash out'}</td>
+                  <td className="cell-clip" title={entry.note}>
+                    {entry.note}
+                    {otherSide && (
+                      <Link to={linkTargetPath(otherSide)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
+                        🔗 Linked
+                      </Link>
+                    )}
+                  </td>
+                  <td><span className="pill-info">{categoryName(entry.categoryID, categories)}</span></td>
+                  <td>{fmtMoney(entry.amount, entry.currencyCode)}</td>
+                  <td>{fmtMoney(balance, entry.currencyCode)}</td>
+                  <td className="footer-note cell-clip" title={entry.source === 'statement-import' ? `Import${entry.statementRef ? ` (${entry.statementRef})` : ''}` : 'Manual'}>
+                    {entry.source === 'statement-import' ? `Import${entry.statementRef ? ` (${entry.statementRef})` : ''}` : 'Manual'}
+                  </td>
+                  <td>
+                    <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => setEditingEntry(entry)} />{' '}
+                    <IconButton
+                      label="Delete"
+                      icon={<TrashIcon size={13} />}
+                      align="right"
+                      onClick={() => confirmAndDeleteLinkable('cash', entry.id, () => deleteEntry(entry.id))}
+                    />
+                  </td>
+                </tr>
+              );
+            })}
+            {!sorted.length && <tr><td colSpan={8} className="footer-note">No matching entries.</td></tr>}
+          </tbody>
+        </table>
+      </div>
       {editingEntry && <EditEntryModal entry={editingEntry} onClose={() => setEditingEntry(null)} />}
+    </Card>
+  );
+}
+
+/** User-reported (2026-09-03): "All currencies' data is dumped into 1
+ * table. Very bad." A single combined table interleaved rows whose
+ * "Balance" column values are each individually correct
+ * (`cashRunningLedger` already tracks a separate running balance per
+ * currency) but read as nonsense side by side, since two unrelated
+ * currencies' balances don't belong in the same column. Split into one
+ * table per currency, arranged in a responsive `.detail-grid`. */
+function CashStatementGrid() {
+  const entries = useCashWorkbookStore((s) => s.workbook.entries);
+  const ledger = useMemo(() => cashRunningLedger(entries), [entries]);
+  const byCurrency = useMemo(() => {
+    const map = new Map<string, CashLedgerRow[]>();
+    for (const row of ledger) {
+      const list = map.get(row.entry.currencyCode) ?? [];
+      list.push(row);
+      map.set(row.entry.currencyCode, list);
+    }
+    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
+  }, [ledger]);
+
+  if (!byCurrency.length) return <p className="footer-note">No cash entries yet — use the + button below to add one.</p>;
+
+  return (
+    <div className="detail-grid">
+      {byCurrency.map(([code, rows]) => <CashStatementTable key={code} code={code} rows={rows} />)}
     </div>
   );
 }
 
-function LedgerTab() {
+function CashStatementTab() {
   return (
     <div>
       <BalancesSummary />
-      <CategoryBreakdown />
-      <EntryList />
-      <LedgerFab />
+      <CashStatementGrid />
     </div>
   );
 }
@@ -636,16 +755,42 @@ function AddPlanForm({ onSaved }: { onSaved?: () => void }) {
   );
 }
 
+/** User-requested (2026-09-03): "All tables should have filter options...
+ * sort data by natural order (FIFO?)." Gained real sortable column headers
+ * (`useSortableRows`, defaulting to ascending/oldest-first — it was already
+ * ascending by a plain date-string compare, now made explicit and matching
+ * every other table on this page) plus Status and Type filters. */
 function PlanList() {
-  const plans = usePlannedCashWorkbookStore((s) => s.workbook.entries);
+  const allPlans = usePlannedCashWorkbookStore((s) => s.workbook.entries);
   const updatePlan = usePlannedCashWorkbookStore((s) => s.updateEntry);
   const deletePlan = usePlannedCashWorkbookStore((s) => s.deleteEntry);
   const addEntry = useCashWorkbookStore((s) => s.addEntry);
   const ensureSignedIn = useEnsureSignedIn();
   const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<PlannedCashEntry | null>(null);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'planned' | 'done'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'IN' | 'OUT'>('all');
 
-  const sorted = useMemo(() => [...plans].sort((a, b) => a.date.localeCompare(b.date)), [plans]);
+  const plans = useMemo(
+    () => allPlans.filter((p) => {
+      if (statusFilter === 'planned' && p.executed) return false;
+      if (statusFilter === 'done' && !p.executed) return false;
+      if (typeFilter !== 'all' && p.type !== typeFilter) return false;
+      return true;
+    }),
+    [allPlans, statusFilter, typeFilter],
+  );
+
+  type Col = 'date' | 'type' | 'amount' | 'status';
+  const sortValue = (p: PlannedCashEntry, col: Col): number | string => {
+    switch (col) {
+      case 'type': return p.type === 'IN' ? 1 : 0;
+      case 'amount': return p.amount;
+      case 'status': return p.executed ? 1 : 0;
+      default: return p.date;
+    }
+  };
+  const { sorted, Th } = useSortableRows(plans, sortValue, 'date', 'asc');
 
   const startEdit = (p: PlannedCashEntry) => { setEditId(p.id); setEditRow({ ...p }); };
   const saveEdit = () => {
@@ -674,10 +819,29 @@ function PlanList() {
 
   return (
     <CollapsibleCard title={<h3 style={{ margin: 0 }}>Plans</h3>}>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+        <Field label="Status" width={120}>
+          <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}>
+            <option value="all">All</option>
+            <option value="planned">Planned</option>
+            <option value="done">Done</option>
+          </Select>
+        </Field>
+        <Field label="Type" width={120}>
+          <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
+            <option value="all">All</option>
+            <option value="IN">Cash in</option>
+            <option value="OUT">Cash out</option>
+          </Select>
+        </Field>
+      </div>
       <div className="table-scroll">
         <table>
           <thead>
-            <tr><th>Date</th><th>Type</th><th>Amount</th><th>Category</th><th>Note</th><th>Status</th><th></th></tr>
+            <tr>
+              <Th col="date">Date</Th><Th col="type">Type</Th><Th col="amount">Amount</Th>
+              <th>Category</th><th>Note</th><Th col="status">Status</Th><th></th>
+            </tr>
           </thead>
           <tbody>
             {sorted.map((p) =>
@@ -780,16 +944,27 @@ function PlanningAccountSection({
 export function PlanningTab({
   plannedCloudEmpty,
   uploadPlannedLocalToCloud,
+  showFab = true,
 }: {
   plannedSyncStatus?: string;
   plannedCloudEmpty: boolean;
   uploadPlannedLocalToCloud: () => Promise<void>;
+  /** Defaults to `true` — the standalone `/planning` page
+   * (`PlanningPage.tsx`) reuses this component unchanged and relies on its
+   * own embedded `AddPlanFab`. `CashPage`'s own "Plans" tab passes `false`
+   * since it already provides the same action via its page-level
+   * `CashPageFab` (see that component's own doc comment for why this
+   * needed to move: the "Plans" tab is no longer guaranteed open by
+   * default after the 2026-09-03 tab reorder, so a FAB nested inside its
+   * content could silently disappear — same bug class as the page-level
+   * Transfers fix). */
+  showFab?: boolean;
 }) {
   return (
     <div>
       <BalanceProjectionSummary />
       <PlanList />
-      <AddPlanFab />
+      {showFab && <AddPlanFab />}
       <PlanningAccountSection cloudEmpty={plannedCloudEmpty} uploadLocalToCloud={uploadPlannedLocalToCloud} />
     </div>
   );
@@ -936,20 +1111,27 @@ export function CashPage({
         Track physical/informal cash — cash in hand, gifts, small informal amounts. Each entry keeps its own
         currency; balances and category totals are grouped per currency, never converted.
       </p>
+      {/* User-requested (2026-09-03) tab order: "Cash statement (correct
+         transaction order!), Plans, Analytics, Categs.." — Categories was
+         previously embedded inside a combined "Ledger" tab, ahead of the
+         statement itself; it's now its own tab, moved to the end. Import/
+         Settings (not named in the request) stay after, unchanged. */}
       <Tabs
         tabs={[
-          { key: 'ledger', label: 'Ledger', content: <LedgerTab /> },
-          { key: 'analytics', label: 'Analytics', content: <AnalyticsTab /> },
+          { key: 'statement', label: 'Cash statement', content: <CashStatementTab /> },
           {
-            key: 'planning',
-            label: 'Planning',
+            key: 'plans',
+            label: 'Plans',
             content: (
               <PlanningTab
                 plannedCloudEmpty={plannedCloudEmpty}
                 uploadPlannedLocalToCloud={uploadPlannedLocalToCloud}
+                showFab={false}
               />
             ),
           },
+          { key: 'analytics', label: 'Analytics', content: <AnalyticsTab /> },
+          { key: 'categories', label: 'Categories', content: <CategoryBreakdown /> },
           { key: 'import', label: 'Import', content: <ImportTab /> },
           {
             key: 'settings',
@@ -967,6 +1149,7 @@ export function CashPage({
           },
         ]}
       />
+      <CashPageFab />
     </div>
   );
 }
