@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Tooltip } from '../Tooltip';
-import { PlusIcon } from '../icons';
+import { MenuIcon, XIcon } from '../icons';
 
 /** The floating "+" action button every module uses for its "Often" tier
  * add-entity flow (Done items 82/166/170/202) — was 9 byte-identical
@@ -67,9 +67,8 @@ export function FabPanel({ actions }: { actions: FabAction[] }) {
           onClick={() => setOpen((o) => !o)}
           aria-label={open ? 'Close actions' : 'Open actions'}
           aria-expanded={open}
-          style={{ transform: open ? 'rotate(45deg)' : undefined, transition: 'transform .15s ease' }}
         >
-          <PlusIcon size={20} />
+          {open ? <XIcon size={18} /> : <MenuIcon size={20} />}
         </button>
       </Tooltip>
     </div>

@@ -120,6 +120,69 @@ export function contributionVsValueSeries(
   });
 }
 
+export interface ExpectedPLRate {
+  dailyAmount: number;
+  dailyPct: number;
+  monthlyAmount: number;
+  monthlyPct: number;
+}
+
+/** User-requested (2026-09-03): "Display expected daily/monthly PL+PL%age
+ * on homepage and each item page." Projects a fund's typical daily/monthly
+ * P&L — in currency, and as a % of its own average invested capital over
+ * the observed period — from its REAL organic-growth history, the same
+ * `value - prevValue - (invested - prevInvested)` math `organicPLByPeriod`
+ * already uses, just totaled across the whole observed span and normalized
+ * per day/month instead of bucketed by calendar period. This is an average
+ * of what already happened, not a promise — deliberately simple (no
+ * day-of-week-varying rate, no balance-jump reconciliation): that harder
+ * "expected profit rate" concept is a separate, explicitly-deferred
+ * feature (see CLAUDE.md's "Planning v2" notes) waiting on the user's own
+ * real sample data before its algorithm gets designed; this is a much
+ * plainer average-of-history projection that needs no new data model.
+ *
+ * Deliberately normalizes by REAL elapsed calendar days between the first
+ * and last data point, not by `averagePeriodPL(organicPLByPeriod(...))`'s
+ * "average of however many distinct calendar months happen to appear" —
+ * for a fund with sparse or irregular updates (e.g. two NAV points 45 days
+ * apart landing in 2 different months), that would silently treat the gap
+ * as "2 months" worth ~22.5 days each rather than the real 45, skewing a
+ * per-day/per-month rate. `averagePeriodPL` stays right for what it's
+ * used for (averaging the Daily History Import preview's own real monthly
+ * buckets, where each bucket genuinely is one calendar month of data) —
+ * this is a different question (a smooth per-day rate), so it uses actual
+ * elapsed time instead.
+ *
+ * Returns `null` when there's fewer than 2 dated data points to measure a
+ * span from (e.g. a fund bought today with no NAV history yet). */
+export function expectedPLRate(
+  fundId: string,
+  transactions: Transaction[],
+  priceHistory: Record<string, PricePoint[]>,
+): ExpectedPLRate | null {
+  const points = contributionVsValueSeries(fundId, transactions, priceHistory);
+  if (points.length < 2) return null;
+
+  let totalOrganic = 0;
+  for (let i = 0; i < points.length; i++) {
+    const prev = i > 0 ? points[i - 1] : { value: 0, invested: 0 };
+    const curr = points[i];
+    totalOrganic += curr.value - prev.value - (curr.invested - prev.invested);
+  }
+  const avgInvested = points.reduce((s, p) => s + p.invested, 0) / points.length;
+
+  const first = points[0];
+  const last = points[points.length - 1];
+  const daysSpan = Math.max(1, (new Date(last.date).getTime() - new Date(first.date).getTime()) / 86400000);
+
+  const dailyAmount = totalOrganic / daysSpan;
+  const monthlyAmount = dailyAmount * 30.44; // average days per calendar month
+  const dailyPct = avgInvested > 0 ? (dailyAmount / avgInvested) * 100 : 0;
+  const monthlyPct = avgInvested > 0 ? (monthlyAmount / avgInvested) * 100 : 0;
+
+  return { dailyAmount, dailyPct, monthlyAmount, monthlyPct };
+}
+
 export interface PeriodPL {
   period: string; // "YYYY-MM" or "YYYY"
   total: number;

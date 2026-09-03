@@ -19,8 +19,8 @@ import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { defaultTimezoneForCurrency } from '../../../lib/datetime';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
-import { getMarketPrice } from '../../../lib/calc';
-import { allocationByCategory, contributionVsValueSeries, fundNetProfit } from '../../../lib/calc/fundsModule';
+import { computePriceStats, getMarketPrice } from '../../../lib/calc';
+import { allocationByCategory, contributionVsValueSeries, expectedPLRate, fundNetProfit } from '../../../lib/calc/fundsModule';
 import { impliedFundNav } from '../../../lib/calc/fundsDailyHistoryImport';
 import {
   buildFundsImportPlan,
@@ -174,17 +174,20 @@ function OverallSummary() {
   const funds = useFundsWorkbookStore((s) => s.workbook.funds);
   const { positions, workbook } = useFundsDerived();
 
-  const totals: Record<string, { invested: number; value: number; profit: number }> = {};
+  const totals: Record<string, { invested: number; value: number; profit: number; expDaily: number; expMonthly: number }> = {};
   funds.forEach((fund) => {
     const p = positions.find((pos) => pos.ticker === fund.id);
     const invested = p?.invested ?? 0;
     const units = p?.shares ?? 0;
     const nav = getMarketPrice(fund.id, workbook.marketPrices, workbook.transactions);
     const value = units * nav;
-    if (!totals[fund.currencyCode]) totals[fund.currencyCode] = { invested: 0, value: 0, profit: 0 };
+    const rate = expectedPLRate(fund.id, workbook.transactions, workbook.priceHistory);
+    if (!totals[fund.currencyCode]) totals[fund.currencyCode] = { invested: 0, value: 0, profit: 0, expDaily: 0, expMonthly: 0 };
     totals[fund.currencyCode].invested += invested;
     totals[fund.currencyCode].value += value;
     totals[fund.currencyCode].profit += fundNetProfit(p, value);
+    totals[fund.currencyCode].expDaily += rate?.dailyAmount ?? 0;
+    totals[fund.currencyCode].expMonthly += rate?.monthlyAmount ?? 0;
   });
   const codes = Object.keys(totals);
   if (!codes.length) return null;
@@ -192,15 +195,29 @@ function OverallSummary() {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px,1fr))', gap: 8, marginBottom: 16 }}>
       {codes.map((code) => {
-        const profit = totals[code].profit;
-        const profitPct = totals[code].invested > 0 ? (profit / totals[code].invested) * 100 : 0;
+        const t = totals[code];
+        const profitPct = t.invested > 0 ? (t.profit / t.invested) * 100 : 0;
+        const expDailyPct = t.invested > 0 ? (t.expDaily / t.invested) * 100 : 0;
+        const expMonthlyPct = t.invested > 0 ? (t.expMonthly / t.invested) * 100 : 0;
         return (
           <div key={code} className="card" style={{ padding: 12 }}>
             <div className="footer-note" style={{ marginBottom: 6 }}>{code}</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px,1fr))', gap: 8 }}>
-              <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Invested</div><MoneyValue n={totals[code].invested} currency={code} /></div>
-              <div className="stat-card card" style={hueStyle(HUES[6])}><div className="label">Current value</div><MoneyValue n={totals[code].value} currency={code} /></div>
-              <div className="stat-card card" style={hueStyle(profit >= 0 ? 'var(--profit)' : 'var(--loss)')}><div className="label">Net profit</div><MoneyValue n={profit} currency={code} after={` (${profitPct.toFixed(1)}%)`} /></div>
+              <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Invested</div><MoneyValue n={t.invested} currency={code} /></div>
+              <div className="stat-card card" style={hueStyle(HUES[6])}><div className="label">Current value</div><MoneyValue n={t.value} currency={code} /></div>
+              <div className="stat-card card" style={hueStyle(t.profit >= 0 ? 'var(--profit)' : 'var(--loss)')}><div className="label">Net profit</div><MoneyValue n={t.profit} currency={code} after={` (${profitPct.toFixed(1)}%)`} /></div>
+              <div className="stat-card card" style={hueStyle(t.expDaily >= 0 ? 'var(--profit)' : 'var(--loss)')}>
+                <Tooltip text="An average of what your funds actually earned/lost per day, based on their real NAV/balance history — not a promise of future returns.">
+                  <div className="label" style={{ cursor: 'pointer' }}>Expected daily P/L</div>
+                </Tooltip>
+                <MoneyValue n={t.expDaily} currency={code} after={` (${expDailyPct.toFixed(2)}%)`} />
+              </div>
+              <div className="stat-card card" style={hueStyle(t.expMonthly >= 0 ? 'var(--profit)' : 'var(--loss)')}>
+                <Tooltip text="The same average daily rate, scaled to a typical calendar month.">
+                  <div className="label" style={{ cursor: 'pointer' }}>Expected monthly P/L</div>
+                </Tooltip>
+                <MoneyValue n={t.expMonthly} currency={code} after={` (${expMonthlyPct.toFixed(2)}%)`} />
+              </div>
             </div>
           </div>
         );
@@ -220,7 +237,11 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
   const closedCount = useMemo(() => allFunds.filter((f) => f.isActive === false).length, [allFunds]);
   const funds = useMemo(() => (showClosed ? allFunds : allFunds.filter((f) => f.isActive !== false)), [allFunds, showClosed]);
 
-  type Row = { fund: Fund; units: number; invested: number; value: number; profit: number; profitPct: number; xirrPct: number | null };
+  // Index/Sr# column, user-requested (2026-09-03) — the fund's own stable
+  // position in `allFunds` (creation order), independent of the table's
+  // current live sort (a sorted table shouldn't renumber what row "3" is
+  // every time the sort changes).
+  type Row = { idx: number; fund: Fund; units: number; invested: number; value: number; profit: number; profitPct: number; xirrPct: number | null };
   const rows: Row[] = funds.map((fund) => {
     const p = positions.find((pos) => pos.ticker === fund.id);
     const units = p?.shares ?? 0;
@@ -230,12 +251,14 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
     const profit = fundNetProfit(p, value);
     const profitPct = invested > 0 ? (profit / invested) * 100 : 0;
     const rate = fundXIRR(fund.id);
-    return { fund, units, invested, value, profit, profitPct, xirrPct: rate !== null ? rate * 100 : null };
+    const idx = allFunds.findIndex((f) => f.id === fund.id) + 1;
+    return { idx, fund, units, invested, value, profit, profitPct, xirrPct: rate !== null ? rate * 100 : null };
   });
 
-  type Col = 'name' | 'category' | 'units' | 'value' | 'profit' | 'xirr';
+  type Col = 'idx' | 'name' | 'category' | 'units' | 'value' | 'profit' | 'xirr';
   const sortValue = (r: Row, col: Col): number | string => {
     switch (col) {
+      case 'idx': return r.idx;
       case 'category': return r.fund.category;
       case 'units': return r.units;
       case 'value': return r.value;
@@ -257,13 +280,14 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
       <table>
         <thead>
           <tr>
-            <Th col="name">Fund</Th><th>Code</th><Th col="category">Category</Th>
-            <Th col="units">Units</Th><Th col="value">Value</Th><Th col="profit">Net P/L</Th><Th col="xirr">XIRR</Th><th></th>
+            <Th col="idx">#</Th><Th col="name">Fund</Th><th>Code</th><Th col="category">Category</Th>
+            <Th col="units">Units</Th><Th col="value">Value</Th><Th col="profit">Net P/L</Th><Th col="xirr">XIRR</Th>
           </tr>
         </thead>
         <tbody>
           {sorted.map((r) => (
             <tr key={r.fund.id} onClick={() => onSelect(r.fund)} style={{ cursor: 'pointer' }}>
+              <td className="footer-note">{r.idx}</td>
               <td>
                 {r.fund.name}
                 {r.fund.isActive === false && <span className="pill-warn" style={{ fontSize: 10, marginLeft: 6 }}>Closed</span>}
@@ -274,7 +298,6 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
               <td>{fmtMoney(r.value, r.fund.currencyCode)}</td>
               <td className={r.profit >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(r.profit, r.fund.currencyCode)} ({r.profitPct.toFixed(1)}%)</td>
               <td>{r.xirrPct !== null ? `${r.xirrPct.toFixed(1)}%` : '—'}</td>
-              <td><button className="btn secondary small" onClick={(e) => { e.stopPropagation(); onSelect(r.fund); }}>Open</button></td>
             </tr>
           ))}
           {!sorted.length && (
@@ -482,6 +505,8 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
   const updateTransaction = useFundsWorkbookStore((s) => s.updateTransaction);
   const deleteTransaction = useFundsWorkbookStore((s) => s.deleteTransaction);
   const setMarketPrice = useFundsWorkbookStore((s) => s.setMarketPrice);
+  const updatePricePoint = useFundsWorkbookStore((s) => s.updatePricePoint);
+  const deletePricePoint = useFundsWorkbookStore((s) => s.deletePricePoint);
   const ensureSignedIn = useEnsureSignedIn();
 
   const [editingFund, setEditingFund] = useState(false);
@@ -508,6 +533,55 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'BUY' | 'SELL'>('all');
+
+  // Balance Update History — user-requested (2026-09-03): "ability to see
+  // balance updates." Every NAV/balance update on record (`setMarketPrice`'s
+  // own writes, both `commitNav`'s and `commitBalance`'s) with edit/delete,
+  // same "recent 8 + show all" + raw-array-index-resolution pattern already
+  // established for QSE/PSX's PositionDetail (Done items 203/208) — Funds
+  // reuses the exact same `priceHistory`/`updatePricePoint`/`deletePricePoint`
+  // store shape via `createWorkbookStore`, so nothing new was needed there.
+  const stats = computePriceStats(fund.id, workbook.priceHistory);
+  const [showAllUpdates, setShowAllUpdates] = useState(false);
+  const updateRows = showAllUpdates ? [...(stats?.chronological ?? [])].reverse() : (stats?.recent ?? []);
+  const rawPriceHistory = workbook.priceHistory[fund.id] ?? [];
+  const [editUpdateIndex, setEditUpdateIndex] = useState<number | null>(null);
+  const [editUpdateRow, setEditUpdateRow] = useState<{ date: string; price: number } | null>(null);
+
+  const startEditUpdate = (rawIndex: number, point: { date: string; price: number }) => {
+    setEditUpdateIndex(rawIndex);
+    setEditUpdateRow({ ...point });
+  };
+  const saveEditUpdate = async () => {
+    if (editUpdateIndex === null || !editUpdateRow) return;
+    if (!editUpdateRow.price || editUpdateRow.price <= 0) return toast('Enter a valid NAV.');
+    if (!(await ensureSignedIn('Sign in to edit balance/NAV history.'))) return;
+    updatePricePoint(fund.id, editUpdateIndex, editUpdateRow);
+    toast('Update edited.');
+    setEditUpdateIndex(null);
+    setEditUpdateRow(null);
+  };
+  const removeUpdate = async (rawIndex: number) => {
+    if (!(await confirmDialog('Delete this balance/NAV update? This cannot be undone.'))) return;
+    if (!(await ensureSignedIn('Sign in to edit balance/NAV history.'))) return;
+    deletePricePoint(fund.id, rawIndex);
+    toast('Update deleted.');
+  };
+  const exportBalanceHistory = () => {
+    if (!stats) return;
+    const rows = [...stats.chronological].sort((a, b) => (a.time || a.date).localeCompare(b.time || b.date));
+    const header = ['When', 'NAV'];
+    const body = rows.map((p) => [p.time ? new Date(p.time).toLocaleString() : p.date, p.price]);
+    const blob = new Blob([toCSV([header, ...body])], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${fund.code || fund.name.replace(/\s+/g, '_')}_balance_history.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('Balance history downloaded.');
+  };
+  const plRate = expectedPLRate(fund.id, workbook.transactions, workbook.priceHistory);
 
   const position = positions.find((p) => p.ticker === fund.id);
   const units = position?.shares ?? 0;
@@ -641,89 +715,124 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
   return (
     <div>
       <button className="btn secondary small" style={{ marginBottom: 12 }} onClick={onBack}>← All funds</button>
-      <Card style={{ marginBottom: 16 }}>
-        {editingFund ? (
-          <div>
-            <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-              <TextInput value={editFund.name} onChange={(e) => setEditFund({ ...editFund, name: e.target.value })} />
-              <TextInput value={editFund.code} onChange={(e) => setEditFund({ ...editFund, code: e.target.value.toUpperCase() })} />
-              <TextInput value={editFund.platform} onChange={(e) => setEditFund({ ...editFund, platform: e.target.value })} />
-              <Select value={editFund.category} onChange={(e) => setEditFund({ ...editFund, category: e.target.value as Fund['category'] })}>
-                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-              </Select>
-              <Select value={editFund.currencyCode} onChange={(e) => setEditFund({ ...editFund, currencyCode: e.target.value })}>
-                {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
-              </Select>
-            </div>
-            <div className="row" style={{ gap: 8, marginTop: 8 }}>
-              <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveFund} />
-              <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditingFund(false)} />
-            </div>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                {fund.name}
-                {fund.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Closed</span>}
-              </div>
-              <div className="footer-note">{fund.code} · {fund.platform} · {fund.category} · {fund.currencyCode}</div>
-            </div>
-            <div className="row" style={{ gap: 8 }}>
-              <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => { setEditFund(fund); setEditingFund(true); }} />
-              <IconButton
-                label={fund.isActive === false ? 'Reopen' : 'Close'}
-                icon={fund.isActive === false ? <RestoreIcon size={13} /> : <ArchiveIcon size={13} />}
-                align="right"
-                onClick={toggleArchived}
-              />
-              <IconButton label="Delete" icon={<TrashIcon size={13} />} align="right" onClick={deleteFund} />
-            </div>
-          </div>
-        )}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 8, marginTop: 12 }}>
-          <div className="stat-card card"><div className="label">Units held</div><div className="value">{fmt(units, 2)}</div></div>
-          <div className="stat-card card">
-            <Tooltip text="NAV = Net Asset Value, the price of one unit of this fund. This is the average price you paid per unit across all your purchases.">
-              <div className="label" style={{ cursor: 'pointer' }}>Avg NAV cost</div>
-            </Tooltip>
-            <div className="value">{fmtPrice(avgNav)}</div>
-          </div>
-          <div className="stat-card card"><div className="label">Invested</div><MoneyValue n={invested} currency={fund.currencyCode} /></div>
-          <div className="stat-card card"><div className="label">Current value</div><MoneyValue n={currentValue} currency={fund.currencyCode} /></div>
-          <div className="stat-card card" style={hueStyle(profit >= 0 ? 'var(--profit)' : 'var(--loss)')}>
-            <Tooltip text="Realized profit from every past withdrawal/sell, plus unrealized profit on units still held — your true total gain, not just what's sitting in the fund right now.">
-              <div className="label" style={{ cursor: 'pointer' }}>Net profit</div>
-            </Tooltip>
-            <MoneyValue n={profit} currency={fund.currencyCode} after={` (${profitPct.toFixed(1)}%)`} />
-          </div>
-          <div className="stat-card card">
-            <Tooltip text="XIRR: your annualized rate of return, accounting for the exact dates and amounts of every purchase — a fairer comparison than a flat percentage when you've invested at different times.">
-              <div className="label" style={{ cursor: 'pointer' }}>XIRR</div>
-            </Tooltip>
-            <div className="value">{rate !== null ? `${(rate * 100).toFixed(1)}%` : '—'}</div>
-          </div>
-        </div>
-      </Card>
 
-      <div className="row" style={{ gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-        <input type="number" step="0.0001" placeholder="Update NAV" value={navInput} onChange={(e) => setNavInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && commitNav()} style={{ width: 130 }} />
-        <button className="btn secondary small" onClick={commitNav}><SaveIcon size={12} />Save NAV</button>
-        <span className="footer-note">Current NAV: {currentNav ? fmtPrice(currentNav) : '—'}</span>
-        <span className="footer-note" style={{ margin: '0 4px' }}>or</span>
-        <Tooltip text="Don't know the per-unit NAV? Enter your fund's current total balance instead — the app computes the implied NAV from the units you already hold, assuming no deposit/withdrawal happened since your last update.">
-          <input
-            type="number"
-            step="0.01"
-            placeholder="Update balance"
-            value={balanceInput}
-            onChange={(e) => setBalanceInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && commitBalance()}
-            style={{ width: 140 }}
-            disabled={units <= 0}
-          />
-        </Tooltip>
-        <button className="btn secondary small" onClick={commitBalance} disabled={units <= 0}><SaveIcon size={12} />Save balance</button>
+      {/* User-requested layout (2026-09-03): "Grid 3 col -> 2 col: Account
+          info stats cards stacked. 1 col: Stacked Balance Update Card +
+          Transfers card." Reuses the same `.position-split` grid QSE/PSX's
+          PositionDetail already established (2/3-width main column + a
+          fixed-width right rail, collapsing to one column under 900px) —
+          rather than a new class, since it's the exact same "wide info
+          block + narrow action rail" shape. */}
+      <div className="position-split">
+        <div>
+          <Card style={{ marginBottom: 16 }}>
+            {editingFund ? (
+              <div>
+                <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+                  <TextInput value={editFund.name} onChange={(e) => setEditFund({ ...editFund, name: e.target.value })} />
+                  <TextInput value={editFund.code} onChange={(e) => setEditFund({ ...editFund, code: e.target.value.toUpperCase() })} />
+                  <TextInput value={editFund.platform} onChange={(e) => setEditFund({ ...editFund, platform: e.target.value })} />
+                  <Select value={editFund.category} onChange={(e) => setEditFund({ ...editFund, category: e.target.value as Fund['category'] })}>
+                    {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </Select>
+                  <Select value={editFund.currencyCode} onChange={(e) => setEditFund({ ...editFund, currencyCode: e.target.value })}>
+                    {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+                  </Select>
+                </div>
+                <div className="row" style={{ gap: 8, marginTop: 8 }}>
+                  <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveFund} />
+                  <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditingFund(false)} />
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {fund.name}
+                    {fund.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Closed</span>}
+                  </div>
+                  <div className="footer-note">{fund.code} · {fund.platform} · {fund.category} · {fund.currencyCode}</div>
+                </div>
+                <div className="row" style={{ gap: 8 }}>
+                  <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => { setEditFund(fund); setEditingFund(true); }} />
+                  <IconButton
+                    label={fund.isActive === false ? 'Reopen' : 'Close'}
+                    icon={fund.isActive === false ? <RestoreIcon size={13} /> : <ArchiveIcon size={13} />}
+                    align="right"
+                    onClick={toggleArchived}
+                  />
+                  <IconButton label="Delete" icon={<TrashIcon size={13} />} align="right" onClick={deleteFund} />
+                </div>
+              </div>
+            )}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 8, marginTop: 12 }}>
+              <div className="stat-card card"><div className="label">Units held</div><div className="value">{fmt(units, 2)}</div></div>
+              <div className="stat-card card">
+                <Tooltip text="NAV = Net Asset Value, the price of one unit of this fund. This is the average price you paid per unit across all your purchases.">
+                  <div className="label" style={{ cursor: 'pointer' }}>Avg NAV cost</div>
+                </Tooltip>
+                <div className="value">{fmtPrice(avgNav)}</div>
+              </div>
+              <div className="stat-card card"><div className="label">Invested</div><MoneyValue n={invested} currency={fund.currencyCode} /></div>
+              <div className="stat-card card"><div className="label">Current value</div><MoneyValue n={currentValue} currency={fund.currencyCode} /></div>
+              <div className="stat-card card" style={hueStyle(profit >= 0 ? 'var(--profit)' : 'var(--loss)')}>
+                <Tooltip text="Realized profit from every past withdrawal/sell, plus unrealized profit on units still held — your true total gain, not just what's sitting in the fund right now.">
+                  <div className="label" style={{ cursor: 'pointer' }}>Net profit</div>
+                </Tooltip>
+                <MoneyValue n={profit} currency={fund.currencyCode} after={` (${profitPct.toFixed(1)}%)`} />
+              </div>
+              <div className="stat-card card">
+                <Tooltip text="XIRR: your annualized rate of return, accounting for the exact dates and amounts of every purchase — a fairer comparison than a flat percentage when you've invested at different times.">
+                  <div className="label" style={{ cursor: 'pointer' }}>XIRR</div>
+                </Tooltip>
+                <div className="value">{rate !== null ? `${(rate * 100).toFixed(1)}%` : '—'}</div>
+              </div>
+              {/* User-requested (2026-09-03): "Display expected daily/monthly
+                  PL+PL%age... on each item page." */}
+              <div className="stat-card card" style={hueStyle(plRate && plRate.dailyAmount < 0 ? 'var(--loss)' : 'var(--profit)')}>
+                <Tooltip text="An average of what this fund actually earned/lost per day, based on its real NAV/balance history — not a promise of future returns.">
+                  <div className="label" style={{ cursor: 'pointer' }}>Expected daily P/L</div>
+                </Tooltip>
+                <div className="value">{plRate ? <>{fmtMoney(plRate.dailyAmount, fund.currencyCode)} <span style={{ fontSize: 12 }}>({plRate.dailyPct.toFixed(2)}%)</span></> : '—'}</div>
+              </div>
+              <div className="stat-card card" style={hueStyle(plRate && plRate.monthlyAmount < 0 ? 'var(--loss)' : 'var(--profit)')}>
+                <Tooltip text="The same average daily rate, scaled to a typical calendar month.">
+                  <div className="label" style={{ cursor: 'pointer' }}>Expected monthly P/L</div>
+                </Tooltip>
+                <div className="value">{plRate ? <>{fmtMoney(plRate.monthlyAmount, fund.currencyCode)} <span style={{ fontSize: 12 }}>({plRate.monthlyPct.toFixed(2)}%)</span></> : '—'}</div>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        <div>
+          <Card style={{ marginBottom: 12 }}>
+            <h3 style={{ marginTop: 0 }}>Update balance</h3>
+            <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <input type="number" step="0.0001" placeholder="Update NAV" value={navInput} onChange={(e) => setNavInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && commitNav()} style={{ width: 130 }} />
+              <button className="btn secondary small" onClick={commitNav}><SaveIcon size={12} />Save NAV</button>
+            </div>
+            <p className="footer-note" style={{ margin: '8px 0' }}>Current NAV: {currentNav ? fmtPrice(currentNav) : '—'}</p>
+            <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <Tooltip text="Don't know the per-unit NAV? Enter your fund's current total balance instead — the app computes the implied NAV from the units you already hold, assuming no deposit/withdrawal happened since your last update.">
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="Update balance"
+                  value={balanceInput}
+                  onChange={(e) => setBalanceInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && commitBalance()}
+                  style={{ width: 140 }}
+                  disabled={units <= 0}
+                />
+              </Tooltip>
+              <button className="btn secondary small" onClick={commitBalance} disabled={units <= 0}><SaveIcon size={12} />Save balance</button>
+            </div>
+          </Card>
+          <CollapsibleCard title={<h3 style={{ margin: 0 }}>Transfers</h3>} defaultOpen={false}>
+            <FundsTransfersSection />
+          </CollapsibleCard>
+        </div>
       </div>
 
       <h3>Add transaction</h3>
@@ -856,6 +965,53 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
           </tbody>
         </table>
       </div>
+      </CollapsibleCard>
+
+      {/* User-requested (2026-09-03): "ability to see balance updates." */}
+      <CollapsibleCard
+        title={<h3 style={{ margin: 0 }}>Balance Update History</h3>}
+        style={{ marginTop: 16 }}
+        headerExtra={stats && stats.totalUpdates > 0 ? <button className="btn secondary" onClick={exportBalanceHistory}>Export CSV</button> : undefined}
+      >
+        {!stats && <p className="footer-note">No balance/NAV updates recorded yet — use "Update balance" above.</p>}
+        {stats && (
+          <>
+            {stats.totalUpdates > stats.recent.length && (
+              <button className="btn secondary small" style={{ marginBottom: 8 }} onClick={() => setShowAllUpdates((v) => !v)}>
+                {showAllUpdates ? 'Show recent 8 only' : `Show all ${stats.totalUpdates} updates`}
+              </button>
+            )}
+            <div className="table-scroll">
+              <table>
+                <thead><tr><th>When</th><th>NAV</th><th></th></tr></thead>
+                <tbody>
+                  {updateRows.map((p) => {
+                    const rawIndex = rawPriceHistory.indexOf(p);
+                    return editUpdateIndex === rawIndex && editUpdateRow ? (
+                      <tr key={rawIndex}>
+                        <td><input type="date" value={editUpdateRow.date} onChange={(e) => setEditUpdateRow({ ...editUpdateRow, date: e.target.value })} style={{ width: 130 }} /></td>
+                        <td><input type="number" step="0.0001" value={editUpdateRow.price} onChange={(e) => setEditUpdateRow({ ...editUpdateRow, price: Number(e.target.value) })} style={{ width: 90 }} /></td>
+                        <td>
+                          <IconButton label="Save" icon={<SaveIcon size={12} />} align="right" onClick={saveEditUpdate} />
+                          <IconButton label="Cancel" icon={<XIcon size={12} />} align="right" onClick={() => { setEditUpdateIndex(null); setEditUpdateRow(null); }} />
+                        </td>
+                      </tr>
+                    ) : (
+                      <tr key={rawIndex}>
+                        <td>{p.time ? new Date(p.time).toLocaleString() : p.date}</td>
+                        <td>{fmtPrice(p.price)}</td>
+                        <td>
+                          <IconButton label="Edit" icon={<EditIcon size={12} />} align="right" onClick={() => startEditUpdate(rawIndex, p)} />
+                          <IconButton label="Delete" icon={<TrashIcon size={12} />} align="right" onClick={() => removeUpdate(rawIndex)} />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </CollapsibleCard>
     </div>
   );

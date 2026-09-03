@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { toInstantMs } from '../lib/datetime';
-import { backfillSerialNumber, nextSerialNumber } from '../lib/financeSerial';
+import { assignSerialNumbersForEntities, backfillSerialNumber, nextSerialNumberForEntity } from '../lib/financeSerial';
 import { resolveLegacyCategoryId } from '../lib/financeMigration';
 import { createEmptyBankWorkbook } from './defaultBankWorkbook';
 import type { BankAccount, BankTransaction, BankWorkbook } from '../types/bankWorkbook';
@@ -109,21 +109,19 @@ export const useBankWorkbookStore = create<BankStoreState>((set, get) => {
         transactions: wb.transactions.filter((t) => t.accountId !== id),
       })),
 
+    // Scoped by account — same reasoning as Cash's scoping-by-currency above.
     addTransaction: (tx) =>
       mutate((wb) => {
         const withFields = withDerivedFields(tx);
-        const withSerial = withFields.serialNumber !== undefined ? withFields : { ...withFields, serialNumber: nextSerialNumber(wb.transactions) };
+        const withSerial = withFields.serialNumber !== undefined ? withFields : { ...withFields, serialNumber: nextSerialNumberForEntity(wb.transactions, (t) => t.accountId, withFields.accountId) };
         return { ...wb, transactions: [...wb.transactions, withSerial] };
       }),
 
     addTransactions: (txs) =>
       mutate((wb) => {
-        let serial = nextSerialNumber(wb.transactions) - 1;
-        const withFields = txs.map((t) => {
-          const derived = withDerivedFields(t);
-          return derived.serialNumber !== undefined ? derived : { ...derived, serialNumber: ++serial };
-        });
-        return { ...wb, transactions: [...wb.transactions, ...withFields] };
+        const withFields = txs.map(withDerivedFields);
+        const withSerial = assignSerialNumbersForEntities(wb.transactions, withFields, (t) => t.accountId);
+        return { ...wb, transactions: [...wb.transactions, ...withSerial] };
       }),
 
     updateTransaction: (id, patch) =>

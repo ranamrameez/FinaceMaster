@@ -111,6 +111,26 @@ export function LogoMark({ size = 22 }: IconProps) {
   );
 }
 
+/** "More actions" — `FabPanel`'s own toggle icon when it offers more than
+ * one action (user-reported 2026-09-03: "FAB menu: + button is misleading.
+ * use menu or more relevant icon"). A plain "+" on that toggle implied "add
+ * one specific thing," which reads wrong for a button that actually opens a
+ * menu of several DIFFERENT actions (e.g. "Add a fund" AND "Transfers") —
+ * the single-action `FabButton` case is unaffected, since there a "+"-style
+ * icon (whichever the one action's own icon is) genuinely is correct. Three
+ * filled dots (not stroked, unlike this file's other icons — a kebab/"more"
+ * glyph reads better solid) is the more universally recognized "menu of
+ * actions" symbol. */
+export function MenuIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden>
+      <circle cx="5" cy="12" r="2.2" fill="currentColor" />
+      <circle cx="12" cy="12" r="2.2" fill="currentColor" />
+      <circle cx="19" cy="12" r="2.2" fill="currentColor" />
+    </svg>
+  );
+}
+
 /** A short ledger/list glyph — used for "view this entity's transactions"
  * quick-links (e.g. the Banking homepage's per-account card action). */
 export function ListIcon({ size = 14 }: IconProps) {

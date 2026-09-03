@@ -1,6 +1,6 @@
 import { create, type UseBoundStore, type StoreApi } from 'zustand';
 import { toInstantMs } from '../lib/datetime';
-import { backfillSeq, nextSeq } from '../lib/seq';
+import { assignSeqForEntities, backfillSeq, nextSeq, nextSeqForEntity } from '../lib/seq';
 import { sortTransactionsChronological } from '../lib/calc/sortTransactions';
 import type { Adjustment, Dividend, PricePoint, Transaction, TradePlan, Transfer, WatchlistItem } from '../types/workbook';
 
@@ -168,13 +168,21 @@ export function createWorkbookStore<TWorkbook extends BaseWorkbook<unknown>>(
       },
 
       addTransaction: (tx) =>
-        mutate((wb) => ({ ...wb, transactions: [...wb.transactions, tx.seq !== undefined ? tx : { ...tx, seq: nextSeq(wb.transactions) }] })),
+        mutate((wb) => {
+          const seq = tx.seq !== undefined ? tx.seq : nextSeqForEntity(wb.transactions, (t) => t.ticker, tx.ticker);
+          const timestamp = tx.timestamp ?? new Date().toISOString();
+          return { ...wb, transactions: [...wb.transactions, { ...tx, seq, timestamp }] };
+        }),
 
+      // A batch can span multiple tickers (e.g. a statement import) — each
+      // ticker's own new rows are numbered independently (see
+      // `assignSeqForEntities`'s own doc comment).
       addTransactions: (txs) =>
         mutate((wb) => {
-          let seq = nextSeq(wb.transactions) - 1;
-          const withSeq = txs.map((t) => (t.seq !== undefined ? t : { ...t, seq: ++seq }));
-          return { ...wb, transactions: [...wb.transactions, ...withSeq] };
+          const now = new Date().toISOString();
+          const withSeq = assignSeqForEntities(wb.transactions, txs, (t) => t.ticker);
+          const withTimestamp = withSeq.map((t) => ({ ...t, timestamp: t.timestamp ?? now }));
+          return { ...wb, transactions: [...wb.transactions, ...withTimestamp] };
         }),
 
       updateTransaction: (index, patch) =>
@@ -186,18 +194,26 @@ export function createWorkbookStore<TWorkbook extends BaseWorkbook<unknown>>(
       deleteTransaction: (index) =>
         mutate((wb) => ({ ...wb, transactions: wb.transactions.filter((_, i) => i !== index) })),
 
+      // No natural owning entity for a Transfer (it's a portfolio-level cash
+      // movement, not tied to one ticker) — stays scoped to the whole array.
       addTransfer: (t) =>
-        mutate((wb) => ({ ...wb, transfers: [...wb.transfers, t.seq !== undefined ? t : { ...t, seq: nextSeq(wb.transfers) }] })),
+        mutate((wb) => ({
+          ...wb,
+          transfers: [...wb.transfers, { ...t, seq: t.seq !== undefined ? t.seq : nextSeq(wb.transfers), timestamp: t.timestamp ?? new Date().toISOString() }],
+        })),
 
       updateTransfer: (id, patch) =>
         mutate((wb) => ({ ...wb, transfers: wb.transfers.map((t) => (t.id === id ? { ...t, ...patch } : t)) })),
 
       deleteTransfer: (id) => mutate((wb) => ({ ...wb, transfers: wb.transfers.filter((t) => t.id !== id) })),
 
+      // No natural owning entity for an Adjustment either — stays scoped to
+      // the whole array, same as Transfer above.
       addAdjustment: (a) =>
         mutate((wb) => {
           const withId = a.id ? a : { ...a, id: crypto.randomUUID() };
-          return { ...wb, adjustments: [...wb.adjustments, withId.seq !== undefined ? withId : { ...withId, seq: nextSeq(wb.adjustments) }] };
+          const seq = withId.seq !== undefined ? withId.seq : nextSeq(wb.adjustments);
+          return { ...wb, adjustments: [...wb.adjustments, { ...withId, seq, timestamp: withId.timestamp ?? new Date().toISOString() }] };
         }),
 
       updateAdjustment: (index, patch) =>
@@ -253,7 +269,8 @@ export function createWorkbookStore<TWorkbook extends BaseWorkbook<unknown>>(
       addDividend: (d) =>
         mutate((wb) => {
           const withId = d.id ? d : { ...d, id: crypto.randomUUID() };
-          return { ...wb, dividends: [...wb.dividends, withId.seq !== undefined ? withId : { ...withId, seq: nextSeq(wb.dividends) }] };
+          const seq = withId.seq !== undefined ? withId.seq : nextSeqForEntity(wb.dividends, (x) => x.ticker, withId.ticker);
+          return { ...wb, dividends: [...wb.dividends, { ...withId, seq, timestamp: withId.timestamp ?? new Date().toISOString() }] };
         }),
 
       updateDividend: (index, patch) =>
@@ -285,7 +302,8 @@ export function createWorkbookStore<TWorkbook extends BaseWorkbook<unknown>>(
           if (!plan || !leg || leg.executed) return wb;
           const tx: Transaction = {
             id: crypto.randomUUID(),
-            seq: nextSeq(wb.transactions),
+            seq: nextSeqForEntity(wb.transactions, (t) => t.ticker, leg.ticker),
+            timestamp: new Date().toISOString(),
             date: leg.date || new Date().toISOString().slice(0, 10),
             ticker: leg.ticker,
             action: leg.action,

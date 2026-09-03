@@ -51,6 +51,20 @@ export interface Transaction {
    * too. `undefined` means "use the computed fee" (the normal case);
    * unlike `manualSameDay` this is shared/meaningful for both exchanges. */
   feeOverride?: number;
+  /** Audit metadata: the real wall-clock instant this record was actually
+   * entered into the app — NOT the same thing as `date`/`time` above (the
+   * transaction's own user-entered effective date). Same field name/
+   * meaning as `Finance.timestamp` (`types/finance.ts`), just not part of
+   * that interface — QSE/PSX/Funds trades are explicitly out of that
+   * migration's scope (see `Finance`'s own doc comment) but the "when was
+   * this actually recorded" concept is identical, so the name is reused
+   * for consistency. Auto-set once by the owning store at creation, never
+   * user-editable, and never backfilled onto pre-existing data that
+   * predates this field — there's no honest value to guess for a record
+   * whose real entry time was never captured, so it's simply absent there,
+   * same as `time`/`timezone` themselves are left unset rather than
+   * guessed for old data. */
+  timestamp?: string;
 }
 
 export interface Transfer {
@@ -68,6 +82,8 @@ export interface Transfer {
   type: 'DEPOSIT' | 'WITHDRAWAL';
   gross: number;
   fee: number;
+  /** Same reasoning as `Transaction.timestamp` above. */
+  timestamp?: string;
 }
 
 export interface Adjustment {
@@ -88,6 +104,8 @@ export interface Adjustment {
   timezone?: string;
   amount: number;
   note?: string;
+  /** Same reasoning as `Transaction.timestamp` above. */
+  timestamp?: string;
 }
 
 export interface TradePlanLeg {
@@ -153,6 +171,8 @@ export interface Dividend {
   perShare: number;
   shares: number;
   amount: number;
+  /** Same reasoning as `Transaction.timestamp` above. */
+  timestamp?: string;
 }
 
 export interface QSESettings {
