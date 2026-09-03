@@ -1,21 +1,39 @@
 import { create } from 'zustand';
 import { toInstantMs } from '../lib/datetime';
-import { backfillSeq, nextSeq } from '../lib/seq';
+import { backfillSerialNumber, nextSerialNumber } from '../lib/financeSerial';
+import { resolveIsDeposit, resolveLegacyCategoryId } from '../lib/financeMigration';
 import { createEmptyRentalsWorkbook } from './defaultRentalsWorkbook';
 import type { Property, RentalEntry, RentalsWorkbook } from '../types/rentalsWorkbook';
 
 const STORAGE_KEY = 'financerecorder_rentals_workbook_v1';
 
-/** Backfills `seq` (see `RentalEntry.seq`'s doc comment) onto any entry
- * missing it, in real-instant chronological order — same pattern as
- * `createWorkbookStore.ts`'s `normalize()`. Applied on every path data can
- * enter the store (local load and `setWorkbook`, which also covers the
+/** `RentalEntry` extends `Finance` (2026-09-03 restructure) — `isDeposit`
+ * is the real, authoritative field here (RENT_INCOME → true, EXPENSE →
+ * false was the old `type` enum) for every NEW write; this also derives it
+ * from the legacy `type` field for real pre-restructure data that has no
+ * `isDeposit` at all (see `RentalEntry.type`'s own doc comment — caught
+ * via live testing, a genuine regression risk, not a hypothetical),
+ * alongside the existing `categoryID`/`timestamp` legacy-data fill-ins. */
+function withDerivedFields(e: RentalEntry): RentalEntry {
+  return {
+    ...e,
+    isDeposit: resolveIsDeposit(e.isDeposit, e.type, 'RENT_INCOME'),
+    categoryID: e.categoryID ?? resolveLegacyCategoryId(e.category),
+    timestamp: e.timestamp ?? new Date().toISOString(),
+  };
+}
+
+/** Backfills `serialNumber` (see `Finance.serialNumber`'s doc comment) onto
+ * any entry missing it, in real-instant chronological order — same pattern
+ * as `createWorkbookStore.ts`'s `normalize()`. Applied on every path data
+ * can enter the store (local load and `setWorkbook`, which also covers the
  * Firebase pull in `useRentalsFirebaseSync`). */
 function normalize(wb: RentalsWorkbook): RentalsWorkbook {
-  const chronological = [...wb.entries].sort(
+  const withFields = wb.entries.map(withDerivedFields);
+  const chronological = [...withFields].sort(
     (a, b) => toInstantMs(a.date, a.time, a.timezone) - toInstantMs(b.date, b.time, b.timezone),
   );
-  return { ...wb, entries: backfillSeq(wb.entries, chronological) };
+  return { ...wb, entries: backfillSerialNumber(withFields, chronological) };
 }
 
 /** Same shape as Banking (properties nested under settings, entries
@@ -87,17 +105,24 @@ export const useRentalsWorkbookStore = create<RentalsStoreState>((set, get) => {
       })),
 
     addEntry: (entry) =>
-      mutate((wb) => ({ ...wb, entries: [...wb.entries, entry.seq !== undefined ? entry : { ...entry, seq: nextSeq(wb.entries) }] })),
+      mutate((wb) => {
+        const withFields = withDerivedFields(entry);
+        const withSerial = withFields.serialNumber !== undefined ? withFields : { ...withFields, serialNumber: nextSerialNumber(wb.entries) };
+        return { ...wb, entries: [...wb.entries, withSerial] };
+      }),
 
     addEntries: (entries) =>
       mutate((wb) => {
-        let seq = nextSeq(wb.entries) - 1;
-        const withSeq = entries.map((e) => (e.seq !== undefined ? e : { ...e, seq: ++seq }));
-        return { ...wb, entries: [...wb.entries, ...withSeq] };
+        let serial = nextSerialNumber(wb.entries) - 1;
+        const withFields = entries.map((e) => {
+          const derived = withDerivedFields(e);
+          return derived.serialNumber !== undefined ? derived : { ...derived, serialNumber: ++serial };
+        });
+        return { ...wb, entries: [...wb.entries, ...withFields] };
       }),
 
     updateEntry: (id, patch) =>
-      mutate((wb) => ({ ...wb, entries: wb.entries.map((e) => (e.id === id ? { ...e, ...patch } : e)) })),
+      mutate((wb) => ({ ...wb, entries: wb.entries.map((e) => (e.id === id ? withDerivedFields({ ...e, ...patch }) : e)) })),
 
     deleteEntry: (id) => mutate((wb) => ({ ...wb, entries: wb.entries.filter((e) => e.id !== id) })),
   };

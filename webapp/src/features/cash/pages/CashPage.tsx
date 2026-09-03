@@ -13,10 +13,15 @@ import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
 import { FabButton, FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
+import { CategorySelect } from '../../../components/CategorySelect';
+import { FinanceEditModal } from '../../../components/FinanceEditModal';
+import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { useAmountFormat } from '../../../hooks/useAmountFormat';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { hueStyle } from '../../../lib/statCardHues';
+import { categoryName, UNCATEGORIZED_ID } from '../../../lib/categories';
+import { useCategoryStore } from '../../../store/categoryStore';
 import { cashBalanceByCurrency, cashByCategory, cashMonthlyFlow, cashRunningLedger } from '../../../lib/calc/cashModule';
 import { plannedCashProjection } from '../../../lib/calc/plannedBalance';
 import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
@@ -92,7 +97,8 @@ function BalancesSummary() {
 
 function CategoryBreakdown() {
   const entries = useCashWorkbookStore((s) => s.workbook.entries);
-  const byCategory = cashByCategory(entries);
+  const categories = useCategoryStore((s) => s.workbook.categories);
+  const byCategory = cashByCategory(entries, categories);
   const currencies = Object.keys(byCategory);
   if (!currencies.length) return null;
 
@@ -119,13 +125,63 @@ function CategoryBreakdown() {
   );
 }
 
+/** Popup edit form for one Cash entry — replaces the old inline table-row
+ * editing (which had quietly drifted out of sync with the add flow: no
+ * time/timezone editing, free-text category instead of a real picker).
+ * User-requested (2026-09-03): "Editing should be done in a popup... to
+ * ensure UI consistency." */
+function EditEntryModal({ entry, onClose }: { entry: CashEntry; onClose: () => void }) {
+  const updateEntry = useCashWorkbookStore((s) => s.updateEntry);
+  const [draft, setDraft] = useState<CashEntry>({ ...entry });
+
+  const save = async () => {
+    if (!(await warnIfLinked('cash', entry.id))) return;
+    updateEntry(entry.id, draft);
+    toast('Entry updated.');
+    onClose();
+  };
+
+  return (
+    <FinanceEditModal titleText="Edit cash entry" onClose={onClose} onSave={save}>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+        <Field label="Date">
+          <TextInput type="date" value={draft.date} onChange={(e) => setDraft({ ...draft, date: e.target.value })} />
+        </Field>
+        <Field label="Type">
+          <Select value={draft.isDeposit ? 'IN' : 'OUT'} onChange={(e) => setDraft({ ...draft, isDeposit: e.target.value === 'IN' })}>
+            <option value="IN">Cash in</option>
+            <option value="OUT">Cash out</option>
+          </Select>
+        </Field>
+        <Field label="Amount" required>
+          <TextInput type="number" step="0.01" value={draft.amount} onChange={(e) => setDraft({ ...draft, amount: Number(e.target.value) })} />
+        </Field>
+        <Field label="Category">
+          <CategorySelect value={draft.categoryID ?? UNCATEGORIZED_ID} onChange={(categoryID) => setDraft({ ...draft, categoryID })} />
+        </Field>
+        <Field label="Note (optional)">
+          <TextInput value={draft.note ?? ''} onChange={(e) => setDraft({ ...draft, note: e.target.value })} />
+        </Field>
+        <TimeZoneFields
+          time={draft.time}
+          timezone={draft.timezone}
+          onTimeChange={(time) => setDraft({ ...draft, time })}
+          onTimezoneChange={(timezone) => setDraft({ ...draft, timezone })}
+        />
+      </div>
+      <p className="footer-note" style={{ marginTop: 8 }}>
+        {draft.source === 'statement-import' ? `Imported${draft.statementRef ? ` from ${draft.statementRef}` : ''}` : 'Entered manually'}
+      </p>
+    </FinanceEditModal>
+  );
+}
+
 function EntryList() {
   const entries = useCashWorkbookStore((s) => s.workbook.entries);
-  const updateEntry = useCashWorkbookStore((s) => s.updateEntry);
   const deleteEntry = useCashWorkbookStore((s) => s.deleteEntry);
+  const categories = useCategoryStore((s) => s.workbook.categories);
   const links = useInterEntityTransfersStore((s) => s.workbook.entries);
-  const [editId, setEditId] = useState<string | null>(null);
-  const [editRow, setEditRow] = useState<CashEntry | null>(null);
+  const [editingEntry, setEditingEntry] = useState<CashEntry | null>(null);
 
   const ledger = useMemo(() => cashRunningLedger(entries), [entries]);
   // User-requested (2026-08-28): "Tag/Mark and also add nav link between
@@ -141,23 +197,13 @@ function EntryList() {
   type Col = 'date' | 'type' | 'amount' | 'category';
   const sortValue = (r: (typeof ledger)[number], col: Col): number | string => {
     switch (col) {
-      case 'type': return r.entry.type;
+      case 'type': return r.entry.isDeposit ? 1 : 0;
       case 'amount': return r.entry.amount;
-      case 'category': return r.entry.category ?? '';
+      case 'category': return categoryName(r.entry.categoryID, categories);
       default: return r.entry.date;
     }
   };
   const { sorted, Th } = useSortableRows(ledger, sortValue, 'date', 'desc');
-
-  const startEdit = (e: CashEntry) => { setEditId(e.id); setEditRow({ ...e }); };
-  const saveEdit = async () => {
-    if (editId === null || !editRow) return;
-    if (!(await warnIfLinked('cash', editId))) return;
-    updateEntry(editId, editRow);
-    toast('Entry updated.');
-    setEditId(null);
-    setEditRow(null);
-  };
 
   return (
     <div className="table-scroll">
@@ -182,29 +228,10 @@ function EntryList() {
           {sorted.map(({ entry, balance }) => {
             const link = linkByRecordId.get(entry.id);
             const otherSide = link ? (link.from.module === 'cash' && link.fromRecordId === entry.id ? link.to : link.from) : undefined;
-            return editId === entry.id && editRow ? (
-              <tr key={entry.id}>
-                <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
-                <td>
-                  <select value={editRow.type} onChange={(e) => setEditRow({ ...editRow, type: e.target.value as 'IN' | 'OUT' })}>
-                    <option value="IN">Cash in</option>
-                    <option value="OUT">Cash out</option>
-                  </select>
-                </td>
-                <td><input value={editRow.note ?? ''} onChange={(e) => setEditRow({ ...editRow, note: e.target.value })} /></td>
-                <td><input value={editRow.category ?? ''} onChange={(e) => setEditRow({ ...editRow, category: e.target.value })} style={{ width: 100 }} /></td>
-                <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 90 }} /></td>
-                <td></td>
-                <td className="footer-note">{entry.source === 'statement-import' ? `Import${entry.statementRef ? ` (${entry.statementRef})` : ''}` : 'Manual'}</td>
-                <td>
-                  <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
-                  <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditId(null)} />
-                </td>
-              </tr>
-            ) : (
+            return (
               <tr key={entry.id}>
                 <td>{entry.date}</td>
-                <td className={entry.type === 'IN' ? 'pill-buy' : 'pill-sell'}>{entry.type === 'IN' ? 'Cash in' : 'Cash out'}</td>
+                <td className={entry.isDeposit ? 'pill-buy' : 'pill-sell'}>{entry.isDeposit ? 'Cash in' : 'Cash out'}</td>
                 <td className="cell-clip" title={entry.note}>
                   {entry.note}
                   {otherSide && (
@@ -213,14 +240,14 @@ function EntryList() {
                     </Link>
                   )}
                 </td>
-                <td>{entry.category ? <span className="pill-info">{entry.category}</span> : '—'}</td>
+                <td><span className="pill-info">{categoryName(entry.categoryID, categories)}</span></td>
                 <td>{fmtMoney(entry.amount, entry.currencyCode)}</td>
                 <td>{fmtMoney(balance, entry.currencyCode)}</td>
                 <td className="footer-note cell-clip" title={entry.source === 'statement-import' ? `Import${entry.statementRef ? ` (${entry.statementRef})` : ''}` : 'Manual'}>
                   {entry.source === 'statement-import' ? `Import${entry.statementRef ? ` (${entry.statementRef})` : ''}` : 'Manual'}
                 </td>
                 <td>
-                  <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(entry)} />{' '}
+                  <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => setEditingEntry(entry)} />{' '}
                   <IconButton
                     label="Delete"
                     icon={<TrashIcon size={13} />}
@@ -234,6 +261,7 @@ function EntryList() {
           {!sorted.length && <tr><td colSpan={8} className="footer-note">No cash entries yet.</td></tr>}
         </tbody>
       </table>
+      {editingEntry && <EditEntryModal entry={editingEntry} onClose={() => setEditingEntry(null)} />}
     </div>
   );
 }
@@ -268,7 +296,8 @@ function AnalyticsTab() {
   const [currency, setCurrency] = useState(currencies[0] ?? 'USD');
   const effectiveCurrency = currencies.includes(currency) ? currency : (currencies[0] ?? currency);
 
-  const byCategory = useMemo(() => cashByCategory(entries)[effectiveCurrency] ?? {}, [entries, effectiveCurrency]);
+  const categoryList = useCategoryStore((s) => s.workbook.categories);
+  const byCategory = useMemo(() => cashByCategory(entries, categoryList)[effectiveCurrency] ?? {}, [entries, categoryList, effectiveCurrency]);
   const categories = Object.keys(byCategory);
   const monthlyFlow = useMemo(() => cashMonthlyFlow(entries, effectiveCurrency), [entries, effectiveCurrency]);
   const balanceOverTime = useMemo(
@@ -370,8 +399,12 @@ function ImportTab() {
     const rawAmount = Number(r[colIndex(amountCol)] ?? 0) * (flipSign ? -1 : 1);
     return {
       date: (r[colIndex(dateCol)] ?? '').trim(),
-      type: (rawAmount >= 0 ? 'IN' : 'OUT') as 'IN' | 'OUT',
+      isDeposit: rawAmount >= 0,
       amount: Math.abs(rawAmount),
+      // Free-text from the CSV, resolved to a real `categoryID` by the
+      // store's own `withDerivedFields` (matches an existing category name
+      // when it can, "Uncategorized" otherwise) — see `CashEntry.category`'s
+      // own `@deprecated` doc comment.
       category: categoryCol ? (r[colIndex(categoryCol)] ?? '').trim() || undefined : undefined,
     };
   };
@@ -386,7 +419,7 @@ function ImportTab() {
       .map((r) => ({
         id: crypto.randomUUID(),
         date: r.date,
-        type: r.type,
+        isDeposit: r.isDeposit,
         amount: r.amount,
         currencyCode,
         category: r.category,
@@ -463,7 +496,7 @@ function ImportTab() {
                 {mappedPreview.map((r, i) => (
                   <tr key={i}>
                     <td>{r.date}</td>
-                    <td className={r.type === 'IN' ? 'pill-buy' : 'pill-sell'}>{r.type === 'IN' ? 'Cash in' : 'Cash out'}</td>
+                    <td className={r.isDeposit ? 'pill-buy' : 'pill-sell'}>{r.isDeposit ? 'Cash in' : 'Cash out'}</td>
                     <td>{fmtMoney(r.amount, currencyCode)}</td>
                     <td>{r.category || '—'}</td>
                   </tr>
@@ -628,7 +661,7 @@ function PlanList() {
     addEntry({
       id: crypto.randomUUID(),
       date: p.date,
-      type: p.type,
+      isDeposit: p.type === 'IN',
       amount: p.amount,
       currencyCode: p.currencyCode,
       category: p.category,

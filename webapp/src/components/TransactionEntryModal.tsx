@@ -7,6 +7,8 @@ import { Field, Select, TextInput } from './ui/Field';
 import { TimeZoneFields } from './ui/TimeZoneFields';
 import { SideFields, useSideCurrency, nextUnpaidEmiMonth } from '../features/transfers/pages/TransferLinksPage';
 import { getLastTransferSource, rememberTransferSource } from '../hooks/useLastTransferSource';
+import { CategorySelect } from './CategorySelect';
+import { UNCATEGORIZED_ID } from '../lib/categories';
 import { defaultTimezoneForCurrency } from '../lib/datetime';
 import { useEnsureSignedIn } from '../lib/firebase/useEnsureSignedIn';
 import { isSupportedLinkPair } from '../lib/interEntityLink';
@@ -39,6 +41,14 @@ const DIRECTION_LABELS: Partial<Record<LinkModule, { in: string; out: string }>>
 };
 const HAS_CATEGORY: LinkModule[] = ['bank', 'cash', 'rentals'];
 const HAS_NOTE: LinkModule[] = ['cash', 'rentals'];
+/** Bank has no `Finance.title` — its own pre-existing `description` field
+ * already fills that role (see `types/finance.ts`'s file-level comment) —
+ * so this is the one module that needs its own "what is this" text input
+ * here. Real bug fix (user-reported): before this, a Bank row had NO title/
+ * description input at all in this popup, so `description` silently fell
+ * back to the category text or the literal string "Transaction" — the app
+ * substituting a value instead of taking real user input. */
+const HAS_DESCRIPTION: LinkModule[] = ['bank'];
 
 interface TxRow {
   key: number;
@@ -50,7 +60,8 @@ interface TxRow {
   date: string;
   time?: string;
   timezone?: string;
-  category: string;
+  categoryID: string;
+  description: string;
   note: string;
 }
 
@@ -65,7 +76,8 @@ function emptyRow(key: number, finance: LinkSideConfig, currencyCode?: string): 
     date: today(),
     time: new Date().toTimeString().slice(0, 5),
     timezone: defaultTimezoneForCurrency(currencyCode),
-    category: '',
+    categoryID: UNCATEGORIZED_ID,
+    description: '',
     note: '',
   };
 }
@@ -116,9 +128,14 @@ function TxRowFields({
         <Field label="Amount" required title={!direction ? 'Bank: negative = spend/debit, positive = deposit/credit.' : undefined}>
           <TextInput type="number" step="0.01" value={row.amount || ''} onChange={(e) => onChange({ ...row, amount: Number(e.target.value) })} />
         </Field>
+        {HAS_DESCRIPTION.includes(row.finance.module) && (
+          <Field label="Description" required>
+            <TextInput value={row.description} onChange={(e) => onChange({ ...row, description: e.target.value })} placeholder="e.g. Rent, Grocery run" />
+          </Field>
+        )}
         {HAS_CATEGORY.includes(row.finance.module) && (
-          <Field label="Category (optional)">
-            <TextInput value={row.category} onChange={(e) => onChange({ ...row, category: e.target.value })} />
+          <Field label="Category">
+            <CategorySelect value={row.categoryID} onChange={(categoryID) => onChange({ ...row, categoryID })} />
           </Field>
         )}
         {HAS_NOTE.includes(row.finance.module) && (
@@ -242,7 +259,7 @@ export function TransactionEntryModal({ defaultFinance, onClose }: { defaultFina
           toAmount: abs,
           from: r.direction === 'out' ? r.finance : resolvedOther,
           to: r.direction === 'out' ? resolvedOther : r.finance,
-          note: r.note.trim() || r.category.trim() || undefined,
+          note: r.note.trim() || r.description.trim() || undefined,
         });
         if ('error' in result) {
           toast(`Couldn't save one linked row: ${result.error}`);
@@ -255,26 +272,27 @@ export function TransactionEntryModal({ defaultFinance, onClose }: { defaultFina
       switch (r.finance.module) {
         case 'bank':
           if (!r.finance.ref) { toast('Pick a bank account first.'); continue; }
+          if (!r.description.trim()) { toast('Enter a description for this transaction.'); continue; }
           addBankTransactions([{
             id: uid(), accountId: r.finance.ref, date: r.date, time: r.time, timezone: r.timezone,
-            amount: r.amount, description: r.category.trim() || r.note.trim() || 'Transaction',
-            category: r.category.trim() || undefined, source: 'manual',
+            amount: r.amount, isDeposit: r.amount >= 0, description: r.description.trim(),
+            categoryID: r.categoryID, source: 'manual',
           }]);
           break;
         case 'cash':
           addCashEntry({
             id: uid(), date: r.date, time: r.time, timezone: r.timezone,
-            type: r.direction === 'in' ? 'IN' : 'OUT', amount: Math.abs(r.amount),
+            isDeposit: r.direction === 'in', amount: Math.abs(r.amount),
             currencyCode: r.finance.currencyCode || 'USD',
-            category: r.category.trim() || undefined, note: r.note.trim() || undefined, source: 'manual',
+            categoryID: r.categoryID, note: r.note.trim() || undefined, source: 'manual',
           });
           break;
         case 'rentals':
           if (!r.finance.ref) { toast('Pick a property first.'); continue; }
           addRentalEntry({
             id: uid(), propertyId: r.finance.ref, date: r.date, time: r.time, timezone: r.timezone,
-            type: r.direction === 'in' ? 'RENT_INCOME' : 'EXPENSE', amount: Math.abs(r.amount),
-            category: r.category.trim() || undefined, note: r.note.trim() || undefined,
+            isDeposit: r.direction === 'in', amount: Math.abs(r.amount),
+            categoryID: r.categoryID, note: r.note.trim() || undefined,
           });
           break;
         case 'personalLoans':

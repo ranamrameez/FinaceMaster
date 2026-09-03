@@ -140,6 +140,14 @@ export function findLinkForRecord(module: LinkModule, recordId: string): InterEn
     );
 }
 
+/** `Finance.isLinked`'s only correct source: computed live from the real
+ * link store, never a second persisted copy of the same fact (a stored
+ * boolean could silently go stale the moment a link is created or removed
+ * elsewhere in the app — see `types/finance.ts`'s file-level comment). */
+export function isRecordLinked(module: LinkModule, recordId: string): boolean {
+  return !!findLinkForRecord(module, recordId);
+}
+
 /** README item 27's known remaining gap, now closed at the "honest warning"
  * level (not full propagation — see the reasoning below): editing a linked
  * record's amount/date directly in its native module doesn't update the

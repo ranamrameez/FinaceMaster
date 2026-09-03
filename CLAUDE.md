@@ -4450,6 +4450,59 @@ not developer notes) continuously as features ship.
   with the user's real uploaded backup seeded into `localStorage` — fund list row and per-fund
   detail page both now show the correct ~269 figure. `npx tsc -b` / `npm run test` (445 tests, 3
   new) / `npm run build` all clean.
+- **Shared `Finance`/`Category` base model for Cash/Bank/Rentals, user-requested (2026-09-03) —
+  see README Done item 221.** This was a genuinely large, real-schema-touching request ("create
+  1 base model and inherit all others from it... use categ ids, instead of texts"), handled per
+  this file's own "plan & propose, get approval, then execute" standing rule — two rounds of
+  `AskUserQuestion` up front resolved the real forks (scope: Cash/Bank/Rentals only, Exchanges/
+  Funds/EMI/Personal Loans excluded as "fundamentally different"; categoryID stays required with
+  an Uncategorized fallback; safe-merges-only category consolidation; `isLinked` as a plain
+  boolean) before any code was written, followed by a design proposal the user then corrected on
+  3 concrete points (`is`-prefix naming, "Credit Card Payment" not an abbreviation, editing moved
+  into a popup) before building started.
+  **Design decisions worth remembering for any future session touching these 3 types**:
+  `types/finance.ts`'s `Finance` interface is a plain TS interface (structural inheritance via
+  `extends`, not runtime OOP classes — this codebase has never used real classes anywhere).
+  Bank's `amount` deliberately stays SIGNED (its running-ledger/credit-card-liability math
+  already depends on the convention) with `isDeposit` re-derived from the sign at every store
+  write — Cash/Rentals' `isDeposit` is the real authoritative field (their old `type` enum,
+  1:1 renamed). `isLinked` is NEVER stored — always resolve it live via
+  `isRecordLinked(module, id)` (`lib/linkCascade.ts`) at display time, since a persisted copy
+  could silently go stale the moment a link is created/removed elsewhere.
+  **The Category registry** (`lib/categories.ts`'s `DEFAULT_CATEGORIES`, `store/categoryStore.ts`,
+  Firebase path `users/{uid}/categories`) is seeded from THIS app owner's own real historical
+  category strings (26 real + Uncategorized) — flagged in that file's own comment as personal,
+  not generic, data, worth reconsidering if this app ever serves more than one independent user.
+  `findCategoryByName`/`categoryName`/`resolveLegacyCategoryId` in `lib/categories.ts`/
+  `lib/financeMigration.ts` are the one place every category lookup/migration goes through —
+  reuse them, don't re-derive.
+  **Editing moved from inline table-row edits into a real popup** (`FinanceEditModal.tsx` +
+  `CategorySelect.tsx`) in all 3 modules, directly closing the "editing UIs are missing fields"
+  report — the old inline edit had quietly drifted out of sync with each module's own add flow
+  (no time/timezone editing, free-text category instead of a picker). Also fixed the concrete
+  "app puts a value instead of taking input" bug: `TransactionEntryModal.tsx`'s Bank rows had no
+  description input at all, silently defaulting to the category text or the literal string
+  "Transaction" — added a real required Description field.
+  **A critical regression was found ONLY via live Playwright testing against the real uploaded
+  backup — neither the type checker nor the first round of unit tests caught it, because every
+  test fixture I wrote used the new `isDeposit` field directly rather than raw legacy JSON.**
+  Removing `type: 'IN'|'OUT'`/`'RENT_INCOME'|'EXPENSE'` from the TS interfaces left no migration
+  path for real pre-restructure data, which has `type` and NO `isDeposit` key at all — every
+  existing "IN"/"RENT_INCOME" record silently evaluated `isDeposit` as `undefined` (falsy),
+  rendering and behaving as OUT/EXPENSE everywhere. Caught by seeding the real 225-entry Cash
+  backup and a synthetic Rentals property into a live browser: a real RENT_INCOME entry rendered
+  as a red "Expense" with a negative amount. **Lesson worth repeating for any future field
+  rename/removal on a type that has real, already-synced production data**: a TypeScript
+  interface change has zero effect on data already sitting in localStorage/Firebase — always
+  keep the old field as an explicitly `@deprecated`-marked optional fallback and write a real
+  migration function, then verify by loading actual old-shaped JSON (not just new-shaped test
+  fixtures) through the real store. Fixed with `resolveIsDeposit()` in
+  `lib/financeMigration.ts`, wired into both `cashWorkbookStore.ts`'s and
+  `rentalsWorkbookStore.ts`'s `withDerivedFields()`; verified the fix with an exact cross-check
+  against the real data (82 rendered "Cash in" rows / 143 "Cash out" rows, matching the raw
+  file's 82 IN / 143 OUT exactly) plus 2 new regression tests reproducing the bug directly by
+  loading raw legacy-shaped objects with no `isDeposit` key. `npx tsc -b` / `npm run test` (466
+  tests, 21 new) / `npm run build` all clean.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

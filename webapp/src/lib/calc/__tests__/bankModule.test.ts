@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import type { BankAccount, BankTransaction } from '../../../types/bankWorkbook';
+import type { Category } from '../../../types/finance';
 import { accountBalance, accountByCategory, accountRunningLedger, assetBalanceByCurrency, bankMonthlyFlow, budgetVsActual, creditCardLiabilityByCurrency, totalBalanceByCurrency } from '../bankModule';
+
+const TEST_CATEGORIES: Category[] = [
+  { id: 'cat_food', serialNumber: 1, name: 'Food' },
+  { id: 'cat_salary', serialNumber: 2, name: 'Salary' },
+  { id: 'cat_groceries', serialNumber: 3, name: 'Groceries' },
+  { id: 'cat_dining', serialNumber: 4, name: 'Dining' },
+  { id: 'cat_fuel', serialNumber: 5, name: 'Fuel' },
+  { id: 'cat_uncategorized', serialNumber: 6, name: 'Uncategorized' },
+];
 
 const account = (over: Partial<BankAccount>): BankAccount => ({
   id: 'a1',
@@ -15,6 +25,7 @@ const tx = (over: Partial<BankTransaction>): BankTransaction => ({
   accountId: 'a1',
   date: '2026-01-01',
   amount: -50,
+  isDeposit: false,
   description: 'Groceries',
   source: 'manual',
   ...over,
@@ -46,12 +57,12 @@ describe('accountRunningLedger', () => {
     expect(rows.map((r) => r.balance)).toEqual([950, 1150]);
   });
 
-  it('breaks a same-instant tie by seq, not array position', () => {
+  it('breaks a same-instant tie by serialNumber, not array position', () => {
     const a = account({ openingBalance: 1000 });
     // Same date, no time -> identical noon-UTC instant. Placed in the
-    // array in the OPPOSITE order their seq implies.
-    const first = tx({ id: 't1', date: '2026-01-01', amount: -50, seq: 1 });
-    const second = tx({ id: 't2', date: '2026-01-01', amount: 200, seq: 2 });
+    // array in the OPPOSITE order their serialNumber implies.
+    const first = tx({ id: 't1', date: '2026-01-01', amount: -50, serialNumber: 1 });
+    const second = tx({ id: 't2', date: '2026-01-01', amount: 200, serialNumber: 2 });
     const rows = accountRunningLedger(a, [second, first]);
     expect(rows.map((r) => r.tx.id)).toEqual(['t1', 't2']);
     expect(rows.map((r) => r.balance)).toEqual([950, 1150]);
@@ -97,18 +108,18 @@ describe('accountByCategory', () => {
   it('nets credits/debits per category for one account', () => {
     const a = account({ id: 'a1' });
     const txs = [
-      tx({ id: 't1', accountId: 'a1', amount: -50, category: 'Food' }),
-      tx({ id: 't2', accountId: 'a1', amount: -30, category: 'Food' }),
-      tx({ id: 't3', accountId: 'a1', amount: 2000, category: 'Salary' }),
+      tx({ id: 't1', accountId: 'a1', amount: -50, categoryID: 'cat_food' }),
+      tx({ id: 't2', accountId: 'a1', amount: -30, categoryID: 'cat_food' }),
+      tx({ id: 't3', accountId: 'a1', amount: 2000, categoryID: 'cat_salary' }),
     ];
-    const byCategory = accountByCategory(a, txs);
+    const byCategory = accountByCategory(a, txs, TEST_CATEGORIES);
     expect(byCategory.Food).toBe(-80);
     expect(byCategory.Salary).toBe(2000);
   });
 
   it('falls back to "Uncategorized"', () => {
     const a = account({ id: 'a1' });
-    expect(accountByCategory(a, [tx({ category: undefined })]).Uncategorized).toBe(-50);
+    expect(accountByCategory(a, [tx({ categoryID: undefined })], TEST_CATEGORIES).Uncategorized).toBe(-50);
   });
 });
 
@@ -136,12 +147,12 @@ describe('bankMonthlyFlow', () => {
 describe('budgetVsActual', () => {
   it('sums actual spend per category for the given month, matched against budget targets', () => {
     const txs: BankTransaction[] = [
-      tx({ id: 't1', accountId: 'a1', date: '2026-01-05', amount: -150, category: 'Groceries' }),
-      tx({ id: 't2', accountId: 'a1', date: '2026-01-10', amount: -50, category: 'Groceries' }),
-      tx({ id: 't3', accountId: 'a1', date: '2026-01-15', amount: -80, category: 'Dining' }),
-      tx({ id: 't4', accountId: 'a1', date: '2026-02-01', amount: -999, category: 'Groceries' }), // different month, excluded
+      tx({ id: 't1', accountId: 'a1', date: '2026-01-05', amount: -150, categoryID: 'cat_groceries' }),
+      tx({ id: 't2', accountId: 'a1', date: '2026-01-10', amount: -50, categoryID: 'cat_groceries' }),
+      tx({ id: 't3', accountId: 'a1', date: '2026-01-15', amount: -80, categoryID: 'cat_dining' }),
+      tx({ id: 't4', accountId: 'a1', date: '2026-02-01', amount: -999, categoryID: 'cat_groceries' }), // different month, excluded
     ];
-    const rows = budgetVsActual(txs, ['a1'], { Groceries: 250, Dining: 100 }, '2026-01');
+    const rows = budgetVsActual(txs, ['a1'], { Groceries: 250, Dining: 100 }, '2026-01', TEST_CATEGORIES);
     expect(rows).toEqual([
       { category: 'Dining', budget: 100, actual: 80 },
       { category: 'Groceries', budget: 250, actual: 200 },
@@ -149,14 +160,14 @@ describe('budgetVsActual', () => {
   });
 
   it('includes a category with actual spend but no set budget target', () => {
-    const txs: BankTransaction[] = [tx({ accountId: 'a1', date: '2026-01-05', amount: -40, category: 'Fuel' })];
-    const rows = budgetVsActual(txs, ['a1'], {}, '2026-01');
+    const txs: BankTransaction[] = [tx({ accountId: 'a1', date: '2026-01-05', amount: -40, categoryID: 'cat_fuel' })];
+    const rows = budgetVsActual(txs, ['a1'], {}, '2026-01', TEST_CATEGORIES);
     expect(rows).toEqual([{ category: 'Fuel', budget: 0, actual: 40 }]);
   });
 
   it('excludes credits (income) from actual spend', () => {
-    const txs: BankTransaction[] = [tx({ accountId: 'a1', date: '2026-01-05', amount: 500, category: 'Salary' })];
-    const rows = budgetVsActual(txs, ['a1'], {}, '2026-01');
+    const txs: BankTransaction[] = [tx({ accountId: 'a1', date: '2026-01-05', amount: 500, categoryID: 'cat_salary' })];
+    const rows = budgetVsActual(txs, ['a1'], {}, '2026-01', TEST_CATEGORIES);
     expect(rows).toEqual([]);
   });
 });

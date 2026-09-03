@@ -18,7 +18,7 @@ describe('buildLinkedRecords', () => {
 
     expect(from.module).toBe('cash');
     if (from.module === 'cash') {
-      expect(from.record).toMatchObject({ id: 'from-1', type: 'OUT', amount: 250, currencyCode: 'USD', date: '2026-01-05' });
+      expect(from.record).toMatchObject({ id: 'from-1', isDeposit: false, amount: 250, currencyCode: 'USD', date: '2026-01-05' });
     }
     expect(to.module).toBe('bank');
     if (to.module === 'bank') {
@@ -40,7 +40,7 @@ describe('buildLinkedRecords', () => {
     expect(from.module).toBe('bank');
     if (from.module === 'bank') expect(from.record.amount).toBe(-100);
     expect(to.module).toBe('cash');
-    if (to.module === 'cash') expect(to.record).toMatchObject({ type: 'IN', amount: 100, currencyCode: 'PKR' });
+    if (to.module === 'cash') expect(to.record).toMatchObject({ isDeposit: true, amount: 100, currencyCode: 'PKR' });
   });
 
   it('maps Bank -> QSE to a WITHDRAWAL/DEPOSIT pair with zero fee', () => {
@@ -112,7 +112,7 @@ describe('buildLinkedRecords', () => {
     expect(from.module).toBe('bank');
     if (from.module === 'bank') expect(from.record.amount).toBe(-800);
     expect(to.module).toBe('rentals');
-    if (to.module === 'rentals') expect(to.record).toMatchObject({ propertyId: 'prop-1', type: 'EXPENSE', amount: 800 });
+    if (to.module === 'rentals') expect(to.record).toMatchObject({ propertyId: 'prop-1', isDeposit: false, amount: 800 });
   });
 
   it('maps a real money transfer INTO Bank (Rentals -> Bank) to RENT_INCOME on the property side', () => {
@@ -125,7 +125,7 @@ describe('buildLinkedRecords', () => {
     };
     const { from, to } = buildLinkedRecords(input, ids);
     expect(from.module).toBe('rentals');
-    if (from.module === 'rentals') expect(from.record).toMatchObject({ propertyId: 'prop-1', type: 'RENT_INCOME', amount: 150 });
+    if (from.module === 'rentals') expect(from.record).toMatchObject({ propertyId: 'prop-1', isDeposit: true, amount: 150 });
     expect(to.module).toBe('bank');
     if (to.module === 'bank') expect(to.record.amount).toBe(150);
   });
@@ -270,7 +270,7 @@ describe('buildLinkedRecords', () => {
     expect(from.module).toBe('funds');
     if (from.module === 'funds') expect(from.record).toMatchObject({ type: 'WITHDRAWAL', gross: 500 });
     expect(to.module).toBe('cash');
-    if (to.module === 'cash') expect(to.record).toMatchObject({ type: 'IN', amount: 500 });
+    if (to.module === 'cash') expect(to.record).toMatchObject({ isDeposit: true, amount: 500 });
   });
 
   it('reuses the same ids when recomputing for an edit', () => {

@@ -1,6 +1,8 @@
+import { categoryName } from '../categories';
+import type { Category } from '../../types/finance';
 import type { Property, RentalEntry } from '../../types/rentalsWorkbook';
 
-const entryDelta = (e: RentalEntry) => (e.type === 'RENT_INCOME' ? e.amount : -e.amount);
+const entryDelta = (e: RentalEntry) => (e.isDeposit ? e.amount : -e.amount);
 
 /** Net income (rent income minus expenses) for one property, all time. */
 export function propertyNetIncome(property: Property, entries: RentalEntry[]): number {
@@ -33,13 +35,15 @@ export function netIncomeByProperty(properties: Property[], entries: RentalEntry
 }
 
 /** Category breakdown for one property (rent income nets in as its own
- * "Rent" bucket; expenses net by their own category). */
-export function propertyByCategory(property: Property, entries: RentalEntry[]): Record<string, number> {
+ * "Rent income" bucket regardless of its own `categoryID`; expenses net by
+ * their own resolved category name — same special-case behavior as before
+ * this module moved onto `categoryID`). */
+export function propertyByCategory(property: Property, entries: RentalEntry[], categories: Category[]): Record<string, number> {
   const out: Record<string, number> = {};
   entries
     .filter((e) => e.propertyId === property.id)
     .forEach((e) => {
-      const cat = e.type === 'RENT_INCOME' ? 'Rent income' : e.category?.trim() || 'Uncategorized';
+      const cat = e.isDeposit ? 'Rent income' : categoryName(e.categoryID, categories);
       out[cat] = (out[cat] || 0) + entryDelta(e);
     });
   return out;
@@ -60,7 +64,7 @@ export function propertyMonthlyRollup(property: Property, entries: RentalEntry[]
     .forEach((e) => {
       const month = e.date.slice(0, 7);
       if (!byMonth[month]) byMonth[month] = { income: 0, expense: 0 };
-      if (e.type === 'RENT_INCOME') byMonth[month].income += e.amount;
+      if (e.isDeposit) byMonth[month].income += e.amount;
       else byMonth[month].expense += e.amount;
     });
   return Object.entries(byMonth)

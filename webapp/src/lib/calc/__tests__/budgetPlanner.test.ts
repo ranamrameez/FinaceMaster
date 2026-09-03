@@ -4,14 +4,15 @@ import { collectBudgetActivities, currentMonth, monthlyIncomeExpense, monthRange
 describe('collectBudgetActivities', () => {
   it('normalizes real Cash/Bank/Rentals entries onto one signed convention', () => {
     const activities = collectBudgetActivities({
-      cashEntries: [{ id: 'c1', date: '2026-03-01', type: 'IN', amount: 500, currencyCode: 'USD', source: 'manual' }],
+      cashEntries: [{ id: 'c1', date: '2026-03-01', isDeposit: true, amount: 500, currencyCode: 'USD', source: 'manual' }],
       plannedCash: [],
       bankAccounts: [{ id: 'a1', name: 'Checking', currencyCode: 'USD', openingBalance: 0 }],
-      bankTransactions: [{ id: 'b1', accountId: 'a1', date: '2026-03-02', amount: -50, description: 'Groceries', source: 'manual' }],
+      bankTransactions: [{ id: 'b1', accountId: 'a1', date: '2026-03-02', amount: -50, isDeposit: false, description: 'Groceries', source: 'manual' }],
       plannedBank: [],
       rentalProperties: [{ id: 'p1', name: 'Flat 1', currencyCode: 'USD' }],
-      rentalEntries: [{ id: 'r1', propertyId: 'p1', date: '2026-03-03', type: 'RENT_INCOME', amount: 800, source: 'manual' }],
+      rentalEntries: [{ id: 'r1', propertyId: 'p1', date: '2026-03-03', isDeposit: true, amount: 800, source: 'manual' }],
       plannedRentals: [],
+      categories: [],
     });
     expect(activities).toHaveLength(3);
     expect(activities.find((a) => a.id === 'c1')!.amount).toBe(500);
@@ -30,6 +31,7 @@ describe('collectBudgetActivities', () => {
       ],
       bankAccounts: [], bankTransactions: [], plannedBank: [],
       rentalProperties: [], rentalEntries: [], plannedRentals: [],
+      categories: [],
     });
     expect(activities).toHaveLength(1);
     expect(activities[0].id).toBe('p1');
@@ -40,9 +42,10 @@ describe('collectBudgetActivities', () => {
     const activities = collectBudgetActivities({
       cashEntries: [], plannedCash: [],
       bankAccounts: [],
-      bankTransactions: [{ id: 'b1', accountId: 'missing', date: '2026-03-01', amount: 10, description: 'x', source: 'manual' }],
+      bankTransactions: [{ id: 'b1', accountId: 'missing', date: '2026-03-01', amount: 10, isDeposit: true, description: 'x', source: 'manual' }],
       plannedBank: [],
       rentalProperties: [], rentalEntries: [], plannedRentals: [],
+      categories: [],
     });
     expect(activities).toEqual([]);
   });
@@ -52,12 +55,13 @@ describe('monthlyIncomeExpense', () => {
   it('buckets by month, split into income/expense per currency', () => {
     const activities = collectBudgetActivities({
       cashEntries: [
-        { id: 'c1', date: '2026-03-01', type: 'IN', amount: 500, currencyCode: 'USD', source: 'manual' },
-        { id: 'c2', date: '2026-03-15', type: 'OUT', amount: 100, currencyCode: 'USD', source: 'manual' },
-        { id: 'c3', date: '2026-04-01', type: 'IN', amount: 1000, currencyCode: 'PKR', source: 'manual' },
+        { id: 'c1', date: '2026-03-01', isDeposit: true, amount: 500, currencyCode: 'USD', source: 'manual' },
+        { id: 'c2', date: '2026-03-15', isDeposit: false, amount: 100, currencyCode: 'USD', source: 'manual' },
+        { id: 'c3', date: '2026-04-01', isDeposit: true, amount: 1000, currencyCode: 'PKR', source: 'manual' },
       ],
       plannedCash: [], bankAccounts: [], bankTransactions: [], plannedBank: [],
       rentalProperties: [], rentalEntries: [], plannedRentals: [],
+      categories: [],
     });
     const out = monthlyIncomeExpense(activities, ['2026-03', '2026-04']);
     expect(out[0]).toEqual({ month: '2026-03', income: { USD: 500 }, expense: { USD: 100 } });

@@ -14,8 +14,13 @@ import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
 import { FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
+import { CategorySelect } from '../../../components/CategorySelect';
+import { FinanceEditModal } from '../../../components/FinanceEditModal';
+import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
+import { categoryName, RENT_CATEGORY_ID, UNCATEGORIZED_ID } from '../../../lib/categories';
+import { useCategoryStore } from '../../../store/categoryStore';
 import { netIncomeByCurrency, netIncomeByProperty, propertyByCategory, propertyMonthlyRollup, propertyNetIncome } from '../../../lib/calc/rentalsModule';
 import { generateLeaseRentPlans, nextPendingBalance, proposeRentCollection } from '../../../lib/calc/rentalPlanning';
 import { parseCSV, toCSV } from '../../../lib/csv';
@@ -264,7 +269,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
     );
     if (!ok) return;
     if (!(await ensureSignedIn('Sign in to record this transaction.'))) return;
-    addRentalEntry({ id: uid(), propertyId: property.id, date: collectDate, type: 'RENT_INCOME', amount: collectAmount, category: 'Rent' });
+    addRentalEntry({ id: uid(), propertyId: property.id, date: collectDate, isDeposit: true, amount: collectAmount, categoryID: RENT_CATEGORY_ID });
     const pendingRentBalance = nextPendingBalance(proposal.amount, collectAmount);
     updateProperty(property.id, { lastCollectionDate: collectDate, pendingRentBalance });
     setLease((prev) => ({ ...prev, lastCollectionDate: collectDate, pendingRentBalance }));
@@ -300,7 +305,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
     const ok = await confirmDialog(`Add this ${fmtMoney(plan.amount, property.currencyCode)} rent income to the ledger?`, 'Mark as done?');
     if (!ok) return;
     if (!(await ensureSignedIn('Sign in to record this transaction.'))) return;
-    addRentalEntry({ id: crypto.randomUUID(), propertyId: plan.propertyId, date: plan.date, type: plan.type, amount: plan.amount, category: plan.category });
+    addRentalEntry({ id: crypto.randomUUID(), propertyId: plan.propertyId, date: plan.date, isDeposit: plan.type === 'RENT_INCOME', amount: plan.amount, category: plan.category });
     updatePlannedEntry(planId, { executed: true });
     toast('Logged to the ledger.');
   };
@@ -480,7 +485,8 @@ function AnalyticsTab() {
     () => netIncomeByProperty(properties, entries, effectiveCurrency),
     [properties, entries, effectiveCurrency],
   );
-  const byCategory = useMemo(() => (selectedProperty ? propertyByCategory(selectedProperty, entries) : {}), [selectedProperty, entries]);
+  const categoryList = useCategoryStore((s) => s.workbook.categories);
+  const byCategory = useMemo(() => (selectedProperty ? propertyByCategory(selectedProperty, entries, categoryList) : {}), [selectedProperty, entries, categoryList]);
   const categories = Object.keys(byCategory);
   const rollup = useMemo(() => (selectedProperty ? propertyMonthlyRollup(selectedProperty, entries) : []), [selectedProperty, entries]);
 
@@ -574,6 +580,7 @@ function EntriesFab({ propertyId, currencyCode }: { propertyId: string; currency
  * scoped to whichever property is currently picked. */
 function useEntriesExport(property: Property | null) {
   const allEntries = useRentalsWorkbookStore((s) => s.workbook.entries);
+  const categories = useCategoryStore((s) => s.workbook.categories);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const entries = useMemo(() => (property ? allEntries.filter((e) => e.propertyId === property.id) : []), [allEntries, property]);
@@ -585,7 +592,7 @@ function useEntriesExport(property: Property | null) {
       .slice()
       .sort((a, b) => a.date.localeCompare(b.date));
     const header = ['Date', 'Type', 'Amount', 'Category', 'Note'];
-    const body = rows.map((e) => [e.date, e.type === 'RENT_INCOME' ? 'Rent income' : 'Expense', e.type === 'RENT_INCOME' ? e.amount : -e.amount, e.category ?? '', e.note ?? '']);
+    const body = rows.map((e) => [e.date, e.isDeposit ? 'Rent income' : 'Expense', e.isDeposit ? e.amount : -e.amount, categoryName(e.categoryID, categories), e.note ?? '']);
     const blob = new Blob([toCSV([header, ...body])], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -600,13 +607,61 @@ function useEntriesExport(property: Property | null) {
   return { fromDate, setFromDate, toDate, setToDate, exportStatement, hasRows: entries.length > 0 };
 }
 
+/** Popup edit form for one Rentals entry — replaces the old inline
+ * table-row editing, same "editing done in a popup for UI consistency"
+ * reasoning as `CashPage.tsx`'s `EditEntryModal`. */
+function EditEntryModal({ entry, onClose }: { entry: RentalEntry; onClose: () => void }) {
+  const updateEntry = useRentalsWorkbookStore((s) => s.updateEntry);
+  const [draft, setDraft] = useState<RentalEntry>({ ...entry });
+
+  const save = async () => {
+    if (!(await warnIfLinked('rentals', entry.id))) return;
+    updateEntry(entry.id, draft);
+    toast('Entry updated.');
+    onClose();
+  };
+
+  return (
+    <FinanceEditModal titleText="Edit rental entry" onClose={onClose} onSave={save}>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+        <Field label="Date">
+          <TextInput type="date" value={draft.date} onChange={(e) => setDraft({ ...draft, date: e.target.value })} />
+        </Field>
+        <Field label="Type">
+          <Select value={draft.isDeposit ? 'RENT_INCOME' : 'EXPENSE'} onChange={(e) => setDraft({ ...draft, isDeposit: e.target.value === 'RENT_INCOME' })}>
+            <option value="RENT_INCOME">Rent income</option>
+            <option value="EXPENSE">Expense</option>
+          </Select>
+        </Field>
+        <Field label="Amount" required>
+          <TextInput type="number" step="0.01" value={draft.amount} onChange={(e) => setDraft({ ...draft, amount: Number(e.target.value) })} />
+        </Field>
+        <Field label="Category">
+          <CategorySelect value={draft.categoryID ?? UNCATEGORIZED_ID} onChange={(categoryID) => setDraft({ ...draft, categoryID })} />
+        </Field>
+        <Field label="Note (optional)">
+          <TextInput value={draft.note ?? ''} onChange={(e) => setDraft({ ...draft, note: e.target.value })} />
+        </Field>
+        <TimeZoneFields
+          time={draft.time}
+          timezone={draft.timezone}
+          onTimeChange={(time) => setDraft({ ...draft, time })}
+          onTimezoneChange={(timezone) => setDraft({ ...draft, timezone })}
+        />
+      </div>
+      <p className="footer-note" style={{ marginTop: 8 }}>
+        {draft.source === 'statement-import' ? `Imported${draft.statementRef ? ` from ${draft.statementRef}` : ''}` : 'Entered manually'}
+      </p>
+    </FinanceEditModal>
+  );
+}
+
 function EntriesList({ property }: { property: Property }) {
   const allEntries = useRentalsWorkbookStore((s) => s.workbook.entries);
-  const updateEntry = useRentalsWorkbookStore((s) => s.updateEntry);
   const deleteEntry = useRentalsWorkbookStore((s) => s.deleteEntry);
+  const categories = useCategoryStore((s) => s.workbook.categories);
   const links = useInterEntityTransfersStore((s) => s.workbook.entries);
-  const [editId, setEditId] = useState<string | null>(null);
-  const [editRow, setEditRow] = useState<RentalEntry | null>(null);
+  const [editingEntry, setEditingEntry] = useState<RentalEntry | null>(null);
 
   const entries = useMemo(() => allEntries.filter((e) => e.propertyId === property.id), [allEntries, property.id]);
   const linkByRecordId = useMemo(() => {
@@ -621,23 +676,13 @@ function EntriesList({ property }: { property: Property }) {
   type Col = 'date' | 'type' | 'amount' | 'category';
   const sortValue = (e: RentalEntry, col: Col): number | string => {
     switch (col) {
-      case 'type': return e.type;
+      case 'type': return e.isDeposit ? 1 : 0;
       case 'amount': return e.amount;
-      case 'category': return e.category ?? '';
+      case 'category': return categoryName(e.categoryID, categories);
       default: return e.date;
     }
   };
   const { sorted, Th } = useSortableRows(entries, sortValue, 'date', 'desc');
-
-  const startEdit = (e: RentalEntry) => { setEditId(e.id); setEditRow({ ...e }); };
-  const saveEdit = async () => {
-    if (!editId || !editRow) return;
-    if (!(await warnIfLinked('rentals', editId))) return;
-    updateEntry(editId, editRow);
-    toast('Entry updated.');
-    setEditId(null);
-    setEditRow(null);
-  };
 
   return (
     <div className="table-scroll">
@@ -652,30 +697,12 @@ function EntriesList({ property }: { property: Property }) {
           {sorted.map((e) => {
             const link = linkByRecordId.get(e.id);
             const otherSide = link ? (link.from.module === 'rentals' && link.fromRecordId === e.id ? link.to : link.from) : undefined;
-            return editId === e.id && editRow ? (
-              <tr key={e.id}>
-                <td><input type="date" value={editRow.date} onChange={(ev) => setEditRow({ ...editRow, date: ev.target.value })} style={{ width: 130 }} /></td>
-                <td>
-                  <select value={editRow.type} onChange={(ev) => setEditRow({ ...editRow, type: ev.target.value as RentalEntry['type'] })}>
-                    <option value="RENT_INCOME">Rent income</option>
-                    <option value="EXPENSE">Expense</option>
-                  </select>
-                </td>
-                <td><input type="number" step="0.01" value={editRow.amount} onChange={(ev) => setEditRow({ ...editRow, amount: Number(ev.target.value) })} style={{ width: 90 }} /></td>
-                <td><input value={editRow.category ?? ''} onChange={(ev) => setEditRow({ ...editRow, category: ev.target.value })} style={{ width: 100 }} /></td>
-                <td><input value={editRow.note ?? ''} onChange={(ev) => setEditRow({ ...editRow, note: ev.target.value })} /></td>
-                <td className="footer-note">{e.source === 'statement-import' ? `Import${e.statementRef ? ` (${e.statementRef})` : ''}` : 'Manual'}</td>
-                <td>
-                  <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
-                  <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditId(null)} />
-                </td>
-              </tr>
-            ) : (
+            return (
               <tr key={e.id}>
                 <td>{e.date}</td>
-                <td className={e.type === 'RENT_INCOME' ? 'pill-buy' : 'pill-sell'}>{e.type === 'RENT_INCOME' ? 'Rent income' : 'Expense'}</td>
-                <td className={e.type === 'RENT_INCOME' ? 'pill-buy' : 'pill-sell'}>{fmtMoney(e.type === 'RENT_INCOME' ? e.amount : -e.amount, property.currencyCode)}</td>
-                <td>{e.type === 'RENT_INCOME' ? '—' : e.category ? <span className="pill-info">{e.category}</span> : '—'}</td>
+                <td className={e.isDeposit ? 'pill-buy' : 'pill-sell'}>{e.isDeposit ? 'Rent income' : 'Expense'}</td>
+                <td className={e.isDeposit ? 'pill-buy' : 'pill-sell'}>{fmtMoney(e.isDeposit ? e.amount : -e.amount, property.currencyCode)}</td>
+                <td>{e.isDeposit ? '—' : <span className="pill-info">{categoryName(e.categoryID, categories)}</span>}</td>
                 <td className="cell-clip" title={e.note}>
                   {e.note}
                   {otherSide && (
@@ -688,7 +715,7 @@ function EntriesList({ property }: { property: Property }) {
                   {e.source === 'statement-import' ? `Import${e.statementRef ? ` (${e.statementRef})` : ''}` : 'Manual'}
                 </td>
                 <td>
-                  <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(e)} />{' '}
+                  <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => setEditingEntry(e)} />{' '}
                   <IconButton
                     label="Delete"
                     icon={<TrashIcon size={13} />}
@@ -702,6 +729,7 @@ function EntriesList({ property }: { property: Property }) {
           {!sorted.length && <tr><td colSpan={7} className="footer-note">No entries for this property yet.</td></tr>}
         </tbody>
       </table>
+      {editingEntry && <EditEntryModal entry={editingEntry} onClose={() => setEditingEntry(null)} />}
     </div>
   );
 }
@@ -750,7 +778,7 @@ function ImportTab() {
     const rawAmount = Number(r[colIndex(amountCol)] ?? 0) * (flipSign ? -1 : 1);
     return {
       date: (r[colIndex(dateCol)] ?? '').trim(),
-      type: (rawAmount >= 0 ? 'RENT_INCOME' : 'EXPENSE') as RentalEntry['type'],
+      isDeposit: rawAmount >= 0,
       amount: Math.abs(rawAmount),
       category: categoryCol ? (r[colIndex(categoryCol)] ?? '').trim() || undefined : undefined,
     };
@@ -768,7 +796,7 @@ function ImportTab() {
         id: uid(),
         propertyId: property.id,
         date: r.date,
-        type: r.type,
+        isDeposit: r.isDeposit,
         amount: r.amount,
         category: r.category,
         source: 'statement-import' as const,
@@ -848,7 +876,7 @@ function ImportTab() {
                 {mappedPreview.map((r, i) => (
                   <tr key={i}>
                     <td>{r.date}</td>
-                    <td className={r.type === 'RENT_INCOME' ? 'pill-buy' : 'pill-sell'}>{r.type === 'RENT_INCOME' ? 'Rent income' : 'Expense'}</td>
+                    <td className={r.isDeposit ? 'pill-buy' : 'pill-sell'}>{r.isDeposit ? 'Rent income' : 'Expense'}</td>
                     <td>{property ? fmtMoney(r.amount, property.currencyCode) : r.amount}</td>
                     <td>{r.category || '—'}</td>
                   </tr>
@@ -867,7 +895,8 @@ function ImportTab() {
 
 function CategoryAndRollup({ property }: { property: Property }) {
   const entries = useRentalsWorkbookStore((s) => s.workbook.entries);
-  const byCategory = propertyByCategory(property, entries);
+  const categories = useCategoryStore((s) => s.workbook.categories);
+  const byCategory = propertyByCategory(property, entries, categories);
   const rollup = useMemo(() => propertyMonthlyRollup(property, entries), [property, entries]);
   const cats = Object.keys(byCategory);
 

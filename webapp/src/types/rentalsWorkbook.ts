@@ -1,3 +1,5 @@
+import type { Finance } from './finance';
+
 export interface Property {
   id: string;
   name: string; // "Apartment 4B", "House on Main St"
@@ -51,25 +53,19 @@ export interface Property {
   pendingRentBalance?: number;
 }
 
-export interface RentalEntry {
-  id: string;
-  /** Stable per-entry sequence number, the definitive tie-breaker when two
-   * entries land on the exact same instant — see `Transaction.seq` in
-   * `types/workbook.ts` for the full reasoning. */
-  seq?: number;
+/** Extends the shared `Finance` base (2026-09-03 restructure — see
+ * `types/finance.ts`'s file-level comment); `type: 'RENT_INCOME'|'EXPENSE'`
+ * became `Finance.isDeposit` (RENT_INCOME → true, EXPENSE → false). */
+export interface RentalEntry extends Finance {
   propertyId: string; // currency is implied by the property, not repeated per-entry
-  date: string;
-  /** Optional time-of-day ("HH:MM"), defaults to noon when absent — see
-   * `lib/datetime.ts`. Lets same-day entries sort by real chronology. */
-  time?: string;
-  /** IANA timezone the `date`+`time` are in; defaults to UTC when absent. */
-  timezone?: string;
-  type: 'RENT_INCOME' | 'EXPENSE';
-  amount: number;
-  /** Free-form, user-definable — never a fixed enum (locked decision,
-   * MODULES_PLAN.md). */
+  /** @deprecated superseded by `Finance.categoryID` — see
+   * `CashEntry.category`'s doc comment for the full reasoning, identical
+   * here. */
   category?: string;
-  note?: string;
+  /** @deprecated superseded by `Finance.isDeposit` — see
+   * `CashEntry.type`'s doc comment for the full reasoning, identical here
+   * (RENT_INCOME -> true, EXPENSE -> false). */
+  type?: 'RENT_INCOME' | 'EXPENSE';
   /** 'statement-import' added 2026-08-23 (README item 25 / MODULES_PLAN.md
    * §13's CSV-import scope) — same "transaction doesn't care about its
    * source" shape as Bank/Cash. Unset (implicitly manual) for every entry

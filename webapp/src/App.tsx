@@ -11,6 +11,7 @@ import { TickerDatalist } from './components/TickerDatalist';
 import { Toast } from './components/Toast';
 import { useFirebaseSync } from './lib/firebase/useFirebaseSync';
 import { usePSXFirebaseSync } from './lib/firebase/usePSXFirebaseSync';
+import { useCategoryFirebaseSync } from './lib/firebase/useCategoryFirebaseSync';
 import { useAppearanceStore } from './store/appearanceStore';
 import { AnalyticsPage } from './features/qse/pages/AnalyticsPage';
 import { DashboardPage } from './features/qse/pages/DashboardPage';
@@ -106,6 +107,11 @@ function App() {
   const transfersSync = useInterEntityTransfersFirebaseSync();
   const subscriptionsSync = useSubscriptionsFirebaseSync();
   const netWorthSnapshotsSync = useNetWorthSnapshotsFirebaseSync();
+  // Shared Category registry (Cash/Bank/Rentals' categoryID FK target) —
+  // no dedicated page/status UI of its own yet, same "still run the sync,
+  // skip the manual upload-if-empty affordance" treatment as Rentals'
+  // Planning feature just above.
+  const categorySync = useCategoryFirebaseSync();
 
   // README Pending item 76: one worst-of-N sync-status indicator in the
   // Sidebar instead of each module's own status buried in its own
@@ -126,6 +132,7 @@ function App() {
     { name: 'Transfers', status: transfersSync.status },
     { name: 'Subscriptions', status: subscriptionsSync.status },
     { name: 'Net Worth Snapshots', status: netWorthSnapshotsSync.status },
+    { name: 'Categories', status: categorySync.status },
   ];
 
   return (

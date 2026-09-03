@@ -5222,6 +5222,58 @@ FinanceManager live link:
      list row showed "268.66 PKR (2.6%)" and the per-fund detail page's Net profit card showed
      "269 PKR (2.6%)" — both matching the user's own expected figure, zero new console errors.
      `npx tsc -b` / `npm run test` (445 tests, 3 new) / `npm run build` all clean.
+221. **Shared `Finance`/`Category` base model + category-ID restructure for Cash/Bank/Rentals,
+     user-requested (2026-09-03).** Scope confirmed with the user before building (Exchanges/
+     Funds/EMI/Personal Loans excluded — "fundamentally different," would gut their calc
+     engines): `CashEntry`/`BankTransaction`/`RentalEntry` now `extends Finance`
+     (`types/finance.ts`) — `id`/`serialNumber`/`title?`/`amount`/`isDeposit`/`categoryID`/
+     `note?`/`timestamp`/`date`/`time?`/`timezone?`/`isLinked?` all come from the shared base,
+     each concrete type keeping only its genuinely own fields (`currencyCode`/`accountId`/
+     `propertyId`/`source`). Two deliberate, explicitly-flagged deviations from the user's own
+     literal field-by-field sketch: Bank's `amount` stays SIGNED (its existing running-ledger/
+     credit-card-liability math depends on it) with `isDeposit` derived from the sign at every
+     write instead of independently authoritative; `isLinked` is computed live from the existing
+     `interEntityTransfers` link store (`lib/linkCascade.ts`'s new `isRecordLinked()`), never a
+     second stored copy that could drift stale. New shared Category registry
+     (`lib/categories.ts`'s `DEFAULT_CATEGORIES`, `store/categoryStore.ts`, own Firebase path
+     `users/{uid}/categories`) seeded from the app owner's own real Cash/Bank/Rentals data:
+     26 real categories (one safe merge found and applied — "CC-Payment"/"CC payment" → the
+     fuller "Credit Card Payment," never abbreviated, per explicit request) + "Uncategorized"
+     for the 327 real records with no category. Category naming/booleans follow the user's own
+     design-principle corrections mid-build: `is`-prefixed booleans throughout (`isDeposit`,
+     `isLinked`, not `linkedTo`), full category names never abbreviations. **Editing moved from
+     inline table-row edits into a real popup** (`components/FinanceEditModal.tsx` + a shared
+     `components/CategorySelect.tsx` dropdown-with-quick-add), replacing the old `editRow`-in-
+     table-cell pattern in all 3 modules' list pages — this directly closes the "editing UIs
+     missing fields" bug report (inline edit had drifted out of sync with the add flow: no time/
+     timezone editing). Also fixed the concrete "app puts a value instead of taking input" bug:
+     `TransactionEntryModal.tsx`'s Bank rows had no description field at all, silently falling
+     back to the category text or the literal string "Transaction" — added a real required
+     Description input. **A critical regression was found via live Playwright testing against the
+     real uploaded backup, not caught by the type checker or the first round of unit tests**:
+     removing the old `type: 'IN'|'OUT'`/`'RENT_INCOME'|'EXPENSE'` fields from the TypeScript
+     interfaces left no migration path for real pre-restructure data (which has `type` and NO
+     `isDeposit` key at all) — every existing "IN"/"RENT_INCOME" record silently read as
+     `isDeposit: undefined` (falsy), rendering and behaving as OUT/EXPENSE. Live-tested against
+     the real 225-entry Cash backup and caught immediately (a Rentals RENT_INCOME entry showing
+     as a red Expense with a negative amount). Fixed by keeping `type` on both types as an
+     explicitly `@deprecated` fallback field and a new `resolveIsDeposit()` in
+     `lib/financeMigration.ts`, wired into both stores' `withDerivedFields()`; verified the fix
+     with an exact cross-check against the real data (82 "Cash in" / 143 "Cash out" rendered,
+     matching the raw file's 82 IN / 143 OUT exactly) plus 2 new regression tests reproducing the
+     bug directly. Every category-consuming calc function (`cashByCategory`, `accountByCategory`,
+     `propertyByCategory`, `budgetVsActual`) gained a `categories: Category[]` parameter and
+     resolves display names via the new `categoryName()` lookup; `Planned*` types (secondary
+     Planning-tab records) were deliberately left on their old free-text `category` field —
+     explicitly scoped out, not an oversight. New tests: `categories.test.ts` (9 cases),
+     `financeStores.test.ts` (10 cases, including the 2 critical-regression ones) — 21 new total.
+     Verified live via Playwright throughout with the user's real uploaded backup (225 Cash
+     entries, 1934 Bank transactions): migrated category names render correctly as pills
+     everywhere ("Accomodation," "Ignore," "Transfer," "Bill," etc.), the edit popup pre-fills
+     every field correctly including the previously-unmigrated ones, the Transfers popup's new
+     Bank Description field works, zero new console errors beyond this sandbox's own already-
+     documented FX/font `ERR_CONNECTION_RESET` noise. `npx tsc -b` / `npm run test` (466 tests,
+     21 new) / `npm run build` all clean.
 
 ## Pending
 

@@ -24,6 +24,7 @@ import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar } from '../../../lib/cssVar';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { useAppearanceStore } from '../../../store/appearanceStore';
+import { useCategoryStore } from '../../../store/categoryStore';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
 import { usePlannedCashWorkbookStore } from '../../../store/plannedCashWorkbookStore';
@@ -90,13 +91,15 @@ export function NetWorthPage({
   // in the planner."). See `lib/calc/budgetPlanner.ts` for the combine
   // logic — real transactions plus each module's own not-yet-executed
   // planned entries, unified across Cash/Bank/Rentals.
+  const categories = useCategoryStore((s) => s.workbook.categories);
   const budgetActivities = useMemo(
     () => collectBudgetActivities({
       cashEntries, plannedCash,
       bankAccounts: bank.settings.accounts, bankTransactions: bank.transactions, plannedBank,
       rentalProperties: rentals.settings.properties, rentalEntries: rentals.entries, plannedRentals,
+      categories,
     }),
-    [cashEntries, plannedCash, bank, plannedBank, rentals, plannedRentals],
+    [cashEntries, plannedCash, bank, plannedBank, rentals, plannedRentals, categories],
   );
   const projectionMonths = useMemo(() => threeMonthWindow(), []);
   const monthlyProjection = useMemo(() => monthlyIncomeExpense(budgetActivities, projectionMonths), [budgetActivities, projectionMonths]);

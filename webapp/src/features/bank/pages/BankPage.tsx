@@ -16,10 +16,15 @@ import { IconButton } from '../../../components/ui/IconButton';
 import { AttributeList } from '../../../components/ui/AttributeList';
 import { FabButton, FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
+import { CategorySelect } from '../../../components/CategorySelect';
+import { FinanceEditModal } from '../../../components/FinanceEditModal';
+import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { useAmountFormat } from '../../../hooks/useAmountFormat';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { hueStyle } from '../../../lib/statCardHues';
+import { categoryName, UNCATEGORIZED_ID } from '../../../lib/categories';
+import { useCategoryStore } from '../../../store/categoryStore';
 import { accountBalance, accountByCategory, accountRunningLedger, bankMonthlyFlow, budgetVsActual, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
 import { plannedBankProjection } from '../../../lib/calc/plannedBalance';
 import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
@@ -799,13 +804,58 @@ function AccountTransfersFab({ accountId, currencyCode }: { accountId: string; c
   );
 }
 
+/** Popup edit form for one Bank transaction — replaces the old inline
+ * table-row editing, same "editing done in a popup for UI consistency"
+ * reasoning as `CashPage.tsx`'s `EditEntryModal`. `amount` stays signed
+ * (Bank's own convention, see `types/finance.ts`) — `isDeposit` is
+ * re-derived from it by the store itself on save, never edited directly
+ * here. */
+function EditTransactionModal({ tx, onClose }: { tx: BankTransaction; onClose: () => void }) {
+  const updateTransaction = useBankWorkbookStore((s) => s.updateTransaction);
+  const [draft, setDraft] = useState<BankTransaction>({ ...tx });
+
+  const save = async () => {
+    if (!(await warnIfLinked('bank', tx.id))) return;
+    updateTransaction(tx.id, draft);
+    toast('Transaction updated.');
+    onClose();
+  };
+
+  return (
+    <FinanceEditModal titleText="Edit transaction" onClose={onClose} onSave={save}>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+        <Field label="Date">
+          <TextInput type="date" value={draft.date} onChange={(e) => setDraft({ ...draft, date: e.target.value })} />
+        </Field>
+        <Field label="Description" required>
+          <TextInput value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
+        </Field>
+        <Field label="Amount" required title="Negative = spend/debit, positive = deposit/credit.">
+          <TextInput type="number" step="0.01" value={draft.amount} onChange={(e) => setDraft({ ...draft, amount: Number(e.target.value) })} />
+        </Field>
+        <Field label="Category">
+          <CategorySelect value={draft.categoryID ?? UNCATEGORIZED_ID} onChange={(categoryID) => setDraft({ ...draft, categoryID })} />
+        </Field>
+        <TimeZoneFields
+          time={draft.time}
+          timezone={draft.timezone}
+          onTimeChange={(time) => setDraft({ ...draft, time })}
+          onTimezoneChange={(timezone) => setDraft({ ...draft, timezone })}
+        />
+      </div>
+      <p className="footer-note" style={{ marginTop: 8 }}>
+        {draft.source === 'statement-import' ? `Imported${draft.statementRef ? ` from ${draft.statementRef}` : ''}` : 'Entered manually'}
+      </p>
+    </FinanceEditModal>
+  );
+}
+
 function TransactionsList({ account }: { account: BankAccount }) {
   const allTransactions = useBankWorkbookStore((s) => s.workbook.transactions);
-  const updateTransaction = useBankWorkbookStore((s) => s.updateTransaction);
   const deleteTransaction = useBankWorkbookStore((s) => s.deleteTransaction);
+  const categories = useCategoryStore((s) => s.workbook.categories);
   const links = useInterEntityTransfersStore((s) => s.workbook.entries);
-  const [editId, setEditId] = useState<string | null>(null);
-  const [editRow, setEditRow] = useState<BankTransaction | null>(null);
+  const [editingTx, setEditingTx] = useState<BankTransaction | null>(null);
 
   const ledger = useMemo(() => accountRunningLedger(account, allTransactions), [account, allTransactions]);
 
@@ -827,21 +877,11 @@ function TransactionsList({ account }: { account: BankAccount }) {
     switch (col) {
       case 'description': return r.tx.description;
       case 'amount': return r.tx.amount;
-      case 'category': return r.tx.category ?? '';
+      case 'category': return categoryName(r.tx.categoryID, categories);
       default: return r.tx.date;
     }
   };
   const { sorted, Th } = useSortableRows(ledger, sortValue, 'date', 'desc');
-
-  const startEdit = (tx: BankTransaction) => { setEditId(tx.id); setEditRow({ ...tx }); };
-  const saveEdit = async () => {
-    if (!editId || !editRow) return;
-    if (!(await warnIfLinked('bank', editId))) return;
-    updateTransaction(editId, editRow);
-    toast('Transaction updated.');
-    setEditId(null);
-    setEditRow(null);
-  };
 
   return (
     <div className="table-scroll">
@@ -849,10 +889,11 @@ function TransactionsList({ account }: { account: BankAccount }) {
         <thead>
           <tr>
             {/* User-reported (2026-08-27): "Transaction Id missing, terrible
-               account statement sequence!" — `seq` (Done item 212) is
-               already the app-wide stable per-record ordering primitive;
-               surfacing it as a plain "#" column gives a real, stable
-               reference number per transaction, not just a truncated uuid. */}
+               account statement sequence!" — `serialNumber` (Done item 212,
+               renamed under the Finance base 2026-09-03) is already the
+               app-wide stable per-record ordering primitive; surfacing it
+               as a plain "#" column gives a real, stable reference number
+               per transaction, not just a truncated uuid. */}
             <th title="Sequence number — a stable reference for this transaction, in the order it was actually entered.">#</th>
             <Th col="date">Date</Th>
             {/* User-reported (2026-08-28): "Description and Source are
@@ -874,23 +915,9 @@ function TransactionsList({ account }: { account: BankAccount }) {
           {sorted.map(({ tx, balance }) => {
             const link = linkByRecordId.get(tx.id);
             const otherSide = link ? (link.from.module === 'bank' && link.fromRecordId === tx.id ? link.to : link.from) : undefined;
-            return editId === tx.id && editRow ? (
+            return (
               <tr key={tx.id}>
-                <td className="footer-note">{tx.seq ?? '—'}</td>
-                <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
-                <td><input value={editRow.description} onChange={(e) => setEditRow({ ...editRow, description: e.target.value })} /></td>
-                <td><input value={editRow.category ?? ''} onChange={(e) => setEditRow({ ...editRow, category: e.target.value })} style={{ width: 100 }} /></td>
-                <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 100 }} /></td>
-                <td></td>
-                <td>{editRow.source}</td>
-                <td>
-                  <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
-                  <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditId(null)} />
-                </td>
-              </tr>
-            ) : (
-              <tr key={tx.id}>
-                <td className="footer-note">{tx.seq ?? '—'}</td>
+                <td className="footer-note">{tx.serialNumber ?? '—'}</td>
                 <td>{tx.date}</td>
                 <td className="cell-clip" title={tx.description}>
                   {tx.description}
@@ -900,14 +927,14 @@ function TransactionsList({ account }: { account: BankAccount }) {
                     </Link>
                   )}
                 </td>
-                <td>{tx.category ? <span className="pill-info">{tx.category}</span> : '—'}</td>
+                <td><span className="pill-info">{categoryName(tx.categoryID, categories)}</span></td>
                 <td className={tx.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(tx.amount, account.currencyCode)}</td>
                 <td>{fmtMoney(balance, account.currencyCode)}</td>
                 <td className="footer-note cell-clip" title={tx.source === 'statement-import' ? `Import${tx.statementRef ? ` (${tx.statementRef})` : ''}` : 'Manual'}>
                   {tx.source === 'statement-import' ? `Import${tx.statementRef ? ` (${tx.statementRef})` : ''}` : 'Manual'}
                 </td>
                 <td>
-                  <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(tx)} />{' '}
+                  <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => setEditingTx(tx)} />{' '}
                   <IconButton
                     label="Delete"
                     icon={<TrashIcon size={13} />}
@@ -921,6 +948,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
           {!sorted.length && <tr><td colSpan={7} className="footer-note">No transactions for this account yet.</td></tr>}
         </tbody>
       </table>
+      {editingTx && <EditTransactionModal tx={editingTx} onClose={() => setEditingTx(null)} />}
     </div>
   );
 }
@@ -930,7 +958,8 @@ function TransactionsList({ account }: { account: BankAccount }) {
  * never nests a card inside a card (rule 1). */
 function CategoryBreakdownBody({ account }: { account: BankAccount }) {
   const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
-  const byCategory = accountByCategory(account, transactions);
+  const categories = useCategoryStore((s) => s.workbook.categories);
+  const byCategory = accountByCategory(account, transactions, categories);
   const cats = Object.keys(byCategory);
   if (!cats.length) return <p className="footer-note" style={{ margin: 0 }}>No categorized transactions yet.</p>;
 
@@ -1011,6 +1040,10 @@ function ImportStatementSection({ account }: { account: BankAccount }) {
         date: (r[di] ?? '').trim(),
         description: (r[desci] ?? '').trim(),
         amount: Number(r[ai]) * (flipSign ? -1 : 1),
+        // Re-derived from `amount`'s own sign by the store anyway (Bank's
+        // amount is the authoritative field — see `types/finance.ts`); set
+        // here only to satisfy the type.
+        isDeposit: Number(r[ai]) * (flipSign ? -1 : 1) >= 0,
         source: 'statement-import' as const,
         statementRef: fileName,
       }))
@@ -1306,6 +1339,7 @@ function BankPlanList({ account }: { account: BankAccount }) {
       date: p.date,
       description: p.description,
       amount: p.amount,
+      isDeposit: p.amount >= 0,
       category: p.category,
       source: 'manual',
     });
@@ -1431,16 +1465,17 @@ function AnalyticsTab() {
 
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? '');
   const account = accounts.find((a) => a.id === accountId) ?? accounts[0];
+  const categoryList = useCategoryStore((s) => s.workbook.categories);
 
-  const byCategory = useMemo(() => (account ? accountByCategory(account, transactions) : {}), [account, transactions]);
+  const byCategory = useMemo(() => (account ? accountByCategory(account, transactions, categoryList) : {}), [account, transactions, categoryList]);
   const categories = Object.keys(byCategory).filter((c) => byCategory[c] < 0); // spend categories only — a doughnut of net credit/debit mixed together isn't meaningful
   const monthlyFlow = useMemo(() => (account ? bankMonthlyFlow(transactions, [account.id]) : []), [account, transactions]);
   const balanceOverTime = useMemo(() => (account ? accountRunningLedger(account, transactions) : []), [account, transactions]);
 
   const thisMonth = today().slice(0, 7);
   const budgetRows = useMemo(
-    () => (account ? budgetVsActual(transactions, [account.id], budgets ?? {}, thisMonth) : []),
-    [account, transactions, budgets, thisMonth],
+    () => (account ? budgetVsActual(transactions, [account.id], budgets ?? {}, thisMonth, categoryList) : []),
+    [account, transactions, budgets, thisMonth, categoryList],
   );
   const [newBudgetCategory, setNewBudgetCategory] = useState('');
   const [newBudgetAmount, setNewBudgetAmount] = useState(0);

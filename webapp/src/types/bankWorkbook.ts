@@ -1,3 +1,5 @@
+import type { Finance } from './finance';
+
 export interface BankAccount {
   id: string;
   name: string;
@@ -73,24 +75,17 @@ export interface BankAccount {
   cardBin?: string;
 }
 
-export interface BankTransaction {
-  id: string;
-  /** Stable per-transaction sequence number, the definitive tie-breaker
-   * when two transactions land on the exact same instant — see
-   * `Transaction.seq` in `types/workbook.ts` for the full reasoning. */
-  seq?: number;
+/** Extends the shared `Finance` base (2026-09-03 restructure — see
+ * `types/finance.ts`'s file-level comment). `amount` stays SIGNED here
+ * (Finance's own doc comment names this as the one deliberate exception —
+ * see there for why) and `description` (not `Finance.title`) remains the
+ * real required "what is this" field, since it already did that job. */
+export interface BankTransaction extends Finance {
   accountId: string;
-  date: string;
-  /** Optional time-of-day ("HH:MM"), defaults to noon when absent — see
-   * `lib/datetime.ts`. Lets same-day transactions sort by real chronology. */
-  time?: string;
-  /** IANA timezone the `date`+`time` are in; defaults to UTC when absent. */
-  timezone?: string;
-  /** Signed: negative = debit/spend, positive = credit/deposit. */
-  amount: number;
   description: string;
-  /** Free-form, user-definable — never a fixed enum (locked decision,
-   * MODULES_PLAN.md). */
+  /** @deprecated superseded by `Finance.categoryID` — see
+   * `CashEntry.category`'s doc comment for the full reasoning, identical
+   * here. */
   category?: string;
   source: 'manual' | 'statement-import';
   /** Which imported statement (filename) this row came from, for

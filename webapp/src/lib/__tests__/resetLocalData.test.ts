@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { resetAllLocalWorkbooks } from '../resetLocalData';
 import { useBankWorkbookStore } from '../../store/bankWorkbookStore';
 import { useCashWorkbookStore } from '../../store/cashWorkbookStore';
+import { useCategoryStore } from '../../store/categoryStore';
 import { useEMIWorkbookStore } from '../../store/emiWorkbookStore';
 import { useFundsWorkbookStore } from '../../store/fundsWorkbookStore';
 import { useInterEntityTransfersStore } from '../../store/interEntityTransfersStore';
@@ -24,7 +25,7 @@ describe('resetAllLocalWorkbooks', () => {
     // Seed every store with something that shouldn't survive a reset.
     useWorkbookStore.getState().addTransfer({ id: 'a', date: '2026-01-01', type: 'DEPOSIT', gross: 100, fee: 0 });
     usePSXWorkbookStore.getState().addTransfer({ id: 'b', date: '2026-01-01', type: 'DEPOSIT', gross: 100, fee: 0 });
-    useCashWorkbookStore.getState().addEntry({ id: 'c', date: '2026-01-01', type: 'IN', amount: 50, currencyCode: 'USD', source: 'manual' });
+    useCashWorkbookStore.getState().addEntry({ id: 'c', date: '2026-01-01', isDeposit: true, amount: 50, currencyCode: 'USD', source: 'manual' });
     useBankWorkbookStore.getState().addAccount({ id: 'd', name: 'Checking', currencyCode: 'USD', openingBalance: 0 });
     usePersonalLoansWorkbookStore.getState().addLoan({ id: 'e', person: 'Alex', direction: 'i_owe', currencyCode: 'USD', principal: 100, date: '2026-01-01' });
     useEMIWorkbookStore.getState().addEntry({
@@ -47,6 +48,10 @@ describe('resetAllLocalWorkbooks', () => {
     usePlannedBankWorkbookStore.getState().addEntry({ id: 'l', accountId: 'd', date: '2026-01-01', description: 'Rent', amount: -100 });
     usePlannedRentalsWorkbookStore.getState().addEntry({ id: 'm', propertyId: 'h', date: '2026-01-01', type: 'RENT_INCOME', amount: 500 });
     useNetWorthSnapshotsWorkbookStore.getState().addEntry({ id: 'n', date: '2026-01-01', byCurrency: { USD: 1000 } });
+    // Category registry (2026-09-03) — same "was this new store actually
+    // wired into the reset" check as the four stores above.
+    const seededCategoryCount = useCategoryStore.getState().workbook.categories.length;
+    useCategoryStore.getState().addCategory('A Custom Category');
 
     expect(useWorkbookStore.getState().workbook.transfers).toHaveLength(1);
     expect(usePSXWorkbookStore.getState().workbook.transfers).toHaveLength(1);
@@ -62,6 +67,7 @@ describe('resetAllLocalWorkbooks', () => {
     expect(usePlannedBankWorkbookStore.getState().workbook.entries).toHaveLength(1);
     expect(usePlannedRentalsWorkbookStore.getState().workbook.entries).toHaveLength(1);
     expect(useNetWorthSnapshotsWorkbookStore.getState().workbook.entries).toHaveLength(1);
+    expect(useCategoryStore.getState().workbook.categories).toHaveLength(seededCategoryCount + 1);
 
     resetAllLocalWorkbooks();
 
@@ -79,6 +85,8 @@ describe('resetAllLocalWorkbooks', () => {
     expect(usePlannedBankWorkbookStore.getState().workbook.entries).toHaveLength(0);
     expect(usePlannedRentalsWorkbookStore.getState().workbook.entries).toHaveLength(0);
     expect(useNetWorthSnapshotsWorkbookStore.getState().workbook.entries).toHaveLength(0);
+    // Resets back to the bundled defaults, discarding the custom category.
+    expect(useCategoryStore.getState().workbook.categories).toHaveLength(seededCategoryCount);
 
     // Persisted to localStorage too, not just in-memory — a page reload
     // right after logout must not bring the old data back.

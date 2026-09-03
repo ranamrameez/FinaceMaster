@@ -50,7 +50,7 @@ describe('createLinkedTransfer', () => {
     if (!('link' in result)) return;
 
     expect(useCashWorkbookStore.getState().workbook.entries).toHaveLength(1);
-    expect(useCashWorkbookStore.getState().workbook.entries[0]).toMatchObject({ type: 'OUT', amount: 100 });
+    expect(useCashWorkbookStore.getState().workbook.entries[0]).toMatchObject({ isDeposit: false, amount: 100 });
     expect(useBankWorkbookStore.getState().workbook.transactions).toHaveLength(1);
     expect(useBankWorkbookStore.getState().workbook.transactions[0]).toMatchObject({ accountId: bankAccountId, amount: 100 });
     expect(useInterEntityTransfersStore.getState().workbook.entries).toHaveLength(1);
