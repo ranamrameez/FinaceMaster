@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { Fund } from '../../../types/fundsWorkbook';
 import type { PricePoint, Transaction } from '../../../types/workbook';
-import { allocationByCategory, contributionVsValueSeries, fundsValueByCurrency, organicPLByPeriod } from '../fundsModule';
+import { allocationByCategory, contributionVsValueSeries, fundNetProfit, fundsValueByCurrency, organicPLByPeriod } from '../fundsModule';
 import { averagePeriodPL, reconstructFundDailyHistory } from '../fundsDailyHistoryImport';
+import { computePositions } from '../positions';
 
 const funds: Fund[] = [
   { id: 'f1', name: 'US Growth', code: 'USG', platform: 'Fidelity', category: 'Equity', currencyCode: 'USD' },
@@ -142,5 +143,43 @@ describe('organicPLByPeriod', () => {
       expect(m.total).toBeCloseTo(reconstruction.monthlyPL[i].total, 2);
     });
     expect(averagePeriodPL(derivedMonthly)).toBeCloseTo(averagePeriodPL(reconstruction.monthlyPL), 2);
+  });
+});
+
+describe('fundNetProfit', () => {
+  const calcFee = () => 0;
+
+  it('is just the unrealized gain when nothing has ever been sold', () => {
+    const txs: Transaction[] = [{ date: '2026-01-01', ticker: 'f1', action: 'BUY', shares: 100, price: 10 }];
+    const position = computePositions(txs, calcFee).find((p) => p.ticker === 'f1');
+    expect(fundNetProfit(position, 100 * 12)).toBeCloseTo(200, 6); // (1200 value - 1000 invested)
+  });
+
+  it('undefined position (fund never bought) nets to just the current value', () => {
+    expect(fundNetProfit(undefined, 500)).toBeCloseTo(500, 6);
+  });
+
+  it('real user-reported bug: withdrawals must not drop their own realized profit from Net P/L (JCSLM, 2026-09-03)', () => {
+    // Real transaction log for one fund: 2 buys, then 3 sells (withdrawals)
+    // that only partially drain the position.
+    const txs: Transaction[] = [
+      { date: '2026-08-13', ticker: 'jcslm', action: 'BUY', shares: 50000.46, price: 1 },
+      { date: '2026-08-23', ticker: 'jcslm', action: 'BUY', shares: 59873.90671252166, price: 1.0021059806249784 },
+      { date: '2026-08-24', ticker: 'jcslm', action: 'SELL', shares: 9975.817001425237, price: 1.0024241622085999 },
+      { date: '2026-08-29', ticker: 'jcslm', action: 'SELL', shares: 49838.45904186861, price: 1.0032412911883106 },
+      { date: '2026-09-02', ticker: 'jcslm', action: 'SELL', shares: 39833.67178039146, price: 1.004175568361499 },
+    ];
+    const position = computePositions(txs, calcFee).find((p) => p.ticker === 'jcslm');
+    const nav = 1.004175568361499;
+    const currentValue = (position?.shares ?? 0) * nav;
+
+    // The bug: `value - invested` alone (the old, wrong formula) only
+    // reflects the ~31 PKR unrealized gain on the units still held —
+    // it silently drops the ~238 PKR already realized across 3 withdrawals.
+    const oldWrongFormula = currentValue - (position?.invested ?? 0);
+    expect(oldWrongFormula).toBeCloseTo(30.97, 1);
+
+    // The fix: realized + unrealized is the true Net P/L, ~269 PKR.
+    expect(fundNetProfit(position, currentValue)).toBeCloseTo(268.66, 1);
   });
 });

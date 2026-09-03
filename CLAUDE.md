@@ -4430,6 +4430,26 @@ not developer notes) continuously as features ship.
   browser launches — confirmed unrelated to the code by isolating and re-running each check):
   all 8 modules now show a real, clickable Transfers control on first load, zero real console
   errors. `npx tsc -b` / `npm run test` (442 tests, unchanged) / `npm run build` all clean.
+- **Critical, user-reported (2026-09-03): Funds "Net P/L" wrong after a withdrawal — see README
+  Done item 220.** User attached a fresh full-app backup and said JCSLM's real Net P/L (~269
+  PKR) was showing as only 30.97 PKR after withdrawals. Confirmed by seeding the exact uploaded
+  `funds` slice: `FundsPage.tsx`'s "Net profit" stat cards all computed `value - invested`, where
+  `Position.invested` (`computePositions()`) is only the cost basis of units STILL HELD — a sell/
+  withdrawal shrinks `invested` right along with `shares`, so that formula only ever captured the
+  *unrealized* gain on what's left, silently dropping every past withdrawal's own already-
+  computed `realized` profit (`Position.realized`, sitting right there unused). Same shape as the
+  bug class already documented above for Trade Planner double-counting and Rentals'
+  from/to-sign exception — a value split across two fields where only one was being read. Fixed
+  with `fundNetProfit(position, currentValue) = realized + (currentValue - invested)`, the exact
+  `realizedPL + unrealizedPL` shape `cashSummary()`'s app-wide `netPL` already uses for the whole
+  portfolio — Funds' own per-fund stat cards (3 call sites: `OverallSummary`, `FundList`,
+  `FundDetail`) just never read `.realized` at all. Verified against the user's own real JCSLM
+  transaction log (2 buys, 3 partial sells): old formula → 30.97 (matches what the user saw
+  exactly); fixed formula → 268.66 (matches their expected ~269). New tests in
+  `fundsModule.test.ts` pin these exact numbers as a regression. Verified live via Playwright
+  with the user's real uploaded backup seeded into `localStorage` — fund list row and per-fund
+  detail page both now show the correct ~269 figure. `npx tsc -b` / `npm run test` (445 tests, 3
+  new) / `npm run build` all clean.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

@@ -5199,6 +5199,29 @@ FinanceManager live link:
      via the "Open actions" panel toggle) on first page load, with zero real console errors across
      all 8. `npx tsc -b` / `npm run test` (442 tests, unchanged — no calc-engine code touched) /
      `npm run build` all clean.
+220. **Critical, user-reported (2026-09-03): Funds "Net P/L" wrong after a withdrawal — JCSLM
+     showed ~31 PKR instead of the real ~269.** Root cause: `FundsPage.tsx`'s "Net profit" stat
+     cards (fund list, per-currency overall summary, and the per-fund detail page) all computed
+     `value - invested`, where `invested` (from the shared `computePositions()`) is only the cost
+     basis of units STILL HELD — a sell/withdrawal reduces `invested` right along with `shares`,
+     so that formula only ever showed the *unrealized* gain on what's left, silently dropping
+     every past withdrawal's own *realized* profit. Confirmed against the user's real JCSLM data
+     (2 buys, then 3 partial sells): the old formula gave 30.97 (exactly what the user saw), while
+     `realized (237.69, already computed by `computePositions()` and simply never read here) +
+     unrealized (30.97)` gives 268.66 — matching the user's own expected ~269. This is the same
+     `realizedPL + unrealizedPL` shape `cashSummary()`'s app-wide `netPL` already uses for the
+     whole portfolio (`lib/calc/cashSummary.ts`) — Funds' own hand-rolled per-fund stat cards had
+     just never been wired to it. Fixed with a new shared `fundNetProfit(position, currentValue)`
+     in `lib/calc/fundsModule.ts`, used by all three call sites (`OverallSummary`, `FundList`,
+     `FundDetail`) instead of the old inline `value - invested`. Added a tooltip on the "Net
+     profit" label explaining it includes realized gains from past withdrawals, so this isn't
+     mistaken for a "quiet" behavior change. New tests: `fundsModule.test.ts` gained 3 cases
+     (simple unrealized-only case, an undefined-position edge case, and a regression pinning the
+     exact real JCSLM numbers — the old formula's 30.97 vs. the fix's 268.66). Verified live via
+     Playwright with the user's own real uploaded backup seeded into `localStorage`: the fund
+     list row showed "268.66 PKR (2.6%)" and the per-fund detail page's Net profit card showed
+     "269 PKR (2.6%)" — both matching the user's own expected figure, zero new console errors.
+     `npx tsc -b` / `npm run test` (445 tests, 3 new) / `npm run build` all clean.
 
 ## Pending
 
