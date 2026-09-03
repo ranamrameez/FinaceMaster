@@ -908,14 +908,34 @@ function EditTransactionModal({ tx, onClose }: { tx: BankTransaction; onClose: (
   );
 }
 
+/** User-requested (2026-09-03): "add filters to other tables as well" —
+ * extends the Type/Category filter treatment Cash's statement tables got
+ * (README Done item 224) here too. */
 function TransactionsList({ account }: { account: BankAccount }) {
   const allTransactions = useBankWorkbookStore((s) => s.workbook.transactions);
   const deleteTransaction = useBankWorkbookStore((s) => s.deleteTransaction);
   const categories = useCategoryStore((s) => s.workbook.categories);
   const links = useInterEntityTransfersStore((s) => s.workbook.entries);
   const [editingTx, setEditingTx] = useState<BankTransaction | null>(null);
+  const [typeFilter, setTypeFilter] = useState<'all' | 'in' | 'out'>('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
 
-  const ledger = useMemo(() => accountRunningLedger(account, allTransactions), [account, allTransactions]);
+  const allLedger = useMemo(() => accountRunningLedger(account, allTransactions), [account, allTransactions]);
+
+  const categoryOptions = useMemo(
+    () => [...new Set(allLedger.map((r) => categoryName(r.tx.categoryID, categories)))].sort(),
+    [allLedger, categories],
+  );
+
+  const ledger = useMemo(
+    () => allLedger.filter((r) => {
+      if (typeFilter === 'in' && r.tx.amount < 0) return false;
+      if (typeFilter === 'out' && r.tx.amount >= 0) return false;
+      if (categoryFilter !== 'all' && categoryName(r.tx.categoryID, categories) !== categoryFilter) return false;
+      return true;
+    }),
+    [allLedger, typeFilter, categoryFilter, categories],
+  );
 
   // User-requested (2026-08-28): "Tag/Mark and also add nav link between the
   // linked trcs" — a recordId -> link map, built once per render (not
@@ -942,7 +962,23 @@ function TransactionsList({ account }: { account: BankAccount }) {
   const { sorted, Th } = useSortableRows(ledger, sortValue, 'date', 'desc');
 
   return (
-    <div className="table-scroll">
+    <div>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+        <Field label="Type" width={120}>
+          <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
+            <option value="all">All</option>
+            <option value="in">Money in</option>
+            <option value="out">Money out</option>
+          </Select>
+        </Field>
+        <Field label="Category" width={170}>
+          <Select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+            <option value="all">All categories</option>
+            {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+          </Select>
+        </Field>
+      </div>
+      <div className="table-scroll">
       <table>
         <thead>
           <tr>
@@ -1003,9 +1039,16 @@ function TransactionsList({ account }: { account: BankAccount }) {
               </tr>
             );
           })}
-          {!sorted.length && <tr><td colSpan={7} className="footer-note">No transactions for this account yet.</td></tr>}
+          {!sorted.length && (
+            <tr>
+              <td colSpan={7} className="footer-note">
+                {allLedger.length ? 'No transactions match these filters.' : 'No transactions for this account yet.'}
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
+      </div>
       {editingTx && <EditTransactionModal tx={editingTx} onClose={() => setEditingTx(null)} />}
     </div>
   );

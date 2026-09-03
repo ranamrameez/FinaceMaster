@@ -15,7 +15,7 @@ import { computeClosedTrades } from '../../../lib/calc/closedTrades';
 import { isNettedLeg } from '../../../lib/calc/psxFees';
 import { transferRunningBalance } from '../../../lib/calc/transferBalance';
 import { FeeModeControl, feeModeFor } from '../../../components/ui/FeeModeControl';
-import { Field } from '../../../components/ui/Field';
+import { Field, Select } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { defaultTimezoneForCurrency, defaultTimezoneForMarket } from '../../../lib/datetime';
@@ -225,6 +225,7 @@ function TransactionList() {
   const currency = workbook.settings.currency;
 
   const [filterTicker, setFilterTicker] = useState('ALL');
+  const [filterAction, setFilterAction] = useState<'ALL' | Transaction['action']>('ALL');
   const [groupBy, setGroupBy] = useState<GroupBy>('none');
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editRow, setEditRow] = useState<Transaction | null>(null);
@@ -239,7 +240,9 @@ function TransactionList() {
   // already separate them.
   const openTickers = useMemo(() => new Set(positions.filter((p) => p.shares > 0).map((p) => p.ticker)), [positions]);
 
-  const filtered = filterTicker === 'ALL' ? indexed : indexed.filter((r) => r.tx.ticker === filterTicker);
+  const filtered = indexed
+    .filter((r) => filterTicker === 'ALL' || r.tx.ticker === filterTicker)
+    .filter((r) => filterAction === 'ALL' || r.tx.action === filterAction);
   type TxCol = 'date' | 'ticker' | 'action' | 'shares' | 'price' | 'amount' | 'fee';
   const sortValue = (r: (typeof filtered)[number], col: TxCol): number | string => {
     switch (col) {
@@ -456,6 +459,11 @@ function TransactionList() {
           <option value="ALL">All tickers</option>
           {tickers.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
+        <select value={filterAction} onChange={(e) => setFilterAction(e.target.value as typeof filterAction)}>
+          <option value="ALL">Buy &amp; sell</option>
+          <option value="BUY">Buy only</option>
+          <option value="SELL">Sell only</option>
+        </select>
         <select value={groupBy} onChange={(e) => setGroupBy(e.target.value as GroupBy)}>
           <option value="none">No grouping</option>
           <option value="ticker">Group by ticker</option>
@@ -529,6 +537,7 @@ function TransactionList() {
   );
 }
 
+/** User-requested (2026-09-03): "add filters to other tables as well." */
 function TransfersSection() {
   const workbook = usePSXWorkbookStore((s) => s.workbook);
   const updateTransfer = usePSXWorkbookStore((s) => s.updateTransfer);
@@ -537,6 +546,7 @@ function TransfersSection() {
   const links = useInterEntityTransfersStore((s) => s.workbook.entries);
   const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<Transfer | null>(null);
+  const [typeFilter, setTypeFilter] = useState<'all' | Transfer['type']>('all');
 
   const linkByRecordId = useMemo(() => {
     const map = new Map<string, (typeof links)[number]>();
@@ -553,6 +563,11 @@ function TransfersSection() {
   // displayed in — same reasoning as the Trade Planner's leg-value resolution.
   const balances = useMemo(() => transferRunningBalance(workbook.transfers), [workbook.transfers]);
 
+  const filteredTransfers = useMemo(
+    () => (typeFilter === 'all' ? workbook.transfers : workbook.transfers.filter((t) => t.type === typeFilter)),
+    [workbook.transfers, typeFilter],
+  );
+
   type TransferCol = 'date' | 'type' | 'gross' | 'fee' | 'balance';
   const sortValue = (t: Transfer, col: TransferCol): number | string => {
     switch (col) {
@@ -563,7 +578,7 @@ function TransfersSection() {
       default: return t.date;
     }
   };
-  const { sorted, Th } = useSortableRows(workbook.transfers, sortValue, 'date', 'desc');
+  const { sorted, Th } = useSortableRows(filteredTransfers, sortValue, 'date', 'desc');
 
   const startEdit = (t: Transfer) => { setEditId(t.id); setEditRow({ ...t }); };
   const saveEdit = async () => {
@@ -577,6 +592,15 @@ function TransfersSection() {
 
   return (
     <div>
+      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+        <Field label="Type" width={140}>
+          <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
+            <option value="all">All</option>
+            <option value="DEPOSIT">Deposit</option>
+            <option value="WITHDRAWAL">Withdrawal</option>
+          </Select>
+        </Field>
+      </div>
       <div className="table-scroll">
         <table>
           <thead>
@@ -716,9 +740,16 @@ function AdjustmentsSection() {
   );
 }
 
+/** User-requested (2026-09-03): "add filters to other tables as well." */
 function CashLedgerSection() {
   const { workbook, ledger } = usePSXDerived();
   const currency = workbook.settings.currency;
+  const [kindFilter, setKindFilter] = useState<'all' | (typeof ledger)[number]['kind']>('all');
+
+  const filtered = useMemo(
+    () => (kindFilter === 'all' ? ledger : ledger.filter((e) => e.kind === kindFilter)),
+    [ledger, kindFilter],
+  );
 
   type LedgerCol = 'date' | 'kind' | 'label' | 'amount' | 'balance';
   const sortValue = (e: (typeof ledger)[number], col: LedgerCol): number | string => {
@@ -730,10 +761,21 @@ function CashLedgerSection() {
       default: return e.date;
     }
   };
-  const { sorted, Th } = useSortableRows(ledger, sortValue, 'date', 'desc');
+  const { sorted, Th } = useSortableRows(filtered, sortValue, 'date', 'desc');
 
   return (
-    <div className="table-scroll">
+    <div>
+      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+        <Field label="Kind" width={140}>
+          <Select value={kindFilter} onChange={(e) => setKindFilter(e.target.value as typeof kindFilter)}>
+            <option value="all">All</option>
+            <option value="trade">Trade</option>
+            <option value="transfer">Transfer</option>
+            <option value="adjustment">Adjustment</option>
+          </Select>
+        </Field>
+      </div>
+      <div className="table-scroll">
       <table>
         <thead>
           <tr>
@@ -757,6 +799,7 @@ function CashLedgerSection() {
           {!sorted.length && <tr><td colSpan={5} className="footer-note">Nothing recorded yet.</td></tr>}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

@@ -158,12 +158,25 @@ function OverallSummary() {
 
 /* ============================== List ============================== */
 
+/** User-requested (2026-09-03): "add filters to other tables as well." */
 function SubscriptionList({ onSelect }: { onSelect: (sub: Subscription) => void }) {
   const subs = useSubscriptionsWorkbookStore((s) => s.workbook.entries);
   const knownCategories = useMemo(() => [...new Set(subs.map((s) => s.category).filter((c): c is string => !!c))].sort(), [subs]);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'cancelled'>('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+
+  const filteredSubs = useMemo(
+    () => subs.filter((s) => {
+      if (statusFilter === 'active' && !s.active) return false;
+      if (statusFilter === 'cancelled' && s.active) return false;
+      if (categoryFilter !== 'all' && (s.category || '') !== categoryFilter) return false;
+      return true;
+    }),
+    [subs, statusFilter, categoryFilter],
+  );
 
   type Row = { sub: Subscription; monthly: number; next: string };
-  const rows: Row[] = subs.map((s) => ({ sub: s, monthly: monthlyEquivalent(s), next: s.active ? nextBillingDate(s) : '' }));
+  const rows: Row[] = filteredSubs.map((s) => ({ sub: s, monthly: monthlyEquivalent(s), next: s.active ? nextBillingDate(s) : '' }));
   type Col = 'name' | 'amount' | 'monthly' | 'category' | 'next' | 'status';
   const sortValue = (r: Row, col: Col): number | string => {
     switch (col) {
@@ -178,7 +191,23 @@ function SubscriptionList({ onSelect }: { onSelect: (sub: Subscription) => void 
   const { sorted, Th } = useSortableRows(rows, sortValue, 'name', 'asc');
 
   return (
-    <div className="table-scroll">
+    <div>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+        <Field label="Status" width={130}>
+          <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}>
+            <option value="all">All</option>
+            <option value="active">Active</option>
+            <option value="cancelled">Cancelled</option>
+          </Select>
+        </Field>
+        <Field label="Category" width={170}>
+          <Select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+            <option value="all">All categories</option>
+            {knownCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+          </Select>
+        </Field>
+      </div>
+      <div className="table-scroll">
       <datalist id="subscriptions-category-datalist">
         {knownCategories.map((c) => <option key={c} value={c} />)}
       </datalist>
@@ -201,9 +230,16 @@ function SubscriptionList({ onSelect }: { onSelect: (sub: Subscription) => void 
               <td><button className="btn secondary small" onClick={(e) => { e.stopPropagation(); onSelect(s); }}>Open</button></td>
             </tr>
           ))}
-          {!sorted.length && <tr><td colSpan={7} className="footer-note">No subscriptions yet — add one above.</td></tr>}
+          {!sorted.length && (
+            <tr>
+              <td colSpan={7} className="footer-note">
+                {subs.length ? 'No subscriptions match these filters.' : 'No subscriptions yet — add one above.'}
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

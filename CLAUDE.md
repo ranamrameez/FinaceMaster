@@ -4630,6 +4630,74 @@ not developer notes) continuously as features ship.
   tab's own grid, Plans' sortable headers, and `/planning`'s unaffected FAB) — zero console
   errors throughout. `npx tsc -b` / `npm run test` (466 tests, unchanged — UI-only
   restructuring, no calc logic touched) / `npm run build` all clean.
+- **Filters extended app-wide, same day (2026-09-03) — see README Done item 225. The user
+  corrected the scoping call made in item 224's own writeup above with a terse, direct
+  message: "i exactly asked to add filters to other tables as well."** Item 224's own text had
+  read "all tables should have filter options" as describing the standard Cash's own tables
+  should meet, not a literal app-wide instruction — the correction settled that this was the
+  wrong call; "all" meant all. **Lesson worth repeating for any future "did I scope this right"
+  moment**: default to the literal, broader reading of blanket-sounding language ("all"/
+  "every") rather than the narrowest plausible interpretation the surrounding context could
+  support — a scoping decision that turns out too narrow costs a correction message and a
+  second pass; one that's too broad rarely does. Rolled the exact pattern item 224 established
+  for Cash (a filter `useState` per dimension, a `useMemo`-derived filtered array feeding the
+  table/`useSortableRows`, a `Field`/`Select` control row, an empty-state message distinguishing
+  "no data at all" from "no data matches this filter") out to every other module's main
+  transaction/record table: QSE's/PSX's `TransactionsPage.tsx` (trade list gained an Action
+  filter alongside its existing ticker/group-by controls; Transfers section gained a Type
+  filter; Cash ledger section gained a Kind filter) and `DividendsSection.tsx` (a per-ticker
+  filter, with "Total collected" now summing whatever's currently filtered rather than the
+  lifetime total — so the headline number always matches what's visibly on screen, not a
+  stale whole-history figure); Banking's `AccountDetailPage` (Type + Category); Funds'
+  `FundDetail` (Buy/Sell type — its CSV export deliberately still reads from the unfiltered
+  transaction list, `allTxs`, not the filtered `txs`, so a statement export never silently
+  drops rows just because the on-screen view happens to be narrowed); Personal Loans'
+  `RepaymentsSection` (Source: manual/statement-import); EMI's Schedule table (Status: paid/
+  planned/upcoming, alongside the pre-existing "show full schedule" toggle); Rentals'
+  `EntriesList` (Type + Category); Subscriptions' list (Status + Category); Budget Planner's
+  activity table (Account + Status, plus a genuinely new empty-state row — the table had none
+  before this pass). **Deliberately left unfiltered, each for a stated reason, not an
+  oversight**: QSE's/PSX's Adjustments section (no real dimension to filter by beyond date/
+  amount/note); per-ticker `StockPage.tsx` transaction tables, Watchlist, Portfolio's Holdings/
+  Closed-positions tables, Trade Planner's leg tables (each already scoped to one ticker or one
+  plan, so a filter control would have nothing left to narrow); every entity LIST
+  (`AccountsList`/`FundList`/`LoanList`/`PropertiesList`/etc.) already gained its own filter
+  dimension via the immediately-prior session's "Show archived"/"Show closed" toggle (Done
+  items 222/223) and wasn't touched again in this pass. **Also deliberately NOT done, a
+  separate and bigger UX call the correction didn't raise**: item 224's own sort-DIRECTION fix
+  (defaulting every Cash table to ascending/FIFO order) was not repeated blindly across every
+  other module here — the correcting message's own wording was specifically about "filters,"
+  not sort order, and flipping every table's default sort direction app-wide is a large enough
+  UX change to warrant its own explicit ask rather than being folded silently into a filters
+  request. **One real implementation snag, self-caught before it shipped**: EMI's new
+  `scheduleWithStatus`/`visibleScheduleRows` computation was first placed in the wrong
+  function — `LoanStatZones` and `LoanDetail` (`features/emi/pages/EMIPage.tsx`) both contain a
+  `const netToReturn = loan.principal + sum.totalInterest;` line, and the new code landed after
+  the WRONG one (`LoanStatZones`, which doesn't have `showFullSchedule`/`plannedBankEntries`/
+  `statusFilter` in scope) — caught immediately by `tsc -b` (`Cannot find name...` on all
+  three), fixed by moving the block into `LoanDetail` itself, right after
+  `deletePlannedEntry`'s own declaration, where every one of those names is actually in scope.
+  **Rule worth repeating for any future edit targeting "the function with this exact variable
+  name in it"**: a duplicated line/variable name across two sibling functions in the same file
+  is a real trap for a text-based edit — confirm which function's scope actually has every
+  OTHER name the new code needs before landing the change, not just that the anchor line looks
+  right. Verified live via Playwright on every touched page: QSE's Transactions page (clicking
+  its own "All" chip to expand every collapsed sub-section first — every field on this page
+  lives inside a `Tabs`-driven `CollapsibleCard` that only mounts its content once expanded, so
+  a verification script has to open the right section before a `locator('select')` can find
+  anything, the same "collapsed content genuinely unmounts" fact already documented for the
+  FAB bug above) showed all 4 new filter selects with correct option lists; PSX's mirrored
+  Transactions page independently re-verified the same way (not just assumed identical from a
+  byte-for-byte-copied diff) — 8 selects total, correct options, zero console errors; Bank's
+  account detail page confirmed working Type/Category selects; EMI's Schedule table confirmed
+  the Status=Paid filter correctly reduced to 0 matching rows for a loan whose first
+  installment isn't due yet (showing the new "No installments match this filter" message) and
+  Status=Upcoming correctly showed close to the full 12-row window; Funds' fund detail page
+  confirmed its Invest/Withdraw and All/Invested/Withdrew selects; Budget Planner's activity
+  table, screenshotted with two seeded rows (one Cash actual, one Cash planned), showed working
+  Account/Status filters and the table rendering correctly. Zero console errors on any page
+  touched. `npx tsc -b` / `npm run test` (466 tests, unchanged — UI-only, no calc logic
+  touched) / `npm run build` all clean.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

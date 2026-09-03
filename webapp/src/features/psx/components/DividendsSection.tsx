@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { PSX_TICKER_DATALIST_ID } from '../../../components/PSXTickerDatalist';
 import { EditIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
@@ -96,6 +96,9 @@ export function DividendsSection() {
   const [sort, setSort] = useState<{ col: string; dir: 'asc' | 'desc' }>({ col: 'date', dir: 'desc' });
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editRow, setEditRow] = useState<Dividend | null>(null);
+  // User-requested (2026-09-03): "add filters to other tables as well."
+  const [tickerFilter, setTickerFilter] = useState('ALL');
+  const dividendTickers = useMemo(() => [...new Set(workbook.dividends.map((d) => d.ticker))].sort(), [workbook.dividends]);
 
   const startEdit = (i: number, d: Dividend) => { setEditIndex(i); setEditRow({ ...d }); };
   const saveEdit = () => {
@@ -115,7 +118,9 @@ export function DividendsSection() {
       default: return d.date;
     }
   };
-  const rows = [...workbook.dividends.map((d, i) => ({ ...d, i }))].sort((a, b) => {
+  const rows = [...workbook.dividends.map((d, i) => ({ ...d, i }))]
+    .filter((d) => tickerFilter === 'ALL' || d.ticker === tickerFilter)
+    .sort((a, b) => {
     const av = sortValue(a, sort.col);
     const bv = sortValue(b, sort.col);
     const cmp = typeof av === 'string' ? av.localeCompare(bv as string) : (av as number) - (bv as number);
@@ -124,7 +129,9 @@ export function DividendsSection() {
   const toggleSort = (col: string) =>
     setSort((s) => (s.col === col ? { col, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { col, dir: 'desc' }));
   const arrow = (col: string) => (sort.col === col ? (sort.dir === 'asc' ? ' ▲' : ' ▼') : '');
-  const total = workbook.dividends.reduce((s, d) => s + d.amount, 0);
+  // Reflects the ticker filter above, so "Total collected" always matches
+  // what's actually shown in the table above it.
+  const total = rows.reduce((s, d) => s + d.amount, 0);
 
   const held = positions.filter((p) => p.shares > 0);
   const estimates = workbook.dividendEstimates || {};
@@ -147,6 +154,14 @@ export function DividendsSection() {
       <AddDividendForm />
 
       <h3 style={{ marginTop: 24 }}>Dividends log</h3>
+      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+        <Field label="Ticker">
+          <select value={tickerFilter} onChange={(e) => setTickerFilter(e.target.value)}>
+            <option value="ALL">All tickers</option>
+            {dividendTickers.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </Field>
+      </div>
       <div className="table-scroll">
         <table>
           <thead>
@@ -187,7 +202,13 @@ export function DividendsSection() {
                 </tr>
               ),
             )}
-            {!rows.length && <tr><td colSpan={6} className="footer-note">No dividends logged yet.</td></tr>}
+            {!rows.length && (
+              <tr>
+                <td colSpan={6} className="footer-note">
+                  {workbook.dividends.length ? 'No dividends match this filter.' : 'No dividends logged yet.'}
+                </td>
+              </tr>
+            )}
           </tbody>
           <tfoot>
             <tr><td colSpan={4}>Total collected</td><td className="pill-buy">{fmtMoney(total, currency)}</td><td></td></tr>

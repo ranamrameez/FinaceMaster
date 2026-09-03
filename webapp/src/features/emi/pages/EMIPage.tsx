@@ -419,6 +419,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
   const [overrideFine, setOverrideFine] = useState(0);
   const [overrideLinkMode, setOverrideLinkMode] = useState(false);
   const [showFullSchedule, setShowFullSchedule] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'planned' | 'upcoming'>('all');
   const [bigEmiInterval, setBigEmiInterval] = useState(6);
   const [bigEmiAmount, setBigEmiAmount] = useState(0);
   const [bigEmiMode, setBigEmiMode] = useState<'majorOnly' | 'regularPlusMajor'>('majorOnly');
@@ -438,6 +439,19 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
   const plannedBankEntries = usePlannedBankWorkbookStore((s) => s.workbook.entries);
   const addPlannedEntries = usePlannedBankWorkbookStore((s) => s.addEntries);
   const deletePlannedEntry = usePlannedBankWorkbookStore((s) => s.deleteEntry);
+
+  // User-requested (2026-09-03): "add filters to other tables as well" —
+  // computed once here (rather than inline in the JSX) so both the table
+  // body and its "no matching rows" empty state read the same filtered set.
+  const scheduleWithStatus = (showFullSchedule ? sum.rows : sum.rows.slice(sum.elapsed, sum.elapsed + 12)).map((r) => ({
+    r,
+    status: (r.month <= sum.elapsed
+      ? 'paid'
+      : plannedBankEntries.some((p) => p.sourceEmiLoanId === loan.id && p.sourceEmiMonth === r.month && !p.executed)
+        ? 'planned'
+        : 'upcoming') as 'paid' | 'planned' | 'upcoming',
+  }));
+  const visibleScheduleRows = scheduleWithStatus.filter(({ status }) => statusFilter === 'all' || status === statusFilter);
 
   /** README item 6 of a 2026-08-26 feedback batch: some real loans aren't
    * a flat EMI every month — e.g. a property installment plan with one
@@ -800,6 +814,17 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
         <input type="checkbox" checked={showFullSchedule} onChange={(e) => setShowFullSchedule(e.target.checked)} />
         Show the full schedule, start to end (instead of just the next 12 installments)
       </label>
+      {/* User-requested (2026-09-03): "add filters to other tables as well." */}
+      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+        <Field label="Status" width={140}>
+          <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}>
+            <option value="all">All</option>
+            <option value="paid">Paid</option>
+            <option value="planned">Planned</option>
+            <option value="upcoming">Upcoming</option>
+          </Select>
+        </Field>
+      </div>
 
       <div className="table-scroll">
         <table>
@@ -811,12 +836,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
             </tr>
           </thead>
           <tbody>
-            {(showFullSchedule ? sum.rows : sum.rows.slice(sum.elapsed, sum.elapsed + 12)).map((r) => {
-              const status = r.month <= sum.elapsed
-                ? 'paid'
-                : plannedBankEntries.some((p) => p.sourceEmiLoanId === loan.id && p.sourceEmiMonth === r.month && !p.executed)
-                  ? 'planned'
-                  : 'upcoming';
+            {visibleScheduleRows.map(({ r, status }) => {
               // User-reported (2026-08-28): "didn't allow me to change the
               // dates, amount and other data" — a past (already-"elapsed")
               // month used to be locked from editing entirely, on the
@@ -918,6 +938,9 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
               );
             })}
             {sum.elapsed >= sum.rows.length && <tr><td colSpan={8} className="footer-note">Loan fully repaid.</td></tr>}
+            {!visibleScheduleRows.length && sum.elapsed < sum.rows.length && (
+              <tr><td colSpan={8} className="footer-note">No installments match this filter.</td></tr>
+            )}
           </tbody>
         </table>
       </div>

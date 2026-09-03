@@ -507,6 +507,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
   const [editRow, setEditRow] = useState<Transaction | null>(null);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'BUY' | 'SELL'>('all');
 
   const position = positions.find((p) => p.ticker === fund.id);
   const units = position?.shares ?? 0;
@@ -527,13 +528,20 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
     if (currentNav > 0 && txNav === 0) setTxNav(currentNav);
   }, [currentNav, txNav]);
 
-  const txs = workbook.transactions.map((t, i) => ({ t, i })).filter((r) => r.t.ticker === fund.id).sort((a, b) => b.t.date.localeCompare(a.t.date));
+  const allTxs = workbook.transactions.map((t, i) => ({ t, i })).filter((r) => r.t.ticker === fund.id);
+  // User-requested (2026-09-03): "add filters to other tables as well" —
+  // a Type filter on the transaction table (export below stays unfiltered
+  // by type, matching its own existing "whole statement for a date range"
+  // behavior).
+  const txs = (typeFilter === 'all' ? allTxs : allTxs.filter((r) => r.t.action === typeFilter))
+    .sort((a, b) => b.t.date.localeCompare(a.t.date));
 
   /** README item 40: extends Banking's statement-export pattern (Done
    * item 58) to this module's own primary record — a fund's "statement"
    * is its buy/sell transaction history. */
   const exportStatement = () => {
-    const rows = txs
+    const rows = allTxs
+      .sort((a, b) => b.t.date.localeCompare(a.t.date))
       .filter((r) => (!fromDate || r.t.date >= fromDate) && (!toDate || r.t.date <= toDate))
       .slice()
       .reverse();
@@ -786,6 +794,15 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
           ) : undefined
         }
       >
+      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+        <Field label="Type" width={140}>
+          <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
+            <option value="all">All</option>
+            <option value="BUY">Invested</option>
+            <option value="SELL">Withdrew</option>
+          </Select>
+        </Field>
+      </div>
       <div className="table-scroll">
         <table>
           <thead><tr><th>Date</th><th>Type</th><th>Units</th><th>NAV</th><th>Amount</th><th></th></tr></thead>
@@ -829,7 +846,13 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                 </tr>
               ),
             )}
-            {!txs.length && <tr><td colSpan={6} className="footer-note">No transactions for this fund yet.</td></tr>}
+            {!txs.length && (
+              <tr>
+                <td colSpan={6} className="footer-note">
+                  {allTxs.length ? 'No transactions match this filter.' : 'No transactions for this fund yet.'}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

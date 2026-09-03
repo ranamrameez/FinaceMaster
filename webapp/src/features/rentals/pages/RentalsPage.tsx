@@ -696,14 +696,32 @@ function EditEntryModal({ entry, onClose }: { entry: RentalEntry; onClose: () =>
   );
 }
 
+/** User-requested (2026-09-03): "add filters to other tables as well" —
+ * extends the Type/Category filter treatment Cash's statement tables got
+ * (README Done item 224) here too. */
 function EntriesList({ property }: { property: Property }) {
   const allEntries = useRentalsWorkbookStore((s) => s.workbook.entries);
   const deleteEntry = useRentalsWorkbookStore((s) => s.deleteEntry);
   const categories = useCategoryStore((s) => s.workbook.categories);
   const links = useInterEntityTransfersStore((s) => s.workbook.entries);
   const [editingEntry, setEditingEntry] = useState<RentalEntry | null>(null);
+  const [typeFilter, setTypeFilter] = useState<'all' | 'in' | 'out'>('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
 
-  const entries = useMemo(() => allEntries.filter((e) => e.propertyId === property.id), [allEntries, property.id]);
+  const allPropertyEntries = useMemo(() => allEntries.filter((e) => e.propertyId === property.id), [allEntries, property.id]);
+  const categoryOptions = useMemo(
+    () => [...new Set(allPropertyEntries.map((e) => categoryName(e.categoryID, categories)))].sort(),
+    [allPropertyEntries, categories],
+  );
+  const entries = useMemo(
+    () => allPropertyEntries.filter((e) => {
+      if (typeFilter === 'in' && !e.isDeposit) return false;
+      if (typeFilter === 'out' && e.isDeposit) return false;
+      if (categoryFilter !== 'all' && categoryName(e.categoryID, categories) !== categoryFilter) return false;
+      return true;
+    }),
+    [allPropertyEntries, typeFilter, categoryFilter, categories],
+  );
   const linkByRecordId = useMemo(() => {
     const map = new Map<string, (typeof links)[number]>();
     for (const l of links) {
@@ -725,7 +743,23 @@ function EntriesList({ property }: { property: Property }) {
   const { sorted, Th } = useSortableRows(entries, sortValue, 'date', 'desc');
 
   return (
-    <div className="table-scroll">
+    <div>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+        <Field label="Type" width={130}>
+          <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
+            <option value="all">All</option>
+            <option value="in">Rent income</option>
+            <option value="out">Expense</option>
+          </Select>
+        </Field>
+        <Field label="Category" width={170}>
+          <Select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+            <option value="all">All categories</option>
+            {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+          </Select>
+        </Field>
+      </div>
+      <div className="table-scroll">
       <table>
         <thead>
           <tr>
@@ -766,9 +800,16 @@ function EntriesList({ property }: { property: Property }) {
               </tr>
             );
           })}
-          {!sorted.length && <tr><td colSpan={7} className="footer-note">No entries for this property yet.</td></tr>}
+          {!sorted.length && (
+            <tr>
+              <td colSpan={7} className="footer-note">
+                {allPropertyEntries.length ? 'No entries match these filters.' : 'No entries for this property yet.'}
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
+      </div>
       {editingEntry && <EditEntryModal entry={editingEntry} onClose={() => setEditingEntry(null)} />}
     </div>
   );

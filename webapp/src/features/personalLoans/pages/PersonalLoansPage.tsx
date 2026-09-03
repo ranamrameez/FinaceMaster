@@ -309,13 +309,19 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
     setEditRow(null);
   };
 
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'manual' | 'statement-import'>('all');
+  const filteredRepayments = useMemo(
+    () => (sourceFilter === 'all' ? repayments : repayments.filter((r) => (r.source ?? 'manual') === sourceFilter)),
+    [repayments, sourceFilter],
+  );
+
   type Col = 'date' | 'amount' | 'remaining';
   const sortValue = (r: PersonalLoanRepayment, col: Col): number | string => {
     if (col === 'amount') return r.amount;
     if (col === 'remaining') return remaining.get(r.id) ?? 0;
     return r.date;
   };
-  const { sorted, Th } = useSortableRows(repayments, sortValue, 'date', 'desc');
+  const { sorted, Th } = useSortableRows(filteredRepayments, sortValue, 'date', 'desc');
 
   return (
     <div>
@@ -342,6 +348,17 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
         }
         style={{ marginBottom: 16 }}
       >
+        {/* User-requested (2026-09-03): "add filters to other tables as
+           well." */}
+        <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+          <Field label="Source" width={140}>
+            <Select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value as typeof sourceFilter)}>
+              <option value="all">All</option>
+              <option value="manual">Manual</option>
+              <option value="statement-import">Imported</option>
+            </Select>
+          </Field>
+        </div>
         <div className="table-scroll">
           <table>
             <thead><tr><Th col="date">Date</Th><Th col="amount">Amount</Th><Th col="remaining">Remaining</Th><th>Source</th><th></th></tr></thead>
@@ -391,7 +408,13 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                   </tr>
                 );
               })}
-              {!sorted.length && <tr><td colSpan={5} className="footer-note">No repayments logged yet.</td></tr>}
+              {!sorted.length && (
+                <tr>
+                  <td colSpan={5} className="footer-note">
+                    {repayments.length ? 'No repayments match this filter.' : 'No repayments logged yet.'}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
