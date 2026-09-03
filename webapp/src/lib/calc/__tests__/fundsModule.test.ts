@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Fund } from '../../../types/fundsWorkbook';
 import type { PricePoint, Transaction } from '../../../types/workbook';
-import { allocationByCategory, contributionVsValueSeries, fundNetProfit, fundsValueByCurrency, organicPLByPeriod } from '../fundsModule';
+import { allocationByCategory, contributionVsValueSeries, expectedPLRate, fundNetProfit, fundsValueByCurrency, organicPLByPeriod } from '../fundsModule';
 import { averagePeriodPL, reconstructFundDailyHistory } from '../fundsDailyHistoryImport';
 import { computePositions } from '../positions';
 
@@ -143,6 +143,34 @@ describe('organicPLByPeriod', () => {
       expect(m.total).toBeCloseTo(reconstruction.monthlyPL[i].total, 2);
     });
     expect(averagePeriodPL(derivedMonthly)).toBeCloseTo(averagePeriodPL(reconstruction.monthlyPL), 2);
+  });
+});
+
+describe('expectedPLRate', () => {
+  it('returns null with fewer than 2 data points', () => {
+    const txs: Transaction[] = [{ date: '2026-01-01', ticker: 'f1', action: 'BUY', shares: 100, price: 10 }];
+    expect(expectedPLRate('f1', txs, {})).toBeNull();
+  });
+
+  it('hand-traced: 100 units bought at NAV 10 (day 1), NAV rises to 11 ten days later, no further cash flow', () => {
+    const txs: Transaction[] = [{ date: '2026-01-01', ticker: 'f1', action: 'BUY', shares: 100, price: 10 }];
+    const priceHistory: Record<string, PricePoint[]> = { f1: [{ date: '2026-01-11', price: 11 }] };
+    // Point 1 (day 1): value=1000, invested=1000 → organic = 1000-0-(1000-0) = 0.
+    // Point 2 (day 11): value=1100, invested=1000 → organic = 1100-1000-(1000-1000) = 100.
+    // Total organic = 100 over a real 10-day span. avgInvested = (1000+1000)/2 = 1000.
+    const rate = expectedPLRate('f1', txs, priceHistory);
+    expect(rate).not.toBeNull();
+    expect(rate!.dailyAmount).toBeCloseTo(10, 6); // 100 / 10 days
+    expect(rate!.dailyPct).toBeCloseTo(1, 6); // 10 / 1000 * 100
+    expect(rate!.monthlyAmount).toBeCloseTo(304.4, 6); // 10 * 30.44
+    expect(rate!.monthlyPct).toBeCloseTo(30.44, 6); // 304.4 / 1000 * 100
+  });
+
+  it('a fund with zero organic growth (NAV unchanged) returns zero rates, not null', () => {
+    const txs: Transaction[] = [{ date: '2026-01-01', ticker: 'f1', action: 'BUY', shares: 100, price: 10 }];
+    const priceHistory: Record<string, PricePoint[]> = { f1: [{ date: '2026-01-11', price: 10 }] };
+    const rate = expectedPLRate('f1', txs, priceHistory);
+    expect(rate).toEqual({ dailyAmount: 0, dailyPct: 0, monthlyAmount: 0, monthlyPct: 0 });
   });
 });
 

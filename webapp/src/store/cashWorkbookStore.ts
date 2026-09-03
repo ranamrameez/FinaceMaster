@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { toInstantMs } from '../lib/datetime';
-import { backfillSerialNumber, nextSerialNumber } from '../lib/financeSerial';
+import { assignSerialNumbersForEntities, backfillSerialNumber, nextSerialNumberForEntity } from '../lib/financeSerial';
 import { resolveIsDeposit, resolveLegacyCategoryId } from '../lib/financeMigration';
 import { createEmptyCashWorkbook } from './defaultCashWorkbook';
 import type { CashEntry, CashSettings, CashWorkbook } from '../types/cashWorkbook';
@@ -83,21 +83,22 @@ export const useCashWorkbookStore = create<CashStoreState>((set, get) => {
       if (!opts?.skipPersist) persist(next);
     },
 
+    // Scoped by currency (Cash's own natural "entity" — matches the
+    // per-currency statement grid, README Done item 224) rather than one
+    // counter across every currency combined (user-reported 2026-09-03:
+    // "ID sequence should belong to each entity rather than global").
     addEntry: (entry) =>
       mutate((wb) => {
         const withFields = withDerivedFields(entry);
-        const withSerial = withFields.serialNumber !== undefined ? withFields : { ...withFields, serialNumber: nextSerialNumber(wb.entries) };
+        const withSerial = withFields.serialNumber !== undefined ? withFields : { ...withFields, serialNumber: nextSerialNumberForEntity(wb.entries, (e) => e.currencyCode, withFields.currencyCode) };
         return { ...wb, entries: [...wb.entries, withSerial] };
       }),
 
     addEntries: (entries) =>
       mutate((wb) => {
-        let serial = nextSerialNumber(wb.entries) - 1;
-        const withFields = entries.map((e) => {
-          const derived = withDerivedFields(e);
-          return derived.serialNumber !== undefined ? derived : { ...derived, serialNumber: ++serial };
-        });
-        return { ...wb, entries: [...wb.entries, ...withFields] };
+        const withFields = entries.map(withDerivedFields);
+        const withSerial = assignSerialNumbersForEntities(wb.entries, withFields, (e) => e.currencyCode);
+        return { ...wb, entries: [...wb.entries, ...withSerial] };
       }),
 
     updateEntry: (id, patch) =>

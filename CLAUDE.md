@@ -4698,6 +4698,143 @@ not developer notes) continuously as features ship.
   Account/Status filters and the table rendering correctly. Zero console errors on any page
   touched. `npx tsc -b` / `npm run test` (466 tests, unchanged — UI-only, no calc logic
   touched) / `npm run build` all clean.
+- **Funds: balance-update history + expected daily/monthly P&L + table/layout redesign
+  (2026-09-03) — see README Done item 226.** User's own message: "ability to see balance
+  updates. Display expected daily/monthly PL+PL%age on homepage and each item page. funds
+  table has redundant open button, also missing ID/Index column. Funds single item page: Grid
+  3 col-> 2 col: Account info stats cards stacked. 1 col: Stacked Balance Update Card +
+  Transfers card. Final Layout: Grid 3 col, Transactions, Balance Update History."
+  **Balance Update History**: Funds had no way to review/correct past NAV/balance updates,
+  unlike QSE/PSX's per-stock `PositionDetail.tsx` (Done items 203/208) — new `CollapsibleCard`
+  on `FundDetail` reuses that exact mechanism (`computePriceStats`, `updatePricePoint`/
+  `deletePricePoint` — already on the Funds store for free, since it reuses
+  `createWorkbookStore` wholesale) rather than inventing a new one.
+  **`expectedPLRate()` (`lib/calc/fundsModule.ts`), the real new calc**: sums
+  `contributionVsValueSeries`'s own `value - prevValue - (invested - prevInvested)` organic-
+  growth math across the WHOLE observed history, then divides by REAL elapsed calendar days
+  between the first and last data point. **Deliberately does NOT reuse
+  `averagePeriodPL(organicPLByPeriod(...))`** (the Daily History Import's own averaging
+  helper, Done item 151) even though it looks like the same job — that averages "however many
+  distinct calendar months happen to appear," which silently misrepresents a fund with sparse
+  or irregular updates (two NAV points 45 days apart landing in 2 different months would count
+  as "2 months" worth ~22.5 days each, not the real 45) — a smooth per-day rate needs actual
+  elapsed time, not a bucket count. Documented this distinction directly in the function's own
+  doc comment so a future session doesn't "simplify" it into the wrong shared helper. New
+  tests hand-trace the exact math (100 units @ NAV 10, NAV rises to 11 ten days later → daily
+  10.00/1.00%, monthly 304.40/30.44%) — the same "reproduce the user's real numbers" discipline
+  this file has repeated many times before, just with synthetic numbers since no real Funds
+  balance-update data was available this session. Surfaced as new stat cards on both the Funds
+  homepage (`OverallSummary`, summed per currency) and each fund's own detail page.
+  **Table cleanup**: `FundList`'s "Open" button removed (Done item 185 had already made every
+  row clickable, so it was a pure duplicate by the time this was reported) and a new "#" Sr#
+  column added — computed from the fund's own stable position in the underlying `funds` array
+  (creation order), NOT the table's current live sort, so a sorted table doesn't renumber what
+  row "3" means every time the sort changes.
+  **`FundDetail` layout, the biggest single JSX change**: reuses `.position-split` (the exact
+  CSS class QSE/PSX's `PositionDetail.tsx` already established — 2/3-width main + 380px right
+  rail, collapsing under 900px) rather than inventing new grid CSS — found and considered
+  reusing `.rail-split` too (the Dashboard right-rail class, Done item 164) but noticed its
+  `grid-template-columns` is dead-commented-out in `theme.css` (`/*grid-template-columns:1fr
+  320px;*/`), meaning it doesn't actually split into two columns today — a real, separate,
+  pre-existing bug, left untouched and unfixed here to keep this change scoped to what was
+  asked, but worth flagging for a future session that touches the Dashboard rail again.
+  Right-rail "Transfers card" embeds the EXISTING `FundsTransfersSection` component unchanged,
+  inside a `CollapsibleCard` (collapsed by default, a secondary action next to "Update
+  balance"'s primary one) — this is the SAME portfolio-wide Transfers content the standalone
+  "Transfers" tab already shows, not a per-fund-filtered view, since `Transfer` has no fund
+  association anywhere in this app's data model (it's a portfolio-level cash movement, the
+  same as QSE/PSX's own `Transfer`) — both surfaces coexist, this just adds a second, page-
+  local way to reach the same data, exactly like every other FAB/shortcut in this app adds a
+  second path to an existing action rather than forking the underlying logic.
+  **One real naming collision self-caught mid-edit**: `FundDetail` already had a local `const
+  rate = fundXIRR(fund.id);` — naming the new `expectedPLRate()` result the same `rate` would
+  have silently shadowed XIRR's own value; caught immediately by `tsc -b` failing on the
+  now-ambiguous later usage, renamed to `plRate` before it ever compiled clean. Verified live
+  via Playwright with seeded data: Expected daily/monthly P&L cards rendered the exact
+  hand-traced numbers on both the homepage and detail page (confirmed via `.stat-card`
+  `innerText()`, not a raw body-text substring match — this project's own repeated lesson that
+  `.label`'s CSS `text-transform:uppercase` makes a literal mixed-case substring check a false
+  negative even when the feature is working correctly, caught exactly that way on a first pass
+  here too before switching to a case-aware/element-scoped check); the split grid measured
+  604px/380px at a 1000px test viewport; the Sr# column and removed Open button both confirmed;
+  the Balance Update History table showed both seeded NAV points correctly newest-first, and
+  its Edit→Save flow correctly hit the real sign-in gate — zero console errors throughout.
+  `npx tsc -b` / `npm run test` (479 tests, 3 new) / `npm run build` all clean.
+- **App-wide: entity-scoped ID sequences + a creation timestamp; FAB menu icon fixed
+  (2026-09-03) — see README Done item 227.** Same message as the Funds work above, its other
+  two asks: "ID sequence should belong to each entity rather than global which is confusing
+  (like some records are missing). Each entity record should have a timestamp to identity
+  transaction order in addition to ID sequence." Plus: "FAB menu: + button is misleading. use
+  menu or more relevant icon."
+  **Root cause, confirmed by reading the actual call sites, not assumed from the report
+  alone**: `nextSeq(wb.transactions)`/`nextSerialNumber(wb.entries)` always computed against
+  the FULL per-workbook array (every ticker's transactions combined, every currency's Cash
+  entries combined, every Bank account's transactions combined, ...) — so filtering down to
+  just one entity's own records showed gaps wherever a DIFFERENT entity's record had consumed
+  an intervening number, reading exactly like data loss even though nothing was actually
+  missing.
+  **Fix, and why it's safe**: new `nextSeqForEntity`/`assignSeqForEntities` (`lib/seq.ts`) and
+  their `lib/financeSerial.ts` mirrors (`nextSerialNumberForEntity`/
+  `assignSerialNumbersForEntities`) filter `existing` down to the same entity (via a `keyOf`
+  callback) before computing the next number. Wired into every add-record call site with a
+  natural owning entity: `ticker` for QSE/PSX/Funds' `Transaction`/`Dividend`
+  (`createWorkbookStore.ts`), `currencyCode` for Cash (ties directly into the just-shipped
+  per-currency statement grid, Done item 224 — the two features now agree on what "this
+  currency's own records" means), `accountId` for Bank, `propertyId` for Rentals, `loanId` for
+  Personal Loans. **`Transfer`/`Adjustment` deliberately stay scoped to the whole array,
+  unchanged** — neither has a natural owning entity (a portfolio-level cash movement isn't
+  "for" one ticker), so there's nothing meaningful to filter by.
+  **Checked, not assumed, that this is safe for the calc engine before touching anything**:
+  read `computePositions` (and confirmed the same shape in every other position/realized-P&L
+  function) — it sorts the FULL combined array once, then accumulates into `byTicker[t]` per
+  entity as it walks the sorted list, so the RELATIVE order of two records belonging to
+  DIFFERENT entities never affects either entity's own running math, only records of the SAME
+  entity do, and those stay exactly as uniquely numbered as before. The one place two
+  different entities' `seq` values CAN end up compared is `buildCashLedger`'s merged running-
+  balance display (used for the whole-portfolio cash ledger view) — on the narrow case of two
+  same-instant trades on DIFFERENT tickers with no recorded time, a `seq` collision (e.g. both
+  tickers' first-ever trade both being `seq: 1`) only affects which of the two rows the ledger
+  *displays* first at that exact tie; the final running balance is identical either way, the
+  same tolerance this app's chronological sorting already accepted for same-instant orderings
+  before this change. Documented this reasoning directly in `lib/seq.ts`'s own doc comment so
+  a future session doesn't need to re-derive it from scratch.
+  **Zero migration risk, by construction**: `seq`/`serialNumber` are written once at creation
+  and never renumbered on later loads — this only changes what number a NEWLY ADDED record
+  gets; every already-numbered real record (production data included) is completely
+  untouched, whether it was numbered under the old global scheme or the new per-entity one —
+  the two schemes can coexist in the same entity's history with no discontinuity, since
+  `nextSeqForEntity` just reads whatever `seq` values are actually stored for that entity right
+  now, not a separately tracked counter.
+  **Creation timestamp**: turned out to be PARTIALLY already built — `Finance` (Cash/Bank/
+  Rentals' shared base type, Done item 221) already had `timestamp?: string`, auto-stamped in
+  each store's own `withDerivedFields()`, confirmed by reading those three files directly
+  before assuming work was needed. Added the identical field (same name, same meaning, same
+  "auto-set once at creation, never backfilled onto pre-existing data since there's no honest
+  value to guess for a record whose real entry time was never captured" rule already
+  established for `time`/`timezone` themselves) to `Transaction`/`Transfer`/`Adjustment`/
+  `Dividend` (`types/workbook.ts`, shared by QSE/PSX/Funds) and `PersonalLoanRepayment`, stamped
+  in every relevant store action. **EMI's `EMIRepayment` deliberately excluded** — its records
+  are already addressed by `month`, a natural unique-per-loan index with no same-instant-tie
+  concern at all, so a `seq`/timestamp pair there would be inert surface area, not a real fix
+  for anything; drew this line explicitly rather than mechanically applying the pattern
+  everywhere "just because APP-WIDE was said."
+  **FAB icon**: `FabPanel`'s (`components/ui/Fab.tsx`) multi-action toggle always showed a
+  plain `PlusIcon`, rotated 45° to read as an X once open — misleading for a button that
+  actually opens a MENU of several DIFFERENT actions (e.g. Funds' own "Add a fund" + "Transfers"),
+  since a "+" implies "add one specific thing." The single-action `FabButton` case was
+  correctly unaffected — there the "+"-shaped (or whichever) icon genuinely IS the one action
+  it performs. New `MenuIcon` (`components/icons.tsx`, three filled circles — deliberately
+  solid, not stroked like this file's other icons, since a kebab/"more" glyph reads better
+  filled) replaces the closed-state icon; the open state now explicitly renders `XIcon` rather
+  than leaning on a 45°-rotated `PlusIcon` to visually become one.
+  New tests: `lib/__tests__/seq.test.ts` gained `nextSeqForEntity`/`assignSeqForEntities`
+  cases (including the "a different entity's high seq values never leak into another entity's
+  next number" scenario that was the literal bug being fixed); new
+  `lib/__tests__/financeSerial.test.ts` (this file had NO test coverage at all before today)
+  covers all four of its functions. Verified live via Playwright: a real multi-action FAB
+  (Funds' landing FAB) showed the 3-dot icon while closed and a real X once opened, zero
+  console errors; the full 479-test suite (8 new across the two seq-helper files) re-run clean
+  after every store file touched. `npx tsc -b` / `npm run test` / `npm run build` all clean.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

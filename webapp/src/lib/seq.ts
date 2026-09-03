@@ -14,17 +14,64 @@
  * assigned once, at creation, and never recomputed from the record's
  * current position.
  *
- * Scoped per-array (not one global counter per workbook) — every
- * chronological sort in this app only ever compares `seq` between
- * records drawn from the SAME array (e.g. `sortTransactionsChronological`
- * only sorts `transactions`); the one function that merges multiple
- * record types into one timeline (`buildCashLedger`) already resolves a
- * cross-type tie via its own domain rule (transfers before trades)
- * BEFORE it would ever need to compare `seq` values from two different
- * arrays, so per-array scoping is sufficient and avoids needing a single
- * persisted counter field threaded through every workbook shape. */
+ * `existing` should already be the set this new record's number is scoped
+ * against — a plain `nextSeq(wb.transfers)`/`nextSeq(wb.adjustments)` for
+ * a record type with no natural owning entity, or `nextSeqForEntity`
+ * below for one that has one (a ticker, an account, a loan). Call this
+ * directly (not through `nextSeqForEntity`) only when there's genuinely no
+ * narrower scope to filter to. */
 export function nextSeq(existing: { seq?: number }[]): number {
   return existing.reduce((max, r) => Math.max(max, r.seq ?? 0), 0) + 1;
+}
+
+/** User-reported (2026-09-03): "ID sequence should belong to each entity
+ * rather than global which is confusing (like some records are missing)."
+ * Before this, `nextSeq` was always called with the FULL per-workbook
+ * array (e.g. every ticker's transactions combined) — so looking at just
+ * one entity's own records (one stock's trades, one fund's transactions)
+ * showed gaps wherever a DIFFERENT entity's record had consumed an
+ * intervening number, reading exactly like data loss even though nothing
+ * was actually missing. This filters `existing` down to the same entity
+ * (via `keyOf`) before computing the next number, so each entity's own
+ * records are numbered 1, 2, 3... independently of every other entity's.
+ *
+ * Safe for the calc engine: every position/realized-P&L function keys its
+ * own running state per entity already (`computePositions`'s `byTicker`,
+ * etc.), so cross-entity `seq` values never need to compare against each
+ * other for correctness — only within the same entity, where they're still
+ * exactly as unique and monotonic as before. The one place two different
+ * entities' `seq` values CAN end up compared is `buildCashLedger`'s merged
+ * running-balance display, on the narrow case of two same-instant trades
+ * on DIFFERENT tickers with no recorded time — there, a same-value `seq`
+ * collision (e.g. both tickers' first-ever trade both being `seq: 1`) can
+ * only affect which of the two rows the ledger *displays* first at that
+ * exact tie; the running balance total afterward is identical either way,
+ * same as any other same-instant ordering already was.
+ *
+ * Existing already-`seq`'d records are never renumbered by this change —
+ * `seq` is written once at creation and never recomputed, so this only
+ * changes what number a NEWLY added record gets, with zero migration risk
+ * to already-synced production data. */
+export function nextSeqForEntity<T extends { seq?: number }>(existing: T[], keyOf: (r: T) => string, key: string): number {
+  return nextSeq(existing.filter((r) => keyOf(r) === key));
+}
+
+/** Bulk counterpart to `nextSeqForEntity`, for an "add several records at
+ * once" action (a CSV/statement import, etc.) whose batch can span more
+ * than one entity — a batch importing trades for two different tickers
+ * numbers each ticker's own new rows independently (1, 2, 3... per
+ * ticker), not across the whole batch. Records that already carry a `seq`
+ * (e.g. re-saving something already numbered) are left untouched. */
+export function assignSeqForEntities<T extends { seq?: number }>(existing: T[], newRecords: T[], keyOf: (r: T) => string): T[] {
+  const counters = new Map<string, number>();
+  return newRecords.map((r) => {
+    if (r.seq !== undefined) return r;
+    const key = keyOf(r);
+    if (!counters.has(key)) counters.set(key, nextSeqForEntity(existing, keyOf, key) - 1);
+    const next = counters.get(key)! + 1;
+    counters.set(key, next);
+    return { ...r, seq: next };
+  });
 }
 
 /** Backfills `seq` onto every record in `records` that's missing it —

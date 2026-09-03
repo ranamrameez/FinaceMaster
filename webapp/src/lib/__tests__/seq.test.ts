@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { backfillSeq, nextSeq } from '../seq';
+import { assignSeqForEntities, backfillSeq, nextSeq, nextSeqForEntity } from '../seq';
 
 describe('nextSeq', () => {
   it('returns 1 for an empty array', () => {
@@ -46,5 +46,48 @@ describe('backfillSeq', () => {
     const byId = Object.fromEntries(result.map((r) => [r.id, r.seq]));
     expect(byId.old).toBe(100);
     expect(byId.newer).toBeGreaterThan(100);
+  });
+});
+
+describe('nextSeqForEntity', () => {
+  it('numbers each entity independently — a different entity in `existing` never affects the result', () => {
+    const existing = [
+      { ticker: 'AAPL', seq: 1 },
+      { ticker: 'AAPL', seq: 2 },
+      { ticker: 'GOOG', seq: 1 },
+      { ticker: 'GOOG', seq: 2 },
+      { ticker: 'GOOG', seq: 3 },
+    ];
+    // AAPL only has 2 records — its next is 3, not 6, even though GOOG's
+    // records also carry high seq values in the same combined array.
+    expect(nextSeqForEntity(existing, (r) => r.ticker, 'AAPL')).toBe(3);
+    expect(nextSeqForEntity(existing, (r) => r.ticker, 'GOOG')).toBe(4);
+  });
+
+  it('returns 1 for an entity with no existing records at all', () => {
+    const existing = [{ ticker: 'AAPL', seq: 1 }];
+    expect(nextSeqForEntity(existing, (r) => r.ticker, 'MSFT')).toBe(1);
+  });
+});
+
+describe('assignSeqForEntities', () => {
+  it('numbers a batch spanning multiple entities independently, per entity', () => {
+    const existing: { ticker: string; seq?: number }[] = [{ ticker: 'AAPL', seq: 5 }];
+    const batch: { ticker: string; seq?: number }[] = [
+      { ticker: 'AAPL' },
+      { ticker: 'GOOG' },
+      { ticker: 'AAPL' },
+      { ticker: 'GOOG' },
+    ];
+    const result = assignSeqForEntities(existing, batch, (r) => r.ticker);
+    // AAPL already had seq 5 in `existing`, so its two new batch rows continue from there.
+    expect(result.filter((r) => r.ticker === 'AAPL').map((r) => r.seq)).toEqual([6, 7]);
+    // GOOG had nothing in `existing`, so its two new batch rows start fresh at 1.
+    expect(result.filter((r) => r.ticker === 'GOOG').map((r) => r.seq)).toEqual([1, 2]);
+  });
+
+  it('leaves a record that already carries a seq untouched', () => {
+    const result = assignSeqForEntities([], [{ ticker: 'AAPL', seq: 42 }], (r: { ticker: string; seq?: number }) => r.ticker);
+    expect(result[0].seq).toBe(42);
   });
 });

@@ -42,6 +42,8 @@ export interface PersonalLoanRepayment {
    * every repayment logged before today. */
   source?: 'manual' | 'statement-import';
   statementRef?: string;
+  /** Same reasoning as `Transaction.timestamp` in `types/workbook.ts`. */
+  timestamp?: string;
 }
 
 export interface PersonalLoansSettings {

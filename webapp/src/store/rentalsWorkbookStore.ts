@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { toInstantMs } from '../lib/datetime';
-import { backfillSerialNumber, nextSerialNumber } from '../lib/financeSerial';
+import { assignSerialNumbersForEntities, backfillSerialNumber, nextSerialNumberForEntity } from '../lib/financeSerial';
 import { resolveIsDeposit, resolveLegacyCategoryId } from '../lib/financeMigration';
 import { createEmptyRentalsWorkbook } from './defaultRentalsWorkbook';
 import type { Property, RentalEntry, RentalsWorkbook } from '../types/rentalsWorkbook';
@@ -104,21 +104,19 @@ export const useRentalsWorkbookStore = create<RentalsStoreState>((set, get) => {
         entries: wb.entries.filter((e) => e.propertyId !== id),
       })),
 
+    // Scoped by property — same reasoning as Cash's scoping-by-currency above.
     addEntry: (entry) =>
       mutate((wb) => {
         const withFields = withDerivedFields(entry);
-        const withSerial = withFields.serialNumber !== undefined ? withFields : { ...withFields, serialNumber: nextSerialNumber(wb.entries) };
+        const withSerial = withFields.serialNumber !== undefined ? withFields : { ...withFields, serialNumber: nextSerialNumberForEntity(wb.entries, (e) => e.propertyId, withFields.propertyId) };
         return { ...wb, entries: [...wb.entries, withSerial] };
       }),
 
     addEntries: (entries) =>
       mutate((wb) => {
-        let serial = nextSerialNumber(wb.entries) - 1;
-        const withFields = entries.map((e) => {
-          const derived = withDerivedFields(e);
-          return derived.serialNumber !== undefined ? derived : { ...derived, serialNumber: ++serial };
-        });
-        return { ...wb, entries: [...wb.entries, ...withFields] };
+        const withFields = entries.map(withDerivedFields);
+        const withSerial = assignSerialNumbersForEntities(wb.entries, withFields, (e) => e.propertyId);
+        return { ...wb, entries: [...wb.entries, ...withSerial] };
       }),
 
     updateEntry: (id, patch) =>

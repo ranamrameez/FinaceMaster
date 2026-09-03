@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { toInstantMs } from '../lib/datetime';
-import { backfillSeq, nextSeq } from '../lib/seq';
+import { assignSeqForEntities, backfillSeq, nextSeqForEntity } from '../lib/seq';
 import { createEmptyPersonalLoansWorkbook } from './defaultPersonalLoansWorkbook';
 import type { PersonalLoan, PersonalLoanRepayment, PersonalLoansWorkbook } from '../types/personalLoansWorkbook';
 
@@ -92,17 +92,21 @@ export const usePersonalLoansWorkbookStore = create<PersonalLoansStoreState>((se
         repayments: wb.repayments.filter((r) => r.loanId !== id),
       })),
 
+    // Scoped by loan — same reasoning as Cash's scoping-by-currency in
+    // cashWorkbookStore.ts.
     addRepayment: (repayment) =>
-      mutate((wb) => ({
-        ...wb,
-        repayments: [...wb.repayments, repayment.seq !== undefined ? repayment : { ...repayment, seq: nextSeq(wb.repayments) }],
-      })),
+      mutate((wb) => {
+        const seq = repayment.seq !== undefined ? repayment.seq : nextSeqForEntity(wb.repayments, (r) => r.loanId, repayment.loanId);
+        const timestamp = repayment.timestamp ?? new Date().toISOString();
+        return { ...wb, repayments: [...wb.repayments, { ...repayment, seq, timestamp }] };
+      }),
 
     addRepayments: (repayments) =>
       mutate((wb) => {
-        let seq = nextSeq(wb.repayments) - 1;
-        const withSeq = repayments.map((r) => (r.seq !== undefined ? r : { ...r, seq: ++seq }));
-        return { ...wb, repayments: [...wb.repayments, ...withSeq] };
+        const now = new Date().toISOString();
+        const withSeq = assignSeqForEntities(wb.repayments, repayments, (r) => r.loanId);
+        const withTimestamp = withSeq.map((r) => ({ ...r, timestamp: r.timestamp ?? now }));
+        return { ...wb, repayments: [...wb.repayments, ...withTimestamp] };
       }),
 
     updateRepayment: (id, patch) =>
