@@ -8,7 +8,7 @@ import { Notice } from '../../../components/Notice';
 import { Tooltip } from '../../../components/Tooltip';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { EditIcon, PlusIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { ArchiveIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { toCSV } from '../../../lib/csv';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
@@ -591,7 +591,10 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
             <h3 style={{ margin: 0 }}>Editing {loan.name}</h3>
           ) : (
             <div>
-              <div style={{ fontWeight: 700, fontSize: 16 }}>{loan.name}</div>
+              <div style={{ fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                {loan.name}
+                {loan.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Archived</span>}
+              </div>
               <div className="footer-note" style={{ fontWeight: 400 }}>
                 {loan.lender} · {loan.currencyCode} · {loan.repaymentMode === 'fixedTotal' ? 'Fixed total (no interest)' : `${loan.annualRatePct}% p.a.`} · {loan.tenureMonths} months
               </div>
@@ -616,6 +619,16 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
           ) : (
             <div className="row" style={{ gap: 8 }}>
               <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => { setEditRow(loan); setEditing(true); }} />
+              <IconButton
+                label={loan.isActive === false ? 'Restore' : 'Archive'}
+                icon={loan.isActive === false ? <RestoreIcon size={13} /> : <ArchiveIcon size={13} />}
+                align="right"
+                onClick={async () => {
+                  if (!(await ensureSignedIn(loan.isActive === false ? 'Sign in to restore this loan.' : 'Sign in to archive this loan.'))) return;
+                  updateEntry(loan.id, { isActive: loan.isActive === false ? true : false });
+                  toast(loan.isActive === false ? 'Loan restored.' : 'Loan archived.');
+                }}
+              />
               <IconButton
                 label="Delete"
                 icon={<TrashIcon size={13} />}
@@ -1113,7 +1126,10 @@ function OverallSummary() {
 }
 
 function LoanList({ onSelect, onEdit }: { onSelect: (loan: EMILoan) => void; onEdit: (loan: EMILoan) => void }) {
-  const loans = useEMIWorkbookStore((s) => s.workbook.entries);
+  const allLoans = useEMIWorkbookStore((s) => s.workbook.entries);
+  const [showArchived, setShowArchived] = useState(false);
+  const archivedCount = useMemo(() => allLoans.filter((l) => l.isActive === false).length, [allLoans]);
+  const loans = useMemo(() => (showArchived ? allLoans : allLoans.filter((l) => l.isActive !== false)), [allLoans, showArchived]);
 
   type Row = { loan: EMILoan; sum: ReturnType<typeof emiSummary> };
   const rows: Row[] = loans.map((loan) => ({ loan, sum: emiSummary(loan) }));
@@ -1130,31 +1146,47 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: EMILoan) => void; onE
   const { sorted, Th } = useSortableRows(rows, sortValue, 'name', 'asc');
 
   return (
-    <div className="table-scroll">
-      <table>
-        <thead>
-          <tr>
-            <Th col="name">Name</Th><Th col="lender">Lender</Th><Th col="monthly">Monthly</Th>
-            <Th col="outstanding">Outstanding</Th><Th col="monthsLeft">Months left</Th><th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map(({ loan: l, sum }) => (
-            <tr key={l.id} onClick={() => onSelect(l)} style={{ cursor: 'pointer' }}>
-              <td>{l.name}</td>
-              <td>{l.lender}{l.repaymentMode === 'fixedTotal' ? ' · no-interest' : ''}</td>
-              <td>{fmtMoney(sum.emi, l.currencyCode)}</td>
-              <td className="pill-sell">{fmtMoney(sum.outstanding, l.currencyCode)}</td>
-              <td>{sum.monthsRemaining}</td>
-              <td>
-                <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={(e) => { e.stopPropagation(); onEdit(l); }} />{' '}
-                <button className="btn secondary small" onClick={(e) => { e.stopPropagation(); onSelect(l); }}>Open</button>
-              </td>
+    <div>
+      {archivedCount > 0 && (
+        <button className="btn secondary small" style={{ marginBottom: 8 }} onClick={() => setShowArchived((v) => !v)}>
+          {showArchived ? 'Hide' : 'Show'} archived ({archivedCount})
+        </button>
+      )}
+      <div className="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <Th col="name">Name</Th><Th col="lender">Lender</Th><Th col="monthly">Monthly</Th>
+              <Th col="outstanding">Outstanding</Th><Th col="monthsLeft">Months left</Th><th></th>
             </tr>
-          ))}
-          {!sorted.length && <tr><td colSpan={6} className="footer-note">No loans yet — add one above.</td></tr>}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {sorted.map(({ loan: l, sum }) => (
+              <tr key={l.id} onClick={() => onSelect(l)} style={{ cursor: 'pointer' }}>
+                <td>
+                  {l.name}
+                  {l.isActive === false && <span className="pill-warn" style={{ fontSize: 10, marginLeft: 6 }}>Archived</span>}
+                </td>
+                <td>{l.lender}{l.repaymentMode === 'fixedTotal' ? ' · no-interest' : ''}</td>
+                <td>{fmtMoney(sum.emi, l.currencyCode)}</td>
+                <td className="pill-sell">{fmtMoney(sum.outstanding, l.currencyCode)}</td>
+                <td>{sum.monthsRemaining}</td>
+                <td>
+                  <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={(e) => { e.stopPropagation(); onEdit(l); }} />{' '}
+                  <button className="btn secondary small" onClick={(e) => { e.stopPropagation(); onSelect(l); }}>Open</button>
+                </td>
+              </tr>
+            ))}
+            {!sorted.length && (
+              <tr>
+                <td colSpan={6} className="footer-note">
+                  {allLoans.length ? 'Every loan is archived — click "Show archived" above to see them.' : 'No loans yet — add one above.'}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

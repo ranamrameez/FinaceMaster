@@ -147,9 +147,12 @@ export function SideFields({ label, cfg, onChange }: { label: string; cfg: LinkS
       // new activity, never from totals" rule as `AccountsList`'s own
       // filter; see `BankAccount.isActive`'s own doc comment.
       case 'bank': return bankAccounts.filter((a) => a.isActive !== false).map((a) => ({ id: a.id, label: `${a.name} (${a.currencyCode})`, currencyCode: a.currencyCode }));
-      case 'rentals': return properties.map((p) => ({ id: p.id, label: `${p.name} (${p.currencyCode})`, currencyCode: p.currencyCode }));
-      case 'personalLoans': return loans.map((l) => ({ id: l.id, label: `${l.person} (${l.currencyCode})`, currencyCode: l.currencyCode }));
-      case 'emi': return emiLoans.map((l) => ({ id: l.id, label: `${l.name} (${l.currencyCode})`, currencyCode: l.currencyCode }));
+      // Same archived-hiding rule extended to every other linkable entity
+      // list with its own `isActive` flag (2026-09-03) — see each type's
+      // own doc comment (`Property`/`PersonalLoan`/`EMILoan`).
+      case 'rentals': return properties.filter((p) => p.isActive !== false).map((p) => ({ id: p.id, label: `${p.name} (${p.currencyCode})`, currencyCode: p.currencyCode }));
+      case 'personalLoans': return loans.filter((l) => l.isActive !== false).map((l) => ({ id: l.id, label: `${l.person} (${l.currencyCode})`, currencyCode: l.currencyCode }));
+      case 'emi': return emiLoans.filter((l) => l.isActive !== false).map((l) => ({ id: l.id, label: `${l.name} (${l.currencyCode})`, currencyCode: l.currencyCode }));
       default: return [];
     }
   };

@@ -7,7 +7,7 @@ import { Modal } from '../../../components/Modal';
 import { Notice } from '../../../components/Notice';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { hueStyle } from '../../../lib/statCardHues';
-import { EditIcon, PlusIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { ArchiveIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
@@ -589,9 +589,20 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
   const repayments = usePersonalLoansWorkbookStore((s) => s.workbook.repayments);
   const deleteLoan = usePersonalLoansWorkbookStore((s) => s.deleteLoan);
   const updateLoan = usePersonalLoansWorkbookStore((s) => s.updateLoan);
+  const ensureSignedIn = useEnsureSignedIn();
   const [editing, setEditing] = useState(!!startInEditMode);
   const [editRow, setEditRow] = useState<PersonalLoan>(loan);
   const outstanding = loanOutstanding(loan, repayments);
+
+  // User-requested (2026-09-03): "add isActive flag to all modules where
+  // applicable" — same archive/restore pattern as `BankAccount.isActive`.
+  // A reversible alternative to Delete; visibility only, never touches a
+  // total.
+  const toggleArchived = async () => {
+    if (!(await ensureSignedIn(loan.isActive === false ? 'Sign in to reactivate this loan.' : 'Sign in to archive this loan.'))) return;
+    updateLoan(loan.id, { isActive: loan.isActive === false ? true : false });
+    toast(loan.isActive === false ? 'Loan reactivated.' : 'Loan archived.');
+  };
 
   return (
     <div>
@@ -637,7 +648,10 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
         ) : (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 16 }}>{loan.person}</div>
+              <div style={{ fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                {loan.person}
+                {loan.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Archived</span>}
+              </div>
               <div className="footer-note">
                 {loan.direction === 'owed_to_me' ? 'Money lent out' : 'Money I owe'} · {loan.currencyCode} · since {loan.date}
               </div>
@@ -645,6 +659,12 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
             </div>
             <div className="row" style={{ gap: 8 }}>
               <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => { setEditRow(loan); setEditing(true); }} />
+              <IconButton
+                label={loan.isActive === false ? 'Restore' : 'Archive'}
+                icon={loan.isActive === false ? <RestoreIcon size={13} /> : <ArchiveIcon size={13} />}
+                align="right"
+                onClick={toggleArchived}
+              />
               <IconButton
                 label="Delete"
                 icon={<TrashIcon size={13} />}
@@ -686,9 +706,12 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
 }
 
 function LoanList({ onSelect, onEdit }: { onSelect: (loan: PersonalLoan) => void; onEdit: (loan: PersonalLoan) => void }) {
-  const loans = usePersonalLoansWorkbookStore((s) => s.workbook.loans);
+  const allLoans = usePersonalLoansWorkbookStore((s) => s.workbook.loans);
   const repayments = usePersonalLoansWorkbookStore((s) => s.workbook.repayments);
   const [filter, setFilter] = useState<'all' | 'owed_to_me' | 'i_owe'>('all');
+  const [showArchived, setShowArchived] = useState(false);
+  const archivedCount = useMemo(() => allLoans.filter((l) => l.isActive === false).length, [allLoans]);
+  const loans = useMemo(() => (showArchived ? allLoans : allLoans.filter((l) => l.isActive !== false)), [allLoans, showArchived]);
   const filtered = filter === 'all' ? loans : loans.filter((l) => l.direction === filter);
 
   type Row = { loan: PersonalLoan; outstanding: number };
@@ -705,12 +728,17 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: PersonalLoan) => void
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row" style={{ gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
         <select value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)}>
           <option value="all">All directions</option>
           <option value="owed_to_me">Money I lent out</option>
           <option value="i_owe">Money I owe</option>
         </select>
+        {archivedCount > 0 && (
+          <button className="btn secondary small" onClick={() => setShowArchived((v) => !v)}>
+            {showArchived ? 'Hide' : 'Show'} archived ({archivedCount})
+          </button>
+        )}
       </div>
       <div className="table-scroll">
         <table>
@@ -718,7 +746,10 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: PersonalLoan) => void
           <tbody>
             {sorted.map(({ loan: l, outstanding }) => (
               <tr key={l.id} onClick={() => onSelect(l)} style={{ cursor: 'pointer' }}>
-                <td>{l.person}</td>
+                <td>
+                  {l.person}
+                  {l.isActive === false && <span className="pill-warn" style={{ fontSize: 10, marginLeft: 6 }}>Archived</span>}
+                </td>
                 <td className={l.direction === 'owed_to_me' ? 'pill-buy' : 'pill-sell'}>{l.direction === 'owed_to_me' ? 'Lent out' : 'I owe'}</td>
                 <td>{fmtMoney(outstanding, l.currencyCode)}</td>
                 <td>
@@ -727,7 +758,13 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: PersonalLoan) => void
                 </td>
               </tr>
             ))}
-            {!sorted.length && <tr><td colSpan={4} className="footer-note">No personal loans yet.</td></tr>}
+            {!sorted.length && (
+              <tr>
+                <td colSpan={4} className="footer-note">
+                  {allLoans.length ? 'Every loan is archived — click "Show archived" above to see them.' : 'No personal loans yet.'}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

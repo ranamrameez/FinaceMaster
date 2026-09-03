@@ -40,6 +40,13 @@ export interface EMILoan {
    * different date via that month's own `EMIRepayment.date` — see
    * `resolvedDueDate()`. */
   paymentDayOfMonth?: number;
+  /** User-requested (2026-09-03): "add isActive flag to all modules where
+   * applicable" — same archive/restore pattern as `BankAccount.isActive`.
+   * Optional, absent = active. Visibility only: hidden from the default
+   * loan list and from "link to bank" / transfer-link pickers, never from
+   * a total (a fully paid-off loan's outstanding balance is already 0, so
+   * archiving it changes nothing about Net Worth/summary totals). */
+  isActive?: boolean;
 }
 
 /** A real, dated record of an actual payment made against a loan —

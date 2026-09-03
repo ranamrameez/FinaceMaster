@@ -5297,6 +5297,47 @@ FinanceManager live link:
      a seeded Checking(1200)+archived-Savings(450) pair still read exactly 1,650 USD, confirming
      archiving never touches a real total. `npx tsc -b` / `npm run test` (466 tests, unchanged —
      a UI-only additive feature) / `npm run build` all clean.
+223. **`isActive` extended to Funds/Personal Loans/EMI/Rentals, user-requested (2026-09-03):
+     "Funds can also be closed! add isActive flag to all modules where applicable" — closes
+     the remaining scope of Pending item 115(c).** Mechanical repetition of Done item 222's
+     exact Bank pattern across the other four entity-holding modules — `Fund`/`PersonalLoan`/
+     `EMILoan`/`Property` all gained the identical optional `isActive?: boolean` (absent =
+     active), each with its own doc comment. Subscriptions was deliberately left untouched —
+     it already has equivalent functionality via its own `active: boolean` (required, not
+     optional) + `cancelledDate`, the original precedent this whole pattern is modeled on; a
+     field rename there would be a real, riskier migration on an already-required field with
+     no corresponding new user benefit. **Funds** ("closed"): `FundList` (a plain table, not
+     `EntityCard`-based, unlike Bank) gained a "Show closed (N)" toggle + a "Closed" pill on the
+     name cell; `FundDetail`'s header gained a Close/Reopen `IconButton` next to Edit/Delete —
+     archiving/reopening never touches `positions`/`fundNetProfit`, so Net Worth stays correct.
+     **Personal Loans**: `LoanList`'s existing direction filter row gained a matching "Show
+     archived" toggle; `LoanDetail`'s header (Card, not `CollapsibleCard`, unlike EMI's) gained
+     the Archive/Restore button. **EMI**: `LoanList` and `LoanDetail`'s existing `CollapsibleCard`
+     header (already restructured onto `title`/`headerExtra` by Done item 172) both gained the
+     same treatment. **Rentals**: `PropertiesList`'s row-level actions (Details/Edit/Delete) gained
+     an Archive/Restore `IconButton` between Edit and Delete, since a property has no dedicated
+     detail PAGE — only `PropertyDetailModal`, and `Modal`'s own `title` prop is a plain string
+     with no header-action slot, so touching that shared component wasn't worth it for one
+     module; the row-level location matches every other action this list already exposes.
+     **"Add a NEW thing into this entity" pickers audited and filtered app-wide**, mirroring
+     Done item 222's own EMI/Subscriptions precedent (an already-linked archived entity still
+     resolves its real name via the full unfiltered list; only the "pick a NEW target" list
+     filters): `TransferLinksPage.tsx`'s `SideFields`/`entitiesForModule` (rentals/
+     personalLoans/emi cases), Rentals' own `usePropertyPicker()` (used by both the Entries and
+     Import tabs — matches Bank's `useAccountPicker` precedent, since both are "add new"
+     pickers, not "view any" ones), and Budget Planner's `AddPlanForm` (`bankAccounts`/
+     `rentalProperties` props filtered at the call site, while `collectBudgetActivities` keeps
+     reading the full unfiltered lists so an archived entity's own past activity still shows in
+     the projection table). Each module's Analytics-tab picker (Bank's own precedent: view any
+     account/fund/property's history, archived included) was deliberately left unfiltered.
+     Verified live via Playwright across all four modules with seeded active+archived pairs:
+     each list correctly hides the archived entity by default and reveals it (with its badge)
+     via the toggle; Personal Loans' Net position (800 = 500+300) and Rentals' Net income
+     (3k = 1k+2k) both confirmed the archived entity's data still counts toward every total;
+     Funds' and Personal Loans' detail-page Archive/Close buttons both correctly hit the real
+     sign-in gate; the Rentals Transfers-FAB's property picker correctly listed only the one
+     active property, excluding the archived one — zero console errors throughout. `npx tsc -b`
+     / `npm run test` (466 tests, unchanged) / `npm run build` all clean.
 
 ## Pending
 
@@ -6043,11 +6084,14 @@ or a design decision before more code, not guessed at further:**
      correct data ordering. Ability to favorite an entity, to view it on top." Well-specified,
      lower-risk than (a)/(b) (an additive field, not a restructuring) — a reasonable next
      concrete step across Bank/Funds/Personal Loans/EMI/Rentals/Subscriptions entity lists.
-     **The "active/inactive" half is now done for Bank** (`BankAccount.isActive`, 2026-09-03 —
-     see Done item 222): archive/restore an account, hidden from the default list + every
-     "add new" picker, never from totals. **Still open**: the same archive treatment for
-     Funds/Personal Loans/EMI/Rentals/Subscriptions' own entity lists, plus favorite/pin and a
-     visible Sr#/Index# column anywhere (Bank included) — none of that is built yet.
+     **The "active/inactive" half is now DONE for Bank, Funds, Personal Loans, EMI, and
+     Rentals** (`isActive`, 2026-09-03 — see Done items 222/223): archive/close a Bank account,
+     Fund, Personal Loan, EMI loan, or Rental property, hidden from the default list + every
+     "add new" picker, never from totals. Subscriptions already had equivalent functionality
+     via its own pre-existing `active`/`cancelledDate` fields (the original precedent this
+     pattern is modeled on), so every module named in the original request now has it. **Still
+     open**: favorite/pin and a visible Sr#/Index# column — neither is built yet, for any
+     module.
      (d) Bank's own Analytics tab was never audited against the date-range-filterable chart
      pattern other Analytics pages already have (Done item 31) — "charts should be interactive...
      right now they are dumping lifetime data all at once."

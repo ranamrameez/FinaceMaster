@@ -8,6 +8,13 @@ export interface PersonalLoan {
   principal: number;
   date: string;
   note?: string;
+  /** User-requested (2026-09-03): "add isActive flag to all modules where
+   * applicable" — same archive/restore pattern as `BankAccount.isActive`.
+   * Optional, absent = active. Visibility only: hidden from the default
+   * loan list and from "link a NEW repayment into" pickers, never from a
+   * total (a closed/settled loan's own outstanding balance — usually 0 by
+   * then — keeps counting toward Net Worth/summary totals unchanged). */
+  isActive?: boolean;
 }
 
 export interface PersonalLoanRepayment {

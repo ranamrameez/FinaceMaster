@@ -165,10 +165,15 @@ export function BudgetPlannerPage() {
       )}
 
       <ActivityList activities={activities} />
+      {/* Archived accounts/properties are excluded from this "pick where a
+         NEW plan goes" picker (2026-09-03) — same rule as everywhere else;
+         `activities`/`ActivityList` above still read the FULL unfiltered
+         lists, so an archived account/property's own past activity still
+         shows. */}
       <AddPlanFab
         addPlannedCash={addPlannedCash} cashDefaultCurrency={cashSettings.defaultCurrency}
-        bankAccounts={bankAccounts} addPlannedBank={addPlannedBank}
-        rentalProperties={rentalProperties} addPlannedRentals={addPlannedRentals}
+        bankAccounts={bankAccounts.filter((a) => a.isActive !== false)} addPlannedBank={addPlannedBank}
+        rentalProperties={rentalProperties.filter((p) => p.isActive !== false)} addPlannedRentals={addPlannedRentals}
       />
     </div>
   );
