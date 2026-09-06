@@ -22,7 +22,7 @@ import { FinanceEditModal } from '../../../components/FinanceEditModal';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { useAmountFormat } from '../../../hooks/useAmountFormat';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
-import { useSortableRows } from '../../../hooks/useSortableRows';
+import { ReorderButtons } from '../../../components/ui/ReorderButtons';
 import { hueStyle } from '../../../lib/statCardHues';
 import { categoryName, UNCATEGORIZED_ID } from '../../../lib/categories';
 import { useCategoryStore } from '../../../store/categoryStore';
@@ -954,12 +954,20 @@ function EditTransactionModal({ tx, onClose }: { tx: BankTransaction; onClose: (
  * (README Done item 224) here too. */
 function TransactionsList({ account }: { account: BankAccount }) {
   const allTransactions = useBankWorkbookStore((s) => s.workbook.transactions);
+  const updateTransaction = useBankWorkbookStore((s) => s.updateTransaction);
   const deleteTransaction = useBankWorkbookStore((s) => s.deleteTransaction);
   const categories = useCategoryStore((s) => s.workbook.categories);
   const links = useInterEntityTransfersStore((s) => s.workbook.entries);
+  const ensureSignedIn = useEnsureSignedIn();
   const [editingTx, setEditingTx] = useState<BankTransaction | null>(null);
   const [typeFilter, setTypeFilter] = useState<'all' | 'in' | 'out'>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  // User-requested (2026-09-06): "although we are removing sorting, we
+  // must add all fields as filters in all tables" — a Source filter
+  // (Manual/Imported) was the one column here with no matching filter,
+  // unlike Personal Loans' equivalent repayments table which already had
+  // one; added for parity now that free column sorting is gone.
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'manual' | 'statement-import'>('all');
 
   const allLedger = useMemo(() => accountRunningLedger(account, allTransactions), [account, allTransactions]);
 
@@ -973,9 +981,10 @@ function TransactionsList({ account }: { account: BankAccount }) {
       if (typeFilter === 'in' && r.tx.amount < 0) return false;
       if (typeFilter === 'out' && r.tx.amount >= 0) return false;
       if (categoryFilter !== 'all' && categoryName(r.tx.categoryID, categories) !== categoryFilter) return false;
+      if (sourceFilter !== 'all' && (r.tx.source ?? 'manual') !== sourceFilter) return false;
       return true;
     }),
-    [allLedger, typeFilter, categoryFilter, categories],
+    [allLedger, typeFilter, categoryFilter, sourceFilter, categories],
   );
 
   // User-requested (2026-08-28): "Tag/Mark and also add nav link between the
@@ -991,21 +1000,25 @@ function TransactionsList({ account }: { account: BankAccount }) {
     return map;
   }, [links]);
 
-  type Col = 'date' | 'description' | 'amount' | 'category';
-  const sortValue = (r: (typeof ledger)[number], col: Col): number | string => {
-    switch (col) {
-      case 'description': return r.tx.description;
-      case 'amount': return r.tx.amount;
-      case 'category': return categoryName(r.tx.categoryID, categories);
-      default: return r.tx.date;
-    }
+  // User-reported (2026-09-06): "we may stop sorting options for
+  // chronologically important tables (only sequence-aware tables) to
+  // avoid the disordered mess" — a statement table's own Balance column
+  // is only meaningful in real chronological+sequence order; letting the
+  // user click any column (Amount, Category, ...) to resort it produces
+  // exactly the "disordered mess" the earlier same-date sort bug already
+  // demonstrated (Done item 234). Sorting is gone from this table
+  // entirely — `ledger` is always shown newest-first, matching
+  // `accountRunningLedger`'s own real-instant+serialNumber order (just
+  // reversed for display), and the ONLY way to change two rows' relative
+  // order is the `ReorderButtons` below, which can only ever swap two
+  // rows genuinely tied on the same real instant — never scramble the
+  // table into a different, unrelated order.
+  const sorted = useMemo(() => [...ledger].reverse(), [ledger]);
+  const instantOf = (r: (typeof sorted)[number]) => toInstantMs(r.tx.date, r.tx.time, r.tx.timezone);
+  const reorder = async (pair: [{ id: string; order: number }, { id: string; order: number }]) => {
+    if (!(await ensureSignedIn('Sign in to reorder transactions.'))) return;
+    for (const p of pair) updateTransaction(p.id, { serialNumber: p.order });
   };
-  // Tiebreak by real chronological instant, then serialNumber — the same
-  // two-step order `accountRunningLedger` itself already sorts by, so a
-  // same-date group's row order always agrees with its own Balance column
-  // (see `useSortableRows`'s own doc comment for the bug this fixes).
-  const ledgerTiebreak = (r: (typeof ledger)[number]) => [toInstantMs(r.tx.date, r.tx.time, r.tx.timezone), r.tx.serialNumber ?? 0];
-  const { sorted, Th } = useSortableRows(ledger, sortValue, 'date', 'desc', ledgerTiebreak);
 
   return (
     <div>
@@ -1023,6 +1036,13 @@ function TransactionsList({ account }: { account: BankAccount }) {
             {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
           </Select>
         </Field>
+        <Field label="Source" width={130}>
+          <Select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value as typeof sourceFilter)}>
+            <option value="all">All</option>
+            <option value="manual">Manual</option>
+            <option value="statement-import">Imported</option>
+          </Select>
+        </Field>
       </div>
       <div className="table-scroll">
       <table>
@@ -1035,7 +1055,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
                as a plain "#" column gives a real, stable reference number
                per transaction, not just a truncated uuid. */}
             <th title="Sequence number — a stable reference for this transaction, in the order it was actually entered.">#</th>
-            <Th col="date">Date</Th>
+            <th>Date</th>
             {/* User-reported (2026-08-28): "Description and Source are
                making the table too large to read" + "Credit/Debit and
                balance should be next to each other. Categories can be
@@ -1043,21 +1063,31 @@ function TransactionsList({ account }: { account: BankAccount }) {
                tooltip for the full text; Category rendered as a colored
                `.pill-info` label instead of plain text; Amount and Balance
                moved next to each other at the end, ahead of actions. */}
-            <Th col="description">Description</Th>
-            <Th col="category">Category</Th>
-            <Th col="amount">Amount</Th>
+            <th>Description</th>
+            <th>Category</th>
+            <th>Amount</th>
             <th>Balance</th>
             <th>Source</th>
             <th></th>
           </tr>
         </thead>
         <tbody>
-          {sorted.map(({ tx, balance }) => {
+          {sorted.map(({ tx, balance }, i) => {
             const link = linkByRecordId.get(tx.id);
             const otherSide = link ? (link.from.module === 'bank' && link.fromRecordId === tx.id ? link.to : link.from) : undefined;
             return (
               <tr key={tx.id}>
-                <td className="footer-note">{tx.serialNumber ?? '—'}</td>
+                <td className="footer-note">
+                  {tx.serialNumber ?? '—'}{' '}
+                  <ReorderButtons
+                    rows={sorted}
+                    index={i}
+                    instantOf={instantOf}
+                    idOf={(r) => r.tx.id}
+                    orderOf={(r) => r.tx.serialNumber}
+                    onMove={reorder}
+                  />
+                </td>
                 <td>{tx.date}</td>
                 <td className="cell-clip" title={tx.description}>
                   {tx.description}

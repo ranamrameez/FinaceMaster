@@ -5201,6 +5201,35 @@ not developer notes) continuously as features ship.
   showing that VISIBLE group's own total (respects "Show archived") — distinct from
   `TotalBalances`' own always-includes-archived grand total, so the two don't duplicate the same
   claim. `npx tsc -b` / `npm run test` (511 tests, 2 new) / `npm run build` all clean.
+- **App-wide same-day reorder (up/down buttons) + sortable-header removal on every running-
+  balance table + filter parity (2026-09-06) — see README Done item 235.** User: "if some
+  transaction is missed and logged later... some interactive option should be there to drag
+  the transactions up or down to correct their order... we may stop sorting options for
+  chronologically important tables (only sequence-aware tables)." Confirmed via
+  `AskUserQuestion`: up/down buttons not drag-and-drop; NEVER touch `id` (cross-entity links
+  reference records by `id`) — a move swaps the two tied rows' `seq`/`serialNumber` instead;
+  app-wide scope, not just Banking.
+  New `hooks/useTieGroupReorder.ts` (tested) — field-name-agnostic (`idOf`/`orderOf` getters,
+  since Cash/Bank/Rentals use `serialNumber` while QSE/PSX/Funds/Personal Loans use `seq`), only
+  offers a move between ADJACENT rows tied on the EXACT same real instant. New
+  `components/ui/ReorderButtons.tsx` renders nothing for an untied row (the common case).
+  Removed sortable headers from every table with a real running-balance column: Bank's account
+  statement, Cash's per-currency statement, Personal Loans' repayments, QSE's/PSX's/Funds'
+  Transfers sections (reorder buttons added to all of these) plus QSE's/PSX's merged Cash
+  Ledger section (no reorder buttons there — each row is derived from a record in its OWN
+  native table, so reordering happens there and flows through automatically). Audited every
+  other table before assuming scope — Rentals' entries, EMI's schedule, loan lists, per-ticker
+  trade tables all show no running balance, so none needed this.
+  Mid-task follow-up from the user: "although we are removing sorting, we must add all fields
+  as filters in all tables" — audited the six touched tables for missing dimension filters and
+  added a Source filter to Bank's/Cash's statement tables and a Type filter to Funds' Transfers
+  section, for parity with sibling tables that already had them (Personal Loans repayments,
+  QSE/PSX Transfers/Cash-ledger).
+  Verified live via Playwright with a deliberately crafted tie (two same-date rows entered
+  "out of order," exactly the reported bug scenario): zero sortable headers remain; an untied
+  row shows no buttons; a tied row's move-toward-the-untied-neighbor is correctly disabled
+  while move-toward-the-tie is enabled; clicking an enabled button correctly hits the real
+  sign-in gate. `npx tsc -b` / `npm run test` (520 tests, 9 new) / `npm run build` all clean.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

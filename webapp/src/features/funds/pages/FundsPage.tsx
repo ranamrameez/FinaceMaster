@@ -39,6 +39,8 @@ import { dlDoughnut, dlLine } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar, tickerColor } from '../../../lib/cssVar';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
+import { ReorderButtons } from '../../../components/ui/ReorderButtons';
+import { toInstantMs } from '../../../lib/datetime';
 import { firebaseReady } from '../../../lib/firebase/client';
 import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import { useAppearanceStore } from '../../../store/appearanceStore';
@@ -1095,6 +1097,11 @@ function FundsTransfersSection() {
   const links = useInterEntityTransfersStore((s) => s.workbook.entries);
   const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<Transfer | null>(null);
+  // User-requested (2026-09-06): "although we are removing sorting, we
+  // must add all fields as filters in all tables" — QSE's/PSX's own
+  // Transfers sections already had this Type filter; Funds' copy was
+  // missing it.
+  const [typeFilter, setTypeFilter] = useState<'all' | Transfer['type']>('all');
 
   const balances = useMemo(() => transferRunningBalance(workbook.transfers), [workbook.transfers]);
   const linkByRecordId = useMemo(() => {
@@ -1106,17 +1113,27 @@ function FundsTransfersSection() {
     return map;
   }, [links]);
 
-  type TransferCol = 'date' | 'type' | 'gross' | 'fee' | 'balance';
-  const sortValue = (t: Transfer, col: TransferCol): number | string => {
-    switch (col) {
-      case 'type': return t.type;
-      case 'gross': return t.gross;
-      case 'fee': return t.fee;
-      case 'balance': return balances.get(t.id) ?? 0;
-      default: return t.date;
-    }
+  // User-reported (2026-09-06): "we may stop sorting options for
+  // chronologically important tables (only sequence-aware tables) to
+  // avoid the disordered mess" — same reasoning as QSE/PSX's own
+  // Transfers sections (Done item 235): Balance only makes sense in real
+  // chronological+sequence order, so free column sorting is gone here,
+  // replaced by `ReorderButtons` for the one thing that genuinely needs
+  // fixing (two same-instant transfers in the wrong relative order).
+  const ensureSignedIn = useEnsureSignedIn();
+  const instantOf = (t: Transfer) => toInstantMs(t.date, t.time, t.timezone);
+  const filteredTransfers = useMemo(
+    () => (typeFilter === 'all' ? workbook.transfers : workbook.transfers.filter((t) => t.type === typeFilter)),
+    [workbook.transfers, typeFilter],
+  );
+  const sorted = useMemo(
+    () => [...filteredTransfers].sort((a, b) => instantOf(b) - instantOf(a) || (b.seq ?? 0) - (a.seq ?? 0)),
+    [filteredTransfers],
+  );
+  const reorderTransfer = async (pair: [{ id: string; order: number }, { id: string; order: number }]) => {
+    if (!(await ensureSignedIn('Sign in to reorder transfers.'))) return;
+    for (const p of pair) updateTransfer(p.id, { seq: p.order });
   };
-  const { sorted, Th } = useSortableRows(workbook.transfers, sortValue, 'date', 'desc');
 
   const startEdit = (t: Transfer) => { setEditId(t.id); setEditRow({ ...t }); };
   const saveEdit = async () => {
@@ -1134,20 +1151,29 @@ function FundsTransfersSection() {
         Cash moved into or out of this Funds account, separate from buying/selling fund units —
         e.g. topping up before a purchase, or withdrawing after a redemption.
       </p>
+      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+        <Field label="Type" width={140}>
+          <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
+            <option value="all">All</option>
+            <option value="DEPOSIT">Deposit</option>
+            <option value="WITHDRAWAL">Withdrawal</option>
+          </Select>
+        </Field>
+      </div>
       <div className="table-scroll" style={{ marginTop: 8 }}>
         <table>
           <thead>
             <tr>
-              <Th col="date">Date</Th>
-              <Th col="type">Type</Th>
-              <Th col="gross">Gross</Th>
-              <Th col="fee">Fee</Th>
-              <Th col="balance">Balance</Th>
+              <th>Date</th>
+              <th>Type</th>
+              <th>Gross</th>
+              <th>Fee</th>
+              <th>Balance</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {sorted.map((t) => {
+            {sorted.map((t, i) => {
               const link = linkByRecordId.get(t.id);
               const otherSide = link ? (link.from.module === 'funds' && link.fromRecordId === t.id ? link.to : link.from) : undefined;
               return editId === t.id && editRow ? (
@@ -1169,7 +1195,17 @@ function FundsTransfersSection() {
                 </tr>
               ) : (
                 <tr key={t.id}>
-                  <td>{t.date}</td>
+                  <td>
+                    {t.date}{' '}
+                    <ReorderButtons
+                      rows={sorted}
+                      index={i}
+                      instantOf={instantOf}
+                      idOf={(row) => row.id}
+                      orderOf={(row) => row.seq}
+                      onMove={reorderTransfer}
+                    />
+                  </td>
                   <td>
                     {t.type}
                     {otherSide && (
