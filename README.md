@@ -6122,6 +6122,28 @@ FinanceManager live link:
   authenticated round-trip isn't possible in this sandbox. New tests:
   `hooks/__tests__/useTieGroupReorder.test.ts` (9 cases). `npx tsc -b` / `npm run test` (520
   tests, 9 new) / `npm run build` all clean.
+- **Linked-transfer tags now name both accounts, not just "Linked" — user-requested,
+  2026-09-06 — see README Done item 236.** User's own wording: "for linked transfers, we must
+  mention From & To accounts as well in addition to the link." Every native table showing a
+  cross-entity-linked record (Bank/Cash/Personal Loans/Rentals/QSE/PSX/Funds/EMI — 7 module
+  pages, 8 call sites of the identical pattern) rendered a plain "🔗 Linked" tag with a nav link
+  to the other side, giving no indication of WHICH two accounts the link actually connects
+  without clicking through. New `describeSide()`/`useLinkSideLabel()` in
+  `TransferLinksPage.tsx` (the shared linking-infrastructure file, right alongside the existing
+  `resolveCurrency()`/`useSideCurrency()` it mirrors) resolves a `LinkSideConfig` into a
+  human-readable label: the module's own name (`LINK_MODULE_LABELS`) plus, for the four modules
+  with more than one named sub-entity (Bank/Rentals/Personal Loans/EMI), the specific account/
+  property/person/loan's own name in parentheses — e.g. "Banking (UBL)" rather than just
+  "Banking." Falls back to the bare module label if the referenced entity was since deleted
+  (`ref` no longer resolves) rather than showing a raw id or throwing. Every one of the 8 call
+  sites now renders `🔗 {sideLabel(link.from)} → {sideLabel(link.to)}` instead of the fixed
+  "🔗 Linked" text — deliberately describing the WHOLE link (both sides), not "the other side"
+  relative to whichever row it's shown on, so the exact same tag text reads identically no
+  matter which side's own table you're looking at. Verified live via Playwright with a real
+  seeded Bank↔Cash link (Bank account named "UBL"): both `/bank/account/:id` and `/cash` showed
+  the identical "🔗 Banking (UBL) → Cash" tag text — confirming both the name resolution and the
+  side-agnostic, whole-link description work correctly. `npx tsc -b` / `npm run test` (520
+  tests, unchanged — pure UI-label change, no calc logic touched) / `npm run build` all clean.
 
 ## Pending
 

@@ -5230,6 +5230,20 @@ not developer notes) continuously as features ship.
   row shows no buttons; a tied row's move-toward-the-untied-neighbor is correctly disabled
   while move-toward-the-tie is enabled; clicking an enabled button correctly hits the real
   sign-in gate. `npx tsc -b` / `npm run test` (520 tests, 9 new) / `npm run build` all clean.
+- **Linked-transfer tags now name both accounts (2026-09-06) — see README Done item 236.**
+  User: "for linked transfers, we must mention From & To accounts as well in addition to the
+  link." Every native table with a linked-record tag (8 call sites across Bank/Cash/Personal
+  Loans/Rentals/QSE/PSX/Funds/EMI) showed a bare "🔗 Linked" with a nav link, no indication of
+  which two accounts. New `describeSide()`/`useLinkSideLabel()` in `TransferLinksPage.tsx`
+  (mirrors the existing `resolveCurrency()`/`useSideCurrency()` pattern) resolves a
+  `LinkSideConfig` to `"<module label> (<entity name>)"` for the 4 modules with named
+  sub-entities (Bank/Rentals/Personal Loans/EMI), falling back to the bare module label if the
+  referenced entity was deleted. Every call site now renders `🔗 {sideLabel(link.from)} →
+  {sideLabel(link.to)}` — describing the WHOLE link, not "the other side" relative to the row,
+  so the tag reads identically regardless of which side's table shows it. Verified live: a
+  seeded Bank(UBL)↔Cash link showed the identical "🔗 Banking (UBL) → Cash" tag on both
+  `/bank/account/:id` and `/cash`. `npx tsc -b` / `npm run test` (520 tests, unchanged) / `npm
+  run build` all clean.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

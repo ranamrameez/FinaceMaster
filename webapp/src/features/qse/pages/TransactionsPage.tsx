@@ -23,7 +23,7 @@ import { toInstantMs } from '../../../lib/datetime';
 import { createEmptyWorkbook } from '../../../store/defaultWorkbook';
 import { useWorkbookStore } from '../../../store/workbookStore';
 import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
-import { linkTargetPath } from '../../transfers/pages/TransferLinksPage';
+import { linkTargetPath, useLinkSideLabel } from '../../transfers/pages/TransferLinksPage';
 import type { Adjustment, Transaction, Transfer } from '../../../types/workbook';
 import { DividendsSection } from '../components/DividendsSection';
 import { useQSEDerived } from '../hooks/useQSEDerived';
@@ -485,6 +485,7 @@ function TransfersSection() {
   const currency = workbook.settings.currency;
   const links = useInterEntityTransfersStore((s) => s.workbook.entries);
   const ensureSignedIn = useEnsureSignedIn();
+  const sideLabel = useLinkSideLabel();
   const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<Transfer | null>(null);
   const [typeFilter, setTypeFilter] = useState<'all' | Transfer['type']>('all');
@@ -596,9 +597,9 @@ function TransfersSection() {
                   </td>
                   <td>
                     {t.type}
-                    {otherSide && (
-                      <Link to={linkTargetPath(otherSide)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
-                        🔗 Linked
+                    {link && (
+                      <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
+                        🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
                       </Link>
                     )}
                   </td>

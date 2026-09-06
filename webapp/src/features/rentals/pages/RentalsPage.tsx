@@ -36,7 +36,7 @@ import { useAppearanceStore } from '../../../store/appearanceStore';
 import { createEmptyRentalsWorkbook } from '../../../store/defaultRentalsWorkbook';
 import { useRentalsWorkbookStore } from '../../../store/rentalsWorkbookStore';
 import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
-import { linkTargetPath } from '../../transfers/pages/TransferLinksPage';
+import { linkTargetPath, useLinkSideLabel } from '../../transfers/pages/TransferLinksPage';
 import { usePlannedRentalsWorkbookStore } from '../../../store/plannedRentalsWorkbookStore';
 import type { Property, RentalEntry, RentalsWorkbook } from '../../../types/rentalsWorkbook';
 import { ChartCard } from '../../qse/components/ChartCard';
@@ -704,6 +704,7 @@ function EntriesList({ property }: { property: Property }) {
   const deleteEntry = useRentalsWorkbookStore((s) => s.deleteEntry);
   const categories = useCategoryStore((s) => s.workbook.categories);
   const links = useInterEntityTransfersStore((s) => s.workbook.entries);
+  const sideLabel = useLinkSideLabel();
   const [editingEntry, setEditingEntry] = useState<RentalEntry | null>(null);
   const [typeFilter, setTypeFilter] = useState<'all' | 'in' | 'out'>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -779,9 +780,9 @@ function EntriesList({ property }: { property: Property }) {
                 <td>{e.isDeposit ? '—' : <span className="pill-info">{categoryName(e.categoryID, categories)}</span>}</td>
                 <td className="cell-clip" title={e.note}>
                   {e.note}
-                  {otherSide && (
-                    <Link to={linkTargetPath(otherSide)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
-                      🔗 Linked
+                  {link && (
+                    <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
+                      🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
                     </Link>
                   )}
                 </td>

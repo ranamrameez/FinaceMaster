@@ -33,7 +33,7 @@ import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
 import { useEMIWorkbookStore } from '../../../store/emiWorkbookStore';
 import { usePlannedBankWorkbookStore } from '../../../store/plannedBankWorkbookStore';
 import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
-import { linkTargetPath } from '../../transfers/pages/TransferLinksPage';
+import { linkTargetPath, useLinkSideLabel } from '../../transfers/pages/TransferLinksPage';
 import type { LinkSideConfig } from '../../../types/interEntityTransfer';
 import type { EMILoan, EMIRepayment } from '../../../types/emiWorkbook';
 import type { PlannedBankTransaction } from '../../../types/plannedBank';
@@ -1039,6 +1039,7 @@ function RepaymentLog({ loan, repayments }: { loan: EMILoan; repayments: EMIRepa
   const updateRepayment = useEMIWorkbookStore((s) => s.updateRepayment);
   const deleteRepayment = useEMIWorkbookStore((s) => s.deleteRepayment);
   const links = useInterEntityTransfersStore((s) => s.workbook.entries);
+  const sideLabel = useLinkSideLabel();
   const [editId, setEditId] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState(0);
   const sorted = [...repayments].sort((a, b) => a.month - b.month);
@@ -1086,9 +1087,9 @@ function RepaymentLog({ loan, repayments }: { loan: EMILoan; repayments: EMIRepa
                   ) : (
                     <>
                       {fmtMoney(r.amount, loan.currencyCode)}
-                      {otherSide && (
-                        <Link to={linkTargetPath(otherSide)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
-                          🔗 Linked
+                      {link && (
+                        <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
+                          🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
                         </Link>
                       )}
                     </>
