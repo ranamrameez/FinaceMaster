@@ -8,7 +8,7 @@ export type CategoryKey = 'netWorth' | 'stocks' | 'funds' | 'bank' | 'cash' | 'p
 // "Transfers" FAB (`components/ui/Fab.tsx`'s `FabPanel`) reachable from
 // every module page.
 const CATEGORIES: { key: CategoryKey; label: string; to: string }[] = [
-  { key: 'netWorth', label: 'Net Worth', to: '/net-worth' },
+  { key: 'netWorth', label: 'Dashboard', to: '/net-worth' },
   { key: 'stocks', label: 'Stock Exchanges', to: '/' },
   { key: 'funds', label: 'Funds', to: '/funds' },
   { key: 'bank', label: 'Banking', to: '/bank' },

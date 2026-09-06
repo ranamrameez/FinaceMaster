@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { projectedNetWorthTrend } from '../netWorthTrend';
+import type { NetWorthAsOfInputs } from '../netWorthAsOf';
 import type { EMILoan } from '../../../types/emiWorkbook';
 import type { BudgetActivity } from '../budgetPlanner';
-import type { NetWorthSnapshot } from '../../../types/netWorthSnapshot';
+import type { QSESettings } from '../../../types/workbook';
+import type { PSXSettings } from '../../../types/psxWorkbook';
 
 // 0%-interest loan: 1200 total over 12 months, 100/month straight-line,
 // starting 2026-01-01, due on the 1st of each month. Hand-traced schedule:
@@ -17,8 +19,18 @@ function activity(partial: Partial<BudgetActivity>): BudgetActivity {
   return { id: 'a', module: 'cash', sourceLabel: 'Cash', date: '2026-01-01', amount: 0, currencyCode: 'USD', description: '', executed: false, ...partial };
 }
 
+const emptyNetWorthAsOfInputs: NetWorthAsOfInputs = {
+  cashEntries: [], bankAccounts: [], bankTransactions: [],
+  personalLoans: [], personalLoanRepayments: [], emiLoans: [],
+  fundsFunds: [], fundsTransactions: [], fundsPriceHistory: {},
+  qseTransactions: [], qseTransfers: [], qseAdjustments: [], qsePriceHistory: {},
+  qseSettings: { feePct: 0.15, minFee: 5, tick: 0.01, currency: 'USD', depositFee: 0 } as QSESettings,
+  psxTransactions: [], psxTransfers: [], psxAdjustments: [], psxPriceHistory: {},
+  psxSettings: { feePct: 0.2, lowPriceThreshold: 25, lowPriceFee: 0.05, sstPct: 15, nccplFeePct: 0.0119, currency: 'PKR', costBasisMethod: 'average' } as PSXSettings,
+};
+
 describe('projectedNetWorthTrend', () => {
-  it('projects a future month as today\'s net worth + non-EMI flow + EMI outstanding delta', () => {
+  it('projects a future month as today\'s net worth (assets - liabilities) + non-EMI flow + EMI outstanding delta', () => {
     const nonEmiExpense = activity({ id: 'e1', date: '2026-04-10', amount: -50 });
     const emiLinkedPlan = activity({ id: 'e2', date: '2026-04-01', amount: -100, sourceEmiLoanId: 'L1' });
 
@@ -26,46 +38,73 @@ describe('projectedNetWorthTrend', () => {
       months: ['2026-04'],
       currentMonth: '2026-03',
       todayISODate: '2026-03-15',
-      currentNetWorthByCurrency: { USD: -500 },
+      currentRows: [{ currency: 'USD', assets: 500, liabilities: 1000, net: -500, breakdown: [] }],
       activities: [nonEmiExpense, emiLinkedPlan],
       emiLoans: [loan],
-      snapshots: [],
+      netWorthAsOfInputs: emptyNetWorthAsOfInputs,
     });
 
     // As of today (2026-03-15): 2 installments due (02-01, 03-01) -> outstanding 1000.
     // As of end of April: 3 installments due (+04-01) -> outstanding 900. Delta = +100.
     // Non-EMI flow after today through April: -50 (the EMI-linked -100 plan is excluded).
-    // Expected: -500 + (-50) + 100 = -450.
-    expect(result).toEqual([{ month: '2026-04', byCurrency: { USD: -450 } }]);
+    // Assets: 500 + (-50) = 450. Liabilities: 1000 - 1000 + 900 = 900. Net: 450 - 900 = -450.
+    expect(result).toHaveLength(1);
+    expect(result[0].month).toBe('2026-04');
+    expect(result[0].assetsByCurrency.USD).toBeCloseTo(450, 6);
+    expect(result[0].liabilitiesByCurrency.USD).toBeCloseTo(900, 6);
+    expect(result[0].byCurrency.USD).toBeCloseTo(-450, 6);
   });
 
-  it('leaves the current month unchanged when nothing happens between today and month-end', () => {
+  it('the current (in-progress) month uses today\'s already-known real figure directly, unchanged by future-only activity', () => {
     const result = projectedNetWorthTrend({
       months: ['2026-03'],
       currentMonth: '2026-03',
       todayISODate: '2026-03-15',
-      currentNetWorthByCurrency: { USD: -500 },
+      currentRows: [{ currency: 'USD', assets: 500, liabilities: 1000, net: -500, breakdown: [] }],
       activities: [],
       emiLoans: [loan],
-      snapshots: [],
+      netWorthAsOfInputs: emptyNetWorthAsOfInputs,
     });
-    expect(result).toEqual([{ month: '2026-03', byCurrency: { USD: -500 } }]);
+    expect(result).toEqual([{
+      month: '2026-03',
+      byCurrency: { USD: -500 },
+      assetsByCurrency: { USD: 500 },
+      liabilitiesByCurrency: { USD: 1000 },
+    }]);
   });
 
-  it('reads a past month from the latest snapshot at or before it, undefined when none exists', () => {
-    const snapshots: NetWorthSnapshot[] = [{ id: 's1', date: '2026-02-15', byCurrency: { USD: -600 } }];
+  it('a fully past month is computed for real from actual transaction history, not a saved snapshot', () => {
+    const inputs: NetWorthAsOfInputs = {
+      ...emptyNetWorthAsOfInputs,
+      cashEntries: [
+        { id: 'c1', date: '2026-01-05', isDeposit: true, amount: 1000, currencyCode: 'USD', categoryID: 'x' },
+        { id: 'c2', date: '2026-02-10', isDeposit: true, amount: 5000, currencyCode: 'USD', categoryID: 'x' }, // after Jan 31
+      ] as never,
+    };
     const result = projectedNetWorthTrend({
-      months: ['2026-01', '2026-02'],
+      months: ['2026-01'],
       currentMonth: '2026-03',
       todayISODate: '2026-03-15',
-      currentNetWorthByCurrency: { USD: -500 },
+      currentRows: [{ currency: 'USD', assets: 6000, liabilities: 0, net: 6000, breakdown: [] }],
       activities: [],
-      emiLoans: [loan],
-      snapshots,
+      emiLoans: [],
+      netWorthAsOfInputs: inputs,
     });
-    expect(result).toEqual([
-      { month: '2026-01', byCurrency: { USD: undefined } },
-      { month: '2026-02', byCurrency: { USD: -600 } },
-    ]);
+    // As of 2026-01-31, only the Jan deposit had happened — real figure is 1000, not today's 6000.
+    expect(result[0].assetsByCurrency.USD).toBeCloseTo(1000, 6);
+    expect(result[0].byCurrency.USD).toBeCloseTo(1000, 6);
+  });
+
+  it('a currency with zero activity that far back is undefined, not zero', () => {
+    const result = projectedNetWorthTrend({
+      months: ['2026-01'],
+      currentMonth: '2026-03',
+      todayISODate: '2026-03-15',
+      currentRows: [{ currency: 'USD', assets: 500, liabilities: 0, net: 500, breakdown: [] }],
+      activities: [],
+      emiLoans: [],
+      netWorthAsOfInputs: emptyNetWorthAsOfInputs,
+    });
+    expect(result[0].byCurrency.USD).toBeUndefined();
   });
 });

@@ -1,11 +1,13 @@
 import {
   ArcElement,
+  BarController,
   BarElement,
   CategoryScale,
   Chart as ChartJS,
   Filler,
   Legend,
   LinearScale,
+  LineController,
   LineElement,
   PointElement,
   Tooltip,
@@ -13,7 +15,13 @@ import {
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { cssVar } from './cssVar';
 
-ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, LineElement, PointElement, Legend, Tooltip, Filler, ChartDataLabels);
+// BarController/LineController (not just their Elements) are needed for a
+// "2-in-1" mixed chart — stacked Assets/Liabilities bars with a Net Worth
+// line overlaid on the same canvas (Net Worth/Dashboard page, user-
+// requested 2026-09-04) — via `<Bar>`'s per-dataset `type: 'line'`
+// override. Both were previously omitted since no chart needed a mixed
+// type before this.
+ChartJS.register(ArcElement, BarController, BarElement, CategoryScale, LinearScale, LineController, LineElement, PointElement, Legend, Tooltip, Filler, ChartDataLabels);
 // Datalabels are opt-in per-chart (legacy behavior: off by default globally).
 ChartJS.defaults.set('plugins.datalabels', { display: false });
 
