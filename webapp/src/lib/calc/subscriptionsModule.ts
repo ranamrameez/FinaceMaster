@@ -1,46 +1,23 @@
 import type { Subscription, SubscriptionAlert } from '../../types/subscriptionsWorkbook';
+import type { RecurrenceRule } from '../../types/recurrence';
+import { nextRecurrenceOccurrence, recurrenceMonthlyEquivalent, recurrenceOccurrencesWithin } from './recurrence';
 
 const MAX_HORIZON_MONTHS = 12;
 
-/** Advances one date by a subscription's own billing cycle — monthly/yearly
- * use real calendar arithmetic (`setMonth`/`setFullYear`, same clamping
- * behavior as EMI's `installmentDueDate`/Rentals' `cycleDate` for a day that
- * doesn't exist in the target month), weekly/custom use fixed day counts. */
-function advance(date: Date, sub: Subscription): Date {
-  const d = new Date(date);
-  switch (sub.billingCycle) {
-    case 'yearly':
-      d.setFullYear(d.getFullYear() + 1);
-      return d;
-    case 'weekly':
-      d.setDate(d.getDate() + 7);
-      return d;
-    case 'custom':
-      d.setDate(d.getDate() + Math.max(1, sub.customDays || 30));
-      return d;
-    default:
-      d.setMonth(d.getMonth() + 1);
-      return d;
-  }
-}
-
-/** Walks forward from `startDate` by whole cycles until reaching the first
- * occurrence on or after `asOf` — capped at 10,000 iterations so a
- * pathological cycle length (e.g. `customDays: 0`, guarded against above by
- * `Math.max(1, ...)` but kept here as defense-in-depth) can never hang. */
-function nextOccurrence(sub: Subscription, asOf: Date): Date {
-  let d = new Date(sub.startDate);
-  const asOfStr = asOf.toISOString().slice(0, 10);
-  let i = 0;
-  while (d.toISOString().slice(0, 10) < asOfStr && i < 10000) {
-    d = advance(d, sub);
-    i++;
-  }
-  return d;
+/** A subscription's own `billingCycle`/`customDays`/`startDate` trio,
+ * repackaged as a `RecurrenceRule` for the shared engine in
+ * `lib/calc/recurrence.ts` (2026-09-07 — the cycle math used to be a
+ * private copy in this file; generalized so Cash/Bank's own recurring
+ * plans can share the identical implementation instead of a second one).
+ * `Subscription`'s own stored fields are deliberately untouched — this is
+ * built inline, never persisted. */
+function ruleOf(sub: Subscription): RecurrenceRule {
+  return { cycle: sub.billingCycle, customDays: sub.customDays, startDate: sub.startDate };
 }
 
 export function nextBillingDate(sub: Subscription, asOf: Date = new Date()): string {
-  return nextOccurrence(sub, asOf).toISOString().slice(0, 10);
+  // A Subscription's rule never has an endDate, so this can never be null.
+  return nextRecurrenceOccurrence(ruleOf(sub), asOf)!.toISOString().slice(0, 10);
 }
 
 /** Normalizes any billing cycle to a per-month figure, for a fair
@@ -48,18 +25,7 @@ export function nextBillingDate(sub: Subscription, asOf: Date = new Date()): str
  * different cycles (a $120/year subscription and a $10/month one should
  * both read as $10/month here). */
 export function monthlyEquivalent(sub: Subscription): number {
-  switch (sub.billingCycle) {
-    case 'yearly':
-      return sub.amount / 12;
-    case 'weekly':
-      return (sub.amount * 52) / 12;
-    case 'custom': {
-      const days = Math.max(1, sub.customDays || 30);
-      return (sub.amount * 30) / days;
-    }
-    default:
-      return sub.amount;
-  }
+  return recurrenceMonthlyEquivalent(ruleOf(sub), sub.amount);
 }
 
 /** Portfolio-wide monthly recurring spend, grouped by currency — active
@@ -185,14 +151,7 @@ export function generateRenewalOccurrences(sub: Subscription, asOf: Date = new D
   horizonEnd.setMonth(horizonEnd.getMonth() + MAX_HORIZON_MONTHS);
   horizonEnd.setDate(horizonEnd.getDate() - 1);
   const horizonEndStr = horizonEnd.toISOString().slice(0, 10);
+  const asOfStr = asOf.toISOString().slice(0, 10);
 
-  const occurrences: RenewalOccurrence[] = [];
-  let d = nextOccurrence(sub, asOf);
-  let i = 0;
-  while (d.toISOString().slice(0, 10) <= horizonEndStr && i < 1000) {
-    occurrences.push({ date: d.toISOString().slice(0, 10), amount: sub.amount });
-    d = advance(d, sub);
-    i++;
-  }
-  return occurrences;
+  return recurrenceOccurrencesWithin(ruleOf(sub), asOfStr, horizonEndStr).map((date) => ({ date, amount: sub.amount }));
 }
