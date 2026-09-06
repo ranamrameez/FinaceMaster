@@ -6144,6 +6144,42 @@ FinanceManager live link:
   the identical "🔗 Banking (UBL) → Cash" tag text — confirming both the name resolution and the
   side-agnostic, whole-link description work correctly. `npx tsc -b` / `npm run test` (520
   tests, unchanged — pure UI-label change, no calc logic touched) / `npm run build` all clean.
+- **Net Worth monthly widget: phantom pre-history balances + unbounded "◀ Earlier" scrolling
+  fixed, user-reported 2026-09-06 — see README Done item 237.** User's own wording: "monthly
+  widgets are moving without a checkout of user first date of transaction. Charts and tables
+  show incorrect/mock data when they find nothing in a month." Two related bugs, both in the
+  Net Worth "Monthly summary" chart+table pair (Done item 229): (a) `netWorthAsOfDate()`'s Bank
+  contribution unconditionally added every account's `openingBalance` regardless of `asOfDate`
+  — but that value really means "the balance as of whenever the account's history was last
+  seeded/imported" (often close to today), not something that held true since account creation.
+  An account whose real transactions only start in, say, 2026 still "existed" with its full
+  opening balance for every month before that too — a phantom, fabricated figure for a period
+  the account has zero evidence for, exactly the "incorrect/mock data" the user described. Fixed
+  by gating Bank accounts the same way QSE/PSX already gate themselves in the same function
+  (`qseHasActivity`/`psxHasActivity`): an account only contributes to a past month once it has
+  at least one real transaction on or before that date — "today"'s own live figure
+  (`useNetWorthSummary`) is completely untouched, since it never calls `netWorthAsOfDate` at
+  all. (b) The monthly window's `windowStart` defaulted to a hardcoded `-3` and "◀ Earlier" had
+  no floor — nothing stopped scrolling indefinitely into the past, well before the user had any
+  real data anywhere, which is exactly where bug (a) would have shown its worst symptoms. New
+  `earliestActivityDate()` (`lib/calc/netWorthAsOf.ts`) scans every dated record across
+  Cash/Bank/Personal Loans/EMI/Funds/QSE/PSX for the true minimum; `NetWorthPage.tsx`'s
+  `floorMonthOf()` folds in Rentals' own dates too (via the already-computed `activities` list,
+  since Rentals never counts toward Net Worth itself but its dates still feed the Income/Expense
+  row). New `monthsBetween()` (`lib/calc/budgetPlanner.ts`) converts that real floor month into a
+  `windowStart`-style offset; the window's initial position and every "◀ Earlier" click both
+  clamp to it, and the button disables (with an explanatory tooltip) once already at the floor.
+  A user with less than 3 months of history now sees a window starting exactly at their real
+  first month, not 3 fabricated months before it. New tests: `netWorthAsOf.test.ts` gained 4
+  cases (a bank account with an opening balance but no period-appropriate transaction correctly
+  contributes nothing before its first transaction; a bank account with literally zero
+  transactions ever never appears in any past-month figure; `earliestActivityDate` cases) and
+  `budgetPlanner.test.ts` gained 2 `monthsBetween` cases. Verified live via Playwright with a
+  seeded Bank account (opening balance 5000, one real transaction dated 2026-08-01, "today"
+  being 2026-09-06): the monthly window correctly started at "August 2026" (not July or
+  earlier), and "◀ Earlier" was correctly disabled — zero console errors beyond the two
+  pre-existing, already-documented FX-fetch network-block messages this sandbox always
+  produces. `npx tsc -b` / `npm run test` (526 tests, 6 new) / `npm run build` all clean.
 
 ## Pending
 

@@ -5244,6 +5244,26 @@ not developer notes) continuously as features ship.
   seeded Bank(UBL)↔Cash link showed the identical "🔗 Banking (UBL) → Cash" tag on both
   `/bank/account/:id` and `/cash`. `npx tsc -b` / `npm run test` (520 tests, unchanged) / `npm
   run build` all clean.
+- **Net Worth monthly widget: phantom pre-history balances + unbounded scrolling fixed
+  (2026-09-06) — see README Done item 237.** User: "monthly widgets are moving without a
+  checkout of user first date of transaction. Charts and tables show incorrect/mock data when
+  they find nothing in a month." Root cause of the "mock data" half: `netWorthAsOfDate()`'s Bank
+  contribution always added an account's `openingBalance` regardless of `asOfDate` — a value
+  that really means "the balance as of whenever the account was last seeded," not something
+  true since account creation, so a month before an account's real transactions started still
+  showed its full opening balance as a phantom figure. Fixed by gating Bank accounts the same
+  way QSE/PSX already gate themselves in the same function: only contribute once the account has
+  a real transaction on or before that date. Root cause of the "moving without a checkout" half:
+  `windowStart` defaulted to a hardcoded `-3` with no floor, so "◀ Earlier" could scroll
+  indefinitely before any real data existed. New `earliestActivityDate()`
+  (`lib/calc/netWorthAsOf.ts`) + `monthsBetween()` (`lib/calc/budgetPlanner.ts`) compute the
+  user's real earliest month across every module and clamp both the initial window and every
+  "◀ Earlier" click to it, disabling the button once at the floor. "Today"'s own live figure
+  (`useNetWorthSummary`) never calls `netWorthAsOfDate` and is completely unaffected. New tests:
+  `netWorthAsOf.test.ts` (+4), `budgetPlanner.test.ts` (+2). Verified live via Playwright with a
+  seeded Bank account (opening 5000, one tx dated 2026-08-01): the window correctly started at
+  "August 2026" with "◀ Earlier" disabled. `npx tsc -b` / `npm run test` (526 tests, 6 new) /
+  `npm run build` all clean.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

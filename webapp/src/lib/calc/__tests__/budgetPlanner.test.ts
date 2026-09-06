@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { collectBudgetActivities, currentMonth, monthlyIncomeExpense, monthRange, threeMonthWindow } from '../budgetPlanner';
+import { collectBudgetActivities, currentMonth, monthlyIncomeExpense, monthRange, monthsBetween, threeMonthWindow } from '../budgetPlanner';
 
 describe('collectBudgetActivities', () => {
   it('normalizes real Cash/Bank/Rentals entries onto one signed convention', () => {
@@ -141,5 +141,17 @@ describe('currentMonth', () => {
   it('returns the calendar month of the given date', () => {
     expect(currentMonth(new Date(2026, 2, 15))).toBe('2026-03');
     expect(currentMonth(new Date(2026, 11, 31))).toBe('2026-12');
+  });
+});
+
+describe('monthsBetween', () => {
+  it('is 0 for the same month, negative when `to` is earlier', () => {
+    expect(monthsBetween('2026-06', '2026-06')).toBe(0);
+    expect(monthsBetween('2026-06', '2026-03')).toBe(-3);
+  });
+
+  it('rolls correctly across a year boundary', () => {
+    expect(monthsBetween('2026-01', '2024-11')).toBe(-14);
+    expect(monthsBetween('2024-11', '2026-01')).toBe(14);
   });
 });

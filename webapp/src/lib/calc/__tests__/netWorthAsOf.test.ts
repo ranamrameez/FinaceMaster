@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { netWorthAsOfDate, priceAsOfDate } from '../netWorthAsOf';
+import { earliestActivityDate, netWorthAsOfDate, priceAsOfDate } from '../netWorthAsOf';
 import type { QSESettings } from '../../../types/workbook';
 import type { PSXSettings } from '../../../types/psxWorkbook';
 
@@ -91,6 +91,34 @@ describe('netWorthAsOfDate', () => {
     expect(usd?.liabilities).toBeCloseTo(7500, 0);
   });
 
+  it('a bank account with an opening balance but no transaction that old contributes nothing (2026-09-06 fix)', () => {
+    // The account's real transactions only start in 2026; its openingBalance
+    // is really "the balance as of whenever it was seeded," not something
+    // that was already true in 2024 — a date before its first transaction
+    // must show NO figure for it, not a phantom copy of that balance.
+    const inputs = {
+      ...emptyInputs(),
+      bankAccounts: [{ id: 'a1', name: 'UBL', currencyCode: 'PKR', openingBalance: 5000 }],
+      bankTransactions: [{ id: 't1', accountId: 'a1', date: '2026-01-10', amount: 200, description: 'x', categoryID: 'x', serialNumber: 1 }],
+    };
+    const before = netWorthAsOfDate('2024-06-01', inputs as never);
+    expect(before.find((r) => r.currency === 'PKR')).toBeUndefined();
+
+    // Once the account's own first transaction has happened, it correctly
+    // contributes opening balance + every transaction up to that date.
+    const after = netWorthAsOfDate('2026-01-31', inputs as never);
+    expect(after.find((r) => r.currency === 'PKR')?.assets).toBeCloseTo(5200, 6);
+  });
+
+  it('a bank account with literally zero transactions ever never appears in any past-month figure', () => {
+    const inputs = {
+      ...emptyInputs(),
+      bankAccounts: [{ id: 'a1', name: 'Car loan escrow', currencyCode: 'USD', openingBalance: 1000 }],
+    };
+    const rows = netWorthAsOfDate('2026-01-31', inputs as never);
+    expect(rows.find((r) => r.currency === 'USD')).toBeUndefined();
+  });
+
   it('values a QSE position using the price known AS OF that date, not a later one', () => {
     const base = {
       ...emptyInputs(),
@@ -105,5 +133,24 @@ describe('netWorthAsOfDate', () => {
     const early = earlyRows.find((r) => r.currency === 'QAR')!.assets;
     const later = laterRows.find((r) => r.currency === 'QAR')!.assets;
     expect(later - early).toBeCloseTo(1000, -1); // ~100 shares * (20-10) more, within fee rounding
+  });
+});
+
+describe('earliestActivityDate', () => {
+  it('returns undefined when nothing is dated anywhere', () => {
+    expect(earliestActivityDate(emptyInputs() as never)).toBeUndefined();
+  });
+
+  it('finds the true minimum across completely different modules', () => {
+    const inputs = {
+      ...emptyInputs(),
+      bankTransactions: [{ id: 't1', accountId: 'a1', date: '2025-06-01', amount: 1, description: 'x', categoryID: 'x', serialNumber: 1 }],
+      cashEntries: [{ id: 'c1', date: '2025-01-15', isDeposit: true, amount: 1, currencyCode: 'USD', categoryID: 'x', serialNumber: 1 }],
+      emiLoans: [{
+        id: 'e1', name: 'Car', lender: 'Bank', currencyCode: 'USD', principal: 1, tenureMonths: 1,
+        startDate: '2024-03-01', repaymentMode: 'interest' as const, annualRatePct: 0,
+      }],
+    };
+    expect(earliestActivityDate(inputs as never)).toBe('2024-03-01');
   });
 });
