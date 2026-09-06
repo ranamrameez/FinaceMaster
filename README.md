@@ -5978,6 +5978,90 @@ FinanceManager live link:
   new console errors. `npx tsc -b` / `npm run test` (509 tests, unchanged — this is seed data,
   not calc logic) / `npm run build` (bundle grew ~116KB, matching the JSON's own size) all
   clean.
+- **Banking: a real same-date sort bug, a real linked-transfer sign bug, a new per-account
+  Analytics grid, and a currency-sum tag on the Banking homepage — 4-item user report,
+  2026-09-06 — see README Done item 234.** User attached a real screenshot (a scrambled-
+  looking transaction table) plus a full app backup to reproduce against, exactly the
+  discipline this file's own history repeatedly rewards.
+  **Bug 1, root-caused against the real data, not guessed**: "multiple entries at the same
+  time are a disaster, incorrect balance calculations." `accountRunningLedger()` itself was
+  never wrong — it already sorts by real instant then `serialNumber` (Done item 212/227) — but
+  `AccountDetailPage`'s own Transactions table sorts via `useSortableRows` with a `sortValue`
+  that returns the raw `date` STRING for the Date column, ignoring `time`/`timezone`. Two
+  same-date rows tie there, and `Array.prototype.sort`'s stability then keeps their
+  PRE-sort (ascending-chronological) order regardless of the column's own `asc`/`desc`
+  direction — so a table sorted "newest first" still showed a same-date pair in oldest-first
+  order, which reads exactly like "the balance is jumping around" even though every row's own
+  stored `balance` was correct the whole time; reproduced this precisely against the user's
+  real MCB account data (two 09-01 rows, two 09-03 rows) before touching any code. Fixed
+  generically: `useSortableRows` gained an optional `tiebreak?: (row: T) => number[]` — an
+  ordered composite key (compared lexicographically, NOT summed into one float, which would
+  risk precision loss combining a millisecond epoch with a small integer) applied, and flipped
+  by the SAME direction as the primary column, whenever the primary comparison ties. Optional
+  and fully backward-compatible — none of the other 39 existing call sites change behavior.
+  Wired into Bank's own table with `[toInstantMs(tx.date, tx.time, tx.timezone), tx.serialNumber
+  ?? 0]` — the exact same two-step order `accountRunningLedger` already uses, so the table's
+  display order is now GUARANTEED to agree with its own Balance column. Verified against the
+  real data: the Balance column now reads a strictly monotonic sequence top-to-bottom.
+  **Bug 2, also root-caused precisely, not just patched**: "Even if I use -negative for first
+  account for withdrawal it always consider deposit for linked transfers." Found in
+  `TransactionEntryModal.tsx` (the app-wide "Transfers" FAB modal, Done item 216): `bank` had
+  NO entry in `DIRECTION_LABELS` (the map deciding which modules show a direction selector),
+  so the `{direction && (<Field label="Direction">...)}` control never rendered for a Bank
+  row — `row.direction` stayed hardcoded at its `emptyRow()` default (`'in'`) with no way to
+  change it. `submit()`'s linked-transfer branch always decides `from`/`to` from
+  `row.direction`, NEVER from the amount's sign — so a Bank row could never become the `from`
+  (outgoing) side of a link, no matter what sign was typed into Amount; the Bank side was
+  silently always treated as the receiving ("in") side. Fixed at the root, and in the same
+  motion addressed the user's own explicit follow-up ask ("use radio/chips for withdrawal or
+  deposit instead of positive & negative entries!"): added `bank: {in:'Deposit',
+  out:'Withdrawal'}` to `DIRECTION_LABELS`, and replaced the shared Direction control's
+  `<Select>` with a new `DirectionChips` component (`.chip`/`.chip.active`, same pattern as
+  `ChartFilterBar`/Net Worth's `IncludeChip`) — Amount is now always a plain magnitude for
+  every direction-having module, converted to Bank's still-SIGNED stored `amount` only at
+  submit time. Once Bank has a real, user-controlled `direction`, the EXISTING linked-transfer
+  `from`/`to` logic needed zero further changes — confirming the diagnosis was precise, not a
+  guess that happened to also need a bigger rewrite. Applied the identical magnitude+chip
+  treatment to the two other Bank amount-entry spots with the same sign-based convention for
+  consistency: `EditTransactionModal` (editing an existing transaction) and `AddBankPlanForm`
+  (Planning tab's add-a-plan form) — both derive direction/magnitude from the stored signed
+  `amount` and recombine on save, so the underlying data shape never changed, only the entry
+  UI. Deliberately left ONE inline table-cell edit (`BankPlanList`'s own edit-row, a narrow
+  `<input>` in a table cell) as a plain signed number — a full chip pair doesn't fit a table
+  cell well, and every other module's own inline table-row editing uses raw inputs too; a
+  known, minor, lower-value remaining inconsistency, not silently overlooked.
+  **Verified against the user's real data, respecting this project's own documented sandbox
+  limits**: seeded the actual uploaded backup into `localStorage` and confirmed (a) editing the
+  real "Raast UBL For Home" transaction (-9900) correctly showed Direction=Withdrawal with
+  magnitude 9900 — proving the derive-from-signed-amount logic is correct on real data; (b)
+  picking Withdrawal + checking "Link to another finance" on a fresh row correctly hit the
+  real sign-in gate (write blocked, no incorrect data saved) — the same verification depth as
+  every other sign-in-gated write in this project, since a full authenticated round-trip isn't
+  possible in this sandbox.
+  **New per-account Analytics grid** (`AccountAnalyticsSection`, on `AccountDetailPage`) —
+  user's own wording: "Grid: Balance over time, Income vs. spend by month, Category breakdown
+  (spend) monthly with month nav + smart tabular values." Reuses the exact three chart shapes
+  the whole-module `AnalyticsTab` already has (Done item 90), pre-scoped to this one account
+  instead of needing an account picker: Balance-over-time and Income-vs-spend-by-month show
+  the account's FULL history (a trend loses its point scoped to one month), while Category
+  breakdown (spend) is scoped to a single month via a ◀ Prev month/This month/Next month ▶
+  nav, matching the user's own "monthly with month nav" wording exactly. "Smart tabular
+  values": a plain table below the charts gives the EXACT numbers behind the selected month
+  (Income/Expense/Net flow/Balance at month end, then one row per spend category) — a chart's
+  hover tooltip is the only other way to read an exact figure, and doesn't work on touch at
+  all. New `accountBalanceAsOfMonth()` in `bankModule.ts` (the "balance at month end" figure,
+  reading the last ledger row on or before that month) is the one new pure function, with its
+  own tests. Verified against the real MCB data: September 2026's Expense figure (9,902.32
+  PKR) hand-checked against the 4 real transactions that month.
+  **Currency-sum tag on the Banking homepage** — user's own wording: "give sums in a tag for
+  each currency in header/label." `AccountsList`'s per-currency group header (a small uppercase
+  "PKR"/"QAR" label) gained a `.pill-info` tag showing that group's own total — deliberately
+  computed from whichever accounts are actually VISIBLE in that group right now (respecting the
+  "Show archived" toggle), distinct from `TotalBalances`' own top-of-page stat cards (which
+  always include archived accounts in a true grand total) — this tag answers "what am I looking
+  at in this group," not "the real overall total," so the two coexist without duplicating the
+  same claim. Verified against the real data: "-19k PKR" / "17k QAR" tags rendered correctly.
+  `npx tsc -b` / `npm run test` (511 tests, 2 new) / `npm run build` all clean.
 
 ## Pending
 

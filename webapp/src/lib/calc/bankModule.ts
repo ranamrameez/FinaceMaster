@@ -159,3 +159,18 @@ export function budgetVsActual(
     .sort()
     .map((category) => ({ category, budget: budgets[category] || 0, actual: actualByCategory[category] || 0 }));
 }
+
+/** The account's running balance as of the LAST day of `month` (a
+ * "YYYY-MM" string) — the last ledger row dated on or before that month,
+ * or the account's own opening balance if it has no transactions that
+ * early yet. User-requested (2026-09-06), the "smart tabular values"
+ * companion to a per-account monthly Analytics grid: an end-of-month
+ * balance figure a chart's own tooltip doesn't surface directly. */
+export function accountBalanceAsOfMonth(ledger: BankLedgerRow[], month: string, openingBalance: number): number {
+  let balance = openingBalance;
+  for (const row of ledger) {
+    if (row.tx.date.slice(0, 7) > month) break;
+    balance = row.balance;
+  }
+  return balance;
+}
