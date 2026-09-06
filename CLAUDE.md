@@ -5264,6 +5264,70 @@ not developer notes) continuously as features ship.
   seeded Bank account (opening 5000, one tx dated 2026-08-01): the window correctly started at
   "August 2026" with "◀ Earlier" disabled. `npx tsc -b` / `npm run test` (526 tests, 6 new) /
   `npm run build` all clean.
+- **Second real-data merge, Pakistan-side ledger this time (2026-09-06) — user provided
+  `ForWebappPK.Expense.20252026.xlsx` (13 relevant sheets, May.2025 through PK.2026.May) plus
+  their own real, same-day full-app RTDB export, asked for one combined importable JSON, and
+  explicitly warned "make sure current balances are not affected since this sheet is missing
+  data." Delivered to the user as a file, NOT auto-applied — same reasoning as every prior real-
+  data delivery in this project (this session cannot sign in as the user).** Same rigorous
+  "cross-check every derived figure against the sheet's own ground truth via an independent
+  computation" discipline as the earlier QR.Expense merge (see that entry above): reconstructed
+  every real transaction from each account's own "X Balance" RUNNING-BALANCE column (row-to-row
+  deltas), not the separate "delta" columns next to them — the delta columns turned out to carry
+  reconciliation-note artifacts on "Month Start" rows that don't actually move the balance (e.g.
+  a `-32.57` Silk delta on one Month Start row that the Silk Balance column itself never
+  reflected) — deriving strictly from the balance column's own observed changes sidesteps that
+  entirely and is self-validating by construction. **The two oldest sheets, October.2024.PK and
+  November.2024.PK, were deliberately SKIPPED** — they're the exact same source data already
+  imported in the earlier QR.Expense merge (that import's own JazzCash/Cash figures trace
+  straight back to them); re-importing them would have double-counted 4 real JazzCash
+  transactions.
+  **A real design fork resolved by checking each account's OWN existing data, not applied
+  uniformly**: BOP ASTP and BOP RDA both had literally ZERO real transactions in the live app —
+  their `openingBalance` (0 and 85.96 respectively) was an unbacked placeholder, so for these
+  the sheet's own real historical anchor REPLACES the placeholder outright (same "full-history
+  import supersedes a stale placeholder" precedent already used for QIB Current/Savings/Misk in
+  the first merge) — BOP ASTP's balance genuinely jumps 0 → ~158,163.48 PKR, BOP RDA's jumps
+  85.96 → ~292,390.56 PKR, both real, deliberate, and disclosed, not silent. JazzCash and the
+  Cash module's PKR entries, by contrast, both had REAL pre-existing activity outside this
+  sheet's own date range (JazzCash: 4 real Oct.2024 transactions plus 6 real Aug/Sep.2026 manual
+  entries including the user's own deliberate "reset to 0" recalibration; Cash PKR: 19 real
+  Oct.2024 entries plus the user's own manual reconcile-to-0 entry dated 2026-08-28) — for these,
+  disturbing the account's own already-verified CURRENT total would be exactly the mistake the
+  user warned against, so the new history was inserted with an offsetting adjustment instead
+  (JazzCash's `openingBalance` shifted by the exact negative of the new transactions' net; Cash's
+  existing 2026-08-28 reconcile entry's own amount adjusted the same way) so today's real balance
+  comes out byte-identical to before the merge. **A real, disclosed limitation, not a
+  construction bug**: JazzCash and Cash PKR both have a genuine ~5-month gap (Dec.2024-Apr.2025)
+  between the old Oct.2024 data and this sheet's own May.2025 anchor that no data source covers
+  — preserving the CURRENT total (the user's own explicit priority) and matching the sheet's own
+  absolute historical figures during 2024-2025 are mathematically incompatible once that real gap
+  exists, so the delivered file's own accompanying notes call out that these two accounts' 2024-
+  2025 intermediate balances will read as offset from the spreadsheet's own numbers by a constant
+  amount, even though every 2025-2026 month-to-month change (and the final current total) is
+  exact. New `Silk` was investigated and found to be **entirely unused across all 13 sheets**
+  (balance stays 0 in every single one) — no account created for it at all, nothing lost by
+  skipping it. Two other sub-ledgers were investigated and DELIBERATELY EXCLUDED as genuinely
+  ambiguous, not silently dropped: `External-Debt` is a sporadically-updated snapshot value (not
+  a real per-transaction ledger, confirmed by tracing its own row-to-row jumps) that isn't
+  attributable to one single lender with confidence; `Hamza Installment Payment`/`...Dues
+  Remaining` turned out to be a real virtual "envelope" pot (folded into the sheet's own `Total
+  Balance` figure alongside the 4 real accounts, confirmed by reconstructing that exact formula
+  from real rows) representing money a specific person ("Hamza") owes the user via recognized
+  installments — plausibly a Personal Loan (the live account already has 3 real "owed_to_me"
+  loans for other named people, confirmed before assuming this needed inventing from scratch),
+  but modeling WHICH of several ambiguous row patterns means "new debt recognized" vs. "money
+  already spent against it" wasn't confident enough to guess at for real financial data — flagged
+  to the user as a recommended manual Personal Loans entry instead. One real, exact-round-number
+  reconciliation adjustment was needed: JazzCash jumps exactly -635.00 between the end of
+  May.2025.PK and the start of June.2025.PK with no matching row anywhere — recorded as one
+  explicit `cat_reconciliation_adjustment` transaction (same established pattern as the earlier
+  merge's own 6 GCC/PCC +3000 jumps), not silently absorbed. Verified the finished file two ways
+  before delivery: confirmed every OTHER module (qse/psx/funds/personalLoans/emiLoans/rentals/
+  subscriptions/planned*/interEntityTransfers/netWorthSnapshots/categories) is byte-identical to
+  the user's own real base export, and independently recomputed each touched account's balance
+  at several real historical checkpoints straight from the finished file's own transaction list
+  against the sheet's own reported figures (all matched to normal float-rounding precision).
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 
