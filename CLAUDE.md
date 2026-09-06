@@ -5345,8 +5345,20 @@ not developer notes) continuously as features ship.
   sorted list; (2) a "Repeats?" toggle (new `components/ui/RecurrenceFields.tsx`) wired into
   both Cash's and Bank's "Add a plan" forms, with `PlannedCashEntry`/`PlannedBankTransaction`
   gaining `recurrence`/`executedThrough` and `plannedBalance.ts`'s projection understanding
-  them. **Still open**: the homepage Upcoming widget and the revamped `/planning` page itself
-  — the calc layer exists but nothing surfaces `collectUpcomingItems()`'s output yet.
+  them. **Completed same day** — see the next entry.
+- **Recurring-planning redesign, final slice — closes README Pending item 118
+  (2026-09-07).** `DashboardRail.tsx`'s original hand-rolled "Upcoming plans" card (Cash/Bank
+  one-off plans only, duplicating logic `collectUpcomingItems()` now does properly) replaced
+  with new `hooks/useUpcomingItems.ts` + `components/UpcomingList.tsx` — genuinely
+  cross-module now (adds EMI/Rentals/Subscriptions), with a "See all →" link to `/planning`.
+  The revamped `/planning` page leads with the full 30-day Upcoming list before the existing
+  Cash/Banking manage-everything sections (unchanged). `UpcomingList` deliberately avoids the
+  shared `.row` CSS class (its rules are meant for form controls, not free-form flex rows —
+  see this file's own repeated notes on that class fighting non-form layouts). Verified live
+  via Playwright + a real screenshot with data seeded across 4 modules (recurring Cash salary,
+  overdue one-off Cash bill, EMI installment, Subscription renewal) — both the Dashboard card
+  and `/planning` page showed all 4 items correctly sorted and the overdue one flagged. This
+  closes out the entire recurring-planning redesign requested at the start of this batch.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 
