@@ -39,6 +39,14 @@ export interface CashEntry extends Finance {
 export interface CashSettings {
   /** Pre-fills new entries only — never converts existing ones. */
   defaultCurrency: string;
+  /** User-requested (2026-09-06): "let the user choose (checkboxes?) to
+   * include the accounts in the Net calcs." Cash is a single per-currency
+   * ledger with no sub-accounts to pick from individually (unlike Bank/
+   * EMI/Personal Loans/Funds, which get a per-entity toggle instead), so
+   * this is a whole-module on/off switch. Optional, defaults to included
+   * (true) when absent. Checked from the Dashboard's "Include in Net
+   * Worth" panel (`NetWorthPage.tsx`). */
+  includeInNetWorth?: boolean;
 }
 
 export interface CashWorkbook {

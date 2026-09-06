@@ -20,7 +20,7 @@ function activity(partial: Partial<BudgetActivity>): BudgetActivity {
 }
 
 const emptyNetWorthAsOfInputs: NetWorthAsOfInputs = {
-  cashEntries: [], bankAccounts: [], bankTransactions: [],
+  cashEntries: [], cashSettings: { defaultCurrency: 'USD' }, bankAccounts: [], bankTransactions: [],
   personalLoans: [], personalLoanRepayments: [], emiLoans: [],
   fundsFunds: [], fundsTransactions: [], fundsPriceHistory: {},
   qseTransactions: [], qseTransfers: [], qseAdjustments: [], qsePriceHistory: {},
@@ -30,7 +30,7 @@ const emptyNetWorthAsOfInputs: NetWorthAsOfInputs = {
 };
 
 describe('projectedNetWorthTrend', () => {
-  it('projects a future month as today\'s net worth (assets - liabilities) + non-EMI flow + EMI outstanding delta', () => {
+  it('projects a future month as today\'s net worth (assets - liabilities) + non-EMI flow + EMI outstanding delta + the loan\'s own scheduled cash outflow', () => {
     const nonEmiExpense = activity({ id: 'e1', date: '2026-04-10', amount: -50 });
     const emiLinkedPlan = activity({ id: 'e2', date: '2026-04-01', amount: -100, sourceEmiLoanId: 'L1' });
 
@@ -46,13 +46,58 @@ describe('projectedNetWorthTrend', () => {
 
     // As of today (2026-03-15): 2 installments due (02-01, 03-01) -> outstanding 1000.
     // As of end of April: 3 installments due (+04-01) -> outstanding 900. Delta = +100.
-    // Non-EMI flow after today through April: -50 (the EMI-linked -100 plan is excluded).
-    // Assets: 500 + (-50) = 450. Liabilities: 1000 - 1000 + 900 = 900. Net: 450 - 900 = -450.
+    // Non-EMI flow after today through April: -50 (the EMI-linked -100 plan is excluded,
+    // per README Done item 231 — its cash effect is now accounted for directly from the
+    // schedule below, not via this Budget Planner activity).
+    // Scheduled EMI cash outflow strictly after 2026-03-15 through end of April: just the
+    // one 04-01 installment (100) — 02-01/03-01 are both on or before "today."
+    // Assets: 500 + (-50) - 100 = 350. Liabilities: 1000 - 1000 + 900 = 900. Net: 350 - 900 = -550.
     expect(result).toHaveLength(1);
     expect(result[0].month).toBe('2026-04');
-    expect(result[0].assetsByCurrency.USD).toBeCloseTo(450, 6);
+    expect(result[0].assetsByCurrency.USD).toBeCloseTo(350, 6);
     expect(result[0].liabilitiesByCurrency.USD).toBeCloseTo(900, 6);
-    expect(result[0].byCurrency.USD).toBeCloseTo(-450, 6);
+    expect(result[0].byCurrency.USD).toBeCloseTo(-550, 6);
+  });
+
+  it('README Done item 231 regression: an EMI loan with NO linked bank plan at all still reduces future assets by its own scheduled installment — not free money', () => {
+    // Before this fix, a loan the user never ran "Link to bank" for had
+    // NOTHING capture its future cash cost: liabilities correctly shrank
+    // via the schedule, but assets never moved, so Net Worth looked like it
+    // improved for free purely from the loan quietly amortizing.
+    const result = projectedNetWorthTrend({
+      months: ['2026-04'],
+      currentMonth: '2026-03',
+      todayISODate: '2026-03-15',
+      currentRows: [{ currency: 'USD', assets: 500, liabilities: 1000, net: -500, breakdown: [] }],
+      activities: [], // no Budget Planner activity for this loan at all
+      emiLoans: [loan],
+      netWorthAsOfInputs: emptyNetWorthAsOfInputs,
+    });
+    // Assets: 500 - 100 (the 04-01 installment, straight from the schedule) = 400.
+    // Liabilities: unchanged from the test above (900) — the schedule-based liability
+    // delta doesn't depend on whether a plan was ever linked.
+    expect(result[0].assetsByCurrency.USD).toBeCloseTo(400, 6);
+    expect(result[0].liabilitiesByCurrency.USD).toBeCloseTo(900, 6);
+    expect(result[0].byCurrency.USD).toBeCloseTo(-500, 6);
+  });
+
+  it('a linked plan\'s own flow and the schedule-based figure never double-count each other', () => {
+    // Same loan, same window, but with a linked (not-yet-executed) plan
+    // present for the SAME installment the schedule-based figure already
+    // covers — the result must match the "no plan at all" case exactly
+    // above, not be double-deducted.
+    const emiLinkedPlan = activity({ id: 'e2', date: '2026-04-01', amount: -100, sourceEmiLoanId: 'L1' });
+    const result = projectedNetWorthTrend({
+      months: ['2026-04'],
+      currentMonth: '2026-03',
+      todayISODate: '2026-03-15',
+      currentRows: [{ currency: 'USD', assets: 500, liabilities: 1000, net: -500, breakdown: [] }],
+      activities: [emiLinkedPlan],
+      emiLoans: [loan],
+      netWorthAsOfInputs: emptyNetWorthAsOfInputs,
+    });
+    expect(result[0].assetsByCurrency.USD).toBeCloseTo(400, 6);
+    expect(result[0].byCurrency.USD).toBeCloseTo(-500, 6);
   });
 
   it('the current (in-progress) month uses today\'s already-known real figure directly, unchanged by future-only activity', () => {

@@ -1,5 +1,6 @@
-import { totalsByCurrency } from './emiModule';
+import { emiScheduledCashOutflowByCurrency, totalsByCurrency } from './emiModule';
 import { netWorthAsOfDate, type NetWorthAsOfInputs } from './netWorthAsOf';
+import { includedEmiLoans } from './netWorthInclusion';
 import type { CurrencyNetWorth } from './netWorth';
 import type { EMILoan } from '../../types/emiWorkbook';
 import type { BudgetActivity } from './budgetPlanner';
@@ -62,13 +63,21 @@ export interface MonthlyNetWorthPoint {
  *
  *   **The flow term deliberately EXCLUDES any Budget Planner activity
  *   tagged `sourceEmiLoanId`** (an EMI's own auto-generated "Link to bank"
- *   installment plan) — that cash outflow's effect on Net Worth is ALREADY
- *   captured correctly by the EMI-outstanding term. Counting both would
- *   double the hit: once as a full-installment cash expense, and again by
- *   not crediting back the principal portion that installment actually
- *   pays down — the same "blend real cash flow with liability data without
+ *   installment plan) — that cash outflow is instead accounted for
+ *   directly from the loan's own SCHEDULE, unconditionally, via
+ *   `emiModule.ts`'s `emiScheduledCashOutflowByCurrency` (see its own doc
+ *   comment for the bug this fixes — README Done item 231, user-reported
+ *   2026-09-06: "EMI is giving me unrealistic values"). Counting both the
+ *   Budget Planner flow AND the schedule-based figure would double the
+ *   hit — the same "blend real cash flow with liability data without
  *   excluding what's already accounted for" double-counting shape this
- *   project hit before with the Trade Planner's executed-leg handling.
+ *   project hit before with the Trade Planner's executed-leg handling —
+ *   so a linked plan's own not-yet-executed flow stays excluded exactly
+ *   as before, just now REPLACED by the schedule-derived figure instead of
+ *   silently dropped with nothing standing in for it (the actual bug: a
+ *   loan that was never linked to a bank account had NOTHING capture its
+ *   future cash cost at all, letting Net Worth look like it improved for
+ *   free purely from the loan quietly amortizing in the model).
  *   `collectBudgetActivities` (README/user-requested 2026-09-04) also now
  *   excludes both sides of any inter-account linked transfer from
  *   `activities` entirely — so this flow term is never inflated by money
@@ -83,7 +92,12 @@ export function projectedNetWorthTrend(params: {
   emiLoans: EMILoan[];
   netWorthAsOfInputs: NetWorthAsOfInputs;
 }): MonthlyNetWorthPoint[] {
-  const { months, currentMonth: nowMonth, todayISODate, currentRows, activities, emiLoans, netWorthAsOfInputs } = params;
+  const { months, currentMonth: nowMonth, todayISODate, currentRows, activities, netWorthAsOfInputs } = params;
+  // Filtered here (not just relying on the caller), same self-contained
+  // pattern `netWorthAsOfDate` already uses for every other entity array —
+  // see `netWorthInclusion.ts`'s own doc comment for the full "let the
+  // user choose which accounts count" feature this belongs to.
+  const emiLoans = includedEmiLoans(params.emiLoans);
   const currencies = currentRows.map((r) => r.currency);
   // Explicit `asOf` derived from `todayISODate`, never `totalsByCurrency`'s
   // own `new Date()` default — keeps this pure/testable and avoids a real
@@ -120,12 +134,13 @@ export function projectedNetWorthTrend(params: {
       });
     } else {
       const emiAtMonth = totalsByCurrency(emiLoans, new Date(endOfMonthAsOf(month)));
+      const emiCashOutflow = emiScheduledCashOutflowByCurrency(emiLoans, todayISODate, endOfMonthAsOf(month));
       const flow: Record<string, number> = {};
       activities
         .filter((a) => a.date > todayISODate && a.date.slice(0, 7) <= month && !a.sourceEmiLoanId)
         .forEach((a) => { flow[a.currencyCode] = (flow[a.currencyCode] ?? 0) + a.amount; });
       currencies.forEach((c) => {
-        const assets = (currentAssets[c] ?? 0) + (flow[c] ?? 0);
+        const assets = (currentAssets[c] ?? 0) + (flow[c] ?? 0) - (emiCashOutflow[c] ?? 0);
         const liabilities = (currentLiabilities[c] ?? 0) - (emiToday[c]?.outstanding ?? 0) + (emiAtMonth[c]?.outstanding ?? 0);
         assetsByCurrency[c] = assets;
         liabilitiesByCurrency[c] = liabilities;

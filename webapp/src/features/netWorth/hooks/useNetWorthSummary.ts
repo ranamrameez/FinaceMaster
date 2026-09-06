@@ -4,6 +4,7 @@ import { netPositionByCurrency } from '../../../lib/calc/personalLoansModule';
 import { totalsByCurrency as emiTotalsByCurrency } from '../../../lib/calc/emiModule';
 import { fundsValueByCurrency } from '../../../lib/calc/fundsModule';
 import { computeNetWorthByCurrency, type CurrencyNetWorth } from '../../../lib/calc/netWorth';
+import { includedBankAccounts, includedEmiLoans, includedFunds, includedPersonalLoans } from '../../../lib/calc/netWorthInclusion';
 import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
 import { usePersonalLoansWorkbookStore } from '../../../store/personalLoansWorkbookStore';
@@ -34,6 +35,7 @@ export interface NetWorthSummary {
  * copies that could drift. */
 export function useNetWorthSummary(): NetWorthSummary {
   const cashEntries = useCashWorkbookStore((s) => s.workbook.entries);
+  const cashSettings = useCashWorkbookStore((s) => s.workbook.settings);
   const bank = useBankWorkbookStore((s) => s.workbook);
   const personalLoans = usePersonalLoansWorkbookStore((s) => s.workbook);
   const emiLoans = useEMIWorkbookStore((s) => s.workbook.entries);
@@ -43,13 +45,21 @@ export function useNetWorthSummary(): NetWorthSummary {
   const qse = useQSEDerived();
   const psx = usePSXDerived();
 
-  const cash = cashBalanceByCurrency(cashEntries);
-  const bankTotals = assetBalanceByCurrency(bank.settings.accounts, bank.transactions);
-  const creditCards = creditCardLiabilityByCurrency(bank.settings.accounts, bank.transactions);
-  const personalLoansNet = netPositionByCurrency(personalLoans.loans, personalLoans.repayments);
+  // User-requested (2026-09-06): "let the user choose (checkboxes?) to
+  // include the accounts in the Net calcs" — Bank/Personal Loans/EMI/Funds
+  // filter their own entity array down to only what's checked "Include in
+  // Net Worth" (see netWorthInclusion.ts's own doc comment for why
+  // filtering the array alone is enough); Cash/QSE/PSX are gated as a
+  // whole module below instead, since they're a single per-currency ledger
+  // each with nothing more granular to toggle.
+  const includedAccounts = includedBankAccounts(bank.settings.accounts);
+  const cash = cashSettings.includeInNetWorth === false ? {} : cashBalanceByCurrency(cashEntries);
+  const bankTotals = assetBalanceByCurrency(includedAccounts, bank.transactions);
+  const creditCards = creditCardLiabilityByCurrency(includedAccounts, bank.transactions);
+  const personalLoansNet = netPositionByCurrency(includedPersonalLoans(personalLoans.loans), personalLoans.repayments);
   const emiOutstanding: Record<string, number> = {};
-  Object.entries(emiTotalsByCurrency(emiLoans)).forEach(([code, t]) => { emiOutstanding[code] = t.outstanding; });
-  const fundsValues = fundsValueByCurrency(funds.funds, funds.transactions, funds.marketPrices);
+  Object.entries(emiTotalsByCurrency(includedEmiLoans(emiLoans))).forEach(([code, t]) => { emiOutstanding[code] = t.outstanding; });
+  const fundsValues = fundsValueByCurrency(includedFunds(funds.funds), funds.transactions, funds.marketPrices);
 
   // Skip an exchange entirely if it's never been touched — otherwise an
   // unused QSE/PSX account always contributes a spurious "0" row in its
@@ -61,8 +71,8 @@ export function useNetWorthSummary(): NetWorthSummary {
   const rows = computeNetWorthByCurrency({
     cash,
     bank: bankTotals,
-    qse: qseUsed ? { [qseSettings.currency]: qse.summary.netWorth } : {},
-    psx: psxUsed ? { [psxSettings.currency]: psx.summary.netWorth } : {},
+    qse: qseUsed && qseSettings.includeInNetWorth !== false ? { [qseSettings.currency]: qse.summary.netWorth } : {},
+    psx: psxUsed && psxSettings.includeInNetWorth !== false ? { [psxSettings.currency]: psx.summary.netWorth } : {},
     funds: fundsValues,
     personalLoansNet,
     emiOutstanding,
