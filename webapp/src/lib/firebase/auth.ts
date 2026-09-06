@@ -62,8 +62,37 @@ export async function resetPassword(email: string) {
  * immediately without prompting again — a real UX cost, but a strictly
  * better outcome than the popup hanging forever with no way to complete
  * at all. `completeGoogleSignInRedirect()` (called once on app load,
- * `useAuthState.ts`) picks up the result when the user lands back. */
+ * `useAuthState.ts`) picks up the result when the user lands back.
+ *
+ * User-reported follow-up (2026-09): even after this fix, "Sign in with
+ * Google succeeds but the user still doesn't get logged in" — confirmed
+ * with the user that the actual symptom is "the page reloads and still
+ * shows signed-out, with no error either way." That's `getRedirectResult()`
+ * resolving to `null` with no thrown error on the return trip — Firebase's
+ * own documented failure mode for this exact "authDomain on a different
+ * origin than the app's own hosting domain" setup (this app's authDomain,
+ * `qse-app.firebaseapp.com`, is different from `ranamrameez.github.io`)
+ * when the browser restricts cross-site storage/cookies for the sign-in
+ * correlation step — genuinely NOT something fixable from this app's own
+ * JS (no custom response headers are available on GitHub Pages' static
+ * hosting, and this app doesn't own a domain it could point a matching
+ * Firebase Hosting authDomain at). What WAS a real, fixable gap: this
+ * exact failure was previously indistinguishable from "this page load
+ * just isn't a redirect return at all" (the normal case for every other
+ * page load) — both produced `signedIn: false` with no toast either way,
+ * so a genuine failure was silent, giving the user no signal to explain
+ * why they're still signed out or what to try next. `GOOGLE_REDIRECT_PENDING_KEY`
+ * (own `sessionStorage` key, set right before navigating away) answers
+ * "was this page load actually expecting to come back signed in?" —
+ * `sessionStorage` survives a normal same-tab top-level navigation away
+ * and back (the same mechanism Firebase's own internal redirect-tracking
+ * already depends on to work at all), so if it's STILL missing on return,
+ * the redirect genuinely failed to complete, not just "this is an
+ * unrelated page load." */
+const GOOGLE_REDIRECT_PENDING_KEY = 'financerecorder_google_redirect_pending';
+
 export async function signInWithGoogle() {
+  try { window.sessionStorage.setItem(GOOGLE_REDIRECT_PENDING_KEY, '1'); } catch { /* ignore — worst case, a failed redirect just goes unexplained like before this fix */ }
   await signInWithRedirect(requireAuth(), new GoogleAuthProvider());
 }
 
@@ -72,13 +101,20 @@ export async function signInWithGoogle() {
  * the current page load is a return from one. `onAuthStateChanged`
  * (the app's single global auth listener, `useAuthState.ts`) fires
  * independently once the SDK processes this, so this function's own
- * job is just: surface a clear error if the redirect itself failed
- * (an empty/undefined result with no thrown error means "this page
- * load wasn't a redirect return at all," not a failure — don't treat
- * that as an error). */
-export async function completeGoogleSignInRedirect(): Promise<{ signedIn: boolean }> {
+ * job is just: surface clear feedback either way. `wasPending` (see
+ * `GOOGLE_REDIRECT_PENDING_KEY`'s own doc comment above) is what lets the
+ * caller tell "signedIn: false because this isn't a redirect return at
+ * all" (the common case, stay silent) apart from "signedIn: false even
+ * though we WERE expecting to come back signed in" (a real, previously-
+ * silent failure worth surfacing). */
+export async function completeGoogleSignInRedirect(): Promise<{ signedIn: boolean; wasPending: boolean }> {
+  let wasPending = false;
+  try {
+    wasPending = window.sessionStorage.getItem(GOOGLE_REDIRECT_PENDING_KEY) === '1';
+    window.sessionStorage.removeItem(GOOGLE_REDIRECT_PENDING_KEY);
+  } catch { /* ignore — treat as "not pending," same as before this fix */ }
   const result = await getRedirectResult(requireAuth());
-  return { signedIn: result !== null };
+  return { signedIn: result !== null, wasPending };
 }
 
 const EMAIL_LINK_STORAGE_KEY = 'financerecorder_email_for_link';

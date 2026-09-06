@@ -294,7 +294,12 @@
   /* ---------- Shell ---------- */
   .shell{display:flex; min-height:100vh;}
   .sidebar{
-    width:220px; flex-shrink:0;
+    /* User-reported (2026-09): "make sidenavbar a bit wider" — was 220px,
+       genuinely cramped against several nav items' own text (e.g. "Trade
+       Transactions", "Personal Loans"). Bumped to 250px; `.main`'s own
+       `margin-left` below must match this value exactly, or the two drift
+       out of sync and either overlap or leave a gap. */
+    width:250px; flex-shrink:0;
     position:fixed; top:0; left:0; height:100vh;
     display:flex; flex-direction:column;
     background:var(--panel);
@@ -331,7 +336,7 @@
      unused margin. Not removed entirely: an unbounded main would stretch a
      single stat card or narrow form to an absurd width on an ultrawide
      monitor, which is its own readability problem, not a fix. */
-  .main{flex:1; margin-left:220px; padding:26px 30px 60px 30px; max-width:1600px; min-width:0; transition:margin-left .18s ease;}
+  .main{flex:1; margin-left:250px; padding:26px 30px 60px 30px; max-width:1600px; min-width:0; transition:margin-left .18s ease;}
   @media(max-width:700px){ .main{padding:18px 14px 50px 14px;} }
 
   /* ---------- Desktop sidebar collapse ("save space and focus" —
@@ -362,7 +367,7 @@
   @media(min-width:861px){ .sidebar-expand-tab.show{display:flex;} }
 
   /* ---------- Mobile: sidebar becomes an off-canvas drawer instead of a
-     permanent 220px column stealing width from a 375px viewport. Opened
+     permanent 250px column stealing width from a 375px viewport. Opened
      via .mobile-menu-btn (rendered only below this breakpoint), closed by
      tapping the backdrop, a nav link, or the same button again. ---------- */
   .mobile-menu-btn{display:none;}
@@ -1447,13 +1452,25 @@ html.auth-signed-out #cloudSignedInBox{display:none !important;}
      overflow-y:auto for the scrollable-nav fix, and an absolutely-positioned
      descendant that flies outside its parent's box gets clipped by that
      overflow. Fixed positioning is placed relative to the viewport instead,
-     so it's immune to that clipping; JS sets its exact top/left on open. */
+     so it's immune to that clipping — same `position:fixed`-with-no-
+     explicit-offsets trick `.sync-status-panel` below uses (no JS sets an
+     exact top/left; `position:fixed`'s own "static position" fallback
+     anchors it right where it'd sit in normal flow).
+     User-reported bug (2026-09), root-caused: this rule used to be
+     `display:none` unconditionally, gated open only by a `.appearance-
+     panel.open` modifier class — but `AppearancePanel.tsx` only ever
+     conditionally RENDERS this div (mounts it just while `open===true`)
+     and never actually adds an `.open` class to it, so the panel was
+     invisible every time regardless of clicking the trigger. Fixed by
+     making `display:grid` the panel's own unconditional style (matching
+     `.sync-status-panel`'s identical, already-working pattern below) —
+     nothing else needs to gate visibility once React itself only mounts
+     the element while open. */
   position:fixed; z-index:1000;
-  display:none;width:255px;padding:10px;
+  display:grid; gap:8px; width:255px; padding:10px;
   background:var(--panel);border:1px solid var(--border);border-radius:10px;
   box-shadow:var(--shadow-lg);
 }
-.appearance-panel.open{display:grid;gap:8px;}
 .appearance-panel-title{
   font-family:var(--disp);font-weight:700;font-size:13px;
   color:var(--text);padding:2px 2px 3px;
@@ -1501,11 +1518,19 @@ html.auth-signed-out #cloudSignedInBox{display:none !important;}
   margin-top:12px; display:flex; flex-direction:column; gap:1px;
 }
 .account-btn{font-size:12.5px; gap:8px;}
-.account-avatar{
-  flex:0 0 22px; width:22px; height:22px; border-radius:50%;
+/* User-reported (2026-09): "Profile Picture not coming from google, not a
+   rounded circle as well." Shared by the sidebar's account row and
+   ProfileEditor.tsx's bigger avatar (see components/Avatar.tsx) — sizing
+   is set inline per call site via `size`, so this only carries the shape/
+   fill. `object-fit:cover` + `border-radius:50%` both apply directly to an
+   `<img>` (a CSS "replaced element"), so a real Google profile photo of
+   any aspect ratio still clips to a clean circle, matching the emoji/
+   initial fallback's own look exactly. */
+.avatar-circle{
+  flex-shrink:0; border-radius:50%; object-fit:cover;
   background:var(--accent-soft); color:var(--on-accent-soft);
   display:flex; align-items:center; justify-content:center;
-  font-size:12px; font-weight:700; line-height:1;
+  font-weight:700; line-height:1;
 }
 .account-name{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .account-btn svg{flex-shrink:0; color:var(--muted);}
