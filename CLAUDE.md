@@ -5148,6 +5148,24 @@ not developer notes) continuously as features ship.
   works and still hits the sign-in gate; a screenshot confirmed the chart's Net Worth line is
   now visible over the semi-transparent bars. `npx tsc -b` / `npm run test` (509 tests,
   unchanged) / `npm run build` all clean.
+- **PSX ticker list expanded from ~121 to 854 real symbols (2026-09-06) — see README Done
+  item 233.** User added a full PSX ticker export and asked: Firebase RTDB standalone node,
+  or use the JSON directly? Chose bundled JSON — this is public reference data (ticker →
+  name), not user data, and QSE's own `stockData/QSE` RTDB node is a documented cautionary
+  precedent (real security-rule/seeding infrastructure never actually finished) neither this
+  nor most future sessions can fully administer without RTDB console access. Moved the file
+  from `webapp/public/Tickers.PSX.json` (unreferenced static asset) into
+  `webapp/src/lib/stockData/psxTickersFull.json`; `psxSeed.ts`'s `PSX_TICKER_NAMES` now
+  derives from it at load time instead of a hand-typed ~121-entry object, which was deleted
+  outright (not kept as dead code — it's in git history if ever needed). Confirmed safe before
+  shipping: every real name display already runs through `shortenCompanyName()`, which strips
+  the raw JSON's more-formal "Ltd"/"Co" suffixes; every `tickerNames` consumer looks up one
+  ticker at a time, never iterates the whole map, so the 7x size growth has no rendering cost.
+  `PSX_TICKER_SECTORS` (a separate small curated map, confirmed to have zero actual consumers
+  app-wide) is untouched — the new JSON has no sector field to derive it from anyway. Verified
+  live via Playwright: the PSX ticker datalist grew to exactly 854 options including both an
+  old known ticker (OGDC) and new-only ones (AABS, "786") — zero new console errors. `npx tsc
+  -b` / `npm run test` (509 tests, unchanged) / `npm run build` all clean.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

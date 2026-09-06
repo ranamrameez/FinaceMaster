@@ -5943,6 +5943,41 @@ FinanceManager live link:
   screenshot confirmed the Net Worth line is now clearly visible over the semi-transparent
   bars. `npx tsc -b` / `npm run test` (509 tests, unchanged — this round's fixes are UI/CSS/
   interaction-delivery changes, not new calc logic) / `npm run build` all clean.
+- **PSX ticker list expanded from ~121 to 854 real symbols (2026-09-06) — see README Done item
+  233.** The user added a full PSX ticker export (`Code`/`Name`/`Country`/`Exchange`/
+  `Currency`/`Type`/`Isin`, 854 entries) and asked whether to upload it "as stand alone in fb
+  rtdb or use as it json." Chose the bundled-JSON route, not a new Firebase RTDB node, for two
+  reasons: this is public reference data (ticker code → company name), not user data, so
+  there's nothing per-user sync would add over a static import; and QSE's own equivalent
+  `stockData/QSE` RTDB node is a cautionary precedent already documented elsewhere in this
+  file as real, unfinished infrastructure (its own security rules were never actually opened
+  up, and it "hasn't actually been seeded yet") that neither this session nor most future ones
+  can fully administer without direct RTDB console access — a bundled JSON import works
+  immediately, offline, and even when signed out, exactly like the old hand-curated list
+  already did. Moved the file from `webapp/public/Tickers.PSX.json` (a plain static asset with
+  nothing importing it) to `webapp/src/lib/stockData/psxTickersFull.json`, and
+  `psxSeed.ts`'s `PSX_TICKER_NAMES` is now derived from it at module load
+  (`Object.fromEntries(...)`) instead of a hand-typed object — the old ~121-entry list is
+  deleted outright (not kept as unused dead code, per this project's own "delete what's
+  certain to be unused" standing rule), since it's already in git history if a future session
+  ever wants to compare wording. **Checked before assuming safety, not guessed**: the raw
+  JSON's names are more formal than the old curated ones (e.g. "Oil and Gas Development Co
+  Ltd" vs. the old "Oil & Gas Development Company") — confirmed this doesn't matter, since
+  every real display call site already runs the name through `shortenCompanyName()`, which
+  strips exactly this kind of corporate suffix before rendering. Also confirmed via a whole-
+  codebase grep that every consumer of `tickerNames` (the PSX ticker datalist, Dashboard/
+  Portfolio/Watchlist name lookups) only ever looks up ONE specific ticker at a time
+  (`tickerNames[r.ticker]`), never iterates the whole map to render a row per entry — so
+  growing the map 7x has no rendering-cost implication, only a bigger (still tiny, native)
+  `<datalist>`. `PSX_TICKER_SECTORS` (a separate, smaller hand-curated map) is UNCHANGED — the
+  new JSON has no sector/GICS field to derive it from, and a fresh grep confirmed it has no
+  actual consumer anywhere in the app today anyway (kept for whenever a PSX sector-breakdown
+  feature is eventually built, not touched here). Verified live via Playwright: the PSX ticker
+  datalist grew to exactly 854 options, correctly including both an old known ticker (OGDC)
+  and two symbols that only exist in the new list (AABS, the numeric-code ticker "786") — zero
+  new console errors. `npx tsc -b` / `npm run test` (509 tests, unchanged — this is seed data,
+  not calc logic) / `npm run build` (bundle grew ~116KB, matching the JSON's own size) all
+  clean.
 
 ## Pending
 

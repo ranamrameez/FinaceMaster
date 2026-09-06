@@ -1,132 +1,50 @@
-/** One-time seed data for PSX ticker names + sectors, ported from the
- * legacy app's js/psx-symbols.json (same list used by the static PSX_Trade_Planner).
- * Mirrors qseSeed.ts's role: bundled fallback so the app is never empty on
- * first load. No fundamentals (EPS/DPS) data source exists for PSX yet —
- * only ticker names + sector are available. */
+import psxTickersFull from './psxTickersFull.json';
 
-export const PSX_TICKER_NAMES: Record<string, string> = {
-  OGDC: 'Oil & Gas Development Company',
-  PPL: 'Pakistan Petroleum',
-  POL: 'Pakistan Oilfields',
-  MARI: 'Mari Petroleum',
-  PSO: 'Pakistan State Oil',
-  SHEL: 'Shell Pakistan',
-  APL: 'Attock Petroleum',
-  HASCOL: 'Hascol Petroleum',
-  SNGP: 'Sui Northern Gas Pipelines',
-  SSGC: 'Sui Southern Gas Company',
-  ATRL: 'Attock Refinery',
-  NRL: 'National Refinery',
-  PRL: 'Pakistan Refinery',
-  CNERGY: 'Cnergyico PK',
-  HBL: 'Habib Bank',
-  UBL: 'United Bank',
-  MCB: 'MCB Bank',
-  NBP: 'National Bank of Pakistan',
-  ABL: 'Allied Bank',
-  BAFL: 'Bank Alfalah',
-  BAHL: 'Bank AL Habib',
-  MEBL: 'Meezan Bank',
-  FABL: 'Faysal Bank',
-  AKBL: 'Askari Bank',
-  BOP: 'The Bank of Punjab',
-  BIPL: 'BankIslami Pakistan',
-  JSBL: 'JS Bank',
-  SILK: 'Silk Bank',
-  LUCK: 'Lucky Cement',
-  DGKC: 'D.G. Khan Cement',
-  MLCF: 'Maple Leaf Cement',
-  FCCL: 'Fauji Cement',
-  PIOC: 'Pioneer Cement',
-  CHCC: 'Cherat Cement',
-  KOHC: 'Kohat Cement',
-  ACPL: 'Attock Cement Pakistan',
-  BWCL: 'Bestway Cement',
-  POWER: 'Power Cement',
-  GWLC: 'Gharibwal Cement',
-  THCCL: 'Thatta Cement',
-  FFC: 'Fauji Fertilizer Company',
-  EFERT: 'Engro Fertilizers',
-  FATIMA: 'Fatima Fertilizer',
-  FFBL: 'Fauji Fertilizer Bin Qasim',
-  EFUG: 'EFU General Insurance',
-  ENGRO: 'Engro Corporation',
-  ENGROH: 'Engro Holdings',
-  ICI: 'ICI Pakistan',
-  LOTCHEM: 'Lotte Chemical Pakistan',
-  EPCL: 'Engro Polymer & Chemicals',
-  SITARA: 'Sitara Chemical Industries',
-  HUBC: 'Hub Power Company',
-  KAPCO: 'Kot Addu Power Company',
-  KEL: 'K-Electric',
-  NPL: 'Nishat Power',
-  NCPL: 'Nishat Chunian Power',
-  LOTS: 'Lotte Chemical (legacy)',
-  PKGP: 'Packages Power',
-  NML: 'Nishat Mills',
-  GATM: 'Gul Ahmed Textile Mills',
-  ILP: 'Interloop',
-  KTML: 'Kohinoor Textile Mills',
-  CTM: 'Crescent Textile Mills',
-  ASTM: 'Ansar Management (Textile)',
-  SAPT: 'Sapphire Textile Mills',
-  SFL: 'Sapphire Fibres',
-  FEROZ: 'Ferozsons Laboratories',
-  INDU: 'Indus Motor Company',
-  PSMC: 'Pak Suzuki Motor Company',
-  HCAR: 'Honda Atlas Cars',
-  MTL: 'Millat Tractors',
-  AGTL: 'Al-Ghazi Tractors',
-  SAZEW: 'Sazgar Engineering Works',
-  GHNI: 'Ghandhara Nissan',
-  GHGL: 'Ghandhara Industries',
-  PSEL: 'Pak Suzuki (legacy code)',
-  ATLH: 'Atlas Honda',
-  THALL: 'Thal Limited',
-  NESTLE: 'Nestle Pakistan',
-  UNITY: 'Unity Foods',
-  FRIESLAND: 'Friesland Campina Engro',
-  MFFL: 'Mitchell\'s Fruit Farms',
-  MUREB: 'Murree Brewery',
-  COLG: 'Colgate-Palmolive Pakistan',
-  NATF: 'National Foods',
-  SHEZAN: 'Shezan International',
-  MEHT: 'Mehmood Textile (Foods)',
-  SYS: 'Systems Limited',
-  TRG: 'TRG Pakistan',
-  NETSOL: 'NetSol Technologies',
-  AIRLINK: 'Air Link Communication',
-  AVN: 'Avanceon',
-  PTC: 'Pakistan Telecommunication Company',
-  WTL: 'WorldCall Telecom',
-  OCTOPUS: 'Octopus Digital',
-  ISL: 'International Steels',
-  ASTL: 'Amreli Steels',
-  MUGHAL: 'Mughal Iron & Steel Industries',
-  ASL: 'Aisha Steel Mills',
-  CSAP: 'Crescent Steel & Allied Products',
-  IPAK: 'International Industries',
-  PKGS: 'Packages Limited',
-  CPPL: 'Century Paper & Board',
-  SPL: 'Security Papers',
-  JSCL: 'JS Investments',
-  AICL: 'Adamjee Insurance',
-  IGIHL: 'IGI Holdings',
-  PICIC: 'PICIC Insurance',
-  PIBTL: 'Pakistan International Bulk Terminal',
-  PIAHCLA: 'PIA Holding Company',
-  KOSM: 'Kohinoor Spinning',
-  TREET: 'Treet Corporation',
-  TPLP: 'TPL Properties',
-  DAWH: 'Dawood Hercules Corporation',
-  DOL: 'Dost Steels',
-  PAEL: 'Pak Elektron',
-  WAVES: 'Waves Corporation',
-  SEARL: 'The Searle Company',
-  GLAXO: 'GlaxoSmithKline Pakistan',
-  ABOT: 'Abbott Laboratories Pakistan',
-  HINOON: 'Highnoon Laboratories',
-};
+/** Bundled seed data for PSX ticker names + sectors — mirrors qseSeed.ts's
+ * role: a fallback so the app is never empty on first load, and (unlike
+ * QSE) the ONLY source, since there's no shared Firebase `stockData/PSX`
+ * node (see usePSXStockData.ts's own comment).
+ *
+ * `PSX_TICKER_NAMES` (2026-09-06): now derived from `psxTickersFull.json`
+ * — a full 854-symbol PSX ticker/name/type/ISIN export the user provided
+ * (moved here from `webapp/public/Tickers.PSX.json`, where it briefly sat
+ * as a plain static asset with nothing importing it), replacing the
+ * previous ~121-symbol hand-curated list ported from the legacy app's
+ * `js/psx-symbols.json`. Deliberately kept as a BUNDLED JSON import, not
+ * uploaded to Firebase RTDB, for two reasons: (1) this is public reference
+ * data (ticker code -> company name), not user data — no per-user sync is
+ * needed, so there's nothing Firebase would add over a static import; (2)
+ * QSE's own equivalent `stockData/QSE` RTDB node is a cautionary precedent
+ * — it's real infrastructure (needs its own RTDB security rules opened up,
+ * gates on sign-in even for a read, and per that file's own note "hasn't
+ * actually been seeded yet") that neither this session nor a future one
+ * can fully verify/administer without direct RTDB console access, whereas
+ * a bundled JSON import works immediately, offline, and even when signed
+ * out — exactly how the old hand-curated list already worked. If PSX ever
+ * needs the SAME data centrally editable across devices without a new
+ * app release (the actual reason QSE's Firebase node exists), that's the
+ * trigger to revisit this, not "it's a bigger list now."
+ *
+ * The raw JSON's `Name` field is more formal than the old hand-curated
+ * names (e.g. "Oil and Gas Development Co Ltd" vs. the old "Oil & Gas
+ * Development Company") — not normalized here on purpose: every real
+ * display call site already runs the name through `shortenName.ts`'s
+ * `shortenCompanyName()`, which strips exactly this kind of corporate
+ * suffix ("Ltd", "Co", etc.) before rendering, so the extra formality
+ * never actually reaches the screen.
+ *
+ * `PSX_TICKER_SECTORS` below is UNCHANGED — the full JSON has no sector/
+ * GICS-style field (only Code/Name/Country/Exchange/Currency/Type/Isin),
+ * so the old hand-curated sector map (a strict subset of tickers) is kept
+ * as-is rather than silently regressed to nothing. Note it has no actual
+ * consumer anywhere in the app today (confirmed via a whole-codebase grep)
+ * — `usePSXStockData()` exposes it, but no component currently reads
+ * `.sectors`; kept for whenever a PSX sector-breakdown feature is built,
+ * not removed as unrelated cleanup here. */
+
+export const PSX_TICKER_NAMES: Record<string, string> = Object.fromEntries(
+  (psxTickersFull as { Code: string; Name: string }[]).map((t) => [t.Code, t.Name]),
+);
 
 export const PSX_TICKER_SECTORS: Record<string, string> = {
   OGDC: 'Oil & Gas Exploration',
