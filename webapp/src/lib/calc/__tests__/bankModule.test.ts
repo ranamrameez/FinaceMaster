@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { BankAccount, BankTransaction } from '../../../types/bankWorkbook';
 import type { Category } from '../../../types/finance';
-import { accountBalance, accountByCategory, accountRunningLedger, assetBalanceByCurrency, bankMonthlyFlow, budgetVsActual, creditCardLiabilityByCurrency, totalBalanceByCurrency } from '../bankModule';
+import { accountBalance, accountBalanceAsOfMonth, accountByCategory, accountRunningLedger, assetBalanceByCurrency, bankMonthlyFlow, budgetVsActual, creditCardLiabilityByCurrency, totalBalanceByCurrency } from '../bankModule';
 
 const TEST_CATEGORIES: Category[] = [
   { id: 'cat_food', serialNumber: 1, name: 'Food' },
@@ -66,6 +66,28 @@ describe('accountRunningLedger', () => {
     const rows = accountRunningLedger(a, [second, first]);
     expect(rows.map((r) => r.tx.id)).toEqual(['t1', 't2']);
     expect(rows.map((r) => r.balance)).toEqual([950, 1150]);
+  });
+});
+
+describe('accountBalanceAsOfMonth', () => {
+  it('returns opening balance when no transactions exist yet that early', () => {
+    const a = account({ openingBalance: 1000 });
+    const ledger = accountRunningLedger(a, []);
+    expect(accountBalanceAsOfMonth(ledger, '2025-12', a.openingBalance)).toBe(1000);
+  });
+
+  it('picks the last ledger row on or before the given month, ignoring later ones', () => {
+    const a = account({ openingBalance: 1000 });
+    const txs = [
+      tx({ id: 't1', date: '2026-01-15', amount: -50 }),
+      tx({ id: 't2', date: '2026-02-10', amount: 200 }),
+      tx({ id: 't3', date: '2026-03-01', amount: -300 }),
+    ];
+    const ledger = accountRunningLedger(a, txs);
+    expect(accountBalanceAsOfMonth(ledger, '2026-01', a.openingBalance)).toBe(950);
+    expect(accountBalanceAsOfMonth(ledger, '2026-02', a.openingBalance)).toBe(1150);
+    expect(accountBalanceAsOfMonth(ledger, '2026-03', a.openingBalance)).toBe(850);
+    expect(accountBalanceAsOfMonth(ledger, '2026-06', a.openingBalance)).toBe(850);
   });
 });
 

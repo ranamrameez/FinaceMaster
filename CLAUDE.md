@@ -5166,6 +5166,41 @@ not developer notes) continuously as features ship.
   live via Playwright: the PSX ticker datalist grew to exactly 854 options including both an
   old known ticker (OGDC) and new-only ones (AABS, "786") — zero new console errors. `npx tsc
   -b` / `npm run test` (509 tests, unchanged) / `npm run build` all clean.
+- **Banking: same-date sort bug, linked-transfer sign bug, per-account Analytics grid,
+  currency-sum tag (2026-09-06) — see README Done item 234.** User attached a real screenshot
+  plus a full app backup — root-caused against that real data, not guessed.
+  **Bug 1**: `AccountDetailPage`'s Transactions table sorted the Date column by the raw date
+  STRING (ignoring `time`/`timezone`), so two same-date rows tied and `Array.sort`'s stability
+  kept their ascending-chronological order regardless of the column's desc/asc direction — a
+  table sorted "newest first" still showed a same-date pair backwards, even though
+  `accountRunningLedger`'s own Balance column (which DOES sort by real instant+serialNumber)
+  was always correct. Fixed generically: `useSortableRows` gained an optional
+  `tiebreak?: (row) => number[]` — a lexicographically-compared composite key (NOT a
+  summed/scaled float, which risks precision loss) applied and flipped by the same direction as
+  the primary column on a tie. Backward-compatible; only Bank's table opts in
+  (`[toInstantMs(...), serialNumber]`), the other 39 `useSortableRows` call sites unchanged.
+  **Bug 2**: `TransactionEntryModal.tsx`'s `DIRECTION_LABELS` had NO entry for `bank`, so its
+  Direction control never rendered for a Bank row and `row.direction` stayed stuck at its
+  hardcoded `'in'` default — but the linked-transfer branch always decides `from`/`to` from
+  `row.direction`, never from amount sign, so a Bank row could never become a link's outgoing
+  side no matter what sign was typed. Fixed by adding `bank` to `DIRECTION_LABELS` (Deposit/
+  Withdrawal) — the existing `from`/`to` logic needed zero changes once Bank had a real
+  direction, confirming the diagnosis was exact. Also replaced the shared Direction `<Select>`
+  with a new `DirectionChips` chip-toggle component (user's own ask: "use radio/chips... instead
+  of positive & negative entries"), applied the same magnitude+chip pattern to
+  `EditTransactionModal` and `AddBankPlanForm` for consistency. Verified against the real data
+  (not just synthetic): editing the real "Raast UBL For Home" -9900 transaction correctly showed
+  Direction=Withdrawal/magnitude=9900; the linked-transfer write correctly hit the sign-in gate.
+  **New per-account Analytics grid** (`AccountAnalyticsSection`): Balance-over-time and Income-
+  vs-spend-by-month show full history; Category breakdown (spend) is scoped to one month via a
+  ◀ Prev/This month/Next ▶ nav, plus a "smart tabular values" table below with exact numbers
+  (Income/Expense/Net/Balance-at-month-end/per-category). New `accountBalanceAsOfMonth()` in
+  `bankModule.ts`, tested. Verified against real data (September's 9,902.32 PKR expense
+  hand-checked against the 4 real transactions that month).
+  **Currency-sum tag**: `AccountsList`'s per-currency group header gained a `.pill-info` tag
+  showing that VISIBLE group's own total (respects "Show archived") — distinct from
+  `TotalBalances`' own always-includes-archived grand total, so the two don't duplicate the same
+  claim. `npx tsc -b` / `npm run test` (511 tests, 2 new) / `npm run build` all clean.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

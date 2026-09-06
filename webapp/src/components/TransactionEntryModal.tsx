@@ -3,7 +3,8 @@ import { Modal } from './Modal';
 import { Notice } from './Notice';
 import { toast } from './Toast';
 import { PlusIcon, SaveIcon, TrashIcon } from './icons';
-import { Field, Select, TextInput } from './ui/Field';
+import { Field, TextInput } from './ui/Field';
+import { DirectionChips } from './ui/DirectionChips';
 import { TimeZoneFields } from './ui/TimeZoneFields';
 import { SideFields, useSideCurrency, nextUnpaidEmiMonth } from '../features/transfers/pages/TransferLinksPage';
 import { getLastTransferSource, rememberTransferSource } from '../hooks/useLastTransferSource';
@@ -26,13 +27,30 @@ import type { LinkModule, LinkSideConfig } from '../types/interEntityTransfer';
 const today = () => new Date().toISOString().slice(0, 10);
 const uid = () => crypto.randomUUID();
 
-/** Which modules show a "direction" selector (their native record has an
- * explicit in/out-shaped field) vs. which use a plain signed amount (Bank)
- * or have no direction concept at all (a repayment is always positive,
- * regardless of which way the debt runs — Personal Loans/EMI). Labels
- * match each module's own existing add-form wording exactly, so this
- * reads as the same feature relocated, not a new one. */
+/** Which modules show a "direction" chip toggle (their native record has
+ * an explicit in/out-shaped field, or — as of the fix below — a signed
+ * amount whose sign this control now sets explicitly) vs. which have no
+ * direction concept at all (a repayment is always positive, regardless of
+ * which way the debt runs — Personal Loans/EMI). Labels match each
+ * module's own existing add-form wording exactly, so this reads as the
+ * same feature relocated, not a new one.
+ *
+ * `bank` added here 2026-09-06, fixing a real user-reported bug: Bank used
+ * to have NO entry here at all (it relied on the typed amount's own sign
+ * instead), which meant `submit()`'s linked-transfer branch — which always
+ * decides `from`/`to` from `row.direction`, never from the amount's sign —
+ * had no way to ever set `row.direction` to `'out'` for a Bank row, since
+ * the `{direction && (...)}` control below never rendered. Every Bank
+ * linked transfer therefore silently treated the Bank side as the
+ * receiving ("in") side, no matter what sign the user typed — see
+ * `DirectionChips.tsx`'s own doc comment for the full trace. Giving Bank a
+ * real, user-controlled direction fixes this at its root for both the
+ * plain and the linked case, and — per the same user's follow-up ask,
+ * "use radio/chips ... instead of positive & negative entries" — replaces
+ * the sign-based entry convention with the same explicit control every
+ * other module here already had. */
 const DIRECTION_LABELS: Partial<Record<LinkModule, { in: string; out: string }>> = {
+  bank: { in: 'Deposit', out: 'Withdrawal' },
   cash: { in: 'Cash in', out: 'Cash out' },
   rentals: { in: 'Rent income', out: 'Expense' },
   qse: { in: 'Deposit', out: 'Withdrawal' },
@@ -119,14 +137,11 @@ function TxRowFields({
         </Field>
         {direction && (
           <Field label="Direction">
-            <Select value={row.direction} onChange={(e) => onChange({ ...row, direction: e.target.value as 'in' | 'out' })}>
-              <option value="in">{direction.in}</option>
-              <option value="out">{direction.out}</option>
-            </Select>
+            <DirectionChips value={row.direction} onChange={(d) => onChange({ ...row, direction: d })} labels={direction} />
           </Field>
         )}
-        <Field label="Amount" required title={!direction ? 'Bank: negative = spend/debit, positive = deposit/credit.' : undefined}>
-          <TextInput type="number" step="0.01" value={row.amount || ''} onChange={(e) => onChange({ ...row, amount: Number(e.target.value) })} />
+        <Field label="Amount" required title={!direction ? 'A repayment is always entered as a positive amount, regardless of which way the debt runs.' : undefined}>
+          <TextInput type="number" step="0.01" min={direction ? 0 : undefined} value={row.amount || ''} onChange={(e) => onChange({ ...row, amount: Number(e.target.value) })} />
         </Field>
         {HAS_DESCRIPTION.includes(row.finance.module) && (
           <Field label="Description" required>
@@ -270,15 +285,22 @@ export function TransactionEntryModal({ defaultFinance, onClose }: { defaultFina
         continue;
       }
       switch (r.finance.module) {
-        case 'bank':
+        case 'bank': {
           if (!r.finance.ref) { toast('Pick a bank account first.'); continue; }
           if (!r.description.trim()) { toast('Enter a description for this transaction.'); continue; }
+          // The Amount field is now always a magnitude (see DIRECTION_LABELS'
+          // own doc comment) — the direction chip decides the sign of the
+          // stored (still-signed) BankTransaction.amount, not the user
+          // having to type a leading `-`. `isDeposit` is re-derived from
+          // this sign by the store itself on every write regardless.
+          const signedAmount = r.direction === 'out' ? -Math.abs(r.amount) : Math.abs(r.amount);
           addBankTransactions([{
             id: uid(), accountId: r.finance.ref, date: r.date, time: r.time, timezone: r.timezone,
-            amount: r.amount, isDeposit: r.amount >= 0, description: r.description.trim(),
+            amount: signedAmount, isDeposit: signedAmount >= 0, description: r.description.trim(),
             categoryID: r.categoryID, source: 'manual',
           }]);
           break;
+        }
         case 'cash':
           addCashEntry({
             id: uid(), date: r.date, time: r.time, timezone: r.timezone,

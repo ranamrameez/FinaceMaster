@@ -12,6 +12,7 @@ import { Modal } from '../../../components/Modal';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { DirectionChips } from '../../../components/ui/DirectionChips';
 import { IconButton } from '../../../components/ui/IconButton';
 import { AttributeList } from '../../../components/ui/AttributeList';
 import { FabButton, FabPanel } from '../../../components/ui/Fab';
@@ -25,7 +26,8 @@ import { useSortableRows } from '../../../hooks/useSortableRows';
 import { hueStyle } from '../../../lib/statCardHues';
 import { categoryName, UNCATEGORIZED_ID } from '../../../lib/categories';
 import { useCategoryStore } from '../../../store/categoryStore';
-import { accountBalance, accountByCategory, accountRunningLedger, bankMonthlyFlow, budgetVsActual, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
+import { accountBalance, accountBalanceAsOfMonth, accountByCategory, accountRunningLedger, bankMonthlyFlow, budgetVsActual, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
+import { monthRange } from '../../../lib/calc/budgetPlanner';
 import { plannedBankProjection } from '../../../lib/calc/plannedBalance';
 import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
@@ -33,6 +35,7 @@ import { cssVar, tickerColor } from '../../../lib/cssVar';
 import { parseCSV, toCSV } from '../../../lib/csv';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
+import { toInstantMs } from '../../../lib/datetime';
 import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import { isValidIbanFormat, lookupIban } from '../../../lib/ibanLookup';
 import { isValidBin, lookupBin } from '../../../lib/binLookup';
@@ -432,6 +435,7 @@ function AccountsList() {
   const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
   const navigate = useNavigate();
   const [showArchived, setShowArchived] = useState(false);
+  const { num } = useAmountFormat();
 
   const archivedCount = useMemo(() => accounts.filter((a) => a.isActive === false).length, [accounts]);
   const visibleAccounts = useMemo(
@@ -467,10 +471,22 @@ function AccountsList() {
       {!visibleAccounts.length && (
         <p className="footer-note">Every account is archived — click "Show archived" above to see them.</p>
       )}
-      {currencyGroups.map(([currency, group]) => (
+      {currencyGroups.map(([currency, group]) => {
+        // User-requested (2026-09-06): "give sums in a tag for each
+        // currency in header/label" — a quick total for whichever accounts
+        // are actually visible in THIS group right now (respects the
+        // "Show archived" toggle above), distinct from `TotalBalances`'
+        // own top-of-page stat cards (which always include archived
+        // accounts in their true grand total) — this is "what am I looking
+        // at in this group," not "the real overall total."
+        const groupSum = group.reduce((s, a) => s + accountBalance(a, transactions), 0);
+        return (
         <div key={currency} style={{ marginBottom: 20 }}>
-          <div className="footer-note" style={{ marginBottom: 8, fontWeight: 700, textTransform: 'uppercase', fontSize: 11, letterSpacing: '.04em' }}>
-            {currency}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <span className="footer-note" style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: 11, letterSpacing: '.04em' }}>
+              {currency}
+            </span>
+            <span className={`pill-info`} style={{ fontSize: 11 }}>{num(groupSum)} {currency}</span>
           </div>
           <div className="entity-card-grid">
             {group.map((a) => (
@@ -511,7 +527,8 @@ function AccountsList() {
             ))}
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -769,6 +786,18 @@ export function AccountDetailPage() {
         )}
       </div>
 
+      {/* User-requested (2026-09-06): "Analytics missing on individual bank
+         page: Grid: Balance over time, Income vs. spend by month, Category
+         breakdown (spend) monthly with month nav + smart tabular values."
+         The whole-module Analytics tab (`AnalyticsTab` below) already has
+         this exact chart set, but only reachable via its own account
+         picker — this brings the same three charts directly onto the
+         account's own page, pre-scoped to it, plus a month-nav'd exact-
+         numbers table (see `AccountAnalyticsSection`'s own doc comment). */}
+      <CollapsibleCard defaultOpen={false} style={{ marginBottom: 16 }} title={<h3 style={{ margin: 0 }}>Analytics</h3>}>
+        <AccountAnalyticsSection account={account} />
+      </CollapsibleCard>
+
       {/* User-requested (2026-08-28): "Adding Trc UI can be removed from
          all, that's why we are doing it one button action" — the
          per-account "Add a transaction" card (built 2026-08-26, see the
@@ -864,13 +893,22 @@ function AccountTransfersFab({ accountId, currencyCode }: { accountId: string; c
 
 /** Popup edit form for one Bank transaction — replaces the old inline
  * table-row editing, same "editing done in a popup for UI consistency"
- * reasoning as `CashPage.tsx`'s `EditEntryModal`. `amount` stays signed
- * (Bank's own convention, see `types/finance.ts`) — `isDeposit` is
- * re-derived from it by the store itself on save, never edited directly
- * here. */
+ * reasoning as `CashPage.tsx`'s `EditEntryModal`. `amount` stays signed on
+ * the STORED record (Bank's own convention, see `types/finance.ts`) —
+ * `isDeposit` is re-derived from it by the store itself on save, never
+ * edited directly here. The UI itself no longer asks for a signed number,
+ * though (user-reported 2026-09-06, "use radio/chips for withdrawal or
+ * deposit instead of positive & negative entries!"): a Deposit/Withdrawal
+ * `DirectionChips` toggle plus a plain magnitude input, converted to the
+ * signed `amount` only at save time — same pattern as
+ * `TransactionEntryModal.tsx`'s add flow. */
 function EditTransactionModal({ tx, onClose }: { tx: BankTransaction; onClose: () => void }) {
   const updateTransaction = useBankWorkbookStore((s) => s.updateTransaction);
   const [draft, setDraft] = useState<BankTransaction>({ ...tx });
+  const direction: 'in' | 'out' = draft.amount >= 0 ? 'in' : 'out';
+  const magnitude = Math.abs(draft.amount);
+  const setDirection = (d: 'in' | 'out') => setDraft({ ...draft, amount: d === 'in' ? magnitude : -magnitude });
+  const setMagnitude = (m: number) => setDraft({ ...draft, amount: direction === 'in' ? m : -m });
 
   const save = async () => {
     if (!(await warnIfLinked('bank', tx.id))) return;
@@ -888,8 +926,11 @@ function EditTransactionModal({ tx, onClose }: { tx: BankTransaction; onClose: (
         <Field label="Description" required>
           <TextInput value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
         </Field>
-        <Field label="Amount" required title="Negative = spend/debit, positive = deposit/credit.">
-          <TextInput type="number" step="0.01" value={draft.amount} onChange={(e) => setDraft({ ...draft, amount: Number(e.target.value) })} />
+        <Field label="Direction">
+          <DirectionChips value={direction} onChange={setDirection} labels={{ in: 'Deposit', out: 'Withdrawal' }} />
+        </Field>
+        <Field label="Amount" required>
+          <TextInput type="number" step="0.01" min={0} value={magnitude || ''} onChange={(e) => setMagnitude(Number(e.target.value))} />
         </Field>
         <Field label="Category">
           <CategorySelect value={draft.categoryID ?? UNCATEGORIZED_ID} onChange={(categoryID) => setDraft({ ...draft, categoryID })} />
@@ -959,7 +1000,12 @@ function TransactionsList({ account }: { account: BankAccount }) {
       default: return r.tx.date;
     }
   };
-  const { sorted, Th } = useSortableRows(ledger, sortValue, 'date', 'desc');
+  // Tiebreak by real chronological instant, then serialNumber — the same
+  // two-step order `accountRunningLedger` itself already sorts by, so a
+  // same-date group's row order always agrees with its own Balance column
+  // (see `useSortableRows`'s own doc comment for the bug this fixes).
+  const ledgerTiebreak = (r: (typeof ledger)[number]) => [toInstantMs(r.tx.date, r.tx.time, r.tx.timezone), r.tx.serialNumber ?? 0];
+  const { sorted, Th } = useSortableRows(ledger, sortValue, 'date', 'desc', ledgerTiebreak);
 
   return (
     <div>
@@ -1057,6 +1103,111 @@ function TransactionsList({ account }: { account: BankAccount }) {
 /** Renders just the category table (no card wrapper of its own) — the
  * caller (`AccountDetailPage`) supplies the `CollapsibleCard` so this
  * never nests a card inside a card (rule 1). */
+/** Per-account Analytics grid on `AccountDetailPage` — user-requested
+ * 2026-09-06 (see that page's own call-site comment for the exact
+ * wording). Reuses the SAME three chart shapes as the whole-module
+ * `AnalyticsTab` below (Balance over time / Income vs. spend by month /
+ * Category breakdown), pre-scoped to this one account instead of needing
+ * an account picker — "Balance over time" and "Income vs. spend by month"
+ * show the account's FULL history (a trend chart loses its point scoped
+ * to one month), while "Category breakdown (spend)" is scoped to a single
+ * selected month via the ◀ Prev/This month/Next ▶ nav, matching the
+ * user's own "monthly with month nav" wording.
+ *
+ * "Smart tabular values": below the chart grid, a plain table gives the
+ * SAME numbers behind the selected month's chart data in exact figures
+ * (Income/Expense/Net flow/Balance at month end, then one row per spend
+ * category) — a chart's own hover tooltip is the only other way to read
+ * an exact number today, and doesn't work at all on a touch device. */
+function AccountAnalyticsSection({ account }: { account: BankAccount }) {
+  const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
+  const categories = useCategoryStore((s) => s.workbook.categories);
+  useAppearanceStore((s) => s.appearance);
+  applyChartTheme();
+
+  const ledger = useMemo(() => accountRunningLedger(account, transactions), [account, transactions]);
+  const monthlyFlow = useMemo(() => bankMonthlyFlow(transactions, [account.id]), [transactions, account.id]);
+
+  const [monthOffset, setMonthOffset] = useState(0);
+  const selectedMonth = monthRange(monthOffset, monthOffset)[0];
+  const selectedMonthLabel = new Date(`${selectedMonth}-01`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+
+  const monthTxs = useMemo(
+    () => transactions.filter((t) => t.accountId === account.id && t.date.slice(0, 7) === selectedMonth),
+    [transactions, account.id, selectedMonth],
+  );
+  const byCategoryThisMonth = useMemo(() => accountByCategory(account, monthTxs, categories), [account, monthTxs, categories]);
+  const spendCategories = Object.keys(byCategoryThisMonth).filter((c) => byCategoryThisMonth[c] < 0);
+  const monthFlowRow = monthlyFlow.find((f) => f.month === selectedMonth);
+  const endOfMonthBalance = accountBalanceAsOfMonth(ledger, selectedMonth, account.openingBalance);
+
+  if (!ledger.length) {
+    return <p className="footer-note" style={{ margin: 0 }}>No transactions yet — analytics will appear once you log some.</p>;
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginBottom: 16 }}>
+        <ChartCard flat title="Balance over time">
+          <Line
+            data={{
+              labels: ledger.map((r) => r.tx.date),
+              datasets: [{ label: 'Balance', data: ledger.map((r) => r.balance), borderColor: '#5aa9c9', backgroundColor: '#5aa9c933', fill: true, tension: 0.2 }],
+            }}
+            options={{ plugins: { legend: { display: false }, datalabels: dlLine((v) => fmtMoney(v, account.currencyCode)) } }}
+          />
+        </ChartCard>
+        <ChartCard flat title="Income vs. spend by month">
+          <Bar
+            data={{
+              labels: monthlyFlow.map((f) => f.month),
+              datasets: [
+                { label: 'Income', data: monthlyFlow.map((f) => f.income), backgroundColor: cssVar('--profit') || '#3ecf8e' },
+                { label: 'Expense', data: monthlyFlow.map((f) => f.expense), backgroundColor: cssVar('--loss') || '#e5484d' },
+              ],
+            }}
+            options={{ plugins: { datalabels: dlBarV((v) => fmtMoney(v, account.currencyCode)) } }}
+          />
+        </ChartCard>
+        <ChartCard flat title={`Category breakdown (spend) — ${selectedMonthLabel}`} empty={!spendCategories.length}>
+          <Doughnut
+            data={{
+              labels: spendCategories,
+              datasets: [{ data: spendCategories.map((c) => Math.abs(byCategoryThisMonth[c])), backgroundColor: spendCategories.map((c) => tickerColor(c)) }],
+            }}
+            options={{ cutout: '55%', plugins: { datalabels: dlDoughnut((v) => fmtMoney(v, account.currencyCode)) } }}
+          />
+        </ChartCard>
+      </div>
+
+      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+        <button className="btn secondary small" onClick={() => setMonthOffset((o) => o - 1)}>◀ Prev month</button>
+        <button className="btn secondary small" onClick={() => setMonthOffset(0)}>This month</button>
+        <button className="btn secondary small" onClick={() => setMonthOffset((o) => o + 1)}>Next month ▶</button>
+      </div>
+
+      <div className="table-scroll">
+        <table>
+          <thead><tr><th colSpan={2}>{selectedMonthLabel}</th></tr></thead>
+          <tbody>
+            <tr><td>Income</td><td>{fmtMoney(monthFlowRow?.income ?? 0, account.currencyCode)}</td></tr>
+            <tr><td>Expense</td><td>{fmtMoney(monthFlowRow?.expense ?? 0, account.currencyCode)}</td></tr>
+            <tr>
+              <td>Net flow</td>
+              <td className={(monthFlowRow?.net ?? 0) >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(monthFlowRow?.net ?? 0, account.currencyCode)}</td>
+            </tr>
+            <tr><td>Balance at month end</td><td>{fmtMoney(endOfMonthBalance, account.currencyCode)}</td></tr>
+            {spendCategories.map((c) => (
+              <tr key={c}><td>{c}</td><td>{fmtMoney(Math.abs(byCategoryThisMonth[c]), account.currencyCode)}</td></tr>
+            ))}
+            {!spendCategories.length && <tr><td colSpan={2} className="footer-note">No spend this month.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function CategoryBreakdownBody({ account }: { account: BankAccount }) {
   const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
   const categories = useCategoryStore((s) => s.workbook.categories);
@@ -1371,6 +1522,11 @@ function AddBankPlanForm({ accountId, onSaved }: { accountId: string; onSaved?: 
   const addPlan = usePlannedBankWorkbookStore((s) => s.addEntry);
   const ensureSignedIn = useEnsureSignedIn();
   const [p, setP] = useState<PlannedBankTransaction>(() => emptyBankPlan(accountId));
+  // Same magnitude+direction UI as the real transaction forms above (user-
+  // reported 2026-09-06) — `PlannedBankTransaction.amount` itself stays
+  // signed, same convention as the real `BankTransaction` it'll become.
+  const direction: 'in' | 'out' = p.amount >= 0 ? 'in' : 'out';
+  const magnitude = Math.abs(p.amount);
 
   const submit = async () => {
     if (!p.amount || !p.description.trim()) return toast('Enter a description and a non-zero amount.');
@@ -1390,13 +1546,20 @@ function AddBankPlanForm({ accountId, onSaved }: { accountId: string; onSaved?: 
         <Field label="Description" width={160}>
           <TextInput value={p.description} onChange={(e) => setP({ ...p, description: e.target.value })} placeholder="e.g. Rent" />
         </Field>
-        <Field label="Amount (+/-)" width={110}>
+        <Field label="Direction">
+          <DirectionChips
+            value={direction}
+            onChange={(d) => setP({ ...p, amount: d === 'in' ? magnitude : -magnitude })}
+            labels={{ in: 'Deposit', out: 'Withdrawal' }}
+          />
+        </Field>
+        <Field label="Amount" width={110}>
           <TextInput
             type="number"
             step="0.01"
-            value={p.amount || ''}
-            onChange={(e) => setP({ ...p, amount: Number(e.target.value) })}
-            title="Negative = spend/debit, positive = deposit/credit"
+            min={0}
+            value={magnitude || ''}
+            onChange={(e) => setP({ ...p, amount: direction === 'in' ? Number(e.target.value) : -Number(e.target.value) })}
           />
         </Field>
         <Field label="Category (optional)" width={140}>
@@ -1406,7 +1569,6 @@ function AddBankPlanForm({ accountId, onSaved }: { accountId: string; onSaved?: 
       <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
         <PlusIcon />Add plan
       </button>
-      <p className="footer-note" style={{ marginTop: 8 }}>Negative amount = spend/debit, positive = deposit/credit.</p>
     </div>
   );
 }
