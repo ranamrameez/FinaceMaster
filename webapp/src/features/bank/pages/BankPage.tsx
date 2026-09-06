@@ -23,6 +23,9 @@ import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { useAmountFormat } from '../../../hooks/useAmountFormat';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { ReorderButtons } from '../../../components/ui/ReorderButtons';
+import { RecurrenceFields } from '../../../components/ui/RecurrenceFields';
+import { nextRecurrenceOccurrence } from '../../../lib/calc/recurrence';
+import { recurrenceLabel } from '../../../lib/recurrenceLabel';
 import { hueStyle } from '../../../lib/statCardHues';
 import { categoryName, UNCATEGORIZED_ID } from '../../../lib/categories';
 import { useCategoryStore } from '../../../store/categoryStore';
@@ -1572,7 +1575,11 @@ function AddBankPlanForm({ accountId, onSaved }: { accountId: string; onSaved?: 
     <div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
         <Field label="Expected date">
-          <TextInput type="date" value={p.date} onChange={(e) => setP({ ...p, date: e.target.value })} />
+          <TextInput
+            type="date"
+            value={p.date}
+            onChange={(e) => setP({ ...p, date: e.target.value, recurrence: p.recurrence ? { ...p.recurrence, startDate: e.target.value } : undefined })}
+          />
         </Field>
         <Field label="Description" width={160}>
           <TextInput value={p.description} onChange={(e) => setP({ ...p, description: e.target.value })} placeholder="e.g. Rent" />
@@ -1596,6 +1603,7 @@ function AddBankPlanForm({ accountId, onSaved }: { accountId: string; onSaved?: 
         <Field label="Category (optional)" width={140}>
           <TextInput value={p.category} onChange={(e) => setP({ ...p, category: e.target.value })} />
         </Field>
+        <RecurrenceFields startDate={p.date} value={p.recurrence} onChange={(recurrence) => setP({ ...p, recurrence })} />
       </div>
       <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
         <PlusIcon />Add plan
@@ -1626,19 +1634,26 @@ function BankPlanList({ account }: { account: BankAccount }) {
   };
 
   const markDone = async (p: PlannedBankTransaction) => {
+    const occurrenceDate = p.recurrence ? nextRecurrenceOccurrence(p.recurrence)?.toISOString().slice(0, 10) : p.date;
+    if (!occurrenceDate) return toast('This plan has no more occurrences left (past its end date).');
     if (!(await ensureSignedIn('Sign in to save bank transactions.'))) return;
     addTransaction({
       id: crypto.randomUUID(),
       accountId: p.accountId,
-      date: p.date,
+      date: occurrenceDate,
       description: p.description,
       amount: p.amount,
       isDeposit: p.amount >= 0,
       category: p.category,
       source: 'manual',
     });
-    updatePlan(p.id, { executed: true });
-    toast('Marked as done — added to this account\'s transactions.');
+    if (p.recurrence) {
+      updatePlan(p.id, { executedThrough: occurrenceDate });
+      toast(`Marked ${occurrenceDate} as done — added to this account's transactions. This plan keeps recurring.`);
+    } else {
+      updatePlan(p.id, { executed: true });
+      toast('Marked as done — added to this account\'s transactions.');
+    }
   };
 
   return (
@@ -1668,9 +1683,9 @@ function BankPlanList({ account }: { account: BankAccount }) {
                   <td>{p.description}</td>
                   <td className={p.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(p.amount, account.currencyCode)}</td>
                   <td>{p.category || '—'}</td>
-                  <td className="footer-note">{p.executed ? 'Done' : 'Planned'}</td>
+                  <td className="footer-note">{p.recurrence ? recurrenceLabel(p.recurrence) : p.executed ? 'Done' : 'Planned'}</td>
                   <td>
-                    {!p.executed && (
+                    {(p.recurrence || !p.executed) && (
                       <button className="btn secondary small" onClick={() => markDone(p)}>Mark as done</button>
                     )}{' '}
                     <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(p)} />{' '}

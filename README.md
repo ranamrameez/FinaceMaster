@@ -6180,6 +6180,33 @@ FinanceManager live link:
   earlier), and "◀ Earlier" was correctly disabled — zero console errors beyond the two
   pre-existing, already-documented FX-fetch network-block messages this sandbox always
   produces. `npx tsc -b` / `npm run test` (526 tests, 6 new) / `npm run build` all clean.
+- **Recurring Cash/Bank plans, first UI slice of the approved Planning redesign
+  (2026-09-07) — see README Done item 238.** User's own diagnosis: "planning is actually
+  redundant, confusing and complex looking... they fail to plan recurring income and
+  expense. like salary deposit on 28 each month. expected utility bills on specific days of
+  a month." Confirmed via `AskUserQuestion`: single-row/live-computed recurrence (not
+  batch-generating rows in advance), fold in EMI/Rentals/Subscriptions to the same Upcoming
+  view, homepage widget + revamped `/planning` page. This entry covers the first two slices:
+  the shared calc engine (`lib/calc/recurrence.ts`, generalized out of Subscriptions' own
+  cycle math — `subscriptionsModule.ts` now delegates to it, zero behavior change, its own
+  test suite passes unchanged) and `lib/calc/upcoming.ts`'s `collectUpcomingItems()`
+  (normalizes Cash/Bank plans, EMI's next unpaid installment, Rentals' next rent collection,
+  and Subscriptions' next renewal into one sorted list), plus wiring a "Repeats?" toggle +
+  cycle picker (new shared `components/ui/RecurrenceFields.tsx`) into both Cash's and Bank's
+  existing "Add a plan" forms. `PlannedCashEntry`/`PlannedBankTransaction` gained an optional
+  `recurrence` rule + `executedThrough` marker — one row now describes an indefinitely-
+  repeating series instead of only a one-off entry; "Mark as done" on a recurring plan
+  creates the real entry dated at whatever the CURRENT due occurrence actually is (via
+  `nextRecurrenceOccurrence`, not necessarily today) and advances `executedThrough` rather
+  than consuming the row, so the same plan keeps generating future occurrences indefinitely.
+  `plannedBalance.ts`'s real-vs-planned projection understands recurring plans too (next
+  occurrence counts as "planned" unless already covered by `executedThrough`). Verified live
+  via Playwright on both Cash's and Bank's Planning tabs: the "Repeats?" toggle correctly
+  reveals an "Every" cycle selector (Month/Year/Week/Custom), Custom reveals a Days field,
+  and submitting correctly hits the real sign-in gate. `npx tsc -b` / `npm run test` (550
+  tests, 24 new) / `npm run build` all clean. **Still to come** (see README Pending item
+  118): the homepage "Upcoming" widget and the revamped `/planning` page that actually
+  surfaces `collectUpcomingItems()`'s output — built but not yet consumed by any UI.
 
 ## Pending
 
@@ -6964,6 +6991,16 @@ or a design decision before more code, not guessed at further:**
      side by side in a responsive grid — same `repeat(auto-fit, minmax(...,1fr))` +
      `alignItems:'start'` pattern `AccountPage.tsx` now uses. Do this incrementally, module by
      module, verified live each time — the same discipline item 116 above already calls for.
+118. **Recurring-planning redesign, UI slices 2/3 still to build (2026-09-07)** — Done item
+     238's calc engine (`lib/calc/recurrence.ts`, `lib/calc/upcoming.ts`'s
+     `collectUpcomingItems()`) and the Cash/Bank "Repeats?" form toggle are done; per the
+     approved plan, still needed: (a) a compact "Upcoming" widget (next ~14 days) on the Net
+     Worth/Dashboard homepage, reusing the existing `DashboardRail`/rail-split pattern; (b) a
+     revamped `/planning` page that leads with the full Upcoming list (not just the compact
+     widget) and consolidates today's fairly redundant Cash-tab/Bank-tab/standalone-page
+     split into one place, while still surfacing (read-only, linking back to their own native
+     pages) what EMI/Rentals/Subscriptions already generate rather than rebuilding those
+     three modules' own working generators.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

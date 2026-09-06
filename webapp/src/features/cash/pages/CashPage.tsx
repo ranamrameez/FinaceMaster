@@ -20,7 +20,10 @@ import { useAmountFormat } from '../../../hooks/useAmountFormat';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { ReorderButtons } from '../../../components/ui/ReorderButtons';
+import { RecurrenceFields } from '../../../components/ui/RecurrenceFields';
 import { toInstantMs } from '../../../lib/datetime';
+import { nextRecurrenceOccurrence } from '../../../lib/calc/recurrence';
+import { recurrenceLabel } from '../../../lib/recurrenceLabel';
 import { hueStyle } from '../../../lib/statCardHues';
 import { categoryName, UNCATEGORIZED_ID } from '../../../lib/categories';
 import { useCategoryStore } from '../../../store/categoryStore';
@@ -756,7 +759,11 @@ function AddPlanForm({ onSaved }: { onSaved?: () => void }) {
     <div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
         <Field label="Expected date">
-          <TextInput type="date" value={p.date} onChange={(e) => setP({ ...p, date: e.target.value })} />
+          <TextInput
+            type="date"
+            value={p.date}
+            onChange={(e) => setP({ ...p, date: e.target.value, recurrence: p.recurrence ? { ...p.recurrence, startDate: e.target.value } : undefined })}
+          />
         </Field>
         <Field label="Type">
           <Select value={p.type} onChange={(e) => setP({ ...p, type: e.target.value as 'IN' | 'OUT' })} width={90}>
@@ -778,6 +785,7 @@ function AddPlanForm({ onSaved }: { onSaved?: () => void }) {
         <Field label="Note (optional)" width={180}>
           <TextInput value={p.note} onChange={(e) => setP({ ...p, note: e.target.value })} />
         </Field>
+        <RecurrenceFields startDate={p.date} value={p.recurrence} onChange={(recurrence) => setP({ ...p, recurrence })} />
       </div>
       <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
         <PlusIcon />Add plan
@@ -833,10 +841,12 @@ function PlanList() {
   };
 
   const markDone = async (p: PlannedCashEntry) => {
+    const occurrenceDate = p.recurrence ? nextRecurrenceOccurrence(p.recurrence)?.toISOString().slice(0, 10) : p.date;
+    if (!occurrenceDate) return toast('This plan has no more occurrences left (past its end date).');
     if (!(await ensureSignedIn('Sign in to save cash entries.'))) return;
     addEntry({
       id: crypto.randomUUID(),
-      date: p.date,
+      date: occurrenceDate,
       isDeposit: p.type === 'IN',
       amount: p.amount,
       currencyCode: p.currencyCode,
@@ -844,8 +854,13 @@ function PlanList() {
       note: p.note,
       source: 'manual',
     });
-    updatePlan(p.id, { executed: true });
-    toast('Marked as done — added to your Cash ledger.');
+    if (p.recurrence) {
+      updatePlan(p.id, { executedThrough: occurrenceDate });
+      toast(`Marked ${occurrenceDate} as done — added to your Cash ledger. This plan keeps recurring.`);
+    } else {
+      updatePlan(p.id, { executed: true });
+      toast('Marked as done — added to your Cash ledger.');
+    }
   };
 
   return (
@@ -901,9 +916,9 @@ function PlanList() {
                   <td>{fmtMoney(p.amount, p.currencyCode)}</td>
                   <td>{p.category || '—'}</td>
                   <td>{p.note}</td>
-                  <td className="footer-note">{p.executed ? 'Done' : 'Planned'}</td>
+                  <td className="footer-note">{p.recurrence ? recurrenceLabel(p.recurrence) : p.executed ? 'Done' : 'Planned'}</td>
                   <td>
-                    {!p.executed && (
+                    {(p.recurrence || !p.executed) && (
                       <button className="btn secondary small" onClick={() => markDone(p)}>Mark as done</button>
                     )}{' '}
                     <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(p)} />{' '}

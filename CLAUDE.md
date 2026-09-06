@@ -5328,6 +5328,25 @@ not developer notes) continuously as features ship.
   the user's own real base export, and independently recomputed each touched account's balance
   at several real historical checkpoints straight from the finished file's own transaction list
   against the sheet's own reported figures (all matched to normal float-rounding precision).
+- **Recurring-planning redesign kicked off (2026-09-07) — see README Done item 238, Pending
+  item 118.** User: "planning is actually redundant, confusing and complex looking... they
+  fail to plan recurring income and expense. like salary deposit on 28 each month." Also
+  asked to archive a "Silk" bank account discovered in the earlier Pakistan-ledger merge —
+  investigated first rather than acting blind: Silk's balance is 0 in every single row across
+  all 13 sheets (confirmed via the same extraction script used for that merge), so there's
+  nothing to archive; told the user, no new file delivered. Planned via `AskUserQuestion`
+  before writing code (per this file's own standing "plan & propose" rule): single-row/live-
+  computed recurrence rather than EMI/Rentals/Subscriptions' existing "batch-generate rows in
+  advance" pattern, fold all five modules (Cash/Bank/EMI/Rentals/Subscriptions) into one
+  Upcoming view, homepage widget + revamped `/planning` page. Built in two commits so far:
+  (1) `lib/calc/recurrence.ts` generalizes Subscriptions' own cycle math (its own tests pass
+  unchanged after the refactor — zero behavior change, just de-duplication) and
+  `lib/calc/upcoming.ts`'s `collectUpcomingItems()` normalizes all five modules into one
+  sorted list; (2) a "Repeats?" toggle (new `components/ui/RecurrenceFields.tsx`) wired into
+  both Cash's and Bank's "Add a plan" forms, with `PlannedCashEntry`/`PlannedBankTransaction`
+  gaining `recurrence`/`executedThrough` and `plannedBalance.ts`'s projection understanding
+  them. **Still open**: the homepage Upcoming widget and the revamped `/planning` page itself
+  — the calc layer exists but nothing surfaces `collectUpcomingItems()`'s output yet.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 
