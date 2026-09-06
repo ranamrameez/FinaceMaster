@@ -52,6 +52,61 @@ describe('plannedCashProjection', () => {
     const result = plannedCashProjection(entries, planned);
     expect(result.USD).toEqual({ real: -100, planned: 200 });
   });
+
+  it('a recurring plan counts its own next occurrence, not yet marked done', () => {
+    const entries = [entry({ id: 'e1', isDeposit: true, amount: 1000 })];
+    const planned = [plan({
+      id: 'p1', type: 'IN', amount: 150000, date: '2026-01-28',
+      recurrence: { cycle: 'monthly', startDate: '2026-01-28' },
+    })];
+    const result = plannedCashProjection(entries, planned, new Date('2026-01-15'));
+    expect(result.USD).toEqual({ real: 1000, planned: 151000 });
+  });
+
+  it('a recurring plan already marked done for the exact occurrence asOf lands on is excluded', () => {
+    const entries = [entry({ id: 'e1', isDeposit: true, amount: 1000 })];
+    const planned = [plan({
+      id: 'p1', type: 'IN', amount: 150000, date: '2026-01-28',
+      recurrence: { cycle: 'monthly', startDate: '2026-01-28' }, executedThrough: '2026-01-28',
+    })];
+    const sameDay = plannedCashProjection(entries, planned, new Date('2026-01-28'));
+    expect(sameDay.USD).toEqual({ real: 1000, planned: 1000 });
+  });
+
+  it('a recurring plan marked done a few days early (before the occurrence date arrives) is excluded until then', () => {
+    const entries = [entry({ id: 'e1', isDeposit: true, amount: 1000 })];
+    const planned = [plan({
+      id: 'p1', type: 'IN', amount: 150000, date: '2026-01-28',
+      recurrence: { cycle: 'monthly', startDate: '2026-01-28' }, executedThrough: '2026-01-28',
+    })];
+    // asOf is BEFORE the Jan 28 occurrence, which has already been marked
+    // done early -> excluded, since the next occurrence date (Jan 28)
+    // isn't past executedThrough yet.
+    const beforeIt = plannedCashProjection(entries, planned, new Date('2026-01-20'));
+    expect(beforeIt.USD).toEqual({ real: 1000, planned: 1000 });
+  });
+
+  it('once a later cycle is the next occurrence, it counts again regardless of an earlier executedThrough', () => {
+    const entries = [entry({ id: 'e1', isDeposit: true, amount: 1000 })];
+    const planned = [plan({
+      id: 'p1', type: 'IN', amount: 150000, date: '2026-01-28',
+      recurrence: { cycle: 'monthly', startDate: '2026-01-28' }, executedThrough: '2026-01-28',
+    })];
+    // asOf has moved past Jan 28 -> the next occurrence is genuinely Feb 28,
+    // which hasn't happened yet, so it correctly counts as planned again.
+    const nowFeb = plannedCashProjection(entries, planned, new Date('2026-02-01'));
+    expect(nowFeb.USD).toEqual({ real: 1000, planned: 151000 });
+  });
+
+  it('a recurring plan past its own endDate stops contributing', () => {
+    const entries = [entry({ id: 'e1', isDeposit: true, amount: 1000 })];
+    const planned = [plan({
+      id: 'p1', type: 'IN', amount: 150000, date: '2026-01-28',
+      recurrence: { cycle: 'monthly', startDate: '2026-01-28', endDate: '2026-01-28' },
+    })];
+    const afterEnd = plannedCashProjection(entries, planned, new Date('2026-03-01'));
+    expect(afterEnd.USD).toEqual({ real: 1000, planned: 1000 });
+  });
 });
 
 describe('plannedBankProjection', () => {

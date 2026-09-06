@@ -2,8 +2,10 @@ import type { BankAccount, BankTransaction } from '../../types/bankWorkbook';
 import type { CashEntry } from '../../types/cashWorkbook';
 import type { PlannedBankTransaction } from '../../types/plannedBank';
 import type { PlannedCashEntry } from '../../types/plannedCash';
+import type { RecurrenceRule } from '../../types/recurrence';
 import { totalBalanceByCurrency } from './bankModule';
 import { cashBalanceByCurrency } from './cashModule';
+import { nextRecurrenceOccurrence } from './recurrence';
 
 export interface BalanceProjection {
   /** Balance from actual entries/transactions only. */
@@ -15,18 +17,35 @@ export interface BalanceProjection {
   planned: number;
 }
 
+/** Whether a plan's own next-due occurrence should count toward the
+ * "planned" projection right now (2026-09-07, recurrence support). A
+ * one-off plan (no `recurrence`) is unchanged: counted until `executed`.
+ * A recurring plan counts its OWN next occurrence — computed live via
+ * `nextRecurrenceOccurrence`, which already walks forward past any cycle
+ * that's already passed — UNLESS `executedThrough` shows that specific
+ * occurrence was already turned into a real entry (already counted in
+ * `real`, so counting it again here would double it); once a later cycle
+ * rolls the "next" date past `executedThrough`, it naturally counts again. */
+function isPlanDue(p: { executed?: boolean; recurrence?: RecurrenceRule; executedThrough?: string }, asOf: Date): boolean {
+  if (!p.recurrence) return !p.executed;
+  const next = nextRecurrenceOccurrence(p.recurrence, asOf);
+  if (!next) return false;
+  const nextStr = next.toISOString().slice(0, 10);
+  return !p.executedThrough || p.executedThrough < nextStr;
+}
+
 /** Real vs. planned cash balance per currency. See `PlannedCashEntry`'s
  * doc comment for why this exists (user request 2026-08-23: a guardrail
  * against overspending — see what your balance would look like if every
  * planned entry actually happened). */
-export function plannedCashProjection(entries: CashEntry[], planned: PlannedCashEntry[]): Record<string, BalanceProjection> {
+export function plannedCashProjection(entries: CashEntry[], planned: PlannedCashEntry[], asOf: Date = new Date()): Record<string, BalanceProjection> {
   const real = cashBalanceByCurrency(entries);
   const out: Record<string, BalanceProjection> = {};
   Object.keys(real).forEach((code) => {
     out[code] = { real: real[code], planned: real[code] };
   });
   planned
-    .filter((p) => !p.executed)
+    .filter((p) => isPlanDue(p, asOf))
     .forEach((p) => {
       if (!out[p.currencyCode]) out[p.currencyCode] = { real: real[p.currencyCode] ?? 0, planned: real[p.currencyCode] ?? 0 };
       out[p.currencyCode].planned += p.type === 'IN' ? p.amount : -p.amount;
@@ -41,6 +60,7 @@ export function plannedBankProjection(
   accounts: BankAccount[],
   transactions: BankTransaction[],
   planned: PlannedBankTransaction[],
+  asOf: Date = new Date(),
 ): Record<string, BalanceProjection> {
   const real = totalBalanceByCurrency(accounts, transactions);
   const out: Record<string, BalanceProjection> = {};
@@ -49,7 +69,7 @@ export function plannedBankProjection(
   });
   const currencyByAccount = new Map(accounts.map((a) => [a.id, a.currencyCode]));
   planned
-    .filter((p) => !p.executed)
+    .filter((p) => isPlanDue(p, asOf))
     .forEach((p) => {
       const code = currencyByAccount.get(p.accountId);
       if (!code) return;
