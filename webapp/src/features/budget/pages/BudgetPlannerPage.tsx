@@ -1,33 +1,20 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bar } from 'react-chartjs-2';
-import { Card, CollapsibleCard } from '../../../components/Card';
+import { CollapsibleCard } from '../../../components/Card';
 import { Modal } from '../../../components/Modal';
-import { Tooltip } from '../../../components/Tooltip';
 import { toast } from '../../../components/Toast';
-import { ChartCard } from '../../qse/components/ChartCard';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { FabButton } from '../../../components/ui/Fab';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import {
   collectBudgetActivities,
-  currentMonth as currentMonthOf,
-  monthlyIncomeExpense,
-  monthRange,
   PREDEFINED_EXPENSE_CATEGORIES,
   PREDEFINED_INCOME_CATEGORIES,
   type BudgetActivity,
   type BudgetModule,
-  type MonthlyIncomeExpense,
 } from '../../../lib/calc/budgetPlanner';
-import { projectedNetWorthTrend, type MonthlyNetWorthPoint } from '../../../lib/calc/netWorthTrend';
-import { useNetWorthSummary } from '../../netWorth/hooks/useNetWorthSummary';
-import { dlBarV } from '../../../lib/chartLabels';
-import { applyChartTheme } from '../../../lib/chartSetup';
-import { cssVar } from '../../../lib/cssVar';
 import { fmtMoney } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
-import { useAppearanceStore } from '../../../store/appearanceStore';
 import { useCategoryStore } from '../../../store/categoryStore';
 import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
 import { usePlannedCashWorkbookStore } from '../../../store/plannedCashWorkbookStore';
@@ -35,8 +22,7 @@ import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
 import { usePlannedBankWorkbookStore } from '../../../store/plannedBankWorkbookStore';
 import { useRentalsWorkbookStore } from '../../../store/rentalsWorkbookStore';
 import { usePlannedRentalsWorkbookStore } from '../../../store/plannedRentalsWorkbookStore';
-import { useEMIWorkbookStore } from '../../../store/emiWorkbookStore';
-import { useNetWorthSnapshotsWorkbookStore } from '../../../store/netWorthSnapshotsWorkbookStore';
+import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
 import { PlusIcon } from '../../../components/icons';
 import type { PlannedCashEntry } from '../../../types/plannedCash';
 import type { PlannedBankTransaction } from '../../../types/plannedBank';
@@ -46,16 +32,20 @@ import type { Property } from '../../../types/rentalsWorkbook';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-/** README item 106 (user-requested, 2026-08-26) — see `lib/calc/
+/** README item 106 (user-requested 2026-08-26) — see `lib/calc/
  * budgetPlanner.ts`'s own doc comment for the full design: a UNIFIED view
- * over Cash/Bank/Rentals' already-existing planned entries, plus an
+ * over Cash/Bank/Rentals' ALREADY-EXISTING planned entries, plus an
  * "add a plan" form right here that writes into whichever module's store
  * the user picks. Nothing about those modules' own Planning tabs changes —
  * this is a read+write convenience layer on top of them, not a
- * replacement. The 3-month (previous/current/next) projection chart's
- * primary home is Net Worth's homepage (per explicit user direction); the
- * same numbers are also shown here since this page IS the natural place
- * to act on what the projection shows. */
+ * replacement.
+ *
+ * User-requested (2026-09-04): "This widget belongs to the main Net Worth
+ * page, so move." The Monthly summary table + its Income vs. expense chart
+ * (previously duplicated here and on the Net Worth/Dashboard page) have
+ * MOVED there entirely — this page now only lists every planned/actual
+ * activity and offers the "add a plan" shortcut. See `NetWorthPage.tsx` for
+ * the moved widget. */
 export function BudgetPlannerPage() {
   const cashEntries = useCashWorkbookStore((s) => s.workbook.entries);
   const cashSettings = useCashWorkbookStore((s) => s.workbook.settings);
@@ -72,47 +62,13 @@ export function BudgetPlannerPage() {
   const plannedRentals = usePlannedRentalsWorkbookStore((s) => s.workbook.entries);
   const addPlannedRentals = usePlannedRentalsWorkbookStore((s) => s.addEntry);
 
-  const emiLoans = useEMIWorkbookStore((s) => s.workbook.entries);
-  const netWorthSnapshots = useNetWorthSnapshotsWorkbookStore((s) => s.workbook.entries);
-  const netWorthSummary = useNetWorthSummary();
+  const links = useInterEntityTransfersStore((s) => s.workbook.entries);
   const categories = useCategoryStore((s) => s.workbook.categories);
 
-  useAppearanceStore((s) => s.appearance);
-  applyChartTheme();
-
   const activities = useMemo(
-    () => collectBudgetActivities({ cashEntries, plannedCash, bankAccounts, bankTransactions, plannedBank, rentalProperties, rentalEntries, plannedRentals, categories }),
-    [cashEntries, plannedCash, bankAccounts, bankTransactions, plannedBank, rentalProperties, rentalEntries, plannedRentals, categories],
+    () => collectBudgetActivities({ cashEntries, plannedCash, bankAccounts, bankTransactions, plannedBank, rentalProperties, rentalEntries, plannedRentals, categories, links }),
+    [cashEntries, plannedCash, bankAccounts, bankTransactions, plannedBank, rentalProperties, rentalEntries, plannedRentals, categories, links],
   );
-
-  // README item 107 (user-requested 2026-08-27): a scrollable window rather
-  // than a fixed 3 months — `windowStart` is the offset (in months from
-  // today) of the FIRST visible column; the window is always 6 months wide
-  // (`windowStart` .. `windowStart+5`), defaulting to 3 past + current + 2
-  // future, matching the user's own "at least 6 months history including
-  // future 2 months projection" wording. Scrolling shifts `windowStart` by
-  // 1 month at a time; "Today" resets it back to the default.
-  const [windowStart, setWindowStart] = useState(-3);
-  const months = useMemo(() => monthRange(windowStart, windowStart + 5), [windowStart]);
-  const nowMonth = useMemo(() => currentMonthOf(), []);
-  const todayISODate = useMemo(() => today(), []);
-  const monthly = useMemo(() => monthlyIncomeExpense(activities, months), [activities, months]);
-  const currencies = useMemo(() => [...new Set(activities.map((a) => a.currencyCode))].sort(), [activities]);
-  const [currency, setCurrency] = useState(currencies[0] ?? 'USD');
-  const effectiveCurrency = currencies.includes(currency) ? currency : (currencies[0] ?? currency);
-
-  const currentNetWorthByCurrency = useMemo(
-    () => Object.fromEntries(netWorthSummary.rows.map((r) => [r.currency, r.net])),
-    [netWorthSummary.rows],
-  );
-  const netWorthTrend = useMemo(
-    () => projectedNetWorthTrend({
-      months, currentMonth: nowMonth, todayISODate, currentNetWorthByCurrency, activities, emiLoans, snapshots: netWorthSnapshots,
-    }),
-    [months, nowMonth, todayISODate, currentNetWorthByCurrency, activities, emiLoans, netWorthSnapshots],
-  );
-
-  const monthLabel = (m: string) => new Date(`${m}-01`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 
   return (
     <div>
@@ -120,49 +76,9 @@ export function BudgetPlannerPage() {
       <p className="footer-note" style={{ marginBottom: 12 }}>
         Every planned income/expense across Cash, Banking, and Rentals in one place — this doesn't replace those
         modules' own Planning tabs, it's a combined view of the same plans, plus a shortcut to add a new one linked
-        to whichever account you want.
+        to whichever account you want. The monthly summary and net worth trend now live on{' '}
+        <Link to="/net-worth">the Dashboard page</Link>.
       </p>
-
-      {!activities.length ? (
-        <Card><p className="footer-note" style={{ marginBottom: 0 }}>No income/expense activity or plans yet across Cash, Banking, or Rentals.</p></Card>
-      ) : (
-        <>
-          {currencies.length > 1 && (
-            <Field label="Currency" width={120}>
-              <Select value={effectiveCurrency} onChange={(e) => setCurrency(e.target.value)}>
-                {currencies.map((c) => <option key={c} value={c}>{c}</option>)}
-              </Select>
-            </Field>
-          )}
-
-          <MonthlySummaryTable
-            months={months}
-            nowMonth={nowMonth}
-            monthLabel={monthLabel}
-            monthly={monthly}
-            netWorthTrend={netWorthTrend}
-            currency={effectiveCurrency}
-            onScrollEarlier={() => setWindowStart((w) => w - 1)}
-            onScrollLater={() => setWindowStart((w) => w + 1)}
-            onToday={() => setWindowStart(-3)}
-          />
-
-          <div style={{ marginTop: 12, marginBottom: 16 }}>
-          <ChartCard title={`Income vs. expense — ${monthLabel(months[0])} to ${monthLabel(months[months.length - 1])}`}>
-            <Bar
-              data={{
-                labels: months.map(monthLabel),
-                datasets: [
-                  { label: 'Income', data: monthly.map((m) => m.income[effectiveCurrency] ?? 0), backgroundColor: cssVar('--profit') || '#3ecf8e' },
-                  { label: 'Expense', data: monthly.map((m) => m.expense[effectiveCurrency] ?? 0), backgroundColor: cssVar('--loss') || '#e5484d' },
-                ],
-              }}
-              options={{ plugins: { datalabels: dlBarV((v) => fmtMoney(v, effectiveCurrency)) } }}
-            />
-          </ChartCard>
-          </div>
-        </>
-      )}
 
       <ActivityList activities={activities} />
       {/* Archived accounts/properties are excluded from this "pick where a
@@ -176,107 +92,6 @@ export function BudgetPlannerPage() {
         rentalProperties={rentalProperties.filter((p) => p.isActive !== false)} addPlannedRentals={addPlannedRentals}
       />
     </div>
-  );
-}
-
-interface MonthlySummaryTableProps {
-  months: string[];
-  nowMonth: string;
-  monthLabel: (m: string) => string;
-  monthly: MonthlyIncomeExpense[];
-  netWorthTrend: MonthlyNetWorthPoint[];
-  currency: string;
-  onScrollEarlier: () => void;
-  onScrollLater: () => void;
-  onToday: () => void;
-}
-
-/** The scrollable multi-month summary table (README item 107, user-
- * requested 2026-08-27: "It should be able to let the user scroll through
- * months and see at least 6 months history including future 2 months
- * projection" — modeled on the user's own reference Google Sheet, which
- * has one big per-month summary table). Months are columns, same shape as
- * that sheet; ◀/▶ shift the 6-month window one month at a time so it
- * genuinely scrolls rather than being capped at a fixed range, and the
- * native horizontal scrollbar on `.table-scroll` covers the visible window
- * itself on a narrow viewport.
- *
- * The "Net worth" row is the concrete answer to the user's second point in
- * the same message ("an EMI will take 36 months... I will always see my
- * Net Worth negative... we must zoom in to see deeper picture") — see
- * `netWorthTrend.ts`'s own doc comment for exactly how each month's figure
- * is derived. It's a TRAJECTORY, not a re-stated headline: a past month
- * with no saved snapshot yet shows "—" rather than a guessed number. */
-function MonthlySummaryTable({ months, nowMonth, monthLabel, monthly, netWorthTrend, currency, onScrollEarlier, onScrollLater, onToday }: MonthlySummaryTableProps) {
-  const monthlyByMonth = new Map(monthly.map((m) => [m.month, m]));
-  const trendByMonth = new Map(netWorthTrend.map((m) => [m.month, m]));
-
-  const statusFor = (m: string): 'Actual' | 'Current' | 'Projected' =>
-    m < nowMonth ? 'Actual' : m === nowMonth ? 'Current' : 'Projected';
-
-  return (
-    <CollapsibleCard title={<h3 style={{ margin: 0 }}>Monthly summary</h3>} style={{ marginBottom: 16 }}>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
-        <button className="btn secondary small" onClick={onScrollEarlier}>◀ Earlier</button>
-        <button className="btn secondary small" onClick={onToday}>Today</button>
-        <button className="btn secondary small" onClick={onScrollLater}>Later ▶</button>
-      </div>
-      <div className="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>Month</th>
-              {months.map((m) => (
-                <th key={m} style={{ minWidth: 130 }}>
-                  {monthLabel(m)}<br />
-                  <span className="footer-note" style={{ fontWeight: statusFor(m) === 'Current' ? 700 : 400 }}>
-                    {statusFor(m)}
-                  </span>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Income</td>
-              {months.map((m) => <td key={m}>{fmtMoney(monthlyByMonth.get(m)?.income[currency] ?? 0, currency)}</td>)}
-            </tr>
-            <tr>
-              <td>Expense</td>
-              {months.map((m) => <td key={m}>{fmtMoney(monthlyByMonth.get(m)?.expense[currency] ?? 0, currency)}</td>)}
-            </tr>
-            <tr>
-              <td>Net</td>
-              {months.map((m) => {
-                const row = monthlyByMonth.get(m);
-                const net = (row?.income[currency] ?? 0) - (row?.expense[currency] ?? 0);
-                return <td key={m} className={net >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(net, currency)}</td>;
-              })}
-            </tr>
-            <tr>
-              <td>
-                <Tooltip text="Today's real net worth, projected forward through each future month using Budget Planner's own planned income/expense plus each EMI loan's amortization schedule. Past months come from your saved Net Worth snapshots — shows as — where none exists yet.">
-                  Net worth
-                </Tooltip>
-              </td>
-              {months.map((m) => {
-                const value = trendByMonth.get(m)?.byCurrency[currency];
-                return (
-                  <td key={m} className={value === undefined ? 'footer-note' : value >= 0 ? 'pill-buy' : 'pill-sell'}>
-                    {value === undefined ? '—' : fmtMoney(value, currency)}
-                  </td>
-                );
-              })}
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <p className="footer-note" style={{ marginTop: 8, marginBottom: 0 }}>
-        Past months show Net worth only where a snapshot was saved for that period (Net Worth page auto-saves one
-        per day) — current/future months are projected from today's real figures. See{' '}
-        <Link to="/net-worth">the Net Worth page</Link> for the full breakdown.
-      </p>
-    </CollapsibleCard>
   );
 }
 

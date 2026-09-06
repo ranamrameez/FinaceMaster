@@ -24,6 +24,7 @@ import type { BankAccount, BankTransaction } from '../../types/bankWorkbook';
 import type { PlannedBankTransaction } from '../../types/plannedBank';
 import type { Property, RentalEntry } from '../../types/rentalsWorkbook';
 import type { PlannedRentalEntry } from '../../types/plannedRentals';
+import type { InterEntityTransfer } from '../../types/interEntityTransfer';
 
 export type BudgetModule = 'cash' | 'bank' | 'rentals';
 
@@ -58,6 +59,31 @@ export interface BudgetActivity {
   sourceEmiLoanId?: string;
 }
 
+/** User-reported (2026-09-04): "Inter-account transfers are counting as
+ * income; bad idea." A cross-entity linked transfer (`createLinkedTransfer`)
+ * writes a REAL ledger record on BOTH sides — e.g. moving money Cash→Bank
+ * creates a real `CashEntry` (money out) AND a real `BankTransaction`
+ * (money in) — so before this fix, `collectBudgetActivities` counted the
+ * RECEIVING side as income even though nothing was actually earned, just
+ * moved between the user's own accounts (and, for a same-currency link,
+ * inflated BOTH the gross Income and gross Expense figures shown on the
+ * Monthly summary, even though "Net" happened to net them back out).
+ * Excludes BOTH sides of every linked transfer from the flow calculation
+ * entirely — moving your own money between your own accounts is neither
+ * income nor expense, a wash for "Net flows" purposes (same principle
+ * already established for Net Worth: see `interEntityLink.ts`'s own doc
+ * comment on why conservation-of-money pairs cancel out). Only REAL
+ * records can be linked (a not-yet-executed plan never is), so this only
+ * ever needs to check the `real` arrays below, never `planned`. */
+function linkedRecordKeys(links: InterEntityTransfer[]): Set<string> {
+  const keys = new Set<string>();
+  links.forEach((l) => {
+    keys.add(`${l.from.module}:${l.fromRecordId}`);
+    keys.add(`${l.to.module}:${l.toRecordId}`);
+  });
+  return keys;
+}
+
 /** Real entries resolve their display category from `categoryID` via the
  * shared registry; planned entries (`PlannedCashEntry`/
  * `PlannedBankTransaction`/`PlannedRentalEntry`) still carry the old
@@ -65,12 +91,14 @@ export interface BudgetActivity {
  * restructure was deliberately scoped to the 3 primary record types, not
  * their Planned* counterparts (see `types/finance.ts`'s file-level
  * comment), so this is a real, documented asymmetry, not an oversight. */
-function normalizeCash(entries: CashEntry[], plans: PlannedCashEntry[], categories: Category[]): BudgetActivity[] {
-  const real: BudgetActivity[] = entries.map((e) => ({
-    id: e.id, module: 'cash', sourceLabel: 'Cash', date: e.date,
-    amount: e.isDeposit ? e.amount : -e.amount, currencyCode: e.currencyCode,
-    category: categoryName(e.categoryID, categories), description: e.note || (e.isDeposit ? 'Cash in' : 'Cash out'), executed: true,
-  }));
+function normalizeCash(entries: CashEntry[], plans: PlannedCashEntry[], categories: Category[], linked: Set<string>): BudgetActivity[] {
+  const real: BudgetActivity[] = entries
+    .filter((e) => !linked.has(`cash:${e.id}`))
+    .map((e) => ({
+      id: e.id, module: 'cash', sourceLabel: 'Cash', date: e.date,
+      amount: e.isDeposit ? e.amount : -e.amount, currencyCode: e.currencyCode,
+      category: categoryName(e.categoryID, categories), description: e.note || (e.isDeposit ? 'Cash in' : 'Cash out'), executed: true,
+    }));
   const planned: BudgetActivity[] = plans.filter((p) => !p.executed).map((p) => ({
     id: p.id, module: 'cash', sourceLabel: 'Cash', date: p.date,
     amount: p.type === 'IN' ? p.amount : -p.amount, currencyCode: p.currencyCode,
@@ -79,9 +107,10 @@ function normalizeCash(entries: CashEntry[], plans: PlannedCashEntry[], categori
   return [...real, ...planned];
 }
 
-function normalizeBank(accounts: BankAccount[], transactions: BankTransaction[], plans: PlannedBankTransaction[], categories: Category[]): BudgetActivity[] {
+function normalizeBank(accounts: BankAccount[], transactions: BankTransaction[], plans: PlannedBankTransaction[], categories: Category[], linked: Set<string>): BudgetActivity[] {
   const accountById = new Map(accounts.map((a) => [a.id, a]));
   const real: BudgetActivity[] = transactions.flatMap((t) => {
+    if (linked.has(`bank:${t.id}`)) return [];
     const account = accountById.get(t.accountId);
     if (!account) return [];
     return [{
@@ -103,9 +132,10 @@ function normalizeBank(accounts: BankAccount[], transactions: BankTransaction[],
   return [...real, ...planned];
 }
 
-function normalizeRentals(properties: Property[], entries: RentalEntry[], plans: PlannedRentalEntry[], categories: Category[]): BudgetActivity[] {
+function normalizeRentals(properties: Property[], entries: RentalEntry[], plans: PlannedRentalEntry[], categories: Category[], linked: Set<string>): BudgetActivity[] {
   const propertyById = new Map(properties.map((p) => [p.id, p]));
   const real: BudgetActivity[] = entries.flatMap((e) => {
+    if (linked.has(`rentals:${e.id}`)) return [];
     const property = propertyById.get(e.propertyId);
     if (!property) return [];
     return [{
@@ -131,11 +161,17 @@ export function collectBudgetActivities(inputs: {
   bankAccounts: BankAccount[]; bankTransactions: BankTransaction[]; plannedBank: PlannedBankTransaction[];
   rentalProperties: Property[]; rentalEntries: RentalEntry[]; plannedRentals: PlannedRentalEntry[];
   categories: Category[];
+  /** Cross-entity linked transfers (`useInterEntityTransfersStore`) —
+   * defaults to none so existing callers that haven't been updated yet
+   * don't break, but every real caller should pass the live list (see
+   * `linkedRecordKeys`'s own doc comment for why). */
+  links?: InterEntityTransfer[];
 }): BudgetActivity[] {
+  const linked = linkedRecordKeys(inputs.links ?? []);
   return [
-    ...normalizeCash(inputs.cashEntries, inputs.plannedCash, inputs.categories),
-    ...normalizeBank(inputs.bankAccounts, inputs.bankTransactions, inputs.plannedBank, inputs.categories),
-    ...normalizeRentals(inputs.rentalProperties, inputs.rentalEntries, inputs.plannedRentals, inputs.categories),
+    ...normalizeCash(inputs.cashEntries, inputs.plannedCash, inputs.categories, linked),
+    ...normalizeBank(inputs.bankAccounts, inputs.bankTransactions, inputs.plannedBank, inputs.categories, linked),
+    ...normalizeRentals(inputs.rentalProperties, inputs.rentalEntries, inputs.plannedRentals, inputs.categories, linked),
   ].sort((a, b) => a.date.localeCompare(b.date));
 }
 

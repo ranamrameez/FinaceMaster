@@ -1,99 +1,137 @@
 import { totalsByCurrency } from './emiModule';
+import { netWorthAsOfDate, type NetWorthAsOfInputs } from './netWorthAsOf';
+import type { CurrencyNetWorth } from './netWorth';
 import type { EMILoan } from '../../types/emiWorkbook';
 import type { BudgetActivity } from './budgetPlanner';
-import type { NetWorthSnapshot } from '../../types/netWorthSnapshot';
 
-function endOfMonthAsOf(month: string): Date {
+export function endOfMonthAsOf(month: string): string {
   const [y, m] = month.split('-').map(Number);
   // `Date.UTC(y, m, 0)` = day 0 of the month AFTER `m` (1-indexed) = the
   // last day of `m` itself, all in UTC so there's no local/UTC boundary to
   // cross (same discipline `installmentDueDate` uses, see its own doc
   // comment for the exact bug this avoids).
-  return new Date(Date.UTC(y, m, 0));
+  return new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
 }
 
 export interface MonthlyNetWorthPoint {
   month: string;
-  /** `undefined` per currency = no data available for this month (a past
-   * month with no snapshot at or before it yet). */
+  /** `undefined` per currency = that currency had no activity yet as of
+   * this month (a genuinely honest "doesn't exist yet," not a missing
+   * snapshot — see this file's own doc comment). */
   byCurrency: Record<string, number | undefined>;
+  assetsByCurrency: Record<string, number | undefined>;
+  liabilitiesByCurrency: Record<string, number | undefined>;
 }
 
 /**
- * A per-month Net Worth "trend" figure for the Budget Planner's scrollable
- * summary table (README item 107 / user-requested 2026-08-27) — the
- * concrete answer to "an EMI makes Net Worth look permanently negative for
- * 36 months; we must zoom in to see the deeper picture." Rather than one
- * flat headline number, this shows the trajectory: does it improve month
- * over month as debt gets paid down, even while the total stays negative.
+ * A per-month Net Worth "trend" for the Net Worth page's scrollable Monthly
+ * summary widget (moved there from Budget Planner, README/user-requested
+ * 2026-09-04 — "this widget belongs to the main Net Worth page").
  *
- * Two different sources depending on whether a month is in the past or the
- * present/future:
- * - **Past months** (before the current calendar month): read from real
- *   `NetWorthSnapshot`s (the existing on-demand/daily-auto history
- *   feature, see `types/netWorthSnapshot.ts`) — the latest snapshot at or
- *   before that month. Never fabricated; a month with no snapshot yet
- *   returns `undefined` for that currency rather than guessing at a number
- *   that was never actually recorded.
- * - **Current/future months**: PROJECTED from today's real Net Worth, not
- *   re-derived from scratch, as two additive terms:
- *   1. Cumulative net cash flow (income − expense) from Budget Planner's
- *      own activities (Cash/Bank/Rentals, real + planned) strictly after
- *      today through the end of the target month.
- *   2. The change in EMI/Loans' own outstanding balance between today and
- *      the end of the target month, via each loan's own amortization
- *      schedule (`emiModule.ts`'s `totalsByCurrency`, the exact same
- *      function Net Worth's own real-time figure already uses for
- *      "today," just called with a different `asOf`).
+ * User-reported (2026-09-04): "Monthly Net Worth should be the sum of all
+ * accounts on the last day of a month... the app is misleading wealth flow
+ * with Net Worth!" This REPLACES the previous design (past months read from
+ * sporadically-saved `NetWorthSnapshot`s, showing "—" for any month with no
+ * snapshot) with a REAL computation for every past/current month, via
+ * `netWorthAsOfDate` — the exact same per-module total functions "today"'s
+ * live figure already uses, just re-run with each module's own transaction/
+ * entry log filtered to that date. This works for ANY past month with real
+ * transaction history, regardless of whether a snapshot was ever saved —
+ * `undefined` now means "this currency genuinely had no activity yet,"
+ * never "we just don't have a record of it."
  *
- *   **Term 1 deliberately EXCLUDES any Budget Planner activity tagged
- *   `sourceEmiLoanId`** (an EMI's own auto-generated "Link to bank"
+ * Two different sources depending on whether a month is fully in the past,
+ * the current (still in progress) month, or the future:
+ * - **Past months** (before the current calendar month): `netWorthAsOfDate`
+ *   as of that month's real LAST DAY.
+ * - **Current month**: `netWorthAsOfDate` as of TODAY, not the (not-yet-
+ *   arrived) end of the month — we can't know what the rest of this month
+ *   holds, so "today" is the most honest real figure available.
+ * - **Future months**: still PROJECTED from today's real Net Worth (there's
+ *   no real transaction history yet to compute from) — Assets grow by
+ *   Budget Planner's own planned income/expense flow through that month;
+ *   Liabilities are today's real liabilities with today's own EMI
+ *   contribution swapped out for that future month's own EMI outstanding
+ *   (via `emiModule.ts`'s `totalsByCurrency`) — every OTHER liability
+ *   (credit cards, personal loans) is held at today's value, the same
+ *   scope this projection has always had. `net = assets - liabilities`
+ *   here is algebraically identical to the original combined formula
+ *   (`currentNet + flow + emiDelta`) that predates the assets/liabilities
+ *   split — this is a strict refinement (a breakdown for the SAME net
+ *   figure), not a behavior change to what "future net worth" means.
+ *
+ *   **The flow term deliberately EXCLUDES any Budget Planner activity
+ *   tagged `sourceEmiLoanId`** (an EMI's own auto-generated "Link to bank"
  *   installment plan) — that cash outflow's effect on Net Worth is ALREADY
- *   captured correctly by term 2's schedule-based liability reduction.
- *   Counting both would double the hit: once as a full-installment cash
- *   expense, and again by not crediting back the principal portion that
- *   installment actually pays down — the same "blend real cash flow with
- *   liability data without excluding what's already accounted for" double-
- *   counting shape this project hit before with the Trade Planner's
- *   executed-leg handling. An EMI loan with no "Link to bank" plan simply
- *   isn't in Budget Planner's activities at all, so it only ever affects
- *   the trend via term 2 — never a gap, never a double count.
+ *   captured correctly by the EMI-outstanding term. Counting both would
+ *   double the hit: once as a full-installment cash expense, and again by
+ *   not crediting back the principal portion that installment actually
+ *   pays down — the same "blend real cash flow with liability data without
+ *   excluding what's already accounted for" double-counting shape this
+ *   project hit before with the Trade Planner's executed-leg handling.
+ *   `collectBudgetActivities` (README/user-requested 2026-09-04) also now
+ *   excludes both sides of any inter-account linked transfer from
+ *   `activities` entirely — so this flow term is never inflated by money
+ *   simply moving between the user's own accounts either.
  */
 export function projectedNetWorthTrend(params: {
   months: string[];
   currentMonth: string;
   todayISODate: string;
-  currentNetWorthByCurrency: Record<string, number>;
+  currentRows: CurrencyNetWorth[];
   activities: BudgetActivity[];
   emiLoans: EMILoan[];
-  snapshots: NetWorthSnapshot[];
+  netWorthAsOfInputs: NetWorthAsOfInputs;
 }): MonthlyNetWorthPoint[] {
-  const { months, currentMonth: nowMonth, todayISODate, currentNetWorthByCurrency, activities, emiLoans, snapshots } = params;
-  const currencies = Object.keys(currentNetWorthByCurrency);
+  const { months, currentMonth: nowMonth, todayISODate, currentRows, activities, emiLoans, netWorthAsOfInputs } = params;
+  const currencies = currentRows.map((r) => r.currency);
   // Explicit `asOf` derived from `todayISODate`, never `totalsByCurrency`'s
-  // own `new Date()` default — this keeps the function pure/testable and
-  // avoids a real (if usually invisible, since `todayISODate` is normally
-  // literally today) mismatch between the two "today"s.
+  // own `new Date()` default — keeps this pure/testable and avoids a real
+  // (if usually invisible, since `todayISODate` is normally literally
+  // today) mismatch between the two "today"s.
   const emiToday = totalsByCurrency(emiLoans, new Date(todayISODate));
-  const sortedSnapshots = [...snapshots].sort((a, b) => a.date.localeCompare(b.date));
+  const currentAssets = Object.fromEntries(currentRows.map((r) => [r.currency, r.assets]));
+  const currentLiabilities = Object.fromEntries(currentRows.map((r) => [r.currency, r.liabilities]));
+  const currentNet = Object.fromEntries(currentRows.map((r) => [r.currency, r.net]));
 
   return months.map((month) => {
     const byCurrency: Record<string, number | undefined> = {};
+    const assetsByCurrency: Record<string, number | undefined> = {};
+    const liabilitiesByCurrency: Record<string, number | undefined> = {};
+
     if (month < nowMonth) {
-      const candidates = sortedSnapshots.filter((s) => s.date.slice(0, 7) <= month);
-      const snap = candidates[candidates.length - 1];
-      currencies.forEach((c) => { byCurrency[c] = snap?.byCurrency[c]; });
+      const rows = netWorthAsOfDate(endOfMonthAsOf(month), netWorthAsOfInputs);
+      const rowByCurrency = new Map(rows.map((r) => [r.currency, r]));
+      currencies.forEach((c) => {
+        const row = rowByCurrency.get(c);
+        byCurrency[c] = row?.net;
+        assetsByCurrency[c] = row?.assets;
+        liabilitiesByCurrency[c] = row?.liabilities;
+      });
+    } else if (month === nowMonth) {
+      // The month is still in progress — we can't know what the rest of it
+      // holds, so use TODAY's already-known real figure directly (the exact
+      // headline number shown elsewhere on the page) rather than
+      // re-deriving it a second time from the same inputs.
+      currencies.forEach((c) => {
+        byCurrency[c] = currentNet[c];
+        assetsByCurrency[c] = currentAssets[c];
+        liabilitiesByCurrency[c] = currentLiabilities[c];
+      });
     } else {
-      const emiAtMonth = totalsByCurrency(emiLoans, endOfMonthAsOf(month));
+      const emiAtMonth = totalsByCurrency(emiLoans, new Date(endOfMonthAsOf(month)));
       const flow: Record<string, number> = {};
       activities
         .filter((a) => a.date > todayISODate && a.date.slice(0, 7) <= month && !a.sourceEmiLoanId)
         .forEach((a) => { flow[a.currencyCode] = (flow[a.currencyCode] ?? 0) + a.amount; });
       currencies.forEach((c) => {
-        const emiDelta = (emiToday[c]?.outstanding ?? 0) - (emiAtMonth[c]?.outstanding ?? 0);
-        byCurrency[c] = currentNetWorthByCurrency[c] + (flow[c] ?? 0) + emiDelta;
+        const assets = (currentAssets[c] ?? 0) + (flow[c] ?? 0);
+        const liabilities = (currentLiabilities[c] ?? 0) - (emiToday[c]?.outstanding ?? 0) + (emiAtMonth[c]?.outstanding ?? 0);
+        assetsByCurrency[c] = assets;
+        liabilitiesByCurrency[c] = liabilities;
+        byCurrency[c] = assets - liabilities;
       });
     }
-    return { month, byCurrency };
+    return { month, byCurrency, assetsByCurrency, liabilitiesByCurrency };
   });
 }

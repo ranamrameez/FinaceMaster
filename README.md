@@ -5598,6 +5598,100 @@ FinanceManager live link:
      write actions (Save NAV, and the history table's Edit→Save) correctly hit the real sign-in
      gate — zero console errors throughout. `npx tsc -b` / `npm run test` (483 tests, 4 new) /
      `npm run build` all clean.
+229. **Net Worth page renamed "Dashboard," reordered, and its Monthly summary/trend widget
+     moved in from Budget Planner with a real historical-computation fix + a new interactive
+     2-in-1 chart (2026-09-04), user-requested.** The user's own report: "Monthly Net Worth
+     should be the sum of all accounts on the last day of a month. Right now, the app is
+     misleading wealth flow with Net Worth! Inter-account transfers are counting as income;
+     bad idea... This widget belongs to the main Net Worth page, so move." **This REVISES Done
+     item 201's own design**, which computed past months from whatever `NetWorthSnapshot` (Done
+     items 157/193) happened to exist at or before that month — honest about degrading to "—"
+     when no snapshot existed, but never actually the real number for a month with real
+     transaction history and no snapshot, which is most of them for any user who only started
+     using the daily-auto-snapshot feature recently.
+     **The real fix, new `lib/calc/netWorthAsOf.ts`**: `netWorthAsOfDate(asOfDate, inputs)`
+     computes a REAL point-in-time Net Worth for ANY past date by filtering every module's own
+     transaction/entry array to `date <= asOfDate` and feeding the filtered data through the
+     EXACT SAME per-module total functions "today"'s live figure already calls
+     (`cashBalanceByCurrency`, `assetBalanceByCurrency`/`creditCardLiabilityByCurrency`,
+     `netPositionByCurrency`, `emiModule.ts`'s `totalsByCurrency`, `fundsValueByCurrency`, and
+     `cashSummary` with the real fee calculators for QSE/PSX) — the same "reuse today's own
+     calc, just re-run against filtered history" pattern this app already used for the Trade
+     Planner's per-ticker analysis and Rentals' lease projections, applied here to the whole
+     cross-module Net Worth rollup for the first time. A new `priceAsOfDate()` helper resolves
+     what a stock/fund's price actually was as of a past date (scanning `priceHistory` for the
+     latest point `<= asOfDate`, falling back to 0 so `getMarketPrice`'s own last-BUY-price
+     fallback — already fed date-filtered transactions — takes over instead). `netWorthTrend.ts`
+     was rewritten around this: a fully past month now calls `netWorthAsOfDate` as of that
+     month's real last day (`endOfMonthAsOf`, unchanged helper, now exported); the in-progress
+     current month uses today's already-known real figure directly (we can't know the rest of
+     an unfinished month); future months stay PROJECTED exactly as before (today's real
+     Assets/Liabilities plus planned cash flow and each EMI loan's own amortization schedule —
+     `MonthlyNetWorthPoint` now carries `assetsByCurrency`/`liabilitiesByCurrency` alongside the
+     combined `byCurrency`, and the future-month formula was proven algebraically identical to
+     the old combined one, a strict refinement not a behavior change). `undefined` for a
+     currency now means "genuinely no activity yet as of that month" for every month, past
+     included — never "we just don't have a saved record of it." **The saved-snapshot mechanism
+     itself is UNCHANGED and still useful** — `saveSnapshot`/the on-demand button/the daily-auto
+     effect (Done items 157/193) still work exactly as before; the new trend calc just no
+     longer NEEDS a snapshot to show a real past-month number, so the two coexist without
+     either superseding the other's purpose.
+     **The linked-transfer fix, `budgetPlanner.ts`'s new `linkedRecordKeys()`**: a cross-entity
+     linked transfer (`createLinkedTransfer`) writes a REAL ledger record on both sides (e.g.
+     Cash→Bank creates a real `CashEntry` withdrawal AND a real `BankTransaction` deposit) — the
+     RECEIVING side was being counted as real Income even though nothing was earned, just moved
+     between the user's own accounts (and for a same-currency link, inflated both gross Income
+     and gross Expense, even though Net happened to net them back out). `collectBudgetActivities`
+     now takes an optional `links` array and excludes BOTH sides of every linked transfer from
+     the activity list entirely — the same "conservation-of-money pairs cancel out" principle
+     `interEntityLink.ts` already documents for Net Worth itself, applied here to Budget
+     Planner's flow figures for the first time. Only REAL records can ever be linked (a
+     not-yet-executed plan never is), so this only needs to check each module's real-entries
+     array, never its planned one.
+     **The widget MOVED, not duplicated** — `BudgetPlannerPage.tsx` had its `MonthlySummaryTable`
+     component, `windowStart` state, the old 3-month Income-vs-expense bar chart, and every
+     now-unused import for them all removed outright; the page's intro paragraph now links to
+     "the Dashboard page" instead. `ActivityList` (the flat filterable table of every planned/
+     actual activity) and `AddPlanFab` (the "add a plan into an existing module" shortcut) are
+     the only things left on Budget Planner — both untouched, and `ActivityList`'s own
+     `activities` prop now also excludes linked-transfer legs via the same fix.
+     **The new "2-in-1" chart, `NetWorthComboChart`**: a stacked Assets(positive)/
+     Liabilities(negative) bar pair with a Net Worth line overlaid on the same canvas per
+     currency, so the stacked total visually equals the line at every point. Needed
+     react-chartjs-2's generic `<Chart type="bar">` component instead of the narrower `<Bar>` —
+     `<Bar>`'s own prop types infer the dataset array as `ChartDataset<'bar'>` only from the
+     first entries and reject a `type: 'line'` entry outright; `<Chart>` accepts a mixed
+     `ChartDataset<'bar' | 'line'>[]` once explicitly annotated. `chartSetup.ts` gained
+     `BarController`/`LineController` registrations (previously only their `Element` types were
+     registered, since no chart before this one needed a mixed type on one canvas).
+     **The reorder + rename + per-currency-grid-not-toggle, all per the user's own exact
+     spec**: H1 (and the `CategoryNav` label, route/file names left alone — no user-facing
+     benefit to touching `/net-worth` itself) changed to "Dashboard." Page order is now: Net
+     worth summary + Exchange rates side by side, the grid of per-currency account-summary
+     `<details>` cards, the new `NetWorthMonthlySection` (one shared ◀ Earlier/Today/Later ▶
+     window governing both a grid of `NetWorthComboChart`s and a grid of `MonthlySummaryTable`s,
+     one of each per currency the user actually holds — no currency picker anywhere, matching
+     the user's own "just like the grid of accounts summary... show for all currencies in a
+     grid instead of toggling"), then supplementary content unaffected by the reordering
+     (capital-split doughnut, Rentals info card, cloud-sync notice). Verified live via
+     Playwright with a seeded 2-currency (USD/PKR) scenario spanning 4 months including one
+     cross-entity Cash→Bank linked transfer: the per-currency accounts grid, the combo charts,
+     and the monthly tables all matched hand-traced expected figures exactly — critically, the
+     linked transfer's 300 USD leg did NOT appear as August income (only the one real,
+     non-linked 200 USD bank deposit did) while August's real Net Worth (1,700 = 1,200 Cash +
+     500 Bank after the transfer) came out correctly unchanged by the transfer itself (money
+     moved between the user's own accounts, total unaffected) — and every past month (June
+     1,000 → July 1,500 → August 1,700) computed for real with zero snapshots ever saved,
+     confirming the snapshot-dependency removal actually works, not just compiles. Clicking
+     "◀ Earlier" moved both the chart grid and the table grid together in lockstep (shared
+     window state). `BudgetPlannerPage.tsx` was confirmed to no longer show "Monthly summary"
+     anywhere and to link correctly to the Dashboard page; its own activity list correctly
+     excluded both legs of the seeded link. Zero console errors (the only 2 messages logged are
+     the same pre-existing FX-rate-fetch network-block errors this sandbox always produces, see
+     Done item 66/141's own documented network-policy caveat — unrelated to this change). `npx
+     tsc -b` / `npm run test` (493 tests, 10 new — `netWorthAsOf.test.ts` [7, new file],
+     `netWorthTrend.test.ts` [rewritten, +1], `budgetPlanner.test.ts` [+2]) / `npm run build`
+     all clean.
 
 ## Pending
 

@@ -38,6 +38,44 @@ describe('collectBudgetActivities', () => {
     expect(activities[0].executed).toBe(false);
   });
 
+  it('excludes BOTH sides of a linked inter-account transfer — not income, not expense', () => {
+    // Cash -> Bank: a real linked transfer creates a real CashEntry (money
+    // out) AND a real BankTransaction (money in) — before the fix, the Bank
+    // side counted as income even though nothing was actually earned.
+    const activities = collectBudgetActivities({
+      cashEntries: [{ id: 'c1', date: '2026-03-01', isDeposit: false, amount: 500, currencyCode: 'USD', source: 'manual' }],
+      plannedCash: [],
+      bankAccounts: [{ id: 'a1', name: 'Checking', currencyCode: 'USD', openingBalance: 0 }],
+      bankTransactions: [{ id: 'b1', accountId: 'a1', date: '2026-03-01', amount: 500, isDeposit: true, description: 'Transfer in', source: 'manual' }],
+      plannedBank: [],
+      rentalProperties: [], rentalEntries: [], plannedRentals: [],
+      categories: [],
+      links: [{
+        id: 'link1', date: '2026-03-01', fromAmount: 500, toAmount: 500,
+        from: { module: 'cash' }, to: { module: 'bank', ref: 'a1' },
+        fromRecordId: 'c1', toRecordId: 'b1',
+      }],
+    });
+    expect(activities).toEqual([]);
+  });
+
+  it('an UNLINKED transaction on the same day is unaffected by an unrelated link', () => {
+    const activities = collectBudgetActivities({
+      cashEntries: [{ id: 'c1', date: '2026-03-01', isDeposit: true, amount: 500, currencyCode: 'USD', source: 'manual' }],
+      plannedCash: [],
+      bankAccounts: [], bankTransactions: [], plannedBank: [],
+      rentalProperties: [], rentalEntries: [], plannedRentals: [],
+      categories: [],
+      links: [{
+        id: 'link1', date: '2026-03-01', fromAmount: 100, toAmount: 100,
+        from: { module: 'cash' }, to: { module: 'bank', ref: 'a1' },
+        fromRecordId: 'someone-else', toRecordId: 'b1',
+      }],
+    });
+    expect(activities).toHaveLength(1);
+    expect(activities[0].id).toBe('c1');
+  });
+
   it('drops an entry whose account/property no longer exists rather than crashing', () => {
     const activities = collectBudgetActivities({
       cashEntries: [], plannedCash: [],
