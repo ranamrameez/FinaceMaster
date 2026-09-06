@@ -39,8 +39,19 @@ export function useAuthState(): AuthState {
     // independently once this resolves with a real user, so this is only
     // responsible for user-facing feedback: a toast either way, since a
     // redirect-based sign-in has no modal left open to show one itself.
+    // User-reported (2026-09): a redirect that fails to complete used to be
+    // completely silent (indistinguishable from "this page load just isn't
+    // a redirect return") — `wasPending` (see `completeGoogleSignInRedirect`'s
+    // own doc comment) tells the two apart, so a genuine failure now says
+    // so instead of leaving the user staring at "not signed in" with zero
+    // explanation.
     completeGoogleSignInRedirect()
-      .then(({ signedIn }) => { if (signedIn) toast('Signed in with Google.'); })
+      .then(({ signedIn, wasPending }) => {
+        if (signedIn) toast('Signed in with Google.');
+        else if (wasPending) {
+          toast('Google sign-in didn\'t finish — your browser may be blocking cross-site cookies/storage for the sign-in step. Try again, allow third-party cookies for this site, or use a different browser.');
+        }
+      })
       .catch((e) => toast(e instanceof Error ? e.message : 'Google sign-in failed.'));
     onAuthStateChanged(auth, (user) => {
       const uid = user?.uid ?? null;

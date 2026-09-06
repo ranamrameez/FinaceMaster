@@ -1,6 +1,7 @@
 import type { User } from 'firebase/auth';
 import { useState } from 'react';
 import { toast } from './Toast';
+import { Avatar } from './Avatar';
 import { SaveIcon } from './icons';
 import { saveProfile } from '../lib/firebase/profile';
 import { useProfile } from '../lib/firebase/useProfile';
@@ -26,8 +27,6 @@ export function ProfileEditor({ user }: { user: User }) {
     setAvatarEmoji(profile.avatarEmoji);
   }
 
-  const initial = (displayName || user.email || user.phoneNumber || '?').charAt(0).toUpperCase();
-
   const save = async () => {
     setBusy(true);
     try {
@@ -43,14 +42,11 @@ export function ProfileEditor({ user }: { user: User }) {
 
   return (
     <div className="row" style={{ gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-      <div
-        style={{
-          width: 40, height: 40, borderRadius: '50%', background: 'var(--accent-soft)', color: 'var(--on-accent-soft)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, flex: '0 0 40px', fontSize: 18,
-        }}
-      >
-        {avatarEmoji || initial}
-      </div>
+      {/* `avatarEmoji` passed here is this component's own LOCAL edit state
+         (see Avatar.tsx's own doc comment) — previewing a not-yet-saved
+         emoji, or falling through to the real Google photo/initial exactly
+         as it will once saved. */}
+      <Avatar user={user} avatarEmoji={avatarEmoji} size={40} />
       <input
         placeholder="Display name"
         value={displayName}

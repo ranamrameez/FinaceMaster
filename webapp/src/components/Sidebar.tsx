@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useProfile } from '../lib/firebase/useProfile';
 import { AppearancePanel } from './AppearancePanel';
+import { Avatar } from './Avatar';
 import { CategoryNav, categoryForPath } from './CategoryNav';
 import { LogInIcon, LogoMark, SettingsIcon } from './icons';
-import { requireSignIn } from './SignInModal';
 
 const QSE_NAV_ITEMS = [
   { num: '01', label: 'Dashboard', to: '/' },
@@ -166,23 +166,34 @@ export function Sidebar({
            across 3 lines and ate real vertical space — a genuine
            regression, not a taste call. User's own ask: "Show user name,
            avatar and settings logo only with smaller text." Rebuilt as a
-           single-line row — small round avatar, name truncated with an
-           ellipsis (never wraps; the full name is still in a native
-           `title` tooltip for anyone who needs it), a settings gear icon
-           on the right as the visual "this opens account settings"
-           affordance. */}
+           single-line row — small round avatar (see components/Avatar.tsx
+           for the real-Google-photo fix), name truncated with an ellipsis
+           (never wraps; the full name is still in a native `title` tooltip
+           for anyone who needs it), a settings gear icon on the right as
+           the visual "this opens account settings" affordance.
+
+           User-reported bug (2026-09): "Signed-out user cannot access
+           settings" — this row used to call `requireSignIn()` directly
+           when signed out, which opened the sign-in modal but never
+           actually navigated anywhere, so a signed-out visitor had no way
+           to reach `/account` at all (not even for Appearance/Data, both
+           of which that page already renders correctly without an
+           account). Now a plain `NavLink` to `/account` in both states —
+           the page's own signed-out branch already shows a "Sign in"
+           prompt alongside Appearance/Data, so this reaches the exact
+           same destination the old button's affordance implied. */}
         <div className="sidebar-account-group">
           {user ? (
             <NavLink to="/account" onClick={onNavigate} className="navbtn account-btn" title={name}>
-              <span className="account-avatar" aria-hidden="true">{profile.avatarEmoji || name.charAt(0).toUpperCase()}</span>
+              <Avatar user={user} avatarEmoji={profile.avatarEmoji} size={22} />
               <span className="account-name">{name}</span>
               <SettingsIcon size={14} />
             </NavLink>
           ) : (
-            <button type="button" className="navbtn account-btn" onClick={() => requireSignIn()}>
-              <span className="account-avatar" aria-hidden="true"><LogInIcon size={13} /></span>
+            <NavLink to="/account" onClick={onNavigate} className="navbtn account-btn">
+              <span className="avatar-circle" style={{ width: 22, height: 22 }} aria-hidden="true"><LogInIcon size={13} /></span>
               <span className="account-name">Not signed in — tap to sign in</span>
-            </button>
+            </NavLink>
           )}
         </div>
 

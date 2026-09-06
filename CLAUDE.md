@@ -4986,6 +4986,74 @@ not developer notes) continuously as features ship.
   beyond the same pre-existing FX-fetch network-block messages this sandbox always produces
   (Done item 66/141's own documented caveat). `npx tsc -b` / `npm run test` (493 tests, 10 new)
   / `npm run build` all clean.
+- **6-item sidebar/settings bug batch (2026-09-06) — see README Done item 230, Pending item
+  117.** User's report: "Appearance Button not working in the side navbar (also make
+  sidenavbar a bit wider). Signed-out user cannot access settings. Signin with google succeeds
+  but user still doesn't logged in. Everything should be a grid item except for tables...
+  Profile Picture not coming from google, not a rounded circle as well." Five of six were real,
+  confirmed code bugs found by reading the actual implementation, not guessed at.
+  **Appearance popover, root-caused**: `.appearance-panel`'s CSS was `display:none`
+  unconditionally, only flipped to `display:grid` by an `.appearance-panel.open` modifier class
+  that `AppearancePanel.tsx` never actually applies (it only conditionally RENDERS the div, and
+  never adds the class) — so the panel sat in the DOM invisible every time, a real regression
+  the component's own stale "JS sets its exact top/left on open" comment hints was once true but
+  isn't anymore. Fixed by making `display:grid` unconditional, matching `.sync-status-panel`'s
+  already-correct sibling implementation (added later, apparently never cross-checked against
+  this older popover) — once React itself only mounts the element while open, no CSS-side gate
+  is needed at all. **Sidebar width** bumped 220px→250px (`.sidebar`/`.main margin-left` kept in
+  lockstep) — several nav labels ("Trade Transactions", "Personal Loans") were genuinely tight.
+  **Signed-out settings access, root-caused**: the sidebar's account row called
+  `requireSignIn()` directly when signed out — opening the modal but navigating nowhere — so a
+  signed-out visitor had no way to reach `/account` at all, even though that page's own
+  signed-out branch already correctly shows Appearance/Data (global, no-account content)
+  alongside a "Sign in" prompt. Fixed by making the row a plain `NavLink` to `/account` in both
+  states.
+  **Google sign-in silent failure**: read the whole redirect-based flow end to end (Done item
+  205's own fix) — it correctly implements Firebase's documented pattern, and this sandbox's
+  network policy blocks Firebase/Google domains outright, so the real OAuth round-trip couldn't
+  be reproduced live. Asked the user the exact symptom via `AskUserQuestion` rather than
+  guessing further: confirmed "page reloads, still shows signed-out... no error toast either
+  way" — pinpointing `getRedirectResult()` resolving to `null` with NO thrown error, Firebase's
+  own documented failure mode when a browser restricts cross-site cookies/storage during the
+  sign-in correlation step for an app whose `authDomain` (`qse-app.firebaseapp.com`) differs
+  from its hosting domain (`ranamrameez.github.io`) — genuinely not fixable from this app's own
+  JS (GitHub Pages' static hosting offers no custom response headers, and this app doesn't own
+  a domain to point a matching authDomain at). **The real, fixable gap**: this exact silent
+  failure was indistinguishable from "this page load just isn't a redirect return at all" (the
+  ordinary case, correctly silent) — both produced zero toast, so a genuine failure gave the
+  user no signal at all. Fixed with a new `GOOGLE_REDIRECT_PENDING_KEY` own `sessionStorage`
+  flag (`lib/firebase/auth.ts`), set right before `signInWithRedirect()` navigates away and
+  read+cleared by `completeGoogleSignInRedirect()` on return — if it's still present, the
+  redirect genuinely failed to complete, not just an unrelated page load; a failure now
+  surfaces a real, actionable toast instead of silence. New `lib/firebase/__tests__/auth.test.ts`
+  (5 cases, new file — this app had no existing mock infrastructure for the Firebase Auth SDK,
+  built one) prove the exact pending/not-pending/success distinction without a live account.
+  **Flagged, not claimed fixed**: whether this detection actually fires in the user's real
+  browser needs their own confirmation next time it happens.
+  **Profile picture, root-caused**: `User` already exposes a real Google photo via `photoURL`
+  after a Google sign-in, but a whole-codebase grep confirmed it was read NOWHERE — both places
+  showing "who's signed in" only ever rendered a hand-picked `avatarEmoji` or a plain text
+  initial. New shared `components/Avatar.tsx` (fix-once-at-the-shared-layer, same pattern as
+  `MoneyValue`/`StatCard`/`Field`): priority is a custom emoji over the real photo over a plain
+  initial; the photo renders as a circular `<img>` via new `.avatar-circle` CSS
+  (`border-radius:50%`+`object-fit:cover` both apply directly to an `<img>`, clipping any aspect
+  ratio cleanly) with `referrerPolicy="no-referrer"` — Google's own photo URLs can silently fail
+  to load without it on some browsers, a broken-image icon with no console error to explain why.
+  `ProfileEditor.tsx` passes its own LOCAL (not-yet-saved) emoji edit state rather than the
+  persisted value, so live-previewing a new emoji before Save still works exactly as before.
+  New `components/__tests__/Avatar.test.tsx` (4 cases) — same "test the component directly,
+  can't exercise a real Google account here" precedent as `SyncStatusIndicator.test.tsx`.
+  **Grid layout**: `AccountPage.tsx`'s sections (none of them tables) now sit in the same
+  responsive `auto-fit`+`alignItems:'start'` grid already established for the Dashboard's own
+  "Net worth summary + Exchange rates" pair — 2-3 short cards side by side instead of each
+  claiming the full page width. Deliberately scoped to this one page, not an app-wide sweep —
+  see README Pending item 117 for the broader principle, to be rolled out incrementally like
+  every other app-wide UI principle in this project. Verified live via Playwright: sidebar
+  measured exactly 250px; the Appearance popover opened/closed correctly (a real bounding-box
+  check) after being completely non-functional before; the signed-out account row is a real
+  `<a>` landing on `/account`, which correctly shows the sign-in prompt AND Appearance AND Data
+  side by side (matching Y-coordinates, not assumed). `npx tsc -b` / `npm run test` (502 tests,
+  9 new) / `npm run build` all clean.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

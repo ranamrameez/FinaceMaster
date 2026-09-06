@@ -46,59 +46,71 @@ export function AccountPage({ syncStatuses }: { syncStatuses: ModuleSyncStatus[]
     <div>
       <h1 className="pagetitle">Account</h1>
 
-      {!user ? (
-        <Card style={{ marginBottom: 16 }}>
-          <p className="footer-note" style={{ marginTop: 0 }}>
-            You're browsing without an account — calculators and pages all work, but saving anything
-            (a transaction, an entity, a plan) requires signing in first.
-          </p>
-          <button className="btn" onClick={() => requireSignIn()}>
-            <LogInIcon />Sign in
-          </button>
-        </Card>
-      ) : (
-        <>
-          <CollapsibleCard title={<h3 style={{ margin: 0 }}>Profile</h3>} style={{ marginBottom: 16 }}>
-            <ProfileEditor user={user} />
-          </CollapsibleCard>
-
-          <CollapsibleCard title={<h3 style={{ margin: 0 }}>Security</h3>} style={{ marginBottom: 16 }}>
+      {/* User-reported (2026-09): "Everything should be a grid item except
+         for tables... Security, Sync, Appearance, Data eating whole page
+         width while being one word/line items." None of this page's
+         sections are tables — a responsive grid (same `auto-fit`/
+         `alignItems:'start'` pattern already used for the Dashboard's own
+         "Net worth summary + Exchange rates" pair) lets 2-3 of these short
+         cards sit side by side on a normal-width screen instead of each
+         claiming the full page width for a couple of lines of content.
+         `alignItems:'start'` keeps each card at its own natural height —
+         Security's two buttons shouldn't stretch to match Profile's. */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginBottom: 16, alignItems: 'start' }}>
+        {!user ? (
+          <Card>
             <p className="footer-note" style={{ marginTop: 0 }}>
-              Signed in with: <strong>{providers.length ? providers.join(', ') : 'Unknown method'}</strong>
-              {user.email ? <> · {user.email}</> : null}
+              You're browsing without an account — calculators and pages all work, but saving anything
+              (a transaction, an entity, a plan) requires signing in first.
             </p>
-            <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-              <button className="btn secondary" onClick={() => signOutUser().then(() => toast('Signed out.'))}>
-                Sign out
-              </button>
-              <button className="btn secondary" onClick={switchAccount}>
-                Switch account
-              </button>
-            </div>
-          </CollapsibleCard>
+            <button className="btn" onClick={() => requireSignIn()}>
+              <LogInIcon />Sign in
+            </button>
+          </Card>
+        ) : (
+          <>
+            <CollapsibleCard title={<h3 style={{ margin: 0 }}>Profile</h3>}>
+              <ProfileEditor user={user} />
+            </CollapsibleCard>
 
-          <CollapsibleCard title={<h3 style={{ margin: 0 }}>Sync status</h3>} style={{ marginBottom: 16 }}>
-            <p className="footer-note" style={{ marginTop: 0, marginBottom: 8 }}>
-              One line per module — click to see which, if any, has a sync issue.
-            </p>
-            <SyncStatusIndicator modules={syncStatuses} />
-          </CollapsibleCard>
-        </>
-      )}
+            <CollapsibleCard title={<h3 style={{ margin: 0 }}>Security</h3>}>
+              <p className="footer-note" style={{ marginTop: 0 }}>
+                Signed in with: <strong>{providers.length ? providers.join(', ') : 'Unknown method'}</strong>
+                {user.email ? <> · {user.email}</> : null}
+              </p>
+              <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+                <button className="btn secondary" onClick={() => signOutUser().then(() => toast('Signed out.'))}>
+                  Sign out
+                </button>
+                <button className="btn secondary" onClick={switchAccount}>
+                  Switch account
+                </button>
+              </div>
+            </CollapsibleCard>
 
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Appearance</h3>} style={{ marginBottom: 16 }}>
-        <div style={{ maxWidth: 320 }}>
-          <AppearanceFields />
-        </div>
-      </CollapsibleCard>
+            <CollapsibleCard title={<h3 style={{ margin: 0 }}>Sync status</h3>}>
+              <p className="footer-note" style={{ marginTop: 0, marginBottom: 8 }}>
+                One line per module — click to see which, if any, has a sync issue.
+              </p>
+              <SyncStatusIndicator modules={syncStatuses} />
+            </CollapsibleCard>
+          </>
+        )}
 
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Data</h3>} style={{ marginBottom: 16 }}>
-        <p className="footer-note" style={{ marginTop: 0 }}>
-          Export every module's data to one JSON file, or import one back in — a full backup, or a way to
-          move data between devices.
-        </p>
-        <Link to="/app-data" className="btn secondary">Backup / restore all data →</Link>
-      </CollapsibleCard>
+        <CollapsibleCard title={<h3 style={{ margin: 0 }}>Appearance</h3>}>
+          <div style={{ maxWidth: 320 }}>
+            <AppearanceFields />
+          </div>
+        </CollapsibleCard>
+
+        <CollapsibleCard title={<h3 style={{ margin: 0 }}>Data</h3>}>
+          <p className="footer-note" style={{ marginTop: 0 }}>
+            Export every module's data to one JSON file, or import one back in — a full backup, or a way to
+            move data between devices.
+          </p>
+          <Link to="/app-data" className="btn secondary">Backup / restore all data →</Link>
+        </CollapsibleCard>
+      </div>
 
       <Notice tone="info" style={{ marginBottom: 16 }}>
         <p style={{ margin: 0 }}>

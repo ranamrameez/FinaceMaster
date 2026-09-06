@@ -5692,6 +5692,110 @@ FinanceManager live link:
      tsc -b` / `npm run test` (493 tests, 10 new — `netWorthAsOf.test.ts` [7, new file],
      `netWorthTrend.test.ts` [rewritten, +1], `budgetPlanner.test.ts` [+2]) / `npm run build`
      all clean.
+230. **6-item sidebar/settings bug batch (2026-09-06), user-reported: "Appearance Button not
+     working in the side navbar (also make sidenavbar a bit wider). Signed-out user cannot
+     access settings. Signin with google succeeds but user still doesn't logged in. Everything
+     should be a grid item except for tables... Profile Picture not coming from google, not a
+     rounded circle as well."** Five of the six were real, confirmed code bugs found by reading
+     the actual implementation, not guessed at from the symptom alone.
+     **(1) Appearance popover genuinely didn't work, root-caused**: `.appearance-panel`'s CSS
+     was `display:none` unconditionally, only overridden to `display:grid` by an
+     `.appearance-panel.open` modifier class — but `AppearancePanel.tsx` only ever
+     conditionally RENDERS the div (mounts it just while React state `open===true`) and never
+     actually applies an `.open` class to it, so the panel sat in the DOM but stayed invisible
+     every single time regardless of clicking the trigger. The component's own stale comment
+     ("JS sets its exact top/left on open") described a positioning mechanism that doesn't
+     exist in the current code either. Fixed by making `display:grid` the panel's own
+     unconditional style — matching `.sync-status-panel`'s already-correct, simpler sibling
+     implementation (`components/SyncStatusIndicator.tsx`, added later and apparently never
+     cross-checked against this older popover) — since React itself already gates visibility by
+     mounting/unmounting, no CSS-side gate was ever needed. **(2) Sidebar width**: bumped
+     220px → 250px (`.sidebar`/`.main`'s `margin-left`, kept in lockstep) — several nav labels
+     ("Trade Transactions", "Personal Loans") were genuinely tight at the old width.
+     **(3) Signed-out settings access, root-caused**: the sidebar's account row called
+     `requireSignIn()` directly when signed out — opening the sign-in modal but never
+     navigating anywhere — so a signed-out visitor had no way to reach `/account` at all, even
+     though that page's own signed-out branch already correctly renders Appearance/Data (global,
+     no-account-needed content) alongside a "Sign in" prompt. Fixed by making the row a plain
+     `NavLink` to `/account` in both signed-in and signed-out states — the destination the old
+     button's own copy ("tap to sign in") already implied.
+     **(4) Google sign-in silent failure, investigated at length, one real fix shipped**: read
+     the entire redirect-based sign-in flow (`lib/firebase/auth.ts`/`useAuthState.ts`, the fix
+     from Done item 205) end to end — it correctly implements Firebase's own documented
+     `signInWithRedirect`/`getRedirectResult`/`onAuthStateChanged` pattern, and this sandbox's
+     network policy blocks Firebase/Google domains outright, so the actual OAuth round-trip
+     could not be reproduced live here. Asked the user for the exact symptom via
+     `AskUserQuestion` rather than guessing further — confirmed: "page reloads, still shows
+     signed-out... no error toast either way." That pinpoints `getRedirectResult()` resolving to
+     `null` with NO thrown error on the return trip — Firebase's own documented failure mode
+     when a browser restricts cross-site cookies/storage during the sign-in correlation step,
+     for exactly this app's setup (`authDomain: qse-app.firebaseapp.com` is a different origin
+     than the app's own hosting domain, `ranamrameez.github.io`) — genuinely not fixable from
+     this app's own JS (no custom response headers are available on GitHub Pages' static
+     hosting, and this app doesn't own a domain to point a matching authDomain at). **What WAS a
+     real, fixable gap**: this exact silent failure was previously indistinguishable from "this
+     page load just isn't a redirect return at all" (the ordinary case for every other page
+     load) — both produced no toast, so a genuine failure gave the user zero signal to explain
+     why they're still signed out. Fixed with a new `GOOGLE_REDIRECT_PENDING_KEY` own
+     `sessionStorage` flag (`auth.ts`), set right before `signInWithRedirect()` navigates away
+     and read+cleared by `completeGoogleSignInRedirect()` on return — `sessionStorage` survives
+     a normal same-tab top-level navigation away and back (the same mechanism Firebase's own
+     internal redirect-tracking already depends on to work at all), so if it's still present on
+     return, the redirect genuinely failed to complete, not just an unrelated page load. A
+     failure now shows: "Google sign-in didn't finish — your browser may be blocking cross-site
+     cookies/storage for the sign-in step. Try again, allow third-party cookies for this site,
+     or use a different browser." New tests: `lib/firebase/__tests__/auth.test.ts` (5 cases,
+     new file, mocking `firebase/auth`/`./client` directly since this app had no existing mock
+     infrastructure for the Firebase Auth SDK) prove the exact pending/not-pending/success
+     distinction without needing a live Google account. **Still flagged, not claimed fixed**:
+     whether this sessionStorage-based detection actually fires correctly in the user's real
+     browser needs their own confirmation next time it happens — this sandbox cannot verify it
+     end to end.
+     **(5) "Profile Picture not coming from google, not a rounded circle as well," root-caused**:
+     `User` (Firebase Auth) already exposes a real Google profile photo via `photoURL` after a
+     Google sign-in, but a whole-codebase grep confirmed `photoURL` was read NOWHERE — both
+     places that show "who's signed in" (`Sidebar.tsx`'s account row, `ProfileEditor.tsx`'s
+     bigger avatar) only ever rendered the user's own hand-picked `avatarEmoji` or a plain text
+     initial. New shared `components/Avatar.tsx` (fix-once-at-the-shared-layer, same pattern as
+     `MoneyValue`/`StatCard`/`Field`): priority is a custom `avatarEmoji` (an explicit
+     personalization) over the real Google photo over a plain initial; the photo renders as a
+     circular `<img>` via a new shared `.avatar-circle` CSS class (`border-radius:50%` +
+     `object-fit:cover` both apply directly to an `<img>`, a CSS "replaced element," so any
+     photo aspect ratio still clips clean) with `referrerPolicy="no-referrer"` (Google's own
+     `lh3.googleusercontent.com` photo URLs can silently fail to load without it on some
+     browsers/privacy settings — a broken-image icon with no console error to explain why).
+     `ProfileEditor.tsx`'s avatar preview passes its own LOCAL (not-yet-saved) `avatarEmoji`
+     edit state rather than the persisted value, so typing a new emoji still live-previews
+     correctly, exactly as before. New tests: `components/__tests__/Avatar.test.tsx` (4 cases —
+     emoji priority, real photo rendering with the correct circular class/referrer policy,
+     plain-initial fallback, and the null-user "?" fallback) — the same "test the component
+     directly, can't exercise a real Google account in this sandbox" precedent already
+     established for `SyncStatusIndicator.test.tsx`.
+     **(6) "Everything should be a grid item except for tables... Security, Sync, Appearance,
+     Data eating whole page width while being one word/line items"**: `AccountPage.tsx`'s five
+     sections (the signed-out "Sign in" prompt or Profile/Security/Sync depending on auth state,
+     plus Appearance and Data, always) are none of them tables — wrapped in the same responsive
+     `repeat(auto-fit, minmax(300px,1fr))` + `alignItems:'start'` grid pattern already
+     established for the Dashboard's own "Net worth summary + Exchange rates" pair (Done item
+     153), so 2-3 of these short cards now sit side by side on a normal-width screen instead of
+     each claiming the full page width for a couple of lines of content — `alignItems:'start'`
+     keeps each card at its own natural height (Security's two buttons don't stretch to match
+     Profile's taller content). **Deliberately scoped to this one page** — the user's own
+     phrasing ("Example: Security, Sync, Appearance, Data...") reads as illustrating a general
+     principle with THIS concrete page, not a literal instruction to re-audit every non-table
+     section across the whole app in the same pass; the broader principle is captured as its own
+     Pending item for incremental future rollout, matching how every other "apply this app-wide"
+     UI principle in this project has always been rolled out (tooltips, `IconButton`, colored
+     stat cards, etc.) — page by page, not as one giant blind sweep.
+     Verified live via Playwright throughout: sidebar measured exactly 250px with `.main`'s
+     margin-left matching; the Appearance popover opened and closed correctly (a real
+     bounding-box check, not just a class-presence check) after being completely non-functional
+     before the fix; the signed-out account row is now a real `<a>` navigating to `/account`,
+     landing on a page that correctly shows the sign-in prompt AND Appearance AND Data all
+     side-by-side in one row (confirmed via matching Y-coordinates, not assumed from the JSX
+     alone) — real, unambiguous evidence the grid layout, the popover fix, and the settings-
+     access fix all work together correctly. `npx tsc -b` / `npm run test` (502 tests, 9 new) /
+     `npm run build` all clean.
 
 ## Pending
 
@@ -6466,6 +6570,16 @@ or a design decision before more code, not guessed at further:**
      gap/wrap combos, button spacing) and extract them into real theme.css classes first, then
      repeat per module — the exact same incremental discipline already used for the Main/Often/
      Rare redesign (see the "App-wide UI/UX redesign" section above).
+117. **App-wide "everything should be a grid item except tables" principle (2026-09-06)** — the
+     user's own phrasing named `AccountPage.tsx` (Security/Sync/Appearance/Data) as "Example,"
+     which read as illustrating a general principle with one concrete page, not a literal
+     instruction to re-audit every non-table section app-wide in the same pass — that concrete
+     example is done (Done item 230's item 6). Rolling this out further means auditing each
+     module's own landing/Settings page for short, non-table sections currently stacked full-
+     width (a few lines of text, 2-3 buttons, a handful of stat cards) that would read better
+     side by side in a responsive grid — same `repeat(auto-fit, minmax(...,1fr))` +
+     `alignItems:'start'` pattern `AccountPage.tsx` now uses. Do this incrementally, module by
+     module, verified live each time — the same discipline item 116 above already calls for.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank
