@@ -6062,6 +6062,66 @@ FinanceManager live link:
   at in this group," not "the real overall total," so the two coexist without duplicating the
   same claim. Verified against the real data: "-19k PKR" / "17k QAR" tags rendered correctly.
   `npx tsc -b` / `npm run test` (511 tests, 2 new) / `npm run build` all clean.
+- **Same-day reorder (up/down move buttons), sortable-header removal on every running-balance
+  table, and filter parity across all of them — user-requested, 2026-09-06 — see README Done
+  item 235.** User's own framing: "if some transaction is missed and logged later, it is/will
+  cause problem. some interactive option should be there to drag the transactions up or down
+  to correct their order and update the ids according to new order to find the correct account
+  balance at a given time. we may stop sorting options for chronologically important tables
+  (only sequence-aware tables) to avoid the disordered mess." Confirmed the design via
+  `AskUserQuestion` before building: up/down move buttons (not drag-and-drop); reordering must
+  NEVER touch a record's own `id` (every cross-entity link references records by `id` — the
+  user's own words: "we must preserve primary key to keeping the linking working... use serial
+  number... meant to track order"), so a move swaps the two adjacent tied rows' `seq`/
+  `serialNumber` instead; and the feature applies to every table with a running balance,
+  app-wide, not just Banking.
+  **New shared, field-name-agnostic core** (`hooks/useTieGroupReorder.ts`, tested): `id`/order
+  getters instead of hardcoded property names, since Cash/Bank/Rentals use `serialNumber` while
+  QSE/PSX/Funds/Personal Loans use `seq` — one implementation covers both without either
+  convention having to rename its own field. A move is only ever offered between ADJACENT rows
+  tied on the EXACT same real instant (date+time+timezone) — a row on a genuinely different
+  real date never needs reordering against a tied neighbor, since date+time already places it
+  correctly; the two rows' order values are swapped outright, nothing else in the array is
+  touched. New `components/ui/ReorderButtons.tsx` renders NOTHING for an untied row (the
+  common case), keeping ordinary rows visually clean — only a row genuinely tied with a
+  neighbor gets up/down buttons, each individually disabled at the edge of its own tie group.
+  **Sortable headers removed from every table with a running balance** (the "sequence-aware"
+  tables the user's own wording named): Bank's account statement, Cash's per-currency
+  statement, Personal Loans' repayments "Remaining" column, and QSE's/PSX's/Funds' Transfers
+  sections (all four already computed a real per-row Balance via `transferRunningBalance`) —
+  each now displays in a FIXED chronological+sequence order (matching the order its own
+  Balance column was computed under) with the reorder buttons as the only way to fix two tied
+  rows' relative order. QSE's/PSX's merged trades+transfers+adjustments "Cash ledger" section
+  also lost its sortable headers for the same reason, but deliberately has NO reorder buttons
+  of its own — each row there is DERIVED from a real record living in its own native table
+  (Trade Transactions / the Transfers section / Adjustments), so reordering happens there and
+  flows through to this merged view automatically since it's fully computed from the same
+  `seq` fields. **Audited every remaining table for a running-balance column before deciding
+  what's in scope, not assumed** — Rentals' entries list, EMI's schedule (addressed by month
+  index, no same-instant-tie concern per an earlier session's own note), Personal Loans' own
+  loan list, and every QSE/PSX per-ticker trade table show no running cash balance at all, so
+  none of them needed this treatment; Funds' own "Transactions" (buy/sell) list likewise has no
+  Balance column, only its separate Transfers section does.
+  **Filter parity, added mid-task per the user's own follow-up** ("although we are removing
+  sorting, we must add all fields as filters in all tables"): audited each of the six tables
+  above for a missing dimension filter — Bank's and Cash's statement tables were missing a
+  Source (Manual/Imported) filter Personal Loans' equivalent already had, and Funds' Transfers
+  section was missing the Type (Deposit/Withdrawal) filter its QSE/PSX siblings already had —
+  added all three for parity. Personal Loans' repayments, and QSE's/PSX's Transfers/Cash-ledger
+  sections already had full filter coverage for their own fields, confirmed rather than
+  assumed.
+  Verified live via Playwright with a deliberately crafted tie scenario (two same-date,
+  no-time entries — Rent and Groceries, both 2026-01-05 — entered "out of order" so the
+  chronologically-earlier one had the HIGHER `serialNumber`, exactly the "missed and logged
+  later" bug scenario): confirmed zero `<th class="sortable">` remain on the table; confirmed
+  the untied Paycheck row shows no reorder buttons at all; confirmed Rent's "Move up" (which
+  would cross into the untied Paycheck row) is correctly disabled while its "Move down" (into
+  the tie with Groceries) is enabled, and vice versa for Groceries; confirmed clicking an
+  enabled move button correctly hits the real sign-in gate rather than silently writing —
+  the same verification depth as every other sign-in-gated write in this project, since a full
+  authenticated round-trip isn't possible in this sandbox. New tests:
+  `hooks/__tests__/useTieGroupReorder.test.ts` (9 cases). `npx tsc -b` / `npm run test` (520
+  tests, 9 new) / `npm run build` all clean.
 
 ## Pending
 

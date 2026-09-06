@@ -19,6 +19,8 @@ import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { useAmountFormat } from '../../../hooks/useAmountFormat';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
+import { ReorderButtons } from '../../../components/ui/ReorderButtons';
+import { toInstantMs } from '../../../lib/datetime';
 import { hueStyle } from '../../../lib/statCardHues';
 import { categoryName, UNCATEGORIZED_ID } from '../../../lib/categories';
 import { useCategoryStore } from '../../../store/categoryStore';
@@ -236,11 +238,17 @@ function EditEntryModal({ entry, onClose }: { entry: CashEntry; onClose: () => v
  * filter options to view filtered table data." */
 function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashLedgerRow[] }) {
   const deleteEntry = useCashWorkbookStore((s) => s.deleteEntry);
+  const updateEntry = useCashWorkbookStore((s) => s.updateEntry);
   const categories = useCategoryStore((s) => s.workbook.categories);
   const links = useInterEntityTransfersStore((s) => s.workbook.entries);
+  const ensureSignedIn = useEnsureSignedIn();
   const [editingEntry, setEditingEntry] = useState<CashEntry | null>(null);
   const [typeFilter, setTypeFilter] = useState<'all' | 'in' | 'out'>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  // User-requested (2026-09-06): "although we are removing sorting, we
+  // must add all fields as filters in all tables" — a Source filter
+  // (Manual/Imported) for parity with Personal Loans' repayments table.
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'manual' | 'statement-import'>('all');
 
   // User-requested (2026-08-28): "Tag/Mark and also add nav link between
   // the linked trcs" — same recordId -> link map as Bank's TransactionsList.
@@ -263,21 +271,26 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
       if (typeFilter === 'in' && !r.entry.isDeposit) return false;
       if (typeFilter === 'out' && r.entry.isDeposit) return false;
       if (categoryFilter !== 'all' && categoryName(r.entry.categoryID, categories) !== categoryFilter) return false;
+      if (sourceFilter !== 'all' && (r.entry.source ?? 'manual') !== sourceFilter) return false;
       return true;
     }),
-    [allRows, typeFilter, categoryFilter, categories],
+    [allRows, typeFilter, categoryFilter, sourceFilter, categories],
   );
 
-  type Col = 'date' | 'type' | 'amount' | 'category';
-  const sortValue = (r: (typeof rows)[number], col: Col): number | string => {
-    switch (col) {
-      case 'type': return r.entry.isDeposit ? 1 : 0;
-      case 'amount': return r.entry.amount;
-      case 'category': return categoryName(r.entry.categoryID, categories);
-      default: return r.entry.date;
-    }
+  // User-reported (2026-09-06): "we may stop sorting options for
+  // chronologically important tables (only sequence-aware tables) to
+  // avoid the disordered mess" — same reasoning as Bank's own statement
+  // table (Done item 235): a running-balance table only makes sense in
+  // its own real chronological+sequence order, so free column sorting is
+  // gone here too, replaced by `ReorderButtons` for the one thing that
+  // genuinely needs fixing (two same-instant rows in the wrong relative
+  // order).
+  const sorted = rows; // buildCashLedger already returns ascending chronological order
+  const instantOf = (r: (typeof sorted)[number]) => toInstantMs(r.entry.date, r.entry.time, r.entry.timezone);
+  const reorder = async (pair: [{ id: string; order: number }, { id: string; order: number }]) => {
+    if (!(await ensureSignedIn('Sign in to reorder entries.'))) return;
+    for (const p of pair) updateEntry(p.id, { serialNumber: p.order });
   };
-  const { sorted, Th } = useSortableRows(rows, sortValue, 'date', 'asc');
 
   return (
     <Card>
@@ -296,32 +309,49 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
             {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
           </Select>
         </Field>
+        <Field label="Source" width={130}>
+          <Select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value as typeof sourceFilter)}>
+            <option value="all">All</option>
+            <option value="manual">Manual</option>
+            <option value="statement-import">Imported</option>
+          </Select>
+        </Field>
       </div>
       <div className="table-scroll">
         <table>
           <thead>
             <tr>
-              <Th col="date">Date</Th>
-              <Th col="type">Type</Th>
+              <th>Date</th>
+              <th>Type</th>
               {/* User-reported (2026-08-28): "Description and Source are
                  making the table too large to read" + "Credit/Debit and
                  balance should be next to each other. Categories can be
                  marked as labels." */}
               <th>Note</th>
-              <Th col="category">Category</Th>
-              <Th col="amount">Amount</Th>
+              <th>Category</th>
+              <th>Amount</th>
               <th>Balance</th>
               <th>Source</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {sorted.map(({ entry, balance }) => {
+            {sorted.map(({ entry, balance }, i) => {
               const link = linkByRecordId.get(entry.id);
               const otherSide = link ? (link.from.module === 'cash' && link.fromRecordId === entry.id ? link.to : link.from) : undefined;
               return (
                 <tr key={entry.id}>
-                  <td>{entry.date}</td>
+                  <td>
+                    {entry.date}{' '}
+                    <ReorderButtons
+                      rows={sorted}
+                      index={i}
+                      instantOf={instantOf}
+                      idOf={(r) => r.entry.id}
+                      orderOf={(r) => r.entry.serialNumber}
+                      onMove={reorder}
+                    />
+                  </td>
                   <td className={entry.isDeposit ? 'pill-buy' : 'pill-sell'}>{entry.isDeposit ? 'Cash in' : 'Cash out'}</td>
                   <td className="cell-clip" title={entry.note}>
                     {entry.note}

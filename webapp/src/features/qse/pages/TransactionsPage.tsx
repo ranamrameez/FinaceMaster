@@ -18,6 +18,8 @@ import { IconButton } from '../../../components/ui/IconButton';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { defaultTimezoneForCurrency, defaultTimezoneForMarket } from '../../../lib/datetime';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
+import { ReorderButtons } from '../../../components/ui/ReorderButtons';
+import { toInstantMs } from '../../../lib/datetime';
 import { createEmptyWorkbook } from '../../../store/defaultWorkbook';
 import { useWorkbookStore } from '../../../store/workbookStore';
 import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
@@ -482,6 +484,7 @@ function TransfersSection() {
   const deleteTransfer = useWorkbookStore((s) => s.deleteTransfer);
   const currency = workbook.settings.currency;
   const links = useInterEntityTransfersStore((s) => s.workbook.entries);
+  const ensureSignedIn = useEnsureSignedIn();
   const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<Transfer | null>(null);
   const [typeFilter, setTypeFilter] = useState<'all' | Transfer['type']>('all');
@@ -506,17 +509,23 @@ function TransfersSection() {
     [workbook.transfers, typeFilter],
   );
 
-  type TransferCol = 'date' | 'type' | 'gross' | 'fee' | 'balance';
-  const sortValue = (t: Transfer, col: TransferCol): number | string => {
-    switch (col) {
-      case 'type': return t.type;
-      case 'gross': return t.gross;
-      case 'fee': return t.fee;
-      case 'balance': return balances.get(t.id) ?? 0;
-      default: return t.date;
-    }
+  // User-reported (2026-09-06): "we may stop sorting options for
+  // chronologically important tables (only sequence-aware tables) to
+  // avoid the disordered mess" — same reasoning as Bank's/Cash's/Personal
+  // Loans' own ledger tables (Done item 235): the Balance column only
+  // makes sense in real chronological+sequence order, so free column
+  // sorting is gone here, replaced by `ReorderButtons` for the one thing
+  // that genuinely needs fixing (two same-instant transfers in the wrong
+  // relative order).
+  const instantOf = (t: Transfer) => toInstantMs(t.date, t.time, t.timezone);
+  const sorted = useMemo(
+    () => [...filteredTransfers].sort((a, b) => instantOf(b) - instantOf(a) || (b.seq ?? 0) - (a.seq ?? 0)),
+    [filteredTransfers],
+  );
+  const reorderTransfer = async (pair: [{ id: string; order: number }, { id: string; order: number }]) => {
+    if (!(await ensureSignedIn('Sign in to reorder transfers.'))) return;
+    for (const p of pair) updateTransfer(p.id, { seq: p.order });
   };
-  const { sorted, Th } = useSortableRows(filteredTransfers, sortValue, 'date', 'desc');
 
   const startEdit = (t: Transfer) => { setEditId(t.id); setEditRow({ ...t }); };
   const saveEdit = async () => {
@@ -543,16 +552,16 @@ function TransfersSection() {
         <table>
           <thead>
             <tr>
-              <Th col="date">Date</Th>
-              <Th col="type">Type</Th>
-              <Th col="gross">Gross</Th>
-              <Th col="fee">Fee</Th>
-              <Th col="balance">Balance</Th>
+              <th>Date</th>
+              <th>Type</th>
+              <th>Gross</th>
+              <th>Fee</th>
+              <th>Balance</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {sorted.map((t) => {
+            {sorted.map((t, i) => {
               const link = linkByRecordId.get(t.id);
               const otherSide = link ? (link.from.module === 'qse' && link.fromRecordId === t.id ? link.to : link.from) : undefined;
               return editId === t.id && editRow ? (
@@ -574,7 +583,17 @@ function TransfersSection() {
                 </tr>
               ) : (
                 <tr key={t.id}>
-                  <td>{t.date}</td>
+                  <td>
+                    {t.date}{' '}
+                    <ReorderButtons
+                      rows={sorted}
+                      index={i}
+                      instantOf={instantOf}
+                      idOf={(row) => row.id}
+                      orderOf={(row) => row.seq}
+                      onMove={reorderTransfer}
+                    />
+                  </td>
                   <td>
                     {t.type}
                     {otherSide && (
@@ -689,17 +708,20 @@ function CashLedgerSection() {
     [ledger, kindFilter],
   );
 
-  type LedgerCol = 'date' | 'kind' | 'label' | 'amount' | 'balance';
-  const sortValue = (e: (typeof ledger)[number], col: LedgerCol): number | string => {
-    switch (col) {
-      case 'kind': return e.kind;
-      case 'label': return e.label;
-      case 'amount': return e.amount;
-      case 'balance': return e.balance;
-      default: return e.date;
-    }
-  };
-  const { sorted, Th } = useSortableRows(filtered, sortValue, 'date', 'desc');
+  // User-reported (2026-09-06): "we may stop sorting options for
+  // chronologically important tables (only sequence-aware tables) to
+  // avoid the disordered mess" — a merged trades+transfers+adjustments
+  // ledger's Balance column only makes sense in `buildCashLedger`'s own
+  // real chronological order (which also enforces the domain rule that a
+  // transfer settles before a same-instant trade — see that function's
+  // own doc comment), so free column sorting is gone here. Unlike
+  // Bank/Cash/Personal Loans/Transfers above, this merged view has no
+  // `ReorderButtons` of its own: each row here is DERIVED from a real
+  // trade/transfer/adjustment record living in its own native table
+  // (Trade Transactions / the Transfers section just above / Adjustments)
+  // — reordering happens there, and flows through to this view
+  // automatically since it's fully computed from the same `seq` fields.
+  const sorted = [...filtered].reverse();
 
   return (
     <div>
@@ -717,11 +739,11 @@ function CashLedgerSection() {
       <table>
         <thead>
           <tr>
-            <Th col="date">Date</Th>
-            <Th col="kind">Kind</Th>
-            <Th col="label">Label</Th>
-            <Th col="amount">Amount</Th>
-            <Th col="balance">Balance</Th>
+            <th>Date</th>
+            <th>Kind</th>
+            <th>Label</th>
+            <th>Amount</th>
+            <th>Balance</th>
           </tr>
         </thead>
         <tbody>

@@ -199,3 +199,22 @@ export function RestoreIcon({ size = 14 }: IconProps) {
     </svg>
   );
 }
+
+/** Plain up/down arrows — the same-day reorder buttons (Done item 235:
+ * "drag transactions up or down to correct their order"). Move buttons,
+ * not a drag handle, per the user's own confirmed answer. */
+export function ArrowUpIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base} aria-hidden>
+      <path d="M12 19V5M5 12l7-7 7 7" />
+    </svg>
+  );
+}
+
+export function ArrowDownIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base} aria-hidden>
+      <path d="M12 5v14M19 12l-7 7-7-7" />
+    </svg>
+  );
+}

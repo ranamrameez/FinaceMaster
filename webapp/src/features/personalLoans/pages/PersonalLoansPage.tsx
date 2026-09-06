@@ -17,6 +17,8 @@ import { FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
+import { ReorderButtons } from '../../../components/ui/ReorderButtons';
+import { toInstantMs } from '../../../lib/datetime';
 import { CURRENCIES } from '../../../lib/currencies';
 import { parseCSV, toCSV } from '../../../lib/csv';
 import { fmtMoney } from '../../../lib/format';
@@ -264,6 +266,7 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
   const updateRepayment = usePersonalLoansWorkbookStore((s) => s.updateRepayment);
   const deleteRepayment = usePersonalLoansWorkbookStore((s) => s.deleteRepayment);
   const links = useInterEntityTransfersStore((s) => s.workbook.entries);
+  const ensureSignedIn = useEnsureSignedIn();
   const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<PersonalLoanRepayment | null>(null);
   const [fromDate, setFromDate] = useState('');
@@ -315,13 +318,23 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
     [repayments, sourceFilter],
   );
 
-  type Col = 'date' | 'amount' | 'remaining';
-  const sortValue = (r: PersonalLoanRepayment, col: Col): number | string => {
-    if (col === 'amount') return r.amount;
-    if (col === 'remaining') return remaining.get(r.id) ?? 0;
-    return r.date;
+  // User-reported (2026-09-06): "we may stop sorting options for
+  // chronologically important tables (only sequence-aware tables) to
+  // avoid the disordered mess" — same reasoning as Bank's/Cash's own
+  // statement tables (Done item 235): a repayment's "Remaining" column
+  // only makes sense in real chronological+sequence order, so free column
+  // sorting is gone here, replaced by `ReorderButtons` for the one thing
+  // that genuinely needs fixing (two same-instant repayments in the wrong
+  // relative order).
+  const instantOf = (r: PersonalLoanRepayment) => toInstantMs(r.date, r.time, r.timezone);
+  const sorted = useMemo(
+    () => [...filteredRepayments].sort((a, b) => instantOf(b) - instantOf(a) || (b.seq ?? 0) - (a.seq ?? 0)),
+    [filteredRepayments],
+  );
+  const reorder = async (pair: [{ id: string; order: number }, { id: string; order: number }]) => {
+    if (!(await ensureSignedIn('Sign in to reorder repayments.'))) return;
+    for (const p of pair) updateRepayment(p.id, { seq: p.order });
   };
-  const { sorted, Th } = useSortableRows(filteredRepayments, sortValue, 'date', 'desc');
 
   return (
     <div>
@@ -361,9 +374,9 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
         </div>
         <div className="table-scroll">
           <table>
-            <thead><tr><Th col="date">Date</Th><Th col="amount">Amount</Th><Th col="remaining">Remaining</Th><th>Source</th><th></th></tr></thead>
+            <thead><tr><th>Date</th><th>Amount</th><th>Remaining</th><th>Source</th><th></th></tr></thead>
             <tbody>
-              {sorted.map((r) => {
+              {sorted.map((r, i) => {
                 const link = linkByRecordId.get(r.id);
                 const otherSide = link ? (link.from.module === 'personalLoans' && link.fromRecordId === r.id ? link.to : link.from) : undefined;
                 return editId === r.id && editRow ? (
@@ -379,7 +392,17 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                   </tr>
                 ) : (
                   <tr key={r.id}>
-                    <td>{r.date}</td>
+                    <td>
+                      {r.date}{' '}
+                      <ReorderButtons
+                        rows={sorted}
+                        index={i}
+                        instantOf={instantOf}
+                        idOf={(row) => row.id}
+                        orderOf={(row) => row.seq}
+                        onMove={reorder}
+                      />
+                    </td>
                     <td>
                       {fmtMoney(r.amount, loan.currencyCode)}
                       {otherSide && (
