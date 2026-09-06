@@ -5867,6 +5867,82 @@ FinanceManager live link:
      default, clicking it correctly hits the real sign-in gate (write blocked, checkbox state
      unchanged) — the same verification depth as every other sign-in-gated write in this
      project. `npx tsc -b` / `npm run test` (509 tests, 7 new) / `npm run build` all clean.
+- **Same-day correction of the "Include in Net Worth" feature just above, user-reported
+  (2026-09-06) — see README Done item 232.** The user's own words, verbatim: "I SAID: USE GRID
+  FOR ALL NON_TABLE DATA in the whole app. YOU DUMPED THE WHOLE CHECKLIST VERTICALLY on the
+  main page instead of inline chips/checkboxes withe USE A FAB + POPUP TO UPDATE THIS USER
+  PREFERENCE. Make chart colours transparent, not solid. they are Hiding lines." — plus a
+  mid-turn addendum, "Appearnce card is cutting!" This wasn't a new feature ask, it was a
+  direct correction of how item 231's own feature had just been delivered, plus two smaller,
+  independently real bugs surfaced in the same message.
+  **"Include in Net Worth" rebuilt as a FAB + popup with inline chips**: the vertical
+  `CollapsibleCard` (one `<label><input type="checkbox">` per line) is gone. New
+  `IncludeInNetWorthFab` renders a `FabButton` ("Include in Net Worth" / gear icon) that opens
+  a `Modal` containing wrapping `flex-wrap` rows of a new `IncludeChip` component — the same
+  `.chip`/`.chip.active` toggle-button pattern `ChartFilterBar.tsx`'s ticker filters already
+  established, reused rather than inventing a second one. Cash/QSE/PSX chips sit together in
+  one row; Bank accounts/Personal Loans/EMI loans/Funds each get their own labeled row,
+  rendered only when that module actually has entities to show. Every chip still routes
+  through the exact same sign-in-gated `toggleInclude()` helper item 231 built — this round
+  only changed the DELIVERY MECHANISM (grid-of-chips-behind-a-FAB instead of a permanent
+  vertical list), not the underlying read/write logic, which was already correct.
+  **Chart transparency**: `NetWorthComboChart`'s stacked Assets/Liabilities bars were fully
+  opaque, visually burying the Net Worth line plotted on the same canvas — confirmed by the
+  user's own screenshot. Fixed with a small `withAlpha(hex, fallback)` helper (`(hex ||
+  fallback).slice(0, 7) + 'B3'`, the same hex-plus-2-digit-alpha-suffix technique
+  `lib/chartLabels.ts`'s `dimColor()` already uses for the hover-cross-highlight dimming, Done
+  item 147) applied to both bar datasets' `backgroundColor`, plus a slightly heavier
+  `borderWidth: 3` on the Net Worth line itself so it reads clearly through the now
+  semi-transparent bars.
+  **"Appearnce card is cutting!" — a real, root-caused CSS bug, the THIRD confirmed instance of
+  this exact bug class in this project.** Any non-`none` CSS `transform` on an ancestor element
+  becomes the containing block for a `position:fixed` descendant per the CSS spec —
+  `theme.css`'s mobile sidebar drawer applies `transform:translateX(...)` at any viewport
+  ≤860px (`-100%` when closed, `0` when open — note `translateX(0)` is still a real, non-`none`
+  transform, so this bug exists in BOTH states, not just "closed"), which silently turned the
+  sidebar itself into `AppearancePanel`'s effective viewport, clipping the popover to the
+  sidebar's own (much smaller) box. Same root cause `Tooltip.tsx` already hit once
+  (`.entity-card:hover{transform}`, Done item 215) and the identical fix: `createPortal` the
+  panel straight to `document.body`, plus the same two-pass position-measurement pattern
+  `Tooltip.tsx` established (mount hidden via `visibility:hidden`, measure the real rendered
+  height with `getBoundingClientRect()`, flip to open ABOVE the trigger if opening below would
+  run past `window.innerHeight`, then reveal) — doubly necessary here since the trigger sits in
+  the sidebar's own footer, near the bottom of a typical viewport, so "always open downward"
+  was a second, independent way to clip it even before the transform issue is considered. The
+  outside-click-to-close handler was updated to check both the trigger's wrapper AND the now-
+  portaled panel's own ref, since the panel is no longer a DOM descendant of the trigger's
+  container. **Lesson repeated for the third time now**: any future `position:fixed` popover
+  anchored to a trigger inside the sidebar (or any element under a CSS `transform`) needs this
+  same portal treatment from the start — `SyncStatusIndicator.tsx` has the identical un-
+  portaled pattern today but is only ever rendered on `/account`, outside the transformed
+  sidebar, so it's flagged as a candidate for the same fix if it's ever reused inside the
+  sidebar, not fixed here since it isn't actually broken yet.
+  **Two complaints in the same message investigated but NOT resolved with a code change,
+  flagged honestly rather than guessed at**: (1) "Monthly Summary showing Income Expense etc,
+  how can you differenciate income/expense etc. on your own without asking the user?? ALL
+  calculations are wrong" — re-read `budgetPlanner.ts`'s `monthlyIncomeExpense()` (a plain
+  sign-based split, `amount >= 0` = income) and `collectBudgetActivities()`'s linked-transfer
+  exclusion (already correct, fixed in an earlier round) end to end; found no incorrect
+  formula. The complaint may be about wanting an explicit, user-controlled classification
+  instead of an automatic sign-based one (a real, buildable feature, symmetrical with item
+  231's own "let the user opt an entity in/out" precedent) rather than a bug — this needs the
+  user's own confirmation of which reading is meant, or a concrete numeric example that's
+  actually wrong, before more code gets written here; asked the user directly rather than
+  guessing. (2) "Checkboxes even not working" — re-read `useEnsureSignedIn.ts` and
+  `bankWorkbookStore.ts`'s `updateAccount` and found both correctly implemented; the entire
+  checkbox interaction surface has now been replaced by the chip-based rebuild above, which
+  should resolve this if it was interaction/UI-related, but this session's sandbox has no real
+  signed-in Firebase session to confirm the actual write against — flagged for the user's own
+  confirmation on a real device rather than claimed fixed on faith.
+  Verified live via Playwright: at a 390×844 mobile viewport, confirmed the sidebar's
+  `transform` is genuinely active (`getComputedStyle`) and the Appearance popover's full
+  bounding box now sits entirely within the viewport after the portal fix (previously would
+  have clipped to the sidebar's own box); at 1400×1000, confirmed the old vertical checklist
+  card is gone, the FAB opens a Modal with chips laid out in a genuine wrapping row (matching
+  top-Y coordinates), and clicking a chip still correctly triggers the sign-in gate; a
+  screenshot confirmed the Net Worth line is now clearly visible over the semi-transparent
+  bars. `npx tsc -b` / `npm run test` (509 tests, unchanged — this round's fixes are UI/CSS/
+  interaction-delivery changes, not new calc logic) / `npm run build` all clean.
 
 ## Pending
 

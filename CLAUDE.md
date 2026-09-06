@@ -5103,6 +5103,51 @@ not developer notes) continuously as features ship.
   hits the real sign-in gate (write blocked, state unchanged) — the same verification depth as
   every other sign-in-gated write in this project. `npx tsc -b` / `npm run test` (509 tests,
   7 new) / `npm run build` all clean.
+- **Same-day correction of the feature just above, user-reported (2026-09-06) — see README
+  Done item 232.** User, verbatim: "I SAID: USE GRID FOR ALL NON_TABLE DATA in the whole app.
+  YOU DUMPED THE WHOLE CHECKLIST VERTICALLY on the main page instead of inline chips/
+  checkboxes withe USE A FAB + POPUP TO UPDATE THIS USER PREFERENCE. Make chart colours
+  transparent, not solid. they are Hiding lines." — plus a mid-turn addendum, "Appearnce card
+  is cutting!" Not a new feature ask: a direct correction of how item 231's own feature had
+  just shipped, plus two smaller, independently real bugs in the same message.
+  **Rebuilt "Include in Net Worth" as a FAB + popup with inline chips**: the vertical
+  `CollapsibleCard` is gone; new `IncludeInNetWorthFab`/`IncludeChip` in `NetWorthPage.tsx`
+  reuse `ChartFilterBar.tsx`'s existing `.chip`/`.chip.active` toggle pattern inside a `Modal`
+  opened from a `FabButton`, with `flex-wrap` rows grouped by module. The underlying
+  `toggleInclude()` sign-in-gated write is completely unchanged — only the delivery mechanism
+  moved, not the logic.
+  **Chart transparency**: `NetWorthComboChart`'s solid Assets/Liabilities bars were burying the
+  Net Worth line on the same canvas — fixed with a `withAlpha()` hex+alpha-suffix helper (same
+  technique as `chartLabels.ts`'s `dimColor()`) plus a heavier line `borderWidth`.
+  **"Appearnce card is cutting!" — a real CSS bug, the THIRD instance of this exact class in
+  this project.** `theme.css`'s mobile sidebar drawer applies a non-`none` `transform`
+  (`translateX(...)`, in BOTH open and closed states — `translateX(0)` still counts) at any
+  viewport ≤860px, which per the CSS spec makes the sidebar the containing block for any
+  `position:fixed` descendant — silently clipping `AppearancePanel` to the sidebar's own box.
+  Identical root cause to `Tooltip.tsx`'s earlier fix (Done item 215,
+  `.entity-card:hover{transform}`); fixed the same way: `createPortal` to `document.body` plus
+  the same two-pass hidden-measure-then-place pattern `Tooltip.tsx` established, updating the
+  outside-click handler to also check the now-portaled panel's own ref. **Lesson repeated a
+  third time**: any future `position:fixed` popover anchored inside the sidebar (or under any
+  transformed ancestor) needs this portal treatment from the start —
+  `SyncStatusIndicator.tsx` has the identical un-portaled pattern today but is only rendered on
+  `/account`, outside the transformed sidebar, so it's flagged as a future risk, not fixed here.
+  **Two complaints investigated, not resolved with code, flagged honestly**: (1) "how can you
+  differenciate income/expense... without asking the user?? ALL calculations are wrong" —
+  re-read `budgetPlanner.ts`'s sign-based `monthlyIncomeExpense()` and the linked-transfer
+  exclusion end to end, found no incorrect formula; this may be a request for user-controlled
+  classification (symmetrical with item 231's own opt-in/out precedent) rather than a bug —
+  needs the user's own clarification or a concrete wrong number before more code is written.
+  (2) "Checkboxes even not working" — re-read the store/sign-in-gate code, found it correctly
+  implemented; the whole interaction surface is now rebuilt as chips, which should fix this if
+  it was UI/interaction-related, but this sandbox has no real signed-in Firebase session to
+  confirm the actual write — flagged for the user's own confirmation on a real device.
+  Verified live via Playwright: a 390×844 mobile viewport confirmed the sidebar's `transform`
+  is active and the Appearance popover's bounding box now sits fully inside the viewport; a
+  1400×1000 desktop check confirmed the old checklist card is gone, the FAB→Modal→chip flow
+  works and still hits the sign-in gate; a screenshot confirmed the chart's Net Worth line is
+  now visible over the semi-transparent bars. `npx tsc -b` / `npm run test` (509 tests,
+  unchanged) / `npm run build` all clean.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

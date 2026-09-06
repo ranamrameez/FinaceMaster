@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useAppearanceStore } from '../store/appearanceStore';
 
 const COLOR_THEMES = [
@@ -77,14 +78,83 @@ export function AppearanceFields() {
   );
 }
 
-export function AppearancePanel() {
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+interface Pos {
+  top: number;
+  left: number;
+}
 
+const PANEL_WIDTH = 255;
+
+/** User-reported (2026-09-06): "Appearnce card is cutting!" Root-caused,
+ * not guessed at: the sidebar has an active (non-`none`) CSS `transform`
+ * on any viewport ≤860px — `translateX(-100%)` when closed, `translateX(0)`
+ * when open (theme.css's mobile drawer rules) — and a `transform` on an
+ * ancestor makes it the CONTAINING BLOCK for any `position:fixed`
+ * descendant per the CSS spec, so this popover's own `position:fixed`
+ * stopped being relative to the viewport and became relative to the
+ * (comparatively small) sidebar box instead, clipping it — the exact same
+ * bug class already found and fixed for `Tooltip.tsx` (see that file's own
+ * doc comment: `.entity-card:hover{transform:...}` did the identical thing
+ * to a hovered tooltip). Fixed the same way: portal the panel straight to
+ * `document.body`, so it's never a DOM descendant of anything that might
+ * apply a transform, plus a real two-pass position measurement (mount
+ * hidden, measure actual height, flip to open ABOVE the trigger if opening
+ * below would run off the bottom of the viewport — this trigger sits in
+ * the sidebar's own footer, near the bottom of the screen on a typical
+ * viewport, so "always open below" was a second, independent way to clip
+ * it even before the transform/containing-block issue is considered). */
+function useAnchoredPosition(open: boolean, triggerRef: React.RefObject<HTMLElement | null>, panelRef: React.RefObject<HTMLElement | null>) {
+  const [pos, setPos] = useState<Pos | null>(null);
+  const [measured, setMeasured] = useState(false);
+
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) {
+      setPos(null);
+      setMeasured(false);
+      return;
+    }
+    const rect = triggerRef.current.getBoundingClientRect();
+    setPos({
+      top: rect.bottom + 6,
+      left: Math.min(rect.left, window.innerWidth - PANEL_WIDTH - 8),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open || measured || !pos || !triggerRef.current || !panelRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const panelHeight = panelRef.current.getBoundingClientRect().height;
+    const fitsBelow = rect.bottom + 6 + panelHeight < window.innerHeight - 8;
+    if (!fitsBelow) {
+      setPos({ ...pos, top: Math.max(8, rect.top - 6 - panelHeight) });
+    }
+    setMeasured(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, measured, pos]);
+
+  return { pos, measured };
+}
+
+/** Closes the popover on an outside click or Escape. The panel is portaled
+ * to `document.body` (see `useAnchoredPosition`'s own doc comment for why),
+ * so it's no longer a DOM descendant of `containerRef` — a click inside it
+ * has to be checked against `panelRef` separately, or it would wrongly
+ * count as "outside" and close itself on every interaction with its own
+ * `<select>`s. */
+function useClosePopoverOnOutsideClick(
+  open: boolean,
+  setOpen: (v: boolean) => void,
+  containerRef: React.RefObject<HTMLElement | null>,
+  panelRef: React.RefObject<HTMLElement | null>,
+) {
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (containerRef.current?.contains(target)) return;
+      if (panelRef.current?.contains(target)) return;
+      setOpen(false);
     };
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false);
@@ -95,18 +165,32 @@ export function AppearancePanel() {
       document.removeEventListener('mousedown', onPointerDown);
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [open]);
+  }, [open, containerRef, panelRef, setOpen]);
+}
+
+export function AppearancePanel() {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const { pos, measured } = useAnchoredPosition(open, triggerRef, panelRef);
+  useClosePopoverOnOutsideClick(open, setOpen, containerRef, panelRef);
 
   return (
     <div className="appearance-popover sidebar-popover" ref={containerRef}>
-      <button className="navbtn appearance-trigger" type="button" onClick={() => setOpen((o) => !o)}>
+      <button className="navbtn appearance-trigger" type="button" ref={triggerRef} onClick={() => setOpen((o) => !o)}>
         <span className="num">✦</span>Appearance
       </button>
-      {open && (
-        <div className="appearance-panel">
+      {open && pos && createPortal(
+        <div
+          ref={panelRef}
+          className="appearance-panel"
+          style={{ top: pos.top, left: pos.left, visibility: measured ? 'visible' : 'hidden' }}
+        >
           <div className="appearance-panel-title">Appearance</div>
           <AppearanceFields />
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
