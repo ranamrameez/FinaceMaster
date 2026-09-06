@@ -6204,9 +6204,28 @@ FinanceManager live link:
   via Playwright on both Cash's and Bank's Planning tabs: the "Repeats?" toggle correctly
   reveals an "Every" cycle selector (Month/Year/Week/Custom), Custom reveals a Days field,
   and submitting correctly hits the real sign-in gate. `npx tsc -b` / `npm run test` (550
-  tests, 24 new) / `npm run build` all clean. **Still to come** (see README Pending item
-  118): the homepage "Upcoming" widget and the revamped `/planning` page that actually
-  surfaces `collectUpcomingItems()`'s output — built but not yet consumed by any UI.
+  tests, 24 new) / `npm run build` all clean.
+- **Recurring-planning redesign, final UI slice — closes README Pending item 118
+  (2026-09-07).** `DashboardRail.tsx`'s original "Upcoming plans" card (a hand-rolled Cash/
+  Bank-only, one-off-only filter+sort, duplicating logic `collectUpcomingItems()` now does
+  properly) is replaced with `useUpcomingItems()` + the new shared `components/
+  UpcomingList.tsx` — same card, now genuinely cross-module (Cash/Bank recurring+one-off
+  plans, EMI's next installment, Rentals' next rent collection, Subscriptions' next renewal),
+  with a "See all →" link to `/planning`. The revamped `/planning` page now LEADS with the
+  full 30-day Upcoming list (the actual point of the user's complaint — "let the user see
+  through some highly expected inflows and outflows") before the existing Cash/Banking
+  "manage everything" sections, which are otherwise unchanged. `UpcomingList` deliberately
+  avoids the shared `.row` CSS class for its rows — that class's `min-width`/`flex` rules are
+  meant for form controls and have repeatedly fought free-form flex layouts elsewhere in this
+  app (see this file's own notes on that class, e.g. Done items 202/228) — plain inline flex
+  styles sidestep it entirely. Verified live via Playwright with data seeded across 4 modules
+  (a recurring Cash salary, an overdue one-off Cash bill, an EMI installment, a Subscription
+  renewal): the Dashboard's "Upcoming" card correctly showed all 4 sorted by date with the
+  overdue one visibly flagged and colored, and `/planning`'s own "Upcoming (next 30 days)"
+  card showed the same items — confirmed via a real screenshot, not just text-presence
+  checks. `npx tsc -b` / `npm run test` (550 tests, unchanged — pure UI wiring on
+  already-tested calc) / `npm run build` all clean. This closes out the entire recurring-
+  planning redesign requested at the start of this batch.
 
 ## Pending
 
@@ -6991,16 +7010,6 @@ or a design decision before more code, not guessed at further:**
      side by side in a responsive grid — same `repeat(auto-fit, minmax(...,1fr))` +
      `alignItems:'start'` pattern `AccountPage.tsx` now uses. Do this incrementally, module by
      module, verified live each time — the same discipline item 116 above already calls for.
-118. **Recurring-planning redesign, UI slices 2/3 still to build (2026-09-07)** — Done item
-     238's calc engine (`lib/calc/recurrence.ts`, `lib/calc/upcoming.ts`'s
-     `collectUpcomingItems()`) and the Cash/Bank "Repeats?" form toggle are done; per the
-     approved plan, still needed: (a) a compact "Upcoming" widget (next ~14 days) on the Net
-     Worth/Dashboard homepage, reusing the existing `DashboardRail`/rail-split pattern; (b) a
-     revamped `/planning` page that leads with the full Upcoming list (not just the compact
-     widget) and consolidates today's fairly redundant Cash-tab/Bank-tab/standalone-page
-     split into one place, while still surfacing (read-only, linking back to their own native
-     pages) what EMI/Rentals/Subscriptions already generate rather than rebuilding those
-     three modules' own working generators.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank
