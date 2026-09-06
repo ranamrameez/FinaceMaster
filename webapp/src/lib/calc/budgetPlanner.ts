@@ -226,6 +226,16 @@ export function currentMonth(asOf: Date = new Date()): string {
   return `${asOf.getFullYear()}-${String(asOf.getMonth() + 1).padStart(2, '0')}`;
 }
 
+/** Whole calendar months from `from` to `to` (both "YYYY-MM") — negative
+ * when `to` is earlier. The inverse of `monthRange`'s own offset math, used
+ * to turn a real calendar month (e.g. a user's earliest-ever transaction
+ * month) into a `windowStart`-style offset relative to "now." */
+export function monthsBetween(from: string, to: string): number {
+  const [fy, fm] = from.split('-').map(Number);
+  const [ty, tm] = to.split('-').map(Number);
+  return (ty - fy) * 12 + (tm - fm);
+}
+
 /** Predefined category suggestions (income and expense kept separate,
  * since they rarely overlap) — a plain suggestion datalist, never a fixed
  * enum, same "category fields must be free-form" rule as every other

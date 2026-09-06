@@ -104,7 +104,29 @@ export function netWorthAsOfDate(asOfDate: string, inputs: NetWorthAsOfInputs): 
     ? {}
     : cashBalanceByCurrency(inputs.cashEntries.filter((e) => e.date <= asOfDate));
 
-  const includedAccounts = includedBankAccounts(inputs.bankAccounts);
+  // User-reported (2026-09-06): "charts and tables show incorrect/mock data
+  // when they find nothing in a month" — `accountBalance()` unconditionally
+  // adds a Bank account's `openingBalance` regardless of `asOfDate`, but
+  // that value is really "the balance as of whenever the account's history
+  // was last seeded/imported" (often close to today), not a figure that
+  // held true since the account's creation. Left unguarded, an account with
+  // real transactions only from (say) 2026 still "existed" with its full
+  // opening balance for every earlier month too — a phantom balance for a
+  // period the account has zero evidence for, not genuinely "no data."
+  // Fixed the same way QSE/PSX already gate themselves above/below
+  // (`qseHasActivity`/`psxHasActivity`): only count an account once it has
+  // at least one real transaction on or before `asOfDate` — exactly mirrors
+  // `useNetWorthSummary`'s own "today" figure once enough time has passed
+  // for that to be trivially true, so "today" itself is never affected;
+  // only a date before an account's own first transaction newly excludes
+  // it, which is correct since nothing is actually known about it that far
+  // back. An account with literally zero transactions ever (e.g. one just
+  // created with an opening balance and nothing logged) never appears in
+  // any past-month figure — only in the live "today" one — since there is
+  // no known date its balance ever held.
+  const includedAccounts = includedBankAccounts(inputs.bankAccounts).filter((a) =>
+    inputs.bankTransactions.some((t) => t.accountId === a.id && t.date <= asOfDate),
+  );
   const bankTxAsOf = inputs.bankTransactions.filter((t) => t.date <= asOfDate);
   const bank = assetBalanceByCurrency(includedAccounts, bankTxAsOf);
   const creditCards = creditCardLiabilityByCurrency(includedAccounts, bankTxAsOf);
@@ -147,4 +169,36 @@ export function netWorthAsOfDate(asOfDate: string, inputs: NetWorthAsOfInputs): 
   }
 
   return computeNetWorthByCurrency({ cash, bank, qse, psx, funds: fundsValues, personalLoansNet, emiOutstanding, creditCards });
+}
+
+/** The earliest real date across every module `netWorthAsOfDate` reads —
+ * user-reported (2026-09-06): "monthly widgets are moving without a check
+ * of user's first date of transaction," i.e. the Net Worth monthly
+ * window's ◀ Earlier button could scroll indefinitely into the past with
+ * nothing to stop it, well before the user ever had any data at all.
+ * Callers use this as a floor: never show (or navigate to) a month before
+ * this one, since a month with no real evidence anywhere isn't "empty," it
+ * genuinely doesn't exist for this user yet. Returns `undefined` when
+ * NOTHING dated is found anywhere (a brand new, fully empty account) — a
+ * caller should fall back to its own default range rather than clamp to
+ * nothing. EMI loans are keyed by `startDate` (a loan has no transaction
+ * log of its own until installments begin); every other module here is
+ * keyed by its own real transaction/entry date, same field
+ * `netWorthAsOfDate` itself filters on. */
+export function earliestActivityDate(inputs: NetWorthAsOfInputs): string | undefined {
+  const dates: string[] = [
+    ...inputs.cashEntries.map((e) => e.date),
+    ...inputs.bankTransactions.map((t) => t.date),
+    ...inputs.personalLoans.map((l) => l.date),
+    ...inputs.personalLoanRepayments.map((r) => r.date),
+    ...inputs.emiLoans.map((l) => l.startDate),
+    ...inputs.fundsTransactions.map((t) => t.date),
+    ...inputs.qseTransactions.map((t) => t.date),
+    ...inputs.qseTransfers.map((t) => t.date),
+    ...inputs.qseAdjustments.map((a) => a.date),
+    ...inputs.psxTransactions.map((t) => t.date),
+    ...inputs.psxTransfers.map((t) => t.date),
+    ...inputs.psxAdjustments.map((a) => a.date),
+  ];
+  return dates.length ? dates.reduce((min, d) => (d < min ? d : min)) : undefined;
 }

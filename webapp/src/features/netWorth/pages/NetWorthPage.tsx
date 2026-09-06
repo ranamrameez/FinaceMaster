@@ -13,9 +13,9 @@ import { toast } from '../../../components/Toast';
 import { ChartCard } from '../../qse/components/ChartCard';
 import { netIncomeByCurrency as rentalsNetIncomeByCurrency } from '../../../lib/calc/rentalsModule';
 import { flowByCurrency } from '../../../lib/calc/netWorth';
-import { collectBudgetActivities, monthlyIncomeExpense, monthRange, currentMonth as currentMonthOf, type MonthlyIncomeExpense } from '../../../lib/calc/budgetPlanner';
+import { collectBudgetActivities, monthlyIncomeExpense, monthRange, monthsBetween, currentMonth as currentMonthOf, type MonthlyIncomeExpense, type BudgetActivity } from '../../../lib/calc/budgetPlanner';
 import { projectedNetWorthTrend, type MonthlyNetWorthPoint } from '../../../lib/calc/netWorthTrend';
-import type { NetWorthAsOfInputs } from '../../../lib/calc/netWorthAsOf';
+import { earliestActivityDate, type NetWorthAsOfInputs } from '../../../lib/calc/netWorthAsOf';
 import { upcomingRenewals } from '../../../lib/calc/subscriptionsModule';
 import { useSubscriptionsWorkbookStore } from '../../../store/subscriptionsWorkbookStore';
 import { useNetWorthSummary } from '../hooks/useNetWorthSummary';
@@ -704,6 +704,16 @@ function IncludeInNetWorthFab({
  * table should show for all currencies in a grid instead of toggling" —
  * both the chart grid and the table grid render ONE item per currency the
  * user actually holds (`ownCurrencies`), no currency picker at all. */
+/** Earliest real calendar month across every dated record this page reads
+ * — `earliestActivityDate` covers Cash/Bank/Personal Loans/EMI/Funds/QSE/
+ * PSX, and Rentals (which never counts toward Net Worth itself, but its
+ * dates still appear in the Income/Expense row via `activities`) is folded
+ * in separately here since it isn't part of `NetWorthAsOfInputs`. */
+function floorMonthOf(inputs: NetWorthAsOfInputs, activities: BudgetActivity[]): string | undefined {
+  const dates = [earliestActivityDate(inputs), ...activities.map((a) => a.date)].filter((d): d is string => !!d);
+  return dates.length ? dates.reduce((min, d) => (d < min ? d : min)).slice(0, 7) : undefined;
+}
+
 function NetWorthMonthlySection({
   ownCurrencies,
   activities,
@@ -719,9 +729,19 @@ function NetWorthMonthlySection({
   netWorthAsOfInputs: NetWorthAsOfInputs;
   todayISODate: string;
 }) {
-  const [windowStart, setWindowStart] = useState(-3);
-  const months = useMemo(() => monthRange(windowStart, windowStart + 5), [windowStart]);
   const nowMonth = useMemo(() => currentMonthOf(), []);
+  // User-reported (2026-09-06): "monthly widgets are moving without a check
+  // of user's first date of transaction" — `windowStart` used to default to
+  // a hardcoded -3 and "◀ Earlier" could scroll indefinitely into the past,
+  // well before the user had any real data at all (which the phantom-
+  // opening-balance bug fixed in `netWorthAsOfDate` would then show as
+  // misleading nonzero figures). `floorWindowStart` is the earliest offset
+  // any real record justifies; the window never starts, nor scrolls,
+  // earlier than that.
+  const floorMonth = useMemo(() => floorMonthOf(netWorthAsOfInputs, activities), [netWorthAsOfInputs, activities]);
+  const floorWindowStart = floorMonth ? monthsBetween(nowMonth, floorMonth) : -3;
+  const [windowStart, setWindowStart] = useState(() => Math.max(-3, floorWindowStart));
+  const months = useMemo(() => monthRange(windowStart, windowStart + 5), [windowStart]);
   const monthly = useMemo(() => monthlyIncomeExpense(activities, months), [activities, months]);
   const trend = useMemo(
     () => projectedNetWorthTrend({ months, currentMonth: nowMonth, todayISODate, currentRows, activities, emiLoans, netWorthAsOfInputs }),
@@ -730,11 +750,20 @@ function NetWorthMonthlySection({
 
   if (!ownCurrencies.length) return null;
 
+  const atFloor = windowStart <= floorWindowStart;
+
   return (
     <div style={{ marginBottom: 16 }}>
       <div className="row" style={{ gap: 8, marginBottom: 12 }}>
-        <button className="btn secondary small" onClick={() => setWindowStart((w) => w - 1)}>◀ Earlier</button>
-        <button className="btn secondary small" onClick={() => setWindowStart(-3)}>Today</button>
+        <button
+          className="btn secondary small"
+          disabled={atFloor}
+          title={atFloor ? 'No data before this — this is as far back as your earliest transaction goes.' : undefined}
+          onClick={() => setWindowStart((w) => Math.max(floorWindowStart, w - 1))}
+        >
+          ◀ Earlier
+        </button>
+        <button className="btn secondary small" onClick={() => setWindowStart(Math.max(-3, floorWindowStart))}>Today</button>
         <button className="btn secondary small" onClick={() => setWindowStart((w) => w + 1)}>Later ▶</button>
       </div>
 
