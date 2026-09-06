@@ -5796,6 +5796,77 @@ FinanceManager live link:
      alone) — real, unambiguous evidence the grid layout, the popover fix, and the settings-
      access fix all work together correctly. `npx tsc -b` / `npm run test` (502 tests, 9 new) /
      `npm run build` all clean.
+231. **Net Worth: a real "unrealistic EMI values" bug fixed, plus a new per-entity "Include in
+     Net Worth" opt-out (2026-09-06), user-reported: "let the user choose (checkboxes?) to
+     include the accounts in the Net calcs. right now, EMI is giving me unrealistic values. may
+     be can also to count EMI per month for each month rather than dumping whole months long
+     plan to pollute the tinier monthly chunks."**
+     **The real bug, found by reading the future-projection code, not guessed at**: Net Worth's
+     Monthly summary trend (Done item 229) correctly shrinks an EMI loan's `outstanding`
+     LIABILITY as its schedule amortizes — but nothing on the ASSET side ever reduced cash to
+     pay for those installments UNLESS the loan had also been explicitly "Linked to bank"
+     (Done item 159), a separate, easy-to-skip opt-in action. A loan tracked in EMI/Loans but
+     never linked to a bank account therefore projected as if its future installments cost
+     nothing — liabilities correctly fell, assets never moved, so Net Worth looked like it was
+     improving for free every month purely from the loan quietly amortizing in the model. This
+     exactly matches "count EMI per month for each month rather than dumping whole months long
+     plan": the fix is a new `emiModule.ts` function, `emiScheduledCashOutflowByCurrency()`,
+     that derives the loan's real cash cost DIRECTLY from its own schedule, one month's real
+     installment at a time, rather than depending on an optional bulk "Link to bank" plan.
+     Wired into `netWorthTrend.ts`'s future-month branch as an unconditional assets deduction
+     (`assets = currentAssets + flow - emiCashOutflow`) — safe against double-counting a loan
+     that HAS been linked, since a not-yet-executed linked plan's own flow was already excluded
+     from `flow` (the existing `sourceEmiLoanId` filter), and this new figure simply replaces
+     what that exclusion removed rather than adding on top of it (proven with a dedicated test:
+     a linked and an unlinked loan produce IDENTICAL projected figures). **The interesting net
+     effect, worth understanding**: subtracting the FULL installment (principal + interest/
+     markup) from assets while only the PRINCIPAL portion reduces the liability correctly lets
+     the interest/markup portion of every paid installment show up as a real, ongoing reduction
+     in Net Worth — a genuine cost, not free money — matching how amortizing debt is supposed
+     to be modeled. A hand-verification during Playwright testing initially looked like a
+     regression (a 0%-interest test loan's projected Net Worth stayed perfectly flat across
+     future months instead of trending some direction) until re-deriving the expected math by
+     hand: for a genuinely 0%-interest loan, paying down principal is net-worth-NEUTRAL by
+     definition (cash and debt fall by the identical amount) — flat is the CORRECT answer for
+     that specific case, not a bug; the old code would have shown net worth incorrectly RISING
+     every month instead (exactly the reported "unrealistic values"), which the new code fixes
+     by holding it flat. New tests: `emiModule.test.ts` gained 5 cases for the new function
+     (including one confirming it sums the full installment, not just the principal
+     component), `netWorthTrend.test.ts` gained 2 regression cases (one loan never linked to
+     any bank account, one linked — proving they land on identical figures) plus updated the
+     existing future-month test's expected numbers for the new deduction.
+     **The "Include in Net Worth" opt-out**: confirmed the design with the user via
+     `AskUserQuestion` before building — per-account/loan/fund granularity (not just a whole-
+     module toggle), since a single misbehaving EMI loan (e.g. one closed early via a real
+     lump-sum payment the schedule doesn't know about — a real gap `EMILoan.isActive`'s own
+     doc comment didn't anticipate, since it explicitly keeps counting a closed loan's balance
+     toward totals) shouldn't force excluding every other loan too. New `includeInNetWorth?:
+     boolean` field (optional, defaults to included/`true` when absent — zero migration risk)
+     added to `BankAccount`, `EMILoan`, `PersonalLoan`, and `Fund` — deliberately a NEW,
+     separate field from each type's own `isActive` archive flag (added 2026-09-03), since that
+     flag's own doc comments explicitly lock in "archiving must never silently change a real
+     financial figure, only what's shown by default" — this is the opposite, a control that
+     DOES change the figure on purpose. Cash/QSE/PSX (each a single per-currency ledger with
+     nothing more granular to toggle) get the same field on their own `Settings` type instead,
+     as a whole-module on/off switch. New shared `lib/calc/netWorthInclusion.ts` filters each
+     entity array down to only what's checked, applied consistently in the ONE place each
+     consumer needs it: `useNetWorthSummary()` (today's live figure), `netWorthAsOfDate()`
+     (every past month), and `projectedNetWorthTrend()` (the future projection, filtering
+     `emiLoans` internally so an excluded loan's own schedule can't leak into the new cash-
+     outflow term either). Filtering just the top-level entity array is sufficient everywhere
+     it's used — verified by reading each consumer function: none of `assetBalanceByCurrency`/
+     `creditCardLiabilityByCurrency`/`totalsByCurrency`/`netPositionByCurrency`/
+     `fundsValueByCurrency` need their separate transaction/repayment list pre-filtered too,
+     since each already scopes those internally per-entity. New "Include in Net Worth"
+     `CollapsibleCard` (defaults collapsed, a Rare-tier control) added as a third card in the
+     Dashboard's existing "Net worth summary + Exchange rates" grid row — one checkbox per
+     Bank account/EMI loan/Personal Loan/Fund plus the three whole-module switches, all sign-in
+     gated through one shared `toggleInclude()` helper (same pattern as every other per-entity
+     Archive/Restore toggle in this app). Verified live via Playwright with a seeded EMI loan
+     and Cash balance: the panel lists every entity correctly, the EMI checkbox is checked by
+     default, clicking it correctly hits the real sign-in gate (write blocked, checkbox state
+     unchanged) — the same verification depth as every other sign-in-gated write in this
+     project. `npx tsc -b` / `npm run test` (509 tests, 7 new) / `npm run build` all clean.
 
 ## Pending
 

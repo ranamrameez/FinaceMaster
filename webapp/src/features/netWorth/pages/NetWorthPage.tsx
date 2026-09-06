@@ -72,18 +72,26 @@ export function NetWorthPage({
   uploadLocalToCloud: () => Promise<void>;
 }) {
   const cashEntries = useCashWorkbookStore((s) => s.workbook.entries);
+  const cashSettings = useCashWorkbookStore((s) => s.workbook.settings);
+  const updateCashSettings = useCashWorkbookStore((s) => s.updateSettings);
   const plannedCash = usePlannedCashWorkbookStore((s) => s.workbook.entries);
   const bank = useBankWorkbookStore((s) => s.workbook);
+  const updateBankAccount = useBankWorkbookStore((s) => s.updateAccount);
   const plannedBank = usePlannedBankWorkbookStore((s) => s.workbook.entries);
   const rentals = useRentalsWorkbookStore((s) => s.workbook);
   const plannedRentals = usePlannedRentalsWorkbookStore((s) => s.workbook.entries);
   const subscriptions = useSubscriptionsWorkbookStore((s) => s.workbook.entries);
   const links = useInterEntityTransfersStore((s) => s.workbook.entries);
   const personalLoans = usePersonalLoansWorkbookStore((s) => s.workbook);
+  const updatePersonalLoan = usePersonalLoansWorkbookStore((s) => s.updateLoan);
   const emiLoans = useEMIWorkbookStore((s) => s.workbook.entries);
+  const updateEmiLoan = useEMIWorkbookStore((s) => s.updateEntry);
   const funds = useFundsWorkbookStore((s) => s.workbook);
+  const setFundsWorkbook = useFundsWorkbookStore((s) => s.setWorkbook);
   const qse = useWorkbookStore((s) => s.workbook);
+  const updateQseSettings = useWorkbookStore((s) => s.updateSettings);
   const psx = usePSXWorkbookStore((s) => s.workbook);
+  const updatePsxSettings = usePSXWorkbookStore((s) => s.updateSettings);
 
   // User-requested (2026-08-26): renewal/expiry alerts on the "homepage" —
   // a 14-day glance window, broader than any one subscription's own
@@ -125,7 +133,7 @@ export function NetWorthPage({
   );
 
   const netWorthAsOfInputs: NetWorthAsOfInputs = useMemo(() => ({
-    cashEntries,
+    cashEntries, cashSettings,
     bankAccounts: bank.settings.accounts, bankTransactions: bank.transactions,
     personalLoans: personalLoans.loans, personalLoanRepayments: personalLoans.repayments,
     emiLoans,
@@ -134,7 +142,7 @@ export function NetWorthPage({
     qsePriceHistory: qse.priceHistory, qseSettings: qse.settings,
     psxTransactions: psx.transactions, psxTransfers: psx.transfers, psxAdjustments: psx.adjustments,
     psxPriceHistory: psx.priceHistory, psxSettings: psx.settings,
-  }), [cashEntries, bank, personalLoans, emiLoans, funds, qse, psx]);
+  }), [cashEntries, cashSettings, bank, personalLoans, emiLoans, funds, qse, psx]);
 
   const [rates, setRates] = useState<FxRates | null>(() => loadCachedFxRates());
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -289,6 +297,15 @@ export function NetWorthPage({
     }
   };
 
+  // Shared sign-in gate for every "Include in Net Worth" checkbox below —
+  // same pattern as the existing per-entity Archive/Restore toggles
+  // (Bank/EMI/Personal Loans/Funds), just one helper instead of repeating
+  // the `ensureSignedIn` call at 7 different call sites.
+  const toggleInclude = async (setter: () => void) => {
+    if (!(await ensureSignedIn('Sign in to change what counts toward Net Worth.'))) return;
+    setter();
+  };
+
   return (
     <div>
       <h1>Dashboard</h1>
@@ -416,6 +433,95 @@ export function NetWorthPage({
             </div>
           )}
         </Card>
+
+        {/* User-requested (2026-09-06): "let the user choose (checkboxes?)
+           to include the accounts in the Net calcs" — granularity
+           confirmed with the user via AskUserQuestion: per-account/loan/
+           fund for the modules with multiple entities to pick from, a
+           whole-module switch for Cash/QSE/PSX (a single per-currency
+           ledger each, nothing more granular to toggle). Defaults
+           collapsed — a Rare-tier control, not something glanced at every
+           visit, same as Data/Legal on the Account hub. */}
+        <CollapsibleCard title={<h3 style={{ margin: 0 }}>Include in Net Worth</h3>} defaultOpen={false}>
+          <p className="footer-note" style={{ marginTop: 0 }}>
+            Uncheck anything that shouldn't count toward your totals above — e.g. an EMI loan you
+            closed early that the schedule still thinks is owed.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input type="checkbox" checked={cashSettings.includeInNetWorth !== false} onChange={(e) => toggleInclude(() => updateCashSettings({ includeInNetWorth: e.target.checked }))} />
+              Cash
+            </label>
+            <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input type="checkbox" checked={qse.settings.includeInNetWorth !== false} onChange={(e) => toggleInclude(() => updateQseSettings({ includeInNetWorth: e.target.checked }))} />
+              Stock Exchanges (QSE)
+            </label>
+            <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input type="checkbox" checked={psx.settings.includeInNetWorth !== false} onChange={(e) => toggleInclude(() => updatePsxSettings({ includeInNetWorth: e.target.checked }))} />
+              Stock Exchanges (PSX)
+            </label>
+
+            {bank.settings.accounts.length > 0 && (
+              <div>
+                <div className="footer-note" style={{ marginBottom: 4, fontWeight: 600 }}>Banking</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {bank.settings.accounts.map((a) => (
+                    <label key={a.id} className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <input type="checkbox" checked={a.includeInNetWorth !== false} onChange={(e) => toggleInclude(() => updateBankAccount(a.id, { includeInNetWorth: e.target.checked }))} />
+                      {a.name} ({a.currencyCode})
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {personalLoans.loans.length > 0 && (
+              <div>
+                <div className="footer-note" style={{ marginBottom: 4, fontWeight: 600 }}>Personal Loans</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {personalLoans.loans.map((l) => (
+                    <label key={l.id} className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <input type="checkbox" checked={l.includeInNetWorth !== false} onChange={(e) => toggleInclude(() => updatePersonalLoan(l.id, { includeInNetWorth: e.target.checked }))} />
+                      {l.person} ({l.currencyCode})
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {emiLoans.length > 0 && (
+              <div>
+                <div className="footer-note" style={{ marginBottom: 4, fontWeight: 600 }}>EMI / Loans</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {emiLoans.map((l) => (
+                    <label key={l.id} className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <input type="checkbox" checked={l.includeInNetWorth !== false} onChange={(e) => toggleInclude(() => updateEmiLoan(l.id, { includeInNetWorth: e.target.checked }))} />
+                      {l.name} ({l.currencyCode})
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {funds.funds.length > 0 && (
+              <div>
+                <div className="footer-note" style={{ marginBottom: 4, fontWeight: 600 }}>Funds</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {funds.funds.map((f) => (
+                    <label key={f.id} className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <input
+                        type="checkbox"
+                        checked={f.includeInNetWorth !== false}
+                        onChange={(e) => toggleInclude(() => setFundsWorkbook({ ...funds, funds: funds.funds.map((x) => (x.id === f.id ? { ...x, includeInNetWorth: e.target.checked } : x)) }))}
+                      />
+                      {f.name} ({f.currencyCode})
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </CollapsibleCard>
       </div>
 
       {rows.length === 0 && (

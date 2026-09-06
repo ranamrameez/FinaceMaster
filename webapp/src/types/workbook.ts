@@ -181,6 +181,13 @@ export interface QSESettings {
   tick: number;
   currency: string;
   depositFee: number;
+  /** User-requested (2026-09-06): "let the user choose (checkboxes?) to
+   * include the accounts in the Net calcs" — QSE is one portfolio with no
+   * sub-accounts, so this is a whole-module on/off switch (same rationale
+   * as `CashSettings.includeInNetWorth`). Optional, defaults to included
+   * (true) when absent. Checked from the Dashboard's "Include in Net
+   * Worth" panel. */
+  includeInNetWorth?: boolean;
 }
 
 export interface Appearance {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { EMILoan, EMIRepayment } from '../../../types/emiWorkbook';
-import { emiSchedule, emiSummary, expectedEndDate, generateBigEmiOverrides, installmentDueDate, markupPercentage, markupRateEquivalents, resolvedDueDate, totalsByCurrency, whatIfExtraPayment } from '../emiModule';
+import { emiScheduledCashOutflowByCurrency, emiSchedule, emiSummary, expectedEndDate, generateBigEmiOverrides, installmentDueDate, markupPercentage, markupRateEquivalents, resolvedDueDate, totalsByCurrency, whatIfExtraPayment } from '../emiModule';
 
 const loan = (over: Partial<EMILoan>): EMILoan => ({
   id: 'e1',
@@ -288,6 +288,53 @@ describe('totalsByCurrency', () => {
     ];
     const totals = totalsByCurrency(loans, new Date('2026-01-01'));
     expect(Object.keys(totals).sort()).toEqual(['PKR', 'USD']);
+  });
+});
+
+// README Done item 231, user-reported (2026-09-06): "EMI is giving me
+// unrealistic values... count EMI per month rather than dumping whole
+// months long plan." See this function's own doc comment in emiModule.ts
+// for the full bug this fixes (Net Worth's future projection showed an
+// unlinked EMI loan's installments as free money).
+describe('emiScheduledCashOutflowByCurrency', () => {
+  it('sums only the installments strictly after fromDateExclusive and on/before toDateInclusive', () => {
+    // 0%-interest, 1200 over 12 months = 100/month, due on the 1st.
+    const l = loan({ id: 'a', currencyCode: 'USD', principal: 1200, totalToReturn: 1200, repaymentMode: 'fixedTotal', tenureMonths: 12, startDate: '2026-01-01', paymentDayOfMonth: 1 });
+    // Due dates: 02-01, 03-01, 04-01, 05-01, ...
+    const out = emiScheduledCashOutflowByCurrency([l], '2026-03-15', '2026-04-30');
+    expect(out.USD).toBeCloseTo(100, 6); // only 04-01
+  });
+
+  it('excludes an installment due exactly on fromDateExclusive itself', () => {
+    const l = loan({ id: 'a', currencyCode: 'USD', principal: 1200, totalToReturn: 1200, repaymentMode: 'fixedTotal', tenureMonths: 12, startDate: '2026-01-01', paymentDayOfMonth: 1 });
+    const out = emiScheduledCashOutflowByCurrency([l], '2026-03-01', '2026-04-30');
+    expect(out.USD).toBeCloseTo(100, 6); // 03-01 excluded (not strictly after), 04-01 included
+  });
+
+  it('includes an installment due exactly on toDateInclusive itself', () => {
+    const l = loan({ id: 'a', currencyCode: 'USD', principal: 1200, totalToReturn: 1200, repaymentMode: 'fixedTotal', tenureMonths: 12, startDate: '2026-01-01', paymentDayOfMonth: 1 });
+    const out = emiScheduledCashOutflowByCurrency([l], '2026-02-15', '2026-03-01');
+    expect(out.USD).toBeCloseTo(100, 6); // 03-01 included
+  });
+
+  it('sums the FULL installment (principal + interest/markup), not just the principal component', () => {
+    // Interest-bearing loan: the installment itself already blends
+    // principal+interest — the schedule-based cash outflow should be the
+    // real amount paid out of pocket, not the smaller principal-only figure
+    // `totalsByCurrency`'s own `outstanding` delta would show.
+    const l = loan({ id: 'a', currencyCode: 'USD', principal: 1000, annualRatePct: 12, tenureMonths: 12, startDate: '2026-01-01' });
+    const { emi } = emiSchedule(l); // due dates start 2026-02-01 (start + 1 month)
+    const out = emiScheduledCashOutflowByCurrency([l], '2026-01-31', '2026-02-28');
+    expect(out.USD).toBeCloseTo(emi, 6);
+  });
+
+  it('keeps currencies separate and sums across multiple loans in the same currency', () => {
+    const a = loan({ id: 'a', currencyCode: 'USD', principal: 1200, totalToReturn: 1200, repaymentMode: 'fixedTotal', tenureMonths: 12, startDate: '2026-01-01', paymentDayOfMonth: 1 });
+    const b = loan({ id: 'b', currencyCode: 'USD', principal: 600, totalToReturn: 600, repaymentMode: 'fixedTotal', tenureMonths: 12, startDate: '2026-01-01', paymentDayOfMonth: 1 });
+    const c = loan({ id: 'c', currencyCode: 'PKR', principal: 1200, totalToReturn: 1200, repaymentMode: 'fixedTotal', tenureMonths: 12, startDate: '2026-01-01', paymentDayOfMonth: 1 });
+    const out = emiScheduledCashOutflowByCurrency([a, b, c], '2026-03-15', '2026-04-30');
+    expect(out.USD).toBeCloseTo(100 + 50, 6); // a's 04-01 (100) + b's 04-01 (50)
+    expect(out.PKR).toBeCloseTo(100, 6);
   });
 });
 

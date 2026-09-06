@@ -450,3 +450,56 @@ export function totalsByCurrency(loans: EMILoan[], asOf: Date = new Date()): Rec
   });
   return out;
 }
+
+/**
+ * The total cash an EMI loan's own SCHEDULE says will be paid out in
+ * installments (principal + interest/markup combined, `row.emi`) between
+ * `fromDateExclusive` and `toDateInclusive` — feeds Net Worth's future-month
+ * projection (`netWorthTrend.ts`).
+ *
+ * User-reported (2026-09-06): "EMI is giving me unrealistic values... maybe
+ * can also count EMI per month for each month rather than dumping whole
+ * months long plan." Root cause: the projection's liability side already
+ * correctly shrinks an EMI loan's `outstanding` balance as scheduled
+ * installments come due, but nothing on the ASSET side reduced cash to pay
+ * for them UNLESS the loan had also been explicitly "Linked to bank"
+ * (README Done item 159) — a separate, easy-to-skip opt-in action. A loan
+ * tracked in EMI/Loans but never linked to a bank account therefore
+ * projected as if its future installments cost nothing: Net Worth looked
+ * like it was improving for free every month, purely from the loan quietly
+ * amortizing in the model with no real-world cash outflow reflected at all.
+ * This function derives that cash cost DIRECTLY from the loan's own
+ * schedule, unconditionally — no "Link to bank" action required — so it
+ * always shows up in the projection, one month's own real installment(s)
+ * at a time, rather than depending on an optional bulk plan.
+ *
+ * Safe against double-counting a loan that HAS been linked: `netWorthTrend.ts`
+ * already excludes a not-yet-executed linked plan's own flow from its
+ * separate Budget Planner activity sum (`sourceEmiLoanId`) — this function
+ * replaces that excluded amount with the identical figure computed straight
+ * from the schedule (a linked plan's own amount is set from `row.emi`
+ * directly, so the two always agree), not an additional cost on top of it.
+ *
+ * Net effect on Net Worth: subtracting the full installment from assets
+ * while only the PRINCIPAL portion reduces the liability (`totalsByCurrency`'s
+ * `outstanding` delta) correctly lets the INTEREST/markup portion of every
+ * paid installment show up as a real reduction in net worth — a real cost,
+ * not free money — matching how amortizing debt is supposed to be modeled.
+ */
+export function emiScheduledCashOutflowByCurrency(
+  loans: EMILoan[],
+  fromDateExclusive: string,
+  toDateInclusive: string,
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  loans.forEach((loan) => {
+    const { rows } = emiSchedule(loan);
+    rows.forEach((row) => {
+      const due = installmentDueDate(loan, row.month);
+      if (due > fromDateExclusive && due <= toDateInclusive) {
+        out[loan.currencyCode] = (out[loan.currencyCode] ?? 0) + row.emi;
+      }
+    });
+  });
+  return out;
+}

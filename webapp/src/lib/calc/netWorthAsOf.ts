@@ -7,7 +7,8 @@ import { netPositionByCurrency } from './personalLoansModule';
 import { totalsByCurrency as emiTotalsByCurrency } from './emiModule';
 import { fundsValueByCurrency } from './fundsModule';
 import { computeNetWorthByCurrency, type CurrencyNetWorth } from './netWorth';
-import type { CashEntry } from '../../types/cashWorkbook';
+import { includedBankAccounts, includedEmiLoans, includedFunds, includedPersonalLoans } from './netWorthInclusion';
+import type { CashEntry, CashSettings } from '../../types/cashWorkbook';
 import type { BankAccount, BankTransaction } from '../../types/bankWorkbook';
 import type { PersonalLoan, PersonalLoanRepayment } from '../../types/personalLoansWorkbook';
 import type { EMILoan } from '../../types/emiWorkbook';
@@ -40,6 +41,7 @@ function marketPricesAsOf(transactions: Transaction[], priceHistory: Record<stri
 
 export interface NetWorthAsOfInputs {
   cashEntries: CashEntry[];
+  cashSettings: CashSettings;
   bankAccounts: BankAccount[];
   bankTransactions: BankTransaction[];
   personalLoans: PersonalLoan[];
@@ -90,33 +92,42 @@ export interface NetWorthAsOfInputs {
  * filtering upstream in `NetWorthInputs`) rather than shown as a spurious
  * 0 — same rule `useNetWorthSummary`'s own `qseUsed`/`psxUsed` checks
  * apply for "today," just naturally date-bounded here since the flag is
- * recomputed from the already-filtered arrays instead of the full history. */
+ * recomputed from the already-filtered arrays instead of the full history.
+ *
+ * User-requested (2026-09-06): "let the user choose (checkboxes?) to
+ * include the accounts in the Net calcs" — every entity array is also
+ * filtered through `netWorthInclusion.ts`'s `included*` helpers here, same
+ * as `useNetWorthSummary`'s "today" figure, so an excluded account/loan/
+ * fund stays excluded for every past month too, not just the live one. */
 export function netWorthAsOfDate(asOfDate: string, inputs: NetWorthAsOfInputs): CurrencyNetWorth[] {
-  const cash = cashBalanceByCurrency(inputs.cashEntries.filter((e) => e.date <= asOfDate));
+  const cash = inputs.cashSettings.includeInNetWorth === false
+    ? {}
+    : cashBalanceByCurrency(inputs.cashEntries.filter((e) => e.date <= asOfDate));
 
+  const includedAccounts = includedBankAccounts(inputs.bankAccounts);
   const bankTxAsOf = inputs.bankTransactions.filter((t) => t.date <= asOfDate);
-  const bank = assetBalanceByCurrency(inputs.bankAccounts, bankTxAsOf);
-  const creditCards = creditCardLiabilityByCurrency(inputs.bankAccounts, bankTxAsOf);
+  const bank = assetBalanceByCurrency(includedAccounts, bankTxAsOf);
+  const creditCards = creditCardLiabilityByCurrency(includedAccounts, bankTxAsOf);
 
-  const loansAsOf = inputs.personalLoans.filter((l) => l.date <= asOfDate);
+  const loansAsOf = includedPersonalLoans(inputs.personalLoans).filter((l) => l.date <= asOfDate);
   const repaymentsAsOf = inputs.personalLoanRepayments.filter((r) => r.date <= asOfDate);
   const personalLoansNet = netPositionByCurrency(loansAsOf, repaymentsAsOf);
 
-  const emiLoansAsOf = inputs.emiLoans.filter((l) => l.startDate <= asOfDate);
+  const emiLoansAsOf = includedEmiLoans(inputs.emiLoans).filter((l) => l.startDate <= asOfDate);
   const emiTotals = emiTotalsByCurrency(emiLoansAsOf, new Date(asOfDate));
   const emiOutstanding: Record<string, number> = {};
   Object.entries(emiTotals).forEach(([code, t]) => { emiOutstanding[code] = t.outstanding; });
 
   const fundsTxAsOf = inputs.fundsTransactions.filter((t) => t.date <= asOfDate);
   const fundsPricesAsOf = marketPricesAsOf(fundsTxAsOf, inputs.fundsPriceHistory, asOfDate);
-  const fundsValues = fundsValueByCurrency(inputs.fundsFunds, fundsTxAsOf, fundsPricesAsOf);
+  const fundsValues = fundsValueByCurrency(includedFunds(inputs.fundsFunds), fundsTxAsOf, fundsPricesAsOf);
 
   const qseTxAsOf = inputs.qseTransactions.filter((t) => t.date <= asOfDate);
   const qseTransfersAsOf = inputs.qseTransfers.filter((t) => t.date <= asOfDate);
   const qseAdjustmentsAsOf = inputs.qseAdjustments.filter((a) => a.date <= asOfDate);
   const qseHasActivity = qseTxAsOf.length > 0 || qseTransfersAsOf.length > 0 || qseAdjustmentsAsOf.length > 0;
   let qse: Record<string, number> = {};
-  if (qseHasActivity) {
+  if (qseHasActivity && inputs.qseSettings.includeInNetWorth !== false) {
     const qseCalcFee = makeQSEFeeCalculator(inputs.qseSettings);
     const qsePricesAsOf = marketPricesAsOf(qseTxAsOf, inputs.qsePriceHistory, asOfDate);
     const qseSummary = cashSummary(qseTxAsOf, qseTransfersAsOf, qseAdjustmentsAsOf, qsePricesAsOf, qseCalcFee);
@@ -128,7 +139,7 @@ export function netWorthAsOfDate(asOfDate: string, inputs: NetWorthAsOfInputs): 
   const psxAdjustmentsAsOf = inputs.psxAdjustments.filter((a) => a.date <= asOfDate);
   const psxHasActivity = psxTxAsOf.length > 0 || psxTransfersAsOf.length > 0 || psxAdjustmentsAsOf.length > 0;
   let psx: Record<string, number> = {};
-  if (psxHasActivity) {
+  if (psxHasActivity && inputs.psxSettings.includeInNetWorth !== false) {
     const psxCalcFee = makePSXFeeCalculator(inputs.psxSettings, psxTxAsOf);
     const psxPricesAsOf = marketPricesAsOf(psxTxAsOf, inputs.psxPriceHistory, asOfDate);
     const psxSummary = cashSummary(psxTxAsOf, psxTransfersAsOf, psxAdjustmentsAsOf, psxPricesAsOf, psxCalcFee);

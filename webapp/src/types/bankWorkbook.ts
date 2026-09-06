@@ -85,6 +85,17 @@ export interface BankAccount {
    * precedent as `Subscription.active`, just optional here instead of
    * required, for zero-migration backward compatibility. */
   isActive?: boolean;
+  /** User-requested (2026-09-06): "let the user choose (checkboxes?) to
+   * include the accounts in the Net calcs" — genuinely independent of
+   * `isActive` above (that one's own doc comment explicitly locks in
+   * "archiving must never silently change a real financial figure," so
+   * reusing it here would contradict a deliberate prior design decision).
+   * Optional, defaults to included (true) when absent, so real existing
+   * accounts keep counting toward Net Worth exactly as before this field
+   * existed. Checked from a single "Include in Net Worth" panel on the
+   * Dashboard page (`NetWorthPage.tsx`), not this account's own edit form —
+   * see that panel's own doc comment for why. */
+  includeInNetWorth?: boolean;
 }
 
 /** Extends the shared `Finance` base (2026-09-03 restructure — see

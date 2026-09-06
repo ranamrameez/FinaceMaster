@@ -5,6 +5,7 @@ import type { PSXSettings } from '../../../types/psxWorkbook';
 
 const emptyInputs = () => ({
   cashEntries: [],
+  cashSettings: { defaultCurrency: 'USD' },
   bankAccounts: [],
   bankTransactions: [],
   personalLoans: [],

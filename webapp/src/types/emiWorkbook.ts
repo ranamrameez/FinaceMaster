@@ -47,6 +47,20 @@ export interface EMILoan {
    * a total (a fully paid-off loan's outstanding balance is already 0, so
    * archiving it changes nothing about Net Worth/summary totals). */
   isActive?: boolean;
+  /** User-requested (2026-09-06): "EMI is giving me unrealistic values...
+   * let the user choose to include the accounts in the Net calcs." A real
+   * gap `isActive`'s own doc comment above didn't anticipate: it assumes
+   * archiving only ever happens once a loan's SCHEDULE-computed
+   * `outstanding` is already 0, but a loan paid off early via a lump sum
+   * (or closed for any other real-world reason the schedule doesn't know
+   * about) can be archived while the schedule still thinks a large amount
+   * is owed — which `isActive` deliberately keeps counting (per its own
+   * "never touch a total" rule), producing exactly this kind of
+   * unrealistic Net Worth figure. This field is the fix: genuinely
+   * independent of `isActive`, optional, defaults to included (true) when
+   * absent. Checked from the Dashboard's "Include in Net Worth" panel
+   * (`NetWorthPage.tsx`), not this loan's own edit form. */
+  includeInNetWorth?: boolean;
 }
 
 /** A real, dated record of an actual payment made against a loan —

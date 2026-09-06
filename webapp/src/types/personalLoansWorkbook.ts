@@ -15,6 +15,13 @@ export interface PersonalLoan {
    * total (a closed/settled loan's own outstanding balance — usually 0 by
    * then — keeps counting toward Net Worth/summary totals unchanged). */
   isActive?: boolean;
+  /** User-requested (2026-09-06): "let the user choose (checkboxes?) to
+   * include the accounts in the Net calcs" — independent of `isActive`
+   * above, whose own comment explicitly keeps counting a closed loan's
+   * balance toward totals. Optional, defaults to included (true) when
+   * absent. Checked from the Dashboard's "Include in Net Worth" panel
+   * (`NetWorthPage.tsx`), not this loan's own edit form. */
+  includeInNetWorth?: boolean;
 }
 
 export interface PersonalLoanRepayment {

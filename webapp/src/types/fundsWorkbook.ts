@@ -17,6 +17,13 @@ export interface Fund {
    * value unchanged — a closed fund isn't a claim that its money vanished,
    * just that it's no longer being actively contributed to). */
   isActive?: boolean;
+  /** User-requested (2026-09-06): "let the user choose (checkboxes?) to
+   * include the accounts in the Net calcs" — independent of `isActive`
+   * above, whose own comment explicitly keeps counting a closed fund's
+   * value toward totals. Optional, defaults to included (true) when
+   * absent. Checked from the Dashboard's "Include in Net Worth" panel
+   * (`NetWorthPage.tsx`), not this fund's own edit form. */
+  includeInNetWorth?: boolean;
 }
 
 export interface FundsSettings {
