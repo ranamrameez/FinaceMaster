@@ -47,7 +47,7 @@ import { useAppearanceStore } from '../../../store/appearanceStore';
 import { createEmptyFundsWorkbook } from '../../../store/defaultFundsWorkbook';
 import { useFundsWorkbookStore } from '../../../store/fundsWorkbookStore';
 import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
-import { linkTargetPath } from '../../transfers/pages/TransferLinksPage';
+import { linkTargetPath, useLinkSideLabel } from '../../transfers/pages/TransferLinksPage';
 import type { Fund, FundsWorkbook } from '../../../types/fundsWorkbook';
 import type { Transaction, Transfer } from '../../../types/workbook';
 import { useFundsDerived } from '../hooks/useFundsDerived';
@@ -1121,6 +1121,7 @@ function FundsTransfersSection() {
   // replaced by `ReorderButtons` for the one thing that genuinely needs
   // fixing (two same-instant transfers in the wrong relative order).
   const ensureSignedIn = useEnsureSignedIn();
+  const sideLabel = useLinkSideLabel();
   const instantOf = (t: Transfer) => toInstantMs(t.date, t.time, t.timezone);
   const filteredTransfers = useMemo(
     () => (typeFilter === 'all' ? workbook.transfers : workbook.transfers.filter((t) => t.type === typeFilter)),
@@ -1208,9 +1209,9 @@ function FundsTransfersSection() {
                   </td>
                   <td>
                     {t.type}
-                    {otherSide && (
-                      <Link to={linkTargetPath(otherSide)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
-                        🔗 Linked
+                    {link && (
+                      <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
+                        🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
                       </Link>
                     )}
                   </td>

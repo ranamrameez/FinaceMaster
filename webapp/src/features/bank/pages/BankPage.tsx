@@ -47,7 +47,7 @@ import { createEmptyBankWorkbook } from '../../../store/defaultBankWorkbook';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
 import { usePlannedBankWorkbookStore } from '../../../store/plannedBankWorkbookStore';
 import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
-import { linkTargetPath } from '../../transfers/pages/TransferLinksPage';
+import { linkTargetPath, useLinkSideLabel } from '../../transfers/pages/TransferLinksPage';
 import type { BankAccount, BankTransaction, BankWorkbook } from '../../../types/bankWorkbook';
 import type { PlannedBankTransaction } from '../../../types/plannedBank';
 
@@ -959,6 +959,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
   const categories = useCategoryStore((s) => s.workbook.categories);
   const links = useInterEntityTransfersStore((s) => s.workbook.entries);
   const ensureSignedIn = useEnsureSignedIn();
+  const sideLabel = useLinkSideLabel();
   const [editingTx, setEditingTx] = useState<BankTransaction | null>(null);
   const [typeFilter, setTypeFilter] = useState<'all' | 'in' | 'out'>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -1091,9 +1092,9 @@ function TransactionsList({ account }: { account: BankAccount }) {
                 <td>{tx.date}</td>
                 <td className="cell-clip" title={tx.description}>
                   {tx.description}
-                  {otherSide && (
-                    <Link to={linkTargetPath(otherSide)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
-                      🔗 Linked
+                  {link && (
+                    <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
+                      🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
                     </Link>
                   )}
                 </td>

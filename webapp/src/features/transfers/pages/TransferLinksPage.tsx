@@ -90,6 +90,63 @@ export function useSideCurrency(cfg: LinkSideConfig): string | null {
   return resolveCurrency(cfg, { cashCurrency, bankAccounts, qseCurrency, psxCurrency, fundsCurrency, properties, loans, emiLoans });
 }
 
+interface NameContext {
+  bankAccounts: { id: string; name: string }[];
+  properties: { id: string; name: string }[];
+  loans: { id: string; person: string }[];
+  emiLoans: { id: string; name: string }[];
+}
+
+/** Same "plain function + a `use*` wrapper that reads the stores once"
+ * split as `resolveCurrency`/`useSideCurrency` above — a human-readable
+ * label for one side of a link: the module's own name
+ * (`LINK_MODULE_LABELS`), plus the specific account/property/loan's own
+ * name in parentheses for the modules with more than one named
+ * sub-entity. Falls back to the bare module label if the referenced
+ * entity was since deleted (`ref` no longer resolves) rather than
+ * throwing or showing a raw id. */
+function describeSide(cfg: LinkSideConfig, ctx: NameContext): string {
+  const base = LINK_MODULE_LABELS[cfg.module];
+  switch (cfg.module) {
+    case 'bank': {
+      const name = ctx.bankAccounts.find((a) => a.id === cfg.ref)?.name;
+      return name ? `${base} (${name})` : base;
+    }
+    case 'rentals': {
+      const name = ctx.properties.find((p) => p.id === cfg.ref)?.name;
+      return name ? `${base} (${name})` : base;
+    }
+    case 'personalLoans': {
+      const name = ctx.loans.find((l) => l.id === cfg.ref)?.person;
+      return name ? `${base} (${name})` : base;
+    }
+    case 'emi': {
+      const name = ctx.emiLoans.find((l) => l.id === cfg.ref)?.name;
+      return name ? `${base} (${name})` : base;
+    }
+    default:
+      return base;
+  }
+}
+
+/** User-requested (2026-09-06): "for linked transfers, we must mention
+ * From & To accounts as well in addition to the link" — the existing
+ * "🔗 Linked" tag on a linked record only ever said "Linked," with no
+ * indication of WHICH two accounts the link actually connects (the user
+ * has to click through to the other side to find out). Returns a
+ * `(cfg) => string` describer, called with both `link.from` and
+ * `link.to` at each call site to build a "🔗 <From> → <To>" tag —
+ * reading the same regardless of which side's own table it's shown on,
+ * since it describes the WHOLE link, not just "the other side" relative
+ * to this row. */
+export function useLinkSideLabel(): (cfg: LinkSideConfig) => string {
+  const bankAccounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
+  const properties = useRentalsWorkbookStore((s) => s.workbook.settings.properties);
+  const loans = usePersonalLoansWorkbookStore((s) => s.workbook.loans);
+  const emiLoans = useEMIWorkbookStore((s) => s.workbook.entries);
+  return (cfg: LinkSideConfig) => describeSide(cfg, { bankAccounts, properties, loans, emiLoans });
+}
+
 /** Best-effort "go see the other side" route for a linked transaction's tag
  * (user-requested: "add nav link between the linked trcs"). Only Bank has a
  * real per-record route (`/bank/account/:id`) — every other module routes

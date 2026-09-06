@@ -40,7 +40,7 @@ import { firebaseReady } from '../../../lib/firebase/client';
 import { useAppearanceStore } from '../../../store/appearanceStore';
 import { usePersonalLoansWorkbookStore } from '../../../store/personalLoansWorkbookStore';
 import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
-import { linkTargetPath } from '../../transfers/pages/TransferLinksPage';
+import { linkTargetPath, useLinkSideLabel } from '../../transfers/pages/TransferLinksPage';
 import type { PersonalLoan, PersonalLoanRepayment } from '../../../types/personalLoansWorkbook';
 import { ChartCard } from '../../qse/components/ChartCard';
 
@@ -267,6 +267,7 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
   const deleteRepayment = usePersonalLoansWorkbookStore((s) => s.deleteRepayment);
   const links = useInterEntityTransfersStore((s) => s.workbook.entries);
   const ensureSignedIn = useEnsureSignedIn();
+  const sideLabel = useLinkSideLabel();
   const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<PersonalLoanRepayment | null>(null);
   const [fromDate, setFromDate] = useState('');
@@ -405,9 +406,9 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                     </td>
                     <td>
                       {fmtMoney(r.amount, loan.currencyCode)}
-                      {otherSide && (
-                        <Link to={linkTargetPath(otherSide)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
-                          🔗 Linked
+                      {link && (
+                        <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
+                          🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
                         </Link>
                       )}
                     </td>

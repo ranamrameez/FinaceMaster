@@ -41,7 +41,7 @@ import { createEmptyCashWorkbook } from '../../../store/defaultCashWorkbook';
 import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
 import { usePlannedCashWorkbookStore } from '../../../store/plannedCashWorkbookStore';
 import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
-import { linkTargetPath } from '../../transfers/pages/TransferLinksPage';
+import { linkTargetPath, useLinkSideLabel } from '../../transfers/pages/TransferLinksPage';
 import type { CashEntry, CashWorkbook } from '../../../types/cashWorkbook';
 import type { PlannedCashEntry } from '../../../types/plannedCash';
 
@@ -242,6 +242,7 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
   const categories = useCategoryStore((s) => s.workbook.categories);
   const links = useInterEntityTransfersStore((s) => s.workbook.entries);
   const ensureSignedIn = useEnsureSignedIn();
+  const sideLabel = useLinkSideLabel();
   const [editingEntry, setEditingEntry] = useState<CashEntry | null>(null);
   const [typeFilter, setTypeFilter] = useState<'all' | 'in' | 'out'>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -355,9 +356,9 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
                   <td className={entry.isDeposit ? 'pill-buy' : 'pill-sell'}>{entry.isDeposit ? 'Cash in' : 'Cash out'}</td>
                   <td className="cell-clip" title={entry.note}>
                     {entry.note}
-                    {otherSide && (
-                      <Link to={linkTargetPath(otherSide)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
-                        🔗 Linked
+                    {link && (
+                      <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
+                        🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
                       </Link>
                     )}
                   </td>
