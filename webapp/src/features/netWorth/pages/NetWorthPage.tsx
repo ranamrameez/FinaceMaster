@@ -3,9 +3,12 @@ import { Link } from 'react-router-dom';
 import { Chart, Doughnut } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue, StatCard } from '../../../components/Card';
 import { confirmDialog } from '../../../components/ConfirmDialog';
+import { Modal } from '../../../components/Modal';
 import { Notice } from '../../../components/Notice';
 import { Tooltip } from '../../../components/Tooltip';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { FabButton } from '../../../components/ui/Fab';
+import { CheckIcon, SettingsIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { ChartCard } from '../../qse/components/ChartCard';
 import { netIncomeByCurrency as rentalsNetIncomeByCurrency } from '../../../lib/calc/rentalsModule';
@@ -43,6 +46,13 @@ import { useEMIWorkbookStore } from '../../../store/emiWorkbookStore';
 import { useFundsWorkbookStore } from '../../../store/fundsWorkbookStore';
 import { useWorkbookStore } from '../../../store/workbookStore';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
+import type { CashSettings } from '../../../types/cashWorkbook';
+import type { QSESettings } from '../../../types/workbook';
+import type { PSXSettings } from '../../../types/psxWorkbook';
+import type { BankAccount } from '../../../types/bankWorkbook';
+import type { PersonalLoan } from '../../../types/personalLoansWorkbook';
+import type { EMILoan } from '../../../types/emiWorkbook';
+import type { Fund, FundsWorkbook } from '../../../types/fundsWorkbook';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const monthLabel = (m: string) => new Date(`${m}-01`).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
@@ -433,96 +443,29 @@ export function NetWorthPage({
             </div>
           )}
         </Card>
-
-        {/* User-requested (2026-09-06): "let the user choose (checkboxes?)
-           to include the accounts in the Net calcs" — granularity
-           confirmed with the user via AskUserQuestion: per-account/loan/
-           fund for the modules with multiple entities to pick from, a
-           whole-module switch for Cash/QSE/PSX (a single per-currency
-           ledger each, nothing more granular to toggle). Defaults
-           collapsed — a Rare-tier control, not something glanced at every
-           visit, same as Data/Legal on the Account hub. */}
-        <CollapsibleCard title={<h3 style={{ margin: 0 }}>Include in Net Worth</h3>} defaultOpen={false}>
-          <p className="footer-note" style={{ marginTop: 0 }}>
-            Uncheck anything that shouldn't count toward your totals above — e.g. an EMI loan you
-            closed early that the schedule still thinks is owed.
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <input type="checkbox" checked={cashSettings.includeInNetWorth !== false} onChange={(e) => toggleInclude(() => updateCashSettings({ includeInNetWorth: e.target.checked }))} />
-              Cash
-            </label>
-            <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <input type="checkbox" checked={qse.settings.includeInNetWorth !== false} onChange={(e) => toggleInclude(() => updateQseSettings({ includeInNetWorth: e.target.checked }))} />
-              Stock Exchanges (QSE)
-            </label>
-            <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <input type="checkbox" checked={psx.settings.includeInNetWorth !== false} onChange={(e) => toggleInclude(() => updatePsxSettings({ includeInNetWorth: e.target.checked }))} />
-              Stock Exchanges (PSX)
-            </label>
-
-            {bank.settings.accounts.length > 0 && (
-              <div>
-                <div className="footer-note" style={{ marginBottom: 4, fontWeight: 600 }}>Banking</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {bank.settings.accounts.map((a) => (
-                    <label key={a.id} className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <input type="checkbox" checked={a.includeInNetWorth !== false} onChange={(e) => toggleInclude(() => updateBankAccount(a.id, { includeInNetWorth: e.target.checked }))} />
-                      {a.name} ({a.currencyCode})
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {personalLoans.loans.length > 0 && (
-              <div>
-                <div className="footer-note" style={{ marginBottom: 4, fontWeight: 600 }}>Personal Loans</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {personalLoans.loans.map((l) => (
-                    <label key={l.id} className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <input type="checkbox" checked={l.includeInNetWorth !== false} onChange={(e) => toggleInclude(() => updatePersonalLoan(l.id, { includeInNetWorth: e.target.checked }))} />
-                      {l.person} ({l.currencyCode})
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {emiLoans.length > 0 && (
-              <div>
-                <div className="footer-note" style={{ marginBottom: 4, fontWeight: 600 }}>EMI / Loans</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {emiLoans.map((l) => (
-                    <label key={l.id} className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <input type="checkbox" checked={l.includeInNetWorth !== false} onChange={(e) => toggleInclude(() => updateEmiLoan(l.id, { includeInNetWorth: e.target.checked }))} />
-                      {l.name} ({l.currencyCode})
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {funds.funds.length > 0 && (
-              <div>
-                <div className="footer-note" style={{ marginBottom: 4, fontWeight: 600 }}>Funds</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {funds.funds.map((f) => (
-                    <label key={f.id} className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <input
-                        type="checkbox"
-                        checked={f.includeInNetWorth !== false}
-                        onChange={(e) => toggleInclude(() => setFundsWorkbook({ ...funds, funds: funds.funds.map((x) => (x.id === f.id ? { ...x, includeInNetWorth: e.target.checked } : x)) }))}
-                      />
-                      {f.name} ({f.currencyCode})
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </CollapsibleCard>
       </div>
+
+      {/* User-reported (2026-09-06), correcting the previous round's own
+         layout: "USE GRID FOR ALL NON_TABLE DATA... YOU DUMPED THE WHOLE
+         CHECKLIST VERTICALLY on the main page instead of inline chips/
+         checkboxes WITH USE A FAB + POPUP TO UPDATE THIS USER PREFERENCE."
+         This is a Rare-tier settings control (per this app's own Main/
+         Often/Rare model) — it belongs behind a FAB + Modal, same as every
+         other rarely-touched per-entity toggle in this app, not a
+         permanently-visible card. Each group of entities is now a wrapping
+         row of `.chip` toggle buttons (the exact pattern `ChartFilterBar`'s
+         ticker filter already established) instead of one checkbox per
+         line. */}
+      <IncludeInNetWorthFab
+        cashSettings={cashSettings} updateCashSettings={updateCashSettings}
+        qseSettings={qse.settings} updateQseSettings={updateQseSettings}
+        psxSettings={psx.settings} updatePsxSettings={updatePsxSettings}
+        bankAccounts={bank.settings.accounts} updateBankAccount={updateBankAccount}
+        personalLoans={personalLoans.loans} updatePersonalLoan={updatePersonalLoan}
+        emiLoans={emiLoans} updateEmiLoan={updateEmiLoan}
+        funds={funds} setFundsWorkbook={setFundsWorkbook}
+        toggleInclude={toggleInclude}
+      />
 
       {rows.length === 0 && (
         <Card><div className="footer-note">No balances recorded yet across any account.</div></Card>
@@ -636,6 +579,117 @@ export function NetWorthPage({
   );
 }
 
+/** A single toggleable `.chip` — the exact pattern `ChartFilterBar`'s
+ * ticker filter already established, reused here instead of a vertical
+ * `<label><input type="checkbox">` stack (see `IncludeInNetWorthFab`'s own
+ * doc comment for why). */
+function IncludeChip({ label, checked, onToggle }: { label: string; checked: boolean; onToggle: () => void }) {
+  return (
+    <button type="button" className={`chip${checked ? ' active' : ''}`} onClick={onToggle}>
+      {checked && <CheckIcon size={11} />}{label}
+    </button>
+  );
+}
+
+/** User-reported (2026-09-06), correcting the previous round's own layout:
+ * "USE GRID FOR ALL NON_TABLE DATA... YOU DUMPED THE WHOLE CHECKLIST
+ * VERTICALLY on the main page instead of inline chips/checkboxes WITH USE
+ * A FAB + POPUP TO UPDATE THIS USER PREFERENCE." Per this app's own Main/
+ * Often/Rare content model, "which accounts count toward Net Worth" is a
+ * Rare-tier setting (touched occasionally, not glanced at every visit) —
+ * it belongs behind a FAB + Modal like every other rarely-used per-entity
+ * toggle in this app (Archive/Restore, "Link to bank," etc.), not
+ * permanently occupying page space. Each entity group renders as a
+ * wrapping row of `IncludeChip`s instead of one checkbox per line. */
+function IncludeInNetWorthFab({
+  cashSettings, updateCashSettings,
+  qseSettings, updateQseSettings,
+  psxSettings, updatePsxSettings,
+  bankAccounts, updateBankAccount,
+  personalLoans, updatePersonalLoan,
+  emiLoans, updateEmiLoan,
+  funds, setFundsWorkbook,
+  toggleInclude,
+}: {
+  cashSettings: CashSettings; updateCashSettings: (patch: Partial<CashSettings>) => void;
+  qseSettings: QSESettings; updateQseSettings: (patch: Partial<QSESettings>) => void;
+  psxSettings: PSXSettings; updatePsxSettings: (patch: Partial<PSXSettings>) => void;
+  bankAccounts: BankAccount[]; updateBankAccount: (id: string, patch: Partial<BankAccount>) => void;
+  personalLoans: PersonalLoan[]; updatePersonalLoan: (id: string, patch: Partial<PersonalLoan>) => void;
+  emiLoans: EMILoan[]; updateEmiLoan: (id: string, patch: Partial<EMILoan>) => void;
+  funds: FundsWorkbook; setFundsWorkbook: (wb: FundsWorkbook) => void;
+  toggleInclude: (setter: () => void) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const toggleFund = (f: Fund) =>
+    toggleInclude(() => setFundsWorkbook({ ...funds, funds: funds.funds.map((x) => (x.id === f.id ? { ...x, includeInNetWorth: x.includeInNetWorth === false } : x)) }));
+
+  return (
+    <>
+      <FabButton label="Include in Net Worth" onClick={() => setOpen(true)}><SettingsIcon size={18} /></FabButton>
+      {open && (
+        <Modal title="Include in Net Worth" onClose={() => setOpen(false)}>
+          <p className="footer-note" style={{ marginTop: 0 }}>
+            Unchecked items are left out of every total on this page — e.g. an EMI loan you closed
+            early that the schedule still thinks is owed.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              <IncludeChip label="Cash" checked={cashSettings.includeInNetWorth !== false} onToggle={() => toggleInclude(() => updateCashSettings({ includeInNetWorth: cashSettings.includeInNetWorth === false }))} />
+              <IncludeChip label="Stock Exchanges (QSE)" checked={qseSettings.includeInNetWorth !== false} onToggle={() => toggleInclude(() => updateQseSettings({ includeInNetWorth: qseSettings.includeInNetWorth === false }))} />
+              <IncludeChip label="Stock Exchanges (PSX)" checked={psxSettings.includeInNetWorth !== false} onToggle={() => toggleInclude(() => updatePsxSettings({ includeInNetWorth: psxSettings.includeInNetWorth === false }))} />
+            </div>
+
+            {bankAccounts.length > 0 && (
+              <div>
+                <div className="footer-note" style={{ marginBottom: 6, fontWeight: 600 }}>Banking</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {bankAccounts.map((a) => (
+                    <IncludeChip key={a.id} label={`${a.name} (${a.currencyCode})`} checked={a.includeInNetWorth !== false} onToggle={() => toggleInclude(() => updateBankAccount(a.id, { includeInNetWorth: a.includeInNetWorth === false }))} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {personalLoans.length > 0 && (
+              <div>
+                <div className="footer-note" style={{ marginBottom: 6, fontWeight: 600 }}>Personal Loans</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {personalLoans.map((l) => (
+                    <IncludeChip key={l.id} label={`${l.person} (${l.currencyCode})`} checked={l.includeInNetWorth !== false} onToggle={() => toggleInclude(() => updatePersonalLoan(l.id, { includeInNetWorth: l.includeInNetWorth === false }))} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {emiLoans.length > 0 && (
+              <div>
+                <div className="footer-note" style={{ marginBottom: 6, fontWeight: 600 }}>EMI / Loans</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {emiLoans.map((l) => (
+                    <IncludeChip key={l.id} label={`${l.name} (${l.currencyCode})`} checked={l.includeInNetWorth !== false} onToggle={() => toggleInclude(() => updateEmiLoan(l.id, { includeInNetWorth: l.includeInNetWorth === false }))} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {funds.funds.length > 0 && (
+              <div>
+                <div className="footer-note" style={{ marginBottom: 6, fontWeight: 600 }}>Funds</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {funds.funds.map((f) => (
+                    <IncludeChip key={f.id} label={`${f.name} (${f.currencyCode})`} checked={f.includeInNetWorth !== false} onToggle={() => toggleFund(f)} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </Modal>
+      )}
+    </>
+  );
+}
+
 /** User-requested (2026-09-04): "Create a chart of this table as well on
  * Net Worth Page. 2-in-one stacked bar chart of Assets vs Liabilities +
  * net worth, with a line chart showing the monthly trend... charts should
@@ -705,9 +759,21 @@ function NetWorthMonthlySection({
  * `LineController` both registered, see `chartSetup.ts`). Liabilities
  * plotted as a NEGATIVE number so the stack diverges from a zero baseline
  * (assets up, liabilities down) — the stacked total then naturally equals
- * Net Worth, which the line dataset also plots explicitly. */
+ * Net Worth, which the line dataset also plots explicitly.
+ *
+ * User-reported (2026-09-06): "Make chart colours transparent, not solid.
+ * they are Hiding lines." The bar fills were fully opaque `--profit`/
+ * `--loss`, so wherever the Net Worth line's own y-value fell inside a
+ * bar's own drawn area, the solid bar painted over it. Fixed with a
+ * hex+alpha suffix (`B3` ≈ 70% opacity — same "#RRGGBB + 2-digit alpha
+ * hex" technique `chartLabels.ts`'s `dimColor()` already uses) on both
+ * bar fills, so the line stays visible through them regardless of Chart.js's
+ * own draw order between a mixed bar/line dataset pair; the line itself
+ * also got a slightly heavier `borderWidth` so it reads clearly as the
+ * foreground series. */
 function NetWorthComboChart({ currency, months, trend }: { currency: string; months: string[]; trend: MonthlyNetWorthPoint[] }) {
   const byMonth = new Map(trend.map((t) => [t.month, t]));
+  const withAlpha = (hex: string, fallback: string) => `${(hex || fallback).slice(0, 7)}B3`;
   return (
     <ChartCard title={`Net worth — ${currency}`}>
       <Chart
@@ -723,7 +789,7 @@ function NetWorthComboChart({ currency, months, trend }: { currency: string; mon
             {
               type: 'bar', label: 'Assets', stack: 'nw',
               data: months.map((m) => byMonth.get(m)?.assetsByCurrency[currency] ?? null),
-              backgroundColor: cssVar('--profit') || '#3ecf8e',
+              backgroundColor: withAlpha(cssVar('--profit'), '#3ecf8e'),
             },
             {
               type: 'bar', label: 'Liabilities', stack: 'nw',
@@ -731,13 +797,14 @@ function NetWorthComboChart({ currency, months, trend }: { currency: string; mon
                 const v = byMonth.get(m)?.liabilitiesByCurrency[currency];
                 return v === undefined ? null : -v;
               }),
-              backgroundColor: cssVar('--loss') || '#e5484d',
+              backgroundColor: withAlpha(cssVar('--loss'), '#e5484d'),
             },
             {
               type: 'line', label: 'Net worth',
               data: months.map((m) => byMonth.get(m)?.byCurrency[currency] ?? null),
               borderColor: cssVar('--accent') || '#5aa9c9',
               backgroundColor: 'transparent',
+              borderWidth: 3,
               tension: 0.2,
               datalabels: dlLine((v) => fmtMoney(v, currency)),
             },
