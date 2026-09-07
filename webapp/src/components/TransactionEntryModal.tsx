@@ -181,7 +181,7 @@ function TxRowFields({
       </label>
       {row.linked && (
         <div style={{ marginTop: 8 }}>
-          <SideFields label="Other finance" cfg={row.other} onChange={(other) => onChange({ ...row, other })} />
+          <SideFields label="Other finance" cfg={row.other} onChange={(other) => onChange({ ...row, other })} preferredCurrency={financeCurrency ?? undefined} />
           {sameEntity && <p className="footer-note" style={{ color: 'var(--warn, orange)' }}>Pick a different account — this is the same one.</p>}
           {!pairSupported && !sameEntity && (
             <p className="footer-note" style={{ color: 'var(--warn, orange)' }}>Linking these two isn't supported yet.</p>

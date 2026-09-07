@@ -6276,6 +6276,39 @@ FinanceManager live link:
   correctly opens the "Add a trade" modal with the real ticker/action/shares/price form (PSX's
   version confirmed to include its Fee Mode control too). `npx tsc -b` / `npm run test` (550
   tests, unchanged — UI-only) / `npm run build` all clean.
+- **Transfers popup: currency mismatch on a remembered account + wrong default currency on a
+  new one, both user-reported same day (2026-09-07) — see README Done item 241.** User: "it
+  saves last used linked account but currency mismatched. Also, the default currency should be
+  of the Account 1 rather than rare inter currency inter finance transfer." Two distinct real
+  bugs in `features/transfers/pages/TransferLinksPage.tsx`'s `SideFields`, both root-caused by
+  reading the actual currency-resolution code rather than guessed at. (1)
+  `useLastTransferSource.ts`'s `rememberTransferSource`/`getLastTransferSource` only ever
+  persisted `{module, ref}`, never `currencyCode` — restoring a remembered "Other finance"
+  account (via the "Link to another finance" checkbox) therefore left `cfg.currencyCode`
+  unset, and `SideFields`' own Currency `<Select>` fell back to
+  `entities[0]?.currencyCode` — the FIRST entity in that module's list, essentially arbitrary
+  and often wrong, displayed right next to the correctly-restored account. Fixed two ways: the
+  currency now persists alongside the module/ref (so a NEW remember-and-restore round-trip is
+  correct from the data alone), and — for defense against already-stored old-format entries
+  that never had a currency saved — the Currency Select's displayed value now prefers looking
+  up the ALREADY-SELECTED `ref`'s own real currency from the live entity list before falling
+  back to `entities[0]`, so even a currency-less restore resolves correctly. (2) `SideFields`'
+  module-change handler always defaulted to `list[0]` (an arbitrary entity/currency) regardless
+  of what the OTHER side of the transfer was already set to — switching "Other finance" from
+  Cash to Bank, say, could easily land on a bank account in a different currency than Account 1,
+  looking like an intentional cross-currency transfer when nothing about the user's action asked
+  for one. Fixed with a new optional `preferredCurrency` prop on `SideFields`, passed only for
+  the "Other finance" side (`TransactionEntryModal.tsx`, sourced from `useSideCurrency(row.
+  finance)` — Account 1's own currency) — a module change now prefers an entity/currency
+  matching it over `list[0]`, for both the ref-picker modules (Bank/Rentals/Personal Loans/EMI)
+  and the plain currency-only Cash case. Verified live via Playwright with a 2-account seeded
+  Bank workbook (EUR account first in the list, USD account second — deliberately ordered so a
+  naive `entities[0]` fallback would visibly pick the WRONG currency if either bug were still
+  present): (1) restoring an old-format (no-currency) remembered "acc-usd" (USD) correctly
+  showed Currency=USD, not the EUR account's currency; (2) with no remembered source and Account
+  1 = Cash (USD), switching "Other finance" to Bank correctly pre-selected the USD account, not
+  the EUR one that would've won as `entities[0]`. `npx tsc -b` / `npm run test` (550 tests,
+  unchanged — UI-only) / `npm run build` all clean.
 
 ## Pending
 

@@ -5405,15 +5405,31 @@ not developer notes) continuously as features ship.
   trade" modal with the real ticker/action/shares/price form (PSX's version confirmed to
   include its Fee Mode control too). `npx tsc -b` / `npm run test` (550 tests, unchanged —
   UI-only) / `npm run build` all clean.
-- **New bug report received mid-session (2026-09-07), NOT yet investigated — tracked here so
-  the next session doesn't lose it**: "Transfers popup : it saves last used linked account but
-  currency mismatched. Also, the default currency should be of the Account 1 rather than rare
-  inter currency inter finance transfer." Needs investigation into
-  `components/TransactionEntryModal.tsx`, `features/transfers/pages/TransferLinksPage.tsx`'s
-  `SideFields`/`useSideCurrency`, and `hooks/useLastTransferSource.ts`'s
-  `getLastTransferSource`/`rememberTransferSource` — likely a real gap where restoring a
-  remembered "From" account doesn't also resync the currency field to match it, and/or the
-  default currency shown assumes something other than Account 1's own currency.
+- **Transfers popup: currency mismatch on a remembered account + wrong default currency on a
+  new one, both user-reported same day (2026-09-07) — see README Done item 241.** User: "it
+  saves last used linked account but currency mismatched. Also, the default currency should be
+  of the Account 1 rather than rare inter currency inter finance transfer." Two distinct real
+  bugs in `SideFields` (`features/transfers/pages/TransferLinksPage.tsx`). (1)
+  `useLastTransferSource.ts` only ever persisted `{module, ref}`, never `currencyCode` —
+  restoring a remembered "Other finance" account left `cfg.currencyCode` unset, and the Currency
+  `<Select>` fell back to `entities[0]?.currencyCode` (the first entity in that module's list,
+  essentially arbitrary) instead of the actually-selected account's real currency. Fixed both at
+  the source (currency now persists alongside module/ref) and at the display layer (the Currency
+  Select's value now looks up the already-selected `ref`'s own real currency before falling
+  back to `entities[0]`, so even an old-format currency-less remembered entry resolves
+  correctly). (2) The module-change handler always defaulted to `list[0]` regardless of what the
+  other side of the transfer already used — switching "Other finance"'s module could easily land
+  on a different-currency entity by pure accident of list order. Fixed with a new optional
+  `preferredCurrency` prop on `SideFields`, passed only for the "Other finance" side (sourced
+  from Account 1's own resolved currency) — a module change now prefers a same-currency entity
+  when one exists. **Lesson worth repeating**: both bugs stemmed from the same root pattern —
+  code that reaches for "the first item in a list" as an implicit default without checking
+  whether a MORE SPECIFIC signal (an already-selected ref, or the other side's own currency) is
+  available and should win instead. Verified live via Playwright with a deliberately-ordered
+  2-account Bank seed (EUR first, USD second, so a naive `entities[0]` fallback would visibly
+  pick the wrong one if either bug were still present): a restored old-format remembered USD
+  account now correctly shows USD (not EUR); switching "Other finance" to Bank with Account 1 =
+  Cash (USD) and no remembered source now correctly pre-selects the USD account (not EUR).
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

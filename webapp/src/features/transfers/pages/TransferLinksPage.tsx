@@ -187,8 +187,20 @@ const REF_PICKER_LABELS: Partial<Record<LinkModule, string>> = {
  * `Modal` — reused directly (`AddAccountForm`/`AddPropertyForm`/
  * `AddLoanForm` ×2, each already exported with an `initialCurrency` prop
  * and an `onSaved(id)` callback for exactly this) rather than duplicating
- * a second add-form per module. */
-export function SideFields({ label, cfg, onChange }: { label: string; cfg: LinkSideConfig; onChange: (cfg: LinkSideConfig) => void }) {
+ * a second add-form per module.
+ *
+ * `preferredCurrency` (optional, added 2026-09-07): user-reported "the
+ * default currency should be of the Account 1 rather than rare inter
+ * currency inter finance transfer." Before this, switching this side's
+ * MODULE (e.g. "Other finance" from Cash to Bank) always defaulted to
+ * whichever entity happened to be first in that module's own list — an
+ * essentially arbitrary currency, easy to land on a real cross-currency
+ * pair by accident. When set (the caller passes the OTHER side's already-
+ * resolved currency), a module change now prefers an entity/currency that
+ * actually matches it, so a same-currency transfer is the default unless
+ * the user deliberately picks otherwise. Only ever passed for the "Other
+ * finance" side — Account 1 has nothing to lean toward, it's the anchor. */
+export function SideFields({ label, cfg, onChange, preferredCurrency }: { label: string; cfg: LinkSideConfig; onChange: (cfg: LinkSideConfig) => void; preferredCurrency?: string }) {
   const bankAccounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
   const properties = useRentalsWorkbookStore((s) => s.workbook.settings.properties);
   const loans = usePersonalLoansWorkbookStore((s) => s.workbook.loans);
@@ -226,10 +238,14 @@ export function SideFields({ label, cfg, onChange }: { label: string; cfg: LinkS
           onChange={(e) => {
             const module = e.target.value as LinkModule;
             const list = entitiesForModule(module);
+            // Prefer an entity matching `preferredCurrency` (Account 1's own
+            // currency) over just grabbing the first one in the list — see
+            // this function's own doc comment.
+            const preferred = preferredCurrency ? list.find((en) => en.currencyCode === preferredCurrency) : undefined;
             onChange({
               module,
-              ref: list[0]?.id,
-              currencyCode: module === 'cash' ? cashCurrency : list[0]?.currencyCode,
+              ref: preferred?.id ?? list[0]?.id,
+              currencyCode: module === 'cash' ? (preferredCurrency ?? cashCurrency) : (preferred?.currencyCode ?? list[0]?.currencyCode),
             });
           }}
         >
@@ -240,7 +256,15 @@ export function SideFields({ label, cfg, onChange }: { label: string; cfg: LinkS
         <>
           <Field label="Currency">
             <Select
-              value={cfg.currencyCode ?? entities[0]?.currencyCode ?? 'USD'}
+              // User-reported (2026-09-07): restoring a remembered account
+              // (which sets `cfg.ref` directly, without going through this
+              // component's own module-change handler) left `cfg.currencyCode`
+              // unset, so this used to fall straight to `entities[0]` — an
+              // arbitrary, often-wrong currency shown right next to the
+              // correctly-restored account. Once a `ref` is already selected,
+              // prefer THAT entity's own real currency over the first one in
+              // the list.
+              value={cfg.currencyCode ?? entities.find((en) => en.id === cfg.ref)?.currencyCode ?? entities[0]?.currencyCode ?? 'USD'}
               onChange={(e) => {
                 const code = e.target.value;
                 const match = entities.find((en) => en.currencyCode === code);
