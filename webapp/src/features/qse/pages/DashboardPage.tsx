@@ -6,6 +6,7 @@ import { DashboardRail } from '../../../components/DashboardRail';
 import { Modal } from '../../../components/Modal';
 import { PlusIcon } from '../../../components/icons';
 import { Sparkline } from '../../../components/Sparkline';
+import { TickerLogo } from '../../../components/TickerLogo';
 import { toast } from '../../../components/Toast';
 import { breakEvenPrice, getDailyPriceHistory } from '../../../lib/calc';
 import { dimColor, dlBarV, dlDoughnut, dlLine, profitColor } from '../../../lib/chartLabels';
@@ -99,7 +100,7 @@ function HoldingsCard() {
     >
       {held.length ? (
         <div className="table-scroll table-compact" style={{ marginTop: 8 }}>
-          <table>
+          <table className="holdings-table">
             <thead>
               <tr><Th col="ticker">Stock</Th><th>Trend</th><Th col="shares">Shares</Th><Th col="avgCost">Cost</Th><Th col="mp">Current Price</Th><Th col="value">Value</Th><Th col="profit">P/L</Th><th>Exit targets</th><Th col="status">Status</Th></tr>
             </thead>
@@ -107,9 +108,14 @@ function HoldingsCard() {
               {held.map((r) => (
                 <tr key={r.ticker} style={{ cursor: 'pointer' }}>
                   <td onClick={() => navigate(`/stock/${r.ticker}`)} style={{ maxWidth: 170 }}>
-                    <div style={{ fontWeight: 600 }}>{r.ticker}</div>
-                    <div className="footer-note" style={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {tickerNames[r.ticker] ? shortenCompanyName(tickerNames[r.ticker]) : ''}
+                    <div className="hd-name">
+                      <TickerLogo ticker={r.ticker} size="sm" exchange="qse" />
+                      <div>
+                        <div>{r.ticker}</div>
+                        <div className="hd-company">
+                          {tickerNames[r.ticker] ? shortenCompanyName(tickerNames[r.ticker]) : ''}
+                        </div>
+                      </div>
                     </div>
                   </td>
                   <td style={{ width: 70 }}><Sparkline data={r.sparkData} formatValue={fmtPrice} width={56} height={20} /></td>
