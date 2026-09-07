@@ -6,9 +6,9 @@ import { EditIcon, ExportIcon, PlusIcon, SaveIcon, TrashIcon, TransferIcon, XIco
 import { Tabs } from '../../../components/Tabs';
 import { Tooltip } from '../../../components/Tooltip';
 import { toast } from '../../../components/Toast';
-import { FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
 import { useSortableRows } from '../../../hooks/useSortableRows';
+import { usePageFabActions } from '../../../hooks/usePageFabActions';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import { computeClosedTrades } from '../../../lib/calc/closedTrades';
@@ -152,14 +152,14 @@ function TransactionRows() {
 /** User-requested (2026-08-28): the module's own "Transfers" FAB, replacing
  * the old always-visible add-transfer form — opens the shared
  * `TransactionEntryModal` defaulted to this exchange's own workbook. */
+/** 2026-09-07: registers via `usePageFabActions` instead of rendering its
+ * own `FabPanel` — see QSE's `TransactionsPage.tsx`'s identical comment on
+ * the "overlapping/blocking instead of grouping" bug this fixes. */
 function TransfersFab() {
   const [open, setOpen] = useState(false);
-  return (
-    <>
-      <FabPanel actions={[{ label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen(true) }]} />
-      {open && <TransactionEntryModal defaultFinance={{ module: 'psx' }} onClose={() => setOpen(false)} />}
-    </>
-  );
+  const actions = useMemo(() => [{ label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen(true) }], []);
+  usePageFabActions(actions);
+  return open ? <TransactionEntryModal defaultFinance={{ module: 'psx' }} onClose={() => setOpen(false)} /> : null;
 }
 
 function AdjustmentForm() {

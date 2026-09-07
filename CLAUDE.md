@@ -5359,6 +5359,19 @@ not developer notes) continuously as features ship.
   overdue one-off Cash bill, EMI installment, Subscription renewal) — both the Dashboard card
   and `/planning` page showed all 4 items correctly sorted and the overdue one flagged. This
   closes out the entire recurring-planning redesign requested at the start of this batch.
+- **Trade Calculator FAB no longer overlaps other FABs (2026-09-07) — see README Done item
+  239.** User: "Trade Calc FAB overlapping/Blocking other Fabs instead of grouping."
+  `CalculatorLauncher.tsx` (mounted globally on every Stock Exchanges route) rendered its own
+  independent `position:fixed` button at the identical corner `FabPanel` already uses —
+  including QSE's/PSX's own page-level Transfers `FabPanel` on Trade Transactions (Done item
+  219) — two fixed elements stacked instead of one grouped panel. Fixed with a small
+  never-persisted `store/fabActionsStore.ts` + `hooks/usePageFabActions.ts`: a page registers
+  its own extra action(s), and `CalculatorLauncher` merges them with its own calculator action
+  into one `FabPanel`. QSE's/PSX's `TransfersFab` switched from rendering its own `FabPanel` to
+  calling the new hook. Verified live: a `getComputedStyle` sweep found exactly one fixed
+  bottom-right element on both a plain page (single button, unchanged) and Trade Transactions
+  (one grouped panel expanding to both actions); clicking through to the calculator worked on
+  both QSE and PSX.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

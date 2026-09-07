@@ -6,9 +6,9 @@ import { EditIcon, ExportIcon, PlusIcon, SaveIcon, TrashIcon, TransferIcon, XIco
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
-import { FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
 import { useSortableRows } from '../../../hooks/useSortableRows';
+import { usePageFabActions } from '../../../hooks/usePageFabActions';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { computeClosedTrades } from '../../../lib/calc/closedTrades';
 import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
@@ -121,15 +121,18 @@ function TransactionRows() {
 
 /** User-requested (2026-08-28): the module's own "Transfers" FAB, replacing
  * the old always-visible add-transfer form — opens the shared
- * `TransactionEntryModal` defaulted to this exchange's own workbook. */
+ * `TransactionEntryModal` defaulted to this exchange's own workbook.
+ *
+ * 2026-09-07: registers via `usePageFabActions` instead of rendering its
+ * own `FabPanel` — the globally-mounted `CalculatorLauncher` already
+ * renders one `FabPanel` for every Stock Exchanges route, and two separate
+ * `position:fixed` panels at the same corner was exactly the "overlapping/
+ * blocking instead of grouping" bug reported. */
 function TransfersFab() {
   const [open, setOpen] = useState(false);
-  return (
-    <>
-      <FabPanel actions={[{ label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen(true) }]} />
-      {open && <TransactionEntryModal defaultFinance={{ module: 'qse' }} onClose={() => setOpen(false)} />}
-    </>
-  );
+  const actions = useMemo(() => [{ label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen(true) }], []);
+  usePageFabActions(actions);
+  return open ? <TransactionEntryModal defaultFinance={{ module: 'qse' }} onClose={() => setOpen(false)} /> : null;
 }
 
 function AdjustmentForm() {

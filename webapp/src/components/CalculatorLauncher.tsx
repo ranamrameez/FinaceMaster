@@ -4,7 +4,8 @@ import { TradeCalculator as QSETradeCalculator } from '../features/qse/component
 import { TradeCalculator as PSXTradeCalculator } from '../features/psx/components/TradeCalculator';
 import { categoryForPath } from './CategoryNav';
 import { Modal } from './Modal';
-import { Tooltip } from './Tooltip';
+import { FabPanel } from './ui/Fab';
+import { useFabActionsStore } from '../store/fabActionsStore';
 
 /** Trade Calculator as an on-demand popup, available from anywhere via this
  * floating button. Route-aware: shows the QSE calculator on QSE routes and
@@ -30,54 +31,40 @@ function stockTickerFromPath(pathname: string, isPSX: boolean): string | undefin
   return match ? decodeURIComponent(match[1]).toUpperCase() : undefined;
 }
 
+/** User-reported (2026-09-07): "Trade Calc FAB overlapping/Blocking other
+ * Fabs instead of grouping" — this used to render its own independent
+ * `position:fixed` button at the exact same `right:24/bottom:24` corner
+ * `FabPanel` (components/ui/Fab.tsx) already uses for every module's own
+ * FAB, including QSE's/PSX's own page-level "Transfers" `FabPanel` on the
+ * Transactions page (README Done item 219) — two separate fixed elements
+ * fighting for one corner instead of the single grouped button `FabPanel`
+ * was specifically built for. Fixed by making the calculator itself just
+ * the FIRST action in a shared `FabPanel`, combined with whatever the
+ * current page has registered via `usePageFabActions()`
+ * (`fabActionsStore.ts`) — a page with nothing else to add (the common
+ * case) sees the identical single round button as before (`FabPanel`
+ * itself renders a lone action exactly like `FabButton`, same CSS class,
+ * zero visual change); a page like Transactions that also registers its
+ * own "Transfers" action now correctly expands into ONE grouped menu
+ * instead of two buttons stacked on top of each other. */
 export function CalculatorLauncher() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const isPSX = location.pathname.startsWith('/psx');
   const isStocks = categoryForPath(location.pathname) === 'stocks';
   const initialTicker = stockTickerFromPath(location.pathname, isPSX);
+  const extraActions = useFabActionsStore((s) => s.extraActions);
 
   if (!isStocks) return null;
 
   return (
     <>
-      {/* User-reported (batch-2 item 1): the toast notification sits at
-         bottom-right too and was rendering hidden behind this button's much
-         higher z-index, plus the button's own "🧮 Calculator" text label
-         was flagged separately as unnecessary — "Calc Icon is enough. move
-         its text to the tooltip." Shrinking this to a round icon-only FAB
-         frees up the corner enough that the toast (repositioned to sit
-         above it in theme.css) never collides with it, and the tooltip now
-         carries the label instead of a native `title`, matching every
-         other icon-only control's tooltip treatment in the app.
-         The `position:fixed` lives on this OUTER div, not the button —
-         `Tooltip`'s own trigger wrapper is a normal (statically positioned)
-         span, and a `position:fixed` button inside it would render at the
-         viewport corner while its DOM parent span stays wherever it fell
-         in document flow (fixed elements are removed from flow entirely),
-         so mouse hover and the tooltip's own getBoundingClientRect() math
-         would both target the wrong, invisible location. Fixing the OUTER
-         div instead means the button and Tooltip's span both sit, via
-         ordinary layout, exactly where the div is pinned. */}
-      <div style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 500 }}>
-        <Tooltip text="Trade calculator" align="right">
-          <button
-            className="btn"
-            onClick={() => setOpen(true)}
-            aria-label="Trade calculator"
-            style={{
-              width: 52,
-              height: 52,
-              borderRadius: '50%',
-              padding: 0,
-              fontSize: 22,
-              boxShadow: '0 4px 16px rgba(0,0,0,.25)',
-            }}
-          >
-            🧮
-          </button>
-        </Tooltip>
-      </div>
+      <FabPanel
+        actions={[
+          { label: 'Trade calculator', icon: <span>🧮</span>, onClick: () => setOpen(true) },
+          ...extraActions,
+        ]}
+      />
       {open && (
         <Modal title={`${isPSX ? 'PSX' : 'QSE'} Trade Calculator`} onClose={() => setOpen(false)}>
           {isPSX ? <PSXTradeCalculator initialTicker={initialTicker} /> : <QSETradeCalculator initialTicker={initialTicker} />}
