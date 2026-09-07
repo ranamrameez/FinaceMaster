@@ -53,6 +53,7 @@ import { useInterEntityTransfersStore } from '../../../store/interEntityTransfer
 import { linkTargetPath, useLinkSideLabel } from '../../transfers/pages/TransferLinksPage';
 import type { BankAccount, BankTransaction, BankWorkbook } from '../../../types/bankWorkbook';
 import type { PlannedBankTransaction } from '../../../types/plannedBank';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const uid = () => crypto.randomUUID();
@@ -175,7 +176,7 @@ function TotalBalances() {
   const upcoming = plannedEntries.filter((p) => !p.executed);
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px,1fr))', gap: 8, marginBottom: 16 }}>
+    <div className="grid-auto" style={{ ...gridAutoStyle(150, 8), marginBottom: 16 }}>
       {codes.map((code) => {
         const pending = upcoming.filter((p) => currencyByAccount.get(p.accountId) === code);
         const net = pending.reduce((s, p) => s + p.amount, 0);
@@ -1181,7 +1182,7 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginBottom: 16 }}>
+      <div className="grid-auto" style={{ ...gridAutoStyle(300, 16), marginBottom: 16 }}>
         <ChartCard flat title="Balance over time">
           <Line
             data={{
@@ -1515,7 +1516,7 @@ function BalanceProjectionSummary() {
       {!codes.length ? (
         <p className="text-muted">No balance yet — add an account or a plan below.</p>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px,1fr))', gap: 8 }}>
+        <div className="grid-auto" style={gridAutoStyle(180, 8)}>
           {codes.map((code) => (
             <div key={code} className="stat-card card">
               <div className="label">{code}</div>
@@ -1802,7 +1803,7 @@ function AnalyticsTab() {
       </Field>
       {account && (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginTop: 12 }}>
+          <div className="grid-auto" style={{ ...gridAutoStyle(320, 16), marginTop: 12 }}>
             <ChartCard flat title="Balance over time" empty={!balanceOverTime.length}>
               <Line
                 data={{

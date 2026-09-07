@@ -9,6 +9,7 @@ import { SyncStatusIndicator, type ModuleSyncStatus } from '../../../components/
 import { toast } from '../../../components/Toast';
 import { signOutUser } from '../../../lib/firebase/auth';
 import { useAuthState } from '../../../lib/firebase/useAuthState';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 /** Firebase provider ids -> what a non-technical user actually recognizes.
  * Only the two methods this app actually offers (see SignInModal.tsx) need
@@ -56,7 +57,7 @@ export function AccountPage({ syncStatuses }: { syncStatuses: ModuleSyncStatus[]
          claiming the full page width for a couple of lines of content.
          `alignItems:'start'` keeps each card at its own natural height —
          Security's two buttons shouldn't stretch to match Profile's. */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginBottom: 16, alignItems: 'start' }}>
+      <div className="grid-auto" style={{ ...gridAutoStyle(300, 16), marginBottom: 16, alignItems: 'start' }}>
         {!user ? (
           <Card>
             <p className="text-muted" style={{ marginTop: 0 }}>

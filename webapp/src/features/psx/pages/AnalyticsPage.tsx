@@ -21,8 +21,9 @@ import { ChartCard } from '../../qse/components/ChartCard';
 import { useChartData } from '../hooks/useChartData';
 import { usePSXDerived } from '../hooks/usePSXDerived';
 import { useAppearanceStore } from '../../../store/appearanceStore';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
-const chartGrid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 } as const;
+const chartGrid = gridAutoStyle(320, 16);
 
 /** Pending item 17's remainder: click-to-drill-down (Done item 137) AND
  * hover cross-highlighting (this pass) on Analytics' own ticker-indexed
@@ -104,7 +105,7 @@ export function AnalyticsPage() {
             key: 'performance',
             label: 'Performance',
             content: (
-              <div style={chartGrid}>
+              <div className="grid-auto" style={chartGrid}>
                 <ChartCard title="ROI % by ticker" empty={!rows.length}>
                   <Bar
                     data={{ labels: rows.map((r) => r.ticker), datasets: [{ data: rows.map((r) => r.roiPct), backgroundColor: rows.map((r) => dimColor(profitColor(r.roiPct), !!hoveredTicker && hoveredTicker !== r.ticker)) }] }}
@@ -161,7 +162,7 @@ export function AnalyticsPage() {
             key: 'allocation',
             label: 'Allocation',
             content: (
-              <div style={chartGrid}>
+              <div className="grid-auto" style={chartGrid}>
                 <ChartCard title="Portfolio allocation (market value)" empty={!allocRows.length}>
                   <Doughnut
                     data={{ labels: allocRows.map((r) => r.ticker), datasets: [{ data: allocRows.map((r) => r.value), backgroundColor: allocRows.map((r) => dimColor(tickerColor(r.ticker), !!hoveredTicker && hoveredTicker !== r.ticker)) }] }}
@@ -181,7 +182,7 @@ export function AnalyticsPage() {
             key: 'cash-fees',
             label: 'Cash & fees',
             content: (
-              <div style={chartGrid}>
+              <div className="grid-auto" style={chartGrid}>
                 <ChartCard title="Cash balance over time" unfiltered empty={!ledger.length}>
                   <Line
                     data={{
@@ -216,7 +217,7 @@ export function AnalyticsPage() {
             key: 'activity-dividends',
             label: 'Activity & dividends',
             content: (
-              <div style={chartGrid}>
+              <div className="grid-auto" style={chartGrid}>
                 <ChartCard title="Monthly trading activity" empty={!activityByMonth.months.length}>
                   <Bar
                     data={{

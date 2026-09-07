@@ -53,6 +53,7 @@ import type { BankAccount } from '../../../types/bankWorkbook';
 import type { PersonalLoan } from '../../../types/personalLoansWorkbook';
 import type { EMILoan } from '../../../types/emiWorkbook';
 import type { Fund, FundsWorkbook } from '../../../types/fundsWorkbook';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const monthLabel = (m: string) => new Date(`${m}-01`).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
@@ -343,7 +344,7 @@ export function NetWorthPage({
           roughly-equal Cards side by side — "Net worth summary" (the
           currency picker grouped directly with the big number it controls)
           and "Exchange rates" (its own Card, with a From/To pair). */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginBottom: 16, alignItems: 'start' }}>
+      <div className="grid-auto" style={{ ...gridAutoStyle(320, 16), marginBottom: 16, alignItems: 'start' }}>
         <Card>
           <h3 style={{ marginTop: 0 }}>Net worth summary</h3>
           <Field label="Show total in" width={150}>
@@ -363,7 +364,7 @@ export function NetWorthPage({
               aren't included above; see their own sections below for real figures.
             </div>
           )}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px,1fr))', gap: 8, marginTop: 12 }}>
+          <div className="grid-auto" style={{ ...gridAutoStyle(140, 8), marginTop: 12 }}>
             <StatCard
               label="Total debts"
               value={fmtMoney(totalDebts, preferredCurrency)}
@@ -474,7 +475,7 @@ export function NetWorthPage({
       {/* Grid of per-currency account summaries (user-specified order,
           2026-09-04) — a responsive grid lets 2-3 currency sections sit
           side by side on a wide viewport instead of stacking. */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 12, marginBottom: 16 }}>
+      <div className="grid-auto" style={{ ...gridAutoStyle(360, 12), marginBottom: 16 }}>
         {rows.map((r) => {
           const converted = convertAmount(r.net, r.currency, preferredCurrency, rates);
           return (
@@ -495,7 +496,7 @@ export function NetWorthPage({
               {r.breakdown.length > 0 && (
                 <div style={{ marginTop: 12 }}>
                   <div className="text-muted" style={{ marginBottom: 4 }}>By account</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 6 }}>
+                  <div className="grid-auto" style={gridAutoStyle(120, 6)}>
                     {r.breakdown.map((b) => (
                       <div key={b.module} className="stat-card card" style={hueStyle(b.amount >= 0 ? 'var(--profit)' : 'var(--loss)')}>
                         <div className="label">{b.module}</div>
@@ -767,13 +768,13 @@ function NetWorthMonthlySection({
         <button className="btn secondary small" onClick={() => setWindowStart((w) => w + 1)}>Later ▶</button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 16, marginBottom: 16 }}>
+      <div className="grid-auto" style={{ ...gridAutoStyle(380, 16), marginBottom: 16 }}>
         {ownCurrencies.map((currency) => (
           <NetWorthComboChart key={currency} currency={currency} months={months} trend={trend} />
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 16 }}>
+      <div className="grid-auto" style={gridAutoStyle(420, 16)}>
         {ownCurrencies.map((currency) => (
           <MonthlySummaryTable key={currency} currency={currency} months={months} nowMonth={nowMonth} monthly={monthly} trend={trend} />
         ))}

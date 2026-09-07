@@ -47,6 +47,7 @@ import { useInterEntityTransfersStore } from '../../../store/interEntityTransfer
 import { linkTargetPath, useLinkSideLabel } from '../../transfers/pages/TransferLinksPage';
 import type { CashEntry, CashWorkbook } from '../../../types/cashWorkbook';
 import type { PlannedCashEntry } from '../../../types/plannedCash';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -106,7 +107,7 @@ function BalancesSummary() {
   const upcoming = plannedEntries.filter((p) => !p.executed);
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px,1fr))', gap: 8, marginBottom: 16 }}>
+    <div className="grid-auto" style={{ ...gridAutoStyle(140, 8), marginBottom: 16 }}>
       {codes.map((code) => {
         const pending = upcoming.filter((p) => p.currencyCode === code);
         const net = pending.reduce((s, p) => s + (p.type === 'IN' ? p.amount : -p.amount), 0);
@@ -471,7 +472,7 @@ function AnalyticsTab() {
           </Select>
         </Field>
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginTop: 12 }}>
+      <div className="grid-auto" style={{ ...gridAutoStyle(320, 16), marginTop: 12 }}>
         <ChartCard title="Category breakdown" empty={!categories.length}>
           <Doughnut
             data={{
@@ -702,7 +703,7 @@ function BalanceProjectionSummary() {
       {!codes.length ? (
         <p className="text-muted">No balance yet — add a cash entry or a plan below.</p>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px,1fr))', gap: 8 }}>
+        <div className="grid-auto" style={gridAutoStyle(180, 8)}>
           {codes.map((code) => (
             <div key={code} className="stat-card card">
               <div className="label">{code}</div>

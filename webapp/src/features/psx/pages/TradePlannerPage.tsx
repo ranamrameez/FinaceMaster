@@ -17,6 +17,7 @@ import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
 import type { Transaction, TradePlan, TradePlanLeg } from '../../../types/workbook';
 import { usePSXDerived } from '../hooks/usePSXDerived';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -672,7 +673,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
            * below the heavier leg-editing table above. A row of colored
            * cards — one per ticker, key figures only — gives an at-a-glance
            * read before the detailed table underneath. */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px,1fr))', gap: 8, marginBottom: 12 }}>
+          <div className="grid-auto" style={{ ...gridAutoStyle(200, 8), marginBottom: 12 }}>
             {sortedTickerAnalysis.map((t, idx) => (
               <div key={t.ticker} className="card stat-card" style={hueStyle(HUES[idx % HUES.length])}>
                 <div className="label">{t.ticker}</div>
