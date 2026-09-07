@@ -410,7 +410,7 @@ function TransactionList() {
                   <tr key={i}>
                     <td>{tx.date}</td>
                     <td><Link to={`/psx/stock/${tx.ticker}`}>{tx.ticker}</Link></td>
-                    <td className={tx.action === 'BUY' ? 'pill-buy' : 'pill-sell'}>{tx.action}</td>
+                    <td className={tx.action === 'BUY' ? 'pill-positive' : 'pill-negative'}>{tx.action}</td>
                     <td>{fmt(tx.shares, 0)}</td>
                     <td>{fmtPrice(tx.price)}</td>
                     <td>{fmtMoney(tx.shares * tx.price, currency)}</td>
@@ -524,7 +524,7 @@ function TransactionList() {
                   <td>{fmt(t.shares, 0)}</td>
                   <td>{fmtMoney(t.buyFee, currency)}</td>
                   <td>{fmtMoney(t.sellFee, currency)}</td>
-                  <td className={t.netPL >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(t.netPL, currency)}</td>
+                  <td className={t.netPL >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(t.netPL, currency)}</td>
                   <td>{t.holdingDays}</td>
                 </tr>
               ))}
@@ -810,7 +810,7 @@ function CashLedgerSection() {
               <td>{e.date}</td>
               <td>{e.kind}</td>
               <td>{e.label}</td>
-              <td className={e.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(e.amount, currency)}</td>
+              <td className={e.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(e.amount, currency)}</td>
               <td>{fmtMoney(e.balance, currency)}</td>
             </tr>
           ))}

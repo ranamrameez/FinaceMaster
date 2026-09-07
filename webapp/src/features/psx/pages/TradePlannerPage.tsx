@@ -160,12 +160,12 @@ function WhatIfExitCalculator({
             {price > 0 && (
               <div className="text-muted">
                 Remaining ({fmt(t.effectiveShares, 0)} sh): {fmtMoney(remaining.proceeds, currency)} proceeds ·{' '}
-                <span className={remaining.pl >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(remaining.pl, currency)}</span> P/L
+                <span className={remaining.pl >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(remaining.pl, currency)}</span> P/L
                 {t.plannedSold > 0 && (
                   <>
                     {' '}· Full position, ignoring planned sells ({fmt(fullShares, 0)} sh):{' '}
                     {fmtMoney(full.proceeds, currency)} proceeds ·{' '}
-                    <span className={full.pl >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(full.pl, currency)}</span> P/L
+                    <span className={full.pl >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(full.pl, currency)}</span> P/L
                   </>
                 )}
               </div>
@@ -528,7 +528,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                   <td><input type="number" step="0.01" value={editTxRow.price} onChange={(e) => setEditTxRow({ ...editTxRow, price: Number(e.target.value) })} style={{ width: 80 }} /></td>
                   <td>{fmtMoney(editTxRow.shares * editTxRow.price, currency)}</td>
                   <td>{fmtMoney(calcFee(editTxRow.shares * editTxRow.price, editTxRow.action === 'BUY', { shares: editTxRow.shares, tx: editTxRow }), currency)}</td>
-                  <td><span className="pill-buy">Executed</span></td>
+                  <td><span className="pill-positive">Executed</span></td>
                   <td>
                     <button className="btn secondary small" onClick={saveEditTx}><SaveIcon size={12} />Save</button>{' '}
                     <button className="btn secondary small" onClick={() => { setEditingTxLegIndex(null); setEditTxRow(null); }}>Cancel</button>
@@ -559,7 +559,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                       </Tooltip>
                     )}</td>
                     <td>{display.ticker}</td>
-                    <td className={display.action === 'BUY' ? 'pill-buy' : 'pill-sell'}>{display.action}</td>
+                    <td className={display.action === 'BUY' ? 'pill-positive' : 'pill-negative'}>{display.action}</td>
                     <td>{fmt(display.shares, 0)}</td>
                     <td>{fmtPrice(display.price)}</td>
                     <td>{fmtMoney(display.shares * display.price, currency)}</td>
@@ -577,10 +577,10 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                       {leg.executed ? (
                         linkedTx ? (
                           <Tooltip text="Synced with its transaction — edit it below or from the Transactions page.">
-                            <span className="pill-buy" style={{ cursor: 'pointer' }}>Executed</span>
+                            <span className="pill-positive" style={{ cursor: 'pointer' }}>Executed</span>
                           </Tooltip>
                         ) : (
-                          <span className="pill-sell">Executed (unlinked)</span>
+                          <span className="pill-negative">Executed (unlinked)</span>
                         )
                       ) : (
                         <span className="text-muted">Planned</span>
@@ -682,7 +682,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                 <div className="sub">
                   BE {t.breakEven > 0 ? fmtPrice(t.breakEven) : '—'} · {fmt(t.effectiveShares, 0)} sh after plan
                   {t.plannedSold > 0 && (
-                    <> · <span className={t.realizedPL >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(t.realizedPL, currency)} P/L</span></>
+                    <> · <span className={t.realizedPL >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(t.realizedPL, currency)} P/L</span></>
                   )}
                 </div>
               </div>
@@ -715,7 +715,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                     <td>{t.avgCost > 0 ? fmtPrice(t.avgCost) : '—'}</td>
                     <td>{t.breakEven > 0 ? fmtPrice(t.breakEven) : '—'}</td>
                     <td>{fmt(t.effectiveShares, 0)}</td>
-                    <td className={t.plannedSold > 0 ? (t.realizedPL >= 0 ? 'pill-buy' : 'pill-sell') : ''}>
+                    <td className={t.plannedSold > 0 ? (t.realizedPL >= 0 ? 'pill-positive' : 'pill-negative') : ''}>
                       {t.plannedSold > 0 ? fmtMoney(t.realizedPL, currency) : '—'}
                     </td>
                   </tr>

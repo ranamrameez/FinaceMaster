@@ -46,9 +46,9 @@ export function UpcomingList({
             <span className="text-muted" style={{ marginRight: 8 }}>{item.date}</span>
             {item.label}
             <span className="text-muted" style={{ marginLeft: 8 }}>({MODULE_LABELS[item.module]})</span>
-            {item.overdue && <span className="pill-sell" style={{ marginLeft: 8 }}>Overdue</span>}
+            {item.overdue && <span className="pill-negative" style={{ marginLeft: 8 }}>Overdue</span>}
           </span>
-          <span className={item.kind === 'income' ? 'pill-buy' : 'pill-sell'} style={{ flexShrink: 0 }}>
+          <span className={item.kind === 'income' ? 'pill-positive' : 'pill-negative'} style={{ flexShrink: 0 }}>
             {item.kind === 'income' ? '+' : '-'}{fmtMoney(item.amount, item.currencyCode)}
           </span>
         </Link>

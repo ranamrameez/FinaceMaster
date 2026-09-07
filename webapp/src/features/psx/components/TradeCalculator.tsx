@@ -297,7 +297,7 @@ export function TradeCalculator({ initialTicker }: { initialTicker?: string } = 
           {sellCap > 0 && sellPrice > 0 && (
             <div className="text-muted" style={{ marginTop: 8 }}>
               Net proceeds {fmtMoney(sellNet, currency)} · Realized P/L{' '}
-              <span className={realized >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(realized, currency)}</span>
+              <span className={realized >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(realized, currency)}</span>
               {realized > 0 && <> · Est. CGT {fmtMoney(sellCGT, currency)}</>} · Remaining{' '}
               {fmt(remainingShares, 0)} shares ({fmtMoney(remainingInvested, currency)} invested)
             </div>
@@ -375,7 +375,7 @@ export function TradeCalculator({ initialTicker }: { initialTicker?: string } = 
           {mode === 'CYCLE' && totalShares > 0 && targetSell > 0 && (
             <div className="text-muted" style={{ marginTop: 4 }}>
               If sold at target: proceeds {fmtMoney(cycleSellProceeds, currency)} · Cycle P/L{' '}
-              <span className={cycleNetPL >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(cycleNetPL, currency)}</span> ({cycleRoi.toFixed(1)}%)
+              <span className={cycleNetPL >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(cycleNetPL, currency)}</span> ({cycleRoi.toFixed(1)}%)
             </div>
           )}
         </div>

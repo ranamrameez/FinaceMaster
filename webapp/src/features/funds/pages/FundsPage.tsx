@@ -412,7 +412,7 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
               <td>{r.fund.category}</td>
               <td>{fmt(r.units, 2)}</td>
               <td>{fmtMoney(r.value, r.fund.currencyCode)}</td>
-              <td className={r.profit >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(r.profit, r.fund.currencyCode)} ({r.profitPct.toFixed(1)}%)</td>
+              <td className={r.profit >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(r.profit, r.fund.currencyCode)} ({r.profitPct.toFixed(1)}%)</td>
               <td>{r.xirrPct !== null ? `${r.xirrPct.toFixed(1)}%` : '—'}</td>
             </tr>
           ))}
@@ -596,7 +596,7 @@ function SnapshotImportSection() {
                     <td>{fmtMoney(p.row.totalInvested, currencyCode)}</td>
                     <td>{fmtMoney(p.row.withdrawn, currencyCode)}</td>
                     <td>{fmtMoney(p.row.currentBalance, currencyCode)}</td>
-                    <td className={p.closed ? 'pill-sell' : 'pill-buy'}>{p.closed ? 'Closed' : 'Open'}</td>
+                    <td className={p.closed ? 'pill-negative' : 'pill-positive'}>{p.closed ? 'Closed' : 'Open'}</td>
                     <td>{p.navUpdate !== null ? fmtPrice(p.navUpdate) : '—'}</td>
                   </tr>
                 ))}
@@ -1091,7 +1091,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
               ) : (
                 <tr key={i}>
                   <td>{t.date}</td>
-                  <td className={t.action === 'BUY' ? 'pill-buy' : 'pill-sell'}>{t.action === 'BUY' ? 'Invested' : 'Withdrew'}</td>
+                  <td className={t.action === 'BUY' ? 'pill-positive' : 'pill-negative'}>{t.action === 'BUY' ? 'Invested' : 'Withdrew'}</td>
                   <td>{fmt(t.shares, 2)}</td>
                   <td>{fmtPrice(t.price)}</td>
                   <td>{fmtMoney(t.shares * t.price, fund.currencyCode)}</td>
@@ -1170,8 +1170,8 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                         <td>{fmtPrice(r.prevNav)}</td>
                         <td>{fmtMoney(r.newBalance, fund.currencyCode)}</td>
                         <td>{fmtPrice(r.newNav)}</td>
-                        <td className={r.change >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(r.change, fund.currencyCode)}</td>
-                        <td className={r.change >= 0 ? 'pill-buy' : 'pill-sell'}>{r.changePct.toFixed(2)}%</td>
+                        <td className={r.change >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(r.change, fund.currencyCode)}</td>
+                        <td className={r.change >= 0 ? 'pill-positive' : 'pill-negative'}>{r.changePct.toFixed(2)}%</td>
                         <td>
                           <IconButton label="Edit" icon={<EditIcon size={12} />} align="right" onClick={() => startEditUpdate(rawIndex, r.point)} />
                           <IconButton label="Delete" icon={<TrashIcon size={12} />} align="right" onClick={() => removeUpdate(rawIndex)} />

@@ -894,7 +894,7 @@ function MonthlySummaryTable({
               {months.map((m) => {
                 const row = monthlyByMonth.get(m);
                 const net = (row?.income[currency] ?? 0) - (row?.expense[currency] ?? 0);
-                return <td key={m} className={net >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(net, currency)}</td>;
+                return <td key={m} className={net >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(net, currency)}</td>;
               })}
             </tr>
             <tr>
@@ -906,7 +906,7 @@ function MonthlySummaryTable({
               {months.map((m) => {
                 const value = trendByMonth.get(m)?.byCurrency[currency];
                 return (
-                  <td key={m} className={value === undefined ? 'text-muted' : value >= 0 ? 'pill-buy' : 'pill-sell'}>
+                  <td key={m} className={value === undefined ? 'text-muted' : value >= 0 ? 'pill-positive' : 'pill-negative'}>
                     {value === undefined ? '—' : fmtMoney(value, currency)}
                   </td>
                 );

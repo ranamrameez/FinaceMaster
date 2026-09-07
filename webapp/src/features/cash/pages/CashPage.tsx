@@ -167,7 +167,7 @@ function CategoryBreakdown() {
                   {rows.map(([cat, amount]) => (
                     <tr key={cat}>
                       <td>{cat}</td>
-                      <td className={amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(amount, code)}</td>
+                      <td className={amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(amount, code)}</td>
                     </tr>
                   ))}
                   {!rows.length && <tr><td className="text-muted">No matching categories.</td></tr>}
@@ -356,7 +356,7 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
                       onMove={reorder}
                     />
                   </td>
-                  <td className={entry.isDeposit ? 'pill-buy' : 'pill-sell'}>{entry.isDeposit ? 'Cash in' : 'Cash out'}</td>
+                  <td className={entry.isDeposit ? 'pill-positive' : 'pill-negative'}>{entry.isDeposit ? 'Cash in' : 'Cash out'}</td>
                   <td className="cell-clip" title={entry.note}>
                     {entry.note}
                     {link && (
@@ -649,7 +649,7 @@ function ImportTab() {
                 {mappedPreview.map((r, i) => (
                   <tr key={i}>
                     <td>{r.date}</td>
-                    <td className={r.isDeposit ? 'pill-buy' : 'pill-sell'}>{r.isDeposit ? 'Cash in' : 'Cash out'}</td>
+                    <td className={r.isDeposit ? 'pill-positive' : 'pill-negative'}>{r.isDeposit ? 'Cash in' : 'Cash out'}</td>
                     <td>{fmtMoney(r.amount, currencyCode)}</td>
                     <td>{r.category || '—'}</td>
                   </tr>
@@ -707,10 +707,10 @@ function BalanceProjectionSummary() {
             <div key={code} className="stat-card card">
               <div className="label">{code}</div>
               {settings.showRealBalance && (
-                <div className={projection[code].real >= 0 ? 'pill-buy' : 'pill-sell'}>Real: {fmtMoney(projection[code].real, code)}</div>
+                <div className={projection[code].real >= 0 ? 'pill-positive' : 'pill-negative'}>Real: {fmtMoney(projection[code].real, code)}</div>
               )}
               {settings.showPlannedBalance && (
-                <div className={projection[code].planned >= 0 ? 'pill-buy' : 'pill-sell'}>
+                <div className={projection[code].planned >= 0 ? 'pill-positive' : 'pill-negative'}>
                   Planned: {fmtMoney(projection[code].planned, code)}
                 </div>
               )}
@@ -912,7 +912,7 @@ function PlanList() {
               ) : (
                 <tr key={p.id}>
                   <td>{p.date}</td>
-                  <td className={p.type === 'IN' ? 'pill-buy' : 'pill-sell'}>{p.type === 'IN' ? 'Cash in' : 'Cash out'}</td>
+                  <td className={p.type === 'IN' ? 'pill-positive' : 'pill-negative'}>{p.type === 'IN' ? 'Cash in' : 'Cash out'}</td>
                   <td>{fmtMoney(p.amount, p.currencyCode)}</td>
                   <td>{p.category || '—'}</td>
                   <td>{p.note}</td>

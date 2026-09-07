@@ -144,7 +144,7 @@ function WatchlistTable({
                   title="Edit current price"
                 />
               </td>
-              <td className={gap !== null && gap <= 0 ? 'pill-buy' : ''}>{gap !== null ? `${gap.toFixed(1)}%` : '—'}</td>
+              <td className={gap !== null && gap <= 0 ? 'pill-positive' : ''}>{gap !== null ? `${gap.toFixed(1)}%` : '—'}</td>
               <td>
                 <button className="btn secondary small" onClick={() => removeWatchlistItem(item.ticker)}>
                   <TrashIcon size={12} />Remove

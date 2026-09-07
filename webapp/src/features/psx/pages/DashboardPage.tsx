@@ -55,11 +55,11 @@ function HoldingsCard() {
           if (!Number.isFinite(profit)) {
             statusRank = 3; statusLabel = 'PRICE NEEDED'; statusClass = '';
           } else if (profit >= 0) {
-            statusRank = 0; statusLabel = 'EXIT READY'; statusClass = 'pill-buy';
+            statusRank = 0; statusLabel = 'EXIT READY'; statusClass = 'pill-positive';
           } else if ((profit / p.invested) * 100 > -3) {
             statusRank = 1; statusLabel = 'WATCH'; statusClass = '';
           } else {
-            statusRank = 2; statusLabel = 'HOLD / REVIEW'; statusClass = 'pill-sell';
+            statusRank = 2; statusLabel = 'HOLD / REVIEW'; statusClass = 'pill-negative';
           }
 
           return {
@@ -151,7 +151,7 @@ function HoldingsCard() {
                       {' '}Inv {fmtMoney(r.invested, currency)}
                     </div>
                   </td>
-                  <td onClick={() => navigate(`/psx/stock/${r.ticker}`)} className={Number.isFinite(r.profit) ? (r.profit >= 0 ? 'pill-buy' : 'pill-sell') : ''}>
+                  <td onClick={() => navigate(`/psx/stock/${r.ticker}`)} className={Number.isFinite(r.profit) ? (r.profit >= 0 ? 'pill-positive' : 'pill-negative') : ''}>
                     <div>{Number.isFinite(r.profit) ? fmtMoney(r.profit, currency) : '—'}</div>
                     <div className="text-muted">{Number.isFinite(r.profitPct) ? `${r.profitPct >= 0 ? '+' : ''}${r.profitPct.toFixed(1)}%` : ''}</div>
                   </td>

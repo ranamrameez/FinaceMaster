@@ -220,7 +220,7 @@ function PropertiesList() {
                 </td>
                 <td>{p.currencyCode}</td>
                 <td>{p.purchasePrice ? fmtMoney(p.purchasePrice, p.currencyCode) : '—'}</td>
-                <td className={propertyNetIncome(p, entries) >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(propertyNetIncome(p, entries), p.currencyCode)}</td>
+                <td className={propertyNetIncome(p, entries) >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(propertyNetIncome(p, entries), p.currencyCode)}</td>
                 <td>
                   <button className="btn secondary small" onClick={(e) => { e.stopPropagation(); setDetailProperty(p); }}>Details</button>{' '}
                   <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={(e) => { e.stopPropagation(); startEdit(p); }} />{' '}
@@ -457,7 +457,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
               <tr key={p.id}>
                 <td>{p.date}</td>
                 <td>{fmtMoney(p.amount, property.currencyCode)}</td>
-                <td>{p.executed ? <span className="pill-buy">Done</span> : <span className="text-muted">Planned</span>}</td>
+                <td>{p.executed ? <span className="pill-positive">Done</span> : <span className="text-muted">Planned</span>}</td>
                 <td>
                   {!p.executed && (
                     <>
@@ -775,8 +775,8 @@ function EntriesList({ property }: { property: Property }) {
             return (
               <tr key={e.id}>
                 <td>{e.date}</td>
-                <td className={e.isDeposit ? 'pill-buy' : 'pill-sell'}>{e.isDeposit ? 'Rent income' : 'Expense'}</td>
-                <td className={e.isDeposit ? 'pill-buy' : 'pill-sell'}>{fmtMoney(e.isDeposit ? e.amount : -e.amount, property.currencyCode)}</td>
+                <td className={e.isDeposit ? 'pill-positive' : 'pill-negative'}>{e.isDeposit ? 'Rent income' : 'Expense'}</td>
+                <td className={e.isDeposit ? 'pill-positive' : 'pill-negative'}>{fmtMoney(e.isDeposit ? e.amount : -e.amount, property.currencyCode)}</td>
                 <td>{e.isDeposit ? '—' : <span className="pill-info">{categoryName(e.categoryID, categories)}</span>}</td>
                 <td className="cell-clip" title={e.note}>
                   {e.note}
@@ -958,7 +958,7 @@ function ImportTab() {
                 {mappedPreview.map((r, i) => (
                   <tr key={i}>
                     <td>{r.date}</td>
-                    <td className={r.isDeposit ? 'pill-buy' : 'pill-sell'}>{r.isDeposit ? 'Rent income' : 'Expense'}</td>
+                    <td className={r.isDeposit ? 'pill-positive' : 'pill-negative'}>{r.isDeposit ? 'Rent income' : 'Expense'}</td>
                     <td>{property ? fmtMoney(r.amount, property.currencyCode) : r.amount}</td>
                     <td>{r.category || '—'}</td>
                   </tr>
@@ -992,7 +992,7 @@ function CategoryAndRollup({ property }: { property: Property }) {
                 {cats.map((cat) => (
                   <tr key={cat}>
                     <td>{cat}</td>
-                    <td className={byCategory[cat] >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(byCategory[cat], property.currencyCode)}</td>
+                    <td className={byCategory[cat] >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(byCategory[cat], property.currencyCode)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1011,7 +1011,7 @@ function CategoryAndRollup({ property }: { property: Property }) {
                     <td>{r.month}</td>
                     <td>{fmtMoney(r.income, property.currencyCode)}</td>
                     <td>{fmtMoney(r.expense, property.currencyCode)}</td>
-                    <td className={r.net >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(r.net, property.currencyCode)}</td>
+                    <td className={r.net >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(r.net, property.currencyCode)}</td>
                   </tr>
                 ))}
               </tbody>

@@ -226,7 +226,7 @@ function SubscriptionList({ onSelect }: { onSelect: (sub: Subscription) => void 
               <td>{fmtMoney(monthly, s.currencyCode)}</td>
               <td>{s.category || '—'}</td>
               <td>{next || '—'}</td>
-              <td className={s.active ? 'pill-buy' : 'pill-sell'}>{s.active ? 'Active' : 'Cancelled'}</td>
+              <td className={s.active ? 'pill-positive' : 'pill-negative'}>{s.active ? 'Active' : 'Cancelled'}</td>
               <td><button className="btn secondary small" onClick={(e) => { e.stopPropagation(); onSelect(s); }}>Open</button></td>
             </tr>
           ))}

@@ -159,7 +159,7 @@ function ActivityList({ activities }: { activities: BudgetActivity[] }) {
                 <td>{a.sourceLabel}</td>
                 <td>{a.description}</td>
                 <td>{a.category || '—'}</td>
-                <td className={a.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(a.amount, a.currencyCode)}</td>
+                <td className={a.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(a.amount, a.currencyCode)}</td>
                 <td className="text-muted">{a.executed ? 'Actual' : 'Planned'}</td>
               </tr>
             ))}

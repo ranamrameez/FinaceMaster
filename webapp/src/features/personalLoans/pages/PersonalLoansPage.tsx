@@ -797,7 +797,7 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: PersonalLoan) => void
                   {l.person}
                   {l.isActive === false && <span className="pill-warn" style={{ fontSize: 10, marginLeft: 6 }}>Archived</span>}
                 </td>
-                <td className={l.direction === 'owed_to_me' ? 'pill-buy' : 'pill-sell'}>{l.direction === 'owed_to_me' ? 'Lent out' : 'I owe'}</td>
+                <td className={l.direction === 'owed_to_me' ? 'pill-positive' : 'pill-negative'}>{l.direction === 'owed_to_me' ? 'Lent out' : 'I owe'}</td>
                 <td>{fmtMoney(outstanding, l.currencyCode)}</td>
                 <td>
                   <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={(e) => { e.stopPropagation(); onEdit(l); }} />{' '}

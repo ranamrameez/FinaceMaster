@@ -915,7 +915,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                       <div className="text-muted">{loan.repaymentMode === 'fixedTotal' ? 'Markup' : 'Interest'}: {fmtMoney(r.interest, loan.currencyCode)} ({markupPct.toFixed(1)}%)</div>
                     </td>
                     <td>
-                      <span className={status === 'paid' ? 'pill-buy' : status === 'planned' ? 'pill-info' : 'pill-warn'}>
+                      <span className={status === 'paid' ? 'pill-positive' : status === 'planned' ? 'pill-info' : 'pill-warn'}>
                         {status === 'paid' ? 'Paid' : status === 'planned' ? 'Planned' : 'Upcoming'}
                       </span>
                     </td>
@@ -1193,7 +1193,7 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: EMILoan) => void; onE
                 </td>
                 <td>{l.lender}{l.repaymentMode === 'fixedTotal' ? ' · no-interest' : ''}</td>
                 <td>{fmtMoney(sum.emi, l.currencyCode)}</td>
-                <td className="pill-sell">{fmtMoney(sum.outstanding, l.currencyCode)}</td>
+                <td className="pill-negative">{fmtMoney(sum.outstanding, l.currencyCode)}</td>
                 <td>{sum.monthsRemaining}</td>
                 <td>
                   <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={(e) => { e.stopPropagation(); onEdit(l); }} />{' '}

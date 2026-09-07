@@ -296,14 +296,14 @@ export function RiskCalculator({
                         <td>{fmtPrice(s.newAvg)}</td>
                         <td>{fmtPrice(s.breakEven)}</td>
                         <td>{fmt(s.recoveryNeededPct, 2)}%</td>
-                        <td style={{ padding: '10px 12px' }}><span className={s.netAtTarget >= 0 ? 'pill pill-buy' : 'pill pill-sell'}>{fmtMoney(s.netAtTarget, currency)}</span></td>
+                        <td style={{ padding: '10px 12px' }}><span className={s.netAtTarget >= 0 ? 'pill pill-positive' : 'pill pill-negative'}>{fmtMoney(s.netAtTarget, currency)}</span></td>
                         <td>
                           {isDiminishing ? (
                             <span className="pill pill-warn">⚠ Diminishing</span>
                           ) : isBest ? (
                             <span className="pill pill-info">✓ Selected</span>
                           ) : (
-                            <span className="pill pill-buy">Useful</span>
+                            <span className="pill pill-positive">Useful</span>
                           )}
                         </td>
                       </tr>

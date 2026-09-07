@@ -49,11 +49,11 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
           if (!Number.isFinite(net)) {
             statusRank = 3; statusLabel = 'PRICE NEEDED'; statusClass = '';
           } else if (net >= 0) {
-            statusRank = 0; statusLabel = 'EXIT READY'; statusClass = 'pill-buy';
+            statusRank = 0; statusLabel = 'EXIT READY'; statusClass = 'pill-positive';
           } else if ((net / p.invested) * 100 > -3) {
             statusRank = 1; statusLabel = 'WATCH'; statusClass = '';
           } else {
-            statusRank = 2; statusLabel = 'HOLD / REVIEW'; statusClass = 'pill-sell';
+            statusRank = 2; statusLabel = 'HOLD / REVIEW'; statusClass = 'pill-negative';
           }
 
           return {
@@ -147,7 +147,7 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
                   {' '}Inv {fmtMoney(r.invested, currency)}
                 </div>
               </td>
-              <td onClick={() => onSelect(r.ticker)} className={Number.isFinite(r.net) ? (r.net >= 0 ? 'pill-buy' : 'pill-sell') : ''}>
+              <td onClick={() => onSelect(r.ticker)} className={Number.isFinite(r.net) ? (r.net >= 0 ? 'pill-positive' : 'pill-negative') : ''}>
                 <div>{Number.isFinite(r.net) ? fmtMoney(r.net, currency) : '—'}</div>
                 <div className="text-muted">{Number.isFinite(r.netPct) ? `${r.netPct >= 0 ? '+' : ''}${r.netPct.toFixed(1)}%` : ''}</div>
               </td>
@@ -209,7 +209,7 @@ function ClosedPositionsTable({ onSelect }: { onSelect: (ticker: string) => void
                 <div>{fmt(p.totalBoughtShares, 0)}</div>
                 <div className="text-muted">{fmt(p.totalSoldShares, 0)} sold</div>
               </td>
-              <td className={p.realized >= 0 ? 'pill-buy' : 'pill-sell'}>
+              <td className={p.realized >= 0 ? 'pill-positive' : 'pill-negative'}>
                 <div>{fmtMoney(p.realized, currency)}</div>
                 <div className="text-muted">Fees {fmtMoney(p.buyFees + p.sellFees, currency)}</div>
               </td>

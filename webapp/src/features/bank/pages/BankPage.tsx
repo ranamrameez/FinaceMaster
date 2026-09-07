@@ -500,7 +500,7 @@ function AccountsList() {
                 badge={
                   a.isLiability || a.isActive === false ? (
                     <span style={{ display: 'flex', gap: 4 }}>
-                      {a.isLiability && <span className="pill-sell" style={{ fontSize: 10 }}>Credit card</span>}
+                      {a.isLiability && <span className="pill-negative" style={{ fontSize: 10 }}>Credit card</span>}
                       {a.isActive === false && <span className="pill-warn" style={{ fontSize: 10 }}>Archived</span>}
                     </span>
                   ) : undefined
@@ -779,7 +779,7 @@ export function AccountDetailPage() {
                     <tr key={p.id}>
                       <td>{p.date}</td>
                       <td>{p.description}</td>
-                      <td className={p.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(p.amount, account.currencyCode)}</td>
+                      <td className={p.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(p.amount, account.currencyCode)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1102,7 +1102,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
                   )}
                 </td>
                 <td><span className="pill-info">{categoryName(tx.categoryID, categories)}</span></td>
-                <td className={tx.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(tx.amount, account.currencyCode)}</td>
+                <td className={tx.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(tx.amount, account.currencyCode)}</td>
                 <td>{fmtMoney(balance, account.currencyCode)}</td>
                 <td className="text-muted cell-clip" title={tx.source === 'statement-import' ? `Import${tx.statementRef ? ` (${tx.statementRef})` : ''}` : 'Manual'}>
                   {tx.source === 'statement-import' ? `Import${tx.statementRef ? ` (${tx.statementRef})` : ''}` : 'Manual'}
@@ -1228,7 +1228,7 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
             <tr><td>Expense</td><td>{fmtMoney(monthFlowRow?.expense ?? 0, account.currencyCode)}</td></tr>
             <tr>
               <td>Net flow</td>
-              <td className={(monthFlowRow?.net ?? 0) >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(monthFlowRow?.net ?? 0, account.currencyCode)}</td>
+              <td className={(monthFlowRow?.net ?? 0) >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(monthFlowRow?.net ?? 0, account.currencyCode)}</td>
             </tr>
             <tr><td>Balance at month end</td><td>{fmtMoney(endOfMonthBalance, account.currencyCode)}</td></tr>
             {spendCategories.map((c) => (
@@ -1256,7 +1256,7 @@ function CategoryBreakdownBody({ account }: { account: BankAccount }) {
             {cats.map((cat) => (
               <tr key={cat}>
                 <td>{cat}</td>
-                <td className={byCategory[cat] >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(byCategory[cat], account.currencyCode)}</td>
+                <td className={byCategory[cat] >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(byCategory[cat], account.currencyCode)}</td>
               </tr>
             ))}
           </tbody>
@@ -1397,7 +1397,7 @@ function ImportStatementSection({ account }: { account: BankAccount }) {
                   <tr key={i}>
                     <td>{r.date}</td>
                     <td>{r.description}</td>
-                    <td className={r.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(r.amount, account.currencyCode)}</td>
+                    <td className={r.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(r.amount, account.currencyCode)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1520,10 +1520,10 @@ function BalanceProjectionSummary() {
             <div key={code} className="stat-card card">
               <div className="label">{code}</div>
               {settings.showRealBalance && (
-                <div className={projection[code].real >= 0 ? 'pill-buy' : 'pill-sell'}>Real: {fmtMoney(projection[code].real, code)}</div>
+                <div className={projection[code].real >= 0 ? 'pill-positive' : 'pill-negative'}>Real: {fmtMoney(projection[code].real, code)}</div>
               )}
               {settings.showPlannedBalance && (
-                <div className={projection[code].planned >= 0 ? 'pill-buy' : 'pill-sell'}>
+                <div className={projection[code].planned >= 0 ? 'pill-positive' : 'pill-negative'}>
                   Planned: {fmtMoney(projection[code].planned, code)}
                 </div>
               )}
@@ -1681,7 +1681,7 @@ function BankPlanList({ account }: { account: BankAccount }) {
                 <tr key={p.id}>
                   <td>{p.date}</td>
                   <td>{p.description}</td>
-                  <td className={p.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(p.amount, account.currencyCode)}</td>
+                  <td className={p.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(p.amount, account.currencyCode)}</td>
                   <td>{p.category || '—'}</td>
                   <td className="text-muted">{p.recurrence ? recurrenceLabel(p.recurrence) : p.executed ? 'Done' : 'Planned'}</td>
                   <td>
@@ -1864,8 +1864,8 @@ function AnalyticsTab() {
                           }}
                         />
                       </td>
-                      <td className={r.budget > 0 && r.actual > r.budget ? 'pill-sell' : ''}>{fmtMoney(r.actual, account.currencyCode)}</td>
-                      <td className={r.budget > 0 ? (r.budget - r.actual >= 0 ? 'pill-buy' : 'pill-sell') : ''}>
+                      <td className={r.budget > 0 && r.actual > r.budget ? 'pill-negative' : ''}>{fmtMoney(r.actual, account.currencyCode)}</td>
+                      <td className={r.budget > 0 ? (r.budget - r.actual >= 0 ? 'pill-positive' : 'pill-negative') : ''}>
                         {r.budget > 0 ? fmtMoney(r.budget - r.actual, account.currencyCode) : '—'}
                       </td>
                     </tr>

@@ -194,7 +194,7 @@ export function DividendsSection() {
                   <td>{d.ticker}</td>
                   <td>{d.perShare || '—'}</td>
                   <td>{d.shares || '—'}</td>
-                  <td className="pill-buy">{fmtMoney(d.amount, currency)}</td>
+                  <td className="pill-positive">{fmtMoney(d.amount, currency)}</td>
                   <td>
                     <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(d.i, d)} />{' '}
                     <IconButton label="Delete" icon={<TrashIcon size={13} />} align="right" onClick={() => removeDividend(d.i)} />
@@ -211,7 +211,7 @@ export function DividendsSection() {
             )}
           </tbody>
           <tfoot>
-            <tr><td colSpan={4}>Total collected</td><td className="pill-buy">{fmtMoney(total, currency)}</td><td></td></tr>
+            <tr><td colSpan={4}>Total collected</td><td className="pill-positive">{fmtMoney(total, currency)}</td><td></td></tr>
           </tfoot>
         </table>
       </div>
@@ -242,7 +242,7 @@ export function DividendsSection() {
                 ))}
               </tbody>
               <tfoot>
-                <tr><td colSpan={3}>Total projected</td><td className="pill-buy">{fmtMoney(totalProjected, currency)}</td></tr>
+                <tr><td colSpan={3}>Total projected</td><td className="pill-positive">{fmtMoney(totalProjected, currency)}</td></tr>
               </tfoot>
             </table>
           </div>
