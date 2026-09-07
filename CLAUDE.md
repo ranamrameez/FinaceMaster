@@ -5430,6 +5430,20 @@ not developer notes) continuously as features ship.
   pick the wrong one if either bug were still present): a restored old-format remembered USD
   account now correctly shows USD (not EUR); switching "Other finance" to Bank with Account 1 =
   Cash (USD) and no remembered source now correctly pre-selects the USD account (not EUR).
+- **Funds: closed/fully-withdrawn positions excluded from "Expected P/L," user-reported same
+  day (2026-09-07) — see README Done item 242.** User: "Expected monthly P/L and others should
+  not count closed positions for future/prediction!" `expectedPLRate()`'s two call sites in
+  `FundsPage.tsx` (the homepage's `OverallSummary` and each fund's own `FundDetail`) summed/
+  showed this forward-looking rate for EVERY fund, with no check for whether that fund still has
+  an ongoing position — nonsensical for a fund that's explicitly closed (`isActive === false`)
+  or fully withdrawn (0 units), since there's no future left to project from. Fixed by gating
+  both call sites on `fund.isActive !== false && units > 0` (both conditions checked
+  independently, since either alone is a real "closed" case). **Deliberately scoped to only this
+  stat** — per `Fund.isActive`'s own existing doc comment, Invested/Current value/Net profit are
+  historical totals that correctly keep including a closed fund's real past figures unchanged.
+  Verified live via Playwright with 3 seeded funds (open, explicitly-closed, fully-withdrawn-but-
+  not-flagged): the aggregate's Expected daily/monthly P/L exactly matched a single-open-fund-
+  only baseline, and both non-open funds' detail pages showed "—" instead of a computed rate.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

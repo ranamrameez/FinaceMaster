@@ -6309,6 +6309,42 @@ FinanceManager live link:
   1 = Cash (USD), switching "Other finance" to Bank correctly pre-selected the USD account, not
   the EUR one that would've won as `entities[0]`. `npx tsc -b` / `npm run test` (550 tests,
   unchanged — UI-only) / `npm run build` all clean.
+- **Funds: closed/fully-withdrawn positions no longer count toward the "Expected P/L"
+  projection, user-reported same day (2026-09-07) — see README Done item 242.** User: "Funds:
+  Expected monthly P/L and others should not count closed positions for future/prediction!"
+  `expectedPLRate()` (`lib/calc/fundsModule.ts`, Done item 226) is a FORWARD-LOOKING projection
+  by design — its own doc comment describes it as "an average of what already happened,"
+  extrapolated ahead as a rough estimate of what to expect going forward. Both of its call
+  sites in `FundsPage.tsx` — the homepage's `OverallSummary` (summed per currency across every
+  fund) and each fund's own `FundDetail` page — computed and included this rate for EVERY fund
+  unconditionally, with no check for whether that fund still has an ongoing position at all: a
+  fund explicitly closed via the "Close" button (`Fund.isActive === false`) or one that's simply
+  been fully sold/withdrawn (0 units currently held, whether or not it was ever formally closed)
+  has nothing left to keep earning or losing money on, so projecting a future rate from its past
+  history is meaningless — there's no "future" left for that position. Fixed by gating both call
+  sites on `fund.isActive !== false && units > 0` — deliberately checking BOTH conditions
+  independently rather than just one, since either alone is a real "closed" case: a fund flagged
+  inactive but (implausibly) still showing units, or a fund fully withdrawn but never explicitly
+  marked closed, both correctly excluded. **Deliberately scoped to only this ONE stat** — per
+  `Fund.isActive`'s own existing doc comment ("never from a total — a closed fund isn't a claim
+  that its money vanished"), Invested/Current value/Net profit are historical totals, not
+  predictions, and correctly keep including a closed fund's real past numbers (its realized P/L
+  from a past sale doesn't stop being real just because the fund is now closed) — only the
+  forward-looking Expected daily/monthly P/L needed this exclusion. `FundDetail`'s own
+  `position`/`units` computation (previously derived further down the component, after the
+  `plRate` call) was moved earlier so the gate could use it, with the later duplicate removed —
+  a pure reordering, no behavior change to anything else on the page. Verified live via
+  Playwright with 3 seeded funds sharing one currency (an open fund still growing, an explicitly
+  closed fund that was fully sold at a profit, and a fully-withdrawn-but-not-flagged-closed
+  fund): the homepage's Expected daily/monthly P/L totals exactly matched a separately-seeded
+  single-open-fund-only baseline (20 USD/day, 609 USD/month over the seeded 10-day span) — proving
+  neither the closed nor the withdrawn fund contributed anything to the aggregate — and both
+  funds' own detail pages showed "—" for Expected daily/monthly P/L instead of a computed rate.
+  Net profit/Invested/Current value were confirmed unaffected (still summing all 3 funds' real
+  historical figures, per the deliberate scoping above). No new calc function was needed (the
+  fix is entirely in which funds the existing `expectedPLRate()` gets called for, not in the
+  function itself), so no new unit tests — `npx tsc -b` / `npm run test` (550 tests, unchanged
+  — UI-only) / `npm run build` all clean.
 
 ## Pending
 
