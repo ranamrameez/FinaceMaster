@@ -30,7 +30,13 @@ export function CategorySelect({ value, onChange }: { value: string; onChange: (
 
   return (
     <div className="row" style={{ gap: 4, alignItems: 'center' }}>
-      <Select value={value} onChange={(e) => onChange(e.target.value)}>
+      {/* User-reported (app-wide audit): "+ of add account in popups...
+         moving in next line" — same fix as `SideFields`' own ref-picker,
+         see that component's own comment for the full root cause and why
+         BOTH `width` and `style={{minWidth}}` are needed together (`width`
+         alone still gets floored back up by `.row > *`'s separate
+         `min-width:160px` rule). */}
+      <Select value={value} onChange={(e) => onChange(e.target.value)} width={110} style={{ minWidth: 110 }}>
         {sorted.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
       </Select>
       <IconButton label="Add a new category" icon={<PlusIcon size={13} />} onClick={() => setAdding(true)} />

@@ -6,7 +6,7 @@ import { Field } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { fmt, fmtMoney } from '../../../lib/format';
-import { defaultTimezoneForCurrency } from '../../../lib/datetime';
+import { defaultTimezoneForCurrency, nowTime } from '../../../lib/datetime';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { useWorkbookStore } from '../../../store/workbookStore';
@@ -26,7 +26,7 @@ function AddDividendForm() {
   const [shares, setShares] = useState(0);
   const [amount, setAmount] = useState(0);
   const [sharesTouched, setSharesTouched] = useState(false);
-  const [time, setTime] = useState<string | undefined>(undefined);
+  const [time, setTime] = useState<string | undefined>(() => nowTime());
   const [timezone, setTimezone] = useState<string | undefined>(() => defaultTimezoneForCurrency(currency));
 
   const onTickerChange = (v: string) => {

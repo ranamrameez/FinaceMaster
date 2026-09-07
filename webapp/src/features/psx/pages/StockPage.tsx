@@ -11,7 +11,7 @@ import { Field, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { useSortableRows } from '../../../hooks/useSortableRows';
-import { defaultTimezoneForMarket } from '../../../lib/datetime';
+import { defaultTimezoneForMarket, nowTime } from '../../../lib/datetime';
 import { toCSV } from '../../../lib/csv';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { isNettedLeg } from '../../../lib/calc/psxFees';
@@ -57,7 +57,7 @@ function TickerTransactions({ ticker }: { ticker: string }) {
   const [feeMode, setFeeMode] = useState<FeeMode>('auto');
   const [manualSameDay, setManualSameDay] = useState(false);
   const [feeOverrideInput, setFeeOverrideInput] = useState<number | undefined>(undefined);
-  const [time, setTime] = useState<string | undefined>(undefined);
+  const [time, setTime] = useState<string | undefined>(() => nowTime());
   const [timezone, setTimezone] = useState<string | undefined>(defaultTimezoneForMarket('PSX'));
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editRow, setEditRow] = useState<Transaction | null>(null);
