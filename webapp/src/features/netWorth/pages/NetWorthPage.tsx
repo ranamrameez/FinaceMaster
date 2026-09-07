@@ -25,7 +25,7 @@ import { useAuthState } from '../../../lib/firebase/useAuthState';
 import { firebaseReady } from '../../../lib/firebase/client';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
-import { dlDoughnut, dlLine } from '../../../lib/chartLabels';
+import { dlDoughnut, dlLine, withAlpha } from '../../../lib/chartLabels';
 import type { ChartDataset } from 'chart.js';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar } from '../../../lib/cssVar';
@@ -803,7 +803,6 @@ function NetWorthMonthlySection({
  * foreground series. */
 function NetWorthComboChart({ currency, months, trend }: { currency: string; months: string[]; trend: MonthlyNetWorthPoint[] }) {
   const byMonth = new Map(trend.map((t) => [t.month, t]));
-  const withAlpha = (hex: string, fallback: string) => `${(hex || fallback).slice(0, 7)}B3`;
   return (
     <ChartCard title={`Net worth — ${currency}`}>
       <Chart

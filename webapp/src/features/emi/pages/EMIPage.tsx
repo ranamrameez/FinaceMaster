@@ -18,7 +18,7 @@ import { TransactionEntryModal } from '../../../components/TransactionEntryModal
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { emiSchedule, emiSummary, expectedEndDate, generateBigEmiOverrides, installmentDueDate, markupPercentage, markupRateEquivalents, resolvedDueDate, totalsByCurrency, whatIfExtraPayment, type EMISummary } from '../../../lib/calc/emiModule';
-import { dlBarV, dlLine } from '../../../lib/chartLabels';
+import { dlBarV, dlLine, withAlpha } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar } from '../../../lib/cssVar';
 import { useAppearanceStore } from '../../../store/appearanceStore';
@@ -960,8 +960,8 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
             data={{
               labels: schedule.rows.map((r) => r.month),
               datasets: [
-                { label: 'Principal', data: schedule.rows.map((r) => r.principalComp), backgroundColor: cssVar('--profit') || '#3ecf8e', stack: 's' },
-                { label: loan.repaymentMode === 'fixedTotal' ? 'Markup' : 'Interest', data: schedule.rows.map((r) => r.interest), backgroundColor: cssVar('--loss') || '#e5484d', stack: 's' },
+                { label: 'Principal', data: schedule.rows.map((r) => r.principalComp), backgroundColor: withAlpha(cssVar('--profit'), '#3ecf8e'), stack: 's' },
+                { label: loan.repaymentMode === 'fixedTotal' ? 'Markup' : 'Interest', data: schedule.rows.map((r) => r.interest), backgroundColor: withAlpha(cssVar('--loss'), '#e5484d'), stack: 's' },
               ],
             }}
             options={{
