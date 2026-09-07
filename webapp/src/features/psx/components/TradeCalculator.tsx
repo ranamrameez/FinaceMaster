@@ -12,6 +12,7 @@ import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
 import { usePSXDerived } from '../hooks/usePSXDerived';
 import { usePSXStockData } from '../hooks/usePSXStockData';
 import { hueStyle } from '../../../lib/statCardHues';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 type Mode = 'BUY' | 'SELL' | 'CYCLE';
 
@@ -257,7 +258,7 @@ export function TradeCalculator({ initialTicker }: { initialTicker?: string } = 
             </Tooltip>
           )}
           {position && (
-            <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 8, flex: 1 }}>
+            <div className="grid-auto" style={{ ...gridAutoStyle(120, 8), flex: 1 }}>
               <div className="stat-card card"><div className="label">Avg cost</div><div className="value">{fmtPrice(avg)}</div></div>
               <div className="stat-card card" style={currentPrice > 0 ? hueStyle(currentPrice >= be ? 'var(--profit)' : 'var(--loss)') : undefined}>
                 <Tooltip text="PSX nets commission when you buy and sell the same ticker on the same day — the smaller-quantity leg (ties go to the buy) pays no commission or SST, only government levies. 'Same-day' assumes this sell nets against a same-day buy; 'other day' assumes the full commission applies.">

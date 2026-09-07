@@ -10,6 +10,7 @@ import { useWorkbookStore } from '../../../store/workbookStore';
 import { useQSEDerived } from '../hooks/useQSEDerived';
 import { useQSEStockData } from '../hooks/useQSEStockData';
 import { hueStyle } from '../../../lib/statCardHues';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 type Mode = 'BUY' | 'SELL' | 'CYCLE';
 
@@ -253,7 +254,7 @@ export function TradeCalculator({ initialTicker }: { initialTicker?: string } = 
             </Tooltip>
           )}
           {position && (
-            <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 8, flex: 1 }}>
+            <div className="grid-auto" style={{ ...gridAutoStyle(120, 8), flex: 1 }}>
               <div className="stat-card card"><div className="label">Avg cost</div><div className="value">{fmtPrice(avg)}</div></div>
               <div className="stat-card card" style={currentPrice > 0 ? hueStyle(currentPrice >= be ? 'var(--profit)' : 'var(--loss)') : undefined}>
                 <div className="label">Break-even</div>

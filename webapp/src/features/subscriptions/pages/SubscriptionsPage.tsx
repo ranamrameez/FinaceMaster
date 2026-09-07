@@ -42,6 +42,7 @@ import type { Subscription, SubscriptionAlert, SubscriptionsWorkbook } from '../
 import type { PlannedBankTransaction } from '../../../types/plannedBank';
 import type { PlannedCashEntry } from '../../../types/plannedCash';
 import { ChartCard } from '../../qse/components/ChartCard';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -144,7 +145,7 @@ function OverallSummary() {
   if (!codes.length) return null;
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px,1fr))', gap: 8, marginBottom: 16 }}>
+    <div className="grid-auto" style={{ ...gridAutoStyle(150, 8), marginBottom: 16 }}>
       {codes.map((code) => (
         <div key={code} className="stat-card card" style={hueStyle('var(--loss)')}>
           <div className="label">Monthly recurring spend ({code})</div>
@@ -474,7 +475,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
             </div>
           </div>
         )}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px,1fr))', gap: 8, marginTop: 12 }}>
+        <div className="grid-auto" style={{ ...gridAutoStyle(130, 8), marginTop: 12 }}>
           <div className="stat-card card" style={hueStyle(HUES[3])}>
             <Tooltip text="What this costs per month on average — converted from its real billing cycle (weekly, yearly, etc.) so you can compare it to other subscriptions.">
               <div className="label" style={{ cursor: 'pointer' }}>Monthly equivalent</div>
@@ -586,7 +587,7 @@ function AnalyticsTab() {
           </Select>
         </Field>
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginTop: 12 }}>
+      <div className="grid-auto" style={{ ...gridAutoStyle(320, 16), marginTop: 12 }}>
         <ChartCard title="Spend by category (monthly equivalent)" empty={!categories.length}>
           <Doughnut
             data={{

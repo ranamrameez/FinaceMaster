@@ -23,6 +23,7 @@ import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney, fmtPrice } from '../../../lib/format';
 import { useFundsWorkbookStore } from '../../../store/fundsWorkbookStore';
 import type { Fund } from '../../../types/fundsWorkbook';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 const uid = () => crypto.randomUUID();
 const CATEGORIES: Fund['category'][] = ['Equity', 'Debt', 'Hybrid', 'International', 'Other'];
@@ -270,7 +271,7 @@ export function DailyHistoryImportSection() {
               </Notice>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px,1fr))', gap: 8, marginTop: 12 }}>
+            <div className="grid-auto" style={{ ...gridAutoStyle(140, 8), marginTop: 12 }}>
               <div className="stat-card card"><div className="label">Reconstructed value</div><MoneyValue n={finalValue} currency={currencyForDisplay} /></div>
               {p.matchedIdentity && (
                 <div className="stat-card card">

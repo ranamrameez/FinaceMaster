@@ -18,7 +18,7 @@ import { TransactionEntryModal } from '../../../components/TransactionEntryModal
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { emiSchedule, emiSummary, expectedEndDate, generateBigEmiOverrides, installmentDueDate, markupPercentage, markupRateEquivalents, resolvedDueDate, totalsByCurrency, whatIfExtraPayment, type EMISummary } from '../../../lib/calc/emiModule';
-import { dlBarV, dlLine } from '../../../lib/chartLabels';
+import { dlBarV, dlLine, withAlpha } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar } from '../../../lib/cssVar';
 import { useAppearanceStore } from '../../../store/appearanceStore';
@@ -37,6 +37,7 @@ import { linkTargetPath, useLinkSideLabel } from '../../transfers/pages/Transfer
 import type { LinkSideConfig } from '../../../types/interEntityTransfer';
 import type { EMILoan, EMIRepayment } from '../../../types/emiWorkbook';
 import type { PlannedBankTransaction } from '../../../types/plannedBank';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -321,7 +322,7 @@ function LoanStatZones({ loan, sum, loanRepayments }: { loan: EMILoan; sum: EMIS
   );
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px,1fr))', gap: 16, marginTop: 12 }}>
+    <div className="grid-auto" style={{ ...gridAutoStyle(220, 16), marginTop: 12 }}>
       {zone('Origination', (
         <>
           <div className="stat-card card" style={hueStyle(HUES[3])}>
@@ -959,8 +960,8 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
             data={{
               labels: schedule.rows.map((r) => r.month),
               datasets: [
-                { label: 'Principal', data: schedule.rows.map((r) => r.principalComp), backgroundColor: cssVar('--profit') || '#3ecf8e', stack: 's' },
-                { label: loan.repaymentMode === 'fixedTotal' ? 'Markup' : 'Interest', data: schedule.rows.map((r) => r.interest), backgroundColor: cssVar('--loss') || '#e5484d', stack: 's' },
+                { label: 'Principal', data: schedule.rows.map((r) => r.principalComp), backgroundColor: withAlpha(cssVar('--profit'), '#3ecf8e'), stack: 's' },
+                { label: loan.repaymentMode === 'fixedTotal' ? 'Markup' : 'Interest', data: schedule.rows.map((r) => r.interest), backgroundColor: withAlpha(cssVar('--loss'), '#e5484d'), stack: 's' },
               ],
             }}
             options={{
@@ -1010,7 +1011,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
           <TextInput type="number" step="0.01" value={extraPayment || ''} onChange={(e) => setExtraPayment(Number(e.target.value))} />
         </Field>
         {extraPayment > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px,1fr))', gap: 8, marginTop: 12 }}>
+          <div className="grid-auto" style={{ ...gridAutoStyle(130, 8), marginTop: 12 }}>
             <div className="stat-card card" style={hueStyle(HUES[0])}><div className="label">New months</div><div className="value">{whatIf.months}</div><div className="sub">{whatIf.monthsSaved} sooner</div></div>
             <div className="stat-card card" style={hueStyle(HUES[7])}><div className="label">New end date</div><div className="value" style={{ fontSize: 14 }}>{whatIf.newEndDate}</div></div>
             <div className="stat-card card" style={hueStyle('var(--profit)')}>
@@ -1129,11 +1130,11 @@ function OverallSummary() {
   if (!codes.length) return null;
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px,1fr))', gap: 8, marginBottom: 16 }}>
+    <div className="grid-auto" style={{ ...gridAutoStyle(150, 8), marginBottom: 16 }}>
       {codes.map((code) => (
         <div key={code} className="card" style={{ padding: 12 }}>
           <div className="text-muted" style={{ marginBottom: 6 }}>{code}</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px,1fr))', gap: 8 }}>
+          <div className="grid-auto" style={gridAutoStyle(110, 8)}>
             <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Monthly total</div><MoneyValue n={totals[code].monthlyInstallment} currency={code} /></div>
             <div className="stat-card card" style={hueStyle('var(--loss)')}>
               <Tooltip text="How much you still owe across your loans in this currency — remaining principal only for interest-rate loans, the full remaining amount (including markup) for fixed-total loans.">

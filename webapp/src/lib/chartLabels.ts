@@ -96,3 +96,14 @@ export function dimColor(hex: string, dim: boolean): string {
   const base = hex.length === 9 ? hex.slice(0, 7) : hex;
   return `${base}40`;
 }
+
+/** UI_DESIGN_GUIDELINES.md ("Charts, color, and readability" rule 2):
+ * chart fills should be translucent so overlapping data stays legible -
+ * an opaque bar/area can bury a line (or another series) sharing the same
+ * canvas. Shared here (was a local copy inside NetWorthPage.tsx's own
+ * combo chart) so any other multi-series chart reaches for the same
+ * helper instead of re-deriving it. `B3` = ~70% opacity, same value the
+ * original NetWorthPage.tsx copy used. */
+export function withAlpha(hex: string, fallback: string): string {
+  return `${(hex || fallback).slice(0, 7)}B3`;
+}

@@ -15,6 +15,7 @@ import { Notice } from './Notice';
 import { Tooltip } from './Tooltip';
 import { Field, Select, TextInput } from './ui/Field';
 import { HUES, hueStyle } from '../lib/statCardHues';
+import { gridAutoStyle } from '../lib/gridStyle';
 
 export interface RiskCalculatorRow {
   ticker: string;
@@ -249,7 +250,7 @@ export function RiskCalculator({
 
           <Card style={{ marginBottom: 16 }}>
             <h3 style={{ marginTop: 0 }}>Current position</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 8 }}>
+            <div className="grid-auto" style={gridAutoStyle(120, 8)}>
               <StatCard label="Invested" value={fmtMoney(currentMetrics.invested, currency)} hue={HUES[0]} labelTitle="Total cost basis of your current position, fees included." />
               <StatCard
                 label="Break-even"
@@ -317,7 +318,7 @@ export function RiskCalculator({
 
           <Card style={{ marginBottom: 16 }}>
             <h3 style={{ marginTop: 0 }}>Capital efficiency &amp; diminishing returns</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 8, marginBottom: 10 }}>
+            <div className="grid-auto" style={{ ...gridAutoStyle(120, 8), marginBottom: 10 }}>
               <StatCard label="Risk level" value={riskMode.toUpperCase()} hue={HUES[6]} labelTitle="Conservative/Balanced/Aggressive only changes the suggested ceiling above — never the math." />
               <StatCard
                 label="Suggested ceiling"
@@ -348,7 +349,7 @@ export function RiskCalculator({
 
           <Card>
             <h3 style={{ marginTop: 0 }}>Stress test after selected average</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px,1fr))', gap: 8 }}>
+            <div className="grid-auto" style={gridAutoStyle(90, 8)}>
               {stress.map((p) => (
                 <div key={p.label} className="stat-card card" style={hueStyle(p.pl >= 0 ? 'var(--profit)' : 'var(--loss)')}>
                   <div className="label">{p.label}</div>

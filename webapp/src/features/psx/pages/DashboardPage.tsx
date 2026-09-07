@@ -20,6 +20,7 @@ import { AlertsBox, usePSXAlerts } from '../components/AlertsBox';
 import { ChartCard } from '../../qse/components/ChartCard';
 import { usePSXDerived } from '../hooks/usePSXDerived';
 import { usePSXStockData } from '../hooks/usePSXStockData';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 const INVEST_PALETTE = ['#3d4b58', '#c9a227', '#34c77b', '#3b6bd6', '#8a97a3', '#e5484d', '#7b5cd6', '#2ea3a3'];
 
@@ -216,7 +217,7 @@ export function DashboardPage() {
 
       <div className="rail-split">
         <div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
+          <div className="grid-auto" style={{ ...gridAutoStyle(160, 12), marginBottom: 20 }}>
             <StatCard label="Net Worth" value={money(summary.netWorth, currency)} title={moneyTitle(summary.netWorth)} hue={INVEST_PALETTE[3]} />
             <StatCard label="Cash Balance" value={money(summary.cashBalance, currency)} title={moneyTitle(summary.cashBalance)} hue={INVEST_PALETTE[7]} />
             <StatCard label="Portfolio Value" value={money(summary.portfolioValue, currency)} title={moneyTitle(summary.portfolioValue)} hue={INVEST_PALETTE[6]} />
@@ -238,7 +239,7 @@ export function DashboardPage() {
 
           <HoldingsCard />
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
+          <div className="grid-auto" style={gridAutoStyle(320, 16)}>
             <ChartCard title="Allocation by ticker (cost basis)" empty={!rows.length}>
               <Doughnut
                 data={{

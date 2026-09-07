@@ -21,6 +21,7 @@ import { useAppearanceStore } from '../../../store/appearanceStore';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
 import type { PricePoint } from '../../../types/workbook';
 import { usePSXDerived } from '../hooks/usePSXDerived';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 function CompactChart({ height, children }: { height: number; children: React.ReactNode }) {
   return <div style={{ height, position: 'relative' }}>{children}</div>;
@@ -194,7 +195,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
 
       {isOpen && (
         <CollapsibleCard title={<h4 style={{ margin: 0 }}>Current position</h4>} style={{ marginBottom: 12 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px,1fr))', gap: 8 }}>
+          <div className="grid-auto" style={gridAutoStyle(100, 8)}>
             <div className="stat-card card" style={hueStyle(HUES[2])}>
               <div className="label">Trend</div>
               <div className="value"><Sparkline data={sparkData} formatValue={fmtPrice} /></div>
@@ -272,7 +273,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
 
       {position && (position.buyCount > 0 || position.sellCount > 0) && (
         <CollapsibleCard title={<h4 style={{ margin: 0 }}>All-time stats</h4>} style={{ marginBottom: 12 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px,1fr))', gap: 8 }}>
+          <div className="grid-auto" style={gridAutoStyle(100, 8)}>
             <div className="stat-card card" style={hueStyle(HUES[0])}>
               <div className="label">Bought / Sold</div>
               <div className="value">{fmt(position.totalBoughtShares, 0)} / {fmt(position.totalSoldShares, 0)}</div>

@@ -52,6 +52,7 @@ import type { Fund, FundsWorkbook } from '../../../types/fundsWorkbook';
 import type { Transaction, Transfer } from '../../../types/workbook';
 import { useFundsDerived } from '../hooks/useFundsDerived';
 import { ChartCard } from '../../qse/components/ChartCard';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const uid = () => crypto.randomUUID();
@@ -143,7 +144,7 @@ function InvestmentHelperModal({ onClose }: { onClose: () => void }) {
         {!projected ? (
           <p className="text-muted" style={{ margin: 0 }}>Not enough price history yet to project returns for this fund.</p>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px,1fr))', gap: 8 }}>
+          <div className="grid-auto" style={gridAutoStyle(90, 8)}>
             <div className="stat-card card" style={hueStyle(projected.dailyAmount >= 0 ? 'var(--profit)' : 'var(--loss)')}>
               <div className="label">Day</div>
               <MoneyValue n={projected.dailyValue} currency={fund.currencyCode} after={` (${projected.dailyAmount >= 0 ? '+' : ''}${fmtMoney(projected.dailyAmount, fund.currencyCode)})`} />
@@ -309,7 +310,7 @@ function OverallSummary() {
   if (!codes.length) return null;
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px,1fr))', gap: 8, marginBottom: 16 }}>
+    <div className="grid-auto" style={{ ...gridAutoStyle(150, 8), marginBottom: 16 }}>
       {codes.map((code) => {
         const t = totals[code];
         const profitPct = t.invested > 0 ? (t.profit / t.invested) * 100 : 0;
@@ -318,7 +319,7 @@ function OverallSummary() {
         return (
           <div key={code} className="card" style={{ padding: 12 }}>
             <div className="text-muted" style={{ marginBottom: 6 }}>{code}</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px,1fr))', gap: 8 }}>
+            <div className="grid-auto" style={gridAutoStyle(110, 8)}>
               <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Invested</div><MoneyValue n={t.invested} currency={code} /></div>
               <div className="stat-card card" style={hueStyle(HUES[6])}><div className="label">Current value</div><MoneyValue n={t.value} currency={code} /></div>
               <div className="stat-card card" style={hueStyle(t.profit >= 0 ? 'var(--profit)' : 'var(--loss)')}><div className="label">Net profit</div><MoneyValue n={t.profit} currency={code} after={` (${profitPct.toFixed(1)}%)`} /></div>
@@ -908,7 +909,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                 </div>
               </div>
             )}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 8, marginTop: 12 }}>
+            <div className="grid-auto" style={{ ...gridAutoStyle(120, 8), marginTop: 12 }}>
               <div className="stat-card card"><div className="label">Units held</div><div className="value">{fmt(units, 2)}</div></div>
               <div className="stat-card card">
                 <Tooltip text="NAV = Net Asset Value, the price of one unit of this fund. This is the average price you paid per unit across all your purchases.">
@@ -1413,7 +1414,7 @@ function AnalyticsTab() {
           </Select>
         </Field>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginTop: 12 }}>
+      <div className="grid-auto" style={{ ...gridAutoStyle(320, 16), marginTop: 12 }}>
         <ChartCard title="Allocation by category" empty={!categories.length}>
           <Doughnut
             data={{

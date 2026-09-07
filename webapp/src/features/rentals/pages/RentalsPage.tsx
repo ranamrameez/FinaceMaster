@@ -40,6 +40,7 @@ import { linkTargetPath, useLinkSideLabel } from '../../transfers/pages/Transfer
 import { usePlannedRentalsWorkbookStore } from '../../../store/plannedRentalsWorkbookStore';
 import type { Property, RentalEntry, RentalsWorkbook } from '../../../types/rentalsWorkbook';
 import { ChartCard } from '../../qse/components/ChartCard';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const uid = () => crypto.randomUUID();
@@ -58,7 +59,7 @@ function NetIncomeSummary() {
   if (!codes.length) return null;
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px,1fr))', gap: 8, marginBottom: 16 }}>
+    <div className="grid-auto" style={{ ...gridAutoStyle(150, 8), marginBottom: 16 }}>
       {codes.map((code) => (
         <div key={code} className="stat-card card" style={hueStyle(totals[code] >= 0 ? 'var(--profit)' : 'var(--loss)')}>
           <div className="label">Net income ({code})</div>
@@ -550,7 +551,7 @@ function AnalyticsTab() {
           </Select>
         </Field>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginTop: 12 }}>
+      <div className="grid-auto" style={{ ...gridAutoStyle(320, 16), marginTop: 12 }}>
         <ChartCard title="Net income by property" empty={!netByProperty.length}>
           <Bar
             data={{
@@ -983,7 +984,7 @@ function CategoryAndRollup({ property }: { property: Property }) {
   const cats = Object.keys(byCategory);
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px,1fr))', gap: 16, marginBottom: 16 }}>
+    <div className="grid-auto" style={{ ...gridAutoStyle(260, 16), marginBottom: 16 }}>
       {cats.length > 0 && (
         <CollapsibleCard title={<h3 style={{ margin: 0 }}>By category</h3>}>
           <div className="table-scroll">

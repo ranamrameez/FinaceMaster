@@ -14,6 +14,7 @@ import { requireSignIn } from '../../../components/SignInModal';
 import { createEmptyPSXWorkbook } from '../../../store/defaultPsxWorkbook';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
 import type { PSXWorkbook } from '../../../types/psxWorkbook';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 function AccountSection({
   user,
@@ -291,7 +292,7 @@ function AmountSettings() {
   // by far, so it's left spanning both columns on its own row rather than
   // forced narrow next to a 3-field card.
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, alignItems: 'start' }}>
+    <div className="grid-auto" style={{ ...gridAutoStyle(320, 16), alignItems: 'start' }}>
       <div style={{ gridColumn: '1 / -1' }}>
         <FeeSettings />
       </div>

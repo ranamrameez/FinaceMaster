@@ -19,6 +19,7 @@ import { useAppearanceStore } from '../../../store/appearanceStore';
 import { useWorkbookStore } from '../../../store/workbookStore';
 import type { PricePoint } from '../../../types/workbook';
 import { useQSEDerived } from '../hooks/useQSEDerived';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 /** Small, fixed-height chart wrapper — Chart.js defaults to filling
  * whatever block-level space it's given, which meant every chart rendered
@@ -178,7 +179,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
 
       {isOpen && (
         <CollapsibleCard title={<h4 style={{ margin: 0 }}>Current position</h4>} style={{ marginBottom: 12 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px,1fr))', gap: 8 }}>
+          <div className="grid-auto" style={gridAutoStyle(100, 8)}>
             <div className="stat-card card" style={hueStyle(HUES[2])}>
               <div className="label">Trend</div>
               <div className="value"><Sparkline data={sparkData} formatValue={fmtPrice} /></div>
@@ -222,7 +223,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
           look back on. */}
       {position && (position.buyCount > 0 || position.sellCount > 0) && (
         <CollapsibleCard title={<h4 style={{ margin: 0 }}>All-time stats</h4>} style={{ marginBottom: 12 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px,1fr))', gap: 8 }}>
+          <div className="grid-auto" style={gridAutoStyle(100, 8)}>
             <div className="stat-card card" style={hueStyle(HUES[0])}>
               <div className="label">Bought / Sold</div>
               <div className="value">{fmt(position.totalBoughtShares, 0)} / {fmt(position.totalSoldShares, 0)}</div>
