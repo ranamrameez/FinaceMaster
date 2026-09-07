@@ -5485,6 +5485,26 @@ not developer notes) continuously as features ship.
   local→remote(QSE)/fallback(PSX)→a real colored fallback badge with correct initials ("QI"/
   "QN"/"OG"), zero `<img>` stuck mid-cascade, confirmed via real screenshots too. `npx tsc -b` /
   `npm run test` (553 tests, unchanged) / `npm run build` all clean.
+- **"Add Trade" available on every Stock Exchanges page + narrower popups, user-requested
+  (2026-09-07) — see README Done item 245.** User: "Add Trade should be available on all pages
+  of Stocks. a popup is better. try to make 40% to 50% width popups instead of winning the
+  horizons!" (1) Moved "Buy/sell stock" (Done item 240, Dashboard-only) into
+  `CalculatorLauncher.tsx` itself — already globally mounted on every Stock Exchanges route via
+  `categoryForPath()` — as a second built-in FAB action next to "Trade calculator," instead of
+  duplicating a page-local `usePageFabActions()` registration on every page. Dashboard's own
+  now-redundant copy removed (replaced, not duplicated); still reuses `TransactionRows`
+  unchanged on both exchanges. (2) `Modal.tsx` gained an optional `width` prop
+  (`clamp(320px, 45vw, 640px)` for this popup) overriding the shared `.modal-box`'s default
+  920px cap — a small ticker/action/shares/price form didn't need that much room, "winning the
+  horizon" on a normal desktop viewport; only applied to this one popup, every other `Modal`
+  keeps its 920px default. **A real Playwright pitfall caught and worked around during
+  verification, not an app bug**: `page.goto()` to a different hash-only URL doesn't remount a
+  HashRouter app, so a FAB panel left "open" on one page silently carried that state into the
+  next check — first misread as the button being missing everywhere but Dashboard, fixed by
+  giving each page its own fresh browser context. Verified live: "Buy/sell stock" present and
+  clickable on all 8 QSE Stock Exchanges pages plus PSX's own Portfolio (Fee Mode control
+  confirmed rendering), and the popup measured exactly 630px on a 1400px viewport — 45.0%,
+  squarely inside the requested range — on both exchanges.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

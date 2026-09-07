@@ -6424,6 +6424,40 @@ FinanceManager live link:
   confirmed the badges render as small, distinctly-colored squares next to each ticker/company
   name, not broken images or stray text. `npx tsc -b` / `npm run test` (553 tests, unchanged —
   UI-only) / `npm run build` all clean.
+- **"Add Trade" made available on every Stock Exchanges page, and every popup narrowed to
+  40-50% width, user-requested (2026-09-07) — see README Done item 245.** User: "Add Trade
+  should be available on all pages of Stocks. a popup is better. try to make 40% to 50% width
+  popups instead of winning the horizons!" (1) The "Buy/sell stock" popup shipped in Done item
+  240 only lived on the Dashboard (a page-local `usePageFabActions()` registration) — moved it
+  into `CalculatorLauncher.tsx` itself instead of duplicating a page-local copy on every page:
+  that component is ALREADY globally mounted on every Stock Exchanges route (gated by
+  `categoryForPath()`, the same route-awareness that already picks QSE vs. PSX for the Trade
+  Calculator), so adding "Buy/sell stock" as a second built-in action there — right next to
+  "Trade calculator" — makes it available everywhere in one place, not one page at a time.
+  Dashboard's own now-redundant page-local `AddTradeFab` was removed (replaced, not duplicated).
+  Still reuses `TransactionsPage.tsx`'s own `TransactionRows` unchanged on both exchanges, same
+  "no parallel add-trade implementation" reasoning the original version already established.
+  (2) `Modal.tsx` gained an optional `width` prop overriding its shared `.modal-box`'s default
+  `max-width:920px` — the "Add a trade" popup's own real content (ticker/action/shares/price,
+  maybe PSX's Fee Mode control) is genuinely small, and 920px made it look oddly wide, "winning
+  the horizon," on a normal desktop viewport. Uses `clamp(320px, 45vw, 640px)` — a floor keeps
+  it usable on mobile (45vw of a narrow phone would be unusably tiny), a ceiling keeps it from
+  creeping back toward that same "wins the whole screen" feel on a very wide monitor, and 45vw
+  in between lands it squarely in the requested 40-50% range on typical desktop widths. Only
+  applied to this one popup — every other `Modal` caller keeps its existing 920px cap unless a
+  future request asks for the same treatment elsewhere. Verified live via Playwright: (1) a
+  genuinely fresh browser context per page (avoiding a real test-script pitfall — `page.goto()`
+  to a different hash-only URL doesn't remount a HashRouter app, so a FAB panel left "open" from
+  a previous page silently carried its expanded state into the next check, at first misreading
+  as the button being MISSING everywhere but Dashboard; a fresh context per page ruled this out)
+  confirmed "Buy/sell stock" present and clickable on all 8 QSE Stock Exchanges pages (Dashboard,
+  Portfolio, StockPage, Watchlist, Analytics, Settings, Risk Analysis, Trade Transactions) and,
+  separately, on PSX's own Portfolio page with its Fee Mode control confirmed rendering inside;
+  (2) the popup measured exactly 630px wide on a 1400px viewport — a 45.0% ratio, squarely inside
+  the requested 40-50% range — on both exchanges, confirmed via both a real bounding-box
+  measurement and a screenshot showing the popup reading as compact and centered rather than
+  spanning the page. Zero real console errors. `npx tsc -b` / `npm run test` (553 tests,
+  unchanged — UI-only) / `npm run build` all clean.
 
 ## Pending
 

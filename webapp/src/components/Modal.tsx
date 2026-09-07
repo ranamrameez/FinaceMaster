@@ -5,6 +5,7 @@ export function Modal({
   onClose,
   children,
   zIndex,
+  width,
 }: {
   title: string;
   onClose: () => void;
@@ -22,10 +23,19 @@ export function Modal({
    * inline z-index:1000 for (see that component's own comment) — this
    * just gives every other `Modal` caller the same escape hatch. */
   zIndex?: number;
+  /** Overrides `.modal-box`'s default `max-width:920px` — user-reported
+   * (2026-09-07): a small form (e.g. the "Add a trade" popup — ticker/
+   * action/shares/price, maybe a fee-mode control) looked oddly wide,
+   * "winning the horizon," stretched almost edge to edge on a normal
+   * desktop viewport for content that doesn't need anywhere near that
+   * much room. Pass a CSS width value (e.g. a `clamp()`) for a popup whose
+   * content is genuinely narrow; omit for the default 920px cap, which
+   * stays right for wider content (a multi-column comparison, a table). */
+  width?: string;
 }) {
   return (
     <div className="modal-overlay show" style={zIndex ? { zIndex } : undefined} onClick={onClose}>
-      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-box" style={width ? { maxWidth: width } : undefined} onClick={(e) => e.stopPropagation()}>
         <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
           <h3 style={{ margin: 0 }}>{title}</h3>
           <button
