@@ -6226,6 +6226,26 @@ FinanceManager live link:
   checks. `npx tsc -b` / `npm run test` (550 tests, unchanged — pure UI wiring on
   already-tested calc) / `npm run build` all clean. This closes out the entire recurring-
   planning redesign requested at the start of this batch.
+- **Trade Calculator FAB no longer overlaps/blocks other FABs, user-reported (2026-09-07) —
+  see README Done item 239.** `CalculatorLauncher.tsx` (globally mounted on every Stock
+  Exchanges route) rendered its OWN independent `position:fixed; right:24; bottom:24`
+  button, at the exact same corner `FabPanel` (`components/ui/Fab.tsx`) already uses for
+  every module's own FAB — including QSE's/PSX's own page-level "Transfers" `FabPanel` on the
+  Trade Transactions page (Done item 219). Visiting that page rendered two separate fixed
+  elements fighting for the same corner instead of the single grouped button `FabPanel` was
+  specifically built for. Fixed with a small, never-persisted `store/fabActionsStore.ts` +
+  paired `hooks/usePageFabActions.ts`: a page can register its own extra FAB action(s), and
+  `CalculatorLauncher` combines them with its own calculator action into ONE `FabPanel`
+  instead of rendering a second fixed element. A page with nothing extra to add (the common
+  case — Dashboard, Portfolio, StockPage, etc.) sees the identical single round button as
+  before, zero visual change; Trade Transactions (calculator + Transfers) now correctly
+  expands into one grouped menu. QSE's and PSX's own `TransfersFab` components switched from
+  rendering their own `<FabPanel>` to calling `usePageFabActions()`. Verified live via
+  Playwright: a real `getComputedStyle` sweep confirmed exactly one `position:fixed`
+  bottom-right element on both the Dashboard (single button) and Trade Transactions (one
+  grouped panel, not two); clicking "Open actions" then "Trade calculator" correctly opened
+  the QSE Trade Calculator modal — same check repeated on PSX's own Trade Transactions page.
+  `npx tsc -b` / `npm run test` (550 tests, unchanged — UI-only) / `npm run build` all clean.
 
 ## Pending
 
