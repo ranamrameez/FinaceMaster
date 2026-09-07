@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Fund } from '../../../types/fundsWorkbook';
 import type { PricePoint, Transaction } from '../../../types/workbook';
-import { allocationByCategory, balanceUpdateHistory, contributionVsValueSeries, expectedPLRate, fundNetProfit, fundsValueByCurrency, organicPLByPeriod } from '../fundsModule';
+import { allocationByCategory, balanceUpdateHistory, contributionVsValueSeries, expectedPLRate, fundNetProfit, fundsValueByCurrency, organicPLByPeriod, projectInvestmentReturn } from '../fundsModule';
 import { averagePeriodPL, reconstructFundDailyHistory } from '../fundsDailyHistoryImport';
 import { computePositions } from '../positions';
 
@@ -171,6 +171,37 @@ describe('expectedPLRate', () => {
     const priceHistory: Record<string, PricePoint[]> = { f1: [{ date: '2026-01-11', price: 10 }] };
     const rate = expectedPLRate('f1', txs, priceHistory);
     expect(rate).toEqual({ dailyAmount: 0, dailyPct: 0, monthlyAmount: 0, monthlyPct: 0 });
+  });
+});
+
+describe('projectInvestmentReturn', () => {
+  it('scales a rate\'s percentages onto a hypothetical amount, not its own dollar amounts', () => {
+    // A 1% daily / 30.44% monthly rate (the same rate hand-traced above,
+    // computed against a $1000 actual balance) applied to a completely
+    // different hypothetical $5000 investment.
+    const rate = { dailyAmount: 10, dailyPct: 1, monthlyAmount: 304.4, monthlyPct: 30.44 };
+    const projected = projectInvestmentReturn(5000, rate);
+    expect(projected.dailyAmount).toBeCloseTo(50, 6); // 5000 * 1%
+    expect(projected.dailyValue).toBeCloseTo(5050, 6);
+    expect(projected.monthlyAmount).toBeCloseTo(1522, 6); // 5000 * 30.44%
+    expect(projected.monthlyValue).toBeCloseTo(6522, 6);
+    expect(projected.yearlyAmount).toBeCloseTo(1522 * 12, 6); // simple, not compounded
+    expect(projected.yearlyValue).toBeCloseTo(5000 + 1522 * 12, 6);
+  });
+
+  it('a negative rate projects a loss, and *Value can go below the invested amount', () => {
+    const rate = { dailyAmount: -5, dailyPct: -0.5, monthlyAmount: -152.2, monthlyPct: -15.22 };
+    const projected = projectInvestmentReturn(1000, rate);
+    expect(projected.dailyAmount).toBeCloseTo(-5, 6);
+    expect(projected.dailyValue).toBeCloseTo(995, 6);
+    expect(projected.monthlyValue).toBeCloseTo(1000 - 152.2, 6);
+    expect(projected.yearlyAmount).toBeCloseTo(-152.2 * 12, 6);
+  });
+
+  it('a zero rate projects no change at any horizon', () => {
+    const rate = { dailyAmount: 0, dailyPct: 0, monthlyAmount: 0, monthlyPct: 0 };
+    const projected = projectInvestmentReturn(2000, rate);
+    expect(projected).toEqual({ dailyAmount: 0, dailyValue: 2000, monthlyAmount: 0, monthlyValue: 2000, yearlyAmount: 0, yearlyValue: 2000 });
   });
 });
 

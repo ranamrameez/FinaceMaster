@@ -5444,6 +5444,24 @@ not developer notes) continuously as features ship.
   Verified live via Playwright with 3 seeded funds (open, explicitly-closed, fully-withdrawn-but-
   not-flagged): the aggregate's Expected daily/monthly P/L exactly matched a single-open-fund-
   only baseline, and both non-open funds' detail pages showed "—" instead of a computed rate.
+- **Funds: "Investment helper" calculator, comparing 2 funds side by side, user-requested
+  (2026-09-07) — see README Done item 243.** User: "Investment helper calculator amount to
+  invest in a fund and expected returns on it. allow comparison b/w 2 funds there as well/ may
+  use POPUP." Confirmed the two real design forks via `AskUserQuestion` before building: rate
+  basis = each fund's own historical rate (reusing `expectedPLRate()`, not XIRR or a manual
+  rate), horizon = a fixed Day/Month/Year set shown at once, not a custom-duration field. New
+  `projectInvestmentReturn(amount, rate)` scales an `ExpectedPLRate`'s PERCENTAGES onto a
+  hypothetical amount — a yearly figure (`monthlyAmount * 12`) extends the same simple,
+  non-compounding extrapolation `expectedPLRate` already uses for its own monthly figure. New
+  `InvestmentHelperModal` (`FundsPage.tsx`) is a third action on the Funds landing FAB, matching
+  the user's "may use POPUP" suggestion; one shared "Amount to invest" applies to both fund
+  slots for an apples-to-apples comparison, Fund B optional. Only ACTIVE funds are offered
+  (same "hide from pickers for new activity" convention as `SideFields`) — distinct from the
+  immediately-preceding fix, which was about NOT projecting from an EXISTING closed position, a
+  different question this feature doesn't touch. Verified live via Playwright with 2 funds
+  (1%/day and 0.2%/day rates, hand-computed from seeded NAV history) plus a closed third fund:
+  the closed fund never appears in either picker, and with $5000 entered both panels' Day/Month/
+  Year figures matched hand-traced math exactly, side by side.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

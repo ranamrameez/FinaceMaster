@@ -183,6 +183,44 @@ export function expectedPLRate(
   return { dailyAmount, dailyPct, monthlyAmount, monthlyPct };
 }
 
+export interface ProjectedReturn {
+  dailyAmount: number;
+  dailyValue: number;
+  monthlyAmount: number;
+  monthlyValue: number;
+  yearlyAmount: number;
+  yearlyValue: number;
+}
+
+/** User-requested (2026-09-07): "Investment helper calculator amount to
+ * invest in a fund and expected returns on it." Scales an `ExpectedPLRate`'s
+ * PERCENTAGES (not its dollar amounts, which are tied to that specific
+ * fund's own current actual invested balance) onto a hypothetical NEW
+ * investment amount — so "if I put $X into this fund, based on its own
+ * real history, what might I expect" works for any amount, not just what's
+ * actually invested right now. `yearlyAmount` extends the same simple
+ * (non-compounding) extrapolation `expectedPLRate` itself already uses for
+ * its own `monthlyAmount` (`dailyAmount * 30.44`) one step further
+ * (`monthlyAmount * 12`) — deliberately not compounded, so this stays
+ * exactly what `expectedPLRate`'s own doc comment already frames the whole
+ * thing as: "an average of what already happened," not a promise.
+ * `*Value` fields are `amount + *Amount` — the total you'd end up with,
+ * not just the delta — since "what would I end up with" is usually the
+ * more useful number to compare funds by at a glance. */
+export function projectInvestmentReturn(amount: number, rate: ExpectedPLRate): ProjectedReturn {
+  const dailyAmount = amount * (rate.dailyPct / 100);
+  const monthlyAmount = amount * (rate.monthlyPct / 100);
+  const yearlyAmount = monthlyAmount * 12;
+  return {
+    dailyAmount,
+    dailyValue: amount + dailyAmount,
+    monthlyAmount,
+    monthlyValue: amount + monthlyAmount,
+    yearlyAmount,
+    yearlyValue: amount + yearlyAmount,
+  };
+}
+
 export interface PeriodPL {
   period: string; // "YYYY-MM" or "YYYY"
   total: number;
