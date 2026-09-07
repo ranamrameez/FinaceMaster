@@ -36,7 +36,7 @@ function emptyRow(): Transaction {
   return { date: today(), ticker: '', action: 'BUY', shares: 0, price: 0, timezone: defaultTimezoneForMarket('PSX') };
 }
 
-function TransactionRows() {
+export function TransactionRows() {
   const addTransactions = usePSXWorkbookStore((s) => s.addTransactions);
   const ensureSignedIn = useEnsureSignedIn();
   const [rows, setRows] = useState<Transaction[]>([emptyRow()]);
