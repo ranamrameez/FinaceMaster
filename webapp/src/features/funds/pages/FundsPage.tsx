@@ -183,13 +183,26 @@ function OverallSummary() {
     const units = p?.shares ?? 0;
     const nav = getMarketPrice(fund.id, workbook.marketPrices, workbook.transactions);
     const value = units * nav;
-    const rate = expectedPLRate(fund.id, workbook.transactions, workbook.priceHistory);
     if (!totals[fund.currencyCode]) totals[fund.currencyCode] = { invested: 0, value: 0, profit: 0, expDaily: 0, expMonthly: 0 };
     totals[fund.currencyCode].invested += invested;
     totals[fund.currencyCode].value += value;
     totals[fund.currencyCode].profit += fundNetProfit(p, value);
-    totals[fund.currencyCode].expDaily += rate?.dailyAmount ?? 0;
-    totals[fund.currencyCode].expMonthly += rate?.monthlyAmount ?? 0;
+    // User-reported (2026-09-07): "Expected monthly P/L and others should
+    // not count closed positions for future/prediction!" — Expected daily/
+    // monthly P/L is a FORWARD-LOOKING projection (see `expectedPLRate`'s
+    // own doc comment: "an average of what already happened," extrapolated
+    // ahead), which makes no sense for a fund that's explicitly closed
+    // (`isActive === false`) or fully withdrawn (`units === 0`) — there's
+    // no ongoing position left to keep earning/losing on. Net
+    // profit/Invested/Current value above are historical totals, not
+    // predictions, so they correctly keep including a closed fund's real
+    // past numbers (its realized P/L doesn't stop being real just because
+    // the fund is now closed) — only this projection is scoped down.
+    if (fund.isActive !== false && units > 0) {
+      const rate = expectedPLRate(fund.id, workbook.transactions, workbook.priceHistory);
+      totals[fund.currencyCode].expDaily += rate?.dailyAmount ?? 0;
+      totals[fund.currencyCode].expMonthly += rate?.monthlyAmount ?? 0;
+    }
   });
   const codes = Object.keys(totals);
   if (!codes.length) return null;
@@ -594,7 +607,18 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
     URL.revokeObjectURL(url);
     toast('Balance history downloaded.');
   };
-  const plRate = expectedPLRate(fund.id, workbook.transactions, workbook.priceHistory);
+  // User-reported (2026-09-07): "Expected monthly P/L and others should not
+  // count closed positions for future/prediction!" — same reasoning as
+  // `OverallSummary`'s own fix: a forward-looking projection makes no sense
+  // once this fund is closed or fully withdrawn, so it's only computed for
+  // an actually-open position. `position`/`units` (previously derived
+  // further down, after this point) are computed here instead so this gate
+  // can use them.
+  const position = positions.find((p) => p.ticker === fund.id);
+  const units = position?.shares ?? 0;
+  const plRate = fund.isActive !== false && units > 0
+    ? expectedPLRate(fund.id, workbook.transactions, workbook.priceHistory)
+    : null;
 
   // User-requested (2026-09-03): "Fund INfo card: add a chart to view
   // periodic growth with balance & PL indications over time." Reuses the
@@ -612,8 +636,6 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
     [fund.id, workbook.transactions, workbook.priceHistory],
   );
 
-  const position = positions.find((p) => p.ticker === fund.id);
-  const units = position?.shares ?? 0;
   const invested = position?.invested ?? 0;
   const avgNav = units > 0 ? invested / units : 0;
   const currentNav = getMarketPrice(fund.id, workbook.marketPrices, workbook.transactions);
