@@ -107,7 +107,29 @@ export function Tooltip({ text, children, align = 'left' }: { text: string; chil
             right: pos.right,
             transform: pos.placement === 'above' ? 'translateY(-100%)' : undefined,
             visibility: measured ? 'visible' : 'hidden',
-            zIndex: 200,
+            // User-reported (2026-09-07): "tooltips buried under FABs" — this
+            // portals to document.body (position:fixed), so its z-index
+            // competes directly against every other fixed-position element
+            // site-wide, not just its own DOM ancestors. 200 sat below
+            // ConfirmDialog/SignInModal (300), SubscriptionAlertsPopup (400),
+            // and FabButton/FabPanel (500) — a tooltip triggered near any of
+            // those rendered visibly behind them. 600 clears all of them
+            // while staying below the deliberately-highest blocking layers
+            // (TradePlanner fullscreen 999/1000, TermsGateModal 1000), which
+            // are meant to sit above literally everything, tooltips included.
+            zIndex: 600,
+            // Raising the z-index above FabPanel also surfaced a real,
+            // separate problem: a tooltip placed BELOW its trigger can land
+            // right on top of a sibling FAB button stacked underneath it
+            // (FabPanel's fanned-out actions sit only 10px apart) — without
+            // this, that tooltip would silently swallow clicks meant for
+            // the button it's now visually covering. A tooltip is never
+            // itself a click target (open/close both live on the trigger
+            // span, not this popup), so making it pointer-inert is strictly
+            // correct, not a workaround — same "the popup shouldn't
+            // intercept anything" precedent `.toast{pointer-events:none}`
+            // already sets for this app's other floating overlay.
+            pointerEvents: 'none',
             background: 'var(--panel-2)',
             color: 'var(--text)',
             border: '1px solid var(--border)',

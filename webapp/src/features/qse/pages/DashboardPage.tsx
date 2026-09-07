@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { CollapsibleCard, StatCard } from '../../../components/Card';
 import { DashboardRail } from '../../../components/DashboardRail';
+import { Modal } from '../../../components/Modal';
+import { PlusIcon } from '../../../components/icons';
 import { Sparkline } from '../../../components/Sparkline';
 import { toast } from '../../../components/Toast';
 import { breakEvenPrice, getDailyPriceHistory } from '../../../lib/calc';
@@ -13,12 +15,14 @@ import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { shortenCompanyName } from '../../../lib/shortenName';
 import { useWorkbookStore } from '../../../store/workbookStore';
 import { useAmountFormat } from '../../../hooks/useAmountFormat';
+import { usePageFabActions } from '../../../hooks/usePageFabActions';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { AlertsBox, useQSEAlerts } from '../components/AlertsBox';
 import { ChartCard } from '../components/ChartCard';
 import { useQSEDerived } from '../hooks/useQSEDerived';
 import { useQSEStockData } from '../hooks/useQSEStockData';
 import { useAppearanceStore } from '../../../store/appearanceStore';
+import { TransactionRows } from './TransactionsPage';
 
 const INVEST_PALETTE = ['#3d4b58', '#c9a227', '#34c77b', '#3b6bd6', '#8a97a3', '#e5484d', '#7b5cd6', '#2ea3a3'];
 
@@ -168,6 +172,26 @@ function HoldingsCard() {
   );
 }
 
+/** User-reported (2026-09-07): "no FAB present to buy a new stock on the
+ * exchange dashboard" — the only way to log a trade used to be navigating
+ * to the Trade Transactions page first. Registers a "Buy/sell stock"
+ * action via `usePageFabActions` (the same grouping mechanism the
+ * CalculatorLauncher fix just added — see that component's own doc
+ * comment) so it combines with the always-present "Trade calculator"
+ * action into one panel instead of a second competing FAB. Reuses
+ * `TransactionsPage.tsx`'s own `TransactionRows` component unchanged (now
+ * exported) — no parallel add-trade implementation. */
+function AddTradeFab() {
+  const [open, setOpen] = useState(false);
+  const actions = useMemo(() => [{ label: 'Buy/sell stock', icon: <PlusIcon size={18} />, onClick: () => setOpen(true) }], []);
+  usePageFabActions(actions);
+  return open ? (
+    <Modal title="Add a trade" onClose={() => setOpen(false)}>
+      <TransactionRows />
+    </Modal>
+  ) : null;
+}
+
 export function DashboardPage() {
   const navigate = useNavigate();
   const { workbook, rows, summary, realizedSeries } = useQSEDerived();
@@ -312,6 +336,7 @@ export function DashboardPage() {
 
         <DashboardRail />
       </div>
+      <AddTradeFab />
     </div>
   );
 }

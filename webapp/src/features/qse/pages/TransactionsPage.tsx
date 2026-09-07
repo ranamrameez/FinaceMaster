@@ -34,7 +34,7 @@ function emptyRow(): Transaction {
   return { date: today(), ticker: '', action: 'BUY', shares: 0, price: 0, timezone: defaultTimezoneForMarket('QSE') };
 }
 
-function TransactionRows() {
+export function TransactionRows() {
   const addTransactions = useWorkbookStore((s) => s.addTransactions);
   const ensureSignedIn = useEnsureSignedIn();
   const [rows, setRows] = useState<Transaction[]>([emptyRow()]);

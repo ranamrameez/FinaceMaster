@@ -6246,6 +6246,36 @@ FinanceManager live link:
   grouped panel, not two); clicking "Open actions" then "Trade calculator" correctly opened
   the QSE Trade Calculator modal — same check repeated on PSX's own Trade Transactions page.
   `npx tsc -b` / `npm run test` (550 tests, unchanged — UI-only) / `npm run build` all clean.
+- **Dashboard "Buy/sell stock" FAB + Tooltip z-index/click-through fix, both user-reported
+  same day (2026-09-07) — see README Done item 240.** (1) "no FAB present to buy a new stock
+  on the exchange dashboard" — the only way to log a trade was navigating to the Trade
+  Transactions page first. `TransactionsPage.tsx`'s own self-contained `TransactionRows`
+  component (ticker/action/shares/price, PSX's own version also has its Fee Mode control) was
+  exported unchanged (no parallel implementation) and dropped into a new `AddTradeFab` on both
+  QSE's and PSX's `DashboardPage.tsx`, registered via the `usePageFabActions()` mechanism from
+  the immediately-prior FAB-grouping fix — it correctly combines with the always-present
+  "Trade calculator" action into one panel rather than adding a THIRD competing fixed element.
+  (2) "tootips buried under FABs" — a real, separate bug found while fixing (1): `Tooltip.tsx`
+  portals to `document.body` (`position:fixed`), so its `zIndex:200` competed directly against
+  every other fixed-position element site-wide, not just its own DOM ancestors — it sat below
+  ConfirmDialog/SignInModal (300), SubscriptionAlertsPopup (400), and FabButton/FabPanel (500).
+  Raised to 600 (clears all of those, stays below the deliberately-highest blocking layers —
+  TradePlanner fullscreen 999/1000, TermsGateModal 1000). **This surfaced a genuine follow-on
+  issue, caught by a real Playwright click failure, not assumed away**: `FabPanel`'s fanned-out
+  actions sit only 10px apart, and a tooltip placed below its own trigger (the app's default
+  placement) could now render directly on top of — and, since the popup had no
+  `pointer-events:none`, actually intercept clicks meant for — a sibling FAB button stacked
+  right underneath it in the same expanded panel. Fixed by making the tooltip popup itself
+  pointer-inert (open/close both already live on the trigger span, never the popup, so this
+  has no effect on the tooltip's own behavior) — same `.toast{pointer-events:none}` precedent
+  this app already uses for its other floating overlay. Verified live via Playwright on both
+  QSE's and PSX's Dashboard: the grouped FAB correctly expands to "Trade calculator" +
+  "Buy/sell stock," and clicking through to "Buy/sell stock" — which previously timed out with
+  Playwright reporting the calculator's own lingering tooltip "intercepts pointer events,"
+  reproducing the exact click-blocking bug before the `pointer-events:none` fix — now
+  correctly opens the "Add a trade" modal with the real ticker/action/shares/price form (PSX's
+  version confirmed to include its Fee Mode control too). `npx tsc -b` / `npm run test` (550
+  tests, unchanged — UI-only) / `npm run build` all clean.
 
 ## Pending
 
