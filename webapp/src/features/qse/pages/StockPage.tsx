@@ -10,7 +10,7 @@ import { Field, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { useSortableRows } from '../../../hooks/useSortableRows';
-import { defaultTimezoneForMarket } from '../../../lib/datetime';
+import { defaultTimezoneForMarket, nowTime } from '../../../lib/datetime';
 import { toCSV } from '../../../lib/csv';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
@@ -35,7 +35,7 @@ function TickerTransactions({ ticker }: { ticker: string }) {
   const [date, setDate] = useState(today());
   const [sharesInput, setSharesInput] = useState('');
   const [priceInput, setPriceInput] = useState('');
-  const [time, setTime] = useState<string | undefined>(undefined);
+  const [time, setTime] = useState<string | undefined>(() => nowTime());
   const [timezone, setTimezone] = useState<string | undefined>(defaultTimezoneForMarket('QSE'));
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editRow, setEditRow] = useState<Transaction | null>(null);

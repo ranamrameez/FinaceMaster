@@ -5505,6 +5505,40 @@ not developer notes) continuously as features ship.
   clickable on all 8 QSE Stock Exchanges pages plus PSX's own Portfolio (Fee Mode control
   confirmed rendering), and the popup measured exactly 630px on a 1400px viewport — 45.0%,
   squarely inside the requested range — on both exchanges.
+- **App-wide UI/UX audit, 4-item batch (2026-09-07) — see README Done item 246.** User: "this
+  tiny <span aria-hidden=\"true\"...> *</span> is moving in next line! Same is the case with +
+  of add account in popups. i have asked countless times to set min width for form elements
+  (try making same width for input, selectbox..). let the user enter minimum data and fill
+  most by default (pick timestamps from user machine while set the timezone and time according
+  to the currency by default)." (1) `Field.tsx`'s required-asterisk fix: a plain space before
+  `*` let the browser wrap it onto its own line when a label broke right at its last word —
+  fixed with a non-breaking space, confirmed already correctly applied (byte-inspected the
+  file: `\xc2\xa0` = U+00A0) before writing any new edit. (2) The "+" quick-add button next to
+  a Select (`SideFields`' ref-picker, `CategorySelect`) wrapping onto its own line — a real
+  two-round root-cause chase, worth remembering the shape of for any future "why won't this
+  element shrink" bug: FIRST theory (`.row > *`'s `min-width:160px` floor) was tested and
+  disproven via live computed-style measurement; REAL cause is `select{width:100%}` giving the
+  select a flex-basis equal to the WHOLE Field width before flexbox even considers shrinking
+  for the wrap decision. First fix attempt (`width={110}` alone) STILL measured 160px on a
+  second live check — `min-width` and `width` are independent constraints, and the floor was
+  still winning; only overriding BOTH `width` AND `style={{minWidth}}` together actually
+  shrank the rendered element. (3) "same width for input, selectbox" — the concrete broken case
+  was (2) above; this app already has substantial prior width-consistency infrastructure
+  (`Field`'s `width=180` default, `.row > *`'s `min-width:160px`, `.btn`'s `min-width:100px`),
+  so a broader raw-input/raw-select sweep was left open (README Pending item 119) rather than
+  guessed at blind. (4) "pick timestamps from user machine... timezone by currency by default"
+  — audited all 11 `TimeZoneFields` call sites: Timezone was already correctly defaulted
+  everywhere, but Time was left blank on every genuine ADD form except the shared Transfers
+  popup. New `nowTime()` in `lib/datetime.ts`, wired into Funds/Dividends(×2)/per-stock add-
+  trade(×2)/Transactions page `emptyRow`+`emptyAdjustment`(×2); deliberately NOT applied to any
+  EDIT form (Cash/Rentals/Bank's edit modals correctly spread from an existing record — auto-
+  filling "now" there would silently overwrite a real unset-state on every reopen). Found and
+  flagged, not fixed: Personal Loans' repayment type already has `time`/`timezone` fields but
+  no `TimeZoneFields` UI was ever wired in — a different, older "never shipped" gap, not a
+  wrong default (README Pending item 120). Verified live via Playwright throughout — screenshot
+  for the asterisk, precise bounding-box measurement + screenshot for the wrap fix (select
+  width exactly 110px, button on the same Y), and 3 independent forms confirmed showing a real
+  current time via the Transactions page's "All" tab expanding every section at once.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

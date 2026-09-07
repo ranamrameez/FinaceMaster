@@ -81,6 +81,21 @@ export function defaultTimezoneForCurrency(currency: string | undefined): string
   return browserTimezone();
 }
 
+/** Current wall-clock time on the user's OWN machine, `HH:MM` — the
+ * default for a fresh add-form's optional Time field. User-reported:
+ * "let the user enter minimum data and fill most by default (pick
+ * timestamps from user machine...)" — every add-form's Date field already
+ * defaults to today(), but most of them left Time blank, requiring the
+ * user to type it by hand for an entry that's really happening right now.
+ * Still freely editable/clearable for a backdated entry — this only sets
+ * the initial value, same as `today()` does for Date. Deliberately NOT
+ * used to backfill an EDIT form's existing `time` — a record that never
+ * had a time recorded should keep reading as "unset," not silently gain
+ * "right now" every time its edit modal happens to be reopened. */
+export function nowTime(): string {
+  return new Date().toTimeString().slice(0, 5);
+}
+
 /** A record without a stored time backfills to noon — the user's own
  * explicit choice: a neutral middle-of-the-day placeholder rather than
  * midnight (which would visually suggest "very early," and would sort
