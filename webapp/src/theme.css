@@ -948,18 +948,30 @@
      theme IS pure white (#fff), so a modal sitting on a dimmed backdrop
      read as a stark, foggy rectangle. Same accent-tinted diagonal gradient
      `.card` already uses, so a modal reads as part of the same visual
-     system instead of a flat white popup. */
+     system instead of a flat white popup.
+     Default width (UI_DESIGN_GUIDELINES.md, popups): no more than ~50% of
+     a normal desktop viewport unless the content is a table/wide
+     workspace — an app-wide audit (2026-09-07) found every real `<Modal>`
+     usage is a form or entity-detail popup, so this is now the universal
+     default rather than a per-caller `width` override. `.fullscreen` is
+     the explicit user escape hatch every popup must offer. */
   .modal-box{
     background:linear-gradient(165deg, color-mix(in srgb, var(--accent) 6%, var(--panel)) 0%, var(--panel) 55%);
     border:1px solid var(--border); border-radius:12px;
-    padding:26px 30px; width:100%; max-width:920px; box-shadow:0 20px 60px rgba(0,0,0,.5);
+    padding:26px 30px; width:100%; max-width:clamp(360px, 50vw, 720px); box-shadow:0 20px 60px rgba(0,0,0,.5);
     animation:fadein .16s ease; max-height:92vh; overflow-y:auto;
   }
+  .modal-box.fullscreen{ max-width:96vw; max-height:96vh; width:96vw; height:96vh; }
   .modal-box .modal-head{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;}
   .modal-box .modal-title{font-family:var(--disp); font-size:20px; font-weight:700;}
-  .modal-box .modal-close{background:transparent; border:none; color:var(--muted); font-size:20px; cursor:pointer; line-height:1; padding:2px 6px;}
-  .modal-box .modal-close:hover{color:var(--text);}
-  @media(max-width:700px){ .modal-box{padding:18px;} }
+  .modal-icon-btn{
+    background:transparent; border:none; color:var(--muted); cursor:pointer;
+    width:28px; height:28px; min-width:28px; display:flex; align-items:center; justify-content:center;
+    border-radius:50%; font-size:18px; line-height:1; flex:0 0 28px; padding:0;
+    transition:background .12s ease, color .12s ease;
+  }
+  .modal-icon-btn:hover{ background:var(--panel-2); color:var(--text); }
+  @media(max-width:700px){ .modal-box{padding:18px;} .modal-box.fullscreen{ width:100vw; height:100vh; max-width:100vw; max-height:100vh; border-radius:0; } }
 
   /* ---------- Portfolio summary (dashboard) ---------- */
   .psum-row{
