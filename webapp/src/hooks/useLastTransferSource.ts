@@ -14,16 +14,26 @@ function entityKey(to: LinkSideConfig): string {
 
 /** Best-effort convenience, not data that needs to survive at all costs —
  * same reasoning as `useLastCurrency`. Losing a remembered source just
- * means the "From" field falls back to its plain default next time. */
+ * means the "From" field falls back to its plain default next time.
+ *
+ * User-reported (2026-09-07): "it saves last used linked account but
+ * currency mismatched" — this used to persist only `{module, ref}`, never
+ * `currencyCode`, so restoring a remembered account left the "Other
+ * finance" field's own `currencyCode` blank; `SideFields`' Currency
+ * dropdown then fell back to displaying whatever entity happened to be
+ * FIRST in that module's list, not the remembered account's actual
+ * currency — a real, visible mismatch even when the remembered account and
+ * its currency were never actually out of sync with each other. Now
+ * persists `currencyCode` too, so a restore comes back fully resolved. */
 export function rememberTransferSource(to: LinkSideConfig, from: LinkSideConfig) {
   try {
-    localStorage.setItem(entityKey(to), JSON.stringify({ module: from.module, ref: from.ref }));
+    localStorage.setItem(entityKey(to), JSON.stringify({ module: from.module, ref: from.ref, currencyCode: from.currencyCode }));
   } catch {
     // ignore
   }
 }
 
-export function getLastTransferSource(to: LinkSideConfig): Pick<LinkSideConfig, 'module' | 'ref'> | null {
+export function getLastTransferSource(to: LinkSideConfig): Pick<LinkSideConfig, 'module' | 'ref' | 'currencyCode'> | null {
   try {
     const raw = localStorage.getItem(entityKey(to));
     if (!raw) return null;
