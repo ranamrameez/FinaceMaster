@@ -38,7 +38,7 @@ export function TermsGateModal() {
           permitted by law the developer(s) aren't liable for financial loss, missed opportunity, data loss, or
           other damage arising from using it, including calculation errors, sync failures, or downtime.
         </p>
-        <p className="footer-note">
+        <p className="text-muted">
           Full details any time via <strong>Disclaimer &amp; Privacy</strong> in the sidebar.
         </p>
         <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 12, cursor: 'pointer' }}>

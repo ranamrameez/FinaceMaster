@@ -82,7 +82,7 @@ function AddDividendForm() {
       </Field>
       <TimeZoneFields time={time} timezone={timezone} onTimeChange={setTime} onTimezoneChange={setTimezone} />
       <button className="btn" onClick={submit}>Add</button>
-      {preview > 0 && !amount && <span className="footer-note">{fmt(shares, 0)} shares × {perShare} = {preview.toFixed(2)}</span>}
+      {preview > 0 && !amount && <span className="text-muted">{fmt(shares, 0)} shares × {perShare} = {preview.toFixed(2)}</span>}
     </div>
   );
 }
@@ -204,7 +204,7 @@ export function DividendsSection() {
             )}
             {!rows.length && (
               <tr>
-                <td colSpan={6} className="footer-note">
+                <td colSpan={6} className="text-muted">
                   {workbook.dividends.length ? 'No dividends match this filter.' : 'No dividends logged yet.'}
                 </td>
               </tr>
@@ -219,7 +219,7 @@ export function DividendsSection() {
       {held.length > 0 && (
         <>
           <h3 style={{ marginTop: 24 }}>Yearly projection</h3>
-          <p className="footer-note">Enter an estimated annual per-share dividend rate for each held ticker; projection = rate × shares held.</p>
+          <p className="text-muted">Enter an estimated annual per-share dividend rate for each held ticker; projection = rate × shares held.</p>
           <div className="table-scroll">
             <table>
               <thead><tr><HeldTh col="ticker">Ticker</HeldTh><HeldTh col="shares">Shares</HeldTh><HeldTh col="estPerShare">Est. annual/share</HeldTh><HeldTh col="projected">Projected annual</HeldTh></tr></thead>

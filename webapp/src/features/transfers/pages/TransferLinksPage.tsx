@@ -330,7 +330,7 @@ export function SideFields({ label, cfg, onChange, preferredCurrency }: { label:
           </Select>
         </Field>
       )}
-      {currency && !hasRefPicker && cfg.module !== 'cash' && <span className="footer-note">{currency}</span>}
+      {currency && !hasRefPicker && cfg.module !== 'cash' && <span className="text-muted">{currency}</span>}
       {addOpen && cfg.module === 'bank' && (
         <Modal title="Add a missing account" onClose={() => setAddOpen(false)}>
           <AddAccountForm initialCurrency={cfg.currencyCode} onSaved={(id) => { onChange({ ...cfg, ref: id }); setAddOpen(false); }} />

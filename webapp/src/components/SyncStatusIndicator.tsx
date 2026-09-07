@@ -86,7 +86,7 @@ export function SyncStatusIndicator({ modules }: { modules: ModuleSyncStatus[] }
               <div key={m.name} className="sync-status-row">
                 <span className="num" style={{ color: DOT[t] }} aria-hidden="true">●</span>
                 <span style={{ flex: 1 }}>{m.name}</span>
-                <span className="footer-note">{m.status}</span>
+                <span className="text-muted">{m.status}</span>
               </div>
             );
           })}

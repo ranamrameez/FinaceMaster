@@ -41,7 +41,7 @@ export function AlertsBox() {
   const alerts = useQSEAlerts();
 
   if (!alerts.length) {
-    return <p className="footer-note">No alerts right now — nothing above ±5% or at a watchlist target.</p>;
+    return <p className="text-muted">No alerts right now — nothing above ±5% or at a watchlist target.</p>;
   }
 
   return (

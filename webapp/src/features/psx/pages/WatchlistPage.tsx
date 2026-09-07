@@ -154,7 +154,7 @@ function WatchlistTable({
           ))}
           {!sorted.length && (
             <tr>
-              <td colSpan={7} className="footer-note">
+              <td colSpan={7} className="text-muted">
                 Watchlist is empty.
               </td>
             </tr>

@@ -59,7 +59,7 @@ export function AccountPage({ syncStatuses }: { syncStatuses: ModuleSyncStatus[]
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginBottom: 16, alignItems: 'start' }}>
         {!user ? (
           <Card>
-            <p className="footer-note" style={{ marginTop: 0 }}>
+            <p className="text-muted" style={{ marginTop: 0 }}>
               You're browsing without an account — calculators and pages all work, but saving anything
               (a transaction, an entity, a plan) requires signing in first.
             </p>
@@ -74,7 +74,7 @@ export function AccountPage({ syncStatuses }: { syncStatuses: ModuleSyncStatus[]
             </CollapsibleCard>
 
             <CollapsibleCard title={<h3 style={{ margin: 0 }}>Security</h3>}>
-              <p className="footer-note" style={{ marginTop: 0 }}>
+              <p className="text-muted" style={{ marginTop: 0 }}>
                 Signed in with: <strong>{providers.length ? providers.join(', ') : 'Unknown method'}</strong>
                 {user.email ? <> · {user.email}</> : null}
               </p>
@@ -89,7 +89,7 @@ export function AccountPage({ syncStatuses }: { syncStatuses: ModuleSyncStatus[]
             </CollapsibleCard>
 
             <CollapsibleCard title={<h3 style={{ margin: 0 }}>Sync status</h3>}>
-              <p className="footer-note" style={{ marginTop: 0, marginBottom: 8 }}>
+              <p className="text-muted" style={{ marginTop: 0, marginBottom: 8 }}>
                 One line per module — click to see which, if any, has a sync issue.
               </p>
               <SyncStatusIndicator modules={syncStatuses} />
@@ -104,7 +104,7 @@ export function AccountPage({ syncStatuses }: { syncStatuses: ModuleSyncStatus[]
         </CollapsibleCard>
 
         <CollapsibleCard title={<h3 style={{ margin: 0 }}>Data</h3>}>
-          <p className="footer-note" style={{ marginTop: 0 }}>
+          <p className="text-muted" style={{ marginTop: 0 }}>
             Export every module's data to one JSON file, or import one back in — a full backup, or a way to
             move data between devices.
           </p>

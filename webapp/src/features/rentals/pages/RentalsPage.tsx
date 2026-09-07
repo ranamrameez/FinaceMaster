@@ -245,7 +245,7 @@ function PropertiesList() {
           )}
           {!sorted.length && (
             <tr>
-              <td colSpan={5} className="footer-note">
+              <td colSpan={5} className="text-muted">
                 {allProperties.length ? 'Every property is archived — click "Show archived" above to see them.' : 'No properties yet — add one above.'}
               </td>
             </tr>
@@ -424,7 +424,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
           <h4 style={{ margin: '0 0 6px' }}>Rent collection</h4>
           {proposal ? (
             <>
-              <p className="footer-note" style={{ marginBottom: 8 }}>
+              <p className="text-muted" style={{ marginBottom: 8 }}>
                 {proposal.isDue ? 'Due for collection' : 'Next collection'} — approve to log it, or adjust the date/amount first
                 (e.g. a partial payment).
                 {(property.pendingRentBalance ?? 0) > 0 && (
@@ -443,7 +443,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
               </div>
             </>
           ) : (
-            <p className="footer-note">Set a Last collection date (or a Lease start) above so the next due date can be computed.</p>
+            <p className="text-muted">Set a Last collection date (or a Lease start) above so the next due date can be computed.</p>
           )}
         </Card>
       )}
@@ -457,7 +457,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
               <tr key={p.id}>
                 <td>{p.date}</td>
                 <td>{fmtMoney(p.amount, property.currencyCode)}</td>
-                <td>{p.executed ? <span className="pill-buy">Done</span> : <span className="footer-note">Planned</span>}</td>
+                <td>{p.executed ? <span className="pill-buy">Done</span> : <span className="text-muted">Planned</span>}</td>
                 <td>
                   {!p.executed && (
                     <>
@@ -468,7 +468,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
                 </td>
               </tr>
             ))}
-            {!propertyPlans.length && <tr><td colSpan={4} className="footer-note">No projected plans yet — fill in lease details above and click "Generate projected rent."</td></tr>}
+            {!propertyPlans.length && <tr><td colSpan={4} className="text-muted">No projected plans yet — fill in lease details above and click "Generate projected rent."</td></tr>}
           </tbody>
         </table>
       </div>
@@ -531,7 +531,7 @@ function AnalyticsTab() {
   const rollup = useMemo(() => (selectedProperty ? propertyMonthlyRollup(selectedProperty, entries) : []), [selectedProperty, entries]);
 
   if (!properties.length) {
-    return <p className="footer-note">Add a property first (Properties tab) to see charts here.</p>;
+    return <p className="text-muted">Add a property first (Properties tab) to see charts here.</p>;
   }
 
   return (
@@ -689,7 +689,7 @@ function EditEntryModal({ entry, onClose }: { entry: RentalEntry; onClose: () =>
           onTimezoneChange={(timezone) => setDraft({ ...draft, timezone })}
         />
       </div>
-      <p className="footer-note" style={{ marginTop: 8 }}>
+      <p className="text-muted" style={{ marginTop: 8 }}>
         {draft.source === 'statement-import' ? `Imported${draft.statementRef ? ` from ${draft.statementRef}` : ''}` : 'Entered manually'}
       </p>
     </FinanceEditModal>
@@ -786,7 +786,7 @@ function EntriesList({ property }: { property: Property }) {
                     </Link>
                   )}
                 </td>
-                <td className="footer-note cell-clip" title={e.source === 'statement-import' ? `Import${e.statementRef ? ` (${e.statementRef})` : ''}` : 'Manual'}>
+                <td className="text-muted cell-clip" title={e.source === 'statement-import' ? `Import${e.statementRef ? ` (${e.statementRef})` : ''}` : 'Manual'}>
                   {e.source === 'statement-import' ? `Import${e.statementRef ? ` (${e.statementRef})` : ''}` : 'Manual'}
                 </td>
                 <td>
@@ -803,7 +803,7 @@ function EntriesList({ property }: { property: Property }) {
           })}
           {!sorted.length && (
             <tr>
-              <td colSpan={7} className="footer-note">
+              <td colSpan={7} className="text-muted">
                 {allPropertyEntries.length ? 'No entries match these filters.' : 'No entries for this property yet.'}
               </td>
             </tr>
@@ -893,12 +893,12 @@ function ImportTab() {
   };
 
   if (!properties.length) {
-    return <p className="footer-note">Add a property first (Properties tab) before importing entries.</p>;
+    return <p className="text-muted">Add a property first (Properties tab) before importing entries.</p>;
   }
 
   return (
     <div>
-      <p className="footer-note" style={{ marginBottom: 12 }}>
+      <p className="text-muted" style={{ marginBottom: 12 }}>
         Import a CSV export of rent/expense entries for one property. This is a simple "map these columns" tool —
         pick which column is which below. A positive amount is treated as rent income, negative as an expense
         (check "Flip sign" if your export does the opposite).
@@ -921,7 +921,7 @@ function ImportTab() {
             e.target.value = '';
           }}
         />
-        {fileName && <span className="footer-note" style={{ marginLeft: 8 }}>{fileName} ({rows.length} rows)</span>}
+        {fileName && <span className="text-muted" style={{ marginLeft: 8 }}>{fileName} ({rows.length} rows)</span>}
       </div>
 
       {headers.length > 0 && (
@@ -944,7 +944,7 @@ function ImportTab() {
                 {headers.map((h) => <option key={h} value={h}>{h}</option>)}
               </Select>
             </Field>
-            <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 20 }} title="Check this if your export uses positive numbers for expenses.">
+            <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 20 }} title="Check this if your export uses positive numbers for expenses.">
               <input type="checkbox" checked={flipSign} onChange={(e) => setFlipSign(e.target.checked)} />
               Flip sign
             </label>
@@ -1035,7 +1035,7 @@ function EntriesTab({
   setPropertyId: (id: string) => void;
 }) {
   if (!properties.length) {
-    return <p className="footer-note">Add a property first (Properties tab) before logging income/expenses.</p>;
+    return <p className="text-muted">Add a property first (Properties tab) before logging income/expenses.</p>;
   }
 
   return (
@@ -1179,7 +1179,7 @@ export function RentalsPage({
   return (
     <div>
       <h1 className="pagetitle">Rentals</h1>
-      <p className="footer-note" style={{ marginBottom: 12 }}>
+      <p className="text-muted" style={{ marginBottom: 12 }}>
         Rental property income and expenses — recurring rent received and costs (maintenance, property tax,
         management fees) against one or more properties, not discrete buy/sell trades.
       </p>
@@ -1209,7 +1209,7 @@ export function RentalsPage({
             label: 'Settings',
             content: (
               <div>
-                <p className="footer-note" style={{ marginTop: 0 }}>
+                <p className="text-muted" style={{ marginTop: 0 }}>
                   Sign-in, profile, appearance, and a whole-app backup live on the{' '}
                   <Link to="/account">Account page →</Link>. What's below is specific to Rentals.
                 </p>

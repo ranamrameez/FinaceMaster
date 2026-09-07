@@ -148,7 +148,7 @@ function TickerTransactions({ ticker }: { ticker: string }) {
                 </tr>
               ),
             )}
-            {!rows.length && <tr><td colSpan={6} className="footer-note">No transactions for {ticker} yet.</td></tr>}
+            {!rows.length && <tr><td colSpan={6} className="text-muted">No transactions for {ticker} yet.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -200,10 +200,10 @@ export function StockPage() {
 
   return (
     <div>
-      <Link to="/portfolio" className="footer-note">← Back to Portfolio</Link>
+      <Link to="/portfolio" className="text-muted">← Back to Portfolio</Link>
       <h1 className="pagetitle" style={{ marginTop: 8, display: 'flex', alignItems: 'center' }}>
         <TickerLogo ticker={ticker} size="lg" exchange="qse" />
-        {ticker} {name && <span className="footer-note" style={{ fontSize: 16 }}>{shortenCompanyName(name, 40)}</span>}
+        {ticker} {name && <span className="text-muted" style={{ fontSize: 16 }}>{shortenCompanyName(name, 40)}</span>}
       </h1>
       <Tabs
         tabs={[

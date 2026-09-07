@@ -10,13 +10,13 @@ import type { ReactNode } from 'react';
 export function AttributeList({ items }: { items: { label: string; value: ReactNode }[] }) {
   const shown = items.filter((i) => i.value !== undefined && i.value !== null && i.value !== '');
   if (!shown.length) {
-    return <p className="footer-note" style={{ margin: 0 }}>Nothing set yet — click Edit to add details.</p>;
+    return <p className="text-muted" style={{ margin: 0 }}>Nothing set yet — click Edit to add details.</p>;
   }
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px,1fr))', gap: '10px 16px' }}>
       {shown.map((i) => (
         <div key={i.label}>
-          <div className="footer-note" style={{ fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 2 }}>
+          <div className="text-muted" style={{ fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 2 }}>
             {i.label}
           </div>
           <div>{i.value}</div>

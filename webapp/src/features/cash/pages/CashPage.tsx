@@ -144,7 +144,7 @@ function CategoryBreakdown() {
   const currencies = Object.keys(byCategory);
   const [search, setSearch] = useState('');
 
-  if (!currencies.length) return <p className="footer-note">No cash entries yet.</p>;
+  if (!currencies.length) return <p className="text-muted">No cash entries yet.</p>;
 
   const q = search.trim().toLowerCase();
   const filtered = currencies.map((code) => ({
@@ -170,7 +170,7 @@ function CategoryBreakdown() {
                       <td className={amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(amount, code)}</td>
                     </tr>
                   ))}
-                  {!rows.length && <tr><td className="footer-note">No matching categories.</td></tr>}
+                  {!rows.length && <tr><td className="text-muted">No matching categories.</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -225,7 +225,7 @@ function EditEntryModal({ entry, onClose }: { entry: CashEntry; onClose: () => v
           onTimezoneChange={(timezone) => setDraft({ ...draft, timezone })}
         />
       </div>
-      <p className="footer-note" style={{ marginTop: 8 }}>
+      <p className="text-muted" style={{ marginTop: 8 }}>
         {draft.source === 'statement-import' ? `Imported${draft.statementRef ? ` from ${draft.statementRef}` : ''}` : 'Entered manually'}
       </p>
     </FinanceEditModal>
@@ -368,7 +368,7 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
                   <td><span className="pill-info">{categoryName(entry.categoryID, categories)}</span></td>
                   <td>{fmtMoney(entry.amount, entry.currencyCode)}</td>
                   <td>{fmtMoney(balance, entry.currencyCode)}</td>
-                  <td className="footer-note cell-clip" title={entry.source === 'statement-import' ? `Import${entry.statementRef ? ` (${entry.statementRef})` : ''}` : 'Manual'}>
+                  <td className="text-muted cell-clip" title={entry.source === 'statement-import' ? `Import${entry.statementRef ? ` (${entry.statementRef})` : ''}` : 'Manual'}>
                     {entry.source === 'statement-import' ? `Import${entry.statementRef ? ` (${entry.statementRef})` : ''}` : 'Manual'}
                   </td>
                   <td>
@@ -383,7 +383,7 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
                 </tr>
               );
             })}
-            {!sorted.length && <tr><td colSpan={8} className="footer-note">No matching entries.</td></tr>}
+            {!sorted.length && <tr><td colSpan={8} className="text-muted">No matching entries.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -412,7 +412,7 @@ function CashStatementGrid() {
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [ledger]);
 
-  if (!byCurrency.length) return <p className="footer-note">No cash entries yet — use the + button below to add one.</p>;
+  if (!byCurrency.length) return <p className="text-muted">No cash entries yet — use the + button below to add one.</p>;
 
   return (
     <div className="detail-grid">
@@ -459,7 +459,7 @@ function AnalyticsTab() {
   );
 
   if (!currencies.length) {
-    return <p className="footer-note">Add a cash entry first (Ledger tab) to see charts here.</p>;
+    return <p className="text-muted">Add a cash entry first (Ledger tab) to see charts here.</p>;
   }
 
   return (
@@ -589,7 +589,7 @@ function ImportTab() {
 
   return (
     <div>
-      <p className="footer-note" style={{ marginBottom: 12 }}>
+      <p className="text-muted" style={{ marginBottom: 12 }}>
         Import a CSV export of cash entries. This is a simple "map these columns" tool, not a parser for a
         specific spreadsheet format — pick which column is which below. A positive amount is treated as cash in,
         negative as cash out (check "Flip sign" if your export does the opposite).
@@ -612,7 +612,7 @@ function ImportTab() {
             e.target.value = '';
           }}
         />
-        {fileName && <span className="footer-note" style={{ marginLeft: 8 }}>{fileName} ({rows.length} rows)</span>}
+        {fileName && <span className="text-muted" style={{ marginLeft: 8 }}>{fileName} ({rows.length} rows)</span>}
       </div>
 
       {headers.length > 0 && (
@@ -635,7 +635,7 @@ function ImportTab() {
                 {headers.map((h) => <option key={h} value={h}>{h}</option>)}
               </Select>
             </Field>
-            <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 20 }} title="Check this if your export uses positive numbers for cash out.">
+            <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 20 }} title="Check this if your export uses positive numbers for cash out.">
               <input type="checkbox" checked={flipSign} onChange={(e) => setFlipSign(e.target.checked)} />
               Flip sign
             </label>
@@ -685,22 +685,22 @@ function BalanceProjectionSummary() {
 
   return (
     <CollapsibleCard title={<h3 style={{ margin: 0 }}>Balance projection</h3>} style={{ marginBottom: 16 }}>
-      <p className="footer-note" style={{ marginTop: 0 }}>
+      <p className="text-muted" style={{ marginTop: 0 }}>
         See what your balance would look like if every plan below actually happened — a reality check before you
         spend. Choose what you want to see:
       </p>
       <div className="row" style={{ gap: 16, marginBottom: 12 }}>
-        <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <input type="checkbox" checked={settings.showRealBalance} onChange={(e) => updateSettings({ showRealBalance: e.target.checked })} />
           Real balance
         </label>
-        <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <input type="checkbox" checked={settings.showPlannedBalance} onChange={(e) => updateSettings({ showPlannedBalance: e.target.checked })} />
           Planned balance
         </label>
       </div>
       {!codes.length ? (
-        <p className="footer-note">No balance yet — add a cash entry or a plan below.</p>
+        <p className="text-muted">No balance yet — add a cash entry or a plan below.</p>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px,1fr))', gap: 8 }}>
           {codes.map((code) => (
@@ -916,7 +916,7 @@ function PlanList() {
                   <td>{fmtMoney(p.amount, p.currencyCode)}</td>
                   <td>{p.category || '—'}</td>
                   <td>{p.note}</td>
-                  <td className="footer-note">{p.recurrence ? recurrenceLabel(p.recurrence) : p.executed ? 'Done' : 'Planned'}</td>
+                  <td className="text-muted">{p.recurrence ? recurrenceLabel(p.recurrence) : p.executed ? 'Done' : 'Planned'}</td>
                   <td>
                     {(p.recurrence || !p.executed) && (
                       <button className="btn secondary small" onClick={() => markDone(p)}>Mark as done</button>
@@ -934,7 +934,7 @@ function PlanList() {
                 </tr>
               ),
             )}
-            {!sorted.length && <tr><td colSpan={7} className="footer-note">No plans yet — add one above.</td></tr>}
+            {!sorted.length && <tr><td colSpan={7} className="text-muted">No plans yet — add one above.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -1153,7 +1153,7 @@ export function CashPage({
   return (
     <div>
       <h1 className="pagetitle">Cash</h1>
-      <p className="footer-note" style={{ marginBottom: 12 }}>
+      <p className="text-muted" style={{ marginBottom: 12 }}>
         Track physical/informal cash — cash in hand, gifts, small informal amounts. Each entry keeps its own
         currency; balances and category totals are grouped per currency, never converted.
       </p>
@@ -1184,7 +1184,7 @@ export function CashPage({
             label: 'Settings',
             content: (
               <div>
-                <p className="footer-note" style={{ marginTop: 0 }}>
+                <p className="text-muted" style={{ marginTop: 0 }}>
                   Sign-in, profile, appearance, and a whole-app backup live on the{' '}
                   <Link to="/account">Account page →</Link>. What's below is specific to Cash.
                 </p>

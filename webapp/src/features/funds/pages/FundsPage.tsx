@@ -139,9 +139,9 @@ function InvestmentHelperModal({ onClose }: { onClose: () => void }) {
     const projected = rate ? projectInvestmentReturn(amount, rate) : null;
     return (
       <div key={fund.id} className="card" style={{ padding: 12, flex: 1, minWidth: 220 }}>
-        <div className="footer-note" style={{ marginBottom: 6 }}>{fund.name} ({fund.currencyCode})</div>
+        <div className="text-muted" style={{ marginBottom: 6 }}>{fund.name} ({fund.currencyCode})</div>
         {!projected ? (
-          <p className="footer-note" style={{ margin: 0 }}>Not enough price history yet to project returns for this fund.</p>
+          <p className="text-muted" style={{ margin: 0 }}>Not enough price history yet to project returns for this fund.</p>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px,1fr))', gap: 8 }}>
             <div className="stat-card card" style={hueStyle(projected.dailyAmount >= 0 ? 'var(--profit)' : 'var(--loss)')}>
@@ -165,10 +165,10 @@ function InvestmentHelperModal({ onClose }: { onClose: () => void }) {
   return (
     <Modal title="Investment helper" onClose={onClose}>
       <Tooltip text="Projects what a hypothetical investment might return, based on each fund's own real historical average daily/monthly growth rate — the same rate already shown as 'Expected daily/monthly P/L' elsewhere on this page. Not a promise of future returns.">
-        <p className="footer-note" style={{ marginTop: 0, cursor: 'pointer' }}>How this works</p>
+        <p className="text-muted" style={{ marginTop: 0, cursor: 'pointer' }}>How this works</p>
       </Tooltip>
       {!funds.length ? (
-        <p className="footer-note">No open funds yet — add one first.</p>
+        <p className="text-muted">No open funds yet — add one first.</p>
       ) : (
         <>
           <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
@@ -246,7 +246,7 @@ function AddFundForm({ onSaved }: { onSaved?: () => void } = {}) {
           </Select>
         </Field>
       </div>
-      <p className="footer-note" style={{ marginTop: 8 }}>Optional initial investment (leave amount blank to just add the fund with no transactions yet):</p>
+      <p className="text-muted" style={{ marginTop: 8 }}>Optional initial investment (leave amount blank to just add the fund with no transactions yet):</p>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
         <Field label="Date">
           <TextInput type="date" value={initialDate} onChange={(e) => setInitialDate(e.target.value)} />
@@ -317,7 +317,7 @@ function OverallSummary() {
         const expMonthlyPct = t.invested > 0 ? (t.expMonthly / t.invested) * 100 : 0;
         return (
           <div key={code} className="card" style={{ padding: 12 }}>
-            <div className="footer-note" style={{ marginBottom: 6 }}>{code}</div>
+            <div className="text-muted" style={{ marginBottom: 6 }}>{code}</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px,1fr))', gap: 8 }}>
               <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Invested</div><MoneyValue n={t.invested} currency={code} /></div>
               <div className="stat-card card" style={hueStyle(HUES[6])}><div className="label">Current value</div><MoneyValue n={t.value} currency={code} /></div>
@@ -403,7 +403,7 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
         <tbody>
           {sorted.map((r) => (
             <tr key={r.fund.id} onClick={() => onSelect(r.fund)} style={{ cursor: 'pointer' }}>
-              <td className="footer-note">{r.idx}</td>
+              <td className="text-muted">{r.idx}</td>
               <td>
                 {r.fund.name}
                 {r.fund.isActive === false && <span className="pill-warn" style={{ fontSize: 10, marginLeft: 6 }}>Closed</span>}
@@ -418,7 +418,7 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
           ))}
           {!sorted.length && (
             <tr>
-              <td colSpan={8} className="footer-note">
+              <td colSpan={8} className="text-muted">
                 {allFunds.length ? 'Every fund is closed — click "Show closed" above to see them.' : 'No funds yet — add one above.'}
               </td>
             </tr>
@@ -530,7 +530,7 @@ function SnapshotImportSection() {
 
   return (
     <div>
-      <p className="footer-note" style={{ marginBottom: 12 }}>
+      <p className="text-muted" style={{ marginBottom: 12 }}>
         For a spreadsheet that tracks Total Invested / Withdrawn / Current Balance per fund rather than individual
         dated trades. Since there's no real transaction history in that shape, this reconstructs a buy (and, if
         withdrawn, a sell) dated on the single "as of" date below, at whatever NAV reproduces your reported balances
@@ -894,7 +894,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                     {fund.name}
                     {fund.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Closed</span>}
                   </div>
-                  <div className="footer-note">{fund.code} · {fund.platform} · {fund.category} · {fund.currencyCode}</div>
+                  <div className="text-muted">{fund.code} · {fund.platform} · {fund.category} · {fund.currencyCode}</div>
                 </div>
                 <div className="row" style={{ gap: 8 }}>
                   <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => { setEditFund(fund); setEditingFund(true); }} />
@@ -1029,9 +1029,9 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
               <TextInput type="number" step="0.0001" value={navInput} onChange={(e) => setNavInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && commitNav()} />
             </Field>
             <button className="btn secondary small" onClick={commitNav}><SaveIcon size={12} />Save NAV</button>
-            <span className="footer-note">Current NAV: {currentNav ? fmtPrice(currentNav) : '—'}</span>
+            <span className="text-muted">Current NAV: {currentNav ? fmtPrice(currentNav) : '—'}</span>
           </div>
-          <div className="footer-note" style={{ textAlign: 'center' }}>OR</div>
+          <div className="text-muted" style={{ textAlign: 'center' }}>OR</div>
           <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <Field label="Update balance" width={150} title="Don't know the per-unit NAV? Enter your fund's current total balance instead — the app computes the implied NAV from the units you already hold, assuming no deposit/withdrawal happened since your last update.">
               <TextInput type="number" step="0.01" value={balanceInput} onChange={(e) => setBalanceInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && commitBalance()} disabled={units <= 0} />
@@ -1111,7 +1111,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
             )}
             {!txs.length && (
               <tr>
-                <td colSpan={6} className="footer-note">
+                <td colSpan={6} className="text-muted">
                   {allTxs.length ? 'No transactions match this filter.' : 'No transactions for this fund yet.'}
                 </td>
               </tr>
@@ -1129,7 +1129,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
         style={{ marginTop: 16 }}
         headerExtra={balanceRows.length > 0 ? <button className="btn secondary" onClick={exportBalanceHistory}>Export CSV</button> : undefined}
       >
-        {!balanceRows.length && <p className="footer-note">No balance/NAV updates recorded yet — use "Update balance or NAV" above.</p>}
+        {!balanceRows.length && <p className="text-muted">No balance/NAV updates recorded yet — use "Update balance or NAV" above.</p>}
         {balanceRows.length > 0 && (
           <>
             {balanceRows.length > 8 && (
@@ -1149,14 +1149,14 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                     const rawIndex = rawPriceHistory.indexOf(r.point);
                     return editUpdateIndex === rawIndex && editUpdateRow ? (
                       <tr key={rawIndex}>
-                        <td className="footer-note">{r.index}</td>
+                        <td className="text-muted">{r.index}</td>
                         <td><input type="date" value={editUpdateRow.date} onChange={(e) => setEditUpdateRow({ ...editUpdateRow, date: e.target.value })} style={{ width: 130 }} /></td>
                         <td>{fmtMoney(r.prevBalance, fund.currencyCode)}</td>
                         <td>{fmtPrice(r.prevNav)}</td>
-                        <td className="footer-note">—</td>
+                        <td className="text-muted">—</td>
                         <td><input type="number" step="0.0001" value={editUpdateRow.price} onChange={(e) => setEditUpdateRow({ ...editUpdateRow, price: Number(e.target.value) })} style={{ width: 90 }} /></td>
-                        <td className="footer-note">—</td>
-                        <td className="footer-note">—</td>
+                        <td className="text-muted">—</td>
+                        <td className="text-muted">—</td>
                         <td>
                           <IconButton label="Save" icon={<SaveIcon size={12} />} align="right" onClick={saveEditUpdate} />
                           <IconButton label="Cancel" icon={<XIcon size={12} />} align="right" onClick={() => { setEditUpdateIndex(null); setEditUpdateRow(null); }} />
@@ -1164,7 +1164,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                       </tr>
                     ) : (
                       <tr key={rawIndex}>
-                        <td className="footer-note">{r.index}</td>
+                        <td className="text-muted">{r.index}</td>
                         <td>{r.time ? new Date(r.time).toLocaleString() : r.date}</td>
                         <td>{fmtMoney(r.prevBalance, fund.currencyCode)}</td>
                         <td>{fmtPrice(r.prevNav)}</td>
@@ -1271,7 +1271,7 @@ function FundsTransfersSection() {
 
   return (
     <div>
-      <p className="footer-note" style={{ marginBottom: 12 }}>
+      <p className="text-muted" style={{ marginBottom: 12 }}>
         Cash moved into or out of this Funds account, separate from buying/selling fund units —
         e.g. topping up before a purchase, or withdrawing after a redemption.
       </p>
@@ -1352,7 +1352,7 @@ function FundsTransfersSection() {
                 </tr>
               );
             })}
-            {!sorted.length && <tr><td colSpan={6} className="footer-note">No transfers yet.</td></tr>}
+            {!sorted.length && <tr><td colSpan={6} className="text-muted">No transfers yet.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -1394,7 +1394,7 @@ function AnalyticsTab() {
   );
 
   if (!funds.length) {
-    return <p className="footer-note">Add a fund first (Funds tab) to see charts here.</p>;
+    return <p className="text-muted">Add a fund first (Funds tab) to see charts here.</p>;
   }
 
   return (
@@ -1577,7 +1577,7 @@ export function FundsPage({
   return (
     <div>
       <h1 className="pagetitle">Funds</h1>
-      <p className="footer-note" style={{ marginBottom: 12 }}>
+      <p className="text-muted" style={{ marginBottom: 12 }}>
         Mutual fund unit holdings and performance — buy/sell units at a NAV per unit, same shape as a stock
         trade. Returns are shown as XIRR, which accounts for when each investment happened, not just totals.
       </p>
@@ -1605,7 +1605,7 @@ export function FundsPage({
               label: 'Settings',
               content: (
                 <div>
-                  <p className="footer-note" style={{ marginTop: 0 }}>
+                  <p className="text-muted" style={{ marginTop: 0 }}>
                     Sign-in, profile, appearance, and a whole-app backup live on the{' '}
                     <Link to="/account">Account page →</Link>. What's below is specific to Funds.
                   </p>

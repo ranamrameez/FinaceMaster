@@ -56,9 +56,9 @@ function NetWorthRailCard() {
           </div>
         </>
       ) : (
-        <p className="footer-note" style={{ marginTop: 0 }}>No data yet across any module.</p>
+        <p className="text-muted" style={{ marginTop: 0 }}>No data yet across any module.</p>
       )}
-      <Link to="/net-worth" className="footer-note" style={{ display: 'block', marginTop: 10 }}>
+      <Link to="/net-worth" className="text-muted" style={{ display: 'block', marginTop: 10 }}>
         Full breakdown →
       </Link>
     </CollapsibleCard>
@@ -71,7 +71,7 @@ function UpcomingPlansRailCard() {
   return (
     <CollapsibleCard title={<h3 style={{ margin: 0 }}>Upcoming</h3>} style={{ marginBottom: 16 }}>
       <UpcomingList items={items} limit={5} emptyText="Nothing expected in the next 14 days." />
-      <Link to="/planning" className="footer-note" style={{ display: 'block', marginTop: 10 }}>
+      <Link to="/planning" className="text-muted" style={{ display: 'block', marginTop: 10 }}>
         See all →
       </Link>
     </CollapsibleCard>

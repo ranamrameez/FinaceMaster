@@ -73,7 +73,7 @@ export function BudgetPlannerPage() {
   return (
     <div>
       <h1 className="pagetitle">Budget Planner</h1>
-      <p className="footer-note" style={{ marginBottom: 12 }}>
+      <p className="text-muted" style={{ marginBottom: 12 }}>
         Every planned income/expense across Cash, Banking, and Rentals in one place — this doesn't replace those
         modules' own Planning tabs, it's a combined view of the same plans, plus a shortcut to add a new one linked
         to whichever account you want. The monthly summary and net worth trend now live on{' '}
@@ -160,12 +160,12 @@ function ActivityList({ activities }: { activities: BudgetActivity[] }) {
                 <td>{a.description}</td>
                 <td>{a.category || '—'}</td>
                 <td className={a.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(a.amount, a.currencyCode)}</td>
-                <td className="footer-note">{a.executed ? 'Actual' : 'Planned'}</td>
+                <td className="text-muted">{a.executed ? 'Actual' : 'Planned'}</td>
               </tr>
             ))}
             {!sorted.length && (
               <tr>
-                <td colSpan={7} className="footer-note">
+                <td colSpan={7} className="text-muted">
                   {activities.length ? 'No activity matches these filters.' : 'No planned activity yet.'}
                 </td>
               </tr>
@@ -253,7 +253,7 @@ function AddPlanForm({ addPlannedCash, cashDefaultCurrency, bankAccounts, addPla
               </Select>
             </Field>
           ) : (
-            <p className="footer-note">No bank accounts yet — add one on the Banking page first.</p>
+            <p className="text-muted">No bank accounts yet — add one on the Banking page first.</p>
           )
         )}
         {module === 'rentals' && (
@@ -264,7 +264,7 @@ function AddPlanForm({ addPlannedCash, cashDefaultCurrency, bankAccounts, addPla
               </Select>
             </Field>
           ) : (
-            <p className="footer-note">No properties yet — add one on the Rentals page first.</p>
+            <p className="text-muted">No properties yet — add one on the Rentals page first.</p>
           )
         )}
         <Field label="Type" width={120} required>
@@ -292,7 +292,7 @@ function AddPlanForm({ addPlannedCash, cashDefaultCurrency, bankAccounts, addPla
       <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
         <PlusIcon />Add plan
       </button>
-      <p className="footer-note" style={{ marginTop: 8 }}><span style={{ color: 'var(--loss)' }}>*</span> Required. Everything else on this form is optional.</p>
+      <p className="text-muted" style={{ marginTop: 8 }}><span style={{ color: 'var(--loss)' }}>*</span> Required. Everything else on this form is optional.</p>
     </div>
   );
 }

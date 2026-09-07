@@ -78,7 +78,7 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
   };
   const { sorted, Th } = useSortableRows(rows, sortValue, 'status', 'desc');
 
-  if (!sorted.length) return <p className="footer-note">No open positions.</p>;
+  if (!sorted.length) return <p className="text-muted">No open positions.</p>;
 
   return (
     <div className="table-scroll">
@@ -114,7 +114,7 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
               <td onClick={() => onSelect(r.ticker)}>{fmt(r.shares, 0)}</td>
               <td onClick={() => onSelect(r.ticker)}>
                 <div>{fmtPrice(r.avgCost)}</div>
-                <div className="footer-note" style={{ color: r.hasMarket ? (r.mp >= r.be ? 'var(--profit)' : 'var(--loss)') : undefined }}>
+                <div className="text-muted" style={{ color: r.hasMarket ? (r.mp >= r.be ? 'var(--profit)' : 'var(--loss)') : undefined }}>
                   BE {fmtPrice(r.be)}
                 </div>
               </td>
@@ -142,16 +142,16 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
               </td>
               <td onClick={() => onSelect(r.ticker)}>
                 <div>{r.hasMarket ? fmtMoney(r.value, currency) : '—'}</div>
-                <div className="footer-note">
+                <div className="text-muted">
                   {r.hasMarket && (r.value >= r.invested ? <span style={{ color: 'var(--profit)' }}>▲</span> : <span style={{ color: 'var(--loss)' }}>▼</span>)}
                   {' '}Inv {fmtMoney(r.invested, currency)}
                 </div>
               </td>
               <td onClick={() => onSelect(r.ticker)} className={Number.isFinite(r.net) ? (r.net >= 0 ? 'pill-buy' : 'pill-sell') : ''}>
                 <div>{Number.isFinite(r.net) ? fmtMoney(r.net, currency) : '—'}</div>
-                <div className="footer-note">{Number.isFinite(r.netPct) ? `${r.netPct >= 0 ? '+' : ''}${r.netPct.toFixed(1)}%` : ''}</div>
+                <div className="text-muted">{Number.isFinite(r.netPct) ? `${r.netPct >= 0 ? '+' : ''}${r.netPct.toFixed(1)}%` : ''}</div>
               </td>
-              <td onClick={() => onSelect(r.ticker)} className="footer-note" style={{ whiteSpace: 'nowrap' }}>
+              <td onClick={() => onSelect(r.ticker)} className="text-muted" style={{ whiteSpace: 'nowrap' }}>
                 +1% {fmtPrice(r.t1)}<br />+2% {fmtPrice(r.t2)}<br />+5% {fmtPrice(r.t3)}
               </td>
               <td onClick={() => onSelect(r.ticker)} className={r.statusClass}>{r.statusLabel}</td>
@@ -207,19 +207,19 @@ function ClosedPositionsTable({ onSelect }: { onSelect: (ticker: string) => void
               </td>
               <td>
                 <div>{fmt(p.totalBoughtShares, 0)}</div>
-                <div className="footer-note">{fmt(p.totalSoldShares, 0)} sold</div>
+                <div className="text-muted">{fmt(p.totalSoldShares, 0)} sold</div>
               </td>
               <td className={p.realized >= 0 ? 'pill-buy' : 'pill-sell'}>
                 <div>{fmtMoney(p.realized, currency)}</div>
-                <div className="footer-note">Fees {fmtMoney(p.buyFees + p.sellFees, currency)}</div>
+                <div className="text-muted">Fees {fmtMoney(p.buyFees + p.sellFees, currency)}</div>
               </td>
-              <td className="footer-note" style={{ whiteSpace: 'nowrap' }}>
+              <td className="text-muted" style={{ whiteSpace: 'nowrap' }}>
                 {p.firstDate} → {p.lastDate}
               </td>
             </tr>
           ))}
           {!sorted.length && (
-            <tr><td colSpan={4} className="footer-note">No closed positions yet.</td></tr>
+            <tr><td colSpan={4} className="text-muted">No closed positions yet.</td></tr>
           )}
         </tbody>
       </table>
