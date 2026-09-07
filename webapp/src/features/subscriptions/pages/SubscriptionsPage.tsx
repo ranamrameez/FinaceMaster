@@ -226,13 +226,13 @@ function SubscriptionList({ onSelect }: { onSelect: (sub: Subscription) => void 
               <td>{fmtMoney(monthly, s.currencyCode)}</td>
               <td>{s.category || '—'}</td>
               <td>{next || '—'}</td>
-              <td className={s.active ? 'pill-buy' : 'pill-sell'}>{s.active ? 'Active' : 'Cancelled'}</td>
+              <td className={s.active ? 'pill-positive' : 'pill-negative'}>{s.active ? 'Active' : 'Cancelled'}</td>
               <td><button className="btn secondary small" onClick={(e) => { e.stopPropagation(); onSelect(s); }}>Open</button></td>
             </tr>
           ))}
           {!sorted.length && (
             <tr>
-              <td colSpan={7} className="footer-note">
+              <td colSpan={7} className="text-muted">
                 {subs.length ? 'No subscriptions match these filters.' : 'No subscriptions yet — add one above.'}
               </td>
             </tr>
@@ -280,7 +280,7 @@ function AlertsSection({ sub }: { sub: Subscription }) {
 
   return (
     <CollapsibleCard title={<h3 style={{ margin: 0 }}>Renewal / expiry alerts</h3>} style={{ marginBottom: 16 }}>
-      <p className="footer-note" style={{ marginTop: 0 }}>
+      <p className="text-muted" style={{ marginTop: 0 }}>
         Get reminded before this renews or expires — pick a suggested lead time, or set an exact date and time.
       </p>
       <div className="row" style={{ gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
@@ -316,7 +316,7 @@ function AlertsSection({ sub }: { sub: Subscription }) {
               {alerts.map((a) => (
                 <tr key={a.id}>
                   <td>{describe(a)}</td>
-                  <td className="footer-note">
+                  <td className="text-muted">
                     {sub.active ? new Date(alertTriggerMs(sub, a) ?? 0).toLocaleString() : 'Subscription cancelled'}
                   </td>
                   <td><IconButton label="Remove" icon={<TrashIcon size={13} />} align="right" onClick={() => removeAlert(a.id)} /></td>
@@ -326,7 +326,7 @@ function AlertsSection({ sub }: { sub: Subscription }) {
           </table>
         </div>
       ) : (
-        <p className="footer-note" style={{ marginBottom: 0 }}>No alerts configured yet.</p>
+        <p className="text-muted" style={{ marginBottom: 0 }}>No alerts configured yet.</p>
       )}
     </CollapsibleCard>
   );
@@ -455,7 +455,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
             <div>
               <div style={{ fontWeight: 700, fontSize: 16 }}>{sub.name}</div>
-              <div className="footer-note">
+              <div className="text-muted">
                 {fmtMoney(sub.amount, sub.currencyCode)}{CYCLE_LABEL[sub.billingCycle]} · {sub.category || 'Uncategorized'} · since {sub.startDate}
                 {!sub.active && sub.cancelledDate && ` · cancelled ${sub.cancelledDate}`}
               </div>
@@ -495,11 +495,11 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
       <Card style={{ marginBottom: 16 }}>
         <h4 style={{ margin: '0 0 8px' }}>Link to a paying account</h4>
         {linkedLabel ? (
-          <p className="footer-note" style={{ marginBottom: 8 }}>
+          <p className="text-muted" style={{ marginBottom: 8 }}>
             Paid via <strong>{linkedLabel}</strong> — upcoming renewals are planned in its Planning tab.
           </p>
         ) : (
-          <p className="footer-note" style={{ marginBottom: 8 }}>
+          <p className="text-muted" style={{ marginBottom: 8 }}>
             Not linked yet. Linking generates a planned (not-yet-done) entry for every renewal in the next 12
             months in the chosen account's Planning tab.
           </p>
@@ -519,7 +519,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
                 </Select>
               </Field>
             ) : (
-              <p className="footer-note">No active bank accounts — add or unarchive one on the Banking page first.</p>
+              <p className="text-muted">No active bank accounts — add or unarchive one on the Banking page first.</p>
             )
           )}
           <button className="btn" onClick={generatePlans} disabled={linkModule === 'bank' && !activeAccounts.length}>
@@ -538,7 +538,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
               {occurrences.map((o, i) => (
                 <tr key={i}><td>{o.date}</td><td>{fmtMoney(o.amount, sub.currencyCode)}</td></tr>
               ))}
-              {!occurrences.length && <tr><td colSpan={2} className="footer-note">No upcoming occurrences (subscription is cancelled).</td></tr>}
+              {!occurrences.length && <tr><td colSpan={2} className="text-muted">No upcoming occurrences (subscription is cancelled).</td></tr>}
             </tbody>
           </table>
         </div>
@@ -574,7 +574,7 @@ function AnalyticsTab() {
   const accountLabels = Object.keys(byAccount);
 
   if (!subs.length) {
-    return <p className="footer-note">Add a subscription first to see charts here.</p>;
+    return <p className="text-muted">Add a subscription first to see charts here.</p>;
   }
 
   return (
@@ -750,7 +750,7 @@ export function SubscriptionsPage({
   return (
     <div>
       <h1 className="pagetitle">Subscriptions</h1>
-      <p className="footer-note" style={{ marginBottom: 12 }}>
+      <p className="text-muted" style={{ marginBottom: 12 }}>
         Recurring payments — streaming, gym, software, memberships — tracked independently and optionally
         linked to whichever Bank account or Cash actually pays them.
       </p>
@@ -776,7 +776,7 @@ export function SubscriptionsPage({
               label: 'Settings',
               content: (
                 <div>
-                  <p className="footer-note" style={{ marginTop: 0 }}>
+                  <p className="text-muted" style={{ marginTop: 0 }}>
                     Sign-in, profile, appearance, and a whole-app backup live on the{' '}
                     <Link to="/account">Account page →</Link>. What's below is specific to Subscriptions.
                   </p>

@@ -55,11 +55,11 @@ function HoldingsCard() {
           if (!Number.isFinite(profit)) {
             statusRank = 3; statusLabel = 'PRICE NEEDED'; statusClass = '';
           } else if (profit >= 0) {
-            statusRank = 0; statusLabel = 'EXIT READY'; statusClass = 'pill-buy';
+            statusRank = 0; statusLabel = 'EXIT READY'; statusClass = 'pill-positive';
           } else if ((profit / p.invested) * 100 > -3) {
             statusRank = 1; statusLabel = 'WATCH'; statusClass = '';
           } else {
-            statusRank = 2; statusLabel = 'HOLD / REVIEW'; statusClass = 'pill-sell';
+            statusRank = 2; statusLabel = 'HOLD / REVIEW'; statusClass = 'pill-negative';
           }
 
           return {
@@ -89,7 +89,7 @@ function HoldingsCard() {
     <CollapsibleCard
       style={{ marginBottom: 16, paddingBottom: 12 }}
       title={<h3 style={{ margin: 0 }}>Holdings</h3>}
-      headerExtra={<Link to="/psx/portfolio" className="footer-note">Full portfolio →</Link>}
+      headerExtra={<Link to="/psx/portfolio" className="text-muted">Full portfolio →</Link>}
     >
       {held.length ? (
         <div className="table-scroll table-compact" style={{ marginTop: 8 }}>
@@ -116,7 +116,7 @@ function HoldingsCard() {
                   <td onClick={() => navigate(`/psx/stock/${r.ticker}`)}>
                     <div>{fmtPrice(r.avgCost)}</div>
                     <div
-                      className="footer-note"
+                      className="text-muted"
                       style={{ color: r.mp > 0 ? (r.mp >= r.be ? 'var(--profit)' : 'var(--loss)') : undefined }}
                     >
                       BE {fmtPrice(r.be)}
@@ -146,16 +146,16 @@ function HoldingsCard() {
                   </td>
                   <td onClick={() => navigate(`/psx/stock/${r.ticker}`)}>
                     <div>{r.mp > 0 ? fmtMoney(r.value, currency) : '—'}</div>
-                    <div className="footer-note">
+                    <div className="text-muted">
                       {r.mp > 0 && (r.value >= r.invested ? <span style={{ color: 'var(--profit)' }}>▲</span> : <span style={{ color: 'var(--loss)' }}>▼</span>)}
                       {' '}Inv {fmtMoney(r.invested, currency)}
                     </div>
                   </td>
-                  <td onClick={() => navigate(`/psx/stock/${r.ticker}`)} className={Number.isFinite(r.profit) ? (r.profit >= 0 ? 'pill-buy' : 'pill-sell') : ''}>
+                  <td onClick={() => navigate(`/psx/stock/${r.ticker}`)} className={Number.isFinite(r.profit) ? (r.profit >= 0 ? 'pill-positive' : 'pill-negative') : ''}>
                     <div>{Number.isFinite(r.profit) ? fmtMoney(r.profit, currency) : '—'}</div>
-                    <div className="footer-note">{Number.isFinite(r.profitPct) ? `${r.profitPct >= 0 ? '+' : ''}${r.profitPct.toFixed(1)}%` : ''}</div>
+                    <div className="text-muted">{Number.isFinite(r.profitPct) ? `${r.profitPct >= 0 ? '+' : ''}${r.profitPct.toFixed(1)}%` : ''}</div>
                   </td>
-                  <td onClick={() => navigate(`/psx/stock/${r.ticker}`)} className="footer-note" style={{ whiteSpace: 'nowrap' }}>
+                  <td onClick={() => navigate(`/psx/stock/${r.ticker}`)} className="text-muted" style={{ whiteSpace: 'nowrap' }}>
                     +1% {fmtPrice(r.t1)}<br />+2% {fmtPrice(r.t2)}<br />+5% {fmtPrice(r.t3)}
                   </td>
                   <td onClick={() => navigate(`/psx/stock/${r.ticker}`)} className={r.statusClass}>{r.statusLabel}</td>
@@ -165,7 +165,7 @@ function HoldingsCard() {
           </table>
         </div>
       ) : (
-        <p className="footer-note">No open positions yet.</p>
+        <p className="text-muted">No open positions yet.</p>
       )}
     </CollapsibleCard>
   );

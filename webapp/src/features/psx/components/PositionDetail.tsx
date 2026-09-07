@@ -264,7 +264,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
               </tbody>
             </table>
           </div>
-          <p className="footer-note" style={{ marginTop: 4 }}>
+          <p className="text-muted" style={{ marginTop: 4 }}>
             A future sell of {ticker} will consume the oldest lot first (FIFO cost basis).
           </p>
         </CollapsibleCard>
@@ -337,7 +337,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
           />
         </CompactChart>
       ) : (
-        <p className="footer-note">No price history recorded for {ticker} yet.</p>
+        <p className="text-muted">No price history recorded for {ticker} yet.</p>
       )}
       <div className="row" style={{ gap: 8, marginTop: 8 }}>
         <input
@@ -396,7 +396,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
             <div className="stat-card card" style={hueStyle(HUES[2])}><div className="label">Highest</div><div className="value">{fmtPrice(stats.max)}</div><div className="sub">{stats.maxDate}</div></div>
           </div>
           <details>
-            <summary className="footer-note" style={{ cursor: 'pointer' }}>
+            <summary className="text-muted" style={{ cursor: 'pointer' }}>
               {showAllPrices ? `All updates (${stats.totalUpdates})` : `Recent updates (${stats.recent.length} of ${stats.totalUpdates})`}
             </summary>
             {stats.totalUpdates > stats.recent.length && (

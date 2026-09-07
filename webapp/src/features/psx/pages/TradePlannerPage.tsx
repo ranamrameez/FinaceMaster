@@ -139,7 +139,7 @@ function WhatIfExitCalculator({
 
   return (
     <div style={{ marginTop: 10 }}>
-      <div className="footer-note" style={{ marginBottom: 4 }}>
+      <div className="text-muted" style={{ marginBottom: 4 }}>
         What if? Test a hypothetical exit price per ticker.
       </div>
       {tickerAnalysis.map((t) => {
@@ -158,14 +158,14 @@ function WhatIfExitCalculator({
               />
             </Field>
             {price > 0 && (
-              <div className="footer-note">
+              <div className="text-muted">
                 Remaining ({fmt(t.effectiveShares, 0)} sh): {fmtMoney(remaining.proceeds, currency)} proceeds ·{' '}
-                <span className={remaining.pl >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(remaining.pl, currency)}</span> P/L
+                <span className={remaining.pl >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(remaining.pl, currency)}</span> P/L
                 {t.plannedSold > 0 && (
                   <>
                     {' '}· Full position, ignoring planned sells ({fmt(fullShares, 0)} sh):{' '}
                     {fmtMoney(full.proceeds, currency)} proceeds ·{' '}
-                    <span className={full.pl >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(full.pl, currency)}</span> P/L
+                    <span className={full.pl >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(full.pl, currency)}</span> P/L
                   </>
                 )}
               </div>
@@ -417,10 +417,10 @@ function PlanCard({ plan }: { plan: TradePlan }) {
       {(plan.defaultTicker || plan.legs[0]?.ticker) && (
         <span className="pill pill-info">{plan.defaultTicker || plan.legs[0]?.ticker}</span>
       )}{' '}
-      <span className="footer-note">
+      <span className="text-muted">
         {plan.createdAt} · {doneCount}/{plan.legs.length} executed
       </span>
-      {plan.notes && <p className="footer-note" style={{ margin: '4px 0 0' }}>{plan.notes}</p>}
+      {plan.notes && <p className="text-muted" style={{ margin: '4px 0 0' }}>{plan.notes}</p>}
     </div>
   );
 
@@ -528,7 +528,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                   <td><input type="number" step="0.01" value={editTxRow.price} onChange={(e) => setEditTxRow({ ...editTxRow, price: Number(e.target.value) })} style={{ width: 80 }} /></td>
                   <td>{fmtMoney(editTxRow.shares * editTxRow.price, currency)}</td>
                   <td>{fmtMoney(calcFee(editTxRow.shares * editTxRow.price, editTxRow.action === 'BUY', { shares: editTxRow.shares, tx: editTxRow }), currency)}</td>
-                  <td><span className="pill-buy">Executed</span></td>
+                  <td><span className="pill-positive">Executed</span></td>
                   <td>
                     <button className="btn secondary small" onClick={saveEditTx}><SaveIcon size={12} />Save</button>{' '}
                     <button className="btn secondary small" onClick={() => { setEditingTxLegIndex(null); setEditTxRow(null); }}>Cancel</button>
@@ -559,7 +559,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                       </Tooltip>
                     )}</td>
                     <td>{display.ticker}</td>
-                    <td className={display.action === 'BUY' ? 'pill-buy' : 'pill-sell'}>{display.action}</td>
+                    <td className={display.action === 'BUY' ? 'pill-positive' : 'pill-negative'}>{display.action}</td>
                     <td>{fmt(display.shares, 0)}</td>
                     <td>{fmtPrice(display.price)}</td>
                     <td>{fmtMoney(display.shares * display.price, currency)}</td>
@@ -567,7 +567,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                       {fmtMoney(legFee(leg), currency)}
                       {scenarios && (
                         <Tooltip text="Shown regardless of what else is in this plan — a lone leg is priced at full commission unless it actually pairs with an opposite same-day trade.">
-                          <div className="footer-note" style={{ cursor: 'pointer' }}>
+                          <div className="text-muted" style={{ cursor: 'pointer' }}>
                             Full {fmtMoney(scenarios.full, currency)} · Same-day netted {fmtMoney(scenarios.netted, currency)}
                           </div>
                         </Tooltip>
@@ -577,13 +577,13 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                       {leg.executed ? (
                         linkedTx ? (
                           <Tooltip text="Synced with its transaction — edit it below or from the Transactions page.">
-                            <span className="pill-buy" style={{ cursor: 'pointer' }}>Executed</span>
+                            <span className="pill-positive" style={{ cursor: 'pointer' }}>Executed</span>
                           </Tooltip>
                         ) : (
-                          <span className="pill-sell">Executed (unlinked)</span>
+                          <span className="pill-negative">Executed (unlinked)</span>
                         )
                       ) : (
-                        <span className="footer-note">Planned</span>
+                        <span className="text-muted">Planned</span>
                       )}
                     </td>
                     <td>
@@ -629,7 +629,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
               );
             })}
             {!plan.legs.length && (
-              <tr><td colSpan={9} className="footer-note">No legs left in this plan.</td></tr>
+              <tr><td colSpan={9} className="text-muted">No legs left in this plan.</td></tr>
             )}
             {addingLeg && (
               <tr>
@@ -664,7 +664,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
 
       {tickerAnalysis.length > 0 && (
         <div style={{ marginTop: 12 }}>
-          <div className="footer-note" style={{ marginBottom: 4 }}>
+          <div className="text-muted" style={{ marginBottom: 4 }}>
             Per-ticker plan analysis — average cost blends this plan's pending buys with any shares you already
             hold; already-executed legs are shown separately and never double-counted into it.
           </div>
@@ -682,7 +682,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                 <div className="sub">
                   BE {t.breakEven > 0 ? fmtPrice(t.breakEven) : '—'} · {fmt(t.effectiveShares, 0)} sh after plan
                   {t.plannedSold > 0 && (
-                    <> · <span className={t.realizedPL >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(t.realizedPL, currency)} P/L</span></>
+                    <> · <span className={t.realizedPL >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(t.realizedPL, currency)} P/L</span></>
                   )}
                 </div>
               </div>
@@ -702,12 +702,12 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                 {sortedTickerAnalysis.map((t) => (
                   <tr key={t.ticker}>
                     <td>{t.ticker}</td>
-                    <td className="footer-note">
+                    <td className="text-muted">
                       {t.executedBought > 0 && <>+{fmt(t.executedBought, 0)} buy </>}
                       {t.executedSold > 0 && <>-{fmt(t.executedSold, 0)} sell</>}
                       {!t.executedBought && !t.executedSold && '—'}
                     </td>
-                    <td className="footer-note">
+                    <td className="text-muted">
                       {t.plannedBought > 0 && <>+{fmt(t.plannedBought, 0)} buy </>}
                       {t.plannedSold > 0 && <>-{fmt(t.plannedSold, 0)} sell</>}
                       {!t.plannedBought && !t.plannedSold && '—'}
@@ -715,7 +715,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                     <td>{t.avgCost > 0 ? fmtPrice(t.avgCost) : '—'}</td>
                     <td>{t.breakEven > 0 ? fmtPrice(t.breakEven) : '—'}</td>
                     <td>{fmt(t.effectiveShares, 0)}</td>
-                    <td className={t.plannedSold > 0 ? (t.realizedPL >= 0 ? 'pill-buy' : 'pill-sell') : ''}>
+                    <td className={t.plannedSold > 0 ? (t.realizedPL >= 0 ? 'pill-positive' : 'pill-negative') : ''}>
                       {t.plannedSold > 0 ? fmtMoney(t.realizedPL, currency) : '—'}
                     </td>
                   </tr>
@@ -727,7 +727,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
         </div>
       )}
 
-      <p className="footer-note" style={{ marginTop: 8 }}>
+      <p className="text-muted" style={{ marginTop: 8 }}>
         Planned buys {fmtMoney(totalBuy, currency)} · Planned sells {fmtMoney(totalSell, currency)}
         {tickerAnalysis.some((t) => t.plannedSold > 0) && (
           <> · Total planned P/L {fmtMoney(tickerAnalysis.reduce((s, t) => s + t.realizedPL, 0), currency)}</>
@@ -768,13 +768,13 @@ export function TradePlannerPage() {
   return (
     <div>
       <h1 className="pagetitle">PSX Trade Planner</h1>
-      <p className="footer-note" style={{ marginBottom: 12 }}>
+      <p className="text-muted" style={{ marginBottom: 12 }}>
         Sketch out multi-leg trades ahead of time, save as many plans as you like, and mark each leg done —
         once it's actually executed — to log it straight into your transaction history without re-entering it.
       </p>
       <NewPlanForm />
       <h2 style={{ marginTop: 8, marginBottom: 8, fontSize: 16 }}>Saved plans</h2>
-      {sorted.length ? sorted.map((p) => <PlanCard key={p.id} plan={p} />) : <p className="footer-note">No trade plans yet.</p>}
+      {sorted.length ? sorted.map((p) => <PlanCard key={p.id} plan={p} />) : <p className="text-muted">No trade plans yet.</p>}
     </div>
   );
 }

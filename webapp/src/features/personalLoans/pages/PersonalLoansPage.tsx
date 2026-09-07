@@ -95,7 +95,7 @@ function AnalyticsTab() {
   );
 
   if (!currencies.length) {
-    return <p className="footer-note">Add a loan first to see charts here.</p>;
+    return <p className="text-muted">Add a loan first to see charts here.</p>;
   }
 
   return (
@@ -385,7 +385,7 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                     <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
                     <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 90 }} /></td>
                     <td></td>
-                    <td className="footer-note cell-clip">{r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}</td>
+                    <td className="text-muted cell-clip">{r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}</td>
                     <td>
                       <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
                       <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditId(null)} />
@@ -417,7 +417,7 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                         <span>{fmtMoney(remaining.get(r.id) ?? 0, loan.currencyCode)}</span>
                       </Tooltip>
                     </td>
-                    <td className="footer-note cell-clip" title={r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}>
+                    <td className="text-muted cell-clip" title={r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}>
                       {r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}
                     </td>
                     <td>
@@ -434,7 +434,7 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
               })}
               {!sorted.length && (
                 <tr>
-                  <td colSpan={5} className="footer-note">
+                  <td colSpan={5} className="text-muted">
                     {repayments.length ? 'No repayments match this filter.' : 'No repayments logged yet.'}
                   </td>
                 </tr>
@@ -528,7 +528,7 @@ function ImportRepaymentsSection({ loan }: { loan: PersonalLoan }) {
             e.target.value = '';
           }}
         />
-        {fileName && <span className="footer-note">{fileName} ({rows.length} rows)</span>}
+        {fileName && <span className="text-muted">{fileName} ({rows.length} rows)</span>}
       </div>
 
       {headers.length > 0 && (
@@ -611,7 +611,7 @@ function PayoffPlanner({ loan, outstanding }: { loan: PersonalLoan; outstanding:
   return (
     <Card style={{ marginBottom: 16 }}>
       <h4 style={{ marginTop: 0 }}>Payoff planner</h4>
-      <p className="footer-note" style={{ marginTop: 0 }}>
+      <p className="text-muted" style={{ marginTop: 0 }}>
         A quick "what if" — see how many months it'd take to clear the remaining {fmtMoney(outstanding, loan.currencyCode)}
         {' '}at a repayment rate you pick. Not saved anywhere, just a live estimate.
       </p>
@@ -625,7 +625,7 @@ function PayoffPlanner({ loan, outstanding }: { loan: PersonalLoan; outstanding:
             <strong>{projection.months} month{projection.months === 1 ? '' : 's'}</strong>, around <strong>{projection.payoffDate}</strong>.
           </p>
         ) : (
-          <p className="footer-note" style={{ marginBottom: 0 }}>Enter a positive monthly amount to project a payoff date.</p>
+          <p className="text-muted" style={{ marginBottom: 0 }}>Enter a positive monthly amount to project a payoff date.</p>
         )
       )}
     </Card>
@@ -699,10 +699,10 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
                 {loan.person}
                 {loan.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Archived</span>}
               </div>
-              <div className="footer-note">
+              <div className="text-muted">
                 {loan.direction === 'owed_to_me' ? 'Money lent out' : 'Money I owe'} · {loan.currencyCode} · since {loan.date}
               </div>
-              {loan.note && <div className="footer-note">{loan.note}</div>}
+              {loan.note && <div className="text-muted">{loan.note}</div>}
             </div>
             <div className="row" style={{ gap: 8 }}>
               <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => { setEditRow(loan); setEditing(true); }} />
@@ -797,7 +797,7 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: PersonalLoan) => void
                   {l.person}
                   {l.isActive === false && <span className="pill-warn" style={{ fontSize: 10, marginLeft: 6 }}>Archived</span>}
                 </td>
-                <td className={l.direction === 'owed_to_me' ? 'pill-buy' : 'pill-sell'}>{l.direction === 'owed_to_me' ? 'Lent out' : 'I owe'}</td>
+                <td className={l.direction === 'owed_to_me' ? 'pill-positive' : 'pill-negative'}>{l.direction === 'owed_to_me' ? 'Lent out' : 'I owe'}</td>
                 <td>{fmtMoney(outstanding, l.currencyCode)}</td>
                 <td>
                   <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={(e) => { e.stopPropagation(); onEdit(l); }} />{' '}
@@ -807,7 +807,7 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: PersonalLoan) => void
             ))}
             {!sorted.length && (
               <tr>
-                <td colSpan={4} className="footer-note">
+                <td colSpan={4} className="text-muted">
                   {allLoans.length ? 'Every loan is archived — click "Show archived" above to see them.' : 'No personal loans yet.'}
                 </td>
               </tr>
@@ -888,7 +888,7 @@ export function PersonalLoansPage({
   return (
     <div>
       <h1 className="pagetitle">Personal Loans</h1>
-      <p className="footer-note" style={{ marginBottom: 12 }}>
+      <p className="text-muted" style={{ marginBottom: 12 }}>
         Informal loans with another person, tracked in either direction — money you lent out, or money you owe —
         with a combined net position. No repayment schedule automation; if this loan actually has a real interest
         schedule, it probably belongs in EMI/Loans instead.

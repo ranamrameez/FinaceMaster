@@ -96,13 +96,13 @@ export function AnalyticsPage() {
   return (
     <div>
       <h1 className="pagetitle">Analytics</h1>
-      <p className="footer-note" style={{ marginTop: -8, marginBottom: 20 }}>
+      <p className="text-muted" style={{ marginTop: -8, marginBottom: 20 }}>
         The full chart library — head back to Dashboard for a quick overview.
       </p>
 
       <ChartFilterBar tickers={allTickers} filter={filter} onChange={setFilter} />
       {isChartFilterActive(filter) && !rows.length && !lifetimeRows.length && (
-        <p className="footer-note" style={{ marginTop: -8, marginBottom: 16 }}>
+        <p className="text-muted" style={{ marginTop: -8, marginBottom: 16 }}>
           No data matches the current filter.
         </p>
       )}
@@ -318,7 +318,7 @@ function FundamentalsCard({
           </table>
         </div>
       ) : (
-        <p className="footer-note">No fundamentals data for currently held tickers.</p>
+        <p className="text-muted">No fundamentals data for currently held tickers.</p>
       )}
     </Card>
   );

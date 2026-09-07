@@ -135,7 +135,7 @@ export function TransactionRows() {
           <SaveIcon />Save {rows.length > 1 ? `${rows.length} transactions` : 'transaction'}
         </button>
       </div>
-      <p className="footer-note" style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+      <p className="text-muted" style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
         Same-day round trips net automatically — the larger side pays full commission, the
         smaller side pays levies only.
         {/* Tooltip itself now renders an info-icon affordance (README item 89,
@@ -410,7 +410,7 @@ function TransactionList() {
                   <tr key={i}>
                     <td>{tx.date}</td>
                     <td><Link to={`/psx/stock/${tx.ticker}`}>{tx.ticker}</Link></td>
-                    <td className={tx.action === 'BUY' ? 'pill-buy' : 'pill-sell'}>{tx.action}</td>
+                    <td className={tx.action === 'BUY' ? 'pill-positive' : 'pill-negative'}>{tx.action}</td>
                     <td>{fmt(tx.shares, 0)}</td>
                     <td>{fmtPrice(tx.price)}</td>
                     <td>{fmtMoney(tx.shares * tx.price, currency)}</td>
@@ -418,14 +418,14 @@ function TransactionList() {
                       {fmtMoney(calcFee(tx.shares * tx.price, tx.action === 'BUY', { shares: tx.shares, tx }), currency)}
                       {tx.feeOverride !== undefined ? (
                         <Tooltip text="This fee was manually entered, overriding the computed value.">
-                          <span className="footer-note" style={{ cursor: 'pointer' }}>{' '}(override)</span>
+                          <span className="text-muted" style={{ cursor: 'pointer' }}>{' '}(override)</span>
                         </Tooltip>
                       ) : (
                         isNettedLeg(workbook.transactions, tx) && (
                           <Tooltip
                             text={tx.manualSameDay ? 'Manually marked as a same-day netted leg — government levies only.' : 'Same-day round trip — netted, government levies only.'}
                           >
-                            <span className="footer-note" style={{ cursor: 'pointer' }}>{' '}(netted{tx.manualSameDay ? ', manual' : ''})</span>
+                            <span className="text-muted" style={{ cursor: 'pointer' }}>{' '}(netted{tx.manualSameDay ? ', manual' : ''})</span>
                           </Tooltip>
                         )
                       )}
@@ -447,7 +447,7 @@ function TransactionList() {
             </Fragment>
           ))}
           {!groups.some((g) => g.rows.length) && (
-            <tr><td colSpan={8} className="footer-note">{emptyMessage}</td></tr>
+            <tr><td colSpan={8} className="text-muted">{emptyMessage}</td></tr>
           )}
         </tbody>
       </table>
@@ -524,12 +524,12 @@ function TransactionList() {
                   <td>{fmt(t.shares, 0)}</td>
                   <td>{fmtMoney(t.buyFee, currency)}</td>
                   <td>{fmtMoney(t.sellFee, currency)}</td>
-                  <td className={t.netPL >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(t.netPL, currency)}</td>
+                  <td className={t.netPL >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(t.netPL, currency)}</td>
                   <td>{t.holdingDays}</td>
                 </tr>
               ))}
               {!sortedClosedTrades.length && (
-                <tr><td colSpan={10} className="footer-note">No closed round-trips yet.</td></tr>
+                <tr><td colSpan={10} className="text-muted">No closed round-trips yet.</td></tr>
               )}
             </tbody>
           </table>
@@ -678,7 +678,7 @@ function TransfersSection() {
                 </tr>
               );
             })}
-            {!sorted.length && <tr><td colSpan={6} className="footer-note">No transfers yet.</td></tr>}
+            {!sorted.length && <tr><td colSpan={6} className="text-muted">No transfers yet.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -751,7 +751,7 @@ function AdjustmentsSection() {
                 </tr>
               ),
             )}
-            {!sorted.length && <tr><td colSpan={4} className="footer-note">No adjustments yet.</td></tr>}
+            {!sorted.length && <tr><td colSpan={4} className="text-muted">No adjustments yet.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -810,11 +810,11 @@ function CashLedgerSection() {
               <td>{e.date}</td>
               <td>{e.kind}</td>
               <td>{e.label}</td>
-              <td className={e.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(e.amount, currency)}</td>
+              <td className={e.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(e.amount, currency)}</td>
               <td>{fmtMoney(e.balance, currency)}</td>
             </tr>
           ))}
-          {!sorted.length && <tr><td colSpan={5} className="footer-note">Nothing recorded yet.</td></tr>}
+          {!sorted.length && <tr><td colSpan={5} className="text-muted">Nothing recorded yet.</td></tr>}
         </tbody>
       </table>
       </div>

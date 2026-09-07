@@ -182,7 +182,7 @@ export function EntityCard({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
         <div style={{ minWidth: 0 }}>
           <div className="entity-card-title">{title}</div>
-          {subtitle && <div className="footer-note" style={{ marginTop: 2 }}>{subtitle}</div>}
+          {subtitle && <div className="text-muted" style={{ marginTop: 2 }}>{subtitle}</div>}
         </div>
         {actions && (
           <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', gap: 2, flexShrink: 0 }}>

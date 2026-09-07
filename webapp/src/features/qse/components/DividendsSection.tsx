@@ -82,7 +82,7 @@ function AddDividendForm() {
       </Field>
       <TimeZoneFields time={time} timezone={timezone} onTimeChange={setTime} onTimezoneChange={setTimezone} />
       <button className="btn" onClick={submit}>Add</button>
-      {preview > 0 && !amount && <span className="footer-note">{fmt(shares, 0)} shares × {perShare} = {preview.toFixed(2)}</span>}
+      {preview > 0 && !amount && <span className="text-muted">{fmt(shares, 0)} shares × {perShare} = {preview.toFixed(2)}</span>}
     </div>
   );
 }
@@ -194,7 +194,7 @@ export function DividendsSection() {
                   <td>{d.ticker}</td>
                   <td>{d.perShare || '—'}</td>
                   <td>{d.shares || '—'}</td>
-                  <td className="pill-buy">{fmtMoney(d.amount, currency)}</td>
+                  <td className="pill-positive">{fmtMoney(d.amount, currency)}</td>
                   <td>
                     <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(d.i, d)} />{' '}
                     <IconButton label="Delete" icon={<TrashIcon size={13} />} align="right" onClick={() => removeDividend(d.i)} />
@@ -204,14 +204,14 @@ export function DividendsSection() {
             )}
             {!rows.length && (
               <tr>
-                <td colSpan={6} className="footer-note">
+                <td colSpan={6} className="text-muted">
                   {workbook.dividends.length ? 'No dividends match this filter.' : 'No dividends logged yet.'}
                 </td>
               </tr>
             )}
           </tbody>
           <tfoot>
-            <tr><td colSpan={4}>Total collected</td><td className="pill-buy">{fmtMoney(total, currency)}</td><td></td></tr>
+            <tr><td colSpan={4}>Total collected</td><td className="pill-positive">{fmtMoney(total, currency)}</td><td></td></tr>
           </tfoot>
         </table>
       </div>
@@ -219,7 +219,7 @@ export function DividendsSection() {
       {held.length > 0 && (
         <>
           <h3 style={{ marginTop: 24 }}>Yearly projection</h3>
-          <p className="footer-note">Enter an estimated annual per-share dividend rate for each held ticker; projection = rate × shares held.</p>
+          <p className="text-muted">Enter an estimated annual per-share dividend rate for each held ticker; projection = rate × shares held.</p>
           <div className="table-scroll">
             <table>
               <thead><tr><HeldTh col="ticker">Ticker</HeldTh><HeldTh col="shares">Shares</HeldTh><HeldTh col="estPerShare">Est. annual/share</HeldTh><HeldTh col="projected">Projected annual</HeldTh></tr></thead>
@@ -242,7 +242,7 @@ export function DividendsSection() {
                 ))}
               </tbody>
               <tfoot>
-                <tr><td colSpan={3}>Total projected</td><td className="pill-buy">{fmtMoney(totalProjected, currency)}</td></tr>
+                <tr><td colSpan={3}>Total projected</td><td className="pill-positive">{fmtMoney(totalProjected, currency)}</td></tr>
               </tfoot>
             </table>
           </div>

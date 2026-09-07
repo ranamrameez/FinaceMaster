@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
+import { CollapseIcon, ExpandIcon } from './icons';
 
 export function Modal({
   title,
@@ -23,35 +24,38 @@ export function Modal({
    * inline z-index:1000 for (see that component's own comment) — this
    * just gives every other `Modal` caller the same escape hatch. */
   zIndex?: number;
-  /** Overrides `.modal-box`'s default `max-width:920px` — user-reported
-   * (2026-09-07): a small form (e.g. the "Add a trade" popup — ticker/
-   * action/shares/price, maybe a fee-mode control) looked oddly wide,
-   * "winning the horizon," stretched almost edge to edge on a normal
-   * desktop viewport for content that doesn't need anywhere near that
-   * much room. Pass a CSS width value (e.g. a `clamp()`) for a popup whose
-   * content is genuinely narrow; omit for the default 920px cap, which
-   * stays right for wider content (a multi-column comparison, a table). */
+  /** Overrides `.modal-box`'s default width cap (UI_DESIGN_GUIDELINES.md:
+   * popups open at no more than ~50% of the viewport by default). A whole
+   * app-wide audit (2026-09-07) found every real `<Modal>` usage is a form
+   * or entity-detail popup, never a table/wide-workspace — so this is an
+   * escape hatch for a genuinely wide future case, not something any
+   * current caller needs. Pass a CSS width value (e.g. a `clamp()`); the
+   * user can still widen any modal via the full-screen toggle regardless. */
   width?: string;
 }) {
+  const [fullScreen, setFullScreen] = useState(false);
   return (
     <div className="modal-overlay show" style={zIndex ? { zIndex } : undefined} onClick={onClose}>
-      <div className="modal-box" style={width ? { maxWidth: width } : undefined} onClick={(e) => e.stopPropagation()}>
+      <div
+        className={`modal-box${fullScreen ? ' fullscreen' : ''}`}
+        style={!fullScreen && width ? { maxWidth: width } : undefined}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
           <h3 style={{ margin: 0 }}>{title}</h3>
-          <button
-            aria-label="Close"
-            onClick={onClose}
-            style={{
-              background: 'transparent', border: 'none', color: 'var(--muted)', cursor: 'pointer',
-              width: 28, height: 28, minWidth: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              borderRadius: '50%', fontSize: 18, lineHeight: 1, flex: '0 0 28px', padding: 0,
-              transition: 'background .12s ease, transform .12s ease',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--panel-2)')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-          >
-            ✕
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <button
+              aria-label={fullScreen ? 'Exit full screen' : 'Full screen'}
+              title={fullScreen ? 'Exit full screen' : 'Full screen'}
+              onClick={() => setFullScreen((v) => !v)}
+              className="modal-icon-btn"
+            >
+              {fullScreen ? <CollapseIcon /> : <ExpandIcon />}
+            </button>
+            <button aria-label="Close" title="Close" onClick={onClose} className="modal-icon-btn modal-icon-btn-close">
+              ✕
+            </button>
+          </div>
         </div>
         <div style={{ marginTop: 12 }}>{children}</div>
       </div>

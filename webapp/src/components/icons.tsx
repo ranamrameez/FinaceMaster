@@ -218,3 +218,24 @@ export function ArrowDownIcon({ size = 14 }: IconProps) {
     </svg>
   );
 }
+
+/** Full-screen toggle for `Modal` (UI_DESIGN_GUIDELINES.md: every popup
+ * must offer a full-screen escape hatch, since the default width is
+ * capped at ~half the viewport). Four corner-arrows expanding outward. */
+export function ExpandIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base} aria-hidden>
+      <path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5" />
+    </svg>
+  );
+}
+
+/** The full-screen toggle's "shrink back down" state — corner-arrows
+ * pointing inward, the reverse of `ExpandIcon`. */
+export function CollapseIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base} aria-hidden>
+      <path d="M3 8V3h5M21 8V3h-5M3 16v5h5M21 16v5h-5" />
+    </svg>
+  );
+}

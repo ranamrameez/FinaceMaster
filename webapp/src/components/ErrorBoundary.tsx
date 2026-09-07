@@ -27,7 +27,7 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="card" style={{ margin: 24, maxWidth: 480 }}>
           <h3 style={{ marginTop: 0 }}>Something went wrong</h3>
-          <p className="footer-note">
+          <p className="text-muted">
             This part of the app hit an unexpected error. Your data is safe — it's saved independently of this
             view. Reloading the page usually fixes it.
           </p>

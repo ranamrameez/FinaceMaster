@@ -165,7 +165,7 @@ function TxRowFields({
           onTimezoneChange={(timezone) => onChange({ ...row, timezone })}
         />
       </div>
-      <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
+      <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
         <input
           type="checkbox"
           checked={row.linked}
@@ -182,9 +182,9 @@ function TxRowFields({
       {row.linked && (
         <div style={{ marginTop: 8 }}>
           <SideFields label="Other finance" cfg={row.other} onChange={(other) => onChange({ ...row, other })} preferredCurrency={financeCurrency ?? undefined} />
-          {sameEntity && <p className="footer-note" style={{ color: 'var(--warn, orange)' }}>Pick a different account — this is the same one.</p>}
+          {sameEntity && <p className="text-muted" style={{ color: 'var(--warn, orange)' }}>Pick a different account — this is the same one.</p>}
           {!pairSupported && !sameEntity && (
-            <p className="footer-note" style={{ color: 'var(--warn, orange)' }}>Linking these two isn't supported yet.</p>
+            <p className="text-muted" style={{ color: 'var(--warn, orange)' }}>Linking these two isn't supported yet.</p>
           )}
           {currencyMismatch && (
             <Notice tone="warning" style={{ marginTop: 8 }}>

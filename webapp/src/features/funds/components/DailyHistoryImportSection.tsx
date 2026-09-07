@@ -189,7 +189,7 @@ export function DailyHistoryImportSection() {
 
   return (
     <div>
-      <p className="footer-note" style={{ marginBottom: 12 }}>
+      <p className="text-muted" style={{ marginBottom: 12 }}>
         For a workbook that tracks each fund's balance day by day (one sheet per fund, a Date / PrvBlc / NewBlc row
         per update) rather than just a final snapshot. This reconstructs the real buy/sell/NAV path — separating
         actual deposits and withdrawals from organic growth — so average monthly and annual P&amp;L are computed
@@ -252,7 +252,7 @@ export function DailyHistoryImportSection() {
             <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
               <div>
                 <div style={{ fontWeight: 700 }}>{p.sheetName}</div>
-                <div className="footer-note">
+                <div className="text-muted">
                   {p.dailyRows[0]?.date} → {p.dailyRows[p.dailyRows.length - 1]?.date} · {p.dailyRows.length} updates ·{' '}
                   {deposits} deposit(s), {withdrawals} withdrawal(s)
                   {p.matchedIdentity && <> · matched Summary row "{p.matchedIdentity.name}" ({p.matchedIdentity.code})</>}

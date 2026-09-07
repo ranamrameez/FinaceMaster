@@ -64,7 +64,7 @@ export function ProfileEditor({ user }: { user: User }) {
       <button className="btn secondary small" disabled={busy || !dirty} onClick={save}>
         <SaveIcon size={12} />Save profile
       </button>
-      <span className="footer-note">{user.email || user.phoneNumber || user.uid}</span>
+      <span className="text-muted">{user.email || user.phoneNumber || user.uid}</span>
     </div>
   );
 }

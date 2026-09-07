@@ -23,7 +23,7 @@ export function ChartFilterBar({
   return (
     <div className="card" style={{ marginBottom: 16, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-        <span className="footer-note">Tickers:</span>
+        <span className="text-muted">Tickers:</span>
         <button
           type="button"
           className={`chip${filter.tickers.length === 0 ? ' active' : ''}`}
@@ -43,14 +43,14 @@ export function ChartFilterBar({
         ))}
       </div>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <span className="footer-note">Months:</span>
+        <span className="text-muted">Months:</span>
         <input
           type="month"
           value={filter.fromMonth ?? ''}
           onChange={(e) => onChange({ ...filter, fromMonth: e.target.value || undefined })}
           aria-label="From month"
         />
-        <span className="footer-note">to</span>
+        <span className="text-muted">to</span>
         <input
           type="month"
           value={filter.toMonth ?? ''}
@@ -63,7 +63,7 @@ export function ChartFilterBar({
           </button>
         )}
       </div>
-      <p className="footer-note" style={{ margin: 0, width: '100%' }}>
+      <p className="text-muted" style={{ margin: 0, width: '100%' }}>
         Ticker/month filters apply to per-ticker and monthly charts below. Whole-portfolio totals (realized vs
         unrealized P/L, cash vs stocks, fees breakdown, deposits vs invested) always reflect your full history —
         they can't be meaningfully filtered to a ticker or date window without changing what "current holdings" means.

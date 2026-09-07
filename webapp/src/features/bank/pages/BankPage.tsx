@@ -108,7 +108,7 @@ function CreditCardFields({ value, onChange, datalistId }: { value: CreditCardVa
 
   return (
     <div style={{ marginTop: 8 }}>
-      <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <input type="checkbox" checked={!!value.isLiability} onChange={(e) => onChange({ isLiability: e.target.checked })} />
         This is a credit card (counts as a debt in Net Worth, not a balance)
       </label>
@@ -406,7 +406,7 @@ export function AddAccountForm({ onSaved, initialCurrency }: { onSaved?: (id: st
       <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
         <PlusIcon />Add account
       </button>
-      <p className="footer-note" style={{ marginTop: 8 }}><span style={{ color: 'var(--loss)' }}>*</span> Required. Everything else on this form is optional.</p>
+      <p className="text-muted" style={{ marginTop: 8 }}><span style={{ color: 'var(--loss)' }}>*</span> Required. Everything else on this form is optional.</p>
     </div>
   );
 }
@@ -457,7 +457,7 @@ function AccountsList() {
   }, [visibleAccounts]);
 
   if (!accounts.length) {
-    return <p className="footer-note">No accounts yet — use the + button below to add one.</p>;
+    return <p className="text-muted">No accounts yet — use the + button below to add one.</p>;
   }
 
   return (
@@ -472,7 +472,7 @@ function AccountsList() {
         </button>
       )}
       {!visibleAccounts.length && (
-        <p className="footer-note">Every account is archived — click "Show archived" above to see them.</p>
+        <p className="text-muted">Every account is archived — click "Show archived" above to see them.</p>
       )}
       {currencyGroups.map(([currency, group]) => {
         // User-requested (2026-09-06): "give sums in a tag for each
@@ -486,7 +486,7 @@ function AccountsList() {
         return (
         <div key={currency} style={{ marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <span className="footer-note" style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: 11, letterSpacing: '.04em' }}>
+            <span className="text-muted" style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: 11, letterSpacing: '.04em' }}>
               {currency}
             </span>
             <span className={`pill-info`} style={{ fontSize: 11 }}>{num(groupSum)} {currency}</span>
@@ -500,7 +500,7 @@ function AccountsList() {
                 badge={
                   a.isLiability || a.isActive === false ? (
                     <span style={{ display: 'flex', gap: 4 }}>
-                      {a.isLiability && <span className="pill-sell" style={{ fontSize: 10 }}>Credit card</span>}
+                      {a.isLiability && <span className="pill-negative" style={{ fontSize: 10 }}>Credit card</span>}
                       {a.isActive === false && <span className="pill-warn" style={{ fontSize: 10 }}>Archived</span>}
                     </span>
                   ) : undefined
@@ -655,8 +655,8 @@ export function AccountDetailPage() {
   if (!account) {
     return (
       <div>
-        <Link to="/bank" className="footer-note">← Back to Banking</Link>
-        <p className="footer-note" style={{ marginTop: 12 }}>Account not found.</p>
+        <Link to="/bank" className="text-muted">← Back to Banking</Link>
+        <p className="text-muted" style={{ marginTop: 12 }}>Account not found.</p>
       </div>
     );
   }
@@ -681,7 +681,7 @@ export function AccountDetailPage() {
 
   return (
     <div>
-      <Link to="/bank" className="footer-note">← Back to Banking</Link>
+      <Link to="/bank" className="text-muted">← Back to Banking</Link>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
         <h1 className="pagetitle" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
           {account.name}
@@ -702,13 +702,13 @@ export function AccountDetailPage() {
           </button>
         </div>
       </div>
-      <p className="footer-note" style={{ marginBottom: 16 }}>
+      <p className="text-muted" style={{ marginBottom: 16 }}>
         {account.isLiability ? 'Amount owed:' : 'Current balance:'}{' '}
         <strong title={fmtMoney(account.isLiability ? Math.max(0, -accountBalance(account, transactions)) : accountBalance(account, transactions), account.currencyCode)}>
           {num(account.isLiability ? Math.max(0, -accountBalance(account, transactions)) : accountBalance(account, transactions))} {account.currencyCode}
         </strong>
         {account.isLiability && account.creditLimit ? (
-          <span className="footer-note"> · {num(Math.max(0, account.creditLimit - Math.max(0, -accountBalance(account, transactions))))} {account.currencyCode} available of {num(account.creditLimit)} limit</span>
+          <span className="text-muted"> · {num(Math.max(0, account.creditLimit - Math.max(0, -accountBalance(account, transactions))))} {account.currencyCode} available of {num(account.creditLimit)} limit</span>
         ) : null}
       </p>
 
@@ -779,7 +779,7 @@ export function AccountDetailPage() {
                     <tr key={p.id}>
                       <td>{p.date}</td>
                       <td>{p.description}</td>
-                      <td className={p.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(p.amount, account.currencyCode)}</td>
+                      <td className={p.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(p.amount, account.currencyCode)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -945,7 +945,7 @@ function EditTransactionModal({ tx, onClose }: { tx: BankTransaction; onClose: (
           onTimezoneChange={(timezone) => setDraft({ ...draft, timezone })}
         />
       </div>
-      <p className="footer-note" style={{ marginTop: 8 }}>
+      <p className="text-muted" style={{ marginTop: 8 }}>
         {draft.source === 'statement-import' ? `Imported${draft.statementRef ? ` from ${draft.statementRef}` : ''}` : 'Entered manually'}
       </p>
     </FinanceEditModal>
@@ -1081,7 +1081,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
             const otherSide = link ? (link.from.module === 'bank' && link.fromRecordId === tx.id ? link.to : link.from) : undefined;
             return (
               <tr key={tx.id}>
-                <td className="footer-note">
+                <td className="text-muted">
                   {tx.serialNumber ?? '—'}{' '}
                   <ReorderButtons
                     rows={sorted}
@@ -1102,9 +1102,9 @@ function TransactionsList({ account }: { account: BankAccount }) {
                   )}
                 </td>
                 <td><span className="pill-info">{categoryName(tx.categoryID, categories)}</span></td>
-                <td className={tx.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(tx.amount, account.currencyCode)}</td>
+                <td className={tx.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(tx.amount, account.currencyCode)}</td>
                 <td>{fmtMoney(balance, account.currencyCode)}</td>
-                <td className="footer-note cell-clip" title={tx.source === 'statement-import' ? `Import${tx.statementRef ? ` (${tx.statementRef})` : ''}` : 'Manual'}>
+                <td className="text-muted cell-clip" title={tx.source === 'statement-import' ? `Import${tx.statementRef ? ` (${tx.statementRef})` : ''}` : 'Manual'}>
                   {tx.source === 'statement-import' ? `Import${tx.statementRef ? ` (${tx.statementRef})` : ''}` : 'Manual'}
                 </td>
                 <td>
@@ -1121,7 +1121,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
           })}
           {!sorted.length && (
             <tr>
-              <td colSpan={7} className="footer-note">
+              <td colSpan={7} className="text-muted">
                 {allLedger.length ? 'No transactions match these filters.' : 'No transactions for this account yet.'}
               </td>
             </tr>
@@ -1176,7 +1176,7 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
   const endOfMonthBalance = accountBalanceAsOfMonth(ledger, selectedMonth, account.openingBalance);
 
   if (!ledger.length) {
-    return <p className="footer-note" style={{ margin: 0 }}>No transactions yet — analytics will appear once you log some.</p>;
+    return <p className="text-muted" style={{ margin: 0 }}>No transactions yet — analytics will appear once you log some.</p>;
   }
 
   return (
@@ -1228,13 +1228,13 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
             <tr><td>Expense</td><td>{fmtMoney(monthFlowRow?.expense ?? 0, account.currencyCode)}</td></tr>
             <tr>
               <td>Net flow</td>
-              <td className={(monthFlowRow?.net ?? 0) >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(monthFlowRow?.net ?? 0, account.currencyCode)}</td>
+              <td className={(monthFlowRow?.net ?? 0) >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(monthFlowRow?.net ?? 0, account.currencyCode)}</td>
             </tr>
             <tr><td>Balance at month end</td><td>{fmtMoney(endOfMonthBalance, account.currencyCode)}</td></tr>
             {spendCategories.map((c) => (
               <tr key={c}><td>{c}</td><td>{fmtMoney(Math.abs(byCategoryThisMonth[c]), account.currencyCode)}</td></tr>
             ))}
-            {!spendCategories.length && <tr><td colSpan={2} className="footer-note">No spend this month.</td></tr>}
+            {!spendCategories.length && <tr><td colSpan={2} className="text-muted">No spend this month.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -1247,7 +1247,7 @@ function CategoryBreakdownBody({ account }: { account: BankAccount }) {
   const categories = useCategoryStore((s) => s.workbook.categories);
   const byCategory = accountByCategory(account, transactions, categories);
   const cats = Object.keys(byCategory);
-  if (!cats.length) return <p className="footer-note" style={{ margin: 0 }}>No categorized transactions yet.</p>;
+  if (!cats.length) return <p className="text-muted" style={{ margin: 0 }}>No categorized transactions yet.</p>;
 
   return (
       <div className="table-scroll">
@@ -1256,7 +1256,7 @@ function CategoryBreakdownBody({ account }: { account: BankAccount }) {
             {cats.map((cat) => (
               <tr key={cat}>
                 <td>{cat}</td>
-                <td className={byCategory[cat] >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(byCategory[cat], account.currencyCode)}</td>
+                <td className={byCategory[cat] >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(byCategory[cat], account.currencyCode)}</td>
               </tr>
             ))}
           </tbody>
@@ -1345,7 +1345,7 @@ function ImportStatementSection({ account }: { account: BankAccount }) {
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-        <span className="footer-note">Import a CSV export from your bank into {account.name}.</span>
+        <span className="text-muted">Import a CSV export from your bank into {account.name}.</span>
         <Tooltip text={'This is a simple "map these columns" tool, not a per-bank-format parser — pick which column is which below, since every bank\'s export looks a little different.'} />
       </div>
       <div>
@@ -1361,7 +1361,7 @@ function ImportStatementSection({ account }: { account: BankAccount }) {
             e.target.value = '';
           }}
         />
-        {fileName && <span className="footer-note" style={{ marginLeft: 8 }}>{fileName} ({rows.length} rows)</span>}
+        {fileName && <span className="text-muted" style={{ marginLeft: 8 }}>{fileName} ({rows.length} rows)</span>}
       </div>
 
       {headers.length > 0 && (
@@ -1382,7 +1382,7 @@ function ImportStatementSection({ account }: { account: BankAccount }) {
                 {headers.map((h) => <option key={h} value={h}>{h}</option>)}
               </Select>
             </Field>
-            <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 20 }} title="Check this if your bank exports spending as positive numbers instead of negative.">
+            <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 20 }} title="Check this if your bank exports spending as positive numbers instead of negative.">
               <input type="checkbox" checked={flipSign} onChange={(e) => setFlipSign(e.target.checked)} />
               Flip sign
             </label>
@@ -1397,7 +1397,7 @@ function ImportStatementSection({ account }: { account: BankAccount }) {
                   <tr key={i}>
                     <td>{r.date}</td>
                     <td>{r.description}</td>
-                    <td className={r.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(r.amount, account.currencyCode)}</td>
+                    <td className={r.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(r.amount, account.currencyCode)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1503,27 +1503,27 @@ function BalanceProjectionSummary() {
       style={{ marginBottom: 16 }}
     >
       <div className="row" style={{ gap: 16, marginBottom: 12 }}>
-        <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <input type="checkbox" checked={settings.showRealBalance} onChange={(e) => updateSettings({ showRealBalance: e.target.checked })} />
           Real balance
         </label>
-        <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <input type="checkbox" checked={settings.showPlannedBalance} onChange={(e) => updateSettings({ showPlannedBalance: e.target.checked })} />
           Planned balance
         </label>
       </div>
       {!codes.length ? (
-        <p className="footer-note">No balance yet — add an account or a plan below.</p>
+        <p className="text-muted">No balance yet — add an account or a plan below.</p>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px,1fr))', gap: 8 }}>
           {codes.map((code) => (
             <div key={code} className="stat-card card">
               <div className="label">{code}</div>
               {settings.showRealBalance && (
-                <div className={projection[code].real >= 0 ? 'pill-buy' : 'pill-sell'}>Real: {fmtMoney(projection[code].real, code)}</div>
+                <div className={projection[code].real >= 0 ? 'pill-positive' : 'pill-negative'}>Real: {fmtMoney(projection[code].real, code)}</div>
               )}
               {settings.showPlannedBalance && (
-                <div className={projection[code].planned >= 0 ? 'pill-buy' : 'pill-sell'}>
+                <div className={projection[code].planned >= 0 ? 'pill-positive' : 'pill-negative'}>
                   Planned: {fmtMoney(projection[code].planned, code)}
                 </div>
               )}
@@ -1681,9 +1681,9 @@ function BankPlanList({ account }: { account: BankAccount }) {
                 <tr key={p.id}>
                   <td>{p.date}</td>
                   <td>{p.description}</td>
-                  <td className={p.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(p.amount, account.currencyCode)}</td>
+                  <td className={p.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(p.amount, account.currencyCode)}</td>
                   <td>{p.category || '—'}</td>
-                  <td className="footer-note">{p.recurrence ? recurrenceLabel(p.recurrence) : p.executed ? 'Done' : 'Planned'}</td>
+                  <td className="text-muted">{p.recurrence ? recurrenceLabel(p.recurrence) : p.executed ? 'Done' : 'Planned'}</td>
                   <td>
                     {(p.recurrence || !p.executed) && (
                       <button className="btn secondary small" onClick={() => markDone(p)}>Mark as done</button>
@@ -1701,7 +1701,7 @@ function BankPlanList({ account }: { account: BankAccount }) {
                 </tr>
               ),
             )}
-            {!sorted.length && <tr><td colSpan={6} className="footer-note">No plans for this account yet.</td></tr>}
+            {!sorted.length && <tr><td colSpan={6} className="text-muted">No plans for this account yet.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -1790,7 +1790,7 @@ function AnalyticsTab() {
   const [newBudgetAmount, setNewBudgetAmount] = useState(0);
 
   if (!accounts.length) {
-    return <p className="footer-note">Add a bank account first (Accounts tab) to see charts here.</p>;
+    return <p className="text-muted">Add a bank account first (Accounts tab) to see charts here.</p>;
   }
 
   return (
@@ -1836,7 +1836,7 @@ function AnalyticsTab() {
           </div>
 
           <CollapsibleCard title={<h3 style={{ margin: 0 }}>Budget — {thisMonth}</h3>} style={{ marginTop: 16 }}>
-            <p className="footer-note" style={{ marginTop: 0 }}>
+            <p className="text-muted" style={{ marginTop: 0 }}>
               Set a monthly spend target per category for {account.name}; compared against what you've actually
               spent there this month.
             </p>
@@ -1864,13 +1864,13 @@ function AnalyticsTab() {
                           }}
                         />
                       </td>
-                      <td className={r.budget > 0 && r.actual > r.budget ? 'pill-sell' : ''}>{fmtMoney(r.actual, account.currencyCode)}</td>
-                      <td className={r.budget > 0 ? (r.budget - r.actual >= 0 ? 'pill-buy' : 'pill-sell') : ''}>
+                      <td className={r.budget > 0 && r.actual > r.budget ? 'pill-negative' : ''}>{fmtMoney(r.actual, account.currencyCode)}</td>
+                      <td className={r.budget > 0 ? (r.budget - r.actual >= 0 ? 'pill-positive' : 'pill-negative') : ''}>
                         {r.budget > 0 ? fmtMoney(r.budget - r.actual, account.currencyCode) : '—'}
                       </td>
                     </tr>
                   ))}
-                  {!budgetRows.length && <tr><td colSpan={4} className="footer-note">No spend or budget targets for this account yet.</td></tr>}
+                  {!budgetRows.length && <tr><td colSpan={4} className="text-muted">No spend or budget targets for this account yet.</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -1916,7 +1916,7 @@ export function PlanningTab({
   const { accounts, account, accountId, setAccountId } = useAccountPicker();
 
   if (!accounts.length) {
-    return <p className="footer-note">Add a bank account first (Accounts tab) before planning transactions.</p>;
+    return <p className="text-muted">Add a bank account first (Accounts tab) before planning transactions.</p>;
   }
 
   return (
@@ -1976,7 +1976,7 @@ function DataManagement() {
 
   return (
     <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, marginTop: 12 }}>
-      <div className="footer-note" style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: 11, letterSpacing: '.04em', marginBottom: 8 }}>
+      <div className="text-muted" style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: 11, letterSpacing: '.04em', marginBottom: 8 }}>
         Data management
       </div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
@@ -2038,7 +2038,7 @@ export function BankPage({
             label: 'Settings',
             content: (
               <div>
-                <p className="footer-note" style={{ marginTop: 0 }}>
+                <p className="text-muted" style={{ marginTop: 0 }}>
                   Sign-in, profile, appearance, and a whole-app backup live on the{' '}
                   <Link to="/account">Account page →</Link>. What's below is specific to Banking.
                 </p>

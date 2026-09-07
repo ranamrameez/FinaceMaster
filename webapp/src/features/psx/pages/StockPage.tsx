@@ -177,7 +177,7 @@ function TickerTransactions({ ticker }: { ticker: string }) {
               ) : (
                 <tr key={i}>
                   <td>{tx.date}</td>
-                  <td className={tx.action === 'BUY' ? 'pill-buy' : 'pill-sell'}>{tx.action}</td>
+                  <td className={tx.action === 'BUY' ? 'pill-positive' : 'pill-negative'}>{tx.action}</td>
                   <td>{fmt(tx.shares, 0)}</td>
                   <td>{fmtPrice(tx.price)}</td>
                   <td>{fmtMoney(tx.shares * tx.price, currency)}</td>
@@ -185,14 +185,14 @@ function TickerTransactions({ ticker }: { ticker: string }) {
                     {fmtMoney(calcFee(tx.shares * tx.price, tx.action === 'BUY', { shares: tx.shares, tx }), currency)}
                     {tx.feeOverride !== undefined ? (
                       <Tooltip text="This fee was manually entered, overriding the computed value.">
-                        <span className="footer-note" style={{ cursor: 'pointer' }}>{' '}(override)</span>
+                        <span className="text-muted" style={{ cursor: 'pointer' }}>{' '}(override)</span>
                       </Tooltip>
                     ) : (
                       isNettedLeg(workbook.transactions, tx) && (
                         <Tooltip
                           text={tx.manualSameDay ? 'Manually marked as a same-day netted leg — government levies only.' : 'Same-day round trip — commission charged on the other leg, this one pays only government levies.'}
                         >
-                          <span className="footer-note" style={{ cursor: 'pointer' }}>{' '}(netted{tx.manualSameDay ? ', manual' : ''})</span>
+                          <span className="text-muted" style={{ cursor: 'pointer' }}>{' '}(netted{tx.manualSameDay ? ', manual' : ''})</span>
                         </Tooltip>
                       )
                     )}
@@ -211,7 +211,7 @@ function TickerTransactions({ ticker }: { ticker: string }) {
                 </tr>
               ),
             )}
-            {!rows.length && <tr><td colSpan={7} className="footer-note">No transactions for {ticker} yet.</td></tr>}
+            {!rows.length && <tr><td colSpan={7} className="text-muted">No transactions for {ticker} yet.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -264,10 +264,10 @@ export function StockPage() {
 
   return (
     <div>
-      <Link to="/psx/portfolio" className="footer-note">← Back to Portfolio</Link>
+      <Link to="/psx/portfolio" className="text-muted">← Back to Portfolio</Link>
       <h1 className="pagetitle" style={{ marginTop: 8, display: 'flex', alignItems: 'center' }}>
         <TickerLogo ticker={ticker} size="lg" exchange="psx" />
-        {ticker} {name && <span className="footer-note" style={{ fontSize: 16 }}>{shortenCompanyName(name, 40)}</span>}
+        {ticker} {name && <span className="text-muted" style={{ fontSize: 16 }}>{shortenCompanyName(name, 40)}</span>}
       </h1>
       <Tabs
         tabs={[

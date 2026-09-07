@@ -20,7 +20,7 @@ export function Sparkline({
   const [hover, setHover] = useState<{ x: number; y: number; value: number } | null>(null);
 
   if (data.length < 2) {
-    return <span className="footer-note">—</span>;
+    return <span className="text-muted">—</span>;
   }
   const min = Math.min(...data);
   const max = Math.max(...data);

@@ -136,7 +136,7 @@ export function RiskCalculator({
   if (!held.length) {
     return (
       <Card>
-        <p className="footer-note">No open positions to analyze yet — the Risk Calculator plans averaging into an
+        <p className="text-muted">No open positions to analyze yet — the Risk Calculator plans averaging into an
           existing position, so add a trade first.</p>
       </Card>
     );
@@ -227,7 +227,7 @@ export function RiskCalculator({
             </Select>
           </Field>
         </div>
-        <p className="footer-note" style={{ marginTop: 8, marginBottom: 0 }}>
+        <p className="text-muted" style={{ marginTop: 8, marginBottom: 0 }}>
           Risk mode only changes the suggested capital ceiling below — it never overrides the math or guarantees
           recovery. Averaging down is not a recovery strategy by itself.
         </p>
@@ -296,20 +296,20 @@ export function RiskCalculator({
                         <td>{fmtPrice(s.newAvg)}</td>
                         <td>{fmtPrice(s.breakEven)}</td>
                         <td>{fmt(s.recoveryNeededPct, 2)}%</td>
-                        <td style={{ padding: '10px 12px' }}><span className={s.netAtTarget >= 0 ? 'pill pill-buy' : 'pill pill-sell'}>{fmtMoney(s.netAtTarget, currency)}</span></td>
+                        <td style={{ padding: '10px 12px' }}><span className={s.netAtTarget >= 0 ? 'pill pill-positive' : 'pill pill-negative'}>{fmtMoney(s.netAtTarget, currency)}</span></td>
                         <td>
                           {isDiminishing ? (
                             <span className="pill pill-warn">⚠ Diminishing</span>
                           ) : isBest ? (
                             <span className="pill pill-info">✓ Selected</span>
                           ) : (
-                            <span className="pill pill-buy">Useful</span>
+                            <span className="pill pill-positive">Useful</span>
                           )}
                         </td>
                       </tr>
                     );
                   })}
-                  {!scenarios.length && <tr><td colSpan={7} className="footer-note">Not enough data to model scenarios.</td></tr>}
+                  {!scenarios.length && <tr><td colSpan={7} className="text-muted">Not enough data to model scenarios.</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -356,7 +356,7 @@ export function RiskCalculator({
                 </div>
               ))}
             </div>
-            <p className="footer-note" style={{ marginTop: 8, marginBottom: 0 }}>
+            <p className="text-muted" style={{ marginTop: 8, marginBottom: 0 }}>
               Stress P/L includes the original position plus the selected additional purchase. A lower average can
               coexist with a larger monetary loss if the decline continues.
             </p>

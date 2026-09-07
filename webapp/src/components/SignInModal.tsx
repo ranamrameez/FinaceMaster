@@ -110,7 +110,7 @@ export function SignInModalHost() {
   if (!firebaseReady) {
     return (
       <Modal title="Sign in" onClose={() => close(false)} zIndex={300}>
-        <p className="footer-note">Cloud sign-in is unavailable — Firebase failed to load in this browser.</p>
+        <p className="text-muted">Cloud sign-in is unavailable — Firebase failed to load in this browser.</p>
       </Modal>
     );
   }

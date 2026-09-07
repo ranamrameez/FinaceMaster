@@ -48,7 +48,7 @@ export function PlanningPage({
   return (
     <div>
       <h1 className="pagetitle">Planning</h1>
-      <p className="footer-note" style={{ marginBottom: 12 }}>
+      <p className="text-muted" style={{ marginBottom: 12 }}>
         Everything expected to happen soon, across every module — a plan can now repeat (e.g.
         a monthly salary or a recurring bill), so you only set it up once. Cash and Banking's
         own "Add/edit a plan" tools are still below; EMI/Rentals/Subscriptions keep their own

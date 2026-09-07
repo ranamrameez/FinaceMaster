@@ -64,7 +64,7 @@ export function SubscriptionAlertsPopup() {
           <div key={d.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, borderTop: '1px solid var(--border)', paddingTop: 8 }}>
             <div>
               <Link to="/subscriptions" style={{ fontWeight: 600, fontSize: 13 }} onClick={() => setHidden(true)}>{d.subscription.name}</Link>
-              <div className="footer-note">
+              <div className="text-muted">
                 {fmtMoney(d.subscription.amount, d.subscription.currencyCode)}
                 {d.alert.daysBefore != null ? ` · renews soon` : ` · reminder`}
               </div>

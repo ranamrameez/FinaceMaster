@@ -61,7 +61,7 @@ export function LegalPage() {
           account data deleted, sign out and use "Clear all data" for local data, or contact us to request full
           account deletion.
         </p>
-        <p className="footer-note">
+        <p className="text-muted">
           This app uses Firebase Authentication and Realtime Database (Google Cloud infrastructure) to store
           account and trading data securely per-account.
         </p>
