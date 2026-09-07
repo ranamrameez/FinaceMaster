@@ -6458,14 +6458,62 @@ FinanceManager live link:
   measurement and a screenshot showing the popup reading as compact and centered rather than
   spanning the page. Zero real console errors. `npx tsc -b` / `npm run test` (553 tests,
   unchanged — UI-only) / `npm run build` all clean.
+- **New `thegroup-price-sync/` Chrome extension (2026-09-07), closing the live-price half of
+  Pending item 13 — see Done item 246.** User-requested, separate from the web app itself: a
+  Manifest V3 extension that scrapes live QSE prices off [The Group](https://webd.thegroup.com.qa/en/markets/qatar)'s
+  market-watch page (while it's open in one of the user's own logged-in tabs) and pushes them
+  into the **shared** `stockData/QSE` Firebase RTDB node — not any one user's own workbook —
+  matching this project's own locked architecture rule (no live market-data API calls from the
+  app itself; fetch on a schedule into our own database). Collection (a local re-scrape) runs
+  every ~45-90s (randomized) whenever the market page is open, but a push to Firebase only
+  happens once a configurable minimum interval has passed (default 2 min, adjustable in the
+  popup) plus a random extra delay on top (1x-2x the floor, re-rolled after every push) — keeps
+  writes well under RTDB's rate limits and avoids a bot-like periodic request pattern against
+  both Firebase and the brokerage's own page. Auth is plain Identity Toolkit REST calls (no
+  Firebase SDK bundled in the service worker) — sign in with an existing account, or create a
+  brand-new dedicated one from the popup, since the shared node's writes don't need to be
+  scoped to any one user. Shared price-history appends use ETag-based conditional PUTs so two
+  concurrent writers can't silently clobber each other. Merged as PR #89.
+  **Same day, immediate follow-up: extended to also scrape ticker/company names, closing
+  the other half of Pending item 13 and the live-coverage half of Pending item 1.** User:
+  "make sure to scrape fundamental stock data (Tickers, symbols,..). Right now, the app has
+  very limited & incomplete generic stock ticker data" — accurate: the bundled `qseSeed.ts`
+  seed only ever hard-coded ~36 of QSE's real listed tickers by hand and was never meant to be
+  kept up to date that way. Tried fetching a complete public QSE ticker list directly from
+  this session first (stockanalysis.com, qe.com.qa, even Wikipedia) — every one of them is
+  blocked by this sandbox's own network egress policy, confirming the Chrome extension
+  (running in the user's own browser, not this sandbox) is the only real path to fresh ticker
+  data here. `content.js`'s scraped row shape grew a `name` field — configurable via a new
+  Options `nameSelector`, with a heuristic fallback that guesses the company name from
+  whichever cell sits immediately after the ticker cell (most market-watch tables put Symbol
+  and Company Name adjacent). `background.js` pushes a non-empty name to
+  `stockData/QSE/tickerNames/{ticker}` alongside the price push (a name failure/absence never
+  blocks that ticker's price push). **Real gap found and fixed on the WEB APP side, or none of
+  this would have actually shown up**: `reader.ts`'s `fetchQSEStockData()` previously required
+  BOTH `tickerNames` AND `fundamentals` to be present in Firebase before using EITHER — since
+  the extension has no way to populate `fundamentals` (profit/EPS needs a financial
+  disclosure, not a market-watch page), real scraped ticker names would have been silently
+  discarded forever in favor of the stale bundled seed. Fixed by merging each field
+  independently with the bundled seed (Firebase wins per-key on overlap, bundled fills any
+  gap) rather than an all-or-nothing pair AND rather than one replacing the other outright —
+  the latter would make coverage briefly get WORSE than the bundled seed while the extension
+  is still filling in a freshly-cleared node. `npx tsc -b` / `npm run test` (553 tests,
+  unchanged) / `npm run build` all clean. **Still open, deliberately not attempted here**: real
+  financial fundamentals (profit/EPS/DPS) still need manual curation per disclosure — nothing
+  about a market-watch page can provide those; and the web app still doesn't read
+  `stockData/QSE/prices`/`priceHistory` to resolve a stock's live "current price" (see Pending
+  item 13's own remaining note) — both tracked, neither silently dropped.
 
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`
-   as a fallback. The intended shared `stockData/QSE` Firebase node (finance data belonging
-   to no single user) exists as a concept the app already prefers when present, but it
-   hasn't actually been seeded in Firebase yet — needs real seeding, ideally via the
-   scheduled-refresh-job architecture described under item 13 below, not manual entry.
+   as a fallback. **Partially addressed (2026-09-07, see Done item 246)**: the shared
+   `stockData/QSE` node's `tickerNames` half is now actually being filled in for real, by the
+   `thegroup-price-sync` Chrome extension scraping company names off The Group's market-watch
+   page — `reader.ts` merges it with the bundled seed (Firebase wins on overlap) rather than
+   requiring both fields present. **Still genuinely open**: real financial fundamentals
+   (profit/EPS/DPS) have no market-watch-page source at all — those need an actual disclosure
+   per ticker and still have no scheduled-refresh path, manual curation only for now.
 12. Ability to read account statement PDFs/Excel files/images to auto-populate trade
     history — **superseded/expanded by item 25 below** (now includes CSV/JSON/PDF/image
     import across every module, not just QSE trades, and locks in a Python backend for the
@@ -6474,7 +6522,17 @@ FinanceManager live link:
     **architecture constraint locked in 2026-08-23**: these must never be called live from
     the app itself (free/cheap tiers rate-limit fast). Fetch on a schedule (cron/worker)
     into our own database and serve the app from that store, same pattern already used for
-    QSE's `stockData/QSE` node (item 1 above) and PSX's bundled `psxSeed.ts`.
+    QSE's `stockData/QSE` node (item 1 above) and PSX's bundled `psxSeed.ts`. **Symbols/prices
+    for QSE now have exactly this kind of scheduled-refresh job (2026-09-07, see Done item
+    246)**: the `thegroup-price-sync` Chrome extension scrapes The Group's market-watch page
+    on a randomized interval and pushes into `stockData/QSE` — prices+history into
+    `prices`/`priceHistory`, ticker/company names into `tickerNames` (merged with the bundled
+    seed). **Still open**: the web app doesn't yet READ `stockData/QSE/prices`/`priceHistory`
+    to resolve a stock's live "current price" (today only `tickerNames`/`fundamentals` are
+    read) — wiring that in is a separate, real-blast-radius change to the live app's price
+    resolution (Dashboard/Portfolio/break-even/P&L for every QSE holding), flagged rather than
+    done blind; logos and finance news have no scraper/source at all yet, and PSX has no
+    equivalent extension (PSX's own ticker list is a static bundled file, see Done item 233).
 17. ~~Charts could get more interactive beyond the ticker/month filters shipped in Done item 31
     (e.g. click-to-drill-down, hover cross-highlighting between charts).~~ **Now fully done.**
     Click-to-drill-down done (2026-08-25) — see Done items 134/137: every ticker-indexed chart

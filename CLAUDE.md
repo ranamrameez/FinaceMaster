@@ -5505,6 +5505,42 @@ not developer notes) continuously as features ship.
   clickable on all 8 QSE Stock Exchanges pages plus PSX's own Portfolio (Fee Mode control
   confirmed rendering), and the popup measured exactly 630px on a 1400px viewport — 45.0%,
   squarely inside the requested range — on both exchanges.
+- **New `thegroup-price-sync/` Chrome extension shipped and merged (2026-09-07, PR #89) —
+  see README Done item 246 for the full writeup, this is a continuity summary.** A separate
+  repo-root deliverable, not a `webapp/` change — a Manifest V3 extension that scrapes live
+  QSE prices off The Group's market-watch page (in the user's own logged-in tab) and pushes
+  them into the shared `stockData/QSE` Firebase node, same architecture this file's own
+  "Design decisions" section already locks in (no live market-data calls from the app itself;
+  fetch on a schedule into our own database). Collection is local/randomized (~45-90s);
+  pushes to Firebase are throttled to a configurable floor (default 2 min) plus a random
+  extra delay on top, user-adjustable in the popup. Auth is plain Identity Toolkit REST, no
+  Firebase SDK bundled. **Still needs a manual Firebase console step** (an RTDB rule change
+  for `stockData/QSE` writes) the user has to apply themselves — documented in the
+  extension's own `README.md`, not yet confirmed done.
+- **Same day, immediate follow-up: extended to scrape ticker/company names too, plus a real
+  web-app-side bug fix that was needed for any of it to actually show up (2026-09-07) — see
+  README Done item 246's update.** User: the bundled `qseSeed.ts` ticker list (~36 of QSE's
+  real tickers, hand-typed) is "very limited & incomplete." Tried fetching a real complete
+  QSE ticker list directly from this session first (stockanalysis.com, qe.com.qa, Wikipedia)
+  — all blocked by this sandbox's own network egress policy, confirming the extension
+  (running in the user's OWN browser) is the only real path to fresh data here, not something
+  a session-side WebFetch can shortcut. `content.js`'s scraped rows gained a `name` field
+  (configurable `nameSelector` in Options, heuristic fallback guesses it from the cell right
+  after the ticker); `background.js` pushes it to `stockData/QSE/tickerNames/{ticker}`
+  alongside the price. **Real, found-not-assumed bug on the webapp side**:
+  `lib/stockData/reader.ts`'s `fetchQSEStockData()` required BOTH `tickerNames` AND
+  `fundamentals` present in Firebase before using EITHER — since this extension can never
+  populate `fundamentals` (EPS/profit needs a real disclosure, not a market-watch page),
+  every scraped ticker name would have been silently discarded forever. Fixed by merging
+  each field independently with the bundled seed (Firebase wins per-key on overlap) — also
+  deliberately NOT a blind "Firebase replaces bundled outright," since that would make
+  coverage briefly WORSE than the old seed while a freshly-cleared shared node is still
+  filling back in. `npx tsc -b` / `npm run test` (553 tests, unchanged) / `npm run build` all
+  clean. **Still open**: real financial fundamentals (profit/EPS/DPS) still need manual
+  curation per disclosure, no scraper can provide those; and the web app still doesn't READ
+  `stockData/QSE/prices`/`priceHistory` to resolve a stock's live "current price" — flagged to
+  the user as a separate, real-blast-radius follow-up (every QSE holding's displayed price/
+  break-even/P&L), not done blind in the same pass.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

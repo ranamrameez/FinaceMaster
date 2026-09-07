@@ -1,17 +1,27 @@
 # TheGroup → FinanceRecorder Price Sync (Chrome extension)
 
-Scrapes live QSE prices off [The Group](https://webd.thegroup.com.qa/en/markets/qatar)'s
+Scrapes live QSE prices — and company names — off [The Group](https://webd.thegroup.com.qa/en/markets/qatar)'s
 market-watch page (while it's open in one of your own logged-in tabs) and pushes them into
 the **shared** `stockData/QSE` node in FinanceRecorder's Firebase Realtime Database — the
 same node the web app already reads ticker names/fundamentals from — so the data is useful
 to every FinanceRecorder user, not just whoever runs this extension.
+
+FinanceRecorder's bundled ticker list (`webapp/src/lib/stockData/qseSeed.ts`) only ever
+hard-coded a partial set of QSE's real listed companies and was never meant to be kept
+up to date by hand. Since this extension already scrapes every row of the market-watch
+table for a price, it captures that same row's company-name cell too and pushes it to
+`stockData/QSE/tickerNames/{ticker}` — so running this for a while against the real page
+is what actually fills in the app's ticker coverage, not a one-off manual edit.
 
 ## How it works
 
 - **`content.js`** runs on the market-watch page and reads whatever's already rendered
   there. It never logs in, never fetches anything itself, and never sends the page's HTML
   anywhere — it only replies to the extension's own background script with parsed
-  `{ticker, price, changePct}` rows.
+  `{ticker, price, changePct, name}` rows. `name` (the company name) is best-effort: the
+  heuristic fallback guesses it from whichever cell sits right after the ticker cell, but a
+  real `nameSelector` set in Options (same "Test scrape" workflow as the other selectors)
+  is far more reliable once you've seen the real page's layout.
 - **`background.js`** (the MV3 service worker) does everything else:
   - **Collects** (asks the content script to re-scrape) every ~45–90 seconds (randomized,
     not a fixed period) whenever the market page is open in some tab. This is free/local —
@@ -22,7 +32,9 @@ to every FinanceRecorder user, not just whoever runs this extension.
     predictable period). Default floor is 2 minutes, adjustable in the popup. This keeps
     writes well under Firebase RTDB's rate limits and avoids a bot-like, perfectly periodic
     request pattern against both Firebase and the brokerage's own page.
-  - Every ticker the scraper finds gets pushed — there's no per-ticker allow-list.
+  - Every ticker the scraper finds gets pushed — there's no per-ticker allow-list. A
+    ticker's company name is pushed alongside its price whenever one was captured for that
+    row (a missing/unreliable name never blocks the price push for the same ticker).
   - Talks to Firebase with plain `fetch()` calls (Identity Toolkit REST for auth, RTDB REST
     for reads/writes) — no Firebase SDK is bundled, since an MV3 service worker doesn't need
     it for this.
@@ -66,7 +78,9 @@ editing.
 prefer this shared feed is a separate, follow-up change to the live app (real blast
 radius: every QSE holding's displayed price, break-even, and P/L) and hasn't been made
 here — ask for that as its own next step once you've confirmed real data is landing in
-Firebase correctly.
+Firebase correctly. **`tickerNames` IS already read and merged in** (`webapp/src/lib/stockData/reader.ts`)
+— any ticker/name you push here shows up in the app immediately, merged with (and
+overriding on overlap) the bundled seed, with no extra wiring needed.
 
 ## Load the extension
 
@@ -97,13 +111,16 @@ credential material there at all.
 
 The bundled heuristic (`content.js`) scans every `<table>` for a row containing one
 ticker-like cell (`[A-Z][A-Z0-9]{1,5}`) followed by a plain numeric cell, and takes that as
-the price. It's a reasonable starting guess, but a real page's actual markup should be
-captured properly:
+the price; it also guesses the company name from whichever cell sits immediately after the
+ticker cell, if that text isn't itself ticker-like or numeric. It's a reasonable starting
+guess, but a real page's actual markup should be captured properly:
 
 1. Open the market-watch page, right-click the price table → **Inspect**.
 2. Find a CSS selector that matches every stock row (e.g. `table.market-watch tbody tr`)
-   and, within a row, one for the ticker cell and one for the price cell.
-3. Paste those into the Options page, click **Test scrape**, and check the JSON output.
+   and, within a row, one each for the ticker cell, the price cell, and (if the table has
+   one) the company-name cell.
+3. Paste those into the Options page, click **Test scrape**, and check the JSON output —
+   each row should show the right `ticker`/`price`/`name`.
 4. Save once it looks right.
 
 ## A note on scraping etiquette

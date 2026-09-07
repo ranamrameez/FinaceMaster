@@ -30,9 +30,9 @@ function cellText(el) {
 }
 
 /** Configured-selector strategy: `rowSelector` picks each stock row;
- * `tickerSelector`/`priceSelector`/`changeSelector` are CSS selectors
- * evaluated RELATIVE to each row (via `row.querySelector`). Any of the
- * optional ones may be blank. */
+ * `tickerSelector`/`priceSelector`/`changeSelector`/`nameSelector` are CSS
+ * selectors evaluated RELATIVE to each row (via `row.querySelector`). Any
+ * of the optional ones (`changeSelector`, `nameSelector`) may be blank. */
 function scrapeWithConfig(cfg) {
   if (!cfg.rowSelector || !cfg.tickerSelector || !cfg.priceSelector) return null;
   const rows = Array.from(document.querySelectorAll(cfg.rowSelector));
@@ -42,22 +42,43 @@ function scrapeWithConfig(cfg) {
     const tickerEl = row.querySelector(cfg.tickerSelector);
     const priceEl = row.querySelector(cfg.priceSelector);
     const changeEl = cfg.changeSelector ? row.querySelector(cfg.changeSelector) : null;
+    const nameEl = cfg.nameSelector ? row.querySelector(cfg.nameSelector) : null;
     const ticker = cellText(tickerEl).toUpperCase();
     const price = parseNumber(cellText(priceEl));
     if (!ticker || price === null) continue;
-    out.push({ ticker, price, changePct: changeEl ? parseNumber(cellText(changeEl)) : null });
+    out.push({
+      ticker,
+      price,
+      changePct: changeEl ? parseNumber(cellText(changeEl)) : null,
+      name: nameEl ? cellText(nameEl) : null,
+    });
   }
   return out.length ? out : null;
+}
+
+/** A plausible company-name cell: has letters, is more than a couple of
+ * characters (so it's not mistaken for a stray currency/unit label), and
+ * isn't itself ticker-like or purely numeric. Used only by the heuristic
+ * fallback below — a real configured `nameSelector` skips this guess
+ * entirely. */
+function looksLikeName(text) {
+  if (!text || text.length < 3) return false;
+  if (TICKER_LIKE.test(text)) return false;
+  if (parseNumber(text) !== null) return false;
+  return /[A-Za-z]/.test(text);
 }
 
 /** Heuristic fallback used when no selectors are configured yet, or the
  * configured ones match nothing (e.g. the page changed). Scans every
  * `<table>` on the page; for each row, looks for one cell that looks like
  * a ticker symbol and a DIFFERENT cell (to its right) that parses as a
- * plain number, and takes the first such number as the price. This is
- * necessarily a best-effort default — a real market-watch table's actual
- * column layout should be captured via the Options page's "Test scrape"
- * tool and saved as explicit selectors once the page is seen live. */
+ * plain number, and takes the first such number as the price. The cell
+ * immediately after the ticker is taken as a guessed company name if it
+ * looks name-like (most market-watch tables put Symbol and Company Name
+ * adjacent to each other) — this is necessarily a best-effort default, a
+ * real market-watch table's actual column layout should be captured via
+ * the Options page's "Test scrape" tool and saved as explicit selectors
+ * once the page is seen live. */
 function scrapeHeuristic() {
   const out = [];
   const seen = new Set();
@@ -87,7 +108,8 @@ function scrapeHeuristic() {
       }
       if (price === null) continue;
       seen.add(ticker);
-      out.push({ ticker, price, changePct: null });
+      const nextText = cellText(cells[tickerIdx + 1]);
+      out.push({ ticker, price, changePct: null, name: looksLikeName(nextText) ? nextText : null });
     }
   };
   for (const table of tables) {

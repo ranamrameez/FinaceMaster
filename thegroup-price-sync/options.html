@@ -113,6 +113,15 @@
       <input id="priceSelector" type="text" placeholder="e.g. td:nth-child(3)" />
       <label>Change % selector <span class="muted">(optional)</span></label>
       <input id="changeSelector" type="text" placeholder="e.g. td:nth-child(4)" />
+      <label>Company name selector <span class="muted">(optional, but needed to fill in missing ticker names)</span></label>
+      <input id="nameSelector" type="text" placeholder="e.g. td:nth-child(2)" />
+      <div class="muted" style="margin-top: 4px">
+        FinanceRecorder's bundled ticker list is missing quite a few real QSE
+        symbols — whatever company name is captured here gets pushed into
+        the shared database too, alongside the price, so the app's ticker
+        coverage fills in from real scraped data instead of staying stuck
+        with an old hand-typed list.
+      </div>
       <div>
         <button id="saveBtn">Save</button>
         <span id="savedMsg" class="saved" hidden>Saved.</span>
