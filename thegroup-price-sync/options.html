@@ -1,0 +1,138 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>TheGroup Price Sync — Options</title>
+    <style>
+      body {
+        max-width: 640px;
+        margin: 30px auto;
+        font: 14px/1.5 -apple-system, Segoe UI, Roboto, sans-serif;
+        color: #1a1a2e;
+        padding: 0 16px;
+      }
+      h1 {
+        font-size: 20px;
+      }
+      h2 {
+        font-size: 15px;
+        margin-top: 28px;
+      }
+      .card {
+        background: #fff;
+        border: 1px solid #e5e5f0;
+        border-radius: 10px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      label {
+        display: block;
+        font-size: 12px;
+        color: #555;
+        margin: 10px 0 4px;
+      }
+      input[type='text'] {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 7px 9px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        font-size: 13px;
+        font-family: ui-monospace, SFMono-Regular, monospace;
+      }
+      button {
+        margin-top: 12px;
+        padding: 8px 14px;
+        border: none;
+        border-radius: 6px;
+        background: #1a1a4e;
+        color: #fff;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .muted {
+        color: #777;
+        font-size: 12px;
+      }
+      pre {
+        background: #f4f4fa;
+        border-radius: 6px;
+        padding: 10px;
+        font-size: 12px;
+        overflow: auto;
+        max-height: 220px;
+      }
+      .pill {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        margin-left: 6px;
+      }
+      .pill-ok {
+        background: #e3f6e8;
+        color: #1c6b34;
+      }
+      .pill-warn {
+        background: #fff3d6;
+        color: #8a5b00;
+      }
+      .saved {
+        color: #1c6b34;
+        font-size: 12px;
+        margin-left: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>TheGroup Price Sync — Options</h1>
+    <p class="muted">
+      These settings only affect HOW the page is scraped (which URL, which
+      CSS selectors). Sign-in and the Firebase push-throttle settings live in
+      the extension's popup, not here.
+    </p>
+
+    <div class="card">
+      <h2>Target page</h2>
+      <label>Market-watch URL</label>
+      <input id="targetUrl" type="text" />
+      <div class="muted">
+        Must be a page open in one of your browser tabs — the extension
+        reads whatever is already rendered there, it does not fetch or log
+        in on its own.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Row/column selectors <span class="muted">(leave blank to auto-detect)</span></h2>
+      <label>Row selector <span class="muted">— one CSS selector matching each stock row</span></label>
+      <input id="rowSelector" type="text" placeholder="e.g. table.market-watch tbody tr" />
+      <label>Ticker selector <span class="muted">— relative to each row</span></label>
+      <input id="tickerSelector" type="text" placeholder="e.g. td:nth-child(1)" />
+      <label>Price selector <span class="muted">— relative to each row</span></label>
+      <input id="priceSelector" type="text" placeholder="e.g. td:nth-child(3)" />
+      <label>Change % selector <span class="muted">(optional)</span></label>
+      <input id="changeSelector" type="text" placeholder="e.g. td:nth-child(4)" />
+      <div>
+        <button id="saveBtn">Save</button>
+        <span id="savedMsg" class="saved" hidden>Saved.</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Test scrape</h2>
+      <p class="muted">
+        Open the market page in a tab first, then click Test — this uses
+        whatever is currently in the fields above (even if unsaved) so you
+        can iterate quickly. No selectors configured yet? It runs the
+        generic auto-detect heuristic instead, so you can see how close that
+        gets on its own.
+      </p>
+      <button id="testBtn">Test scrape</button>
+      <span id="testStrategy"></span>
+      <pre id="testOutput">(no test run yet)</pre>
+    </div>
+
+    <script type="module" src="options.js"></script>
+  </body>
+</html>
