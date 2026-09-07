@@ -37,7 +37,17 @@ import { Tooltip } from '../Tooltip';
  * (optional)"); this is the marker for the opposite case. Purely visual —
  * doesn't add HTML `required` validation, since several "required" fields
  * here are validated with a friendlier toast message on submit rather
- * than the browser's own native validation UI. */
+ * than the browser's own native validation UI.
+ *
+ * User-reported (app-wide audit): "this tiny asterisk is moving in next
+ * line!" — a plain space before `*` is an ordinary break opportunity, so
+ * a label that happens to wrap right at its last word left the asterisk
+ * isolated alone on its own line, disconnected from the word it marks.
+ * A non-breaking space glues it to the immediately preceding word instead
+ * — the label text itself can still wrap normally elsewhere (a long label
+ * legitimately spanning 2-3 lines is accepted, established behavior —
+ * see this file's own `justifyContent:'flex-end'` note above), this only
+ * stops the asterisk specifically from ever stranding itself. */
 /** `width` defaults to 180 (2026-08-28, user-reported: "give same width
  * ...to all form elements app wide...for best UI consistency") — most
  * `Field` call sites across the app either pass their own considered width
@@ -52,7 +62,7 @@ export function Field({ label, children, width = 180, title, required }: { label
   const labelContent = required ? (
     <>
       {label}
-      <span style={{ color: 'var(--loss)' }} aria-hidden="true"> *</span>
+      <span style={{ color: 'var(--loss)' }} aria-hidden="true">{' *'}</span>
     </>
   ) : (
     label

@@ -10,7 +10,7 @@ import { SideFields, useSideCurrency, nextUnpaidEmiMonth } from '../features/tra
 import { getLastTransferSource, rememberTransferSource } from '../hooks/useLastTransferSource';
 import { CategorySelect } from './CategorySelect';
 import { UNCATEGORIZED_ID } from '../lib/categories';
-import { defaultTimezoneForCurrency } from '../lib/datetime';
+import { defaultTimezoneForCurrency, nowTime } from '../lib/datetime';
 import { useEnsureSignedIn } from '../lib/firebase/useEnsureSignedIn';
 import { isSupportedLinkPair } from '../lib/interEntityLink';
 import { createLinkedTransfer } from '../lib/linkCascade';
@@ -92,7 +92,7 @@ function emptyRow(key: number, finance: LinkSideConfig, currencyCode?: string): 
     amount: 0,
     direction: 'in',
     date: today(),
-    time: new Date().toTimeString().slice(0, 5),
+    time: nowTime(),
     timezone: defaultTimezoneForCurrency(currencyCode),
     categoryID: UNCATEGORIZED_ID,
     description: '',

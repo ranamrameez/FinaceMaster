@@ -16,7 +16,7 @@ import { IconButton } from '../../../components/ui/IconButton';
 import { FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
-import { defaultTimezoneForCurrency } from '../../../lib/datetime';
+import { defaultTimezoneForCurrency, nowTime } from '../../../lib/datetime';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { getMarketPrice } from '../../../lib/calc';
@@ -642,7 +642,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
   // the same reason RiskCalculator's targetAmountInput is — a controlled
   // number input re-formats on every keystroke and fights typing.
   const [txAmountInput, setTxAmountInput] = useState('');
-  const [txTime, setTxTime] = useState<string | undefined>(undefined);
+  const [txTime, setTxTime] = useState<string | undefined>(() => nowTime());
   const [txTimezone, setTxTimezone] = useState<string | undefined>(() => defaultTimezoneForCurrency(fund.currencyCode));
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editRow, setEditRow] = useState<Transaction | null>(null);

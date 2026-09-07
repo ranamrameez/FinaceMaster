@@ -16,7 +16,7 @@ import { transferRunningBalance } from '../../../lib/calc/transferBalance';
 import { Field, Select } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
-import { defaultTimezoneForCurrency, defaultTimezoneForMarket } from '../../../lib/datetime';
+import { defaultTimezoneForCurrency, defaultTimezoneForMarket, nowTime } from '../../../lib/datetime';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { ReorderButtons } from '../../../components/ui/ReorderButtons';
 import { toInstantMs } from '../../../lib/datetime';
@@ -31,7 +31,7 @@ import { useQSEDerived } from '../hooks/useQSEDerived';
 const today = () => new Date().toISOString().slice(0, 10);
 
 function emptyRow(): Transaction {
-  return { date: today(), ticker: '', action: 'BUY', shares: 0, price: 0, timezone: defaultTimezoneForMarket('QSE') };
+  return { date: today(), ticker: '', action: 'BUY', shares: 0, price: 0, time: nowTime(), timezone: defaultTimezoneForMarket('QSE') };
 }
 
 export function TransactionRows() {
@@ -139,7 +139,7 @@ function AdjustmentForm() {
   const addAdjustment = useWorkbookStore((s) => s.addAdjustment);
   const currency = useWorkbookStore((s) => s.workbook.settings.currency);
   const ensureSignedIn = useEnsureSignedIn();
-  const emptyAdjustment = (): Adjustment => ({ date: today(), amount: 0, note: '', timezone: defaultTimezoneForCurrency(currency) });
+  const emptyAdjustment = (): Adjustment => ({ date: today(), amount: 0, note: '', time: nowTime(), timezone: defaultTimezoneForCurrency(currency) });
   const [a, setA] = useState<Adjustment>(emptyAdjustment);
 
   return (

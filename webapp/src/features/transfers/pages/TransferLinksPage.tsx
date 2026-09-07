@@ -274,9 +274,34 @@ export function SideFields({ label, cfg, onChange, preferredCurrency }: { label:
               {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
             </Select>
           </Field>
+          {/* User-reported (app-wide audit): "+ of add account in popups...
+             moving in next line" — this ref-picker Select sits inside a
+             Field whose default width (180px) is sized for ONE plain
+             control. The real cause (confirmed via a real computed-style
+             check, not guessed): the base CSS rule `select{width:100%}`
+             gives the select a flex-basis equal to the FULL 180px
+             container — flexbox decides whether a `.row` needs to wrap
+             using that hypothetical (pre-shrink) size, so the select
+             alone already "fills" the row before the IconButton beside it
+             is even considered, and flex-wrap bumps the button to a new
+             line rather than ever trying to shrink the select down first.
+             A `min-width` override (tried first, confirmed NOT to fix
+             this via the same live measurement) can't help, since the
+             problem isn't a width FLOOR — it's the item's own hypothetical
+             size already exceeding the container. Only an explicit,
+             smaller `width` (via `Select`'s own `width` prop, which sets a
+             real inline style that overrides the 100% CSS rule) fixes it,
+             by giving the select a small enough flex-basis from the
+             start that the button fits beside it on the very first
+             layout pass. `style={{minWidth:110}}` is ALSO required
+             alongside `width` — confirmed via a second live measurement
+             that `width` alone still rendered at 160px, since `.row > *`'s
+             separate `min-width:160px` floor is a hard floor that wins
+             over a smaller explicit `width` regardless; only overriding
+             BOTH together actually shrinks the rendered element. */}
           <Field label={refLabel}>
             <div className="row" style={{ gap: 4, alignItems: 'center' }}>
-              <Select value={cfg.ref ?? ''} onChange={(e) => onChange({ ...cfg, ref: e.target.value })}>
+              <Select value={cfg.ref ?? ''} onChange={(e) => onChange({ ...cfg, ref: e.target.value })} width={110} style={{ minWidth: 110 }}>
                 {!filteredEntities.length && <option value="">None in this currency</option>}
                 {filteredEntities.map((en) => <option key={en.id} value={en.id}>{en.label}</option>)}
               </Select>
