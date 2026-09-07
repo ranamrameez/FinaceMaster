@@ -418,12 +418,6 @@
   }
   .pagesub{color:var(--muted); font-size:14.5px; margin:0 0 22px 0; line-height:1.5;}
 
-  .grid{display:grid; gap:12px;}
-  .grid-4{grid-template-columns:repeat(4,1fr);}
-  .grid-3{grid-template-columns:repeat(3,1fr);}
-  .grid-2{grid-template-columns:repeat(2,1fr);}
-  @media(max-width:1000px){.grid-4{grid-template-columns:repeat(2,1fr);} .grid-3{grid-template-columns:repeat(2,1fr);}}
-
   .card{
     /* A faint accent-tinted gradient instead of a flat panel color — makes
        switching color themes actually change the room's "temperature",
@@ -654,9 +648,6 @@
      cell (e.g. a plain numeric/text last column with no buttons). */
   tbody td:last-child:has(button){text-align:right;}
   .num-cell{text-align:right;}
-  .pos{color:var(--profit);}
-  .neg{color:var(--loss);}
-  .neutral{color:var(--warn);}
 
   .pill{display:inline-block; padding:3px 9px; border-radius:20px; font-size:11.5px; font-family:var(--mono); font-weight:700;}
   .pill-positive{background:color-mix(in srgb, var(--profit) 16%, var(--panel)); color:var(--profit);}
@@ -1002,11 +993,6 @@
      clear the input's own border) reclaims that space; the spinner still
      has its native width, so padding-right stays at 0. */
   input.price-input[type=number]{padding:8px 0 8px 6px; text-align:left; font-family:var(--mono);}
-  .rule-note{
-    font-size:12px; color:var(--muted); background:var(--panel-2); border:1px solid var(--border);
-    border-radius:8px; padding:10px 12px; margin-bottom:16px; line-height:1.5;
-  }
-  .rule-note b{color:var(--text);}
 
   /* ---------- Notice — a distinct callout for warnings/info, not just
      another card (user-reported items 10/11: a plain card with a thin
@@ -1032,48 +1018,7 @@
   .notice-success{ background:color-mix(in srgb, var(--profit) 12%, var(--panel)); border-color:color-mix(in srgb, var(--profit) 40%, var(--border)); }
   .notice-success .notice-icon{color:var(--profit);}
 
-  /* ---------- Modal info cards (grouped, side-by-side, quick glance) ---------- */
-  .mgroups{display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:20px; align-items:start;}
-  .mgroup-title{
-    font-family:var(--disp); font-size:13px; font-weight:700; text-transform:uppercase;
-    letter-spacing:.04em; color:var(--gold); margin:0 0 8px 0;
-  }
-  .mgrid{display:grid; grid-template-columns:repeat(auto-fit, minmax(110px,1fr)); gap:6px;}
-  .price-history-list{display:flex; flex-direction:column; gap:2px; max-height:170px; overflow-y:auto;}
-  .ph-row{display:grid; grid-template-columns:1fr auto auto; gap:12px; padding:6px 8px; font-family:var(--mono); font-size:12.5px; border-bottom:1px solid var(--border);}
-  .ph-row:last-child{border-bottom:none;}
-  .ph-date{color:var(--muted);}
-  .ph-price{font-weight:700; text-align:right;}
-  .ph-delta{text-align:right; min-width:56px;}
-  .ph-delta.pos{color:var(--profit);} .ph-delta.neg{color:var(--loss);}
-  .mcard{
-    background:var(--panel-2); border:1px solid var(--border); border-radius:8px;
-    padding:8px 10px;
-  }
-  .mcard.wide{grid-column:1 / -1;}
-  .mcard .mlabel{font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:3px;}
-  .mcard .mlabel .info-tip{width:12px; height:12px; font-size:9px; margin-left:4px; vertical-align:text-top;}
   .stat-card .label .info-tip{vertical-align:text-top;}
-  .mcard .mvalue{font-family:var(--mono); font-size:14.5px; font-weight:700; line-height:1.25;}
-  .mcard .mvalue.pos{color:var(--profit);}
-  .mcard .mvalue.neg{color:var(--loss);}
-  .mcard .msub{font-size:10.5px; color:var(--muted); margin-top:2px;}
-  /* Semantic highlight variants — break-even is always the "important
-     reference number" (gold), share count is always the "how much do I
-     hold" number (blue). Gentle gradient, not a flat fill, so it reads as
-     an accent rather than a warning/alert block. */
-  .mcard.mc-gold{
-    background:linear-gradient(135deg, rgba(var(--gold-rgb),.20), rgba(var(--gold-rgb),.04));
-    border-color:rgba(var(--gold-rgb),.45);
-  }
-  .mcard.mc-gold .mlabel{color:rgba(var(--gold-rgb),.85);}
-  .mcard.mc-gold .mvalue{color:var(--gold);}
-  .mcard.mc-blue{
-    background:linear-gradient(135deg, rgba(var(--info-rgb),.20), rgba(var(--info-rgb),.04));
-    border-color:rgba(var(--info-rgb),.45);
-  }
-  .mcard.mc-blue .mlabel{color:rgba(var(--info-rgb),.85);}
-  .mcard.mc-blue .mvalue{color:var(--info);}
 
   /* ---------- Dashboard ticker cards ----------
      These are the highest-priority items on the page, so they get a
@@ -1232,23 +1177,6 @@
 	border-bottom: 1px solid var(--border);
 	box-shadow: 0 4px 10px rgba(0,0,0,.06);
 }
-  /* Readability pass: keep semantic colors restrained and text high-contrast. */
-  .mgroup-title{color:var(--text);font-weight:800;border-bottom:1px solid var(--border);padding-bottom:7px;}
-  .mcard{background:var(--panel-2);border-color:var(--border);}
-  .mcard .mlabel{color:var(--muted);}
-  .mcard .msub{color:var(--muted);}
-  .mcard.mc-gold,.mcard.mc-blue{background:var(--panel-2);border-color:var(--border);}
-  .mcard.mc-gold .mlabel,.mcard.mc-blue .mlabel{color:var(--muted);}
-  .mcard.mc-gold .mvalue{color:var(--gold);text-shadow:0 0 0 transparent;}
-  .mcard.mc-blue .mvalue{color:var(--info);}
-  .hybrid-table tbody td{color:var(--text);}
-  html[data-color^="material-"] .mgroup-title{color:var(--accent);}
-  html[data-color^="material-"] .mcard.mc-gold .mvalue{color:var(--accent);}
-  html[data-color^="material-"] .mcard.mc-blue .mvalue{color:var(--accent);}
-  html[data-color^="material-"] .hybrid-status{background:var(--accent-soft);border:0;}
-  html[data-color^="material-"] .hybrid-status.pos{color:var(--profit);}
-  html[data-color^="material-"] .hybrid-status.neg{color:var(--loss);}
-  html[data-color^="material-"] .hybrid-status.watch{color:var(--accent);}
     /* Final Material palette guard: ensures component backgrounds/text follow
      the selected Material palette instead of the generic root palette. */
   html[data-color^="material-"] body{background:var(--bg);color:var(--text);}
