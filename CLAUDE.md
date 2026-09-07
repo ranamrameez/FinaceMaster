@@ -5462,6 +5462,29 @@ not developer notes) continuously as features ship.
   (1%/day and 0.2%/day rates, hand-computed from seeded NAV history) plus a closed third fund:
   the closed fund never appears in either picker, and with $5000 entered both panels' Day/Month/
   Year figures matched hand-traced math exactly, side by side.
+- **QSE/PSX ticker logos, first slice of the rollout (2026-09-07) — see README Done item 244,
+  Pending item 118 for the rest.** User: "QSE few logos are present in root repo but not
+  utilized in the new webapp, old index is using very good mechanism, find logo in our repo,
+  otherwise find it through the template URL otherwise Text-tag type symbol." Investigated
+  first: a whole-history `git log` search for `logos/*` came back empty — no `logos/` folder
+  has EVER existed in this repo. "Present in root repo" was the user's own memory of the LEGACY
+  app's own 3-stage mechanism (`index.html`'s `tickerLogo()`), which never had real committed
+  logo files either — the new webapp's `theme.css` already had the exact `.ticker-logo`/
+  `.ticker-logo-fallback`/`.hd-name`/`.hd-company` CSS ported over, but nothing in the whole
+  React codebase ever used those classes (confirmed via a whole-source grep) — a real, complete
+  gap. New `components/TickerLogo.tsx` ports the legacy mechanism exactly: (1) local
+  `{BASE_URL}logos/{TICKER}.svg` (nothing ships there today, drop-in ready for the future — same
+  as the legacy app itself), (2) QSE-only remote CDN (`webd.thegroup.com.qa`, proxied through
+  `wsrv.nl` for CORS) — PSX has no known public CDN (same conclusion the legacy PSX page already
+  reached), (3) a colored-initials text-tag fallback, reusing this app's OWN already-established
+  `tickerColor()` (`lib/cssVar.ts`) instead of reintroducing the legacy app's separate palette.
+  Applied as a working vertical slice: Dashboard's Holdings table, Portfolio's Open/Closed
+  tables, and a "lg" logo next to each `StockPage`'s own title — both exchanges. Verified live
+  via Playwright: since this sandbox blocks the remote CDN too, this was a genuine end-to-end
+  test of the full cascade, not just the first stage — every ticker correctly fell through
+  local→remote(QSE)/fallback(PSX)→a real colored fallback badge with correct initials ("QI"/
+  "QN"/"OG"), zero `<img>` stuck mid-cascade, confirmed via real screenshots too. `npx tsc -b` /
+  `npm run test` (553 tests, unchanged) / `npm run build` all clean.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

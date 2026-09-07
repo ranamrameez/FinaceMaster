@@ -4,6 +4,7 @@ import { confirmDialog } from '../../../components/ConfirmDialog';
 import { EditIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { RiskCalculator } from '../../../components/RiskCalculator';
 import { Tabs } from '../../../components/Tabs';
+import { TickerLogo } from '../../../components/TickerLogo';
 import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
 import { Field, TextInput } from '../../../components/ui/Field';
@@ -264,7 +265,8 @@ export function StockPage() {
   return (
     <div>
       <Link to="/psx/portfolio" className="footer-note">← Back to Portfolio</Link>
-      <h1 className="pagetitle" style={{ marginTop: 8 }}>
+      <h1 className="pagetitle" style={{ marginTop: 8, display: 'flex', alignItems: 'center' }}>
+        <TickerLogo ticker={ticker} size="lg" exchange="psx" />
         {ticker} {name && <span className="footer-note" style={{ fontSize: 16 }}>{shortenCompanyName(name, 40)}</span>}
       </h1>
       <Tabs

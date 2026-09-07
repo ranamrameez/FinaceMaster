@@ -6381,6 +6381,49 @@ FinanceManager live link:
   +3,652.80 (values 5.01k/5.3k/8.65k) — every figure matching hand-traced math exactly, side by
   side in the same modal. Zero console errors. `npx tsc -b` / `npm run test` (553 tests, 3 new)
   / `npm run build` all clean.
+- **QSE/PSX ticker logos, first slice of the rollout (2026-09-07) — see README Done item 244,
+  Pending item 118 for the rest.** User: "QSE few logos are present in root repo but not
+  utilized in the new webapp, old index is using very good mechanism, find logo in our repo,
+  otherwise find it through the template URL otherwise Text-tag type symbol." Investigated
+  first, not guessed at: a whole-history `git log` search for `logos/*` came back completely
+  empty — no `logos/` folder has EVER existed anywhere in this repo, at any commit. "Present in
+  root repo" was the user's own memory of the LEGACY app's mechanism (`index.html`'s
+  `tickerLogo()`/`logoFallback()`, which itself only ever had a `./logos/` folder as a
+  *possible* drop-in location, never actually committed with real files either — the legacy
+  mechanism was always designed around this exact 3-stage fallback, not a folder that was ever
+  populated). The new webapp's `theme.css` already had the exact `.ticker-logo`/
+  `.ticker-logo-fallback`/`.hd-name`/`.hd-company` CSS ported over from the legacy app at some
+  point, byte-for-byte — but nothing in the whole React codebase ever actually USED those
+  classes (confirmed via a whole-source grep), so this was a real, complete gap, not a partial
+  one. New `components/TickerLogo.tsx` ports the legacy mechanism exactly, in the same priority
+  order the user asked for: (1) **local repo logo** — `{BASE_URL}logos/{TICKER}.svg` (nothing
+  ships there today, same as the legacy app itself, but dropping SVGs into
+  `webapp/public/logos/` named `TICKER.svg` picks them up automatically with zero code changes,
+  matching the legacy app's own "drop your own logos here" design); (2) **template URL**, QSE
+  only — the legacy app's own broker logo CDN (`https://webd.thegroup.com.qa/logos/{TICKER}.svg`)
+  proxied through `wsrv.nl` (fetches server-side and re-serves with permissive CORS/CORP
+  headers — hotlinking the broker URL directly fails in-browser without this, per the legacy
+  app's own comment); PSX has no known public logo CDN (same conclusion the legacy
+  `PSX_Trade_Planner.html` already reached in its own code comment), so a PSX ticker skips
+  straight from local to (3) **text-tag fallback** — a small colored-initials badge (first 2
+  letters of the ticker), using this app's OWN already-established `tickerColor()`
+  (`lib/cssVar.ts`) rather than reintroducing the legacy app's separate palette — a small, free
+  consistency win, since a ticker's fallback badge now matches its own chart color elsewhere in
+  the app. Applied as a working vertical slice to the highest-traffic ticker-display surfaces on
+  both exchanges: Dashboard's Holdings table, Portfolio's Open/Closed positions tables (all
+  reusing the ported `.hd-name`/`.hd-company` flex layout, adding `className="holdings-table"`
+  to each table so that CSS scoping actually applies), and a "lg"-sized logo next to each
+  per-stock `StockPage`'s own `<h1>` title. Verified live via Playwright: since this sandbox's
+  network policy blocks the remote CDN too, this was a genuine end-to-end test of the FULL
+  3-stage cascade, not just the first stage — every QSE ticker correctly fell through local
+  (404) → remote (network-blocked) → fallback badge, landing on a real `<span
+  class="ticker-logo-fallback">` with the correct 2-letter initials (confirmed "QI" for QIBK,
+  "QN" for QNBK, "OG" for OGDC) and zero `<img>` elements left stuck mid-cascade; PSX tickers
+  confirmed skipping the remote stage entirely (same 2-letter fallback, no extra network attempt
+  beyond the local 404). Real before/after screenshots of the Dashboard and a per-stock page
+  confirmed the badges render as small, distinctly-colored squares next to each ticker/company
+  name, not broken images or stray text. `npx tsc -b` / `npm run test` (553 tests, unchanged —
+  UI-only) / `npm run build` all clean.
 
 ## Pending
 
@@ -7165,6 +7208,17 @@ or a design decision before more code, not guessed at further:**
      side by side in a responsive grid — same `repeat(auto-fit, minmax(...,1fr))` +
      `alignItems:'start'` pattern `AccountPage.tsx` now uses. Do this incrementally, module by
      module, verified live each time — the same discipline item 116 above already calls for.
+118. **Ticker logo rollout, remaining surfaces (2026-09-07)** — Done item 244 shipped
+     `components/TickerLogo.tsx` (the local → template-URL → colored-initials fallback chain)
+     and applied it to Dashboard/Portfolio's tables plus each `StockPage`'s own title, on both
+     QSE and PSX, as a working vertical slice. Not yet touched, same component ready to drop in:
+     Trade Transactions' trade-list table, per-stock `StockPage`'s own Trades tab, Watchlist,
+     Dividends' tables, the Trade Planner's leg tables and per-ticker summary cards, the Trade
+     Calculator popup, Risk Analysis, and Funds' own fund list/detail (Funds has no ticker CDN
+     of its own — would need its own `exchange`-equivalent handling, most likely local-only +
+     text-tag, mirroring PSX's "no known CDN" case — a real small design decision, not just a
+     copy-paste of the QSE/PSX rollout). Do this incrementally, page by page, verified live each
+     time — same discipline item 116/117 above already call for on other rollouts.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

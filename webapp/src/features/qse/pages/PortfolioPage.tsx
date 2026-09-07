@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sparkline } from '../../../components/Sparkline';
 import { Tabs } from '../../../components/Tabs';
+import { TickerLogo } from '../../../components/TickerLogo';
 import { toast } from '../../../components/Toast';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { breakEvenPrice, getDailyPriceHistory, getMarketPrice } from '../../../lib/calc';
@@ -81,7 +82,7 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
 
   return (
     <div className="table-scroll">
-      <table>
+      <table className="holdings-table">
         <thead>
           <tr>
             <Th col="ticker">Stock</Th>
@@ -99,9 +100,14 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
           {sorted.map((r) => (
             <tr key={r.ticker} style={{ cursor: 'pointer' }}>
               <td onClick={() => onSelect(r.ticker)} style={{ maxWidth: 190 }}>
-                <div style={{ fontWeight: 600 }}>{r.ticker}</div>
-                <div className="footer-note" style={{ maxWidth: 170, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {tickerNames[r.ticker] ? shortenCompanyName(tickerNames[r.ticker]) : ''}
+                <div className="hd-name">
+                  <TickerLogo ticker={r.ticker} size="sm" exchange="qse" />
+                  <div>
+                    <div>{r.ticker}</div>
+                    <div className="hd-company">
+                      {tickerNames[r.ticker] ? shortenCompanyName(tickerNames[r.ticker]) : ''}
+                    </div>
+                  </div>
                 </div>
               </td>
               <td onClick={(e) => e.stopPropagation()} style={{ width: 82 }}><Sparkline data={r.sparkData} formatValue={fmtPrice} /></td>
@@ -176,7 +182,7 @@ function ClosedPositionsTable({ onSelect }: { onSelect: (ticker: string) => void
 
   return (
     <div className="table-scroll">
-      <table>
+      <table className="holdings-table">
         <thead>
           <tr>
             <Th col="ticker">Stock</Th>
@@ -189,9 +195,14 @@ function ClosedPositionsTable({ onSelect }: { onSelect: (ticker: string) => void
           {sorted.map((p) => (
             <tr key={p.ticker} style={{ cursor: 'pointer' }} onClick={() => onSelect(p.ticker)}>
               <td style={{ maxWidth: 190 }}>
-                <div style={{ fontWeight: 600 }}>{p.ticker}</div>
-                <div className="footer-note" style={{ maxWidth: 170, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {tickerNames[p.ticker] ? shortenCompanyName(tickerNames[p.ticker]) : ''}
+                <div className="hd-name">
+                  <TickerLogo ticker={p.ticker} size="sm" exchange="qse" />
+                  <div>
+                    <div>{p.ticker}</div>
+                    <div className="hd-company">
+                      {tickerNames[p.ticker] ? shortenCompanyName(tickerNames[p.ticker]) : ''}
+                    </div>
+                  </div>
                 </div>
               </td>
               <td>
