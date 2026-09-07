@@ -1,0 +1,159 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>TheGroup Price Sync</title>
+    <style>
+      body {
+        width: 320px;
+        margin: 0;
+        padding: 14px;
+        font: 13px/1.4 -apple-system, Segoe UI, Roboto, sans-serif;
+        color: #1a1a2e;
+        background: #fbfbfe;
+      }
+      h1 {
+        font-size: 14px;
+        margin: 0 0 10px;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      .row > * {
+        flex: 1;
+      }
+      label {
+        display: block;
+        font-size: 11px;
+        color: #666;
+        margin-bottom: 3px;
+      }
+      input[type='email'],
+      input[type='password'],
+      input[type='number'] {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 6px 8px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        font-size: 13px;
+      }
+      button {
+        padding: 7px 10px;
+        border: none;
+        border-radius: 6px;
+        background: #1a1a4e;
+        color: #fff;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      button.secondary {
+        background: #e6e6f0;
+        color: #1a1a4e;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      .card {
+        background: #fff;
+        border: 1px solid #e5e5f0;
+        border-radius: 8px;
+        padding: 10px;
+        margin-bottom: 10px;
+      }
+      .muted {
+        color: #888;
+        font-size: 11px;
+      }
+      .error {
+        color: #b3261e;
+        font-size: 11px;
+        margin-top: 6px;
+        white-space: pre-wrap;
+      }
+      .signed-in-email {
+        font-weight: 600;
+        word-break: break-all;
+      }
+      a {
+        color: #1a1a4e;
+      }
+      .footer-links {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>TheGroup → FinanceRecorder Price Sync</h1>
+
+    <div id="signedOutView" class="card" hidden>
+      <div class="muted" style="margin-bottom: 8px">
+        Sign in with your FinanceRecorder account (email/password) — prices you
+        scrape get pushed to the same shared database every FinanceRecorder
+        user reads from.
+      </div>
+      <label>Email</label>
+      <input id="email" type="email" autocomplete="username" />
+      <label>Password</label>
+      <input id="password" type="password" autocomplete="current-password" />
+      <div class="row" style="margin-top: 8px; align-items: center">
+        <label style="display: flex; align-items: center; gap: 6px; margin: 0">
+          <input id="createNew" type="checkbox" style="width: auto" />
+          Create a new account instead
+        </label>
+      </div>
+      <div class="muted" id="createNewHint" hidden style="margin: 4px 0 8px">
+        This doesn't need to match your FinanceRecorder login — any signed-in
+        account can push prices, since they land in the shared database, not
+        anyone's personal workbook. A dedicated account keeps your main
+        password out of this extension's local storage.
+      </div>
+      <div class="row">
+        <button id="signInBtn">Sign in</button>
+      </div>
+      <div id="signInError" class="error"></div>
+    </div>
+
+    <div id="signedInView" hidden>
+      <div class="card">
+        <div class="row" style="align-items: center">
+          <div class="muted">Signed in as</div>
+          <button class="secondary" id="signOutBtn" style="flex: 0 0 auto">Sign out</button>
+        </div>
+        <div class="signed-in-email" id="emailLabel"></div>
+      </div>
+
+      <div class="card">
+        <label>Minimum minutes between Firebase pushes</label>
+        <input id="minPushMinutes" type="number" min="2" step="1" />
+        <div class="muted" style="margin-top: 4px">
+          Actual gap is randomized between this and 2× this, to avoid a
+          predictable request pattern and stay well under Firebase's write
+          limits. Scraping itself happens more often (every ~1 min) but only
+          triggers a push once this floor is reached.
+        </div>
+      </div>
+
+      <div class="card" id="statusCard">
+        <div id="statusLines" class="muted"></div>
+        <div id="statusError" class="error"></div>
+      </div>
+
+      <div class="row">
+        <button id="scrapeNowBtn" class="secondary">Scrape now</button>
+        <button id="pushNowBtn">Push now</button>
+      </div>
+      <div class="footer-links">
+        <a href="#" id="openPageLink">Open market page</a>
+        <a href="#" id="openOptionsLink">Options</a>
+      </div>
+    </div>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "TheGroup → FinanceRecorder Price Sync",
+  "version": "0.1.0",
+  "description": "Scrapes live QSE prices from The Group's market-watch page and syncs them into your FinanceRecorder account.",
+  "permissions": ["storage", "alarms", "scripting", "tabs"],
+  "host_permissions": [
+    "https://webd.thegroup.com.qa/*",
+    "https://qse-app-default-rtdb.asia-southeast1.firebasedatabase.app/*",
+    "https://identitytoolkit.googleapis.com/*",
+    "https://securetoken.googleapis.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://webd.thegroup.com.qa/*/markets/*", "https://webd.thegroup.com.qa/markets/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "options_page": "options.html",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
