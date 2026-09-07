@@ -3,8 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { CollapsibleCard, StatCard } from '../../../components/Card';
 import { DashboardRail } from '../../../components/DashboardRail';
-import { Modal } from '../../../components/Modal';
-import { PlusIcon } from '../../../components/icons';
 import { Sparkline } from '../../../components/Sparkline';
 import { TickerLogo } from '../../../components/TickerLogo';
 import { toast } from '../../../components/Toast';
@@ -15,7 +13,6 @@ import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { shortenCompanyName } from '../../../lib/shortenName';
 import { useAmountFormat } from '../../../hooks/useAmountFormat';
-import { usePageFabActions } from '../../../hooks/usePageFabActions';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
 import { useAppearanceStore } from '../../../store/appearanceStore';
@@ -23,7 +20,6 @@ import { AlertsBox, usePSXAlerts } from '../components/AlertsBox';
 import { ChartCard } from '../../qse/components/ChartCard';
 import { usePSXDerived } from '../hooks/usePSXDerived';
 import { usePSXStockData } from '../hooks/usePSXStockData';
-import { TransactionRows } from './TransactionsPage';
 
 const INVEST_PALETTE = ['#3d4b58', '#c9a227', '#34c77b', '#3b6bd6', '#8a97a3', '#e5484d', '#7b5cd6', '#2ea3a3'];
 
@@ -175,20 +171,6 @@ function HoldingsCard() {
   );
 }
 
-/** See QSE's `DashboardPage.tsx`'s identical `AddTradeFab` for the full
- * reasoning (user-reported 2026-09-07: "no FAB present to buy a new stock
- * on the exchange dashboard"). */
-function AddTradeFab() {
-  const [open, setOpen] = useState(false);
-  const actions = useMemo(() => [{ label: 'Buy/sell stock', icon: <PlusIcon size={18} />, onClick: () => setOpen(true) }], []);
-  usePageFabActions(actions);
-  return open ? (
-    <Modal title="Add a trade" onClose={() => setOpen(false)}>
-      <TransactionRows />
-    </Modal>
-  ) : null;
-}
-
 export function DashboardPage() {
   const navigate = useNavigate();
   const { workbook, rows, summary, realizedSeries } = usePSXDerived();
@@ -324,7 +306,6 @@ export function DashboardPage() {
         </div>
 
       </div>
-      <AddTradeFab />
     </div>
   );
 }
