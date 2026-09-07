@@ -20,7 +20,7 @@ import { defaultTimezoneForCurrency } from '../../../lib/datetime';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { getMarketPrice } from '../../../lib/calc';
-import { allocationByCategory, balanceUpdateHistory, contributionVsValueSeries, expectedPLRate, fundNetProfit } from '../../../lib/calc/fundsModule';
+import { allocationByCategory, balanceUpdateHistory, contributionVsValueSeries, expectedPLRate, fundNetProfit, projectInvestmentReturn } from '../../../lib/calc/fundsModule';
 import { impliedFundNav } from '../../../lib/calc/fundsDailyHistoryImport';
 import {
   buildFundsImportPlan,
@@ -76,7 +76,7 @@ function emptyFund(defaultCurrency: string): Fund {
  * pre-filled, still choosable from `SideFields`' own dropdown inside the
  * modal. */
 function AddFundFab() {
-  const [open, setOpen] = useState<'fund' | 'transfer' | null>(null);
+  const [open, setOpen] = useState<'fund' | 'transfer' | 'helper' | null>(null);
   const defaultCurrency = useFundsWorkbookStore((s) => s.workbook.settings.defaultCurrency);
   return (
     <>
@@ -84,6 +84,7 @@ function AddFundFab() {
         actions={[
           { label: 'Add a fund', icon: <PlusIcon />, onClick: () => setOpen('fund') },
           { label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen('transfer') },
+          { label: 'Investment helper', icon: <span>🧮</span>, onClick: () => setOpen('helper') },
         ]}
       />
       {open === 'fund' && (
@@ -92,7 +93,107 @@ function AddFundFab() {
         </Modal>
       )}
       {open === 'transfer' && <TransactionEntryModal defaultFinance={{ module: 'funds', currencyCode: defaultCurrency }} onClose={() => setOpen(null)} />}
+      {open === 'helper' && <InvestmentHelperModal onClose={() => setOpen(null)} />}
     </>
+  );
+}
+
+/** User-requested (2026-09-07): "Investment helper calculator amount to
+ * invest in a fund and expected returns on it. allow comparison b/w 2
+ * funds there as well/ may use POPUP." Confirmed via AskUserQuestion
+ * before building: the rate basis is each fund's OWN historical rate (the
+ * same `expectedPLRate()` already powering the "Expected daily/monthly
+ * P/L" stat cards elsewhere on this page, via the new `projectInvestment
+ * Return()` — no new "manual assumed rate" or XIRR-based path), and the
+ * horizon is a fixed Day/Month/Year set shown at once rather than a
+ * custom-duration field.
+ *
+ * A single shared "Amount to invest" applies to BOTH fund slots — an
+ * apples-to-apples comparison ("if I put the same $X into either of
+ * these, which fares better"), not two independently-typed amounts.
+ * Fund B starts unset ("— Compare with another fund —"); picking one adds
+ * a second result panel next to Fund A's.
+ *
+ * Only ACTIVE funds (`isActive !== false`) are offered here — same "hide
+ * from pickers for NEW activity, never from totals" convention every other
+ * "pick where new money goes" picker in this app already follows (see
+ * `SideFields`' own entity lists) — this is squarely a "what if I put NEW
+ * money in" tool, not a historical report, so it fits that rule exactly.
+ * A fund with fewer than 2 price-history points has no rate to project
+ * from at all (`expectedPLRate` returns `null`) — shown as a plain message
+ * rather than a broken/zeroed panel. */
+function InvestmentHelperModal({ onClose }: { onClose: () => void }) {
+  const allFunds = useFundsWorkbookStore((s) => s.workbook.funds);
+  const workbook = useFundsWorkbookStore((s) => s.workbook);
+  const funds = useMemo(() => allFunds.filter((f) => f.isActive !== false), [allFunds]);
+  const [amount, setAmount] = useState(1000);
+  const [fundAId, setFundAId] = useState(funds[0]?.id ?? '');
+  const [fundBId, setFundBId] = useState('');
+
+  const fundA = funds.find((f) => f.id === fundAId);
+  const fundB = funds.find((f) => f.id === fundBId);
+
+  const panel = (fund: Fund | undefined) => {
+    if (!fund) return null;
+    const rate = expectedPLRate(fund.id, workbook.transactions, workbook.priceHistory);
+    const projected = rate ? projectInvestmentReturn(amount, rate) : null;
+    return (
+      <div key={fund.id} className="card" style={{ padding: 12, flex: 1, minWidth: 220 }}>
+        <div className="footer-note" style={{ marginBottom: 6 }}>{fund.name} ({fund.currencyCode})</div>
+        {!projected ? (
+          <p className="footer-note" style={{ margin: 0 }}>Not enough price history yet to project returns for this fund.</p>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px,1fr))', gap: 8 }}>
+            <div className="stat-card card" style={hueStyle(projected.dailyAmount >= 0 ? 'var(--profit)' : 'var(--loss)')}>
+              <div className="label">Day</div>
+              <MoneyValue n={projected.dailyValue} currency={fund.currencyCode} after={` (${projected.dailyAmount >= 0 ? '+' : ''}${fmtMoney(projected.dailyAmount, fund.currencyCode)})`} />
+            </div>
+            <div className="stat-card card" style={hueStyle(projected.monthlyAmount >= 0 ? 'var(--profit)' : 'var(--loss)')}>
+              <div className="label">Month</div>
+              <MoneyValue n={projected.monthlyValue} currency={fund.currencyCode} after={` (${projected.monthlyAmount >= 0 ? '+' : ''}${fmtMoney(projected.monthlyAmount, fund.currencyCode)})`} />
+            </div>
+            <div className="stat-card card" style={hueStyle(projected.yearlyAmount >= 0 ? 'var(--profit)' : 'var(--loss)')}>
+              <div className="label">Year</div>
+              <MoneyValue n={projected.yearlyValue} currency={fund.currencyCode} after={` (${projected.yearlyAmount >= 0 ? '+' : ''}${fmtMoney(projected.yearlyAmount, fund.currencyCode)})`} />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <Modal title="Investment helper" onClose={onClose}>
+      <Tooltip text="Projects what a hypothetical investment might return, based on each fund's own real historical average daily/monthly growth rate — the same rate already shown as 'Expected daily/monthly P/L' elsewhere on this page. Not a promise of future returns.">
+        <p className="footer-note" style={{ marginTop: 0, cursor: 'pointer' }}>How this works</p>
+      </Tooltip>
+      {!funds.length ? (
+        <p className="footer-note">No open funds yet — add one first.</p>
+      ) : (
+        <>
+          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+            <Field label="Amount to invest" width={150} required>
+              <TextInput type="number" step="0.01" value={amount || ''} onChange={(e) => setAmount(Number(e.target.value))} />
+            </Field>
+            <Field label="Fund A" width={200}>
+              <Select value={fundAId} onChange={(e) => setFundAId(e.target.value)}>
+                {funds.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+              </Select>
+            </Field>
+            <Field label="Fund B (optional)" width={220}>
+              <Select value={fundBId} onChange={(e) => setFundBId(e.target.value)}>
+                <option value="">— Compare with another fund —</option>
+                {funds.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+              </Select>
+            </Field>
+          </div>
+          <div className="row" style={{ gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
+            {panel(fundA)}
+            {panel(fundB)}
+          </div>
+        </>
+      )}
+    </Modal>
   );
 }
 

@@ -6345,6 +6345,42 @@ FinanceManager live link:
   fix is entirely in which funds the existing `expectedPLRate()` gets called for, not in the
   function itself), so no new unit tests — `npx tsc -b` / `npm run test` (550 tests, unchanged
   — UI-only) / `npm run build` all clean.
+- **Funds: "Investment helper" calculator, comparing 2 funds side by side, user-requested
+  (2026-09-07) — see README Done item 243.** User: "Investment helper calculator amount to
+  invest in a fund and expected returns on it. allow comparison b/w 2 funds there as well/ may
+  use POPUP." Confirmed the two real design forks via `AskUserQuestion` before building, per
+  this project's own standing plan-and-approve rule: the rate basis is each fund's OWN
+  historical rate (the same `expectedPLRate()` already powering the "Expected daily/monthly
+  P/L" stat cards — not XIRR, not a manually-typed assumed rate), and the horizon is a fixed
+  Day/Month/Year set shown at once, not a custom-duration field. New `projectInvestmentReturn(
+  amount, rate)` in `lib/calc/fundsModule.ts` scales an `ExpectedPLRate`'s PERCENTAGES (not its
+  dollar amounts, which are tied to that fund's own current actual invested balance) onto a
+  hypothetical new amount — a yearly figure (`monthlyAmount * 12`) extends the same simple,
+  non-compounding extrapolation `expectedPLRate` itself already uses for its own monthly figure,
+  deliberately not compounded so it stays exactly what `expectedPLRate`'s own framing already
+  is: "an average of what already happened," not a promise. New `InvestmentHelperModal`
+  (`FundsPage.tsx`), reachable as a third action on the Funds landing page's existing FAB
+  (alongside "Add a fund"/"Transfers") — matching the user's own "may use POPUP" suggestion and
+  this app's established FAB+popup convention for a "rare" action. One shared "Amount to
+  invest" field applies to both fund slots for an apples-to-apples comparison; Fund B starts
+  unset ("— Compare with another fund —") and adds a second result panel once picked. Only
+  ACTIVE funds (`isActive !== false`) are offered in either picker — same "hide from pickers for
+  NEW activity, never from totals" convention every other "pick where new money goes" picker in
+  this app already follows (`SideFields`' own entity lists) — this is squarely a "what if I put
+  new money in" tool, so it fits that rule exactly (distinct from the SAME session's earlier fix,
+  which was about NOT projecting from an EXISTING closed position — a different, narrower
+  question this feature doesn't touch). A fund with fewer than 2 price-history points shows "Not
+  enough price history yet to project returns for this fund" instead of a broken/zeroed panel.
+  New tests: `fundsModule.test.ts` gained a `projectInvestmentReturn` block (3 cases: scaling
+  onto a different hypothetical amount than the rate's own history, a negative/loss rate, and a
+  zero rate). Verified live via Playwright with 2 seeded funds sharing a currency (Fund A: 1%
+  daily/30.44% monthly rate, Fund B: 0.2% daily/6.088% monthly — hand-computed from their real
+  seeded NAV history) plus a closed third fund: confirmed the closed fund never appears in
+  either picker; with $5000 entered, Fund A's Day/Month/Year panel showed exactly +50.00/
+  +1,522.00/+18,264.00 (values 5.05k/6.52k/23.26k) and Fund B's showed exactly +10.00/+304.40/
+  +3,652.80 (values 5.01k/5.3k/8.65k) — every figure matching hand-traced math exactly, side by
+  side in the same modal. Zero console errors. `npx tsc -b` / `npm run test` (553 tests, 3 new)
+  / `npm run build` all clean.
 
 ## Pending
 
