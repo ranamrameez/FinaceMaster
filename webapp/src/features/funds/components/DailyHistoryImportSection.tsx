@@ -1,10 +1,12 @@
 import { useRef, useState } from 'react';
 import { Card, MoneyValue } from '../../../components/Card';
+import { CategorySelect } from '../../../components/CategorySelect';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { Notice } from '../../../components/Notice';
 import { PlusIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { UNCATEGORIZED_ID } from '../../../lib/categories';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
@@ -26,7 +28,6 @@ import type { Fund } from '../../../types/fundsWorkbook';
 import { gridAutoStyle } from '../../../lib/gridStyle';
 
 const uid = () => crypto.randomUUID();
-const CATEGORIES: Fund['category'][] = ['Equity', 'Debt', 'Hybrid', 'International', 'Other'];
 
 interface SheetPlan {
   sheetName: string;
@@ -63,7 +64,7 @@ export function DailyHistoryImportSection() {
   const [ignoredSheets, setIgnoredSheets] = useState<string[]>([]);
   const [currencyCode, setCurrencyCode] = useState(lastCurrency);
   const currencyOptions = useEnabledCurrencies(currencyCode);
-  const [defaultCategory, setDefaultCategory] = useState<Fund['category']>('Other');
+  const [defaultCategoryID, setDefaultCategoryID] = useState<string>(UNCATEGORIZED_ID);
   const [busy, setBusy] = useState(false);
 
   const onFile = (file: File) => {
@@ -174,7 +175,7 @@ export function DailyHistoryImportSection() {
           name: p.newName.trim() || p.sheetName,
           code: p.newCode.trim().toUpperCase(),
           platform: p.newPlatform.trim(),
-          category: defaultCategory,
+          categoryID: defaultCategoryID === UNCATEGORIZED_ID ? undefined : defaultCategoryID,
           currencyCode,
         };
         return { fundId, newFund, reconstruction: p.reconstruction };
@@ -219,10 +220,8 @@ export function DailyHistoryImportSection() {
                 {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
               </Select>
             </Field>
-            <Field label="Category for new funds" width={160}>
-              <Select value={defaultCategory} onChange={(e) => setDefaultCategory(e.target.value as Fund['category'])}>
-                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-              </Select>
+            <Field label="Category for new funds" width={180}>
+              <CategorySelect value={defaultCategoryID} onChange={setDefaultCategoryID} />
             </Field>
           </>
         )}

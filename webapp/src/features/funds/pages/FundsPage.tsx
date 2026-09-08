@@ -23,7 +23,10 @@ import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { getMarketPrice } from '../../../lib/calc';
 import { pendingShareDeltaByTicker } from '../../../lib/calc/positions';
-import { allocationByCategory, balanceUpdateHistory, contributionVsValueSeries, expectedPLRate, fundNetProfit, projectInvestmentReturn } from '../../../lib/calc/fundsModule';
+import { allocationByCategory, balanceUpdateHistory, contributionVsValueSeries, expectedPLRate, fundCategoryLabel, fundNetProfit, projectInvestmentReturn } from '../../../lib/calc/fundsModule';
+import { CategorySelect } from '../../../components/CategorySelect';
+import { useCategoryStore } from '../../../store/categoryStore';
+import { UNCATEGORIZED_ID } from '../../../lib/categories';
 import { impliedFundNav } from '../../../lib/calc/fundsDailyHistoryImport';
 import {
   buildFundsImportPlan,
@@ -58,10 +61,9 @@ import { gridAutoStyle } from '../../../lib/gridStyle';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const uid = () => crypto.randomUUID();
-const CATEGORIES: Fund['category'][] = ['Equity', 'Debt', 'Hybrid', 'International', 'Other'];
 
 function emptyFund(defaultCurrency: string): Fund {
-  return { id: '', name: '', code: '', platform: '', category: 'Equity', currencyCode: defaultCurrency };
+  return { id: '', name: '', code: '', platform: '', currencyCode: defaultCurrency };
 }
 
 /* ============================== Add fund ============================== */
@@ -239,10 +241,8 @@ function AddFundForm({ onSaved }: { onSaved?: () => void } = {}) {
         <Field label="Invested via" width={140}>
           <TextInput value={f.platform} onChange={(e) => setF({ ...f, platform: e.target.value })} placeholder="e.g. Fidelity" />
         </Field>
-        <Field label="Category" width={130}>
-          <Select value={f.category} onChange={(e) => setF({ ...f, category: e.target.value as Fund['category'] })}>
-            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </Select>
+        <Field label="Category" width={160}>
+          <CategorySelect value={f.categoryID ?? UNCATEGORIZED_ID} onChange={(categoryID) => setF({ ...f, categoryID })} />
         </Field>
         <Field label="Currency" width={100} required>
           <Select value={f.currencyCode} onChange={(e) => { setF({ ...f, currencyCode: e.target.value }); setLastCurrency(e.target.value); }}>
@@ -355,6 +355,7 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
   const setWorkbook = useFundsWorkbookStore((s) => s.setWorkbook);
   const ensureSignedIn = useEnsureSignedIn();
   const { positions, fundXIRR, workbook } = useFundsDerived();
+  const categoryRegistry = useCategoryStore((s) => s.workbook.categories);
   const [showClosed, setShowClosed] = useState(false);
   const closedCount = useMemo(() => allFunds.filter((f) => f.isActive === false).length, [allFunds]);
   const funds = useMemo(() => (showClosed ? allFunds : allFunds.filter((f) => f.isActive !== false)), [allFunds, showClosed]);
@@ -391,7 +392,7 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
     switch (col) {
       case 'idx': return r.idx;
       case 'favorite': return r.fund.isFavorite ? 1 : 0;
-      case 'category': return r.fund.category;
+      case 'category': return fundCategoryLabel(r.fund, categoryRegistry);
       case 'units': return r.units;
       case 'value': return r.value;
       case 'profit': return r.profitPct;
@@ -438,7 +439,7 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
                 {r.fund.isActive === false && <span className="pill-warn" style={{ fontSize: 10, marginLeft: 6 }}>Closed</span>}
               </td>
               <td>{r.fund.code}</td>
-              <td>{r.fund.category}</td>
+              <td>{fundCategoryLabel(r.fund, categoryRegistry)}</td>
               <td>{fmt(r.units, 2)}</td>
               <td>{fmtMoney(r.value, r.fund.currencyCode)}</td>
               <td className={r.profit >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(r.profit, r.fund.currencyCode)} ({r.profitPct.toFixed(1)}%)</td>
@@ -507,7 +508,7 @@ function SnapshotImportSection() {
   const [snapshotDate, setSnapshotDate] = useState(today());
   const [currencyCode, setCurrencyCode] = useState(lastCurrency);
   const currencyOptions = useEnabledCurrencies(currencyCode);
-  const [defaultCategory, setDefaultCategory] = useState<Fund['category']>('Other');
+  const [defaultCategoryID, setDefaultCategoryID] = useState<string>(UNCATEGORIZED_ID);
   const [busy, setBusy] = useState(false);
 
   const plan: FundSnapshotPlanRow[] = useMemo(
@@ -546,7 +547,11 @@ function SnapshotImportSection() {
     if (!(await ensureSignedIn('Sign in to import funds.'))) return;
     setBusy(true);
     try {
-      const { newFunds, transactions, navUpdates } = materializeFundsImport(plan, { snapshotDate, currencyCode, defaultCategory });
+      const { newFunds, transactions, navUpdates } = materializeFundsImport(plan, {
+        snapshotDate,
+        currencyCode,
+        defaultCategoryID: defaultCategoryID === UNCATEGORIZED_ID ? undefined : defaultCategoryID,
+      });
       if (newFunds.length) setWorkbook({ ...workbook, funds: [...workbook.funds, ...newFunds] });
       if (transactions.length) addTransactions(transactions);
       navUpdates.forEach((u) => setMarketPrice(u.ticker, u.price));
@@ -591,10 +596,8 @@ function SnapshotImportSection() {
                 {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
               </Select>
             </Field>
-            <Field label="Category for new funds" width={160}>
-              <Select value={defaultCategory} onChange={(e) => setDefaultCategory(e.target.value as Fund['category'])}>
-                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-              </Select>
+            <Field label="Category for new funds" width={180}>
+              <CategorySelect value={defaultCategoryID} onChange={setDefaultCategoryID} />
             </Field>
           </>
         )}
@@ -654,6 +657,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
   const updatePricePoint = useFundsWorkbookStore((s) => s.updatePricePoint);
   const deletePricePoint = useFundsWorkbookStore((s) => s.deletePricePoint);
   const ensureSignedIn = useEnsureSignedIn();
+  const categoryRegistry = useCategoryStore((s) => s.workbook.categories);
 
   const [editingFund, setEditingFund] = useState(false);
   const [editFund, setEditFund] = useState<Fund>(fund);
@@ -915,9 +919,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                   <TextInput value={editFund.name} onChange={(e) => setEditFund({ ...editFund, name: e.target.value })} />
                   <TextInput value={editFund.code} onChange={(e) => setEditFund({ ...editFund, code: e.target.value.toUpperCase() })} />
                   <TextInput value={editFund.platform} onChange={(e) => setEditFund({ ...editFund, platform: e.target.value })} />
-                  <Select value={editFund.category} onChange={(e) => setEditFund({ ...editFund, category: e.target.value as Fund['category'] })}>
-                    {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </Select>
+                  <CategorySelect value={editFund.categoryID ?? UNCATEGORIZED_ID} onChange={(categoryID) => setEditFund({ ...editFund, categoryID })} />
                   <Select value={editFund.currencyCode} onChange={(e) => setEditFund({ ...editFund, currencyCode: e.target.value })}>
                     {editFundCurrencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
                   </Select>
@@ -935,7 +937,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                     {fund.name}
                     {fund.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Closed</span>}
                   </div>
-                  <div className="text-muted">{fund.code} · {fund.platform} · {fund.category} · {fund.currencyCode}</div>
+                  <div className="text-muted">{fund.code} · {fund.platform} · {fundCategoryLabel(fund, categoryRegistry)} · {fund.currencyCode}</div>
                 </div>
                 <div className="row" style={{ gap: 8 }}>
                   <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => { setEditFund(fund); setEditingFund(true); }} />
@@ -1443,6 +1445,7 @@ function FundsTransfersSection() {
 function AnalyticsTab() {
   const funds = useFundsWorkbookStore((s) => s.workbook.funds);
   const { workbook } = useFundsDerived();
+  const categoryRegistry = useCategoryStore((s) => s.workbook.categories);
   // Charts read CSS-var-derived colors — subscribe so this re-renders (and
   // recomputes those colors) on a live theme switch, same pattern as every
   // other chart-bearing page in this app.
@@ -1457,8 +1460,8 @@ function AnalyticsTab() {
   const selectedFund = funds.find((f) => f.id === fundId) ?? funds[0] ?? null;
 
   const allocation = useMemo(
-    () => allocationByCategory(funds, workbook.transactions, workbook.marketPrices, effectiveCurrency),
-    [funds, workbook.transactions, workbook.marketPrices, effectiveCurrency],
+    () => allocationByCategory(funds, workbook.transactions, workbook.marketPrices, effectiveCurrency, categoryRegistry),
+    [funds, workbook.transactions, workbook.marketPrices, effectiveCurrency, categoryRegistry],
   );
   const categories = Object.keys(allocation);
 

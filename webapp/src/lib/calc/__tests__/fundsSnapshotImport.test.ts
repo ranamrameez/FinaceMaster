@@ -87,7 +87,7 @@ describe('buildFundsImportPlan + materializeFundsImport', () => {
     const { newFunds, transactions, navUpdates } = materializeFundsImport(plan, {
       snapshotDate: '2026-08-25',
       currencyCode: 'PKR',
-      defaultCategory: 'Other',
+      defaultCategoryID: undefined,
     });
     expect(newFunds).toHaveLength(8);
 
@@ -105,5 +105,11 @@ describe('buildFundsImportPlan + materializeFundsImport', () => {
 
     // The spreadsheet's own "All Totals" Current Balance row.
     expect(totalValue).toBeCloseTo(6194361.86, 1);
+  });
+
+  it('writes categoryID (not the deprecated fixed-enum category) onto new funds when one is picked', () => {
+    const { newFunds } = materializeFundsImport(plan, { snapshotDate: '2026-08-25', currencyCode: 'PKR', defaultCategoryID: 'cat_growth' });
+    expect(newFunds.every((f) => f.categoryID === 'cat_growth')).toBe(true);
+    expect(newFunds.every((f) => f.category === undefined)).toBe(true);
   });
 });

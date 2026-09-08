@@ -5,7 +5,24 @@ export interface Fund {
   name: string;
   code: string; // fund's ticker/symbol equivalent
   platform: string; // "Fidelity", "Al Rajhi Capital", ...
-  category: 'Equity' | 'Debt' | 'Hybrid' | 'International' | 'Other';
+  /** @deprecated (2026-09-08) — Funds' one deliberate deviation from this
+   * project's own "category fields must be free-form" rule (MODULES_PLAN.md),
+   * since Analytics' "Allocation by category" chart needed *some* grouping
+   * before the shared category registry existed. Superseded by `categoryID`
+   * below (README Done item 248, mirroring the identical Subscriptions
+   * retrofit — Done item 245) — kept, still populated on old records, and
+   * read as a display fallback when `categoryID` is unset, so a fund saved
+   * before this change keeps showing its real asset-class label instead of
+   * silently becoming "Uncategorized". Never written to by new code. */
+  category?: 'Equity' | 'Debt' | 'Hybrid' | 'International' | 'Other';
+  /** Points into the app-wide shared category registry (`lib/categories.ts`)
+   * — the same one Cash/Bank/Rentals/Subscriptions use, per the user's own
+   * "single shared category list used everywhere + per-user customization"
+   * request. Undefined until the user picks/renames a category via
+   * `CategorySelect`; display code falls back to the legacy `category`
+   * enum string above, then to "Uncategorized" — see `fundCategoryLabel()`
+   * in `features/funds/pages/FundsPage.tsx`. */
+  categoryID?: string;
   /** Per-fund, not per-module. */
   currencyCode: string;
   /** User-requested (2026-09-03): "Funds can also be closed!" — same
