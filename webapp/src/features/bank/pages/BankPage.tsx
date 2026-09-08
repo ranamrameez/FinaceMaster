@@ -1163,6 +1163,27 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
   const ledger = useMemo(() => accountRunningLedger(account, transactions), [account, transactions]);
   const monthlyFlow = useMemo(() => bankMonthlyFlow(transactions, [account.id]), [transactions, account.id]);
 
+  // Pending item 115(d): "charts should be interactive... right now they are
+  // dumping lifetime data all at once" — a from/to month range narrows the
+  // two full-history charts (Balance over time, Income vs. spend by month).
+  // Deliberately a local `<input type="month">` pair rather than reusing
+  // QSE/PSX's `ChartFilterBar`/`ChartFilter` (lib/calc/chartFilters.ts) —
+  // that type's `tickers` field has no meaning for a bank account, and the
+  // shapes here (a running ledger, a `{month,income,expense}[]` series)
+  // don't match its `{months,values}` helpers either. The Category
+  // breakdown card + its own ◀/▶ month nav below is a separate, more
+  // specific tool (one exact month at a time) and is left untouched.
+  const [fromMonth, setFromMonth] = useState('');
+  const [toMonth, setToMonth] = useState('');
+  const filteredLedger = useMemo(
+    () => ledger.filter((r) => (!fromMonth || r.tx.date.slice(0, 7) >= fromMonth) && (!toMonth || r.tx.date.slice(0, 7) <= toMonth)),
+    [ledger, fromMonth, toMonth],
+  );
+  const filteredMonthlyFlow = useMemo(
+    () => monthlyFlow.filter((f) => (!fromMonth || f.month >= fromMonth) && (!toMonth || f.month <= toMonth)),
+    [monthlyFlow, fromMonth, toMonth],
+  );
+
   const [monthOffset, setMonthOffset] = useState(0);
   const selectedMonth = monthRange(monthOffset, monthOffset)[0];
   const selectedMonthLabel = new Date(`${selectedMonth}-01`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
@@ -1182,23 +1203,33 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
 
   return (
     <div>
+      <div className="row" style={{ gap: 8, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
+        <span className="text-muted">Chart range:</span>
+        <input type="month" value={fromMonth} onChange={(e) => setFromMonth(e.target.value)} aria-label="From month" />
+        <span className="text-muted">to</span>
+        <input type="month" value={toMonth} onChange={(e) => setToMonth(e.target.value)} aria-label="To month" />
+        {(fromMonth || toMonth) && (
+          <button type="button" className="btn secondary small" onClick={() => { setFromMonth(''); setToMonth(''); }}>Clear</button>
+        )}
+        <Tooltip text="Narrows the Balance over time and Income vs. spend charts below to this window. Doesn't affect Category breakdown, which already has its own month navigation, or any lifetime total shown elsewhere." />
+      </div>
       <div className="grid-auto" style={{ ...gridAutoStyle(300, 16), marginBottom: 16 }}>
-        <ChartCard flat title="Balance over time">
+        <ChartCard flat title="Balance over time" empty={!filteredLedger.length}>
           <Line
             data={{
-              labels: ledger.map((r) => r.tx.date),
-              datasets: [{ label: 'Balance', data: ledger.map((r) => r.balance), borderColor: '#5aa9c9', backgroundColor: '#5aa9c933', fill: true, tension: 0.2 }],
+              labels: filteredLedger.map((r) => r.tx.date),
+              datasets: [{ label: 'Balance', data: filteredLedger.map((r) => r.balance), borderColor: '#5aa9c9', backgroundColor: '#5aa9c933', fill: true, tension: 0.2 }],
             }}
             options={{ plugins: { legend: { display: false }, datalabels: dlLine((v) => fmtMoney(v, account.currencyCode)) } }}
           />
         </ChartCard>
-        <ChartCard flat title="Income vs. spend by month">
+        <ChartCard flat title="Income vs. spend by month" empty={!filteredMonthlyFlow.length}>
           <Bar
             data={{
-              labels: monthlyFlow.map((f) => f.month),
+              labels: filteredMonthlyFlow.map((f) => f.month),
               datasets: [
-                { label: 'Income', data: monthlyFlow.map((f) => f.income), backgroundColor: cssVar('--profit') || '#3ecf8e' },
-                { label: 'Expense', data: monthlyFlow.map((f) => f.expense), backgroundColor: cssVar('--loss') || '#e5484d' },
+                { label: 'Income', data: filteredMonthlyFlow.map((f) => f.income), backgroundColor: cssVar('--profit') || '#3ecf8e' },
+                { label: 'Expense', data: filteredMonthlyFlow.map((f) => f.expense), backgroundColor: cssVar('--loss') || '#e5484d' },
               ],
             }}
             options={{ plugins: { datalabels: dlBarV((v) => fmtMoney(v, account.currencyCode)) } }}
