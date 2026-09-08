@@ -59,7 +59,7 @@ export function TransactionRows() {
   return (
     <div>
       {rows.map((r, i) => (
-        <div key={i} className="row" style={{ gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+        <div key={i} className="row entry-row" style={{ gap: 8, flexWrap: 'wrap' }}>
           <Field label={i === 0 ? 'Date' : undefined}>
             <input
               type="date"

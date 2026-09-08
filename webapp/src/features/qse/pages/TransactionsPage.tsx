@@ -58,7 +58,7 @@ export function TransactionRows() {
     <div>
       {/* README item 10: enter multiple transactions at once, not just one row at a time. */}
       {rows.map((r, i) => (
-        <div key={i} className="row" style={{ gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+        <div key={i} className="row entry-row" style={{ gap: 8, flexWrap: 'wrap' }}>
           <Field label={i === 0 ? 'Date' : undefined}>
             <input type="date" value={r.date} onChange={(e) => update(i, { date: e.target.value })} />
           </Field>

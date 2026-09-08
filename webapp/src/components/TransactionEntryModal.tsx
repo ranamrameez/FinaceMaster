@@ -106,13 +106,11 @@ function emptyRow(key: number, finance: LinkSideConfig, currencyCode?: string): 
  * number of rows changes as they're added/removed. */
 function TxRowFields({
   row,
-  isFirst,
   onChange,
   onRemove,
   canRemove,
 }: {
   row: TxRow;
-  isFirst: boolean;
   onChange: (row: TxRow) => void;
   onRemove: () => void;
   canRemove: boolean;
@@ -125,7 +123,7 @@ function TxRowFields({
   const pairSupported = !row.linked || (isSupportedLinkPair(row.finance.module, row.other.module) && isSupportedLinkPair(row.other.module, row.finance.module));
 
   return (
-    <div style={{ borderTop: isFirst ? undefined : '1px solid var(--border)', paddingTop: isFirst ? 0 : 12, marginTop: isFirst ? 0 : 12 }}>
+    <div className="entry-row">
       <SideFields
         label="Finance"
         cfg={row.finance}
@@ -349,11 +347,10 @@ export function TransactionEntryModal({ defaultFinance, onClose }: { defaultFina
 
   return (
     <Modal title="Transfers" onClose={onClose}>
-      {rows.map((r, i) => (
+      {rows.map((r) => (
         <TxRowFields
           key={r.key}
           row={r}
-          isFirst={i === 0}
           onChange={(row) => updateRow(r.key, row)}
           onRemove={() => removeRow(r.key)}
           canRemove={rows.length > 1}
