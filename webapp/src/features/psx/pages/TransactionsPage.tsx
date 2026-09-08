@@ -73,7 +73,6 @@ export function TransactionRows() {
               value={r.ticker}
               onChange={(e) => update(i, { ticker: e.target.value.toUpperCase() })}
               list={PSX_TICKER_DATALIST_ID}
-              style={{ width: 80 }}
             />
           </Field>
           <Field label={i === 0 ? 'Action' : undefined}>
@@ -91,7 +90,6 @@ export function TransactionRows() {
               placeholder="Shares"
               value={r.shares || ''}
               onChange={(e) => update(i, { shares: Number(e.target.value) })}
-              style={{ width: 90 }}
             />
           </Field>
           <Field label={i === 0 ? 'Price' : undefined} required={i === 0}>
@@ -101,7 +99,6 @@ export function TransactionRows() {
               placeholder="Price"
               value={r.price || ''}
               onChange={(e) => update(i, { price: Number(e.target.value) })}
-              style={{ width: 90 }}
             />
           </Field>
           <FeeModeControl
@@ -122,7 +119,10 @@ export function TransactionRows() {
             onTimeChange={(time) => update(i, { time })}
             onTimezoneChange={(timezone) => update(i, { timezone })}
           />
-          <button className="btn secondary small" onClick={() => setRows((rs) => rs.filter((_, idx) => idx !== i))}>
+          <button
+            className="btn secondary small ml-auto align-end"
+            onClick={() => setRows((rs) => rs.filter((_, idx) => idx !== i))}
+          >
             <TrashIcon size={12} />Remove
           </button>
         </div>
@@ -131,7 +131,9 @@ export function TransactionRows() {
         <button className="btn secondary" onClick={() => setRows((rs) => [...rs, emptyRow()])}>
           <PlusIcon />Add row
         </button>
-        <button className="btn" onClick={submit}>
+      </div>
+      <div className="d-flex justify-center" style={{ marginTop: 16 }}>
+        <button className="btn" style={{ minWidth: 220 }} onClick={submit}>
           <SaveIcon />Save {rows.length > 1 ? `${rows.length} transactions` : 'transaction'}
         </button>
       </div>
