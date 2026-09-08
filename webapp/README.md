@@ -6715,6 +6715,26 @@ FinanceManager live link:
   pending"), the row-level "Pending" pill rendered on both, and clicking "Mark cleared"
   correctly hit the real sign-in gate rather than silently writing while signed out — zero
   console errors. `npx tsc -b` / `npm run test` (562 tests, 8 new) / `npm run build` all clean.
+239. **QSE/PSX Dashboard: "Current Deposit" and "Deposits vs. Net Worth" stat cards
+  (2026-09-08, user-requested).** "should show Current Deposit (Deposits - Withdrawals) &
+  Current Deposits vs Current NET Worth (Cash Bal + Port. value)." `summary.totalInward`/
+  `totalOutward`/`netWorth` (already `cashBalance + portfolioValue`, matching the user's own
+  definition exactly) were all already computed by `cashSummary()` — this was purely two new
+  `StatCard`s reading already-available fields, no new calc logic, on both exchanges.
+  "Deposits vs. Net Worth" is hued profit/loss-style (green when Net Worth ≥ Current Deposit,
+  red otherwise), matching the convention every other P/L-shaped stat card in the app already
+  uses. **A real test-methodology trap worth remembering, not an app bug**: a first verification
+  pass seeded QSE `settings` with only `{currency}`, missing `feePct`/`minFee`/`tick`/
+  `depositFee` — the exact same "incomplete settings → `calcFee` silently returns `NaN`
+  throughout" pitfall this file has already documented once before (the Trade Planner
+  per-ticker-analysis investigation) — which made the new "Deposits vs. Net Worth" card (and,
+  it turned out, several unrelated pre-existing fee/P&L cells on the same page) render "—"
+  purely because `summary.netWorth` itself came back `NaN`. Re-verified with a complete,
+  schema-accurate settings object (matching `defaultWorkbook.ts`'s real `DEFAULT_SETTINGS`) and
+  both cards computed correctly (Net Worth 4.53k QAR, Current Deposit 4.5k QAR, Deposits vs. Net
+  Worth 29 QAR for a seeded scenario) — confirming the "—" was a test-seed artifact, not a real
+  bug in the new cards. `npx tsc -b` / `npm run test` (562 tests, unchanged) / `npm run build`
+  all clean.
 
 ## Pending
 
@@ -7555,12 +7575,6 @@ or a design decision before more code, not guessed at further:**
        module's pending items alongside its planned ones (both are "money not fully settled
        yet," from the user's point of view) — not designed yet, flagged here rather than
        silently conflated with Planning during this pass.
-121. **QSE/PSX Dashboard: "Current Deposit" and "Deposits vs. Net Worth" stat cards
-     (2026-09-08, user-requested)** — "should show Current Deposit (Deposits - Withdrawals) &
-     Current Deposits vs Current NET Worth (Cash Bal + Port. value)." `summary.totalInward`/
-     `totalOutward`/`netWorth` (already `cashBalance + portfolioValue`, matching the user's own
-     definition exactly) are all already computed by `cashSummary()` — this is two new
-     `StatCard`s reading already-available fields, not new calc logic. Not yet built.
 122. **Trade Transactions: sold price / lot P&L / overall avg-cost P&L — investigate what's
      actually missing (2026-09-08, user-requested).** The user's exact ask ("show the sold
      price and PL w.r.t. that lot's buy price, as well as overall PL according to the Buy avg")
@@ -7584,10 +7598,11 @@ or a design decision before more code, not guessed at further:**
      the highest-traffic Amount fields first (Trade Transactions, TransactionEntryModal, Trade
      Calculator), same incremental verify-per-surface discipline as every other app-wide
      rollout in this project.
-124. **Banded (striped) table rows app-wide (2026-09-08, user-requested)** — small, mechanical:
-     a `tbody tr:nth-child(even)` background tint in `theme.css`, themed for both light/dark
-     (same token-based approach every other themed rule in this file already uses). Not yet
-     built.
+~~124. Banded (striped) table rows app-wide~~ — **already built**, checked before assuming it
+     needed work (same "check git history/live code before assuming it needs work" discipline
+     this file has repeated many times): `theme.css`'s `tbody tr:nth-child(even){background:
+     color-mix(in srgb, var(--panel-2) 55%, var(--panel));}` (its own comment cites an earlier
+     "item 14" user report) already applies this app-wide, with no competing override found.
 125. **Inter-currency transfer auto-fill from cached FX rate (2026-09-08, user-requested,
      design confirmed via `AskUserQuestion`)** — "we should allow the automated editable
      converted values." Confirmed: auto-fill the "to" amount from the existing `lib/fx.ts`
