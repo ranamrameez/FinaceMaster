@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Property Management - Greenwood Heights</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700&amp;family=Work+Sans:wght@400;500;600&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-surface-variant": "#45464d",
+                        "primary-container": "#131b2e",
+                        "surface-container": "#e5eeff",
+                        "on-tertiary-fixed": "#2a1700",
+                        "on-error-container": "#93000a",
+                        "on-primary-container": "#7c839b",
+                        "surface-tint": "#565e74",
+                        "primary-fixed": "#dae2fd",
+                        "inverse-surface": "#213145",
+                        "on-secondary": "#ffffff",
+                        "surface-container-highest": "#d3e4fe",
+                        "on-tertiary-container": "#b87500",
+                        "inverse-on-surface": "#eaf1ff",
+                        "background": "#f8f9ff",
+                        "outline": "#76777d",
+                        "on-secondary-fixed": "#002113",
+                        "surface-variant": "#d3e4fe",
+                        "primary-fixed-dim": "#bec6e0",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-fixed": "#131b2e",
+                        "on-tertiary": "#ffffff",
+                        "secondary-container": "#6cf8bb",
+                        "on-secondary-fixed-variant": "#005236",
+                        "on-tertiary-fixed-variant": "#653e00",
+                        "surface-container-low": "#eff4ff",
+                        "surface-bright": "#f8f9ff",
+                        "inverse-primary": "#bec6e0",
+                        "error-container": "#ffdad6",
+                        "on-background": "#0b1c30",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "outline-variant": "#c6c6cd",
+                        "on-surface": "#0b1c30",
+                        "error": "#ba1a1a",
+                        "on-error": "#ffffff",
+                        "tertiary": "#000000",
+                        "primary": "#000000",
+                        "surface": "#f8f9ff",
+                        "tertiary-container": "#2a1700",
+                        "on-secondary-container": "#00714d",
+                        "on-primary": "#ffffff",
+                        "secondary": "#006c49",
+                        "secondary-fixed-dim": "#4edea3",
+                        "secondary-fixed": "#6ffbbe",
+                        "tertiary-fixed-dim": "#ffb95f",
+                        "surface-dim": "#cbdbf5",
+                        "tertiary-fixed": "#ffddb8",
+                        "surface-container-high": "#dce9ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "md": "24px",
+                        "base": "4px",
+                        "sm": "16px",
+                        "xl": "80px",
+                        "xs": "8px",
+                        "container-max": "1440px",
+                        "gutter": "24px",
+                        "lg": "48px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Manrope"],
+                        "display-lg": ["Manrope"],
+                        "label-caps": ["Work Sans"],
+                        "data-tabular": ["JetBrains Mono"],
+                        "body-sm": ["Work Sans"],
+                        "body-md": ["Work Sans"],
+                        "body-lg": ["Work Sans"],
+                        "headline-sm": ["Manrope"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "data-tabular": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "headline-sm": ["24px", { "lineHeight": "32px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-fill {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md antialiased overflow-x-hidden min-h-screen">
+<!-- TopAppBar -->
+<header class="fixed top-0 right-0 w-full md:w-[calc(100%-16rem)] h-20 bg-surface dark:bg-background border-b border-outline-variant dark:border-outline flex justify-between items-center px-lg z-40 transition-all duration-200 ease-in-out">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors hidden md:block" data-icon="search">search</span>
+<input class="hidden md:block bg-transparent border-none focus:ring-0 text-body-sm text-on-surface placeholder:text-on-surface-variant/70 w-64" placeholder="Search properties..." type="text"/>
+<div class="md:hidden flex items-center gap-xs text-primary font-bold font-headline-sm">
+<div class="w-8 h-8 rounded-lg bg-primary text-on-primary flex items-center justify-center font-bold text-lg">W</div>
+                WealthPro
+            </div>
+</div>
+<div class="flex items-center gap-md">
+<div class="hidden md:flex gap-sm">
+<a class="text-on-surface-variant hover:text-primary transition-colors font-body-sm active:opacity-80 pb-1 cursor-pointer" href="#">USD</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors font-body-sm active:opacity-80 pb-1 cursor-pointer" href="#">EUR</a>
+<a class="text-primary font-bold border-b-2 border-primary pb-1 cursor-pointer font-body-sm transition-colors active:opacity-80" href="#">GBP</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors font-body-sm active:opacity-80 pb-1 cursor-pointer" href="#">JPY</a>
+</div>
+<div class="h-6 w-px bg-outline-variant/50 hidden md:block"></div>
+<div class="flex items-center gap-sm">
+<button class="text-on-surface-variant hover:text-primary transition-colors active:opacity-80">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors active:opacity-80">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-surface-container-high border border-outline-variant overflow-hidden cursor-pointer active:opacity-80">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A highly detailed close-up portrait of a professional wealth manager with a confident, subtle smile. The lighting is soft and natural, emphasizing a high-trust, premium corporate aesthetic. The background is a slightly blurred, bright, modern office space with cool tones of white and steel, fitting a clean, minimalist light-mode design system." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCQzS6V98YIoRYtGeULuoaR-7FKu53ijfgtvvAVK300qkXgKN8iWcvFxlIFw4gdKnGvODOe3hQFH6WoHzmQnFjMDFE2Wdp4lyxzFQX9nZgSFl6rUDswYbbVIMiad54oqefbk-ARBgMIKAnmpTX65XyjBaJClEH80qdaZ_dI_md1TDn2R9gNsnV7PPvdhc52Jcwy_F_MhGoHLoj_otBVJiiqwtqItRdVucD1KFoJDauPMa3luPuOV74I"/>
+</div>
+</div>
+</div>
+</header>
+<!-- SideNavBar -->
+<nav class="hidden md:flex flex-col h-screen w-64 fixed left-0 top-0 bg-surface-container-low dark:bg-surface-container-lowest z-50 transition-all duration-200 ease-in-out py-md px-sm border-r border-outline-variant/20 shadow-[1px_0_10px_rgba(0,0,0,0.02)]">
+<div class="flex items-center gap-sm mb-xl px-xs">
+<div class="w-10 h-10 rounded-lg bg-primary text-on-primary flex items-center justify-center font-bold text-xl shadow-sm">W</div>
+<div>
+<div class="font-headline-sm text-headline-sm font-bold text-primary dark:text-primary-fixed leading-tight">WealthPro</div>
+<div class="text-xs text-on-surface-variant font-medium tracking-wide uppercase">Wealth Management</div>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto pr-2 space-y-1">
+<a class="flex items-center gap-sm py-3 px-3 rounded-lg text-on-surface-variant dark:text-on-primary-container font-body-md text-body-md hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors duration-200 ease-in-out group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors" data-icon="dashboard">dashboard</span>
+<span class="group-hover:text-primary transition-colors">Dashboard</span>
+</a>
+<a class="flex items-center gap-sm py-3 px-3 rounded-lg text-on-surface-variant dark:text-on-primary-container font-body-md text-body-md hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors duration-200 ease-in-out group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors" data-icon="account_balance">account_balance</span>
+<span class="group-hover:text-primary transition-colors">Banking</span>
+</a>
+<a class="flex items-center gap-sm py-3 px-3 rounded-lg text-on-surface-variant dark:text-on-primary-container font-body-md text-body-md hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors duration-200 ease-in-out group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors" data-icon="trending_up">trending_up</span>
+<span class="group-hover:text-primary transition-colors">Investments</span>
+</a>
+<a class="flex items-center gap-sm py-3 px-3 rounded-lg text-on-surface-variant dark:text-on-primary-container font-body-md text-body-md hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors duration-200 ease-in-out group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors" data-icon="payments">payments</span>
+<span class="group-hover:text-primary transition-colors">Loans</span>
+</a>
+<a class="flex items-center gap-sm py-3 px-3 rounded-lg text-on-surface-variant dark:text-on-primary-container font-body-md text-body-md hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors duration-200 ease-in-out group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors" data-icon="event_repeat">event_repeat</span>
+<span class="group-hover:text-primary transition-colors">Subscriptions</span>
+</a>
+<a class="flex items-center gap-sm py-3 px-3 rounded-lg text-on-surface-variant dark:text-on-primary-container font-body-md text-body-md hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors duration-200 ease-in-out group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors" data-icon="show_chart">show_chart</span>
+<span class="group-hover:text-primary transition-colors">Stock Exchange</span>
+</a>
+<a class="flex items-center gap-sm py-3 px-3 rounded-lg text-primary dark:text-primary-fixed font-bold border-r-4 border-primary bg-surface-container-high/50 font-body-md text-body-md transition-colors duration-200 ease-in-out group" href="#">
+<span class="material-symbols-outlined text-primary icon-fill" data-icon="domain">domain</span>
+<span>Property Management</span>
+</a>
+</div>
+<div class="mt-auto pt-md">
+<button class="w-full bg-primary text-on-primary py-3 rounded-lg font-body-md text-body-md font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+                New Transaction
+            </button>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="pt-20 md:ml-64 min-h-screen pb-lg transition-all duration-200">
+<div class="max-w-[1440px] mx-auto px-sm md:px-xl py-lg">
+<!-- Page Header -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-sm mb-lg">
+<div>
+<div class="flex items-center gap-2 mb-2 text-on-surface-variant font-label-caps uppercase tracking-widest text-xs">
+<span class="material-symbols-outlined text-[16px]" data-icon="arrow_back">arrow_back</span>
+<a class="hover:text-primary transition-colors" href="#">Property Portfolio</a>
+<span class="mx-1">/</span>
+<span class="text-primary font-semibold">Greenwood Heights</span>
+</div>
+<h1 class="font-display-lg text-display-lg text-on-surface mb-1">Greenwood Heights</h1>
+<p class="font-body-md text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]" data-icon="location_on">location_on</span>
+                        42 Park Lane, Kensington, London W8 4PN, UK
+                    </p>
+</div>
+<div class="flex flex-wrap gap-xs">
+<button class="px-4 py-2 bg-surface text-primary border border-outline-variant rounded-lg font-body-sm font-semibold hover:bg-surface-container-low transition-colors shadow-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="edit_document">edit_document</span>
+                        Edit Lease
+                    </button>
+<button class="px-4 py-2 bg-surface text-primary border border-outline-variant rounded-lg font-body-sm font-semibold hover:bg-surface-container-low transition-colors shadow-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="price_change">price_change</span>
+                        Update Valuation
+                    </button>
+<button class="px-4 py-2 bg-primary text-on-primary rounded-lg font-body-sm font-semibold hover:opacity-90 transition-opacity shadow-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="build">build</span>
+                        Add Maintenance
+                    </button>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+<!-- Financial Overview (Span 8) -->
+<div class="md:col-span-8 bg-surface border border-outline-variant rounded-xl p-md shadow-sm">
+<div class="flex justify-between items-center mb-md border-b border-outline-variant/30 pb-3">
+<h2 class="font-headline-sm text-headline-sm text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="monitoring">monitoring</span>
+                            Financial Overview
+                        </h2>
+<div class="px-2 py-1 bg-surface-container-low rounded text-xs font-label-caps text-on-surface-variant uppercase">YTD Performance</div>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-sm mb-md">
+<div class="p-sm bg-[#f8fafc] rounded-lg border border-outline-variant/20 hover:border-outline-variant/50 transition-colors">
+<div class="font-label-caps text-on-surface-variant mb-1">Current Market Value</div>
+<div class="font-data-tabular text-2xl font-semibold text-on-surface flex items-baseline gap-1">
+                                £2,450,000 <span class="font-label-caps text-xs text-on-surface-variant">GBP</span>
+</div>
+<div class="mt-2 flex items-center gap-1 text-secondary font-medium text-sm">
+<span class="material-symbols-outlined text-[16px]" data-icon="trending_up">trending_up</span>
+                                +12.5% since acquisition
+                            </div>
+</div>
+<div class="p-sm bg-[#f8fafc] rounded-lg border border-outline-variant/20 hover:border-outline-variant/50 transition-colors">
+<div class="font-label-caps text-on-surface-variant mb-1">Acquisition Price (2019)</div>
+<div class="font-data-tabular text-2xl font-semibold text-on-surface flex items-baseline gap-1">
+                                £2,177,700 <span class="font-label-caps text-xs text-on-surface-variant">GBP</span>
+</div>
+<div class="mt-2 flex items-center gap-1 text-on-surface-variant font-medium text-sm">
+<span class="material-symbols-outlined text-[16px]" data-icon="account_balance">account_balance</span>
+                                Mortgaged: £1.2M
+                            </div>
+</div>
+<div class="p-sm bg-[#f8fafc] rounded-lg border border-outline-variant/20 hover:border-outline-variant/50 transition-colors">
+<div class="font-label-caps text-on-surface-variant mb-1">Annual Yield</div>
+<div class="font-data-tabular text-2xl font-semibold text-on-surface flex items-baseline gap-1">
+                                4.2%
+                            </div>
+<div class="mt-2 flex items-center gap-1 text-secondary font-medium text-sm">
+<span class="material-symbols-outlined text-[16px]" data-icon="check_circle">check_circle</span>
+                                Above target (3.8%)
+                            </div>
+</div>
+</div>
+<!-- Placeholder for Chart -->
+<div class="h-64 w-full bg-surface-container-lowest rounded-lg border border-outline-variant/20 flex flex-col justify-end relative overflow-hidden group">
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-low to-transparent opacity-50"></div>
+<!-- Faux Chart Lines -->
+<svg class="absolute inset-0 w-full h-full" preserveaspectratio="none" viewbox="0 0 100 100">
+<path class="opacity-80" d="M0,90 Q20,80 40,60 T80,40 T100,20" fill="none" stroke="#131b2e" stroke-width="2"></path>
+<path class="opacity-20" d="M0,100 L0,90 Q20,80 40,60 T80,40 T100,20 L100,100 Z" fill="url(#grad1)"></path>
+<defs>
+<lineargradient id="grad1" x1="0%" x2="0%" y1="0%" y2="100%">
+<stop offset="0%" style="stop-color:#131b2e;stop-opacity:1"></stop>
+<stop offset="100%" style="stop-color:#131b2e;stop-opacity:0"></stop>
+</lineargradient>
+</defs>
+</svg>
+<div class="absolute top-4 left-4 font-label-caps text-on-surface-variant">Value Trajectory (5Y)</div>
+</div>
+</div>
+<!-- Rental & Tenant Info (Span 4) -->
+<div class="md:col-span-4 bg-surface border border-outline-variant rounded-xl p-md shadow-sm flex flex-col">
+<div class="flex justify-between items-center mb-md border-b border-outline-variant/30 pb-3">
+<h2 class="font-headline-sm text-headline-sm text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="key">key</span>
+                            Lease Details
+                        </h2>
+<span class="px-2 py-1 bg-secondary-container text-on-secondary-fixed rounded text-xs font-label-caps font-bold">ACTIVE</span>
+</div>
+<div class="flex-1 space-y-4">
+<div>
+<div class="font-label-caps text-on-surface-variant mb-1">Current Tenant</div>
+<div class="flex items-center gap-3 bg-[#f8fafc] p-2 rounded-lg border border-outline-variant/20">
+<div class="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center font-bold text-primary">EJ</div>
+<div>
+<div class="font-semibold text-on-surface text-sm">Eleanor James</div>
+<div class="text-xs text-on-surface-variant">Verified Corporate Account</div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<div>
+<div class="font-label-caps text-on-surface-variant mb-1">Monthly Rent</div>
+<div class="font-data-tabular font-semibold text-on-surface">£8,500 <span class="text-xs font-normal">GBP</span></div>
+</div>
+<div>
+<div class="font-label-caps text-on-surface-variant mb-1">Next Payment</div>
+<div class="font-data-tabular font-semibold text-on-surface">01 Nov 2023</div>
+</div>
+</div>
+<div>
+<div class="font-label-caps text-on-surface-variant mb-1">Lease Term</div>
+<div class="bg-[#f8fafc] p-3 rounded-lg border border-outline-variant/20">
+<div class="flex justify-between text-sm mb-2">
+<span class="text-on-surface">01 May 2022</span>
+<span class="text-on-surface font-medium">30 Apr 2024</span>
+</div>
+<div class="w-full h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 75%"></div>
+</div>
+<div class="text-right text-xs text-on-surface-variant mt-1">6 months remaining</div>
+</div>
+</div>
+</div>
+<button class="w-full mt-4 py-2 bg-surface text-primary border border-outline-variant rounded-lg font-body-sm font-semibold hover:bg-surface-container-low transition-colors text-center">
+                        View Full Ledger
+                    </button>
+</div>
+<!-- Maintenance Log (Span 12) -->
+<div class="md:col-span-12 bg-surface border border-outline-variant rounded-xl p-md shadow-sm mt-sm">
+<div class="flex justify-between items-center mb-md border-b border-outline-variant/30 pb-3">
+<h2 class="font-headline-sm text-headline-sm text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="handyman">handyman</span>
+                            Maintenance Log
+                        </h2>
+<a class="text-sm font-semibold text-primary hover:underline" href="#">View All Records</a>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline-variant/40">
+<th class="py-3 px-2 font-label-caps text-on-surface-variant font-semibold">Date</th>
+<th class="py-3 px-2 font-label-caps text-on-surface-variant font-semibold">Description</th>
+<th class="py-3 px-2 font-label-caps text-on-surface-variant font-semibold">Vendor</th>
+<th class="py-3 px-2 font-label-caps text-on-surface-variant font-semibold text-right">Cost</th>
+<th class="py-3 px-2 font-label-caps text-on-surface-variant font-semibold text-center">Status</th>
+</tr>
+</thead>
+<tbody class="font-body-sm">
+<tr class="border-b border-outline-variant/20 hover:bg-[#f8fafc] transition-colors">
+<td class="py-3 px-2 font-data-tabular text-on-surface">15 Oct 2023</td>
+<td class="py-3 px-2 font-medium text-on-surface">HVAC Annual Inspection</td>
+<td class="py-3 px-2 text-on-surface-variant">Climate Control Ltd.</td>
+<td class="py-3 px-2 font-data-tabular text-right text-on-surface">£450.00</td>
+<td class="py-3 px-2 text-center">
+<span class="inline-flex items-center gap-1 px-2 py-1 bg-error-container/20 text-error rounded-full text-xs font-semibold bg-[#fef2f2] text-[#991b1b]">
+<span class="material-symbols-outlined text-[14px]" data-icon="pending">pending</span>
+                                            Pending Approval
+                                        </span>
+</td>
+</tr>
+<tr class="border-b border-outline-variant/20 hover:bg-[#f8fafc] transition-colors">
+<td class="py-3 px-2 font-data-tabular text-on-surface">02 Sep 2023</td>
+<td class="py-3 px-2 font-medium text-on-surface">Master Bathroom Plumbing Repair</td>
+<td class="py-3 px-2 text-on-surface-variant">London Plumbers Co.</td>
+<td class="py-3 px-2 font-data-tabular text-right text-on-surface">£1,250.00</td>
+<td class="py-3 px-2 text-center">
+<span class="inline-flex items-center gap-1 px-2 py-1 bg-secondary-container/30 text-secondary rounded-full text-xs font-semibold bg-[#ecfdf5] text-[#065f46]">
+<span class="material-symbols-outlined text-[14px]" data-icon="check_circle">check_circle</span>
+                                            Completed
+                                        </span>
+</td>
+</tr>
+<tr class="hover:bg-[#f8fafc] transition-colors">
+<td class="py-3 px-2 font-data-tabular text-on-surface">14 Jun 2023</td>
+<td class="py-3 px-2 font-medium text-on-surface">Exterior Painting (Facade)</td>
+<td class="py-3 px-2 text-on-surface-variant">ProPaint Decorators</td>
+<td class="py-3 px-2 font-data-tabular text-right text-on-surface">£3,400.00</td>
+<td class="py-3 px-2 text-center">
+<span class="inline-flex items-center gap-1 px-2 py-1 bg-secondary-container/30 text-secondary rounded-full text-xs font-semibold bg-[#ecfdf5] text-[#065f46]">
+<span class="material-symbols-outlined text-[14px]" data-icon="check_circle">check_circle</span>
+                                            Completed
+                                        </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 w-full bg-surface border-t border-outline-variant z-40 flex justify-around py-2 px-1 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+<a class="flex flex-col items-center p-2 text-on-surface-variant active:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="text-[10px] font-label-caps mt-1">Dashboard</span>
+</a>
+<a class="flex flex-col items-center p-2 text-primary font-bold transition-colors" href="#">
+<span class="material-symbols-outlined icon-fill" data-icon="domain">domain</span>
+<span class="text-[10px] font-label-caps mt-1">Properties</span>
+</a>
+<a class="flex flex-col items-center p-2 text-on-surface-variant active:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance">account_balance</span>
+<span class="text-[10px] font-label-caps mt-1">Banking</span>
+</a>
+<a class="flex flex-col items-center p-2 text-on-surface-variant active:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="trending_up">trending_up</span>
+<span class="text-[10px] font-label-caps mt-1">Investments</span>
+</a>
+</nav>
+</body></html>

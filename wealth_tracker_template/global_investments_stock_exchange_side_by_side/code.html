@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}.sidebar-transition{transition:width 0.3s cubic-bezier(0.4, 0, 0.2, 1);}.nav-group:not(:last-child){margin-bottom:16px;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"inverse-primary":"#bec6e0","surface-tint":"#565e74","on-tertiary-fixed":"#2a1700","background":"#f8f9ff","surface-bright":"#f8f9ff","surface-container":"#e5eeff","primary":"#000000","surface-container-high":"#dce9ff","on-secondary-container":"#00714d","on-surface":"#0b1c30","primary-fixed-dim":"#bec6e0","on-secondary":"#ffffff","on-background":"#0b1c30","surface":"#f8f9ff","tertiary-fixed":"#ffddb8","on-tertiary-fixed-variant":"#653e00","outline":"#76777d","surface-variant":"#d3e4fe","primary-fixed":"#dae2fd","on-surface-variant":"#45464d","on-primary":"#ffffff","on-secondary-fixed":"#002113","on-tertiary-container":"#b87500","on-tertiary":"#ffffff","inverse-on-surface":"#eaf1ff","on-primary-fixed":"#131b2e","outline-variant":"#c6c6cd","surface-container-highest":"#d3e4fe","inverse-surface":"#213145","secondary-container":"#6cf8bb","secondary":"#006c49","on-secondary-fixed-variant":"#005236","on-primary-container":"#7c839b","surface-container-low":"#eff4ff","error-container":"#ffdad6","secondary-fixed-dim":"#4edea3","surface-dim":"#cbdbf5","tertiary-container":"#2a1700","secondary-fixed":"#6ffbbe","primary-container":"#131b2e","on-error":"#ffffff","surface-container-lowest":"#ffffff","error":"#ba1a1a","on-error-container":"#93000a","tertiary-fixed-dim":"#ffb95f","tertiary":"#000000","on-primary-fixed-variant":"#3f465c"},"borderRadius":{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},"spacing":{"sm":"16px","gutter":"24px","md":"24px","base":"4px","xs":"8px","container-max":"1440px","lg":"48px","xl":"80px"},"fontFamily":{"data-tabular":["JetBrains Mono"],"display-lg":["Manrope"],"body-md":["Work Sans"],"body-lg":["Work Sans"],"headline-md":["Manrope"],"label-caps":["Work Sans"],"body-sm":["Work Sans"],"headline-sm":["Manrope"]},"fontSize":{"data-tabular":["14px",{"lineHeight":"20px","fontWeight":"500"}],"display-lg":["48px",{"lineHeight":"56px","letterSpacing":"-0.02em","fontWeight":"700"}],"body-md":["16px",{"lineHeight":"24px","fontWeight":"400"}],"body-lg":["18px",{"lineHeight":"28px","fontWeight":"400"}],"headline-md":["32px",{"lineHeight":"40px","letterSpacing":"-0.01em","fontWeight":"600"}],"label-caps":["12px",{"lineHeight":"16px","letterSpacing":"0.05em","fontWeight":"600"}],"body-sm":["14px",{"lineHeight":"20px","fontWeight":"400"}],"headline-sm":["24px",{"lineHeight":"32px","fontWeight":"600"}]}}}}</script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@100..900&family=Work+Sans:wght@100..900&display=swap" rel="stylesheet"/></head><body class="bg-surface font-body-md text-on-surface"><aside class="sidebar-transition fixed left-0 top-0 h-full w-72 bg-surface-container-low z-50 flex flex-col border-r border-outline-variant/30 shadow-[4px_0_24px_rgba(0,0,0,0.02)] overflow-hidden" id="main-sidebar"><div class="px-gutter h-20 flex items-center shrink-0 mb-xs"><div class="flex items-center gap-sm"><div class="w-10 h-10 bg-primary flex items-center justify-center rounded-xl shrink-0"><span class="material-symbols-outlined text-on-primary">payments</span></div><span class="font-headline-sm text-headline-sm tracking-tight text-primary whitespace-nowrap overflow-hidden sidebar-label">WealthPro</span></div></div><nav class="flex-1 px-sm overflow-y-auto space-y-base custom-scrollbar" data-active-classes="bg-secondary-container text-on-secondary-container font-bold"><div class="nav-group"><p class="px-md py-xs text-[10px] font-label-caps text-on-surface-variant uppercase tracking-widest sidebar-label">Wealth Overview</p><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="dashboard" href="#">Dashboard</a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="unified-summary" href="#">Unified Summary</a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="forecast" href="#">Forecast</a></div><div class="nav-group"><p class="px-md py-xs text-[10px] font-label-caps text-on-surface-variant uppercase tracking-widest sidebar-label">Markets</p><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="stock-exchange" href="#">Stock Exchange</a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="psx-workstation" href="#">PSX Workstation</a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="qse-workstation" href="#">QSE Workstation</a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="fx-workstation" href="#">FX Workstation</a></div><div class="nav-group"><p class="px-md py-xs text-[10px] font-label-caps text-on-surface-variant uppercase tracking-widest sidebar-label">Asset Management</p><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="banking-loans" href="#">Banking & Loans</a><div class="pl-sm border-l border-outline-variant/30 ml-md my-xs"><a class="block px-sm py-2 text-body-sm text-on-surface-variant/80 hover:text-primary transition-colors" data-path="global-checking" href="#">Global Checking</a><a class="block px-sm py-2 text-body-sm text-on-surface-variant/80 hover:text-primary transition-colors" data-path="savings" href="#">Savings Account</a><a class="block px-sm py-2 text-body-sm text-on-surface-variant/80 hover:text-primary transition-colors" data-path="investment-account" href="#">Investment Account</a></div><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="property-management" href="#">Property Management</a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="cash-physical-assets" href="#">Cash & Physical Assets</a></div><div class="nav-group"><p class="px-md py-xs text-[10px] font-label-caps text-on-surface-variant uppercase tracking-widest sidebar-label">Operations</p><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="transfer-hub" href="#">Transfer Hub</a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="transaction-history" href="#">Transaction History</a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="alerts-notifications" href="#">Alerts & Notifications</a></div></nav><div class="p-gutter border-t border-outline-variant/30 mt-auto shrink-0"><button class="w-full flex items-center justify-center p-sm rounded-xl bg-surface-container hover:bg-surface-container-high transition-colors" onclick="const s=document.getElementById('main-sidebar'); const m=document.getElementById('main-content'); const l=document.querySelectorAll('.sidebar-label'); if(s.classList.contains('w-72')){s.classList.replace('w-72','w-20'); m.classList.replace('pl-72','pl-20'); l.forEach(x=>x.classList.add('hidden'));}else{s.classList.replace('w-20','w-72'); m.classList.replace('pl-20','pl-72'); l.forEach(x=>x.classList.remove('hidden'));}"><span class="material-symbols-outlined text-on-surface-variant">menu_open</span></button></div></aside><div class="sidebar-transition pl-72" id="main-content"><header class="fixed top-0 left-0 right-0 h-20 bg-surface/80 backdrop-blur-xl z-40 px-gutter flex items-center justify-between border-b border-outline-variant/20 shadow-sm ml-auto sidebar-transition pl-[inherit]"><div class="flex items-center gap-md"><div class="flex items-center gap-xs px-md py-2 bg-surface-container-lowest border border-outline-variant rounded-full shadow-sm"><span class="w-2 h-2 rounded-full bg-secondary"></span><span class="font-label-caps text-on-surface-variant uppercase">Active:</span><span class="font-data-tabular text-on-surface font-bold">USD</span></div><div class="h-8 w-[1px] bg-outline-variant"></div><div class="relative group"><button class="flex items-center gap-sm px-md py-2 rounded-lg bg-surface-container-high hover:bg-primary hover:text-on-primary transition-all"><span class="material-symbols-outlined text-sm">currency_exchange</span><span class="font-label-caps">Multi-Currency</span><span class="material-symbols-outlined text-sm">expand_more</span></button><div class="absolute top-full mt-xs left-0 w-64 bg-surface-container-lowest rounded-xl shadow-[0_10px_25px_-5px_rgba(11,28,48,0.1)] border border-outline-variant hidden group-hover:block py-sm z-50"><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">Global (Total)</span><span class="material-symbols-outlined text-sm">public</span></button><div class="h-[1px] bg-outline-variant my-xs mx-md"></div><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">US Dollar</span><span class="font-data-tabular">USD</span></button><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">Euro</span><span class="font-data-tabular">EUR</span></button></div></div></div><div class="flex items-center gap-gutter"><div class="relative flex items-center bg-surface-container px-md py-2 rounded-lg border border-outline-variant"><span class="material-symbols-outlined text-on-surface-variant mr-sm">search</span><input class="bg-transparent border-none outline-none text-sm text-on-surface w-48 placeholder:text-on-surface-variant" placeholder="Search portfolios..." type="text"/></div><button class="p-sm rounded-full hover:bg-surface-container-high transition-colors relative"><span class="material-symbols-outlined text-on-surface-variant">notifications</span><span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-surface"></span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center cursor-pointer"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></header><main class="relative pt-20 bg-surface min-h-screen"><div class="flex flex-col w-full pb-24">
+<!-- Top Ticker Bar / Summary Strip -->
+<div class="w-full bg-surface-container-low px-gutter py-6 flex flex-wrap items-center justify-between gap-6">
+<div class="flex items-center gap-6">
+<div>
+<p class="font-label-caps text-on-surface-variant uppercase">Portfolio Total Equity</p>
+<h2 class="font-headline-md text-on-surface font-headline-md mt-1">$1,482,900.50</h2>
+</div>
+<div class="h-10 w-[1px] bg-outline-variant/30 hidden sm:block"></div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-2xl" style="font-variation-settings: 'FILL' 1;">trending_up</span>
+<div>
+<p class="font-label-caps text-on-surface-variant uppercase">24h Net Return</p>
+<p class="font-data-tabular text-secondary font-bold text-base mt-1">+ $14,820.40 (+1.12%)</p>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-5 py-2.5 bg-primary text-on-primary font-label-caps rounded-xl hover:opacity-90 transition-opacity flex items-center gap-2 shadow-sm" onclick="document.getElementById('trade-calculator').scrollIntoView({behavior: 'smooth'})">
+<span class="material-symbols-outlined text-sm">calculate</span>
+        Trade Cycle Planner
+      </button>
+<button class="px-5 py-2.5 bg-surface-container-high text-on-surface font-label-caps rounded-xl hover:bg-surface-container-highest transition-colors flex items-center gap-2" onclick="triggerPriceUpdateModal()">
+<span class="material-symbols-outlined text-sm">update</span>
+        Batch Update Prices
+      </button>
+</div>
+</div>
+<!-- Main Content Grid -->
+<div class="px-gutter py-8 space-y-xl max-w-container-max mx-auto w-full">
+<!-- Global Exchanges Overview Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+<!-- NYSE Card -->
+<div class="bg-surface-container-low p-6 rounded-xl flex flex-col justify-between hover:shadow-md transition-shadow">
+<div>
+<div class="flex items-center justify-between mb-4">
+<span class="font-label-caps bg-surface-container-high px-2.5 py-1 rounded-full text-on-surface">NYSE (USD)</span>
+<span class="font-data-tabular text-secondary text-sm font-bold">+2.4%</span>
+</div>
+<h3 class="font-headline-sm text-on-surface">New York</h3>
+<p class="font-body-sm text-on-surface-variant mt-1">Primary Equities</p>
+</div>
+<div class="mt-6 pt-4 border-t border-outline-variant/20 flex justify-between items-baseline">
+<span class="font-label-caps text-on-surface-variant">Worth</span>
+<span class="font-data-tabular font-bold text-lg text-on-surface">$840,200.00</span>
+</div>
+</div>
+<!-- LSE Card -->
+<div class="bg-surface-container-low p-6 rounded-xl flex flex-col justify-between hover:shadow-md transition-shadow">
+<div>
+<div class="flex items-center justify-between mb-4">
+<span class="font-label-caps bg-surface-container-high px-2.5 py-1 rounded-full text-on-surface">LSE (GBP)</span>
+<span class="font-data-tabular text-secondary text-sm font-bold">+0.8%</span>
+</div>
+<h3 class="font-headline-sm text-on-surface">London</h3>
+<p class="font-body-sm text-on-surface-variant mt-1">FTSE Blue Chips</p>
+</div>
+<div class="mt-6 pt-4 border-t border-outline-variant/20 flex justify-between items-baseline">
+<span class="font-label-caps text-on-surface-variant">Worth</span>
+<span class="font-data-tabular font-bold text-lg text-on-surface">£310,450.00</span>
+</div>
+</div>
+<!-- PSX Card -->
+<div class="bg-surface-container-low p-6 rounded-xl flex flex-col justify-between hover:shadow-md transition-shadow">
+<div>
+<div class="flex items-center justify-between mb-4">
+<span class="font-label-caps bg-surface-container-high px-2.5 py-1 rounded-full text-on-surface">PSX (PKR)</span>
+<span class="font-data-tabular text-error text-sm font-bold">-0.4%</span>
+</div>
+<h3 class="font-headline-sm text-on-surface">Pakistan</h3>
+<p class="font-body-sm text-on-surface-variant mt-1">KSE-100 Holdings</p>
+</div>
+<div class="mt-6 pt-4 border-t border-outline-variant/20 flex justify-between items-baseline">
+<span class="font-label-caps text-on-surface-variant">Worth</span>
+<span class="font-data-tabular font-bold text-lg text-on-surface">₨ 42,500,000</span>
+</div>
+</div>
+<!-- QSE Card -->
+<div class="bg-surface-container-low p-6 rounded-xl flex flex-col justify-between hover:shadow-md transition-shadow">
+<div>
+<div class="flex items-center justify-between mb-4">
+<span class="font-label-caps bg-surface-container-high px-2.5 py-1 rounded-full text-on-surface">QSE (QAR)</span>
+<span class="font-data-tabular text-secondary text-sm font-bold">+1.5%</span>
+</div>
+<h3 class="font-headline-sm text-on-surface">Qatar</h3>
+<p class="font-body-sm text-on-surface-variant mt-1">Doha Securities</p>
+</div>
+<div class="mt-6 pt-4 border-t border-outline-variant/20 flex justify-between items-baseline">
+<span class="font-label-caps text-on-surface-variant">Worth</span>
+<span class="font-data-tabular font-bold text-lg text-on-surface">QR 752,000</span>
+</div>
+</div>
+</div>
+<!-- Multi-Currency Holdings Sections -->
+<div class="space-y-lg">
+<!-- NYSE Section -->
+<div class="bg-surface-container-lowest rounded-xl p-6 shadow-sm">
+<div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-primary-container text-on-primary-container flex items-center justify-center font-bold">US</div>
+<div>
+<h3 class="font-headline-sm text-on-surface">New York Stock Exchange (NYSE)</h3>
+<p class="font-body-sm text-on-surface-variant">Denominated in USD ($)</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-label-caps text-on-surface-variant">Exchange Subtotal:</span>
+<span class="font-data-tabular font-bold text-lg text-on-surface">$840,200.00</span>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline-variant/20 text-on-surface-variant font-label-caps text-[11px]">
+<th class="py-3 px-4">Asset / Ticker</th>
+<th class="py-3 px-4">Shares / Qty</th>
+<th class="py-3 px-4">Avg Buy Price</th>
+<th class="py-3 px-4">Current Price</th>
+<th class="py-3 px-4">Break-Even (BE)</th>
+<th class="py-3 px-4">Total Invested</th>
+<th class="py-3 px-4">Current Worth</th>
+<th class="py-3 px-4 text-right">Profit / Loss</th>
+<th class="py-3 px-4 text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10 font-body-sm">
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-4 px-4">
+<div class="font-bold text-on-surface">Apple Inc.</div>
+<div class="text-xs text-on-surface-variant font-data-tabular">AAPL • NYSE</div>
+</td>
+<td class="py-4 px-4 font-data-tabular">1,200</td>
+<td class="py-4 px-4 font-data-tabular">$165.50</td>
+<td class="py-4 px-4 font-data-tabular font-bold text-on-surface" id="price-aapl">$182.30</td>
+<td class="py-4 px-4 font-data-tabular text-on-surface-variant">$162.10</td>
+<td class="py-4 px-4 font-data-tabular">$198,600.00</td>
+<td class="py-4 px-4 font-data-tabular font-bold text-on-surface">$218,760.00</td>
+<td class="py-4 px-4 text-right font-data-tabular text-secondary font-bold">+ $20,160.00 (+10.15%)</td>
+<td class="py-4 px-4 text-right">
+<button class="p-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high transition-colors" onclick="openEditPriceModal('AAPL', '182.30', 'USD')">
+<span class="material-symbols-outlined text-sm text-on-surface-variant">edit</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-4 px-4">
+<div class="font-bold text-on-surface">Microsoft Corp.</div>
+<div class="text-xs text-on-surface-variant font-data-tabular">MSFT • NASDAQ</div>
+</td>
+<td class="py-4 px-4 font-data-tabular">850</td>
+<td class="py-4 px-4 font-data-tabular">$310.00</td>
+<td class="py-4 px-4 font-data-tabular font-bold text-on-surface">$415.20</td>
+<td class="py-4 px-4 font-data-tabular text-on-surface-variant">$304.50</td>
+<td class="py-4 px-4 font-data-tabular">$263,500.00</td>
+<td class="py-4 px-4 font-data-tabular font-bold text-on-surface">$352,920.00</td>
+<td class="py-4 px-4 text-right font-data-tabular text-secondary font-bold">+ $89,420.00 (+33.94%)</td>
+<td class="py-4 px-4 text-right">
+<button class="p-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high transition-colors" onclick="openEditPriceModal('MSFT', '415.20', 'USD')">
+<span class="material-symbols-outlined text-sm text-on-surface-variant">edit</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-4 px-4">
+<div class="font-bold text-on-surface">Tesla Inc.</div>
+<div class="text-xs text-on-surface-variant font-data-tabular">TSLA • NASDAQ</div>
+</td>
+<td class="py-4 px-4 font-data-tabular">1,500</td>
+<td class="py-4 px-4 font-data-tabular">$245.00</td>
+<td class="py-4 px-4 font-data-tabular font-bold text-on-surface">$178.60</td>
+<td class="py-4 px-4 font-data-tabular text-on-surface-variant">$241.00</td>
+<td class="py-4 px-4 font-data-tabular">$367,500.00</td>
+<td class="py-4 px-4 font-data-tabular font-bold text-on-surface">$267,900.00</td>
+<td class="py-4 px-4 text-right font-data-tabular text-error font-bold">- $99,600.00 (-27.10%)</td>
+<td class="py-4 px-4 text-right">
+<button class="p-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high transition-colors" onclick="openEditPriceModal('TSLA', '178.60', 'USD')">
+<span class="material-symbols-outlined text-sm text-on-surface-variant">edit</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- LSE Section -->
+<div class="bg-surface-container-lowest rounded-xl p-6 shadow-sm">
+<div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-primary-container text-on-primary-container flex items-center justify-center font-bold">UK</div>
+<div>
+<h3 class="font-headline-sm text-on-surface">London Stock Exchange (LSE)</h3>
+<p class="font-body-sm text-on-surface-variant">Denominated in GBP (£)</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-label-caps text-on-surface-variant">Exchange Subtotal:</span>
+<span class="font-data-tabular font-bold text-lg text-on-surface">£310,450.00</span>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline-variant/20 text-on-surface-variant font-label-caps text-[11px]">
+<th class="py-3 px-4">Asset / Ticker</th>
+<th class="py-3 px-4">Shares / Qty</th>
+<th class="py-3 px-4">Avg Buy Price</th>
+<th class="py-3 px-4">Current Price</th>
+<th class="py-3 px-4">Break-Even (BE)</th>
+<th class="py-3 px-4">Total Invested</th>
+<th class="py-3 px-4">Current Worth</th>
+<th class="py-3 px-4 text-right">Profit / Loss</th>
+<th class="py-3 px-4 text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10 font-body-sm">
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-4 px-4">
+<div class="font-bold text-on-surface">Shell PLC</div>
+<div class="text-xs text-on-surface-variant font-data-tabular">SHEL • LSE</div>
+</td>
+<td class="py-4 px-4 font-data-tabular">8,000</td>
+<td class="py-4 px-4 font-data-tabular">£22.50</td>
+<td class="py-4 px-4 font-data-tabular font-bold text-on-surface">£26.40</td>
+<td class="py-4 px-4 font-data-tabular text-on-surface-variant">£21.90</td>
+<td class="py-4 px-4 font-data-tabular">£180,000.00</td>
+<td class="py-4 px-4 font-data-tabular font-bold text-on-surface">£211,200.00</td>
+<td class="py-4 px-4 text-right font-data-tabular text-secondary font-bold">+ £31,200.00 (+17.33%)</td>
+<td class="py-4 px-4 text-right">
+<button class="p-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high transition-colors" onclick="openEditPriceModal('SHEL', '26.40', 'GBP')">
+<span class="material-symbols-outlined text-sm text-on-surface-variant">edit</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-4 px-4">
+<div class="font-bold text-on-surface">AstraZeneca PLC</div>
+<div class="text-xs text-on-surface-variant font-data-tabular">AZN • LSE</div>
+</td>
+<td class="py-4 px-4 font-data-tabular">1,100</td>
+<td class="py-4 px-4 font-data-tabular">£105.00</td>
+<td class="py-4 px-4 font-data-tabular font-bold text-on-surface">£90.22</td>
+<td class="py-4 px-4 font-data-tabular text-on-surface-variant">£103.50</td>
+<td class="py-4 px-4 font-data-tabular">£115,500.00</td>
+<td class="py-4 px-4 font-data-tabular font-bold text-on-surface">£99,250.00</td>
+<td class="py-4 px-4 text-right font-data-tabular text-error font-bold">- £16,250.00 (-14.07%)</td>
+<td class="py-4 px-4 text-right">
+<button class="p-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high transition-colors" onclick="openEditPriceModal('AZN', '90.22', 'GBP')">
+<span class="material-symbols-outlined text-sm text-on-surface-variant">edit</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- PSX Section -->
+<div class="bg-surface-container-lowest rounded-xl p-6 shadow-sm">
+<div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-primary-container text-on-primary-container flex items-center justify-center font-bold">PK</div>
+<div>
+<h3 class="font-headline-sm text-on-surface">Pakistan Stock Exchange (PSX)</h3>
+<p class="font-body-sm text-on-surface-variant">Denominated in PKR (₨)</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-label-caps text-on-surface-variant">Exchange Subtotal:</span>
+<span class="font-data-tabular font-bold text-lg text-on-surface">₨ 42,500,000</span>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline-variant/20 text-on-surface-variant font-label-caps text-[11px]">
+<th class="py-3 px-4">Asset / Ticker</th>
+<th class="py-3 px-4">Shares / Qty</th>
+<th class="py-3 px-4">Avg Buy Price</th>
+<th class="py-3 px-4">Current Price</th>
+<th class="py-3 px-4">Break-Even (BE)</th>
+<th class="py-3 px-4">Total Invested</th>
+<th class="py-3 px-4">Current Worth</th>
+<th class="py-3 px-4 text-right">Profit / Loss</th>
+<th class="py-3 px-4 text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10 font-body-sm">
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-4 px-4">
+<div class="font-bold text-on-surface">Engro Corporation</div>
+<div class="text-xs text-on-surface-variant font-data-tabular">ENGRO • PSX</div>
+</td>
+<td class="py-4 px-4 font-data-tabular">50,000</td>
+<td class="py-4 px-4 font-data-tabular">₨ 280.00</td>
+<td class="py-4 px-4 font-data-tabular font-bold text-on-surface">₨ 315.00</td>
+<td class="py-4 px-4 font-data-tabular text-on-surface-variant">₨ 275.00</td>
+<td class="py-4 px-4 font-data-tabular">₨ 14,000,000</td>
+<td class="py-4 px-4 font-data-tabular font-bold text-on-surface">₨ 15,750,000</td>
+<td class="py-4 px-4 text-right font-data-tabular text-secondary font-bold">+ ₨ 1,750,000 (+12.5%)</td>
+<td class="py-4 px-4 text-right">
+<button class="p-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high transition-colors" onclick="openEditPriceModal('ENGRO', '315.00', 'PKR')">
+<span class="material-symbols-outlined text-sm text-on-surface-variant">edit</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Trade Cycle Planner & Averaging Down Tool -->
+<div class="bg-primary-container text-on-primary-container rounded-xl p-8 shadow-md" id="trade-calculator">
+<div class="max-w-3xl">
+<span class="font-label-caps text-inverse-primary uppercase tracking-wider">Manual Workstation Tool</span>
+<h3 class="font-headline-md text-white mt-1">Averaging Down & Trade Cycle Planner</h3>
+<p class="font-body-md text-on-primary-container mt-2">Simulate additional stock accumulation to strategically lower your break-even point during downward volatility.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+<div class="bg-surface/5 backdrop-blur p-6 rounded-xl border border-white/10 space-y-4">
+<h4 class="font-headline-sm text-white text-base">1. Select Holding</h4>
+<div>
+<label class="block font-label-caps text-inverse-primary mb-2">Asset Ticker</label>
+<select class="w-full bg-surface-container-low text-on-surface px-4 py-3 rounded-lg border-none outline-none font-body-sm" id="calc-asset">
+<option value="TSLA">TSLA (NYSE) - Current: $178.60</option>
+<option value="AZN">AZN (LSE) - Current: £90.22</option>
+<option value="AAPL">AAPL (NYSE) - Current: $182.30</option>
+</select>
+</div>
+<div>
+<label class="block font-label-caps text-inverse-primary mb-2">Current Shares Held</label>
+<input class="w-full bg-surface-container-low text-on-surface px-4 py-3 rounded-lg border-none outline-none font-data-tabular" id="calc-current-shares" type="number" value="1500"/>
+</div>
+<div>
+<label class="block font-label-caps text-inverse-primary mb-2">Current Avg Buy Price</label>
+<input class="w-full bg-surface-container-low text-on-surface px-4 py-3 rounded-lg border-none outline-none font-data-tabular" id="calc-current-avg" type="number" value="245.00"/>
+</div>
+</div>
+<div class="bg-surface/5 backdrop-blur p-6 rounded-xl border border-white/10 space-y-4">
+<h4 class="font-headline-sm text-white text-base">2. Planned Purchase</h4>
+<div>
+<label class="block font-label-caps text-inverse-primary mb-2">Additional Shares to Buy</label>
+<input class="w-full bg-surface-container-low text-on-surface px-4 py-3 rounded-lg border-none outline-none font-data-tabular" id="calc-add-shares" type="number" value="500"/>
+</div>
+<div>
+<label class="block font-label-caps text-inverse-primary mb-2">Target Execution Price</label>
+<input class="w-full bg-surface-container-low text-on-surface px-4 py-3 rounded-lg border-none outline-none font-data-tabular" id="calc-add-price" type="number" value="175.00"/>
+</div>
+<div class="pt-4">
+<button class="w-full py-3 bg-secondary-container text-on-secondary-container font-label-caps rounded-lg hover:opacity-90 transition-opacity font-bold" onclick="calculateNewAverage()">
+              Calculate New Break-Even
+            </button>
+</div>
+</div>
+<div class="bg-surface/10 backdrop-blur p-6 rounded-xl border border-white/10 flex flex-col justify-between">
+<div>
+<h4 class="font-headline-sm text-white text-base mb-4">3. Projected Outcome</h4>
+<div class="space-y-4 font-body-sm">
+<div>
+<p class="text-inverse-primary font-label-caps">New Total Shares</p>
+<p class="font-data-tabular text-xl font-bold text-white mt-1" id="res-shares">2,000</p>
+</div>
+<div>
+<p class="text-inverse-primary font-label-caps">New Composite Average Price</p>
+<p class="font-data-tabular text-xl font-bold text-secondary-fixed mt-1" id="res-avg">$227.50</p>
+</div>
+<div>
+<p class="text-inverse-primary font-label-caps">Total Capital Deployed</p>
+<p class="font-data-tabular text-xl font-bold text-white mt-1" id="res-capital">$455,000.00</p>
+</div>
+</div>
+</div>
+<div class="pt-4 border-t border-white/10">
+<span class="text-xs text-inverse-primary">Calculated manually using weighted cost-basis formulas. No external broker routing.</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Manual Price Update Modal (Hidden by default) -->
+<div class="fixed inset-0 bg-inverse-surface/60 backdrop-blur-sm z-50 flex items-center justify-center hidden" id="price-modal">
+<div class="bg-surface-container-lowest rounded-xl p-8 max-w-md w-full shadow-2xl space-y-6">
+<div class="flex items-center justify-between">
+<h3 class="font-headline-sm text-on-surface" id="modal-title">Update Asset Price</h3>
+<button class="p-2 rounded-full hover:bg-surface-container" onclick="closeEditPriceModal()">
+<span class="material-symbols-outlined text-on-surface-variant">close</span>
+</button>
+</div>
+<div class="space-y-4">
+<div>
+<label class="block font-label-caps text-on-surface-variant mb-2">New Valuation Price (<span id="modal-currency">USD</span>)</label>
+<input class="w-full bg-surface-container text-on-surface px-4 py-3 rounded-lg border border-outline-variant outline-none font-data-tabular text-lg" id="modal-input-price" type="text"/>
+</div>
+<p class="text-body-sm text-on-surface-variant">Manual pricing updates immediately recalibrate portfolio equity summaries and profit/loss metrics locally.</p>
+</div>
+<div class="flex items-center justify-end gap-3 pt-4 border-t border-outline-variant/20">
+<button class="px-5 py-2.5 rounded-lg bg-surface-container text-on-surface font-label-caps" onclick="closeEditPriceModal()">Cancel</button>
+<button class="px-5 py-2.5 rounded-lg bg-primary text-on-primary font-label-caps" onclick="saveNewPrice()">Apply Update</button>
+</div>
+</div>
+</div>
+<script>
+    let activeTicker = '';
+    let activeCurrency = '';
+
+    function openEditPriceModal(ticker, currentPrice, currency) {
+      activeTicker = ticker;
+      activeCurrency = currency;
+      document.getElementById('modal-title').innerText = `Update Price: ${ticker}`;
+      document.getElementById('modal-currency').innerText = currency;
+      document.getElementById('modal-input-price').value = currentPrice;
+      document.getElementById('price-modal').classList.remove('hidden');
+    }
+
+    function closeEditPriceModal() {
+      document.getElementById('price-modal').classList.add('hidden');
+    }
+
+    function saveNewPrice() {
+      const val = document.getElementById('modal-input-price').value;
+      if(activeTicker === 'AAPL') {
+        document.getElementById('price-aapl').innerText = '$' + val;
+      }
+      closeEditPriceModal();
+    }
+
+    function triggerPriceUpdateModal() {
+      openEditPriceModal('BATCH_PORTFOLIO', '100.00', 'USD');
+    }
+
+    function calculateNewAverage() {
+      const currShares = parseFloat(document.getElementById('calc-current-shares').value) || 0;
+      const currAvg = parseFloat(document.getElementById('calc-current-avg').value) || 0;
+      const addShares = parseFloat(document.getElementById('calc-add-shares').value) || 0;
+      const addPrice = parseFloat(document.getElementById('calc-add-price').value) || 0;
+
+      const totalShares = currShares + addShares;
+      const totalCost = (currShares * currAvg) + (addShares * addPrice);
+      const newAvg = totalShares > 0 ? totalCost / totalShares : 0;
+
+      document.getElementById('res-shares').innerText = totalShares.toLocaleString();
+      document.getElementById('res-avg').innerText = '$' + newAvg.toFixed(2);
+      document.getElementById('res-capital').innerText = '$' + totalCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+  </script>
+</div></main></div></body></html>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Multi-Currency Transfer Hub | WealthPro FX</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-error-container": "#93000a",
+                    "primary-container": "#131b2e",
+                    "on-primary-fixed-variant": "#3f465c",
+                    "surface-container-low": "#f2f3f9",
+                    "inverse-primary": "#bec6e0",
+                    "on-tertiary": "#ffffff",
+                    "secondary": "#006c49",
+                    "pip-down": "#E11D48",
+                    "inverse-on-surface": "#eff0f6",
+                    "on-tertiary-container": "#7073ff",
+                    "surface-tint": "#565e74",
+                    "surface-bright": "#f8f9ff",
+                    "on-error": "#ffffff",
+                    "primary-fixed-dim": "#bec6e0",
+                    "primary-fixed": "#dae2fd",
+                    "error-container": "#ffdad6",
+                    "outline-variant": "#c6c6cd",
+                    "surface-container-highest": "#e1e2e8",
+                    "tertiary-fixed-dim": "#c0c1ff",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-dim": "#CBDBF5",
+                    "surface-variant": "#e1e2e8",
+                    "on-secondary-fixed-variant": "#005236",
+                    "background": "#f8f9ff",
+                    "on-background": "#191c20",
+                    "on-tertiary-fixed-variant": "#2f2ebe",
+                    "on-primary": "#ffffff",
+                    "pip-up": "#059669",
+                    "tertiary-container": "#07006c",
+                    "on-surface": "#191c20",
+                    "on-secondary-container": "#00714d",
+                    "tertiary-fixed": "#e1e0ff",
+                    "on-surface-variant": "#45464d",
+                    "on-primary-fixed": "#131b2e",
+                    "outline": "#76777d",
+                    "surface-container-high": "#e7e8ee",
+                    "surface": "#f8f9ff",
+                    "surface-container": "#eceef3",
+                    "on-secondary": "#ffffff",
+                    "secondary-container": "#6cf8bb",
+                    "primary": "#000000",
+                    "border-subtle": "#E2E8F0",
+                    "on-secondary-fixed": "#002113",
+                    "secondary-fixed": "#6ffbbe",
+                    "on-primary-container": "#7c839b",
+                    "on-tertiary-fixed": "#07006c",
+                    "secondary-fixed-dim": "#4edea3",
+                    "tertiary": "#000000",
+                    "error": "#ba1a1a",
+                    "inverse-surface": "#2e3135"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "cell-py": "8px",
+                    "widget-gap": "16px",
+                    "container-margin": "24px",
+                    "gutter": "16px",
+                    "cell-px": "12px"
+            },
+            "fontFamily": {
+                    "headline-sm": ["Manrope"],
+                    "display-lg": ["Manrope"],
+                    "label-caps": ["Manrope"],
+                    "data-tabular": ["Manrope"],
+                    "body-md": ["Manrope"],
+                    "rate-display": ["Manrope"],
+                    "headline-md": ["Manrope"],
+                    "body-lg": ["Manrope"]
+            },
+            "fontSize": {
+                    "headline-sm": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-caps": ["11px", {"lineHeight": "16px", "letterSpacing": "0.06em", "fontWeight": "700"}],
+                    "data-tabular": ["13px", {"lineHeight": "18px", "fontWeight": "500"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "rate-display": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                    "headline-md": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        body { background-color: theme('colors.background'); color: theme('colors.on-background'); font-family: 'Manrope', sans-serif; }
+    </style>
+</head>
+<body class="flex min-h-screen bg-background">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full flex flex-col z-40 docked left-0 h-full w-64 bg-primary-container border-r border-border-subtle flat no shadows">
+<div class="p-container-margin flex flex-col gap-2">
+<h1 class="font-display-lg text-display-lg text-on-primary">WealthPro</h1>
+<p class="font-label-caps text-label-caps text-on-primary-container">Institutional Grade FX</p>
+</div>
+<nav class="flex-1 mt-8 overflow-y-auto">
+<ul class="flex flex-col gap-1 px-4">
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-primary-container hover:bg-on-primary-fixed-variant transition-colors duration-150" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">dashboard</span>
+<span class="font-label-caps text-label-caps">Dashboard</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-primary-container hover:bg-on-primary-fixed-variant transition-colors duration-150" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">account_balance</span>
+<span class="font-label-caps text-label-caps">Banking</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-primary-container hover:bg-on-primary-fixed-variant transition-colors duration-150" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">payments</span>
+<span class="font-label-caps text-label-caps">Investments</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-primary-container hover:bg-on-primary-fixed-variant transition-colors duration-150" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">credit_score</span>
+<span class="font-label-caps text-label-caps">Loans</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-primary-container hover:bg-on-primary-fixed-variant transition-colors duration-150" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">subscriptions</span>
+<span class="font-label-caps text-label-caps">Subscriptions</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-primary-container hover:bg-on-primary-fixed-variant transition-colors duration-150" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">show_chart</span>
+<span class="font-label-caps text-label-caps">Stock Exchange</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-primary-container hover:bg-on-primary-fixed-variant transition-colors duration-150" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">domain</span>
+<span class="font-label-caps text-label-caps">Property Management</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-secondary-container text-on-secondary-container font-bold border-r-4 border-secondary opacity-90 scale-95 transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">currency_exchange</span>
+<span class="font-label-caps text-label-caps">FX Workstation</span>
+</a>
+</li>
+</ul>
+</nav>
+<div class="p-4 mt-auto">
+<div class="flex items-center gap-3 px-4 py-3 rounded-lg border border-on-primary-fixed-variant">
+<img class="w-8 h-8 rounded-full bg-surface-container-highest object-cover" data-alt="A small circular avatar placeholder image showing a subtle silhouette of a professional user in a sleek, modern, light-mode corporate setting. High contrast, minimalist, monochrome aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCyHIC4doYp3S1q3Awrh6o21VWViOubMvmYpty33D-87qJbbQVIvPKMhwpRtuuDCoLnL9ytv51pwRMNDncpzjyXJkV5IP4NLeJogsM6zOnS0CEKZtmLG_si7mfKw4ZD7Tii0G_W638nSKF_PSbqRWb01gNZJTi5VSH-p-20JnrKxzZVUa3Dla6wFuwUA2dxC9KtyUtg9jIoY0yj4V5GDWiEVUyc0ZM79feXr-rSWcZpknRV59lFCEYw"/>
+<div class="flex flex-col">
+<span class="font-data-tabular text-data-tabular text-on-primary">User Profile</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<div class="flex-1 ml-64 flex flex-col min-h-screen">
+<!-- TopAppBar -->
+<header class="fixed top-0 right-0 left-64 flex justify-between items-center px-container-margin h-16 z-30 docked full-width top-0 border-b border-border-subtle bg-surface-bright flat no shadows text-primary">
+<div class="flex items-center gap-8">
+<h2 class="font-headline-sm text-headline-sm font-bold text-on-surface">FX Workstation</h2>
+<nav class="hidden md:flex gap-6">
+<a class="text-primary border-b-2 border-primary pb-1 font-body-md text-body-md" href="#">USD</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors font-body-md text-body-md" href="#">EUR</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors font-body-md text-body-md" href="#">GBP</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors font-body-md text-body-md" href="#">JPY</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-highest">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-highest">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-highest">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Canvas -->
+<main class="flex-1 mt-16 p-container-margin overflow-y-auto">
+<div class="max-w-[1440px] mx-auto">
+<div class="mb-8">
+<h2 class="font-headline-md text-headline-md text-on-background">Multi-Currency Transfer Hub</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant mt-2">Execute global transfers and manage currency exposure across institutional accounts.</p>
+</div>
+</div>
+</main>
+</div>
+</body></html>

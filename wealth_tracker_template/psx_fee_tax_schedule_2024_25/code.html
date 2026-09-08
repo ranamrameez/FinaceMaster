@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Fee &amp; Tax Schedule - Pakistan Stock Exchange (PSX)</title>
+<!-- Fonts & Icons -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&amp;family=Work+Sans:wght@400..700&amp;family=JetBrains+Mono:wght@400..700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-high": "#dce9ff",
+                        "on-secondary-fixed": "#002113",
+                        "secondary-fixed-dim": "#4edea3",
+                        "on-primary": "#ffffff",
+                        "primary-fixed": "#dae2fd",
+                        "surface-variant": "#d3e4fe",
+                        "inverse-primary": "#bec6e0",
+                        "inverse-surface": "#213145",
+                        "surface-container-highest": "#d3e4fe",
+                        "outline-variant": "#c6c6cd",
+                        "surface-tint": "#565e74",
+                        "error": "#ba1a1a",
+                        "on-tertiary": "#ffffff",
+                        "outline": "#76777d",
+                        "secondary-fixed": "#6ffbbe",
+                        "on-error-container": "#93000a",
+                        "on-secondary-fixed-variant": "#005236",
+                        "on-primary-container": "#7c839b",
+                        "error-container": "#ffdad6",
+                        "secondary-container": "#6cf8bb",
+                        "surface-container": "#e5eeff",
+                        "secondary": "#006c49",
+                        "background": "#f8f9ff",
+                        "tertiary-fixed": "#ffddb8",
+                        "on-error": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "on-surface-variant": "#45464d",
+                        "on-tertiary-fixed": "#2a1700",
+                        "surface-dim": "#cbdbf5",
+                        "tertiary-container": "#2a1700",
+                        "on-background": "#0b1c30",
+                        "primary-fixed-dim": "#bec6e0",
+                        "on-secondary-container": "#00714d",
+                        "surface-container-low": "#eff4ff",
+                        "surface": "#f8f9ff",
+                        "on-tertiary-container": "#b87500",
+                        "primary": "#000000",
+                        "surface-bright": "#f8f9ff",
+                        "tertiary-fixed-dim": "#ffb95f",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "on-surface": "#0b1c30",
+                        "on-primary-fixed": "#131b2e",
+                        "primary-container": "#131b2e",
+                        "inverse-on-surface": "#eaf1ff",
+                        "on-tertiary-fixed-variant": "#653e00",
+                        "tertiary": "#000000",
+                        "surface-container-lowest": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "lg": "48px",
+                        "gutter": "24px",
+                        "container-max": "1440px",
+                        "md": "24px",
+                        "xl": "80px",
+                        "xs": "8px",
+                        "base": "4px",
+                        "sm": "16px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Work Sans"],
+                        "display-lg": ["Manrope"],
+                        "label-caps": ["Work Sans"],
+                        "body-md": ["Work Sans"],
+                        "data-tabular": ["JetBrains Mono"],
+                        "headline-sm": ["Manrope"],
+                        "body-sm": ["Work Sans"],
+                        "headline-md": ["Manrope"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "data-tabular": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "headline-sm": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-md": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background font-body-md antialiased h-screen overflow-hidden flex">
+<!-- SideNavBar Component -->
+<nav class="bg-surface-container-low dark:bg-inverse-surface h-screen w-64 fixed left-0 top-0 flex flex-col py-md px-sm border-r border-outline-variant z-40">
+<div class="mb-lg px-sm">
+<h1 class="font-display-lg text-headline-sm font-bold text-primary dark:text-inverse-primary tracking-tight">WealthPro</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Premium Management</p>
+</div>
+<div class="flex-1 overflow-y-auto space-y-1">
+<a class="flex items-center gap-3 px-sm py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer active:scale-95 group" href="#">
+<span class="material-symbols-outlined text-[24px]">dashboard</span>
+<span class="font-body-md text-body-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-sm py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer active:scale-95 group" href="#">
+<span class="material-symbols-outlined text-[24px]">account_balance</span>
+<span class="font-body-md text-body-md">Banking</span>
+</a>
+<a class="flex items-center gap-3 px-sm py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer active:scale-95 group" href="#">
+<span class="material-symbols-outlined text-[24px]">trending_up</span>
+<span class="font-body-md text-body-md">Investments</span>
+</a>
+<a class="flex items-center gap-3 px-sm py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer active:scale-95 group" href="#">
+<span class="material-symbols-outlined text-[24px]">payments</span>
+<span class="font-body-md text-body-md">Loans</span>
+</a>
+<a class="flex items-center gap-3 px-sm py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer active:scale-95 group" href="#">
+<span class="material-symbols-outlined text-[24px]">subscriptions</span>
+<span class="font-body-md text-body-md">Subscriptions</span>
+</a>
+<a class="flex items-center gap-3 px-sm py-3 rounded-lg text-primary font-bold bg-primary-fixed/20 border-r-4 border-secondary cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined text-[24px]">show_chart</span>
+<span class="font-body-md text-body-md">Stock Exchange</span>
+</a>
+</div>
+<div class="mt-auto pt-md space-y-3">
+<button class="w-full bg-primary text-on-primary py-3 rounded-lg font-body-md text-body-md hover:bg-primary-container transition-colors shadow-sm">
+                Open New Account
+            </button>
+<div class="border-t border-outline-variant pt-3 space-y-1">
+<a class="flex items-center gap-3 px-sm py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="font-body-sm text-body-sm">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-sm py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">help_outline</span>
+<span class="font-body-sm text-body-sm">Support</span>
+</a>
+</div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<div class="flex-1 ml-64 flex flex-col h-screen overflow-hidden bg-background">
+<!-- TopNavBar Component -->
+<header class="bg-surface docked full-width top-0 sticky z-30 border-b border-outline-variant h-16 px-xl flex justify-between items-center w-full">
+<div class="flex items-center gap-lg">
+<div class="flex items-center gap-4 bg-surface-container-low px-4 py-2 rounded-full border border-outline-variant/50 focus-within:border-primary transition-colors w-64">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-body-sm font-body-sm w-full p-0" placeholder="Search markets..." type="text"/>
+</div>
+<nav class="hidden md:flex gap-6">
+<a class="text-on-surface-variant hover:text-primary transition-colors font-body-sm text-body-sm py-4" href="#">Global View</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors font-body-sm text-body-sm py-4" href="#">Analytics</a>
+<a class="text-primary border-b-2 border-primary font-body-sm text-body-sm py-4 font-medium" href="#">Reports</a>
+</nav>
+</div>
+<div class="flex items-center gap-6">
+<span class="font-data-tabular text-data-tabular text-on-surface-variant bg-surface-container-low px-3 py-1 rounded-md border border-outline-variant/30">Currency: USD</span>
+<div class="flex items-center gap-4 text-on-surface-variant">
+<button class="hover:text-primary transition-colors"><span class="material-symbols-outlined">notifications</span></button>
+<button class="hover:text-primary transition-colors"><span class="material-symbols-outlined">account_circle</span></button>
+</div>
+</div>
+</header>
+<!-- Scrollable Canvas -->
+<main class="flex-1 overflow-y-auto p-xl space-y-lg">
+<!-- Page Header -->
+<div class="flex justify-between items-end border-b border-outline-variant pb-md">
+<div>
+<div class="flex items-center gap-2 mb-2">
+<span class="bg-primary-container text-on-primary-container px-2 py-1 rounded font-label-caps text-label-caps uppercase">Regulatory Report</span>
+<span class="text-on-surface-variant font-data-tabular text-data-tabular">FY 2024-2025</span>
+</div>
+<h2 class="font-headline-md text-headline-md text-on-surface">Pakistan Stock Exchange (PSX)</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant mt-2 max-w-3xl">Comprehensive Fee &amp; Tax Schedule outlining statutory obligations, brokerage commissions, and micro-levies impacting trade profitability.</p>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-lg hover:bg-surface-container-low transition-colors font-body-sm text-body-sm">
+<span class="material-symbols-outlined text-[18px]">download</span> Export PDF
+                    </button>
+<button class="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-lg hover:bg-primary-container transition-colors font-body-sm text-body-sm">
+<span class="material-symbols-outlined text-[18px]">print</span> Print Schedule
+                    </button>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-12 gap-gutter">
+<!-- Main Tax Table (8 columns) -->
+<div class="col-span-12 xl:col-span-8 bg-surface rounded-xl border border-outline-variant shadow-sm overflow-hidden flex flex-col">
+<div class="px-sm py-4 bg-surface-container-lowest border-b border-outline-variant flex justify-between items-center">
+<h3 class="font-headline-sm text-headline-sm text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">gavel</span>
+                            Statutory Taxes &amp; Levies
+                        </h3>
+<span class="font-label-caps text-label-caps text-on-surface-variant bg-surface-container px-2 py-1 rounded">UPDATED JUL '24</span>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant">
+<th class="py-3 px-sm font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Fee/Tax Category</th>
+<th class="py-3 px-sm font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Rate / Amount</th>
+<th class="py-3 px-sm font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Applied To</th>
+<th class="py-3 px-sm font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant font-data-tabular text-data-tabular">
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="py-3 px-sm text-on-surface font-body-md text-body-md">Capital Gain Tax (CGT) - Filer</td>
+<td class="py-3 px-sm text-on-surface">15.00%</td>
+<td class="py-3 px-sm text-on-surface-variant font-body-sm">Realized Gain</td>
+<td class="py-3 px-sm"><span class="bg-secondary-container text-on-secondary-container px-2 py-1 rounded text-[11px] font-bold">ACTIVE</span></td>
+</tr>
+<tr class="hover:bg-surface-container-lowest transition-colors bg-error-container/10">
+<td class="py-3 px-sm text-on-surface font-body-md text-body-md">Capital Gain Tax (CGT) - Non-Filer</td>
+<td class="py-3 px-sm text-error font-bold">45.00%</td>
+<td class="py-3 px-sm text-on-surface-variant font-body-sm">Realized Gain</td>
+<td class="py-3 px-sm"><span class="bg-error-container text-on-error-container px-2 py-1 rounded text-[11px] font-bold">PENALTY RATE</span></td>
+</tr>
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="py-3 px-sm text-on-surface font-body-md text-body-md">Sindh Sales Tax (SST)</td>
+<td class="py-3 px-sm text-on-surface">13.00%</td>
+<td class="py-3 px-sm text-on-surface-variant font-body-sm">Brokerage Commission</td>
+<td class="py-3 px-sm"><span class="bg-surface-container text-on-surface-variant px-2 py-1 rounded text-[11px] font-bold">STANDARD</span></td>
+</tr>
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="py-3 px-sm text-on-surface font-body-md text-body-md">Capital Value Tax (CVT)</td>
+<td class="py-3 px-sm text-on-surface">0.01%</td>
+<td class="py-3 px-sm text-on-surface-variant font-body-sm">Purchase Value</td>
+<td class="py-3 px-sm"><span class="bg-surface-container text-on-surface-variant px-2 py-1 rounded text-[11px] font-bold">STANDARD</span></td>
+</tr>
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="py-3 px-sm text-on-surface font-body-md text-body-md">Advance Income Tax (WHT)</td>
+<td class="py-3 px-sm text-on-surface">0.02%</td>
+<td class="py-3 px-sm text-on-surface-variant font-body-sm">Traded Value</td>
+<td class="py-3 px-sm"><span class="bg-surface-container text-on-surface-variant px-2 py-1 rounded text-[11px] font-bold">STANDARD</span></td>
+</tr>
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="py-3 px-sm text-on-surface font-body-md text-body-md">PSX / SECP Fee</td>
+<td class="py-3 px-sm text-on-surface">0.0033%</td>
+<td class="py-3 px-sm text-on-surface-variant font-body-sm">Traded Value</td>
+<td class="py-3 px-sm"><span class="bg-surface-container text-on-surface-variant px-2 py-1 rounded text-[11px] font-bold">STANDARD</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Side Panel (4 columns) -->
+<div class="col-span-12 xl:col-span-4 space-y-gutter">
+<!-- Tax Impact Summary Card -->
+<div class="bg-surface rounded-xl border border-outline-variant shadow-sm p-sm">
+<div class="flex items-center gap-2 mb-3">
+<span class="material-symbols-outlined text-error">policy</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Tax Impact Analysis</h3>
+</div>
+<div class="p-3 bg-surface-container-low rounded-lg border border-outline-variant/50">
+<h4 class="font-body-md text-body-md font-bold text-on-surface mb-2">Elimination of Holding Incentives</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+                                Effective July 1, 2024, the tiered CGT structure based on holding periods has been abolished for new investments. All capital gains are now taxed at a flat rate of <strong class="text-on-surface">15% for Filers</strong> and <strong class="text-error">45% for Non-Filers</strong>, regardless of whether the asset is held for 1 month or 5 years.
+                            </p>
+</div>
+</div>
+<!-- Effective Cost Breakdown Chart (Visual Representation) -->
+<div class="bg-surface rounded-xl border border-outline-variant shadow-sm p-sm flex flex-col h-[320px]">
+<div class="flex justify-between items-center mb-4">
+<h3 class="font-headline-sm text-headline-sm text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">pie_chart</span>
+                                Effective Cost per Trade
+                            </h3>
+</div>
+<!-- Simulated Chart Area -->
+<div class="flex-1 relative bg-surface-container-lowest rounded border border-outline-variant/30 flex items-end justify-center gap-4 p-4">
+<!-- Trade Size 1 -->
+<div class="flex flex-col items-center gap-2 w-1/3 h-full justify-end">
+<div class="w-full bg-primary-fixed rounded-t flex flex-col justify-end overflow-hidden" style="height: 40%;">
+<div class="w-full bg-error/80 h-[10%]" title="Taxes"></div>
+<div class="w-full bg-secondary/80 h-[20%]" title="Commission"></div>
+</div>
+<span class="font-data-tabular text-[10px] text-on-surface-variant">PKR 100k</span>
+</div>
+<!-- Trade Size 2 -->
+<div class="flex flex-col items-center gap-2 w-1/3 h-full justify-end">
+<div class="w-full bg-primary-fixed rounded-t flex flex-col justify-end overflow-hidden" style="height: 70%;">
+<div class="w-full bg-error/80 h-[15%]" title="Taxes"></div>
+<div class="w-full bg-secondary/80 h-[15%]" title="Commission"></div>
+</div>
+<span class="font-data-tabular text-[10px] text-on-surface-variant">PKR 500k</span>
+</div>
+<!-- Trade Size 3 -->
+<div class="flex flex-col items-center gap-2 w-1/3 h-full justify-end">
+<div class="w-full bg-primary-fixed rounded-t flex flex-col justify-end overflow-hidden" style="height: 100%;">
+<div class="w-full bg-error/80 h-[20%]" title="Taxes"></div>
+<div class="w-full bg-secondary/80 h-[10%]" title="Commission"></div>
+</div>
+<span class="font-data-tabular text-[10px] text-on-surface-variant">PKR 1M+</span>
+</div>
+</div>
+<div class="flex justify-center gap-4 mt-3 font-label-caps text-label-caps text-on-surface-variant">
+<div class="flex items-center gap-1"><div class="w-3 h-3 bg-primary-fixed rounded-sm"></div> Principal</div>
+<div class="flex items-center gap-1"><div class="w-3 h-3 bg-secondary/80 rounded-sm"></div> Brokerage</div>
+<div class="flex items-center gap-1"><div class="w-3 h-3 bg-error/80 rounded-sm"></div> Levies/Taxes</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer Note -->
+<div class="text-center pt-md pb-xl">
+<p class="font-body-sm text-body-sm text-on-surface-variant/70">
+                    * Rates are subject to change based on Federal Board of Revenue (FBR) notifications. Always consult with a certified tax advisor.
+                 </p>
+</div>
+</main>
+</div>
+</body></html>

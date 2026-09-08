@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Notifications &amp; Alerts Management - WealthPro</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Manrope:wght@600;700&amp;family=Work+Sans:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-secondary-fixed-variant": "#005236",
+                    "on-error": "#ffffff",
+                    "surface-container-high": "#dce9ff",
+                    "on-secondary": "#ffffff",
+                    "primary-fixed-dim": "#bec6e0",
+                    "on-secondary-fixed": "#002113",
+                    "inverse-surface": "#213145",
+                    "surface-container-low": "#eff4ff",
+                    "on-surface-variant": "#45464d",
+                    "inverse-on-surface": "#eaf1ff",
+                    "outline": "#76777d",
+                    "primary": "#000000",
+                    "on-primary-fixed": "#131b2e",
+                    "tertiary-fixed": "#ffddb8",
+                    "inverse-primary": "#bec6e0",
+                    "on-tertiary-container": "#b87500",
+                    "on-primary-fixed-variant": "#3f465c",
+                    "on-secondary-container": "#00714d",
+                    "primary-fixed": "#dae2fd",
+                    "error": "#ba1a1a",
+                    "on-background": "#0b1c30",
+                    "tertiary-container": "#2a1700",
+                    "tertiary-fixed-dim": "#ffb95f",
+                    "background": "#f8f9ff",
+                    "surface-variant": "#d3e4fe",
+                    "on-primary-container": "#7c839b",
+                    "secondary": "#006c49",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-dim": "#cbdbf5",
+                    "surface-container": "#e5eeff",
+                    "secondary-container": "#6cf8bb",
+                    "surface-container-highest": "#d3e4fe",
+                    "on-error-container": "#93000a",
+                    "on-primary": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "on-tertiary-fixed-variant": "#653e00",
+                    "surface": "#f8f9ff",
+                    "surface-bright": "#f8f9ff",
+                    "primary-container": "#131b2e",
+                    "tertiary": "#000000",
+                    "on-tertiary": "#ffffff",
+                    "on-tertiary-fixed": "#2a1700",
+                    "surface-tint": "#565e74",
+                    "secondary-fixed": "#6ffbbe",
+                    "secondary-fixed-dim": "#4edea3",
+                    "outline-variant": "#c6c6cd",
+                    "on-surface": "#0b1c30"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "container-max": "1440px",
+                    "lg": "48px",
+                    "sm": "16px",
+                    "base": "4px",
+                    "md": "24px",
+                    "xl": "80px",
+                    "gutter": "24px",
+                    "xs": "8px"
+            },
+            "fontFamily": {
+                    "data-tabular": ["JetBrains Mono"],
+                    "body-md": ["Work Sans"],
+                    "display-lg": ["Manrope"],
+                    "body-lg": ["Work Sans"],
+                    "label-caps": ["Work Sans"],
+                    "body-sm": ["Work Sans"],
+                    "headline-md": ["Manrope"],
+                    "headline-sm": ["Manrope"]
+            },
+            "fontSize": {
+                    "data-tabular": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-md": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "headline-sm": ["24px", {"lineHeight": "32px", "fontWeight": "600"}]
+            }
+          },
+        }
+      }
+    </script>
+</head>
+<body class="bg-background text-on-background font-body-md antialiased min-h-screen flex">
+<!-- SideNavBar -->
+<nav class="hidden md:flex flex-col bg-surface-container-low dark:bg-inverse-surface h-screen w-64 fixed left-0 top-0 py-md z-20 border-r border-outline-variant">
+<div class="px-md mb-xl">
+<h1 class="font-headline-sm text-headline-sm font-bold text-primary dark:text-primary-fixed">WealthPro</h1>
+<p class="font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mt-1">Wealth Management System</p>
+</div>
+<div class="flex-1 flex flex-col gap-2 px-sm">
+<a class="flex items-center gap-sm px-sm py-2 rounded-lg text-on-surface-variant dark:text-outline-variant hover:bg-surface-container dark:hover:bg-on-primary-fixed-variant hover:text-primary dark:hover:text-primary-fixed transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-caps text-label-caps">Overview</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-2 rounded-lg text-on-surface-variant dark:text-outline-variant hover:bg-surface-container dark:hover:bg-on-primary-fixed-variant hover:text-primary dark:hover:text-primary-fixed transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="font-label-caps text-label-caps">Linking History</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-2 rounded-lg text-on-surface-variant dark:text-outline-variant hover:bg-surface-container dark:hover:bg-on-primary-fixed-variant hover:text-primary dark:hover:text-primary-fixed transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">account_tree</span>
+<span class="font-label-caps text-label-caps">Module Audit</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-2 rounded-lg text-on-surface-variant dark:text-outline-variant hover:bg-surface-container dark:hover:bg-on-primary-fixed-variant hover:text-primary dark:hover:text-primary-fixed transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">assessment</span>
+<span class="font-label-caps text-label-caps">Reports</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-2 rounded-lg text-on-surface-variant dark:text-outline-variant hover:bg-surface-container dark:hover:bg-on-primary-fixed-variant hover:text-primary dark:hover:text-primary-fixed transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">shield</span>
+<span class="font-label-caps text-label-caps">Security</span>
+</a>
+<!-- Current Active Section Not in JSON but matching Intent -> Settings / Alerts -->
+<a class="flex items-center gap-sm px-sm py-2 rounded-lg text-primary dark:text-primary-fixed font-bold border-r-4 border-primary dark:border-primary-fixed bg-surface-container-high dark:bg-on-primary-fixed-variant transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">notifications</span>
+<span class="font-label-caps text-label-caps">Alerts</span>
+</a>
+</div>
+<div class="mt-auto px-sm flex flex-col gap-2">
+<button class="w-full py-2 bg-primary text-on-primary font-label-caps text-label-caps rounded-lg hover:opacity-90 transition-opacity mb-4">Export Audit Log</button>
+<a class="flex items-center gap-sm px-sm py-2 rounded-lg text-on-surface-variant dark:text-outline-variant hover:bg-surface-container dark:hover:bg-on-primary-fixed-variant hover:text-primary dark:hover:text-primary-fixed transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">support_agent</span>
+<span class="font-label-caps text-label-caps">Support</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-2 rounded-lg text-on-surface-variant dark:text-outline-variant hover:bg-surface-container dark:hover:bg-on-primary-fixed-variant hover:text-primary dark:hover:text-primary-fixed transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-label-caps text-label-caps">Sign Out</span>
+</a>
+<div class="px-sm pt-4 border-t border-outline-variant flex items-center gap-sm">
+<img alt="WealthPro Admin" class="w-8 h-8 rounded-full object-cover" data-alt="A small, professional headshot photo of an admin user in a corporate setting. Clean lighting, modern aesthetic. High quality, crisp details." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDUItRXXvh5gqeQgEmdj_Nu9DvMZCmZfRjq_jOu4e6MqXCIQmDSAsJn2HlOvLHXOh2AHcX4iARkNT9D_ZVN-ge8CnOiCOk8tuXFw9VvgquCitBwCb7Qmd0bHFoaPZuFXF5zfDTxwjFLBjdd9oa9e67o57_J0k3PYCCy1os66JX_n49re1Kjqj-sOCeV0p2203wRk5odZR7bG7s0Ks6HOE2uY2eiPpVRP0u6bAnTU-WBdH1AM0f-WOc_"/>
+</div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<div class="flex-1 md:ml-64 flex flex-col min-h-screen">
+<!-- TopAppBar -->
+<header class="bg-surface-container-lowest dark:bg-on-background border-b border-outline-variant dark:border-outline w-full top-0 z-10 sticky">
+<div class="flex justify-between items-center w-full px-xl h-20 max-w-container-max mx-auto">
+<div class="md:hidden flex items-center">
+<h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed">WealthPro</h1>
+</div>
+<nav class="hidden md:flex items-center gap-lg h-full">
+<a class="text-on-surface-variant dark:text-outline-variant hover:text-primary dark:hover:text-primary-fixed transition-colors cursor-pointer active:opacity-80 h-full flex items-center font-label-caps text-label-caps" href="#">Dashboard</a>
+<a class="text-on-surface-variant dark:text-outline-variant hover:text-primary dark:hover:text-primary-fixed transition-colors cursor-pointer active:opacity-80 h-full flex items-center font-label-caps text-label-caps" href="#">Analytics</a>
+<a class="text-on-surface-variant dark:text-outline-variant hover:text-primary dark:hover:text-primary-fixed transition-colors cursor-pointer active:opacity-80 h-full flex items-center font-label-caps text-label-caps" href="#">Audit Log</a>
+<a class="text-primary dark:text-primary-fixed border-b-2 border-primary dark:border-primary-fixed h-full flex items-center font-label-caps text-label-caps" href="#">Settings</a>
+</nav>
+<div class="flex items-center gap-md">
+<div class="hidden md:flex items-center bg-surface-container rounded-full px-3 py-1.5 border border-outline-variant">
+<span class="font-data-tabular text-data-tabular text-on-surface mr-2">USD</span>
+<span class="material-symbols-outlined text-on-surface-variant text-sm cursor-pointer">expand_more</span>
+</div>
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed cursor-pointer active:opacity-80 hover:text-primary dark:hover:text-primary-fixed transition-colors">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant dark:text-outline-variant cursor-pointer active:opacity-80 hover:text-primary dark:hover:text-primary-fixed transition-colors">help_outline</span>
+<img alt="User profile" class="w-8 h-8 rounded-full object-cover hidden md:block" data-alt="A small, professional profile picture of a user. The photo is well-lit, showing a person in business attire against a neutral background. High resolution and clear." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCehtMUpA5rcg9RtuO-1B0BkBaiO_7OKQksELF-wV5SoCfSqYZzpxvuzM9Iytf5gVHZSaO_QcbesBxDgY-OxyVwGg7sLkLuNpU682AD4RzQg3DjHVaQ2NGJGVpCXzVOVE2r3tyUYrILEZMHkvkDB5NcuU-Rfba-k8lxfFqLs3HJszyj9ovsEFprTDAEZciq-I2P9TtfN7rv1tHyTTeCECUVeXBxmKu79FVUAvuiy1NEg18xty2bZk1i"/>
+</div>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="flex-1 p-sm md:p-lg xl:p-xl max-w-container-max mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- Header Section -->
+<div class="col-span-1 lg:col-span-12 mb-md">
+<h2 class="font-headline-md text-headline-md text-on-surface mb-2">Notifications &amp; Alerts</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Manage your global feed, critical alerts, and notification preferences.</p>
+</div>
+<!-- Left Column: Priority Inbox & Global Feed -->
+<div class="col-span-1 lg:col-span-8 flex flex-col gap-lg">
+<!-- Priority Inbox (Bento-style critical alerts) -->
+<section class="bg-surface-container-lowest rounded-xl border border-outline-variant p-md">
+<div class="flex items-center gap-2 mb-md">
+<span class="material-symbols-outlined text-error" style="font-variation-settings: 'FILL' 1;">error</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Priority Inbox</h3>
+<span class="bg-error text-on-error font-label-caps text-label-caps px-2 py-1 rounded-full ml-2">2 Action Required</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-sm">
+<!-- Critical Alert 1 -->
+<div class="bg-error-container border border-error/20 p-sm rounded-lg flex flex-col gap-2">
+<div class="flex justify-between items-start">
+<span class="font-label-caps text-label-caps text-on-error-container uppercase">Loan EMI Due</span>
+<span class="font-data-tabular text-data-tabular text-on-error-container text-xs">Today, 2:00 PM</span>
+</div>
+<p class="font-body-md text-body-md text-on-error-container">Mortgage payment of <span class="font-data-tabular">USD 4,250.00</span> is due today. Ensure sufficient funds in Primary Account.</p>
+<div class="mt-auto pt-2 flex gap-2">
+<button class="bg-on-error-container text-on-error px-4 py-1.5 rounded text-sm font-label-caps hover:opacity-90">Pay Now</button>
+<button class="bg-transparent border border-on-error-container text-on-error-container px-4 py-1.5 rounded text-sm font-label-caps hover:bg-error-container/50">View Details</button>
+</div>
+</div>
+<!-- Critical Alert 2 -->
+<div class="bg-tertiary-fixed border border-tertiary-container/20 p-sm rounded-lg flex flex-col gap-2">
+<div class="flex justify-between items-start">
+<span class="font-label-caps text-label-caps text-on-tertiary-container uppercase">Low Liquidity Warning</span>
+<span class="font-data-tabular text-data-tabular text-on-tertiary-container text-xs">Yesterday</span>
+</div>
+<p class="font-body-md text-body-md text-on-tertiary-container">Scheduled transfer of <span class="font-data-tabular">EUR 15,000.00</span> to Investment Portfolio exceeds current checking balance.</p>
+<div class="mt-auto pt-2 flex gap-2">
+<button class="bg-on-tertiary-container text-on-tertiary px-4 py-1.5 rounded text-sm font-label-caps hover:opacity-90">Transfer Funds</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Global Notifications Feed -->
+<section class="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden">
+<div class="p-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Global Feed</h3>
+<button class="text-primary font-label-caps text-label-caps hover:underline">Mark all as read</button>
+</div>
+<div class="flex flex-col">
+<!-- Feed Item: Warning -->
+<div class="p-md border-b border-outline-variant flex gap-md hover:bg-surface-container-lowest transition-colors cursor-pointer group">
+<div class="flex-shrink-0 w-10 h-10 rounded-full bg-tertiary-fixed flex items-center justify-center">
+<span class="material-symbols-outlined text-on-tertiary-container" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-baseline mb-1">
+<h4 class="font-body-lg text-body-lg text-on-surface group-hover:text-primary transition-colors">Housing budget exceeded by 5%</h4>
+<span class="font-data-tabular text-data-tabular text-on-surface-variant text-xs">2h ago</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-3">Your Q3 Housing expenses have reached <span class="font-data-tabular">USD 12,600</span>, exceeding the allocated budget of <span class="font-data-tabular">USD 12,000</span>.</p>
+<button class="border border-outline text-on-surface px-3 py-1 rounded text-sm font-label-caps hover:bg-surface-container transition-colors">Adjust Budget</button>
+</div>
+</div>
+<!-- Feed Item: Success -->
+<div class="p-md border-b border-outline-variant flex gap-md hover:bg-surface-container-lowest transition-colors cursor-pointer group">
+<div class="flex-shrink-0 w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-secondary-container" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-baseline mb-1">
+<h4 class="font-body-lg text-body-lg text-on-surface group-hover:text-primary transition-colors">Trade Execution Success</h4>
+<span class="font-data-tabular text-data-tabular text-on-surface-variant text-xs">5h ago</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-3">Buy order for <span class="font-data-tabular">150 AAPL</span> executed at <span class="font-data-tabular">USD 185.20</span> per share.</p>
+<button class="border border-outline text-on-surface px-3 py-1 rounded text-sm font-label-caps hover:bg-surface-container transition-colors">View Trade</button>
+</div>
+</div>
+<!-- Feed Item: Info/Manual Sync -->
+<div class="p-md border-b border-outline-variant flex gap-md hover:bg-surface-container-lowest transition-colors cursor-pointer group bg-surface-container-highest/20">
+<div class="flex-shrink-0 w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-fixed" style="font-variation-settings: 'FILL' 1;">sync_problem</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-baseline mb-1">
+<h4 class="font-body-lg text-body-lg text-on-surface group-hover:text-primary transition-colors">PSX Holdings Sync Required</h4>
+<span class="font-data-tabular text-data-tabular text-on-surface-variant text-xs">1d ago</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-3">Your PSX (Pakistan Stock Exchange) holdings haven't been updated in 3 days. Manual sync recommended to reflect current valuations.</p>
+<button class="bg-primary text-on-primary px-3 py-1 rounded text-sm font-label-caps hover:opacity-90 transition-opacity">Update Balance</button>
+</div>
+</div>
+<!-- Feed Item: Dividend -->
+<div class="p-md flex gap-md hover:bg-surface-container-lowest transition-colors cursor-pointer group">
+<div class="flex-shrink-0 w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-secondary-container" style="font-variation-settings: 'FILL' 1;">payments</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-baseline mb-1">
+<h4 class="font-body-lg text-body-lg text-on-surface group-hover:text-primary transition-colors">Dividend Arrival</h4>
+<span class="font-data-tabular text-data-tabular text-on-surface-variant text-xs">2d ago</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-3">Dividend payment of <span class="font-data-tabular text-secondary">+ USD 450.00</span> received from VOO Vanguard S&amp;P 500 ETF.</p>
+<button class="border border-outline text-on-surface px-3 py-1 rounded text-sm font-label-caps hover:bg-surface-container transition-colors">View Transaction</button>
+</div>
+</div>
+</div>
+<div class="p-3 border-t border-outline-variant bg-surface-container-lowest text-center">
+<button class="text-primary font-label-caps text-label-caps hover:underline">Load More Notifications</button>
+</div>
+</section>
+</div>
+<!-- Right Column: Alert Settings -->
+<div class="col-span-1 lg:col-span-4">
+<section class="bg-surface-container-lowest rounded-xl border border-outline-variant p-md sticky top-[100px]">
+<div class="flex items-center gap-2 mb-lg pb-sm border-b border-outline-variant">
+<span class="material-symbols-outlined text-on-surface">tune</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Alert Settings</h3>
+</div><div class="mb-md"><button class="w-full py-2 bg-primary text-on-primary font-label-caps text-label-caps rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"><span class="material-symbols-outlined text-sm">add</span>Create Custom Alert</button><p class="text-[11px] text-on-surface-variant mt-2 text-center">Now supports daily, weekly, monthly, and annual intervals.</p></div>
+<div class="flex flex-col gap-md">
+<!-- Setting Toggle 1 -->
+<div class="flex items-center justify-between">
+<div class="flex-1 pr-4">
+<h4 class="font-body-md text-body-md font-semibold text-on-surface">Budget Alerts</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Threshold-based warnings for category overages.</p>
+</div>
+<!-- Custom Toggle Switch -->
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<!-- Setting Toggle 2 -->
+<div class="flex items-center justify-between">
+<div class="flex-1 pr-4">
+<h4 class="font-body-md text-body-md font-semibold text-on-surface">Trade Execution Notices</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Immediate alerts on successful/failed trades.</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<!-- Setting Toggle 3 -->
+<div class="flex items-center justify-between">
+<div class="flex-1 pr-4">
+<h4 class="font-body-md text-body-md font-semibold text-on-surface">Market Movement</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Significant price shifts in PSX/QSE holdings (&gt;5%).</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<!-- Setting Toggle 4 -->
+<div class="flex items-center justify-between">
+<div class="flex-1 pr-4">
+<h4 class="font-body-md text-body-md font-semibold text-on-surface">Maintenance Reminders</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Real estate and property management schedules.</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<!-- Setting Toggle 5 -->
+<div class="flex items-center justify-between">
+<div class="flex-1 pr-4">
+<h4 class="font-body-md text-body-md font-semibold text-on-surface">Zakat &amp; Sharia Compliance</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Annual calculation reminders and compliance warnings.</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-secondary"></div>
+</label>
+</div>
+<div class="mt-md pt-md border-t border-outline-variant"><h4 class="font-label-caps text-label-caps text-on-surface-variant mb-sm uppercase">Active Custom Alerts</h4><div class="flex flex-col gap-sm"><div class="flex items-center justify-between p-2 rounded-lg hover:bg-surface-container transition-colors group"><div class="flex-1"><div class="flex items-center gap-2 mb-1"><span class="font-body-sm text-body-sm text-on-surface font-semibold">Property Tax Payment</span><span class="bg-surface-container-high text-on-surface-variant text-[10px] px-1.5 py-0.5 rounded uppercase font-bold">Annual</span></div><p class="text-[11px] text-on-surface-variant">Next Due: Apr 15, 2025</p></div><div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity"><button class="material-symbols-outlined text-on-surface-variant hover:text-primary text-sm">edit</button><button class="material-symbols-outlined text-error hover:text-error/80 text-sm">delete</button></div></div><div class="flex items-center justify-between p-2 rounded-lg hover:bg-surface-container transition-colors group"><div class="flex-1"><div class="flex items-center gap-2 mb-1"><span class="font-body-sm text-body-sm text-on-surface font-semibold">Quarterly Portfolio Review</span><span class="bg-surface-container-high text-on-surface-variant text-[10px] px-1.5 py-0.5 rounded uppercase font-bold">Quarterly</span></div><p class="text-[11px] text-on-surface-variant">Next Due: Jan 1, 2025</p></div><div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity"><button class="material-symbols-outlined text-on-surface-variant hover:text-primary text-sm">edit</button><button class="material-symbols-outlined text-error hover:text-error/80 text-sm">delete</button></div></div><div class="flex items-center justify-between p-2 rounded-lg hover:bg-surface-container transition-colors group"><div class="flex-1"><div class="flex items-center gap-2 mb-1"><span class="font-body-sm text-body-sm text-on-surface font-semibold">Monthly Subscription Check</span><span class="bg-surface-container-high text-on-surface-variant text-[10px] px-1.5 py-0.5 rounded uppercase font-bold">Monthly</span></div><p class="text-[11px] text-on-surface-variant">Next Due: Nov 1, 2024</p></div><div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity"><button class="material-symbols-outlined text-on-surface-variant hover:text-primary text-sm">edit</button><button class="material-symbols-outlined text-error hover:text-error/80 text-sm">delete</button></div></div></div></div></div>
+<div class="mt-lg pt-sm border-t border-outline-variant">
+<button class="w-full py-2 bg-transparent border border-outline text-on-surface font-label-caps text-label-caps rounded-lg hover:bg-surface-container transition-colors">Advanced Settings</button>
+</div>
+</section>
+</div>
+</main>
+</div>
+</body></html>

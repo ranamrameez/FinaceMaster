@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>FX Workstation - WealthPro</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error-container": "#93000a",
+                        "primary-container": "#131b2e",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "surface-container-low": "#f2f3f9",
+                        "inverse-primary": "#bec6e0",
+                        "on-tertiary": "#ffffff",
+                        "secondary": "#006c49",
+                        "pip-down": "#E11D48",
+                        "inverse-on-surface": "#eff0f6",
+                        "on-tertiary-container": "#7073ff",
+                        "surface-tint": "#565e74",
+                        "surface-bright": "#f8f9ff",
+                        "on-error": "#ffffff",
+                        "primary-fixed-dim": "#bec6e0",
+                        "primary-fixed": "#dae2fd",
+                        "error-container": "#ffdad6",
+                        "outline-variant": "#c6c6cd",
+                        "surface-container-highest": "#e1e2e8",
+                        "tertiary-fixed-dim": "#c0c1ff",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-dim": "#CBDBF5",
+                        "surface-variant": "#e1e2e8",
+                        "on-secondary-fixed-variant": "#005236",
+                        "background": "#f8f9ff",
+                        "on-background": "#191c20",
+                        "on-tertiary-fixed-variant": "#2f2ebe",
+                        "on-primary": "#ffffff",
+                        "pip-up": "#059669",
+                        "tertiary-container": "#07006c",
+                        "on-surface": "#191c20",
+                        "on-secondary-container": "#00714d",
+                        "tertiary-fixed": "#e1e0ff",
+                        "on-surface-variant": "#45464d",
+                        "on-primary-fixed": "#131b2e",
+                        "outline": "#76777d",
+                        "surface-container-high": "#e7e8ee",
+                        "surface": "#f8f9ff",
+                        "surface-container": "#eceef3",
+                        "on-secondary": "#ffffff",
+                        "secondary-container": "#6cf8bb",
+                        "primary": "#000000",
+                        "border-subtle": "#E2E8F0",
+                        "on-secondary-fixed": "#002113",
+                        "secondary-fixed": "#6ffbbe",
+                        "on-primary-container": "#7c839b",
+                        "on-tertiary-fixed": "#07006c",
+                        "secondary-fixed-dim": "#4edea3",
+                        "tertiary": "#000000",
+                        "error": "#ba1a1a",
+                        "inverse-surface": "#2e3135"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "cell-py": "8px",
+                        "widget-gap": "16px",
+                        "container-margin": "24px",
+                        "gutter": "16px",
+                        "cell-px": "12px"
+                    },
+                    "fontFamily": {
+                        "headline-sm": ["Manrope"],
+                        "display-lg": ["Manrope"],
+                        "label-caps": ["Manrope"],
+                        "data-tabular": ["Manrope"],
+                        "body-md": ["Manrope"],
+                        "rate-display": ["Manrope"],
+                        "headline-md": ["Manrope"],
+                        "body-lg": ["Manrope"]
+                    },
+                    "fontSize": {
+                        "headline-sm": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-caps": ["11px", { "lineHeight": "16px", "letterSpacing": "0.06em", "fontWeight": "700" }],
+                        "data-tabular": ["13px", { "lineHeight": "18px", "fontWeight": "500" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "rate-display": ["18px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "headline-md": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background min-h-screen flex font-body-md overflow-hidden">
+<!-- SideNavBar -->
+<aside class="bg-primary-container border-r border-border-subtle fixed left-0 top-0 h-full w-64 flex flex-col z-40 text-on-primary-fixed">
+<div class="p-container-margin border-b border-border-subtle/20">
+<h1 class="font-headline-sm text-headline-sm font-bold text-on-primary">WealthPro</h1>
+<p class="font-label-caps text-label-caps text-on-primary-container mt-1">Institutional Grade FX</p>
+</div>
+<nav class="flex-1 overflow-y-auto py-4">
+<ul class="space-y-1 px-3">
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded font-label-caps text-label-caps text-on-primary-container hover:bg-on-primary-fixed-variant transition-colors duration-150" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+                        Dashboard
+                    </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded font-label-caps text-label-caps text-on-primary-container hover:bg-on-primary-fixed-variant transition-colors duration-150" href="#">
+<span class="material-symbols-outlined">account_balance</span>
+                        Banking
+                    </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded font-label-caps text-label-caps text-on-primary-container hover:bg-on-primary-fixed-variant transition-colors duration-150" href="#">
+<span class="material-symbols-outlined">payments</span>
+                        Investments
+                    </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded font-label-caps text-label-caps text-on-primary-container hover:bg-on-primary-fixed-variant transition-colors duration-150" href="#">
+<span class="material-symbols-outlined">credit_score</span>
+                        Loans
+                    </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded font-label-caps text-label-caps text-on-primary-container hover:bg-on-primary-fixed-variant transition-colors duration-150" href="#">
+<span class="material-symbols-outlined">subscriptions</span>
+                        Subscriptions
+                    </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded font-label-caps text-label-caps text-on-primary-container hover:bg-on-primary-fixed-variant transition-colors duration-150" href="#">
+<span class="material-symbols-outlined">show_chart</span>
+                        Stock Exchange
+                    </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded font-label-caps text-label-caps text-on-primary-container hover:bg-on-primary-fixed-variant transition-colors duration-150" href="#">
+<span class="material-symbols-outlined">domain</span>
+                        Property Management
+                    </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded font-label-caps text-label-caps bg-secondary-container text-on-secondary-container font-bold border-l-4 border-secondary opacity-90 scale-95 transition-all" href="#">
+<span class="material-symbols-outlined">currency_exchange</span>
+                        FX Workstation
+                    </a>
+</li>
+</ul>
+</nav>
+<div class="p-4 border-t border-border-subtle/20 flex items-center gap-3">
+<img alt="User Profile Avatar" class="w-10 h-10 rounded-full object-cover border border-outline-variant" data-alt="A professional headshot of a corporate trader in a sharp suit against a minimal grey background. High resolution, stark lighting, analytical mood." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCah6C5yFloTzy9NnIvj2-sTmB1KEWlnsQgjjFGOiRzEwc5FynZ4qZSN1PLo8EQ-p0S6tcSbDUHowu2_H0AsMP11eTbSowHkkgeFM8tpfh2H_p-lDEcZnPadYeBgfI2rcIlmHNQnxDYTFbY1Na3Kg3jIqGE2xzI_eNmkJqIJv2o87Quc_Dojxi4pAoC2TqOTQ5yrWXM5w_BkL3jz_T16IeSvPwKRsoMT1BHIHxjI27eKA23gG9oWdvF"/>
+<div class="flex-1 min-w-0">
+<p class="font-data-tabular text-data-tabular text-on-primary truncate">A. Trader</p>
+<p class="font-label-caps text-label-caps text-on-primary-container truncate">ID: 8847-X</p>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<div class="ml-64 flex-1 flex flex-col h-screen overflow-hidden">
+<!-- TopAppBar -->
+<header class="bg-surface-bright border-b border-border-subtle flex justify-between items-center px-container-margin h-16 z-30 shrink-0">
+<div class="flex items-center gap-6 h-full">
+<span class="font-headline-sm text-headline-sm font-bold text-on-surface">FX Workstation</span>
+<nav class="hidden md:flex h-full items-end">
+<a class="px-4 pb-1 font-label-caps text-label-caps text-on-surface-variant hover:text-primary transition-colors h-full flex items-end" href="#">USD</a>
+<a class="px-4 pb-1 font-label-caps text-label-caps text-primary border-b-2 border-primary h-full flex items-end scale-98" href="#">EUR</a>
+<a class="px-4 pb-1 font-label-caps text-label-caps text-on-surface-variant hover:text-primary transition-colors h-full flex items-end" href="#">GBP</a>
+<a class="px-4 pb-1 font-label-caps text-label-caps text-on-surface-variant hover:text-primary transition-colors h-full flex items-end" href="#">JPY</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-sm">search</span>
+<input class="bg-surface-container-low border border-border-subtle rounded-DEFAULT pl-9 pr-3 py-1.5 font-data-tabular text-data-tabular focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary w-48 transition-all" placeholder="Search pairs..." type="text"/>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Dashboard Canvas -->
+<main class="flex-1 overflow-auto p-gutter bg-background flex flex-col gap-widget-gap">
+<div class="grid grid-cols-12 gap-widget-gap flex-1 min-h-0">
+<!-- Left Column: Chart & Positions -->
+<div class="col-span-12 lg:col-span-8 flex flex-col gap-widget-gap">
+<!-- Charting Widget -->
+<div class="bg-surface-container-lowest border border-border-subtle rounded flex-1 flex flex-col min-h-[400px]">
+<div class="px-cell-px py-cell-py border-b border-border-subtle flex justify-between items-center bg-surface-container-low/50">
+<div class="flex items-center gap-3">
+<h2 class="font-headline-sm text-headline-sm">EUR/USD</h2>
+<span class="font-label-caps text-label-caps border border-pip-up text-pip-up px-1.5 py-0.5 rounded-sm">OPEN</span>
+</div>
+<div class="flex gap-2 font-label-caps text-label-caps">
+<button class="px-2 py-1 text-on-surface-variant hover:bg-surface-container rounded transition-colors">1H</button>
+<button class="px-2 py-1 bg-surface-container-highest text-on-surface rounded transition-colors">4H</button>
+<button class="px-2 py-1 text-on-surface-variant hover:bg-surface-container rounded transition-colors">1D</button>
+<button class="px-2 py-1 text-on-surface-variant hover:bg-surface-container rounded transition-colors">1W</button>
+</div>
+</div>
+<div class="flex-1 relative p-4 bg-surface-bright flex items-center justify-center">
+<!-- Placeholder for actual chart implementation -->
+<div class="absolute inset-0 opacity-20 pointer-events-none" style="background-image: repeating-linear-gradient(#e1e2e8 0 1px, transparent 1px 100%), repeating-linear-gradient(90deg, #e1e2e8 0 1px, transparent 1px 100%); background-size: 50px 50px;"></div>
+<div class="text-center text-on-surface-variant font-data-tabular">
+<span class="material-symbols-outlined text-4xl mb-2 block text-outline-variant">candlestick_chart</span>
+                                Professional Charting Component (EUR/USD)<br/>
+<span class="text-xs text-outline">RSI: 42.5 | MACD: -0.0012</span>
+</div>
+</div>
+<div class="px-cell-px py-1.5 border-t border-border-subtle bg-surface-container-low/30 flex justify-between items-center"><p class="text-[10px] font-label-caps text-outline">Data Source: Manual / Free Tier API</p><p class="text-[10px] font-label-caps text-outline-variant italic">Last updated: Just now</p></div></div>
+<!-- Positions Table -->
+<div class="bg-surface-container-lowest border border-border-subtle rounded h-64 flex flex-col shrink-0">
+<div class="px-cell-px py-cell-py border-b border-border-subtle bg-surface-container-low/50">
+<h3 class="font-label-caps text-label-caps text-on-surface">OPEN POSITIONS</h3>
+</div>
+<div class="flex-1 overflow-auto">
+<table class="w-full text-left font-data-tabular text-data-tabular border-collapse">
+<thead>
+<tr class="border-b border-border-subtle text-on-surface-variant font-label-caps text-label-caps">
+<th class="px-cell-px py-cell-py font-normal sticky top-0 bg-surface-container-lowest">Pair</th>
+<th class="px-cell-px py-cell-py font-normal sticky top-0 bg-surface-container-lowest">Type</th>
+<th class="px-cell-px py-cell-py font-normal sticky top-0 bg-surface-container-lowest text-right">Size</th>
+<th class="px-cell-px py-cell-py font-normal sticky top-0 bg-surface-container-lowest text-right">Entry</th>
+<th class="px-cell-px py-cell-py font-normal sticky top-0 bg-surface-container-lowest text-right">Current</th>
+<th class="px-cell-px py-cell-py font-normal sticky top-0 bg-surface-container-lowest text-right">P&amp;L (USD)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="border-b border-border-subtle/50 hover:bg-surface-container transition-colors cursor-pointer">
+<td class="px-cell-px py-2 font-bold">EUR/USD</td>
+<td class="px-cell-px py-2 text-pip-up">LONG</td>
+<td class="px-cell-px py-2 text-right">10.00</td>
+<td class="px-cell-px py-2 text-right">1.08450</td>
+<td class="px-cell-px py-2 text-right">1.08512</td>
+<td class="px-cell-px py-2 text-right text-pip-up font-bold">+620.00</td>
+</tr>
+<tr class="border-b border-border-subtle/50 hover:bg-surface-container transition-colors cursor-pointer">
+<td class="px-cell-px py-2 font-bold">GBP/JPY</td>
+<td class="px-cell-px py-2 text-pip-down">SHORT</td>
+<td class="px-cell-px py-2 text-right">5.00</td>
+<td class="px-cell-px py-2 text-right">189.250</td>
+<td class="px-cell-px py-2 text-right">189.410</td>
+<td class="px-cell-px py-2 text-right text-pip-down font-bold">-532.18</td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors cursor-pointer">
+<td class="px-cell-px py-2 font-bold">AUD/USD</td>
+<td class="px-cell-px py-2 text-pip-up">LONG</td>
+<td class="px-cell-px py-2 text-right">2.50</td>
+<td class="px-cell-px py-2 text-right">0.65210</td>
+<td class="px-cell-px py-2 text-right">0.65285</td>
+<td class="px-cell-px py-2 text-right text-pip-up font-bold">+187.50</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Right Column: Watchlist & Trading Panel -->
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-widget-gap">
+<!-- Quick Trade Widget -->
+<div class="bg-surface-container-lowest border border-border-subtle rounded p-cell-px flex flex-col gap-4">
+<div class="flex justify-between items-center border-b border-border-subtle pb-2">
+<h3 class="font-label-caps text-label-caps text-on-surface">QUICK TRADE</h3>
+<div class="bg-surface-container text-on-surface font-data-tabular text-xs px-2 py-0.5 rounded flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-pip-up"></span>
+                                Live
+                            </div>
+</div>
+<div class="flex gap-2">
+<!-- Sell Button -->
+<button class="flex-1 bg-surface-bright hover:bg-surface-container border border-border-subtle rounded p-2 flex flex-col items-center transition-colors group relative overflow-hidden">
+<div class="absolute inset-0 bg-pip-down/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<span class="font-label-caps text-label-caps text-on-surface-variant mb-1 z-10">SELL</span>
+<div class="font-rate-display text-rate-display text-on-surface flex items-baseline z-10">
+<span class="text-sm">1.08</span><span class="text-xl font-bold text-pip-down">49</span><span class="text-xs">2</span>
+</div>
+</button>
+<!-- Buy Button -->
+<button class="flex-1 bg-surface-bright hover:bg-surface-container border border-border-subtle rounded p-2 flex flex-col items-center transition-colors group relative overflow-hidden">
+<div class="absolute inset-0 bg-pip-up/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<span class="font-label-caps text-label-caps text-on-surface-variant mb-1 z-10">BUY</span>
+<div class="font-rate-display text-rate-display text-on-surface flex items-baseline z-10">
+<span class="text-sm">1.08</span><span class="text-xl font-bold text-pip-up">51</span><span class="text-xs">2</span>
+</div>
+</button>
+</div>
+<div class="text-center font-data-tabular text-[10px] text-on-surface-variant">Spread: 2.0</div>
+<div class="space-y-3 mt-2">
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-1">Volume (Lots)</label>
+<div class="flex items-center border border-border-subtle rounded bg-surface-container-lowest overflow-hidden">
+<button class="px-3 py-1 bg-surface-container-low hover:bg-surface-container text-on-surface-variant border-r border-border-subtle transition-colors">-</button>
+<input class="flex-1 w-full text-center font-data-tabular text-data-tabular border-none focus:ring-0 p-1" type="text" value="1.00"/>
+<button class="px-3 py-1 bg-surface-container-low hover:bg-surface-container text-on-surface-variant border-l border-border-subtle transition-colors">+</button>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-2">
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-1">Stop Loss</label>
+<input class="w-full border border-border-subtle rounded bg-surface-container-lowest font-data-tabular text-data-tabular p-1.5 focus:border-primary focus:ring-1 focus:ring-primary transition-all" placeholder="Price" type="text"/>
+</div>
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-1">Take Profit</label>
+<input class="w-full border border-border-subtle rounded bg-surface-container-lowest font-data-tabular text-data-tabular p-1.5 focus:border-primary focus:ring-1 focus:ring-primary transition-all" placeholder="Price" type="text"/>
+</div>
+</div>
+<button class="w-full bg-primary text-on-primary font-label-caps text-label-caps py-2 rounded hover:bg-on-primary-fixed-variant transition-colors mt-4 flex items-center justify-center gap-2"><span class="material-symbols-outlined text-sm">edit_note</span> LOG MANUAL TRADE</button></div>
+</div>
+<!-- Market Watch Grid -->
+<div class="bg-surface-container-lowest border border-border-subtle rounded flex-1 flex flex-col min-h-0">
+<div class="px-cell-px py-cell-py border-b border-border-subtle bg-surface-container-low/50">
+<h3 class="font-label-caps text-label-caps text-on-surface">MARKET WATCH</h3>
+<button class="text-[10px] font-label-caps text-primary hover:underline flex items-center gap-1 mt-1"><span class="material-symbols-outlined text-xs">edit</span> Manual Rate Entry</button></div>
+<div class="flex-1 overflow-auto">
+<table class="w-full text-left font-data-tabular text-data-tabular border-collapse">
+<thead>
+<tr class="border-b border-border-subtle text-on-surface-variant font-label-caps text-label-caps">
+<th class="px-cell-px py-2 font-normal sticky top-0 bg-surface-container-lowest">Symbol</th>
+<th class="px-cell-px py-2 font-normal sticky top-0 bg-surface-container-lowest text-right">Bid</th>
+<th class="px-cell-px py-2 font-normal sticky top-0 bg-surface-container-lowest text-right">Ask</th>
+<th class="px-cell-px py-2 font-normal sticky top-0 bg-surface-container-lowest text-right">Chg</th><th class="px-cell-px py-2 font-normal sticky top-0 bg-surface-container-lowest text-right">Source</th>
+</tr>
+</thead>
+<tbody>
+<tr class="border-b border-border-subtle/50 hover:bg-surface-container transition-colors cursor-pointer bg-surface-container/30">
+<td class="px-cell-px py-2 font-bold flex items-center gap-1"><span class="w-1 h-1 rounded-full bg-secondary inline-block"></span> EUR/USD</td>
+<td class="px-cell-px py-2 text-right">1.08492</td>
+<td class="px-cell-px py-2 text-right">1.08512</td>
+<td class="px-cell-px py-2 text-right text-pip-up">+0.12%</td><td class="px-cell-px py-2 text-right"><span class="text-[10px] px-1.5 py-0.5 rounded bg-secondary-container text-on-secondary-container font-label-caps">USER</span></td>
+</tr>
+<tr class="border-b border-border-subtle/50 hover:bg-surface-container transition-colors cursor-pointer">
+<td class="px-cell-px py-2 font-bold">GBP/USD</td>
+<td class="px-cell-px py-2 text-right">1.26340</td>
+<td class="px-cell-px py-2 text-right">1.26355</td>
+<td class="px-cell-px py-2 text-right text-pip-down">-0.05%</td><td class="px-cell-px py-2 text-right"><span class="text-[10px] px-1.5 py-0.5 rounded bg-surface-container text-outline-variant font-label-caps">SYNC</span></td>
+</tr>
+<tr class="border-b border-border-subtle/50 hover:bg-surface-container transition-colors cursor-pointer">
+<td class="px-cell-px py-2 font-bold">USD/JPY</td>
+<td class="px-cell-px py-2 text-right">150.450</td>
+<td class="px-cell-px py-2 text-right">150.470</td>
+<td class="px-cell-px py-2 text-right text-pip-up">+0.34%</td><td class="px-cell-px py-2 text-right"><span class="text-[10px] px-1.5 py-0.5 rounded bg-surface-container text-outline-variant font-label-caps">SYNC</span></td>
+</tr>
+<tr class="border-b border-border-subtle/50 hover:bg-surface-container transition-colors cursor-pointer">
+<td class="px-cell-px py-2 font-bold">AUD/USD</td>
+<td class="px-cell-px py-2 text-right">0.65285</td>
+<td class="px-cell-px py-2 text-right">0.65300</td>
+<td class="px-cell-px py-2 text-right text-on-surface-variant">0.00%</td><td class="px-cell-px py-2 text-right"><span class="text-[10px] px-1.5 py-0.5 rounded bg-surface-container text-outline-variant font-label-caps">SYNC</span></td>
+</tr>
+<tr class="border-b border-border-subtle/50 hover:bg-surface-container transition-colors cursor-pointer">
+<td class="px-cell-px py-2 font-bold">USD/CHF</td>
+<td class="px-cell-px py-2 text-right">0.88120</td>
+<td class="px-cell-px py-2 text-right">0.88145</td>
+<td class="px-cell-px py-2 text-right text-pip-down">-0.18%</td><td class="px-cell-px py-2 text-right"><span class="text-[10px] px-1.5 py-0.5 rounded bg-surface-container text-outline-variant font-label-caps">SYNC</span></td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors cursor-pointer">
+<td class="px-cell-px py-2 font-bold">NZD/USD</td>
+<td class="px-cell-px py-2 text-right">0.61740</td>
+<td class="px-cell-px py-2 text-right">0.61765</td>
+<td class="px-cell-px py-2 text-right text-pip-up">+0.08%</td><td class="px-cell-px py-2 text-right"><span class="text-[10px] px-1.5 py-0.5 rounded bg-surface-container text-outline-variant font-label-caps">SYNC</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

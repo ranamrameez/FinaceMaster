@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"success":"#006c49","error-container":"#ffdad6","on-secondary":"#ffffff","inverse-on-surface":"#eff0f6","on-tertiary-fixed-variant":"#3e465b","inverse-surface":"#2e3135","surface-container-low":"#f2f3f9","primary-container":"#1b1b1b","primary":"#000000","primary-fixed":"#e2e2e2","tertiary-fixed":"#dae2fc","tertiary":"#000000","surface-tint":"#5e5e5e","outline":"#7e7576","surface-container-high":"#e7e8ee","surface-bright":"#f8f9ff","surface-container-lowest":"#ffffff","surface-container":"#eceef3","on-background":"#191c20","surface-variant":"#e1e2e8","surface":"#f8f9ff","on-tertiary":"#ffffff","on-primary-fixed-variant":"#474747","on-secondary-fixed-variant":"#005236","on-primary-fixed":"#1b1b1b","on-secondary-container":"#0c714d","secondary-container":"#9af2c5","tertiary-fixed-dim":"#bec6e0","on-primary-container":"#848484","currency-secondary":"#45464d","on-secondary-fixed":"#002113","error":"#ba1a1a","primary-fixed-dim":"#c6c6c6","on-surface":"#191c20","inverse-primary":"#c6c6c6","on-primary":"#ffffff","on-tertiary-fixed":"#131b2e","on-tertiary-container":"#7b839b","surface-container-highest":"#e1e2e8","on-surface-variant":"#4c4546","secondary-fixed":"#9df4c8","background":"#f8f9ff","surface-dim":"#d8dae0","tertiary-container":"#131b2e","on-error":"#ffffff","secondary":"#006c49","currency-primary":"#0b1c30","outline-variant":"#cfc4c5","secondary-fixed-dim":"#81d8ad","on-error-container":"#93000a"},"borderRadius":{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},"spacing":{"base":"4px","lg":"48px","gutter":"24px","xl":"80px","sm":"16px","xs":"8px","md":"24px"},"fontFamily":{"body-sm":["Work Sans"],"label-caps":["Work Sans"],"data-tabular":["JetBrains Mono"],"currency-display":["JetBrains Mono"],"headline-sm":["Manrope"],"body-lg":["Work Sans"],"headline-lg":["Manrope"],"body-md":["Work Sans"],"headline-md":["Manrope"]},"fontSize":{"body-sm":["14px",{"lineHeight":"20px","fontWeight":"400"}],"label-caps":["12px",{"lineHeight":"16px","letterSpacing":"0.05em","fontWeight":"600"}],"data-tabular":["14px",{"lineHeight":"20px","fontWeight":"500"}],"currency-display":["24px",{"lineHeight":"32px","letterSpacing":"-0.02em","fontWeight":"600"}],"headline-sm":["24px",{"lineHeight":"32px","fontWeight":"600"}],"body-lg":["18px",{"lineHeight":"28px","fontWeight":"400"}],"headline-lg":["48px",{"lineHeight":"56px","letterSpacing":"-0.02em","fontWeight":"700"}],"body-md":["16px",{"lineHeight":"24px","fontWeight":"400"}],"headline-md":["32px",{"lineHeight":"40px","letterSpacing":"-0.01em","fontWeight":"600"}]}}}}</script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@100..900&family=Work+Sans:wght@100..900&display=swap" rel="stylesheet"/></head><body class="bg-surface font-body-md text-on-surface"><aside class="fixed left-0 top-0 h-full w-72 bg-surface-container-low z-50 flex flex-col border-r border-outline-variant/30 shadow-[4px_0_24px_rgba(0,0,0,0.02)]"><div class="px-gutter h-20 flex items-center mb-xs"><div class="flex items-center gap-sm"><div class="w-10 h-10 bg-primary flex items-center justify-center rounded-xl"><span class="material-symbols-outlined text-on-primary">payments</span></div><span class="font-headline-sm text-headline-sm tracking-tight text-primary">WealthPro</span></div></div><nav class="flex-1 px-sm overflow-y-auto space-y-base" data-active-classes="bg-secondary-container text-on-secondary-container font-bold"><a aria-current="page" class="flex items-center px-md py-3 rounded-lg transition-all group bg-secondary-container text-on-secondary-container font-bold" data-path="dashboard" href="#"><span class="material-symbols-outlined mr-md">dashboard</span><span class="font-body-md">Dashboard</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="banking" href="#"><span class="material-symbols-outlined mr-md">account_balance</span><span class="font-body-md">Banking</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="investments" href="#"><span class="material-symbols-outlined mr-md">monitoring</span><span class="font-body-md">Investments</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="loans" href="#"><span class="material-symbols-outlined mr-md">request_quote</span><span class="font-body-md">Loans</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="subscriptions" href="#"><span class="material-symbols-outlined mr-md">event_repeat</span><span class="font-body-md">Subscriptions</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="stock-exchange" href="#"><span class="material-symbols-outlined mr-md">show_chart</span><span class="font-body-md">Stock Exchange</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="property-management" href="#"><span class="material-symbols-outlined mr-md">apartment</span><span class="font-body-md">Property</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="fx-workstation" href="#"><span class="material-symbols-outlined mr-md">currency_exchange</span><span class="font-body-md">FX Workstation</span></a></nav><div class="p-gutter border-t border-outline-variant/30"><div class="flex items-center gap-sm p-sm rounded-xl bg-surface-container"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div><div class="flex-1 overflow-hidden"><p class="text-body-sm font-label-caps truncate">John Doe</p><p class="text-[10px] text-on-surface-variant">Private Wealth</p></div><span class="material-symbols-outlined text-on-surface-variant text-sm">settings</span></div></div></aside><div class="pl-72"><header class="fixed top-0 left-72 right-0 h-20 bg-surface/80 backdrop-blur-xl z-40 px-gutter flex items-center justify-between border-b border-outline-variant/20 shadow-sm"><div class="flex items-center gap-md"><div class="flex items-center gap-xs px-md py-2 bg-surface-container-lowest border border-outline-variant rounded-full shadow-sm"><span class="w-2 h-2 rounded-full bg-success"></span><span class="font-label-caps text-on-surface-variant uppercase">Active:</span><span class="font-data-tabular text-currency-primary font-bold">USD</span></div><div class="h-8 w-[1px] bg-outline-variant"></div><div class="relative group"><button class="flex items-center gap-sm px-md py-2 rounded-lg bg-surface-container-high hover:bg-primary hover:text-on-primary transition-all"><span class="material-symbols-outlined text-sm">currency_exchange</span><span class="font-label-caps">Multi-Currency</span><span class="material-symbols-outlined text-sm">expand_more</span></button><div class="absolute top-full mt-xs left-0 w-64 bg-surface-container-lowest rounded-xl shadow-[0_10px_25px_-5px_rgba(11,28,48,0.1)] border border-outline-variant hidden group-hover:block py-sm z-50"><div class="px-md py-xs text-xs font-label-caps text-on-surface-variant">Select View</div><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">Global (Total)</span><span class="material-symbols-outlined text-sm">public</span></button><div class="h-[1px] bg-outline-variant my-xs mx-md"></div><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">US Dollar</span><span class="font-data-tabular">USD</span></button><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">Euro</span><span class="font-data-tabular">EUR</span></button><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">PK Rupee</span><span class="font-data-tabular">PKR</span></button><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">QA Riyal</span><span class="font-data-tabular">QAR</span></button></div></div></div><div class="flex items-center gap-gutter"><div class="relative flex items-center bg-surface-container px-md py-2 rounded-lg border border-outline-variant"><span class="material-symbols-outlined text-on-surface-variant mr-sm">search</span><input class="bg-transparent border-none outline-none text-sm text-on-surface w-48 placeholder:text-on-surface-variant" placeholder="Search portfolios..." type="text"/></div><button class="p-sm rounded-full hover:bg-surface-container-high transition-colors relative"><span class="material-symbols-outlined text-on-surface-variant">notifications</span><span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-surface"></span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center cursor-pointer"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></header><main class="relative pt-20 bg-surface min-h-screen"><div class="flex flex-col w-full">
+<div class="px-xl py-xl w-full mx-auto max-w-[1440px] flex flex-col gap-lg">
+<!-- Consolidated Global Summary -->
+<div class="w-full bg-primary text-on-primary rounded-3xl p-lg shadow-xl relative overflow-hidden group">
+<!-- Decorative Background Element -->
+<div class="absolute -top-32 -right-32 w-96 h-96 bg-primary-fixed opacity-10 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-1000"></div>
+<div class="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-gutter">
+<div class="flex flex-col gap-sm">
+<div class="flex items-center gap-xs">
+<span class="font-label-caps text-label-caps text-on-primary/70 uppercase tracking-widest">Global Consolidated Wealth</span>
+<div class="px-2 py-1 bg-on-primary/10 rounded font-label-caps text-label-caps">BASE: USD</div>
+</div>
+<div class="flex items-baseline gap-sm">
+<span class="font-currency-display text-[64px] leading-[72px] font-bold tracking-tight text-on-primary animate-value" data-value="14250000.00">$0.00</span>
+</div>
+<div class="flex items-center gap-xs text-secondary-fixed">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+<span class="font-data-tabular text-data-tabular">+2.4% (30d)</span>
+</div>
+</div>
+<div class="flex gap-md bg-on-primary/5 p-sm rounded-xl backdrop-blur-sm">
+<div class="flex flex-col gap-xs pr-md">
+<span class="font-label-caps text-label-caps text-on-primary/60">Liquid Assets</span>
+<span class="font-data-tabular text-data-tabular text-on-primary">$4,120,500</span>
+</div>
+<div class="w-[1px] bg-on-primary/20"></div>
+<div class="flex flex-col gap-xs pl-md">
+<span class="font-label-caps text-label-caps text-on-primary/60">Fixed Assets</span>
+<span class="font-data-tabular text-data-tabular text-on-primary">$10,129,500</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Main Bento Grid -->
+<div class="grid grid-cols-12 gap-gutter w-full">
+<!-- Currency Breakdown Chart -->
+<div class="col-span-12 lg:col-span-8 bg-surface-container-lowest rounded-3xl p-md shadow-sm flex flex-col gap-md transition-all hover:shadow-md">
+<div class="flex justify-between items-center">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Currency Allocation</h2>
+<button class="p-2 rounded-full hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">more_horiz</span>
+</button>
+</div>
+<div class="flex-1 flex flex-col md:flex-row items-center gap-lg py-md">
+<!-- Donut Chart SVG -->
+<div class="relative w-48 h-48 flex-shrink-0">
+<svg class="w-full h-full transform -rotate-90" viewbox="0 0 100 100">
+<!-- EUR -->
+<circle class="stroke-tertiary-fixed stroke-[12]" cx="50" cy="50" fill="transparent" r="40" stroke-dasharray="251.2" stroke-dashoffset="150" stroke-linecap="round"></circle>
+<!-- PKR -->
+<circle class="stroke-secondary stroke-[12]" cx="50" cy="50" fill="transparent" r="40" stroke-dasharray="251.2" stroke-dashoffset="200" stroke-linecap="round"></circle>
+<!-- USD -->
+<circle class="stroke-primary stroke-[16]" cx="50" cy="50" fill="transparent" r="40" stroke-dasharray="251.2" stroke-dashoffset="60" stroke-linecap="round"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="font-label-caps text-label-caps text-on-surface-variant">Dominant</span>
+<span class="font-currency-display text-[20px] font-bold text-primary">USD</span>
+</div>
+</div>
+<!-- Legend -->
+<div class="flex-1 w-full flex flex-col gap-sm">
+<div class="flex justify-between items-center p-sm rounded-lg bg-surface-container-low hover:bg-surface-container transition-colors cursor-pointer">
+<div class="flex items-center gap-sm">
+<div class="w-3 h-3 rounded-full bg-primary"></div>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-bold text-on-surface">US Dollar</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant">Primary Reserve</span>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-data-tabular text-data-tabular text-on-surface">65%</span>
+<span class="font-data-tabular text-data-tabular text-on-surface-variant text-sm">$9,262,500</span>
+</div>
+</div>
+<div class="flex justify-between items-center p-sm rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer">
+<div class="flex items-center gap-sm">
+<div class="w-3 h-3 rounded-full bg-secondary"></div>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-bold text-on-surface">PK Rupee</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant">Domestic Holdings</span>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-data-tabular text-data-tabular text-on-surface">20%</span>
+<span class="font-data-tabular text-data-tabular text-on-surface-variant text-sm">Rs. 798,000,000</span>
+</div>
+</div>
+<div class="flex justify-between items-center p-sm rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer">
+<div class="flex items-center gap-sm">
+<div class="w-3 h-3 rounded-full bg-tertiary-fixed"></div>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-bold text-on-surface">Euro</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant">European Equities</span>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-data-tabular text-data-tabular text-on-surface">15%</span>
+<span class="font-data-tabular text-data-tabular text-on-surface-variant text-sm">€1,988,372</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Specialized Modules (Yield & Zakat) -->
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-gutter">
+<!-- Rental Yield -->
+<div class="flex-1 bg-surface-container rounded-3xl p-md shadow-sm relative overflow-hidden group">
+<div class="absolute inset-0 bg-cover bg-center opacity-20 mix-blend-overlay transition-transform duration-700 group-hover:scale-110" data-alt="Abstract aerial view of modern luxury real estate architecture, sharp geometric lines, warm sunlight, muted neutral tones, corporate minimalism." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAe2DIPuTd7d0kt6QgEAQj_8gb9UUqtgfPotBAwfzAOsqHzDGCf6G5R0EHRvOSiF6SZ-trpEcFosmXPZGGasYT-1xq1OAuEt2cUzkJVaFnvVbrdngKMfT-SV_ygNa_bMz4fXLW0U8x4SAIysh6w3nnVBdb-xF-6cM7zD9WA6ia1InyA4CnxmWbDPd20YTA4bpRcBQ-ECYG13Yrsj0NHXkwP-ginRfPw5jwUF__DOCIcktvQQnjv9kNI')"></div>
+<div class="relative z-10 flex flex-col h-full justify-between gap-md">
+<div class="flex justify-between items-start">
+<div class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-sm">apartment</span>
+</div>
+<span class="px-2 py-1 bg-surface-container-lowest rounded-full font-label-caps text-label-caps text-on-surface shadow-sm">Real Estate</span>
+</div>
+<div>
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-1">Global Rental Yield</p>
+<div class="flex items-baseline gap-2">
+<span class="font-currency-display text-[32px] text-primary">6.8%</span>
+<span class="font-data-tabular text-data-tabular text-success">+0.2%</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Zakat Obligation -->
+<div class="flex-1 bg-secondary-container text-on-secondary-container rounded-3xl p-md shadow-sm flex flex-col justify-between gap-md transition-all hover:bg-secondary hover:text-on-secondary group cursor-pointer">
+<div class="flex justify-between items-start">
+<div class="w-10 h-10 rounded-full bg-surface-container-lowest/50 text-secondary flex items-center justify-center group-hover:text-on-secondary group-hover:bg-on-secondary/20">
+<span class="material-symbols-outlined text-sm">volunteer_activism</span>
+</div>
+</div>
+<div>
+<p class="font-label-caps text-label-caps opacity-80 mb-1">Est. Zakat Obligation (FY24)</p>
+<div class="flex items-baseline gap-2">
+<span class="font-currency-display text-[24px]">$128,450</span>
+</div>
+<p class="font-body-sm text-body-sm mt-2 opacity-90 flex items-center gap-1 group-hover:underline">
+                View calculation breakdown <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Currency Portfolios Header -->
+<div class="mt-lg mb-sm flex items-center justify-between">
+<h3 class="font-headline-md text-headline-md text-on-surface">Portfolio by Currency</h3>
+<div class="flex gap-2">
+<button class="px-4 py-2 bg-primary text-on-primary rounded-full font-label-caps text-label-caps shadow-sm">All Views</button>
+</div>
+</div>
+<!-- Currency Portfolios Grid -->
+<div class="grid grid-cols-12 gap-gutter w-full">
+<!-- USD Portfolio -->
+<div class="col-span-12 md:col-span-4 bg-surface-container-lowest rounded-3xl p-md shadow-sm hover:-translate-y-1 transition-transform duration-300">
+<div class="flex items-center justify-between mb-md">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center font-data-tabular font-bold text-on-surface">US</div>
+<span class="font-headline-sm text-headline-sm text-on-surface">USD</span>
+</div>
+<span class="font-label-caps text-label-caps text-on-surface-variant bg-surface px-2 py-1 rounded">BASE</span>
+</div>
+<div class="flex flex-col gap-1 mb-md">
+<span class="font-currency-display text-[28px] text-currency-primary">$9,262,500.00</span>
+<span class="font-data-tabular text-data-tabular text-success">+1.2% this week</span>
+</div>
+<div class="flex flex-col gap-2 mt-auto">
+<div class="flex justify-between items-center py-2 bg-surface-container-low px-sm rounded-lg">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Equities</span>
+<span class="font-data-tabular text-data-tabular right-aligned">$5,100,000</span>
+</div>
+<div class="flex justify-between items-center py-2 bg-surface-container-low px-sm rounded-lg">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Cash</span>
+<span class="font-data-tabular text-data-tabular right-aligned">$4,162,500</span>
+</div>
+</div>
+</div>
+<!-- PKR Portfolio -->
+<div class="col-span-12 md:col-span-4 bg-surface-container-lowest rounded-3xl p-md shadow-sm hover:-translate-y-1 transition-transform duration-300">
+<div class="flex items-center justify-between mb-md">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-data-tabular font-bold">PK</div>
+<span class="font-headline-sm text-headline-sm text-on-surface">PKR</span>
+</div>
+<span class="font-label-caps text-label-caps text-on-surface-variant bg-surface px-2 py-1 rounded">EMERGING</span>
+</div>
+<div class="flex flex-col gap-1 mb-md">
+<span class="font-currency-display text-[28px] text-currency-primary">Rs. 798M</span>
+<span class="font-data-tabular text-data-tabular text-on-surface-variant text-sm">≈ $2,850,000 USD</span>
+</div>
+<div class="flex flex-col gap-2 mt-auto">
+<div class="flex justify-between items-center py-2 bg-surface-container-low px-sm rounded-lg">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Real Estate</span>
+<span class="font-data-tabular text-data-tabular right-aligned">Rs. 650M</span>
+</div>
+<div class="flex justify-between items-center py-2 bg-surface-container-low px-sm rounded-lg">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Bonds</span>
+<span class="font-data-tabular text-data-tabular right-aligned">Rs. 148M</span>
+</div>
+</div>
+</div>
+<!-- EUR Portfolio -->
+<div class="col-span-12 md:col-span-4 bg-surface-container-lowest rounded-3xl p-md shadow-sm hover:-translate-y-1 transition-transform duration-300">
+<div class="flex items-center justify-between mb-md">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-full bg-tertiary-fixed text-on-tertiary-fixed flex items-center justify-center font-data-tabular font-bold">EU</div>
+<span class="font-headline-sm text-headline-sm text-on-surface">EUR</span>
+</div>
+</div>
+<div class="flex flex-col gap-1 mb-md">
+<span class="font-currency-display text-[28px] text-currency-primary">€1,988,372.00</span>
+<span class="font-data-tabular text-data-tabular text-on-surface-variant text-sm">≈ $2,137,500 USD</span>
+</div>
+<div class="flex flex-col gap-2 mt-auto">
+<div class="flex justify-between items-center py-2 bg-surface-container-low px-sm rounded-lg">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Corp Bonds</span>
+<span class="font-data-tabular text-data-tabular right-aligned">€1,200,000</span>
+</div>
+<div class="flex justify-between items-center py-2 bg-surface-container-low px-sm rounded-lg">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Equities</span>
+<span class="font-data-tabular text-data-tabular right-aligned">€788,372</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Global FAB -->
+<button class="fixed bottom-8 right-8 w-14 h-14 bg-primary text-on-primary rounded-full shadow-xl flex items-center justify-center hover:scale-105 hover:shadow-2xl transition-all z-50 group">
+<span class="material-symbols-outlined text-[28px] group-hover:rotate-90 transition-transform duration-300">add</span>
+</button>
+</div>
+<script>
+  // Simple number animation for the hero value
+  document.addEventListener("DOMContentLoaded", () => {
+    const valueEl = document.querySelector('.animate-value');
+    if (valueEl) {
+      const target = parseFloat(valueEl.getAttribute('data-value'));
+      let current = 0;
+      const duration = 1500;
+      const steps = 60;
+      const stepValue = target / steps;
+      const interval = duration / steps;
+      
+      const formatCurrency = (val) => {
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
+      };
+
+      const timer = setInterval(() => {
+        current += stepValue;
+        if (current >= target) {
+          current = target;
+          clearInterval(timer);
+        }
+        valueEl.textContent = formatCurrency(current);
+      }, interval);
+    }
+  });
+</script></main></div></body></html>
