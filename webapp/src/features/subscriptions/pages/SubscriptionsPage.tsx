@@ -8,7 +8,7 @@ import { Notice } from '../../../components/Notice';
 import { Tooltip } from '../../../components/Tooltip';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { EditIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { EditIcon, PlusIcon, SaveIcon, StarIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
@@ -162,9 +162,20 @@ function OverallSummary() {
 /** User-requested (2026-09-03): "add filters to other tables as well." */
 function SubscriptionList({ onSelect }: { onSelect: (sub: Subscription) => void }) {
   const subs = useSubscriptionsWorkbookStore((s) => s.workbook.entries);
+  const updateEntry = useSubscriptionsWorkbookStore((s) => s.updateEntry);
+  const ensureSignedIn = useEnsureSignedIn();
   const knownCategories = useMemo(() => [...new Set(subs.map((s) => s.category).filter((c): c is string => !!c))].sort(), [subs]);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'cancelled'>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  // Pending item 115(c): Sr# = the subscription's own stable position in
+  // the underlying (unfiltered) array, creation order — same convention as
+  // every other module's entity list.
+  const srNumOf = useMemo(() => new Map(subs.map((s, i) => [s.id, i + 1])), [subs]);
+
+  const toggleFavorite = async (s: Subscription) => {
+    if (!(await ensureSignedIn(s.isFavorite ? 'Sign in to unfavorite this subscription.' : 'Sign in to favorite this subscription.'))) return;
+    updateEntry(s.id, { isFavorite: !s.isFavorite });
+  };
 
   const filteredSubs = useMemo(
     () => subs.filter((s) => {
@@ -178,7 +189,7 @@ function SubscriptionList({ onSelect }: { onSelect: (sub: Subscription) => void 
 
   type Row = { sub: Subscription; monthly: number; next: string };
   const rows: Row[] = filteredSubs.map((s) => ({ sub: s, monthly: monthlyEquivalent(s), next: s.active ? nextBillingDate(s) : '' }));
-  type Col = 'name' | 'amount' | 'monthly' | 'category' | 'next' | 'status';
+  type Col = 'name' | 'amount' | 'monthly' | 'category' | 'next' | 'status' | 'favorite';
   const sortValue = (r: Row, col: Col): number | string => {
     switch (col) {
       case 'amount': return r.sub.amount;
@@ -186,6 +197,7 @@ function SubscriptionList({ onSelect }: { onSelect: (sub: Subscription) => void 
       case 'category': return r.sub.category ?? '';
       case 'next': return r.next || 'zzzz';
       case 'status': return r.sub.active ? 0 : 1;
+      case 'favorite': return r.sub.isFavorite ? 1 : 0;
       default: return r.sub.name;
     }
   };
@@ -215,13 +227,22 @@ function SubscriptionList({ onSelect }: { onSelect: (sub: Subscription) => void 
       <table>
         <thead>
           <tr>
-            <Th col="name">Name</Th><Th col="amount">Amount</Th><Th col="monthly">Monthly equiv.</Th>
+            <th>#</th><Th col="favorite">★</Th><Th col="name">Name</Th><Th col="amount">Amount</Th><Th col="monthly">Monthly equiv.</Th>
             <Th col="category">Category</Th><Th col="next">Next renewal</Th><Th col="status">Status</Th><th></th>
           </tr>
         </thead>
         <tbody>
           {sorted.map(({ sub: s, monthly, next }) => (
             <tr key={s.id} onClick={() => onSelect(s)} style={{ cursor: 'pointer' }}>
+              <td className="text-muted">{srNumOf.get(s.id)}</td>
+              <td>
+                <IconButton
+                  label={s.isFavorite ? 'Unfavorite' : 'Favorite'}
+                  icon={<StarIcon size={13} filled={s.isFavorite} />}
+                  align="right"
+                  onClick={(e) => { e.stopPropagation(); toggleFavorite(s); }}
+                />
+              </td>
               <td>{s.name}</td>
               <td>{fmtMoney(s.amount, s.currencyCode)}{CYCLE_LABEL[s.billingCycle]}</td>
               <td>{fmtMoney(monthly, s.currencyCode)}</td>
@@ -233,7 +254,7 @@ function SubscriptionList({ onSelect }: { onSelect: (sub: Subscription) => void 
           ))}
           {!sorted.length && (
             <tr>
-              <td colSpan={7} className="text-muted">
+              <td colSpan={9} className="text-muted">
                 {subs.length ? 'No subscriptions match these filters.' : 'No subscriptions yet — add one above.'}
               </td>
             </tr>

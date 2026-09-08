@@ -7,7 +7,7 @@ import { Notice } from '../../../components/Notice';
 import { Tooltip } from '../../../components/Tooltip';
 import { ChartCard } from '../../qse/components/ChartCard';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { ArchiveIcon, EditIcon, ExportIcon, ListIcon, PlusIcon, RestoreIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { ArchiveIcon, EditIcon, ExportIcon, ListIcon, PlusIcon, RestoreIcon, SaveIcon, StarIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Modal } from '../../../components/Modal';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
@@ -437,15 +437,29 @@ export function AddAccountForm({ onSaved, initialCurrency }: { onSaved?: (id: st
 function AccountsList() {
   const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
   const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
+  const updateAccount = useBankWorkbookStore((s) => s.updateAccount);
   const navigate = useNavigate();
+  const ensureSignedIn = useEnsureSignedIn();
   const [showArchived, setShowArchived] = useState(false);
   const { num } = useAmountFormat();
+
+  // Pending item 115(c): "add numeric sequence Id with each entity... for
+  // correct data ordering" — the account's own stable position in the
+  // underlying array (creation order), NOT the currency-grouped/favorite-
+  // sorted display order below. Same convention Funds' own Sr# column
+  // already established (Done item 226).
+  const srNumOf = useMemo(() => new Map(accounts.map((a, i) => [a.id, i + 1])), [accounts]);
 
   const archivedCount = useMemo(() => accounts.filter((a) => a.isActive === false).length, [accounts]);
   const visibleAccounts = useMemo(
     () => (showArchived ? accounts : accounts.filter((a) => a.isActive !== false)),
     [accounts, showArchived],
   );
+
+  const toggleFavorite = async (a: BankAccount) => {
+    if (!(await ensureSignedIn(a.isFavorite ? 'Sign in to unfavorite this account.' : 'Sign in to favorite this account.'))) return;
+    updateAccount(a.id, { isFavorite: !a.isFavorite });
+  };
 
   const currencyGroups = useMemo(() => {
     const byCurrency = new Map<string, BankAccount[]>();
@@ -454,6 +468,9 @@ function AccountsList() {
       list.push(a);
       byCurrency.set(a.currencyCode, list);
     }
+    // Favorites float to the top of each currency group; a stable sort
+    // otherwise leaves creation order (matching Sr#) as the tiebreak.
+    for (const list of byCurrency.values()) list.sort((a, b) => Number(!!b.isFavorite) - Number(!!a.isFavorite));
     return [...byCurrency.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [visibleAccounts]);
 
@@ -496,7 +513,7 @@ function AccountsList() {
             {group.map((a) => (
               <EntityCard
                 key={a.id}
-                title={a.name}
+                title={<><span className="text-muted" style={{ fontWeight: 400, fontSize: 11, marginRight: 5 }}>#{srNumOf.get(a.id)}</span>{a.name}</>}
                 subtitle={[a.accountType, a.branch].filter(Boolean).join(' · ') || undefined}
                 badge={
                   a.isLiability || a.isActive === false ? (
@@ -520,12 +537,20 @@ function AccountsList() {
                 }
                 onClick={() => navigate(`/bank/account/${a.id}`)}
                 actions={
-                  <IconButton
-                    label="Transactions"
-                    icon={<ListIcon size={13} />}
-                    align="right"
-                    onClick={() => navigate(`/bank/account/${a.id}`)}
-                  />
+                  <>
+                    <IconButton
+                      label={a.isFavorite ? 'Unfavorite' : 'Favorite'}
+                      icon={<StarIcon size={13} filled={a.isFavorite} />}
+                      align="right"
+                      onClick={() => toggleFavorite(a)}
+                    />
+                    <IconButton
+                      label="Transactions"
+                      icon={<ListIcon size={13} />}
+                      align="right"
+                      onClick={() => navigate(`/bank/account/${a.id}`)}
+                    />
+                  </>
                 }
               />
             ))}

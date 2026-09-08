@@ -59,6 +59,10 @@ export interface Property {
    * total (a sold/inactive property's past income/expense entries keep
    * counting toward Net Worth/summary totals unchanged). */
   isActive?: boolean;
+  /** Pending item 115(c): "favorite an entity, to view it on top." Purely
+   * a display/sort preference — see `BankAccount.isFavorite`'s own comment
+   * for why this is a separate field from `isActive`. */
+  isFavorite?: boolean;
 }
 
 /** Extends the shared `Finance` base (2026-09-03 restructure — see

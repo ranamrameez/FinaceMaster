@@ -7,7 +7,7 @@ import { Modal } from '../../../components/Modal';
 import { Notice } from '../../../components/Notice';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { hueStyle } from '../../../lib/statCardHues';
-import { ArchiveIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { ArchiveIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, StarIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
@@ -756,19 +756,31 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
 function LoanList({ onSelect, onEdit }: { onSelect: (loan: PersonalLoan) => void; onEdit: (loan: PersonalLoan) => void }) {
   const allLoans = usePersonalLoansWorkbookStore((s) => s.workbook.loans);
   const repayments = usePersonalLoansWorkbookStore((s) => s.workbook.repayments);
+  const updateLoan = usePersonalLoansWorkbookStore((s) => s.updateLoan);
+  const ensureSignedIn = useEnsureSignedIn();
   const [filter, setFilter] = useState<'all' | 'owed_to_me' | 'i_owe'>('all');
   const [showArchived, setShowArchived] = useState(false);
   const archivedCount = useMemo(() => allLoans.filter((l) => l.isActive === false).length, [allLoans]);
   const loans = useMemo(() => (showArchived ? allLoans : allLoans.filter((l) => l.isActive !== false)), [allLoans, showArchived]);
   const filtered = filter === 'all' ? loans : loans.filter((l) => l.direction === filter);
+  // Pending item 115(c): Sr# = the loan's own stable position in the
+  // underlying (unfiltered) array, creation order — not this table's own
+  // live sort. Same convention as Bank/Funds.
+  const srNumOf = useMemo(() => new Map(allLoans.map((l, i) => [l.id, i + 1])), [allLoans]);
+
+  const toggleFavorite = async (l: PersonalLoan) => {
+    if (!(await ensureSignedIn(l.isFavorite ? 'Sign in to unfavorite this loan.' : 'Sign in to favorite this loan.'))) return;
+    updateLoan(l.id, { isFavorite: !l.isFavorite });
+  };
 
   type Row = { loan: PersonalLoan; outstanding: number };
   const rows: Row[] = filtered.map((loan) => ({ loan, outstanding: loanOutstanding(loan, repayments) }));
-  type Col = 'person' | 'direction' | 'outstanding';
+  type Col = 'person' | 'direction' | 'outstanding' | 'favorite';
   const sortValue = (r: Row, col: Col): number | string => {
     switch (col) {
       case 'direction': return r.loan.direction;
       case 'outstanding': return r.outstanding;
+      case 'favorite': return r.loan.isFavorite ? 1 : 0;
       default: return r.loan.person;
     }
   };
@@ -790,10 +802,19 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: PersonalLoan) => void
       </div>
       <div className="table-scroll">
         <table>
-          <thead><tr><Th col="person">Person</Th><Th col="direction">Direction</Th><Th col="outstanding">Outstanding</Th><th></th></tr></thead>
+          <thead><tr><th>#</th><Th col="favorite">★</Th><Th col="person">Person</Th><Th col="direction">Direction</Th><Th col="outstanding">Outstanding</Th><th></th></tr></thead>
           <tbody>
             {sorted.map(({ loan: l, outstanding }) => (
               <tr key={l.id} onClick={() => onSelect(l)} style={{ cursor: 'pointer' }}>
+                <td className="text-muted">{srNumOf.get(l.id)}</td>
+                <td>
+                  <IconButton
+                    label={l.isFavorite ? 'Unfavorite' : 'Favorite'}
+                    icon={<StarIcon size={13} filled={l.isFavorite} />}
+                    align="right"
+                    onClick={(e) => { e.stopPropagation(); toggleFavorite(l); }}
+                  />
+                </td>
                 <td>
                   {l.person}
                   {l.isActive === false && <span className="pill-warn" style={{ fontSize: 10, marginLeft: 6 }}>Archived</span>}
@@ -808,7 +829,7 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: PersonalLoan) => void
             ))}
             {!sorted.length && (
               <tr>
-                <td colSpan={4} className="text-muted">
+                <td colSpan={6} className="text-muted">
                   {allLoans.length ? 'Every loan is archived — click "Show archived" above to see them.' : 'No personal loans yet.'}
                 </td>
               </tr>

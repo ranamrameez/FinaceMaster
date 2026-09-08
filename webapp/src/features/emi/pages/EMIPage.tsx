@@ -8,7 +8,7 @@ import { Notice } from '../../../components/Notice';
 import { Tooltip } from '../../../components/Tooltip';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { ArchiveIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { ArchiveIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, StarIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { toCSV } from '../../../lib/csv';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
@@ -1152,19 +1152,31 @@ function OverallSummary() {
 
 function LoanList({ onSelect, onEdit }: { onSelect: (loan: EMILoan) => void; onEdit: (loan: EMILoan) => void }) {
   const allLoans = useEMIWorkbookStore((s) => s.workbook.entries);
+  const updateEntry = useEMIWorkbookStore((s) => s.updateEntry);
+  const ensureSignedIn = useEnsureSignedIn();
   const [showArchived, setShowArchived] = useState(false);
   const archivedCount = useMemo(() => allLoans.filter((l) => l.isActive === false).length, [allLoans]);
   const loans = useMemo(() => (showArchived ? allLoans : allLoans.filter((l) => l.isActive !== false)), [allLoans, showArchived]);
+  // Pending item 115(c): Sr# = the loan's own stable position in the
+  // underlying (unfiltered) array, creation order — same convention as
+  // Bank/Personal Loans/Funds.
+  const srNumOf = useMemo(() => new Map(allLoans.map((l, i) => [l.id, i + 1])), [allLoans]);
+
+  const toggleFavorite = async (l: EMILoan) => {
+    if (!(await ensureSignedIn(l.isFavorite ? 'Sign in to unfavorite this loan.' : 'Sign in to favorite this loan.'))) return;
+    updateEntry(l.id, { isFavorite: !l.isFavorite });
+  };
 
   type Row = { loan: EMILoan; sum: ReturnType<typeof emiSummary> };
   const rows: Row[] = loans.map((loan) => ({ loan, sum: emiSummary(loan) }));
-  type Col = 'name' | 'lender' | 'monthly' | 'outstanding' | 'monthsLeft';
+  type Col = 'name' | 'lender' | 'monthly' | 'outstanding' | 'monthsLeft' | 'favorite';
   const sortValue = (r: Row, col: Col): number | string => {
     switch (col) {
       case 'lender': return r.loan.lender;
       case 'monthly': return r.sum.emi;
       case 'outstanding': return r.sum.outstanding;
       case 'monthsLeft': return r.sum.monthsRemaining;
+      case 'favorite': return r.loan.isFavorite ? 1 : 0;
       default: return r.loan.name;
     }
   };
@@ -1181,13 +1193,22 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: EMILoan) => void; onE
         <table>
           <thead>
             <tr>
-              <Th col="name">Name</Th><Th col="lender">Lender</Th><Th col="monthly">Monthly</Th>
+              <th>#</th><Th col="favorite">★</Th><Th col="name">Name</Th><Th col="lender">Lender</Th><Th col="monthly">Monthly</Th>
               <Th col="outstanding">Outstanding</Th><Th col="monthsLeft">Months left</Th><th></th>
             </tr>
           </thead>
           <tbody>
             {sorted.map(({ loan: l, sum }) => (
               <tr key={l.id} onClick={() => onSelect(l)} style={{ cursor: 'pointer' }}>
+                <td className="text-muted">{srNumOf.get(l.id)}</td>
+                <td>
+                  <IconButton
+                    label={l.isFavorite ? 'Unfavorite' : 'Favorite'}
+                    icon={<StarIcon size={13} filled={l.isFavorite} />}
+                    align="right"
+                    onClick={(e) => { e.stopPropagation(); toggleFavorite(l); }}
+                  />
+                </td>
                 <td>
                   {l.name}
                   {l.isActive === false && <span className="pill-warn" style={{ fontSize: 10, marginLeft: 6 }}>Archived</span>}
@@ -1204,7 +1225,7 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: EMILoan) => void; onE
             ))}
             {!sorted.length && (
               <tr>
-                <td colSpan={6} className="text-muted">
+                <td colSpan={8} className="text-muted">
                   {allLoans.length ? 'Every loan is archived — click "Show archived" above to see them.' : 'No loans yet — add one above.'}
                 </td>
               </tr>
