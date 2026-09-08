@@ -17,6 +17,7 @@ import { TransactionEntryModal } from '../../../components/TransactionEntryModal
 import { CategorySelect } from '../../../components/CategorySelect';
 import { FinanceEditModal } from '../../../components/FinanceEditModal';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
+import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { categoryName, RENT_CATEGORY_ID, UNCATEGORIZED_ID } from '../../../lib/categories';
@@ -24,7 +25,6 @@ import { useCategoryStore } from '../../../store/categoryStore';
 import { netIncomeByCurrency, netIncomeByProperty, netIncomePendingByCurrency, propertyByCategory, propertyMonthlyRollup, propertyNetIncome } from '../../../lib/calc/rentalsModule';
 import { generateLeaseRentPlans, nextPendingBalance, proposeRentCollection } from '../../../lib/calc/rentalPlanning';
 import { parseCSV, toCSV } from '../../../lib/csv';
-import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
 import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import { dlBarV, dlDoughnut } from '../../../lib/chartLabels';
@@ -123,6 +123,7 @@ export function AddPropertyForm({ onSaved, initialCurrency }: { onSaved?: (id: s
   const [lastCurrency, setLastCurrency] = useLastCurrency('rentals', 'USD');
   const ensureSignedIn = useEnsureSignedIn();
   const [p, setP] = useState(() => emptyProperty(initialCurrency ?? lastCurrency));
+  const currencyOptions = useEnabledCurrencies(p.currencyCode);
 
   const submit = async () => {
     if (!p.name.trim()) return toast('Enter a property name.');
@@ -142,7 +143,7 @@ export function AddPropertyForm({ onSaved, initialCurrency }: { onSaved?: (id: s
         </Field>
         <Field label="Currency" width={100} required>
           <Select value={p.currencyCode} onChange={(e) => { setP({ ...p, currencyCode: e.target.value }); setLastCurrency(e.target.value); }}>
-            {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+            {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>
         <Field label="Purchase price (optional)" width={160}>
@@ -164,6 +165,7 @@ function PropertiesList() {
   const ensureSignedIn = useEnsureSignedIn();
   const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<Property | null>(null);
+  const editCurrencyOptions = useEnabledCurrencies(editRow?.currencyCode);
   const [detailProperty, setDetailProperty] = useState<Property | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const archivedCount = useMemo(() => allProperties.filter((p) => p.isActive === false).length, [allProperties]);
@@ -226,7 +228,7 @@ function PropertiesList() {
                 <td><input value={editRow.name} onChange={(e) => setEditRow({ ...editRow, name: e.target.value })} /></td>
                 <td>
                   <select value={editRow.currencyCode} onChange={(e) => setEditRow({ ...editRow, currencyCode: e.target.value })}>
-                    {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+                    {editCurrencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
                   </select>
                 </td>
                 <td><input type="number" step="0.01" value={editRow.purchasePrice ?? ''} onChange={(e) => setEditRow({ ...editRow, purchasePrice: e.target.value === '' ? undefined : Number(e.target.value) })} style={{ width: 110 }} /></td>

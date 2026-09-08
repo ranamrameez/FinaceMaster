@@ -15,6 +15,7 @@ import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
 import { FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
+import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { emiSchedule, emiSummary, expectedEndDate, generateBigEmiOverrides, installmentDueDate, markupPercentage, markupRateEquivalents, resolvedDueDate, totalsByCurrency, whatIfExtraPayment, type EMISummary } from '../../../lib/calc/emiModule';
@@ -22,7 +23,6 @@ import { dlBarV, dlLine, withAlpha } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar } from '../../../lib/cssVar';
 import { useAppearanceStore } from '../../../store/appearanceStore';
-import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
@@ -97,6 +97,7 @@ export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: strin
   const [lastCurrency, setLastCurrency] = useLastCurrency('emi', defaultCurrency);
   const ensureSignedIn = useEnsureSignedIn();
   const [l, setL] = useState<EMILoan>(() => emptyLoan(initialCurrency ?? lastCurrency));
+  const currencyOptions = useEnabledCurrencies(l.currencyCode);
 
   /** User-reported (2026-08-28, repeated after an earlier round only added
    * a "jump to edit mode after saving" workaround instead of what was
@@ -146,7 +147,7 @@ export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: strin
         </Field>
         <Field label="Currency" width={100} required>
           <Select value={l.currencyCode} onChange={(e) => { setL({ ...l, currencyCode: e.target.value }); setLastCurrency(e.target.value); }}>
-            {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+            {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>
         <Field label="Principal" width={120} required title="The original loan amount, before any interest/markup or repayments.">
@@ -406,6 +407,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
   const loanRepayments = repayments.filter((r) => r.loanId === loan.id);
   const [editing, setEditing] = useState(!!startInEditMode);
   const [editRow, setEditRow] = useState<EMILoan>(loan);
+  const currencyOptions = useEnabledCurrencies(editRow.currencyCode);
   const sum = emiSummary(loan);
   const netToReturn = loan.principal + sum.totalInterest;
   const ensureSignedIn = useEnsureSignedIn();
@@ -669,7 +671,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
             </Field>
             <Field label="Currency">
               <Select value={editRow.currencyCode} onChange={(e) => setEditRow({ ...editRow, currencyCode: e.target.value })}>
-                {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+                {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
               </Select>
             </Field>
             <Field label="Principal">

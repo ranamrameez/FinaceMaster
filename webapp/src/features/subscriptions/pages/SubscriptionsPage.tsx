@@ -15,6 +15,7 @@ import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
 import { FabButton } from '../../../components/ui/Fab';
+import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import {
@@ -30,7 +31,6 @@ import { dlBarV, dlDoughnut } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { categoryName, UNCATEGORIZED_ID } from '../../../lib/categories';
 import { cssVar, tickerColor } from '../../../lib/cssVar';
-import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
@@ -87,6 +87,7 @@ function AddSubscriptionForm({ onSaved }: { onSaved?: () => void } = {}) {
   const [lastCurrency, setLastCurrency] = useLastCurrency('subscriptions', defaultCurrency);
   const ensureSignedIn = useEnsureSignedIn();
   const [s, setS] = useState<Subscription>(() => emptySubscription(lastCurrency));
+  const currencyOptions = useEnabledCurrencies(s.currencyCode);
 
   const submit = async () => {
     if (!s.name.trim()) return toast('Enter a subscription name.');
@@ -110,7 +111,7 @@ function AddSubscriptionForm({ onSaved }: { onSaved?: () => void } = {}) {
         </Field>
         <Field label="Currency" width={100} required>
           <Select value={s.currencyCode} onChange={(e) => { setS({ ...s, currencyCode: e.target.value }); setLastCurrency(e.target.value); }}>
-            {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+            {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>
         <Field label="Billing cycle" width={140}>
@@ -375,6 +376,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
   const ensureSignedIn = useEnsureSignedIn();
   const [editing, setEditing] = useState(false);
   const [editRow, setEditRow] = useState<Subscription>(sub);
+  const currencyOptions = useEnabledCurrencies(editRow.currencyCode);
 
   const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
   // Archived accounts stay findable (so an already-linked archived account
@@ -466,7 +468,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
               </Field>
               <Field label="Currency">
                 <Select value={editRow.currencyCode} onChange={(e) => setEditRow({ ...editRow, currencyCode: e.target.value })}>
-                  {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+                  {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
                 </Select>
               </Field>
               <Field label="Billing cycle">

@@ -6963,6 +6963,50 @@ FinanceManager live link:
   126** — not attempted here, since switching it needs the same design/migration care already
   flagged (it feeds the Funds Analytics "Allocation by category" chart, and was explicitly
   excluded from the original Finance-base restructure as "fundamentally different").
+246. **Per-user selectable currency subset (2026-09-08), closes Pending item 127 — the last of
+  the user's own "5 IMPORTANT FEATURES missed" list.** "App setting should let the user choose
+  his currencies... show checkbox/chips rather [than] scrolling through a list... this app
+  supports multiple currencies but not all users are multi-currency!" Built per the design
+  already proposed in that Pending item's own text, since it was low-risk and purely additive.
+  New `store/enabledCurrenciesStore.ts`: a global, non-financial preference (same
+  own-localStorage-key shape as `appearanceStore`, deliberately NOT part of any module's
+  workbook or synced to Firebase — this is a UI convenience, not financial data).
+  `enabledCodes: string[] | null` — `null` (the default, no real user has ever set this) means
+  "not configured, show everything," the zero-migration case; `toggle()` refuses to ever empty
+  the subset to zero (a picker with nothing checked would hide every currency selector in the
+  app, including the one needed to check a box back on) and returns `false` so the UI can
+  surface a toast instead of silently no-opping. New `hooks/useEnabledCurrencies.ts`: the one
+  function every currency `<select>` in the app now calls — takes the select's own current
+  value and ALWAYS includes it in the returned list even if it falls outside the chosen subset
+  (verified live, see below) — never hide a currency the user's own real data already uses,
+  even if they forgot to check it. New "Currencies" section on the Account page (a chip picker
+  over `CURRENCIES`, same `.chip`/`.chip.active` toggle pattern already used by `ChartFilterBar`
+  and Net Worth's "Include in Net Worth" picker) plus a "Reset to all currencies" button.
+  **Rolled out to every genuine "pick a currency for a new/existing entity" selector app-wide**
+  (19 call sites across Bank/Cash/EMI/Funds — both its main add-form and its Daily History
+  Import section — Personal Loans/Rentals/Subscriptions, add forms, edit forms, and the two
+  modules' own "default currency" settings) — each component calls the hook once with whatever
+  local state already tracks its own currently-selected currency, and the old
+  `CURRENCIES.map(...)` call is swapped for the hook's own result; the now-unused `CURRENCIES`
+  import was removed from every file that no longer references it directly.
+  **Deliberately NOT applied to two pickers, on purpose, not an oversight**: Net Worth's "Show
+  total in" select and the Transfers page's `SideFields` currency picker — both let the user
+  choose among currencies their OWN REAL DATA already uses (an already-in-use-currency
+  filter/convert view), a genuinely different job from an "add-new-entity" picker's
+  decluttering purpose; filtering these by the enabled subset risked hiding a real currency the
+  user's own existing accounts/entries use, which would contradict this feature's own "never
+  hide a currency in real use" rule from a different angle (the picker itself, not just its
+  currently-selected value). New tests: `store/__tests__/enabledCurrenciesStore.test.ts` (6
+  cases) and `hooks/__tests__/useEnabledCurrencies.test.ts` (5 cases, using the same
+  `renderHook` pattern already established for `useLastCurrency`). Verified live via
+  Playwright: the Account page's chip picker rendered all 9 `CURRENCIES` entries, unchecking
+  EUR and GBP correctly persisted `["USD","SAR","AED","QAR","KWD","BHD","OMR","PKR","INR"]` to
+  localStorage, and Cash's own add-entry currency select immediately reflected the narrowed
+  9-currency list; separately, a seeded Bank account already using EUR (outside a
+  `["USD","PKR"]` configured subset) correctly showed `["USD","PKR","EUR"]` in its own edit
+  form's currency select — the "never hide a currency already in use" guarantee proven, not
+  just asserted — zero console errors throughout. `npx tsc -b` / `npm run test` (616 tests, 11
+  new) / `npm run build` all clean.
 
 ## Pending
 
@@ -7834,19 +7878,7 @@ or a design decision before more code, not guessed at further:**
      free-form categories needs the same design/migration care `types/finance.ts`'s own
      file-level comment already gave this exact scoping question (it was explicitly excluded
      from the original Finance-base restructure as "fundamentally different"). Not yet built.
-127. **Per-user selectable currency subset (2026-09-08, user-requested)** — "App setting should
-     let the user choose his currencies... show checkbox/chips rather [than] scrolling through
-     a list... this app supports multiple currencies but not all users are multi-currency."
-     Every currency `<select>` in the app currently renders the FULL `CURRENCIES` list
-     (`lib/currencies.ts`, ~25 entries) regardless of which currencies a user's own data
-     actually uses. Proposed design (not yet confirmed with the user): a new Account-page
-     setting — a chip/checkbox picker over `CURRENCIES`, stored like `appearanceStore` (a
-     global, non-financial preference, not per-module) — and a new small helper
-     (`useEnabledCurrencies()` or similar) that every currency `<select>` in the app switches to
-     reading from instead of the raw full list, falling back to the full list when nothing's
-     configured (so an existing user sees no change until they opt in) or when a currency
-     already in real use isn't in the chosen subset (never hide a currency the user's own data
-     actually needs, even if they forgot to check it). Not yet built.
+~~127. Per-user selectable currency subset~~ — **done (2026-09-08), see Done item 246.**
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

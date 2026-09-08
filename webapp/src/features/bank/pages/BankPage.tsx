@@ -21,6 +21,7 @@ import { CategorySelect } from '../../../components/CategorySelect';
 import { FinanceEditModal } from '../../../components/FinanceEditModal';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { useAmountFormat } from '../../../hooks/useAmountFormat';
+import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { ReorderButtons } from '../../../components/ui/ReorderButtons';
 import { RecurrenceFields } from '../../../components/ui/RecurrenceFields';
@@ -36,7 +37,6 @@ import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar, tickerColor } from '../../../lib/cssVar';
 import { parseCSV, toCSV } from '../../../lib/csv';
-import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
 import { toInstantMs } from '../../../lib/datetime';
 import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
@@ -317,6 +317,7 @@ function AccountFormFields({
   onChange: (patch: Partial<BankAccount>) => void;
   idSuffix: string;
 }) {
+  const currencyOptions = useEnabledCurrencies(value.currencyCode);
   return (
     <div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
@@ -325,7 +326,7 @@ function AccountFormFields({
         </Field>
         <Field label="Currency" width={100} required>
           <Select value={value.currencyCode} onChange={(e) => onChange({ currencyCode: e.target.value })}>
-            {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+            {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>
         <Field label="Opening balance (optional)" width={140}>

@@ -7,9 +7,11 @@ import { ProfileEditor } from '../../../components/ProfileEditor';
 import { requireSignIn } from '../../../components/SignInModal';
 import { SyncStatusIndicator, type ModuleSyncStatus } from '../../../components/SyncStatusIndicator';
 import { toast } from '../../../components/Toast';
+import { CURRENCIES } from '../../../lib/currencies';
 import { signOutUser } from '../../../lib/firebase/auth';
 import { useAuthState } from '../../../lib/firebase/useAuthState';
 import { gridAutoStyle } from '../../../lib/gridStyle';
+import { useEnabledCurrenciesStore } from '../../../store/enabledCurrenciesStore';
 
 /** Firebase provider ids -> what a non-technical user actually recognizes.
  * Only the two methods this app actually offers (see SignInModal.tsx) need
@@ -18,6 +20,50 @@ const PROVIDER_LABEL: Record<string, string> = {
   'google.com': 'Google',
   password: 'Email',
 };
+
+/** User-requested (2026-09-08): "App setting should let the user choose his
+ * currencies... show checkbox/chips rather [than] scrolling through a
+ * list... this app supports multiple currencies but not all users are
+ * multi-currency!" A global preference (not per-module — same shape as
+ * Appearance), so it lives on this same hub. Unchecking the last remaining
+ * currency is a no-op with an explanatory toast rather than letting the
+ * subset empty out (`useEnabledCurrenciesStore.toggle` itself refuses this,
+ * see its own doc comment) — a picker with nothing checked would hide every
+ * currency selector in the app, including the one needed to check a box
+ * back on. */
+function CurrenciesSection() {
+  const enabledCodes = useEnabledCurrenciesStore((s) => s.enabledCodes);
+  const toggle = useEnabledCurrenciesStore((s) => s.toggle);
+  const setEnabledCodes = useEnabledCurrenciesStore((s) => s.setEnabledCodes);
+  const isEnabled = (code: string) => enabledCodes === null || enabledCodes.includes(code);
+
+  return (
+    <CollapsibleCard title={<h3 style={{ margin: 0 }}>Currencies</h3>}>
+      <p className="text-muted" style={{ marginTop: 0, marginBottom: 8 }}>
+        Pick which currencies show up in a currency picker across the app. A currency your own
+        data already uses always stays available, even if unchecked here.
+      </p>
+      <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+        {CURRENCIES.map((c) => (
+          <button
+            key={c.code}
+            className={`chip${isEnabled(c.code) ? ' active' : ''}`}
+            onClick={() => {
+              if (!toggle(c.code)) toast('Keep at least one currency checked.');
+            }}
+          >
+            {c.code}
+          </button>
+        ))}
+      </div>
+      {enabledCodes !== null && (
+        <button className="btn secondary small" style={{ marginTop: 8 }} onClick={() => setEnabledCodes(null)}>
+          Reset to all currencies
+        </button>
+      )}
+    </CollapsibleCard>
+  );
+}
 
 /** The global "Rare" tier hub (2026-08-27 redesign, Main/Often/Rare model —
  * see CLAUDE.md's "App-wide UI/UX redesign" section for the full plan).
@@ -103,6 +149,8 @@ export function AccountPage({ syncStatuses }: { syncStatuses: ModuleSyncStatus[]
             <AppearanceFields />
           </div>
         </CollapsibleCard>
+
+        <CurrenciesSection />
 
         <CollapsibleCard title={<h3 style={{ margin: 0 }}>Data</h3>}>
           <p className="text-muted" style={{ marginTop: 0 }}>
