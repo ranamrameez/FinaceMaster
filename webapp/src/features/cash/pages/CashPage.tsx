@@ -1055,8 +1055,12 @@ function DataManagement() {
   };
 
   return (
-    <div>
-      <Card style={{ marginBottom: 16 }}>
+    // Pending item 117: "everything should be a grid item except tables" —
+    // these two short, non-table cards used to stack full-width for no
+    // reason; side by side in a responsive grid, same `AccountPage.tsx`
+    // precedent (`grid-auto` + `gridAutoStyle`).
+    <div className="grid-auto" style={{ ...gridAutoStyle(280, 16), alignItems: 'start' }}>
+      <Card>
         <h3 style={{ marginTop: 0 }}>General</h3>
         <Field label="Default currency (pre-fills new entries only)" width={140}>
           <Select value={workbook.settings.defaultCurrency} onChange={(e) => updateSettings({ defaultCurrency: e.target.value })}>
