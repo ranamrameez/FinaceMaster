@@ -10,7 +10,7 @@ import { Field, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { useSortableRows } from '../../../hooks/useSortableRows';
-import { defaultTimezoneForMarket, nowTime } from '../../../lib/datetime';
+import { defaultTimeForDate, defaultTimezoneForMarket, nowTime } from '../../../lib/datetime';
 import { toCSV } from '../../../lib/csv';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
@@ -37,6 +37,7 @@ function TickerTransactions({ ticker }: { ticker: string }) {
   const [priceInput, setPriceInput] = useState('');
   const [time, setTime] = useState<string | undefined>(() => nowTime());
   const [timezone, setTimezone] = useState<string | undefined>(defaultTimezoneForMarket('QSE'));
+  const [timeTouched, setTimeTouched] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editRow, setEditRow] = useState<Transaction | null>(null);
 
@@ -91,7 +92,14 @@ function TickerTransactions({ ticker }: { ticker: string }) {
           </select>
         </Field>
         <Field label="Date">
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => {
+              setDate(e.target.value);
+              if (!timeTouched) setTime(defaultTimeForDate(e.target.value));
+            }}
+          />
         </Field>
         <Field label="Shares" required>
           <input type="number" placeholder="Shares" value={sharesInput} onChange={(e) => setSharesInput(e.target.value)} style={{ width: 90 }} />
@@ -99,7 +107,12 @@ function TickerTransactions({ ticker }: { ticker: string }) {
         <Field label="Price" required>
           <input type="number" step="0.001" placeholder="Price" value={priceInput} onChange={(e) => setPriceInput(e.target.value)} style={{ width: 90 }} />
         </Field>
-        <TimeZoneFields time={time} timezone={timezone} onTimeChange={setTime} onTimezoneChange={setTimezone} />
+        <TimeZoneFields
+          time={time}
+          timezone={timezone}
+          onTimeChange={(t) => { setTime(t); setTimeTouched(true); }}
+          onTimezoneChange={setTimezone}
+        />
         <button className="btn" onClick={submit}>Add {action === 'BUY' ? 'buy' : 'sell'}</button>
       </div>
 

@@ -8,7 +8,7 @@ import { Field } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { fmt, fmtMoney } from '../../../lib/format';
-import { defaultTimezoneForCurrency, nowTime } from '../../../lib/datetime';
+import { defaultTimeForDate, defaultTimezoneForCurrency, nowTime } from '../../../lib/datetime';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
@@ -29,6 +29,7 @@ function AddDividendForm() {
   const [amount, setAmount] = useState(0);
   const [sharesTouched, setSharesTouched] = useState(false);
   const [time, setTime] = useState<string | undefined>(() => nowTime());
+  const [timeTouched, setTimeTouched] = useState(false);
   const [timezone, setTimezone] = useState<string | undefined>(() => defaultTimezoneForCurrency(currency));
 
   const onTickerChange = (v: string) => {
@@ -59,7 +60,14 @@ function AddDividendForm() {
   return (
     <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
       <Field label="Date">
-        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => {
+            setDate(e.target.value);
+            if (!timeTouched) setTime(defaultTimeForDate(e.target.value));
+          }}
+        />
       </Field>
       <Field label="Ticker">
         <input placeholder="Ticker" value={ticker} onChange={(e) => onTickerChange(e.target.value)} list={PSX_TICKER_DATALIST_ID} style={{ width: 90 }} />
@@ -82,7 +90,12 @@ function AddDividendForm() {
       <Field label="Total received">
         <input type="number" step="0.01" placeholder={preview ? preview.toFixed(2) : 'Total received'} value={amount || ''} onChange={(e) => setAmount(Number(e.target.value))} style={{ width: 100 }} />
       </Field>
-      <TimeZoneFields time={time} timezone={timezone} onTimeChange={setTime} onTimezoneChange={setTimezone} />
+      <TimeZoneFields
+        time={time}
+        timezone={timezone}
+        onTimeChange={(t) => { setTime(t); setTimeTouched(true); }}
+        onTimezoneChange={setTimezone}
+      />
       <button className="btn" onClick={submit}>Add</button>
       {preview > 0 && !amount && <span className="text-muted">{fmt(shares, 0)} shares × {perShare} = {preview.toFixed(2)}</span>}
     </div>

@@ -21,7 +21,7 @@ import { Field, Select } from '../../../components/ui/Field';
 import { AmountInput } from '../../../components/ui/AmountInput';
 import { IconButton } from '../../../components/ui/IconButton';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
-import { defaultTimezoneForCurrency, defaultTimezoneForMarket, nowTime } from '../../../lib/datetime';
+import { defaultTimeForDate, defaultTimezoneForCurrency, defaultTimezoneForMarket, nowTime } from '../../../lib/datetime';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { ReorderButtons } from '../../../components/ui/ReorderButtons';
 import { toInstantMs } from '../../../lib/datetime';
@@ -43,9 +43,13 @@ export function TransactionRows() {
   const addTransactions = usePSXWorkbookStore((s) => s.addTransactions);
   const ensureSignedIn = useEnsureSignedIn();
   const [rows, setRows] = useState<Transaction[]>([emptyRow()]);
+  const [timeTouched, setTimeTouched] = useState<boolean[]>([false]);
 
   const update = (i: number, patch: Partial<Transaction>) =>
     setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+  const updateDate = (i: number, date: string) =>
+    update(i, timeTouched[i] ? { date } : { date, time: defaultTimeForDate(date) });
+  const touchTime = (i: number) => setTimeTouched((ts) => ts.map((t, idx) => (idx === i ? true : t)));
 
   const submit = async () => {
     const valid = rows.filter((r) => r.ticker && r.shares > 0 && r.price > 0);
@@ -57,6 +61,7 @@ export function TransactionRows() {
     addTransactions(valid.map((r) => ({ ...r, ticker: r.ticker.toUpperCase() })));
     toast(`Added ${valid.length} transaction${valid.length > 1 ? 's' : ''}.`);
     setRows([emptyRow()]);
+    setTimeTouched([false]);
   };
 
   return (
@@ -67,7 +72,7 @@ export function TransactionRows() {
             <input
               type="date"
               value={r.date}
-              onChange={(e) => update(i, { date: e.target.value })}
+              onChange={(e) => updateDate(i, e.target.value)}
             />
           </Field>
           <Field label={i === 0 ? 'Ticker' : undefined} required={i === 0}>
@@ -108,7 +113,7 @@ export function TransactionRows() {
           <TimeZoneFields
             time={r.time}
             timezone={r.timezone}
-            onTimeChange={(time) => update(i, { time })}
+            onTimeChange={(time) => { update(i, { time }); touchTime(i); }}
             onTimezoneChange={(timezone) => update(i, { timezone })}
           />
           <Field label={i === 0 ? 'Order' : undefined}>
@@ -123,14 +128,20 @@ export function TransactionRows() {
           </Field>
           <button
             className="btn secondary small ml-auto align-end"
-            onClick={() => setRows((rs) => rs.filter((_, idx) => idx !== i))}
+            onClick={() => {
+              setRows((rs) => rs.filter((_, idx) => idx !== i));
+              setTimeTouched((ts) => ts.filter((_, idx) => idx !== i));
+            }}
           >
             <TrashIcon size={12} />Remove
           </button>
         </div>
       ))}
       <div className="row" style={{ gap: 8 }}>
-        <button className="btn secondary" onClick={() => setRows((rs) => [...rs, emptyRow()])}>
+        <button
+          className="btn secondary"
+          onClick={() => { setRows((rs) => [...rs, emptyRow()]); setTimeTouched((ts) => [...ts, false]); }}
+        >
           <PlusIcon />Add row
         </button>
       </div>
@@ -172,11 +183,19 @@ function AdjustmentForm() {
   const ensureSignedIn = useEnsureSignedIn();
   const emptyAdjustment = (): Adjustment => ({ date: today(), amount: 0, note: '', time: nowTime(), timezone: defaultTimezoneForCurrency(currency) });
   const [a, setA] = useState<Adjustment>(emptyAdjustment);
+  const [timeTouched, setTimeTouched] = useState(false);
 
   return (
     <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
       <Field label="Date">
-        <input type="date" value={a.date} onChange={(e) => setA({ ...a, date: e.target.value })} />
+        <input
+          type="date"
+          value={a.date}
+          onChange={(e) => {
+            const date = e.target.value;
+            setA(timeTouched ? { ...a, date } : { ...a, date, time: defaultTimeForDate(date) });
+          }}
+        />
       </Field>
       <Field label="Amount">
         <input
@@ -194,7 +213,7 @@ function AdjustmentForm() {
       <TimeZoneFields
         time={a.time}
         timezone={a.timezone}
-        onTimeChange={(time) => setA({ ...a, time })}
+        onTimeChange={(time) => { setA({ ...a, time }); setTimeTouched(true); }}
         onTimezoneChange={(timezone) => setA({ ...a, timezone })}
       />
       <button
@@ -205,6 +224,7 @@ function AdjustmentForm() {
           addAdjustment(a);
           toast('Adjustment added.');
           setA(emptyAdjustment());
+          setTimeTouched(false);
         }}
       >
         <PlusIcon />Add
