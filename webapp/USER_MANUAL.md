@@ -3,9 +3,9 @@
 Live app: <https://ranamrameez.github.io/FinaceMaster/>
 
 This is the end-user guide — how to actually use the app. For project status/backlog see
-`README.md`; for developer/AI-continuity notes see `CLAUDE.md`; for the future-modules
-design see `MODULES_PLAN.md`. **This manual is kept up to date alongside the app itself —
-if a feature described here changes, this file changes with it.**
+`README.md`; for developer/AI-continuity notes see the repo root's `CLAUDE.md`; for the
+future-modules design see `MODULES_PLAN.md`. **This manual is kept up to date alongside
+the app itself — if a feature described here changes, this file changes with it.**
 
 ---
 

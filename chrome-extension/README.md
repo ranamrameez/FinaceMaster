@@ -71,7 +71,7 @@ Firebase correctly.
 ## Load the extension
 
 1. `chrome://extensions` → enable **Developer mode** (top right).
-2. **Load unpacked** → select this `thegroup-price-sync/` folder.
+2. **Load unpacked** → select this `chrome-extension/` folder.
 3. Open the market-watch page in a tab and stay signed in there as you normally would.
 4. Click the extension icon → sign in (see below) → open **Options** and use **Test
    scrape** to check whether the auto-detect heuristic finds real rows, or fill in real CSS
