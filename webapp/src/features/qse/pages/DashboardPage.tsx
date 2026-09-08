@@ -7,6 +7,7 @@ import { Sparkline } from '../../../components/Sparkline';
 import { TickerLogo } from '../../../components/TickerLogo';
 import { toast } from '../../../components/Toast';
 import { breakEvenPrice, getDailyPriceHistory } from '../../../lib/calc';
+import { pendingShareDeltaByTicker } from '../../../lib/calc/positions';
 import { dimColor, dlBarV, dlDoughnut, dlLine, profitColor } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
@@ -89,6 +90,12 @@ function HoldingsCard() {
   };
   const { sorted: held, Th } = useSortableRows(heldRaw, sortValue, 'profit', 'desc');
 
+  // User-requested (2026-09-08): "Also show a pending share-count delta" —
+  // a placed-but-not-yet-filled order shouldn't move the real Shares figure
+  // (positions already exclude it), but shouldn't just silently vanish
+  // either, so show what it would change to once filled.
+  const pendingDelta = useMemo(() => pendingShareDeltaByTicker(workbook.transactions), [workbook.transactions]);
+
   return (
     <CollapsibleCard
       style={{ marginBottom: 16, paddingBottom: 12 }}
@@ -116,7 +123,14 @@ function HoldingsCard() {
                     </div>
                   </td>
                   <td style={{ width: 70 }}><Sparkline data={r.sparkData} formatValue={fmtPrice} width={56} height={20} /></td>
-                  <td onClick={() => navigate(`/stock/${r.ticker}`)}>{fmt(r.shares, 0)}</td>
+                  <td onClick={() => navigate(`/stock/${r.ticker}`)}>
+                    {fmt(r.shares, 0)}
+                    {!!pendingDelta[r.ticker] && (
+                      <div className="text-muted" title="Placed but not yet filled orders for this ticker — shares will change by this much once they clear.">
+                        {pendingDelta[r.ticker] > 0 ? '+' : ''}{fmt(pendingDelta[r.ticker], 0)} pending
+                      </div>
+                    )}
+                  </td>
                   <td onClick={() => navigate(`/stock/${r.ticker}`)}>
                     <div>{fmtPrice(r.avgCost)}</div>
                     <div
@@ -240,7 +254,17 @@ export function DashboardPage() {
         <div>
           <div className="grid-auto" style={{ ...gridAutoStyle(160, 12), marginBottom: 20 }}>
             <StatCard label="Net Worth" value={money(summary.netWorth, currency)} title={moneyTitle(summary.netWorth)} hue={INVEST_PALETTE[3]} />
-            <StatCard label="Cash Balance" value={money(summary.cashBalance, currency)} title={moneyTitle(summary.cashBalance)} hue={INVEST_PALETTE[7]} />
+            <StatCard
+              label="Cash Balance"
+              value={money(summary.cashBalance, currency)}
+              title={moneyTitle(summary.cashBalance)}
+              hue={INVEST_PALETTE[7]}
+              sub={
+                summary.pendingCashImpact !== 0
+                  ? `${summary.pendingCashImpact > 0 ? '+' : ''}${money(summary.pendingCashImpact, currency)} pending orders → ${money(summary.cashBalance + summary.pendingCashImpact, currency)} incl. pending`
+                  : undefined
+              }
+            />
             <StatCard label="Portfolio Value" value={money(summary.portfolioValue, currency)} title={moneyTitle(summary.portfolioValue)} hue={INVEST_PALETTE[6]} />
             <StatCard label="Realized P/L" value={money(summary.realizedPL, currency)} title={moneyTitle(summary.realizedPL)} hue={summary.realizedPL >= 0 ? 'var(--profit)' : 'var(--loss)'} labelTitle="Profit or loss already locked in — from stock you've fully sold." />
             <StatCard label="Unrealized P/L" value={money(summary.unrealizedPL, currency)} title={moneyTitle(summary.unrealizedPL)} hue={summary.unrealizedPL >= 0 ? 'var(--profit)' : 'var(--loss)'} labelTitle="Profit or loss on paper only — from stock you still hold, based on its current price." />

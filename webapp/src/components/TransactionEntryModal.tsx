@@ -72,7 +72,7 @@ const HAS_DESCRIPTION: LinkModule[] = ['bank'];
  * user already knows is happening but hasn't cleared yet (a sent transfer
  * not yet reflected, a stock order not yet filled). Shipped first for
  * Cash + Banking, the user's own two worked examples — see
- * `Finance.status`'s own doc comment for the full design and why this is
+ * `Finance.isPending`'s own doc comment for the full design and why this is
  * genuinely different from the Planning feature's hypothetical entries.
  * Deliberately not offered on a LINKED row: a cross-entity transfer is two
  * real records written together via `createLinkedTransfer`, and "pending"
@@ -370,7 +370,7 @@ export function TransactionEntryModal({ defaultFinance, onClose }: { defaultFina
             id: uid(), accountId: r.finance.ref, date: r.date, time: r.time, timezone: r.timezone,
             amount: signedAmount, isDeposit: signedAmount >= 0, description: r.description.trim(),
             categoryID: r.categoryID, source: 'manual',
-            status: r.pending ? 'pending' : undefined,
+            isPending: r.pending || undefined,
           }]);
           break;
         }
@@ -380,7 +380,7 @@ export function TransactionEntryModal({ defaultFinance, onClose }: { defaultFina
             isDeposit: r.direction === 'in', amount: Math.abs(r.amount),
             currencyCode: r.finance.currencyCode || 'USD',
             categoryID: r.categoryID, note: r.note.trim() || undefined, source: 'manual',
-            status: r.pending ? 'pending' : undefined,
+            isPending: r.pending || undefined,
           });
           break;
         case 'rentals':

@@ -71,15 +71,15 @@ describe('cashBalanceByCurrency', () => {
   it('excludes pending entries from the cleared balance (2026-09-08 Pending-state feature)', () => {
     const entries = [
       entry({ isDeposit: true, amount: 500, currencyCode: 'USD' }),
-      entry({ isDeposit: false, amount: 100, currencyCode: 'USD', status: 'pending' }),
-      entry({ isDeposit: true, amount: 50, currencyCode: 'USD', status: 'cleared' }),
+      entry({ isDeposit: false, amount: 100, currencyCode: 'USD', isPending: true }),
+      entry({ isDeposit: true, amount: 50, currencyCode: 'USD', isPending: false }),
     ];
     expect(cashBalanceByCurrency(entries)).toEqual({ USD: 550 });
   });
 
-  it('a record with no status field behaves exactly as before (zero-migration)', () => {
+  it('a record with no isPending field behaves exactly as before (zero-migration)', () => {
     const entries = [entry({ isDeposit: true, amount: 500, currencyCode: 'USD' })];
-    expect(entries[0].status).toBeUndefined();
+    expect(entries[0].isPending).toBeUndefined();
     expect(cashBalanceByCurrency(entries)).toEqual({ USD: 500 });
   });
 });
@@ -88,9 +88,9 @@ describe('cashPendingByCurrency', () => {
   it('sums only pending entries, signed, per currency', () => {
     const entries = [
       entry({ isDeposit: true, amount: 500, currencyCode: 'USD' }),
-      entry({ isDeposit: true, amount: 200, currencyCode: 'USD', status: 'pending' }),
-      entry({ isDeposit: false, amount: 50, currencyCode: 'USD', status: 'pending' }),
-      entry({ isDeposit: true, amount: 1000, currencyCode: 'SAR', status: 'pending' }),
+      entry({ isDeposit: true, amount: 200, currencyCode: 'USD', isPending: true }),
+      entry({ isDeposit: false, amount: 50, currencyCode: 'USD', isPending: true }),
+      entry({ isDeposit: true, amount: 1000, currencyCode: 'SAR', isPending: true }),
     ];
     expect(cashPendingByCurrency(entries)).toEqual({ USD: 150, SAR: 1000 });
   });
