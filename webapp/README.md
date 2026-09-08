@@ -6763,6 +6763,41 @@ FinanceManager live link:
   USD amount to 200 correctly left the PKR field at 30,000 (not overwritten); Save correctly hit
   the real sign-in gate — zero console errors throughout. `npx tsc -b` / `npm run test` (562
   tests, unchanged) / `npm run build` all clean.
+241. **Math-expression evaluation in Amount inputs (2026-09-08), closes Pending item 123.**
+  "allow users to directly enter basic math in the input boxes like a sheet rather than needing
+  an external calc." New `lib/mathExpression.ts`: a hand-rolled recursive-descent parser/
+  evaluator (`tokenize` -> `parse` with the standard `parseExpr`/`parseTerm`/`parseFactor`
+  precedence-climbing grammar for `+ - * /` and parens) — **deliberately never `eval()`/
+  `Function()` on user input**, a dedicated test asserts this directly. `resolveNumericInput()`
+  tries a plain `Number()` first (so an ordinary typed number is never routed through the parser
+  needlessly) and falls back to the expression evaluator. New shared `components/ui/
+  AmountInput.tsx` wraps this into a drop-in replacement for `<TextInput type="number">`: the
+  browser's own native `type="number"` input REJECTS characters like `+`/`*`/`(` outright, so
+  this needed `type="text" inputMode="decimal"` instead, with its own local "draft" text state
+  holding exactly what's typed — the same pattern already established for the Trade
+  Calculator's Amount field (Done item 51), generalized into one reusable component instead of
+  re-solved per call site. Evaluates on blur/Enter, not on every keystroke (an in-progress
+  expression like `"10+"` isn't a valid number yet, so committing it mid-type would be wrong);
+  an unresolvable expression is left as-is so the user can see and fix their typo, rather than
+  silently clearing the field. From the caller's own side, `value`/`onChange` behave exactly
+  like a plain controlled number field — `onChange` only ever receives a resolved number, never
+  raw text, so no downstream code (calc engine, other effects) needed to change at all. Wired
+  into the three highest-traffic Amount-style fields first, matching this project's own
+  established incremental-rollout discipline: `TransactionEntryModal.tsx`'s main Amount field,
+  and QSE's/PSX's Trade Transactions Shares/Price fields in the multi-row add form (both with a
+  `title` tooltip noting math-expression support). **Deliberately NOT applied to the FX
+  cross-currency "Amount ({otherCurrency})" field added in Done item 240** — that field already
+  has its own `useEffect`-driven auto-sync-until-touched behavior, and layering a second
+  independent commit-on-blur mechanism on top risked a real interaction bug between the two;
+  flagged as a follow-up, not an oversight. New tests: `lib/__tests__/mathExpression.test.ts`
+  (15 cases — every grammar rule, precedence, parens, decimals, negative numbers, whitespace,
+  and the "never uses eval" security check) and `components/ui/__tests__/AmountInput.test.tsx`
+  (6 cases, `@testing-library/react`). Verified live via Playwright: on QSE's Trade
+  Transactions, typing "100+50" into Shares correctly became "150" and "10.5*2" into Price
+  became "21" on blur, with the input's own `type` attribute confirmed as "text" (proving it's
+  genuinely `AmountInput`, not an unchanged number input); on the Cash page's Transfers-FAB
+  modal, typing "50+25.5" into Amount correctly became "75.5" — zero console errors in either
+  check. `npx tsc -b` / `npm run test` (583 tests, 21 new) / `npm run build` all clean.
 
 ## Pending
 
@@ -7614,18 +7649,12 @@ or a design decision before more code, not guessed at further:**
      candidates: showing this inline in the main trade-list row itself rather than a separate
      section, or something about combining "per lot" and "overall avg" into one view — rather
      than guessing and duplicating an already-built feature.
-123. **Math-expression evaluation in number inputs (2026-09-08, user-requested)** —
-     "allow users to directly enter basic math in the input boxes like a sheet rather than
-     needing an external calc." A genuinely well-scoped, app-wide, low-risk UX win: a shared
-     wrapper around the many `<input type="number">`/`TextInput` amount fields that evaluates a
-     typed expression (`10.5+5`, `200/3`) on blur/Enter, replacing the field's text with the
-     result, while leaving the field a plain number the rest of the app already understands
-     (no calc-engine changes needed downstream). Needs a small, safe expression evaluator (never
-     `eval()`/`Function()` on user input) — `+`/`-`/`*`/`/`/parens only. Not yet built; a
-     reasonable next step is one new shared component (e.g. wrapping `TextInput`) applied to
-     the highest-traffic Amount fields first (Trade Transactions, TransactionEntryModal, Trade
-     Calculator), same incremental verify-per-surface discipline as every other app-wide
-     rollout in this project.
+~~123. Math-expression evaluation in number inputs~~ — **done (2026-09-08), see Done item 241.**
+     Rolled out to `TransactionEntryModal.tsx`'s Amount field and QSE's/PSX's Trade Transactions
+     Shares/Price fields; the Trade Calculator's Amount field already had its own equivalent
+     local-text-state mechanism (Done item 51) and wasn't touched. Not yet extended to every
+     other Amount-style field app-wide (e.g. per-module add-record forms) — a reasonable further
+     rollout, not attempted in one pass per this project's own incremental discipline.
 ~~124. Banded (striped) table rows app-wide~~ — **already built**, checked before assuming it
      needed work (same "check git history/live code before assuming it needs work" discipline
      this file has repeated many times): `theme.css`'s `tbody tr:nth-child(even){background:

@@ -16,6 +16,7 @@ import { computeFIFOPositions, type FIFOLot } from '../../../lib/calc/fifoPositi
 import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import { transferRunningBalance } from '../../../lib/calc/transferBalance';
 import { Field, Select } from '../../../components/ui/Field';
+import { AmountInput } from '../../../components/ui/AmountInput';
 import { IconButton } from '../../../components/ui/IconButton';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { defaultTimezoneForCurrency, defaultTimezoneForMarket, nowTime } from '../../../lib/datetime';
@@ -78,22 +79,11 @@ export function TransactionRows() {
               <option value="SELL">SELL</option>
             </select>
           </Field>
-          <Field label={i === 0 ? 'Shares' : undefined} required={i === 0}>
-            <input
-              type="number"
-              placeholder="Shares"
-              value={r.shares || ''}
-              onChange={(e) => update(i, { shares: Number(e.target.value) })}
-            />
+          <Field label={i === 0 ? 'Shares' : undefined} required={i === 0} title={i === 0 ? 'You can type a math expression here too, e.g. 100+50.' : undefined}>
+            <AmountInput placeholder="Shares" value={r.shares} onChange={(shares) => update(i, { shares })} />
           </Field>
-          <Field label={i === 0 ? 'Price' : undefined} required={i === 0}>
-            <input
-              type="number"
-              step="0.001"
-              placeholder="Price"
-              value={r.price || ''}
-              onChange={(e) => update(i, { price: Number(e.target.value) })}
-            />
+          <Field label={i === 0 ? 'Price' : undefined} required={i === 0} title={i === 0 ? 'You can type a math expression here too, e.g. 10.5+5.' : undefined}>
+            <AmountInput placeholder="Price" value={r.price} onChange={(price) => update(i, { price })} />
           </Field>
           <TimeZoneFields
             time={r.time}
