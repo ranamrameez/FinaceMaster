@@ -10,7 +10,7 @@ import { SideFields, useSideCurrency, nextUnpaidEmiMonth } from '../features/tra
 import { getLastTransferSource, rememberTransferSource } from '../hooks/useLastTransferSource';
 import { CategorySelect } from './CategorySelect';
 import { UNCATEGORIZED_ID } from '../lib/categories';
-import { defaultTimezoneForCurrency, nowTime } from '../lib/datetime';
+import { defaultTimeForDate, defaultTimezoneForCurrency, nowTime } from '../lib/datetime';
 import { convertAmount, loadCachedFxRates } from '../lib/fx';
 import { useEnsureSignedIn } from '../lib/firebase/useEnsureSignedIn';
 import { isSupportedLinkPair } from '../lib/interEntityLink';
@@ -101,6 +101,12 @@ interface TxRow {
   direction: 'in' | 'out';
   date: string;
   time?: string;
+  /** True once the user has actually edited the Time field themselves —
+   * from then on it's their own real choice, and the Date field's own
+   * onChange stops re-stamping it. See `defaultTimeForDate()`'s own doc
+   * comment for why this exists (README item: "some transactions are not
+   * showing up down arrows"). */
+  timeTouched: boolean;
   timezone?: string;
   categoryID: string;
   description: string;
@@ -118,6 +124,7 @@ function emptyRow(key: number, finance: LinkSideConfig, currencyCode?: string): 
     direction: 'in',
     date: today(),
     time: nowTime(),
+    timeTouched: false,
     timezone: defaultTimezoneForCurrency(currencyCode),
     categoryID: UNCATEGORIZED_ID,
     description: '',
@@ -173,7 +180,14 @@ function TxRowFields({
       />
       <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
         <Field label="Date">
-          <TextInput type="date" value={row.date} onChange={(e) => onChange({ ...row, date: e.target.value })} />
+          <TextInput
+            type="date"
+            value={row.date}
+            onChange={(e) => {
+              const date = e.target.value;
+              onChange(row.timeTouched ? { ...row, date } : { ...row, date, time: defaultTimeForDate(date) });
+            }}
+          />
         </Field>
         {direction && (
           <Field label="Direction">
@@ -201,7 +215,7 @@ function TxRowFields({
         <TimeZoneFields
           time={row.time}
           timezone={row.timezone}
-          onTimeChange={(time) => onChange({ ...row, time })}
+          onTimeChange={(time) => onChange({ ...row, time, timeTouched: true })}
           onTimezoneChange={(timezone) => onChange({ ...row, timezone })}
         />
       </div>

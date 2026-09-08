@@ -17,7 +17,7 @@ import { IconButton } from '../../../components/ui/IconButton';
 import { FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
-import { defaultTimezoneForCurrency, nowTime } from '../../../lib/datetime';
+import { defaultTimeForDate, defaultTimezoneForCurrency, nowTime } from '../../../lib/datetime';
 import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
@@ -678,6 +678,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
   // number input re-formats on every keystroke and fights typing.
   const [txAmountInput, setTxAmountInput] = useState('');
   const [txTime, setTxTime] = useState<string | undefined>(() => nowTime());
+  const [txTimeTouched, setTxTimeTouched] = useState(false);
   const [txTimezone, setTxTimezone] = useState<string | undefined>(() => defaultTimezoneForCurrency(fund.currencyCode));
   const [txPending, setTxPending] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -1023,7 +1024,14 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
           </Select>
         </Field>
         <Field label="Date">
-          <TextInput type="date" value={txDate} onChange={(e) => setTxDate(e.target.value)} />
+          <TextInput
+            type="date"
+            value={txDate}
+            onChange={(e) => {
+              setTxDate(e.target.value);
+              if (!txTimeTouched) setTxTime(defaultTimeForDate(e.target.value));
+            }}
+          />
         </Field>
         <Field label="NAV">
           <TextInput
@@ -1062,7 +1070,12 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
             style={{ width: 110 }}
           />
         </Field>
-        <TimeZoneFields time={txTime} timezone={txTimezone} onTimeChange={setTxTime} onTimezoneChange={setTxTimezone} />
+        <TimeZoneFields
+          time={txTime}
+          timezone={txTimezone}
+          onTimeChange={(t) => { setTxTime(t); setTxTimeTouched(true); }}
+          onTimezoneChange={setTxTimezone}
+        />
         <Field label="Order">
           <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 6 }} title="Placed but not yet settled — excluded from your units/value until it clears.">
             <input type="checkbox" checked={txPending} onChange={(e) => setTxPending(e.target.checked)} />

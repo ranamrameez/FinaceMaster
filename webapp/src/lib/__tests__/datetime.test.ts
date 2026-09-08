@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_TIME, defaultTimezoneForCurrency, defaultTimezoneForMarket, toInstantMs } from '../datetime';
+import { DEFAULT_TIME, defaultTimeForDate, defaultTimezoneForCurrency, defaultTimezoneForMarket, isToday, nowTime, toInstantMs } from '../datetime';
 
 describe('defaultTimezoneForMarket', () => {
   it('maps QSE and PSX to their own market timezone', () => {
@@ -57,5 +57,29 @@ describe('toInstantMs', () => {
     const doha = toInstantMs('2026-01-15', '00:00', 'Asia/Qatar');
     const utc = toInstantMs('2026-01-15', '00:00', 'UTC');
     expect((utc - doha) / (60 * 60 * 1000)).toBeCloseTo(3, 1);
+  });
+});
+
+describe('isToday / defaultTimeForDate', () => {
+  const today = () => new Date().toISOString().slice(0, 10);
+  const yesterday = () => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().slice(0, 10);
+  };
+
+  it('isToday is true for the real current date and false for any other date', () => {
+    expect(isToday(today())).toBe(true);
+    expect(isToday(yesterday())).toBe(false);
+    expect(isToday('2020-01-01')).toBe(false);
+  });
+
+  it('defaultTimeForDate returns a real current time for today (matches nowTime)', () => {
+    expect(defaultTimeForDate(today())).toBe(nowTime());
+  });
+
+  it('defaultTimeForDate returns undefined for a backdated date, so it falls back to noon (restores same-day tie eligibility)', () => {
+    expect(defaultTimeForDate(yesterday())).toBeUndefined();
+    expect(defaultTimeForDate('2020-01-01')).toBeUndefined();
   });
 });

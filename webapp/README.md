@@ -7065,6 +7065,40 @@ FinanceManager live link:
   correctly, and the Add Fund form's Category field rendered the real 27-entry shared registry
   (not the old 5-value fixed list) — zero console errors. `npx tsc -b` / `npm run test` (621
   tests, 5 new) / `npm run build` all clean.
+- **Critical, user-reported (2026-09-08): "Some transactions are not showing up down arrows" —
+  see README Done item 262.** Root-caused end-to-end, not guessed: the same-day reorder
+  buttons (`ReorderButtons`/`useTieGroupReorder.ts`, Done item 235) only ever render for two
+  records that tie on the exact same real instant — but every add-form's Time field auto-fills
+  `nowTime()` (the real current wall-clock time, Done item 246's item 4) at the moment the row
+  is CREATED, and stays stuck there even after the Date field is later backdated (confirmed
+  live: filling a fresh add-transaction row's Date with a past date left Time showing the
+  original prefill, completely unrelated to the backdated date). Two genuinely same-day,
+  order-unknown BACKDATED entries typed minutes apart therefore get two arbitrary, different
+  `time` values and can never tie — silently defeating the reorder feature for exactly the
+  scenario it exists for (a transaction logged later, same day, real order unknown — Done item
+  235's own founding user report). **Confirmed with a direct-seed Playwright check first, not
+  assumed**: two Bank transactions seeded with different times (09:03 vs 14:47) on the same
+  date correctly show 0 reorder buttons (by design); with identical times (or no time field at
+  all, both falling back to noon) they correctly show 4 (2 per row) — proving the underlying
+  tie-detection mechanism itself was never broken, only the auto-fill feeding it. New
+  `defaultTimeForDate(date)`/`isToday(date)` in `lib/datetime.ts`: returns a real `nowTime()`
+  when the date being entered IS today (a same-day entry, where "now" is a meaningful default)
+  or `undefined` when it's backdated (the real time is unknown — falls back to noon, restoring
+  same-day tie eligibility). Wired into every add-form's Date `onChange` across the app (the
+  shared `TransactionEntryModal.tsx`'s Transfers popup — gained a `TxRow.timeTouched` flag,
+  same "only ever nudge forward, never clobber a real user edit" discipline this codebase
+  already uses for `toAmountTouched`/`sharesTouched`/PSX's own `autoSameDay()` — plus QSE's and
+  PSX's Trade Transactions add-row/Adjustments form, StockPage's per-ticker add-trade toolbar,
+  DividendsSection, and Funds' add-transaction form), each with its own local `timeTouched`
+  state (a `boolean[]` for the multi-row Trade Transactions forms, index-aligned with `rows`
+  since rows are only ever appended/removed, never reordered) that a manual Time edit sets to
+  `true`, permanently exempting that row/form from the auto-reset. Verified live via
+  Playwright: backdating a fresh row's Date field now correctly clears Time to blank (was
+  previously stuck at the stale prefill); attempting the actual save correctly hits the real
+  sign-in gate (this session can't complete a real signed-in round-trip, same limitation as
+  every other write in this project). New tests: `datetime.test.ts` gained an `isToday`/
+  `defaultTimeForDate` block (3 cases). `npx tsc -b` / `npm run test` (624 tests, 3 new) /
+  `npm run build` all clean.
 
 ## Pending
 

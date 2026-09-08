@@ -96,6 +96,36 @@ export function nowTime(): string {
   return new Date().toTimeString().slice(0, 5);
 }
 
+/** True when `date` is today's real calendar date. */
+export function isToday(date: string): boolean {
+  return date === new Date().toISOString().slice(0, 10);
+}
+
+/** User-reported (2026-09-08): "Some transactions are not showing up down
+ * arrows" — the same-day reorder buttons (`useTieGroupReorder.ts`) only
+ * ever appear for two records that tie on the exact same real instant,
+ * but `nowTime()`'s own auto-fill (above) stamps a NEW row with whatever
+ * the wall clock happens to read the moment the row is created — and
+ * every add-form's Date field defaults to today but stays freely
+ * editable, so backdating it does NOT re-sync `time`. Two genuinely
+ * same-day, order-unknown BACKDATED entries typed minutes apart therefore
+ * get two arbitrary, different `time` values and can never tie — exactly
+ * defeating the reorder feature for the very scenario it exists for (a
+ * transaction logged later, same day, real order unknown).
+ *
+ * Call this from a form's own Date-field `onChange`, only while the user
+ * hasn't manually edited Time themselves (same "only ever nudge forward,
+ * reset explicitly on the one real transition, never clobber a real
+ * user edit" discipline this codebase already uses elsewhere — see
+ * `psxFees.ts`'s `autoSameDay()`): re-stamp with `nowTime()` when the
+ * NEW date is today (this row really is happening right now), or clear
+ * back to `undefined` when it's backdated (the real time is unknown —
+ * falls back to `DEFAULT_TIME`/noon, restoring same-day tie eligibility
+ * for the whole point of the reorder feature). */
+export function defaultTimeForDate(date: string): string | undefined {
+  return isToday(date) ? nowTime() : undefined;
+}
+
 /** A record without a stored time backfills to noon — the user's own
  * explicit choice: a neutral middle-of-the-day placeholder rather than
  * midnight (which would visually suggest "very early," and would sort
