@@ -5,6 +5,7 @@ import { Doughnut, Line } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Modal } from '../../../components/Modal';
 import { Notice } from '../../../components/Notice';
+import { TickerLogo } from '../../../components/TickerLogo';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { ArchiveIcon, CheckIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, StarIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
@@ -427,7 +428,12 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
                   onClick={(e) => { e.stopPropagation(); toggleFavorite(r.fund); }}
                 />
               </td>
-              <td>
+              <td style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                {/* Funds has no known logo CDN of its own (README item 118) — passing
+                 * exchange="psx" reuses TickerLogo's "no remote CDN, local-drop-in or
+                 * colored-initials fallback only" path rather than QSE's own CDN, which
+                 * would 404 for every fund code and burn a wasted network round trip. */}
+                <TickerLogo ticker={r.fund.code} exchange="psx" size="sm" />
                 {r.fund.name}
                 {r.fund.isActive === false && <span className="pill-warn" style={{ fontSize: 10, marginLeft: 6 }}>Closed</span>}
               </td>
@@ -925,6 +931,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <TickerLogo ticker={fund.code} exchange="psx" size="lg" />
                     {fund.name}
                     {fund.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Closed</span>}
                   </div>

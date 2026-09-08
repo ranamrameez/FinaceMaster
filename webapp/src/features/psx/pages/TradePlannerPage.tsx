@@ -1,5 +1,6 @@
 import { Fragment, useState, type ReactNode } from 'react';
 import { CollapsibleCard } from '../../../components/Card';
+import { TickerLogo } from '../../../components/TickerLogo';
 import { PSX_TICKER_DATALIST_ID } from '../../../components/PSXTickerDatalist';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { CheckIcon, EditIcon, PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
@@ -416,7 +417,10 @@ function PlanCard({ plan }: { plan: TradePlan }) {
     <div>
       <strong>{plan.name}</strong>{' '}
       {(plan.defaultTicker || plan.legs[0]?.ticker) && (
-        <span className="pill pill-info">{plan.defaultTicker || plan.legs[0]?.ticker}</span>
+        <span className="pill pill-info" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          <TickerLogo ticker={plan.defaultTicker || plan.legs[0]?.ticker || ''} exchange="psx" size="sm" />
+          {plan.defaultTicker || plan.legs[0]?.ticker}
+        </span>
       )}{' '}
       <span className="text-muted">
         {plan.createdAt} · {doneCount}/{plan.legs.length} executed
@@ -559,7 +563,10 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                         <span style={{ cursor: 'pointer', color: 'var(--warn)' }}> ⚠</span>
                       </Tooltip>
                     )}</td>
-                    <td>{display.ticker}</td>
+                    <td style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <TickerLogo ticker={display.ticker} exchange="psx" size="sm" />
+                      {display.ticker}
+                    </td>
                     <td className={display.action === 'BUY' ? 'pill-positive' : 'pill-negative'}>{display.action}</td>
                     <td>{fmt(display.shares, 0)}</td>
                     <td>{fmtPrice(display.price)}</td>
@@ -676,7 +683,10 @@ function PlanCard({ plan }: { plan: TradePlan }) {
           <div className="grid-auto" style={{ ...gridAutoStyle(200, 8), marginBottom: 12 }}>
             {sortedTickerAnalysis.map((t, idx) => (
               <div key={t.ticker} className="card stat-card" style={hueStyle(HUES[idx % HUES.length])}>
-                <div className="label">{t.ticker}</div>
+                <div className="label" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <TickerLogo ticker={t.ticker} exchange="psx" size="sm" />
+                  {t.ticker}
+                </div>
                 <div className="value" style={{ fontSize: 15 }}>
                   {t.avgCost > 0 ? `Avg ${fmtPrice(t.avgCost)}` : 'No avg cost'}
                 </div>
@@ -702,7 +712,10 @@ function PlanCard({ plan }: { plan: TradePlan }) {
               <tbody>
                 {sortedTickerAnalysis.map((t) => (
                   <tr key={t.ticker}>
-                    <td>{t.ticker}</td>
+                    <td style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <TickerLogo ticker={t.ticker} exchange="psx" size="sm" />
+                      {t.ticker}
+                    </td>
                     <td className="text-muted">
                       {t.executedBought > 0 && <>+{fmt(t.executedBought, 0)} buy </>}
                       {t.executedSold > 0 && <>-{fmt(t.executedSold, 0)} sell</>}

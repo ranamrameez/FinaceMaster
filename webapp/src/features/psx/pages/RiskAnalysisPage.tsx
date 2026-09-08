@@ -24,6 +24,7 @@ export function RiskAnalysisPage() {
         tick={tick}
         calcFee={calcFee}
         stockPageUrl={(t) => `/psx/stock/${t}`}
+        exchange="psx"
       />
     </div>
   );
