@@ -567,8 +567,18 @@
      status background (BUY/SELL action cells, the netted-fee pill, etc.)
      still shows through since it's painted on the <td> itself, on top of
      whichever band its <tr> falls on. */
-  tbody tr:nth-child(even){background:color-mix(in srgb, var(--panel-2) 55%, var(--panel));}
-  tbody tr:hover{background:var(--panel-2);}
+  /* User-reported (2026-09-08): "table rows are indistinct bcz banded
+     rows' bgs are almost similar." Real, measurable bug, not a taste
+     call — `--panel`/`--panel-2` sit only ~4% apart in lightness on the
+     default theme (e.g. #ffffff vs #f4f5f7), and blending them 55/45
+     landed the even row within a few RGB values of the odd row,
+     effectively invisible. Mixing in a real slice of `--accent` instead
+     of another near-identical neutral gives a genuinely distinguishable
+     band on every color theme (accent is always a saturated, distinct
+     hue from panel/panel-2 by design), while staying light enough not
+     to fight text contrast. */
+  tbody tr:nth-child(even){background:color-mix(in srgb, var(--accent) 12%, var(--panel-2));}
+  tbody tr:hover{background:color-mix(in srgb, var(--accent) 22%, var(--panel-2));}
   /* User-reported (item 4): Edit/Delete/Save/Cancel action buttons sit at
      bad positions in a table row — every such row across the app puts
      those buttons in the row's LAST <td> (confirmed by reading every

@@ -94,6 +94,15 @@ export function creditCardLiabilityByCurrency(accounts: BankAccount[], transacti
   return out;
 }
 
+/** Pending item 115(a): the "total balance with that bank" rollup — same
+ * per-currency-grouped shape as `totalBalanceByCurrency`, scoped to
+ * exactly the accounts linked to one `Bank` (via `BankAccount.bankId`).
+ * Reuses `totalBalanceByCurrency` unchanged rather than reimplementing the
+ * same sum, so both stay correct together. */
+export function bankTotalsByCurrency(bankId: string, accounts: BankAccount[], transactions: BankTransaction[]): Record<string, number> {
+  return totalBalanceByCurrency(accounts.filter((a) => a.bankId === bankId), transactions);
+}
+
 /** Category breakdown for one account (net credit minus debit per
  * category). Keyed by category NAME (resolved from `categoryID` via the
  * shared registry), not the id itself — every existing caller/chart
