@@ -301,10 +301,11 @@ describe('calcFeeBreakdown calibrated against a real broker contract note (2026-
   // Every value below is transcribed directly from a real JS Global
   // Capital / Zindigi contract note (Trade Date 24/08/2026) — commission
   // (Brok. Amount), SST Amount, and Levies Charges columns. Confirms
-  // feePct=0.2%/lowPriceFee=PKR0.05, sstPct=15%, and the nccplFeePct=0.0119%
-  // "Levies" calibration (see defaultPsxWorkbook.ts) all reconcile exactly
-  // — this is the real ground truth the user asked to validate the formula
-  // against, not a synthetic hand-traced case like the other tests here.
+  // feePct=0.2%/lowPriceFee=PKR0.05, sstPct=15%, and the nccplFeePct=0.012%
+  // "Levies" calibration (see defaultPsxWorkbook.ts, re-tightened 2026-09-08
+  // against a larger 45-row real dataset) all reconcile exactly — this is
+  // the real ground truth the user asked to validate the formula against,
+  // not a synthetic hand-traced case like the other tests here.
   const realRows: { shares: number; rate: number; brokAmount: number; sst: number; levies: number }[] = [
     { shares: 1, rate: 330.5, brokAmount: 0.66, sst: 0.1, levies: 0.04 },
     { shares: 1, rate: 331.46, brokAmount: 0.66, sst: 0.1, levies: 0.04 },
@@ -322,6 +323,45 @@ describe('calcFeeBreakdown calibrated against a real broker contract note (2026-
   ];
 
   it('matches commission, SST, and levies for every real purchase leg in the statement', () => {
+    realRows.forEach((r) => {
+      const amount = r.shares * r.rate;
+      const fb = calcFeeBreakdown(amount, true, r.shares, DEFAULT_PSX_SETTINGS);
+      expect(fb.commission).toBeCloseTo(r.brokAmount, 2);
+      expect(fb.taxOnCommission).toBeCloseTo(r.sst, 2);
+      expect(fb.nccplFee).toBeCloseTo(r.levies, 2);
+    });
+  });
+});
+
+describe('calcFeeBreakdown calibrated against a larger real dataset (2026-09-08, 45 charged legs)', () => {
+  // These 15 rows are a representative sample of the full 45-real-charged-leg
+  // dataset (17-Aug through 07-Sep-2026, saved in full at
+  // psx/trades/psx_sample_statement.html — see its own "Export CSV" button
+  // for the complete set) used to RE-calibrate nccplFeePct from 0.0119% to
+  // 0.012% — every one of the 45 real charged legs (buys, plus the two
+  // large, non-netted 2026-09-04 PSO sells) reconciles exactly at 0.012%,
+  // where 0.0119% only matched ~39/45. feePct/lowPriceFee/sstPct were
+  // already correct and are reconfirmed here, not re-derived.
+  const realRows: { shares: number; rate: number; brokAmount: number; sst: number; levies: number }[] = [
+    { shares: 1, rate: 319.0, brokAmount: 0.64, sst: 0.1, levies: 0.04 },
+    { shares: 5, rate: 15.25, brokAmount: 0.25, sst: 0.04, levies: 0.01 },
+    { shares: 1, rate: 38.8, brokAmount: 0.08, sst: 0.01, levies: 0.0 },
+    { shares: 5, rate: 314.5, brokAmount: 3.15, sst: 0.47, levies: 0.19 },
+    { shares: 1, rate: 101.85, brokAmount: 0.2, sst: 0.03, levies: 0.01 },
+    { shares: 2, rate: 327.5, brokAmount: 1.31, sst: 0.2, levies: 0.08 },
+    { shares: 10, rate: 371.5, brokAmount: 7.43, sst: 1.11, levies: 0.45 },
+    { shares: 50, rate: 24.65, brokAmount: 2.5, sst: 0.38, levies: 0.15 },
+    { shares: 25, rate: 24.0, brokAmount: 1.25, sst: 0.19, levies: 0.07 },
+    { shares: 62, rate: 23.79, brokAmount: 3.1, sst: 0.47, levies: 0.18 },
+    { shares: 5, rate: 321.52, brokAmount: 3.22, sst: 0.48, levies: 0.19 },
+    // The two large, standalone PSO sells on 2026-09-04 — real broker's own
+    // ground truth for the transposed-price bug found the same day (the app
+    // had recorded 375.5 for the first leg; the real rate is 357.5000).
+    { shares: 50, rate: 357.5, brokAmount: 35.75, sst: 5.36, levies: 2.15 },
+    { shares: 80, rate: 357.8, brokAmount: 57.25, sst: 8.59, levies: 3.43 },
+  ];
+
+  it('matches commission, SST, and levies for every real charged leg', () => {
     realRows.forEach((r) => {
       const amount = r.shares * r.rate;
       const fb = calcFeeBreakdown(amount, true, r.shares, DEFAULT_PSX_SETTINGS);
