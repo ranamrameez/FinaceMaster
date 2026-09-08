@@ -1,6 +1,6 @@
 # FinanceRecorder — User Manual
 
-Live app: <https://ranamrameez.github.io/FinaceMaster/webapp/>
+Live app: <https://ranamrameez.github.io/FinaceMaster/>
 
 This is the end-user guide — how to actually use the app. For project status/backlog see
 `README.md`; for developer/AI-continuity notes see `CLAUDE.md`; for the future-modules

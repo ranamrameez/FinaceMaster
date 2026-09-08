@@ -1,8 +1,17 @@
-# Deploys the legacy static root files unchanged, plus the built React app
-# (webapp/dist) placed at /webapp/ — assembled into a clean staging
-# directory so the raw webapp/ source (webapp/index.html, webapp/src/,
-# etc.) never gets uploaded and can't shadow the actual built output at
-# that same URL path.
+# Builds the React app (webapp/) and deploys ONLY its built output
+# (webapp/dist) to GitHub Pages, at the site root.
+#
+# 2026-09-08: this used to `rsync` the ENTIRE repo root into the deploy
+# staging directory (minus a short denylist) alongside the built webapp at
+# /webapp/ — which meant every other repo-root file was ALSO being served
+# publicly by GitHub Pages, including real personal financial data
+# snapshots (qse-workbook-backup.json, psx/psx-workbook-backup.json) and
+# the legacy static HTML apps (index.html, PSX_Trade_Planner.html,
+# Risk_Analysis_Calculator.html) that read/wrote the same Firebase project
+# as this app with older, unmaintained logic. Both are real risks: public
+# exposure of real financial data, and a stale page silently writing bad
+# data into the same database. Fixed by deploying an explicit allowlist
+# (webapp/dist only) instead of an implicit denylist over the whole repo.
 name: Deploy static content to Pages
 
 on:
@@ -47,20 +56,12 @@ jobs:
       - name: Build webapp
         working-directory: webapp
         run: npm run build
-      - name: Assemble deploy directory
-        run: |
-          mkdir -p _site
-          # Legacy static files at the root, excluding source/dev-only dirs.
-          rsync -a --exclude '_site' --exclude 'webapp' --exclude '.github' --exclude '.git' --exclude 'node_modules' ./ _site/
-          # Built webapp only (not its source) at /webapp/.
-          mkdir -p _site/webapp
-          cp -r webapp/dist/. _site/webapp/
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '_site'
+          path: 'webapp/dist'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5

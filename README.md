@@ -6523,6 +6523,36 @@ FinanceManager live link:
   "All" tab expanding every section at once — the Trade row/Adjustment/Dividend forms
   together), all three showing a real current time, not blank. `npx tsc -b` / `npm run test`
   (553 tests, unchanged — UI-only) / `npm run build` all clean.
+232. **Repo root cleanup + a real data-exposure bug fixed (2026-09-08), user-requested:
+  "clean & restructure the repo root now because legacy pages can destroy our db. we dont
+  need the stale/isolated sample data, docs and htmls etc."** Deleted the legacy static apps
+  (`index.html`, `PSX_Trade_Planner.html`, an accidental duplicate `PSX_Trade_Planner .html`
+  with a trailing space in its own filename, `Risk_Analysis_Calculator.html`, and their
+  `css/`/`js/` assets) — every one had a real, tested React equivalent already, and a stale
+  page still reachable at a stable URL was a real risk of writing bad data into the same
+  live Firebase project this app uses. **A second, more serious issue was found investigating
+  the first, not something the user named directly**: `.github/workflows/static.yml` used to
+  `rsync` the ENTIRE repo root into the deploy output — meaning every other repo file,
+  including the real personal financial data snapshots (`qse-workbook-backup.json`, `psx/
+  psx-workbook-backup.json`), was being served PUBLICLY by GitHub Pages at predictable URLs.
+  Fixed by switching the workflow from an implicit denylist to an explicit allowlist —
+  it now uploads ONLY `webapp/dist`, nothing else, regardless of what's added to the repo
+  root later. The app itself moved from a `/webapp/` subpath to the site root
+  (`https://ranamrameez.github.io/FinaceMaster/`, `vite.config.ts`'s `base` updated to match)
+  now that there's no legacy content left to share the root with. Also removed, confirmed via
+  grep to have zero remaining references first: 5 raw screenshot working-files from the PSX
+  contract-note extraction sessions (fully transcribed into `psx/trades/psx_sample_statement.html`
+  already), an unreferenced one-off PDF, a SNGP-only Excel trade log fully superseded by that
+  same statement doc, and the `reference/finance-suite-prototype/` external reference (every
+  module it was ported for is long since built). Deliberately kept, checked individually:
+  `functions/` (a real Cloud Function scaffold, unused but matching this app's own "no live
+  market API calls from a page load" principle), `thegroup-price-sync/` (a separate, working
+  Chrome extension feeding the shared `stockData/QSE` node — not sample data), both real
+  workbook backups (kept as the source the Vitest fixtures are refreshed from), and
+  `firebase.json`/`.firebaserc`. Verified live (a local static server standing in for GitHub
+  Pages, since this sandbox's network policy blocks github.io directly) that the rebuilt app
+  loads with zero console errors at the new root path before any of this shipped. `npx tsc -b`
+  / `npm run test` (554 tests, unchanged) / `npm run build` all clean.
 
 ## Pending
 
