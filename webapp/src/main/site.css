@@ -49,3 +49,17 @@
 .align-center { align-items: center; }
 .align-end { align-self: flex-end; }
 .ml-auto { margin-left: auto; }
+
+/* User-requested (2026-09-08): "A transaction entry may have a 1px light
+ * grey border to be differenciate b/w multiple enteries" - a queued row in
+ * a multi-row add-transaction form (QSE/PSX's TransactionRows, the shared
+ * TransactionEntryModal) previously had no visual boundary of its own, so
+ * several stacked rows read as one continuous block. One shared class
+ * (not three one-off inline border styles) so all three call sites stay
+ * visually identical. */
+.entry-row {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
