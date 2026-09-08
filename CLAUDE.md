@@ -5870,6 +5870,32 @@ touched those.
   unchanged across all five — pure UI-defaulting/wiring, no calc-engine formula touched) /
   `npm run build` all clean; every one of the five verified live via Playwright, including a
   real reproduction of the exact reported stale-toAmount sequence.
+- **Bank parent entity built additively (2026-09-08) — closes README Pending item 115(a), see
+  README Done item 265 — plus a real row-banding contrast bug fixed (Done item 266).** Bank
+  as a normalized parent entity ("add bank first... see the total balance with that bank") was
+  built with ZERO migration risk: a new optional `Bank` type + `BankAccount.bankId` link, no
+  automatic conversion of any account's existing free-text bank name into a real record —
+  grouping is always an explicit user action, so there was no "confirm a migration first" step
+  needed despite this being flagged as high-risk schema surgery in the original Pending item.
+  Funds/brokerage parent entity (item 115(b)) is the still-open twin. Separately, a real,
+  measured CSS bug: table row banding used `color-mix` between `--panel`/`--panel-2`, two
+  tokens only a few RGB values apart on the default theme, making alternating rows nearly
+  invisible — fixed by mixing in `--accent` instead (always a distinct hue from panel/panel-2
+  on every theme).
+- **User flagged, same day, NOT yet resolved as of this note: "SERIOUS BUG: Add & Edit popups
+  are lossing data while prefilling and saving."** Investigated broadly before this note was
+  written — checked every module's own Add/Edit draft-state pattern (Funds/EMI/Personal Loans/
+  Subscriptions/Rentals all initialize edit-form state from the FULL existing record via
+  `useState<X>(record)`, re-synced fresh on every "Edit" click; Bank's own explicit-field
+  `accountToFormValue()` mapper is protected by `updateAccount`'s merge-patch store action, so
+  a field missing from that mapper can't silently get wiped on save) — found no confirmed
+  systemic "field silently dropped" bug in this sweep. **Do not assume this report is
+  resolved or a false alarm** — a future session should get the specific popup/module from the
+  user before continuing this investigation; guessing further without a concrete repro risks
+  burning effort on the wrong file. (2) Also flagged, not yet scoped: "Planning & Budget
+  Planner are two faces of a single feature, confusing, complex and still incomplete" — a real
+  design question (should these two pages actually merge, and how) needing the user's own
+  direction before any code, per this file's standing plan-and-propose rule for design forks.
 
 ## Live URLs
 

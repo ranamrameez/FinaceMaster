@@ -1,8 +1,39 @@
 import type { Finance } from './finance';
 
+/** Pending item 115(a): "A bank is main entity. User may have multiple
+ * accounts with same bank. so we must add bank first and then on its
+ * details page, give ability to add extra accounts. and see the total
+ * balance with that bank." A `Bank` is a real, user-created grouping
+ * entity — distinct from `BankAccount.bankName` (free text, filled by the
+ * IBAN lookup on one specific account) and from `BankAccount.branch`
+ * (also free text, per-account). Deliberately ADDITIVE, zero migration:
+ * `BankSettings.banks` defaults to `[]` and `BankAccount.bankId` is
+ * optional — an existing account with no `bankId` is simply "not grouped
+ * under a Bank yet," not broken or requiring a fixup. No automatic
+ * migration from an account's own free-text `bankName` into a real `Bank`
+ * record is performed on load (that would be a silent, unconfirmed
+ * mutation of real production data, against this project's own locked
+ * "ask before touching real financial data structure" rule) — grouping
+ * an account under a Bank is always an explicit user action. */
+export interface Bank {
+  id: string;
+  name: string;
+  notes?: string;
+  /** Same "archive, don't delete" convention as `BankAccount.isActive` —
+   * hides from the default Banks list/picker, never from totals. */
+  isActive?: boolean;
+  /** Same cosmetic sort preference as `BankAccount.isFavorite`. */
+  isFavorite?: boolean;
+}
+
 export interface BankAccount {
   id: string;
   name: string;
+  /** Optional link to a `Bank` (`BankSettings.banks`) — which real
+   * institution this account belongs to, for the "total balance with
+   * that bank" rollup. `undefined` means this account isn't grouped
+   * under any Bank yet. */
+  bankId?: string;
   /** An account has one currency (real-world bank accounts do) — unlike
    * Cash/Personal Loans, currency isn't repeated per-transaction here. */
   currencyCode: string;
@@ -125,6 +156,11 @@ export interface BankTransaction extends Finance {
 
 export interface BankSettings {
   accounts: BankAccount[];
+  /** Optional — see `Bank`'s own doc comment. `bankWorkbookStore.ts`'s
+   * `normalize()` defaults a missing key to `[]` on every load path
+   * (local load, cloud pull, `setWorkbook`), so no pre-existing local/
+   * cloud data needs any manual fixup. */
+  banks?: Bank[];
   /** Monthly spend target per category (free-form category name -> a
    * currency-agnostic target amount, in whatever currency the user has in
    * mind when setting it — same simplification as the rest of this app's

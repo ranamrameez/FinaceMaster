@@ -30,7 +30,7 @@ import { recurrenceLabel } from '../../../lib/recurrenceLabel';
 import { hueStyle } from '../../../lib/statCardHues';
 import { categoryName, UNCATEGORIZED_ID } from '../../../lib/categories';
 import { useCategoryStore } from '../../../store/categoryStore';
-import { accountBalance, accountBalanceAsOfMonth, accountByCategory, accountPendingBalance, accountRunningLedger, bankMonthlyFlow, budgetVsActual, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
+import { accountBalance, accountBalanceAsOfMonth, accountByCategory, accountPendingBalance, accountRunningLedger, bankMonthlyFlow, bankTotalsByCurrency, budgetVsActual, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
 import { monthRange } from '../../../lib/calc/budgetPlanner';
 import { plannedBankProjection } from '../../../lib/calc/plannedBalance';
 import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
@@ -58,8 +58,8 @@ import { gridAutoStyle } from '../../../lib/gridStyle';
 const today = () => new Date().toISOString().slice(0, 10);
 const uid = () => crypto.randomUUID();
 
-function emptyAccount(defaultCurrency: string): Omit<BankAccount, 'id'> {
-  return { name: '', currencyCode: defaultCurrency, openingBalance: 0 };
+function emptyAccount(defaultCurrency: string, bankId?: string): Omit<BankAccount, 'id'> {
+  return { name: '', currencyCode: defaultCurrency, openingBalance: 0, bankId };
 }
 
 const ACCOUNT_TYPES = ['Savings', 'Current', 'Checking', 'Salary', 'Business', 'Fixed deposit'];
@@ -274,13 +274,29 @@ function IbanLookupFields({ value, onChange, bankNameDatalistId }: { value: Iban
  * button. Bank's "Add an account" action stays exactly as it was — only
  * the wrapper changed. */
 function AccountsFab() {
-  const [open, setOpen] = useState<'account' | 'transfer' | null>(null);
+  const [open, setOpen] = useState<'account' | 'transfer' | 'bank' | null>(null);
+  const addBank = useBankWorkbookStore((s) => s.addBank);
+  const ensureSignedIn = useEnsureSignedIn();
+  const [bankName, setBankName] = useState('');
+  const submitBank = async () => {
+    if (!bankName.trim()) return toast('Enter a bank name.');
+    if (!(await ensureSignedIn('Sign in to save a bank.'))) return;
+    addBank({ id: uid(), name: bankName.trim() });
+    toast('Bank added.');
+    setBankName('');
+    setOpen(null);
+  };
   return (
     <>
       <FabPanel
         actions={[
           { label: 'Add an account', icon: <PlusIcon />, onClick: () => setOpen('account') },
           { label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen('transfer') },
+          // Pending item 115(a): grouped here rather than a second floating
+          // button, so it can't stack/overlap with this panel (same class
+          // of bug already fixed once for the app-wide Transfers FAB —
+          // see Done item 239).
+          { label: 'Add a bank', icon: <PlusIcon />, onClick: () => setOpen('bank') },
         ]}
       />
       {open === 'account' && (
@@ -289,6 +305,16 @@ function AccountsFab() {
         </Modal>
       )}
       {open === 'transfer' && <TransactionEntryModal onClose={() => setOpen(null)} />}
+      {open === 'bank' && (
+        <Modal title="Add a bank" onClose={() => setOpen(null)}>
+          <Field label="Bank name" width={220} required>
+            <TextInput value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="e.g. UBL" />
+          </Field>
+          <div className="d-flex justify-center" style={{ marginTop: 16 }}>
+            <button className="btn" onClick={submitBank}><SaveIcon />Save</button>
+          </div>
+        </Modal>
+      )}
     </>
   );
 }
@@ -318,8 +344,23 @@ function AccountFormFields({
   idSuffix: string;
 }) {
   const currencyOptions = useEnabledCurrencies(value.currencyCode);
+  const banks = useBankWorkbookStore((s) => s.workbook.settings.banks ?? []);
+  const visibleBanks = useMemo(() => banks.filter((b) => b.isActive !== false), [banks]);
   return (
     <div>
+      {/* Pending item 115(a): grouping under a real Bank entity is
+         optional — "no bank yet" is a completely valid, common state, so
+         this is a plain Select with a "No bank" option, never required. */}
+      {visibleBanks.length > 0 && (
+        <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+          <Field label="Bank (optional)" width={180} title="Group this account under a Bank entity to see a combined total for everything at that bank.">
+            <Select value={value.bankId ?? ''} onChange={(e) => onChange({ bankId: e.target.value || undefined })}>
+              <option value="">No bank</option>
+              {visibleBanks.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </Select>
+          </Field>
+        </div>
+      )}
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
         <Field label="Account name" width={180} required>
           <TextInput value={value.name} onChange={(e) => onChange({ name: e.target.value })} placeholder="e.g. Meezan Checking" />
@@ -379,11 +420,11 @@ function AccountFormFields({
  * the caller (still optional, still fires with no meaningful argument for
  * the existing `AddAccountFab` caller, which only used it to close its own
  * modal) so that same picker can auto-select the new account immediately. */
-export function AddAccountForm({ onSaved, initialCurrency }: { onSaved?: (id: string) => void; initialCurrency?: string }) {
+export function AddAccountForm({ onSaved, initialCurrency, initialBankId }: { onSaved?: (id: string) => void; initialCurrency?: string; initialBankId?: string }) {
   const addAccount = useBankWorkbookStore((s) => s.addAccount);
   const [lastCurrency, setLastCurrency] = useLastCurrency('bank-account', 'USD');
   const ensureSignedIn = useEnsureSignedIn();
-  const [a, setA] = useState(() => emptyAccount(initialCurrency ?? lastCurrency));
+  const [a, setA] = useState(() => emptyAccount(initialCurrency ?? lastCurrency, initialBankId));
 
   const submit = async () => {
     if (!a.name.trim()) return toast('Enter an account name.');
@@ -391,7 +432,7 @@ export function AddAccountForm({ onSaved, initialCurrency }: { onSaved?: (id: st
     const id = uid();
     addAccount({ ...a, id, name: a.name.trim() });
     toast(`Account "${a.name.trim()}" added.`);
-    setA(emptyAccount(a.currencyCode));
+    setA(emptyAccount(a.currencyCode, initialBankId));
     onSaved?.(id);
   };
 
@@ -428,6 +469,188 @@ export function AddAccountForm({ onSaved, initialCurrency }: { onSaved?: (id: st
  * both moved to `AccountDetailPage` (its own Account Details card's Edit
  * icon, and a dedicated red "Delete account" button) — this card no longer
  * mutates anything itself, it's a pure Main-tier summary + navigation. */
+/** Pending item 115(a): "add bank first and then on its details page, give
+ * ability to add extra accounts. and see the total balance with that
+ * bank. and on Banking homepage see their breakdown and summary." A
+ * collapsed-by-default `CollapsibleCard` above the plain `AccountsList`
+ * below (rule 1: additive, doesn't restructure that already-tested view)
+ * — a Bank is purely optional grouping, so most workbooks (no banks
+ * created yet) show nothing extra here at all. */
+function BanksList() {
+  const banks = useBankWorkbookStore((s) => s.workbook.settings.banks ?? []);
+  const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
+  const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
+  const navigate = useNavigate();
+  const [showArchived, setShowArchived] = useState(false);
+  const archivedCount = useMemo(() => banks.filter((b) => b.isActive === false).length, [banks]);
+  const visibleBanks = useMemo(
+    () => (showArchived ? banks : banks.filter((b) => b.isActive !== false)).sort((a, b) => Number(!!b.isFavorite) - Number(!!a.isFavorite)),
+    [banks, showArchived],
+  );
+  if (!banks.length) return null;
+  return (
+    <CollapsibleCard title="Banks" defaultOpen={false}>
+      {archivedCount > 0 && (
+        <button className="btn secondary small" style={{ marginBottom: 12 }} onClick={() => setShowArchived((v) => !v)}>
+          {showArchived ? 'Hide' : 'Show'} archived ({archivedCount})
+        </button>
+      )}
+      <div className="entity-card-grid">
+        {visibleBanks.map((b) => {
+          const totals = bankTotalsByCurrency(b.id, accounts, transactions);
+          const currencies = Object.keys(totals);
+          const accountCount = accounts.filter((a) => a.bankId === b.id).length;
+          return (
+            <EntityCard
+              key={b.id}
+              title={b.name}
+              subtitle={`${accountCount} account${accountCount === 1 ? '' : 's'}`}
+              badge={b.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Archived</span> : undefined}
+              statLabel={currencies.length > 1 ? 'Total (by currency)' : 'Total'}
+              stat={
+                currencies.length ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {currencies.map((c) => <MoneyValue key={c} n={totals[c]} currency={c} />)}
+                  </div>
+                ) : (
+                  <span className="text-muted">No accounts yet</span>
+                )
+              }
+              onClick={() => navigate(`/bank/bank/${b.id}`)}
+            />
+          );
+        })}
+      </div>
+    </CollapsibleCard>
+  );
+}
+
+/** Pending item 115(a)'s own detail page — mirrors `AccountDetailPage`'s
+ * read-only+Edit-icon convention. Lists every account linked to this
+ * Bank (reusing `EntityCard`, same styling as `AccountsList` itself) with
+ * an "Add account" FAB that pre-fills `bankId` so a new account created
+ * from here is grouped under this Bank from the start. */
+export function BankDetailPage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const banks = useBankWorkbookStore((s) => s.workbook.settings.banks ?? []);
+  const bank = banks.find((b) => b.id === id);
+  const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
+  const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
+  const updateBank = useBankWorkbookStore((s) => s.updateBank);
+  const deleteBank = useBankWorkbookStore((s) => s.deleteBank);
+  const ensureSignedIn = useEnsureSignedIn();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState({ name: bank?.name ?? '', notes: bank?.notes ?? '' });
+  const linkedAccounts = useMemo(() => accounts.filter((a) => a.bankId === id), [accounts, id]);
+  const totals = useMemo(() => (bank ? bankTotalsByCurrency(bank.id, accounts, transactions) : {}), [bank, accounts, transactions]);
+  const [addOpen, setAddOpen] = useState(false);
+
+  const startEdit = () => {
+    if (!bank) return;
+    setDraft({ name: bank.name, notes: bank.notes ?? '' });
+    setEditing(true);
+  };
+  const save = async () => {
+    if (!bank) return;
+    if (!draft.name.trim()) return toast('Enter a bank name.');
+    if (!(await ensureSignedIn('Sign in to save bank details.'))) return;
+    updateBank(bank.id, { name: draft.name.trim(), notes: draft.notes.trim() || undefined });
+    toast('Bank updated.');
+    setEditing(false);
+  };
+  const remove = async () => {
+    if (!bank) return;
+    if (!(await confirmDialog(`Delete "${bank.name}"? Its accounts stay, just no longer grouped under this bank.`))) return;
+    if (!(await ensureSignedIn('Sign in to delete this bank.'))) return;
+    deleteBank(bank.id);
+    toast('Bank deleted.');
+    navigate('/bank');
+  };
+
+  if (!bank) {
+    return (
+      <div>
+        <Link to="/bank">← Back to Banking</Link>
+        <p className="text-muted">Bank not found.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <Link to="/bank">← Back to Banking</Link>
+      <CollapsibleCard
+        title={editing ? 'Edit bank' : bank.name}
+        defaultOpen
+        headerExtra={
+          !editing && (
+            <>
+              <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={startEdit} />
+              <IconButton label="Delete" icon={<TrashIcon size={13} />} align="right" onClick={remove} />
+            </>
+          )
+        }
+      >
+        {editing ? (
+          <div>
+            <Field label="Bank name" width={220} required>
+              <TextInput value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+            </Field>
+            <Field label="Notes (optional)" width={220}>
+              <TextInput value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
+            </Field>
+            <div className="row" style={{ gap: 8, marginTop: 8 }}>
+              <button className="btn" onClick={save}><SaveIcon />Save</button>
+              <button className="btn secondary" onClick={() => setEditing(false)}><XIcon />Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <div>
+            {bank.notes && <p className="text-muted" style={{ marginTop: 0 }}>{bank.notes}</p>}
+            <div className="row" style={{ gap: 16, flexWrap: 'wrap' }}>
+              {Object.keys(totals).length ? (
+                Object.entries(totals).map(([c, n]) => (
+                  <div key={c} className="stat-card card" style={hueStyle('var(--accent)')}>
+                    <div className="label">Total ({c})</div>
+                    <MoneyValue n={n} currency={c} />
+                  </div>
+                ))
+              ) : (
+                <p className="text-muted">No accounts linked yet.</p>
+              )}
+            </div>
+          </div>
+        )}
+      </CollapsibleCard>
+      <div style={{ marginTop: 16 }}>
+        <div className="entity-card-grid">
+          {linkedAccounts.map((a) => (
+            <EntityCard
+              key={a.id}
+              title={a.name}
+              subtitle={[a.accountType, a.branch].filter(Boolean).join(' · ') || undefined}
+              statLabel={a.isLiability ? 'Owed' : 'Balance'}
+              stat={<MoneyValue n={a.isLiability ? Math.max(0, -accountBalance(a, transactions)) : accountBalance(a, transactions)} currency={a.currencyCode} />}
+              hue={a.isLiability ? (accountBalance(a, transactions) < 0 ? 'var(--loss)' : 'var(--profit)') : (accountBalance(a, transactions) >= 0 ? 'var(--profit)' : 'var(--loss)')}
+              onClick={() => navigate(`/bank/account/${a.id}`)}
+            />
+          ))}
+        </div>
+        {!linkedAccounts.length && <p className="text-muted">No accounts linked to this bank yet.</p>}
+      </div>
+      <FabButton label="Add account" onClick={() => setAddOpen(true)}>
+        <PlusIcon />
+      </FabButton>
+      {addOpen && (
+        <Modal title="Add an account" onClose={() => setAddOpen(false)}>
+          <AddAccountForm initialBankId={bank.id} onSaved={() => setAddOpen(false)} />
+        </Modal>
+      )}
+    </div>
+  );
+}
+
 /** User-requested (2026-09-03): "isActive flag to archive accounts." An
  * archived account is hidden from this default grid (and from every
  * "pick where a NEW transaction/plan goes" picker elsewhere — see
@@ -622,6 +845,7 @@ export function AccountDetailPage() {
     minPaymentAmount: a?.minPaymentAmount,
     cardNetwork: a?.cardNetwork,
     cardBin: a?.cardBin,
+    bankId: a?.bankId,
   });
   const [meta, setMeta] = useState<Omit<BankAccount, 'id'>>(() => accountToFormValue(account));
   const saveMeta = async () => {
@@ -897,6 +1121,7 @@ function AccountsTab() {
   return (
     <div>
       <TotalBalances />
+      <BanksList />
       <AccountsList />
       <AccountsFab />
     </div>
