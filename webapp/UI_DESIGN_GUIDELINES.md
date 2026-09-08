@@ -1,11 +1,11 @@
 # FinanceRecorder UI Design Guidelines
 
-This file is the authoritative UI checklist for the React application in
-`webapp/`. It turns the Main / Often / Rare redesign principles and later
-product decisions into rules that can be audited in the running application.
-If an older status note (in `README.md` or `CLAUDE.md`) calls something
-"done" but it breaks one of these rules in the real UI, the work is not
-done — re-open it.
+This file is the authoritative UI checklist for this React application. It
+turns the Main / Often / Rare redesign principles and later product
+decisions into rules that can be audited in the running application. If an
+older status note (in `README.md` here or the repo root's `CLAUDE.md`)
+calls something "done" but it breaks one of these rules in the real UI,
+the work is not done — re-open it.
 
 ## Scope and precedence
 

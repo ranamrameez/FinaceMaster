@@ -18,15 +18,17 @@ speculative — but only QSE is actually built so far. Design new architecture
 to extend cleanly to the rest; don't build the rest speculatively.
 
 **Standing instruction (added 2026-08-23, user-requested): always update
-`README.md`'s Done/Pending sections for the latest developments and state**
-whenever a feature lands, changes, or gets deferred — do this as part of
-finishing the work, not as an afterthought. `README.md` is the project's
-actual backlog/status doc; this file is continuity notes for an AI session
-picking the project back up, not a substitute for it. Keep both current.
+`webapp/README.md`'s Done/Pending sections for the latest developments and
+state** whenever a feature lands, changes, or gets deferred — do this as
+part of finishing the work, not as an afterthought. `webapp/README.md` is
+the project's actual backlog/status doc (moved there from the repo root on
+2026-09-08 — see "Repo layout" below); this file is continuity notes for
+an AI session picking the project back up, not a substitute for it. Keep
+both current.
 
 **Standing instruction (added 2026-08-23, user-requested): auto-commit and
 push tested changes without asking first, and keep building the modules in
-`MODULES_PLAN.md`'s suggested order without waiting for per-step
+`webapp/MODULES_PLAN.md`'s suggested order without waiting for per-step
 confirmation.** The user is this repo's sole owner (solo project, `main`
 branch, no other collaborators) and explicitly asked to remove the
 per-commit "should I push?" and per-module "should I start this?" checkpoints
@@ -36,8 +38,8 @@ confirmation step, not the quality bar. This does not extend to genuinely
 destructive or undesigned actions (force-push, deleting real user data,
 anything not already covered by a written plan) — use judgment and still
 ask if something outside already-decided scope comes up. Also maintain a
-**user manual** (`USER_MANUAL.md`, end-user facing — how to use the app,
-not developer notes) continuously as features ship.
+**user manual** (`webapp/USER_MANUAL.md`, end-user facing — how to use the
+app, not developer notes) continuously as features ship.
 
 ## Current status (as of 2026-08-23)
 
@@ -5913,13 +5915,24 @@ were found and fixed, not just tidying:
 
 ## Repo layout
 
+**Restructured 2026-09-08, same session as the "Repo root cleanup" above, same user
+instruction ("deep cleaning... use qualified names for folders... root repo should list
+general files... platform specific info should stay inside its directory").** The repo
+root now holds only genuinely general/cross-platform things: this file (kept at the root
+so it keeps auto-loading for future sessions — see the note below), a short general
+`README.md`, `.github/`, `functions/`+`firebase.json`+`.firebaserc` (the one Firebase
+project every platform in this repo shares), and three qualified top-level folders —
+`webapp/` (the web app, with all of ITS OWN detailed docs now living inside it),
+`chrome-extension/` (renamed from `thegroup-price-sync/`), and `sample/` (real QSE/PSX
+data snapshots, moved out of the root and out of a bare unlabeled `psx/` folder). There
+is no Android/iOS app in this repo today — those names only came up as examples of the
+qualified-naming pattern to follow if one is ever added, not a placeholder to create now.
+
 ```
-MODULES_PLAN.md                                                     design plan for Funds/Banking/Cash/Rentals/EMI-Loans/Personal-Loans (Cash is built, 2026-08-23 — see its own entry; the rest aren't yet)
-USER_MANUAL.md                                                      end-user-facing docs — kept up to date alongside features, not a substitute for this file
 functions/                                                          Cloud Function scaffold (FX-rate fetch) — unused by the shipped feature, kept as real infra, see "Repo root cleanup" above
-thegroup-price-sync/                                                Chrome extension feeding the shared stockData/QSE Firebase node — see its own README, not sample data
-qse-workbook-backup.json, psx/psx-workbook-backup.json              real user data snapshots (see Data safety below)
-webapp/                                                              the new React app — all new work happens here
+chrome-extension/                                                   Chrome extension feeding the shared stockData/QSE Firebase node (renamed from thegroup-price-sync/) — see its own README, not sample data
+sample/qse-workbook-backup.json, sample/psx/psx-workbook-backup.json, sample/psx/trades/  real QSE/PSX data snapshots + the crystallized PSX statement doc (see Data safety below) — moved out of the repo root into their own qualified folder
+webapp/                                                              the web app — all new web-platform work happens here; also now holds README.md/MODULES_PLAN.md/USER_MANUAL.md/UI_DESIGN_GUIDELINES.md, since all four are entirely about this one platform
   src/lib/calc/            pure calc engine (fees, positions, cash ledger, P/L) — exchange-agnostic,
                             parametrized by a FeeCalculator; psxFees.ts has the PSX-specific one
   src/store/                createWorkbookStore.ts is a generic factory; workbookStore.ts (QSE) and
@@ -6186,16 +6199,18 @@ window/prompt on their screen rather than assuming failure.
 
 ## Data safety note
 
-`qse-workbook-backup.json` and `psx/psx-workbook-backup.json` at the repo
-root are **real personal trading data snapshots** the user provided, kept in
-sync manually. They're also used as Vitest fixtures
-(`webapp/src/lib/calc/__tests__/fixtures/`) — `qse-workbook-backup.json`'s
-copy is pinned to specific hand-verified expected values in `calc.test.ts`;
-`psx-workbook-backup.json`'s copy (added 2026-08-23) is used more loosely by
-`psxFees.test.ts` (pipeline-runs-clean + a couple of settings-dependent spot
-checks, not fully hand-traced per-row). Don't casually overwrite either
-fixture copy when refreshing the root backup files without checking whether
-the tests' expected values still hold.
+`sample/qse-workbook-backup.json` and `sample/psx/psx-workbook-backup.json`
+(moved out of the repo root into `sample/` on 2026-09-08, alongside
+`sample/psx/trades/psx_sample_statement.html`) are **real personal trading
+data snapshots** the user provided, kept in sync manually. They're also
+used as Vitest fixtures (`webapp/src/lib/calc/__tests__/fixtures/`) —
+`qse-workbook-backup.json`'s copy is pinned to specific hand-verified
+expected values in `calc.test.ts`; `psx-workbook-backup.json`'s copy
+(added 2026-08-23) is used more loosely by `psxFees.test.ts` (pipeline-
+runs-clean + a couple of settings-dependent spot checks, not fully
+hand-traced per-row). Don't casually overwrite either fixture copy when
+refreshing the `sample/` backup files without checking whether the tests'
+expected values still hold.
 
 ## Firebase
 
