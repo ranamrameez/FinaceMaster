@@ -5874,7 +5874,7 @@ FinanceManager live link:
      unchanged) — the same verification depth as every other sign-in-gated write in this
      project. `npx tsc -b` / `npm run test` (509 tests, 7 new) / `npm run build` all clean.
 - **Same-day correction of the "Include in Net Worth" feature just above, user-reported
-  (2026-09-06) — see README Done item 232.** The user's own words, verbatim: "I SAID: USE GRID
+  (2026-09-06) — see README Done item 258.** The user's own words, verbatim: "I SAID: USE GRID
   FOR ALL NON_TABLE DATA in the whole app. YOU DUMPED THE WHOLE CHECKLIST VERTICALLY on the
   main page instead of inline chips/checkboxes withe USE A FAB + POPUP TO UPDATE THIS USER
   PREFERENCE. Make chart colours transparent, not solid. they are Hiding lines." — plus a
@@ -5986,7 +5986,7 @@ FinanceManager live link:
   clean.
 - **Banking: a real same-date sort bug, a real linked-transfer sign bug, a new per-account
   Analytics grid, and a currency-sum tag on the Banking homepage — 4-item user report,
-  2026-09-06 — see README Done item 234.** User attached a real screenshot (a scrambled-
+  2026-09-06 — see README Done item 259.** User attached a real screenshot (a scrambled-
   looking transaction table) plus a full app backup to reproduce against, exactly the
   discipline this file's own history repeatedly rewards.
   **Bug 1, root-caused against the real data, not guessed**: "multiple entries at the same
@@ -6129,7 +6129,7 @@ FinanceManager live link:
   `hooks/__tests__/useTieGroupReorder.test.ts` (9 cases). `npx tsc -b` / `npm run test` (520
   tests, 9 new) / `npm run build` all clean.
 - **Linked-transfer tags now name both accounts, not just "Linked" — user-requested,
-  2026-09-06 — see README Done item 236.** User's own wording: "for linked transfers, we must
+  2026-09-06 — see README Done item 260.** User's own wording: "for linked transfers, we must
   mention From & To accounts as well in addition to the link." Every native table showing a
   cross-entity-linked record (Bank/Cash/Personal Loans/Rentals/QSE/PSX/Funds/EMI — 7 module
   pages, 8 call sites of the identical pattern) rendered a plain "🔗 Linked" tag with a nav link
@@ -6151,7 +6151,7 @@ FinanceManager live link:
   side-agnostic, whole-link description work correctly. `npx tsc -b` / `npm run test` (520
   tests, unchanged — pure UI-label change, no calc logic touched) / `npm run build` all clean.
 - **Net Worth monthly widget: phantom pre-history balances + unbounded "◀ Earlier" scrolling
-  fixed, user-reported 2026-09-06 — see README Done item 237.** User's own wording: "monthly
+  fixed, user-reported 2026-09-06 — see README Done item 261.** User's own wording: "monthly
   widgets are moving without a checkout of user first date of transaction. Charts and tables
   show incorrect/mock data when they find nothing in a month." Two related bugs, both in the
   Net Worth "Monthly summary" chart+table pair (Done item 229): (a) `netWorthAsOfDate()`'s Bank
@@ -6187,7 +6187,7 @@ FinanceManager live link:
   pre-existing, already-documented FX-fetch network-block messages this sandbox always
   produces. `npx tsc -b` / `npm run test` (526 tests, 6 new) / `npm run build` all clean.
 - **Recurring Cash/Bank plans, first UI slice of the approved Planning redesign
-  (2026-09-07) — see README Done item 238.** User's own diagnosis: "planning is actually
+  (2026-09-07) — see README Done item 249.** User's own diagnosis: "planning is actually
   redundant, confusing and complex looking... they fail to plan recurring income and
   expense. like salary deposit on 28 each month. expected utility bills on specific days of
   a month." Confirmed via `AskUserQuestion`: single-row/live-computed recurrence (not
@@ -6233,7 +6233,7 @@ FinanceManager live link:
   already-tested calc) / `npm run build` all clean. This closes out the entire recurring-
   planning redesign requested at the start of this batch.
 - **Trade Calculator FAB no longer overlaps/blocks other FABs, user-reported (2026-09-07) —
-  see README Done item 239.** `CalculatorLauncher.tsx` (globally mounted on every Stock
+  see README Done item 250.** `CalculatorLauncher.tsx` (globally mounted on every Stock
   Exchanges route) rendered its OWN independent `position:fixed; right:24; bottom:24`
   button, at the exact same corner `FabPanel` (`components/ui/Fab.tsx`) already uses for
   every module's own FAB — including QSE's/PSX's own page-level "Transfers" `FabPanel` on the
@@ -6253,7 +6253,7 @@ FinanceManager live link:
   the QSE Trade Calculator modal — same check repeated on PSX's own Trade Transactions page.
   `npx tsc -b` / `npm run test` (550 tests, unchanged — UI-only) / `npm run build` all clean.
 - **Dashboard "Buy/sell stock" FAB + Tooltip z-index/click-through fix, both user-reported
-  same day (2026-09-07) — see README Done item 240.** (1) "no FAB present to buy a new stock
+  same day (2026-09-07) — see README Done item 251.** (1) "no FAB present to buy a new stock
   on the exchange dashboard" — the only way to log a trade was navigating to the Trade
   Transactions page first. `TransactionsPage.tsx`'s own self-contained `TransactionRows`
   component (ticker/action/shares/price, PSX's own version also has its Fee Mode control) was
@@ -6283,7 +6283,7 @@ FinanceManager live link:
   version confirmed to include its Fee Mode control too). `npx tsc -b` / `npm run test` (550
   tests, unchanged — UI-only) / `npm run build` all clean.
 - **Transfers popup: currency mismatch on a remembered account + wrong default currency on a
-  new one, both user-reported same day (2026-09-07) — see README Done item 241.** User: "it
+  new one, both user-reported same day (2026-09-07) — see README Done item 252.** User: "it
   saves last used linked account but currency mismatched. Also, the default currency should be
   of the Account 1 rather than rare inter currency inter finance transfer." Two distinct real
   bugs in `features/transfers/pages/TransferLinksPage.tsx`'s `SideFields`, both root-caused by
@@ -6316,7 +6316,7 @@ FinanceManager live link:
   the EUR one that would've won as `entities[0]`. `npx tsc -b` / `npm run test` (550 tests,
   unchanged — UI-only) / `npm run build` all clean.
 - **Funds: closed/fully-withdrawn positions no longer count toward the "Expected P/L"
-  projection, user-reported same day (2026-09-07) — see README Done item 242.** User: "Funds:
+  projection, user-reported same day (2026-09-07) — see README Done item 253.** User: "Funds:
   Expected monthly P/L and others should not count closed positions for future/prediction!"
   `expectedPLRate()` (`lib/calc/fundsModule.ts`, Done item 226) is a FORWARD-LOOKING projection
   by design — its own doc comment describes it as "an average of what already happened,"
@@ -6352,7 +6352,7 @@ FinanceManager live link:
   function itself), so no new unit tests — `npx tsc -b` / `npm run test` (550 tests, unchanged
   — UI-only) / `npm run build` all clean.
 - **Funds: "Investment helper" calculator, comparing 2 funds side by side, user-requested
-  (2026-09-07) — see README Done item 243.** User: "Investment helper calculator amount to
+  (2026-09-07) — see README Done item 254.** User: "Investment helper calculator amount to
   invest in a fund and expected returns on it. allow comparison b/w 2 funds there as well/ may
   use POPUP." Confirmed the two real design forks via `AskUserQuestion` before building, per
   this project's own standing plan-and-approve rule: the rate basis is each fund's OWN
@@ -6387,7 +6387,7 @@ FinanceManager live link:
   +3,652.80 (values 5.01k/5.3k/8.65k) — every figure matching hand-traced math exactly, side by
   side in the same modal. Zero console errors. `npx tsc -b` / `npm run test` (553 tests, 3 new)
   / `npm run build` all clean.
-- **QSE/PSX ticker logos, first slice of the rollout (2026-09-07) — see README Done item 244,
+- **QSE/PSX ticker logos, first slice of the rollout (2026-09-07) — see README Done item 255,
   Pending item 118 for the rest.** User: "QSE few logos are present in root repo but not
   utilized in the new webapp, old index is using very good mechanism, find logo in our repo,
   otherwise find it through the template URL otherwise Text-tag type symbol." Investigated
@@ -6431,7 +6431,7 @@ FinanceManager live link:
   name, not broken images or stray text. `npx tsc -b` / `npm run test` (553 tests, unchanged —
   UI-only) / `npm run build` all clean.
 - **"Add Trade" made available on every Stock Exchanges page, and every popup narrowed to
-  40-50% width, user-requested (2026-09-07) — see README Done item 245.** User: "Add Trade
+  40-50% width, user-requested (2026-09-07) — see README Done item 256.** User: "Add Trade
   should be available on all pages of Stocks. a popup is better. try to make 40% to 50% width
   popups instead of winning the horizons!" (1) The "Buy/sell stock" popup shipped in Done item
   240 only lived on the Dashboard (a page-local `usePageFabActions()` registration) — moved it
@@ -6464,7 +6464,7 @@ FinanceManager live link:
   measurement and a screenshot showing the popup reading as compact and centered rather than
   spanning the page. Zero real console errors. `npx tsc -b` / `npm run test` (553 tests,
   unchanged — UI-only) / `npm run build` all clean.
-- **App-wide UI/UX audit, 4-item batch (2026-09-07) — see README Done item 246.** User: "this
+- **App-wide UI/UX audit, 4-item batch (2026-09-07) — see README Done item 257.** User: "this
   tiny asterisk is moving in next line! Same is the case with + of add account in popups. i
   have asked countless times to set min width for form elements (try making same width for
   input, selectbox..). let the user enter minimum data and fill most by default (pick
@@ -6603,7 +6603,7 @@ FinanceManager live link:
   Sr#/Index# column) are unrelated and still open. `npx tsc -b` / `npm run test` (554 tests,
   unchanged) / `npm run build` all clean.
 235. **Ticker logo rollout extended to Trade Transactions/Watchlist/Dividends (2026-09-08) —
-  continues Pending item 118, both exchanges.** `components/TickerLogo.tsx` (Done item 244)
+  continues Pending item 118, both exchanges.** `components/TickerLogo.tsx` (Done item 255)
   wasn't touching anything beyond Dashboard/Portfolio/`StockPage` titles yet. Added it to every
   remaining ticker cell with a real per-row identity: QSE's/PSX's Trade Transactions page (the
   main trade-list table, plus its Open trades and Closed trades sections — all three ticker
@@ -6621,7 +6621,7 @@ FinanceManager live link:
   Transactions — trade list + open lots + dividend history + yearly projection; 1 on Watchlist),
   all correctly rendering the colored-initials fallback badge in this sandbox (both the local
   and remote-CDN stages are blocked by its network policy, so this is a genuine end-to-end test
-  of the full 3-stage fallback chain, same as Done item 244's own verification note) — confirmed
+  of the full 3-stage fallback chain, same as Done item 255's own verification note) — confirmed
   with a real screenshot too, not just element counts. Zero console errors beyond the expected
   blocked-image-fetch noise. Still open, per Pending item 118's own remaining list: Trade
   Planner's leg tables/summary cards, the Trade Calculator popup, Risk Analysis, and Funds
@@ -7008,7 +7008,7 @@ FinanceManager live link:
   just asserted — zero console errors throughout. `npx tsc -b` / `npm run test` (616 tests, 11
   new) / `npm run build` all clean.
 - **Ticker logo rollout, remaining surfaces closed out (2026-09-08) — see README Done item
-  247, closes Pending item 118 in full.** Extended `TickerLogo` (Done item 244's local →
+  247, closes Pending item 118 in full.** Extended `TickerLogo` (Done item 255's local →
   QSE-CDN → colored-initials fallback chain) to every surface that item's own text flagged as
   still open: PSX Trade Planner's plan-title pill, its per-ticker summary stat cards, its
   analysis table, and its leg rows; both QSE's and PSX's standalone Risk Analysis pages plus
@@ -7857,7 +7857,7 @@ or a design decision before more code, not guessed at further:**
      open design question — no Funds-specific CDN mode was built; `exchange="psx"` reuses the
      existing "no known CDN, local-drop-in or colored-initials only" path, keyed off `fund.code`
      rather than `fund.id`).
-119. **Broader raw-input/raw-select width-consistency audit (2026-09-07)** — Done item 246
+119. **Broader raw-input/raw-select width-consistency audit (2026-09-07)** — Done item 257
      fixed the concrete, visibly-broken manifestation of "give form elements the same width"
      (a Select+IconButton composite row wrapping inside a narrow popup), on top of substantial
      already-existing infrastructure for this exact complaint (`Field`'s own `width=180`
