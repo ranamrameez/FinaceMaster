@@ -7782,12 +7782,26 @@ or a design decision before more code, not guessed at further:**
      Disclaimer, replacing the sidebar's scattered footer content and its mislinked "Signed in
      as X"), plus Banking's own full pass (entity-card Accounts grid, read-only+Edit-icon
      `AccountDetailPage`, tooltip-ified stray paragraphs, Settings tab linking to the hub).
-     **Still open**: roll the same `EntityCard`/read-only-detail-page/hub-linking pattern out to
-     the other 12 modules one at a time (verify each live before moving to the next, same
-     incremental style as everything else in this project); audit (don't blindly rebuild) each
-     module's existing inline cross-entity-linking coverage against the "each module should link
-     without leaving its own page" ask — most already have this per Done items 125/131/156, so
-     this is a verification pass, not new construction; and the separate, higher-risk Credit
+     **Still open, but note a real doc-drift issue found while re-checking this item
+     (2026-09-08)**: `webapp/UI_DESIGN_GUIDELINES.md` ("Add UI design guidelines doc (Phase 0
+     of the UI audit)") is a newer, more thorough, checklist-form spec of these SAME Main/
+     Often/Rare principles + the 9 design rules — its own opening line says explicitly that a
+     status note here or in `CLAUDE.md` calling something "done" while it still breaks one of
+     its rules means the work is NOT done, re-open it. A separate, later audit effort (Done
+     items 213 onward, `main/site.css`'s `.grid-auto`/flex-utility classes, dead-CSS removal,
+     the sticky submodule nav pilot, chart translucency/sharper-stat-card passes, and dozens of
+     later module-specific fixes) has addressed a good deal of the UNDERLYING UI-quality intent
+     this item cares about — filters, grids, per-account/per-entity detail pages, FAB+popup
+     entity creation, tooltip-ified explanations — across most modules through means OTHER than
+     the specific `EntityCard` component. **Verified via a direct grep, not assumed**: `EntityCard`
+     itself is still used ONLY by Banking (confirmed 2026-09-08) — so the literal "roll
+     EntityCard out to 12 modules" ask is still genuinely open, but a future session shouldn't
+     read "still open" here as "nothing's been done for these modules" — check a module against
+     `UI_DESIGN_GUIDELINES.md`'s own rules directly (not just against whether it uses
+     `EntityCard`) before assuming it needs work. Also still open: audit (don't blindly rebuild)
+     each module's existing inline cross-entity-linking coverage against the "each module should
+     link without leaving its own page" ask — most already have this per Done items 125/131/156,
+     so this is a verification pass, not new construction; and the separate, higher-risk Credit
      Card/Bank/Branch normalization migration (flagged as its own track in CLAUDE.md, not to be
      bundled into the general UI rollout — it touches the user's real imported GCC/PCC
      credit-card-as-liability-account data and needs its own focused session).
