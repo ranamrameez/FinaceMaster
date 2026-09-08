@@ -1,6 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 
-export type CategoryKey = 'netWorth' | 'stocks' | 'funds' | 'bank' | 'cash' | 'personalLoans' | 'emi' | 'rentals' | 'subscriptions' | 'planning' | 'budget';
+export type CategoryKey = 'netWorth' | 'stocks' | 'funds' | 'bank' | 'cash' | 'personalLoans' | 'emi' | 'rentals' | 'subscriptions' | 'planning';
 
 // User-requested (2026-08-28): "This entirely removes the transfers page
 // and the problem of duplicated transaction cards" — the standalone
@@ -18,7 +18,6 @@ const CATEGORIES: { key: CategoryKey; label: string; to: string }[] = [
   { key: 'rentals', label: 'Rentals', to: '/rentals' },
   { key: 'subscriptions', label: 'Subscriptions', to: '/subscriptions' },
   { key: 'planning', label: 'Planning', to: '/planning' },
-  { key: 'budget', label: 'Budget Planner', to: '/budget' },
 ];
 
 /** Derives the active category from the route rather than storing it
@@ -36,7 +35,7 @@ export function categoryForPath(pathname: string): CategoryKey {
   if (pathname.startsWith('/rentals')) return 'rentals';
   if (pathname.startsWith('/subscriptions')) return 'subscriptions';
   if (pathname.startsWith('/planning')) return 'planning';
-  if (pathname.startsWith('/budget')) return 'budget';
+  if (pathname.startsWith('/budget')) return 'planning';
   return 'stocks';
 }
 

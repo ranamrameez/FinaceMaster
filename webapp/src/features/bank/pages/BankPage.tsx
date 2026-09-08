@@ -1974,17 +1974,32 @@ function BankPlanList({ account }: { account: BankAccount }) {
       <div className="table-scroll">
         <table>
           <thead>
-            <tr><th>Date</th><th>Description</th><th>Amount</th><th>Category</th><th>Status</th><th></th></tr>
+            <tr><th>Date</th><th>Description</th><th>Amount</th><th>Category</th><th>Repeats / status</th><th></th></tr>
           </thead>
           <tbody>
             {sorted.map((p) =>
               editId === p.id && editRow ? (
                 <tr key={p.id}>
-                  <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
+                  <td>
+                    <input
+                      type="date"
+                      value={editRow.date}
+                      onChange={(e) => setEditRow({ ...editRow, date: e.target.value, recurrence: editRow.recurrence ? { ...editRow.recurrence, startDate: e.target.value } : undefined })}
+                      style={{ width: 130 }}
+                    />
+                  </td>
                   <td><input value={editRow.description} onChange={(e) => setEditRow({ ...editRow, description: e.target.value })} /></td>
                   <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 100 }} /></td>
                   <td><input value={editRow.category ?? ''} onChange={(e) => setEditRow({ ...editRow, category: e.target.value })} style={{ width: 100 }} /></td>
-                  <td></td>
+                  <td>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                      <RecurrenceFields
+                        startDate={editRow.date}
+                        value={editRow.recurrence}
+                        onChange={(recurrence) => setEditRow({ ...editRow, recurrence })}
+                      />
+                    </div>
+                  </td>
                   <td>
                     <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
                     <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditId(null)} />

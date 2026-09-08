@@ -871,6 +871,7 @@ function PlanList() {
     setEditId(null);
     setEditRow(null);
   };
+  const currencyOptions = useEnabledCurrencies(editRow?.currencyCode);
 
   const markDone = async (p: PlannedCashEntry) => {
     const occurrenceDate = p.recurrence ? nextRecurrenceOccurrence(p.recurrence)?.toISOString().slice(0, 10) : p.date;
@@ -917,15 +918,22 @@ function PlanList() {
         <table>
           <thead>
             <tr>
-              <Th col="date">Date</Th><Th col="type">Type</Th><Th col="amount">Amount</Th>
-              <th>Category</th><th>Note</th><Th col="status">Status</Th><th></th>
+              <Th col="date">Date</Th><Th col="type">Type</Th><Th col="amount">Amount</Th><th>Currency</th>
+              <th>Category</th><th>Note</th><Th col="status">Repeats / status</Th><th></th>
             </tr>
           </thead>
           <tbody>
             {sorted.map((p) =>
               editId === p.id && editRow ? (
                 <tr key={p.id}>
-                  <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
+                  <td>
+                    <input
+                      type="date"
+                      value={editRow.date}
+                      onChange={(e) => setEditRow({ ...editRow, date: e.target.value, recurrence: editRow.recurrence ? { ...editRow.recurrence, startDate: e.target.value } : undefined })}
+                      style={{ width: 130 }}
+                    />
+                  </td>
                   <td>
                     <select value={editRow.type} onChange={(e) => setEditRow({ ...editRow, type: e.target.value as 'IN' | 'OUT' })}>
                       <option value="IN">Cash in</option>
@@ -933,9 +941,22 @@ function PlanList() {
                     </select>
                   </td>
                   <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 90 }} /></td>
+                  <td>
+                    <select value={editRow.currencyCode} onChange={(e) => setEditRow({ ...editRow, currencyCode: e.target.value })} style={{ width: 80 }}>
+                      {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+                    </select>
+                  </td>
                   <td><input value={editRow.category ?? ''} onChange={(e) => setEditRow({ ...editRow, category: e.target.value })} style={{ width: 100 }} /></td>
                   <td><input value={editRow.note ?? ''} onChange={(e) => setEditRow({ ...editRow, note: e.target.value })} /></td>
-                  <td></td>
+                  <td>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                      <RecurrenceFields
+                        startDate={editRow.date}
+                        value={editRow.recurrence}
+                        onChange={(recurrence) => setEditRow({ ...editRow, recurrence })}
+                      />
+                    </div>
+                  </td>
                   <td>
                     <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
                     <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditId(null)} />
@@ -946,6 +967,7 @@ function PlanList() {
                   <td>{p.date}</td>
                   <td className={p.type === 'IN' ? 'pill-positive' : 'pill-negative'}>{p.type === 'IN' ? 'Cash in' : 'Cash out'}</td>
                   <td>{fmtMoney(p.amount, p.currencyCode)}</td>
+                  <td>{p.currencyCode}</td>
                   <td>{p.category || '—'}</td>
                   <td>{p.note}</td>
                   <td className="text-muted">{p.recurrence ? recurrenceLabel(p.recurrence) : p.executed ? 'Done' : 'Planned'}</td>
@@ -966,7 +988,7 @@ function PlanList() {
                 </tr>
               ),
             )}
-            {!sorted.length && <tr><td colSpan={7} className="text-muted">No plans yet — add one above.</td></tr>}
+            {!sorted.length && <tr><td colSpan={8} className="text-muted">No plans yet — add one above.</td></tr>}
           </tbody>
         </table>
       </div>
