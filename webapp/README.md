@@ -6559,6 +6559,24 @@ FinanceManager live link:
   Pages, since this sandbox's network policy blocks github.io directly) that the rebuilt app
   loads with zero console errors at the new root path before any of this shipped. `npx tsc -b`
   / `npm run test` (554 tests, unchanged) / `npm run build` all clean.
+233. **Pending item 120 ("Personal Loans repayment form has no Time/Timezone UI") re-checked
+  against the live code (2026-09-08) — found already resolved, not a real remaining gap.**
+  That item was written by auditing `PersonalLoansPage.tsx` in isolation and finding no
+  `TimeZoneFields` import there — but `PersonalLoansPage.tsx` no longer has its own
+  add-repayment form at all: `RepaymentsFab` (its only add-entry action) opens the shared
+  app-wide `TransactionEntryModal` (the Transfers-FAB redesign, Done item 216, 2026-08-28) with
+  `defaultFinance={{module: 'personalLoans', ...}}`, and that modal already has a full
+  `TimeZoneFields` control wired straight through to `addPersonalLoanRepayment({..., time:
+  r.time, timezone: r.timezone})` — confirmed by reading `TransactionEntryModal.tsx` directly,
+  and by grepping every call site of `addRepayment`/`addPersonalLoanRepayment` app-wide to
+  confirm the modal is genuinely the only manual entry path (the other caller,
+  `linkCascade.ts`, is the cross-entity-link write path, not manual entry). **Lesson repeated
+  again, worth internalizing rather than just re-noting**: a Pending item written against one
+  file's own imports, without checking whether that file's UI responsibility had already moved
+  elsewhere (per an earlier, unrelated redesign), read as a real gap when it wasn't one — check
+  what actually renders the add-flow for a module, not just whether the module's own page file
+  imports the expected component. No code changes needed; this entry exists only to correct the
+  backlog. `npx tsc -b` / `npm run test` (554 tests, unchanged) / `npm run build` all clean.
 
 ## Pending
 
@@ -7363,16 +7381,6 @@ or a design decision before more code, not guessed at further:**
      to confirm none of them still render inconsistently sized relative to a sibling — only do
      this if a further specific instance is reported, since a blind sweep risks either missing
      the real remaining cases or touching CSS that's already correctly tuned elsewhere.
-120. **Personal Loans repayment form has no Time/Timezone UI at all (2026-09-07)** — found while
-     auditing Done item 246's "smart defaults" fix: `PersonalLoanRepayment` already carries
-     optional `time`/`timezone` fields (used for real chronological sorting, per the app-wide
-     `seq`/timestamp work), but no `TimeZoneFields` component was ever wired into its
-     add-repayment form — every repayment silently saves with `time: undefined` regardless of
-     when it's logged, unlike every other module's own add-form. A genuinely different, older
-     gap (a feature that was never fully shipped for this one module) than "the default is
-     wrong," which is what Done item 246 fixed elsewhere — needs its own short pass: add
-     `TimeZoneFields` to the add-repayment form, defaulting time via `nowTime()` and timezone
-     via `defaultTimezoneForCurrency`, same pattern as every other module.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank
