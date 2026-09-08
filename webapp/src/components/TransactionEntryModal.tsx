@@ -67,6 +67,17 @@ const HAS_NOTE: LinkModule[] = ['cash', 'rentals'];
  * back to the category text or the literal string "Transaction" — the app
  * substituting a value instead of taking real user input. */
 const HAS_DESCRIPTION: LinkModule[] = ['bank'];
+/** User-requested (2026-09-08): a "Pending" state — a real transaction the
+ * user already knows is happening but hasn't cleared yet (a sent transfer
+ * not yet reflected, a stock order not yet filled). Shipped first for
+ * Cash + Banking, the user's own two worked examples — see
+ * `Finance.status`'s own doc comment for the full design and why this is
+ * genuinely different from the Planning feature's hypothetical entries.
+ * Deliberately not offered on a LINKED row: a cross-entity transfer is two
+ * real records written together via `createLinkedTransfer`, and "pending"
+ * for a link needs its own design (does one side clear independently of
+ * the other?) not attempted here. */
+const HAS_PENDING: LinkModule[] = ['cash', 'bank'];
 
 interface TxRow {
   key: number;
@@ -81,6 +92,7 @@ interface TxRow {
   categoryID: string;
   description: string;
   note: string;
+  pending: boolean;
 }
 
 function emptyRow(key: number, finance: LinkSideConfig, currencyCode?: string): TxRow {
@@ -97,6 +109,7 @@ function emptyRow(key: number, finance: LinkSideConfig, currencyCode?: string): 
     categoryID: UNCATEGORIZED_ID,
     description: '',
     note: '',
+    pending: false,
   };
 }
 
@@ -177,6 +190,12 @@ function TxRowFields({
         />
         Link to another finance (a transfer between two accounts)
       </label>
+      {!row.linked && HAS_PENDING.includes(row.finance.module) && (
+        <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }} title="Money already sent/placed but not yet reflected or filled — excluded from the current balance until you mark it cleared.">
+          <input type="checkbox" checked={row.pending} onChange={(e) => onChange({ ...row, pending: e.target.checked })} />
+          Pending (not yet cleared)
+        </label>
+      )}
       {row.linked && (
         <div style={{ marginTop: 8 }}>
           <SideFields label="Other finance" cfg={row.other} onChange={(other) => onChange({ ...row, other })} preferredCurrency={financeCurrency ?? undefined} />
@@ -298,6 +317,7 @@ export function TransactionEntryModal({ defaultFinance, onClose }: { defaultFina
             id: uid(), accountId: r.finance.ref, date: r.date, time: r.time, timezone: r.timezone,
             amount: signedAmount, isDeposit: signedAmount >= 0, description: r.description.trim(),
             categoryID: r.categoryID, source: 'manual',
+            status: r.pending ? 'pending' : undefined,
           }]);
           break;
         }
@@ -307,6 +327,7 @@ export function TransactionEntryModal({ defaultFinance, onClose }: { defaultFina
             isDeposit: r.direction === 'in', amount: Math.abs(r.amount),
             currencyCode: r.finance.currencyCode || 'USD',
             categoryID: r.categoryID, note: r.note.trim() || undefined, source: 'manual',
+            status: r.pending ? 'pending' : undefined,
           });
           break;
         case 'rentals':

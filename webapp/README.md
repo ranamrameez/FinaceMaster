@@ -6673,6 +6673,48 @@ FinanceManager live link:
   management measured the same Y-coordinate (genuinely side by side, not just visually close),
   zero console errors. `npx tsc -b` / `npm run test` (554 tests, unchanged) / `npm run build`
   all clean.
+238. **App-wide "Pending" transaction state, first slice: Cash + Banking (2026-09-08),
+  user-requested.** The app's own "we are missing a Pending state where balances disappear and
+  may flow either way on success/failure" report, with real examples: "Pending Stock buy order
+  in market locks the available cash... Bank Transfer done while other still didn't reflect."
+  Confirmed the design via `AskUserQuestion` before writing any code — this touches every
+  balance-consuming calc in the app, not a small UI tweak: (1) pending money genuinely LOCKS out
+  of the real/available balance (not just a display tag), but (2) both the cleared and the
+  including-pending figures must always be shown together — "rather than giving user a heart
+  attack by excluding pending amounts and not showing them in the stats" — and (3) rolled out
+  everywhere the app has a real balance, starting with Cash + Banking as the concrete first
+  slice (the user's own two worked examples), sequenced rather than attempted as one giant
+  change — see the new Pending item below for the rest.
+  **`Finance.status?: 'pending' | 'cleared'`** (the shared base type behind `CashEntry`/
+  `BankTransaction`/`RentalEntry`) — optional, absent = cleared, zero-migration since no real
+  existing record has ever had this field. **The two functions every other Cash/Bank balance or
+  total in the app already derives from** (`cashBalanceByCurrency`, `accountBalance`) now
+  exclude `status === 'pending'` records — a "fix once" change: Net Worth, Dashboard totals,
+  every existing caller automatically starts reflecting only cleared money with ZERO call-site
+  changes needed. New companion functions `cashPendingByCurrency`/`accountPendingBalance` sum
+  ONLY the pending amount, so the UI can show "Cleared: X" alongside "+Y pending → Z incl.
+  pending" rather than the pending figure just vanishing. **Deliberately left as a design
+  choice, not an oversight**: `cashRunningLedger`/`accountRunningLedger` (the per-row ledger
+  table) still include pending rows in their own running-total math in chronological order —
+  the table itself already visually tags a pending row with a "Pending" pill, so its own
+  trailing balance reading as "if everything settles, here's where you'd be" is a reasonable,
+  clearly-labeled companion to the cleared-only headline stat, not a second contradictory
+  number. **"Easily change the state"**: no new store action needed — a pending record is a
+  plain `updateEntry`/`updateTransaction` patch, wired into a "Mark cleared" `IconButton`
+  directly on each pending row (one click, sign-in gated like every other write) and into both
+  Edit modals as a real checkbox (so a cleared record can also be reverted to pending, or a
+  brand-new pending entry set at creation time via a new checkbox in the shared app-wide
+  `TransactionEntryModal.tsx` — deliberately only offered on the PLAIN, non-linked case; a
+  linked cross-entity transfer writes two real records together and "pending" for a link needs
+  its own design, not attempted here). New tests:
+  `lib/calc/__tests__/{cashModule,bankModule}.test.ts` gained 6 cases covering the exclusion,
+  the zero-migration case, and the new pending-sum functions. Verified live via Playwright with
+  a seeded pending Cash entry and a seeded pending Bank transaction: both stat cards correctly
+  read "Cleared: X" with a "+Y pending → Z incl. pending" sub-line (e.g. Cash: "1k USD" / "-200
+  USD pending → 800 USD incl. pending"; Bank: "500 USD" / "-150 USD pending → 350 USD incl.
+  pending"), the row-level "Pending" pill rendered on both, and clicking "Mark cleared"
+  correctly hit the real sign-in gate rather than silently writing while signed out — zero
+  console errors. `npx tsc -b` / `npm run test` (562 tests, 8 new) / `npm run build` all clean.
 
 ## Pending
 
@@ -7484,6 +7526,107 @@ or a design decision before more code, not guessed at further:**
      to confirm none of them still render inconsistently sized relative to a sibling — only do
      this if a further specific instance is reported, since a blind sweep risks either missing
      the real remaining cases or touching CSS that's already correctly tuned elsewhere.
+120. **Pending-transaction-state rollout remainder (2026-09-08)** — Done item 238 shipped the
+     core `Finance.status`/`cashPendingByCurrency`/`accountPendingBalance` pattern for Cash +
+     Banking. The user confirmed (via `AskUserQuestion`) they want this in every module
+     eventually — the remaining rollout, roughly in order of how directly each module maps onto
+     the pattern already built:
+     - **QSE/PSX (a pending stock order)** — the user's own named example ("Pending Stock buy
+       order in market locks the available cash"). Structurally bigger than Cash/Bank: a
+       pending BUY needs to reserve cash without yet owning shares (so `cashSummary()`'s
+       balance calc needs the same pending-exclusion treatment Cash/Bank just got), while a
+       pending SELL needs to reserve/flag shares without yet realizing the sale (so
+       `computePositions`/`computeFIFOPositions` need to know a transaction is provisional and
+       not yet count it toward realized P/L or a closed lot) — this is NOT a copy-paste of the
+       Cash/Bank pattern, it's a real design question about what "pending" means for a position
+       calc, and should be scoped with its own `AskUserQuestion` round before writing code.
+     - **Rentals/Personal Loans/EMI/Funds/Subscriptions** — each reuses `Finance`/similar record
+       shapes closely enough that the identical `status` field + a pending-exclusion pass
+       through that module's own balance function should mostly mirror Cash/Bank directly; still
+       needs its own verification pass per module (this project's own "ship one module well,
+       verify live, then extend" discipline), not a blind mechanical copy across all of them in
+       one PR.
+     - The Planning feature's own 3rd original motive ("well-known/estimated/pending" — see
+       Done item 43) named "pending transfers still in process and invisible on either side" as
+       one of Planning's founding use cases, but Planning's own planned entries are
+       hypothetical/not-yet-executed and never touch a real balance — genuinely different from
+       this feature's real, already-happened-but-not-cleared transactions. Once Pending-state
+       covers more modules, it's worth revisiting whether Planning's UI should surface a
+       module's pending items alongside its planned ones (both are "money not fully settled
+       yet," from the user's point of view) — not designed yet, flagged here rather than
+       silently conflated with Planning during this pass.
+121. **QSE/PSX Dashboard: "Current Deposit" and "Deposits vs. Net Worth" stat cards
+     (2026-09-08, user-requested)** — "should show Current Deposit (Deposits - Withdrawals) &
+     Current Deposits vs Current NET Worth (Cash Bal + Port. value)." `summary.totalInward`/
+     `totalOutward`/`netWorth` (already `cashBalance + portfolioValue`, matching the user's own
+     definition exactly) are all already computed by `cashSummary()` — this is two new
+     `StatCard`s reading already-available fields, not new calc logic. Not yet built.
+122. **Trade Transactions: sold price / lot P&L / overall avg-cost P&L — investigate what's
+     actually missing (2026-09-08, user-requested).** The user's exact ask ("show the sold
+     price and PL w.r.t. that lot's buy price, as well as overall PL according to the Buy avg")
+     appears to already be covered by two existing features built earlier this same day: the
+     "Closed trades (realized round-trips)" section on the Trade Transactions page (added this
+     session, FIFO-matched, shows buy price/sell price/net P&L per lot) and `PositionDetail`'s
+     existing "P/L" stat card (average-cost-based, for the currently open position). Before
+     building anything new here, confirm with the user exactly what's still missing — likely
+     candidates: showing this inline in the main trade-list row itself rather than a separate
+     section, or something about combining "per lot" and "overall avg" into one view — rather
+     than guessing and duplicating an already-built feature.
+123. **Math-expression evaluation in number inputs (2026-09-08, user-requested)** —
+     "allow users to directly enter basic math in the input boxes like a sheet rather than
+     needing an external calc." A genuinely well-scoped, app-wide, low-risk UX win: a shared
+     wrapper around the many `<input type="number">`/`TextInput` amount fields that evaluates a
+     typed expression (`10.5+5`, `200/3`) on blur/Enter, replacing the field's text with the
+     result, while leaving the field a plain number the rest of the app already understands
+     (no calc-engine changes needed downstream). Needs a small, safe expression evaluator (never
+     `eval()`/`Function()` on user input) — `+`/`-`/`*`/`/`/parens only. Not yet built; a
+     reasonable next step is one new shared component (e.g. wrapping `TextInput`) applied to
+     the highest-traffic Amount fields first (Trade Transactions, TransactionEntryModal, Trade
+     Calculator), same incremental verify-per-surface discipline as every other app-wide
+     rollout in this project.
+124. **Banded (striped) table rows app-wide (2026-09-08, user-requested)** — small, mechanical:
+     a `tbody tr:nth-child(even)` background tint in `theme.css`, themed for both light/dark
+     (same token-based approach every other themed rule in this file already uses). Not yet
+     built.
+125. **Inter-currency transfer auto-fill from cached FX rate (2026-09-08, user-requested,
+     design confirmed via `AskUserQuestion`)** — "we should allow the automated editable
+     converted values." Confirmed: auto-fill the "to" amount from the existing `lib/fx.ts`
+     cached rate (the same source Net Worth already uses, refreshed at most once a day) the
+     moment both currencies are known in a cross-currency link, remaining fully editable
+     afterward — never silently trusted. Applies to `TransactionEntryModal.tsx`'s linked-row
+     flow (`SideFields`/`fromAmount`/`toAmount`) and the standalone Transfers-page equivalent.
+     Not yet built — the user's own follow-up question ("ask if any middleware like FX
+     involved") reads as wanting the UI to also surface WHERE the suggested rate came from
+     (e.g. "via cached rate, updated <date>") rather than a bare number, which should be part of
+     this same pass.
+126. **Single shared category list used everywhere + per-user customization (2026-09-08,
+     user-requested)** — partially already true: Cash/Bank/Rentals already share one real
+     registry (`lib/categories.ts`/`categoryStore.ts`, Done item 221's "Finance base model"
+     restructure) with a real "add your own category" flow via `CategorySelect`. Genuinely NOT
+     yet unified: Subscriptions has its own free-text `category` field with no link to the
+     shared registry (only a per-subscription-history datalist suggestion); Funds uses a FIXED
+     enum (`'Equity'|'Debt'|'Hybrid'|'International'|'Other'`) rather than free-form categories
+     at all — a real, deliberate-at-the-time deviation from this project's own "category fields
+     must be free-form" cross-cutting rule (see `MODULES_PLAN.md`). Extending the shared
+     registry to Subscriptions is a small, low-risk change (swap its free-text field for
+     `CategorySelect`); switching Funds off its fixed enum is bigger — it's used today to group
+     "Allocation by category" on the Funds Analytics chart, and moving to free-form categories
+     needs the same design/migration care `types/finance.ts`'s own file-level comment already
+     gave this exact scoping question (it was explicitly excluded from the original Finance-base
+     restructure as "fundamentally different"). Not yet built.
+127. **Per-user selectable currency subset (2026-09-08, user-requested)** — "App setting should
+     let the user choose his currencies... show checkbox/chips rather [than] scrolling through
+     a list... this app supports multiple currencies but not all users are multi-currency."
+     Every currency `<select>` in the app currently renders the FULL `CURRENCIES` list
+     (`lib/currencies.ts`, ~25 entries) regardless of which currencies a user's own data
+     actually uses. Proposed design (not yet confirmed with the user): a new Account-page
+     setting — a chip/checkbox picker over `CURRENCIES`, stored like `appearanceStore` (a
+     global, non-financial preference, not per-module) — and a new small helper
+     (`useEnabledCurrencies()` or similar) that every currency `<select>` in the app switches to
+     reading from instead of the raw full list, falling back to the full list when nothing's
+     configured (so an existing user sees no change until they opt in) or when a currency
+     already in real use isn't in the chosen subset (never hide a currency the user's own data
+     actually needs, even if they forgot to check it). Not yet built.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

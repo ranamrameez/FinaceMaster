@@ -30,12 +30,32 @@ export function cashRunningLedger(entries: CashEntry[]): CashLedgerRow[] {
   });
 }
 
-/** Current balance per currency — just the last running-ledger row for
- * each currency, exposed separately since most callers want the summary,
- * not the full row-by-row history. */
+/** Current (cleared, spendable) balance per currency — excludes any entry
+ * with `status === 'pending'` (see `Finance.status`'s own doc comment for
+ * why: a pending entry's money isn't actually available yet). Every other
+ * balance/total in the app (Dashboard, Net Worth, ...) derives from this
+ * one function, so excluding pending here is a "fix once" change — no
+ * downstream caller needed to change to get the "locks real balances"
+ * behavior the user asked for. Zero-migration: no real existing entry has
+ * ever had `status` set, so this returns exactly what it always did until
+ * a user actually marks something pending. */
 export function cashBalanceByCurrency(entries: CashEntry[]): Record<string, number> {
   const out: Record<string, number> = {};
   entries.forEach((e) => {
+    if (e.status === 'pending') return;
+    out[e.currencyCode] = (out[e.currencyCode] || 0) + (e.isDeposit ? e.amount : -e.amount);
+  });
+  return out;
+}
+
+/** The net amount currently sitting in `'pending'` entries, per currency —
+ * the companion figure to `cashBalanceByCurrency` above, so the UI can
+ * show "Cleared: X" and "+Y pending" side by side rather than the pending
+ * amount just silently vanishing from every stat. */
+export function cashPendingByCurrency(entries: CashEntry[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  entries.forEach((e) => {
+    if (e.status !== 'pending') return;
     out[e.currencyCode] = (out[e.currencyCode] || 0) + (e.isDeposit ? e.amount : -e.amount);
   });
   return out;

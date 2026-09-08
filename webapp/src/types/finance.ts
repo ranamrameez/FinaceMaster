@@ -86,6 +86,32 @@ export interface Finance {
    * value via `isRecordLinked(module, id)` (`lib/linkCascade.ts`) at
    * display time instead. */
   isLinked?: boolean;
+  /** User-requested (2026-09-08): "an important state of transactions
+   * (PENDING) where balances just disappear and may flow in both direction
+   * on success/failure... locks real balances." Optional, absent = the
+   * same as `'cleared'` (zero migration — no real existing record has ever
+   * had this field, so every current balance/total is completely
+   * unaffected until a user actually marks something pending). A pending
+   * record is a REAL transaction the user already knows is happening (a
+   * transfer sent but not yet reflected on the other side, a stock order
+   * placed but not yet filled) — genuinely different from the Planning
+   * feature's hypothetical/estimated/recurring entries, which never touch
+   * a real balance at all. `cashBalanceByCurrency`/`accountBalance` (the
+   * two functions every other balance/total in the app derives from)
+   * exclude `'pending'` records from the headline "available" figure by
+   * design — the user explicitly asked that pending money "disappear" from
+   * what's actually spendable right now — while `cashPendingByCurrency`/
+   * `accountPendingBalance` expose the pending amount separately so the UI
+   * can show BOTH the cleared and the including-pending figure side by
+   * side, never just silently dropping the pending amount from view
+   * entirely ("rather than giving user a heart attack by excluding pending
+   * amounts and not showing them in the stats"). Transitioning a pending
+   * record to `'cleared'` (or deleting it, for a failed/cancelled one) is a
+   * plain `updateEntry`/`updateTransaction` patch — no new store action
+   * needed. Shipped first for Cash + Banking (the user's own two worked
+   * examples); QSE/PSX and the remaining modules follow the identical
+   * pattern in a later pass — see `webapp/README.md`'s own Pending list. */
+  status?: 'pending' | 'cleared';
 }
 
 /** One entry in the shared category registry every Finance-based record

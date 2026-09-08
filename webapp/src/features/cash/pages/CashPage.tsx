@@ -5,7 +5,7 @@ import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { EditIcon, PlusIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { CheckIcon, EditIcon, PlusIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Modal } from '../../../components/Modal';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
@@ -27,7 +27,7 @@ import { recurrenceLabel } from '../../../lib/recurrenceLabel';
 import { hueStyle } from '../../../lib/statCardHues';
 import { categoryName, UNCATEGORIZED_ID } from '../../../lib/categories';
 import { useCategoryStore } from '../../../store/categoryStore';
-import { cashBalanceByCurrency, cashByCategory, cashMonthlyFlow, cashRunningLedger, type CashLedgerRow } from '../../../lib/calc/cashModule';
+import { cashBalanceByCurrency, cashByCategory, cashMonthlyFlow, cashPendingByCurrency, cashRunningLedger, type CashLedgerRow } from '../../../lib/calc/cashModule';
 import { plannedCashProjection } from '../../../lib/calc/plannedBalance';
 import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
@@ -97,6 +97,7 @@ function BalancesSummary() {
   const plannedEntries = usePlannedCashWorkbookStore((s) => s.workbook.entries);
   const { num } = useAmountFormat();
   const balances = cashBalanceByCurrency(entries);
+  const pendingBalances = cashPendingByCurrency(entries);
   const codes = Object.keys(balances);
   if (!codes.length) return null;
 
@@ -111,10 +112,19 @@ function BalancesSummary() {
       {codes.map((code) => {
         const pending = upcoming.filter((p) => p.currencyCode === code);
         const net = pending.reduce((s, p) => s + (p.type === 'IN' ? p.amount : -p.amount), 0);
+        const realPending = pendingBalances[code] ?? 0;
         return (
           <div key={code} className="stat-card card" style={hueStyle(balances[code] >= 0 ? 'var(--profit)' : 'var(--loss)')}>
             <div className="label">Balance ({code})</div>
             <MoneyValue n={balances[code]} currency={code} />
+            {/* User-requested (2026-09-08): don't just exclude pending money
+               from the headline balance — show it too, so nothing that's
+               actually part of the picture is silently invisible. */}
+            {realPending !== 0 && (
+              <div className="sub">
+                {realPending > 0 ? '+' : ''}{num(realPending)} {code} pending → {num(balances[code] + realPending)} {code} incl. pending
+              </div>
+            )}
             {pending.length > 0 && (
               <div className="sub">
                 {pending.length} upcoming plan{pending.length > 1 ? 's' : ''} (net {net >= 0 ? '+' : ''}
@@ -226,6 +236,10 @@ function EditEntryModal({ entry, onClose }: { entry: CashEntry; onClose: () => v
           onTimezoneChange={(timezone) => setDraft({ ...draft, timezone })}
         />
       </div>
+      <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }} title="Not yet cleared — excluded from the Balance stat until unchecked.">
+        <input type="checkbox" checked={draft.status === 'pending'} onChange={(e) => setDraft({ ...draft, status: e.target.checked ? 'pending' : 'cleared' })} />
+        Pending (not yet cleared)
+      </label>
       <p className="text-muted" style={{ marginTop: 8 }}>
         {draft.source === 'statement-import' ? `Imported${draft.statementRef ? ` from ${draft.statementRef}` : ''}` : 'Entered manually'}
       </p>
@@ -360,6 +374,9 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
                   <td className={entry.isDeposit ? 'pill-positive' : 'pill-negative'}>{entry.isDeposit ? 'Cash in' : 'Cash out'}</td>
                   <td className="cell-clip" title={entry.note}>
                     {entry.note}
+                    {entry.status === 'pending' && (
+                      <span className="pill-warn" style={{ marginLeft: 6 }} title="Not yet cleared — excluded from the Balance stat above until marked cleared.">Pending</span>
+                    )}
                     {link && (
                       <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
                         🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
@@ -373,6 +390,18 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
                     {entry.source === 'statement-import' ? `Import${entry.statementRef ? ` (${entry.statementRef})` : ''}` : 'Manual'}
                   </td>
                   <td>
+                    {entry.status === 'pending' && (
+                      <IconButton
+                        label="Mark cleared"
+                        icon={<CheckIcon size={13} />}
+                        align="right"
+                        onClick={async () => {
+                          if (!(await ensureSignedIn('Sign in to update this entry.'))) return;
+                          updateEntry(entry.id, { status: 'cleared' });
+                          toast('Marked cleared.');
+                        }}
+                      />
+                    )}{' '}
                     <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => setEditingEntry(entry)} />{' '}
                     <IconButton
                       label="Delete"

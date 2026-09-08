@@ -7,7 +7,7 @@ import { Notice } from '../../../components/Notice';
 import { Tooltip } from '../../../components/Tooltip';
 import { ChartCard } from '../../qse/components/ChartCard';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { ArchiveIcon, EditIcon, ExportIcon, ListIcon, PlusIcon, RestoreIcon, SaveIcon, StarIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { ArchiveIcon, CheckIcon, EditIcon, ExportIcon, ListIcon, PlusIcon, RestoreIcon, SaveIcon, StarIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Modal } from '../../../components/Modal';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
@@ -29,7 +29,7 @@ import { recurrenceLabel } from '../../../lib/recurrenceLabel';
 import { hueStyle } from '../../../lib/statCardHues';
 import { categoryName, UNCATEGORIZED_ID } from '../../../lib/categories';
 import { useCategoryStore } from '../../../store/categoryStore';
-import { accountBalance, accountBalanceAsOfMonth, accountByCategory, accountRunningLedger, bankMonthlyFlow, budgetVsActual, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
+import { accountBalance, accountBalanceAsOfMonth, accountByCategory, accountPendingBalance, accountRunningLedger, bankMonthlyFlow, budgetVsActual, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
 import { monthRange } from '../../../lib/calc/budgetPlanner';
 import { plannedBankProjection } from '../../../lib/calc/plannedBalance';
 import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
@@ -736,6 +736,17 @@ export function AccountDetailPage() {
         {account.isLiability && account.creditLimit ? (
           <span className="text-muted"> · {num(Math.max(0, account.creditLimit - Math.max(0, -accountBalance(account, transactions))))} {account.currencyCode} available of {num(account.creditLimit)} limit</span>
         ) : null}
+        {/* User-requested (2026-09-08): show pending money too, not just
+           exclude it silently — the cleared figure above already excludes
+           any `status:'pending'` transaction. */}
+        {(() => {
+          const pendingAmt = accountPendingBalance(account, transactions);
+          if (pendingAmt === 0) return null;
+          const withPending = account.isLiability ? Math.max(0, -(accountBalance(account, transactions) + pendingAmt)) : accountBalance(account, transactions) + pendingAmt;
+          return (
+            <span> · {pendingAmt > 0 ? '+' : ''}{num(pendingAmt)} {account.currencyCode} pending → {num(withPending)} {account.currencyCode} incl. pending</span>
+          );
+        })()}
       </p>
 
       {/* User-reported (2026-08-28): "UI ordering still pathetic. Account
@@ -971,6 +982,10 @@ function EditTransactionModal({ tx, onClose }: { tx: BankTransaction; onClose: (
           onTimezoneChange={(timezone) => setDraft({ ...draft, timezone })}
         />
       </div>
+      <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }} title="Not yet cleared — excluded from Current balance until unchecked.">
+        <input type="checkbox" checked={draft.status === 'pending'} onChange={(e) => setDraft({ ...draft, status: e.target.checked ? 'pending' : 'cleared' })} />
+        Pending (not yet cleared)
+      </label>
       <p className="text-muted" style={{ marginTop: 8 }}>
         {draft.source === 'statement-import' ? `Imported${draft.statementRef ? ` from ${draft.statementRef}` : ''}` : 'Entered manually'}
       </p>
@@ -1121,6 +1136,9 @@ function TransactionsList({ account }: { account: BankAccount }) {
                 <td>{tx.date}</td>
                 <td className="cell-clip" title={tx.description}>
                   {tx.description}
+                  {tx.status === 'pending' && (
+                    <span className="pill-warn" style={{ marginLeft: 6 }} title="Not yet cleared — excluded from Current balance above until marked cleared.">Pending</span>
+                  )}
                   {link && (
                     <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
                       🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
@@ -1134,6 +1152,18 @@ function TransactionsList({ account }: { account: BankAccount }) {
                   {tx.source === 'statement-import' ? `Import${tx.statementRef ? ` (${tx.statementRef})` : ''}` : 'Manual'}
                 </td>
                 <td>
+                  {tx.status === 'pending' && (
+                    <IconButton
+                      label="Mark cleared"
+                      icon={<CheckIcon size={13} />}
+                      align="right"
+                      onClick={async () => {
+                        if (!(await ensureSignedIn('Sign in to update this transaction.'))) return;
+                        updateTransaction(tx.id, { status: 'cleared' });
+                        toast('Marked cleared.');
+                      }}
+                    />
+                  )}{' '}
                   <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => setEditingTx(tx)} />{' '}
                   <IconButton
                     label="Delete"
