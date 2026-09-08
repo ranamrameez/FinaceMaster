@@ -6656,6 +6656,23 @@ FinanceManager live link:
   "#"/"★" column pair ahead of Person/Direction/Outstanding), and clicking any star correctly
   hit the real sign-in gate rather than silently writing while signed out — zero console errors
   anywhere. `npx tsc -b` / `npm run test` (554 tests, unchanged) / `npm run build` all clean.
+237. **Pending item 117 rollout, one more module + a full re-audit (2026-09-08).** Cash's
+  Settings tab had a genuine instance of the "short non-table cards stacked full-width" pattern
+  the item names — a "General" card (just the default-currency picker) sitting above "Data
+  management" (three buttons) with nothing between them worth the full page width. Gridded
+  with the same `grid-auto`/`gridAutoStyle` pattern `AccountPage.tsx`/PSX's own "Fees & amounts"
+  tab already use. **Then audited every other module for the identical pattern before assuming
+  more work was needed**: Bank/Funds/Subscriptions/Rentals each have only ONE substantive short
+  card in Settings (`DataManagement`, no "General" sibling — Bank was already de-cardified into
+  a plain section per Done item 214, and the others never had a separate whole-module currency
+  setting to warrant one), so there's nothing to place beside them. QSE's Settings tabs are
+  already one-card-per-`Tabs`-tab (Account/Data management/Amount settings), and PSX's own
+  4-card "Fees & amounts" tab was already gridded (Done item 156). **This closes Pending item
+  117's rollout in full** — every module's Settings/landing page has been checked, not just the
+  one instance that happened to be reported. Verified live via Playwright: General and Data
+  management measured the same Y-coordinate (genuinely side by side, not just visually close),
+  zero console errors. `npx tsc -b` / `npm run test` (554 tests, unchanged) / `npm run build`
+  all clean.
 
 ## Pending
 
@@ -7433,16 +7450,12 @@ or a design decision before more code, not guessed at further:**
      gap/wrap combos, button spacing) and extract them into real theme.css classes first, then
      repeat per module — the exact same incremental discipline already used for the Main/Often/
      Rare redesign (see the "App-wide UI/UX redesign" section above).
-117. **App-wide "everything should be a grid item except tables" principle (2026-09-06)** — the
-     user's own phrasing named `AccountPage.tsx` (Security/Sync/Appearance/Data) as "Example,"
-     which read as illustrating a general principle with one concrete page, not a literal
-     instruction to re-audit every non-table section app-wide in the same pass — that concrete
-     example is done (Done item 230's item 6). Rolling this out further means auditing each
-     module's own landing/Settings page for short, non-table sections currently stacked full-
-     width (a few lines of text, 2-3 buttons, a handful of stat cards) that would read better
-     side by side in a responsive grid — same `repeat(auto-fit, minmax(...,1fr))` +
-     `alignItems:'start'` pattern `AccountPage.tsx` now uses. Do this incrementally, module by
-     module, verified live each time — the same discipline item 116 above already calls for.
+117. ~~App-wide "everything should be a grid item except tables" principle (2026-09-06)~~ —
+     **done in full (2026-09-08), see Done item 237.** Every module's landing/Settings page has
+     been audited for the "short non-table cards stacked full-width" pattern; Cash's Settings
+     tab (General + Data management) was the one genuine remaining instance, now gridded — every
+     other module either already had this fix (Bank/PSX) or never had the multi-card shape to
+     begin with (Funds/Subscriptions/Rentals/QSE, each with only one substantive Settings card).
 118. **Ticker logo rollout, remaining surfaces (2026-09-07, extended 2026-09-08)** — Done item
      244 shipped `components/TickerLogo.tsx` (the local → template-URL → colored-initials
      fallback chain) and applied it to Dashboard/Portfolio's tables plus each `StockPage`'s own
