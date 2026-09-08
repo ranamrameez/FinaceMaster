@@ -160,6 +160,32 @@ function offsetMinutesAt(instant: number, timeZone: string): number {
   return (asUTC - instant) / 60000;
 }
 
+/** User-reported (2026-09-08), a follow-up to `defaultTimeForDate` above:
+ * "NOT ALL TRANSACTIONS showing movement arrows. some transactions need
+ * reordering for same date." `defaultTimeForDate` fixed the most common
+ * cause (a fresh row's `nowTime()` stamp going stale after backdating the
+ * Date field), but two records that both got a REAL, DIFFERENT time — one
+ * genuinely entered at 9am, another at 3pm the same day, in whatever real
+ * order the user typed them — still never tie under `toInstantMs`, even
+ * though the user may still not know which one actually happened first in
+ * real life and wants to fix their relative order. The user's own ask is
+ * explicitly for same-CALENDAR-DATE reordering, a strictly broader
+ * relaxation than same-instant: this key drops time/timezone entirely, so
+ * every record dated the same day ties for reorder purposes regardless of
+ * what time each happens to carry. The display ledgers that offer
+ * `ReorderButtons` sort by this (with `seq`/`serialNumber` as the sole
+ * same-day tie-break) instead of `toInstantMs`, so a reorder move actually
+ * changes the visible order, not just tie-eligibility. Deliberately NOT
+ * used by the core calc engine's own `sortTransactionsChronological`
+ * (`lib/calc/sortTransactions.ts`) — FIFO lot matching and realized P&L
+ * need the finer, real-instant + BUY-before-SELL ordering for financial
+ * correctness (Done item 128); this coarser date-only key is only for
+ * DISPLAY ledgers with a reorder control, never the position/P&L math. */
+export function dateOnlyMs(date: string): number {
+  const [y, m, d] = date.split('-').map(Number);
+  return Date.UTC(y, (m || 1) - 1, d || 1);
+}
+
 /** Combines a date/time/timezone into a real epoch-ms instant, safe to
  * compare across records. Missing `time` backfills to `DEFAULT_TIME`;
  * missing `timezone` falls back to UTC — deliberately, not the browser's

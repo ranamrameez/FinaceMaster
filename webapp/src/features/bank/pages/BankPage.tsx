@@ -38,7 +38,7 @@ import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar, tickerColor } from '../../../lib/cssVar';
 import { parseCSV, toCSV } from '../../../lib/csv';
 import { fmtMoney } from '../../../lib/format';
-import { toInstantMs } from '../../../lib/datetime';
+import { dateOnlyMs } from '../../../lib/datetime';
 import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import { isValidIbanFormat, lookupIban } from '../../../lib/ibanLookup';
 import { isValidBin, lookupBin } from '../../../lib/binLookup';
@@ -1060,7 +1060,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
   // rows genuinely tied on the same real instant — never scramble the
   // table into a different, unrelated order.
   const sorted = useMemo(() => [...ledger].reverse(), [ledger]);
-  const instantOf = (r: (typeof sorted)[number]) => toInstantMs(r.tx.date, r.tx.time, r.tx.timezone);
+  const instantOf = (r: (typeof sorted)[number]) => dateOnlyMs(r.tx.date);
   const reorder = async (pair: [{ id: string; order: number }, { id: string; order: number }]) => {
     if (!(await ensureSignedIn('Sign in to reorder transactions.'))) return;
     for (const p of pair) updateTransaction(p.id, { serialNumber: p.order });

@@ -1,5 +1,5 @@
 import type { PersonalLoan, PersonalLoanRepayment } from '../../types/personalLoansWorkbook';
-import { toInstantMs } from '../datetime';
+import { dateOnlyMs } from '../datetime';
 
 /** Excludes any repayment with `isPending` set (Pending-transaction-state,
  * 2026-09-08) — a repayment the user's logged but that hasn't actually
@@ -20,8 +20,10 @@ export function loanPendingImpact(loan: PersonalLoan, repayments: PersonalLoanRe
 }
 
 /** Running "remaining outstanding" after each repayment to this loan, in
- * date order — user-reported gap: no running balance column on the
- * repayments list, only the loan's current total (`loanOutstanding`).
+ * calendar-date order (same-date ties broken by `seq`, see
+ * `dateOnlyMs`'s own doc comment — Done item 235, extended 2026-09-08) —
+ * user-reported gap: no running balance column on the repayments list,
+ * only the loan's current total (`loanOutstanding`).
  * Returns a map keyed by `PersonalLoanRepayment.id` so the caller can look
  * up a value regardless of what order the table is currently sorted in
  * (same pattern as `transferRunningBalance`). Clamped at 0 per-row like
@@ -30,7 +32,7 @@ export function loanPendingImpact(loan: PersonalLoan, repayments: PersonalLoanRe
 export function repaymentRunningOutstanding(loan: PersonalLoan, repayments: PersonalLoanRepayment[]): Map<string, number> {
   const forLoan = repayments
     .filter((r) => r.loanId === loan.id)
-    .sort((a, b) => toInstantMs(a.date, a.time, a.timezone) - toInstantMs(b.date, b.time, b.timezone) || (a.seq ?? 0) - (b.seq ?? 0))
+    .sort((a, b) => dateOnlyMs(a.date) - dateOnlyMs(b.date) || (a.seq ?? 0) - (b.seq ?? 0))
     .map((r) => ({ r }));
   const out = new Map<string, number>();
   let remaining = loan.principal;
@@ -52,7 +54,7 @@ export function repaymentRunningOutstanding(loan: PersonalLoan, repayments: Pers
 export function loanBalanceHistory(loan: PersonalLoan, repayments: PersonalLoanRepayment[]): { date: string; balance: number }[] {
   const forLoan = repayments
     .filter((r) => r.loanId === loan.id)
-    .sort((a, b) => toInstantMs(a.date, a.time, a.timezone) - toInstantMs(b.date, b.time, b.timezone) || (a.seq ?? 0) - (b.seq ?? 0))
+    .sort((a, b) => dateOnlyMs(a.date) - dateOnlyMs(b.date) || (a.seq ?? 0) - (b.seq ?? 0))
     .map((r) => ({ r }));
   const points: { date: string; balance: number }[] = [{ date: loan.date, balance: loan.principal }];
   let remaining = loan.principal;

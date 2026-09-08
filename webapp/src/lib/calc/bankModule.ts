@@ -1,7 +1,7 @@
 import { categoryName } from '../categories';
 import type { Category } from '../../types/finance';
 import type { BankAccount, BankTransaction } from '../../types/bankWorkbook';
-import { toInstantMs } from '../datetime';
+import { dateOnlyMs } from '../datetime';
 
 export interface BankLedgerRow {
   tx: BankTransaction;
@@ -9,17 +9,17 @@ export interface BankLedgerRow {
 }
 
 /** Running balance for one account, starting from its opening balance, in
- * real-instant chronological order; two transactions tied at the same
- * instant (the common case for untimed records, which default to the
- * same noon-UTC placeholder) are then ordered by `serialNumber` — a
- * stable, persisted per-transaction counter (see `Finance.serialNumber`'s
- * doc comment) — rather than relying on `Array.prototype.sort`'s
- * stability. */
+ * calendar-date order; two transactions on the same DATE (Done item 235's
+ * reorder feature, extended 2026-09-08 to same-date rather than
+ * same-instant — see `dateOnlyMs`'s own doc comment) are then ordered by
+ * `serialNumber` — a stable, persisted per-transaction counter (see
+ * `Finance.serialNumber`'s doc comment) — rather than relying on
+ * `Array.prototype.sort`'s stability or an untimed time-of-day guess. */
 export function accountRunningLedger(account: BankAccount, transactions: BankTransaction[]): BankLedgerRow[] {
   const accountTxs = transactions.filter((t) => t.accountId === account.id);
   const sorted = [...accountTxs].sort((a, b) => {
-    const byInstant = toInstantMs(a.date, a.time, a.timezone) - toInstantMs(b.date, b.time, b.timezone);
-    return byInstant !== 0 ? byInstant : (a.serialNumber ?? 0) - (b.serialNumber ?? 0);
+    const byDate = dateOnlyMs(a.date) - dateOnlyMs(b.date);
+    return byDate !== 0 ? byDate : (a.serialNumber ?? 0) - (b.serialNumber ?? 0);
   });
   let balance = account.openingBalance;
   return sorted.map((tx) => {

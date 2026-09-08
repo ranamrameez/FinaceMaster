@@ -1,25 +1,25 @@
 import { categoryName } from '../categories';
 import type { Category } from '../../types/finance';
 import type { CashEntry } from '../../types/cashWorkbook';
-import { toInstantMs } from '../datetime';
+import { dateOnlyMs } from '../datetime';
 
 export interface CashLedgerRow {
   entry: CashEntry;
   balance: number; // running balance within this entry's own currency
 }
 
-/** Running balance per currency, in chronological order — entries in
+/** Running balance per currency, in calendar-date order — entries in
  * different currencies never mix into one balance (no live FX-rate source
- * to convert with). Sorted by real instant (date+time+timezone); two
- * untimed entries falling on the same instant are then ordered by
- * `serialNumber` (a stable, persisted per-entry counter — see
- * `Finance.serialNumber`'s doc comment) rather than relying on
- * `Array.prototype.sort`'s stability, which doesn't survive an edit, a
- * delete-and-re-add, or an import reordering the array. */
+ * to convert with). Two entries on the same DATE (Done item 235's reorder
+ * feature, extended 2026-09-08 to same-date rather than same-instant —
+ * see `dateOnlyMs`'s own doc comment) are then ordered by `serialNumber`
+ * (a stable, persisted per-entry counter — see `Finance.serialNumber`'s
+ * doc comment) rather than relying on `Array.prototype.sort`'s stability
+ * or an untimed time-of-day guess. */
 export function cashRunningLedger(entries: CashEntry[]): CashLedgerRow[] {
   const sorted = [...entries].sort((a, b) => {
-    const byInstant = toInstantMs(a.date, a.time, a.timezone) - toInstantMs(b.date, b.time, b.timezone);
-    return byInstant !== 0 ? byInstant : (a.serialNumber ?? 0) - (b.serialNumber ?? 0);
+    const byDate = dateOnlyMs(a.date) - dateOnlyMs(b.date);
+    return byDate !== 0 ? byDate : (a.serialNumber ?? 0) - (b.serialNumber ?? 0);
   });
   const runningByCurrency: Record<string, number> = {};
   return sorted.map((entry) => {

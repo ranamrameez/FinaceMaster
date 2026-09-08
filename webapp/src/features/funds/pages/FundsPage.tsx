@@ -45,7 +45,7 @@ import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar, tickerColor } from '../../../lib/cssVar';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { ReorderButtons } from '../../../components/ui/ReorderButtons';
-import { toInstantMs } from '../../../lib/datetime';
+import { dateOnlyMs } from '../../../lib/datetime';
 import { firebaseReady } from '../../../lib/firebase/client';
 import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import { useAppearanceStore } from '../../../store/appearanceStore';
@@ -1338,7 +1338,7 @@ function FundsTransfersSection() {
   // fixing (two same-instant transfers in the wrong relative order).
   const ensureSignedIn = useEnsureSignedIn();
   const sideLabel = useLinkSideLabel();
-  const instantOf = (t: Transfer) => toInstantMs(t.date, t.time, t.timezone);
+  const instantOf = (t: Transfer) => dateOnlyMs(t.date);
   const filteredTransfers = useMemo(
     () => (typeFilter === 'all' ? workbook.transfers : workbook.transfers.filter((t) => t.type === typeFilter)),
     [workbook.transfers, typeFilter],

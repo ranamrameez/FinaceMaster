@@ -24,7 +24,7 @@ import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { defaultTimeForDate, defaultTimezoneForCurrency, defaultTimezoneForMarket, nowTime } from '../../../lib/datetime';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { ReorderButtons } from '../../../components/ui/ReorderButtons';
-import { toInstantMs } from '../../../lib/datetime';
+import { dateOnlyMs } from '../../../lib/datetime';
 import { createEmptyPSXWorkbook } from '../../../store/defaultPsxWorkbook';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
 import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
@@ -715,7 +715,7 @@ function TransfersSection() {
   // sequence order, so free column sorting is gone here, replaced by
   // `ReorderButtons` for the one thing that genuinely needs fixing (two
   // same-instant transfers in the wrong relative order).
-  const instantOf = (t: Transfer) => toInstantMs(t.date, t.time, t.timezone);
+  const instantOf = (t: Transfer) => dateOnlyMs(t.date);
   const sorted = useMemo(
     () => [...filteredTransfers].sort((a, b) => instantOf(b) - instantOf(a) || (b.seq ?? 0) - (a.seq ?? 0)),
     [filteredTransfers],
