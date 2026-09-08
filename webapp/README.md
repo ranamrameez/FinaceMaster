@@ -6627,6 +6627,35 @@ FinanceManager live link:
   Planner's leg tables/summary cards, the Trade Calculator popup, Risk Analysis, and Funds
   (needs its own small `exchange`-equivalent design decision first). `npx tsc -b` / `npm run
   test` (554 tests, unchanged) / `npm run build` all clean.
+236. **Favorite toggle + a visible Sr#/Index# column, every entity list (2026-09-08) — closes
+  Pending item 115(c) in full.** Rolled the same additive pattern across all six modules named
+  in the original request: `BankAccount`/`PersonalLoan`/`EMILoan`/`Property`/`Subscription`/
+  `Fund` each gained an optional `isFavorite?: boolean` (a purely cosmetic sort/display
+  preference — never read by any calc function, unlike `isActive`/`includeInNetWorth` on the
+  same types, which explicitly change what's counted or shown by default; kept as its own field
+  for exactly that reason, same as those two already are from each other). New `StarIcon`
+  (`components/icons.tsx`, filled when favorited, outline otherwise — a stroke-only icon
+  wouldn't read as a clear on/off toggle) toggled via a sign-in-gated `IconButton`, same pattern
+  as every other per-entity write action in the app. **Sr#** is the entity's own stable position
+  in the underlying (unfiltered, un-sorted) array — creation order, never renumbered when the
+  table/grid's own sort changes — the exact convention Funds' own Sr# column already established
+  (Done item 226); this pass just brought the other five modules up to the same standard and
+  added the matching star toggle to Funds' own list too. **Two different UI shapes, matched to
+  each module's own existing list style, not forced into one**: Bank's `AccountsList` is an
+  `EntityCard` grid (Main tier, per the Often/Main/Rare redesign) — the star sits in the card's
+  own top-right `actions` slot (same as its existing "Transactions" button) and favorites float
+  to the top of each currency group, since there's no other user-driven sort control on a card
+  grid to layer this onto. Personal Loans/EMI/Rentals/Subscriptions/Funds are plain
+  `useSortableRows` tables — there, "favorite" became a genuine sortable column (clicking its
+  header sorts by favorite, same as any other column) rather than an always-on-top rule, since
+  forcing a fixed order onto a table that already gives the user full column-sort control would
+  contradict the very feature that's already there. Verified live via Playwright across all six
+  modules with seeded multi-entity data: star-icon counts matched the seeded entity counts on
+  each page exactly, real screenshots confirmed the Sr#/star columns render correctly (Bank:
+  "#1 First Account"/"#2 Second Account" each with their own star button; Personal Loans: a
+  "#"/"★" column pair ahead of Person/Direction/Outstanding), and clicking any star correctly
+  hit the real sign-in gate rather than silently writing while signed out — zero console errors
+  anywhere. `npx tsc -b` / `npm run test` (554 tests, unchanged) / `npm run build` all clean.
 
 ## Pending
 
@@ -7378,9 +7407,10 @@ or a design decision before more code, not guessed at further:**
      Fund, Personal Loan, EMI loan, or Rental property, hidden from the default list + every
      "add new" picker, never from totals. Subscriptions already had equivalent functionality
      via its own pre-existing `active`/`cancelledDate` fields (the original precedent this
-     pattern is modeled on), so every module named in the original request now has it. **Still
-     open**: favorite/pin and a visible Sr#/Index# column — neither is built yet, for any
-     module.
+     pattern is modeled on), so every module named in the original request now has it.
+     ~~**Still open**: favorite/pin and a visible Sr#/Index# column — neither is built yet, for
+     any module.~~ **Done (2026-09-08) — see Done item 236.** Every module named here (Bank,
+     Personal Loans, EMI, Rentals, Subscriptions, Funds) now has both.
      ~~(d) Bank's own Analytics tab was never audited against the date-range-filterable chart
      pattern other Analytics pages already have (Done item 31) — "charts should be interactive...
      right now they are dumping lifetime data all at once."~~ **Done (2026-09-08) — see Done item

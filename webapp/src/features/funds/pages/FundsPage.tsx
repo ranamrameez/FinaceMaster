@@ -7,7 +7,7 @@ import { Modal } from '../../../components/Modal';
 import { Notice } from '../../../components/Notice';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { ArchiveIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { ArchiveIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, StarIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
@@ -349,10 +349,21 @@ function OverallSummary() {
  * comment); their positions still contribute to every total unchanged. */
 function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
   const allFunds = useFundsWorkbookStore((s) => s.workbook.funds);
+  const setWorkbook = useFundsWorkbookStore((s) => s.setWorkbook);
+  const ensureSignedIn = useEnsureSignedIn();
   const { positions, fundXIRR, workbook } = useFundsDerived();
   const [showClosed, setShowClosed] = useState(false);
   const closedCount = useMemo(() => allFunds.filter((f) => f.isActive === false).length, [allFunds]);
   const funds = useMemo(() => (showClosed ? allFunds : allFunds.filter((f) => f.isActive !== false)), [allFunds, showClosed]);
+
+  // Pending item 115(c): "favorite an entity, to view it on top." Fund CRUD
+  // goes through `setWorkbook` directly (no dedicated `updateFund` store
+  // action — see this file's own earlier comment on that), same pattern
+  // already used for the Archive/Reopen toggle on `FundDetail`.
+  const toggleFavorite = async (fund: Fund) => {
+    if (!(await ensureSignedIn(fund.isFavorite ? 'Sign in to unfavorite this fund.' : 'Sign in to favorite this fund.'))) return;
+    setWorkbook({ ...workbook, funds: workbook.funds.map((f) => (f.id === fund.id ? { ...f, isFavorite: !f.isFavorite } : f)) });
+  };
 
   // Index/Sr# column, user-requested (2026-09-03) — the fund's own stable
   // position in `allFunds` (creation order), independent of the table's
@@ -372,10 +383,11 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
     return { idx, fund, units, invested, value, profit, profitPct, xirrPct: rate !== null ? rate * 100 : null };
   });
 
-  type Col = 'idx' | 'name' | 'category' | 'units' | 'value' | 'profit' | 'xirr';
+  type Col = 'idx' | 'favorite' | 'name' | 'category' | 'units' | 'value' | 'profit' | 'xirr';
   const sortValue = (r: Row, col: Col): number | string => {
     switch (col) {
       case 'idx': return r.idx;
+      case 'favorite': return r.fund.isFavorite ? 1 : 0;
       case 'category': return r.fund.category;
       case 'units': return r.units;
       case 'value': return r.value;
@@ -397,7 +409,7 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
       <table>
         <thead>
           <tr>
-            <Th col="idx">#</Th><Th col="name">Fund</Th><th>Code</th><Th col="category">Category</Th>
+            <Th col="idx">#</Th><Th col="favorite">★</Th><Th col="name">Fund</Th><th>Code</th><Th col="category">Category</Th>
             <Th col="units">Units</Th><Th col="value">Value</Th><Th col="profit">Net P/L</Th><Th col="xirr">XIRR</Th>
           </tr>
         </thead>
@@ -405,6 +417,14 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
           {sorted.map((r) => (
             <tr key={r.fund.id} onClick={() => onSelect(r.fund)} style={{ cursor: 'pointer' }}>
               <td className="text-muted">{r.idx}</td>
+              <td>
+                <IconButton
+                  label={r.fund.isFavorite ? 'Unfavorite' : 'Favorite'}
+                  icon={<StarIcon size={13} filled={r.fund.isFavorite} />}
+                  align="right"
+                  onClick={(e) => { e.stopPropagation(); toggleFavorite(r.fund); }}
+                />
+              </td>
               <td>
                 {r.fund.name}
                 {r.fund.isActive === false && <span className="pill-warn" style={{ fontSize: 10, marginLeft: 6 }}>Closed</span>}
@@ -419,7 +439,7 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
           ))}
           {!sorted.length && (
             <tr>
-              <td colSpan={8} className="text-muted">
+              <td colSpan={9} className="text-muted">
                 {allFunds.length ? 'Every fund is closed — click "Show closed" above to see them.' : 'No funds yet — add one above.'}
               </td>
             </tr>

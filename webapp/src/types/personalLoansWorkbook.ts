@@ -22,6 +22,10 @@ export interface PersonalLoan {
    * absent. Checked from the Dashboard's "Include in Net Worth" panel
    * (`NetWorthPage.tsx`), not this loan's own edit form. */
   includeInNetWorth?: boolean;
+  /** Pending item 115(c): "favorite an entity, to view it on top." Purely
+   * a display/sort preference — see `BankAccount.isFavorite`'s own comment
+   * for why this is a separate field from `isActive`/`includeInNetWorth`. */
+  isFavorite?: boolean;
 }
 
 export interface PersonalLoanRepayment {

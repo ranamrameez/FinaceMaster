@@ -239,3 +239,15 @@ export function CollapseIcon({ size = 14 }: IconProps) {
     </svg>
   );
 }
+
+/** Pending item 115(c): "favorite an entity, to view it on top." Filled
+ * (solid) when the entity is favorited, outline otherwise — a stroke-only
+ * icon (this file's usual convention) doesn't read as a clear on/off toggle
+ * the way a filled star does. */
+export function StarIcon({ size = 14, filled = false }: IconProps & { filled?: boolean }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01Z" />
+    </svg>
+  );
+}

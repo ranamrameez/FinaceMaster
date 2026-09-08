@@ -6,7 +6,7 @@ import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
 import { hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { ArchiveIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { ArchiveIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, StarIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Modal } from '../../../components/Modal';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
@@ -157,6 +157,10 @@ function PropertiesList() {
   const [showArchived, setShowArchived] = useState(false);
   const archivedCount = useMemo(() => allProperties.filter((p) => p.isActive === false).length, [allProperties]);
   const properties = useMemo(() => (showArchived ? allProperties : allProperties.filter((p) => p.isActive !== false)), [allProperties, showArchived]);
+  // Pending item 115(c): Sr# = the property's own stable position in the
+  // underlying (unfiltered) array, creation order — same convention as
+  // Bank/Personal Loans/EMI/Funds.
+  const srNumOf = useMemo(() => new Map(allProperties.map((p, i) => [p.id, i + 1])), [allProperties]);
 
   // User-requested (2026-09-03): "add isActive flag to all modules where
   // applicable" — same archive/restore pattern as `BankAccount.isActive`.
@@ -164,6 +168,11 @@ function PropertiesList() {
     if (!(await ensureSignedIn(p.isActive === false ? 'Sign in to restore this property.' : 'Sign in to archive this property.'))) return;
     updateProperty(p.id, { isActive: p.isActive === false ? true : false });
     toast(p.isActive === false ? 'Property restored.' : 'Property archived.');
+  };
+
+  const toggleFavorite = async (p: Property) => {
+    if (!(await ensureSignedIn(p.isFavorite ? 'Sign in to unfavorite this property.' : 'Sign in to favorite this property.'))) return;
+    updateProperty(p.id, { isFavorite: !p.isFavorite });
   };
 
   const startEdit = (p: Property) => { setEditId(p.id); setEditRow({ ...p }); };
@@ -175,12 +184,13 @@ function PropertiesList() {
     setEditRow(null);
   };
 
-  type Col = 'name' | 'currency' | 'purchasePrice' | 'netIncome';
+  type Col = 'name' | 'currency' | 'purchasePrice' | 'netIncome' | 'favorite';
   const sortValue = (p: Property, col: Col): number | string => {
     switch (col) {
       case 'currency': return p.currencyCode;
       case 'purchasePrice': return p.purchasePrice ?? 0;
       case 'netIncome': return propertyNetIncome(p, entries);
+      case 'favorite': return p.isFavorite ? 1 : 0;
       default: return p.name;
     }
   };
@@ -195,11 +205,13 @@ function PropertiesList() {
       )}
       <div className="table-scroll">
       <table>
-        <thead><tr><Th col="name">Name</Th><Th col="currency">Currency</Th><Th col="purchasePrice">Purchase price</Th><Th col="netIncome">Net income (all time)</Th><th></th></tr></thead>
+        <thead><tr><th>#</th><Th col="favorite">★</Th><Th col="name">Name</Th><Th col="currency">Currency</Th><Th col="purchasePrice">Purchase price</Th><Th col="netIncome">Net income (all time)</Th><th></th></tr></thead>
         <tbody>
           {sorted.map((p) =>
             editId === p.id && editRow ? (
               <tr key={p.id}>
+                <td className="text-muted">{srNumOf.get(p.id)}</td>
+                <td></td>
                 <td><input value={editRow.name} onChange={(e) => setEditRow({ ...editRow, name: e.target.value })} /></td>
                 <td>
                   <select value={editRow.currencyCode} onChange={(e) => setEditRow({ ...editRow, currencyCode: e.target.value })}>
@@ -215,6 +227,15 @@ function PropertiesList() {
               </tr>
             ) : (
               <tr key={p.id} onClick={() => setDetailProperty(p)} style={{ cursor: 'pointer' }}>
+                <td className="text-muted">{srNumOf.get(p.id)}</td>
+                <td>
+                  <IconButton
+                    label={p.isFavorite ? 'Unfavorite' : 'Favorite'}
+                    icon={<StarIcon size={13} filled={p.isFavorite} />}
+                    align="right"
+                    onClick={(e) => { e.stopPropagation(); toggleFavorite(p); }}
+                  />
+                </td>
                 <td>
                   {p.name}
                   {p.isActive === false && <span className="pill-warn" style={{ fontSize: 10, marginLeft: 6 }}>Archived</span>}
@@ -246,7 +267,7 @@ function PropertiesList() {
           )}
           {!sorted.length && (
             <tr>
-              <td colSpan={5} className="text-muted">
+              <td colSpan={7} className="text-muted">
                 {allProperties.length ? 'Every property is archived — click "Show archived" above to see them.' : 'No properties yet — add one above.'}
               </td>
             </tr>

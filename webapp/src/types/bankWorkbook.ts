@@ -96,6 +96,13 @@ export interface BankAccount {
    * Dashboard page (`NetWorthPage.tsx`), not this account's own edit form —
    * see that panel's own doc comment for why. */
   includeInNetWorth?: boolean;
+  /** Pending item 115(c): "Ability to favorite an entity, to view it on
+   * top." Optional, defaults unfavorited — a purely cosmetic sort/display
+   * preference, never read by any calc function (unlike `isActive`/
+   * `includeInNetWorth`, both of which change what's counted or shown by
+   * default). Toggled directly from the account's own `EntityCard` in
+   * `AccountsList`. */
+  isFavorite?: boolean;
 }
 
 /** Extends the shared `Finance` base (2026-09-03 restructure — see

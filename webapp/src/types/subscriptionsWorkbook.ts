@@ -41,6 +41,10 @@ export interface Subscription {
   active: boolean; // toggled off instead of deleted when cancelled, keeps history
   cancelledDate?: string;
   alerts?: SubscriptionAlert[];
+  /** Pending item 115(c): "favorite an entity, to view it on top." Purely
+   * a display/sort preference — see `BankAccount.isFavorite`'s own comment
+   * for why this is a separate field from `active`. */
+  isFavorite?: boolean;
 }
 
 export interface SubscriptionsSettings {
