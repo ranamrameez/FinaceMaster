@@ -7,7 +7,7 @@ import { Modal } from '../../../components/Modal';
 import { Notice } from '../../../components/Notice';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { hueStyle } from '../../../lib/statCardHues';
-import { ArchiveIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, StarIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { ArchiveIcon, CheckIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, StarIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
@@ -26,6 +26,8 @@ import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade
 import {
   loanBalanceHistory,
   loanOutstanding,
+  loanPendingImpact,
+  netPendingByCurrency,
   netPositionByCurrency,
   outstandingByLoan,
   projectPayoff,
@@ -55,18 +57,29 @@ function NetPositionSummary() {
   const loans = usePersonalLoansWorkbookStore((s) => s.workbook.loans);
   const repayments = usePersonalLoansWorkbookStore((s) => s.workbook.repayments);
   const net = netPositionByCurrency(loans, repayments);
+  const pending = netPendingByCurrency(loans, repayments);
   const codes = Object.keys(net);
   if (!codes.length) return null;
 
   return (
     <div className="grid-auto" style={{ ...gridAutoStyle(150, 8), marginBottom: 16 }}>
-      {codes.map((code) => (
-        <div key={code} className="stat-card card" style={hueStyle(net[code] >= 0 ? 'var(--profit)' : 'var(--loss)')}>
-          <div className="label">Net position ({code})</div>
-          <MoneyValue n={net[code]} currency={code} />
-          <div className="sub">{net[code] >= 0 ? 'Net owed to you' : 'Net you owe'}</div>
-        </div>
-      ))}
+      {codes.map((code) => {
+        const realPending = pending[code] ?? 0;
+        return (
+          <div key={code} className="stat-card card" style={hueStyle(net[code] >= 0 ? 'var(--profit)' : 'var(--loss)')}>
+            <div className="label">Net position ({code})</div>
+            <MoneyValue n={net[code]} currency={code} />
+            <div className="sub">{net[code] >= 0 ? 'Net owed to you' : 'Net you owe'}</div>
+            {/* User-requested (2026-09-08): don't just exclude pending
+               repayments from the headline figure — show it too. */}
+            {realPending !== 0 && (
+              <div className="sub">
+                {realPending > 0 ? '+' : ''}{fmtMoney(realPending, code)} pending → {fmtMoney(net[code] + realPending, code)} incl. pending
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -388,6 +401,10 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                     <td></td>
                     <td className="text-muted cell-clip">{r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}</td>
                     <td>
+                      <label className="text-muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }} title="Not yet cleared — excluded from Outstanding until unchecked.">
+                        <input type="checkbox" checked={!!editRow.isPending} onChange={(e) => setEditRow({ ...editRow, isPending: e.target.checked })} />
+                        Pending
+                      </label>{' '}
                       <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
                       <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditId(null)} />
                     </td>
@@ -407,6 +424,11 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                     </td>
                     <td>
                       {fmtMoney(r.amount, loan.currencyCode)}
+                      {r.isPending && (
+                        <Tooltip text="Not yet cleared — excluded from Outstanding above until marked cleared.">
+                          <span className="pill-warn" style={{ marginLeft: 6 }}>Pending</span>
+                        </Tooltip>
+                      )}
                       {link && (
                         <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
                           🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
@@ -422,6 +444,18 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                       {r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}
                     </td>
                     <td>
+                      {r.isPending && (
+                        <IconButton
+                          label="Mark cleared"
+                          icon={<CheckIcon size={13} />}
+                          align="right"
+                          onClick={async () => {
+                            if (!(await ensureSignedIn('Sign in to update this repayment.'))) return;
+                            updateRepayment(r.id, { isPending: false });
+                            toast('Marked cleared.');
+                          }}
+                        />
+                      )}{' '}
                       <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(r)} />{' '}
                       <IconButton
                         label="Delete"
@@ -641,6 +675,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
   const [editing, setEditing] = useState(!!startInEditMode);
   const [editRow, setEditRow] = useState<PersonalLoan>(loan);
   const outstanding = loanOutstanding(loan, repayments);
+  const pendingImpact = loanPendingImpact(loan, repayments);
 
   // User-requested (2026-09-03): "add isActive flag to all modules where
   // applicable" — same archive/restore pattern as `BankAccount.isActive`.
@@ -739,6 +774,11 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
               <div className="label" style={{ cursor: 'pointer' }}>Outstanding</div>
             </Tooltip>
             <MoneyValue n={outstanding} currency={loan.currencyCode} />
+            {pendingImpact !== 0 && (
+              <div className="sub">
+                -{fmtMoney(pendingImpact, loan.currencyCode)} pending → {fmtMoney(Math.max(0, outstanding - pendingImpact), loan.currencyCode)} incl. pending
+              </div>
+            )}
           </div>
         </div>
       </Card>

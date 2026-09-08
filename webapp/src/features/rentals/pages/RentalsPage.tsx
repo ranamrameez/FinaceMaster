@@ -6,7 +6,7 @@ import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
 import { hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { ArchiveIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, StarIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { ArchiveIcon, CheckIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, StarIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Modal } from '../../../components/Modal';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
@@ -21,7 +21,7 @@ import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { categoryName, RENT_CATEGORY_ID, UNCATEGORIZED_ID } from '../../../lib/categories';
 import { useCategoryStore } from '../../../store/categoryStore';
-import { netIncomeByCurrency, netIncomeByProperty, propertyByCategory, propertyMonthlyRollup, propertyNetIncome } from '../../../lib/calc/rentalsModule';
+import { netIncomeByCurrency, netIncomeByProperty, netIncomePendingByCurrency, propertyByCategory, propertyMonthlyRollup, propertyNetIncome } from '../../../lib/calc/rentalsModule';
 import { generateLeaseRentPlans, nextPendingBalance, proposeRentCollection } from '../../../lib/calc/rentalPlanning';
 import { parseCSV, toCSV } from '../../../lib/csv';
 import { CURRENCIES } from '../../../lib/currencies';
@@ -55,17 +55,28 @@ function NetIncomeSummary() {
   const properties = useRentalsWorkbookStore((s) => s.workbook.settings.properties);
   const entries = useRentalsWorkbookStore((s) => s.workbook.entries);
   const totals = netIncomeByCurrency(properties, entries);
+  const pending = netIncomePendingByCurrency(properties, entries);
   const codes = Object.keys(totals);
   if (!codes.length) return null;
 
   return (
     <div className="grid-auto" style={{ ...gridAutoStyle(150, 8), marginBottom: 16 }}>
-      {codes.map((code) => (
-        <div key={code} className="stat-card card" style={hueStyle(totals[code] >= 0 ? 'var(--profit)' : 'var(--loss)')}>
-          <div className="label">Net income ({code})</div>
-          <MoneyValue n={totals[code]} currency={code} />
-        </div>
-      ))}
+      {codes.map((code) => {
+        const realPending = pending[code] ?? 0;
+        return (
+          <div key={code} className="stat-card card" style={hueStyle(totals[code] >= 0 ? 'var(--profit)' : 'var(--loss)')}>
+            <div className="label">Net income ({code})</div>
+            <MoneyValue n={totals[code]} currency={code} />
+            {/* User-requested (2026-09-08): don't just exclude pending money
+               from the headline figure — show it too. */}
+            {realPending !== 0 && (
+              <div className="sub">
+                {realPending > 0 ? '+' : ''}{fmtMoney(realPending, code)} pending → {fmtMoney(totals[code] + realPending, code)} incl. pending
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -711,6 +722,10 @@ function EditEntryModal({ entry, onClose }: { entry: RentalEntry; onClose: () =>
           onTimezoneChange={(timezone) => setDraft({ ...draft, timezone })}
         />
       </div>
+      <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }} title="Not yet cleared — excluded from Net income until unchecked.">
+        <input type="checkbox" checked={!!draft.isPending} onChange={(e) => setDraft({ ...draft, isPending: e.target.checked })} />
+        Pending (not yet cleared)
+      </label>
       <p className="text-muted" style={{ marginTop: 8 }}>
         {draft.source === 'statement-import' ? `Imported${draft.statementRef ? ` from ${draft.statementRef}` : ''}` : 'Entered manually'}
       </p>
@@ -724,6 +739,8 @@ function EditEntryModal({ entry, onClose }: { entry: RentalEntry; onClose: () =>
 function EntriesList({ property }: { property: Property }) {
   const allEntries = useRentalsWorkbookStore((s) => s.workbook.entries);
   const deleteEntry = useRentalsWorkbookStore((s) => s.deleteEntry);
+  const updateEntry = useRentalsWorkbookStore((s) => s.updateEntry);
+  const ensureSignedIn = useEnsureSignedIn();
   const categories = useCategoryStore((s) => s.workbook.categories);
   const links = useInterEntityTransfersStore((s) => s.workbook.entries);
   const sideLabel = useLinkSideLabel();
@@ -802,6 +819,9 @@ function EntriesList({ property }: { property: Property }) {
                 <td>{e.isDeposit ? '—' : <span className="pill-info">{categoryName(e.categoryID, categories)}</span>}</td>
                 <td className="cell-clip" title={e.note}>
                   {e.note}
+                  {e.isPending && (
+                    <span className="pill-warn" style={{ marginLeft: 6 }} title="Not yet cleared — excluded from Net income above until marked cleared.">Pending</span>
+                  )}
                   {link && (
                     <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
                       🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
@@ -812,6 +832,18 @@ function EntriesList({ property }: { property: Property }) {
                   {e.source === 'statement-import' ? `Import${e.statementRef ? ` (${e.statementRef})` : ''}` : 'Manual'}
                 </td>
                 <td>
+                  {e.isPending && (
+                    <IconButton
+                      label="Mark cleared"
+                      icon={<CheckIcon size={13} />}
+                      align="right"
+                      onClick={async () => {
+                        if (!(await ensureSignedIn('Sign in to update this entry.'))) return;
+                        updateEntry(e.id, { isPending: false });
+                        toast('Marked cleared.');
+                      }}
+                    />
+                  )}{' '}
                   <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => setEditingEntry(e)} />{' '}
                   <IconButton
                     label="Delete"

@@ -55,6 +55,14 @@ export interface PersonalLoanRepayment {
   statementRef?: string;
   /** Same reasoning as `Transaction.timestamp` in `types/workbook.ts`. */
   timestamp?: string;
+  /** Pending-transaction-state (2026-09-08) — a repayment the user knows is
+   * happening but that hasn't actually cleared yet, same "boolean flag,
+   * standard DB practice" design as `Transaction.isPending`/
+   * `Finance.isPending`. Optional, absent/false = the normal case
+   * (zero-migration). Excluded from every outstanding-balance/net-position
+   * figure until cleared — see `personalLoansModule.ts`'s
+   * `outstandingByLoan`/`netPositionByCurrency` for where this is enforced. */
+  isPending?: boolean;
 }
 
 export interface PersonalLoansSettings {

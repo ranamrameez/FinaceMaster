@@ -7,7 +7,7 @@ import { Modal } from '../../../components/Modal';
 import { Notice } from '../../../components/Notice';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { ArchiveIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, StarIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { ArchiveIcon, CheckIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, StarIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
@@ -20,6 +20,7 @@ import { defaultTimezoneForCurrency, nowTime } from '../../../lib/datetime';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { getMarketPrice } from '../../../lib/calc';
+import { pendingShareDeltaByTicker } from '../../../lib/calc/positions';
 import { allocationByCategory, balanceUpdateHistory, contributionVsValueSeries, expectedPLRate, fundNetProfit, projectInvestmentReturn } from '../../../lib/calc/fundsModule';
 import { impliedFundNav } from '../../../lib/calc/fundsDailyHistoryImport';
 import {
@@ -665,11 +666,16 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
   const [txAmountInput, setTxAmountInput] = useState('');
   const [txTime, setTxTime] = useState<string | undefined>(() => nowTime());
   const [txTimezone, setTxTimezone] = useState<string | undefined>(() => defaultTimezoneForCurrency(fund.currencyCode));
+  const [txPending, setTxPending] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editRow, setEditRow] = useState<Transaction | null>(null);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'BUY' | 'SELL'>('all');
+  // User-requested (2026-09-08): "Also show a pending share-count delta" —
+  // same reasoning/mechanism as QSE/PSX's Dashboard (Done item 243), reused
+  // as-is since Funds shares the exact same Transaction type.
+  const pendingUnitDelta = useMemo(() => pendingShareDeltaByTicker(workbook.transactions)[fund.id] || 0, [workbook.transactions, fund.id]);
 
   // Balance Update History — user-requested (2026-09-03): "ability to see
   // balance updates," then (same day) "missing crucial data. Add all data
@@ -869,11 +875,15 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
     if (!txNav) return toast('Enter a NAV (or an amount, once a NAV is known).');
     if (!txUnits) return toast('Enter units, or an amount to compute them from the NAV.');
     if (!(await ensureSignedIn('Sign in to save this transaction.'))) return;
-    addTransaction({ date: txDate, ticker: fund.id, action: txAction, shares: txUnits, price: txNav, time: txTime, timezone: txTimezone });
+    addTransaction({
+      date: txDate, ticker: fund.id, action: txAction, shares: txUnits, price: txNav, time: txTime, timezone: txTimezone,
+      isPending: txPending || undefined,
+    });
     toast(`${txAction === 'BUY' ? 'Invested' : 'Withdrew'} logged.`);
     setTxUnits(0);
     setTxAmountInput('');
     setTxTime(undefined);
+    setTxPending(false);
   };
 
   const startEdit = (i: number, t: Transaction) => { setEditIndex(i); setEditRow({ ...t }); };
@@ -930,7 +940,15 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
               </div>
             )}
             <div className="grid-auto" style={{ ...gridAutoStyle(120, 8), marginTop: 12 }}>
-              <div className="stat-card card"><div className="label">Units held</div><div className="value">{fmt(units, 2)}</div></div>
+              <div className="stat-card card">
+                <div className="label">Units held</div>
+                <div className="value">{fmt(units, 2)}</div>
+                {!!pendingUnitDelta && (
+                  <div className="sub" title="Placed but not yet settled orders for this fund — units will change by this much once they clear.">
+                    {pendingUnitDelta > 0 ? '+' : ''}{fmt(pendingUnitDelta, 2)} pending
+                  </div>
+                )}
+              </div>
               <div className="stat-card card">
                 <Tooltip text="NAV = Net Asset Value, the price of one unit of this fund. This is the average price you paid per unit across all your purchases.">
                   <div className="label" style={{ cursor: 'pointer' }}>Avg NAV cost</div>
@@ -1033,6 +1051,12 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
           />
         </Field>
         <TimeZoneFields time={txTime} timezone={txTimezone} onTimeChange={setTxTime} onTimezoneChange={setTxTimezone} />
+        <Field label="Order">
+          <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 6 }} title="Placed but not yet settled — excluded from your units/value until it clears.">
+            <input type="checkbox" checked={txPending} onChange={(e) => setTxPending(e.target.checked)} />
+            Pending
+          </label>
+        </Field>
         <button className="btn" onClick={submitTx}><PlusIcon />Add</button>
       </div>
 
@@ -1105,18 +1129,41 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                   <td><input type="number" step="0.0001" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })} style={{ width: 90 }} /></td>
                   <td>{fmtMoney(editRow.shares * editRow.price, fund.currencyCode)}</td>
                   <td>
+                    <label className="text-muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }} title="Not yet settled — excluded from units/value until unchecked.">
+                      <input type="checkbox" checked={!!editRow.isPending} onChange={(e) => setEditRow({ ...editRow, isPending: e.target.checked })} />
+                      Pending
+                    </label>{' '}
                     <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
                     <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditIndex(null)} />
                   </td>
                 </tr>
               ) : (
                 <tr key={i}>
-                  <td>{t.date}</td>
+                  <td>
+                    {t.date}
+                    {t.isPending && (
+                      <Tooltip text="Order placed but not yet settled — excluded from units/value until cleared.">
+                        <span className="pill-warn" style={{ marginLeft: 6 }}>Pending</span>
+                      </Tooltip>
+                    )}
+                  </td>
                   <td className={t.action === 'BUY' ? 'pill-positive' : 'pill-negative'}>{t.action === 'BUY' ? 'Invested' : 'Withdrew'}</td>
                   <td>{fmt(t.shares, 2)}</td>
                   <td>{fmtPrice(t.price)}</td>
                   <td>{fmtMoney(t.shares * t.price, fund.currencyCode)}</td>
                   <td>
+                    {t.isPending && (
+                      <IconButton
+                        label="Mark cleared"
+                        icon={<CheckIcon size={13} />}
+                        align="right"
+                        onClick={async () => {
+                          if (!(await ensureSignedIn('Sign in to update this transaction.'))) return;
+                          updateTransaction(i, { isPending: false });
+                          toast('Marked cleared.');
+                        }}
+                      />
+                    )}{' '}
                     <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(i, t)} />{' '}
                     <IconButton
                       label="Delete"
