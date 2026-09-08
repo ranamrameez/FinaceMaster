@@ -26,7 +26,11 @@ import { netIncomeByCurrency, netIncomeByProperty, netIncomePendingByCurrency, p
 import { generateLeaseRentPlans, nextPendingBalance, proposeRentCollection } from '../../../lib/calc/rentalPlanning';
 import { parseCSV, toCSV } from '../../../lib/csv';
 import { fmtMoney } from '../../../lib/format';
-import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
+import { confirmAndDeleteLinkable, createLinkedTransfer, warnIfLinked } from '../../../lib/linkCascade';
+import { getLastTransferSource, rememberTransferSource } from '../../../hooks/useLastTransferSource';
+import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
+import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
+import type { LinkSideConfig } from '../../../types/interEntityTransfer';
 import { dlBarV, dlDoughnut } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar, tickerColor } from '../../../lib/cssVar';
@@ -293,6 +297,72 @@ function PropertiesList() {
   );
 }
 
+/** User-reported (2026-09-08): "Rental Income linking with an account
+ * option is gone." The regular Income & expenses add flow (the shared
+ * `TransactionEntryModal` "Transfers" popup) still has this — confirmed
+ * live, its own "Link to another finance" checkbox + Account picker work
+ * correctly for Rentals. The genuine gap turned out to be here instead:
+ * the semi-automated "Rent collection" approve flow (`logCollection`
+ * below) always called `addRentalEntry` directly with no linking option
+ * at all — unlike every other module's own "approve and log" shortcut
+ * (EMI's `LinkedEMIRepaymentFields`, which this mirrors exactly), so
+ * approving a real rent collection never actually credited the real
+ * Bank/Cash account it was deposited into. Rent is always RENT_INCOME
+ * (never EXPENSE) here, so — per `interEntityLink.ts`'s own documented
+ * exception for Rentals having no real balance of its own — the property
+ * is always the `from` side and the real Bank/Cash account is always
+ * `to`, unlike EMI where the paying account is always `from`. */
+function LinkedRentCollectionFields({
+  property,
+  amount,
+  date,
+  onLinked,
+}: {
+  property: Property;
+  amount: number;
+  date: string;
+  onLinked: () => void;
+}) {
+  const ensureSignedIn = useEnsureSignedIn();
+  const bankAccounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
+  const cashCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
+  const propertySide: LinkSideConfig = { module: 'rentals', ref: property.id };
+  const remembered = getLastTransferSource(propertySide);
+  const [otherModule, setOtherModule] = useState<'bank' | 'cash'>(remembered?.module === 'cash' ? 'cash' : 'bank');
+  const [otherAccountId, setOtherAccountId] = useState(remembered?.ref ?? bankAccounts[0]?.id ?? '');
+
+  const create = async () => {
+    if (!(amount > 0)) return toast('Enter an amount greater than zero.');
+    if (otherModule === 'bank' && !otherAccountId) return toast('Add a bank account on the Banking page first.');
+    if (!(await ensureSignedIn('Sign in to link this collection.'))) return;
+    const other: LinkSideConfig = otherModule === 'bank' ? { module: 'bank', ref: otherAccountId } : { module: 'cash', currencyCode: cashCurrency };
+    const result = createLinkedTransfer({ date, fromAmount: amount, toAmount: amount, from: propertySide, to: other });
+    if ('error' in result) return toast(result.error);
+    rememberTransferSource(propertySide, other);
+    toast('Linked rent collection logged — also recorded on the other side.');
+    onLinked();
+  };
+
+  return (
+    <div className="row" style={{ gap: 6, alignItems: 'flex-end' }}>
+      <select value={otherModule} onChange={(e) => setOtherModule(e.target.value as 'bank' | 'cash')}>
+        <option value="bank">Bank account</option>
+        <option value="cash">Cash</option>
+      </select>
+      {otherModule === 'bank' && (
+        bankAccounts.length ? (
+          <select value={otherAccountId} onChange={(e) => setOtherAccountId(e.target.value)}>
+            {bankAccounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.currencyCode})</option>)}
+          </select>
+        ) : (
+          <span className="text-muted">No bank accounts yet.</span>
+        )
+      )}
+      <button className="btn small" onClick={create}>Link &amp; log</button>
+    </div>
+  );
+}
+
 /** README items 38/13: lease/tenant/security-deposit info per property,
  * plus a one-click "Generate projected rent" that creates a Planning-
  * feature plan (via `usePlannedRentalsWorkbookStore`) for every rent cycle
@@ -323,12 +393,26 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
   const proposal = proposeRentCollection(property);
   const [collectDate, setCollectDate] = useState(proposal?.dueDate ?? '');
   const [collectAmount, setCollectAmount] = useState(proposal?.amount ?? 0);
+  const [collectLinkMode, setCollectLinkMode] = useState(false);
   const lastProposalDueDate = useRef(proposal?.dueDate);
   if (proposal && lastProposalDueDate.current !== proposal.dueDate) {
     lastProposalDueDate.current = proposal.dueDate;
     setCollectDate(proposal.dueDate);
     setCollectAmount(proposal.amount);
   }
+
+  // Shared post-collection bookkeeping (advance the collection cycle's own
+  // anchor date + carry any partial-payment shortfall forward) — used by
+  // both the plain and the linked-to-a-real-account path below, since
+  // `LinkedRentCollectionFields` only knows how to create the linked
+  // transfer itself, not this property-specific cycle state.
+  const applyCollectionResult = () => {
+    if (!proposal) return;
+    const pendingRentBalance = nextPendingBalance(proposal.amount, collectAmount);
+    updateProperty(property.id, { lastCollectionDate: collectDate, pendingRentBalance });
+    setLease((prev) => ({ ...prev, lastCollectionDate: collectDate, pendingRentBalance }));
+    return pendingRentBalance;
+  };
 
   const logCollection = async () => {
     if (!proposal) return;
@@ -339,10 +423,8 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
     if (!ok) return;
     if (!(await ensureSignedIn('Sign in to record this transaction.'))) return;
     addRentalEntry({ id: uid(), propertyId: property.id, date: collectDate, isDeposit: true, amount: collectAmount, categoryID: RENT_CATEGORY_ID });
-    const pendingRentBalance = nextPendingBalance(proposal.amount, collectAmount);
-    updateProperty(property.id, { lastCollectionDate: collectDate, pendingRentBalance });
-    setLease((prev) => ({ ...prev, lastCollectionDate: collectDate, pendingRentBalance }));
-    toast(pendingRentBalance > 0 ? `Logged — ${fmtMoney(pendingRentBalance, property.currencyCode)} still pending, carried to next cycle.` : 'Logged to the ledger.');
+    const pendingRentBalance = applyCollectionResult();
+    toast(pendingRentBalance ? `Logged — ${fmtMoney(pendingRentBalance, property.currencyCode)} still pending, carried to next cycle.` : 'Logged to the ledger.');
   };
 
   const saveLease = async () => {
@@ -474,8 +556,21 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
                 <Field label="Amount" title="Pre-filled with the full expected amount — lower it to record a partial payment; the shortfall carries into the next proposal.">
                   <TextInput type="number" step="0.01" value={collectAmount} onChange={(e) => setCollectAmount(Number(e.target.value))} />
                 </Field>
-                <button className="btn" onClick={logCollection}>Approve &amp; log</button>
+                {collectLinkMode ? (
+                  <LinkedRentCollectionFields
+                    property={property}
+                    amount={collectAmount}
+                    date={collectDate}
+                    onLinked={() => { applyCollectionResult(); setCollectLinkMode(false); }}
+                  />
+                ) : (
+                  <button className="btn" onClick={logCollection}>Approve &amp; log</button>
+                )}
               </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>
+                <input type="checkbox" checked={collectLinkMode} onChange={(e) => setCollectLinkMode(e.target.checked)} />
+                Link this to a Bank account or Cash (creates a matching entry there too, instead of just here)
+              </label>
             </>
           ) : (
             <p className="text-muted">Set a Last collection date (or a Lease start) above so the next due date can be computed.</p>
