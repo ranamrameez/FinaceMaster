@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>QSE Trade &amp; Risk Workstation - WealthPro</title>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&amp;family=Manrope:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-high": "#dce9ff",
+                        "on-secondary-fixed": "#002113",
+                        "secondary-fixed-dim": "#4edea3",
+                        "on-primary": "#ffffff",
+                        "primary-fixed": "#dae2fd",
+                        "surface-variant": "#d3e4fe",
+                        "inverse-primary": "#bec6e0",
+                        "inverse-surface": "#213145",
+                        "surface-container-highest": "#d3e4fe",
+                        "outline-variant": "#c6c6cd",
+                        "surface-tint": "#565e74",
+                        "error": "#ba1a1a",
+                        "on-tertiary": "#ffffff",
+                        "outline": "#76777d",
+                        "secondary-fixed": "#6ffbbe",
+                        "on-error-container": "#93000a",
+                        "on-secondary-fixed-variant": "#005236",
+                        "on-primary-container": "#7c839b",
+                        "error-container": "#ffdad6",
+                        "secondary-container": "#6cf8bb",
+                        "surface-container": "#e5eeff",
+                        "secondary": "#006c49",
+                        "background": "#f8f9ff",
+                        "tertiary-fixed": "#ffddb8",
+                        "on-error": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "on-surface-variant": "#45464d",
+                        "on-tertiary-fixed": "#2a1700",
+                        "surface-dim": "#cbdbf5",
+                        "tertiary-container": "#2a1700",
+                        "on-background": "#0b1c30",
+                        "primary-fixed-dim": "#bec6e0",
+                        "on-secondary-container": "#00714d",
+                        "surface-container-low": "#eff4ff",
+                        "surface": "#f8f9ff",
+                        "on-tertiary-container": "#b87500",
+                        "primary": "#000000",
+                        "surface-bright": "#f8f9ff",
+                        "tertiary-fixed-dim": "#ffb95f",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "on-surface": "#0b1c30",
+                        "on-primary-fixed": "#131b2e",
+                        "primary-container": "#131b2e",
+                        "inverse-on-surface": "#eaf1ff",
+                        "on-tertiary-fixed-variant": "#653e00",
+                        "tertiary": "#000000",
+                        "surface-container-lowest": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "lg": "48px",
+                        "gutter": "24px",
+                        "container-max": "1440px",
+                        "md": "24px",
+                        "xl": "80px",
+                        "xs": "8px",
+                        "base": "4px",
+                        "sm": "16px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Work Sans"],
+                        "display-lg": ["Manrope"],
+                        "label-caps": ["Work Sans"],
+                        "body-md": ["Work Sans"],
+                        "data-tabular": ["JetBrains Mono"],
+                        "headline-sm": ["Manrope"],
+                        "body-sm": ["Work Sans"],
+                        "headline-md": ["Manrope"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "data-tabular": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "headline-sm": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-md": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined[data-weight="fill"] {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        /* Subtle scrollbar for modern feel */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background-color: #c6c6cd;
+            border-radius: 10px;
+        }
+        
+        /* Glassmorphism utilities */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex antialiased">
+<!-- SideNavBar -->
+<nav class="h-screen w-64 fixed left-0 top-0 bg-surface-container-low dark:bg-inverse-surface border-r border-outline-variant flex flex-col py-md px-sm z-40 hidden md:flex">
+<!-- Header -->
+<div class="mb-lg px-sm">
+<div class="flex items-center gap-sm mb-4">
+<div class="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold">
+                    WP
+                </div>
+<div>
+<h1 class="font-display-lg text-headline-sm font-bold text-primary dark:text-inverse-primary leading-none">WealthPro</h1>
+<span class="font-label-caps text-label-caps text-on-surface-variant">Premium Management</span>
+</div>
+</div>
+</div>
+<!-- Navigation Links -->
+<ul class="space-y-2 flex-grow">
+<li>
+<a class="flex items-center gap-3 px-sm py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-body-md text-body-md">Dashboard</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-sm py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined">account_balance</span>
+<span class="font-body-md text-body-md">Banking</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-sm py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined">trending_up</span>
+<span class="font-body-md text-body-md">Investments</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-sm py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-body-md text-body-md">Loans</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-sm py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined">subscriptions</span>
+<span class="font-body-md text-body-md">Subscriptions</span>
+</a>
+</li>
+<!-- Active Tab: Stock Exchange -->
+<li>
+<a class="flex items-center gap-3 px-sm py-3 rounded-lg text-primary font-bold border-r-4 border-secondary bg-surface-container-high cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined" data-weight="fill">show_chart</span>
+<span class="font-body-md text-body-md">Stock Exchange</span>
+</a>
+</li>
+</ul>
+<!-- Footer -->
+<div class="mt-auto border-t border-outline-variant pt-4 space-y-2">
+<button class="w-full bg-primary text-on-primary py-2 rounded-lg font-body-sm font-semibold hover:opacity-90 transition-opacity mb-4">
+                Open New Account
+            </button>
+<a class="flex items-center gap-3 px-sm py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body-md text-body-md">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-sm py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">help_outline</span>
+<span class="font-body-md text-body-md">Support</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Wrapper -->
+<div class="flex-grow flex flex-col md:ml-64 w-full md:w-[calc(100%-16rem)]">
+<!-- TopNavBar -->
+<header class="h-16 px-xl bg-surface border-b border-outline-variant flex justify-between items-center sticky top-0 z-50">
+<div class="flex items-center gap-6">
+<!-- Mobile Menu Button (Hidden on Desktop) -->
+<button class="md:hidden text-primary">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<nav class="hidden md:flex gap-6">
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors duration-200 ease-in-out py-4" href="#">Global View</a>
+<a class="font-body-sm text-body-sm text-primary border-b-2 border-primary py-4 font-semibold" href="#">Analytics</a>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors duration-200 ease-in-out py-4" href="#">Reports</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden lg:flex items-center bg-surface-container-low rounded-full px-4 py-2 border border-outline-variant">
+<span class="material-symbols-outlined text-outline mr-2 text-sm">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm font-body-sm p-0 w-48 text-on-surface" placeholder="Search QSE symbols..." type="text"/>
+</div>
+<div class="flex items-center gap-3 text-on-surface-variant">
+<span class="font-label-caps text-label-caps bg-surface-container-high px-2 py-1 rounded text-primary">Currency: QAR</span>
+<button class="p-2 hover:bg-surface-container-low rounded-full transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-1 right-1 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<button class="p-2 hover:bg-surface-container-low rounded-full transition-colors">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Workspace Canvas -->
+<main class="flex-grow p-4 md:p-gutter max-w-[1440px] mx-auto w-full overflow-y-auto">
+<!-- Page Header -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+<div>
+<h2 class="font-headline-md text-headline-md text-primary mb-1">QSE Trade &amp; Risk Workstation</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Advanced trade planning with fixed 0.275% commission analysis.</p>
+</div>
+<div class="flex gap-3">
+<button class="bg-surface-container-low text-primary border border-outline-variant px-4 py-2 rounded-lg font-body-sm font-semibold hover:bg-surface-variant transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">download</span> Export
+                    </button>
+<button class="bg-primary text-on-primary px-4 py-2 rounded-lg font-body-sm font-semibold hover:opacity-90 transition-opacity flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">add</span> New Trade
+                    </button>
+</div>
+</div>
+<!-- Dashboard Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- Left Column: Market Context & Trade Planner (8 cols) -->
+<div class="lg:col-span-8 flex flex-col gap-gutter">
+<!-- Market Context (Bento Style) -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-sm">
+<div class="flex justify-between items-center mb-4">
+<h3 class="font-headline-sm text-headline-sm text-primary">QSE Market Context</h3>
+<span class="font-label-caps text-label-caps text-secondary flex items-center gap-1">
+<span class="w-2 h-2 bg-secondary rounded-full animate-pulse"></span> Market Open
+                            </span>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+<!-- QNB -->
+<div class="p-4 rounded-lg bg-surface-container-low border border-outline-variant hover:border-primary transition-colors cursor-pointer">
+<div class="flex justify-between items-start mb-2">
+<span class="font-label-caps text-label-caps text-on-surface-variant font-bold">QNBK</span>
+<span class="material-symbols-outlined text-secondary text-sm">trending_up</span>
+</div>
+<div class="font-data-tabular text-data-tabular text-lg font-bold text-primary">15.42 <span class="text-xs text-on-surface-variant">QAR</span></div>
+<div class="font-data-tabular text-data-tabular text-xs text-secondary mt-1">+0.12 (0.78%)</div>
+</div>
+<!-- QIB -->
+<div class="p-4 rounded-lg bg-surface-container-low border border-outline-variant hover:border-primary transition-colors cursor-pointer">
+<div class="flex justify-between items-start mb-2">
+<span class="font-label-caps text-label-caps text-on-surface-variant font-bold">QIBK</span>
+<span class="material-symbols-outlined text-secondary text-sm">trending_up</span>
+</div>
+<div class="font-data-tabular text-data-tabular text-lg font-bold text-primary">19.85 <span class="text-xs text-on-surface-variant">QAR</span></div>
+<div class="font-data-tabular text-data-tabular text-xs text-secondary mt-1">+0.05 (0.25%)</div>
+</div>
+<!-- Industries Qatar -->
+<div class="p-4 rounded-lg bg-surface-container-low border border-outline-variant hover:border-primary transition-colors cursor-pointer">
+<div class="flex justify-between items-start mb-2">
+<span class="font-label-caps text-label-caps text-on-surface-variant font-bold">IQCD</span>
+<span class="material-symbols-outlined text-error text-sm">trending_down</span>
+</div>
+<div class="font-data-tabular text-data-tabular text-lg font-bold text-primary">12.30 <span class="text-xs text-on-surface-variant">QAR</span></div>
+<div class="font-data-tabular text-data-tabular text-xs text-error mt-1">-0.15 (1.20%)</div>
+</div>
+<!-- Ooredoo -->
+<div class="p-4 rounded-lg bg-surface-container-low border border-outline-variant hover:border-primary transition-colors cursor-pointer">
+<div class="flex justify-between items-start mb-2">
+<span class="font-label-caps text-label-caps text-on-surface-variant font-bold">ORDS</span>
+<span class="material-symbols-outlined text-outline text-sm">horizontal_rule</span>
+</div>
+<div class="font-data-tabular text-data-tabular text-lg font-bold text-primary">10.15 <span class="text-xs text-on-surface-variant">QAR</span></div>
+<div class="font-data-tabular text-data-tabular text-xs text-on-surface-variant mt-1">0.00 (0.00%)</div>
+</div>
+</div>
+</section>
+<!-- Trade Planner -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm overflow-hidden flex flex-col">
+<div class="border-b border-outline-variant bg-surface-container-low p-4 flex justify-between items-center">
+<h3 class="font-headline-sm text-headline-sm text-primary flex items-center gap-2">
+<span class="material-symbols-outlined">calculate</span> QSE Trade Planner
+                            </h3>
+<div class="bg-surface-variant text-primary px-3 py-1 rounded text-xs font-label-caps border border-outline-variant">
+                                Commission: Fixed 0.275%
+                            </div>
+</div>
+<div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+<!-- Input Form -->
+<div class="space-y-4">
+<div class="flex gap-4 mb-6 border-b border-outline-variant pb-2">
+<button class="font-label-caps text-label-caps text-primary border-b-2 border-primary pb-2 -mb-[3px] font-bold">New Entry</button>
+<button class="font-label-caps text-label-caps text-on-surface-variant hover:text-primary pb-2 -mb-[3px]">Average Down</button>
+</div>
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-1">Symbol</label>
+<input class="w-full bg-surface-container-low border border-outline-variant rounded-lg p-2 font-data-tabular text-primary focus:ring-2 focus:ring-primary focus:border-primary outline-none" type="text" value="QNBK"/>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-1">Quantity</label>
+<input class="w-full bg-surface-container-low border border-outline-variant rounded-lg p-2 font-data-tabular text-primary focus:ring-2 focus:ring-primary focus:border-primary outline-none text-right" type="number" value="1000"/>
+</div>
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-1">Entry Price (QAR)</label>
+<input class="w-full bg-surface-container-low border border-outline-variant rounded-lg p-2 font-data-tabular text-primary focus:ring-2 focus:ring-primary focus:border-primary outline-none text-right" step="0.01" type="number" value="15.42"/>
+</div>
+</div>
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-1">Target Sell Price (QAR)</label>
+<input class="w-full bg-surface-container-low border border-outline-variant rounded-lg p-2 font-data-tabular text-primary focus:ring-2 focus:ring-primary focus:border-primary outline-none text-right" step="0.01" type="number" value="16.00"/>
+</div>
+<button class="w-full bg-primary text-on-primary py-3 rounded-lg font-body-md font-semibold mt-4 hover:opacity-90 transition-opacity">
+                                    Calculate Trade
+                                </button>
+</div>
+<!-- Results & Break-even -->
+<div class="bg-surface-container-low rounded-lg p-5 border border-outline-variant flex flex-col justify-between">
+<div>
+<h4 class="font-label-caps text-label-caps text-on-surface-variant mb-4 border-b border-outline-variant pb-2">Break-even Analysis</h4>
+<div class="space-y-3">
+<div class="flex justify-between items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Gross Cost</span>
+<span class="font-data-tabular text-data-tabular text-primary">15,420.00</span>
+</div>
+<div class="flex justify-between items-center text-error">
+<span class="font-body-sm text-body-sm">Buy Commission (0.275%)</span>
+<span class="font-data-tabular text-data-tabular">-42.41</span>
+</div>
+<div class="flex justify-between items-center pt-2 border-t border-outline-variant font-bold">
+<span class="font-body-sm text-body-sm text-primary">Total Capital Outlay</span>
+<span class="font-data-tabular text-data-tabular text-primary">15,462.41</span>
+</div>
+<div class="mt-4 bg-surface rounded p-3 border border-outline-variant">
+<div class="flex justify-between items-center">
+<span class="font-label-caps text-label-caps text-primary">Break-even Price</span>
+<span class="font-data-tabular text-data-tabular text-lg font-bold text-primary">15.51 <span class="text-xs font-normal">QAR</span></span>
+</div>
+<p class="text-[10px] text-on-surface-variant mt-1 leading-tight">Price required to cover both buy and sell commissions (0.55% total round-trip).</p>
+</div>
+</div>
+</div>
+<div class="mt-6 pt-4 border-t border-outline-variant">
+<div class="flex justify-between items-center mb-2">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Target Gross Value</span>
+<span class="font-data-tabular text-data-tabular text-primary">16,000.00</span>
+</div>
+<div class="flex justify-between items-center text-error mb-2">
+<span class="font-body-sm text-body-sm">Sell Commission (0.275%)</span>
+<span class="font-data-tabular text-data-tabular">-44.00</span>
+</div>
+<div class="flex justify-between items-center bg-secondary/10 p-3 rounded-lg border border-secondary/20">
+<span class="font-body-md text-body-md font-bold text-secondary">Net Profit</span>
+<span class="font-data-tabular text-data-tabular text-xl font-bold text-secondary">+493.59 <span class="text-sm font-normal">QAR</span></span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column: Risk Analysis (4 cols) -->
+<div class="lg:col-span-4 flex flex-col gap-gutter">
+<section class="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm p-6 flex-grow">
+<h3 class="font-headline-sm text-headline-sm text-primary mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined">security</span> Risk Management
+                        </h3>
+<div class="space-y-6">
+<!-- Stop Loss Setup -->
+<div>
+<div class="flex justify-between items-end mb-2">
+<label class="block font-label-caps text-label-caps text-on-surface-variant">Stop-Loss Target</label>
+<span class="font-label-caps text-label-caps text-error">-2.00%</span>
+</div>
+<div class="relative">
+<input class="w-full bg-surface border border-error rounded-lg p-2 pl-3 font-data-tabular text-primary focus:ring-2 focus:ring-error focus:border-error outline-none text-left" step="0.01" type="number" value="15.11"/>
+<div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-on-surface-variant font-data-tabular text-sm">
+                                        QAR
+                                    </div>
+</div>
+<div class="mt-2 flex justify-between text-xs font-data-tabular text-on-surface-variant">
+<span>Max Loss (inc. comm):</span>
+<span class="text-error font-bold">-393.97 QAR</span>
+</div>
+</div>
+<!-- Take Profit Setup -->
+<div class="pt-4 border-t border-outline-variant">
+<div class="flex justify-between items-end mb-2">
+<label class="block font-label-caps text-label-caps text-on-surface-variant">Take-Profit Target</label>
+<span class="font-label-caps text-label-caps text-secondary">+5.00%</span>
+</div>
+<div class="relative">
+<input class="w-full bg-surface border border-secondary rounded-lg p-2 pl-3 font-data-tabular text-primary focus:ring-2 focus:ring-secondary focus:border-secondary outline-none text-left" step="0.01" type="number" value="16.19"/>
+<div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-on-surface-variant font-data-tabular text-sm">
+                                        QAR
+                                    </div>
+</div>
+</div>
+<!-- Risk/Reward Ratio -->
+<div class="pt-4 border-t border-outline-variant">
+<h4 class="font-label-caps text-label-caps text-on-surface-variant mb-3">Risk / Reward Ratio</h4>
+<div class="relative h-4 bg-surface-container-low rounded-full overflow-hidden flex border border-outline-variant">
+<div class="bg-error h-full" style="width: 28.5%;"></div>
+<div class="bg-secondary h-full" style="width: 71.5%;"></div>
+</div>
+<div class="flex justify-between mt-2 font-data-tabular text-xs">
+<span class="text-error">1</span>
+<span class="text-on-surface-variant font-bold text-center">1 : 2.5</span>
+<span class="text-secondary">2.5</span>
+</div>
+</div>
+<!-- Action -->
+<div class="pt-6">
+<button class="w-full bg-surface-container-highest text-primary border border-outline-variant py-3 rounded-lg font-body-md font-semibold hover:bg-surface-variant transition-colors flex justify-center items-center gap-2">
+<span class="material-symbols-outlined text-sm">save</span> Save to Trade Log
+                                </button>
+</div>
+</div>
+</section>
+</div>
+</div>
+<!-- Recent Calculations Table (Full Width) -->
+<section class="mt-gutter bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm overflow-hidden">
+<div class="p-4 border-b border-outline-variant bg-surface-container-low">
+<h3 class="font-headline-sm text-body-lg text-primary font-bold">Recent Trade Scenarios</h3>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface border-b border-outline-variant">
+<th class="p-3 font-label-caps text-label-caps text-on-surface-variant font-semibold">Symbol</th>
+<th class="p-3 font-label-caps text-label-caps text-on-surface-variant font-semibold">Type</th>
+<th class="p-3 font-label-caps text-label-caps text-on-surface-variant font-semibold text-right">Entry</th>
+<th class="p-3 font-label-caps text-label-caps text-on-surface-variant font-semibold text-right">Qty</th>
+<th class="p-3 font-label-caps text-label-caps text-on-surface-variant font-semibold text-right">Total Comm.</th>
+<th class="p-3 font-label-caps text-label-caps text-on-surface-variant font-semibold text-right">Break-even</th>
+<th class="p-3 font-label-caps text-label-caps text-on-surface-variant font-semibold text-center">Status</th>
+</tr>
+</thead>
+<tbody class="font-data-tabular text-sm text-primary">
+<tr class="border-b border-outline-variant hover:bg-surface-container-low transition-colors">
+<td class="p-3 font-bold">QNBK</td>
+<td class="p-3 text-xs">Buy</td>
+<td class="p-3 text-right">15.42</td>
+<td class="p-3 text-right">1,000</td>
+<td class="p-3 text-right text-on-surface-variant">86.41 QAR</td>
+<td class="p-3 text-right text-secondary">15.51</td>
+<td class="p-3 text-center">
+<span class="inline-block px-2 py-1 bg-surface-variant text-primary rounded text-xs font-sans">Draft</span>
+</td>
+</tr>
+<tr class="border-b border-outline-variant hover:bg-surface-container-low transition-colors">
+<td class="p-3 font-bold">IQCD</td>
+<td class="p-3 text-xs">Avg Down</td>
+<td class="p-3 text-right">12.50</td>
+<td class="p-3 text-right">500</td>
+<td class="p-3 text-right text-on-surface-variant">34.37 QAR</td>
+<td class="p-3 text-right text-secondary">12.57</td>
+<td class="p-3 text-center">
+<span class="inline-block px-2 py-1 bg-secondary/20 text-secondary rounded text-xs font-sans">Executed</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</main>
+</div>
+</body></html>

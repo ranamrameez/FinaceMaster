@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"success":"#006c49","error-container":"#ffdad6","on-secondary":"#ffffff","inverse-on-surface":"#eff0f6","on-tertiary-fixed-variant":"#3e465b","inverse-surface":"#2e3135","surface-container-low":"#f2f3f9","primary-container":"#1b1b1b","primary":"#000000","primary-fixed":"#e2e2e2","tertiary-fixed":"#dae2fc","tertiary":"#000000","surface-tint":"#5e5e5e","outline":"#7e7576","surface-container-high":"#e7e8ee","surface-bright":"#f8f9ff","surface-container-lowest":"#ffffff","surface-container":"#eceef3","on-background":"#191c20","surface-variant":"#e1e2e8","surface":"#f8f9ff","on-tertiary":"#ffffff","on-primary-fixed-variant":"#474747","on-secondary-fixed-variant":"#005236","on-primary-fixed":"#1b1b1b","on-secondary-container":"#0c714d","secondary-container":"#9af2c5","tertiary-fixed-dim":"#bec6e0","on-primary-container":"#848484","currency-secondary":"#45464d","on-secondary-fixed":"#002113","error":"#ba1a1a","primary-fixed-dim":"#c6c6c6","on-surface":"#191c20","inverse-primary":"#c6c6c6","on-primary":"#ffffff","on-tertiary-fixed":"#131b2e","on-tertiary-container":"#7b839b","surface-container-highest":"#e1e2e8","on-surface-variant":"#4c4546","secondary-fixed":"#9df4c8","background":"#f8f9ff","surface-dim":"#d8dae0","tertiary-container":"#131b2e","on-error":"#ffffff","secondary":"#006c49","currency-primary":"#0b1c30","outline-variant":"#cfc4c5","secondary-fixed-dim":"#81d8ad","on-error-container":"#93000a"},"borderRadius":{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},"spacing":{"base":"4px","lg":"48px","gutter":"24px","xl":"80px","sm":"16px","xs":"8px","md":"24px"},"fontFamily":{"body-sm":["Work Sans"],"label-caps":["Work Sans"],"data-tabular":["JetBrains Mono"],"currency-display":["JetBrains Mono"],"headline-sm":["Manrope"],"body-lg":["Work Sans"],"headline-lg":["Manrope"],"body-md":["Work Sans"],"headline-md":["Manrope"]},"fontSize":{"body-sm":["14px",{"lineHeight":"20px","fontWeight":"400"}],"label-caps":["12px",{"lineHeight":"16px","letterSpacing":"0.05em","fontWeight":"600"}],"data-tabular":["14px",{"lineHeight":"20px","fontWeight":"500"}],"currency-display":["24px",{"lineHeight":"32px","letterSpacing":"-0.02em","fontWeight":"600"}],"headline-sm":["24px",{"lineHeight":"32px","fontWeight":"600"}],"body-lg":["18px",{"lineHeight":"28px","fontWeight":"400"}],"headline-lg":["48px",{"lineHeight":"56px","letterSpacing":"-0.02em","fontWeight":"700"}],"body-md":["16px",{"lineHeight":"24px","fontWeight":"400"}],"headline-md":["32px",{"lineHeight":"40px","letterSpacing":"-0.01em","fontWeight":"600"}]}}}}</script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@100..900&family=Work+Sans:wght@100..900&display=swap" rel="stylesheet"/></head><body class="bg-surface font-body-md text-on-surface"><aside class="fixed left-0 top-0 h-full w-72 bg-surface-container-low z-50 flex flex-col border-r border-outline-variant/30 shadow-[4px_0_24px_rgba(0,0,0,0.02)]"><div class="px-gutter h-20 flex items-center mb-xs"><div class="flex items-center gap-sm"><div class="w-10 h-10 bg-primary flex items-center justify-center rounded-xl"><span class="material-symbols-outlined text-on-primary">payments</span></div><span class="font-headline-sm text-headline-sm tracking-tight text-primary">WealthPro</span></div></div><nav class="flex-1 px-sm overflow-y-auto space-y-base" data-active-classes="bg-secondary-container text-on-secondary-container font-bold"><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all group" data-path="dashboard" href="#"><span class="material-symbols-outlined mr-md">dashboard</span><span class="font-body-md">Dashboard</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="banking" href="#"><span class="material-symbols-outlined mr-md">account_balance</span><span class="font-body-md">Banking</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="investments" href="#"><span class="material-symbols-outlined mr-md">monitoring</span><span class="font-body-md">Investments</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="loans" href="#"><span class="material-symbols-outlined mr-md">request_quote</span><span class="font-body-md">Loans</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="subscriptions" href="#"><span class="material-symbols-outlined mr-md">event_repeat</span><span class="font-body-md">Subscriptions</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="stock-exchange" href="#"><span class="material-symbols-outlined mr-md">show_chart</span><span class="font-body-md">Stock Exchange</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="property-management" href="#"><span class="material-symbols-outlined mr-md">apartment</span><span class="font-body-md">Property</span></a><a aria-current="page" class="flex items-center px-md py-3 rounded-lg transition-all bg-secondary-container text-on-secondary-container font-bold" data-path="fx-workstation" href="#"><span class="material-symbols-outlined mr-md">currency_exchange</span><span class="font-body-md">FX Workstation</span></a></nav><div class="p-gutter border-t border-outline-variant/30"><div class="flex items-center gap-sm p-sm rounded-xl bg-surface-container"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div><div class="flex-1 overflow-hidden"><p class="text-body-sm font-label-caps truncate">John Doe</p><p class="text-[10px] text-on-surface-variant">Private Wealth</p></div><span class="material-symbols-outlined text-on-surface-variant text-sm">settings</span></div></div></aside><div class="pl-72"><header class="fixed top-0 left-72 right-0 h-20 bg-surface/80 backdrop-blur-xl z-40 px-gutter flex items-center justify-between border-b border-outline-variant/20 shadow-sm"><div class="flex items-center gap-md"><div class="flex items-center gap-xs px-md py-2 bg-surface-container-lowest border border-outline-variant rounded-full shadow-sm"><span class="w-2 h-2 rounded-full bg-success"></span><span class="font-label-caps text-on-surface-variant uppercase">Active:</span><span class="font-data-tabular text-currency-primary font-bold">USD</span></div><div class="h-8 w-[1px] bg-outline-variant"></div><div class="relative group"><button class="flex items-center gap-sm px-md py-2 rounded-lg bg-surface-container-high hover:bg-primary hover:text-on-primary transition-all"><span class="material-symbols-outlined text-sm">currency_exchange</span><span class="font-label-caps">Multi-Currency</span><span class="material-symbols-outlined text-sm">expand_more</span></button><div class="absolute top-full mt-xs left-0 w-64 bg-surface-container-lowest rounded-xl shadow-[0_10px_25px_-5px_rgba(11,28,48,0.1)] border border-outline-variant hidden group-hover:block py-sm z-50"><div class="px-md py-xs text-xs font-label-caps text-on-surface-variant">Select View</div><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">Global (Total)</span><span class="material-symbols-outlined text-sm">public</span></button><div class="h-[1px] bg-outline-variant my-xs mx-md"></div><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">US Dollar</span><span class="font-data-tabular">USD</span></button><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">Euro</span><span class="font-data-tabular">EUR</span></button><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">PK Rupee</span><span class="font-data-tabular">PKR</span></button><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">QA Riyal</span><span class="font-data-tabular">QAR</span></button></div></div></div><div class="flex items-center gap-gutter"><div class="relative flex items-center bg-surface-container px-md py-2 rounded-lg border border-outline-variant"><span class="material-symbols-outlined text-on-surface-variant mr-sm">search</span><input class="bg-transparent border-none outline-none text-sm text-on-surface w-48 placeholder:text-on-surface-variant" placeholder="Search portfolios..." type="text"/></div><button class="p-sm rounded-full hover:bg-surface-container-high transition-colors relative"><span class="material-symbols-outlined text-on-surface-variant">notifications</span><span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-surface"></span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center cursor-pointer"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></header><main class="relative pt-20 bg-surface min-h-screen"><div class="flex flex-col w-full relative pb-xl">
+<!-- Ambient Gradient Background -->
+<div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
+<div class="absolute -top-[10%] -right-[10%] w-[50%] h-[50%] bg-gradient-radial from-secondary/5 to-transparent blur-3xl opacity-60 rounded-full"></div>
+<div class="absolute top-[40%] -left-[10%] w-[40%] h-[40%] bg-gradient-radial from-primary/5 to-transparent blur-3xl opacity-40 rounded-full"></div>
+</div>
+<div class="relative z-10 px-gutter w-full max-w-7xl mx-auto mt-lg flex flex-col gap-xl">
+<!-- Page Header & Key Metrics -->
+<section class="w-full flex flex-col lg:flex-row gap-lg justify-between items-end">
+<div class="flex flex-col gap-xs max-w-2xl">
+<h1 class="font-headline-lg text-headline-lg text-on-surface">Transfer & Convert</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Move funds seamlessly across your global accounts with real-time institutional exchange rates.</p>
+</div>
+<div class="flex flex-row gap-md">
+<!-- Mini Market Widget -->
+<div class="bg-surface-container-lowest p-md rounded-xl shadow-sm border border-outline-variant/30 flex flex-col gap-base min-w-[200px]">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">EUR/USD Spot Rate</span>
+<div class="flex items-center gap-xs">
+<span class="font-currency-display text-currency-display text-currency-primary">1.0842</span>
+<span class="material-symbols-outlined text-success text-sm">arrow_upward</span>
+</div>
+<span class="font-data-tabular text-xs text-success">+0.0015 (0.14%)</span>
+</div>
+<div class="bg-surface-container-lowest p-md rounded-xl shadow-sm border border-outline-variant/30 flex flex-col gap-base min-w-[200px]">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">USD/PKR Spot Rate</span>
+<div class="flex items-center gap-xs">
+<span class="font-currency-display text-currency-display text-currency-primary">278.50</span>
+<span class="material-symbols-outlined text-error text-sm">arrow_downward</span>
+</div>
+<span class="font-data-tabular text-xs text-error">-1.20 (0.43%)</span>
+</div>
+</div>
+</section>
+<!-- Main Workspace Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter w-full">
+<!-- Left Column: Transfer Engine -->
+<div class="lg:col-span-7 flex flex-col gap-gutter">
+<div class="bg-surface-container-lowest rounded-2xl shadow-md border border-outline-variant/20 p-lg relative overflow-hidden">
+<!-- Subtle top highlight -->
+<div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-secondary to-secondary-fixed"></div>
+<div class="flex items-center justify-between mb-lg">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Initiate Transfer</h2>
+<button class="text-secondary font-label-caps flex items-center gap-xs hover:bg-secondary-container/20 px-sm py-2 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-sm">tune</span>
+              Advanced Options
+            </button>
+</div>
+<form class="flex flex-col gap-lg">
+<!-- From Account -->
+<div class="flex flex-col gap-sm relative">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase">From Account</label>
+<div class="group relative flex items-center bg-surface-container-low rounded-xl border border-outline-variant/40 hover:border-primary focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all p-sm">
+<div class="w-12 h-12 bg-primary/5 rounded-lg flex items-center justify-center mr-md">
+<span class="font-data-tabular text-currency-primary font-bold">USD</span>
+</div>
+<div class="flex flex-col flex-1">
+<span class="font-body-md text-on-surface font-medium">Global Checking •••• 4092</span>
+<span class="font-data-tabular text-sm text-on-surface-variant">Balance: $124,500.00</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">expand_more</span>
+<!-- Hidden Select for native behavior -->
+<select class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
+<option>Global Checking (USD) •••• 4092</option>
+<option>Euro Reserve (EUR) •••• 1104</option>
+</select>
+</div>
+</div>
+<!-- Amount Input -->
+<div class="flex flex-col gap-sm">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase">Amount to Send</label>
+<div class="flex items-center bg-surface-container-lowest rounded-xl border border-outline-variant hover:border-primary focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all overflow-hidden p-xs">
+<div class="bg-surface-container px-md py-sm rounded-lg flex items-center gap-xs">
+<span class="font-data-tabular text-on-surface font-bold">USD</span>
+</div>
+<input class="flex-1 bg-transparent border-none outline-none font-currency-display text-currency-display text-currency-primary text-right px-md" placeholder="0.00" type="text" value="5,000.00"/>
+</div>
+</div>
+<!-- Swap/Connection Divider -->
+<div class="relative flex items-center justify-center -my-sm z-10">
+<div class="absolute w-full h-[1px] bg-outline-variant/30"></div>
+<button class="bg-surface-container-lowest border border-outline-variant rounded-full p-sm shadow-sm hover:bg-surface-container transition-colors relative group" type="button">
+<span class="material-symbols-outlined text-secondary group-hover:rotate-180 transition-transform duration-500">swap_vert</span>
+</button>
+</div>
+<!-- To Account -->
+<div class="flex flex-col gap-sm relative">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase">To Account</label>
+<div class="group relative flex items-center bg-surface-container-low rounded-xl border border-outline-variant/40 hover:border-primary focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all p-sm">
+<div class="w-12 h-12 bg-secondary/10 rounded-lg flex items-center justify-center mr-md">
+<span class="font-data-tabular text-secondary font-bold">EUR</span>
+</div>
+<div class="flex flex-col flex-1">
+<span class="font-body-md text-on-surface font-medium">Euro Reserve •••• 1104</span>
+<span class="font-data-tabular text-sm text-on-surface-variant">Balance: €42,100.50</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">expand_more</span>
+<select class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
+<option>Euro Reserve (EUR) •••• 1104</option>
+<option>PKR Ops (PKR) •••• 8821</option>
+</select>
+</div>
+</div>
+<!-- Converted Amount Preview (Read-only) -->
+<div class="bg-surface-container/50 rounded-xl p-md border border-outline-variant/20 flex flex-col gap-xs">
+<div class="flex justify-between items-center">
+<span class="font-label-caps text-on-surface-variant">Guaranteed Exchange Rate</span>
+<span class="font-data-tabular text-sm text-on-surface">1 USD = 0.9223 EUR</span>
+</div>
+<div class="flex justify-between items-end mt-sm">
+<span class="font-body-md text-on-surface">Recipient Gets</span>
+<div class="flex items-center gap-xs">
+<span class="font-data-tabular text-on-surface-variant">EUR</span>
+<span class="font-currency-display text-[32px] leading-none text-primary">4,611.50</span>
+</div>
+</div>
+<div class="flex justify-between items-center mt-xs pt-xs border-t border-outline-variant/20">
+<span class="font-label-caps text-on-surface-variant">Fee (0.5%)</span>
+<span class="font-data-tabular text-xs text-on-surface-variant">- $25.00</span>
+</div>
+</div>
+<button class="w-full bg-primary text-on-primary font-label-caps py-md rounded-xl hover:bg-primary/90 transition-colors shadow-md mt-sm flex justify-center items-center gap-sm uppercase" type="button">
+              Confirm Transfer
+              <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</form>
+</div>
+</div>
+<!-- Right Column: Settings & History -->
+<div class="lg:col-span-5 flex flex-col gap-gutter">
+<!-- Currency Settings Bento Card -->
+<div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/20 p-md flex flex-col gap-md">
+<div class="flex justify-between items-center">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Currency Preferences</h3>
+<button class="w-8 h-8 rounded-full hover:bg-surface-container flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant text-sm">edit</span>
+</button>
+</div>
+<div class="grid grid-cols-2 gap-sm">
+<div class="bg-surface-container-low p-sm rounded-xl border border-outline-variant/30 flex flex-col gap-xs relative overflow-hidden">
+<div class="absolute -right-4 -bottom-4 w-16 h-16 bg-primary/5 rounded-full blur-xl pointer-events-none"></div>
+<span class="font-label-caps text-[10px] text-on-surface-variant uppercase tracking-widest">Base Currency</span>
+<div class="flex items-center gap-sm mt-xs">
+<div class="w-10 h-10 bg-primary text-on-primary rounded-lg flex items-center justify-center font-data-tabular font-bold">USD</div>
+<div class="flex flex-col">
+<span class="font-body-sm font-medium">US Dollar</span>
+<span class="text-[10px] text-success flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-success"></span>Active</span>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-low p-sm rounded-xl border border-outline-variant/30 flex flex-col gap-xs">
+<span class="font-label-caps text-[10px] text-on-surface-variant uppercase tracking-widest">Secondary</span>
+<div class="flex items-center gap-sm mt-xs">
+<div class="w-10 h-10 bg-surface-container-high text-on-surface rounded-lg flex items-center justify-center font-data-tabular font-bold">EUR</div>
+<div class="flex flex-col">
+<span class="font-body-sm font-medium">Euro</span>
+<span class="text-[10px] text-on-surface-variant">Default Quote</span>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-container p-sm rounded-xl border border-outline-variant/30 flex items-center justify-between">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-on-surface-variant">language</span>
+<span class="font-body-sm text-on-surface">Auto-convert incoming funds</span>
+</div>
+<!-- Toggle Switch -->
+<div class="w-10 h-6 bg-secondary rounded-full relative cursor-pointer">
+<div class="absolute right-1 top-1 w-4 h-4 bg-on-secondary rounded-full shadow-sm"></div>
+</div>
+</div>
+</div>
+<!-- Recent Transfers List -->
+<div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/20 p-md flex-1 flex flex-col">
+<div class="flex justify-between items-center mb-md">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Recent Activity</h3>
+<button class="font-label-caps text-secondary hover:underline">View All</button>
+</div>
+<div class="flex flex-col gap-xs flex-1">
+<!-- Transfer Item 1 -->
+<div class="group flex items-center justify-between p-sm hover:bg-surface-container-low rounded-xl transition-colors cursor-pointer border border-transparent hover:border-outline-variant/20">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center relative">
+<span class="material-symbols-outlined text-on-surface-variant text-sm">sync_alt</span>
+<div class="absolute -bottom-1 -right-1 w-4 h-4 bg-success rounded-full border-2 border-surface-container-lowest flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary text-[10px]" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+</div>
+<div class="flex flex-col">
+<span class="font-body-sm text-on-surface font-medium">USD to EUR</span>
+<span class="font-data-tabular text-[11px] text-on-surface-variant">Today, 09:41 AM</span>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-data-tabular text-sm text-on-surface font-medium">- $2,000.00</span>
+<div class="flex items-center gap-1 mt-0.5">
+<span class="bg-surface-container-high px-1.5 py-0.5 rounded text-[9px] font-label-caps text-on-surface-variant uppercase">Rate 0.92</span>
+<span class="font-data-tabular text-[11px] text-success">+ €1,840.00</span>
+</div>
+</div>
+</div>
+<!-- Transfer Item 2 -->
+<div class="group flex items-center justify-between p-sm hover:bg-surface-container-low rounded-xl transition-colors cursor-pointer border border-transparent hover:border-outline-variant/20">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center relative">
+<span class="material-symbols-outlined text-on-surface-variant text-sm">arrow_forward</span>
+<div class="absolute -bottom-1 -right-1 w-4 h-4 bg-[#f59e0b] rounded-full border-2 border-surface-container-lowest flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary text-[10px]">schedule</span>
+</div>
+</div>
+<div class="flex flex-col">
+<span class="font-body-sm text-on-surface font-medium">EUR to PKR</span>
+<span class="font-data-tabular text-[11px] text-on-surface-variant">Yesterday, 14:22 PM</span>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-data-tabular text-sm text-on-surface font-medium">- €500.00</span>
+<div class="flex items-center gap-1 mt-0.5">
+<span class="bg-surface-container-high px-1.5 py-0.5 rounded text-[9px] font-label-caps text-[#b45309] uppercase">Pending</span>
+</div>
+</div>
+</div>
+<!-- Transfer Item 3 -->
+<div class="group flex items-center justify-between p-sm hover:bg-surface-container-low rounded-xl transition-colors cursor-pointer border border-transparent hover:border-outline-variant/20">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center relative">
+<span class="material-symbols-outlined text-on-surface-variant text-sm">sync_alt</span>
+<div class="absolute -bottom-1 -right-1 w-4 h-4 bg-success rounded-full border-2 border-surface-container-lowest flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary text-[10px]" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+</div>
+<div class="flex flex-col">
+<span class="font-body-sm text-on-surface font-medium">USD to QAR</span>
+<span class="font-data-tabular text-[11px] text-on-surface-variant">Oct 12, 11:05 AM</span>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-data-tabular text-sm text-on-surface font-medium">- $1,250.00</span>
+<div class="flex items-center gap-1 mt-0.5">
+<span class="bg-surface-container-high px-1.5 py-0.5 rounded text-[9px] font-label-caps text-on-surface-variant uppercase">Rate 3.64</span>
+<span class="font-data-tabular text-[11px] text-success">+ 4,550.00 QAR</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Abstract visualization placeholder to add visual richness -->
+<div class="mt-md h-24 rounded-xl relative overflow-hidden bg-surface-container-lowest border border-outline-variant/20 flex items-center justify-center" data-alt="Abstract geometric data visualization showing currency flow networks in subtle shades of navy and grey on a light background, elegant corporate finance style, minimalist." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDyWmSAcD8kU0AQzEZsQyMFfPbims78s88FBJ_pRruloJCCraKnmp01jXTWeD1-OsKifSq4zNod3VibF6ABtcIFYkubQM-PB9nySaNbqz_gGhClIOVRhQQloNPXiwI4H_eWCiGmIbUqV6GOtvDRUcshObW0rCGyFKcXrPcQrPJAzAG1xEsz1gmVlBoRmdsFambFWLie52ndLIkTRdQOJMgmSBRjdr6DPQmblr8MCWeam8wb3Wwqu-rJ')">
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest to-transparent"></div>
+<span class="relative z-10 font-label-caps text-on-surface-variant bg-surface-container-lowest/80 backdrop-blur-sm px-sm py-1 rounded-full text-[10px]">Volume Heatmap</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div></main></div></body></html>

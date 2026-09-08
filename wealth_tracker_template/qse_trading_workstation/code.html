@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"success":"#006c49","error-container":"#ffdad6","on-secondary":"#ffffff","inverse-on-surface":"#eff0f6","on-tertiary-fixed-variant":"#3e465b","inverse-surface":"#2e3135","surface-container-low":"#f2f3f9","primary-container":"#1b1b1b","primary":"#000000","primary-fixed":"#e2e2e2","tertiary-fixed":"#dae2fc","tertiary":"#000000","surface-tint":"#5e5e5e","outline":"#7e7576","surface-container-high":"#e7e8ee","surface-bright":"#f8f9ff","surface-container-lowest":"#ffffff","surface-container":"#eceef3","on-background":"#191c20","surface-variant":"#e1e2e8","surface":"#f8f9ff","on-tertiary":"#ffffff","on-primary-fixed-variant":"#474747","on-secondary-fixed-variant":"#005236","on-primary-fixed":"#1b1b1b","on-secondary-container":"#0c714d","secondary-container":"#9af2c5","tertiary-fixed-dim":"#bec6e0","on-primary-container":"#848484","currency-secondary":"#45464d","on-secondary-fixed":"#002113","error":"#ba1a1a","primary-fixed-dim":"#c6c6c6","on-surface":"#191c20","inverse-primary":"#c6c6c6","on-primary":"#ffffff","on-tertiary-fixed":"#131b2e","on-tertiary-container":"#7b839b","surface-container-highest":"#e1e2e8","on-surface-variant":"#4c4546","secondary-fixed":"#9df4c8","background":"#f8f9ff","surface-dim":"#d8dae0","tertiary-container":"#131b2e","on-error":"#ffffff","secondary":"#006c49","currency-primary":"#0b1c30","outline-variant":"#cfc4c5","secondary-fixed-dim":"#81d8ad","on-error-container":"#93000a"},"borderRadius":{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},"spacing":{"base":"4px","lg":"48px","gutter":"24px","xl":"80px","sm":"16px","xs":"8px","md":"24px"},"fontFamily":{"body-sm":["Work Sans"],"label-caps":["Work Sans"],"data-tabular":["JetBrains Mono"],"currency-display":["JetBrains Mono"],"headline-sm":["Manrope"],"body-lg":["Work Sans"],"headline-lg":["Manrope"],"body-md":["Work Sans"],"headline-md":["Manrope"]},"fontSize":{"body-sm":["14px",{"lineHeight":"20px","fontWeight":"400"}],"label-caps":["12px",{"lineHeight":"16px","letterSpacing":"0.05em","fontWeight":"600"}],"data-tabular":["14px",{"lineHeight":"20px","fontWeight":"500"}],"currency-display":["24px",{"lineHeight":"32px","letterSpacing":"-0.02em","fontWeight":"600"}],"headline-sm":["24px",{"lineHeight":"32px","fontWeight":"600"}],"body-lg":["18px",{"lineHeight":"28px","fontWeight":"400"}],"headline-lg":["48px",{"lineHeight":"56px","letterSpacing":"-0.02em","fontWeight":"700"}],"body-md":["16px",{"lineHeight":"24px","fontWeight":"400"}],"headline-md":["32px",{"lineHeight":"40px","letterSpacing":"-0.01em","fontWeight":"600"}]}}}}</script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@100..900&family=Work+Sans:wght@100..900&display=swap" rel="stylesheet"/></head><body class="bg-surface font-body-md text-on-surface"><aside class="fixed left-0 top-0 h-full w-72 bg-surface-container-low z-50 flex flex-col border-r border-outline-variant/30 shadow-[4px_0_24px_rgba(0,0,0,0.02)]"><div class="px-gutter h-20 flex items-center mb-xs"><div class="flex items-center gap-sm"><div class="w-10 h-10 bg-primary flex items-center justify-center rounded-xl"><span class="material-symbols-outlined text-on-primary">payments</span></div><span class="font-headline-sm text-headline-sm tracking-tight text-primary">WealthPro</span></div></div><nav class="flex-1 px-sm overflow-y-auto space-y-base" data-active-classes="bg-secondary-container text-on-secondary-container font-bold"><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all group" data-path="dashboard" href="#"><span class="material-symbols-outlined mr-md">dashboard</span><span class="font-body-md">Dashboard</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="banking" href="#"><span class="material-symbols-outlined mr-md">account_balance</span><span class="font-body-md">Banking</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="investments" href="#"><span class="material-symbols-outlined mr-md">monitoring</span><span class="font-body-md">Investments</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="loans" href="#"><span class="material-symbols-outlined mr-md">request_quote</span><span class="font-body-md">Loans</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="subscriptions" href="#"><span class="material-symbols-outlined mr-md">event_repeat</span><span class="font-body-md">Subscriptions</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="stock-exchange" href="#"><span class="material-symbols-outlined mr-md">show_chart</span><span class="font-body-md">Stock Exchange</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="property-management" href="#"><span class="material-symbols-outlined mr-md">apartment</span><span class="font-body-md">Property</span></a><a aria-current="page" class="flex items-center px-md py-3 rounded-lg transition-all bg-secondary-container text-on-secondary-container font-bold" data-path="fx-workstation" href="#"><span class="material-symbols-outlined mr-md">currency_exchange</span><span class="font-body-md">FX Workstation</span></a></nav><div class="p-gutter border-t border-outline-variant/30"><div class="flex items-center gap-sm p-sm rounded-xl bg-surface-container"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div><div class="flex-1 overflow-hidden"><p class="text-body-sm font-label-caps truncate">John Doe</p><p class="text-[10px] text-on-surface-variant">Private Wealth</p></div><span class="material-symbols-outlined text-on-surface-variant text-sm">settings</span></div></div></aside><div class="pl-72"><header class="fixed top-0 left-72 right-0 h-20 bg-surface/80 backdrop-blur-xl z-40 px-gutter flex items-center justify-between border-b border-outline-variant/20 shadow-sm"><div class="flex items-center gap-md"><div class="flex items-center gap-xs px-md py-2 bg-surface-container-lowest border border-outline-variant rounded-full shadow-sm"><span class="w-2 h-2 rounded-full bg-success"></span><span class="font-label-caps text-on-surface-variant uppercase">Active:</span><span class="font-data-tabular text-currency-primary font-bold">USD</span></div><div class="h-8 w-[1px] bg-outline-variant"></div><div class="relative group"><button class="flex items-center gap-sm px-md py-2 rounded-lg bg-surface-container-high hover:bg-primary hover:text-on-primary transition-all"><span class="material-symbols-outlined text-sm">currency_exchange</span><span class="font-label-caps">Multi-Currency</span><span class="material-symbols-outlined text-sm">expand_more</span></button><div class="absolute top-full mt-xs left-0 w-64 bg-surface-container-lowest rounded-xl shadow-[0_10px_25px_-5px_rgba(11,28,48,0.1)] border border-outline-variant hidden group-hover:block py-sm z-50"><div class="px-md py-xs text-xs font-label-caps text-on-surface-variant">Select View</div><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">Global (Total)</span><span class="material-symbols-outlined text-sm">public</span></button><div class="h-[1px] bg-outline-variant my-xs mx-md"></div><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">US Dollar</span><span class="font-data-tabular">USD</span></button><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">Euro</span><span class="font-data-tabular">EUR</span></button><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">PK Rupee</span><span class="font-data-tabular">PKR</span></button><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">QA Riyal</span><span class="font-data-tabular">QAR</span></button></div></div></div><div class="flex items-center gap-gutter"><div class="relative flex items-center bg-surface-container px-md py-2 rounded-lg border border-outline-variant"><span class="material-symbols-outlined text-on-surface-variant mr-sm">search</span><input class="bg-transparent border-none outline-none text-sm text-on-surface w-48 placeholder:text-on-surface-variant" placeholder="Search portfolios..." type="text"/></div><button class="p-sm rounded-full hover:bg-surface-container-high transition-colors relative"><span class="material-symbols-outlined text-on-surface-variant">notifications</span><span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-surface"></span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center cursor-pointer"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></header><main class="relative pt-20 bg-surface min-h-screen"><div class="flex flex-col w-full h-[calc(100vh-80px)] overflow-hidden bg-background font-body-md text-on-background relative">
+<!-- Interactive Background Element -->
+<div class="absolute inset-0 z-0 pointer-events-none overflow-hidden flex justify-end opacity-20">
+<svg height="100%" preserveaspectratio="none" viewbox="0 0 1000 1000" width="100%">
+<defs>
+<lineargradient id="grid-fade" x1="0%" x2="0%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="var(--tw-colors-primary-fixed)" stop-opacity="0.3"></stop>
+<stop offset="100%" stop-color="var(--tw-colors-primary-fixed)" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+<path d="M 0 0 L 1000 0 L 1000 1000 L 0 1000 Z" fill="url(#grid-fade)"></path>
+<!-- Simulating a chart grid overlay -->
+<g stroke="var(--tw-colors-outline-variant)" stroke-opacity="0.5" stroke-width="1">
+<line x1="0" x2="1000" y1="200" y2="200"></line>
+<line x1="0" x2="1000" y1="400" y2="400"></line>
+<line x1="0" x2="1000" y1="600" y2="600"></line>
+<line x1="0" x2="1000" y1="800" y2="800"></line>
+<line x1="200" x2="200" y1="0" y2="1000"></line>
+<line x1="400" x2="400" y1="0" y2="1000"></line>
+<line x1="600" x2="600" y1="0" y2="1000"></line>
+<line x1="800" x2="800" y1="0" y2="1000"></line>
+</g>
+</svg>
+</div>
+<!-- Ticker Tape (Real-time QSE Indices) -->
+<div class="w-full h-12 bg-inverse-surface text-inverse-on-surface flex items-center overflow-hidden whitespace-nowrap z-10 shadow-sm flex-shrink-0 relative">
+<div class="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-inverse-surface to-transparent z-10"></div>
+<div class="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-inverse-surface to-transparent z-10"></div>
+<div class="animate-marquee flex items-center gap-8 pl-8 pr-8" style="animation: marquee 30s linear infinite;">
+<div class="flex items-center gap-2">
+<span class="font-label-caps text-on-tertiary-fixed-variant bg-tertiary-fixed px-2 py-0.5 rounded-sm">QE Index</span>
+<span class="font-data-tabular font-bold">10,452.30</span>
+<span class="text-secondary-fixed-dim font-data-tabular flex items-center text-sm"><span class="material-symbols-outlined text-[16px]">arrow_drop_up</span> 45.20 (0.43%)</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-label-caps text-on-primary-fixed-variant bg-primary-fixed px-2 py-0.5 rounded-sm">QE Al Rayan</span>
+<span class="font-data-tabular font-bold">4,120.85</span>
+<span class="text-error font-data-tabular flex items-center text-sm"><span class="material-symbols-outlined text-[16px]">arrow_drop_down</span> -12.40 (-0.30%)</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-label-caps text-on-primary-fixed-variant bg-primary-fixed px-2 py-0.5 rounded-sm">QE All Share</span>
+<span class="font-data-tabular font-bold">3,580.15</span>
+<span class="text-secondary-fixed-dim font-data-tabular flex items-center text-sm"><span class="material-symbols-outlined text-[16px]">arrow_drop_up</span> 18.75 (0.52%)</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-label-caps text-inverse-on-surface bg-surface-tint px-2 py-0.5 rounded-sm">QNBK</span>
+<span class="font-data-tabular font-bold">15.40</span>
+<span class="text-secondary-fixed-dim font-data-tabular flex items-center text-sm"><span class="material-symbols-outlined text-[16px]">arrow_drop_up</span> 0.15 (0.98%)</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-label-caps text-inverse-on-surface bg-surface-tint px-2 py-0.5 rounded-sm">QIBK</span>
+<span class="font-data-tabular font-bold">19.85</span>
+<span class="text-error font-data-tabular flex items-center text-sm"><span class="material-symbols-outlined text-[16px]">arrow_drop_down</span> -0.05 (-0.25%)</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-label-caps text-inverse-on-surface bg-surface-tint px-2 py-0.5 rounded-sm">IQCD</span>
+<span class="font-data-tabular font-bold">13.20</span>
+<span class="text-secondary-fixed-dim font-data-tabular flex items-center text-sm"><span class="material-symbols-outlined text-[16px]">arrow_drop_up</span> 0.22 (1.69%)</span>
+</div>
+</div>
+</div>
+<!-- Main Workstation Layout -->
+<div class="flex-1 p-xs md:p-sm lg:p-md gap-xs md:gap-sm lg:gap-md grid grid-cols-12 grid-rows-[auto_1fr] overflow-y-auto z-10">
+<!-- Top Row: Main Chart & Order Entry -->
+<div class="col-span-12 lg:col-span-9 flex flex-col gap-sm">
+<!-- Chart Header Controls -->
+<div class="bg-surface-container-lowest rounded-xl p-sm shadow-sm flex flex-wrap items-center justify-between gap-sm">
+<div class="flex items-center gap-md">
+<div class="flex items-center gap-xs">
+<div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-on-primary font-headline-sm">Q</div>
+<div>
+<h1 class="font-headline-sm text-headline-sm text-on-surface m-0 leading-tight">QNBK</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant m-0">Qatar National Bank Q.P.S.C.</p>
+</div>
+</div>
+<div class="h-8 w-px bg-outline-variant hidden md:block"></div>
+<div class="flex flex-col">
+<span class="font-headline-md text-headline-md text-on-surface m-0 leading-none">15.40 <span class="font-label-caps text-label-caps text-on-surface-variant">QAR</span></span>
+<span class="font-body-sm text-body-sm text-secondary flex items-center gap-1"><span class="material-symbols-outlined text-sm">arrow_upward</span> +0.15 (+0.98%)</span>
+</div>
+</div>
+<div class="flex items-center gap-xs bg-surface-container-low p-1 rounded-lg">
+<button class="px-3 py-1.5 rounded-md font-label-caps text-label-caps text-on-surface-variant hover:bg-surface-container-high transition-colors">1D</button>
+<button class="px-3 py-1.5 rounded-md font-label-caps text-label-caps text-on-surface-variant hover:bg-surface-container-high transition-colors">1W</button>
+<button class="px-3 py-1.5 rounded-md font-label-caps text-label-caps bg-primary text-on-primary shadow-sm">1M</button>
+<button class="px-3 py-1.5 rounded-md font-label-caps text-label-caps text-on-surface-variant hover:bg-surface-container-high transition-colors">3M</button>
+<button class="px-3 py-1.5 rounded-md font-label-caps text-label-caps text-on-surface-variant hover:bg-surface-container-high transition-colors">YTD</button>
+<div class="w-px h-4 bg-outline-variant mx-1"></div>
+<button class="p-1.5 rounded-md text-on-surface-variant hover:bg-surface-container-high transition-colors"><span class="material-symbols-outlined text-[20px]">candlestick_chart</span></button>
+<button class="p-1.5 rounded-md text-on-surface-variant hover:bg-surface-container-high transition-colors"><span class="material-symbols-outlined text-[20px]">show_chart</span></button>
+<button class="p-1.5 rounded-md text-on-surface-variant hover:bg-surface-container-high transition-colors"><span class="material-symbols-outlined text-[20px]">settings</span></button>
+</div>
+</div>
+<!-- Advanced Technical Chart (Mockup with SVG) -->
+<div class="flex-1 bg-inverse-surface rounded-xl shadow-md p-sm relative min-h-[400px] flex flex-col group">
+<!-- Grid overlay for dark chart -->
+<div class="absolute inset-0 p-sm pb-8 pl-12 pointer-events-none">
+<svg height="100%" preserveaspectratio="none" width="100%">
+<g opacity="0.2" stroke="var(--tw-colors-on-surface-variant)" stroke-dasharray="2,4" stroke-width="0.5">
+<line x1="0" x2="100%" y1="20%" y2="20%"></line>
+<line x1="0" x2="100%" y1="40%" y2="40%"></line>
+<line x1="0" x2="100%" y1="60%" y2="60%"></line>
+<line x1="0" x2="100%" y1="80%" y2="80%"></line>
+<line x1="20%" x2="20%" y1="0" y2="100%"></line>
+<line x1="40%" x2="40%" y1="0" y2="100%"></line>
+<line x1="60%" x2="60%" y1="0" y2="100%"></line>
+<line x1="80%" x2="80%" y1="0" y2="100%"></line>
+</g>
+</svg>
+</div>
+<!-- Y-Axis (Price) -->
+<div class="absolute right-sm top-sm bottom-8 w-12 flex flex-col justify-between items-end font-data-tabular text-[10px] text-inverse-primary pointer-events-none z-10">
+<span>16.00</span>
+<span>15.75</span>
+<span>15.50</span>
+<span class="bg-secondary-fixed-dim text-on-secondary-fixed-variant px-1 rounded">15.40</span>
+<span>15.25</span>
+<span>15.00</span>
+</div>
+<!-- X-Axis (Time) -->
+<div class="absolute bottom-1 left-12 right-14 h-6 flex justify-between items-end font-data-tabular text-[10px] text-inverse-primary pointer-events-none z-10">
+<span>10:00</span>
+<span>11:00</span>
+<span>12:00</span>
+<span>13:00</span>
+<span>14:00</span>
+</div>
+<!-- Candlestick Mockup -->
+<div class="flex-1 w-full relative ml-8 mr-12 mb-6">
+<svg class="absolute inset-0" height="100%" preserveaspectratio="none" viewbox="0 0 100 100" width="100%">
+<!-- Red Candle -->
+<line stroke="var(--tw-colors-error)" stroke-width="0.5" x1="10" x2="10" y1="20" y2="40"></line>
+<rect fill="var(--tw-colors-error)" height="10" width="2" x="9" y="25"></rect>
+<!-- Green Candle -->
+<line stroke="var(--tw-colors-secondary-fixed-dim)" stroke-width="0.5" x1="15" x2="15" y1="35" y2="10"></line>
+<rect fill="var(--tw-colors-secondary-fixed-dim)" height="15" width="2" x="14" y="15"></rect>
+<!-- Red Candle -->
+<line stroke="var(--tw-colors-error)" stroke-width="0.5" x1="20" x2="20" y1="12" y2="30"></line>
+<rect fill="var(--tw-colors-error)" height="12" width="2" x="19" y="15"></rect>
+<!-- Trend Line -->
+<path d="M 5 30 Q 25 15, 50 40 T 95 10" fill="none" opacity="0.5" stroke="var(--tw-colors-primary-fixed)" stroke-dasharray="1,1" stroke-width="0.5"></path>
+<!-- Current Price Line -->
+<line stroke="var(--tw-colors-secondary-fixed-dim)" stroke-dasharray="0.5,0.5" stroke-width="0.2" x1="0" x2="100" y1="10" y2="10"></line>
+</svg>
+<!-- Volume Bars -->
+<div class="absolute bottom-0 left-0 right-0 h-1/4 opacity-30 flex items-end justify-between px-2 gap-0.5">
+<div class="w-full bg-error h-[40%]"></div>
+<div class="w-full bg-secondary-fixed-dim h-[60%]"></div>
+<div class="w-full bg-error h-[30%]"></div>
+<div class="w-full bg-secondary-fixed-dim h-[80%]"></div>
+<div class="w-full bg-error h-[20%]"></div>
+</div>
+</div>
+<!-- Interactive Crosshair (Hover effect) -->
+<div class="absolute inset-0 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200">
+<div class="absolute left-1/2 top-0 bottom-0 w-px bg-outline-variant border-r border-dashed border-outline-variant z-20"></div>
+<div class="absolute top-1/2 left-0 right-0 h-px bg-outline-variant border-b border-dashed border-outline-variant z-20"></div>
+<div class="absolute left-1/2 bottom-0 -ml-4 bg-surface-container px-2 py-1 rounded text-[10px] font-data-tabular text-on-surface z-30 transform translate-y-full mt-1">12:30</div>
+<div class="absolute top-1/2 right-0 -mt-2.5 bg-surface-container px-2 py-1 rounded text-[10px] font-data-tabular text-on-surface z-30 transform translate-x-full ml-1">15.22</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Order Entry & Depth of Market -->
+<div class="col-span-12 lg:col-span-3 flex flex-col gap-sm">
+<!-- Order Entry Panel -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm p-sm flex flex-col gap-sm">
+<h2 class="font-headline-sm text-[18px] text-on-surface m-0 border-b border-outline-variant pb-2">Quick Order</h2>
+<div class="flex bg-surface-container p-1 rounded-lg">
+<button class="flex-1 py-1.5 rounded-md font-label-caps text-label-caps bg-surface-container-lowest text-on-surface shadow-sm">Buy</button>
+<button class="flex-1 py-1.5 rounded-md font-label-caps text-label-caps text-on-surface-variant hover:text-on-surface">Sell</button>
+</div>
+<div class="flex flex-col gap-2 mt-2">
+<div class="relative">
+<label class="absolute -top-2 left-2 bg-surface-container-lowest px-1 font-label-caps text-[10px] text-on-surface-variant">Symbol</label>
+<input class="w-full bg-transparent border border-outline-variant rounded-lg px-3 py-2 font-data-tabular text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-shadow" type="text" value="QNBK"/>
+</div>
+<div class="flex gap-2">
+<div class="relative flex-1">
+<label class="absolute -top-2 left-2 bg-surface-container-lowest px-1 font-label-caps text-[10px] text-on-surface-variant">Qty</label>
+<input class="w-full bg-transparent border border-outline-variant rounded-lg px-3 py-2 font-data-tabular text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-shadow" type="number" value="1000"/>
+</div>
+<div class="relative flex-1">
+<label class="absolute -top-2 left-2 bg-surface-container-lowest px-1 font-label-caps text-[10px] text-on-surface-variant">Price (QAR)</label>
+<input class="w-full bg-transparent border border-outline-variant rounded-lg px-3 py-2 font-data-tabular text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-shadow" type="number" value="15.40"/>
+</div>
+</div>
+<div class="flex justify-between items-center text-sm mt-2 p-2 bg-surface-container-low rounded-lg">
+<span class="font-body-sm text-on-surface-variant">Est. Total</span>
+<span class="font-data-tabular font-bold text-on-surface">15,400.00 QAR</span>
+</div>
+<button class="w-full py-3 rounded-lg bg-secondary text-on-secondary font-label-caps hover:bg-on-secondary-fixed-variant transition-colors mt-2 shadow-sm flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">shopping_cart_checkout</span>
+                      Place Buy Order
+                  </button>
+</div>
+</div>
+<!-- Depth of Market (Level 2) -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm p-sm flex-1 flex flex-col min-h-[300px]">
+<div class="flex justify-between items-center border-b border-outline-variant pb-2 mb-2">
+<h2 class="font-headline-sm text-[16px] text-on-surface m-0">Order Book (L2)</h2>
+<span class="font-label-caps text-[10px] text-on-surface-variant bg-surface-container px-2 py-0.5 rounded">QNBK</span>
+</div>
+<!-- Bids / Asks Header -->
+<div class="grid grid-cols-2 gap-4 font-label-caps text-[10px] text-on-surface-variant mb-1 px-1">
+<div class="flex justify-between"><span>Vol</span><span>Bid</span></div>
+<div class="flex justify-between"><span>Ask</span><span>Vol</span></div>
+</div>
+<!-- L2 Data Lines -->
+<div class="flex-1 overflow-y-auto font-data-tabular text-[12px]">
+<div class="grid grid-cols-2 gap-4 py-1 px-1 hover:bg-surface-container transition-colors cursor-pointer relative overflow-hidden group">
+<div class="absolute left-0 top-0 bottom-0 bg-secondary/10 w-[60%] group-hover:bg-secondary/20 transition-colors"></div>
+<div class="flex justify-between text-secondary relative z-10"><span>12,500</span><span>15.39</span></div>
+<div class="flex justify-between text-error relative z-10"><span>15.40</span><span>8,200</span></div>
+<div class="absolute right-0 top-0 bottom-0 bg-error/10 w-[40%] group-hover:bg-error/20 transition-colors"></div>
+</div>
+<div class="grid grid-cols-2 gap-4 py-1 px-1 hover:bg-surface-container transition-colors cursor-pointer relative overflow-hidden group">
+<div class="absolute left-0 top-0 bottom-0 bg-secondary/10 w-[45%] group-hover:bg-secondary/20 transition-colors"></div>
+<div class="flex justify-between text-secondary relative z-10"><span>8,400</span><span>15.38</span></div>
+<div class="flex justify-between text-error relative z-10"><span>15.41</span><span>15,000</span></div>
+<div class="absolute right-0 top-0 bottom-0 bg-error/10 w-[70%] group-hover:bg-error/20 transition-colors"></div>
+</div>
+<div class="grid grid-cols-2 gap-4 py-1 px-1 hover:bg-surface-container transition-colors cursor-pointer relative overflow-hidden group">
+<div class="absolute left-0 top-0 bottom-0 bg-secondary/10 w-[80%] group-hover:bg-secondary/20 transition-colors"></div>
+<div class="flex justify-between text-secondary relative z-10"><span>25,000</span><span>15.37</span></div>
+<div class="flex justify-between text-error relative z-10"><span>15.42</span><span>3,100</span></div>
+<div class="absolute right-0 top-0 bottom-0 bg-error/10 w-[15%] group-hover:bg-error/20 transition-colors"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Row: Portfolio & News -->
+<div class="col-span-12 grid grid-cols-12 gap-sm lg:gap-md">
+<!-- QSE Portfolio Summary -->
+<div class="col-span-12 lg:col-span-8 bg-surface-container-lowest rounded-xl shadow-sm p-sm">
+<div class="flex justify-between items-center mb-sm">
+<h2 class="font-headline-sm text-[18px] text-on-surface m-0">QSE Holdings</h2>
+<div class="font-data-tabular text-on-surface-variant text-sm">Total Val: <span class="text-on-surface font-bold text-base">452,180.50 QAR</span></div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline-variant font-label-caps text-[10px] text-on-surface-variant">
+<th class="py-2 px-2 font-normal">Symbol</th>
+<th class="py-2 px-2 font-normal text-right">Shares</th>
+<th class="py-2 px-2 font-normal text-right">Avg Price</th>
+<th class="py-2 px-2 font-normal text-right">Last Price</th>
+<th class="py-2 px-2 font-normal text-right">Market Val (QAR)</th>
+<th class="py-2 px-2 font-normal text-right">Day P&L</th>
+</tr>
+</thead>
+<tbody class="font-data-tabular text-sm">
+<tr class="border-b border-outline-variant/50 hover:bg-surface-container-low transition-colors">
+<td class="py-2 px-2 font-bold text-on-surface">QNBK</td>
+<td class="py-2 px-2 text-right">10,000</td>
+<td class="py-2 px-2 text-right">14.80</td>
+<td class="py-2 px-2 text-right">15.40</td>
+<td class="py-2 px-2 text-right">154,000.00</td>
+<td class="py-2 px-2 text-right text-secondary">+1,500.00</td>
+</tr>
+<tr class="border-b border-outline-variant/50 hover:bg-surface-container-low transition-colors">
+<td class="py-2 px-2 font-bold text-on-surface">IQCD</td>
+<td class="py-2 px-2 text-right">5,500</td>
+<td class="py-2 px-2 text-right">13.50</td>
+<td class="py-2 px-2 text-right">13.20</td>
+<td class="py-2 px-2 text-right">72,600.00</td>
+<td class="py-2 px-2 text-right text-error">-1,650.00</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Market News (Qatar specific) -->
+<div class="col-span-12 lg:col-span-4 bg-surface-container-lowest rounded-xl shadow-sm p-sm flex flex-col">
+<div class="flex justify-between items-center mb-sm border-b border-outline-variant pb-2">
+<h2 class="font-headline-sm text-[18px] text-on-surface m-0 flex items-center gap-1"><span class="material-symbols-outlined text-primary text-[20px]">feed</span> QSE News</h2>
+<button class="text-[10px] font-label-caps text-primary hover:underline">View All</button>
+</div>
+<div class="flex-1 overflow-y-auto space-y-3">
+<a class="block group" href="#">
+<div class="font-label-caps text-[10px] text-on-surface-variant mb-0.5 flex justify-between">
+<span>QNA</span>
+<span>10:45 AM</span>
+</div>
+<h3 class="font-body-sm text-sm font-bold text-on-surface group-hover:text-primary transition-colors line-clamp-2">Qatar Central Bank issues treasury bills worth QAR 1.5 billion</h3>
+</a>
+<div class="h-px w-full bg-outline-variant/50"></div>
+<a class="block group" href="#">
+<div class="font-label-caps text-[10px] text-on-surface-variant mb-0.5 flex justify-between">
+<span>Reuters</span>
+<span>09:12 AM</span>
+</div>
+<h3 class="font-body-sm text-sm font-bold text-on-surface group-hover:text-primary transition-colors line-clamp-2">QNB Group reports 7% increase in Q3 net profit, beating estimates</h3>
+</a>
+<div class="h-px w-full bg-outline-variant/50"></div>
+<a class="block group" href="#">
+<div class="font-label-caps text-[10px] text-on-surface-variant mb-0.5 flex justify-between">
+<span>Bloomberg</span>
+<span>Yesterday</span>
+</div>
+<h3 class="font-body-sm text-sm font-bold text-on-surface group-hover:text-primary transition-colors line-clamp-2">Qatar Energy signs new LNG supply deal with Asian buyers</h3>
+</a>
+</div>
+</div>
+</div>
+</div>
+</div>
+<style>
+  @keyframes marquee {
+      0% { transform: translateX(0%); }
+      100% { transform: translateX(-50%); }
+  }
+</style></main></div></body></html>

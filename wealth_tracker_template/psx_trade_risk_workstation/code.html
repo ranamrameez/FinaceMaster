@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>WealthPro - PSX Trade &amp; Risk Workstation</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Manrope:wght@600;700&amp;family=Work+Sans:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                            "surface-container-high": "#dce9ff",
+                            "on-secondary-fixed": "#002113",
+                            "secondary-fixed-dim": "#4edea3",
+                            "on-primary": "#ffffff",
+                            "primary-fixed": "#dae2fd",
+                            "surface-variant": "#d3e4fe",
+                            "inverse-primary": "#bec6e0",
+                            "inverse-surface": "#213145",
+                            "surface-container-highest": "#d3e4fe",
+                            "outline-variant": "#c6c6cd",
+                            "surface-tint": "#565e74",
+                            "error": "#ba1a1a",
+                            "on-tertiary": "#ffffff",
+                            "outline": "#76777d",
+                            "secondary-fixed": "#6ffbbe",
+                            "on-error-container": "#93000a",
+                            "on-secondary-fixed-variant": "#005236",
+                            "on-primary-container": "#7c839b",
+                            "error-container": "#ffdad6",
+                            "secondary-container": "#6cf8bb",
+                            "surface-container": "#e5eeff",
+                            "secondary": "#006c49",
+                            "background": "#f8f9ff",
+                            "tertiary-fixed": "#ffddb8",
+                            "on-error": "#ffffff",
+                            "on-secondary": "#ffffff",
+                            "on-surface-variant": "#45464d",
+                            "on-tertiary-fixed": "#2a1700",
+                            "surface-dim": "#cbdbf5",
+                            "tertiary-container": "#2a1700",
+                            "on-background": "#0b1c30",
+                            "primary-fixed-dim": "#bec6e0",
+                            "on-secondary-container": "#00714d",
+                            "surface-container-low": "#eff4ff",
+                            "surface": "#f8f9ff",
+                            "on-tertiary-container": "#b87500",
+                            "primary": "#000000",
+                            "surface-bright": "#f8f9ff",
+                            "tertiary-fixed-dim": "#ffb95f",
+                            "on-primary-fixed-variant": "#3f465c",
+                            "on-surface": "#0b1c30",
+                            "on-primary-fixed": "#131b2e",
+                            "primary-container": "#131b2e",
+                            "inverse-on-surface": "#eaf1ff",
+                            "on-tertiary-fixed-variant": "#653e00",
+                            "tertiary": "#000000",
+                            "surface-container-lowest": "#ffffff"
+                    },
+                    "borderRadius": {
+                            "DEFAULT": "0.125rem",
+                            "lg": "0.25rem",
+                            "xl": "0.5rem",
+                            "full": "0.75rem"
+                    },
+                    "spacing": {
+                            "lg": "48px",
+                            "gutter": "24px",
+                            "container-max": "1440px",
+                            "md": "24px",
+                            "xl": "80px",
+                            "xs": "8px",
+                            "base": "4px",
+                            "sm": "16px"
+                    },
+                    "fontFamily": {
+                            "body-lg": ["Work Sans"],
+                            "display-lg": ["Manrope"],
+                            "label-caps": ["Work Sans"],
+                            "body-md": ["Work Sans"],
+                            "data-tabular": ["JetBrains Mono"],
+                            "headline-sm": ["Manrope"],
+                            "body-sm": ["Work Sans"],
+                            "headline-md": ["Manrope"]
+                    },
+                    "fontSize": {
+                            "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                            "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                            "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                            "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                            "data-tabular": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                            "headline-sm": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                            "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                            "headline-md": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom Scrollbar for data tables */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #c6c6cd; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #76777d; }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md h-screen overflow-hidden flex">
+<!-- SideNavBar -->
+<nav class="bg-surface-container-low dark:bg-inverse-surface h-screen w-64 fixed left-0 top-0 flex flex-col py-md px-sm border-r border-outline-variant z-40">
+<div class="mb-xl px-xs">
+<h1 class="font-display-lg text-headline-sm font-bold text-primary dark:text-inverse-primary">WealthPro</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Premium Management</p>
+</div>
+<div class="flex-1 overflow-y-auto space-y-2">
+<a class="flex items-center gap-4 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-4 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">account_balance</span>
+                Banking
+            </a>
+<a class="flex items-center gap-4 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">trending_up</span>
+                Investments
+            </a>
+<a class="flex items-center gap-4 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">payments</span>
+                Loans
+            </a>
+<a class="flex items-center gap-4 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">subscriptions</span>
+                Subscriptions
+            </a>
+<a class="flex items-center gap-4 px-4 py-3 rounded-lg text-primary dark:text-primary-fixed-dim font-bold border-r-4 border-secondary bg-surface-container-high font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined fill">show_chart</span>
+                Stock Exchange
+            </a>
+</div>
+<div class="mt-auto pt-6 border-t border-outline-variant">
+<button class="w-full bg-primary text-on-primary font-label-caps text-label-caps py-3 rounded-lg hover:bg-primary-container transition-colors mb-4">
+                Open New Account
+            </button>
+<div class="space-y-1">
+<a class="flex items-center gap-4 px-4 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors font-body-sm text-body-sm" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+                    Settings
+                </a>
+<a class="flex items-center gap-4 px-4 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors font-body-sm text-body-sm" href="#">
+<span class="material-symbols-outlined text-[20px]">help_outline</span>
+                    Support
+                </a>
+</div>
+<div class="mt-4 flex items-center gap-3 px-2">
+<img alt="User Profile" class="w-10 h-10 rounded-full object-cover border border-outline-variant" data-alt="A professional headshot of a financial advisor in a modern office setting. Crisp white lighting, modern corporate aesthetic. High resolution." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCVbRmfN2sRODAyp5a1UsyLIxEgP_UewpZBwszSKycGscJPtD5HUvjTO_XwX7dhaWHpsSzF0IYmg2b3xAar8e-nH4DghcD4C2YYMUHUVeZ8rV07EWKkRfQ0NkqNsXovI1Pou7CZZTYPzySePbeHVqlCQ5_uRws0cMuTe-u_KZhLhY0KKupIp4ubG7kDW83tzz-2sBZtotD2LchlQ3KMMk6Aqu7XzftUAC0xjVqCKZBBWmEF2kMxmEMc"/>
+<div>
+<p class="font-label-caps text-label-caps text-primary">A. Khan</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">ID: 849201</p>
+</div>
+</div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<div class="flex-1 ml-64 flex flex-col h-screen overflow-hidden bg-background">
+<!-- TopNavBar -->
+<header class="bg-surface dark:bg-surface-dim border-b border-outline-variant dark:border-outline docked full-width top-0 sticky z-50 flex justify-between items-center h-16 px-xl duration-200 ease-in-out">
+<div class="flex items-center gap-8">
+<!-- Search (on_left logic from JSON) -->
+<div class="relative w-64 hidden lg:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full bg-surface-container-low border border-outline-variant rounded-full py-1.5 pl-10 pr-4 font-body-sm text-body-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" placeholder="Search ticker..." type="text"/>
+</div>
+<nav class="hidden md:flex gap-6">
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors py-5 border-b-2 border-transparent" href="#">Global View</a>
+<a class="font-body-sm text-body-sm text-primary dark:text-primary-fixed-dim border-b-2 border-primary py-5 font-semibold" href="#">Analytics</a>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors py-5 border-b-2 border-transparent" href="#">Reports</a>
+</nav>
+</div>
+<div class="flex items-center gap-6">
+<div class="font-data-tabular text-data-tabular text-on-surface-variant bg-surface-container-low px-3 py-1 rounded border border-outline-variant">
+                    Currency: <span class="font-semibold text-primary">PKR</span>
+</div>
+<div class="flex items-center gap-4 text-outline">
+<button class="hover:text-primary transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-0 right-0 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<button class="hover:text-primary transition-colors md:hidden">
+<span class="material-symbols-outlined">search</span>
+</button>
+<button class="hover:text-primary transition-colors hidden md:block">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Scrollable Canvas -->
+<main class="flex-1 overflow-y-auto p-8 lg:p-12 xl:p-gutter max-w-container-max mx-auto w-full">
+<div class="flex justify-between items-end mb-8">
+<div>
+<h2 class="font-headline-md text-headline-md text-primary mb-1">PSX Trade &amp; Risk Workstation</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Advanced capital gains &amp; levy calculator for KSE-100 equities.</p>
+</div>
+<div class="flex items-center gap-3 bg-surface-container px-4 py-2 rounded-lg border border-outline-variant">
+<span class="relative flex h-3 w-3">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-secondary"></span>
+</span>
+<span class="font-label-caps text-label-caps text-on-surface">MARKET OPEN</span>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Left Column: Tax & Fee Configuration (4 cols) -->
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+<!-- Filer Status Card -->
+<div class="bg-surface rounded-xl border border-outline-variant p-6 shadow-sm">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-headline-sm text-headline-sm text-primary">Tax Status</h3>
+<span class="material-symbols-outlined text-outline">gavel</span>
+</div>
+<div class="flex p-1 bg-surface-container-low rounded-lg border border-outline-variant mb-6">
+<button class="flex-1 py-2 font-label-caps text-label-caps rounded-md bg-primary text-on-primary shadow-sm transition-all text-center">
+                                FILER (15%)
+                            </button>
+<button class="flex-1 py-2 font-label-caps text-label-caps rounded-md text-on-surface-variant hover:bg-surface-variant transition-all text-center">
+                                NON-FILER (45%)
+                            </button>
+</div>
+<div class="space-y-4">
+<h4 class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Statutory Levies Breakdown</h4>
+<div class="flex justify-between items-center py-2 border-b border-outline-variant border-dashed">
+<span class="font-body-sm text-body-sm text-on-surface">Sindh Sales Tax (SST)</span>
+<span class="font-data-tabular text-data-tabular text-primary">13.00%</span>
+</div>
+<div class="flex justify-between items-center py-2 border-b border-outline-variant border-dashed">
+<span class="font-body-sm text-body-sm text-on-surface">Capital Value Tax (CVT)</span>
+<span class="font-data-tabular text-data-tabular text-primary">0.01%</span>
+</div>
+<div class="flex justify-between items-center py-2 border-b border-outline-variant border-dashed">
+<span class="font-body-sm text-body-sm text-on-surface">Advance Tax</span>
+<span class="font-data-tabular text-data-tabular text-primary">0.02%</span>
+</div>
+<h4 class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider pt-2">Institutional Fees</h4>
+<div class="flex justify-between items-center py-2 border-b border-outline-variant border-dashed">
+<span class="font-body-sm text-body-sm text-on-surface">PSX / SECP / NCCPL / CDC</span>
+<span class="font-data-tabular text-data-tabular text-primary">~0.015%</span>
+</div>
+<div class="flex justify-between items-center py-2 bg-surface-container-low px-2 rounded -mx-2">
+<span class="font-label-caps text-label-caps text-on-surface font-semibold">Total Cost per Side</span>
+<span class="font-data-tabular text-data-tabular font-bold text-primary">~0.15%</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

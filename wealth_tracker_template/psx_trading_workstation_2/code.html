@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}.sidebar-transition{transition:width 0.3s cubic-bezier(0.4, 0, 0.2, 1);}.nav-group:not(:last-child){margin-bottom:16px;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"inverse-primary":"#bec6e0","surface-tint":"#565e74","on-tertiary-fixed":"#2a1700","background":"#f8f9ff","surface-bright":"#f8f9ff","surface-container":"#e5eeff","primary":"#000000","surface-container-high":"#dce9ff","on-secondary-container":"#00714d","on-surface":"#0b1c30","primary-fixed-dim":"#bec6e0","on-secondary":"#ffffff","on-background":"#0b1c30","surface":"#f8f9ff","tertiary-fixed":"#ffddb8","on-tertiary-fixed-variant":"#653e00","outline":"#76777d","surface-variant":"#d3e4fe","primary-fixed":"#dae2fd","on-surface-variant":"#45464d","on-primary":"#ffffff","on-secondary-fixed":"#002113","on-tertiary-container":"#b87500","on-tertiary":"#ffffff","inverse-on-surface":"#eaf1ff","on-primary-fixed":"#131b2e","outline-variant":"#c6c6cd","surface-container-highest":"#d3e4fe","inverse-surface":"#213145","secondary-container":"#6cf8bb","secondary":"#006c49","on-secondary-fixed-variant":"#005236","on-primary-container":"#7c839b","surface-container-low":"#eff4ff","error-container":"#ffdad6","secondary-fixed-dim":"#4edea3","surface-dim":"#cbdbf5","tertiary-container":"#2a1700","secondary-fixed":"#6ffbbe","primary-container":"#131b2e","on-error":"#ffffff","surface-container-lowest":"#ffffff","error":"#ba1a1a","on-error-container":"#93000a","tertiary-fixed-dim":"#ffb95f","tertiary":"#000000","on-primary-fixed-variant":"#3f465c"},"borderRadius":{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},"spacing":{"sm":"16px","gutter":"24px","md":"24px","base":"4px","xs":"8px","container-max":"1440px","lg":"48px","xl":"80px"},"fontFamily":{"data-tabular":["JetBrains Mono"],"display-lg":["Manrope"],"body-md":["Work Sans"],"body-lg":["Work Sans"],"headline-md":["Manrope"],"label-caps":["Work Sans"],"body-sm":["Work Sans"],"headline-sm":["Manrope"]},"fontSize":{"data-tabular":["14px",{"lineHeight":"20px","fontWeight":"500"}],"display-lg":["48px",{"lineHeight":"56px","letterSpacing":"-0.02em","fontWeight":"700"}],"body-md":["16px",{"lineHeight":"24px","fontWeight":"400"}],"body-lg":["18px",{"lineHeight":"28px","fontWeight":"400"}],"headline-md":["32px",{"lineHeight":"40px","letterSpacing":"-0.01em","fontWeight":"600"}],"label-caps":["12px",{"lineHeight":"16px","letterSpacing":"0.05em","fontWeight":"600"}],"body-sm":["14px",{"lineHeight":"20px","fontWeight":"400"}],"headline-sm":["24px",{"lineHeight":"32px","fontWeight":"600"}]}}}}</script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@100..900&family=Work+Sans:wght@100..900&display=swap" rel="stylesheet"/></head><body class="bg-surface font-body-md text-on-surface"><aside class="sidebar-transition fixed left-0 top-0 h-full w-72 bg-surface-container-low z-50 flex flex-col border-r border-outline-variant/30 shadow-[4px_0_24px_rgba(0,0,0,0.02)] overflow-hidden" id="main-sidebar"><div class="px-gutter h-20 flex items-center shrink-0 mb-xs"><div class="flex items-center gap-sm"><div class="w-10 h-10 bg-primary flex items-center justify-center rounded-xl shrink-0"><span class="material-symbols-outlined text-on-primary">payments</span></div><span class="font-headline-sm text-headline-sm tracking-tight text-primary whitespace-nowrap overflow-hidden sidebar-label">WealthPro</span></div></div><nav class="flex-1 px-sm overflow-y-auto space-y-base custom-scrollbar" data-active-classes="bg-secondary-container text-on-secondary-container font-bold"><div class="nav-group"><p class="px-md py-xs text-[10px] font-label-caps text-on-surface-variant uppercase tracking-widest sidebar-label">Wealth Overview</p><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="dashboard" href="#">Dashboard</a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="unified-summary" href="#">Unified Summary</a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="forecast" href="#">Forecast</a></div><div class="nav-group"><p class="px-md py-xs text-[10px] font-label-caps text-on-surface-variant uppercase tracking-widest sidebar-label">Markets</p><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="stock-exchange" href="#">Stock Exchange</a><a aria-current="page" class="flex items-center px-md py-3 rounded-lg transition-all bg-secondary-container text-on-secondary-container font-bold" data-path="psx-workstation" href="#">PSX Workstation</a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="qse-workstation" href="#">QSE Workstation</a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="fx-workstation" href="#">FX Workstation</a></div><div class="nav-group"><p class="px-md py-xs text-[10px] font-label-caps text-on-surface-variant uppercase tracking-widest sidebar-label">Asset Management</p><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="banking-loans" href="#">Banking & Loans</a><div class="pl-sm border-l border-outline-variant/30 ml-md my-xs"><a class="block px-sm py-2 text-body-sm text-on-surface-variant/80 hover:text-primary transition-colors" data-path="global-checking" href="#">Global Checking</a><a class="block px-sm py-2 text-body-sm text-on-surface-variant/80 hover:text-primary transition-colors" data-path="savings" href="#">Savings Account</a><a class="block px-sm py-2 text-body-sm text-on-surface-variant/80 hover:text-primary transition-colors" data-path="investment-account" href="#">Investment Account</a></div><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="property-management" href="#">Property Management</a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="cash-physical-assets" href="#">Cash & Physical Assets</a></div><div class="nav-group"><p class="px-md py-xs text-[10px] font-label-caps text-on-surface-variant uppercase tracking-widest sidebar-label">Operations</p><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="transfer-hub" href="#">Transfer Hub</a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="transaction-history" href="#">Transaction History</a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="alerts-notifications" href="#">Alerts & Notifications</a></div></nav><div class="p-gutter border-t border-outline-variant/30 mt-auto shrink-0"><button class="w-full flex items-center justify-center p-sm rounded-xl bg-surface-container hover:bg-surface-container-high transition-colors" onclick="const s=document.getElementById('main-sidebar'); const m=document.getElementById('main-content'); const l=document.querySelectorAll('.sidebar-label'); if(s.classList.contains('w-72')){s.classList.replace('w-72','w-20'); m.classList.replace('pl-72','pl-20'); l.forEach(x=>x.classList.add('hidden'));}else{s.classList.replace('w-20','w-72'); m.classList.replace('pl-20','pl-72'); l.forEach(x=>x.classList.remove('hidden'));}"><span class="material-symbols-outlined text-on-surface-variant">menu_open</span></button></div></aside><div class="sidebar-transition pl-72" id="main-content"><header class="fixed top-0 left-0 right-0 h-20 bg-surface/80 backdrop-blur-xl z-40 px-gutter flex items-center justify-between border-b border-outline-variant/20 shadow-sm ml-auto sidebar-transition pl-[inherit]"><div class="flex items-center gap-md"><div class="flex items-center gap-xs px-md py-2 bg-surface-container-lowest border border-outline-variant rounded-full shadow-sm"><span class="w-2 h-2 rounded-full bg-secondary"></span><span class="font-label-caps text-on-surface-variant uppercase">Active:</span><span class="font-data-tabular text-on-surface font-bold">USD</span></div><div class="h-8 w-[1px] bg-outline-variant"></div><div class="relative group"><button class="flex items-center gap-sm px-md py-2 rounded-lg bg-surface-container-high hover:bg-primary hover:text-on-primary transition-all"><span class="material-symbols-outlined text-sm">currency_exchange</span><span class="font-label-caps">Multi-Currency</span><span class="material-symbols-outlined text-sm">expand_more</span></button><div class="absolute top-full mt-xs left-0 w-64 bg-surface-container-lowest rounded-xl shadow-[0_10px_25px_-5px_rgba(11,28,48,0.1)] border border-outline-variant hidden group-hover:block py-sm z-50"><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">Global (Total)</span><span class="material-symbols-outlined text-sm">public</span></button><div class="h-[1px] bg-outline-variant my-xs mx-md"></div><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">US Dollar</span><span class="font-data-tabular">USD</span></button><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">Euro</span><span class="font-data-tabular">EUR</span></button></div></div></div><div class="flex items-center gap-gutter"><div class="relative flex items-center bg-surface-container px-md py-2 rounded-lg border border-outline-variant"><span class="material-symbols-outlined text-on-surface-variant mr-sm">search</span><input class="bg-transparent border-none outline-none text-sm text-on-surface w-48 placeholder:text-on-surface-variant" placeholder="Search portfolios..." type="text"/></div><button class="p-sm rounded-full hover:bg-surface-container-high transition-colors relative"><span class="material-symbols-outlined text-on-surface-variant">notifications</span><span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-surface"></span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center cursor-pointer"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></header><main class="relative pt-20 bg-surface min-h-screen"><div class="flex flex-col w-full h-full relative overflow-hidden bg-background">
+<!-- Header Summary Section -->
+<div class="flex-none px-gutter py-md bg-surface-container-lowest z-10 sticky top-0 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.05)]">
+<div class="flex flex-row justify-between items-end max-w-[container-max] mx-auto">
+<div>
+<h1 class="font-display-lg text-display-lg text-on-surface mb-2">PSX Workstation</h1>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-2xl">Real-time market analysis, active order flow, and risk management tailored for the Pakistan Stock Exchange.</p>
+</div>
+<div class="flex gap-md">
+<div class="flex flex-col items-end">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider mb-1">KSE-100 INDEX</span>
+<div class="flex items-baseline gap-2">
+<span class="font-headline-md text-headline-md text-on-surface">64,289.45</span>
+<span class="font-data-tabular text-data-tabular text-secondary bg-secondary-container px-2 py-0.5 rounded-full">+1.24%</span>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider mb-1">MARKET VOL</span>
+<div class="flex items-baseline gap-2">
+<span class="font-headline-md text-headline-md text-on-surface">345.2M</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Main Content Area - Scrollable -->
+<div class="flex-1 overflow-y-auto px-gutter py-xl">
+<div class="max-w-[container-max] mx-auto flex flex-col gap-xl">
+<!-- Top Grid: Chart & Active Positions -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- Main Chart Area -->
+<div class="lg:col-span-8 bg-surface-container-lowest rounded-2xl shadow-sm p-6 flex flex-col min-h-[500px]">
+<div class="flex justify-between items-center mb-6">
+<div class="flex items-center gap-4">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Technical Analysis</h2>
+<div class="flex bg-surface-container p-1 rounded-lg">
+<button class="px-4 py-1.5 rounded-md font-label-caps text-label-caps text-on-surface bg-surface-container-lowest shadow-sm">KSE100</button>
+<button class="px-4 py-1.5 rounded-md font-label-caps text-label-caps text-on-surface-variant hover:text-on-surface">OGDC</button>
+<button class="px-4 py-1.5 rounded-md font-label-caps text-label-caps text-on-surface-variant hover:text-on-surface">PPL</button>
+<button class="px-4 py-1.5 rounded-md font-label-caps text-label-caps text-on-surface-variant hover:text-on-surface">TRG</button>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="w-8 h-8 flex items-center justify-center rounded-full bg-surface-container hover:bg-surface-container-high transition-colors text-on-surface-variant"><span class="material-symbols-outlined text-[20px]">add</span></button>
+<button class="w-8 h-8 flex items-center justify-center rounded-full bg-surface-container hover:bg-surface-container-high transition-colors text-on-surface-variant"><span class="material-symbols-outlined text-[20px]">more_horiz</span></button>
+</div>
+</div>
+<!-- Decorative Chart Area -->
+<div class="flex-1 w-full bg-surface-container-low rounded-xl relative overflow-hidden group">
+<!-- Chart Grid Lines -->
+<div class="absolute inset-0 flex flex-col justify-between py-8 px-4 opacity-30">
+<div class="w-full h-px bg-outline-variant"></div>
+<div class="w-full h-px bg-outline-variant"></div>
+<div class="w-full h-px bg-outline-variant"></div>
+<div class="w-full h-px bg-outline-variant"></div>
+<div class="w-full h-px bg-outline-variant"></div>
+</div>
+<!-- SVG Sparkline (Simulated Candlestick/Line) -->
+<svg class="absolute inset-0 w-full h-full p-4" preserveaspectratio="none" viewbox="0 0 1000 300">
+<defs>
+<lineargradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="var(--color-primary-fixed)" stop-opacity="0.4"></stop>
+<stop offset="100%" stop-color="var(--color-primary-fixed)" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+<path d="M0,250 C50,220 100,280 150,210 S250,150 300,180 S400,90 450,120 S550,40 600,60 S700,20 750,40 S850,10 900,30 L1000,5 L1000,300 L0,300 Z" fill="url(#chartGradient)"></path>
+<path class="text-primary" d="M0,250 C50,220 100,280 150,210 S250,150 300,180 S400,90 450,120 S550,40 600,60 S700,20 750,40 S850,10 900,30 L1000,5" fill="none" stroke="currentColor" stroke-width="2"></path>
+<!-- Simulated Volume Bars -->
+<g class="text-secondary opacity-60">
+<rect fill="currentColor" height="30" width="10" x="50" y="270"></rect>
+<rect fill="currentColor" height="40" width="10" x="150" y="260"></rect>
+<rect fill="currentColor" height="20" width="10" x="250" y="280"></rect>
+<rect fill="currentColor" height="50" width="10" x="350" y="250"></rect>
+</g>
+<g class="text-error opacity-60">
+<rect fill="currentColor" height="25" width="10" x="100" y="275"></rect>
+<rect fill="currentColor" height="45" width="10" x="200" y="255"></rect>
+<rect fill="currentColor" height="15" width="10" x="300" y="285"></rect>
+<rect fill="currentColor" height="60" width="10" x="400" y="240"></rect>
+</g>
+</svg>
+<!-- Chart Overlay Elements -->
+<div class="absolute top-4 right-4 bg-surface-container-lowest/80 backdrop-blur-sm p-3 rounded-lg shadow-sm">
+<div class="font-data-tabular text-data-tabular text-on-surface">O: 63,500.20</div>
+<div class="font-data-tabular text-data-tabular text-on-surface">H: 64,400.15</div>
+<div class="font-data-tabular text-data-tabular text-on-surface">L: 63,450.00</div>
+<div class="font-data-tabular text-data-tabular text-on-surface">C: 64,289.45</div>
+</div>
+</div>
+<div class="mt-4 flex justify-between items-center">
+<div class="flex gap-2">
+<span class="px-2 py-1 bg-surface-container text-on-surface-variant font-label-caps text-label-caps rounded">RSI: 58.4</span>
+<span class="px-2 py-1 bg-surface-container text-on-surface-variant font-label-caps text-label-caps rounded">MACD: Bullish</span>
+</div>
+<div class="font-data-tabular text-data-tabular text-on-surface-variant text-sm">Last Updated: 14:30 PKT</div>
+</div>
+</div>
+<!-- Active Positions & Order Entry -->
+<div class="lg:col-span-4 flex flex-col gap-gutter">
+<!-- Order Entry Ticket -->
+<div class="bg-surface-container-lowest rounded-2xl shadow-sm p-6 flex flex-col">
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-6">Quick Trade</h3>
+<div class="flex bg-surface-container p-1 rounded-lg mb-6">
+<button class="flex-1 py-2 rounded-md font-label-caps text-label-caps text-on-primary bg-primary shadow-sm">BUY</button>
+<button class="flex-1 py-2 rounded-md font-label-caps text-label-caps text-on-surface-variant hover:text-on-surface">SELL</button>
+</div>
+<div class="space-y-4 mb-6">
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-1">Symbol</label>
+<div class="relative">
+<input class="w-full bg-surface-container-low font-data-tabular text-data-tabular text-on-surface px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all" type="text" value="OGDC"/>
+<span class="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant">search</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-1">Quantity</label>
+<input class="w-full bg-surface-container-low font-data-tabular text-data-tabular text-on-surface px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all" type="number" value="1000"/>
+</div>
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-1">Price (PKR)</label>
+<input class="w-full bg-surface-container-low font-data-tabular text-data-tabular text-on-surface px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all" type="number" value="115.50"/>
+</div>
+</div>
+<div class="flex justify-between items-center py-2 px-3 bg-surface-container-low rounded-lg">
+<span class="font-label-caps text-label-caps text-on-surface-variant">Est. Total</span>
+<span class="font-data-tabular text-data-tabular text-on-surface font-bold">115,500.00 PKR</span>
+</div>
+</div>
+<button class="w-full py-4 bg-primary text-on-primary font-body-md text-body-md rounded-xl hover:bg-primary-container hover:text-on-primary-container transition-colors shadow-sm flex justify-center items-center gap-2">
+<span>Submit Order</span>
+<span class="material-symbols-outlined text-[18px]">send</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Lower Grid: Tax Calculator & Watchlist -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- Tax Calculator -->
+<div class="lg:col-span-5 bg-surface-container-lowest rounded-2xl shadow-sm p-6 relative overflow-hidden">
+<div class="absolute top-0 right-0 w-64 h-64 bg-primary-fixed/20 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-2 relative z-10">CGT Calculator</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-6 relative z-10">Capital Gains Tax estimator for PSX equity holdings.</p>
+<div class="space-y-6 relative z-10">
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-container-low p-4 rounded-xl">
+<span class="block font-label-caps text-label-caps text-on-surface-variant mb-2">Holding Period</span>
+<select class="w-full bg-transparent font-data-tabular text-data-tabular text-on-surface outline-none cursor-pointer">
+<option>< 1 Year (15%)</option>
+<option>1-2 Years (12.5%)</option>
+<option>> 2 Years (10%)</option>
+</select>
+</div>
+<div class="bg-surface-container-low p-4 rounded-xl">
+<span class="block font-label-caps text-label-caps text-on-surface-variant mb-2">Filer Status</span>
+<select class="w-full bg-transparent font-data-tabular text-data-tabular text-on-surface outline-none cursor-pointer">
+<option>Active (ATL)</option>
+<option>Non-Filer</option>
+</select>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex-1 bg-surface-container-low p-4 rounded-xl">
+<span class="block font-label-caps text-label-caps text-on-surface-variant mb-1">Realized Gain</span>
+<div class="font-data-tabular text-data-tabular text-on-surface text-lg">500,000 PKR</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">arrow_forward</span>
+<div class="flex-1 bg-error-container p-4 rounded-xl">
+<span class="block font-label-caps text-label-caps text-on-error-container mb-1">Est. Tax Liability</span>
+<div class="font-data-tabular text-data-tabular text-on-error-container font-bold text-lg">75,000 PKR</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Market Movers / Watchlist -->
+<div class="lg:col-span-7 bg-surface-container-lowest rounded-2xl shadow-sm p-6">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Top Movers</h3>
+<button class="font-label-caps text-label-caps text-primary hover:underline">View All</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline-variant/30">
+<th class="py-3 px-2 font-label-caps text-label-caps text-on-surface-variant uppercase">Symbol</th>
+<th class="py-3 px-2 font-label-caps text-label-caps text-on-surface-variant uppercase text-right">Price (PKR)</th>
+<th class="py-3 px-2 font-label-caps text-label-caps text-on-surface-variant uppercase text-right">Change</th>
+<th class="py-3 px-2 font-label-caps text-label-caps text-on-surface-variant uppercase text-right">Vol</th>
+</tr>
+</thead>
+<tbody>
+<tr class="border-b border-outline-variant/10 hover:bg-surface-container-low transition-colors group cursor-pointer">
+<td class="py-3 px-2">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container flex items-center justify-center font-data-tabular text-data-tabular text-on-surface text-xs font-bold">OGD</div>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface font-semibold group-hover:text-primary transition-colors">OGDC</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant text-xs">Oil & Gas Dev</span>
+</div>
+</div>
+</td>
+<td class="py-3 px-2 text-right font-data-tabular text-data-tabular text-on-surface">118.25</td>
+<td class="py-3 px-2 text-right font-data-tabular text-data-tabular text-secondary">+4.50%</td>
+<td class="py-3 px-2 text-right font-data-tabular text-data-tabular text-on-surface-variant">12.5M</td>
+</tr>
+<tr class="border-b border-outline-variant/10 hover:bg-surface-container-low transition-colors group cursor-pointer">
+<td class="py-3 px-2">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container flex items-center justify-center font-data-tabular text-data-tabular text-on-surface text-xs font-bold">SYS</div>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface font-semibold group-hover:text-primary transition-colors">SYS</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant text-xs">Systems Ltd</span>
+</div>
+</div>
+</td>
+<td class="py-3 px-2 text-right font-data-tabular text-data-tabular text-on-surface">425.10</td>
+<td class="py-3 px-2 text-right font-data-tabular text-data-tabular text-secondary">+2.15%</td>
+<td class="py-3 px-2 text-right font-data-tabular text-data-tabular text-on-surface-variant">3.2M</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors group cursor-pointer">
+<td class="py-3 px-2">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container flex items-center justify-center font-data-tabular text-data-tabular text-on-surface text-xs font-bold">TRG</div>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface font-semibold group-hover:text-primary transition-colors">TRG</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant text-xs">TRG Pakistan</span>
+</div>
+</div>
+</td>
+<td class="py-3 px-2 text-right font-data-tabular text-data-tabular text-on-surface">78.40</td>
+<td class="py-3 px-2 text-right font-data-tabular text-data-tabular text-error">-1.80%</td>
+<td class="py-3 px-2 text-right font-data-tabular text-data-tabular text-on-surface-variant">8.9M</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div></main></div></body></html>

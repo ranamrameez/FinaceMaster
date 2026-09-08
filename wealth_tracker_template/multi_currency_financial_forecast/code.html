@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"success":"#006c49","error-container":"#ffdad6","on-secondary":"#ffffff","inverse-on-surface":"#eff0f6","on-tertiary-fixed-variant":"#3e465b","inverse-surface":"#2e3135","surface-container-low":"#f2f3f9","primary-container":"#1b1b1b","primary":"#000000","primary-fixed":"#e2e2e2","tertiary-fixed":"#dae2fc","tertiary":"#000000","surface-tint":"#5e5e5e","outline":"#7e7576","surface-container-high":"#e7e8ee","surface-bright":"#f8f9ff","surface-container-lowest":"#ffffff","surface-container":"#eceef3","on-background":"#191c20","surface-variant":"#e1e2e8","surface":"#f8f9ff","on-tertiary":"#ffffff","on-primary-fixed-variant":"#474747","on-secondary-fixed-variant":"#005236","on-primary-fixed":"#1b1b1b","on-secondary-container":"#0c714d","secondary-container":"#9af2c5","tertiary-fixed-dim":"#bec6e0","on-primary-container":"#848484","currency-secondary":"#45464d","on-secondary-fixed":"#002113","error":"#ba1a1a","primary-fixed-dim":"#c6c6c6","on-surface":"#191c20","inverse-primary":"#c6c6c6","on-primary":"#ffffff","on-tertiary-fixed":"#131b2e","on-tertiary-container":"#7b839b","surface-container-highest":"#e1e2e8","on-surface-variant":"#4c4546","secondary-fixed":"#9df4c8","background":"#f8f9ff","surface-dim":"#d8dae0","tertiary-container":"#131b2e","on-error":"#ffffff","secondary":"#006c49","currency-primary":"#0b1c30","outline-variant":"#cfc4c5","secondary-fixed-dim":"#81d8ad","on-error-container":"#93000a"},"borderRadius":{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},"spacing":{"base":"4px","lg":"48px","gutter":"24px","xl":"80px","sm":"16px","xs":"8px","md":"24px"},"fontFamily":{"body-sm":["Work Sans"],"label-caps":["Work Sans"],"data-tabular":["JetBrains Mono"],"currency-display":["JetBrains Mono"],"headline-sm":["Manrope"],"body-lg":["Work Sans"],"headline-lg":["Manrope"],"body-md":["Work Sans"],"headline-md":["Manrope"]},"fontSize":{"body-sm":["14px",{"lineHeight":"20px","fontWeight":"400"}],"label-caps":["12px",{"lineHeight":"16px","letterSpacing":"0.05em","fontWeight":"600"}],"data-tabular":["14px",{"lineHeight":"20px","fontWeight":"500"}],"currency-display":["24px",{"lineHeight":"32px","letterSpacing":"-0.02em","fontWeight":"600"}],"headline-sm":["24px",{"lineHeight":"32px","fontWeight":"600"}],"body-lg":["18px",{"lineHeight":"28px","fontWeight":"400"}],"headline-lg":["48px",{"lineHeight":"56px","letterSpacing":"-0.02em","fontWeight":"700"}],"body-md":["16px",{"lineHeight":"24px","fontWeight":"400"}],"headline-md":["32px",{"lineHeight":"40px","letterSpacing":"-0.01em","fontWeight":"600"}]}}}}</script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@100..900&family=Work+Sans:wght@100..900&display=swap" rel="stylesheet"/></head><body class="bg-surface font-body-md text-on-surface"><aside class="fixed left-0 top-0 h-full w-72 bg-surface-container-low z-50 flex flex-col border-r border-outline-variant/30 shadow-[4px_0_24px_rgba(0,0,0,0.02)]"><div class="px-gutter h-20 flex items-center mb-xs"><div class="flex items-center gap-sm"><div class="w-10 h-10 bg-primary flex items-center justify-center rounded-xl"><span class="material-symbols-outlined text-on-primary">payments</span></div><span class="font-headline-sm text-headline-sm tracking-tight text-primary">WealthPro</span></div></div><nav class="flex-1 px-sm overflow-y-auto space-y-base" data-active-classes="bg-secondary-container text-on-secondary-container font-bold"><a aria-current="page" class="flex items-center px-md py-3 rounded-lg transition-all group bg-secondary-container text-on-secondary-container font-bold" data-path="dashboard" href="#"><span class="material-symbols-outlined mr-md">dashboard</span><span class="font-body-md">Dashboard</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="banking" href="#"><span class="material-symbols-outlined mr-md">account_balance</span><span class="font-body-md">Banking</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="investments" href="#"><span class="material-symbols-outlined mr-md">monitoring</span><span class="font-body-md">Investments</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="loans" href="#"><span class="material-symbols-outlined mr-md">request_quote</span><span class="font-body-md">Loans</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="subscriptions" href="#"><span class="material-symbols-outlined mr-md">event_repeat</span><span class="font-body-md">Subscriptions</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="stock-exchange" href="#"><span class="material-symbols-outlined mr-md">show_chart</span><span class="font-body-md">Stock Exchange</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="property-management" href="#"><span class="material-symbols-outlined mr-md">apartment</span><span class="font-body-md">Property</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="fx-workstation" href="#"><span class="material-symbols-outlined mr-md">currency_exchange</span><span class="font-body-md">FX Workstation</span></a></nav><div class="p-gutter border-t border-outline-variant/30"><div class="flex items-center gap-sm p-sm rounded-xl bg-surface-container"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div><div class="flex-1 overflow-hidden"><p class="text-body-sm font-label-caps truncate">John Doe</p><p class="text-[10px] text-on-surface-variant">Private Wealth</p></div><span class="material-symbols-outlined text-on-surface-variant text-sm">settings</span></div></div></aside><div class="pl-72"><header class="fixed top-0 left-72 right-0 h-20 bg-surface/80 backdrop-blur-xl z-40 px-gutter flex items-center justify-between border-b border-outline-variant/20 shadow-sm"><div class="flex items-center gap-md"><div class="flex items-center gap-xs px-md py-2 bg-surface-container-lowest border border-outline-variant rounded-full shadow-sm"><span class="w-2 h-2 rounded-full bg-success"></span><span class="font-label-caps text-on-surface-variant uppercase">Active:</span><span class="font-data-tabular text-currency-primary font-bold">USD</span></div><div class="h-8 w-[1px] bg-outline-variant"></div><div class="relative group"><button class="flex items-center gap-sm px-md py-2 rounded-lg bg-surface-container-high hover:bg-primary hover:text-on-primary transition-all"><span class="material-symbols-outlined text-sm">currency_exchange</span><span class="font-label-caps">Multi-Currency</span><span class="material-symbols-outlined text-sm">expand_more</span></button><div class="absolute top-full mt-xs left-0 w-64 bg-surface-container-lowest rounded-xl shadow-[0_10px_25px_-5px_rgba(11,28,48,0.1)] border border-outline-variant hidden group-hover:block py-sm z-50"><div class="px-md py-xs text-xs font-label-caps text-on-surface-variant">Select View</div><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">Global (Total)</span><span class="material-symbols-outlined text-sm">public</span></button><div class="h-[1px] bg-outline-variant my-xs mx-md"></div><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">US Dollar</span><span class="font-data-tabular">USD</span></button><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">Euro</span><span class="font-data-tabular">EUR</span></button><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">PK Rupee</span><span class="font-data-tabular">PKR</span></button><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">QA Riyal</span><span class="font-data-tabular">QAR</span></button></div></div></div><div class="flex items-center gap-gutter"><div class="relative flex items-center bg-surface-container px-md py-2 rounded-lg border border-outline-variant"><span class="material-symbols-outlined text-on-surface-variant mr-sm">search</span><input class="bg-transparent border-none outline-none text-sm text-on-surface w-48 placeholder:text-on-surface-variant" placeholder="Search portfolios..." type="text"/></div><button class="p-sm rounded-full hover:bg-surface-container-high transition-colors relative"><span class="material-symbols-outlined text-on-surface-variant">notifications</span><span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-surface"></span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center cursor-pointer"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></header><main class="relative pt-20 bg-surface min-h-screen"><div class="flex flex-col w-full px-gutter pb-xl gap-xl">
+<div class="flex items-end justify-between">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface">Sharia-Compliant Forecast</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant mt-sm">Net worth projection across global assets over 3 months.</p>
+</div>
+<div class="flex items-center gap-md">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Forecast View</span>
+<div class="flex bg-surface-container rounded-xl shadow-sm p-base border border-outline-variant/30">
+<button class="px-md py-xs rounded-lg bg-surface-container-lowest shadow-sm font-label-caps text-label-caps text-primary border border-outline-variant/20 transition-all">Global (USD)</button>
+<button class="px-md py-xs rounded-lg text-on-surface-variant font-label-caps text-label-caps hover:text-primary transition-all">Local (AED)</button>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-12 gap-gutter">
+<div class="col-span-8 flex flex-col gap-gutter">
+<div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/30 p-md flex flex-col relative overflow-hidden">
+<div class="absolute top-0 right-0 p-lg w-64 h-64 bg-secondary/5 blur-[80px] rounded-full pointer-events-none"></div>
+<div class="flex justify-between items-start mb-lg relative z-10">
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface mb-xs">Projected Net Worth</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Includes Murabaha and Sukuk expected yields.</p>
+</div>
+<div class="text-right">
+<p class="font-label-caps text-label-caps text-on-surface-variant uppercase mb-base">Estimated Total (+3m)</p>
+<p class="font-currency-display text-currency-display text-success flex items-end justify-end gap-xs">
+<span class="font-body-md text-body-md text-success/70 pb-[2px]">USD</span>
+                            14,285,450.00
+                        </p>
+</div>
+</div>
+<div class="h-64 w-full relative z-10 mt-md">
+<svg class="w-full h-full text-secondary" preserveaspectratio="none" viewbox="0 0 800 200">
+<defs>
+<lineargradient id="chart-gradient" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="currentColor" stop-opacity="0.2"></stop>
+<stop offset="100%" stop-color="currentColor" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+<path d="M0,180 C100,175 200,140 300,120 C400,100 500,80 600,60 C700,40 800,20 800,20 L800,200 L0,200 Z" fill="url(#chart-gradient)"></path>
+<path d="M0,180 C100,175 200,140 300,120 C400,100 500,80 600,60 C700,40 800,20 800,20" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="3"></path>
+<circle cx="0" cy="180" fill="currentColor" r="4"></circle>
+<circle cx="266" cy="128" fill="currentColor" r="4"></circle>
+<circle cx="533" cy="74" fill="currentColor" r="4"></circle>
+<circle cx="800" cy="20" fill="currentColor" r="4"></circle>
+</svg>
+<div class="absolute bottom-0 w-full flex justify-between px-md text-on-surface-variant font-data-tabular text-[12px] transform translate-y-full pt-sm">
+<span>Today</span>
+<span>Month 1</span>
+<span>Month 2</span>
+<span>Month 3</span>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/30 overflow-hidden">
+<div class="p-md border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-low/50">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Asset Breakdown & Expected Yields</h3>
+<span class="px-sm py-base bg-secondary-container text-on-secondary-container rounded-md font-label-caps text-label-caps">Sharia Compliant</span>
+</div>
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline-variant/30 bg-surface">
+<th class="py-sm px-md font-label-caps text-label-caps text-on-surface-variant uppercase">Asset / Contract</th>
+<th class="py-sm px-md font-label-caps text-label-caps text-on-surface-variant uppercase text-right">Current Value</th>
+<th class="py-sm px-md font-label-caps text-label-caps text-on-surface-variant uppercase text-right">Est. Profit Rate</th>
+<th class="py-sm px-md font-label-caps text-label-caps text-on-surface-variant uppercase text-right">Forecasted Return</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/20">
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="py-md px-md">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined text-sm">real_estate_agent</span>
+</div>
+<div>
+<p class="font-body-md text-body-md text-on-surface font-semibold">Ijara Property Portfolio</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Dubai, UAE</p>
+</div>
+</div>
+</td>
+<td class="py-md px-md text-right font-data-tabular text-data-tabular text-on-surface">USD 4,500,000</td>
+<td class="py-md px-md text-right font-data-tabular text-data-tabular text-success">+5.2% p.a.</td>
+<td class="py-md px-md text-right font-data-tabular text-data-tabular text-on-surface font-semibold">USD +58,500</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="py-md px-md">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+</div>
+<div>
+<p class="font-body-md text-body-md text-on-surface font-semibold">Global Sukuk Fund</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Diverse Holdings</p>
+</div>
+</div>
+</td>
+<td class="py-md px-md text-right font-data-tabular text-data-tabular text-on-surface">USD 3,200,000</td>
+<td class="py-md px-md text-right font-data-tabular text-data-tabular text-success">+4.8% p.a.</td>
+<td class="py-md px-md text-right font-data-tabular text-data-tabular text-on-surface font-semibold">USD +38,400</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="py-md px-md">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined text-sm">handshake</span>
+</div>
+<div>
+<p class="font-body-md text-body-md text-on-surface font-semibold">Murabaha Trade Finance</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Commodities</p>
+</div>
+</div>
+</td>
+<td class="py-md px-md text-right font-data-tabular text-data-tabular text-on-surface">USD 1,800,000</td>
+<td class="py-md px-md text-right font-data-tabular text-data-tabular text-success">+6.5% p.a. (Mark-up)</td>
+<td class="py-md px-md text-right font-data-tabular text-data-tabular text-on-surface font-semibold">USD +29,250</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="col-span-4 flex flex-col gap-gutter">
+<div class="bg-primary text-on-primary rounded-2xl shadow-md p-lg relative overflow-hidden flex flex-col justify-between h-[320px]">
+<div class="absolute -top-24 -right-24 w-64 h-64 bg-secondary rounded-full opacity-20 blur-[40px]"></div>
+<div>
+<h3 class="font-label-caps text-label-caps text-on-primary/70 uppercase mb-sm tracking-widest">Total Projected Profit</h3>
+<p class="font-headline-lg text-headline-lg text-on-primary mb-xs">USD 126,150</p>
+<div class="flex items-center gap-xs text-secondary-container">
+<span class="material-symbols-outlined text-sm">arrow_upward</span>
+<span class="font-data-tabular text-data-tabular font-bold">+1.24%</span>
+<span class="font-body-sm text-body-sm text-on-primary/60 ml-xs">vs last 3 months</span>
+</div>
+</div>
+<div class="border-t border-on-primary/20 pt-md mt-auto">
+<p class="font-body-sm text-body-sm text-on-primary/80 leading-relaxed">
+                        Based on current profit rates and mark-ups. Subject to market fluctuations within Sharia compliance parameters.
+                    </p>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/30 p-md">
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-md">Zakat Calculator</h3>
+<div class="bg-surface-container rounded-xl p-md flex flex-col gap-sm">
+<div class="flex justify-between items-center">
+<span class="font-body-md text-body-md text-on-surface-variant">Eligible Wealth (Hawl)</span>
+<span class="font-data-tabular text-data-tabular text-on-surface">USD 10,500,000</span>
+</div>
+<div class="h-[1px] bg-outline-variant/30 w-full my-xs"></div>
+<div class="flex justify-between items-center">
+<span class="font-body-md text-body-md text-on-surface font-semibold">Est. Zakat (2.5%)</span>
+<span class="font-data-tabular text-data-tabular text-primary font-bold">USD 262,500</span>
+</div>
+<button class="w-full mt-md bg-surface-container-high hover:bg-primary hover:text-on-primary text-on-surface font-label-caps text-label-caps py-sm px-md rounded-lg transition-colors flex items-center justify-center gap-sm">
+<span class="material-symbols-outlined text-sm">calculate</span>
+                        Detailed Zakat Assessment
+                    </button>
+</div>
+</div>
+<div class="rounded-2xl overflow-hidden shadow-sm relative h-48 border border-outline-variant/30">
+<div class="absolute inset-0 bg-cover bg-center w-full h-full mix-blend-overlay opacity-80" data-alt="A macro shot of a sleek modern glass architectural building reflecting a bright blue sky, representing modern Islamic finance and growth. Soft, bright lighting, high contrast." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAxCQOPrUlgZs7O9lHtzg6OWiKJ5aH7wB-n0AvcK0oh8R469M9h4I4gDd2qHWV10wt_5Xi5K3K9sGKwx14rKH5YUhDaEFsXN-Wp5y3T_o2ALBZxQ_y2C0WFZrvwblmWlUTmcad-y5YrWNu9Z2c9xjPY9a2HmrCDW34qea5MM7HHNRlOfLXefG7jJcrWKFSQDwdY49ejicBpp5MhXzwiiS300x2RTPQT0kuGP_G9YtwP2uqdn1rClnhx')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-primary/90 to-primary/40"></div>
+<div class="absolute inset-0 p-md flex flex-col justify-end">
+<h4 class="font-headline-sm text-headline-sm text-on-primary mb-xs">Explore New Sukuks</h4>
+<p class="font-body-sm text-body-sm text-on-primary/80 mb-md">Diversify your portfolio with newly issued government Sukuks.</p>
+<button class="self-start text-on-primary font-label-caps text-label-caps uppercase border-b border-on-primary pb-xs hover:text-secondary-container hover:border-secondary-container transition-colors">View Offerings</button>
+</div>
+</div>
+</div>
+</div>
+</div></main></div></body></html>

@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Banking &amp; Loans - WealthPro</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&amp;family=Manrope:wght@600;700;800&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-surface-variant": "#45464d",
+                        "on-primary": "#ffffff",
+                        "primary": "#000000",
+                        "on-tertiary-fixed": "#2a1700",
+                        "secondary": "#006c49",
+                        "secondary-fixed": "#6ffbbe",
+                        "on-secondary-fixed-variant": "#005236",
+                        "inverse-on-surface": "#eaf1ff",
+                        "outline-variant": "#c6c6cd",
+                        "on-tertiary": "#ffffff",
+                        "background": "#f8f9ff",
+                        "secondary-container": "#6cf8bb",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-high": "#dce9ff",
+                        "inverse-primary": "#bec6e0",
+                        "error": "#ba1a1a",
+                        "primary-fixed-dim": "#bec6e0",
+                        "tertiary": "#000000",
+                        "on-primary-fixed": "#131b2e",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "surface": "#f8f9ff",
+                        "outline": "#76777d",
+                        "on-background": "#0b1c30",
+                        "surface-container-low": "#eff4ff",
+                        "on-error-container": "#93000a",
+                        "error-container": "#ffdad6",
+                        "surface-container": "#e5eeff",
+                        "on-secondary-container": "#00714d",
+                        "on-surface": "#0b1c30",
+                        "surface-container-highest": "#d3e4fe",
+                        "on-error": "#ffffff",
+                        "secondary-fixed-dim": "#4edea3",
+                        "surface-dim": "#cbdbf5",
+                        "surface-variant": "#d3e4fe",
+                        "on-tertiary-container": "#b87500",
+                        "surface-tint": "#565e74",
+                        "on-secondary": "#ffffff",
+                        "primary-container": "#131b2e",
+                        "tertiary-fixed": "#ffddb8",
+                        "tertiary-fixed-dim": "#ffb95f",
+                        "on-secondary-fixed": "#002113",
+                        "on-primary-container": "#7c839b",
+                        "primary-fixed": "#dae2fd",
+                        "inverse-surface": "#213145",
+                        "surface-bright": "#f8f9ff",
+                        "tertiary-container": "#2a1700",
+                        "on-tertiary-fixed-variant": "#653e00"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "sm": "16px",
+                        "xl": "80px",
+                        "container-max": "1440px",
+                        "lg": "48px",
+                        "base": "4px",
+                        "md": "24px",
+                        "xs": "8px",
+                        "gutter": "24px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Work Sans"],
+                        "display-lg": ["Manrope"],
+                        "body-md": ["Work Sans"],
+                        "body-sm": ["Work Sans"],
+                        "data-tabular": ["JetBrains Mono"],
+                        "label-caps": ["Work Sans"],
+                        "headline-md": ["Manrope"],
+                        "headline-sm": ["Manrope"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "data-tabular": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-md": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "headline-sm": ["24px", { "lineHeight": "32px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: theme('colors.background'); color: theme('colors.on-background'); }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid theme('colors.outline-variant');
+        }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: theme('spacing.gutter');
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex">
+<!-- SideNavBar -->
+<aside class="bg-surface-container-low dark:bg-inverse-surface h-screen w-64 fixed left-0 top-0 flex flex-col py-md px-sm z-40">
+<div class="mb-lg">
+<h1 class="font-display-lg text-headline-sm font-bold text-primary dark:text-inverse-primary">WealthPro</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Premium Management</p>
+</div>
+<nav class="flex-1 space-y-xs">
+<a class="flex items-center space-x-sm p-sm rounded-lg text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-variant transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-body-md text-body-md">Dashboard</span>
+</a>
+<a class="flex items-center space-x-sm p-sm rounded-lg text-primary dark:text-primary-fixed-dim font-bold border-r-4 border-secondary bg-surface-container-high cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance" style="font-variation-settings: 'FILL' 1;">account_balance</span>
+<span class="font-body-md text-body-md">Banking</span>
+</a>
+<a class="flex items-center space-x-sm p-sm rounded-lg text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-variant transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="trending_up">trending_up</span>
+<span class="font-body-md text-body-md">Investments</span>
+</a>
+<a class="flex items-center space-x-sm p-sm rounded-lg text-primary dark:text-primary-fixed-dim font-bold border-r-4 border-secondary bg-surface-container-high cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="payments" style="font-variation-settings: 'FILL' 1;">payments</span>
+<span class="font-body-md text-body-md">Loans</span>
+</a>
+<a class="flex items-center space-x-sm p-sm rounded-lg text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-variant transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="subscriptions">subscriptions</span>
+<span class="font-body-md text-body-md">Subscriptions</span>
+</a>
+<a class="flex items-center space-x-sm p-sm rounded-lg text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-variant transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="show_chart">show_chart</span>
+<span class="font-body-md text-body-md">Stock Exchange</span>
+</a>
+</nav>
+<div class="mt-auto pt-md border-t border-outline-variant">
+<button class="w-full bg-primary text-on-primary py-sm px-md rounded-full font-label-caps uppercase tracking-wider mb-sm hover:opacity-90 transition-opacity">Open New Account</button>
+<div class="space-y-xs">
+<a class="flex items-center space-x-sm p-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-body-sm text-body-sm">Settings</span>
+</a>
+<a class="flex items-center space-x-sm p-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+<span class="font-body-sm text-body-sm">Support</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<div class="ml-64 flex-1 flex flex-col min-h-screen">
+<!-- TopNavBar -->
+<header class="bg-surface dark:bg-surface-dim docked full-width top-0 sticky z-50 border-b border-outline-variant dark:border-outline flex justify-between items-center h-16 px-xl w-full">
+<div class="flex items-center space-x-lg">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant" data-icon="search">search</span>
+<input class="pl-xl pr-sm py-xs rounded-full border-outline-variant bg-surface-container-lowest focus:ring-2 focus:ring-primary focus:border-primary font-body-sm text-body-sm" placeholder="Search..." type="text"/>
+</div>
+<nav class="hidden md:flex space-x-md">
+<a class="font-body-sm text-body-sm text-on-surface-variant dark:text-on-surface-variant hover:text-primary dark:hover:text-primary-fixed-dim transition-colors duration-200 ease-in-out py-md" href="#">Global View</a>
+<a class="font-body-sm text-body-sm text-primary dark:text-primary-fixed-dim border-b-2 border-primary py-md" href="#">Analytics</a>
+<a class="font-body-sm text-body-sm text-on-surface-variant dark:text-on-surface-variant hover:text-primary dark:hover:text-primary-fixed-dim transition-colors duration-200 ease-in-out py-md" href="#">Reports</a>
+</nav>
+</div>
+<div class="flex items-center space-x-md">
+<span class="font-label-caps uppercase text-on-surface-variant">Currency: USD</span>
+<div class="flex space-x-sm">
+<button class="p-xs text-on-surface-variant hover:text-primary transition-colors"><span class="material-symbols-outlined" data-icon="notifications">notifications</span></button>
+<button class="p-xs text-on-surface-variant hover:text-primary transition-colors"><span class="material-symbols-outlined" data-icon="account_circle">account_circle</span></button>
+</div>
+<img alt="User Avatar" class="w-8 h-8 rounded-full object-cover border border-outline-variant" data-alt="A small, professional circular avatar portrait of a modern corporate user in a bright light-mode setting. The portrait features a confident individual looking directly at the camera, against a clean white background. Soft, diffused lighting highlights their features, conveying trust and reliability suitable for a premium wealth management platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCoEHAJHy-wDkYfpoEQNu-3AwIlv6jRrKtw9sZK3iWy-S_mzTHjQdFmzC-kC_-Le2pQgue0MxCsx_h_uyz8jvkAGwK3phueRSOJGAloHHsYdTly4awvA2nYW47OwtpsJatOX6-me5z1H0mfexo3qz9ZVLvZSEzKH4xJBD_y6myVU7_q4mq8pgFvI8QjdSdJ13Ec63iyyTHh29ArBFr7PgImtoa7cmiDNYmgYsDITK7AATzPl8lZn0Yw"/>
+</div>
+</header>
+<!-- Dashboard Canvas -->
+<main class="flex-1 p-xl overflow-y-auto">
+<div class="max-w-[1440px] mx-auto space-y-xl">
+<!-- Page Header -->
+<div class="flex justify-between items-end">
+<div>
+<h2 class="font-headline-md text-headline-md text-primary">Banking &amp; Loans</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-xs">Overview of your active accounts and EMI schedules.</p>
+</div>
+<button class="bg-secondary text-on-secondary px-md py-sm rounded-lg font-label-caps uppercase tracking-wider hover:bg-on-secondary-fixed-variant transition-colors flex items-center space-x-xs shadow-sm">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+<span>Apply for Loan</span>
+</button>
+</div>
+<!-- Bento Grid Layout -->
+<div class="bento-grid">
+<!-- Accounts Overview (Span 8) -->
+<div class="col-span-12 lg:col-span-8 glass-card rounded-xl p-lg flex flex-col">
+<h3 class="font-headline-sm text-headline-sm text-primary mb-md">Active Accounts</h3>
+<div class="grid grid-cols-2 gap-md flex-1">
+<!-- Account Card 1 -->
+<div class="border border-outline-variant rounded-lg p-md bg-surface-container-lowest flex flex-col justify-between hover:border-outline transition-colors cursor-pointer group">
+<div class="flex justify-between items-start mb-lg">
+<div class="flex items-center space-x-sm">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="account_balance">account_balance</span>
+</div>
+<div>
+<p class="font-label-caps uppercase text-on-surface-variant">Checking</p>
+<p class="font-body-sm text-body-sm text-primary font-medium">**** 4920</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors" data-icon="arrow_forward">arrow_forward</span>
+</div>
+<div>
+<p class="font-data-tabular text-data-tabular text-headline-md text-primary">$124,500.00</p>
+<p class="font-body-sm text-body-sm text-secondary flex items-center mt-xs">
+<span class="material-symbols-outlined text-sm mr-1" data-icon="trending_up">trending_up</span> +2.4% this month
+                                    </p>
+</div>
+</div>
+<!-- Account Card 2 -->
+<div class="border border-outline-variant rounded-lg p-md bg-surface-container-lowest flex flex-col justify-between hover:border-outline transition-colors cursor-pointer group">
+<div class="flex justify-between items-start mb-lg">
+<div class="flex items-center space-x-sm">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="savings">savings</span>
+</div>
+<div>
+<p class="font-label-caps uppercase text-on-surface-variant">High-Yield Savings</p>
+<p class="font-body-sm text-body-sm text-primary font-medium">**** 8812</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors" data-icon="arrow_forward">arrow_forward</span>
+</div>
+<div>
+<p class="font-data-tabular text-data-tabular text-headline-md text-primary">$850,000.00</p>
+<p class="font-body-sm text-body-sm text-secondary flex items-center mt-xs">
+<span class="material-symbols-outlined text-sm mr-1" data-icon="trending_up">trending_up</span> +4.1% APY
+                                    </p>
+</div>
+</div>
+</div>
+</div>
+<!-- EMI Calculator (Span 4) -->
+<div class="col-span-12 lg:col-span-4 glass-card rounded-xl p-lg bg-surface-container-low border-none relative overflow-hidden">
+<div class="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjIiIGZpbGw9IiMwMDAiLz48L3N2Zz4=')]"></div>
+<div class="relative z-10 h-full flex flex-col">
+<div class="flex items-center justify-between mb-md">
+<h3 class="font-headline-sm text-headline-sm text-primary">EMI Calculator</h3>
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="calculate">calculate</span>
+</div>
+<div class="space-y-md flex-1">
+<div>
+<label class="block font-label-caps uppercase text-on-surface-variant mb-xs">Loan Amount</label>
+<div class="relative">
+<span class="absolute left-sm top-1/2 -translate-y-1/2 font-data-tabular text-primary">$</span>
+<input class="w-full pl-lg pr-sm py-sm rounded-lg border-outline-variant bg-surface-container-lowest focus:ring-2 focus:ring-primary focus:border-primary font-data-tabular text-body-md" type="text" value="500,000"/>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-sm">
+<div>
+<label class="block font-label-caps uppercase text-on-surface-variant mb-xs">Interest (%)</label>
+<input class="w-full px-sm py-sm rounded-lg border-outline-variant bg-surface-container-lowest focus:ring-2 focus:ring-primary focus:border-primary font-data-tabular text-body-md" type="text" value="5.5"/>
+</div>
+<div>
+<label class="block font-label-caps uppercase text-on-surface-variant mb-xs">Tenure (Yrs)</label>
+<input class="w-full px-sm py-sm rounded-lg border-outline-variant bg-surface-container-lowest focus:ring-2 focus:ring-primary focus:border-primary font-data-tabular text-body-md" type="text" value="15"/>
+</div>
+</div>
+</div>
+<div class="mt-lg pt-md border-t border-outline-variant">
+<p class="font-label-caps uppercase text-on-surface-variant mb-xs">Estimated Monthly EMI</p>
+<p class="font-data-tabular text-headline-md text-primary">$4,085.42</p>
+</div>
+</div>
+</div>
+<!-- Active Loans (Span 12) -->
+<div class="col-span-12 glass-card rounded-xl p-lg">
+<div class="flex justify-between items-center mb-md">
+<h3 class="font-headline-sm text-headline-sm text-primary">Active Loan Facilities</h3>
+<button class="font-label-caps uppercase text-primary hover:underline">View All</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline-variant">
+<th class="py-sm px-sm font-label-caps uppercase text-on-surface-variant font-medium">Loan Type</th>
+<th class="py-sm px-sm font-label-caps uppercase text-on-surface-variant font-medium">Principal</th>
+<th class="py-sm px-sm font-label-caps uppercase text-on-surface-variant font-medium">Interest Rate</th>
+<th class="py-sm px-sm font-label-caps uppercase text-on-surface-variant font-medium">Next EMI Date</th>
+<th class="py-sm px-sm font-label-caps uppercase text-on-surface-variant font-medium">Status</th>
+<th class="py-sm px-sm font-label-caps uppercase text-on-surface-variant font-medium text-right">Action</th>
+</tr>
+</thead>
+<tbody class="font-body-sm text-body-sm">
+<tr class="border-b border-outline-variant hover:bg-surface-container-lowest transition-colors">
+<td class="py-md px-sm">
+<div class="flex items-center space-x-sm">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="real_estate_agent">real_estate_agent</span>
+<span class="font-medium text-primary">Commercial Mortgage</span>
+</div>
+</td>
+<td class="py-md px-sm font-data-tabular text-primary">$1,250,000</td>
+<td class="py-md px-sm font-data-tabular text-primary">4.2% Fixed</td>
+<td class="py-md px-sm text-on-surface-variant">Oct 15, 2023</td>
+<td class="py-md px-sm">
+<span class="inline-flex items-center px-2 py-1 rounded-full bg-[#dcfce7] text-[#166534] font-label-caps text-[10px]">
+<span class="material-symbols-outlined text-[14px] mr-1" data-icon="check_circle">check_circle</span> Active
+                                            </span>
+</td>
+<td class="py-md px-sm text-right">
+<button class="text-primary hover:text-secondary font-medium transition-colors border border-outline-variant rounded px-sm py-1">Pay EMI</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="py-md px-sm">
+<div class="flex items-center space-x-sm">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="directions_car">directions_car</span>
+<span class="font-medium text-primary">Auto Loan (Fleet)</span>
+</div>
+</td>
+<td class="py-md px-sm font-data-tabular text-primary">$85,000</td>
+<td class="py-md px-sm font-data-tabular text-primary">6.1% Variable</td>
+<td class="py-md px-sm text-on-surface-variant">Oct 22, 2023</td>
+<td class="py-md px-sm">
+<span class="inline-flex items-center px-2 py-1 rounded-full bg-[#fef08a] text-[#854d0e] font-label-caps text-[10px]">
+<span class="material-symbols-outlined text-[14px] mr-1" data-icon="schedule">schedule</span> Processing
+                                            </span>
+</td>
+<td class="py-md px-sm text-right">
+<button class="text-outline-variant cursor-not-allowed font-medium border border-outline-variant rounded px-sm py-1" disabled="">Pay EMI</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>
