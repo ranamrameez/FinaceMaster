@@ -7099,6 +7099,35 @@ FinanceManager live link:
   every other write in this project). New tests: `datetime.test.ts` gained an `isToday`/
   `defaultTimeForDate` block (3 cases). `npx tsc -b` / `npm run test` (624 tests, 3 new) /
   `npm run build` all clean.
+- **User-reported (2026-09-08): "Rental Income linking with an account option is gone" — see
+  README Done item 263.** Investigated the regular Income & expenses add flow first — the
+  shared `TransactionEntryModal` "Transfers" popup's "Link to another finance" checkbox +
+  Account picker still work correctly for Rentals, confirmed live (checking the box, picking
+  Banking as the other module, correctly showed the real bank account). The genuine gap turned
+  out to be a DIFFERENT, separate flow: `PropertyDetailModal`'s semi-automated "Rent
+  collection" approve button (README Done item 124) always called `addRentalEntry` directly,
+  with NO linking option at all — unlike every sibling module's own "approve and log" shortcut
+  (EMI's `LinkedEMIRepaymentFields`, which this new `LinkedRentCollectionFields` mirrors
+  exactly), so approving a real rent collection never actually credited the real Bank/Cash
+  account it was deposited into — a real, concrete gap this session couldn't confirm was a
+  strict regression (found no evidence the Rent Collection flow ever had linking, per this
+  file's own history), but fixed regardless as the closest, most literal match to the report.
+  New "Link this to a Bank account or Cash" checkbox on the Rent Collection card; when checked,
+  `LinkedRentCollectionFields` replaces the plain "Approve & log" button with a module+account
+  picker and a "Link & log" button that calls `createLinkedTransfer` (Rentals always as `from`,
+  since rent income means real money is arriving at the real Bank/Cash `to` side — per
+  `interEntityLink.ts`'s own documented "Rentals has no real balance of its own" exception)
+  instead of the plain unlinked `addRentalEntry` — remembers the last-used account per property
+  via `useLastTransferSource`, same pattern as every other linking shortcut in the app. A new
+  shared `applyCollectionResult()` helper (extracted from the pre-existing `logCollection`)
+  advances the collection cycle's own anchor date and carries forward any partial-payment
+  shortfall for BOTH the plain and the linked path, since `LinkedRentCollectionFields` only
+  knows how to create the linked transfer itself, not this property-specific cycle state.
+  Verified live via Playwright: the checkbox, module picker, and a real account picker
+  ("Test Account (USD)") all render correctly once checked; with a zero amount "Link & log"
+  correctly toasts instead of writing anything; with a real amount it correctly hits the real
+  sign-in gate. `npx tsc -b` / `npm run test` (624 tests, unchanged) / `npm run build` all
+  clean.
 
 ## Pending
 
