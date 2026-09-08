@@ -35,11 +35,16 @@
  *
  * Deliberately scoped to ADJACENT rows within the same tie group (rows
  * whose `instantOf` value is EXACTLY equal) — a row that's genuinely on a
- * different real date/time never needs reordering against a tied
- * neighbor: date+time already places it correctly. Reordering across a
- * real time boundary isn't offered at all (the move buttons simply don't
- * render past the edge of a tie group) — there's nothing ambiguous left
- * to fix there.
+ * different real date never needs reordering against a tied neighbor:
+ * date already places it correctly. Reordering across a date boundary
+ * isn't offered at all (the move buttons simply don't render past the
+ * edge of a tie group) — there's nothing ambiguous left to fix there.
+ * `instantOf` itself is caller-supplied and generic — every current
+ * caller passes `dateOnlyMs(date)` (Done item 235, extended 2026-09-08
+ * from same-instant to same-CALENDAR-DATE — see that function's own doc
+ * comment for why), not a real instant despite the parameter's name; the
+ * function itself only ever compares whatever number `instantOf` returns
+ * for exact equality, so it works identically either way.
  *
  * `rows` must already be sorted into the table's real display order
  * (instant, then current order value — i.e. whatever

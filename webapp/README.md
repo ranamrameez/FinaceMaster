@@ -7128,6 +7128,86 @@ FinanceManager live link:
   correctly toasts instead of writing anything; with a real amount it correctly hits the real
   sign-in gate. `npx tsc -b` / `npm run test` (624 tests, unchanged) / `npm run build` all
   clean.
+- **Five-item batch of real bugs, same day (2026-09-08), all root-caused before writing any
+  code — see README Done item 264.** User's own report, verbatim, arrived across two messages:
+  a real financial-correctness bug ("QIB to BOP RDA [cross-currency]... after that i did UBL
+  to MCB... i think its two/three digits like 85.55555 with long number of decimals"), plus
+  four follow-ups ("NOT ALL TRANSACTIONS showing movement arrows. some transactions need
+  reordering for same date," "i choosed IgnoreCount categ but Transfer was logged," "try to
+  choose the same/logical module by default... like Bank to Bank, Cash to Bank," and "for
+  inter-currency transfer, we should store source as well like FX name").
+  1. **Stale cross-currency `toAmount` leaking into a later same-currency pair on the same
+     row.** `TxRowFields`'s `useEffect` auto-suggests `row.toAmount` from `lib/fx.ts`'s cached
+     rates, but only re-runs it `while (currencyMismatch)` — nothing ever RESET it back to
+     `undefined` once `currencyMismatch` became false again (the user picking a different,
+     same-currency pair on the same row after an earlier cross-currency suggestion, exactly
+     the QIB(QAR)→BOP RDA(PKR) then UBL(PKR)→MCB(PKR) sequence reported). Same "only ever
+     nudge forward, never reset on the one real transition that needs it" bug class this
+     project has hit before (Done item 77's BUY→SELL `manualSameDay` reset). Fixed by
+     explicitly resetting `toAmount: undefined, toAmountTouched: false` in the three places
+     that can change which currencies are being compared: the `finance`/`other` `SideFields`
+     `onChange` handlers and the "Link to another finance" checkbox's own `onChange`. Verified
+     live via Playwright reproducing the EXACT reported sequence: after QIB(QAR)→BOP RDA(PKR)
+     suggested a real converted `toAmount`, switching the same row to UBL(PKR)→MCB(PKR) (same
+     currency, no mismatch) made the cross-currency "Amount (X)" field disappear ENTIRELY —
+     confirming the stale value doesn't leak through as a phantom same-currency conversion.
+  2. **"IgnoreCount category chosen but Transfer was logged."** `buildSideRecord()` in
+     `lib/interEntityLink.ts` hardcodes `TRANSFER_CATEGORY_ID` for a linked Cash/Bank/Rentals
+     record BY DESIGN (documented in that function's own comment) — but the Category `<Field>`
+     in `TxRowFields` stayed visible and editable even while `row.linked` was checked,
+     silently discarding whatever category the user picked. Fixed by hiding the Category field
+     entirely once `row.linked` is true (`!row.linked` added to its render condition) rather
+     than trying to make the linked record respect a category, which would contradict
+     `buildSideRecord`'s own intentional design — the checkbox's own label now wraps in a
+     `Tooltip` ("A linked transfer is always categorized as Transfer on this side...") so the
+     Category field's disappearance reads as an explained design choice, not a bug. Verified
+     live: Category field visible before checking the box, gone after.
+  3. **Same-DAY (not same-instant) reordering.** `defaultTimeForDate()` (an earlier fix, Done
+     item 262) only solved the most common cause of a missing reorder arrow — a fresh row's
+     `nowTime()` stamp going stale after backdating the Date field — but two records that both
+     got a REAL, DIFFERENT recorded time (e.g. one genuinely entered at 9am, another at 3pm the
+     same real day) still never tied under the old real-INSTANT equality check, even though the
+     user may still not know their real relative order and wants to fix it. The user's own ask
+     was explicitly for same-CALENDAR-DATE reordering, a strictly broader relaxation. New
+     `dateOnlyMs(date)` in `lib/datetime.ts` drops time/timezone entirely from the comparison —
+     wired into every display ledger that offers `ReorderButtons` (`accountRunningLedger`/Bank,
+     `cashRunningLedger`/Cash, `repaymentRunningOutstanding`+`loanBalanceHistory`/Personal
+     Loans, `transferRunningBalance`, and the QSE/PSX/Funds Transfers sections' own inline
+     sorts — 9 call sites total across 8 files) as BOTH the underlying sort key (with
+     `seq`/`serialNumber` as the sole same-day tie-break, same as before) and the `instantOf`
+     callback passed to `ReorderButtons`, so a reorder move actually changes the visible row
+     order, not just tie-eligibility. **Deliberately NOT applied to `lib/calc/
+     sortTransactions.ts`'s `sortTransactionsChronological()`** — the core FIFO lot-matching/
+     realized-P&L calc engine needs the finer real-instant + BUY-before-SELL ordering for
+     financial correctness (Done item 128); this coarser date-only key is only for DISPLAY
+     ledgers with a reorder control, never the position/P&L math. Verified live via Playwright
+     with two Bank transactions dated the same day but genuinely different times (09:00 and
+     15:00, not the `nowTime()`-stale-stamp scenario Done item 262 already covered) — reorder
+     arrows now correctly appear for both, and clicking one correctly hits the real sign-in
+     gate. A third, different-DATE transaction in the same seeded set correctly showed no
+     arrows at all, confirming the relaxation didn't become "always show arrows."
+  4. **Smarter "Other finance" module default.** The Transfers popup's "Other finance" side
+     always defaulted to `'cash'` regardless of what the "Finance" side was — the user's own
+     examples ("Bank to Bank, Cash to Bank") named Banking as the module most people actually
+     transfer with. New `LIKELY_OTHER_MODULE: LinkModule = 'bank'` constant replaces the
+     hardcoded `'cash'` in `emptyRow()`'s `other: {...}` — a plain constant, not a per-module
+     lookup table, since Bank is genuinely the most common "other side" for every module
+     including itself (Bank-to-Bank, the user's own first example). Still only a prefill:
+     `getLastTransferSource()` (a real per-destination remembered account, Done item 120) and
+     the user's own pick both still win over it once either exists. Verified live: a fresh
+     row's "Other finance" module correctly shows "Banking" selected by default.
+  5. **Rate-source field for a cross-currency link.** `InterEntityTransferInput` gained an
+     optional `rateSource?: string` (inherited automatically into `InterEntityTransfer` via its
+     existing `extends`) — a free-text record of WHERE a conversion rate came from (e.g. "UBL
+     bank rate," "Sarafa exchange"), purely descriptive and never resolved against `lib/fx.ts`'s
+     cached rates, same "no live FX lookup, just remember what the user says happened" rule as
+     `fromAmount`/`toAmount` themselves. A new "Rate source (optional)" `Field` sits alongside
+     the existing "Amount (X)" field in the currency-mismatch block, only shown while the two
+     sides' currencies actually differ; `submit()` passes `rateSource: r.rateSource.trim() ||
+     undefined` through to `createLinkedTransfer`. Verified live: the field appears exactly
+     when a mismatch is present, accepts and retains typed text.
+  `npx tsc -b` / `npm run test` (624 tests, unchanged — every fix here is UI-defaulting/wiring,
+  no calc-engine formula changed) / `npm run build` all clean.
 
 ## Pending
 

@@ -5826,6 +5826,50 @@ app — zero new console errors anywhere. `npx tsc -b` / `npm run test` (442 tes
 115's four structural items (Bank-as-parent-entity, Funds/broker-as-parent-entity, entity
 active/favorite/Sr#, Bank's Analytics date-range filtering) — none of this round's fixes
 touched those.
+- **Six PRs merged 2026-09-08, working down README's Pending backlog per the user's own
+  "continue until all pending items are completed" standing instruction — see README Done
+  items 247/248, the numbering-collision fix, 262/263, and 264 for the full per-item
+  writeups; this file's own detailed narrative wasn't updated per-PR during that stretch (a
+  real gap — `webapp/README.md` is the source of truth for this window, not this file's
+  prose) to keep pace with a fast run of small, well-scoped PRs.** Highlights, each its own
+  merged PR: ticker-logo rollout finished (closes Pending item 118); Funds gained the shared
+  category-registry (`lib/categories.ts`) migration Cash/Bank/Rentals already had (closes
+  Pending item 126); a real 13-way Done-item numbering collision in README.md (two
+  independently-grown numbering conventions colliding across the 232-246 range) found and
+  fixed via a scripted zero-collision re-check, not by eyeballing; a stale Pending item 114
+  cross-reference corrected to point at `UI_DESIGN_GUIDELINES.md`, discovered mid-audit; a
+  real reorder-arrows bug fixed (backdated same-day Bank/Cash/etc. transactions weren't
+  tying for the same-day reorder feature because `nowTime()`'s wall-clock auto-fill never
+  re-synced after the Date field was backdated — new `defaultTimeForDate()` in
+  `lib/datetime.ts` re-stamps `nowTime()` only when the chosen date is genuinely today, else
+  clears back to the noon default); and Rentals' semi-automated "Rent collection" approve
+  flow gained the same account-linking shortcut every sibling module's own "approve and log"
+  action already had (it had none at all before this fix — a real, if unconfirmed-as-a-
+  regression, gap). **Same day, a five-item batch of further bugs — see README Done item
+  264**: (1) a real financial-correctness bug where a cross-currency linked-transfer
+  suggestion (`toAmount`, auto-computed from `lib/fx.ts`'s cached rates) went stale and leaked
+  into a LATER same-currency pair on the same popup row — the user's own real report (QIB→BOP
+  RDA cross-currency, then UBL→MCB same-currency on the same row, producing a nonsensical
+  ~85.555... amount) — fixed by explicitly resetting `toAmount`/`toAmountTouched` on every
+  `finance`/`other` change and on the link checkbox itself, the same "only-nudge-forward,
+  reset-on-the-real-transition" discipline as Done item 77; (2) picking a Category on a
+  LINKED transfer row was silently discarded (`buildSideRecord` always hardcodes
+  `TRANSFER_CATEGORY_ID` for a linked record by design) — fixed by hiding the Category field
+  entirely while linked, with a `Tooltip` explaining why, rather than pretending the picked
+  category would apply; (3) the same-day reorder-arrows feature (Done item 235) was
+  broadened from same-real-INSTANT to same-CALENDAR-DATE — new `dateOnlyMs()` in
+  `lib/datetime.ts`, wired into every display ledger with `ReorderButtons` (9 call sites
+  across 8 files) as both the sort key and the tie-detector, deliberately NOT touched in the
+  core FIFO/realized-P&L calc engine's own `sortTransactionsChronological()`, which still
+  needs the finer real-instant ordering for financial correctness; (4) the Transfers popup's
+  "Other finance" side now defaults to Banking (`LIKELY_OTHER_MODULE`) instead of a hardcoded
+  Cash, since Bank is the most common real "other side" per the user's own examples; (5) a
+  new optional `rateSource?: string` field on `InterEntityTransferInput`/`InterEntityTransfer`
+  records where a cross-currency link's real conversion rate came from (e.g. "UBL bank rate"),
+  shown only when the two sides' currencies differ. `npx tsc -b` / `npm run test` (624 tests,
+  unchanged across all five — pure UI-defaulting/wiring, no calc-engine formula touched) /
+  `npm run build` all clean; every one of the five verified live via Playwright, including a
+  real reproduction of the exact reported stale-toAmount sequence.
 
 ## Live URLs
 

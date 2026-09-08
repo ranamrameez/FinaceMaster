@@ -22,7 +22,7 @@ import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { ReorderButtons } from '../../../components/ui/ReorderButtons';
 import { RecurrenceFields } from '../../../components/ui/RecurrenceFields';
-import { toInstantMs } from '../../../lib/datetime';
+import { dateOnlyMs } from '../../../lib/datetime';
 import { nextRecurrenceOccurrence } from '../../../lib/calc/recurrence';
 import { recurrenceLabel } from '../../../lib/recurrenceLabel';
 import { hueStyle } from '../../../lib/statCardHues';
@@ -305,7 +305,7 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
   // genuinely needs fixing (two same-instant rows in the wrong relative
   // order).
   const sorted = rows; // buildCashLedger already returns ascending chronological order
-  const instantOf = (r: (typeof sorted)[number]) => toInstantMs(r.entry.date, r.entry.time, r.entry.timezone);
+  const instantOf = (r: (typeof sorted)[number]) => dateOnlyMs(r.entry.date);
   const reorder = async (pair: [{ id: string; order: number }, { id: string; order: number }]) => {
     if (!(await ensureSignedIn('Sign in to reorder entries.'))) return;
     for (const p of pair) updateEntry(p.id, { serialNumber: p.order });

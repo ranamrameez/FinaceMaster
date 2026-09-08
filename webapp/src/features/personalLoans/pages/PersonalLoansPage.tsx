@@ -19,7 +19,7 @@ import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { ReorderButtons } from '../../../components/ui/ReorderButtons';
-import { toInstantMs } from '../../../lib/datetime';
+import { dateOnlyMs } from '../../../lib/datetime';
 import { parseCSV, toCSV } from '../../../lib/csv';
 import { fmtMoney } from '../../../lib/format';
 import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
@@ -342,7 +342,7 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
   // sorting is gone here, replaced by `ReorderButtons` for the one thing
   // that genuinely needs fixing (two same-instant repayments in the wrong
   // relative order).
-  const instantOf = (r: PersonalLoanRepayment) => toInstantMs(r.date, r.time, r.timezone);
+  const instantOf = (r: PersonalLoanRepayment) => dateOnlyMs(r.date);
   const sorted = useMemo(
     () => [...filteredRepayments].sort((a, b) => instantOf(b) - instantOf(a) || (b.seq ?? 0) - (a.seq ?? 0)),
     [filteredRepayments],

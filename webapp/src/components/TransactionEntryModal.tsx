@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Modal } from './Modal';
 import { toast } from './Toast';
+import { Tooltip } from './Tooltip';
 import { PlusIcon, SaveIcon, TrashIcon } from './icons';
 import { Field, TextInput } from './ui/Field';
 import { AmountInput } from './ui/AmountInput';
@@ -98,6 +99,11 @@ interface TxRow {
    * then on it's their own real number, and the `useEffect` stops
    * overwriting it as `amount`/currencies keep changing. */
   toAmountTouched: boolean;
+  /** User-requested: where a cross-currency link's conversion rate came
+   * from (e.g. "UBL bank rate", "Sarafa exchange") — see
+   * `InterEntityTransfer.rateSource`'s own doc comment. Only shown/used
+   * while the two sides' currencies actually differ. */
+  rateSource: string;
   direction: 'in' | 'out';
   date: string;
   time?: string;
@@ -114,12 +120,22 @@ interface TxRow {
   pending: boolean;
 }
 
+/** User-reported (2026-09-08): "try to choose the same/logical module by
+ * default for max UX. like Bank to Bank, Cash to Bank." `bank` is the most
+ * likely real "other side" for every module — including Bank itself
+ * (Bank-to-Bank, the user's own first example) — so this is a plain
+ * constant default rather than a per-module lookup table; still named and
+ * documented so a future session doesn't have to re-derive why. Only a
+ * prefill: `getLastTransferSource()` (checked first, wherever this is
+ * used) and the user's own pick both still win over it. */
+const LIKELY_OTHER_MODULE: LinkModule = 'bank';
+
 function emptyRow(key: number, finance: LinkSideConfig, currencyCode?: string): TxRow {
   return {
     key,
     finance,
     linked: false,
-    other: { module: 'cash', currencyCode },
+    other: { module: LIKELY_OTHER_MODULE, currencyCode },
     amount: 0,
     direction: 'in',
     date: today(),
@@ -131,6 +147,7 @@ function emptyRow(key: number, finance: LinkSideConfig, currencyCode?: string): 
     note: '',
     pending: false,
     toAmountTouched: false,
+    rateSource: '',
   };
 }
 
@@ -176,7 +193,15 @@ function TxRowFields({
       <SideFields
         label="Finance"
         cfg={row.finance}
-        onChange={(finance) => onChange({ ...row, finance, timezone: defaultTimezoneForCurrency(useSideCurrencyStatic(finance)) })}
+        onChange={(finance) =>
+          onChange({
+            ...row,
+            finance,
+            timezone: defaultTimezoneForCurrency(useSideCurrencyStatic(finance)),
+            toAmount: undefined,
+            toAmountTouched: false,
+          })
+        }
       />
       <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
         <Field label="Date">
@@ -202,7 +227,7 @@ function TxRowFields({
             <TextInput value={row.description} onChange={(e) => onChange({ ...row, description: e.target.value })} placeholder="e.g. Rent, Grocery run" />
           </Field>
         )}
-        {HAS_CATEGORY.includes(row.finance.module) && (
+        {HAS_CATEGORY.includes(row.finance.module) && !row.linked && (
           <Field label="Category">
             <CategorySelect value={row.categoryID} onChange={(categoryID) => onChange({ ...row, categoryID })} />
           </Field>
@@ -228,10 +253,16 @@ function TxRowFields({
             // Same "remember the last used source" convenience every other
             // linking entry point already has — prefills, never forces.
             const remembered = linked ? getLastTransferSource(row.finance) : undefined;
-            onChange({ ...row, linked, other: remembered ?? row.other });
+            onChange({ ...row, linked, other: remembered ?? row.other, toAmount: undefined, toAmountTouched: false });
           }}
         />
-        Link to another finance (a transfer between two accounts)
+        {HAS_CATEGORY.includes(row.finance.module) ? (
+          <Tooltip text="A linked transfer is always categorized as Transfer on this side — the Category picker above is hidden while this is checked, not silently ignored.">
+            <span>Link to another finance (a transfer between two accounts)</span>
+          </Tooltip>
+        ) : (
+          'Link to another finance (a transfer between two accounts)'
+        )}
       </label>
       {!row.linked && HAS_PENDING.includes(row.finance.module) && (
         <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }} title="Money already sent/placed but not yet reflected or filled — excluded from the current balance until you mark it cleared.">
@@ -241,21 +272,35 @@ function TxRowFields({
       )}
       {row.linked && (
         <div style={{ marginTop: 8 }}>
-          <SideFields label="Other finance" cfg={row.other} onChange={(other) => onChange({ ...row, other })} preferredCurrency={financeCurrency ?? undefined} />
+          <SideFields
+            label="Other finance"
+            cfg={row.other}
+            onChange={(other) => onChange({ ...row, other, toAmount: undefined, toAmountTouched: false })}
+            preferredCurrency={financeCurrency ?? undefined}
+          />
           {sameEntity && <p className="text-muted" style={{ color: 'var(--warn, orange)' }}>Pick a different account — this is the same one.</p>}
           {!pairSupported && !sameEntity && (
             <p className="text-muted" style={{ color: 'var(--warn, orange)' }}>Linking these two isn't supported yet.</p>
           )}
           {currencyMismatch && (
             <div style={{ marginTop: 8 }}>
-              <Field label={`Amount (${otherCurrency})`}>
-                <TextInput
-                  type="number"
-                  step="0.01"
-                  value={row.toAmount ?? ''}
-                  onChange={(e) => onChange({ ...row, toAmount: e.target.value === '' ? undefined : Number(e.target.value), toAmountTouched: true })}
-                />
-              </Field>
+              <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+                <Field label={`Amount (${otherCurrency})`}>
+                  <TextInput
+                    type="number"
+                    step="0.01"
+                    value={row.toAmount ?? ''}
+                    onChange={(e) => onChange({ ...row, toAmount: e.target.value === '' ? undefined : Number(e.target.value), toAmountTouched: true })}
+                  />
+                </Field>
+                <Field label="Rate source (optional)" title="Where this conversion rate came from — e.g. your bank's rate, a specific exchange name — for your own future reference.">
+                  <TextInput
+                    value={row.rateSource}
+                    onChange={(e) => onChange({ ...row, rateSource: e.target.value })}
+                    placeholder="e.g. UBL bank rate"
+                  />
+                </Field>
+              </div>
               <p className="text-muted" style={{ margin: '4px 0 0' }}>
                 {financeCurrency} → {otherCurrency}
                 {' — '}
@@ -361,6 +406,7 @@ export function TransactionEntryModal({ defaultFinance, onClose }: { defaultFina
           from: r.direction === 'out' ? r.finance : resolvedOther,
           to: r.direction === 'out' ? resolvedOther : r.finance,
           note: r.note.trim() || r.description.trim() || undefined,
+          rateSource: r.rateSource.trim() || undefined,
         });
         if ('error' in result) {
           toast(`Couldn't save one linked row: ${result.error}`);

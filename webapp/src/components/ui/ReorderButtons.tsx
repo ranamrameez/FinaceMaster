@@ -37,7 +37,7 @@ export function ReorderButtons<T>({
   return (
     <span style={{ display: 'inline-flex', gap: 2 }}>
       <IconButton
-        label="Move up — shares the same date/time as the row above; this only changes their relative order, not either one's real date."
+        label="Move up — shares the same date as the row above; this only changes their relative order, not either one's real date."
         icon={<ArrowUpIcon size={12} />}
         disabled={!up}
         onClick={() => {
@@ -46,7 +46,7 @@ export function ReorderButtons<T>({
         }}
       />
       <IconButton
-        label="Move down — shares the same date/time as the row below; this only changes their relative order, not either one's real date."
+        label="Move down — shares the same date as the row below; this only changes their relative order, not either one's real date."
         icon={<ArrowDownIcon size={12} />}
         disabled={!down}
         onClick={() => {
