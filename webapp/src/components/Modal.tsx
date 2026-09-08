@@ -41,9 +41,9 @@ export function Modal({
         style={!fullScreen && width ? { maxWidth: width } : undefined}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="d-flex justify-between align-center">
           <h3 style={{ margin: 0 }}>{title}</h3>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div className="d-flex align-center" style={{ gap: 4 }}>
             <button
               aria-label={fullScreen ? 'Exit full screen' : 'Full screen'}
               title={fullScreen ? 'Exit full screen' : 'Full screen'}

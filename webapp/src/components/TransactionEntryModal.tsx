@@ -194,9 +194,11 @@ function TxRowFields({
         </div>
       )}
       {canRemove && (
-        <button className="btn secondary small" style={{ marginTop: 8 }} onClick={onRemove}>
-          <TrashIcon size={12} />Remove row
-        </button>
+        <div className="d-flex justify-end" style={{ marginTop: 8 }}>
+          <button className="btn secondary small" onClick={onRemove}>
+            <TrashIcon size={12} />Remove row
+          </button>
+        </div>
       )}
     </div>
   );
@@ -357,9 +359,11 @@ export function TransactionEntryModal({ defaultFinance, onClose }: { defaultFina
           canRemove={rows.length > 1}
         />
       ))}
-      <div className="row" style={{ gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
+      <div className="row" style={{ gap: 8, marginTop: 16 }}>
         <button className="btn secondary" onClick={addRow}><PlusIcon size={12} />Add row</button>
-        <button className="btn" onClick={submit}><SaveIcon />Save</button>
+      </div>
+      <div className="d-flex justify-center" style={{ marginTop: 16 }}>
+        <button className="btn" style={{ minWidth: 220 }} onClick={submit}><SaveIcon />Save</button>
       </div>
     </Modal>
   );

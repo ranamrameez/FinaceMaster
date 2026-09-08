@@ -34,3 +34,18 @@
   grid-template-columns: repeat(auto-fit, minmax(var(--grid-min, 160px), 1fr));
   gap: var(--grid-gap, 12px);
 }
+
+/* Small set of atomic flex-alignment utilities (Bootstrap-style: one class,
+ * one job) - user-requested (2026-09-08) after a round of button-alignment
+ * fixes kept landing as one-off inline `style={{display:'flex', ...}}`
+ * objects per call site instead of a shared class, repeating exactly the
+ * "hardcoded CSS" problem rule 3 exists to stop. Reach for these instead of
+ * a new inline flex object; add a new atomic class here (not a bespoke
+ * component-specific rule) if a genuinely new alignment shape comes up. */
+.d-flex { display: flex; }
+.justify-end { justify-content: flex-end; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.align-center { align-items: center; }
+.align-end { align-self: flex-end; }
+.ml-auto { margin-left: auto; }
