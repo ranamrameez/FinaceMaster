@@ -5882,20 +5882,32 @@ touched those.
   tokens only a few RGB values apart on the default theme, making alternating rows nearly
   invisible — fixed by mixing in `--accent` instead (always a distinct hue from panel/panel-2
   on every theme).
-- **User flagged, same day, NOT yet resolved as of this note: "SERIOUS BUG: Add & Edit popups
-  are lossing data while prefilling and saving."** Investigated broadly before this note was
-  written — checked every module's own Add/Edit draft-state pattern (Funds/EMI/Personal Loans/
-  Subscriptions/Rentals all initialize edit-form state from the FULL existing record via
-  `useState<X>(record)`, re-synced fresh on every "Edit" click; Bank's own explicit-field
-  `accountToFormValue()` mapper is protected by `updateAccount`'s merge-patch store action, so
-  a field missing from that mapper can't silently get wiped on save) — found no confirmed
-  systemic "field silently dropped" bug in this sweep. **Do not assume this report is
-  resolved or a false alarm** — a future session should get the specific popup/module from the
-  user before continuing this investigation; guessing further without a concrete repro risks
-  burning effort on the wrong file. (2) Also flagged, not yet scoped: "Planning & Budget
-  Planner are two faces of a single feature, confusing, complex and still incomplete" — a real
-  design question (should these two pages actually merge, and how) needing the user's own
-  direction before any code, per this file's standing plan-and-propose rule for design forks.
+- **"SERIOUS BUG: Add & Edit popups are lossing data while prefilling and saving" — root-caused
+  and fixed same day (2026-09-08), see README Done item 267.** A broad sweep of every module's
+  Add/Edit draft-state pattern (Funds/EMI/Personal Loans/Subscriptions/Rentals/Bank/Cash) found
+  no systemic "field silently dropped" bug — every module uses the safe full-record-spread +
+  merge/replace pattern. Asked the user which popup; answer: "Plans." The real gap: Cash's
+  `PlanList` and Bank's `BankPlanList` inline edit rows never exposed Currency (Cash) or
+  Recurrence (both) for editing at all — the underlying `editRow` state DID preserve them (an
+  untouched full spread), so nothing was actually being wiped on save, but a user opening Edit
+  on a recurring/foreign-currency plan saw no sign those fields existed, reading exactly like
+  "lost." Fixed by wiring the already-existing `RecurrenceFields` component (built for the ADD
+  forms, never also added to either module's EDIT row) plus a Currency `<select>` into both
+  inline edit rows, with the Date field's `onChange` also re-syncing `recurrence.startDate` on
+  edit (matching what the ADD forms already did). Verified live: changing a plan's recurrence
+  cycle and saving persisted correctly while every other field stayed intact.
+- **"Planning & Budget Planner are two faces of a single feature, confusing, complex and still
+  incomplete" — merged into one page same day (2026-09-08), see README Done item 268.** Asked
+  the user how to resolve it; chose "merge into one page." Confirmed the complaint was accurate
+  (both pages let you add a Cash/Bank plan with neither a strict superset of the other) before
+  merging. Kept the `/planning` route; `/budget` now redirects there; the "Budget Planner"
+  `CategoryNav` entry is gone. New page order: Upcoming (30 days) → the old Budget Planner's
+  combined filterable Cash/Bank/Rentals activity table → Cash's own Planning tools (now with the
+  fixed recurrence-capable plan list) → Banking's own Planning tools → a new Rentals-only
+  "Add a one-off plan" section (Budget Planner's old generic add-plan form, narrowed to Rentals
+  only, since Cash/Bank now have strictly more capable sections of their own above).
+  `features/budget/pages/BudgetPlannerPage.tsx` deleted; `lib/calc/budgetPlanner.ts` (the pure
+  calc module) is untouched, still used by `netWorthTrend.ts` and the merged page.
 
 ## Live URLs
 

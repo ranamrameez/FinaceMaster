@@ -7255,6 +7255,59 @@ FinanceManager live link:
   than a plain even-row band. Verified via a real before/after computed-style check (even row
   went from a ~5-unit RGB delta to ~34 units against the odd row) plus a screenshot. `npx tsc
   -b` / `npm run test` (624 tests, unchanged — CSS-only) / `npm run build` all clean.
+- **"SERIOUS BUG: Add & Edit popups are lossing data while prefilling and saving" — root-caused,
+  fixed for the reported case (2026-09-08) — see README Done item 267.** Swept every module's
+  Add/Edit draft-state pattern first (Bank accounts/transactions, Cash entries, Funds, EMI,
+  Personal Loans, Rentals, Subscriptions) — every one already uses the safe pattern (full-record
+  draft init, resynced fresh per Edit click, either a full-record write or a partial merge on
+  save) — found no data-loss bug in any of them. Asked the user which popup; answer: "Plans."
+  **The real gap, once found**: Cash's `PlanList` and Bank's `BankPlanList` inline edit-row UIs
+  (the "Plans" tabs' own table) only ever exposed Date/Type/Amount/Category/Note for editing —
+  Currency (Cash) and Recurrence (both) were silently absent from the edit form entirely, even
+  though the underlying `editRow` state DID preserve them (a full `{ ...p }` spread, never
+  touched by the missing fields' non-existent `onChange` handlers) — so the data was never
+  actually wiped on save, but a user opening Edit on a recurring/foreign-currency plan saw no
+  sign those fields existed at all, which reads exactly like "lost" from the outside. Root
+  cause: `RecurrenceFields` (the shared component built for the ADD forms, see Done item 238)
+  was never also wired into either module's EDIT row. Fixed by adding a Currency `<select>` and
+  `RecurrenceFields` to both inline edit rows (Cash gained an extra "Currency" column; both
+  gained a "Repeats / status" column replacing the old plain "Status" one), with the Date
+  field's `onChange` also re-syncing `recurrence.startDate` on edit — the same fix the ADD forms
+  already had, now matched on the EDIT side. Verified live via Playwright on both modules: the
+  edit row now shows a real Currency select (USD + every enabled currency) and a working
+  Repeats/Every/Days control set; changing a plan's recurrence cycle (monthly → yearly on Cash,
+  monthly → weekly on Bank) and saving correctly persisted the new cycle to localStorage while
+  every other field (amount, category, note, currencyCode) stayed exactly as it was — confirming
+  the underlying store write was never the bug, only the missing UI. `npx tsc -b` / `npm run
+  test` (624 tests, unchanged) / `npm run build` all clean.
+- **Planning & Budget Planner merged into one page, user-requested (2026-09-08) — see README
+  Done item 268.** User: "Planning & Budget Planner are two faces of a single feature, confusing,
+  complex and still incomplete" — confirmed accurate by reading both pages side by side: both let
+  you add a Cash/Bank plan (Planning's own Cash/Bank "Add a plan" forms support recurrence;
+  Budget Planner's generic one didn't), both showed planned Cash/Bank data, and neither was a
+  strict superset of the other (only Budget Planner's combined table let you browse Cash+Bank+
+  Rentals activity filtered in one place). Asked the user how to resolve it; chose "merge into
+  one page." Kept the `/planning` route and its nav entry; `/budget` now redirects to
+  `/planning` (`<Navigate to="/planning" replace />`) rather than a hard 404 for anyone with the
+  old URL saved, and the "Budget Planner" `CategoryNav` entry is gone. New page order: Upcoming
+  (next 30 days, unchanged) → "All planned financial activity" (the old Budget Planner's
+  combined, filterable Cash/Bank/Rentals table, now the one place to browse everything) → Cash's
+  own Planning tools (balance projection + the now-fixed recurrence-capable plan list, reused
+  unchanged) → Banking's own Planning tools (same) → a new "Rentals" section. Rentals never had
+  its own per-page Planning tools (only per-property auto-generation buried in
+  `PropertyDetailModal`) — kept Budget Planner's generic add-plan form for this one case,
+  narrowed to Rentals only (dropped its Cash/Bank options entirely, since Cash's/Bank's own
+  sections above are now strictly more capable for those two — recurrence, edit, delete,
+  mark-done — and keeping a second, less capable way to add a Cash/Bank plan on the same page
+  would just recreate the exact "two faces of one feature" problem this merge exists to fix).
+  `features/budget/pages/BudgetPlannerPage.tsx` deleted outright (the underlying pure calc
+  module, `lib/calc/budgetPlanner.ts`, is untouched — still used by `netWorthTrend.ts` and the
+  merged page itself). Verified live via Playwright: `/planning` shows all 4 sections
+  (CollapsibleCards default open, so nothing needed expanding); `/budget` redirects to
+  `/planning`; `CategoryNav` lists 10 entries with no separate "Budget Planner"; the new
+  Rentals-only "Add a rental plan" FAB opens with only a property picker (no module picker) and
+  correctly hits the real sign-in gate on submit — zero console errors. `npx tsc -b` / `npm run
+  test` (624 tests, unchanged) / `npm run build` all clean.
 
 ## Pending
 

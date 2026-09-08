@@ -1,4 +1,4 @@
-import { HashRouter, Route, Routes } from 'react-router-dom';
+import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
 import { CalculatorLauncher } from './components/CalculatorLauncher';
 import { ConfirmDialogHost } from './components/ConfirmDialog';
@@ -52,7 +52,6 @@ import { useInterEntityTransfersFirebaseSync } from './lib/firebase/useInterEnti
 import { useNetWorthSnapshotsFirebaseSync } from './lib/firebase/useNetWorthSnapshotsFirebaseSync';
 import { LegalPage } from './pages/LegalPage';
 import { NetWorthPage } from './features/netWorth/pages/NetWorthPage';
-import { BudgetPlannerPage } from './features/budget/pages/BudgetPlannerPage';
 import { AppDataPage } from './features/appData/pages/AppDataPage';
 import { AccountPage } from './features/account/pages/AccountPage';
 
@@ -289,7 +288,7 @@ function App() {
                   />
                 }
               />
-              <Route path="/budget" element={<BudgetPlannerPage />} />
+              <Route path="/budget" element={<Navigate to="/planning" replace />} />
               <Route path="/app-data" element={<AppDataPage />} />
               <Route path="/account" element={<AccountPage syncStatuses={syncStatuses} />} />
               <Route path="/legal" element={<LegalPage />} />
