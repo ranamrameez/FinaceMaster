@@ -1,7 +1,18 @@
 import type { Fund } from '../../types/fundsWorkbook';
+import type { Category } from '../../types/finance';
 import type { Position, PricePoint, Transaction } from '../../types/workbook';
+import { categoryName } from '../categories';
 import { computePositions } from './positions';
 import { getDailyPriceHistory, getMarketPrice, getPriceHistory } from './priceHistory';
+
+/** A fund's category label for display/grouping — prefers the shared
+ * registry's `categoryID` (README Done item 248), falls back to the
+ * pre-retrofit fixed-enum `category` string for a fund saved before that
+ * migration, and only reads as "Uncategorized" once neither is set. Same
+ * three-tier fallback shape as Subscriptions' own `subCategoryLabel()`. */
+export function fundCategoryLabel(fund: Fund, categories: Category[]): string {
+  return fund.categoryID ? categoryName(fund.categoryID, categories) : fund.category || 'Uncategorized';
+}
 
 const calcFee = () => 0; // NAV is already net of fund fees — see FundsWorkbook's doc comment
 
@@ -51,6 +62,7 @@ export function allocationByCategory(
   transactions: Transaction[],
   marketPrices: Record<string, number>,
   currencyCode: string,
+  categories: Category[] = [],
 ): Record<string, number> {
   const positions = computePositions(transactions, calcFee);
   const out: Record<string, number> = {};
@@ -61,7 +73,10 @@ export function allocationByCategory(
       const units = position?.shares ?? 0;
       const nav = getMarketPrice(fund.id, marketPrices, transactions);
       const value = units * nav;
-      if (value > 0) out[fund.category] = (out[fund.category] ?? 0) + value;
+      if (value > 0) {
+        const label = fundCategoryLabel(fund, categories);
+        out[label] = (out[label] ?? 0) + value;
+      }
     });
   return out;
 }

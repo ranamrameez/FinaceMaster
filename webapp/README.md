@@ -7032,6 +7032,39 @@ FinanceManager live link:
   first two letters of the seeded "MYFUND" code) — proving the colored-initials fallback fires
   correctly with zero wasted network attempt. Zero console errors throughout. `npx tsc -b` /
   `npm run test` (616 tests, unchanged — UI-only) / `npm run build` all clean.
+- **Funds moved off its fixed category enum onto the shared registry (2026-09-08) — see
+  README Done item 248, closes README Pending item 126 in full.** Mirrors the identical
+  Subscriptions retrofit (Done item 245) exactly: `Fund.category` (the old fixed `'Equity'|
+  'Debt'|'Hybrid'|'International'|'Other'` enum) is now optional and `@deprecated`, kept —
+  never written to by new code — purely as a display fallback for a fund saved before this
+  change; a new `categoryID?: string` points into the same app-wide shared category registry
+  Cash/Bank/Rentals/Subscriptions already use. New `fundCategoryLabel(fund, categories)` in
+  `lib/calc/fundsModule.ts` is the one place every display/grouping site now resolves a fund's
+  category label (`categoryID` → registry name → legacy `category` string → "Uncategorized"),
+  and `allocationByCategory()` (feeding Analytics' "Allocation by category" chart) takes a new
+  optional `categories` parameter to group by that resolved label instead of the raw enum.
+  **The one real design question this item itself flagged**: `DEFAULT_CATEGORIES` (the shared
+  registry's seed list) holds the app owner's own real Cash/Bank/Rentals category names
+  ("Grocery", "Bill", etc.), nothing resembling "Equity"/"Debt" — deliberately did NOT seed the
+  registry with the old fund-specific enum values, since `lib/categories.ts`'s own doc comment
+  already flags that list as personal, not generic, seed data not to be casually extended. A
+  user who wants an "Equity"/"Debt"-style grouping back adds it once via `CategorySelect`'s
+  own "+" quick-add, same as any other custom category — this is the literal shape of the
+  original "single shared list + per-user customization" request, not a workaround for it.
+  Both Funds import flows (`SnapshotImportSection`'s "Category for new funds" picker,
+  `DailyHistoryImportSection`'s identical one) switched from the old fixed `<Select>` to the
+  same `CategorySelect`, and `materializeFundsImport()`'s `defaultCategory: Fund['category']`
+  parameter became `defaultCategoryID?: string`, writing `categoryID` onto newly-created funds
+  instead of the deprecated field. New tests: `fundsModule.test.ts` gained a `fundCategoryLabel`
+  block (3 cases covering all three fallback tiers) plus a categoryID-grouping case for
+  `allocationByCategory`; `fundsSnapshotImport.test.ts` gained a case confirming
+  `materializeFundsImport` writes `categoryID`, never the deprecated `category`. Verified live
+  via Playwright with a seeded mix of one legacy-category fund and one registry-categoryID
+  fund: the fund list table showed both labels correctly ("Debt" for the legacy fund, "Grocery"
+  for the registry-linked one), the Analytics allocation chart grouped by both labels
+  correctly, and the Add Fund form's Category field rendered the real 27-entry shared registry
+  (not the old 5-value fixed list) — zero console errors. `npx tsc -b` / `npm run test` (621
+  tests, 5 new) / `npm run build` all clean.
 
 ## Pending
 
@@ -7089,8 +7122,8 @@ wave" section)**:
     Personal Loans' payoff planner, Cash/Banking's Planning tab) rather than a dedicated
     Calculator-button variant per module — no separate work item left here unless a module-
     specific popup calculator is explicitly requested later.
-23. **Per-module Analytics for Cash/Banking/Personal Loans/EMI-Loans/Funds/Rentals — DONE
-    (2026-08-24), see Done items 44/45/90/91/92/93.** Every one of the six non-exchange
+~~23. Per-module Analytics for Cash/Banking/Personal Loans/EMI-Loans/Funds/Rentals~~ —
+    **done (2026-08-24), see Done items 44/45/90/91/92/93.** Every one of the six non-exchange
     modules now has a real Analytics tab with charts, matching QSE/PSX's Analytics page in
     spirit (fewer charts per module, all fit for that module's own data shape — see
     `MODULES_PLAN.md` §11 for what each module got). Module-specific "planning" tools
@@ -7205,7 +7238,8 @@ already fixed; the rest tracked here**:
     separate, much larger undertaking if wanted later — not tracked as a gap here.
 46. ~~A raw-vs-concise number display toggle in Appearance settings (1,000 vs 1k).~~ **Done —
     see Done item 83.**
-47. **Done — see Done items 85/89/98, plus a final audit (2026-08-26).** `components/
+~~47. Tooltip/native-`title` sweep~~ — **done, see Done items 85/89/98, plus a final audit
+    (2026-08-26).** `components/
     Tooltip.tsx` now backs `StatCard`/`MoneyValue`/`FeeModeControl`'s tooltips, the Fee
     column's "(netted)"/"(override)" tags, the Trade Planner's sync indicators, QSE's/PSX's
     `PositionDetail` stat cards, and the per-transaction/per-repayment "Balance"/"Remaining"
@@ -7328,7 +7362,7 @@ item 103) — all three now fixed, see Done item 104:**
     across the app haven't had a dedicated audit pass — this was two real, meaningful passes on
     the terms most likely to confuse a non-trader/non-accountant, not an exhaustive audit of
     every string in the app.
-56. **Portfolio page overhaul (2026-08-24, item 12 of the original screenshot batch) — a real,
+~~56. Portfolio page overhaul (2026-08-24, item 12 of the original screenshot batch)~~ — a real,
     multi-part redesign; re-audited against the live page (2026-08-25), most items already
     resolved by later fixes in this same project, one real bug found and fixed — see Done item
     138.** The user's own list, verbatim, with current status: (a) "no live market data makes
@@ -7878,20 +7912,13 @@ or a design decision before more code, not guessed at further:**
      "item 14" user report) already applies this app-wide, with no competing override found.
 ~~125. Inter-currency transfer auto-fill from cached FX rate~~ — **done (2026-09-08), see Done
      item 240.**
-126. **Single shared category list used everywhere + per-user customization (2026-09-08,
-     user-requested)** — Cash/Bank/Rentals already share one real registry
-     (`lib/categories.ts`/`categoryStore.ts`, Done item 221's "Finance base model" restructure)
-     with a real "add your own category" flow via `CategorySelect`.
-     ~~Subscriptions has its own free-text `category` field with no link to the shared
-     registry~~ — **done (2026-09-08), see Done item 245.** Still genuinely NOT unified: Funds
-     uses a FIXED enum (`'Equity'|'Debt'|'Hybrid'|'International'|'Other'`) rather than
-     free-form categories at all — a real, deliberate-at-the-time deviation from this project's
-     own "category fields must be free-form" cross-cutting rule (see `MODULES_PLAN.md`).
-     Switching Funds off its fixed enum is a bigger change than Subscriptions was — it's used
-     today to group "Allocation by category" on the Funds Analytics chart, and moving to
-     free-form categories needs the same design/migration care `types/finance.ts`'s own
-     file-level comment already gave this exact scoping question (it was explicitly excluded
-     from the original Finance-base restructure as "fundamentally different"). Not yet built.
+~~126. Single shared category list used everywhere + per-user customization~~ — **done in full
+     (2026-09-08), see Done items 245/248.** Cash/Bank/Rentals share one real registry
+     (`lib/categories.ts`/`categoryStore.ts`, Done item 221); Subscriptions and Funds (the
+     latter's own fixed `'Equity'|'Debt'|'Hybrid'|'International'|'Other'` enum, a deliberate-
+     at-the-time deviation from this project's own "category fields must be free-form" rule)
+     both now retrofit onto the same registry via an optional `categoryID`, keeping their old
+     free-text/fixed-enum field as a read-only display fallback for pre-migration records.
 ~~127. Per-user selectable currency subset~~ — **done (2026-09-08), see Done item 246.**
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/

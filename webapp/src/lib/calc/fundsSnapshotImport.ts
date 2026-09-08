@@ -144,7 +144,7 @@ export interface FundsImportResult {
  * before SELL (see `sortTransactionsChronological`). */
 export function materializeFundsImport(
   plan: FundSnapshotPlanRow[],
-  opts: { snapshotDate: string; currencyCode: string; defaultCategory: Fund['category'] },
+  opts: { snapshotDate: string; currencyCode: string; defaultCategoryID?: string },
 ): FundsImportResult {
   const newFunds: Fund[] = [];
   const transactions: Transaction[] = [];
@@ -157,7 +157,7 @@ export function materializeFundsImport(
         name: p.row.name,
         code: p.row.code,
         platform: p.row.bank,
-        category: opts.defaultCategory,
+        categoryID: opts.defaultCategoryID,
         currencyCode: opts.currencyCode,
       });
     }

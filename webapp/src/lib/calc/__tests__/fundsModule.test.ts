@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import type { Category } from '../../../types/finance';
 import type { Fund } from '../../../types/fundsWorkbook';
 import type { PricePoint, Transaction } from '../../../types/workbook';
-import { allocationByCategory, balanceUpdateHistory, contributionVsValueSeries, expectedPLRate, fundNetProfit, fundsValueByCurrency, organicPLByPeriod, projectInvestmentReturn } from '../fundsModule';
+import { allocationByCategory, balanceUpdateHistory, contributionVsValueSeries, expectedPLRate, fundCategoryLabel, fundNetProfit, fundsValueByCurrency, organicPLByPeriod, projectInvestmentReturn } from '../fundsModule';
 import { averagePeriodPL, reconstructFundDailyHistory } from '../fundsDailyHistoryImport';
 import { computePositions } from '../positions';
 
@@ -60,6 +61,32 @@ describe('allocationByCategory', () => {
   it('never blends currencies together', () => {
     const result = allocationByCategory(funds, transactions, { f1: 12 }, 'PKR');
     expect(Object.keys(result)).toEqual(['Debt']);
+  });
+
+  it('groups by categoryID (shared registry) when set, overriding the legacy category string', () => {
+    const categories: Category[] = [{ id: 'cat_growth', serialNumber: 1, name: 'Growth' }];
+    const withRegistryCategory: Fund[] = [{ id: 'f1', name: 'US Growth', code: 'USG', platform: 'Fidelity', category: 'Equity', categoryID: 'cat_growth', currencyCode: 'USD' }];
+    const result = allocationByCategory(withRegistryCategory, transactions, { f1: 12 }, 'USD', categories);
+    expect(result).toEqual({ Growth: 1200 });
+  });
+});
+
+describe('fundCategoryLabel', () => {
+  const categories: Category[] = [{ id: 'cat_growth', serialNumber: 1, name: 'Growth' }];
+
+  it('prefers categoryID resolved against the shared registry when set', () => {
+    const fund: Fund = { id: 'f1', name: 'X', code: 'X', platform: 'X', category: 'Equity', categoryID: 'cat_growth', currencyCode: 'USD' };
+    expect(fundCategoryLabel(fund, categories)).toBe('Growth');
+  });
+
+  it('falls back to the legacy fixed-enum category for a fund saved before this migration', () => {
+    const fund: Fund = { id: 'f1', name: 'X', code: 'X', platform: 'X', category: 'Debt', currencyCode: 'USD' };
+    expect(fundCategoryLabel(fund, categories)).toBe('Debt');
+  });
+
+  it('falls back to Uncategorized with neither field set', () => {
+    const fund: Fund = { id: 'f1', name: 'X', code: 'X', platform: 'X', currencyCode: 'USD' };
+    expect(fundCategoryLabel(fund, categories)).toBe('Uncategorized');
   });
 });
 
