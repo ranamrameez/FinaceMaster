@@ -1,6 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal } from './Modal';
-import { Notice } from './Notice';
 import { toast } from './Toast';
 import { PlusIcon, SaveIcon, TrashIcon } from './icons';
 import { Field, TextInput } from './ui/Field';
@@ -11,6 +10,7 @@ import { getLastTransferSource, rememberTransferSource } from '../hooks/useLastT
 import { CategorySelect } from './CategorySelect';
 import { UNCATEGORIZED_ID } from '../lib/categories';
 import { defaultTimezoneForCurrency, nowTime } from '../lib/datetime';
+import { convertAmount, loadCachedFxRates } from '../lib/fx';
 import { useEnsureSignedIn } from '../lib/firebase/useEnsureSignedIn';
 import { isSupportedLinkPair } from '../lib/interEntityLink';
 import { createLinkedTransfer } from '../lib/linkCascade';
@@ -85,6 +85,18 @@ interface TxRow {
   linked: boolean;
   other: LinkSideConfig;
   amount: number;
+  /** The "other" side's own amount for a cross-currency linked transfer —
+   * see the currency-mismatch block in `TxRowFields` below for why this
+   * exists. Kept in sync with the live FX-cache suggestion (via a
+   * `useEffect` in `TxRowFields`) as long as `toAmountTouched` is false, so
+   * `submit()` below can just read this field directly rather than
+   * needing to recompute the suggestion itself (which it can't — currency
+   * resolution is a hook, only callable from a component's render). */
+  toAmount?: number;
+  /** True once the user has actually edited the suggested `toAmount` — from
+   * then on it's their own real number, and the `useEffect` stops
+   * overwriting it as `amount`/currencies keep changing. */
+  toAmountTouched: boolean;
   direction: 'in' | 'out';
   date: string;
   time?: string;
@@ -110,6 +122,7 @@ function emptyRow(key: number, finance: LinkSideConfig, currencyCode?: string): 
     description: '',
     note: '',
     pending: false,
+    toAmountTouched: false,
   };
 }
 
@@ -134,6 +147,21 @@ function TxRowFields({
   const direction = DIRECTION_LABELS[row.finance.module];
   const sameEntity = row.linked && row.finance.module === row.other.module && !!row.finance.ref && row.finance.ref === row.other.ref;
   const pairSupported = !row.linked || (isSupportedLinkPair(row.finance.module, row.other.module) && isSupportedLinkPair(row.other.module, row.finance.module));
+
+  // User-requested (2026-09-08, design confirmed via AskUserQuestion):
+  // "allow the automated editable converted values" — suggests the other
+  // side's amount from the same cached FX rate table Net Worth already
+  // uses (`lib/fx.ts`), kept live-updating in `row.toAmount` as `amount`/
+  // currencies change until the user actually edits the field (then
+  // `toAmountTouched` stops this effect from overwriting their own value).
+  const cachedRates = loadCachedFxRates();
+  const suggestedToAmount = currencyMismatch ? convertAmount(row.amount, financeCurrency!, otherCurrency!, cachedRates) : null;
+  useEffect(() => {
+    if (currencyMismatch && !row.toAmountTouched && row.toAmount !== (suggestedToAmount ?? undefined)) {
+      onChange({ ...row, toAmount: suggestedToAmount ?? undefined });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currencyMismatch, suggestedToAmount, row.toAmountTouched]);
 
   return (
     <div className="entry-row">
@@ -204,9 +232,25 @@ function TxRowFields({
             <p className="text-muted" style={{ color: 'var(--warn, orange)' }}>Linking these two isn't supported yet.</p>
           )}
           {currencyMismatch && (
-            <Notice tone="warning" style={{ marginTop: 8 }}>
-              <p style={{ margin: 0 }}>{financeCurrency} vs. {otherCurrency} — no live conversion, both sides record the same numeric amount.</p>
-            </Notice>
+            <div style={{ marginTop: 8 }}>
+              <Field label={`Amount (${otherCurrency})`}>
+                <TextInput
+                  type="number"
+                  step="0.01"
+                  value={row.toAmount ?? ''}
+                  onChange={(e) => onChange({ ...row, toAmount: e.target.value === '' ? undefined : Number(e.target.value), toAmountTouched: true })}
+                />
+              </Field>
+              <p className="text-muted" style={{ margin: '4px 0 0' }}>
+                {financeCurrency} → {otherCurrency}
+                {' — '}
+                {row.toAmountTouched
+                  ? 'entered manually.'
+                  : cachedRates && suggestedToAmount !== null
+                    ? `via cached FX rate (updated ${new Date(cachedRates.fetchedAt).toLocaleDateString()}) — editable.`
+                    : 'no cached FX rate available — enter the converted amount yourself.'}
+              </p>
+            </div>
           )}
         </div>
       )}
@@ -287,10 +331,18 @@ export function TransactionEntryModal({ defaultFinance, onClose }: { defaultFina
         const abs = Math.abs(r.amount);
         const emiLoan = r.other.module === 'emi' ? emiLoans.find((l) => l.id === r.other.ref) : undefined;
         const resolvedOther = emiLoan ? { ...r.other, emiMonth: nextUnpaidEmiMonth(emiLoan) } : r.other;
+        // `r.amount` is always the FINANCE side's own amount; `r.toAmount`
+        // (when set — a cross-currency link) is always the OTHER side's —
+        // `from`/`to` below swap which is which based on direction, so
+        // fromAmount/toAmount need the same conditional swap, not a flat
+        // `abs` on both sides (that was only correct back when every
+        // linked transfer shared one numeric amount for both currencies).
+        const financeAmount = abs;
+        const otherAmount = r.toAmount ?? abs;
         const result = createLinkedTransfer({
           date: r.date,
-          fromAmount: abs,
-          toAmount: abs,
+          fromAmount: r.direction === 'out' ? financeAmount : otherAmount,
+          toAmount: r.direction === 'out' ? otherAmount : financeAmount,
           from: r.direction === 'out' ? r.finance : resolvedOther,
           to: r.direction === 'out' ? resolvedOther : r.finance,
           note: r.note.trim() || r.description.trim() || undefined,

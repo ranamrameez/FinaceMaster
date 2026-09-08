@@ -6735,6 +6735,34 @@ FinanceManager live link:
   Worth 29 QAR for a seeded scenario) — confirming the "—" was a test-seed artifact, not a real
   bug in the new cards. `npx tsc -b` / `npm run test` (562 tests, unchanged) / `npm run build`
   all clean.
+240. **Inter-currency transfer auto-fill from cached FX rate (2026-09-08), design confirmed
+  via `AskUserQuestion` earlier the same session.** "we should allow the automated editable
+  converted values and ask if any middleware (like FX) involved." `TransactionEntryModal.tsx`'s
+  linked-row flow used to hardcode `fromAmount: abs, toAmount: abs` — the SAME numeric amount on
+  both sides of a link regardless of currency, with a plain warning that "no live conversion"
+  applied. Replaced with a real editable "Amount ({otherCurrency})" field that auto-suggests
+  from the existing `lib/fx.ts` cached rate (the same source Net Worth already uses) the moment
+  a currency mismatch is detected, plus a caption naming the source: "USD → PKR — via cached FX
+  rate (updated 9/7/2026) — editable." — directly answering the "ask if any middleware
+  involved" half of the request. **The suggestion live-updates as the amount changes, until the
+  user actually edits the field** — `TxRow` gained `toAmount`/`toAmountTouched`, kept in sync by
+  a `useEffect` (currency resolution is a hook, so this can't be recomputed inside the plain
+  `submit()` handler — the effect is what lets `submit()` just read `row.toAmount` directly).
+  Once touched, the caption switches to "entered manually" and the effect stops overwriting it,
+  confirmed by changing the USD amount afterward and seeing the PKR field hold its manually-set
+  value rather than snapping back to a new suggestion. **A real correctness bug caught and fixed
+  while wiring `submit()`, not present in the old code (which never needed to distinguish the
+  two amounts)**: `fromAmount`/`toAmount` need the same conditional swap `from`/`to` already do
+  based on `r.direction` — a first draft always sent `fromAmount: abs` (the FINANCE side's own
+  amount) regardless of which side ends up as `from`, which is wrong exactly when
+  `direction === 'in'` (finance becomes `to`, not `from`). Fixed by computing `financeAmount`/
+  `otherAmount` once and assigning each to `fromAmount`/`toAmount` via the identical
+  direction-based ternary `from`/`to` already use. Verified live via Playwright with a seeded
+  cached rate (1 USD = 278.5 PKR) and a real Cash↔Bank link: entering 100 USD auto-filled
+  27,850.00 PKR with the correct source caption; overriding it to 30,000 and then changing the
+  USD amount to 200 correctly left the PKR field at 30,000 (not overwritten); Save correctly hit
+  the real sign-in gate — zero console errors throughout. `npx tsc -b` / `npm run test` (562
+  tests, unchanged) / `npm run build` all clean.
 
 ## Pending
 
@@ -7603,17 +7631,8 @@ or a design decision before more code, not guessed at further:**
      this file has repeated many times): `theme.css`'s `tbody tr:nth-child(even){background:
      color-mix(in srgb, var(--panel-2) 55%, var(--panel));}` (its own comment cites an earlier
      "item 14" user report) already applies this app-wide, with no competing override found.
-125. **Inter-currency transfer auto-fill from cached FX rate (2026-09-08, user-requested,
-     design confirmed via `AskUserQuestion`)** — "we should allow the automated editable
-     converted values." Confirmed: auto-fill the "to" amount from the existing `lib/fx.ts`
-     cached rate (the same source Net Worth already uses, refreshed at most once a day) the
-     moment both currencies are known in a cross-currency link, remaining fully editable
-     afterward — never silently trusted. Applies to `TransactionEntryModal.tsx`'s linked-row
-     flow (`SideFields`/`fromAmount`/`toAmount`) and the standalone Transfers-page equivalent.
-     Not yet built — the user's own follow-up question ("ask if any middleware like FX
-     involved") reads as wanting the UI to also surface WHERE the suggested rate came from
-     (e.g. "via cached rate, updated <date>") rather than a bare number, which should be part of
-     this same pass.
+~~125. Inter-currency transfer auto-fill from cached FX rate~~ — **done (2026-09-08), see Done
+     item 240.**
 126. **Single shared category list used everywhere + per-user customization (2026-09-08,
      user-requested)** — partially already true: Cash/Bank/Rentals already share one real
      registry (`lib/categories.ts`/`categoryStore.ts`, Done item 221's "Finance base model"
