@@ -3,6 +3,7 @@ import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
+import { CategorySelect } from '../../../components/CategorySelect';
 import { Modal } from '../../../components/Modal';
 import { Notice } from '../../../components/Notice';
 import { Tooltip } from '../../../components/Tooltip';
@@ -27,6 +28,7 @@ import {
 } from '../../../lib/calc/subscriptionsModule';
 import { dlBarV, dlDoughnut } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
+import { categoryName, UNCATEGORIZED_ID } from '../../../lib/categories';
 import { cssVar, tickerColor } from '../../../lib/cssVar';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
@@ -34,11 +36,13 @@ import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
 import { useAppearanceStore } from '../../../store/appearanceStore';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
+import { useCategoryStore } from '../../../store/categoryStore';
 import { createEmptySubscriptionsWorkbook } from '../../../store/defaultSubscriptionsWorkbook';
 import { usePlannedBankWorkbookStore } from '../../../store/plannedBankWorkbookStore';
 import { usePlannedCashWorkbookStore } from '../../../store/plannedCashWorkbookStore';
 import { useSubscriptionsWorkbookStore } from '../../../store/subscriptionsWorkbookStore';
 import type { Subscription, SubscriptionAlert, SubscriptionsWorkbook } from '../../../types/subscriptionsWorkbook';
+import type { Category } from '../../../types/finance';
 import type { PlannedBankTransaction } from '../../../types/plannedBank';
 import type { PlannedCashEntry } from '../../../types/plannedCash';
 import { ChartCard } from '../../qse/components/ChartCard';
@@ -89,7 +93,7 @@ function AddSubscriptionForm({ onSaved }: { onSaved?: () => void } = {}) {
     if (!s.amount || s.amount <= 0) return toast('Enter an amount.');
     if (s.billingCycle === 'custom' && (!s.customDays || s.customDays <= 0)) return toast('Enter the custom cycle length in days.');
     if (!(await ensureSignedIn('Sign in to save subscriptions.'))) return;
-    addEntry({ ...s, id: crypto.randomUUID(), name: s.name.trim(), category: s.category?.trim() || undefined });
+    addEntry({ ...s, id: crypto.randomUUID(), name: s.name.trim() });
     toast(`Subscription "${s.name.trim()}" added.`);
     setS(emptySubscription(s.currencyCode));
     onSaved?.();
@@ -125,8 +129,8 @@ function AddSubscriptionForm({ onSaved }: { onSaved?: () => void } = {}) {
         <Field label="Start date">
           <TextInput type="date" value={s.startDate} onChange={(e) => setS({ ...s, startDate: e.target.value })} />
         </Field>
-        <Field label="Category (optional)" width={150}>
-          <TextInput list="subscriptions-category-datalist" value={s.category ?? ''} onChange={(e) => setS({ ...s, category: e.target.value })} placeholder="e.g. Streaming" />
+        <Field label="Category" width={180}>
+          <CategorySelect value={s.categoryID ?? UNCATEGORIZED_ID} onChange={(categoryID) => setS({ ...s, categoryID })} />
         </Field>
       </div>
       <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
@@ -160,11 +164,24 @@ function OverallSummary() {
 /* ============================== List ============================== */
 
 /** User-requested (2026-09-03): "add filters to other tables as well." */
+/** Resolves a subscription's category to a display name — the shared
+ * registry (`categoryID`) when set, falling back to the pre-retrofit
+ * free-text `category` field for old data, then "Uncategorized". Reused
+ * everywhere the category shows up (cell, sort, filter) so all three stay
+ * in sync by construction. */
+function subCategoryLabel(s: Subscription, categoryRegistry: Category[]): string {
+  return s.categoryID ? categoryName(s.categoryID, categoryRegistry) : s.category?.trim() || 'Uncategorized';
+}
+
 function SubscriptionList({ onSelect }: { onSelect: (sub: Subscription) => void }) {
   const subs = useSubscriptionsWorkbookStore((s) => s.workbook.entries);
   const updateEntry = useSubscriptionsWorkbookStore((s) => s.updateEntry);
+  const categoryRegistry = useCategoryStore((s) => s.workbook.categories);
   const ensureSignedIn = useEnsureSignedIn();
-  const knownCategories = useMemo(() => [...new Set(subs.map((s) => s.category).filter((c): c is string => !!c))].sort(), [subs]);
+  const knownCategories = useMemo(
+    () => [...new Set(subs.map((s) => subCategoryLabel(s, categoryRegistry)))].sort(),
+    [subs, categoryRegistry],
+  );
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'cancelled'>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   // Pending item 115(c): Sr# = the subscription's own stable position in
@@ -181,10 +198,10 @@ function SubscriptionList({ onSelect }: { onSelect: (sub: Subscription) => void 
     () => subs.filter((s) => {
       if (statusFilter === 'active' && !s.active) return false;
       if (statusFilter === 'cancelled' && s.active) return false;
-      if (categoryFilter !== 'all' && (s.category || '') !== categoryFilter) return false;
+      if (categoryFilter !== 'all' && subCategoryLabel(s, categoryRegistry) !== categoryFilter) return false;
       return true;
     }),
-    [subs, statusFilter, categoryFilter],
+    [subs, statusFilter, categoryFilter, categoryRegistry],
   );
 
   type Row = { sub: Subscription; monthly: number; next: string };
@@ -194,7 +211,7 @@ function SubscriptionList({ onSelect }: { onSelect: (sub: Subscription) => void 
     switch (col) {
       case 'amount': return r.sub.amount;
       case 'monthly': return r.monthly;
-      case 'category': return r.sub.category ?? '';
+      case 'category': return subCategoryLabel(r.sub, categoryRegistry);
       case 'next': return r.next || 'zzzz';
       case 'status': return r.sub.active ? 0 : 1;
       case 'favorite': return r.sub.isFavorite ? 1 : 0;
@@ -221,9 +238,6 @@ function SubscriptionList({ onSelect }: { onSelect: (sub: Subscription) => void 
         </Field>
       </div>
       <div className="table-scroll">
-      <datalist id="subscriptions-category-datalist">
-        {knownCategories.map((c) => <option key={c} value={c} />)}
-      </datalist>
       <table>
         <thead>
           <tr>
@@ -246,7 +260,7 @@ function SubscriptionList({ onSelect }: { onSelect: (sub: Subscription) => void 
               <td>{s.name}</td>
               <td>{fmtMoney(s.amount, s.currencyCode)}{CYCLE_LABEL[s.billingCycle]}</td>
               <td>{fmtMoney(monthly, s.currencyCode)}</td>
-              <td>{s.category || '—'}</td>
+              <td><span className="pill-info">{subCategoryLabel(s, categoryRegistry)}</span></td>
               <td>{next || '—'}</td>
               <td className={s.active ? 'pill-positive' : 'pill-negative'}>{s.active ? 'Active' : 'Cancelled'}</td>
               <td><button className="btn secondary small" onClick={(e) => { e.stopPropagation(); onSelect(s); }}>Open</button></td>
@@ -357,6 +371,7 @@ function AlertsSection({ sub }: { sub: Subscription }) {
 function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => void }) {
   const updateEntry = useSubscriptionsWorkbookStore((s) => s.updateEntry);
   const deleteEntry = useSubscriptionsWorkbookStore((s) => s.deleteEntry);
+  const categoryRegistry = useCategoryStore((s) => s.workbook.categories);
   const ensureSignedIn = useEnsureSignedIn();
   const [editing, setEditing] = useState(false);
   const [editRow, setEditRow] = useState<Subscription>(sub);
@@ -420,9 +435,15 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
       updateEntry(sub.id, { paidVia: { module: 'bank', ref: account.id } });
       toast(`${newPlans.length} planned renewal${newPlans.length > 1 ? 's' : ''} added to ${account.name}'s Planning tab.`);
     } else {
+      // A generated plan's own `category` is free text (Planning predates the
+      // shared registry) — only pass a real category name through, not the
+      // generic "Uncategorized" fallback `subCategoryLabel` uses for display.
+      const planCategory = sub.categoryID && sub.categoryID !== UNCATEGORIZED_ID
+        ? categoryName(sub.categoryID, categoryRegistry)
+        : sub.category;
       const newPlans: PlannedCashEntry[] = occurrences.map((o) => ({
         id: crypto.randomUUID(), date: o.date, type: 'OUT', amount: o.amount, currencyCode: sub.currencyCode,
-        category: sub.category, note: `Subscription: ${sub.name}`, executed: false, sourceSubscriptionId: sub.id,
+        category: planCategory, note: `Subscription: ${sub.name}`, executed: false, sourceSubscriptionId: sub.id,
       }));
       addPlannedCashEntries(newPlans);
       updateEntry(sub.id, { paidVia: { module: 'cash' } });
@@ -464,8 +485,8 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
               <Field label="Start date">
                 <TextInput type="date" value={editRow.startDate} onChange={(e) => setEditRow({ ...editRow, startDate: e.target.value })} />
               </Field>
-              <Field label="Category (optional)">
-                <TextInput value={editRow.category ?? ''} onChange={(e) => setEditRow({ ...editRow, category: e.target.value })} />
+              <Field label="Category">
+                <CategorySelect value={editRow.categoryID ?? UNCATEGORIZED_ID} onChange={(categoryID) => setEditRow({ ...editRow, categoryID })} />
               </Field>
             </div>
             <div className="row" style={{ gap: 8, marginTop: 8 }}>
@@ -478,7 +499,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
             <div>
               <div style={{ fontWeight: 700, fontSize: 16 }}>{sub.name}</div>
               <div className="text-muted">
-                {fmtMoney(sub.amount, sub.currencyCode)}{CYCLE_LABEL[sub.billingCycle]} · {sub.category || 'Uncategorized'} · since {sub.startDate}
+                {fmtMoney(sub.amount, sub.currencyCode)}{CYCLE_LABEL[sub.billingCycle]} · {subCategoryLabel(sub, categoryRegistry)} · since {sub.startDate}
                 {!sub.active && sub.cancelledDate && ` · cancelled ${sub.cancelledDate}`}
               </div>
             </div>
@@ -573,6 +594,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
 
 function AnalyticsTab() {
   const subs = useSubscriptionsWorkbookStore((s) => s.workbook.entries);
+  const categoryRegistry = useCategoryStore((s) => s.workbook.categories);
   useAppearanceStore((s) => s.appearance);
   applyChartTheme();
 
@@ -580,7 +602,7 @@ function AnalyticsTab() {
   const [currency, setCurrency] = useState(currencies[0] ?? 'USD');
   const effectiveCurrency = currencies.includes(currency) ? currency : (currencies[0] ?? currency);
 
-  const byCategory = useMemo(() => spendByCategory(subs, effectiveCurrency), [subs, effectiveCurrency]);
+  const byCategory = useMemo(() => spendByCategory(subs, effectiveCurrency, categoryRegistry), [subs, effectiveCurrency, categoryRegistry]);
   const categories = Object.keys(byCategory);
   const renewals = useMemo(() => upcomingRenewals(subs, 30), [subs]);
 

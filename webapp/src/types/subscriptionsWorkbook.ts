@@ -37,7 +37,20 @@ export interface Subscription {
    * once set, "Generate renewal plans" creates planned entries in that
    * entity's Planning tab for upcoming renewals. */
   paidVia?: { module: 'bank' | 'cash'; ref?: string };
-  category?: string; // free-form, user-definable — same rule as every other module
+  /** Points into the shared cross-module category registry (`lib/categories.ts`),
+   * same as Cash/Bank/Rentals — user-requested (2026-09-08): "Single standard
+   * list of categories in db and custom per user. Use them everywhere."
+   * Optional so old data without it degrades cleanly via `categoryName()`'s
+   * own "Uncategorized" fallback, same zero-migration pattern as every other
+   * optional-field retrofit in this project. */
+  categoryID?: string;
+  /** @deprecated Superseded by `categoryID` (2026-09-08) — kept only so a
+   * pre-existing free-text value isn't silently discarded. Never written by
+   * new code; `subscriptionsModule.ts`'s category breakdown falls back to
+   * this only when `categoryID` is absent, so an old subscription's
+   * category still shows up somewhere instead of becoming "Uncategorized"
+   * outright. */
+  category?: string;
   active: boolean; // toggled off instead of deleted when cancelled, keeps history
   cancelledDate?: string;
   alerts?: SubscriptionAlert[];

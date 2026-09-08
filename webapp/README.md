@@ -6933,6 +6933,36 @@ FinanceManager live link:
   read "100.00" / "+20.00 pending," with the pending row correctly tagged in the transactions
   table — zero console errors on any of the three. `npx tsc -b` / `npm run test` (604 tests, 7
   new) / `npm run build` all clean.
+245. **Subscriptions joins the shared category registry (2026-09-08), closes the Subscriptions
+  half of Pending item 126.** "Single standard list of categories in db and custom per user.
+  Use them everywhere." `Subscription` gains `categoryID?: string` (the shared registry
+  reference every other module uses) alongside a `@deprecated category?: string` — kept, not
+  removed, so a pre-existing free-text value isn't silently discarded once `categoryID` becomes
+  the primary field. New `subCategoryLabel()` in `SubscriptionsPage.tsx` is the one place that
+  resolves a subscription's category to a display name — `categoryID` via the shared
+  `categoryName()` when set, the legacy free-text field otherwise, "Uncategorized" as the final
+  fallback — reused by the list table's category cell/sort/filter and the detail page's summary
+  line so all three can't drift out of sync. Both add and edit forms swapped their free-text
+  `TextInput` (+ a per-page category datalist, now dead code and removed) for the shared
+  `CategorySelect` component, matching Cash/Bank/Rentals exactly. `subscriptionsModule.ts`'s
+  `spendByCategory()` gained a `categories: Category[]` parameter for the same resolution,
+  used by the Analytics tab's category-breakdown chart. **One real behavior decision worth
+  remembering**: the "Generate renewal plans" flow writes a planned entry's own `category` as
+  free text (Planning's `PlannedCashEntry.category` predates the shared registry and wasn't
+  touched here) — resolving that from `categoryID` needed care not to write the literal string
+  "Uncategorized" into a plan when a subscription has no real category set (the old behavior
+  left it `undefined`); a small `planCategory` guard preserves that. New tests:
+  `subscriptionsModule.test.ts`'s `spendByCategory` block split into two cases — the existing
+  legacy-field behavior (now passing an empty registry) plus a new case proving `categoryID`
+  is preferred over a stale legacy string when both are present. Verified live via Playwright:
+  a seeded subscription with `categoryID: 'cat_health'` correctly showed "Health" in the list
+  row, the detail page's summary line, AND the edit form's pre-selected `<select>` value; a
+  second subscription using only the legacy `category` field correctly showed its own text
+  unchanged — zero console errors. `npx tsc -b` / `npm run test` (605 tests, 1 new) / `npm run
+  build` all clean. **Funds' fixed category enum remains the other, bigger half of Pending item
+  126** — not attempted here, since switching it needs the same design/migration care already
+  flagged (it feeds the Funds Analytics "Allocation by category" chart, and was explicitly
+  excluded from the original Finance-base restructure as "fundamentally different").
 
 ## Pending
 
@@ -7791,20 +7821,19 @@ or a design decision before more code, not guessed at further:**
 ~~125. Inter-currency transfer auto-fill from cached FX rate~~ — **done (2026-09-08), see Done
      item 240.**
 126. **Single shared category list used everywhere + per-user customization (2026-09-08,
-     user-requested)** — partially already true: Cash/Bank/Rentals already share one real
-     registry (`lib/categories.ts`/`categoryStore.ts`, Done item 221's "Finance base model"
-     restructure) with a real "add your own category" flow via `CategorySelect`. Genuinely NOT
-     yet unified: Subscriptions has its own free-text `category` field with no link to the
-     shared registry (only a per-subscription-history datalist suggestion); Funds uses a FIXED
-     enum (`'Equity'|'Debt'|'Hybrid'|'International'|'Other'`) rather than free-form categories
-     at all — a real, deliberate-at-the-time deviation from this project's own "category fields
-     must be free-form" cross-cutting rule (see `MODULES_PLAN.md`). Extending the shared
-     registry to Subscriptions is a small, low-risk change (swap its free-text field for
-     `CategorySelect`); switching Funds off its fixed enum is bigger — it's used today to group
-     "Allocation by category" on the Funds Analytics chart, and moving to free-form categories
-     needs the same design/migration care `types/finance.ts`'s own file-level comment already
-     gave this exact scoping question (it was explicitly excluded from the original Finance-base
-     restructure as "fundamentally different"). Not yet built.
+     user-requested)** — Cash/Bank/Rentals already share one real registry
+     (`lib/categories.ts`/`categoryStore.ts`, Done item 221's "Finance base model" restructure)
+     with a real "add your own category" flow via `CategorySelect`.
+     ~~Subscriptions has its own free-text `category` field with no link to the shared
+     registry~~ — **done (2026-09-08), see Done item 245.** Still genuinely NOT unified: Funds
+     uses a FIXED enum (`'Equity'|'Debt'|'Hybrid'|'International'|'Other'`) rather than
+     free-form categories at all — a real, deliberate-at-the-time deviation from this project's
+     own "category fields must be free-form" cross-cutting rule (see `MODULES_PLAN.md`).
+     Switching Funds off its fixed enum is a bigger change than Subscriptions was — it's used
+     today to group "Allocation by category" on the Funds Analytics chart, and moving to
+     free-form categories needs the same design/migration care `types/finance.ts`'s own
+     file-level comment already gave this exact scoping question (it was explicitly excluded
+     from the original Finance-base restructure as "fundamentally different"). Not yet built.
 127. **Per-user selectable currency subset (2026-09-08, user-requested)** — "App setting should
      let the user choose his currencies... show checkbox/chips rather [than] scrolling through
      a list... this app supports multiple currencies but not all users are multi-currency."
