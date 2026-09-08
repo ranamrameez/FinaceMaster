@@ -6715,6 +6715,14 @@ FinanceManager live link:
   pending"), the row-level "Pending" pill rendered on both, and clicking "Mark cleared"
   correctly hit the real sign-in gate rather than silently writing while signed out — zero
   console errors. `npx tsc -b` / `npm run test` (562 tests, 8 new) / `npm run build` all clean.
+  **Retrofitted same day, before the QSE/PSX rollout below (2026-09-08), the user's own explicit
+  design call**: "use boolean flag or a status table, a standard DB Practice." Since the field
+  was itself brand-new/optional, this was a rename+type-narrow, not a data migration — no real
+  record has ever had either shape stored. `Finance.status?: 'pending' | 'cleared'` became
+  `Finance.isPending?: boolean` everywhere it was used (`cashBalanceByCurrency`/
+  `accountBalance`/`cashPendingByCurrency`/`accountPendingBalance`, both Edit modals' checkboxes,
+  the "Mark cleared" handlers, `TransactionEntryModal.tsx`'s pending checkbox) — same behavior,
+  simpler shape.
 239. **QSE/PSX Dashboard: "Current Deposit" and "Deposits vs. Net Worth" stat cards
   (2026-09-08, user-requested).** "should show Current Deposit (Deposits - Withdrawals) &
   Current Deposits vs Current NET Worth (Cash Bal + Port. value)." `summary.totalInward`/
@@ -6822,6 +6830,58 @@ FinanceManager live link:
   showed "973.38 PKR" — both exactly matching the Closed Trades section's own figure for the
   same trade — with the BUY row correctly showing "—" on both; zero console errors. `npx tsc
   -b` / `npm run test` (586 tests, 3 new) / `npm run build` all clean.
+243. **Pending-transaction-state rollout: QSE/PSX (2026-09-08), closes the QSE/PSX bullet of
+  Pending item 120.** The user's own named example ("Pending Stock buy order in market locks
+  the available cash making less available") — the structurally bigger half Done item 238's own
+  writeup flagged as needing its own design round, not a copy-paste of Cash/Bank's pattern.
+  Confirmed via two `AskUserQuestion` rounds before coding: (1) scope — lock cash for a pending
+  BUY/SELL AND show a pending share-count delta alongside the real share count (both picked,
+  not either/or); the field shape is a plain flag on `Transaction` itself, not a separate
+  order record (reuses the exact same store/edit/delete machinery a real transaction already
+  has — no new record type, no new store actions). (2) field shape — the user then generalized
+  their own earlier "boolean, a standard DB practice" call into retrofitting Cash/Bank's
+  `status` string too (see Done item 238's own addendum) — `Transaction.isPending?: boolean`,
+  same name for consistency even though `Transaction` sits outside the `Finance` base type's
+  own migration scope.
+  **The real design work was in the calc engine, not the UI**: `computePositions`/
+  `computeFIFOPositions`/`computeClosedTrades`/`computeRealizedPLTimeSeries` — every function
+  the app's position/P&L figures derive from — now filter out a pending transaction as their
+  first step, a "fix once" change matching Cash/Bank's own `cashBalanceByCurrency`/
+  `accountBalance` precedent: a pending BUY doesn't add shares yet, a pending SELL doesn't
+  remove them, realize P&L, or close a FIFO lot yet. `cashSummary()`'s own internal
+  `buildCashLedger` call (which produces the headline `cashBalance`) does the same filtering —
+  but the SEPARATE, unfiltered `buildCashLedger` call each exchange's own hook already made for
+  the full "Cash Ledger" display table is untouched, so a pending trade still shows up there,
+  tagged, in true chronological order (same "the full statement view keeps everything, only the
+  headline figure excludes it" split Cash/Bank's own `cashRunningLedger`/`accountRunningLedger`
+  already established).
+  New companion figures, the "show both, never silently drop it" half: `pendingShareDeltaByTicker()`
+  (`lib/calc/positions.ts`) — net pending BUY shares minus pending SELL shares, per ticker, absent
+  (not zero) for a ticker with no pending activity — and `CashSummary.pendingCashImpact` (new
+  field, computed in `cashSummary()`) — the net cash a pending BUY would lock (negative) or a
+  pending SELL would add (positive) once it fills, at today's computed fee.
+  **UI, both exchanges**: a "Pending" checkbox on the Trade Transactions add-row form and the
+  edit-row form (first-row-only labeled, same convention as every other multi-row toolbar field
+  in this app); a "Pending" `pill-warn` tag (with an explanatory `Tooltip`) next to a pending
+  row's ticker in the main trade list, plus a "Mark cleared" `IconButton` (sign-in gated, a
+  plain `updateTransaction(i, {isPending: false})` patch — no new store action) alongside
+  Edit/Delete. Dashboard: the Holdings table's Shares cell gains a muted "+X pending"/"-X
+  pending" sub-line from `pendingShareDeltaByTicker`; the Cash Balance stat card gains a `sub`
+  line ("+/-Y pending orders → Z incl. pending") from the new `pendingCashImpact`, shown only
+  when nonzero — identical wording pattern to Cash's/Bank's own pending sub-lines. New tests:
+  `lib/calc/__tests__/pendingTransactions.test.ts` (new file, 11 cases) covering every filtered
+  function's exclusion, the pending-delta helper, and `cashSummary`'s cash-balance exclusion +
+  `pendingCashImpact` for both a locking BUY and an adding SELL. Verified live via Playwright on
+  both exchanges with a realistic seeded scenario (a cleared position, a pending BUY on the same
+  ticker, and a pending SELL on a different already-held ticker): the Holdings table showed the
+  correct real share count plus the correct signed pending delta on each ticker, the Cash
+  Balance card's sub-line matched hand-computed figures exactly (e.g. QSE: "-6 QAR" real, "-252
+  QAR pending orders → -258 QAR incl. pending"), the Trade Transactions page showed both pending
+  rows tagged with their P/L column correctly reading "—" (nothing realized on an unfilled
+  order), and the merged Cash Ledger section still listed every trade including the pending ones
+  in chronological order — with "Mark cleared" and the add-row Pending checkbox both confirmed
+  working (the former correctly hitting the real sign-in gate) — zero console errors throughout.
+  `npx tsc -b` / `npm run test` (597 tests, 11 new) / `npm run build` all clean.
 
 ## Pending
 
@@ -7634,19 +7694,12 @@ or a design decision before more code, not guessed at further:**
      this if a further specific instance is reported, since a blind sweep risks either missing
      the real remaining cases or touching CSS that's already correctly tuned elsewhere.
 120. **Pending-transaction-state rollout remainder (2026-09-08)** — Done item 238 shipped the
-     core `Finance.status`/`cashPendingByCurrency`/`accountPendingBalance` pattern for Cash +
-     Banking. The user confirmed (via `AskUserQuestion`) they want this in every module
-     eventually — the remaining rollout, roughly in order of how directly each module maps onto
-     the pattern already built:
-     - **QSE/PSX (a pending stock order)** — the user's own named example ("Pending Stock buy
-       order in market locks the available cash"). Structurally bigger than Cash/Bank: a
-       pending BUY needs to reserve cash without yet owning shares (so `cashSummary()`'s
-       balance calc needs the same pending-exclusion treatment Cash/Bank just got), while a
-       pending SELL needs to reserve/flag shares without yet realizing the sale (so
-       `computePositions`/`computeFIFOPositions` need to know a transaction is provisional and
-       not yet count it toward realized P/L or a closed lot) — this is NOT a copy-paste of the
-       Cash/Bank pattern, it's a real design question about what "pending" means for a position
-       calc, and should be scoped with its own `AskUserQuestion` round before writing code.
+     core `Finance.isPending`/`cashPendingByCurrency`/`accountPendingBalance` pattern for Cash +
+     Banking (retrofitted from a string `status` field to a plain boolean the same day, see that
+     item's own addendum). The user confirmed (via `AskUserQuestion`) they want this in every
+     module eventually — the remaining rollout, roughly in order of how directly each module
+     maps onto the pattern already built:
+     - ~~QSE/PSX (a pending stock order)~~ — **done (2026-09-08), see Done item 243.**
      - **Rentals/Personal Loans/EMI/Funds/Subscriptions** — each reuses `Finance`/similar record
        shapes closely enough that the identical `status` field + a pending-exclusion pass
        through that module's own balance function should mostly mirror Cash/Bank directly; still

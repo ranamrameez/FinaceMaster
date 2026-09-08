@@ -47,16 +47,16 @@ describe('accountBalance', () => {
   it('excludes pending transactions (2026-09-08 Pending-state feature)', () => {
     const a = account({ openingBalance: 1000 });
     const txs = [
-      tx({ id: 't1', amount: -50, status: 'cleared' }),
-      tx({ id: 't2', amount: -300, status: 'pending' }),
+      tx({ id: 't1', amount: -50, isPending: false }),
+      tx({ id: 't2', amount: -300, isPending: true }),
     ];
     expect(accountBalance(a, txs)).toBe(950);
   });
 
-  it('a transaction with no status field behaves exactly as before (zero-migration)', () => {
+  it('a transaction with no isPending field behaves exactly as before (zero-migration)', () => {
     const a = account({ openingBalance: 1000 });
     const txs = [tx({ amount: -50 })];
-    expect(txs[0].status).toBeUndefined();
+    expect(txs[0].isPending).toBeUndefined();
     expect(accountBalance(a, txs)).toBe(950);
   });
 });
@@ -65,10 +65,10 @@ describe('accountPendingBalance', () => {
   it('sums only pending transactions for that account', () => {
     const a = account({ id: 'a1' });
     const txs = [
-      tx({ id: 't1', accountId: 'a1', amount: -300, status: 'pending' }),
-      tx({ id: 't2', accountId: 'a1', amount: 100, status: 'pending' }),
-      tx({ id: 't3', accountId: 'a1', amount: 50, status: 'cleared' }),
-      tx({ id: 't4', accountId: 'a2', amount: 9999, status: 'pending' }),
+      tx({ id: 't1', accountId: 'a1', amount: -300, isPending: true }),
+      tx({ id: 't2', accountId: 'a1', amount: 100, isPending: true }),
+      tx({ id: 't3', accountId: 'a1', amount: 50, isPending: false }),
+      tx({ id: 't4', accountId: 'a2', amount: 9999, isPending: true }),
     ];
     expect(accountPendingBalance(a, txs)).toBe(-200);
   });

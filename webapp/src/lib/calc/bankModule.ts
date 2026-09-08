@@ -29,24 +29,24 @@ export function accountRunningLedger(account: BankAccount, transactions: BankTra
 }
 
 /** Current (cleared, available) balance for one account: opening balance +
- * every CLEARED transaction — excludes any transaction with
- * `status === 'pending'` (see `Finance.status`'s own doc comment). Every
- * other Bank balance/total in the app derives from this one function, so
- * excluding pending here is a "fix once" change. Zero-migration: no real
- * existing transaction has ever had `status` set, so this returns exactly
- * what it always did until a user actually marks something pending. */
+ * every CLEARED transaction — excludes any transaction with `isPending`
+ * set (see `Finance.isPending`'s own doc comment). Every other Bank
+ * balance/total in the app derives from this one function, so excluding
+ * pending here is a "fix once" change. Zero-migration: no real existing
+ * transaction has ever had `isPending` set, so this returns exactly what
+ * it always did until a user actually marks something pending. */
 export function accountBalance(account: BankAccount, transactions: BankTransaction[]): number {
   return transactions
-    .filter((t) => t.accountId === account.id && t.status !== 'pending')
+    .filter((t) => t.accountId === account.id && !t.isPending)
     .reduce((sum, t) => sum + t.amount, 0) + account.openingBalance;
 }
 
-/** The net amount currently sitting in `'pending'` transactions for one
+/** The net amount currently sitting in pending transactions for one
  * account — the companion figure to `accountBalance` above, so the UI can
  * show "Cleared: X" and "+Y pending" side by side. */
 export function accountPendingBalance(account: BankAccount, transactions: BankTransaction[]): number {
   return transactions
-    .filter((t) => t.accountId === account.id && t.status === 'pending')
+    .filter((t) => t.accountId === account.id && t.isPending)
     .reduce((sum, t) => sum + t.amount, 0);
 }
 

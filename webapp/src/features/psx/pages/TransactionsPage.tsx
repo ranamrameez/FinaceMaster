@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { PSX_TICKER_DATALIST_ID } from '../../../components/PSXTickerDatalist';
 import { TickerLogo } from '../../../components/TickerLogo';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { EditIcon, ExportIcon, PlusIcon, SaveIcon, TrashIcon, TransferIcon, XIcon } from '../../../components/icons';
+import { CheckIcon, EditIcon, ExportIcon, PlusIcon, SaveIcon, TrashIcon, TransferIcon, XIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { Tooltip } from '../../../components/Tooltip';
 import { toast } from '../../../components/Toast';
@@ -111,6 +111,16 @@ export function TransactionRows() {
             onTimeChange={(time) => update(i, { time })}
             onTimezoneChange={(timezone) => update(i, { timezone })}
           />
+          <Field label={i === 0 ? 'Order' : undefined}>
+            <label
+              className="text-muted"
+              style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+              title="Placed but not yet filled — excluded from your shares/cash balance until it clears."
+            >
+              <input type="checkbox" checked={!!r.isPending} onChange={(e) => update(i, { isPending: e.target.checked })} />
+              Pending
+            </label>
+          </Field>
           <button
             className="btn secondary small ml-auto align-end"
             onClick={() => setRows((rs) => rs.filter((_, idx) => idx !== i))}
@@ -218,6 +228,7 @@ function TransactionList() {
   const { workbook, calcFee, positions } = usePSXDerived();
   const deleteTransaction = usePSXWorkbookStore((s) => s.deleteTransaction);
   const updateTransaction = usePSXWorkbookStore((s) => s.updateTransaction);
+  const ensureSignedIn = useEnsureSignedIn();
   const currency = workbook.settings.currency;
 
   const [filterTicker, setFilterTicker] = useState('ALL');
@@ -439,6 +450,10 @@ function TransactionList() {
                     </td>
                     <td></td>
                     <td>
+                      <label className="text-muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }} title="Placed but not yet filled — excluded from shares/cash balance until cleared.">
+                        <input type="checkbox" checked={!!editRow.isPending} onChange={(e) => setEditRow({ ...editRow, isPending: e.target.checked })} />
+                        Pending
+                      </label>{' '}
                       <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
                       <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditIndex(null)} />
                     </td>
@@ -446,7 +461,14 @@ function TransactionList() {
                 ) : (
                   <tr key={i}>
                     <td>{tx.date}</td>
-                    <td><TickerLogo ticker={tx.ticker} size="sm" exchange="psx" /><Link to={`/psx/stock/${tx.ticker}`}>{tx.ticker}</Link></td>
+                    <td>
+                      <TickerLogo ticker={tx.ticker} size="sm" exchange="psx" /><Link to={`/psx/stock/${tx.ticker}`}>{tx.ticker}</Link>
+                      {tx.isPending && (
+                        <Tooltip text="Order placed but not yet filled — excluded from your shares/cash balance until cleared.">
+                          <span className="pill-warn" style={{ marginLeft: 6 }}>Pending</span>
+                        </Tooltip>
+                      )}
+                    </td>
                     <td className={tx.action === 'BUY' ? 'pill-positive' : 'pill-negative'}>{tx.action}</td>
                     <td>{fmt(tx.shares, 0)}</td>
                     <td>{fmtPrice(tx.price)}</td>
@@ -471,6 +493,18 @@ function TransactionList() {
                       {tx.id && sellPLById[tx.id] ? fmtMoney(sellPLById[tx.id].netPL, currency) : '—'}
                     </td>
                     <td>
+                      {tx.isPending && (
+                        <IconButton
+                          label="Mark cleared"
+                          icon={<CheckIcon size={13} />}
+                          align="right"
+                          onClick={async () => {
+                            if (!(await ensureSignedIn('Sign in to update this transaction.'))) return;
+                            updateTransaction(i, { isPending: false });
+                            toast('Marked cleared.');
+                          }}
+                        />
+                      )}{' '}
                       <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(i, tx)} />{' '}
                       <IconButton
                         label="Delete"

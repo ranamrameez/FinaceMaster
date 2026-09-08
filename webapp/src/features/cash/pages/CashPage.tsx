@@ -237,7 +237,7 @@ function EditEntryModal({ entry, onClose }: { entry: CashEntry; onClose: () => v
         />
       </div>
       <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }} title="Not yet cleared — excluded from the Balance stat until unchecked.">
-        <input type="checkbox" checked={draft.status === 'pending'} onChange={(e) => setDraft({ ...draft, status: e.target.checked ? 'pending' : 'cleared' })} />
+        <input type="checkbox" checked={!!draft.isPending} onChange={(e) => setDraft({ ...draft, isPending: e.target.checked })} />
         Pending (not yet cleared)
       </label>
       <p className="text-muted" style={{ marginTop: 8 }}>
@@ -374,7 +374,7 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
                   <td className={entry.isDeposit ? 'pill-positive' : 'pill-negative'}>{entry.isDeposit ? 'Cash in' : 'Cash out'}</td>
                   <td className="cell-clip" title={entry.note}>
                     {entry.note}
-                    {entry.status === 'pending' && (
+                    {entry.isPending && (
                       <span className="pill-warn" style={{ marginLeft: 6 }} title="Not yet cleared — excluded from the Balance stat above until marked cleared.">Pending</span>
                     )}
                     {link && (
@@ -390,14 +390,14 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
                     {entry.source === 'statement-import' ? `Import${entry.statementRef ? ` (${entry.statementRef})` : ''}` : 'Manual'}
                   </td>
                   <td>
-                    {entry.status === 'pending' && (
+                    {entry.isPending && (
                       <IconButton
                         label="Mark cleared"
                         icon={<CheckIcon size={13} />}
                         align="right"
                         onClick={async () => {
                           if (!(await ensureSignedIn('Sign in to update this entry.'))) return;
-                          updateEntry(entry.id, { status: 'cleared' });
+                          updateEntry(entry.id, { isPending: false });
                           toast('Marked cleared.');
                         }}
                       />

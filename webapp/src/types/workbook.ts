@@ -65,6 +65,29 @@ export interface Transaction {
    * same as `time`/`timezone` themselves are left unset rather than
    * guessed for old data. */
   timestamp?: string;
+  /** User-requested (2026-09-08), the QSE/PSX half of the app-wide
+   * Pending-transaction-state feature: "Pending Stock buy order in market
+   * locks the available cash making less available." A real order the user
+   * has already placed but that hasn't filled yet — genuinely different
+   * from the Trade Planner's hypothetical legs, which never claim to be a
+   * real order at all. A plain boolean, same "boolean flag, a standard DB
+   * practice" design the user asked to retrofit onto `Finance.isPending`
+   * too (this type is separate from `Finance` — QSE/PSX/Funds transactions
+   * are explicitly out of that migration's scope, see `Finance`'s own doc
+   * comment — but reuses the identical field name for consistency).
+   * Optional, absent/false = the normal case (zero migration — no real
+   * existing transaction has ever had this set). `computePositions`/
+   * `computeFIFOPositions`/`computeClosedTrades`/
+   * `computeRealizedPLTimeSeries` (every function the app's position/P&L
+   * figures derive from) exclude a pending transaction entirely — a
+   * pending BUY doesn't add shares yet, a pending SELL doesn't remove them
+   * or realize anything yet — while `pendingShareDeltaByTicker` and
+   * `cashSummary`'s own pending-cash exclusion expose what WOULD change if
+   * every pending order filled, so the UI can show both figures side by
+   * side rather than the pending order just silently vanishing. Clearing a
+   * pending order (or deleting it, for a cancelled one) is a plain
+   * `updateTransaction` patch — no new store action needed. */
+  isPending?: boolean;
 }
 
 export interface Transfer {
@@ -289,6 +312,13 @@ export interface CashSummary {
   portfolioValue: number;
   netWorth: number;
   ledger: CashLedgerEvent[];
+  /** Net cash impact of every currently-pending transaction (a not-yet-
+   * filled buy locks cash: negative; a not-yet-filled sell would add cash
+   * once it fills: positive) — the companion figure to `cashBalance`
+   * excluding pending above, so the UI can show "Available: X" and
+   * "+Y locked in pending orders" side by side. See `Transaction.isPending`'s
+   * own doc comment (Pending-transaction-state, 2026-09-08). */
+  pendingCashImpact: number;
 }
 
 export interface RealizedPLPoint {

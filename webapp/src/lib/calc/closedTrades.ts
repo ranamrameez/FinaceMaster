@@ -60,7 +60,9 @@ const EPSILON = 1e-7;
 export function computeClosedTrades(transactions: Transaction[], calcFee: FeeCalculator): ClosedTrade[] {
   const lotsByTicker: Record<string, OpenLot[]> = {};
   const trades: ClosedTrade[] = [];
-  const sorted = sortTransactionsChronological(transactions);
+  // Excludes pending transactions (Pending-transaction-state, 2026-09-08) —
+  // a not-yet-filled sell hasn't actually closed anything yet.
+  const sorted = sortTransactionsChronological(transactions.filter((t) => !t.isPending));
 
   for (const tx of sorted) {
     const t = tx.ticker;

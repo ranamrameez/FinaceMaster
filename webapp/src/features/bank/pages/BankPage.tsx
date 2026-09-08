@@ -738,7 +738,7 @@ export function AccountDetailPage() {
         ) : null}
         {/* User-requested (2026-09-08): show pending money too, not just
            exclude it silently — the cleared figure above already excludes
-           any `status:'pending'` transaction. */}
+           any `isPending` transaction. */}
         {(() => {
           const pendingAmt = accountPendingBalance(account, transactions);
           if (pendingAmt === 0) return null;
@@ -983,7 +983,7 @@ function EditTransactionModal({ tx, onClose }: { tx: BankTransaction; onClose: (
         />
       </div>
       <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }} title="Not yet cleared — excluded from Current balance until unchecked.">
-        <input type="checkbox" checked={draft.status === 'pending'} onChange={(e) => setDraft({ ...draft, status: e.target.checked ? 'pending' : 'cleared' })} />
+        <input type="checkbox" checked={!!draft.isPending} onChange={(e) => setDraft({ ...draft, isPending: e.target.checked })} />
         Pending (not yet cleared)
       </label>
       <p className="text-muted" style={{ marginTop: 8 }}>
@@ -1136,7 +1136,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
                 <td>{tx.date}</td>
                 <td className="cell-clip" title={tx.description}>
                   {tx.description}
-                  {tx.status === 'pending' && (
+                  {tx.isPending && (
                     <span className="pill-warn" style={{ marginLeft: 6 }} title="Not yet cleared — excluded from Current balance above until marked cleared.">Pending</span>
                   )}
                   {link && (
@@ -1152,14 +1152,14 @@ function TransactionsList({ account }: { account: BankAccount }) {
                   {tx.source === 'statement-import' ? `Import${tx.statementRef ? ` (${tx.statementRef})` : ''}` : 'Manual'}
                 </td>
                 <td>
-                  {tx.status === 'pending' && (
+                  {tx.isPending && (
                     <IconButton
                       label="Mark cleared"
                       icon={<CheckIcon size={13} />}
                       align="right"
                       onClick={async () => {
                         if (!(await ensureSignedIn('Sign in to update this transaction.'))) return;
-                        updateTransaction(tx.id, { status: 'cleared' });
+                        updateTransaction(tx.id, { isPending: false });
                         toast('Marked cleared.');
                       }}
                     />

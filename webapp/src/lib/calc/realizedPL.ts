@@ -8,7 +8,9 @@ import { sortTransactionsChronological } from './sortTransactions';
 export function computeRealizedPLTimeSeries(transactions: Transaction[], calcFee: FeeCalculator): RealizedPLPoint[] {
   const byTicker: Record<string, { shares: number; cost: number }> = {};
   const points: RealizedPLPoint[] = [];
-  const sorted = sortTransactionsChronological(transactions);
+  // Excludes pending transactions (Pending-transaction-state, 2026-09-08) —
+  // a not-yet-filled sell hasn't realized anything yet.
+  const sorted = sortTransactionsChronological(transactions.filter((t) => !t.isPending));
   let running = 0;
 
   sorted.forEach((tx) => {
