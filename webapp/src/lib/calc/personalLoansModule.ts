@@ -1,9 +1,22 @@
 import type { PersonalLoan, PersonalLoanRepayment } from '../../types/personalLoansWorkbook';
 import { toInstantMs } from '../datetime';
 
+/** Excludes any repayment with `isPending` set (Pending-transaction-state,
+ * 2026-09-08) — a repayment the user's logged but that hasn't actually
+ * cleared yet shouldn't reduce the loan's real outstanding balance until it
+ * does. Every other Personal Loans outstanding/net-position figure in the
+ * app derives from this one function, so excluding pending here is a "fix
+ * once" change — see `loanPendingImpact` below for the companion figure. */
 export function loanOutstanding(loan: PersonalLoan, repayments: PersonalLoanRepayment[]): number {
-  const repaid = repayments.filter((r) => r.loanId === loan.id).reduce((s, r) => s + r.amount, 0);
+  const repaid = repayments.filter((r) => r.loanId === loan.id && !r.isPending).reduce((s, r) => s + r.amount, 0);
   return Math.max(0, loan.principal - repaid);
+}
+
+/** The sum of pending repayments against one loan — the companion figure to
+ * `loanOutstanding` above, so the UI can show "Outstanding: X" and "-Y
+ * pending" side by side rather than the pending amount just vanishing. */
+export function loanPendingImpact(loan: PersonalLoan, repayments: PersonalLoanRepayment[]): number {
+  return repayments.filter((r) => r.loanId === loan.id && r.isPending).reduce((s, r) => s + r.amount, 0);
 }
 
 /** Running "remaining outstanding" after each repayment to this loan, in
@@ -59,6 +72,21 @@ export function netPositionByCurrency(loans: PersonalLoan[], repayments: Persona
     const outstanding = loanOutstanding(loan, repayments);
     const sign = loan.direction === 'owed_to_me' ? 1 : -1;
     out[loan.currencyCode] = (out[loan.currencyCode] || 0) + sign * outstanding;
+  });
+  return out;
+}
+
+/** Portfolio-wide pending repayment impact, grouped by currency — the
+ * companion figure to `netPositionByCurrency` above. A pending repayment
+ * reduces outstanding once cleared, so its impact on NET POSITION carries
+ * the opposite sign convention from `loanOutstanding` itself (paying down a
+ * debt you owe moves your net position UP, toward zero or positive). */
+export function netPendingByCurrency(loans: PersonalLoan[], repayments: PersonalLoanRepayment[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  loans.forEach((loan) => {
+    const pending = loanPendingImpact(loan, repayments);
+    const sign = loan.direction === 'owed_to_me' ? -1 : 1;
+    out[loan.currencyCode] = (out[loan.currencyCode] || 0) + sign * pending;
   });
   return out;
 }

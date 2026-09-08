@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Property, RentalEntry } from '../../../types/rentalsWorkbook';
 import type { Category } from '../../../types/finance';
-import { netIncomeByCurrency, netIncomeByProperty, propertyByCategory, propertyMonthlyRollup, propertyNetIncome } from '../rentalsModule';
+import { netIncomeByCurrency, netIncomeByProperty, netIncomePendingByCurrency, propertyByCategory, propertyMonthlyRollup, propertyNetIncome, propertyPendingNetImpact } from '../rentalsModule';
 
 const TEST_CATEGORIES: Category[] = [
   { id: 'cat_maintenance', serialNumber: 1, name: 'Maintenance' },
@@ -43,6 +43,27 @@ describe('propertyNetIncome', () => {
     ];
     expect(propertyNetIncome(p, entries)).toBe(1000);
   });
+
+  it('excludes pending entries (2026-09-08 Pending-transaction-state)', () => {
+    const p = property({ id: 'p1' });
+    const entries = [
+      entry({ id: 'e1', propertyId: 'p1', isDeposit: true, amount: 1000 }),
+      entry({ id: 'e2', propertyId: 'p1', isDeposit: true, amount: 500, isPending: true }),
+    ];
+    expect(propertyNetIncome(p, entries)).toBe(1000);
+  });
+});
+
+describe('propertyPendingNetImpact', () => {
+  it('sums only pending entries for one property, signed', () => {
+    const p = property({ id: 'p1' });
+    const entries = [
+      entry({ id: 'e1', propertyId: 'p1', isDeposit: true, amount: 500, isPending: true }),
+      entry({ id: 'e2', propertyId: 'p1', isDeposit: false, amount: 100, isPending: true, categoryID: 'cat_maintenance' }),
+      entry({ id: 'e3', propertyId: 'p1', isDeposit: true, amount: 999 }), // cleared, ignored
+    ];
+    expect(propertyPendingNetImpact(p, entries)).toBe(400);
+  });
 });
 
 describe('netIncomeByCurrency', () => {
@@ -60,6 +81,20 @@ describe('netIncomeByCurrency', () => {
     const totals = netIncomeByCurrency(properties, entries);
     expect(totals.USD).toBe(1500);
     expect(totals.AED).toBe(2000);
+  });
+});
+
+describe('netIncomePendingByCurrency', () => {
+  it('sums pending entries across properties by currency, independent of netIncomeByCurrency', () => {
+    const properties = [property({ id: 'p1', currencyCode: 'USD' }), property({ id: 'p2', currencyCode: 'AED' })];
+    const entries = [
+      entry({ propertyId: 'p1', isDeposit: true, amount: 1000 }),
+      entry({ propertyId: 'p1', isDeposit: true, amount: 200, isPending: true }),
+      entry({ propertyId: 'p2', isDeposit: false, amount: 50, isPending: true, categoryID: 'cat_maintenance' }),
+    ];
+    const pending = netIncomePendingByCurrency(properties, entries);
+    expect(pending.USD).toBe(200);
+    expect(pending.AED).toBe(-50);
   });
 });
 

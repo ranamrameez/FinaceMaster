@@ -78,7 +78,7 @@ const HAS_DESCRIPTION: LinkModule[] = ['bank'];
  * real records written together via `createLinkedTransfer`, and "pending"
  * for a link needs its own design (does one side clear independently of
  * the other?) not attempted here. */
-const HAS_PENDING: LinkModule[] = ['cash', 'bank'];
+const HAS_PENDING: LinkModule[] = ['cash', 'bank', 'rentals', 'personalLoans'];
 
 interface TxRow {
   key: number;
@@ -389,11 +389,15 @@ export function TransactionEntryModal({ defaultFinance, onClose }: { defaultFina
             id: uid(), propertyId: r.finance.ref, date: r.date, time: r.time, timezone: r.timezone,
             isDeposit: r.direction === 'in', amount: Math.abs(r.amount),
             categoryID: r.categoryID, note: r.note.trim() || undefined,
+            isPending: r.pending || undefined,
           });
           break;
         case 'personalLoans':
           if (!r.finance.ref) { toast('Pick a loan first.'); continue; }
-          addPersonalLoanRepayment({ id: uid(), loanId: r.finance.ref, date: r.date, time: r.time, timezone: r.timezone, amount: Math.abs(r.amount) });
+          addPersonalLoanRepayment({
+            id: uid(), loanId: r.finance.ref, date: r.date, time: r.time, timezone: r.timezone,
+            amount: Math.abs(r.amount), isPending: r.pending || undefined,
+          });
           break;
         case 'emi': {
           if (!r.finance.ref) { toast('Pick a loan first.'); continue; }

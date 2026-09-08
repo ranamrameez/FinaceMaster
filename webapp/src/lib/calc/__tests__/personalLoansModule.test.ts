@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PersonalLoan, PersonalLoanRepayment } from '../../../types/personalLoansWorkbook';
-import { loanBalanceHistory, loanOutstanding, netPositionByCurrency, outstandingByLoan, projectPayoff, repaymentRunningOutstanding, repaymentsByMonth } from '../personalLoansModule';
+import { loanBalanceHistory, loanOutstanding, loanPendingImpact, netPendingByCurrency, netPositionByCurrency, outstandingByLoan, projectPayoff, repaymentRunningOutstanding, repaymentsByMonth } from '../personalLoansModule';
 
 const loan = (over: Partial<PersonalLoan>): PersonalLoan => ({
   id: 'l1',
@@ -33,6 +33,27 @@ describe('loanOutstanding', () => {
     ];
     expect(loanOutstanding(l, repayments)).toBe(400);
   });
+
+  it('excludes pending repayments (2026-09-08 Pending-transaction-state)', () => {
+    const l = loan({ id: 'l1', principal: 500 });
+    const repayments: PersonalLoanRepayment[] = [
+      { id: 'r1', loanId: 'l1', date: '2026-02-01', amount: 100 },
+      { id: 'r2', loanId: 'l1', date: '2026-02-05', amount: 200, isPending: true },
+    ];
+    expect(loanOutstanding(l, repayments)).toBe(400);
+  });
+});
+
+describe('loanPendingImpact', () => {
+  it('sums only pending repayments for one loan', () => {
+    const l = loan({ id: 'l1', principal: 500 });
+    const repayments: PersonalLoanRepayment[] = [
+      { id: 'r1', loanId: 'l1', date: '2026-02-01', amount: 100 },
+      { id: 'r2', loanId: 'l1', date: '2026-02-05', amount: 200, isPending: true },
+      { id: 'r3', loanId: 'other', date: '2026-02-05', amount: 9999, isPending: true },
+    ];
+    expect(loanPendingImpact(l, repayments)).toBe(200);
+  });
 });
 
 describe('netPositionByCurrency', () => {
@@ -51,6 +72,20 @@ describe('netPositionByCurrency', () => {
     const loans: PersonalLoan[] = [loan({ id: 'l1', direction: 'i_owe', currencyCode: 'USD', principal: 500 })];
     const repayments: PersonalLoanRepayment[] = [{ id: 'r1', loanId: 'l1', date: '2026-02-01', amount: 300 }];
     expect(netPositionByCurrency(loans, repayments).USD).toBe(-200);
+  });
+});
+
+describe('netPendingByCurrency', () => {
+  it('a pending repayment on a loan owed to you shows as a negative impact on net position (it will go down once cleared)', () => {
+    const loans: PersonalLoan[] = [loan({ id: 'l1', direction: 'owed_to_me', currencyCode: 'USD', principal: 500 })];
+    const repayments: PersonalLoanRepayment[] = [{ id: 'r1', loanId: 'l1', date: '2026-02-01', amount: 100, isPending: true }];
+    expect(netPendingByCurrency(loans, repayments).USD).toBe(-100);
+  });
+
+  it('a pending repayment on a loan you owe shows as a positive impact on net position (you owe less once cleared)', () => {
+    const loans: PersonalLoan[] = [loan({ id: 'l1', direction: 'i_owe', currencyCode: 'USD', principal: 500 })];
+    const repayments: PersonalLoanRepayment[] = [{ id: 'r1', loanId: 'l1', date: '2026-02-01', amount: 100, isPending: true }];
+    expect(netPendingByCurrency(loans, repayments).USD).toBe(100);
   });
 });
 

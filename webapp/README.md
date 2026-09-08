@@ -6882,6 +6882,57 @@ FinanceManager live link:
   in chronological order — with "Mark cleared" and the add-row Pending checkbox both confirmed
   working (the former correctly hitting the real sign-in gate) — zero console errors throughout.
   `npx tsc -b` / `npm run test` (597 tests, 11 new) / `npm run build` all clean.
+244. **Pending-transaction-state rollout: Rentals, Personal Loans, Funds (2026-09-08).**
+  Continues Pending item 120's remaining-modules bullet, following the "ship one module well,
+  verify live, then extend" discipline rather than a blind mechanical copy. Each module needed
+  its own short "what's the headline function" identification before the mechanical part:
+  **Rentals** — `RentalEntry` already inherits `isPending` from the shared `Finance` base type
+  (Done item 221's restructure), so no type change was needed; `propertyNetIncome()`
+  (`lib/calc/rentalsModule.ts`) is the one function every Rentals total already derives from,
+  now excluding pending entries, with new `propertyPendingNetImpact`/`netIncomePendingByCurrency`
+  companions. **Personal Loans** — `PersonalLoanRepayment` gained a new `isPending?: boolean`
+  (outside `Finance`'s scope, same field name for consistency); `loanOutstanding()` is the
+  headline function, now excluding pending repayments, with new `loanPendingImpact`/
+  `netPendingByCurrency` companions — the latter needed real sign-flip reasoning, not a blind
+  copy of the same multiplier `netPositionByCurrency` uses: a pending repayment REDUCES
+  outstanding once cleared, so its impact on net position carries the OPPOSITE sign from
+  `loanOutstanding`'s own owed_to_me/i_owe convention (paying down debt you owe moves your net
+  position UP, toward zero) — proven with two dedicated sign-specific tests, not just one happy
+  path. **Funds** — genuinely free: `Fund`/`Transaction` reuse the exact shared `Transaction`
+  type and `computePositions`/`cashSummary` QSE/PSX already use, so Funds' units/invested/value
+  figures were ALREADY excluding pending transactions the moment Done item 243 shipped, with
+  zero Funds-specific calc code needed — confirmed by reading the type hierarchy before assuming
+  work was needed, this project's own repeated "check before building" discipline. Also reused
+  `pendingShareDeltaByTicker` (already generic over any `Transaction[]`) as-is for a "Units
+  held... +X pending" sub-line on `FundDetail`, the same mechanism as QSE/PSX's Dashboard.
+  **UI, all three modules**: a "Pending" checkbox on each module's add-entry flow (Rentals routes
+  through the shared app-wide `TransactionEntryModal` — added `'rentals'` and `'personalLoans'`
+  to its `HAS_PENDING` list and wired `isPending` into both `addRentalEntry`/
+  `addPersonalLoanRepayment` calls; Funds has its own dedicated add-transaction form on
+  `FundsPage.tsx`, wired directly) and each module's own edit form/modal; a "Pending" `pill-warn`
+  tag on a pending row plus a "Mark cleared" `IconButton` (sign-in gated, a plain
+  `updateEntry`/`updateRepayment`/`updateTransaction` patch) in each module's list; a pending
+  sub-line on each module's headline stat card (Rentals' "Net income," Personal Loans' "Net
+  position" AND its per-loan "Outstanding" card, Funds' "Units held"). **Deliberately NOT
+  rolled out to Subscriptions** — a `Subscription` is a single object with a `startDate`/
+  `active` flag, not a per-transaction ledger (the identical reasoning already documented for
+  why Subscriptions was skipped from the `time`/`timezone` rollout, Pending-state item 41) —
+  there's no "not yet cleared" concept for a subscription record itself to attach to.
+  **Deliberately NOT attempted for EMI** — its real outstanding-balance/schedule figures derive
+  from `EMILoan.installmentOverrides`/`customMonthlyPayment` via `emiSchedule()`, not directly
+  from the `EMIRepayment[]` ledger the way every other module's headline function reads its own
+  entries array; retrofitting pending-state onto that engine (which has already been through
+  several real bug-fix rounds — see Done items 154/161/165) needs its own `AskUserQuestion`
+  scoping round before touching it, the same bar QSE/PSX's own genuinely-different-from-Cash/
+  Bank design needed — not attempted blind in this pass. New tests: `rentalsModule.test.ts`
+  gained 3 cases, `personalLoansModule.test.ts` gained 4 (including the two sign-specific
+  `netPendingByCurrency` cases). Verified live via Playwright with a seeded scenario per module:
+  Rentals' Net income card read "1k USD" / "+150.00 USD pending → 1,150.00 USD incl. pending"
+  (200 pending rent minus 50 pending expense); Personal Loans' Net position card read "400 USD"
+  / "Net owed to you" / "-50.00 USD pending → 350.00 USD incl. pending"; Funds' Units held card
+  read "100.00" / "+20.00 pending," with the pending row correctly tagged in the transactions
+  table — zero console errors on any of the three. `npx tsc -b` / `npm run test` (604 tests, 7
+  new) / `npm run build` all clean.
 
 ## Pending
 
@@ -7700,12 +7751,19 @@ or a design decision before more code, not guessed at further:**
      module eventually — the remaining rollout, roughly in order of how directly each module
      maps onto the pattern already built:
      - ~~QSE/PSX (a pending stock order)~~ — **done (2026-09-08), see Done item 243.**
-     - **Rentals/Personal Loans/EMI/Funds/Subscriptions** — each reuses `Finance`/similar record
-       shapes closely enough that the identical `status` field + a pending-exclusion pass
-       through that module's own balance function should mostly mirror Cash/Bank directly; still
-       needs its own verification pass per module (this project's own "ship one module well,
-       verify live, then extend" discipline), not a blind mechanical copy across all of them in
-       one PR.
+     - ~~Rentals/Personal Loans/Funds~~ — **done (2026-09-08), see Done item 244.**
+     - **Subscriptions** — deliberately NOT done, and not a gap: a `Subscription` is a single
+       object with a `startDate`/`active` flag, not a per-transaction ledger, so there's no
+       "not yet cleared" record for a pending flag to attach to (same reasoning already
+       documented for why Subscriptions was skipped from the `time`/`timezone` rollout).
+     - **EMI** — deliberately NOT done, genuinely different from every other module: its real
+       outstanding-balance/schedule figures derive from `EMILoan.installmentOverrides`/
+       `customMonthlyPayment` via `emiSchedule()`, not directly from the `EMIRepayment[]`
+       ledger the way every other module's headline function reads its own entries array.
+       Retrofitting pending-state onto that engine (already through several real bug-fix
+       rounds — Done items 154/161/165) needs its own `AskUserQuestion` scoping round before
+       writing code, the same bar QSE/PSX needed for its own genuinely-different-from-Cash/
+       Bank design (Done item 243) — not attempted blind.
      - The Planning feature's own 3rd original motive ("well-known/estimated/pending" — see
        Done item 43) named "pending transfers still in process and invisible on either side" as
        one of Planning's founding use cases, but Planning's own planned entries are
