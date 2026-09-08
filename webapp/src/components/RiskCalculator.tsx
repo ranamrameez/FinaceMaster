@@ -12,6 +12,7 @@ import { fmt, fmtMoney, fmtPrice } from '../lib/format';
 import type { FeeCalculator } from '../types/workbook';
 import { Card, StatCard } from './Card';
 import { Notice } from './Notice';
+import { TickerLogo } from './TickerLogo';
 import { Tooltip } from './Tooltip';
 import { Field, Select, TextInput } from './ui/Field';
 import { HUES, hueStyle } from '../lib/statCardHues';
@@ -41,6 +42,7 @@ export function RiskCalculator({
   calcFee,
   initialTicker,
   stockPageUrl,
+  exchange = 'qse',
 }: {
   rows: RiskCalculatorRow[];
   tickerNames: Record<string, string>;
@@ -59,6 +61,12 @@ export function RiskCalculator({
    * call sites; StockPage.tsx's embedded tab omits it since the user is
    * already on that ticker's own page (a link there would point at itself). */
   stockPageUrl?: (ticker: string) => string;
+  /** Which exchange's ticker-logo fallback chain to use (README item 118's
+   * ticker-logo rollout) — QSE has a known logo CDN, PSX doesn't, so this
+   * decides whether TickerLogo tries a remote fetch before falling back to
+   * the colored-initials badge. Defaults to 'qse' since this component
+   * predates PSX passing it explicitly; both real callers pass their own. */
+  exchange?: 'qse' | 'psx';
 }) {
   const held = useMemo(() => [...rows].filter((r) => r.shares > 0).sort((a, b) => a.ticker.localeCompare(b.ticker)), [rows]);
   const [ticker, setTicker] = useState(initialTicker || '');
@@ -154,6 +162,11 @@ export function RiskCalculator({
               ))}
             </Select>
           </Field>
+          {ticker && (
+            <Field label=" ">
+              <TickerLogo ticker={ticker} exchange={exchange} />
+            </Field>
+          )}
           {stockPageUrl && ticker && (
             <Field label=" ">
               <Link to={stockPageUrl(ticker)} className="btn secondary" style={{ display: 'inline-block' }}>

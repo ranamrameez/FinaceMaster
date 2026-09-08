@@ -7007,6 +7007,31 @@ FinanceManager live link:
   form's currency select — the "never hide a currency already in use" guarantee proven, not
   just asserted — zero console errors throughout. `npx tsc -b` / `npm run test` (616 tests, 11
   new) / `npm run build` all clean.
+- **Ticker logo rollout, remaining surfaces closed out (2026-09-08) — see README Done item
+  247, closes Pending item 118 in full.** Extended `TickerLogo` (Done item 244's local →
+  QSE-CDN → colored-initials fallback chain) to every surface that item's own text flagged as
+  still open: PSX Trade Planner's plan-title pill, its per-ticker summary stat cards, its
+  analysis table, and its leg rows; both QSE's and PSX's standalone Risk Analysis pages plus
+  each `StockPage`'s own embedded Risk Analysis tab (via a new `exchange?: 'qse'|'psx'` prop
+  on the shared `RiskCalculator.tsx`, defaulting to `'qse'` since the component predates PSX
+  passing it explicitly — both real callers now pass their own); both QSE's and PSX's Trade
+  Calculator popups, next to the ticker picker. **Funds' fund list/detail needed the one real
+  small design decision the Pending item itself flagged**: Funds has no known logo CDN of its
+  own, so rather than adding a new "no CDN" mode to `TickerLogo`, its two call sites
+  (`FundList`'s table row, `FundDetail`'s header) pass `exchange="psx"` — PSX already has the
+  identical "no known CDN, skip straight from local to the colored-initials fallback" behavior
+  (confirmed by reading `TickerLogo.tsx`'s own `onError` logic: only `exchange === 'qse'`
+  attempts the remote stage), so this reuses existing behavior with zero new code rather than
+  inventing a third fallback mode. Fund logos resolve off `fund.code` (the type's own
+  documented "fund's ticker/symbol equivalent" field), not `fund.id`. Verified live via
+  Playwright with seeded PSX and Funds workbooks: the Trade Planner's collapsed plan card
+  showed 1 logo (the title pill), expanding it showed 4 (title + summary card + analysis row +
+  leg row); both standalone Risk Analysis pages and both Trade Calculator popups each showed
+  exactly 1 logo next to their ticker picker once a ticker was selected; Funds' list and detail
+  page each showed 1 logo, with the detail page's fallback badge text confirmed as "MY" (the
+  first two letters of the seeded "MYFUND" code) — proving the colored-initials fallback fires
+  correctly with zero wasted network attempt. Zero console errors throughout. `npx tsc -b` /
+  `npm run test` (616 tests, unchanged — UI-only) / `npm run build` all clean.
 
 ## Pending
 
@@ -7790,25 +7815,14 @@ or a design decision before more code, not guessed at further:**
      tab (General + Data management) was the one genuine remaining instance, now gridded — every
      other module either already had this fix (Bank/PSX) or never had the multi-card shape to
      begin with (Funds/Subscriptions/Rentals/QSE, each with only one substantive Settings card).
-118. **Ticker logo rollout, remaining surfaces (2026-09-07, extended 2026-09-08)** — Done item
-     244 shipped `components/TickerLogo.tsx` (the local → template-URL → colored-initials
-     fallback chain) and applied it to Dashboard/Portfolio's tables plus each `StockPage`'s own
-     title, on both QSE and PSX. **Extended (2026-09-08, see Done item 235) to: Trade
-     Transactions' trade-list table plus its Open trades/Closed trades sections (all 3 ticker
-     cells, both exchanges), Watchlist, and both Dividends tables (history + Yearly projection —
-     these two also gained a `<Link>` to the stock page, which they never had at all before,
-     since every other ticker-bearing table in the app already links out and a bare non-clickable
-     ticker was itself a small inconsistency worth fixing alongside dropping the logo in).**
-     **Checked, not touched, per-stock `StockPage`'s own Trades tab (`TickerTransactions`)**: it
-     has no ticker column at all — every row is already scoped to the one ticker the page's own
-     title (which already carries the `lg` logo) is for, so there's no per-row cell to add a
-     logo to; not a missed surface. **Still not touched**: the Trade Planner's leg tables and
-     per-ticker summary cards, the Trade Calculator popup, Risk Analysis, and Funds' own fund
-     list/detail (Funds has no ticker CDN of its own — would need its own `exchange`-equivalent
-     handling, most likely local-only + text-tag, mirroring PSX's "no known CDN" case — a real
-     small design decision, not just a copy-paste of the QSE/PSX rollout). Do this incrementally,
-     page by page, verified live each time — same discipline item 116/117 above already call for
-     on other rollouts.
+~~118. Ticker logo rollout, remaining surfaces~~ — **done in full (2026-09-08), see Done item
+     247.** Extended `TickerLogo` to the Trade Planner (title pill, summary cards, analysis
+     table, leg rows), both standalone Risk Analysis pages plus each `StockPage`'s own embedded
+     Risk Analysis tab (via a new `exchange` prop on the shared `RiskCalculator.tsx`), both
+     Trade Calculator popups, and Funds' fund list/detail (resolved the item's own flagged
+     open design question — no Funds-specific CDN mode was built; `exchange="psx"` reuses the
+     existing "no known CDN, local-drop-in or colored-initials only" path, keyed off `fund.code`
+     rather than `fund.id`).
 119. **Broader raw-input/raw-select width-consistency audit (2026-09-07)** — Done item 246
      fixed the concrete, visibly-broken manifestation of "give form elements the same width"
      (a Select+IconButton composite row wrapping inside a narrow popup), on top of substantial

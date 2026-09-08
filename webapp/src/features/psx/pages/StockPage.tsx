@@ -303,6 +303,7 @@ export function StockPage() {
                     tick={workbook.settings.tick}
                     calcFee={calcFee}
                     initialTicker={ticker}
+                    exchange="psx"
                   />
                 ),
               }]

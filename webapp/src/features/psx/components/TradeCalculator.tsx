@@ -3,6 +3,7 @@ import { breakEvenPrice, requiredSellPrice, roundTick } from '../../../lib/calc'
 import { calcCGT, feeScenarios } from '../../../lib/calc/psxFees';
 import type { FeeCalculator } from '../../../types/workbook';
 import { PlusIcon, SaveIcon } from '../../../components/icons';
+import { TickerLogo } from '../../../components/TickerLogo';
 import { toast } from '../../../components/Toast';
 import { Field, TextInput } from '../../../components/ui/Field';
 import { Tooltip } from '../../../components/Tooltip';
@@ -224,6 +225,7 @@ export function TradeCalculator({ initialTicker }: { initialTicker?: string } = 
             </optgroup>
           )}
         </select>
+        {ticker && <TickerLogo ticker={ticker} exchange="psx" />}
       </div>
 
       {ticker && (
