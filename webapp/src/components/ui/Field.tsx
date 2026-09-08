@@ -39,15 +39,16 @@ import { Tooltip } from '../Tooltip';
  * here are validated with a friendlier toast message on submit rather
  * than the browser's own native validation UI.
  *
- * User-reported (app-wide audit): "this tiny asterisk is moving in next
- * line!" — a plain space before `*` is an ordinary break opportunity, so
- * a label that happens to wrap right at its last word left the asterisk
- * isolated alone on its own line, disconnected from the word it marks.
- * A non-breaking space glues it to the immediately preceding word instead
- * — the label text itself can still wrap normally elsewhere (a long label
- * legitimately spanning 2-3 lines is accepted, established behavior —
- * see this file's own `justifyContent:'flex-end'` note above), this only
- * stops the asterisk specifically from ever stranding itself. */
+ * User-reported (app-wide audit), TWICE — a hand-rolled `<span>{' *'}</span>`
+ * with a JS-string non-breaking space still visibly wrapped the asterisk
+ * onto its own line in a real narrow Field (e.g. the "Add a trade" popup's
+ * Ticker/Shares/Price columns). Rather than keep debugging the exact JSX/
+ * flex interaction that let it break, moved to the simpler, more robust
+ * fix the user asked for directly: a single `.field-required::after` CSS
+ * rule (`theme.css`) with the marker as one pseudo-element `content`
+ * string — there's no separate DOM text node + sibling `<span>` for a line
+ * break to ever land between, since the label text and its marker are one
+ * indivisible box as far as text layout is concerned. */
 /** `width` defaults to 180 (2026-08-28, user-reported: "give same width
  * ...to all form elements app wide...for best UI consistency") — most
  * `Field` call sites across the app either pass their own considered width
@@ -59,14 +60,7 @@ import { Tooltip } from '../Tooltip';
  * without touching the ones that already pass their own `width` for a real
  * reason (an explicit `width` prop always wins, same as before). */
 export function Field({ label, children, width = 180, title, required }: { label?: string; children: ReactNode; width?: number; title?: string; required?: boolean }) {
-  const labelContent = required ? (
-    <>
-      {label}
-      <span style={{ color: 'var(--loss)' }} aria-hidden="true">{' *'}</span>
-    </>
-  ) : (
-    label
-  );
+  const labelContent = required ? <span className="field-required">{label}</span> : label;
   return (
     <label style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 4, fontSize: 12, color: 'var(--muted)', width, marginBottom: 0 }}>
       {title ? <Tooltip text={title}><span style={{ cursor: 'pointer' }}>{labelContent}</span></Tooltip> : labelContent}
