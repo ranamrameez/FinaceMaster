@@ -12,6 +12,7 @@ import { usePageFabActions } from '../../../hooks/usePageFabActions';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import { computeClosedTrades } from '../../../lib/calc/closedTrades';
+import { computeFIFOPositions, type FIFOLot } from '../../../lib/calc/fifoPositions';
 import { isNettedLeg } from '../../../lib/calc/psxFees';
 import { transferRunningBalance } from '../../../lib/calc/transferBalance';
 import { FeeModeControl, feeModeFor } from '../../../components/ui/FeeModeControl';
@@ -313,6 +314,33 @@ function TransactionList() {
   };
   const { sorted: sortedClosedTrades, Th: CTTh } = useSortableRows(closedTrades, ctSortValue, 'sellDate', 'desc');
 
+  // User's own words: "make separate sections for open and closed trades...
+  // it gets difficult to know the sold status and price of a lot." Same
+  // FIFO-lot view as `computeClosedTrades` above, just the still-held half
+  // of it (`computeFIFOPositions`'s own `lotsByTicker`) — a pure reporting
+  // ledger, independent of PSX's own costBasisMethod setting.
+  const openLots = useMemo(() => {
+    const txs = filterTicker === 'ALL' ? workbook.transactions : workbook.transactions.filter((t) => t.ticker === filterTicker);
+    const { lotsByTicker } = computeFIFOPositions(txs, calcFee);
+    const flat: (FIFOLot & { ticker: string })[] = [];
+    for (const [ticker, lots] of Object.entries(lotsByTicker)) {
+      for (const lot of lots) flat.push({ ticker, ...lot });
+    }
+    return flat;
+  }, [workbook.transactions, calcFee, filterTicker]);
+  type OLCol = 'ticker' | 'buyDate' | 'buyPrice' | 'shares' | 'invested' | 'buyFeeTotal';
+  const olSortValue = (l: (typeof openLots)[number], col: OLCol): number | string => {
+    switch (col) {
+      case 'ticker': return l.ticker;
+      case 'buyPrice': return l.buyPrice;
+      case 'shares': return l.remainingShares;
+      case 'invested': return l.remainingShares * l.buyPrice;
+      case 'buyFeeTotal': return l.buyFeeTotal;
+      default: return l.buyDate;
+    }
+  };
+  const { sorted: sortedOpenLots, Th: OLTh } = useSortableRows(openLots, olSortValue, 'buyDate', 'desc');
+
   const startEdit = (i: number, tx: Transaction) => {
     setEditIndex(i);
     setEditRow({ ...tx });
@@ -492,7 +520,47 @@ function TransactionList() {
         {renderTable(closedGroups, 'No transactions for a fully closed position yet.')}
       </details>
 
-      <details style={{ marginTop: 16 }}>
+      <details open style={{ marginTop: 16 }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 700, marginBottom: 8 }}>
+          <Tooltip text="Each buy lot that hasn't been fully sold yet, FIFO-matched against your real sells — the mirror image of Closed trades below, so it's always clear which shares are still open vs. already sold.">
+            Open trades (not yet sold)
+          </Tooltip>{' '}
+          — {sortedOpenLots.length}
+        </summary>
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <OLTh col="ticker">Ticker</OLTh>
+                <OLTh col="buyDate">Buy date</OLTh>
+                <OLTh col="buyPrice">Buy price</OLTh>
+                <OLTh col="shares">Shares</OLTh>
+                <OLTh col="invested">Invested</OLTh>
+                <OLTh col="buyFeeTotal">Buy fee</OLTh>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedOpenLots.map((l, i) => (
+                <tr key={i}>
+                  <td><Link to={`/psx/stock/${l.ticker}`}>{l.ticker}</Link></td>
+                  <td>{l.buyDate}</td>
+                  <td>{fmtPrice(l.buyPrice)}</td>
+                  <td>{fmt(l.remainingShares, 0)}</td>
+                  <td>{fmtMoney(l.remainingShares * l.buyPrice, currency)}</td>
+                  <td>{fmtMoney(l.buyFeeTotal, currency)}</td>
+                  <td><span className="pill pill-info">Open</span></td>
+                </tr>
+              ))}
+              {!sortedOpenLots.length && (
+                <tr><td colSpan={7} className="text-muted">No open lots — everything bought so far has been sold.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </details>
+
+      <details open style={{ marginTop: 16 }}>
         <summary style={{ cursor: 'pointer', fontWeight: 700, marginBottom: 8 }}>
           <Tooltip text="Each fully or partially closed round-trip, matched buy-to-sell via FIFO, with its own buy price, sell price, fees on both legs, and net P/L — so a closed trade's own numbers stay separate from whatever the currently-open position shows.">
             Closed trades (realized round-trips)
@@ -513,6 +581,7 @@ function TransactionList() {
                 <CTTh col="sellFee">Sell fee</CTTh>
                 <CTTh col="netPL">Net P/L</CTTh>
                 <CTTh col="holdingDays">Days held</CTTh>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
@@ -528,10 +597,11 @@ function TransactionList() {
                   <td>{fmtMoney(t.sellFee, currency)}</td>
                   <td className={t.netPL >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(t.netPL, currency)}</td>
                   <td>{t.holdingDays}</td>
+                  <td><span className="pill pill-info">Closed</span></td>
                 </tr>
               ))}
               {!sortedClosedTrades.length && (
-                <tr><td colSpan={10} className="text-muted">No closed round-trips yet.</td></tr>
+                <tr><td colSpan={11} className="text-muted">No closed round-trips yet.</td></tr>
               )}
             </tbody>
           </table>
