@@ -1,6 +1,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { QSE_TICKER_DATALIST_ID } from '../../../components/TickerDatalist';
+import { TickerLogo } from '../../../components/TickerLogo';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { EditIcon, ExportIcon, PlusIcon, SaveIcon, TrashIcon, TransferIcon, XIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
@@ -394,7 +395,7 @@ function TransactionList() {
                 ) : (
                   <tr key={i}>
                     <td>{tx.date}</td>
-                    <td><Link to={`/stock/${tx.ticker}`}>{tx.ticker}</Link></td>
+                    <td><TickerLogo ticker={tx.ticker} size="sm" exchange="qse" /><Link to={`/stock/${tx.ticker}`}>{tx.ticker}</Link></td>
                     <td className={tx.action === 'BUY' ? 'pill-positive' : 'pill-negative'}>{tx.action}</td>
                     <td>{fmt(tx.shares, 0)}</td>
                     <td>{fmtPrice(tx.price)}</td>
@@ -482,7 +483,7 @@ function TransactionList() {
             <tbody>
               {sortedOpenLots.map((l, i) => (
                 <tr key={i}>
-                  <td><Link to={`/stock/${l.ticker}`}>{l.ticker}</Link></td>
+                  <td><TickerLogo ticker={l.ticker} size="sm" exchange="qse" /><Link to={`/stock/${l.ticker}`}>{l.ticker}</Link></td>
                   <td>{l.buyDate}</td>
                   <td>{fmtPrice(l.buyPrice)}</td>
                   <td>{fmt(l.remainingShares, 0)}</td>
@@ -526,7 +527,7 @@ function TransactionList() {
             <tbody>
               {sortedClosedTrades.map((t, i) => (
                 <tr key={i}>
-                  <td><Link to={`/stock/${t.ticker}`}>{t.ticker}</Link></td>
+                  <td><TickerLogo ticker={t.ticker} size="sm" exchange="qse" /><Link to={`/stock/${t.ticker}`}>{t.ticker}</Link></td>
                   <td>{t.buyDate}</td>
                   <td>{fmtPrice(t.buyPrice)}</td>
                   <td>{t.sellDate}</td>
