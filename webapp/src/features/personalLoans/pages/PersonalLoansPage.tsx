@@ -15,11 +15,11 @@ import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
 import { FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
+import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { ReorderButtons } from '../../../components/ui/ReorderButtons';
 import { toInstantMs } from '../../../lib/datetime';
-import { CURRENCIES } from '../../../lib/currencies';
 import { parseCSV, toCSV } from '../../../lib/csv';
 import { fmtMoney } from '../../../lib/format';
 import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
@@ -198,6 +198,7 @@ export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: strin
   const [lastCurrency, setLastCurrency] = useLastCurrency('personalLoans', defaultCurrency);
   const ensureSignedIn = useEnsureSignedIn();
   const [l, setL] = useState<PersonalLoan>(() => emptyLoan(initialCurrency ?? lastCurrency));
+  const currencyOptions = useEnabledCurrencies(l.currencyCode);
 
   const submit = async () => {
     if (!l.person.trim()) return toast('Enter a person/lender name.');
@@ -224,7 +225,7 @@ export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: strin
         </Field>
         <Field label="Currency" width={100} required>
           <Select value={l.currencyCode} onChange={(e) => { setL({ ...l, currencyCode: e.target.value }); setLastCurrency(e.target.value); }}>
-            {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+            {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>
         <Field label="Principal" width={110} required title="The original amount of the loan, before any repayments.">
@@ -674,6 +675,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
   const ensureSignedIn = useEnsureSignedIn();
   const [editing, setEditing] = useState(!!startInEditMode);
   const [editRow, setEditRow] = useState<PersonalLoan>(loan);
+  const currencyOptions = useEnabledCurrencies(editRow.currencyCode);
   const outstanding = loanOutstanding(loan, repayments);
   const pendingImpact = loanPendingImpact(loan, repayments);
 
@@ -705,7 +707,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
               </Field>
               <Field label="Currency">
                 <Select value={editRow.currencyCode} onChange={(e) => setEditRow({ ...editRow, currencyCode: e.target.value })}>
-                  {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+                  {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
                 </Select>
               </Field>
               <Field label="Principal">

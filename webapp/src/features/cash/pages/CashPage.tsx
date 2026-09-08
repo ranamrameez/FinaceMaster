@@ -17,6 +17,7 @@ import { CategorySelect } from '../../../components/CategorySelect';
 import { FinanceEditModal } from '../../../components/FinanceEditModal';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { useAmountFormat } from '../../../hooks/useAmountFormat';
+import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { ReorderButtons } from '../../../components/ui/ReorderButtons';
@@ -35,7 +36,6 @@ import { cssVar, tickerColor } from '../../../lib/cssVar';
 import { useAppearanceStore } from '../../../store/appearanceStore';
 import { ChartCard } from '../../qse/components/ChartCard';
 import { parseCSV } from '../../../lib/csv';
-import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
 import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
@@ -557,6 +557,7 @@ function ImportTab() {
   const [categoryCol, setCategoryCol] = useState('');
   const [flipSign, setFlipSign] = useState(false);
   const [currencyCode, setCurrencyCode] = useState(defaultCurrency);
+  const currencyOptions = useEnabledCurrencies(currencyCode);
 
   const onFile = (file: File) => {
     const reader = new FileReader();
@@ -626,7 +627,7 @@ function ImportTab() {
       </p>
       <Field label="Currency for imported entries" width={140}>
         <Select value={currencyCode} onChange={(e) => setCurrencyCode(e.target.value)}>
-          {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+          {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
         </Select>
       </Field>
       <div style={{ marginTop: 8 }}>
@@ -775,6 +776,7 @@ function AddPlanForm({ onSaved }: { onSaved?: () => void }) {
   const [lastCurrency, setLastCurrency] = useLastCurrency('cash', defaultCurrency);
   const ensureSignedIn = useEnsureSignedIn();
   const [p, setP] = useState<PlannedCashEntry>(() => emptyPlan(lastCurrency));
+  const currencyOptions = useEnabledCurrencies(p.currencyCode);
 
   const submit = async () => {
     if (!p.amount || p.amount <= 0) return toast('Enter an amount.');
@@ -806,7 +808,7 @@ function AddPlanForm({ onSaved }: { onSaved?: () => void }) {
         </Field>
         <Field label="Currency" width={110}>
           <Select value={p.currencyCode} onChange={(e) => { setP({ ...p, currencyCode: e.target.value }); setLastCurrency(e.target.value); }}>
-            {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+            {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>
         <Field label="Category (optional)" width={140}>
@@ -1050,6 +1052,7 @@ function DataManagement() {
   const workbook = useCashWorkbookStore((s) => s.workbook);
   const setWorkbook = useCashWorkbookStore((s) => s.setWorkbook);
   const updateSettings = useCashWorkbookStore((s) => s.updateSettings);
+  const currencyOptions = useEnabledCurrencies(workbook.settings.defaultCurrency);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const exportJSON = () => {
@@ -1093,7 +1096,7 @@ function DataManagement() {
         <h3 style={{ marginTop: 0 }}>General</h3>
         <Field label="Default currency (pre-fills new entries only)" width={140}>
           <Select value={workbook.settings.defaultCurrency} onChange={(e) => updateSettings({ defaultCurrency: e.target.value })}>
-            {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+            {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>
       </Card>

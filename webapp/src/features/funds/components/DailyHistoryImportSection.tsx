@@ -6,6 +6,7 @@ import { PlusIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
+import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import {
   averagePeriodPL,
@@ -19,7 +20,6 @@ import {
 } from '../../../lib/calc/fundsDailyHistoryImport';
 import { parseFundsSnapshotRows, type FundSnapshotRow } from '../../../lib/calc/fundsSnapshotImport';
 import { parseXlsxWorkbook } from '../../../lib/xlsxReader';
-import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney, fmtPrice } from '../../../lib/format';
 import { useFundsWorkbookStore } from '../../../store/fundsWorkbookStore';
 import type { Fund } from '../../../types/fundsWorkbook';
@@ -62,6 +62,7 @@ export function DailyHistoryImportSection() {
   const [plans, setPlans] = useState<SheetPlan[] | null>(null);
   const [ignoredSheets, setIgnoredSheets] = useState<string[]>([]);
   const [currencyCode, setCurrencyCode] = useState(lastCurrency);
+  const currencyOptions = useEnabledCurrencies(currencyCode);
   const [defaultCategory, setDefaultCategory] = useState<Fund['category']>('Other');
   const [busy, setBusy] = useState(false);
 
@@ -215,7 +216,7 @@ export function DailyHistoryImportSection() {
           <>
             <Field label="Currency for new funds" width={140}>
               <Select value={currencyCode} onChange={(e) => setCurrencyCode(e.target.value)}>
-                {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+                {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
               </Select>
             </Field>
             <Field label="Category for new funds" width={160}>

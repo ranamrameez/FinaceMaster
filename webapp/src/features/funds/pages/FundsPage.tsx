@@ -17,6 +17,7 @@ import { FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { defaultTimezoneForCurrency, nowTime } from '../../../lib/datetime';
+import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { getMarketPrice } from '../../../lib/calc';
@@ -34,7 +35,6 @@ import { toCSV } from '../../../lib/csv';
 import { DailyHistoryImportSection } from '../components/DailyHistoryImportSection';
 import { getDailyPriceHistory } from '../../../lib/calc/priceHistory';
 import { transferRunningBalance } from '../../../lib/calc/transferBalance';
-import { CURRENCIES } from '../../../lib/currencies';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { dlDoughnut, dlLine } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
@@ -206,6 +206,7 @@ function AddFundForm({ onSaved }: { onSaved?: () => void } = {}) {
   const [lastCurrency, setLastCurrency] = useLastCurrency('funds', 'USD');
   const ensureSignedIn = useEnsureSignedIn();
   const [f, setF] = useState<Fund>(() => emptyFund(lastCurrency));
+  const currencyOptions = useEnabledCurrencies(f.currencyCode);
   const [initialDate, setInitialDate] = useState(today());
   const [initialAmount, setInitialAmount] = useState(0);
   const [initialNav, setInitialNav] = useState(1);
@@ -244,7 +245,7 @@ function AddFundForm({ onSaved }: { onSaved?: () => void } = {}) {
         </Field>
         <Field label="Currency" width={100} required>
           <Select value={f.currencyCode} onChange={(e) => { setF({ ...f, currencyCode: e.target.value }); setLastCurrency(e.target.value); }}>
-            {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+            {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>
       </div>
@@ -499,6 +500,7 @@ function SnapshotImportSection() {
   const [rows, setRows] = useState<FundSnapshotRow[] | null>(null);
   const [snapshotDate, setSnapshotDate] = useState(today());
   const [currencyCode, setCurrencyCode] = useState(lastCurrency);
+  const currencyOptions = useEnabledCurrencies(currencyCode);
   const [defaultCategory, setDefaultCategory] = useState<Fund['category']>('Other');
   const [busy, setBusy] = useState(false);
 
@@ -580,7 +582,7 @@ function SnapshotImportSection() {
             </Field>
             <Field label="Currency" width={100}>
               <Select value={currencyCode} onChange={(e) => setCurrencyCode(e.target.value)}>
-                {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+                {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
               </Select>
             </Field>
             <Field label="Category for new funds" width={160}>
@@ -649,6 +651,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
 
   const [editingFund, setEditingFund] = useState(false);
   const [editFund, setEditFund] = useState<Fund>(fund);
+  const editFundCurrencyOptions = useEnabledCurrencies(editFund.currencyCode);
   const [navInput, setNavInput] = useState('');
   const [balanceInput, setBalanceInput] = useState('');
   const [txAction, setTxAction] = useState<'BUY' | 'SELL'>('BUY');
@@ -910,7 +913,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                     {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                   </Select>
                   <Select value={editFund.currencyCode} onChange={(e) => setEditFund({ ...editFund, currencyCode: e.target.value })}>
-                    {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+                    {editFundCurrencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
                   </Select>
                 </div>
                 <div className="row" style={{ gap: 8, marginTop: 8 }}>
