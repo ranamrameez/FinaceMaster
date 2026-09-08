@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { FeeCalculator, Transaction } from '../../../types/workbook';
-import { computeClosedTrades } from '../closedTrades';
+import { closedPLBySellTxId, computeClosedTrades } from '../closedTrades';
 
 const flatFee: FeeCalculator = (amount) => Math.round(amount * 0.005 * 100) / 100; // flat 0.5%
 
@@ -98,5 +98,55 @@ describe('computeClosedTrades', () => {
     );
     expect(trades).toHaveLength(1);
     expect(trades[0].holdingDays).toBe(0);
+  });
+});
+
+describe('closedPLBySellTxId', () => {
+  it('sums P&L across every lot a single sell drained into one figure keyed by that sell', () => {
+    // A sell (id "s1") that drains two buy lots produces two ClosedTrade
+    // records sharing the same sellTxId — the inline row figure should
+    // blend them into one net number for that sell transaction.
+    const trades = computeClosedTrades(
+      [
+        tx({ id: 'b1', date: '2026-01-01', action: 'BUY', shares: 5, price: 100 }),
+        tx({ id: 'b2', date: '2026-01-02', action: 'BUY', shares: 5, price: 120 }),
+        tx({ id: 's1', date: '2026-01-10', action: 'SELL', shares: 10, price: 130 }),
+      ],
+      flatFee,
+    );
+    expect(trades).toHaveLength(2);
+    const byId = closedPLBySellTxId(trades);
+    expect(Object.keys(byId)).toEqual(['s1']);
+    expect(byId.s1.shares).toBe(10);
+    expect(byId.s1.netPL).toBeCloseTo(
+      trades[0].netPL + trades[1].netPL,
+      5,
+    );
+  });
+
+  it('keeps two different sells fully independent', () => {
+    const trades = computeClosedTrades(
+      [
+        tx({ id: 'b1', date: '2026-01-01', action: 'BUY', shares: 10, price: 100 }),
+        tx({ id: 's1', date: '2026-01-05', action: 'SELL', shares: 4, price: 110 }),
+        tx({ id: 's2', date: '2026-01-10', action: 'SELL', shares: 6, price: 120 }),
+      ],
+      flatFee,
+    );
+    const byId = closedPLBySellTxId(trades);
+    expect(byId.s1.shares).toBe(4);
+    expect(byId.s2.shares).toBe(6);
+    expect(byId.s1.netPL).not.toBeCloseTo(byId.s2.netPL, 0);
+  });
+
+  it('a sell with no id (legacy data) is simply excluded, not thrown into an "undefined" bucket', () => {
+    const trades = computeClosedTrades(
+      [
+        tx({ date: '2026-01-01', action: 'BUY', shares: 5, price: 100 }),
+        tx({ date: '2026-01-05', action: 'SELL', shares: 5, price: 110 }),
+      ],
+      flatFee,
+    );
+    expect(Object.keys(closedPLBySellTxId(trades))).toHaveLength(0);
   });
 });

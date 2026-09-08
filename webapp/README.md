@@ -6798,6 +6798,30 @@ FinanceManager live link:
   genuinely `AmountInput`, not an unchanged number input); on the Cash page's Transfers-FAB
   modal, typing "50+25.5" into Amount correctly became "75.5" — zero console errors in either
   check. `npx tsc -b` / `npm run test` (583 tests, 21 new) / `npm run build` all clean.
+242. **Trade Transactions: inline per-row realized P&L, closes Pending item 122 (2026-09-08).**
+  Confirmed the exact gap via `AskUserQuestion`: the existing "Closed trades" section and
+  `PositionDetail`'s average-cost P/L card already covered the literal ask — what was missing
+  was showing a SELL row's own realized P&L directly in the main trade-list row itself, not
+  only in a separate section further down the page. `lib/calc/closedTrades.ts`'s
+  `ClosedTrade` gained `sellTxId?: string` (the originating sell transaction's stable `id` —
+  see `Transaction.id`'s own doc comment), and a new `closedPLBySellTxId()` sums every
+  `ClosedTrade` record produced by ONE sell (a sell that drains more than one buy lot produces
+  several records, one per lot touched) into a single net figure for that sell — the row shows
+  one blended number, matching this project's own established "the trade row is the unit the
+  user thinks in" convention (same reasoning as `Position`'s own weighted-average rollup),
+  while the untouched per-lot detail still lives in the Closed Trades section for anyone who
+  wants it. New "P/L" column (with a tooltip explaining the FIFO-matching) added to both QSE's
+  and PSX's Trade Transactions main table: a SELL row shows its realized P&L
+  (`pill-positive`/`pill-negative` colored by sign), a BUY row shows "—" (nothing realized
+  yet). Computed from the WHOLE workbook, not scoped to the page's own ticker filter, so a
+  row's figure never changes just because the filter is narrowed elsewhere. New tests:
+  `closedTrades.test.ts` gained a `closedPLBySellTxId` block (3 cases: a sell draining two
+  lots blends into one figure, two different sells stay independent, an id-less legacy sell is
+  simply excluded rather than thrown into an "undefined" bucket). Verified live via Playwright
+  on both exchanges with a seeded buy+partial-sell: QSE's SELL row showed "96.98 QAR," PSX's
+  showed "973.38 PKR" — both exactly matching the Closed Trades section's own figure for the
+  same trade — with the BUY row correctly showing "—" on both; zero console errors. `npx tsc
+  -b` / `npm run test` (586 tests, 3 new) / `npm run build` all clean.
 
 ## Pending
 
@@ -7638,17 +7662,10 @@ or a design decision before more code, not guessed at further:**
        module's pending items alongside its planned ones (both are "money not fully settled
        yet," from the user's point of view) — not designed yet, flagged here rather than
        silently conflated with Planning during this pass.
-122. **Trade Transactions: sold price / lot P&L / overall avg-cost P&L — investigate what's
-     actually missing (2026-09-08, user-requested).** The user's exact ask ("show the sold
-     price and PL w.r.t. that lot's buy price, as well as overall PL according to the Buy avg")
-     appears to already be covered by two existing features built earlier this same day: the
-     "Closed trades (realized round-trips)" section on the Trade Transactions page (added this
-     session, FIFO-matched, shows buy price/sell price/net P&L per lot) and `PositionDetail`'s
-     existing "P/L" stat card (average-cost-based, for the currently open position). Before
-     building anything new here, confirm with the user exactly what's still missing — likely
-     candidates: showing this inline in the main trade-list row itself rather than a separate
-     section, or something about combining "per lot" and "overall avg" into one view — rather
-     than guessing and duplicating an already-built feature.
+~~122. Trade Transactions: sold price / lot P&L / overall avg-cost P&L~~ — **done (2026-09-08),
+     see Done item 242.** Confirmed via `AskUserQuestion` the missing piece was showing a sell's
+     realized P&L inline in the main trade row (not a new section — Closed Trades/
+     `PositionDetail`'s P/L card already covered the rest).
 ~~123. Math-expression evaluation in number inputs~~ — **done (2026-09-08), see Done item 241.**
      Rolled out to `TransactionEntryModal.tsx`'s Amount field and QSE's/PSX's Trade Transactions
      Shares/Price fields; the Trade Calculator's Amount field already had its own equivalent

@@ -11,7 +11,7 @@ import { TransactionEntryModal } from '../../../components/TransactionEntryModal
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { usePageFabActions } from '../../../hooks/usePageFabActions';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
-import { computeClosedTrades } from '../../../lib/calc/closedTrades';
+import { closedPLBySellTxId, computeClosedTrades } from '../../../lib/calc/closedTrades';
 import { computeFIFOPositions, type FIFOLot } from '../../../lib/calc/fifoPositions';
 import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import { transferRunningBalance } from '../../../lib/calc/transferBalance';
@@ -275,6 +275,16 @@ function TransactionList() {
   };
   const { sorted: sortedClosedTrades, Th: CTTh } = useSortableRows(closedTrades, ctSortValue, 'sellDate', 'desc');
 
+  // User's own ask (2026-09-08): "show the sold price and PL w.r.t. that
+  // lot's buy price... inline in the main trade row." Computed from the
+  // WHOLE workbook (not `filterTicker`-scoped like `closedTrades` above) so
+  // a row's own P&L figure never changes just because the ticker filter is
+  // narrowed to something else.
+  const sellPLById = useMemo(
+    () => closedPLBySellTxId(computeClosedTrades(workbook.transactions, calcFee)),
+    [workbook.transactions, calcFee],
+  );
+
   // User's own words: "make separate sections for open and closed trades...
   // it gets difficult to know the sold status and price of a lot." Same
   // FIFO-lot view as `computeClosedTrades` above, just the still-held half
@@ -346,6 +356,11 @@ function TransactionList() {
             <Th col="shares">Shares</Th>
             <Th col="price">Price</Th>
             <Th col="amount">Amount</Th>
+            <th>
+              <Tooltip text="Realized profit/loss for a SELL row, matched FIFO against your oldest still-open buy lot(s) for this ticker — the same figure as the Closed trades section below, shown per-row here. Blank on a BUY row (nothing realized yet).">
+                P/L
+              </Tooltip>
+            </th>
             <th></th>
           </tr>
         </thead>
@@ -354,7 +369,7 @@ function TransactionList() {
             <Fragment key={g.key || 'ungrouped'}>
               {g.key && (
                 <tr key={'hdr-' + g.key} style={{ background: 'var(--panel-2)' }}>
-                  <td colSpan={7}>
+                  <td colSpan={8}>
                     <strong>{g.key}</strong> — {g.rows.length} txns ·{' '}
                     buys {fmt(g.rows.filter((r) => r.tx.action === 'BUY').reduce((s, r) => s + r.tx.shares, 0), 0)} ·{' '}
                     sells {fmt(g.rows.filter((r) => r.tx.action === 'SELL').reduce((s, r) => s + r.tx.shares, 0), 0)} ·{' '}
@@ -377,6 +392,7 @@ function TransactionList() {
                     <td><input type="number" value={editRow.shares} onChange={(e) => setEditRow({ ...editRow, shares: Number(e.target.value) })} style={{ width: 70 }} /></td>
                     <td><input type="number" step="0.001" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })} style={{ width: 80 }} /></td>
                     <td>{fmtMoney(editRow.shares * editRow.price, currency)}</td>
+                    <td></td>
                     <td>
                       <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
                       <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditIndex(null)} />
@@ -390,6 +406,9 @@ function TransactionList() {
                     <td>{fmt(tx.shares, 0)}</td>
                     <td>{fmtPrice(tx.price)}</td>
                     <td>{fmtMoney(tx.shares * tx.price, currency)}</td>
+                    <td className={tx.id && sellPLById[tx.id] ? (sellPLById[tx.id].netPL >= 0 ? 'pill-positive' : 'pill-negative') : undefined}>
+                      {tx.id && sellPLById[tx.id] ? fmtMoney(sellPLById[tx.id].netPL, currency) : '—'}
+                    </td>
                     <td>
                       <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(i, tx)} />{' '}
                       <IconButton
@@ -407,7 +426,7 @@ function TransactionList() {
             </Fragment>
           ))}
           {!groups.some((g) => g.rows.length) && (
-            <tr><td colSpan={7} className="text-muted">{emptyMessage}</td></tr>
+            <tr><td colSpan={8} className="text-muted">{emptyMessage}</td></tr>
           )}
         </tbody>
       </table>
