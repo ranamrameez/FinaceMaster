@@ -18,6 +18,7 @@ import { isNettedLeg } from '../../../lib/calc/psxFees';
 import { transferRunningBalance } from '../../../lib/calc/transferBalance';
 import { FeeModeControl, feeModeFor } from '../../../components/ui/FeeModeControl';
 import { Field, Select } from '../../../components/ui/Field';
+import { AmountInput } from '../../../components/ui/AmountInput';
 import { IconButton } from '../../../components/ui/IconButton';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { defaultTimezoneForCurrency, defaultTimezoneForMarket, nowTime } from '../../../lib/datetime';
@@ -86,22 +87,11 @@ export function TransactionRows() {
               <option value="SELL">SELL</option>
             </select>
           </Field>
-          <Field label={i === 0 ? 'Shares' : undefined} required={i === 0}>
-            <input
-              type="number"
-              placeholder="Shares"
-              value={r.shares || ''}
-              onChange={(e) => update(i, { shares: Number(e.target.value) })}
-            />
+          <Field label={i === 0 ? 'Shares' : undefined} required={i === 0} title={i === 0 ? 'You can type a math expression here too, e.g. 100+50.' : undefined}>
+            <AmountInput placeholder="Shares" value={r.shares} onChange={(shares) => update(i, { shares })} />
           </Field>
-          <Field label={i === 0 ? 'Price' : undefined} required={i === 0}>
-            <input
-              type="number"
-              step="0.01"
-              placeholder="Price"
-              value={r.price || ''}
-              onChange={(e) => update(i, { price: Number(e.target.value) })}
-            />
+          <Field label={i === 0 ? 'Price' : undefined} required={i === 0} title={i === 0 ? 'You can type a math expression here too, e.g. 10.5+5.' : undefined}>
+            <AmountInput placeholder="Price" value={r.price} onChange={(price) => update(i, { price })} />
           </Field>
           <FeeModeControl
             mode={feeModeFor(r)}

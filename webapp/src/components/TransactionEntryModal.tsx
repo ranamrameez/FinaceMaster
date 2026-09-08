@@ -3,6 +3,7 @@ import { Modal } from './Modal';
 import { toast } from './Toast';
 import { PlusIcon, SaveIcon, TrashIcon } from './icons';
 import { Field, TextInput } from './ui/Field';
+import { AmountInput } from './ui/AmountInput';
 import { DirectionChips } from './ui/DirectionChips';
 import { TimeZoneFields } from './ui/TimeZoneFields';
 import { SideFields, useSideCurrency, nextUnpaidEmiMonth } from '../features/transfers/pages/TransferLinksPage';
@@ -179,8 +180,8 @@ function TxRowFields({
             <DirectionChips value={row.direction} onChange={(d) => onChange({ ...row, direction: d })} labels={direction} />
           </Field>
         )}
-        <Field label="Amount" required title={!direction ? 'A repayment is always entered as a positive amount, regardless of which way the debt runs.' : undefined}>
-          <TextInput type="number" step="0.01" min={direction ? 0 : undefined} value={row.amount || ''} onChange={(e) => onChange({ ...row, amount: Number(e.target.value) })} />
+        <Field label="Amount" required title={!direction ? 'A repayment is always entered as a positive amount, regardless of which way the debt runs.' : 'You can type a math expression here too, e.g. 10.5+5 — it evaluates once you leave the field.'}>
+          <AmountInput value={row.amount} onChange={(amount) => onChange({ ...row, amount })} />
         </Field>
         {HAS_DESCRIPTION.includes(row.finance.module) && (
           <Field label="Description" required>
