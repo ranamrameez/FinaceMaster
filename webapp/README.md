@@ -6602,6 +6602,31 @@ FinanceManager live link:
   remaining (a)/(b)/(c) sub-items (Bank/Broker parent-entity schema surgery, favorite/pin +
   Sr#/Index# column) are unrelated and still open. `npx tsc -b` / `npm run test` (554 tests,
   unchanged) / `npm run build` all clean.
+235. **Ticker logo rollout extended to Trade Transactions/Watchlist/Dividends (2026-09-08) —
+  continues Pending item 118, both exchanges.** `components/TickerLogo.tsx` (Done item 244)
+  wasn't touching anything beyond Dashboard/Portfolio/`StockPage` titles yet. Added it to every
+  remaining ticker cell with a real per-row identity: QSE's/PSX's Trade Transactions page (the
+  main trade-list table, plus its Open trades and Closed trades sections — all three ticker
+  columns), Watchlist's ticker column, and both Dividends tables (the history log and the
+  "Yearly projection" table). **The two Dividends tables also gained a `<Link>` to the stock
+  page, which neither had before** — every other ticker cell in the app already links out, so a
+  bare non-clickable ticker string was a small pre-existing inconsistency worth fixing in the
+  same pass rather than dropping a logo next to dead text. **Checked, not touched**: per-stock
+  `StockPage`'s own Trades tab (`TickerTransactions`) has no ticker column at all — every row is
+  already scoped to that one ticker (whose logo already sits in the page's own title, `lg` size)
+  — confirmed this by reading the component before assuming it needed the same treatment, since
+  the Pending item's own text listed it as an open surface. Verified live via Playwright with a
+  seeded QSE + PSX workbook (a transaction, a dividend, a watchlist item each): `.ticker-logo`
+  element counts matched the exact number of ticker-bearing rows on each page (4 on Trade
+  Transactions — trade list + open lots + dividend history + yearly projection; 1 on Watchlist),
+  all correctly rendering the colored-initials fallback badge in this sandbox (both the local
+  and remote-CDN stages are blocked by its network policy, so this is a genuine end-to-end test
+  of the full 3-stage fallback chain, same as Done item 244's own verification note) — confirmed
+  with a real screenshot too, not just element counts. Zero console errors beyond the expected
+  blocked-image-fetch noise. Still open, per Pending item 118's own remaining list: Trade
+  Planner's leg tables/summary cards, the Trade Calculator popup, Risk Analysis, and Funds
+  (needs its own small `exchange`-equivalent design decision first). `npx tsc -b` / `npm run
+  test` (554 tests, unchanged) / `npm run build` all clean.
 
 ## Pending
 
@@ -7388,17 +7413,25 @@ or a design decision before more code, not guessed at further:**
      side by side in a responsive grid — same `repeat(auto-fit, minmax(...,1fr))` +
      `alignItems:'start'` pattern `AccountPage.tsx` now uses. Do this incrementally, module by
      module, verified live each time — the same discipline item 116 above already calls for.
-118. **Ticker logo rollout, remaining surfaces (2026-09-07)** — Done item 244 shipped
-     `components/TickerLogo.tsx` (the local → template-URL → colored-initials fallback chain)
-     and applied it to Dashboard/Portfolio's tables plus each `StockPage`'s own title, on both
-     QSE and PSX, as a working vertical slice. Not yet touched, same component ready to drop in:
-     Trade Transactions' trade-list table, per-stock `StockPage`'s own Trades tab, Watchlist,
-     Dividends' tables, the Trade Planner's leg tables and per-ticker summary cards, the Trade
-     Calculator popup, Risk Analysis, and Funds' own fund list/detail (Funds has no ticker CDN
-     of its own — would need its own `exchange`-equivalent handling, most likely local-only +
-     text-tag, mirroring PSX's "no known CDN" case — a real small design decision, not just a
-     copy-paste of the QSE/PSX rollout). Do this incrementally, page by page, verified live each
-     time — same discipline item 116/117 above already call for on other rollouts.
+118. **Ticker logo rollout, remaining surfaces (2026-09-07, extended 2026-09-08)** — Done item
+     244 shipped `components/TickerLogo.tsx` (the local → template-URL → colored-initials
+     fallback chain) and applied it to Dashboard/Portfolio's tables plus each `StockPage`'s own
+     title, on both QSE and PSX. **Extended (2026-09-08, see Done item 235) to: Trade
+     Transactions' trade-list table plus its Open trades/Closed trades sections (all 3 ticker
+     cells, both exchanges), Watchlist, and both Dividends tables (history + Yearly projection —
+     these two also gained a `<Link>` to the stock page, which they never had at all before,
+     since every other ticker-bearing table in the app already links out and a bare non-clickable
+     ticker was itself a small inconsistency worth fixing alongside dropping the logo in).**
+     **Checked, not touched, per-stock `StockPage`'s own Trades tab (`TickerTransactions`)**: it
+     has no ticker column at all — every row is already scoped to the one ticker the page's own
+     title (which already carries the `lg` logo) is for, so there's no per-row cell to add a
+     logo to; not a missed surface. **Still not touched**: the Trade Planner's leg tables and
+     per-ticker summary cards, the Trade Calculator popup, Risk Analysis, and Funds' own fund
+     list/detail (Funds has no ticker CDN of its own — would need its own `exchange`-equivalent
+     handling, most likely local-only + text-tag, mirroring PSX's "no known CDN" case — a real
+     small design decision, not just a copy-paste of the QSE/PSX rollout). Do this incrementally,
+     page by page, verified live each time — same discipline item 116/117 above already call for
+     on other rollouts.
 119. **Broader raw-input/raw-select width-consistency audit (2026-09-07)** — Done item 246
      fixed the concrete, visibly-broken manifestation of "give form elements the same width"
      (a Select+IconButton composite row wrapping inside a narrow popup), on top of substantial

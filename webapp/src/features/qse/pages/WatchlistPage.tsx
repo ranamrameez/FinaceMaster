@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { QSE_TICKER_DATALIST_ID } from '../../../components/TickerDatalist';
 import { PlusIcon, TrashIcon } from '../../../components/icons';
 import { Sparkline } from '../../../components/Sparkline';
+import { TickerLogo } from '../../../components/TickerLogo';
 import { toast } from '../../../components/Toast';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { getDailyPriceHistory } from '../../../lib/calc';
@@ -118,7 +119,7 @@ function WatchlistTable({
         <tbody>
           {sorted.map(({ item, gap, sparkData }) => (
             <tr key={item.ticker}>
-              <td><Link to={`/stock/${item.ticker}`}>{item.ticker}</Link></td>
+              <td><TickerLogo ticker={item.ticker} size="sm" exchange="qse" /><Link to={`/stock/${item.ticker}`}>{item.ticker}</Link></td>
               <td style={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>{tickerNames[item.ticker] ? shortenCompanyName(tickerNames[item.ticker]) : ''}</td>
               <td style={{ width: 82 }}><Sparkline data={sparkData} formatValue={fmtPrice} /></td>
               <td>

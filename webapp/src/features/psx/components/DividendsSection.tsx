@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { PSX_TICKER_DATALIST_ID } from '../../../components/PSXTickerDatalist';
+import { TickerLogo } from '../../../components/TickerLogo';
 import { EditIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { Field } from '../../../components/ui/Field';
@@ -191,7 +193,7 @@ export function DividendsSection() {
               ) : (
                 <tr key={d.i}>
                   <td>{d.date}</td>
-                  <td>{d.ticker}</td>
+                  <td><TickerLogo ticker={d.ticker} size="sm" exchange="psx" /><Link to={`/psx/stock/${d.ticker}`}>{d.ticker}</Link></td>
                   <td>{d.perShare || '—'}</td>
                   <td>{d.shares || '—'}</td>
                   <td className="pill-positive">{fmtMoney(d.amount, currency)}</td>
@@ -226,7 +228,7 @@ export function DividendsSection() {
               <tbody>
                 {sortedHeld.map((p) => (
                   <tr key={p.ticker}>
-                    <td>{p.ticker}</td>
+                    <td><TickerLogo ticker={p.ticker} size="sm" exchange="psx" /><Link to={`/psx/stock/${p.ticker}`}>{p.ticker}</Link></td>
                     <td>{fmt(p.shares, 0)}</td>
                     <td>
                       <input
