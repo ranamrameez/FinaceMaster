@@ -48,19 +48,152 @@
 		#exportCsvBtn:hover {
 			background: #146c2e;
 		}
+		h2 {
+			font-size: 16px;
+			margin: 28px 0 8px 0;
+			border-bottom: 1px solid #ddd;
+			padding-bottom: 6px;
+		}
+		table.lots-table td, table.lots-table th {
+			text-align: right;
+		}
+		table.lots-table td:first-child, table.lots-table th:first-child,
+		table.lots-table td:nth-child(2), table.lots-table th:nth-child(2) {
+			text-align: left;
+		}
+		.tag {
+			display: inline-block;
+			padding: 2px 10px;
+			border-radius: 999px;
+			font-size: 11px;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.02em;
+		}
+		.tag-open {
+			background: #e8eef7;
+			color: #2b4a7a;
+		}
+		.tag-closed-profit {
+			background: #e3f6e8;
+			color: #1a7f37;
+		}
+		.tag-closed-loss {
+			background: #fbe7e7;
+			color: #b3261e;
+		}
+		.pl-pos { color: #1a7f37; font-weight: 600; }
+		.pl-neg { color: #b3261e; font-weight: 600; }
 	</style>
 </head>
 <body>
 	<div class="toolbar">
 		<div>
 			<h1 style="margin:0 0 4px 0;">PSX Sample Statement</h1>
-			<p>Real broker contract-note data (JS Global Capital / JSBL-ZINDIGI), grouped by statement, used to
-			cross-check this app's own PSX fee/CGT calc engine against real numbers.</p>
+			<p>Real broker contract-note data (JS Global Capital / JSBL-ZINDIGI), used to cross-check this app's own
+			PSX fee/CGT calc engine against real numbers. Open Trades / Closed Trades below are a FIFO-matched
+			per-lot view (each buy lot paired with the sale price and date that closed it) &mdash; the full
+			statement further down is every real contract note, unmatched, grouped by broker statement.</p>
 		</div>
 		<button id="exportCsvBtn" onclick="exportAllTablesToCSV()">Export CSV</button>
 	</div>
 
-    <table class="trade-transactions">
+	<h2>Open Trades (not yet sold)</h2>
+	<table class="lots-table" data-label="Open Trades">
+		<thead>
+			<tr><th>Symbol</th><th>Buy Date</th><th>Buy Price</th><th>Shares</th><th>Invested</th><th>Buy Fee</th><th>Status</th></tr>
+		</thead>
+		<tbody>
+			<tr><td>EPQL</td><td>2026-09-01</td><td>24.77</td><td>10</td><td>247.70</td><td>0.60</td><td><span class="tag tag-open">Open</span></td></tr>
+			<tr><td>EPQL</td><td>2026-09-01</td><td>24.65</td><td>50</td><td>1,232.50</td><td>3.02</td><td><span class="tag tag-open">Open</span></td></tr>
+			<tr><td>EPQL</td><td>2026-09-01</td><td>24.74</td><td>25</td><td>618.50</td><td>1.51</td><td><span class="tag tag-open">Open</span></td></tr>
+			<tr><td>EPQL</td><td>2026-09-02</td><td>24.18</td><td>22</td><td>531.96</td><td>1.33</td><td><span class="tag tag-open">Open</span></td></tr>
+			<tr><td>EPQL</td><td>2026-09-02</td><td>24.00</td><td>25</td><td>600.00</td><td>1.51</td><td><span class="tag tag-open">Open</span></td></tr>
+			<tr><td>EPQL</td><td>2026-09-02</td><td>24.05</td><td>12</td><td>288.60</td><td>0.72</td><td><span class="tag tag-open">Open</span></td></tr>
+			<tr><td>EPQL</td><td>2026-09-02</td><td>24.40</td><td>19</td><td>463.60</td><td>1.15</td><td><span class="tag tag-open">Open</span></td></tr>
+			<tr><td>EPQL</td><td>2026-09-02</td><td>24.10</td><td>25</td><td>602.50</td><td>1.51</td><td><span class="tag tag-open">Open</span></td></tr>
+			<tr><td>EPQL</td><td>2026-09-07</td><td>23.79</td><td>62</td><td>1,474.98</td><td>3.74</td><td><span class="tag tag-open">Open</span></td></tr>
+			<tr><td>OGDC</td><td>2026-09-07</td><td>322.00</td><td>1</td><td>322.00</td><td>0.78</td><td><span class="tag tag-open">Open</span></td></tr>
+			<tr><td>OGDC</td><td>2026-09-07</td><td>321.52</td><td>5</td><td>1,607.60</td><td>3.89</td><td><span class="tag tag-open">Open</span></td></tr>
+		</tbody>
+		<tfoot>
+			<tr class="grand-total"><th colspan="4">Total open (still held)</th><th>7,989.94</th><th></th><th></th></tr>
+		</tfoot>
+	</table>
+
+	<h2>Closed Trades (sold, FIFO-matched)</h2>
+	<table class="lots-table" data-label="Closed Trades">
+		<thead>
+			<tr><th>Symbol</th><th>Buy Date</th><th>Buy Price</th><th>Sell Date</th><th>Sale Price</th><th>Shares</th><th>Buy Fee</th><th>Sell Fee</th><th>Net P&amp;L</th><th>Held (days)</th><th>Status</th></tr>
+		</thead>
+		<tbody>
+			<tr><td>OGDC</td><td>2026-08-17</td><td>319.00</td><td>2026-08-17</td><td>319.00</td><td>1</td><td>0.77</td><td>0.04</td><td class="pl-neg">-0.81</td><td>0</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>CNERGY</td><td>2026-08-18</td><td>15.25</td><td>2026-08-18</td><td>15.36</td><td>5</td><td>0.30</td><td>0.01</td><td class="pl-pos">0.24</td><td>0</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>DCR</td><td>2026-08-18</td><td>38.80</td><td>2026-08-18</td><td>38.90</td><td>1</td><td>0.09</td><td>0.00</td><td class="pl-pos">0.01</td><td>0</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>OGDC</td><td>2026-08-18</td><td>314.50</td><td>2026-08-19</td><td>319.05</td><td>5</td><td>3.81</td><td>3.86</td><td class="pl-pos">15.08</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>OGDC</td><td>2026-08-18</td><td>314.55</td><td>2026-08-19</td><td>319.05</td><td>2</td><td>1.52</td><td>1.54</td><td class="pl-pos">5.94</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>OGDC</td><td>2026-08-18</td><td>314.90</td><td>2026-08-19</td><td>319.05</td><td>5</td><td>3.81</td><td>3.86</td><td class="pl-pos">13.08</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>OGDC</td><td>2026-08-18</td><td>315.80</td><td>2026-08-19</td><td>319.05</td><td>10</td><td>7.64</td><td>7.72</td><td class="pl-pos">17.14</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>OGDC</td><td>2026-08-18</td><td>315.91</td><td>2026-08-19</td><td>319.05</td><td>10</td><td>7.65</td><td>7.72</td><td class="pl-pos">16.03</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>OGDC</td><td>2026-08-18</td><td>317.55</td><td>2026-08-19</td><td>319.05</td><td>2</td><td>1.54</td><td>1.54</td><td class="pl-neg">-0.08</td><td>1</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-18</td><td>104.20</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-neg">-1.76</td><td>3</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-18</td><td>105.60</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.26</td><td>0.25</td><td class="pl-neg">-3.17</td><td>3</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-19</td><td>101.85</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-pos">0.59</td><td>2</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-19</td><td>101.90</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-pos">0.54</td><td>2</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-19</td><td>102.00</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-pos">0.44</td><td>2</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-19</td><td>102.20</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-pos">0.24</td><td>2</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-19</td><td>102.60</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-neg">-0.16</td><td>2</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-19</td><td>102.75</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-neg">-0.31</td><td>2</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-19</td><td>103.00</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-neg">-0.56</td><td>2</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>101.50</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-pos">0.94</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>101.60</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-pos">0.84</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>101.61</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-pos">0.83</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>101.75</td><td>2026-08-21</td><td>102.94</td><td>2</td><td>0.49</td><td>0.50</td><td class="pl-pos">1.39</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>101.80</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-pos">0.64</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>101.90</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-pos">0.54</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>102.00</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-pos">0.44</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>102.10</td><td>2026-08-21</td><td>102.94</td><td>2</td><td>0.49</td><td>0.50</td><td class="pl-pos">0.69</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>102.20</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-pos">0.24</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>102.30</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-pos">0.14</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>102.31</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-pos">0.13</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>102.40</td><td>2026-08-21</td><td>102.94</td><td>2</td><td>0.50</td><td>0.50</td><td class="pl-pos">0.08</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>102.41</td><td>2026-08-21</td><td>102.94</td><td>2</td><td>0.50</td><td>0.50</td><td class="pl-pos">0.06</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>102.50</td><td>2026-08-21</td><td>102.94</td><td>2</td><td>0.50</td><td>0.50</td><td class="pl-neg">-0.12</td><td>1</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>102.51</td><td>2026-08-21</td><td>102.94</td><td>2</td><td>0.50</td><td>0.50</td><td class="pl-neg">-0.14</td><td>1</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>102.61</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-neg">-0.17</td><td>1</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>102.70</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-neg">-0.26</td><td>1</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>102.81</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-neg">-0.37</td><td>1</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-21</td><td>101.10</td><td>2026-08-21</td><td>102.94</td><td>6</td><td>0.07</td><td>1.49</td><td class="pl-pos">9.48</td><td>0</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-21</td><td>101.27</td><td>2026-08-21</td><td>102.94</td><td>3</td><td>0.04</td><td>0.75</td><td class="pl-pos">4.22</td><td>0</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-21</td><td>101.31</td><td>2026-08-21</td><td>102.94</td><td>5</td><td>0.06</td><td>1.25</td><td class="pl-pos">6.84</td><td>0</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>OGDC</td><td>2026-08-24</td><td>330.50</td><td>2026-08-24</td><td>334.50</td><td>1</td><td>0.80</td><td>0.04</td><td class="pl-pos">3.16</td><td>0</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>OGDC</td><td>2026-08-24</td><td>331.46</td><td>2026-08-24</td><td>334.50</td><td>1</td><td>0.80</td><td>0.04</td><td class="pl-pos">2.20</td><td>0</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>PPL</td><td>2026-08-24</td><td>242.50</td><td>2026-08-24</td><td>243.89</td><td>1</td><td>0.03</td><td>0.03</td><td class="pl-pos">1.33</td><td>0</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>PSO</td><td>2026-08-24</td><td>378.80</td><td>2026-08-24</td><td>380.00</td><td>2</td><td>1.83</td><td>0.09</td><td class="pl-pos">0.48</td><td>0</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-24</td><td>102.61</td><td>2026-08-24</td><td>103.14</td><td>1</td><td>0.01</td><td>0.01</td><td class="pl-pos">0.51</td><td>0</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>OGDC</td><td>2026-08-27</td><td>327.80</td><td>2026-09-01</td><td>330.50</td><td>1</td><td>0.79</td><td>0.80</td><td class="pl-pos">1.11</td><td>5</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>OGDC</td><td>2026-08-27</td><td>327.75</td><td>2026-09-01</td><td>330.50</td><td>1</td><td>0.79</td><td>0.80</td><td class="pl-pos">1.16</td><td>5</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>OGDC</td><td>2026-08-27</td><td>327.70</td><td>2026-09-01</td><td>330.50</td><td>2</td><td>1.59</td><td>1.60</td><td class="pl-pos">2.41</td><td>5</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>OGDC</td><td>2026-08-27</td><td>327.50</td><td>2026-09-01</td><td>330.50</td><td>2</td><td>1.59</td><td>1.60</td><td class="pl-pos">2.81</td><td>5</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>PSO</td><td>2026-08-24</td><td>378.20</td><td>2026-09-04</td><td>357.50</td><td>10</td><td>9.15</td><td>8.65</td><td class="pl-neg">-224.80</td><td>11</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>PSO</td><td>2026-08-24</td><td>377.70</td><td>2026-09-04</td><td>357.50</td><td>10</td><td>9.14</td><td>8.65</td><td class="pl-neg">-219.79</td><td>11</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>PSO</td><td>2026-08-24</td><td>376.25</td><td>2026-09-04</td><td>357.50</td><td>10</td><td>9.11</td><td>8.65</td><td class="pl-neg">-205.26</td><td>11</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>PSO</td><td>2026-08-24</td><td>378.03</td><td>2026-09-04</td><td>357.50</td><td>10</td><td>9.15</td><td>8.65</td><td class="pl-neg">-223.10</td><td>11</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>PSO</td><td>2026-08-24</td><td>377.10</td><td>2026-09-04</td><td>357.50</td><td>10</td><td>9.13</td><td>8.65</td><td class="pl-neg">-213.78</td><td>11</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>PSO</td><td>2026-08-24</td><td>376.12</td><td>2026-09-04</td><td>357.80</td><td>10</td><td>9.10</td><td>8.66</td><td class="pl-neg">-200.96</td><td>11</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>PSO</td><td>2026-08-24</td><td>374.51</td><td>2026-09-04</td><td>357.80</td><td>4</td><td>3.63</td><td>3.46</td><td class="pl-neg">-73.93</td><td>11</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>PSO</td><td>2026-08-24</td><td>374.25</td><td>2026-09-04</td><td>357.80</td><td>15</td><td>13.59</td><td>12.99</td><td class="pl-neg">-273.33</td><td>11</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>PSO</td><td>2026-08-25</td><td>374.00</td><td>2026-09-04</td><td>357.80</td><td>26</td><td>23.53</td><td>22.51</td><td class="pl-neg">-467.24</td><td>10</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>PSO</td><td>2026-08-25</td><td>372.50</td><td>2026-09-04</td><td>357.80</td><td>15</td><td>13.52</td><td>12.99</td><td class="pl-neg">-247.01</td><td>10</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>PSO</td><td>2026-08-27</td><td>371.50</td><td>2026-09-04</td><td>357.80</td><td>10</td><td>8.99</td><td>8.66</td><td class="pl-neg">-154.65</td><td>8</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+		</tbody>
+		<tfoot>
+			<tr class="grand-total"><th colspan="8">Total realized P&amp;L</th><th>-2,399.75</th><th></th><th></th></tr>
+		</tfoot>
+	</table>
+
+	<h2>Full Broker Statement (every real contract note, by statement)</h2>
+    <table class="trade-transactions" data-label="Statement 1">
     <thead>
         <tr>
             <th>Transaction</th>
@@ -122,7 +255,7 @@
     </tfoot>
 </table>
 
-	<table class="trade-transactions">
+	<table class="trade-transactions" data-label="Statement 2">
     <thead>
         <tr>
             <th>Transaction</th>
@@ -438,7 +571,7 @@
     </tfoot>
 </table>
 
-	<table class="trade-transactions">
+	<table class="trade-transactions" data-label="Statement 3">
     <thead>
         <tr>
             <th>Transaction</th>
@@ -856,7 +989,7 @@
     </tfoot>
 </table>
 
-	<table class="trade-transactions">
+	<table class="trade-transactions" data-label="Statement 4">
     <thead>
         <tr>
             <th>Trade Date</th>
@@ -1345,10 +1478,10 @@ function tableRowsToCSV(table) {
 }
 
 function exportAllTablesToCSV() {
-	var tables = document.querySelectorAll('table.trade-transactions');
+	var tables = document.querySelectorAll('table');
 	var blocks = [];
 	tables.forEach(function (table, i) {
-		blocks.push('Statement ' + (i + 1));
+		blocks.push(table.getAttribute('data-label') || ('Statement ' + (i + 1)));
 		blocks.push(tableRowsToCSV(table));
 		blocks.push('');
 	});
