@@ -6577,6 +6577,31 @@ FinanceManager live link:
   what actually renders the add-flow for a module, not just whether the module's own page file
   imports the expected component. No code changes needed; this entry exists only to correct the
   backlog. `npx tsc -b` / `npm run test` (554 tests, unchanged) / `npm run build` all clean.
+234. **Bank's Analytics section gains a date-range filter (2026-09-08) — closes Pending item
+  115(d).** "Bank's own Analytics tab was never audited against the date-range-filterable chart
+  pattern other Analytics pages already have... charts should be interactive... right now they
+  are dumping lifetime data all at once." `AccountAnalyticsSection`'s "Balance over time" and
+  "Income vs. spend by month" charts always rendered a full-history `accountRunningLedger`/
+  `bankMonthlyFlow` with no way to narrow either. Added a plain `<input type="month">` from/to
+  pair (`Chart range:`) above the chart grid, filtering both series client-side. **Deliberately
+  NOT a reuse of QSE/PSX's `ChartFilterBar`/`ChartFilter`** (`lib/calc/chartFilters.ts`) — that
+  type's `tickers` field has no meaning for a single bank account, and its
+  `{months,values}`-shaped helpers (`filterMonthlySeries`/`filterMonthlyDualSeries`) don't match
+  either of this section's own shapes (a running ledger keyed by transaction, a
+  `{month,income,expense,net}[]` series) — a small local filter was simpler and more honest than
+  forcing an ill-fitting shared type. The existing "Category breakdown (spend)" card's own
+  ◀ Prev/This month/Next ▶ nav is a separate, more specific tool (one exact month, with its own
+  "smart tabular values" table) and is deliberately left untouched — the new range only applies
+  to the two full-history charts named in the Pending item. Verified live via Playwright with a
+  seeded 3-month account (May/June/July): both `ChartCard`s' `empty` prop correctly kicked in
+  ("Not enough data yet.") when the range was narrowed to a month with zero transactions;
+  narrowing to May-only correctly re-scoped both charts to exactly that month's data (screenshot-
+  confirmed: Balance over time plotted only the two May points, Income vs. spend showed only the
+  "2026-05" bar pair) while Category breakdown's own month-nav stayed on the real current month,
+  unaffected; Clear correctly restored full history. Zero console errors. Pending item 115's
+  remaining (a)/(b)/(c) sub-items (Bank/Broker parent-entity schema surgery, favorite/pin +
+  Sr#/Index# column) are unrelated and still open. `npx tsc -b` / `npm run test` (554 tests,
+  unchanged) / `npm run build` all clean.
 
 ## Pending
 
@@ -7331,9 +7356,11 @@ or a design decision before more code, not guessed at further:**
      pattern is modeled on), so every module named in the original request now has it. **Still
      open**: favorite/pin and a visible Sr#/Index# column — neither is built yet, for any
      module.
-     (d) Bank's own Analytics tab was never audited against the date-range-filterable chart
+     ~~(d) Bank's own Analytics tab was never audited against the date-range-filterable chart
      pattern other Analytics pages already have (Done item 31) — "charts should be interactive...
-     right now they are dumping lifetime data all at once."
+     right now they are dumping lifetime data all at once."~~ **Done (2026-09-08) — see Done item
+     234.** A from/to month-range filter now narrows Balance-over-time and Income-vs-spend-by-
+     month; Category breakdown's own separate month-nav is untouched.
 116. **App-wide CSS cleanup — remove hardcoded/inline styles, use proper generic classes
      (2026-09-03).** User's own words: "this app's css is very bad. we need to remove all hard
      coded css and use proper & generic classes for each element on the page!" A real, valid,
