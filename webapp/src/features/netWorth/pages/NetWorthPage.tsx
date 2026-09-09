@@ -914,16 +914,24 @@ function MonthlySummaryTable({
           </thead>
           <tbody>
             <tr>
-              <td>Income</td>
+              <td>
+                <Tooltip text="Everything that added money in this month — real transactions and planned entries combined, EXCLUDING any linked inter-account transfer (moving your own money between your own accounts isn't real income).">
+                  Inflow
+                </Tooltip>
+              </td>
               {months.map((m) => <td key={m}>{fmtMoney(monthlyByMonth.get(m)?.income[currency] ?? 0, currency)}</td>)}
             </tr>
             <tr>
-              <td>Expense</td>
+              <td>
+                <Tooltip text="Everything that took money out this month — real transactions and planned entries combined, EXCLUDING any linked inter-account transfer (moving your own money between your own accounts isn't a real expense).">
+                  Outflow
+                </Tooltip>
+              </td>
               {months.map((m) => <td key={m}>{fmtMoney(monthlyByMonth.get(m)?.expense[currency] ?? 0, currency)}</td>)}
             </tr>
             <tr>
               <td>
-                <Tooltip text="Income minus expense for this month — real transactions and planned entries combined, EXCLUDING any inter-account transfer (which is neither income nor expense).">
+                <Tooltip text="Inflow minus outflow for this month — real transactions and planned entries combined, EXCLUDING any linked inter-account transfer (which is neither an inflow nor an outflow).">
                   Net flow
                 </Tooltip>
               </td>

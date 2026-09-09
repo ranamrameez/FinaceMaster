@@ -1159,7 +1159,7 @@ export function AccountDetailPage() {
       </div>
 
       {/* User-requested (2026-09-06): "Analytics missing on individual bank
-         page: Grid: Balance over time, Income vs. spend by month, Category
+         page: Grid: Balance over time, Deposits vs. withdrawals by month, Category
          breakdown (spend) monthly with month nav + smart tabular values."
          The whole-module Analytics tab (`AnalyticsTab` below) already has
          this exact chart set, but only reachable via its own account
@@ -1533,9 +1533,9 @@ function TransactionsList({ account }: { account: BankAccount }) {
 /** Per-account Analytics grid on `AccountDetailPage` — user-requested
  * 2026-09-06 (see that page's own call-site comment for the exact
  * wording). Reuses the SAME three chart shapes as the whole-module
- * `AnalyticsTab` below (Balance over time / Income vs. spend by month /
+ * `AnalyticsTab` below (Balance over time / Deposits vs. withdrawals by month /
  * Category breakdown), pre-scoped to this one account instead of needing
- * an account picker — "Balance over time" and "Income vs. spend by month"
+ * an account picker — "Balance over time" and "Deposits vs. withdrawals by month"
  * show the account's FULL history (a trend chart loses its point scoped
  * to one month), while "Category breakdown (spend)" is scoped to a single
  * selected month via the ◀ Prev/This month/Next ▶ nav, matching the
@@ -1557,7 +1557,7 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
 
   // Pending item 115(d): "charts should be interactive... right now they are
   // dumping lifetime data all at once" — a from/to month range narrows the
-  // two full-history charts (Balance over time, Income vs. spend by month).
+  // two full-history charts (Balance over time, Deposits vs. withdrawals by month).
   // Deliberately a local `<input type="month">` pair rather than reusing
   // QSE/PSX's `ChartFilterBar`/`ChartFilter` (lib/calc/chartFilters.ts) —
   // that type's `tickers` field has no meaning for a bank account, and the
@@ -1603,7 +1603,7 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
         {(fromMonth || toMonth) && (
           <button type="button" className="btn secondary small" onClick={() => { setFromMonth(''); setToMonth(''); }}>Clear</button>
         )}
-        <Tooltip text="Narrows the Balance over time and Income vs. spend charts below to this window. Doesn't affect Category breakdown, which already has its own month navigation, or any lifetime total shown elsewhere." />
+        <Tooltip text="Narrows the Balance over time and Deposits vs. withdrawals charts below to this window. Doesn't affect Category breakdown, which already has its own month navigation, or any lifetime total shown elsewhere." />
       </div>
       <div className="grid-auto" style={{ ...gridAutoStyle(300, 16), marginBottom: 16 }}>
         <ChartCard flat title="Balance over time" empty={!filteredLedger.length}>
@@ -1615,13 +1615,18 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
             options={{ plugins: { legend: { display: false }, datalabels: dlLine((v) => fmtMoney(v, account.currencyCode)) } }}
           />
         </ChartCard>
-        <ChartCard flat title="Income vs. spend by month" empty={!filteredMonthlyFlow.length}>
+        <ChartCard
+          flat
+          title="Deposits vs. withdrawals by month"
+          titleTooltip="Every deposit vs. withdrawal for this account, including any inter-account transfer — this is a raw cash-flow view, not a categorized income/expense breakdown."
+          empty={!filteredMonthlyFlow.length}
+        >
           <Bar
             data={{
               labels: filteredMonthlyFlow.map((f) => f.month),
               datasets: [
-                { label: 'Income', data: filteredMonthlyFlow.map((f) => f.income), backgroundColor: cssVar('--profit') || '#3ecf8e' },
-                { label: 'Expense', data: filteredMonthlyFlow.map((f) => f.expense), backgroundColor: cssVar('--loss') || '#e5484d' },
+                { label: 'Deposits', data: filteredMonthlyFlow.map((f) => f.income), backgroundColor: cssVar('--profit') || '#3ecf8e' },
+                { label: 'Withdrawals', data: filteredMonthlyFlow.map((f) => f.expense), backgroundColor: cssVar('--loss') || '#e5484d' },
               ],
             }}
             options={{ plugins: { datalabels: dlBarV((v) => fmtMoney(v, account.currencyCode)) } }}
@@ -1648,8 +1653,8 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
         <table>
           <thead><tr><th colSpan={2}>{selectedMonthLabel}</th></tr></thead>
           <tbody>
-            <tr><td>Income</td><td>{fmtMoney(monthFlowRow?.income ?? 0, account.currencyCode)}</td></tr>
-            <tr><td>Expense</td><td>{fmtMoney(monthFlowRow?.expense ?? 0, account.currencyCode)}</td></tr>
+            <tr><td>Deposits</td><td>{fmtMoney(monthFlowRow?.income ?? 0, account.currencyCode)}</td></tr>
+            <tr><td>Withdrawals</td><td>{fmtMoney(monthFlowRow?.expense ?? 0, account.currencyCode)}</td></tr>
             <tr>
               <td>Net flow</td>
               <td className={(monthFlowRow?.net ?? 0) >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(monthFlowRow?.net ?? 0, account.currencyCode)}</td>
@@ -2260,13 +2265,18 @@ function AnalyticsTab() {
                 options={{ cutout: '55%', plugins: { datalabels: dlDoughnut((v) => fmtMoney(v, account.currencyCode)) } }}
               />
             </ChartCard>
-            <ChartCard flat title="Income vs. spend by month" empty={!monthlyFlow.length}>
+            <ChartCard
+              flat
+              title="Deposits vs. withdrawals by month"
+              titleTooltip="Every deposit vs. withdrawal across the selected account(s), including any inter-account transfer — this is a raw cash-flow view, not a categorized income/expense breakdown."
+              empty={!monthlyFlow.length}
+            >
               <Bar
                 data={{
                   labels: monthlyFlow.map((f) => f.month),
                   datasets: [
-                    { label: 'Income', data: monthlyFlow.map((f) => f.income), backgroundColor: cssVar('--profit') || '#3ecf8e' },
-                    { label: 'Expense', data: monthlyFlow.map((f) => f.expense), backgroundColor: cssVar('--loss') || '#e5484d' },
+                    { label: 'Deposits', data: monthlyFlow.map((f) => f.income), backgroundColor: cssVar('--profit') || '#3ecf8e' },
+                    { label: 'Withdrawals', data: monthlyFlow.map((f) => f.expense), backgroundColor: cssVar('--loss') || '#e5484d' },
                   ],
                 }}
                 options={{ plugins: { datalabels: dlBarV((v) => fmtMoney(v, account.currencyCode)) } }}

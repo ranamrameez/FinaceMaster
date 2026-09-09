@@ -7690,6 +7690,41 @@ FinanceManager live link:
   look: QSE/PSX chips and the Pages toggle sit directly under "Stock Exchanges," with the flat
   list of other modules continuing right after, no divider line in between. `npx tsc -b` /
   `npm run test` (627 tests, unchanged — UI-only) / `npm run build` all clean.
+- **"Income"/"Expense" wording fixed wherever a figure can include an inter-account transfer
+  (2026-09-09) — see Done item 282, closes Pending item 130(a).** User's report: "An
+  inter-account transfer cannot be counted as income/ expense. Use appropriate words like
+  inflow & outflow." Audited every "Income"/"Expense" label in the app, not just the one
+  Monthly Summary table already fixed as part of a prior report (Done item 229's own
+  `linkedRecordKeys()` exclusion) — found the SAME underlying issue in two more places whose
+  charts had ZERO transfer-awareness at all (not even the linked-transfer exclusion the Net
+  Worth table already had): Cash's own "Income vs. expense by month" chart
+  (`cashMonthlyFlow()`) and Bank's per-account + whole-portfolio "Income vs. spend by month"
+  charts/tables (`bankMonthlyFlow()`) — both sum every entry's raw signed amount with no
+  linked-record filter, so a transfer's receiving/sending leg genuinely was counted as
+  income/expense there, worse than the already-partially-fixed Net Worth table. Deliberately
+  matched each module's OWN already-established vocabulary rather than inventing one new term
+  everywhere: Cash already says "Cash in"/"Cash out" throughout its ledger/forms (confirmed via
+  grep before choosing wording, not guessed), so its chart became "Cash in vs. out by month"
+  with "Cash in"/"Cash out" series labels; Bank already says "Deposit"/"Withdrawal" in its own
+  `DirectionChips`, so its chart/table became "Deposits vs. withdrawals by month" with
+  "Deposits"/"Withdrawals" labels. Net Worth's own Monthly Summary table (already
+  transfer-excluding via `linkedRecordKeys()`) got "Income"/"Expense" → "Inflow"/"Outflow"
+  specifically, plus a new tooltip on each row explaining the exclusion. Every new `ChartCard`
+  title also gained a `titleTooltip` explaining the figure includes any (non-excluded) transfer
+  — an honest label plus an explanation, not just a rename. **Deliberately NOT touched, a real
+  scoping line, not an oversight**: Rentals' own "Income"/"Expense" labels
+  (`RentalEntry.type: RENT_INCOME | EXPENSE`) — unlike Cash/Bank's raw signed-amount sum, this
+  is a real user-CHOSEN categorization at entry time (even for a linked transfer, whose mapping
+  `interEntityLink.ts` deliberately picks correctly per its own documented "no real balance of
+  its own" exception, not a bug) — renaming a genuine categorized record type would be a
+  different, larger change than fixing an unguarded raw aggregate, and wasn't part of this
+  report. Verified live via Playwright with seeded Cash + Bank data: Cash's chart renders "Cash
+  in vs. out by month" (old "Income vs. expense by month" title confirmed gone); Bank's
+  per-account chart/table render "Deposits vs. withdrawals by month"/"Deposits"/"Withdrawals";
+  Net Worth's Monthly Summary table renders "Inflow"/"Outflow" cells — zero console errors.
+  `npx tsc -b` / `npm run test` (627 tests, unchanged — pure wording/copy, no calc logic
+  touched) / `npm run build` all clean. **Still open**: item 130(b), the genuinely new
+  category-level Income/Expense/Ignore classification feature.
 
 ## Pending
 
@@ -8605,21 +8640,19 @@ or a design decision before more code, not guessed at further:**
      we are cutting the text; users can never read the full data." Scope not yet finalized —
      likely starts with QSE/PSX Trade Transactions (the page the report's screenshot was about)
      but could generalize to any module's transaction table. Not yet built.
-130. **Wording + true category-level Income/Expense/Ignore classification (2026-09-09,
-     user-reported, multi-part).** (a) Rename "Income"/"Expense" to "Inflow"/"Outflow" wherever
-     the figure can include an inter-account transfer (at minimum the Monthly Summary table on
-     the Dashboard/Net Worth page and `lib/calc/budgetPlanner.ts`'s own labels) — a transfer
-     between the user's own accounts is neither real income nor a real expense. (b) Separately,
-     build TRUE category-level classification: a `kind: 'income' | 'expense' | 'ignore'` field
-     on `Category`, seeded sensible defaults for the user's own named categories (Income,
-     Grocery, Bill, Extra, Guests, Tuition Fee, Other Fees, Other, Ignore, plus more generic
-     ones), a per-category "which zone" picker in Account/Category settings (the user's own
-     red=expense/green=income/gray=ignore framing), expense-category-split charts built on this
-     classification, and a "this month vs last month" net-worth delta shown as both an amount
-     and a percentage (this month's total minus last month's, per the user's own formula: "month
-     Intial minus last balance can tell the Net Worth while current - previous month worth can
-     tell a month's positive/-negative impact"). A real design pass, not yet started — (a) is a
-     small, scoped wording fix; (b) is a genuinely new feature.
+~~130(a). Rename "Income"/"Expense" to Inflow/Outflow-equivalent wording wherever the figure
+     can include an inter-account transfer~~ — **done (2026-09-09), see Done item 282.**
+130(b). **True category-level Income/Expense/Ignore classification, still open — see README
+     Done item 282 for the wording half already shipped.** Build a `kind: 'income' | 'expense' |
+     'ignore'` field on `Category`, seeded sensible defaults for the user's own named categories
+     (Income, Grocery, Bill, Extra, Guests, Tuition Fee, Other Fees, Other, Ignore, plus more
+     generic ones), a per-category "which zone" picker in Account/Category settings (the user's
+     own red=expense/green=income/gray=ignore framing), expense-category-split charts built on
+     this classification, and a "this month vs last month" net-worth delta shown as both an
+     amount and a percentage (this month's total minus last month's, per the user's own formula:
+     "month Intial minus last balance can tell the Net Worth while current - previous month
+     worth can tell a month's positive/-negative impact"). A real design pass, not yet started —
+     a genuinely new feature, not a wording fix.
 131. **First-time currency-selection prompt (2026-09-09, user-requested).** "We should ask user
      about his currencies on signup. then can still customize in settings anytime." No formal
      "signup" flow exists in this sign-in-gated app — most likely means firing once alongside

@@ -516,13 +516,17 @@ function AnalyticsTab() {
             options={{ cutout: '55%', plugins: { datalabels: dlDoughnut((v) => fmtMoney(v, effectiveCurrency)) } }}
           />
         </ChartCard>
-        <ChartCard title="Income vs. expense by month" empty={!monthlyFlow.length}>
+        <ChartCard
+          title="Cash in vs. out by month"
+          titleTooltip="Every deposit vs. withdrawal for this currency, including any inter-account transfer — this is a raw cash-flow view, not a categorized income/expense breakdown."
+          empty={!monthlyFlow.length}
+        >
           <Bar
             data={{
               labels: monthlyFlow.map((f) => f.month),
               datasets: [
-                { label: 'Income', data: monthlyFlow.map((f) => f.income), backgroundColor: cssVar('--profit') || '#3ecf8e' },
-                { label: 'Expense', data: monthlyFlow.map((f) => f.expense), backgroundColor: cssVar('--loss') || '#e5484d' },
+                { label: 'Cash in', data: monthlyFlow.map((f) => f.income), backgroundColor: cssVar('--profit') || '#3ecf8e' },
+                { label: 'Cash out', data: monthlyFlow.map((f) => f.expense), backgroundColor: cssVar('--loss') || '#e5484d' },
               ],
             }}
             options={{ plugins: { datalabels: dlBarV((v) => fmtMoney(v, effectiveCurrency)) } }}
