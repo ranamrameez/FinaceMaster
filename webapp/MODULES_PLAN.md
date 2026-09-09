@@ -539,6 +539,9 @@ matching the note already in `CLAUDE.md`'s "Not yet restructured" section.
 Routing itself stayed flat (didn't restructure to `/stocks/:exchange/...`) — the dropdown
 was layered on top of the existing flat routes rather than requiring a routing rewrite first.
 
+**Update (2026-08-26)**: converted from a click-to-open dropdown to a plain always-visible
+list — see README Done item 181. The category names/routing above are otherwise unchanged.
+
 ---
 
 # Next wave (2026-08-23, user-requested)
