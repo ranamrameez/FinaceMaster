@@ -7670,6 +7670,26 @@ FinanceManager live link:
   (`--border`), and a real screenshot showed clean, evenly-spaced rows with the Pending badge/
   Mark-cleared action rendering correctly alongside. `npx tsc -b` / `npm run test` (627 tests,
   3 new) / `npm run build` all clean.
+- **Sidebar: QSE/PSX's own page list now nests under "Stock Exchanges" as a real subnav
+  (2026-09-09) — see Done item 281, closes Pending item 128.** User's correction: "I asked to
+  include individual stock Exchs. as subnavs of the SE main nav, but you placed it below as a
+  stand-alone menu using ugly lines." The exchange switcher + "▸ Pages" list used to render as
+  a SEPARATE block below the whole `CategoryNav` list, with a border-top divider — visually its
+  own standalone menu, not nested under "Stock Exchanges" at all. `CategoryNav.tsx` gained a
+  `stocksSubnav` prop: each category row now renders inside a `Fragment` (not a wrapping
+  `<div>`, so `nav.navlist`'s `display:flex;flex-direction:column;gap:2px` still treats every
+  row — and now the injected subnav — as its own direct flex item), with the subnav content
+  inserted immediately after the "Stock Exchanges" row only while that category is active.
+  `Sidebar.tsx` builds the QSE/PSX chip switcher + collapsible page list once and passes it
+  through; a new `.category-stocks-subnav` CSS class (left border + indent) reads as
+  nested-under-its-parent rather than a competing section. Verified live via Playwright: the
+  subnav renders 4px below the "Stock Exchanges" row's own bottom edge (not after the whole
+  list), is completely absent on every other category and on `/account`, and the "Funds" row
+  sits correctly BELOW the expanded subnav, not immediately after "Stock Exchanges" — confirms
+  true nesting, not just a visual illusion. A real desktop screenshot confirms the intended
+  look: QSE/PSX chips and the Pages toggle sit directly under "Stock Exchanges," with the flat
+  list of other modules continuing right after, no divider line in between. `npx tsc -b` /
+  `npm run test` (627 tests, unchanged — UI-only) / `npm run build` all clean.
 
 ## Pending
 
@@ -8578,15 +8598,8 @@ or a design decision before more code, not guessed at further:**
      free-text/fixed-enum field as a read-only display fallback for pre-migration records.
 ~~127. Per-user selectable currency subset~~ — **done (2026-09-08), see Done item 246.**
 
-128. **Sidebar: nest QSE/PSX's own page list as a real subnav under "Stock Exchanges", not a
-     separate accordion (2026-09-09, user-corrected).** The current `usePagesOpen()` "▸ Pages"
-     block (Done items 209/210) sits BELOW the `CategoryNav` list as its own independent
-     collapsible section with a `1px solid` divider above it — the user's own framing: "I asked
-     to include individual stock Exchs. as subnavs of the SE main nav, but you placed it below
-     as a stand-alone menu using ugly lines." Needs a real design pass (how a nested item list
-     renders directly under one `CategoryNav` row, only while that category is active/expanded,
-     without breaking the QSE/PSX exchange-switcher chips that already live in roughly that
-     spot) — not attempted yet.
+~~128. Sidebar: nest QSE/PSX's own page list as a real subnav under "Stock Exchanges", not a
+     separate accordion~~ — **done (2026-09-09), see Done item 281.**
 129. **Transaction-detail popup on row click, since tables truncate long text (2026-09-09,
      user-reported).** "We should also show a transaction record in a popup when clicked since
      we are cutting the text; users can never read the full data." Scope not yet finalized —

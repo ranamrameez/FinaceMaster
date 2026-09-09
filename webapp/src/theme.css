@@ -1275,6 +1275,18 @@ html[data-color^="material-"][data-theme="dark"] select{
    picking a module is one click instead of two. */
 .category-list{margin-bottom:6px; padding-bottom:6px; border-bottom:1px solid var(--border);}
 .category-item.active{background:var(--accent-soft); color:var(--on-accent-soft); font-weight:600;}
+/* User-corrected (2026-09-09): "I asked to include individual stock Exchs.
+   as subnavs of the SE main nav, but you placed it below as a stand-alone
+   menu using ugly lines." Was a separate bordered block below the whole
+   category list (Pending item 113's own top-border divider); now rendered
+   as a real sibling list item directly after "Stock Exchanges" (see
+   CategoryNav.tsx's `stocksSubnav` prop) — a left border + indent reads as
+   nested-under-its-parent instead of a competing standalone section, the
+   same visual language a nested tree view uses. */
+.category-stocks-subnav{
+  padding:6px 0 4px 10px; margin:2px 0 4px;
+  border-left:2px solid var(--border);
+}
 
 /* Account section (2026-08-26 feedback): the sign-in state used to be a
    plain `.text-muted`-styled text link, easy to miss as an actual action
