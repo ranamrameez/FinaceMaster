@@ -8,6 +8,7 @@ import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
+import { RecordDetailModal } from '../../../components/RecordDetailModal';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { usePageFabActions } from '../../../hooks/usePageFabActions';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
@@ -233,6 +234,7 @@ function TransactionList() {
   const [groupBy, setGroupBy] = useState<GroupBy>('none');
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editRow, setEditRow] = useState<Transaction | null>(null);
+  const [detailTx, setDetailTx] = useState<Transaction | null>(null);
 
   const indexed = workbook.transactions.map((tx, i) => ({ tx, i }));
   const tickers = useMemo(() => [...new Set(workbook.transactions.map((t) => t.ticker))].sort(), [workbook.transactions]);
@@ -439,9 +441,9 @@ function TransactionList() {
                     </td>
                   </tr>
                 ) : (
-                  <tr key={i}>
+                  <tr key={i} onClick={() => setDetailTx(tx)} style={{ cursor: 'pointer' }}>
                     <td>{tx.date}</td>
-                    <td>
+                    <td onClick={(e) => e.stopPropagation()}>
                       <TickerLogo ticker={tx.ticker} size="sm" exchange="qse" /><Link to={`/stock/${tx.ticker}`}>{tx.ticker}</Link>
                       {tx.isPending && (
                         <Tooltip text="Order placed but not yet filled — excluded from your shares/cash balance until cleared.">
@@ -456,7 +458,7 @@ function TransactionList() {
                     <td className={tx.id && sellPLById[tx.id] ? (sellPLById[tx.id].netPL >= 0 ? 'pill-positive' : 'pill-negative') : undefined}>
                       {tx.id && sellPLById[tx.id] ? fmtMoney(sellPLById[tx.id].netPL, currency) : '—'}
                     </td>
-                    <td>
+                    <td onClick={(e) => e.stopPropagation()}>
                       {tx.isPending && (
                         <IconButton
                           label="Mark cleared"
@@ -615,6 +617,27 @@ function TransactionList() {
           </table>
         </div>
       </details>
+
+      {detailTx && (
+        <RecordDetailModal
+          title={`${detailTx.action} ${detailTx.ticker}`}
+          onClose={() => setDetailTx(null)}
+          fields={[
+            { label: 'Date', value: detailTx.date },
+            { label: 'Time', value: detailTx.time ?? '— (defaults to noon)' },
+            { label: 'Timezone', value: detailTx.timezone ?? '—' },
+            { label: 'Ticker', value: detailTx.ticker },
+            { label: 'Action', value: detailTx.action },
+            { label: 'Shares', value: fmt(detailTx.shares, 0) },
+            { label: 'Price', value: fmtPrice(detailTx.price) },
+            { label: 'Amount', value: fmtMoney(detailTx.shares * detailTx.price, currency) },
+            ...(detailTx.id && sellPLById[detailTx.id]
+              ? [{ label: 'Realized P/L', value: fmtMoney(sellPLById[detailTx.id].netPL, currency) }]
+              : []),
+            { label: 'Status', value: detailTx.isPending ? 'Pending (not yet cleared)' : 'Cleared' },
+          ]}
+        />
+      )}
     </div>
   );
 }

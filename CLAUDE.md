@@ -6208,6 +6208,22 @@ touched those.
   defaults to `false` — verified live via Playwright with exactly that seeded scenario. New
   tests: `currencyOnboardingStore.test.ts` (3 cases). `npx tsc -b` / `npm run test` (630 tests,
   3 new) / `npm run build` all clean.
+- **Transaction-detail popup on row click, QSE/PSX Trade List, first slice of README Pending
+  item 129 (2026-09-09) — see README Done item 284.** User: "We should also show a transaction
+  record in a popup when clicked since we are cutting the text; users can never read the full
+  data." New generic `components/RecordDetailModal.tsx` — a `{label, value}[]`-driven read-only
+  popup (reuses the shared `Modal`), so each module's own list builds its own field list rather
+  than the component guessing at a shape. Wired into both exchanges' "Trade List" section:
+  clicking anywhere on a row (except the ticker link or the action buttons, both of which
+  `stopPropagation`) opens a popup showing every field, including two genuinely NOT shown in
+  the table row today — Time and Timezone. PSX's popup also spells out WHY the fee came out the
+  way it did (netted/same-day/manual-override), the same reasoning already abbreviated as a
+  tooltip on the table's own Fee cell. Verified live via Playwright: the popup opens with
+  correct fields on a data-cell click; the ticker link still navigates without also opening the
+  popup; "Edit" still opens the inline edit row without opening the popup — confirms
+  `stopPropagation` is scoped correctly. `npx tsc -b` / `npm run test` (630 tests, unchanged) /
+  `npm run build` all clean. Deliberately scoped to QSE/PSX's Trade List only — see README
+  Pending item 132 for rolling the same (already-generic) component out to every other module.
 
 ## Live URLs
 
