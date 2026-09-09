@@ -17,13 +17,14 @@ import { collectBudgetActivities, monthlyIncomeExpense, monthRange, monthsBetwee
 import { projectedNetWorthTrend, type MonthlyNetWorthPoint } from '../../../lib/calc/netWorthTrend';
 import { earliestActivityDate, type NetWorthAsOfInputs } from '../../../lib/calc/netWorthAsOf';
 import { upcomingRenewals } from '../../../lib/calc/subscriptionsModule';
+import { UpcomingList } from '../../../components/UpcomingList';
+import { useUpcomingItems } from '../../../hooks/useUpcomingItems';
 import { useSubscriptionsWorkbookStore } from '../../../store/subscriptionsWorkbookStore';
 import { useNetWorthSummary } from '../hooks/useNetWorthSummary';
 import { convertAmount, effectiveRate, fetchFxRates, isFxStale, loadCachedFxRates, saveFxRates, setCrossRate, type FxRates } from '../../../lib/fx';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { useAuthState } from '../../../lib/firebase/useAuthState';
 import { firebaseReady } from '../../../lib/firebase/client';
-import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
 import { dlDoughnut, dlLine, withAlpha } from '../../../lib/chartLabels';
 import type { ChartDataset } from 'chart.js';
@@ -33,6 +34,7 @@ import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { useAppearanceStore } from '../../../store/appearanceStore';
 import { useCategoryStore } from '../../../store/categoryStore';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
+import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
 import { usePlannedCashWorkbookStore } from '../../../store/plannedCashWorkbookStore';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
@@ -109,6 +111,13 @@ export function NetWorthPage({
   // configured alert lead time (which might be shorter, or unset), so this
   // stays useful even for a subscription with no alerts configured at all.
   const renewalsSoon = upcomingRenewals(subscriptions, 14);
+  // User-reported (2026-09-09): "Stocks Dashboard: Those Rail Cards should
+  // actually be in main dashboard. They are more relevant here." The rail's
+  // own "Net worth" mini-card (DashboardRail.tsx) would just duplicate this
+  // whole page, so only its "Upcoming" panel — genuinely not shown anywhere
+  // on this page before — moved here; the rail itself was removed from
+  // QSE's/PSX's Dashboard entirely.
+  const upcomingItems = useUpcomingItems(14);
 
   // Charts on this page recompute their CSS-var-derived colors only when
   // this component re-renders — same reasoning as every other chart-bearing
@@ -127,6 +136,12 @@ export function NetWorthPage({
   // default — falling back to 'USD' only when there's no data yet to judge by.
   const { rows, biggestExposureCurrency } = useNetWorthSummary();
   const [preferredCurrency, setPreferredCurrency] = useLastCurrency('net-worth-preferred', biggestExposureCurrency);
+  // User-reported (2026-09-09): "Dashboard Net Worth Summary still lists
+  // global currencies rather than user's." The "Show total in" picker used
+  // to map over the whole `CURRENCIES` catalog (~25 currencies) instead of
+  // the same enabled/held-currency list every other picker in the app
+  // already uses (`AccountFormFields`, etc.) — this is that same list.
+  const preferredCurrencyOptions = useEnabledCurrencies(preferredCurrency);
 
   const categories = useCategoryStore((s) => s.workbook.categories);
   // User-reported (2026-09-04): "Inter-account transfers are counting as
@@ -340,6 +355,11 @@ export function NetWorthPage({
         </Notice>
       )}
 
+      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Upcoming</h3>} style={{ marginBottom: 16 }} defaultOpen={upcomingItems.length > 0}>
+        <UpcomingList items={upcomingItems} limit={8} emptyText="Nothing expected in the next 14 days." />
+        <Link to="/planning" className="text-muted" style={{ display: 'block', marginTop: 10 }}>See all →</Link>
+      </CollapsibleCard>
+
       {/* Items 2/3/4/5 of a 2026-08-26 follow-up batch: two separate,
           roughly-equal Cards side by side — "Net worth summary" (the
           currency picker grouped directly with the big number it controls)
@@ -349,7 +369,7 @@ export function NetWorthPage({
           <h3 style={{ marginTop: 0 }}>Net worth summary</h3>
           <Field label="Show total in" width={150}>
             <Select value={preferredCurrency} onChange={(e) => setPreferredCurrency(e.target.value)} width={150}>
-              {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+              {preferredCurrencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
             </Select>
           </Field>
           <div style={{ marginTop: 12 }}>
@@ -388,6 +408,13 @@ export function NetWorthPage({
           </div>
         </Card>
 
+        {/* User-reported (2026-09-09): "Exchange rates should only be
+           visible if the user chooses multiple currencies" — converting
+           between currencies is meaningless with only one, and the card
+           was permanently visible regardless. Gated on `ownCurrencies`
+           (currencies with real data), the same list already used for the
+           "Rates between your own currencies" table further down. */}
+        {ownCurrencies.length > 1 && (
         <Card>
           <h3 style={{ marginTop: 0 }}>Exchange rates</h3>
           <div className="text-muted">
@@ -444,6 +471,7 @@ export function NetWorthPage({
             </div>
           )}
         </Card>
+        )}
       </div>
 
       {/* User-reported (2026-09-06), correcting the previous round's own
@@ -774,7 +802,15 @@ function NetWorthMonthlySection({
         ))}
       </div>
 
-      <div className="grid-auto" style={gridAutoStyle(420, 16)}>
+      {/* User-reported (2026-09-09): "Tables should have 100% width...
+         unable to read the tables in SS" — this table was one of the
+         concrete examples: side-by-side in a 420px grid column left almost
+         no room to show more than 2-3 of its 6 months before `.table-scroll`
+         kicked in, which is exactly what made the screenshot look broken.
+         Stacked full-width instead — each currency's table gets the whole
+         page width, only falling back to horizontal scroll if it still
+         doesn't fit. */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {ownCurrencies.map((currency) => (
           <MonthlySummaryTable key={currency} currency={currency} months={months} nowMonth={nowMonth} monthly={monthly} trend={trend} />
         ))}

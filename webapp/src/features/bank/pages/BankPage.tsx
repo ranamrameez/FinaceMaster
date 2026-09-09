@@ -42,7 +42,7 @@ import { dateOnlyMs } from '../../../lib/datetime';
 import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import { isValidIbanFormat, lookupIban } from '../../../lib/ibanLookup';
 import { isValidBin, lookupBin } from '../../../lib/binLookup';
-import { PK_QA_BANKS_AND_WALLETS } from '../../../lib/bankDirectory';
+import { banksForCurrency } from '../../../lib/bankDirectory';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
 import { useAppearanceStore } from '../../../store/appearanceStore';
@@ -201,18 +201,27 @@ function TotalBalances() {
 
 interface IbanLookupValue {
   iban?: string;
-  bankName?: string;
   bic?: string;
 }
 
-/** User-requested (2026-08-26): look up a bank's name/BIC from its IBAN
- * instead of typing them by hand. See `lib/ibanLookup.ts` for the
- * provider-chain design and why only one live provider is wired in today.
- * All three fields stay freely hand-editable regardless of whether lookup
- * succeeds — an account may have no IBAN at all (common for PKR/QAR
- * accounts), or the lookup may simply fail, and that shouldn't block
- * entering the bank name manually. */
-function IbanLookupFields({ value, onChange, bankNameDatalistId }: { value: IbanLookupValue; onChange: (patch: Partial<IbanLookupValue>) => void; bankNameDatalistId: string }) {
+/** User-requested (2026-08-26): look up a bank's BIC from its IBAN instead
+ * of typing it by hand. See `lib/ibanLookup.ts` for the provider-chain
+ * design and why only one live provider is wired in today. Both fields
+ * stay freely hand-editable regardless of whether lookup succeeds — an
+ * account may have no IBAN at all (common for PKR/QAR accounts), or the
+ * lookup may simply fail, and that shouldn't block anything else.
+ *
+ * User-reported (2026-09-09): "Bank (optional) is a duplicate of the Bank
+ * name (optional) field" — this used to also fill/own a free-text "Bank
+ * name" input, which duplicated the real `Bank`-entity picker
+ * (`BankIdentityField`, below) on the very same form: an account could end
+ * up with a `bankId` pointing at one Bank record AND a `bankName` string
+ * naming the same institution a second, disconnected way. Fixed by having
+ * a successful lookup hand its found name to `onBankNameFound` instead of
+ * writing a field of its own — `BankIdentityField` resolves that into (or
+ * reuses) a real `Bank` entity, so there's exactly one place an account's
+ * bank identity lives. */
+function IbanLookupFields({ value, onChange, onBankNameFound }: { value: IbanLookupValue; onChange: (patch: Partial<IbanLookupValue>) => void; onBankNameFound: (name: string) => void }) {
   const [looking, setLooking] = useState(false);
 
   const doLookup = async () => {
@@ -229,7 +238,8 @@ function IbanLookupFields({ value, onChange, bankNameDatalistId }: { value: Iban
         toast("IBAN not supported by the app (or the lookup service is unavailable right now) — enter the bank name manually below.");
         return;
       }
-      onChange({ bankName: result.bankName ?? value.bankName, bic: result.bic ?? value.bic });
+      if (result.bankName) onBankNameFound(result.bankName);
+      onChange({ bic: result.bic ?? value.bic });
       toast(`Found: ${result.bankName ?? result.bic ?? 'bank details'}.`);
     } catch {
       toast("IBAN not supported by the app (or the lookup service is unavailable right now) — enter the bank name manually below.");
@@ -248,19 +258,74 @@ function IbanLookupFields({ value, onChange, bankNameDatalistId }: { value: Iban
           {looking ? 'Looking up…' : 'Look up bank'}
         </button>
       </div>
-      <Field label="Bank name (optional)" width={180} title="Type to search — includes common Pakistani and Qatari banks/wallet apps, or type any other bank's name.">
-        <TextInput list={bankNameDatalistId} value={value.bankName ?? ''} onChange={(e) => onChange({ bankName: e.target.value || undefined })} placeholder="e.g. Standard Chartered" />
-      </Field>
       <Field label="BIC / SWIFT (optional)" width={140}>
         <TextInput value={value.bic ?? ''} onChange={(e) => onChange({ bic: e.target.value || undefined })} placeholder="e.g. SCBLPKKX" />
       </Field>
-      {/* User-requested (2026-08-26): prefilled Pakistan/Qatar banks + mobile
-         wallet apps — a suggestion list, never a fixed enum; any other bank
-         name typed here is accepted exactly the same way. */}
-      <datalist id={bankNameDatalistId}>
-        {PK_QA_BANKS_AND_WALLETS.map((b) => <option key={b} value={b} />)}
-      </datalist>
     </div>
+  );
+}
+
+/** The ONE place an account's bank identity lives — replaces what used to
+ * be two disconnected controls (a `Bank`-entity `<Select>`, only shown once
+ * at least one Bank existed, and a free-text "Bank name" field IBAN lookup
+ * also wrote to). A single type-to-search field: typing an EXISTING bank's
+ * name (case-insensitively) links to that real `Bank` entity; typing a new
+ * name creates one on blur — "still able to add new Bank in this easy
+ * way," per the user's own wording — rather than a fixed enum. Suggestions
+ * are the user's own existing banks plus `bankDirectory.ts`'s prefilled
+ * Pakistani/Qatari banks FILTERED BY THE ACCOUNT'S OWN CURRENCY ("list
+ * banks by currency"). Deliberately not a live bank-lookup API call (the
+ * user's own suggested implementation) — this app's locked design
+ * decision is no live third-party API calls from a page load/user action;
+ * the bundled directory plus the user's own already-created Bank entities
+ * serves the same "don't make the user type it from scratch" goal without
+ * one. `bankName` (the old free-text field) is kept ONLY as a read fallback
+ * for accounts that predate this — for anything typed here going forward,
+ * `bankId` is authoritative and `bankName` is cleared. */
+function BankIdentityField({ value, onChange, idSuffix }: { value: Pick<BankAccount, 'bankId' | 'bankName' | 'currencyCode'>; onChange: (patch: Partial<BankAccount>) => void; idSuffix: string }) {
+  const banks = useBankWorkbookStore((s) => s.workbook.settings.banks ?? []);
+  const addBank = useBankWorkbookStore((s) => s.addBank);
+  const ensureSignedIn = useEnsureSignedIn();
+  const visibleBanks = useMemo(() => banks.filter((b) => b.isActive !== false), [banks]);
+  const currentName = useMemo(() => {
+    if (value.bankId) return visibleBanks.find((b) => b.id === value.bankId)?.name ?? '';
+    return value.bankName ?? '';
+  }, [value.bankId, value.bankName, visibleBanks]);
+  const [draft, setDraft] = useState(currentName);
+  const [dirty, setDirty] = useState(false);
+  if (!dirty && draft !== currentName) setDraft(currentName);
+
+  const resolve = async () => {
+    const name = draft.trim();
+    setDirty(false);
+    if (!name) { onChange({ bankId: undefined, bankName: undefined }); return; }
+    const existing = visibleBanks.find((b) => b.name.toLowerCase() === name.toLowerCase());
+    if (existing) { onChange({ bankId: existing.id, bankName: undefined }); return; }
+    if (!(await ensureSignedIn('Sign in to add a new bank.'))) { setDraft(currentName); return; }
+    const id = uid();
+    addBank({ id, name });
+    onChange({ bankId: id, bankName: undefined });
+  };
+
+  const suggestions = useMemo(() => {
+    const existingNames = visibleBanks.map((b) => b.name);
+    return [...new Set([...existingNames, ...banksForCurrency(value.currencyCode)])];
+  }, [value.currencyCode, visibleBanks]);
+  const datalistId = `bank-identity-datalist-${idSuffix}`;
+
+  return (
+    <Field label="Bank (optional)" width={220} title="Type to search your own banks or common Pakistani/Qatari banks/wallets. Typing a new name adds it as a real Bank entity so you can later see a combined total for everything at that bank.">
+      <TextInput
+        list={datalistId}
+        value={draft}
+        onChange={(e) => { setDraft(e.target.value); setDirty(true); }}
+        onBlur={resolve}
+        placeholder="e.g. UBL"
+      />
+      <datalist id={datalistId}>
+        {suggestions.map((n) => <option key={n} value={n} />)}
+      </datalist>
+    </Field>
   );
 }
 
@@ -344,23 +409,17 @@ function AccountFormFields({
   idSuffix: string;
 }) {
   const currencyOptions = useEnabledCurrencies(value.currencyCode);
-  const banks = useBankWorkbookStore((s) => s.workbook.settings.banks ?? []);
-  const visibleBanks = useMemo(() => banks.filter((b) => b.isActive !== false), [banks]);
   return (
     <div>
       {/* Pending item 115(a): grouping under a real Bank entity is
-         optional — "no bank yet" is a completely valid, common state, so
-         this is a plain Select with a "No bank" option, never required. */}
-      {visibleBanks.length > 0 && (
-        <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
-          <Field label="Bank (optional)" width={180} title="Group this account under a Bank entity to see a combined total for everything at that bank.">
-            <Select value={value.bankId ?? ''} onChange={(e) => onChange({ bankId: e.target.value || undefined })}>
-              <option value="">No bank</option>
-              {visibleBanks.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </Select>
-          </Field>
-        </div>
-      )}
+         optional — "no bank yet" is a completely valid, common state.
+         `BankIdentityField` (below) is the ONE place this account's bank
+         identity lives — it replaces what used to be a separate `Bank`
+         Select shown only once a Bank existed, and it's typing-to-create
+         so "no bank yet" costs nothing extra. */}
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+        <BankIdentityField value={value} onChange={onChange} idSuffix={idSuffix} />
+      </div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
         <Field label="Account name" width={180} required>
           <TextInput value={value.name} onChange={(e) => onChange({ name: e.target.value })} placeholder="e.g. Meezan Checking" />
@@ -385,9 +444,12 @@ function AccountFormFields({
           <TextInput list={`bank-account-type-datalist-${idSuffix}`} value={value.accountType ?? ''} onChange={(e) => onChange({ accountType: e.target.value || undefined })} placeholder="e.g. Savings" />
         </Field>
       </div>
-      {/* User-requested: an IBAN lookup fills bank name/BIC automatically
-         when supported; all still hand-editable. */}
-      <IbanLookupFields value={value} onChange={onChange} bankNameDatalistId={`bank-name-datalist-${idSuffix}`} />
+      {/* User-requested: an IBAN lookup fills the bank name/BIC
+         automatically when supported; all still hand-editable. A found
+         name feeds `BankIdentityField` above via `onChange({ bankName })`
+         (its own `currentName` falls back to `bankName` while `bankId`
+         isn't set yet) rather than a separate field of its own. */}
+      <IbanLookupFields value={value} onChange={onChange} onBankNameFound={(name) => onChange({ bankName: name })} />
       <CreditCardFields value={value} onChange={onChange} datalistId={`card-network-datalist-${idSuffix}`} />
       {/* User-requested: save an account number + the SMS sender details a
          bank alert actually arrives from, for a future SMS-based
@@ -516,6 +578,7 @@ function BanksList() {
                   <span className="text-muted">No accounts yet</span>
                 )
               }
+              hue={b.color}
               onClick={() => navigate(`/bank/bank/${b.id}`)}
             />
           );
@@ -541,21 +604,21 @@ export function BankDetailPage() {
   const deleteBank = useBankWorkbookStore((s) => s.deleteBank);
   const ensureSignedIn = useEnsureSignedIn();
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState({ name: bank?.name ?? '', notes: bank?.notes ?? '' });
+  const [draft, setDraft] = useState({ name: bank?.name ?? '', notes: bank?.notes ?? '', color: bank?.color ?? '' });
   const linkedAccounts = useMemo(() => accounts.filter((a) => a.bankId === id), [accounts, id]);
   const totals = useMemo(() => (bank ? bankTotalsByCurrency(bank.id, accounts, transactions) : {}), [bank, accounts, transactions]);
   const [addOpen, setAddOpen] = useState(false);
 
   const startEdit = () => {
     if (!bank) return;
-    setDraft({ name: bank.name, notes: bank.notes ?? '' });
+    setDraft({ name: bank.name, notes: bank.notes ?? '', color: bank.color ?? '' });
     setEditing(true);
   };
   const save = async () => {
     if (!bank) return;
     if (!draft.name.trim()) return toast('Enter a bank name.');
     if (!(await ensureSignedIn('Sign in to save bank details.'))) return;
-    updateBank(bank.id, { name: draft.name.trim(), notes: draft.notes.trim() || undefined });
+    updateBank(bank.id, { name: draft.name.trim(), notes: draft.notes.trim() || undefined, color: draft.color || undefined });
     toast('Bank updated.');
     setEditing(false);
   };
@@ -599,6 +662,17 @@ export function BankDetailPage() {
             </Field>
             <Field label="Notes (optional)" width={220}>
               <TextInput value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
+            </Field>
+            {/* User-requested (2026-09-09): "Let the user choose color for
+               an entity for better distinction (user may choose blue as
+               UBL brand color is blue)." */}
+            <Field label="Card color (optional)" width={140} title="Colors this Bank's card so it's easy to spot at a glance — pick your bank's own brand color, or anything you like.">
+              <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+                <input type="color" value={draft.color || '#5aa9c9'} onChange={(e) => setDraft({ ...draft, color: e.target.value })} style={{ width: 44, height: 32, padding: 2, minWidth: 0 }} />
+                {draft.color && (
+                  <button type="button" className="btn secondary small" onClick={() => setDraft({ ...draft, color: '' })}>Reset</button>
+                )}
+              </div>
             </Field>
             <div className="row" style={{ gap: 8, marginTop: 8 }}>
               <button className="btn" onClick={save}><SaveIcon />Save</button>
@@ -782,6 +856,27 @@ function AccountsList() {
         </div>
         );
       })}
+    </div>
+  );
+}
+
+/** User-requested (2026-09-09): "CCs should show a bar (red for consumed
+ * and green part for available with max limit and used clearly mentioned
+ * at the ends." A plain two-segment bar — red width proportional to
+ * `used`, green fills the rest — with Used/Available labeled at each end,
+ * same red=liability/green=positive convention this module already uses
+ * for hues elsewhere (see `AccountsList`'s own `isLiability`-driven hue). */
+function CreditUsageBar({ used, limit, currency }: { used: number; limit: number; currency: string }) {
+  const usedPct = limit > 0 ? Math.min(100, Math.max(0, (used / limit) * 100)) : 0;
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ display: 'flex', height: 10, borderRadius: 6, overflow: 'hidden', background: 'color-mix(in srgb, var(--profit) 30%, var(--panel-2))' }}>
+        <div style={{ width: `${usedPct}%`, background: 'var(--loss)' }} />
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 12 }}>
+        <span style={{ color: 'var(--loss)' }}>Used: {fmtMoney(used, currency)}</span>
+        <span style={{ color: 'var(--profit)' }}>Available: {fmtMoney(Math.max(0, limit - used), currency)} of {fmtMoney(limit, currency)}</span>
+      </div>
     </div>
   );
 }
@@ -973,6 +1068,17 @@ export function AccountDetailPage() {
           );
         })()}
       </p>
+
+      {/* User-requested (2026-09-09): "CCs should show a bar (red for
+         consumed and green part for available with max limit and used
+         clearly mentioned at the ends." */}
+      {account.isLiability && account.creditLimit ? (
+        <CreditUsageBar
+          used={Math.max(0, -accountBalance(account, transactions))}
+          limit={account.creditLimit}
+          currency={account.currencyCode}
+        />
+      ) : null}
 
       {/* User-reported (2026-08-28): "UI ordering still pathetic. Account
          details buried in middle instead of showing on top" — full-width,

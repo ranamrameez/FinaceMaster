@@ -24,6 +24,12 @@ export interface Bank {
   isActive?: boolean;
   /** Same cosmetic sort preference as `BankAccount.isFavorite`. */
   isFavorite?: boolean;
+  /** User-requested (2026-09-09): "Let the user choose color for an entity
+   * for better distinction (user may choose blue as UBL brand color is
+   * blue)." A plain hex string fed straight into `EntityCard`'s `hue` prop
+   * (`--card-hue`) — when unset, the card falls back to whatever default
+   * coloring that list already used. */
+  color?: string;
 }
 
 export interface BankAccount {

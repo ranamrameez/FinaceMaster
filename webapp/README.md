@@ -7545,6 +7545,67 @@ FinanceManager live link:
   Verified live via Playwright across Bank/Personal Loans/EMI/Rentals with seeded closed
   entities: every page shows "Show closed (1)" and zero remaining "archived" text. `npx tsc -b`
   / `npm run test` (624 tests, unchanged) / `npm run build` all clean.
+- **Large app-wide batch — 3 bugs, 2 "said done but wasn't" corrections, 6 features
+  (2026-09-09) — see Done item 279.** User's own numbered list, worked through in full.
+  **Bugs, all confirmed real and fixed**: (1) Net Worth's "Show total in" picker mapped over
+  the whole global `CURRENCIES` catalog instead of `useEnabledCurrencies()` (the same
+  enabled-currency list every other picker in the app already respects) — fixed; verified live
+  that seeding `enabledCodes: ['QAR','PKR']` narrows it to exactly those two, matching the
+  Account page's own "Currencies" section. (2) Clicking Settings/Account highlighted "Stock
+  Exchanges" in the sidebar and even rendered its QSE/PSX chip switcher + Pages list —
+  `categoryForPath()`'s fallback (`return 'stocks'` for anything unrecognized) was firing for
+  `/account`/`/app-data`/`/legal` too, three real global pages, not just genuinely
+  module-less routes like `/stock/:ticker`. Fixed by returning `null` for those three
+  specifically (`CategoryKey | null`), leaving the Stock-Exchanges fallback intact for
+  everything else. (3) "PP is not rounded" — a real instance of the exact
+  `.row > *{min-width:160px}` cascade trap this project has hit repeatedly (Tooltip buttons,
+  Done item 228): `ProfileEditor`'s `<Avatar>` (a 40×40 span/img) is the first direct child of
+  a `.row`, so the 160px floor stretched it wide while its own inline `height:40` stayed put —
+  `border-radius:50%` on a 160×40 box draws an oval. Fixed with the same `.row >
+  .avatar-circle{min-width:0}` exception already established for `.tooltip-trigger`.
+  **"Agreed but still pending" corrections**: (1) transparent chart colors — `withAlpha()`
+  (documented as a general UI_DESIGN_GUIDELINES.md rule) had only ever actually been wired
+  into ONE chart (Net Worth's combo chart). Fixed properly this time: a real Chart.js plugin
+  (`chartFillTransparencyPlugin`, registered once in `chartSetup.ts`) walks every dataset on
+  every chart and applies the same alpha suffix to any bar/doughnut/pie/polarArea fill,
+  skipping anything already translucent or non-hex — genuinely app-wide, not another
+  single-file patch. Verified via real canvas pixel sampling (3,176 semi-transparent vs. 430
+  opaque sampled pixels on a doughnut). (2) Tables cut off/not 100% width — the concrete
+  example (Net Worth's Monthly Summary tables) was genuinely cramped: 2-per-row in a 420px
+  grid column left barely enough room for 2-3 of 6 months before `.table-scroll` kicked in.
+  Restacked to one full-width table per currency instead of side-by-side — measured 1090px
+  wide after the fix (was ~420px). **Features**: (1) Bank/Bank name duplicate fields merged
+  into one `BankIdentityField` — type-to-search, reusing an existing `Bank` entity by name or
+  creating one on blur (no separate free-text field IBAN lookup wrote to anymore), with
+  suggestions from the user's own banks plus `bankDirectory.ts`'s Pakistani/Qatari banks
+  **filtered by the account's own currency** (new `banksForCurrency()`) — deliberately not a
+  live bank-lookup API call, per this app's locked no-live-third-party-API design decision.
+  (2) Exchange rates card now hidden unless the user holds 2+ currencies (converting between
+  one currency is meaningless); the FX rate cache (`lib/fx.ts`) is no longer a global,
+  cross-account table — `clearCachedFxRates()` wired into `resetAllLocalWorkbooks()` so a
+  previous account's manual rates never leak into the next signed-in account on a shared
+  browser (REVERSES that file's own original "global preference, not per-account data"
+  design note). (3) Rail cards (`DashboardRail.tsx`, QSE/PSX Dashboard) relocated to the main
+  Dashboard/Net Worth page per the user's own framing ("more relevant here") — its "Net
+  worth" mini-card was dropped outright as a pure duplicate of that page's own full content;
+  only its "Upcoming" panel (genuinely new content there) moved over. `DashboardRail.tsx` and
+  the dead `.rail-split` CSS (whose own `grid-template-columns` had been commented out since
+  it shipped — never actually split into two columns) were deleted rather than left unused.
+  (4) `Bank.color?: string` — a user-pickable hex color (native `<input type="color">` in
+  the Bank edit form) feeding straight into `EntityCard`'s `hue`, so e.g. "UBL" can be colored
+  its own real brand blue. (5) A credit-card usage bar (`CreditUsageBar`, `AccountDetailPage`)
+  — a red segment proportional to the amount owed, green for the rest, with Used/Available
+  (and the limit) labeled at each end, replacing the old plain-text "X available of Y limit"
+  line. (6) Confirmed, not built: the "top navbar should be fixed" ask was already satisfied
+  — `Tabs.tsx`'s own `.chip-tabs.subnav` jump-to-section bar has been `position:sticky` since
+  Done item 108. **Deliberately left as standing, broader Pending items rather than guessed
+  at in this same pass** (see the new Pending item 121): "natural order for UI sections" and
+  "many pages still have their own Settings instead of the global one" are both real,
+  page-by-page audits, not a single fix. Verified live via Playwright throughout — the
+  Playwright fixture data seeded via `page.addInitScript` at every step, real bounding-box/
+  pixel measurements rather than guesses, zero new console errors (only this sandbox's own
+  pre-existing, already-documented network-block noise). `npx tsc -b` / `npm run test` (624
+  tests, unchanged — no calc logic touched) / `npm run build` all clean.
 
 ## Pending
 
@@ -8414,6 +8475,19 @@ or a design decision before more code, not guessed at further:**
        module's pending items alongside its planned ones (both are "money not fully settled
        yet," from the user's point of view) — not designed yet, flagged here rather than
        silently conflated with Planning during this pass.
+121. **Two broader UI principles from the 2026-09-09 batch (see Done item 279), deliberately
+     not attempted as a blind sweep — real page-by-page audits, each its own scoped pass**:
+     (a) "use natural order for UI sections (Entity detail, trans, analytics, etc.)" — several
+     module pages already follow something close to this (e.g. Banking's `AccountDetailPage`,
+     reordered by Done item 215 to lead with Account details), but this hasn't been checked
+     against every module's own page consistently; (b) "many pages still have settings while
+     asked to make them global & centralized" — the Main/Often/Rare redesign's Banking pilot
+     (Done item 213) is the only module whose Settings tab fully links out to `/account` for
+     the global bits; Cash/Personal Loans/EMI/Funds/Rentals/Subscriptions/QSE/PSX's own
+     Settings tabs need the same audit-and-trim pass Banking already got (see this app's own
+     "App-wide UI/UX redesign" section in CLAUDE.md for the full rollout plan already written
+     for this).
+
 ~~122. Trade Transactions: sold price / lot P&L / overall avg-cost P&L~~ — **done (2026-09-08),
      see Done item 242.** Confirmed via `AskUserQuestion` the missing piece was showing a sell's
      realized P&L inline in the main trade row (not a new section — Closed Trades/

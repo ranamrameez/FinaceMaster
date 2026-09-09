@@ -704,6 +704,15 @@
      correctly. Specificity 0,2,0 beats `.row > *`'s 0,1,0, so this wins
      regardless of source order. */
   .row > .tooltip-trigger{min-width:0;}
+  /* User-reported (2026-09-09): "PP is not rounded in the settings" — the
+     real bug wasn't the circle CSS (border-radius:50% on .avatar-circle was
+     always correct), it was this exact same `.row > *{min-width:160px}`
+     trap already fixed above for Tooltip-wrapped buttons: `ProfileEditor`
+     renders `<Avatar>` (a 40x40 span/img) as the FIRST direct child of a
+     `.row`, so the 160px floor stretched it into a wide box while its own
+     inline `height:40` stayed put — border-radius:50% on a 160x40 box draws
+     an oval, not a circle. Same fix, same specificity reasoning. */
+  .row > .avatar-circle{min-width:0;}
   /* User-reported (2026-08-28): "give same width (maybe 20%) to all form
      elements app wide... Buttons with text (100px maybe with 100% on
      mobiles?) for best UI consistency." `min-width:100px` (was 38px) here
@@ -802,15 +811,14 @@
   .position-split{display:grid; grid-template-columns:1fr 380px; gap:16px; align-items:start;}
   .position-split > *{min-width:0;}
   @media(max-width:900px){.position-split{grid-template-columns:1fr;}}
-  /* Generic main-content + right-rail split (README Pending item 54: wide
-     viewports had real unused space — a persistent right-rail panel with
-     genuinely useful cross-module info, not just wider grids). Same
-     collapse-to-one-column behavior as .position-split, kept as a
-     separate class since it's a different, reusable pairing (any page's
-     main content + a summary rail), not specific to a stock position. */
-  .rail-split{display:grid; /*grid-template-columns:1fr 320px;*/ gap:16px; align-items:start;}
-  .rail-split > *{min-width:0;}
-  @media(max-width:1000px){.rail-split{grid-template-columns:1fr;}}
+  /* `.rail-split` (the QSE/PSX Dashboard right-rail grid) removed
+     2026-09-09 — user-reported: "Those Rail Cards should actually be in
+     main dashboard. They are more relevant here." Its "Upcoming" content
+     moved to the main Dashboard/NetWorthPage; its "Net worth" mini-card
+     was dropped as a pure duplicate of that same page. This class was
+     also never actually splitting into two columns — its own
+     `grid-template-columns` had been left commented out — so nothing of
+     value is lost removing it outright rather than leaving dead CSS. */
   .chart-card{padding:16px 16px 12px 16px;}
   /* User-reported (2026-08-26): "No pie charts or other charts take more
      than 35vh" — ChartCard's charts had no height cap at all, relying on

@@ -23,9 +23,19 @@ const CATEGORIES: { key: CategoryKey; label: string; to: string }[] = [
 /** Derives the active category from the route rather than storing it
  * separately, same rationale as ExchangeSwitcher's QSE/PSX detection in
  * Sidebar.tsx: a reload or shared link always lands on the nav state that
- * matches what's on screen. Anything not owned by a module (e.g. /legal)
- * falls back to Stock Exchanges. */
-export function categoryForPath(pathname: string): CategoryKey {
+ * matches what's on screen. Anything not owned by any module (a real
+ * global "Rare"-tier page — Account, whole-app Data export/import, Legal)
+ * returns `null` so nothing gets wrongly highlighted; every other
+ * unrecognized route still falls back to Stock Exchanges (per-ticker pages,
+ * Risk Analysis, the Trade Planner, etc. all genuinely belong there).
+ * User-reported (2026-09-09): clicking the account/settings row used to
+ * highlight "Stock Exchanges" and even render its QSE/PSX sub-nav in the
+ * sidebar while on `/account` — this was that same fallback firing for a
+ * page it was never meant to cover. */
+export function categoryForPath(pathname: string): CategoryKey | null {
+  if (pathname.startsWith('/account')) return null;
+  if (pathname.startsWith('/app-data')) return null;
+  if (pathname.startsWith('/legal')) return null;
   if (pathname.startsWith('/net-worth')) return 'netWorth';
   if (pathname.startsWith('/funds')) return 'funds';
   if (pathname.startsWith('/bank')) return 'bank';
