@@ -8016,6 +8016,30 @@ FinanceManager live link:
   Settings, QSE Trade Transactions' "Add Trades" row, Cash, Bank, Funds) — every row still wraps
   correctly with zero layout regression, confirmed via real screenshots, not assumed from the
   CSS reasoning alone.
+- **`USER_MANUAL.md` refreshed against real, current behavior — see Done item 296.** Per
+  CLAUDE.md's own standing instruction to maintain this file continuously as features ship,
+  found it had drifted behind several real changes rather than assuming it was current: (1)
+  every "category dropdown" reference (11 occurrences) described a UI element removed by Done
+  item 181 (2026-08-26) — the sidebar's category list has been a plain always-visible list,
+  not a click-to-open dropdown, for two weeks; (2) §23 "Transfers" described the standalone
+  `/transfers` page removed by Done item 216 (2026-08-28) in favor of an app-wide "Transfers"
+  FAB + shared popup — the whole section was rewritten to describe the actual current flow
+  (which 7 modules have the FAB, the auto-suggested cross-currency amount from a cached FX
+  rate — a real improvement over the old "no live conversion" claim, Done item 264 — and that
+  there's no "edit both sides at once" action anymore, only create/delete-cascade/one-sided-
+  edit-with-a-warning); it was also missing a real, currently-shipped pairing (Bank ↔ Bank,
+  for moving money between two of your own accounts). (3) §24 "Net Worth" said to pick "Net
+  Worth" from the list, but the sidebar's actual label is "Dashboard" (Done item 229) — added
+  a clarifying note distinguishing it from each exchange's own "Dashboard" page. (4) §24 also
+  claimed snapshots are "entirely on-demand" and that a snapshot-driven line chart appears
+  once you have two or more — both wrong since Done item 193 made the snapshot automatic
+  (once/day, in the background) and Done item 229 retired that chart entirely in favor of a
+  real per-month computation needing no snapshot at all — confirmed by reading the live
+  `NetWorthPage.tsx` component tree, not assumed from an old Done-item description. Added the
+  new Monthly summary section (combo chart + table, ◀ Earlier/Today/Later ▶) and the two
+  newer Assets-vs-liabilities/Breakdown-by-module charts (Done item 195), neither of which was
+  documented at all. Doc-only change — no code touched, `npx tsc -b` / `npm run test` (623
+  tests) / `npm run build` all unaffected.
 
 ## Pending
 
@@ -8718,13 +8742,18 @@ or a design decision before more code, not guessed at further:**
      real information-loss tradeoffs per table that need individual judgment, not a mechanical
      fix.
 112. ~~"Side nav poorly arranged" (2026-08-27, screenshot-backed, item 3 of the same batch as
-     Done item 203).~~ **Candidate (a) done (2026-08-27) — see Done item 209.** Two candidates
-     were named: (a) QSE/PSX's permanently-inline numbered page list (the same one Pending item
-     109 pointed at — confirmed as the intended target and fixed by collapsing it into an
-     accordion); (b) the visual grouping/spacing between the top-level category list and the
-     exchange chip switcher/numbered list below it, having no clear separator — **still open**,
-     not addressed by this fix, tracked separately since it's a distinct, smaller visual-polish
-     ask than (a)'s structural one.
+     Done item 203).~~ **Both candidates now done, see Done items 209 and 281 (2026-09-09).** Two
+     candidates were named: (a) QSE/PSX's permanently-inline numbered page list (the same one
+     Pending item 109 pointed at — fixed by collapsing it into an accordion, Done item 209); (b)
+     the visual grouping/spacing between the top-level category list and the exchange chip
+     switcher/numbered list below it, having no clear separator — resolved as a side effect of
+     Done item 281's later, unrelated fix (nesting the whole QSE/PSX subnav directly inside the
+     "Stock Exchanges" category row, closing Pending item 128), confirmed via a live screenshot:
+     the "Stock Exchanges" row now renders as one visually cohesive grouped block (its own
+     highlighted background containing the chip switcher + Pages accordion) with a clear
+     boundary from "Funds" below it — not a documentation-only close, a real re-check against the
+     current UI. **Lesson repeated**: check whether a later, differently-motivated fix already
+     resolved an older open item before assuming it still needs its own separate pass.
 113. ~~Sidebar visual grouping: the top-level category list and the QSE/PSX chip switcher +
      "Pages" accordion below it have no clear visual separator.~~ **Done (2026-08-27) — see
      Done item 210.** A top border + spacing now makes the boundary explicit.

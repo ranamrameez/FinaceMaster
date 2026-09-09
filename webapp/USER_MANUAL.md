@@ -40,14 +40,15 @@ automatically between your devices once you're signed in on each of them.
 
 ## 3. Switching between modules, and between QSE and PSX
 
-The sidebar's top control is a **category dropdown** — click it to see every module (Stock
-Exchanges, Funds, Banking, Cash, Personal Loans, EMI/Loans, Rentals, Transfers), with the one
-you're currently in checked. Picking a category jumps you to it; the dropdown always shows
-what you're on, so you don't need to reopen it just to confirm where you are.
+The sidebar's top section is an always-visible **category list** — Dashboard, Stock Exchanges,
+Funds, Banking, Cash, Personal Loans, EMI/Loans, Rentals, Subscriptions, Planning — with the
+one you're currently in highlighted. Click any entry to jump straight to it; there's no need
+to open anything first, it's just a normal list of links.
 
-Inside **Stock Exchanges**, a second **QSE / PSX** switcher (two chips) appears underneath the
-dropdown — click either one to jump to that exchange's Dashboard. Which exchange is "active"
-always matches whichever page you're on, same as the category dropdown above it.
+Inside **Stock Exchanges**, the list expands in place to show a **QSE / PSX** switcher (two
+chips) and a collapsible **▸ Pages** list of that exchange's own pages, nested directly under
+the "Stock Exchanges" entry — click **Pages** to expand or collapse it (this choice is
+remembered). Which exchange is "active" always matches whichever page you're on.
 
 On a desktop-width screen, click the **«** button next to the "FinanceRecorder" title to
 slide the sidebar off-screen and reclaim the space — a small **»** tab stays in the top-left
@@ -348,7 +349,7 @@ holdings aren't a function of which window you're looking at).
 
 ## 14. Cash
 
-The first non-stock-exchange module (pick **Cash** from the sidebar's category dropdown).
+The first non-stock-exchange module (pick **Cash** from the sidebar's category list).
 Tracks physical/informal cash — cash in hand, gifts, small informal amounts — as a simple
 ledger, separate from any exchange.
 
@@ -387,7 +388,7 @@ ledger, separate from any exchange.
 ## 15. Personal Loans
 
 Informal loans with another person — money you lent out, or money you owe — tracked in
-**either direction** in one place. Pick **Personal Loans** from the category dropdown.
+**either direction** in one place. Pick **Personal Loans** from the category list.
 
 - **Add a loan**: person/lender name, direction (lent out / I owe), currency, principal
   amount, date, optional note.
@@ -425,7 +426,7 @@ Informal loans with another person — money you lent out, or money you owe — 
 ## 16. Banking
 
 Bank account balances and transaction history, entered manually or imported from a CSV
-statement. Pick **Banking** from the category dropdown. No live bank connection (regulator
+statement. Pick **Banking** from the category list. No live bank connection (regulator
 licensing is required for that, so it's manual entry or statement import only).
 
 - **Accounts tab**: add one or more accounts (name, currency, opening balance). Each
@@ -472,7 +473,7 @@ licensing is required for that, so it's manual entry or statement import only).
 ## 18. EMI / Loans
 
 For a loan you're repaying on a fixed schedule — a mortgage, car financing, or similar. Pick
-**EMI / Loans** from the category dropdown. Distinct from Banking (which just tracks account
+**EMI / Loans** from the category list. Distinct from Banking (which just tracks account
 transactions) and Personal Loans (informal, no schedule).
 
 - **Add a loan**: click the floating **+** button (bottom-right of the page) to open the
@@ -578,7 +579,7 @@ transactions) and Personal Loans (informal, no schedule).
 
 ## 20. Funds
 
-Mutual fund unit holdings and performance. Pick **Funds** from the category dropdown.
+Mutual fund unit holdings and performance. Pick **Funds** from the category list.
 Structurally the closest of the new modules to QSE/PSX (buy/sell units at a NAV per unit is the same shape as buy/
 sell shares at a price), so it shares the same underlying calculation engine.
 
@@ -625,7 +626,7 @@ sell shares at a price), so it shares the same underlying calculation engine.
     final Import click asks you to confirm before doing anything. When a sheet's ending balance
     doesn't uniquely match one fund (e.g. two of your funds both closed at zero), the app
     won't guess — it defaults to "create new fund" and lets you manually pick the right
-    existing one from the dropdown instead.
+    existing one from the list instead.
   - **Snapshot (CSV)** — for a spreadsheet that only tracks each fund's Total Invested /
     Withdrawn / Current Balance (no day-by-day history), a common lighter-weight way to track
     mutual funds. Choose the CSV file, set a single "as-of" date, currency, and default
@@ -645,7 +646,7 @@ sell shares at a price), so it shares the same underlying calculation engine.
 
 ## 21. Rentals
 
-Rental property income and expenses. Pick **Rentals** from the category dropdown. Not
+Rental property income and expenses. Pick **Rentals** from the category list. Not
 discrete buy/sell trades like the other modules — recurring rent received and costs (maintenance, property
 tax, management fees) against one or more properties.
 
@@ -703,7 +704,7 @@ stock exchange modules. Subscriptions (§22 below) was added afterward as a seve
 ## 22. Subscriptions
 
 Recurring payments — streaming, gym memberships, software, anything you're billed for on a
-schedule. Pick **Subscriptions** from the category dropdown.
+schedule. Pick **Subscriptions** from the category list.
 
 - **Add a subscription**: name, amount, currency, billing cycle (Monthly/Yearly/Weekly, or
   Custom with your own number of days), start date, and an optional free-form category.
@@ -728,63 +729,65 @@ schedule. Pick **Subscriptions** from the category dropdown.
 
 ## 23. Transfers (linking money between modules)
 
-Pick **Transfers** from the category dropdown. Normally, moving money between two modules
-— say, withdrawing cash from your bank account — means entering it twice: a withdrawal in
-Banking and a cash-in entry in Cash. Do that and the two records have no idea they're
-related; edit or delete one later and the other silently goes stale. The Transfers page
-fixes that for the most common moves by creating **one linked transfer** that writes a real
-record on both sides at once, and keeps them in sync afterward.
+Normally, moving money between two modules — say, withdrawing cash from your bank account —
+means entering it twice: a withdrawal in Banking and a cash-in entry in Cash. Do that and the
+two records have no idea they're related; edit or delete one later and the other silently
+goes stale. **Transfers** fixes that for the most common moves by creating **one linked
+transfer** that writes a real record on both sides at once, and keeps them in sync afterward.
 
-**Supported so far**: Cash ↔ Banking, Banking ↔ your QSE or PSX cash balance (a deposit or
-withdrawal), Banking/Cash ↔ a specific Rentals property (rent received, or an expense paid),
-Banking/Cash ↔ a specific Personal Loan (a repayment logged against that loan), Banking/Cash
-↔ Funds (a deposit into or withdrawal from Funds' cash balance), and Banking/Cash ↔ a
-specific EMI/Loans loan (a payment logged against that loan's next installment). Other
-pairings (e.g. Cash directly to a stock exchange) aren't wired up yet — the form tells you if
-a pairing isn't supported instead of silently doing something wrong.
+There's no separate Transfers page to navigate to — click the floating **+**/menu button in
+the bottom-right corner and pick **Transfers** from the panel that fans out. This button (and
+the Transfers action inside it) is available on Cash, Banking, Personal Loans, EMI/Loans,
+Rentals, Funds, and QSE/PSX's Trade Transactions page — open it from whichever module you're
+adding the record to, and it opens the same popup either way.
 
-- **Create a link**: choose the **From** and **To** side (for Banking, also pick which
-  account; for Rentals, pick which property; for Personal Loans or EMI/Loans, pick which
-  loan), an amount, a date, and an optional note, then **Create link**. This adds a matching
-  entry to both modules' own ledgers — you'll see it appear in Cash's ledger, Banking's
-  transaction list, a property's income/expenses, a loan's repayment list (Personal Loans'
-  or EMI/Loans' — see its Repayment log, §18), or Funds' own transaction history, exactly
-  like anything else you'd entered by hand there. A Personal Loans or EMI/Loans repayment
-  created this way is always a positive amount against the chosen loan, regardless of which
-  side of the link it's on — for EMI/Loans specifically, it always applies to whichever
-  installment is next due (not yet covered by an actual payment), matching your loan's own
-  schedule automatically rather than asking you to pick a month.
-- **Different currencies**: no live conversion happens automatically — but if the two sides
-  use different currencies, check **"Different amount on the other side"** and enter the
-  real converted amount yourself (from your bank's rate, a cash exchange receipt, etc.).
-  Leave it unchecked and the same number is used on both sides as-is, which is only correct
-  when both sides share a currency (the form warns you if they don't).
-- **Editing or deleting a link** (in the "Linked transfers" list at the bottom of the page)
-  updates or removes **both** sides' records together — you don't need to (and shouldn't)
-  go edit or delete the two records separately in their own modules.
-- **Editing a linked record from its own module instead** (e.g. correcting the amount
-  directly in Cash's ledger rather than on the Transfers page) still works, but only changes
-  that one side — the other side and the link itself won't update to match. The app warns you
-  before saving in that case, so you can back out and use the Transfers page instead if you
-  want both sides to stay in sync. Deleting from either module is always safe either way — it
-  cascades to both sides automatically, same as deleting from the Transfers page.
-- **A shortcut, right where you're already adding the record**: QSE/PSX's Cash Transfers
-  form, Rentals' add-entry form, Personal Loans' add-repayment row, EMI/Loans' Schedule table
-  pencil editor, and Funds' new Transfers tab each have a **"Link this to a Bank account or
-  Cash"** checkbox — check it and the form
-  swaps its normal Fee/Add controls for a module picker and a **Link & add** button that
-  creates the same linked pair this page does, without leaving that module's own screen. It's
-  a simpler version of the full form above (both sides always share one amount, no
-  cross-currency "different amount" option), so for a cross-currency link, use the full
-  Transfers page instead. It also remembers which account/loan/property you last linked to
-  from that same spot, so it's usually already picked for you next time.
+**Supported so far**: Cash ↔ Banking (including moving money between two of your own bank
+accounts), Banking ↔ your QSE or PSX cash balance (a deposit or withdrawal), Banking/Cash ↔ a
+specific Rentals property (rent received, or an expense paid), Banking/Cash ↔ a specific
+Personal Loan (a repayment logged against that loan), Banking/Cash ↔ Funds (a deposit into or
+withdrawal from Funds' cash balance), and Banking/Cash ↔ a specific EMI/Loans loan (a payment
+logged against that loan's next installment). Other pairings (e.g. Cash directly to a stock
+exchange) aren't wired up yet — the popup tells you if a pairing isn't supported instead of
+silently doing something wrong.
+
+- **Create a link**: pick which side you're on, an amount, a direction (Deposit/Withdrawal,
+  Cash in/out, etc. — whichever wording matches that module), a date, and check **"Link to
+  another finance (a transfer between two accounts)"**. A second picker appears for the
+  **other** side (for Banking, also pick which account; for Rentals, which property; for
+  Personal Loans or EMI/Loans, which loan) — fill it in and save. This writes a matching entry
+  to both modules' own ledgers at once — you'll see it appear in Cash's ledger, Banking's
+  transaction list, a property's income/expenses, a loan's repayment list (Personal Loans' or
+  EMI/Loans' — see its Repayment log, §18), or Funds' own transaction history, exactly like
+  anything else you'd entered by hand there. It also remembers which account/loan/property you
+  last linked to from that same module, so it's usually already picked for you next time. A
+  Personal Loans or EMI/Loans repayment created this way is always a positive amount against
+  the chosen loan, regardless of which side of the link it's on — for EMI/Loans specifically,
+  it always applies to whichever installment is next due (not yet covered by an actual
+  payment), matching your loan's own schedule automatically rather than asking you to pick a
+  month.
+- **Different currencies**: if the two sides use different currencies, an "Amount" field for
+  the other side appears automatically — pre-filled from a cached exchange rate when one's
+  available (editable), or left blank for you to fill in yourself (from your bank's rate, a
+  cash exchange receipt, etc.) when there's no cached rate for that pair. An optional "Rate
+  source" note lets you record where the rate came from, for your own future reference.
+- **Finding the other side**: a linked record shows a "🔗 [module] → [module]" tag naming
+  both sides — click it to jump straight to the other side's own record.
+- **Deleting a linked record** (from either side, in its own native module) always cascades —
+  it removes **both** sides' records together, so you never end up with one half of a
+  transfer left dangling.
+- **Editing a linked record's amount/date/etc.** only ever changes that one side — there's no
+  single "edit both sides" action. The app warns you before saving an edit to a linked record,
+  so you know the other side won't update to match; if you need both sides to change together,
+  delete the link (from either side) and create a fresh one instead.
 
 ---
 
 ## 24. Net Worth
 
-Pick **Net Worth** from the category dropdown — a single page summarizing everything you've
-recorded across every module. Each currency you use gets its own collapsible section (click
+Pick **Dashboard** from the category list (the top entry — it's the same page this manual
+calls "Net Worth"; not to be confused with each stock exchange's own "Dashboard" page under
+Stock Exchanges) — a single page summarizing everything you've recorded across every module.
+Each currency you use gets its own collapsible section (click
 its header to expand/collapse, or use the responsive grid to see 2-3 side by side on a wide
 screen) showing your real, unconverted **Assets**, **Liabilities**, and **Net** total in that
 currency — plus a "By module" breakdown of exactly which modules contributed to it. Cash and
@@ -812,13 +815,24 @@ to, so adding it again here would count it twice.
   currency, shown as a doughnut for an at-a-glance comparison — a currency with negative net
   worth doesn't get a slice (a doughnut can't show a negative value meaningfully) but is still
   fully visible in its own card above.
-- **Save snapshot / net-worth-over-time chart**: click **Save snapshot** any time to log
-  today's net worth (in every currency you hold) — clicking it again later the same day
-  updates that day's entry instead of creating a duplicate. Once you have two or more
-  snapshots, a line chart appears showing your net worth's history in your currently-selected
-  "Show total in" currency. Nothing is snapshotted automatically — this is entirely on-demand,
-  so build up a history by clicking it whenever you want a data point (e.g. once a month). A
-  saved snapshot is a frozen record of that day — editing old transactions later never
+- **Assets vs. liabilities by currency chart**: a bar chart comparing your total assets
+  against your total liabilities within each currency you hold, side by side — unlike the
+  doughnut above, this one does show a currency whose liabilities outweigh its assets.
+- **Breakdown by module chart**: for whichever currency you're most exposed in, a bar chart
+  of the same per-module figures the small colored "By module" cards above already show.
+- **Monthly summary**: below the charts, a per-currency section (one grid entry per currency
+  you hold) with a combined bar/line chart — assets and liabilities as stacked bars, net worth
+  as an overlaid line — plus a scrollable table of Income/Expense/Net/Net worth by month.
+  **◀ Earlier** / **Today** / **Later ▶** slide a shared 6-month window (3 past, current, 2
+  future) backwards or forwards; it won't scroll further back than your own earliest recorded
+  activity. Past months are computed for real from your actual history (no saved snapshot
+  needed); future months are a projection from today's real figures plus your Planning-tab
+  plans and EMI/Loans' own repayment schedules — a forecast, not a guarantee.
+- **Save snapshot**: click **Save snapshot** any time to log today's net worth (in every
+  currency you hold) — clicking it again later the same day updates that day's entry instead
+  of creating a duplicate. This also happens automatically once a day in the background while
+  you're signed in, so you don't have to remember to click it. A saved snapshot is a frozen
+  record of that day — editing old transactions later never
   rewrites a past snapshot's number, only your live current totals above change.
 
 ---

@@ -5670,6 +5670,22 @@ app, not developer notes) continuously as features ship.
   representative pages (QSE/PSX Settings, QSE Trade Transactions' multi-field "Add Trades" row,
   Cash, Bank, Funds) with real screenshots confirming every row still wraps correctly. PR merged
   same session, branch reset fresh from `origin/main` per this session's own standing rule.
+- **`USER_MANUAL.md` refreshed against real, current behavior (2026-09-09) — see README Done
+  item 296.** After exhausting the safely-actionable UI/CSS-cleanup Pending items (found the
+  Main/Often/Rare `EntityCard` rollout and `UI_DESIGN_GUIDELINES.md`'s own checklist already
+  substantially satisfied on re-check), picked up this file's own standing "maintain a user
+  manual continuously" instruction and found it had genuinely drifted: 11 "category dropdown"
+  references described a UI element removed two weeks earlier (Done item 181 — it's a plain
+  always-visible list now), the whole §23 "Transfers" section described a standalone page
+  removed by Done item 216 (replaced by an app-wide FAB + shared popup), §24 "Net Worth" told
+  readers to pick "Net Worth" from the list when the actual sidebar label is "Dashboard" (Done
+  item 229), and §24 also claimed the snapshot feature is "entirely on-demand" driving a
+  history chart — both wrong, since Done item 193 made snapshots automatic and Done item 229
+  retired that chart for a real per-month computation. Rewrote all of it against the live code
+  (`TransactionEntryModal.tsx`, `isSupportedLinkPair`, `NetWorthPage.tsx`'s actual component
+  tree) rather than trusting old Done-item prose, and documented a real pairing (Bank ↔ Bank)
+  and two real charts (Assets vs. liabilities by currency, Breakdown by module) that existed
+  in the app but were never in the manual at all. Doc-only — no code touched.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 
