@@ -59,13 +59,36 @@ import { Tooltip } from '../Tooltip';
  * reported. A shared default here fixes every no-width call site at once
  * without touching the ones that already pass their own `width` for a real
  * reason (an explicit `width` prop always wins, same as before). */
-export function Field({ label, children, width = 180, title, required }: { label?: string; children: ReactNode; width?: number; title?: string; required?: boolean }) {
+/** `as="div"` (2026-09-09, user-reported "you falsely claimed a fix!" on
+ * the Pending chip): wrapping a `<button>` in this component's `<label>`
+ * did NOT fix the earlier "checkbox click area too big" bug — `<button>`
+ * is itself a "labelable" HTML element, so the `<label>` still forwarded
+ * ANY click landing on its own blank space (the whole ~180x50 box, not
+ * just the visible chip) to the nested button, exactly like it did for a
+ * checkbox. Confirmed live: clicking 10px into the "Order" label's
+ * caption text — nowhere near the rendered chip — still toggled
+ * `isPending`. Tried suppressing it with `e.preventDefault()` in a
+ * bubble-phase click handler on the label first (the textbook fix for
+ * this exact browser behavior) — confirmed via a console.log that the
+ * handler DOES fire and DOES call `preventDefault()`, and the chip STILL
+ * toggled anyway; empirically, React's root-level event delegation
+ * doesn't suppress the browser's native label→control click forwarding
+ * the way a direct native listener would, so that approach doesn't
+ * actually work here. The robust fix instead sidesteps the whole
+ * question: render a plain `<div>` (no label-activation behavior exists
+ * for a div at all) instead of a `<label>` wherever the wrapped content
+ * isn't a real input/select a caption should focus into. Default stays
+ * `'label'` — every existing call site (wrapping a real input/select,
+ * where click-to-focus the caption IS the whole point) is unaffected;
+ * only `PendingToggle`'s own Field wrappers pass `as="div"`. */
+export function Field({ label, children, width = 180, title, required, as = 'label' }: { label?: string; children: ReactNode; width?: number; title?: string; required?: boolean; as?: 'label' | 'div' }) {
   const labelContent = required ? <span className="field-required">{label}</span> : label;
+  const Tag = as;
   return (
-    <label style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 4, fontSize: 12, color: 'var(--muted)', width, marginBottom: 0 }}>
+    <Tag style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 4, fontSize: 12, color: 'var(--muted)', width, marginBottom: 0 }}>
       {title ? <Tooltip text={title}><span style={{ cursor: 'pointer' }}>{labelContent}</span></Tooltip> : labelContent}
       {children}
-    </label>
+    </Tag>
   );
 }
 
