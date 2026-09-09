@@ -7894,6 +7894,23 @@ FinanceManager live link:
   existing inline cross-entity-linking coverage" sub-thread of Pending item 114** — the item's
   other remaining scope (the Credit Card/Bank/Branch normalization migration, its own separate
   higher-risk track) stays open.
+- **PSX Settings' itemized fee fields (PSX/NCCPL/SECP/CDC/CVT) explained via tooltip, continuing
+  Pending item 55's app-wide plain-language pass (2026-09-09) — see Done item 290.** These 5
+  acronym-only labels (no expansion or explanation anywhere in the UI) are exactly the kind of
+  genuine jargon Pending item 55 named as its own remaining scope ("every table column header/
+  form field hint across the app haven't had a dedicated audit pass") — a non-trader/non-
+  accountant has no way to know what NCCPL, SECP, CDC, or CVT even stand for, let alone why
+  each one is a separate line. Used `Field`'s existing `title` prop (already the established
+  mechanism for this exact job, Done items 105/140/144) to add a one-sentence plain-language
+  explanation to each: PSX fee (the exchange's own processing charge), NCCPL fee (the trade-
+  settlement body's fee), SECP levy (the regulator's own fee), CDC (the depository's per-share
+  fee), CVT (Capital Value Tax, buy-side only). Deliberately scoped to just these 5 fields, not
+  a full app-wide sweep in one pass, matching this project's own established incremental
+  discipline for broad "audit the whole app" items. Verified live via Playwright: all 5 labels
+  render a real `role="tooltip"` popup on hover with the correct text, zero console errors.
+  `npx tsc -b` / `npm run test` (630 tests, unchanged) / `npm run build` all clean. **Pending
+  item 55's own remaining scope stays open** — table column headers and form-field hints across
+  the rest of the app haven't had this same audit pass yet.
 
 ## Pending
 
@@ -8185,11 +8202,13 @@ item 103) — all three now fixed, see Done item 104:**
     PositionDetail/EMI/Personal Loans/Funds now has an explanatory tooltip. **Second pass done
     (2026-08-25) — see Done item 144**: "Principal" (Personal Loans + EMI), "Amortization
     schedule" (EMI), "Total interest/markup (life)" (EMI), and "Monthly/Yearly equivalent"
-    (Subscriptions) now have tooltips too. **Still open**: Bank/Cash/Rentals' own labels (their
+    (Subscriptions) now have tooltips too. **Third pass done (2026-09-09) — see Done item
+    290**: PSX Settings' 5 acronym-only fee fields (PSX/NCCPL/SECP/CDC/CVT) now explain what
+    each body/charge actually is. **Still open**: Bank/Cash/Rentals' own labels (their
     section headings — "By category", "Net income", "Monthly rollup" — read as plain English
     already and weren't judged to need one) and every table column header/form field hint
-    across the app haven't had a dedicated audit pass — this was two real, meaningful passes on
-    the terms most likely to confuse a non-trader/non-accountant, not an exhaustive audit of
+    across the app haven't had a dedicated audit pass — this was three real, meaningful passes
+    on the terms most likely to confuse a non-trader/non-accountant, not an exhaustive audit of
     every string in the app.
 ~~56. Portfolio page overhaul (2026-08-24, item 12 of the original screenshot batch)~~ — a real,
     multi-part redesign; re-audited against the live page (2026-08-25), most items already
