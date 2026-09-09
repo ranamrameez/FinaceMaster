@@ -14,6 +14,7 @@ import {
   COLLECT_MAX_SECONDS,
   priceCachePath,
   priceHistoryPath,
+  tickerNamePath,
   SHARED_LAST_UPDATED_PATH,
   getAuth,
   setAuth,
@@ -167,6 +168,7 @@ async function pushRows(rows) {
   const nowIso = new Date().toISOString();
   const today = nowIso.slice(0, 10);
   let pushed = 0;
+  let namesPushed = 0;
   const errors = [];
   for (const row of rows) {
     try {
@@ -176,13 +178,25 @@ async function pushRows(rows) {
     } catch (e) {
       errors.push(`${row.ticker}: ${e.message || e}`);
     }
+    // Ticker name is a best-effort extra on top of the price push above —
+    // a name-write failure (or a row with no scraped name at all) never
+    // blocks or fails the price push for that same ticker.
+    const name = row.name && row.name.trim();
+    if (name) {
+      try {
+        await putScalar(tickerNamePath(row.ticker), name, auth.idToken);
+        namesPushed++;
+      } catch (e) {
+        errors.push(`${row.ticker} (name): ${e.message || e}`);
+      }
+    }
   }
   try {
     await putScalar(SHARED_LAST_UPDATED_PATH, nowIso, auth.idToken);
   } catch (e) {
     // Non-critical — the per-ticker writes already landed.
   }
-  return { pushed, total: rows.length, errors };
+  return { pushed, namesPushed, total: rows.length, errors };
 }
 
 // ---------- Scraping (delegates to the content script) ----------
@@ -249,7 +263,7 @@ async function runCycle({ forcePush = false } = {}) {
 
   if (due) {
     try {
-      const { pushed, total, errors } = await pushRows(rows);
+      const { pushed, namesPushed, total, errors } = await pushRows(rows);
       const floorMs = syncConfig.minPushIntervalMinutes * 60000;
       // Randomized gap: between 1x and 2x the configured floor, re-rolled
       // fresh after every push — never a perfectly predictable period.
@@ -258,6 +272,7 @@ async function runCycle({ forcePush = false } = {}) {
         lastPushAt: Date.now(),
         lastPushCount: pushed,
         lastPushTotal: total,
+        lastNamesCount: namesPushed,
         nextPushAt,
         lastError: errors.length ? `${errors.length} ticker(s) failed to push (see console).` : '',
       });

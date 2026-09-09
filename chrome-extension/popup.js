@@ -29,7 +29,7 @@ async function renderStatus() {
   const status = await getStatus();
   const lines = [
     `Last scrape: ${fmtAgo(status.lastScrapeAt)}${status.lastScrapeCount != null ? ` — ${status.lastScrapeCount} ticker(s)` : ''}${status.lastStrategy ? ` (${status.lastStrategy})` : ''}`,
-    `Last push: ${fmtAgo(status.lastPushAt)}${status.lastPushCount != null ? ` — ${status.lastPushCount}/${status.lastPushTotal} ticker(s)` : ''}`,
+    `Last push: ${fmtAgo(status.lastPushAt)}${status.lastPushCount != null ? ` — ${status.lastPushCount}/${status.lastPushTotal} ticker(s), ${status.lastNamesCount || 0} name(s)` : ''}`,
     `Next push due: ${fmtIn(status.nextPushAt)}`,
   ];
   $('statusLines').innerHTML = lines.map((l) => `<div>${l}</div>`).join('');

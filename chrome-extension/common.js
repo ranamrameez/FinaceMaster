@@ -35,9 +35,9 @@ export const COLLECT_MAX_SECONDS = 90;
 
 export const STORAGE_KEYS = {
   AUTH: 'auth', // { idToken, refreshToken, uid, email, expiresAt }
-  SCRAPE_CONFIG: 'scrapeConfig', // { targetUrl, rowSelector, tickerSelector, priceSelector, changeSelector }
+  SCRAPE_CONFIG: 'scrapeConfig', // { targetUrl, rowSelector, tickerSelector, priceSelector, changeSelector, nameSelector }
   SYNC_CONFIG: 'syncConfig', // { minPushIntervalMinutes }
-  STATUS: 'status', // { lastScrapeAt, lastScrapeCount, lastPushAt, lastPushCount, nextPushAt, lastError }
+  STATUS: 'status', // { lastScrapeAt, lastScrapeCount, lastPushAt, lastPushCount, lastNamesCount, nextPushAt, lastError }
 };
 
 export const DEFAULT_SCRAPE_CONFIG = {
@@ -46,6 +46,7 @@ export const DEFAULT_SCRAPE_CONFIG = {
   tickerSelector: '',
   priceSelector: '',
   changeSelector: '',
+  nameSelector: '',
 };
 
 export const DEFAULT_SYNC_CONFIG = {
@@ -98,19 +99,27 @@ export async function setSyncConfig(patch) {
   return next;
 }
 
-// Prices are written to the SAME shared `stockData/QSE` node the
-// FinanceRecorder web app already reads for ticker names/fundamentals
-// (webapp/src/lib/stockData/reader.ts) — not into any one user's own
-// `users/{uid}/workbook`. This is a deliberate choice: a price scraped by
-// one signed-in user is useful to every FinanceRecorder user, not just the
-// person running the extension, and it matches this app's own locked
-// architecture decision (see webapp's CLAUDE.md "Design decisions": no
-// live market-data API calls from the app itself — fetch on a schedule
-// into our own database, serve every read from that local store). Writing
-// still requires SOME authenticated Firebase user (RTDB rules should gate
-// writes on `auth != null`, not on being any particular uid) — see
-// README.md for the exact security-rule change this needs, which only the
-// project owner can apply via the Firebase console.
+// Prices AND ticker names are written to the SAME shared `stockData/QSE`
+// node the FinanceRecorder web app already reads for ticker names/
+// fundamentals (webapp/src/lib/stockData/reader.ts) — not into any one
+// user's own `users/{uid}/workbook`. This is a deliberate choice: a price
+// or name scraped by one signed-in user is useful to every FinanceRecorder
+// user, not just the person running the extension, and it matches this
+// app's own locked architecture decision (see webapp's CLAUDE.md "Design
+// decisions": no live market-data API calls from the app itself — fetch on
+// a schedule into our own database, serve every read from that local
+// store). Writing still requires SOME authenticated Firebase user (RTDB
+// rules should gate writes on `auth != null`, not on being any particular
+// uid) — see README.md for the exact security-rule change this needs,
+// which only the project owner can apply via the Firebase console.
+//
+// The web app's bundled `qseSeed.ts` only hard-codes ~36 of QSE's ~50+
+// listed tickers (a stale, incomplete one-time seed — see that file's own
+// comment). Since this extension's content script already scrapes every
+// row of the market-watch page for a price, capturing that same row's
+// company-name cell and pushing it to `tickerNames/{ticker}` here is how
+// the app's actual ticker coverage gets filled in for real, from data the
+// bundled seed never had — see README.md.
 //
 // NOTE: the web app does not yet read `prices`/`priceHistory` from this
 // node to resolve a stock's "current price" — today it only reads
@@ -124,6 +133,10 @@ export function priceCachePath(ticker) {
 
 export function priceHistoryPath(ticker) {
   return `stockData/QSE/priceHistory/${encodeURIComponent(ticker)}`;
+}
+
+export function tickerNamePath(ticker) {
+  return `stockData/QSE/tickerNames/${encodeURIComponent(ticker)}`;
 }
 
 export const SHARED_LAST_UPDATED_PATH = 'stockData/QSE/pricesUpdatedAt';

@@ -13,6 +13,7 @@ function readFields() {
     tickerSelector: $('tickerSelector').value.trim(),
     priceSelector: $('priceSelector').value.trim(),
     changeSelector: $('changeSelector').value.trim(),
+    nameSelector: $('nameSelector').value.trim(),
   };
 }
 
@@ -23,6 +24,7 @@ async function load() {
   $('tickerSelector').value = cfg.tickerSelector;
   $('priceSelector').value = cfg.priceSelector;
   $('changeSelector').value = cfg.changeSelector;
+  $('nameSelector').value = cfg.nameSelector;
 }
 
 $('saveBtn').addEventListener('click', async () => {
