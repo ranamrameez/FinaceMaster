@@ -7986,6 +7986,21 @@ FinanceManager live link:
   either tier (none existed before this change either) — only the picker and the underlying
   guard exist so far; a future session building a "manage categories" screen should keep using
   `scope` to gate which rows offer rename/delete.
+- **QSE/PSX Settings' "Account" tab trimmed to stop duplicating the global `/account` hub,
+  closing Pending item 121(b) for every module in the app — see Done item 294 (2026-09-09).**
+  QSE's and PSX's `SettingsPage.tsx` were the last two modules still showing a full
+  `ProfileEditor` + a "Sign in"/"Sign out" button directly on their own "Account" tab — the
+  exact duplication Done item 213 built `/account` to eliminate, already fixed for Cash/Bank/
+  Funds/Rentals/Subscriptions but never carried over to the two original (pre-`/account`)
+  modules. Trimmed both `AccountSection`s to just the module-specific cloud-empty upload
+  prompt, with the same "Sign-in, profile, appearance, and a whole-app backup live on the
+  Account page →" pointer paragraph every other module's Settings tab already uses. Checked
+  Personal Loans and EMI too before assuming they needed the same fix — neither has a
+  "Settings"/"Account" tab at all (confirmed via a fresh grep: no `Tabs` call in either file),
+  so there was nothing there to trim; this closes the item for every module that actually has
+  one. Verified live via Playwright: both pages now show zero `ProfileEditor` fields and zero
+  "Sign out" buttons, with a real `Account page →` link present on each. `npx tsc -b` / `npm
+  run test` (623 tests, unchanged — UI-only) / `npm run build` all clean.
 
 ## Pending
 
@@ -8584,10 +8599,14 @@ everything below is started. Working down it in priority order across following 
 100. ~~Personal Loans: the Payoff Planner should come AFTER Repayments on a loan's detail page
      (transactions are more important) — currently Payoff Planner renders above Repayments.~~
      **Done (2026-08-26) — see Done item 168.**
-101. Transfers page: "terrible UI, arrange elements in grids for better UX" — a broad
-     redesign ask without a specific target shape given; needs the user's own sense of what
-     "better" looks like (a wireframe, or at least which specific elements feel wrong) before
-     guessing at a full redesign.
+~~101. Transfers page: "terrible UI, arrange elements in grids for better UX".~~ **Moot as of
+     Done item 216 (2026-08-28) — the standalone `/transfers` page this item was about no
+     longer exists.** `TransferLinksPage.tsx` was reduced to a shared-utilities-only module
+     (`SideFields`/`useSideCurrency`/`linkTargetPath`, no page component, no route, confirmed
+     via a fresh grep) once the app-wide "Transfers" FAB replaced the standalone page with a
+     popup reachable from every module — there's no longer a dedicated Transfers page's UI
+     left to redesign. The popup's own layout is covered by this project's general
+     Field/`.row` grid conventions, same as every other module's add-form.
 102. ~~Transfers page: use info popups/tooltips to explain concepts instead of permanent
      explanatory paragraphs eating page space.~~ **Done (2026-08-26) — see Done item 169.**
      The "New linked transfer" card's own explanatory paragraph moved behind a `Tooltip`; the
@@ -8867,13 +8886,15 @@ or a design decision before more code, not guessed at further:**
      (a) "use natural order for UI sections (Entity detail, trans, analytics, etc.)" — several
      module pages already follow something close to this (e.g. Banking's `AccountDetailPage`,
      reordered by Done item 215 to lead with Account details), but this hasn't been checked
-     against every module's own page consistently; (b) "many pages still have settings while
-     asked to make them global & centralized" — the Main/Often/Rare redesign's Banking pilot
-     (Done item 213) is the only module whose Settings tab fully links out to `/account` for
-     the global bits; Cash/Personal Loans/EMI/Funds/Rentals/Subscriptions/QSE/PSX's own
-     Settings tabs need the same audit-and-trim pass Banking already got (see this app's own
-     "App-wide UI/UX redesign" section in CLAUDE.md for the full rollout plan already written
-     for this).
+     against every module's own page consistently — **still open**.
+     ~~(b) "many pages still have settings while asked to make them global & centralized"~~ —
+     **done for every module that has a Settings tab at all (2026-09-09) — see Done item 294.**
+     Cash/Funds/Rentals/Subscriptions already had this fix (own Done items, see the app-wide
+     UI/UX redesign section in CLAUDE.md); QSE's and PSX's `SettingsPage.tsx` were the two
+     remaining modules still duplicating `/account`'s Profile/Sign-in/Sign-out UI locally, now
+     trimmed to the same "...live on the Account page →" pointer pattern. Personal Loans and
+     EMI have no Settings/Account tab at all (confirmed by reading both files) — nothing there
+     to trim, so this closes the item everywhere it could actually apply.
 
 ~~122. Trade Transactions: sold price / lot P&L / overall avg-cost P&L~~ — **done (2026-09-08),
      see Done item 242.** Confirmed via `AskUserQuestion` the missing piece was showing a sell's

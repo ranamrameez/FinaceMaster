@@ -5648,6 +5648,16 @@ app, not developer notes) continuously as features ship.
   items verified live via Playwright with real coordinate/DOM measurements, not visual guesses.
   `npx tsc -b` / `npm run test` (623 tests, net +8 after -15 removed / +23 added) / `npm run
   build` all clean throughout.
+- **PR #154 merged (2026-09-09); continued down README's Pending list per the standing "keep
+  working, one item at a time" instruction — see README Done item 294.** QSE's and PSX's
+  `SettingsPage.tsx` were the last two modules still showing a duplicated `ProfileEditor` +
+  Sign in/out on their own "Account" tab, the exact thing `/account` (Done item 213) was built
+  to consolidate — every other module (Cash/Bank/Funds/Rentals/Subscriptions) already got this
+  trim, QSE/PSX just hadn't. Fixed both to the same "...live on the Account page →" pointer
+  pattern; checked Personal Loans/EMI first and found neither has a Settings tab at all, so
+  there was nothing to trim there — this closes Pending item 121(b) for every module that
+  actually has one. Verified live via Playwright: zero `ProfileEditor` fields/Sign-out buttons
+  remain on either page, both show a real link to `/account`.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

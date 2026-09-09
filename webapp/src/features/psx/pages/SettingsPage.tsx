@@ -1,27 +1,28 @@
 import type { User } from 'firebase/auth';
 import { useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Card } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
-import { LogInIcon } from '../../../components/icons';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
-import { ProfileEditor } from '../../../components/ProfileEditor';
-import { signOutUser } from '../../../lib/firebase/auth';
 import { firebaseReady } from '../../../lib/firebase/client';
-import { requireSignIn } from '../../../components/SignInModal';
 import { createEmptyPSXWorkbook } from '../../../store/defaultPsxWorkbook';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
 import type { PSXWorkbook } from '../../../types/psxWorkbook';
 import { gridAutoStyle } from '../../../lib/gridStyle';
 
+// User-reported (2026-09-09, Pending item 121(b)): "many pages still have
+// settings while asked to make them global & centralized" — this section
+// used to duplicate the global /account hub's own Profile/Sign-in/Sign-out
+// UI (Done item 213 built /account specifically to consolidate that).
+// Trimmed to just the module-specific cloud-empty upload prompt, matching
+// the pattern already applied to Cash/Funds/Rentals/Subscriptions.
 function AccountSection({
-  user,
   cloudEmpty,
   uploadLocalToCloud,
 }: {
-  user: User | null;
   cloudEmpty: boolean;
   uploadLocalToCloud: () => Promise<void>;
 }) {
@@ -30,59 +31,36 @@ function AccountSection({
   const localRowCount =
     workbook.transactions.length + workbook.transfers.length + workbook.adjustments.length;
 
-  const run = async (fn: () => Promise<void>) => {
-    setBusy(true);
-    try {
-      await fn();
-    } catch (e) {
-      toast(e instanceof Error ? e.message : 'Something went wrong.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  if (!firebaseReady) {
-    return <p className="text-muted">Cloud sync is unavailable — Firebase failed to load in this browser.</p>;
-  }
-
-  if (user) {
-    return (
-      <>
-        <ProfileEditor user={user} />
-        {cloudEmpty && (
-          <Notice tone="warning" style={{ marginTop: 8 }}>
-            <p style={{ marginTop: 0 }}>
-              No data found in the cloud for this account's PSX workbook. This app will <strong>not</strong>{' '}
-              upload anything automatically — if you expected existing data here and don't see it, stop and
-              investigate before uploading rather than overwriting.
-            </p>
-            <button
-              className="btn secondary"
-              disabled={busy}
-              onClick={async () => {
-                const ok = await confirmDialog(
-                  `This will overwrite anything currently in the cloud for this account's PSX data (there is nothing there now, but confirming since this can't be undone).`,
-                  `Upload ${localRowCount} local row(s) to the cloud?`,
-                );
-                if (!ok) return;
-                run(uploadLocalToCloud);
-              }}
-            >
-              Upload local data to cloud ({localRowCount} rows)
-            </button>
-          </Notice>
-        )}
-        <button className="btn secondary" disabled={busy} onClick={() => run(signOutUser)} style={{ marginTop: 8 }}>
-          Sign out
-        </button>
-      </>
-    );
-  }
-
+  if (!firebaseReady || !cloudEmpty) return null;
   return (
-    <button className="btn" style={{ marginTop: 8 }} onClick={() => requireSignIn()}>
-      <LogInIcon />Sign in
-    </button>
+    <Notice tone="warning" style={{ marginTop: 8 }}>
+      <p style={{ marginTop: 0 }}>
+        No data found in the cloud for this account's PSX workbook. This app will <strong>not</strong>{' '}
+        upload anything automatically — if you expected existing data here and don't see it, stop and
+        investigate before uploading rather than overwriting.
+      </p>
+      <button
+        className="btn secondary"
+        disabled={busy}
+        onClick={async () => {
+          const ok = await confirmDialog(
+            `This will overwrite anything currently in the cloud for this account's PSX data (there is nothing there now, but confirming since this can't be undone).`,
+            `Upload ${localRowCount} local row(s) to the cloud?`,
+          );
+          if (!ok) return;
+          setBusy(true);
+          try {
+            await uploadLocalToCloud();
+          } catch (e) {
+            toast(e instanceof Error ? e.message : 'Something went wrong.');
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        Upload local data to cloud ({localRowCount} rows)
+      </button>
+    </Notice>
   );
 }
 
@@ -337,7 +315,6 @@ function AmountSettings() {
 }
 
 export function SettingsPage({
-  user,
   cloudEmpty,
   uploadLocalToCloud,
 }: {
@@ -354,7 +331,15 @@ export function SettingsPage({
           {
             key: 'account',
             label: 'Account',
-            content: <AccountSection user={user} cloudEmpty={cloudEmpty} uploadLocalToCloud={uploadLocalToCloud} />,
+            content: (
+              <div>
+                <p className="text-muted" style={{ marginTop: 0 }}>
+                  Sign-in, profile, appearance, and a whole-app backup live on the{' '}
+                  <Link to="/account">Account page →</Link>. What's below is specific to PSX.
+                </p>
+                <AccountSection cloudEmpty={cloudEmpty} uploadLocalToCloud={uploadLocalToCloud} />
+              </div>
+            ),
           },
           { key: 'data', label: 'Data management', content: <DataManagement /> },
           { key: 'amounts', label: 'Fees & amounts', content: <AmountSettings /> },
