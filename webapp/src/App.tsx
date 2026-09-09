@@ -7,6 +7,7 @@ import { PSXTickerDatalist } from './components/PSXTickerDatalist';
 import { SignInModalHost } from './components/SignInModal';
 import { SubscriptionAlertsPopup } from './components/SubscriptionAlertsPopup';
 import { TermsGateModal } from './components/TermsGateModal';
+import { CurrencyOnboardingModal } from './components/CurrencyOnboardingModal';
 import { TickerDatalist } from './components/TickerDatalist';
 import { Toast } from './components/Toast';
 import { useFirebaseSync } from './lib/firebase/useFirebaseSync';
@@ -137,6 +138,7 @@ function App() {
   return (
     <ErrorBoundary>
       <TermsGateModal />
+      <CurrencyOnboardingModal />
       <ConfirmDialogHost />
       <SignInModalHost />
       <HashRouter>
