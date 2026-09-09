@@ -7753,6 +7753,25 @@ FinanceManager live link:
   `enabledCurrencies` localStorage key the Account page reads, "Done" closes it, and a reload
   correctly never shows it again. `npx tsc -b` / `npm run test` (630 tests, 3 new) / `npm run
   build` all clean.
+- **Transaction-detail popup on row click, QSE/PSX Trade List (2026-09-09) — see Done item
+  284, first slice of Pending item 129.** User: "We should also show a transaction record in a
+  popup when clicked since we are cutting the text; users can never read the full data." New
+  generic `components/RecordDetailModal.tsx` — a `{label, value}[]`-driven read-only popup
+  (reuses the shared `Modal`), so each module's own list builds its own field list rather than
+  the component guessing at a shape (a genuinely reusable primitive, not a QSE/PSX-specific
+  one). Wired into both exchanges' "Trade List" section: clicking anywhere on a row (except the
+  ticker link or the action buttons, both of which `stopPropagation`) opens a popup showing
+  every field, including two genuinely NOT shown in the table row at all today — Time and
+  Timezone. PSX's popup also includes a Fee line explaining WHY the fee came out the way it did
+  (netted/same-day/manual-override), the same reasoning already shown inline via a tooltip on
+  the table's own Fee cell, now spelled out in full rather than abbreviated. Verified live via
+  Playwright: clicking a data cell opens the popup with the right fields (Time/Timezone/Status
+  all present and correct); clicking the ticker link navigates to the stock page WITHOUT also
+  opening the popup; clicking "Edit" opens the existing inline edit row WITHOUT opening the
+  popup — confirms `stopPropagation` is scoped correctly, not accidentally blocking the row's
+  own existing interactions. `npx tsc -b` / `npm run test` (630 tests, unchanged — new UI, no
+  calc logic touched) / `npm run build` all clean. **Deliberately scoped to QSE/PSX's Trade
+  List only, not every module** — see the new Pending item 132 for the rollout remainder.
 
 ## Pending
 
@@ -8663,11 +8682,9 @@ or a design decision before more code, not guessed at further:**
 
 ~~128. Sidebar: nest QSE/PSX's own page list as a real subnav under "Stock Exchanges", not a
      separate accordion~~ — **done (2026-09-09), see Done item 281.**
-129. **Transaction-detail popup on row click, since tables truncate long text (2026-09-09,
-     user-reported).** "We should also show a transaction record in a popup when clicked since
-     we are cutting the text; users can never read the full data." Scope not yet finalized —
-     likely starts with QSE/PSX Trade Transactions (the page the report's screenshot was about)
-     but could generalize to any module's transaction table. Not yet built.
+~~129. Transaction-detail popup on row click, since tables truncate long text~~ — **QSE/PSX
+     Trade List done (2026-09-09), see Done item 284. Generalizing to other modules' tables is
+     a real, separate remaining rollout — see Pending item 132.**
 ~~130(a). Rename "Income"/"Expense" to Inflow/Outflow-equivalent wording wherever the figure
      can include an inter-account transfer~~ — **done (2026-09-09), see Done item 282.**
 130(b). **True category-level Income/Expense/Ignore classification, still open — see README
@@ -8682,6 +8699,14 @@ or a design decision before more code, not guessed at further:**
      worth can tell a month's positive/-negative impact"). A real design pass, not yet started —
      a genuinely new feature, not a wording fix.
 ~~131. First-time currency-selection prompt~~ — **done (2026-09-09), see Done item 283.**
+132. **Roll the new `RecordDetailModal` (Done item 284) out beyond QSE/PSX's Trade List
+     (2026-09-09).** The component itself is a generic `{label, value}[]`-driven popup, ready
+     to reuse — what's left per module is deciding which fields are worth surfacing in a
+     detail popup for THAT module's own record type (Cash/Bank/Rentals' shared `Finance`-based
+     ledgers, Personal Loans' repayments, EMI's schedule rows, Funds' transactions, Subscriptions)
+     and wiring row-click + `stopPropagation` on that table's own action buttons, same pattern
+     already established for QSE/PSX. Not a design question, just an incremental rollout — see
+     this project's own standing discipline of shipping one working slice first, then extending.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank
