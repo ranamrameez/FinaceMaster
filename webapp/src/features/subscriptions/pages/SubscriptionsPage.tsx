@@ -2,7 +2,7 @@ import type { User } from 'firebase/auth';
 import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bar, Doughnut } from 'react-chartjs-2';
-import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
+import { Card, CollapsibleCard, EntityCard, MoneyValue } from '../../../components/Card';
 import { CategorySelect } from '../../../components/CategorySelect';
 import { Modal } from '../../../components/Modal';
 import { Notice } from '../../../components/Notice';
@@ -17,7 +17,6 @@ import { IconButton } from '../../../components/ui/IconButton';
 import { FabButton } from '../../../components/ui/Fab';
 import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
-import { useSortableRows } from '../../../hooks/useSortableRows';
 import {
   alertTriggerMs,
   generateRenewalOccurrences,
@@ -174,6 +173,15 @@ function subCategoryLabel(s: Subscription, categoryRegistry: Category[]): string
   return s.categoryID ? categoryName(s.categoryID, categoryRegistry) : s.category?.trim() || 'Uncategorized';
 }
 
+// Converted from a sortable table to an EntityCard grid (2026-09-09) —
+// closes README Pending item 114's rollout (the last module of the
+// group: Bank/Banks, Funds/Brokers, Personal Loans, EMI, Rentals already
+// converted). Per UI rule 1/3: entity items belong on cards in a wrap-flex
+// grid, not a table with its own per-column reorder controls — dropped
+// this list's own `useSortableRows` usage (its only remaining caller in
+// this file) in favor of favorite-first ordering. The old table's "Open"
+// button was dropped as redundant (the whole card is already clickable),
+// matching every other converted list's own precedent.
 function SubscriptionList({ onSelect }: { onSelect: (sub: Subscription) => void }) {
   const subs = useSubscriptionsWorkbookStore((s) => s.workbook.entries);
   const updateEntry = useSubscriptionsWorkbookStore((s) => s.updateEntry);
@@ -205,21 +213,10 @@ function SubscriptionList({ onSelect }: { onSelect: (sub: Subscription) => void 
     [subs, statusFilter, categoryFilter, categoryRegistry],
   );
 
-  type Row = { sub: Subscription; monthly: number; next: string };
-  const rows: Row[] = filteredSubs.map((s) => ({ sub: s, monthly: monthlyEquivalent(s), next: s.active ? nextBillingDate(s) : '' }));
-  type Col = 'name' | 'amount' | 'monthly' | 'category' | 'next' | 'status' | 'favorite';
-  const sortValue = (r: Row, col: Col): number | string => {
-    switch (col) {
-      case 'amount': return r.sub.amount;
-      case 'monthly': return r.monthly;
-      case 'category': return subCategoryLabel(r.sub, categoryRegistry);
-      case 'next': return r.next || 'zzzz';
-      case 'status': return r.sub.active ? 0 : 1;
-      case 'favorite': return r.sub.isFavorite ? 1 : 0;
-      default: return r.sub.name;
-    }
-  };
-  const { sorted, Th } = useSortableRows(rows, sortValue, 'name', 'asc');
+  const sorted = useMemo(
+    () => [...filteredSubs].sort((a, b) => Number(!!b.isFavorite) - Number(!!a.isFavorite)),
+    [filteredSubs],
+  );
 
   return (
     <div>
@@ -238,45 +235,43 @@ function SubscriptionList({ onSelect }: { onSelect: (sub: Subscription) => void 
           </Select>
         </Field>
       </div>
-      <div className="table-scroll">
-      <table>
-        <thead>
-          <tr>
-            <th>#</th><Th col="favorite">★</Th><Th col="name">Name</Th><Th col="amount">Amount</Th><Th col="monthly">Monthly equiv.</Th>
-            <Th col="category">Category</Th><Th col="next">Next renewal</Th><Th col="status">Status</Th><th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map(({ sub: s, monthly, next }) => (
-            <tr key={s.id} onClick={() => onSelect(s)} style={{ cursor: 'pointer' }}>
-              <td className="text-muted">{srNumOf.get(s.id)}</td>
-              <td>
-                <IconButton
-                  label={s.isFavorite ? 'Unfavorite' : 'Favorite'}
-                  icon={<StarIcon size={13} filled={s.isFavorite} />}
-                  align="right"
-                  onClick={(e) => { e.stopPropagation(); toggleFavorite(s); }}
-                />
-              </td>
-              <td>{s.name}</td>
-              <td>{fmtMoney(s.amount, s.currencyCode)}{CYCLE_LABEL[s.billingCycle]}</td>
-              <td>{fmtMoney(monthly, s.currencyCode)}</td>
-              <td><span className="pill-info">{subCategoryLabel(s, categoryRegistry)}</span></td>
-              <td>{next || '—'}</td>
-              <td className={s.active ? 'pill-positive' : 'pill-negative'}>{s.active ? 'Active' : 'Cancelled'}</td>
-              <td><button className="btn secondary small" onClick={(e) => { e.stopPropagation(); onSelect(s); }}>Open</button></td>
-            </tr>
-          ))}
-          {!sorted.length && (
-            <tr>
-              <td colSpan={9} className="text-muted">
-                {subs.length ? 'No subscriptions match these filters.' : 'No subscriptions yet — add one above.'}
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-      </div>
+      {!sorted.length ? (
+        <p className="text-muted">
+          {subs.length ? 'No subscriptions match these filters.' : 'No subscriptions yet — add one above.'}
+        </p>
+      ) : (
+        <div className="entity-card-grid">
+          {sorted.map((s) => {
+            const monthly = monthlyEquivalent(s);
+            const next = s.active ? nextBillingDate(s) : '';
+            return (
+              <EntityCard
+                key={s.id}
+                title={<><span className="text-muted" style={{ fontWeight: 400, fontSize: 11, marginRight: 5 }}>#{srNumOf.get(s.id)}</span>{s.name}</>}
+                subtitle={
+                  <>
+                    {fmtMoney(s.amount, s.currencyCode)}{CYCLE_LABEL[s.billingCycle]} ·{' '}
+                    <span className="pill-info">{subCategoryLabel(s, categoryRegistry)}</span>
+                    {next && <> · Next: {next}</>}
+                  </>
+                }
+                badge={<span className={s.active ? 'pill-positive' : 'pill-negative'} style={{ fontSize: 10 }}>{s.active ? 'Active' : 'Cancelled'}</span>}
+                statLabel="Monthly equiv."
+                stat={<MoneyValue n={monthly} currency={s.currencyCode} />}
+                onClick={() => onSelect(s)}
+                actions={
+                  <IconButton
+                    label={s.isFavorite ? 'Unfavorite' : 'Favorite'}
+                    icon={<StarIcon size={13} filled={s.isFavorite} />}
+                    align="right"
+                    onClick={() => toggleFavorite(s)}
+                  />
+                }
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

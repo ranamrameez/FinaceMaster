@@ -6008,6 +6008,16 @@ touched those.
   reasoning as Done item 223). Verified live via Playwright: favorite-first order, archived
   badge/toggle, the new modal section's fields present and saving correctly (hits the sign-in
   gate), Favorite's sign-in gate. Only Subscriptions' list remains for Pending item 114.
+- **Subscriptions' `SubscriptionList` also converted to an `EntityCard` grid (2026-09-09) —
+  CLOSES README Pending item 114's `EntityCard`-rollout sub-thread entirely, see README Done
+  item 274.** Last module in the group. Dropped `useSortableRows` (only remaining caller),
+  favorite-first ordering, each card packs amount/cycle/category/next-renewal into its
+  subtitle, an Active/Cancelled badge, Monthly equiv. as the stat (no `hue` — a subscription
+  spend has no profit/loss sign). Verified live via Playwright — favorite-first order, the
+  Status filter, card-click-to-detail, and the Favorite sign-in gate all confirmed. The
+  broader app-wide UI/UX redesign item (Main/Often/Rare model, Credit Card/Bank/Branch
+  normalization, etc.) stays open for its other remaining scope — only the "put every
+  module's entity list on EntityCard" ask is now fully done.
 
 ## Live URLs
 
