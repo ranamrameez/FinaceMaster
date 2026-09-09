@@ -7424,6 +7424,29 @@ FinanceManager live link:
   archived toggle/badge, card-click-to-detail, and the Favorite star's sign-in gate all
   confirmed working. `npx tsc -b` / `npm run test` (624 tests, unchanged) / `npm run build`
   all clean. Still open per Pending item 114: Rentals' `PropertiesList`, Subscriptions' list.
+- **Rentals' `PropertiesList` converted from a sortable table to an `EntityCard` grid
+  (2026-09-09) — see Done item 273, continuing Pending item 114's rollout.** This one needed
+  more than a mechanical swap: the old table had an inline row-edit mode for Name/Currency/
+  Purchase price with no equivalent in `PropertyDetailModal` (the module's existing "Often"
+  tier detail popup, which only ever covered lease/tenant/deposit fields) — removing the table
+  would have silently dropped the ability to edit those three fields at all. Fixed by adding a
+  new "Property details" section to the TOP of `PropertyDetailModal` (Name/Currency/Purchase
+  price, reusing the exact same `lease` state — already the full `Property` object — and the
+  same `saveLease` handler, renamed to reflect its now-wider scope), so clicking a card now
+  opens one place that shows/edits every attribute, matching the "Often" tier convention every
+  other converted list already follows. `PropertiesList` itself: dropped `useSortableRows`
+  (the file's OTHER table — the entries ledger — still uses it, so the import stays),
+  favorite-first ordering, each card shows Sr#, name, a "Currency · Purchase price: X" subtitle,
+  an Archived badge, and Net income (all time) hued green/red by sign. Favorite/Edit/Archive/
+  Delete all stay in the card's own `actions` slot rather than moving into the modal, since
+  `Modal` has no header-action slot — same reasoning already documented in Done item 223 for
+  why Archive/Restore lived in the list to begin with. Verified live via Playwright with a
+  seeded 3-property scenario (one favorited with a purchase price, one with negative net
+  income, one archived): favorite-first ordering, the archived toggle/badge, the new modal
+  section (Name/Currency/Purchase price fields present and editable), a Save hitting the real
+  sign-in gate, and the Favorite star's sign-in gate all confirmed working — zero console
+  errors. `npx tsc -b` / `npm run test` (624 tests, unchanged) / `npm run build` all clean.
+  Still open per Pending item 114: Subscriptions' list — the last one.
 
 ## Pending
 
@@ -8154,11 +8177,12 @@ or a design decision before more code, not guessed at further:**
      entity creation, tooltip-ified explanations — across most modules through means OTHER than
      the specific `EntityCard` component. **Verified via a direct grep, not assumed**: `EntityCard`
      was used only by Banking as of 2026-09-08; as of 2026-09-09 it's also used by Funds'
-     `BrokersList` (Done item 270), Personal Loans' `LoanList` (Done item 271), and EMI's
-     `LoanList` (Done item 272) — so the literal "roll EntityCard out to N modules" ask is
-     progressing incrementally, one module at a time, per this project's own established
-     discipline. Still open: Rentals' `PropertiesList`, Subscriptions' list. A future session
-     shouldn't read "still open" here as "nothing's been done for these modules" — check a module against
+     `BrokersList` (Done item 270), Personal Loans' `LoanList` (Done item 271), EMI's
+     `LoanList` (Done item 272), and Rentals' `PropertiesList` (Done item 273) — so the
+     literal "roll EntityCard out to N modules" ask is progressing incrementally, one module
+     at a time, per this project's own established discipline. Still open: Subscriptions'
+     list — the last one. A future session shouldn't read "still open" here as "nothing's
+     been done for these modules" — check a module against
      `UI_DESIGN_GUIDELINES.md`'s own rules directly (not just against whether it uses
      `EntityCard`) before assuming it needs work. Also still open: audit (don't blindly rebuild)
      each module's existing inline cross-entity-linking coverage against the "each module should

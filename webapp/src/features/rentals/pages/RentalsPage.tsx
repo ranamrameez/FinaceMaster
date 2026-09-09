@@ -2,11 +2,11 @@ import type { User } from 'firebase/auth';
 import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bar, Doughnut } from 'react-chartjs-2';
-import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
+import { Card, CollapsibleCard, EntityCard, MoneyValue } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
 import { hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { ArchiveIcon, CheckIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, StarIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { ArchiveIcon, CheckIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, StarIcon, TransferIcon, TrashIcon } from '../../../components/icons';
 import { Modal } from '../../../components/Modal';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
@@ -161,15 +161,26 @@ export function AddPropertyForm({ onSaved, initialCurrency }: { onSaved?: (id: s
   );
 }
 
+// Converted from a sortable table to an EntityCard grid (2026-09-09) —
+// continues README Pending item 114's rollout (Bank/Banks, Funds/Brokers,
+// Personal Loans, EMI already converted). Per UI rule 1/3: entity items
+// belong on cards in a wrap-flex grid, not a table with its own per-column
+// reorder controls — dropped this list's own `useSortableRows` usage in
+// favor of favorite-first ordering (the file's OTHER table, the entries
+// ledger, still uses `useSortableRows`, so the import stays). The old
+// inline table-row edit (Name/Currency/Purchase price) is gone — those
+// fields moved into `PropertyDetailModal`'s own "Property details" section,
+// so the click-to-open-detail flow now shows/edits every attribute in one
+// place, matching the "Often" tier convention every other converted list
+// follows. Archive/Restore/Delete stay in this list's own card actions
+// (not the modal) since `Modal` has no header-action slot — same reasoning
+// already documented for this module in README Done item 223.
 function PropertiesList() {
   const allProperties = useRentalsWorkbookStore((s) => s.workbook.settings.properties);
   const entries = useRentalsWorkbookStore((s) => s.workbook.entries);
   const updateProperty = useRentalsWorkbookStore((s) => s.updateProperty);
   const deleteProperty = useRentalsWorkbookStore((s) => s.deleteProperty);
   const ensureSignedIn = useEnsureSignedIn();
-  const [editId, setEditId] = useState<string | null>(null);
-  const [editRow, setEditRow] = useState<Property | null>(null);
-  const editCurrencyOptions = useEnabledCurrencies(editRow?.currencyCode);
   const [detailProperty, setDetailProperty] = useState<Property | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const archivedCount = useMemo(() => allProperties.filter((p) => p.isActive === false).length, [allProperties]);
@@ -192,26 +203,10 @@ function PropertiesList() {
     updateProperty(p.id, { isFavorite: !p.isFavorite });
   };
 
-  const startEdit = (p: Property) => { setEditId(p.id); setEditRow({ ...p }); };
-  const saveEdit = () => {
-    if (!editId || !editRow) return;
-    updateProperty(editId, editRow);
-    toast('Property updated.');
-    setEditId(null);
-    setEditRow(null);
-  };
-
-  type Col = 'name' | 'currency' | 'purchasePrice' | 'netIncome' | 'favorite';
-  const sortValue = (p: Property, col: Col): number | string => {
-    switch (col) {
-      case 'currency': return p.currencyCode;
-      case 'purchasePrice': return p.purchasePrice ?? 0;
-      case 'netIncome': return propertyNetIncome(p, entries);
-      case 'favorite': return p.isFavorite ? 1 : 0;
-      default: return p.name;
-    }
-  };
-  const { sorted, Th } = useSortableRows(properties, sortValue, 'name', 'asc');
+  const sorted = useMemo(
+    () => [...properties].sort((a, b) => Number(!!b.isFavorite) - Number(!!a.isFavorite)),
+    [properties],
+  );
 
   return (
     <div>
@@ -220,79 +215,55 @@ function PropertiesList() {
           {showArchived ? 'Hide' : 'Show'} archived ({archivedCount})
         </button>
       )}
-      <div className="table-scroll">
-      <table>
-        <thead><tr><th>#</th><Th col="favorite">★</Th><Th col="name">Name</Th><Th col="currency">Currency</Th><Th col="purchasePrice">Purchase price</Th><Th col="netIncome">Net income (all time)</Th><th></th></tr></thead>
-        <tbody>
-          {sorted.map((p) =>
-            editId === p.id && editRow ? (
-              <tr key={p.id}>
-                <td className="text-muted">{srNumOf.get(p.id)}</td>
-                <td></td>
-                <td><input value={editRow.name} onChange={(e) => setEditRow({ ...editRow, name: e.target.value })} /></td>
-                <td>
-                  <select value={editRow.currencyCode} onChange={(e) => setEditRow({ ...editRow, currencyCode: e.target.value })}>
-                    {editCurrencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
-                  </select>
-                </td>
-                <td><input type="number" step="0.01" value={editRow.purchasePrice ?? ''} onChange={(e) => setEditRow({ ...editRow, purchasePrice: e.target.value === '' ? undefined : Number(e.target.value) })} style={{ width: 110 }} /></td>
-                <td></td>
-                <td>
-                  <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
-                  <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditId(null)} />
-                </td>
-              </tr>
-            ) : (
-              <tr key={p.id} onClick={() => setDetailProperty(p)} style={{ cursor: 'pointer' }}>
-                <td className="text-muted">{srNumOf.get(p.id)}</td>
-                <td>
-                  <IconButton
-                    label={p.isFavorite ? 'Unfavorite' : 'Favorite'}
-                    icon={<StarIcon size={13} filled={p.isFavorite} />}
-                    align="right"
-                    onClick={(e) => { e.stopPropagation(); toggleFavorite(p); }}
-                  />
-                </td>
-                <td>
-                  {p.name}
-                  {p.isActive === false && <span className="pill-warn" style={{ fontSize: 10, marginLeft: 6 }}>Archived</span>}
-                </td>
-                <td>{p.currencyCode}</td>
-                <td>{p.purchasePrice ? fmtMoney(p.purchasePrice, p.currencyCode) : '—'}</td>
-                <td className={propertyNetIncome(p, entries) >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(propertyNetIncome(p, entries), p.currencyCode)}</td>
-                <td>
-                  <button className="btn secondary small" onClick={(e) => { e.stopPropagation(); setDetailProperty(p); }}>Details</button>{' '}
-                  <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={(e) => { e.stopPropagation(); startEdit(p); }} />{' '}
-                  <IconButton
-                    label={p.isActive === false ? 'Restore' : 'Archive'}
-                    icon={p.isActive === false ? <RestoreIcon size={13} /> : <ArchiveIcon size={13} />}
-                    align="right"
-                    onClick={(e) => { e.stopPropagation(); toggleArchived(p); }}
-                  />{' '}
-                  <IconButton
-                    label="Delete"
-                    icon={<TrashIcon size={13} />}
-                    align="right"
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      if (await confirmDialog('This deletes the property and all its income/expense entries.', `Delete property "${p.name}"?`)) deleteProperty(p.id);
-                    }}
-                  />
-                </td>
-              </tr>
-            ),
-          )}
-          {!sorted.length && (
-            <tr>
-              <td colSpan={7} className="text-muted">
-                {allProperties.length ? 'Every property is archived — click "Show archived" above to see them.' : 'No properties yet — add one above.'}
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+      {!sorted.length ? (
+        <p className="text-muted">
+          {allProperties.length ? 'Every property is archived — click "Show archived" above to see them.' : 'No properties yet — add one above.'}
+        </p>
+      ) : (
+        <div className="entity-card-grid">
+          {sorted.map((p) => {
+            const netIncome = propertyNetIncome(p, entries);
+            return (
+              <EntityCard
+                key={p.id}
+                title={<><span className="text-muted" style={{ fontWeight: 400, fontSize: 11, marginRight: 5 }}>#{srNumOf.get(p.id)}</span>{p.name}</>}
+                subtitle={<>{p.currencyCode}{p.purchasePrice ? ` · Purchase price: ${fmtMoney(p.purchasePrice, p.currencyCode)}` : ''}</>}
+                badge={p.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Archived</span> : undefined}
+                statLabel="Net income (all time)"
+                stat={<MoneyValue n={netIncome} currency={p.currencyCode} />}
+                hue={netIncome >= 0 ? 'var(--profit)' : 'var(--loss)'}
+                onClick={() => setDetailProperty(p)}
+                actions={
+                  <>
+                    <IconButton
+                      label={p.isFavorite ? 'Unfavorite' : 'Favorite'}
+                      icon={<StarIcon size={13} filled={p.isFavorite} />}
+                      align="right"
+                      onClick={() => toggleFavorite(p)}
+                    />
+                    <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => setDetailProperty(p)} />
+                    <IconButton
+                      label={p.isActive === false ? 'Restore' : 'Archive'}
+                      icon={p.isActive === false ? <RestoreIcon size={13} /> : <ArchiveIcon size={13} />}
+                      align="right"
+                      onClick={() => toggleArchived(p)}
+                    />
+                    <IconButton
+                      label="Delete"
+                      icon={<TrashIcon size={13} />}
+                      align="right"
+                      onClick={async () => {
+                        if (await confirmDialog('This deletes the property and all its income/expense entries.', `Delete property "${p.name}"?`)) deleteProperty(p.id);
+                      }}
+                    />
+                  </>
+                }
+              />
+            );
+          })}
+        </div>
+      )}
       {detailProperty && <PropertyDetailModal property={detailProperty} onClose={() => setDetailProperty(null)} />}
-      </div>
     </div>
   );
 }
@@ -427,10 +398,12 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
     toast(pendingRentBalance ? `Logged — ${fmtMoney(pendingRentBalance, property.currencyCode)} still pending, carried to next cycle.` : 'Logged to the ledger.');
   };
 
+  const currencyOptions = useEnabledCurrencies(lease.currencyCode);
+
   const saveLease = async () => {
-    if (!(await ensureSignedIn('Sign in to save lease/tenant details.'))) return;
+    if (!(await ensureSignedIn('Sign in to save property details.'))) return;
     updateProperty(property.id, lease);
-    toast('Lease details saved.');
+    toast('Property details saved.');
   };
 
   const generatePlans = async () => {
@@ -463,6 +436,28 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
 
   return (
     <Modal title={property.name} onClose={onClose}>
+      {/* Pending item 114/README item 271-272's own precedent: an entity's
+         "Often" tier detail view must show/edit EVERY attribute, not just
+         the module-specific ones — Name/Currency/Purchase price used to be
+         editable only via a separate inline table-row edit in
+         `PropertiesList`, which no longer exists once that list became an
+         EntityCard grid (2026-09-09). Reuses the SAME `lease` state (already
+         the full Property object) and `saveLease` handler, since these
+         fields save identically to every lease/tenant field below. */}
+      <h4 style={{ margin: '0 0 8px' }}>Property details</h4>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+        <Field label="Name">
+          <TextInput value={lease.name} onChange={(e) => setLease({ ...lease, name: e.target.value })} />
+        </Field>
+        <Field label="Currency">
+          <Select value={lease.currencyCode} onChange={(e) => setLease({ ...lease, currencyCode: e.target.value })}>
+            {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+          </Select>
+        </Field>
+        <Field label="Purchase price (optional)">
+          <TextInput type="number" step="0.01" value={lease.purchasePrice ?? ''} onChange={(e) => setLease({ ...lease, purchasePrice: e.target.value === '' ? undefined : Number(e.target.value) })} />
+        </Field>
+      </div>
       <h4 style={{ margin: '0 0 8px' }}>Lease &amp; tenant details</h4>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
         <Field label="Monthly rent">
@@ -532,7 +527,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
         </label>
       </div>
       <div className="row" style={{ gap: 8, marginBottom: 16 }}>
-        <button className="btn secondary" onClick={saveLease}><SaveIcon size={12} />Save lease details</button>
+        <button className="btn secondary" onClick={saveLease}><SaveIcon size={12} />Save details</button>
         <button className="btn" onClick={generatePlans}>Generate projected rent</button>
       </div>
 
