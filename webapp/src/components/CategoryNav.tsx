@@ -1,3 +1,4 @@
+import { Fragment, type ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 
 export type CategoryKey = 'netWorth' | 'stocks' | 'funds' | 'bank' | 'cash' | 'personalLoans' | 'emi' | 'rentals' | 'subscriptions' | 'planning';
@@ -57,23 +58,38 @@ export function categoryForPath(pathname: string): CategoryKey | null {
  * two. Active-state highlighting reuses `categoryForPath` (not React
  * Router's own `NavLink` matching) so Stock Exchanges correctly stays
  * highlighted across every `/psx/*` route too, not just the exact "/"
- * match. Stock Exchanges keeps its own QSE/PSX sub-switcher + page nav
- * rendered by the caller below this component; every other category is a
- * single page, so picking it just navigates there. */
-export function CategoryNav({ onNavigate }: { onNavigate?: () => void }) {
+ * match.
+ *
+ * User-reported (2026-09-09), a real correction, not a taste call: "I
+ * asked to include individual stock Exchs. as subnavs of the SE main nav,
+ * but you placed it below as a stand-alone menu using ugly lines." The
+ * old shape rendered QSE/PSX's own exchange-switcher + per-page list as a
+ * SEPARATE block below the whole category list, with a border-top divider
+ * — visually its own standalone menu, not nested under "Stock Exchanges"
+ * at all. `stocksSubnav` lets the caller (`Sidebar.tsx`) inject that
+ * content as a real sibling list item immediately AFTER the "Stock
+ * Exchanges" row, only while that category is active — a `Fragment`
+ * (not a wrapping `<div>`) keeps every other row's DOM shape identical, so
+ * `nav.navlist`'s `display:flex;flex-direction:column;gap:2px` still
+ * treats each row (and, now, the injected subnav block) as its own direct
+ * flex item, stacking it right where a nested item visually belongs
+ * instead of after the whole list. */
+export function CategoryNav({ onNavigate, stocksSubnav }: { onNavigate?: () => void; stocksSubnav?: ReactNode }) {
   const location = useLocation();
   const active = categoryForPath(location.pathname);
   return (
     <nav className="navlist category-list">
       {CATEGORIES.map((c) => (
-        <NavLink
-          key={c.key}
-          to={c.to}
-          onClick={onNavigate}
-          className={`navbtn category-item${c.key === active ? ' active' : ''}`}
-        >
-          {c.label}
-        </NavLink>
+        <Fragment key={c.key}>
+          <NavLink
+            to={c.to}
+            onClick={onNavigate}
+            className={`navbtn category-item${c.key === active ? ' active' : ''}`}
+          >
+            {c.label}
+          </NavLink>
+          {c.key === 'stocks' && active === 'stocks' && stocksSubnav}
+        </Fragment>
       ))}
     </nav>
   );

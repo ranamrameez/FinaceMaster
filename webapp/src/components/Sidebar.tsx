@@ -4,7 +4,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useProfile } from '../lib/firebase/useProfile';
 import { AppearancePanel } from './AppearancePanel';
 import { Avatar } from './Avatar';
-import { CategoryNav, categoryForPath } from './CategoryNav';
+import { CategoryNav } from './CategoryNav';
 import { LogInIcon, LogoMark, SettingsIcon } from './icons';
 
 const QSE_NAV_ITEMS = [
@@ -40,7 +40,16 @@ const PAGES_OPEN_KEY = 'financerecorder_stock_pages_open_v1';
  * first visit; once expanded it stays expanded (persisted, same
  * localStorage-remembered pattern as the whole-sidebar collapse in
  * AppShell.tsx) so a user who's shown they want to navigate between
- * Dashboard/Portfolio/etc. isn't forced to re-expand on every reload. */
+ * Dashboard/Portfolio/etc. isn't forced to re-expand on every reload.
+ *
+ * User-reported again (2026-09-09), a correction to how the ABOVE shipped:
+ * "I asked to include individual stock Exchs. as subnavs of the SE main
+ * nav, but you placed it below as a stand-alone menu using ugly lines."
+ * The collapse-by-default behavior itself was right — only WHERE it
+ * rendered was wrong. Now passed into `CategoryNav`'s `stocksSubnav` prop
+ * so it renders as a real nested item directly under "Stock Exchanges" in
+ * the same list, not a separate bordered block below it — see that
+ * component's own doc comment for the DOM-shape reasoning. */
 function usePagesOpen() {
   const [open, setOpen] = useState(() => {
     try {
@@ -96,8 +105,36 @@ export function Sidebar({
   const location = useLocation();
   const exchange: 'qse' | 'psx' = location.pathname.startsWith('/psx') ? 'psx' : 'qse';
   const navItems = exchange === 'psx' ? PSX_NAV_ITEMS : QSE_NAV_ITEMS;
-  const category = categoryForPath(location.pathname);
   const { open: pagesOpen, toggle: togglePagesOpen } = usePagesOpen();
+
+  const stocksSubnav = (
+    <div className="category-stocks-subnav">
+      <ExchangeSwitcher exchange={exchange} />
+      <button
+        type="button"
+        onClick={togglePagesOpen}
+        aria-expanded={pagesOpen}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6, width: '100%', background: 'none', border: 'none',
+          color: 'var(--muted)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.04em',
+          padding: '4px 2px', cursor: 'pointer', marginBottom: 4,
+        }}
+      >
+        <span style={{ display: 'inline-block', transition: 'transform .15s ease', transform: pagesOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>▸</span>
+        Pages
+      </button>
+      {pagesOpen && (
+        <nav className="navlist">
+          {navItems.map((item) => (
+            <NavLink key={item.to} to={item.to} end onClick={onNavigate} className={({ isActive }) => `navbtn${isActive ? ' active' : ''}`}>
+              <span className="num">{item.num}</span>
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
+      )}
+    </div>
+  );
 
   return (
     <div className={`sidebar ${className}`.trim()}>
@@ -114,41 +151,7 @@ export function Sidebar({
       </div>
 
       <div className="sidebar-scroll">
-        <CategoryNav onNavigate={onNavigate} />
-
-        {category === 'stocks' && (
-          // Pending item 113: the category list above and this exchange-
-          // specific block had no visual separator, reading as one
-          // undifferentiated block — a thin top border + spacing makes the
-          // boundary explicit without changing any navigation behavior
-          // (distinct from Done item 209's structural fix, right below).
-          <div style={{ borderTop: '1px solid var(--border)', marginTop: 8, paddingTop: 10 }}>
-            <ExchangeSwitcher exchange={exchange} />
-            <button
-              type="button"
-              onClick={togglePagesOpen}
-              aria-expanded={pagesOpen}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6, width: '100%', background: 'none', border: 'none',
-                color: 'var(--muted)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.04em',
-                padding: '4px 2px', cursor: 'pointer', marginBottom: 4,
-              }}
-            >
-              <span style={{ display: 'inline-block', transition: 'transform .15s ease', transform: pagesOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>▸</span>
-              Pages
-            </button>
-            {pagesOpen && (
-              <nav className="navlist">
-                {navItems.map((item) => (
-                  <NavLink key={item.to} to={item.to} end onClick={onNavigate} className={({ isActive }) => `navbtn${isActive ? ' active' : ''}`}>
-                    <span className="num">{item.num}</span>
-                    {item.label}
-                  </NavLink>
-                ))}
-              </nav>
-            )}
-          </div>
-        )}
+        <CategoryNav onNavigate={onNavigate} stocksSubnav={stocksSubnav} />
       </div>
 
       <div className="sidebar-footer">

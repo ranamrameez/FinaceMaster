@@ -6152,6 +6152,22 @@ touched those.
   gray expense charts, a month-over-month net-worth delta); and a first-time currency-
   selection prompt. `npx tsc -b` / `npm run test` (627 tests, 3 new) / `npm run build` all
   clean.
+- **Sidebar: QSE/PSX's page list nested under "Stock Exchanges" as a real subnav, closing
+  README Pending item 128 (2026-09-09) — see README Done item 281.** Direct follow-up to the
+  user's own correction in the same message batch above. The exchange switcher + "▸ Pages"
+  list used to render as a separate block BELOW the whole `CategoryNav` list with its own
+  border-top divider — visually a standalone menu, not nested under "Stock Exchanges" at all.
+  `CategoryNav.tsx` gained a `stocksSubnav` prop: each category row now renders inside a
+  `Fragment` (not a wrapping `<div>`, so `nav.navlist`'s flex-column layout still treats every
+  row and the injected subnav as its own direct flex item), with the subnav content inserted
+  immediately after the "Stock Exchanges" row, only while that category is active.
+  `Sidebar.tsx` builds the QSE/PSX chip switcher + collapsible page list once and passes it
+  through; new `.category-stocks-subnav` CSS (left border + indent) reads as nested-under-its-
+  parent rather than a competing section. Verified live via Playwright: subnav renders 4px
+  below the "Stock Exchanges" row's own bottom edge (not after the whole list), is completely
+  absent on every other category and on `/account`, and "Funds" sits correctly below the
+  expanded subnav — confirms true nesting. `npx tsc -b` / `npm run test` (627 tests, unchanged)
+  / `npm run build` all clean.
 
 ## Live URLs
 
