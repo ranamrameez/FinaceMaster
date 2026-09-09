@@ -559,7 +559,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
                 </Select>
               </Field>
             ) : (
-              <p className="text-muted">No active bank accounts — add or unarchive one on the Banking page first.</p>
+              <p className="text-muted">No active bank accounts — add one or reopen a closed one on the Banking page first.</p>
             )
           )}
           <button className="btn" onClick={generatePlans} disabled={linkModule === 'bank' && !activeAccounts.length}>

@@ -683,9 +683,9 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
   // A reversible alternative to Delete; visibility only, never touches a
   // total.
   const toggleArchived = async () => {
-    if (!(await ensureSignedIn(loan.isActive === false ? 'Sign in to reactivate this loan.' : 'Sign in to archive this loan.'))) return;
+    if (!(await ensureSignedIn(loan.isActive === false ? 'Sign in to reopen this loan.' : 'Sign in to close this loan.'))) return;
     updateLoan(loan.id, { isActive: loan.isActive === false ? true : false });
-    toast(loan.isActive === false ? 'Loan reactivated.' : 'Loan archived.');
+    toast(loan.isActive === false ? 'Loan reopened.' : 'Loan closed.');
   };
 
   return (
@@ -734,7 +734,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
             <div>
               <div style={{ fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 {loan.person}
-                {loan.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Archived</span>}
+                {loan.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Closed</span>}
               </div>
               <div className="text-muted">
                 {loan.direction === 'owed_to_me' ? 'Money lent out' : 'Money I owe'} · {loan.currencyCode} · since {loan.date}
@@ -744,7 +744,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
             <div className="row" style={{ gap: 8 }}>
               <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => { setEditRow(loan); setEditing(true); }} />
               <IconButton
-                label={loan.isActive === false ? 'Restore' : 'Archive'}
+                label={loan.isActive === false ? 'Reopen' : 'Close'}
                 icon={loan.isActive === false ? <RestoreIcon size={13} /> : <ArchiveIcon size={13} />}
                 align="right"
                 onClick={toggleArchived}
@@ -835,13 +835,13 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: PersonalLoan) => void
         </select>
         {archivedCount > 0 && (
           <button className="btn secondary small" onClick={() => setShowArchived((v) => !v)}>
-            {showArchived ? 'Hide' : 'Show'} archived ({archivedCount})
+            {showArchived ? 'Hide' : 'Show'} closed ({archivedCount})
           </button>
         )}
       </div>
       {!filtered.length ? (
         <p className="text-muted">
-          {allLoans.length ? 'Every loan is archived — click "Show archived" above to see them.' : 'No personal loans yet.'}
+          {allLoans.length ? 'Every loan is closed — click "Show closed" above to see them.' : 'No personal loans yet.'}
         </p>
       ) : (
         <div className="entity-card-grid">
@@ -852,7 +852,7 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: PersonalLoan) => void
                 key={l.id}
                 title={<><span className="text-muted entity-card-sr">#{srNumOf.get(l.id)}</span>{l.person}</>}
                 subtitle={l.direction === 'owed_to_me' ? 'Lent out' : 'I owe'}
-                badge={l.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Archived</span> : undefined}
+                badge={l.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Closed</span> : undefined}
                 statLabel="Outstanding"
                 stat={<MoneyValue n={outstanding} currency={l.currencyCode} />}
                 hue={l.direction === 'owed_to_me' ? 'var(--profit)' : 'var(--loss)'}

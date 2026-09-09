@@ -609,7 +609,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
             <div>
               <div style={{ fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 {loan.name}
-                {loan.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Archived</span>}
+                {loan.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Closed</span>}
               </div>
               <div className="text-muted" style={{ fontWeight: 400 }}>
                 {loan.lender} · {loan.currencyCode} · {loan.repaymentMode === 'fixedTotal' ? 'Fixed total (no interest)' : `${loan.annualRatePct}% p.a.`} · {loan.tenureMonths} months
@@ -636,13 +636,13 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
             <div className="row" style={{ gap: 8 }}>
               <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => { setEditRow(loan); setEditing(true); }} />
               <IconButton
-                label={loan.isActive === false ? 'Restore' : 'Archive'}
+                label={loan.isActive === false ? 'Reopen' : 'Close'}
                 icon={loan.isActive === false ? <RestoreIcon size={13} /> : <ArchiveIcon size={13} />}
                 align="right"
                 onClick={async () => {
-                  if (!(await ensureSignedIn(loan.isActive === false ? 'Sign in to restore this loan.' : 'Sign in to archive this loan.'))) return;
+                  if (!(await ensureSignedIn(loan.isActive === false ? 'Sign in to reopen this loan.' : 'Sign in to close this loan.'))) return;
                   updateEntry(loan.id, { isActive: loan.isActive === false ? true : false });
-                  toast(loan.isActive === false ? 'Loan restored.' : 'Loan archived.');
+                  toast(loan.isActive === false ? 'Loan reopened.' : 'Loan closed.');
                 }}
               />
               <IconButton
@@ -791,7 +791,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                   </button>
                 </div>
               ) : (
-                <p className="text-muted">No active bank accounts — add or unarchive one on the Banking page first.</p>
+                <p className="text-muted">No active bank accounts — add one or reopen a closed one on the Banking page first.</p>
               )}
             </div>
           </div>
@@ -1184,12 +1184,12 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: EMILoan) => void; onE
     <div>
       {archivedCount > 0 && (
         <button className="btn secondary small" style={{ marginBottom: 8 }} onClick={() => setShowArchived((v) => !v)}>
-          {showArchived ? 'Hide' : 'Show'} archived ({archivedCount})
+          {showArchived ? 'Hide' : 'Show'} closed ({archivedCount})
         </button>
       )}
       {!sorted.length ? (
         <p className="text-muted">
-          {allLoans.length ? 'Every loan is archived — click "Show archived" above to see them.' : 'No loans yet — add one above.'}
+          {allLoans.length ? 'Every loan is closed — click "Show closed" above to see them.' : 'No loans yet — add one above.'}
         </p>
       ) : (
         <div className="entity-card-grid">
@@ -1200,7 +1200,7 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: EMILoan) => void; onE
                 key={l.id}
                 title={<><span className="text-muted entity-card-sr">#{srNumOf.get(l.id)}</span>{l.name}</>}
                 subtitle={`${l.lender}${l.repaymentMode === 'fixedTotal' ? ' · no-interest' : ''}`}
-                badge={l.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Archived</span> : undefined}
+                badge={l.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Closed</span> : undefined}
                 statLabel="Outstanding"
                 stat={<MoneyValue n={sum.outstanding} currency={l.currencyCode} />}
                 hue="var(--loss)"
