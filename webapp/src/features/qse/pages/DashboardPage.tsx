@@ -362,7 +362,7 @@ export function DashboardPage() {
           </div>
         </div>
 
-        <DashboardRail />
+        <DashboardRail preferredCurrency={currency} />
       </div>
     </div>
   );

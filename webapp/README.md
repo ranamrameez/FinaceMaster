@@ -7486,6 +7486,19 @@ FinanceManager live link:
   sweep — per the item's own explicit "not one blind sweep" guidance, this stays a small,
   incremental, per-pattern extraction; the next occasion to repeat this (a different module,
   a different repeated pattern) is still open.
+- **QSE/PSX Dashboard right-rail now shows the current exchange's own currency, closing the
+  currency half of Pending item 88 (2026-09-09) — see Done item 276.** The rail's "Net worth"
+  card previously always picked `useNetWorthSummary()`'s `biggestExposureCurrency` — correct
+  for a currency-agnostic page, but wrong for a page that already HAS its own obvious currency
+  (QSE's QAR, PSX's PKR). New optional `DashboardRail`/`NetWorthRailCard` `preferredCurrency`
+  prop, passed as each exchange's own `workbook.settings.currency` from
+  `DashboardPage.tsx` — falls back to `biggestExposureCurrency` when that currency has no Net
+  Worth data yet, or for a future non-exchange caller that doesn't pass one. Verified live via
+  Playwright with a deliberately adversarial seed (a small QSE QAR position + a much bigger
+  USD Bank balance, so the two candidate currencies visibly disagree): the rail correctly
+  showed QAR. `npx tsc -b` / `npm run test` (624 tests, unchanged) / `npm run build` all clean.
+  **Still open** (the item's own other half, needs the user's confirmation first): whether the
+  rail itself should become a floating button + popup instead of a permanently-docked column.
 
 ## Pending
 
@@ -8001,12 +8014,20 @@ everything below is started. Working down it in priority order across following 
 88. ~~QSE/PSX Dashboard: the new right-rail's Net worth and Upcoming-plans cards (Done item 164)
     are reported as visually CUTTING OFF/clipped.~~ **The layout-bug half is done (2026-08-26)
     — see Done item 186.** Real cause: `.row`'s shared `min-width:160px`-per-child CSS forcing
-    a plain two-item row wider than the rail's own 320px column. **Still open**: the rail's
+    a plain two-item row wider than the rail's own 320px column. ~~**Still open**: the rail's
     money figures should show in the CURRENT STOCK EXCHANGE's own currency (QAR for QSE, PKR
     for PSX) rather than whatever `useNetWorthSummary()`'s biggest-exposure currency happens to
-    be — and the rail itself should become a floating button + popup instead of a
-    permanently-docked column (a bigger reversal of Done item 164's own "docked right-rail"
-    design, worth confirming intent before rebuilding it as a popup).
+    be~~ **Currency half done (2026-09-09) — see Done item 276.** New optional
+    `DashboardRail`/`NetWorthRailCard` `preferredCurrency` prop, passed as `currency` (each
+    exchange's own `workbook.settings.currency`) from both QSE's and PSX's `DashboardPage.tsx` —
+    falls back to `biggestExposureCurrency` when that currency has no Net Worth row yet, or when
+    a future non-exchange caller of the generic `DashboardRail` doesn't pass one at all. Verified
+    live via Playwright with a deliberately adversarial seed (a small QSE QAR position alongside
+    a much bigger USD Bank balance, so the two currency choices would visibly disagree): the
+    rail correctly showed QAR, not USD. **Still open**: the rail itself becoming a floating
+    button + popup instead of a permanently-docked column — a bigger reversal of Done item 164's
+    own "docked right-rail" design, still needs the user's own confirmation before rebuilding it
+    that way.
 89. ~~App-wide: every tooltip-bearing label should carry a small visible icon.~~ **Done
     (2026-08-26) — see Done item 169.** Fixed once in `Tooltip.tsx` itself.
 90. App-wide: "cards inside cards" — **re-audited (2026-08-26)**: checked every module's
