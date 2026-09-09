@@ -7447,6 +7447,23 @@ FinanceManager live link:
   sign-in gate, and the Favorite star's sign-in gate all confirmed working — zero console
   errors. `npx tsc -b` / `npm run test` (624 tests, unchanged) / `npm run build` all clean.
   Still open per Pending item 114: Subscriptions' list — the last one.
+- **Subscriptions' `SubscriptionList` converted from a sortable table to an `EntityCard` grid
+  (2026-09-09) — see Done item 274, CLOSING Pending item 114's rollout entirely.** The last
+  module in the group (Bank/Banks, Funds/Brokers, Personal Loans, EMI, Rentals already
+  converted). Dropped `useSortableRows` (this list was its only remaining caller in the file —
+  the other 3 tables in this file don't use it) in favor of favorite-first ordering, matching
+  every other converted list. Each card shows Sr#, name, a subtitle packing amount/cycle,
+  category (still the `.pill-info` badge), and next renewal date, an Active/Cancelled badge,
+  and Monthly equiv. as the stat (no `hue` — unlike a directional money figure, a subscription
+  spend has no profit/loss sign to color by, and Active/Cancelled already has its own status
+  badge). The old table's redundant "Open" button dropped, matching every other converted
+  list's precedent. Verified live via Playwright with a seeded 3-subscription scenario (a
+  favorited active one, a plain active one, a cancelled one): favorite-first ordering, the
+  Status filter correctly narrowing to just the cancelled one, card-click-to-detail, and the
+  Favorite star's sign-in gate all confirmed working. `npx tsc -b` / `npm run test` (624 tests,
+  unchanged) / `npm run build` all clean. **README Pending item 114 is now fully closed** —
+  every module named in it (Bank, Funds, Personal Loans, EMI, Rentals, Subscriptions) has its
+  main entity list on `EntityCard`s.
 
 ## Pending
 
@@ -8176,13 +8193,14 @@ or a design decision before more code, not guessed at further:**
      this item cares about — filters, grids, per-account/per-entity detail pages, FAB+popup
      entity creation, tooltip-ified explanations — across most modules through means OTHER than
      the specific `EntityCard` component. **Verified via a direct grep, not assumed**: `EntityCard`
-     was used only by Banking as of 2026-09-08; as of 2026-09-09 it's also used by Funds'
+     was used only by Banking as of 2026-09-08; by 2026-09-09 it's also used by Funds'
      `BrokersList` (Done item 270), Personal Loans' `LoanList` (Done item 271), EMI's
-     `LoanList` (Done item 272), and Rentals' `PropertiesList` (Done item 273) — so the
-     literal "roll EntityCard out to N modules" ask is progressing incrementally, one module
-     at a time, per this project's own established discipline. Still open: Subscriptions'
-     list — the last one. A future session shouldn't read "still open" here as "nothing's
-     been done for these modules" — check a module against
+     `LoanList` (Done item 272), Rentals' `PropertiesList` (Done item 273), and
+     Subscriptions' `SubscriptionList` (Done item 274) — **the literal "roll EntityCard out
+     to every module" ask is now fully done**, closing that sub-thread of this item. The
+     broader app-wide redesign item stays open for its other remaining scope below. A future
+     session shouldn't read "still open" here as "nothing's been done for these modules" —
+     check a module against
      `UI_DESIGN_GUIDELINES.md`'s own rules directly (not just against whether it uses
      `EntityCard`) before assuming it needs work. Also still open: audit (don't blindly rebuild)
      each module's existing inline cross-entity-linking coverage against the "each module should
