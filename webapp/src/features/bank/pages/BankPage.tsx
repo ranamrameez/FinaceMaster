@@ -18,6 +18,7 @@ import { IconButton } from '../../../components/ui/IconButton';
 import { AttributeList } from '../../../components/ui/AttributeList';
 import { FabButton, FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
+import { RecordDetailModal } from '../../../components/RecordDetailModal';
 import { CategorySelect } from '../../../components/CategorySelect';
 import { FinanceEditModal } from '../../../components/FinanceEditModal';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
@@ -1342,6 +1343,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
   const ensureSignedIn = useEnsureSignedIn();
   const sideLabel = useLinkSideLabel();
   const [editingTx, setEditingTx] = useState<BankTransaction | null>(null);
+  const [detailTx, setDetailTx] = useState<BankTransaction | null>(null);
   const [typeFilter, setTypeFilter] = useState<'all' | 'in' | 'out'>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   // User-requested (2026-09-06): "although we are removing sorting, we
@@ -1458,8 +1460,8 @@ function TransactionsList({ account }: { account: BankAccount }) {
             const link = linkByRecordId.get(tx.id);
             const otherSide = link ? (link.from.module === 'bank' && link.fromRecordId === tx.id ? link.to : link.from) : undefined;
             return (
-              <tr key={tx.id}>
-                <td className="text-muted">
+              <tr key={tx.id} onClick={() => setDetailTx(tx)} style={{ cursor: 'pointer' }}>
+                <td className="text-muted" onClick={(e) => e.stopPropagation()}>
                   {tx.serialNumber ?? '—'}{' '}
                   <ReorderButtons
                     rows={sorted}
@@ -1477,7 +1479,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
                     <span className="pill-warn" style={{ marginLeft: 6 }} title="Not yet cleared — excluded from Current balance above until marked cleared.">Pending</span>
                   )}
                   {link && (
-                    <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
+                    <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side" onClick={(e) => e.stopPropagation()}>
                       🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
                     </Link>
                   )}
@@ -1488,7 +1490,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
                 <td className="text-muted cell-clip" title={tx.source === 'statement-import' ? `Import${tx.statementRef ? ` (${tx.statementRef})` : ''}` : 'Manual'}>
                   {tx.source === 'statement-import' ? `Import${tx.statementRef ? ` (${tx.statementRef})` : ''}` : 'Manual'}
                 </td>
-                <td>
+                <td onClick={(e) => e.stopPropagation()}>
                   {tx.isPending && (
                     <IconButton
                       label="Mark cleared"
@@ -1523,6 +1525,29 @@ function TransactionsList({ account }: { account: BankAccount }) {
       </table>
       </div>
       {editingTx && <EditTransactionModal tx={editingTx} onClose={() => setEditingTx(null)} />}
+      {detailTx && (
+        <RecordDetailModal
+          title={detailTx.amount >= 0 ? 'Money in' : 'Money out'}
+          onClose={() => setDetailTx(null)}
+          fields={[
+            { label: 'Date', value: detailTx.date },
+            { label: 'Time', value: detailTx.time ?? '— (defaults to noon)' },
+            { label: 'Timezone', value: detailTx.timezone ?? '—' },
+            { label: 'Description', value: detailTx.description || '—' },
+            { label: 'Category', value: categoryName(detailTx.categoryID, categories) },
+            { label: 'Amount', value: fmtMoney(detailTx.amount, account.currencyCode) },
+            { label: 'Sequence #', value: detailTx.serialNumber ?? '—' },
+            { label: 'Source', value: detailTx.source === 'statement-import' ? `Import${detailTx.statementRef ? ` (${detailTx.statementRef})` : ''}` : 'Manual' },
+            { label: 'Status', value: detailTx.isPending ? 'Pending (not yet cleared)' : 'Cleared' },
+            ...(linkByRecordId.get(detailTx.id)
+              ? (() => {
+                  const l = linkByRecordId.get(detailTx.id)!;
+                  return [{ label: 'Linked', value: `${sideLabel(l.from)} → ${sideLabel(l.to)}` }];
+                })()
+              : []),
+          ]}
+        />
+      )}
     </div>
   );
 }

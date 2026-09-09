@@ -17,6 +17,7 @@ import { PendingToggle } from '../../../components/ui/PendingToggle';
 import { IconButton } from '../../../components/ui/IconButton';
 import { FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
+import { RecordDetailModal } from '../../../components/RecordDetailModal';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { defaultTimeForDate, defaultTimezoneForCurrency, nowTime } from '../../../lib/datetime';
 import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
@@ -912,6 +913,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
   const [txPending, setTxPending] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editRow, setEditRow] = useState<Transaction | null>(null);
+  const [detailTx, setDetailTx] = useState<Transaction | null>(null);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'BUY' | 'SELL'>('all');
@@ -1399,7 +1401,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                   </td>
                 </tr>
               ) : (
-                <tr key={i}>
+                <tr key={i} onClick={() => setDetailTx(t)} style={{ cursor: 'pointer' }}>
                   <td>
                     {t.date}
                     {t.isPending && (
@@ -1412,7 +1414,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                   <td>{fmt(t.shares, 2)}</td>
                   <td>{fmtPrice(t.price)}</td>
                   <td>{fmtMoney(t.shares * t.price, fund.currencyCode)}</td>
-                  <td>
+                  <td onClick={(e) => e.stopPropagation()}>
                     {t.isPending && (
                       <IconButton
                         label="Mark cleared"
@@ -1514,6 +1516,22 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
           </>
         )}
       </CollapsibleCard>
+      {detailTx && (
+        <RecordDetailModal
+          title={detailTx.action === 'BUY' ? 'Invested' : 'Withdrew'}
+          onClose={() => setDetailTx(null)}
+          fields={[
+            { label: 'Date', value: detailTx.date },
+            { label: 'Time', value: detailTx.time ?? '— (defaults to noon)' },
+            { label: 'Timezone', value: detailTx.timezone ?? '—' },
+            { label: 'Type', value: detailTx.action === 'BUY' ? 'Invested' : 'Withdrew' },
+            { label: 'Units', value: fmt(detailTx.shares, 2) },
+            { label: 'NAV', value: fmtPrice(detailTx.price) },
+            { label: 'Amount', value: fmtMoney(detailTx.shares * detailTx.price, fund.currencyCode) },
+            { label: 'Status', value: detailTx.isPending ? 'Pending (not yet settled)' : 'Cleared' },
+          ]}
+        />
+      )}
     </div>
   );
 }

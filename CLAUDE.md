@@ -5577,6 +5577,17 @@ app, not developer notes) continuously as features ship.
   `stockData/QSE/prices`/`priceHistory` to resolve a stock's live "current price" — flagged to
   the user as a separate, real-blast-radius follow-up (every QSE holding's displayed price/
   break-even/P&L), not done blind in the same pass.
+- **`RecordDetailModal` rolled out beyond QSE/PSX's Trade List (2026-09-09) — see
+  `webapp/README.md` Done item 286, closes most of Pending item 132.** Cash's statement
+  table, Bank's account-detail transaction list, Rentals' entries list, Personal Loans'
+  repayments table, and Funds' per-fund transaction list all gained the same row-click detail
+  popup QSE/PSX's Trade List already had (Done item 284) — each builds its own field list, no
+  shared-shape guessing. EMI's Schedule table and Subscriptions' `SubscriptionList` were
+  deliberately skipped, each for a stated reason (EMI's row already shows every field with
+  nothing truncated; Subscriptions has no per-transaction ledger and already opens a richer
+  detail page on click). Verified live via a real dev-server + Playwright session across all
+  five modules with seeded data — zero console errors. `npx tsc -b` / `npm run test` (630
+  tests, unchanged) / `npm run build` all clean.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

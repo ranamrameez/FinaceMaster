@@ -7794,6 +7794,35 @@ FinanceManager live link:
   `npm run build` all clean. **Still open**: item 130(b)-ii, the category-level Income/Expense/
   Ignore classification feature itself (a real design fork on several of this app's ambiguous
   real production categories — needs the user's own classification pass, not a guess).
+- **`RecordDetailModal` rolled out beyond QSE/PSX's Trade List, closing most of Pending item
+  132 (2026-09-09) — see Done item 286.** A pure, non-design-question incremental rollout of
+  the generic detail-popup component built for Done item 284 — each module builds its own
+  `{label, value}[]` field list, no shared-shape guessing. Wired into the five modules whose
+  main list is a real transaction-style table with fields genuinely truncated by column width
+  (a Note/Description cell, or Time/Timezone/link info not shown in the row at all): Cash's
+  per-currency statement table, Bank's account-detail transaction list, Rentals' per-property
+  entries list, Personal Loans' repayments table, and Funds' per-fund transaction list — each
+  gets row-click-to-open with `stopPropagation` on the row's own action buttons/links, same
+  pattern as QSE/PSX. **EMI's Schedule table was deliberately NOT touched** — unlike the five
+  above, every field (due date, installment, net paid/balance, principal/markup breakdown,
+  status) is already fully visible in the row itself, nothing is truncated, and the row's own
+  inline `overrideMonth`-driven edit UI already replaces the whole row rather than hiding
+  fields behind columns — a detail popup would add clutter, not recover lost information, so
+  this table doesn't fit the pattern the original request was about. **Subscriptions'
+  `SubscriptionList` was also deliberately skipped** — it's an `EntityCard` grid of whole
+  subscription records (not a per-transaction ledger; a `Subscription` has no dated log to
+  show truncated fields from — same reasoning already documented for why Subscriptions was
+  skipped from the time/timezone and pending-state rollouts), and its cards already open a
+  full `SubscriptionDetail` page on click, which is a strictly richer view than a
+  `RecordDetailModal` popup would be. Verified live via Playwright across all five modules
+  with seeded data (a real dev-server session, not just a code read): each module's row click
+  correctly opened a popup showing the row's full data including fields cut off in the table
+  (a long Note/Description, Time/Timezone, linked-transfer info), and closing it worked — zero
+  console errors on any of the five. `npx tsc -b` / `npm run test` (630 tests, unchanged — new
+  UI wiring onto an already-tested component, no calc logic touched) / `npm run build` all
+  clean. **What's left of Pending item 132**: nothing further is planned — the two modules
+  deliberately not converted (EMI, Subscriptions) have a stated reason each, not a "not yet
+  done" gap.
 
 ## Pending
 
@@ -8724,14 +8753,13 @@ or a design decision before more code, not guessed at further:**
      unclassified by default" design confirmed with them first, not a blind guess baked into
      seed data used for real money.
 ~~131. First-time currency-selection prompt~~ — **done (2026-09-09), see Done item 283.**
-132. **Roll the new `RecordDetailModal` (Done item 284) out beyond QSE/PSX's Trade List
-     (2026-09-09).** The component itself is a generic `{label, value}[]`-driven popup, ready
-     to reuse — what's left per module is deciding which fields are worth surfacing in a
-     detail popup for THAT module's own record type (Cash/Bank/Rentals' shared `Finance`-based
-     ledgers, Personal Loans' repayments, EMI's schedule rows, Funds' transactions, Subscriptions)
-     and wiring row-click + `stopPropagation` on that table's own action buttons, same pattern
-     already established for QSE/PSX. Not a design question, just an incremental rollout — see
-     this project's own standing discipline of shipping one working slice first, then extending.
+~~132. Roll the new `RecordDetailModal` (Done item 284) out beyond QSE/PSX's Trade List~~ —
+     **done (2026-09-09), see Done item 286.** Cash/Bank/Rentals/Personal Loans/Funds' own
+     main transaction-style tables all got row-click detail popups. EMI's Schedule table and
+     Subscriptions' `SubscriptionList` were deliberately left out, each for a stated reason
+     (EMI's row already shows every field with nothing truncated; Subscriptions is an
+     `EntityCard` grid with no per-transaction ledger and already opens a richer detail page
+     on click) — not a remaining gap.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

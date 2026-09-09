@@ -14,6 +14,7 @@ import { PendingToggle } from '../../../components/ui/PendingToggle';
 import { IconButton } from '../../../components/ui/IconButton';
 import { FabButton, FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
+import { RecordDetailModal } from '../../../components/RecordDetailModal';
 import { CategorySelect } from '../../../components/CategorySelect';
 import { FinanceEditModal } from '../../../components/FinanceEditModal';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
@@ -267,6 +268,7 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
   const ensureSignedIn = useEnsureSignedIn();
   const sideLabel = useLinkSideLabel();
   const [editingEntry, setEditingEntry] = useState<CashEntry | null>(null);
+  const [detailEntry, setDetailEntry] = useState<CashEntry | null>(null);
   const [typeFilter, setTypeFilter] = useState<'all' | 'in' | 'out'>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   // User-requested (2026-09-06): "although we are removing sorting, we
@@ -364,8 +366,8 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
               const link = linkByRecordId.get(entry.id);
               const otherSide = link ? (link.from.module === 'cash' && link.fromRecordId === entry.id ? link.to : link.from) : undefined;
               return (
-                <tr key={entry.id}>
-                  <td>
+                <tr key={entry.id} onClick={() => setDetailEntry(entry)} style={{ cursor: 'pointer' }}>
+                  <td onClick={(e) => e.stopPropagation()}>
                     {entry.date}{' '}
                     <ReorderButtons
                       rows={sorted}
@@ -383,7 +385,7 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
                       <span className="pill-warn" style={{ marginLeft: 6 }} title="Not yet cleared — excluded from the Balance stat above until marked cleared.">Pending</span>
                     )}
                     {link && (
-                      <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
+                      <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side" onClick={(e) => e.stopPropagation()}>
                         🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
                       </Link>
                     )}
@@ -394,7 +396,7 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
                   <td className="text-muted cell-clip" title={entry.source === 'statement-import' ? `Import${entry.statementRef ? ` (${entry.statementRef})` : ''}` : 'Manual'}>
                     {entry.source === 'statement-import' ? `Import${entry.statementRef ? ` (${entry.statementRef})` : ''}` : 'Manual'}
                   </td>
-                  <td>
+                  <td onClick={(e) => e.stopPropagation()}>
                     {entry.isPending && (
                       <IconButton
                         label="Mark cleared"
@@ -423,6 +425,29 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
         </table>
       </div>
       {editingEntry && <EditEntryModal entry={editingEntry} onClose={() => setEditingEntry(null)} />}
+      {detailEntry && (
+        <RecordDetailModal
+          title={detailEntry.isDeposit ? 'Cash in' : 'Cash out'}
+          onClose={() => setDetailEntry(null)}
+          fields={[
+            { label: 'Date', value: detailEntry.date },
+            { label: 'Time', value: detailEntry.time ?? '— (defaults to noon)' },
+            { label: 'Timezone', value: detailEntry.timezone ?? '—' },
+            { label: 'Type', value: detailEntry.isDeposit ? 'Cash in' : 'Cash out' },
+            { label: 'Amount', value: fmtMoney(detailEntry.amount, detailEntry.currencyCode) },
+            { label: 'Category', value: categoryName(detailEntry.categoryID, categories) },
+            { label: 'Note', value: detailEntry.note || '—' },
+            { label: 'Source', value: detailEntry.source === 'statement-import' ? `Import${detailEntry.statementRef ? ` (${detailEntry.statementRef})` : ''}` : 'Manual' },
+            { label: 'Status', value: detailEntry.isPending ? 'Pending (not yet cleared)' : 'Cleared' },
+            ...(linkByRecordId.get(detailEntry.id)
+              ? (() => {
+                  const l = linkByRecordId.get(detailEntry.id)!;
+                  return [{ label: 'Linked', value: `${sideLabel(l.from)} → ${sideLabel(l.to)}` }];
+                })()
+              : []),
+          ]}
+        />
+      )}
     </Card>
   );
 }
