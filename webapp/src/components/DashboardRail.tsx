@@ -26,19 +26,27 @@ import { useUpcomingItems } from '../hooks/useUpcomingItems';
  * via the shared `.rail-split` CSS grid — starts on QSE's/PSX's Dashboard
  * (the highest-traffic pages) as a working vertical slice, same "ship one
  * page first, verified" pattern this project always follows before a
- * wider rollout. */
-export function DashboardRail() {
+ * wider rollout.
+ *
+ * `preferredCurrency` (README Pending item 88's own "still open" note,
+ * 2026-09-09): a Dashboard already has its own obvious currency — QSE's
+ * QAR, PSX's PKR — that's more relevant to a viewer on THAT page than
+ * whatever currency happens to have the biggest cross-module exposure.
+ * Optional and falls back to `biggestExposureCurrency` when omitted (a
+ * page with no natural single currency of its own) or when the preferred
+ * currency has no Net Worth data at all yet. */
+export function DashboardRail({ preferredCurrency }: { preferredCurrency?: string } = {}) {
   return (
     <div>
-      <NetWorthRailCard />
+      <NetWorthRailCard preferredCurrency={preferredCurrency} />
       <UpcomingPlansRailCard />
     </div>
   );
 }
 
-function NetWorthRailCard() {
+function NetWorthRailCard({ preferredCurrency }: { preferredCurrency?: string }) {
   const { rows, biggestExposureCurrency } = useNetWorthSummary();
-  const row = rows.find((r) => r.currency === biggestExposureCurrency);
+  const row = rows.find((r) => r.currency === preferredCurrency) ?? rows.find((r) => r.currency === biggestExposureCurrency);
 
   return (
     <CollapsibleCard title={<h3 style={{ margin: 0 }}>Net worth</h3>} style={{ marginBottom: 16 }}>

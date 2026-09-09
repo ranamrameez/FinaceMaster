@@ -345,7 +345,7 @@ export function DashboardPage() {
             </Link>
           </div>
 
-          <DashboardRail />
+          <DashboardRail preferredCurrency={currency} />
 
         </div>
 

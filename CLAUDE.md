@@ -6030,6 +6030,14 @@ touched those.
   compound `.text-muted.entity-card-sr` selector, confirmed via `getComputedStyle` (11px, not
   11.5px) before and after. Deliberately small and incremental, not a full sweep, per the
   Pending item's own explicit guidance against one blind pass.
+- **QSE/PSX Dashboard right-rail now shows the current exchange's own currency (2026-09-09) —
+  closes the currency half of README Pending item 88, see README Done item 276.** New optional
+  `preferredCurrency` prop on `DashboardRail`/`NetWorthRailCard`, passed as each exchange's own
+  `workbook.settings.currency` — falls back to `biggestExposureCurrency` when that currency has
+  no data yet. Verified live via Playwright with a deliberately adversarial seed (small QSE QAR
+  position, much bigger USD Bank balance): the rail correctly showed QAR, not USD. Still open:
+  whether the rail should become a floating popup instead of a docked column (needs the user's
+  own confirmation, a bigger reversal of Done item 164's design).
 
 ## Live URLs
 
