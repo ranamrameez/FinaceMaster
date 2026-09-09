@@ -7499,6 +7499,28 @@ FinanceManager live link:
   showed QAR. `npx tsc -b` / `npm run test` (624 tests, unchanged) / `npm run build` all clean.
   **Still open** (the item's own other half, needs the user's confirmation first): whether the
   rail itself should become a floating button + popup instead of a permanently-docked column.
+- **Funds' own `FundList` converted from a sortable table to an `EntityCard` grid, correcting a
+  real gap in the earlier "Pending item 114 is fully closed" claim (2026-09-09) — see Done item
+  277.** Done item 270 (Funds/Broker parent entity) converted Funds' `BrokersList` — a
+  SECONDARY list — to `EntityCard`, and an earlier pass in this same session mistakenly counted
+  that as satisfying item 114's ask for Funds, without checking whether Funds' own PRIMARY
+  entity list (`FundList`, analogous to Bank's `AccountsList`/Personal Loans' `LoanList`/etc.)
+  had actually been touched. It hadn't — still a full `<table>`+`useSortableRows` the whole
+  time. Found while investigating a small, unrelated Sr#-prefix consistency question during
+  the CSS-cleanup pass above, not by re-reading item 114's own text carefully enough the first
+  time — a reminder that "a related list in the same module got converted" isn't the same claim
+  as "this specific list got converted." Fixed the same way as every other list in this rollout:
+  dropped `useSortableRows` (its only remaining caller in the file), favorite-first ordering,
+  each card shows Sr#+ticker-logo+name, a "Code · Category · XIRR" subtitle, a Closed badge,
+  and Value/Net P/L as the stat (hued by P/L sign) — the Units/Category columns the old table
+  also showed are dropped from the card's own summary (still visible on the fund's own detail
+  page), same "group related figures, don't just drop them" regrouping every other converted
+  list already did. Verified live via Playwright with a seeded 3-fund scenario (a favorited
+  fund with real P/L, a plain fund, a closed fund): favorite-first ordering, ticker logos'
+  colored-initials fallback rendering correctly, the closed toggle/badge, card-click-to-detail,
+  and the Favorite star's sign-in gate all confirmed working. `npx tsc -b` / `npm run test`
+  (624 tests, unchanged) / `npm run build` all clean. **Pending item 114 is genuinely fully
+  closed now** — every module's own PRIMARY entity list, Funds included, is on `EntityCard`s.
 
 ## Pending
 
@@ -8236,14 +8258,16 @@ or a design decision before more code, not guessed at further:**
      this item cares about — filters, grids, per-account/per-entity detail pages, FAB+popup
      entity creation, tooltip-ified explanations — across most modules through means OTHER than
      the specific `EntityCard` component. **Verified via a direct grep, not assumed**: `EntityCard`
-     was used only by Banking as of 2026-09-08; by 2026-09-09 it's also used by Funds'
-     `BrokersList` (Done item 270), Personal Loans' `LoanList` (Done item 271), EMI's
-     `LoanList` (Done item 272), Rentals' `PropertiesList` (Done item 273), and
-     Subscriptions' `SubscriptionList` (Done item 274) — **the literal "roll EntityCard out
-     to every module" ask is now fully done**, closing that sub-thread of this item. The
-     broader app-wide redesign item stays open for its other remaining scope below. A future
-     session shouldn't read "still open" here as "nothing's been done for these modules" —
-     check a module against
+     was used only by Banking as of 2026-09-08; by 2026-09-09 it's also used by Personal Loans'
+     `LoanList` (Done item 271), EMI's `LoanList` (Done item 272), Rentals' `PropertiesList`
+     (Done item 273), Subscriptions' `SubscriptionList` (Done item 274), and — after a
+     self-caught correction, see Done item 277 — Funds' own PRIMARY `FundList` (an earlier pass
+     mistakenly counted Funds' SECONDARY `BrokersList`, Done item 270, as satisfying this
+     module's requirement without checking the primary list too) — **the literal "roll
+     EntityCard out to every module" ask is now genuinely fully done**, closing that sub-thread
+     of this item. The broader app-wide redesign item stays open for its other remaining scope
+     below. A future session shouldn't read "still open" here as "nothing's been done for these
+     modules" — check a module against
      `UI_DESIGN_GUIDELINES.md`'s own rules directly (not just against whether it uses
      `EntityCard`) before assuming it needs work. Also still open: audit (don't blindly rebuild)
      each module's existing inline cross-entity-linking coverage against the "each module should
@@ -8296,22 +8320,24 @@ or a design decision before more code, not guessed at further:**
      234.** A from/to month-range filter now narrows Balance-over-time and Income-vs-spend-by-
      month; Category breakdown's own separate month-nav is untouched.
 116. **App-wide CSS cleanup — remove hardcoded/inline styles, use proper generic classes
-     (2026-09-03).** User's own words: "this app's css is very bad. we need to remove all hard
-     coded css and use proper & generic classes for each element on the page!" A real, valid,
-     standing direction — this app has extensive inline `style={{}}` scattered across nearly
-     every page, a pattern that's produced at least 3 confirmed real bugs this project has
-     already hit (the `.row > *` min-width cascade trap fixed in Done item 228, the `flex:1`
-     row-sizing bug from Done item 54, and the `min-width:0` CSS-grid-shrink trap from Done item
-     203) — each one only found by tracing a specific reported symptom back through a maze of
-     ad hoc inline styles competing with global rules. **Not something to attempt as one blind
-     sweep** — a full inline-style-to-classes refactor touches literally every page in the app
-     and needs its own scoped, incremental pass (module by module, verified live each time,
-     matching this project's own established pattern for every other large refactor) rather
-     than one giant unreviewable diff. A reasonable starting point for a future session: audit
-     one module's page for its most-repeated inline style patterns (stat-card grids, `.row`
-     gap/wrap combos, button spacing) and extract them into real theme.css classes first, then
-     repeat per module — the exact same incremental discipline already used for the Main/Often/
-     Rare redesign (see the "App-wide UI/UX redesign" section above).
+     (2026-09-03), IN PROGRESS as of 2026-09-09.** User's own words: "this app's css is very
+     bad. we need to remove all hard coded css and use proper & generic classes for each
+     element on the page!" A real, valid, standing direction — this app has extensive inline
+     `style={{}}` scattered across nearly every page, a pattern that's produced at least 3
+     confirmed real bugs this project has already hit (the `.row > *` min-width cascade trap
+     fixed in Done item 228, the `flex:1` row-sizing bug from Done item 54, and the
+     `min-width:0` CSS-grid-shrink trap from Done item 203) — each one only found by tracing a
+     specific reported symptom back through a maze of ad hoc inline styles competing with
+     global rules. **Not something to attempt as one blind sweep** — a full inline-style-to-
+     classes refactor touches literally every page in the app and needs its own scoped,
+     incremental pass (module by module, verified live each time, matching this project's own
+     established pattern for every other large refactor) rather than one giant unreviewable
+     diff. **First concrete instance done (2026-09-09) — see Done item 275**: a repeated
+     "muted Sr# prefix" inline style, copy-pasted across 5 files during the same session's
+     `EntityCard` rollout, extracted into a new `.entity-card-sr` class. The exact same
+     incremental discipline (audit one repeated pattern, extract, verify, repeat) still applies
+     for every other module/pattern — this is one instance of an ongoing, repeatable practice,
+     not a closed item.
 117. ~~App-wide "everything should be a grid item except tables" principle (2026-09-06)~~ —
      **done in full (2026-09-08), see Done item 237.** Every module's landing/Settings page has
      been audited for the "short non-table cards stacked full-width" pattern; Cash's Settings
