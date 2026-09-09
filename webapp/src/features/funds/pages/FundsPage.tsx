@@ -149,7 +149,7 @@ function BrokersList({ onSelect }: { onSelect: (broker: Broker) => void }) {
     <CollapsibleCard title="Brokers" defaultOpen={false}>
       {archivedCount > 0 && (
         <button className="btn secondary small" style={{ marginBottom: 12 }} onClick={() => setShowArchived((v) => !v)}>
-          {showArchived ? 'Hide' : 'Show'} archived ({archivedCount})
+          {showArchived ? 'Hide' : 'Show'} closed ({archivedCount})
         </button>
       )}
       <div className="entity-card-grid">
@@ -162,7 +162,7 @@ function BrokersList({ onSelect }: { onSelect: (broker: Broker) => void }) {
               key={b.id}
               title={b.name}
               subtitle={`${fundCount} fund${fundCount === 1 ? '' : 's'}`}
-              badge={b.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Archived</span> : undefined}
+              badge={b.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Closed</span> : undefined}
               statLabel={currencies.length > 1 ? 'Total (by currency)' : 'Total'}
               stat={
                 currencies.length ? (

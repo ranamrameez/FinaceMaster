@@ -492,7 +492,7 @@ function BanksList() {
     <CollapsibleCard title="Banks" defaultOpen={false}>
       {archivedCount > 0 && (
         <button className="btn secondary small" style={{ marginBottom: 12 }} onClick={() => setShowArchived((v) => !v)}>
-          {showArchived ? 'Hide' : 'Show'} archived ({archivedCount})
+          {showArchived ? 'Hide' : 'Show'} closed ({archivedCount})
         </button>
       )}
       <div className="entity-card-grid">
@@ -505,7 +505,7 @@ function BanksList() {
               key={b.id}
               title={b.name}
               subtitle={`${accountCount} account${accountCount === 1 ? '' : 's'}`}
-              badge={b.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Archived</span> : undefined}
+              badge={b.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Closed</span> : undefined}
               statLabel={currencies.length > 1 ? 'Total (by currency)' : 'Total'}
               stat={
                 currencies.length ? (
@@ -710,11 +710,11 @@ function AccountsList() {
           style={{ marginBottom: 12 }}
           onClick={() => setShowArchived((v) => !v)}
         >
-          {showArchived ? 'Hide' : 'Show'} archived ({archivedCount})
+          {showArchived ? 'Hide' : 'Show'} closed ({archivedCount})
         </button>
       )}
       {!visibleAccounts.length && (
-        <p className="text-muted">Every account is archived — click "Show archived" above to see them.</p>
+        <p className="text-muted">Every account is closed — click "Show closed" above to see them.</p>
       )}
       {currencyGroups.map(([currency, group]) => {
         // User-requested (2026-09-06): "give sums in a tag for each
@@ -743,7 +743,7 @@ function AccountsList() {
                   a.isLiability || a.isActive === false ? (
                     <span style={{ display: 'flex', gap: 4 }}>
                       {a.isLiability && <span className="pill-negative" style={{ fontSize: 10 }}>Credit card</span>}
-                      {a.isActive === false && <span className="pill-warn" style={{ fontSize: 10 }}>Archived</span>}
+                      {a.isActive === false && <span className="pill-warn" style={{ fontSize: 10 }}>Closed</span>}
                     </span>
                   ) : undefined
                 }
@@ -925,9 +925,9 @@ export function AccountDetailPage() {
   // balance keeps counting toward every total (see `BankAccount.isActive`'s
   // own doc comment) — so unlike Delete, this needs no destructive warning.
   const toggleArchived = async () => {
-    if (!(await ensureSignedIn(account.isActive === false ? 'Sign in to restore this account.' : 'Sign in to archive this account.'))) return;
+    if (!(await ensureSignedIn(account.isActive === false ? 'Sign in to reopen this account.' : 'Sign in to close this account.'))) return;
     updateAccount(account.id, { isActive: account.isActive === false ? true : false });
-    toast(account.isActive === false ? 'Account restored.' : 'Account archived.');
+    toast(account.isActive === false ? 'Account reopened.' : 'Account closed.');
   };
 
   return (
@@ -936,17 +936,17 @@ export function AccountDetailPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
         <h1 className="pagetitle" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
           {account.name}
-          {account.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Archived</span>}
+          {account.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Closed</span>}
         </h1>
         {/* User-requested (2026-08-27): "Delete and Edit are rare operations
            they should [be] on details page only... with delete as a red
            danger button." Edit already lives on the Account Details card
-           below (its own Edit icon); Delete/Archive are the account's own
+           below (its own Edit icon); Delete/Close are the account's own
            destructive/reversible actions, both moved off the homepage
            entity card entirely and grouped together here (rule 7). */}
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn secondary small" onClick={toggleArchived}>
-            {account.isActive === false ? <><RestoreIcon size={13} />Restore account</> : <><ArchiveIcon size={13} />Archive account</>}
+            {account.isActive === false ? <><RestoreIcon size={13} />Reopen account</> : <><ArchiveIcon size={13} />Close account</>}
           </button>
           <button className="btn danger small" onClick={deleteThisAccount}>
             <TrashIcon size={13} />Delete account

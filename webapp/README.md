@@ -7521,6 +7521,30 @@ FinanceManager live link:
   and the Favorite star's sign-in gate all confirmed working. `npx tsc -b` / `npm run test`
   (624 tests, unchanged) / `npm run build` all clean. **Pending item 114 is genuinely fully
   closed now** — every module's own PRIMARY entity list, Funds included, is on `EntityCard`s.
+- **"Archived"/"Archive"/"Restore" standardized to "Closed"/"Close"/"Reopen" everywhere the
+  `isActive` toggle appears (2026-09-09) — see Done item 278.** User-flagged inconsistency:
+  Funds already used "Close"/"Reopen"/"Closed" (Done item 223) while Bank, Personal Loans, EMI,
+  and Rentals all said "Archive"/"Restore"/"Archived" for the exact same `isActive` toggle.
+  Asked which wording should win — "Closed" is the natural real-world verb for a financial
+  instrument going inactive ("close a bank account," "close a loan," "close a position"),
+  where "Archive" is a generic filing term nobody actually uses for these. Standardized on
+  Funds' existing wording across all badges ("Archived"→"Closed"), toggle-visibility buttons
+  ("Show archived"→"Show closed"), action labels/toasts ("Archive"/"Restore"→"Close"/"Reopen",
+  "Loan archived."→"Loan closed.", etc.), and empty-state copy, in Bank's `BanksList`/
+  `AccountsList`/`AccountDetailPage`, Personal Loans' `LoanDetail`/`LoanList`, EMI's
+  `LoanDetail`/`LoanList`, Rentals' `PropertiesList`, and Funds' own `BrokersList` (which had
+  been missed when Funds' primary `FundList` got the "Closed" wording — a leftover "Show
+  archived"/"Archived" pair on the secondary list). Also fixed two related hint strings
+  (EMI's/Subscriptions' "add or unarchive one on the Banking page" → "add one or reopen a
+  closed one"). **Deliberately scoped to user-facing text only** — the underlying `isActive`
+  field name, `toggleArchived` function names, `showArchived`/`archivedCount` variable names,
+  and `ArchiveIcon`/`RestoreIcon` component names are all internal and untouched, keeping the
+  diff small; Subscriptions' own separate Active/Cancelled wording is untouched too, since
+  that's a genuinely different field (`active: boolean`, required, with `cancelledDate`), not
+  this same optional-`isActive` pattern (already documented in Done item 223's own rationale).
+  Verified live via Playwright across Bank/Personal Loans/EMI/Rentals with seeded closed
+  entities: every page shows "Show closed (1)" and zero remaining "archived" text. `npx tsc -b`
+  / `npm run test` (624 tests, unchanged) / `npm run build` all clean.
 
 ## Pending
 

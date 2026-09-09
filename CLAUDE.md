@@ -6053,6 +6053,18 @@ touched those.
   3-fund scenario — favorite-first order, ticker-logo fallback, closed toggle/badge,
   card-click-to-detail, and the Favorite sign-in gate all confirmed. Pending item 114 is now
   genuinely fully closed.
+- **"Archived" vs "Closed" wording standardized to "Closed" everywhere (2026-09-09) — see
+  README Done item 278.** User flagged the inconsistency directly: Funds already said "Close/
+  Reopen/Closed" while Bank/Personal Loans/EMI/Rentals all said "Archive/Restore/Archived" for
+  the identical `isActive` toggle. "Closed" won — it's the natural finance verb ("close an
+  account/loan/position"), "Archive" is a generic filing term. Renamed every user-facing badge/
+  button/toast/empty-state string across those 4 modules plus Funds' `BrokersList` (which had
+  been missed and still said "Archived") to match. Internal names (`isActive`, `toggleArchived`,
+  `showArchived`, `ArchiveIcon`/`RestoreIcon`) deliberately left alone — copy-only change.
+  Subscriptions' separate Active/Cancelled wording is untouched (a different required field,
+  not this same optional-`isActive` pattern). Verified live via Playwright across all 4 modules
+  with seeded closed entities. `npx tsc -b` / `npm run test` (624 tests, unchanged) / `npm run
+  build` all clean.
 
 ## Live URLs
 

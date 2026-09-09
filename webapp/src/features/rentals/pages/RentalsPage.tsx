@@ -193,9 +193,9 @@ function PropertiesList() {
   // User-requested (2026-09-03): "add isActive flag to all modules where
   // applicable" — same archive/restore pattern as `BankAccount.isActive`.
   const toggleArchived = async (p: Property) => {
-    if (!(await ensureSignedIn(p.isActive === false ? 'Sign in to restore this property.' : 'Sign in to archive this property.'))) return;
+    if (!(await ensureSignedIn(p.isActive === false ? 'Sign in to reopen this property.' : 'Sign in to close this property.'))) return;
     updateProperty(p.id, { isActive: p.isActive === false ? true : false });
-    toast(p.isActive === false ? 'Property restored.' : 'Property archived.');
+    toast(p.isActive === false ? 'Property reopened.' : 'Property closed.');
   };
 
   const toggleFavorite = async (p: Property) => {
@@ -212,12 +212,12 @@ function PropertiesList() {
     <div>
       {archivedCount > 0 && (
         <button className="btn secondary small" style={{ marginBottom: 8 }} onClick={() => setShowArchived((v) => !v)}>
-          {showArchived ? 'Hide' : 'Show'} archived ({archivedCount})
+          {showArchived ? 'Hide' : 'Show'} closed ({archivedCount})
         </button>
       )}
       {!sorted.length ? (
         <p className="text-muted">
-          {allProperties.length ? 'Every property is archived — click "Show archived" above to see them.' : 'No properties yet — add one above.'}
+          {allProperties.length ? 'Every property is closed — click "Show closed" above to see them.' : 'No properties yet — add one above.'}
         </p>
       ) : (
         <div className="entity-card-grid">
@@ -228,7 +228,7 @@ function PropertiesList() {
                 key={p.id}
                 title={<><span className="text-muted entity-card-sr">#{srNumOf.get(p.id)}</span>{p.name}</>}
                 subtitle={<>{p.currencyCode}{p.purchasePrice ? ` · Purchase price: ${fmtMoney(p.purchasePrice, p.currencyCode)}` : ''}</>}
-                badge={p.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Archived</span> : undefined}
+                badge={p.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Closed</span> : undefined}
                 statLabel="Net income (all time)"
                 stat={<MoneyValue n={netIncome} currency={p.currencyCode} />}
                 hue={netIncome >= 0 ? 'var(--profit)' : 'var(--loss)'}
@@ -243,7 +243,7 @@ function PropertiesList() {
                     />
                     <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => setDetailProperty(p)} />
                     <IconButton
-                      label={p.isActive === false ? 'Restore' : 'Archive'}
+                      label={p.isActive === false ? 'Reopen' : 'Close'}
                       icon={p.isActive === false ? <RestoreIcon size={13} /> : <ArchiveIcon size={13} />}
                       align="right"
                       onClick={() => toggleArchived(p)}
