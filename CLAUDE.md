@@ -6168,6 +6168,29 @@ touched those.
   absent on every other category and on `/account`, and "Funds" sits correctly below the
   expanded subnav — confirms true nesting. `npx tsc -b` / `npm run test` (627 tests, unchanged)
   / `npm run build` all clean.
+- **"Income"/"Expense" wording fixed wherever a figure can include an inter-account transfer,
+  closing README Pending item 130(a) (2026-09-09) — see README Done item 282.** User: "An
+  inter-account transfer cannot be counted as income/ expense. Use appropriate words like
+  inflow & outflow." Audited every "Income"/"Expense" label app-wide rather than only touching
+  the one place already partly fixed (Net Worth's Monthly Summary table, via Done item 229's
+  `linkedRecordKeys()` exclusion) — found the SAME issue, WORSE, in two more places with ZERO
+  transfer-awareness at all: Cash's own `cashMonthlyFlow()`-driven chart and Bank's
+  `bankMonthlyFlow()`-driven chart/table (both per-account and whole-portfolio), neither of
+  which excludes a linked transfer's leg at all. Matched each module's own already-established
+  vocabulary rather than inventing a new term everywhere: Cash already says "Cash in"/"Cash
+  out" throughout (confirmed via grep first), so its chart became "Cash in vs. out by month";
+  Bank already says "Deposit"/"Withdrawal" in its own `DirectionChips`, so its chart/table
+  became "Deposits vs. withdrawals by month". Net Worth's own table got "Income"/"Expense" →
+  "Inflow"/"Outflow" specifically, plus a new explanatory tooltip per row. Every renamed
+  `ChartCard` also gained a `titleTooltip` explaining the figure can include a (non-excluded)
+  transfer. Deliberately NOT touched: Rentals' own `RENT_INCOME`/`EXPENSE` labels — a real
+  user-chosen categorization at entry time (not a raw signed-amount sum), a different class of
+  thing from the unguarded aggregates actually being fixed here. Verified live via Playwright
+  with seeded Cash + Bank data across all 3 surfaces — zero console errors. `npx tsc -b` /
+  `npm run test` (627 tests, unchanged — pure wording/copy) / `npm run build` all clean. Still
+  open: item 130(b), the genuinely new category-level Income/Expense/Ignore classification
+  feature (seeded default categories, a per-category zone picker, red/green/gray expense
+  charts, a month-over-month net-worth delta).
 
 ## Live URLs
 
