@@ -7911,6 +7911,81 @@ FinanceManager live link:
   `npx tsc -b` / `npm run test` (630 tests, unchanged) / `npm run build` all clean. **Pending
   item 55's own remaining scope stays open** — table column headers and form-field hints across
   the rest of the app haven't had this same audit pass yet.
+- **Critical, user-reported (2026-09-09): "you falsely claimed a fix!" on the Pending chip's
+  click area — see Done item 291.** The user posted a screenshot of the "Add Trades" popup
+  showing a browser DevTools inspector overlay reading "label 180 x 52.8" over the Order/
+  Pending field, disputing the earlier PendingToggle chip fix. Root-caused properly rather than
+  re-asserting the earlier fix: `Field`'s wrapping `<label>` is still a real HTML "labelable"
+  element's container even once its checkbox was swapped for a `<button>` (Done item — the
+  original chip redesign) — `<button>` is ITSELF a labelable element per the HTML spec, so the
+  label still forwards any click on its own blank space (the whole ~180x52 box, not just the
+  visible chip) to the nested button. Confirmed live via Playwright: clicking 10px into the
+  "Order" label's caption text — nowhere near the rendered chip — still toggled `isPending`,
+  reproducing exactly what the user's screenshot implied. **Tried the textbook fix first and
+  confirmed it does NOT work here**: adding `e.preventDefault()` in a bubble-phase click
+  handler on the label (the standard way to suppress a label's default click-forwarding) —
+  a `console.log` proved the handler fires and calls `preventDefault()`, but the click still
+  forwarded to the button anyway, empirically showing React's root-level event delegation
+  doesn't suppress this particular browser default action the way a direct native listener
+  would. Fixed instead by giving `Field` an `as="label" | "div"` prop so it can render a plain
+  `<div>` (which has no label-activation behavior at all) wherever the wrapped content isn't a
+  real input/select a caption should focus into — applied to the four `Field` call sites that
+  wrap `PendingToggle` (QSE/PSX's multi-row add-form and per-stock add-form); every other
+  `Field` usage (wrapping a real input/select, where click-to-focus the caption IS the point)
+  is completely unaffected. Verified live via Playwright with precise coordinate testing:
+  clicking the caption text and a corner of the field's blank space no longer toggles Pending;
+  clicking the chip itself still toggles both ways. `npx tsc -b` / `npm run test` (630 tests,
+  unchanged) / `npm run build` all clean. **Lesson worth repeating for any future "I fixed X"
+  claim that a user later disputes with evidence**: don't defend the earlier fix — reproduce
+  the exact reported scenario fresh and measure it directly; here the earlier round had only
+  verified that the VISUAL chip toggles correctly on a direct click, never tested whether the
+  wrapping label's own default click-forwarding behavior (an HTML mechanism independent of
+  which element the label wraps) still applied to the new markup.
+- **Removed Funds' Excel (XLSX) Daily History Import, user-requested (2026-09-09) — see Done
+  item 292.** User: "i have already provided all sample data and its imported in the app.
+  remove the excel headache now." Since their real data no longer needs this one-time
+  reconstruct-from-a-spreadsheet import path (see this file's own earlier 2026-08-26 entries on
+  the real QR.Expense/ForWebappPK.Expense/Funds-daily-history real-data merges), removed:
+  `DailyHistoryImportSection.tsx` (the XLSX upload UI), `xlsxReader.ts` (the SheetJS/`xlsx`
+  adapter), the `xlsx` npm dependency itself — **previously flagged in this file's own history
+  as carrying an unresolved high-severity `npm audit` advisory with "no npm-available fix"; now
+  gone entirely, `npm audit` reports 0 vulnerabilities** — and the reconstruction-specific
+  functions in `fundsDailyHistoryImport.ts` (`parseDailyBalanceRows`, `reconstructFundDailyHistory`,
+  `averagePeriodPL`, `suggestFundMatch`, `mergeDailyImportIntoWorkbook`) plus their dedicated
+  tests. Kept `impliedFundNav` — unrelated to Excel parsing, still used by the separate "Update
+  balance" quick action (Done item 211, a manual entry, not a bulk import). Kept the CSV
+  "Snapshot Import" section completely unchanged (plain CSV parsing, no `xlsx` dependency, not
+  what "excel" referred to) as the Funds Import tab's only remaining mode, dropping the now-
+  pointless "Daily history (XLSX)" vs "Snapshot (CSV)" mode switch — the tab just shows the CSV
+  importer directly now. Bundle size dropped ~340KB (513KB → 396KB gzip) as a direct result of
+  dropping the dependency. Verified live via Playwright: the Import tab renders with no XLSX
+  toggle and the "Choose CSV file" button present. `npx tsc -b` / `npm run test` (615 tests,
+  15 fewer — the removed XLSX-reconstruction-specific tests) / `npm run build` all clean.
+- **Two-tier category system: App-level (shared) vs custom (user-specific), user-requested
+  (2026-09-09) — see Done item 293.** User: "App level categs are for all, while custom are
+  user specific. we need both." `Category` (`types/finance.ts`) gained an optional
+  `scope?: 'app' | 'custom'` field. Every entry in `DEFAULT_CATEGORIES` (the 27 bundled
+  reference categories, `lib/categories.ts`) is now tagged `scope: 'app'` — shared, protected
+  reference data. Anything the user adds via `CategorySelect`'s "+" quick-add is tagged
+  `scope: 'custom'` — fully owned and freely editable. `categoryStore.ts`'s `normalize()`
+  backfills `scope` on load for any category missing it (an id matching a known default → `app`,
+  otherwise → `custom`), so every real pre-existing account — whose stored `categories` array
+  already includes copies of the defaults, seeded before this field ever existed — gets tagged
+  correctly with zero migration step needed. `renameCategory`/`deleteCategory` now refuse (with
+  a toast) to touch an app-level category — no UI actually calls these on one today (only
+  custom categories are rename/delete-able, and there's no rename/delete UI at all yet), but
+  this is the one place that stays true regardless of what future UI adds. `CategorySelect`'s
+  dropdown now visibly groups "App categories" and "My categories" via real `<optgroup>`
+  elements — the actual user-facing manifestation of the two tiers, not just an internal
+  data-model change. Verified live via Playwright: the picker shows all 27 App categories under
+  their own group; adding a category via the "+" popup correctly creates it tagged `custom` and
+  it appears under a newly-shown "My categories" group. New tests: `store/__tests__/
+  categoryStore.test.ts` (6 cases — this store had zero test coverage before this) plus 2 new
+  cases in `lib/__tests__/categories.test.ts`. `npx tsc -b` / `npm run test` (623 tests, 8 new)
+  / `npm run build` all clean. **Deliberately scoped down**: no rename/delete UI was built for
+  either tier (none existed before this change either) — only the picker and the underlying
+  guard exist so far; a future session building a "manage categories" screen should keep using
+  `scope` to gate which rows offer rename/delete.
 
 ## Pending
 
@@ -8382,8 +8457,11 @@ everything below is started. Working down it in priority order across following 
 77. ~~App-wide: whole-app import/export through Settings.~~ **Done (2026-08-26) — see Done item
     177.** One combined JSON file, all 14 modules. **Still open**: every table exporting to
     Excel/HTML/PDF (only CSV/JSON exist today — see README item 40 for CSV, Done item 177 for
-    whole-app JSON); this project's own "xlsx" dependency has a known unpatched advisory
-    flagged at Done item 151, worth reconsidering before leaning on it further for EXPORT too.
+    whole-app JSON). **Note (2026-09-09): the `xlsx` npm dependency itself (whose unpatched
+    advisory this item used to flag as a reason for caution) is gone entirely as of Done item
+    292** — removed along with Funds' XLSX Daily History Import at the user's own request, once
+    their real data no longer needed it. A future Excel EXPORT feature would need to add a
+    dependency fresh (this one or another), not "lean on" one already in the codebase.
 78. ~~Net Worth: add charts comparing the distribution of finances, both per-currency and within
     one selected currency.~~ **Done (2026-08-27) — see Done item 195.** Built the item's own
     named hypothesis: an Assets-vs-Liabilities-by-currency bar chart, and a per-module
