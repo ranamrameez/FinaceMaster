@@ -7308,6 +7308,48 @@ FinanceManager live link:
   Rentals-only "Add a rental plan" FAB opens with only a property picker (no module picker) and
   correctly hits the real sign-in gate on submit — zero console errors. `npx tsc -b` / `npm run
   test` (624 tests, unchanged) / `npm run build` all clean.
+- **Standing instruction (2026-09-09): "keep working and complete all pending tasks. work on a
+  task, complete, push & repeat. if any task requires my approval keep it for last when all
+  other tasks are done."** From here on, work continuously down this Pending list — one item at
+  a time, verify (tsc/tests/build/live where applicable), commit, push, open a PR, self-review,
+  and merge, then immediately move to the next item — without waiting for per-item confirmation.
+  Any Pending item that genuinely needs the user's own input first (a design fork, their own
+  data file, a real signed-in browser round-trip, a specific repro detail) is explicitly
+  deferred to LAST, not skipped or guessed at — the existing per-item notes throughout this
+  Pending list already say which ones those are (e.g. items 25/28/104/107/108/110/111/115(b)'s
+  design confirmation, 120's EMI scoping round).
+- **Found and merged a real stray unmerged PR while starting this pass — see Done item 269.**
+  Per the user's own prompt to check for one: `git branch -r` turned up 3 branches beyond `main`
+  and this session's own designated branch. Two (`claude/continuation-3m98ma`, `claude/funds-
+  net-pl-calculation-cqizan`) had zero diff against `main` — leftover session-branch artifacts
+  from the "restart the designated branch after each merge" convention, safe to leave alone, not
+  deleted (no reason to risk a destructive branch-delete for branches that carry no unmerged
+  work). The third, `claude/chrome-stock-scraper-extension-q6rts2`, was real: **PR #92**
+  ("Scrape QSE ticker/company names too, fix shared stockData read to use them"), open and
+  draft since 2026-09-07, containing a genuine bug fix (`fetchQSEStockData()` used to require
+  BOTH `tickerNames` AND `fundamentals` present in Firebase before using EITHER — since the
+  Chrome extension has no way to populate `fundamentals`, real scraped ticker names were
+  silently discarded forever) plus the extension's own name-scraping feature. Its `mergeable_
+  state` was `dirty` — a real merge conflict against current `main`, purely because the
+  2026-09-08 repo-root restructuring (Done items covering the `thegroup-price-sync/` →
+  `chrome-extension/` rename, `qse-workbook-backup.json` → `sample/`, etc.) happened AFTER this
+  PR was opened. Resolved per this file's own "merge conflict → merge the base branch into the
+  PR head, resolve, validate, push" rule: checked out the branch, `git merge origin/main`, and
+  git's own rename-detection auto-merged every renamed file cleanly — the ONLY real conflict was
+  the repo-root `README.md` itself, where the PR's copy still had the entire pre-restructuring
+  long-form doc and `main`'s copy was the new short pointer file; resolved by taking `main`'s
+  version outright (`git show origin/main:README.md > README.md`), since the pointer-file
+  restructuring is a deliberate, later, superseding decision, not something to un-revert.
+  Verified before pushing: `npx tsc -b` clean, `npm run test` (624 tests, unchanged) clean,
+  `npm run build` clean, `node --check` on all 6 extension `.js` files at their new
+  `chrome-extension/` path (all pass), and `chrome-extension/manifest.json` re-validated as
+  well-formed JSON post-rename. Pushed the merge commit, PR's `mergeable_state` came back
+  `clean`, marked ready for review, self-reviewed, and squash-merged. **Lesson for any future
+  session**: `git branch -r` (or `list_pull_requests` with `state: 'all'`) costs nothing and
+  should be a routine check at the START of any "keep working through the backlog" session —
+  a prior session's own draft PR can sit open and drift into a real merge conflict purely from
+  later, unrelated restructuring work, with nothing about it surfacing on its own (no CI, no
+  notification) until someone thinks to look.
 
 ## Pending
 
