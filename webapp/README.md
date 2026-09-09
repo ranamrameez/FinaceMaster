@@ -7389,6 +7389,25 @@ FinanceManager live link:
   errors throughout. `npx tsc -b` / `npm run test` (624 tests, unchanged — no calc logic
   touched beyond the one thin, unstested-by-precedent wrapper function, matching
   `bankTotalsByCurrency`'s own lack of a dedicated test) / `npm run build` all clean.
+- **Personal Loans' `LoanList` converted from a sortable table to an `EntityCard` grid
+  (2026-09-09) — see Done item 271, continuing Pending item 114's rollout.** Same rule-1/3
+  rationale as Bank's `AccountsList`/`BanksList` and Funds' `BrokersList` before it: entity
+  items belong on Cards in a wrap-flex grid, not a table with its own per-column reorder
+  controls. Dropped `useSortableRows` (now fully unused in this file, its import removed) in
+  favor of a fixed favorite-first ordering, matching every other converted list's own
+  precedent. Each card shows the loan's own Sr# (creation order, computed once against the
+  FULL unfiltered `loans` array so it never renumbers under a filter/archived-toggle change —
+  same `srNumOf` pattern already used elsewhere in this app), person, direction subtitle, an
+  Archived badge when applicable, and Outstanding as the stat — hued green/red by direction
+  (owed-to-me vs. i-owe), matching the sign-based `StatCard` hue convention this app already
+  uses everywhere else for a directional money figure. Favorite (star) and Edit moved into
+  `EntityCard`'s own `actions` slot (top-right, `stopPropagation`'d) instead of table columns.
+  The existing direction filter and "Show archived (N)" toggle carried over unchanged.
+  Verified live via Playwright with a seeded 3-loan scenario (one favorited, one archived, one
+  of each direction): favorite-first ordering confirmed (Ali before Bob in DOM order), the
+  direction filter and archived toggle both work exactly as before, clicking a card opens its
+  detail view, and the Favorite star correctly hits the real sign-in gate. `npx tsc -b` / `npm
+  run test` (624 tests, unchanged — pure UI restructuring) / `npm run build` all clean.
 
 ## Pending
 
@@ -8118,8 +8137,11 @@ or a design decision before more code, not guessed at further:**
      this item cares about — filters, grids, per-account/per-entity detail pages, FAB+popup
      entity creation, tooltip-ified explanations — across most modules through means OTHER than
      the specific `EntityCard` component. **Verified via a direct grep, not assumed**: `EntityCard`
-     itself is still used ONLY by Banking (confirmed 2026-09-08) — so the literal "roll
-     EntityCard out to 12 modules" ask is still genuinely open, but a future session shouldn't
+     was used only by Banking as of 2026-09-08; as of 2026-09-09 it's also used by Funds'
+     `BrokersList` (Done item 270) and Personal Loans' `LoanList` (Done item 271) — so the
+     literal "roll EntityCard out to N modules" ask is progressing incrementally, one module
+     at a time, per this project's own established discipline. Still open: EMI's loan list,
+     Rentals' `PropertiesList`, Subscriptions' list. A future session shouldn't
      read "still open" here as "nothing's been done for these modules" — check a module against
      `UI_DESIGN_GUIDELINES.md`'s own rules directly (not just against whether it uses
      `EntityCard`) before assuming it needs work. Also still open: audit (don't blindly rebuild)
