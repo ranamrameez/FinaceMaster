@@ -2,7 +2,7 @@ import type { User } from 'firebase/auth';
 import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bar, Line } from 'react-chartjs-2';
-import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
+import { Card, CollapsibleCard, EntityCard, MoneyValue } from '../../../components/Card';
 import { Modal } from '../../../components/Modal';
 import { Notice } from '../../../components/Notice';
 import { confirmDialog } from '../../../components/ConfirmDialog';
@@ -17,7 +17,6 @@ import { FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
 import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
-import { useSortableRows } from '../../../hooks/useSortableRows';
 import { ReorderButtons } from '../../../components/ui/ReorderButtons';
 import { dateOnlyMs } from '../../../lib/datetime';
 import { parseCSV, toCSV } from '../../../lib/csv';
@@ -795,6 +794,14 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
   );
 }
 
+/** Pending item 114: "Main tier: entity items as CARDS rather than long
+ * tables with custom reordering options" — converted from a sortable
+ * table to an `EntityCard` grid, same pattern already rolled out to
+ * Banking's `AccountsList`/`BanksList` and Funds' `BrokersList`. The old
+ * per-column sort is gone on purpose (rule 1); ordering is now
+ * favorite-first (same "favorites float to the top" convention every
+ * other `EntityCard` grid in the app already uses), with Sr# still shown
+ * from the loan's own stable creation-order position. */
 function LoanList({ onSelect, onEdit }: { onSelect: (loan: PersonalLoan) => void; onEdit: (loan: PersonalLoan) => void }) {
   const allLoans = usePersonalLoansWorkbookStore((s) => s.workbook.loans);
   const repayments = usePersonalLoansWorkbookStore((s) => s.workbook.repayments);
@@ -804,29 +811,19 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: PersonalLoan) => void
   const [showArchived, setShowArchived] = useState(false);
   const archivedCount = useMemo(() => allLoans.filter((l) => l.isActive === false).length, [allLoans]);
   const loans = useMemo(() => (showArchived ? allLoans : allLoans.filter((l) => l.isActive !== false)), [allLoans, showArchived]);
-  const filtered = filter === 'all' ? loans : loans.filter((l) => l.direction === filter);
+  const filtered = useMemo(
+    () => (filter === 'all' ? loans : loans.filter((l) => l.direction === filter)).sort((a, b) => Number(!!b.isFavorite) - Number(!!a.isFavorite)),
+    [loans, filter],
+  );
   // Pending item 115(c): Sr# = the loan's own stable position in the
-  // underlying (unfiltered) array, creation order — not this table's own
-  // live sort. Same convention as Bank/Funds.
+  // underlying (unfiltered) array, creation order — not this grid's own
+  // favorite-first display order. Same convention as Bank/Funds.
   const srNumOf = useMemo(() => new Map(allLoans.map((l, i) => [l.id, i + 1])), [allLoans]);
 
   const toggleFavorite = async (l: PersonalLoan) => {
     if (!(await ensureSignedIn(l.isFavorite ? 'Sign in to unfavorite this loan.' : 'Sign in to favorite this loan.'))) return;
     updateLoan(l.id, { isFavorite: !l.isFavorite });
   };
-
-  type Row = { loan: PersonalLoan; outstanding: number };
-  const rows: Row[] = filtered.map((loan) => ({ loan, outstanding: loanOutstanding(loan, repayments) }));
-  type Col = 'person' | 'direction' | 'outstanding' | 'favorite';
-  const sortValue = (r: Row, col: Col): number | string => {
-    switch (col) {
-      case 'direction': return r.loan.direction;
-      case 'outstanding': return r.outstanding;
-      case 'favorite': return r.loan.isFavorite ? 1 : 0;
-      default: return r.loan.person;
-    }
-  };
-  const { sorted, Th } = useSortableRows(rows, sortValue, 'person', 'asc');
 
   return (
     <div>
@@ -842,43 +839,40 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: PersonalLoan) => void
           </button>
         )}
       </div>
-      <div className="table-scroll">
-        <table>
-          <thead><tr><th>#</th><Th col="favorite">★</Th><Th col="person">Person</Th><Th col="direction">Direction</Th><Th col="outstanding">Outstanding</Th><th></th></tr></thead>
-          <tbody>
-            {sorted.map(({ loan: l, outstanding }) => (
-              <tr key={l.id} onClick={() => onSelect(l)} style={{ cursor: 'pointer' }}>
-                <td className="text-muted">{srNumOf.get(l.id)}</td>
-                <td>
-                  <IconButton
-                    label={l.isFavorite ? 'Unfavorite' : 'Favorite'}
-                    icon={<StarIcon size={13} filled={l.isFavorite} />}
-                    align="right"
-                    onClick={(e) => { e.stopPropagation(); toggleFavorite(l); }}
-                  />
-                </td>
-                <td>
-                  {l.person}
-                  {l.isActive === false && <span className="pill-warn" style={{ fontSize: 10, marginLeft: 6 }}>Archived</span>}
-                </td>
-                <td className={l.direction === 'owed_to_me' ? 'pill-positive' : 'pill-negative'}>{l.direction === 'owed_to_me' ? 'Lent out' : 'I owe'}</td>
-                <td>{fmtMoney(outstanding, l.currencyCode)}</td>
-                <td>
-                  <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={(e) => { e.stopPropagation(); onEdit(l); }} />{' '}
-                  <button className="btn secondary small" onClick={(e) => { e.stopPropagation(); onSelect(l); }}>Open</button>
-                </td>
-              </tr>
-            ))}
-            {!sorted.length && (
-              <tr>
-                <td colSpan={6} className="text-muted">
-                  {allLoans.length ? 'Every loan is archived — click "Show archived" above to see them.' : 'No personal loans yet.'}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      {!filtered.length ? (
+        <p className="text-muted">
+          {allLoans.length ? 'Every loan is archived — click "Show archived" above to see them.' : 'No personal loans yet.'}
+        </p>
+      ) : (
+        <div className="entity-card-grid">
+          {filtered.map((l) => {
+            const outstanding = loanOutstanding(l, repayments);
+            return (
+              <EntityCard
+                key={l.id}
+                title={<><span className="text-muted" style={{ fontWeight: 400, fontSize: 11, marginRight: 5 }}>#{srNumOf.get(l.id)}</span>{l.person}</>}
+                subtitle={l.direction === 'owed_to_me' ? 'Lent out' : 'I owe'}
+                badge={l.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Archived</span> : undefined}
+                statLabel="Outstanding"
+                stat={<MoneyValue n={outstanding} currency={l.currencyCode} />}
+                hue={l.direction === 'owed_to_me' ? 'var(--profit)' : 'var(--loss)'}
+                onClick={() => onSelect(l)}
+                actions={
+                  <>
+                    <IconButton
+                      label={l.isFavorite ? 'Unfavorite' : 'Favorite'}
+                      icon={<StarIcon size={13} filled={l.isFavorite} />}
+                      align="right"
+                      onClick={() => toggleFavorite(l)}
+                    />
+                    <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => onEdit(l)} />
+                  </>
+                }
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

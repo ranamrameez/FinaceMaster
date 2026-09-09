@@ -5982,6 +5982,15 @@ touched those.
   via Playwright (seeded broker+fund data): correct per-currency totals, correct hand-off from
   a broker's own linked-fund card into that fund's real detail view, "Add a broker" hits the
   real sign-in gate, the Fund add-form's Broker picker lists correctly.
+- **Personal Loans' `LoanList` converted to an `EntityCard` grid (2026-09-09) — continues
+  README Pending item 114's rollout, see README Done item 271.** Same pattern as Bank's
+  `AccountsList`/`BanksList` and Funds' `BrokersList` — dropped the sortable `<table>` (and its
+  now-fully-unused `useSortableRows` import) in favor of favorite-first-ordered cards, each
+  showing Sr#/person/direction/an Archived badge/Outstanding (hued green/red by direction).
+  Direction filter and "Show archived" toggle carried over unchanged. Verified live via
+  Playwright with a seeded 3-loan scenario — favorite-first order, filter/archive toggle,
+  card-click-to-detail, and the Favorite star's sign-in gate all confirmed working. Still open
+  per Pending item 114: EMI's loan list, Rentals' `PropertiesList`, Subscriptions' list.
 
 ## Live URLs
 
