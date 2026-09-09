@@ -6239,6 +6239,19 @@ touched those.
   category-level Income/Expense/Ignore classification feature itself — needs the user's own
   classification pass on several ambiguous real production categories (Extra, Misk, Reserve,
   Saving, Touring), not a guess.
+- **`RecordDetailModal` rolled out to Cash and Bank, continuing README Pending item 132
+  (2026-09-09) — see README Done item 286.** Cash's `CashStatementTable` and Bank's
+  `TransactionsList` both gained row-click detail popups, same generic `RecordDetailModal`
+  QSE/PSX's Trade List already uses. **A real bug caught before shipping**: the first pass put
+  `stopPropagation` on the WHOLE Date/# `<td>` (reasoning: it contains `ReorderButtons`, whose
+  own click shouldn't also open the popup) — but that silently blocked the row's own click
+  handler from firing for ANY click in that column, not just the reorder arrows. A live
+  Playwright check (clicking the date cell, expecting a modal, getting none) caught this
+  immediately. Fixed by scoping `stopPropagation` to a `<span>` wrapping only the
+  `ReorderButtons`. **Rule for any future `stopPropagation`-on-a-cell-with-a-nested-
+  interactive-element**: scope it to the smallest wrapper around the interactive element
+  itself, never the whole cell. `npx tsc -b` / `npm run test` (630 tests, unchanged) / `npm run
+  build` all clean. Still open: Rentals/Personal Loans/EMI/Funds/Subscriptions.
 
 ## Live URLs
 
