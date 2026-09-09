@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { EditIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { CheckIcon, EditIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { RiskCalculator } from '../../../components/RiskCalculator';
 import { Tabs } from '../../../components/Tabs';
 import { TickerLogo } from '../../../components/TickerLogo';
 import { toast } from '../../../components/Toast';
+import { Tooltip } from '../../../components/Tooltip';
 import { Field, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
+import { PendingToggle } from '../../../components/ui/PendingToggle';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { defaultTimeForDate, defaultTimezoneForMarket, nowTime } from '../../../lib/datetime';
@@ -35,9 +37,10 @@ function TickerTransactions({ ticker }: { ticker: string }) {
   const [date, setDate] = useState(today());
   const [sharesInput, setSharesInput] = useState('');
   const [priceInput, setPriceInput] = useState('');
-  const [time, setTime] = useState<string | undefined>(() => nowTime());
+  const [time, setTime] = useState<string | undefined>(() => nowTime(defaultTimezoneForMarket('QSE')));
   const [timezone, setTimezone] = useState<string | undefined>(defaultTimezoneForMarket('QSE'));
   const [timeTouched, setTimeTouched] = useState(false);
+  const [isPending, setIsPending] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editRow, setEditRow] = useState<Transaction | null>(null);
 
@@ -64,10 +67,11 @@ function TickerTransactions({ ticker }: { ticker: string }) {
     const price = Number(priceInput);
     if (!shares || !price) return toast('Enter shares and price.');
     if (!(await ensureSignedIn('Sign in to save this transaction.'))) return;
-    addTransaction({ date, ticker, action, shares, price, time, timezone });
+    addTransaction({ date, ticker, action, shares, price, time, timezone, isPending: isPending || undefined });
     toast(`${action} ${shares} ${ticker} @ ${fmtPrice(price)} logged.`);
     setSharesInput('');
     setPriceInput('');
+    setIsPending(false);
   };
 
   const startEdit = (i: number, tx: Transaction) => {
@@ -97,7 +101,7 @@ function TickerTransactions({ ticker }: { ticker: string }) {
             value={date}
             onChange={(e) => {
               setDate(e.target.value);
-              if (!timeTouched) setTime(defaultTimeForDate(e.target.value));
+              if (!timeTouched) setTime(defaultTimeForDate(e.target.value, timezone));
             }}
           />
         </Field>
@@ -113,6 +117,13 @@ function TickerTransactions({ ticker }: { ticker: string }) {
           onTimeChange={(t) => { setTime(t); setTimeTouched(true); }}
           onTimezoneChange={setTimezone}
         />
+        <Field label="Order">
+          <PendingToggle
+            checked={isPending}
+            onChange={setIsPending}
+            title="Placed but not yet filled — excluded from your shares/cash balance until it clears."
+          />
+        </Field>
         <button className="btn" onClick={submit}>Add {action === 'BUY' ? 'buy' : 'sell'}</button>
       </div>
 
@@ -136,18 +147,42 @@ function TickerTransactions({ ticker }: { ticker: string }) {
                   <td><input type="number" step="0.001" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })} style={{ width: 80 }} /></td>
                   <td>{fmtMoney(editRow.shares * editRow.price, currency)}</td>
                   <td>
+                    <PendingToggle
+                      checked={!!editRow.isPending}
+                      onChange={(v) => setEditRow({ ...editRow, isPending: v })}
+                      title="Placed but not yet filled — excluded from shares/cash balance until cleared."
+                    />{' '}
                     <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
                     <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditIndex(null)} />
                   </td>
                 </tr>
               ) : (
                 <tr key={i}>
-                  <td>{tx.date}</td>
+                  <td>
+                    {tx.date}
+                    {tx.isPending && (
+                      <Tooltip text="Order placed but not yet filled — excluded from your shares/cash balance until cleared.">
+                        <span className="pill-warn" style={{ marginLeft: 6 }}>Pending</span>
+                      </Tooltip>
+                    )}
+                  </td>
                   <td className={tx.action === 'BUY' ? 'pill-positive' : 'pill-negative'}>{tx.action}</td>
                   <td>{fmt(tx.shares, 0)}</td>
                   <td>{fmtPrice(tx.price)}</td>
                   <td>{fmtMoney(tx.shares * tx.price, currency)}</td>
                   <td>
+                    {tx.isPending && (
+                      <IconButton
+                        label="Mark cleared"
+                        icon={<CheckIcon size={13} />}
+                        align="right"
+                        onClick={async () => {
+                          if (!(await ensureSignedIn('Sign in to update this transaction.'))) return;
+                          updateTransaction(i, { isPending: false });
+                          toast('Marked cleared.');
+                        }}
+                      />
+                    )}{' '}
                     <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(i, tx)} />{' '}
                     <IconButton
                       label="Delete"

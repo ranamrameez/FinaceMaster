@@ -28,7 +28,7 @@ function AddDividendForm() {
   const [shares, setShares] = useState(0);
   const [amount, setAmount] = useState(0);
   const [sharesTouched, setSharesTouched] = useState(false);
-  const [time, setTime] = useState<string | undefined>(() => nowTime());
+  const [time, setTime] = useState<string | undefined>(() => nowTime(defaultTimezoneForCurrency(currency)));
   const [timeTouched, setTimeTouched] = useState(false);
   const [timezone, setTimezone] = useState<string | undefined>(() => defaultTimezoneForCurrency(currency));
 
@@ -65,7 +65,7 @@ function AddDividendForm() {
           value={date}
           onChange={(e) => {
             setDate(e.target.value);
-            if (!timeTouched) setTime(defaultTimeForDate(e.target.value));
+            if (!timeTouched) setTime(defaultTimeForDate(e.target.value, timezone));
           }}
         />
       </Field>

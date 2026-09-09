@@ -12,6 +12,7 @@ import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { PendingToggle } from '../../../components/ui/PendingToggle';
 import { IconButton } from '../../../components/ui/IconButton';
 import { FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
@@ -401,10 +402,11 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                     <td></td>
                     <td className="text-muted cell-clip">{r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}</td>
                     <td>
-                      <label className="text-muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }} title="Not yet cleared — excluded from Outstanding until unchecked.">
-                        <input type="checkbox" checked={!!editRow.isPending} onChange={(e) => setEditRow({ ...editRow, isPending: e.target.checked })} />
-                        Pending
-                      </label>{' '}
+                      <PendingToggle
+                        checked={!!editRow.isPending}
+                        onChange={(v) => setEditRow({ ...editRow, isPending: v })}
+                        title="Not yet cleared — excluded from Outstanding until unchecked."
+                      />{' '}
                       <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
                       <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditId(null)} />
                     </td>

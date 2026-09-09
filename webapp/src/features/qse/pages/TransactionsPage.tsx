@@ -22,6 +22,7 @@ import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { defaultTimeForDate, defaultTimezoneForCurrency, defaultTimezoneForMarket, nowTime } from '../../../lib/datetime';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { ReorderButtons } from '../../../components/ui/ReorderButtons';
+import { PendingToggle } from '../../../components/ui/PendingToggle';
 import { dateOnlyMs } from '../../../lib/datetime';
 import { createEmptyWorkbook } from '../../../store/defaultWorkbook';
 import { useWorkbookStore } from '../../../store/workbookStore';
@@ -34,7 +35,7 @@ import { useQSEDerived } from '../hooks/useQSEDerived';
 const today = () => new Date().toISOString().slice(0, 10);
 
 function emptyRow(): Transaction {
-  return { date: today(), ticker: '', action: 'BUY', shares: 0, price: 0, time: nowTime(), timezone: defaultTimezoneForMarket('QSE') };
+  return { date: today(), ticker: '', action: 'BUY', shares: 0, price: 0, time: nowTime(defaultTimezoneForMarket('QSE')), timezone: defaultTimezoneForMarket('QSE') };
 }
 
 export function TransactionRows() {
@@ -52,7 +53,7 @@ export function TransactionRows() {
   const update = (i: number, patch: Partial<Transaction>) =>
     setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
   const updateDate = (i: number, date: string) =>
-    update(i, timeTouched[i] ? { date } : { date, time: defaultTimeForDate(date) });
+    update(i, timeTouched[i] ? { date } : { date, time: defaultTimeForDate(date, rows[i].timezone) });
   const touchTime = (i: number) => setTimeTouched((ts) => ts.map((t, idx) => (idx === i ? true : t)));
 
   const submit = async () => {
@@ -103,14 +104,11 @@ export function TransactionRows() {
             onTimezoneChange={(timezone) => update(i, { timezone })}
           />
           <Field label={i === 0 ? 'Order' : undefined}>
-            <label
-              className="text-muted"
-              style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+            <PendingToggle
+              checked={!!r.isPending}
+              onChange={(v) => update(i, { isPending: v })}
               title="Placed but not yet filled — excluded from your shares/cash balance until it clears."
-            >
-              <input type="checkbox" checked={!!r.isPending} onChange={(e) => update(i, { isPending: e.target.checked })} />
-              Pending
-            </label>
+            />
           </Field>
           <button
             className="btn secondary small ml-auto align-end"
@@ -160,7 +158,7 @@ function AdjustmentForm() {
   const addAdjustment = useWorkbookStore((s) => s.addAdjustment);
   const currency = useWorkbookStore((s) => s.workbook.settings.currency);
   const ensureSignedIn = useEnsureSignedIn();
-  const emptyAdjustment = (): Adjustment => ({ date: today(), amount: 0, note: '', time: nowTime(), timezone: defaultTimezoneForCurrency(currency) });
+  const emptyAdjustment = (): Adjustment => ({ date: today(), amount: 0, note: '', time: nowTime(defaultTimezoneForCurrency(currency)), timezone: defaultTimezoneForCurrency(currency) });
   const [a, setA] = useState<Adjustment>(emptyAdjustment);
   const [timeTouched, setTimeTouched] = useState(false);
 
@@ -172,7 +170,7 @@ function AdjustmentForm() {
           value={a.date}
           onChange={(e) => {
             const date = e.target.value;
-            setA(timeTouched ? { ...a, date } : { ...a, date, time: defaultTimeForDate(date) });
+            setA(timeTouched ? { ...a, date } : { ...a, date, time: defaultTimeForDate(date, a.timezone) });
           }}
         />
       </Field>
@@ -431,10 +429,11 @@ function TransactionList() {
                     <td>{fmtMoney(editRow.shares * editRow.price, currency)}</td>
                     <td></td>
                     <td>
-                      <label className="text-muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }} title="Placed but not yet filled — excluded from shares/cash balance until cleared.">
-                        <input type="checkbox" checked={!!editRow.isPending} onChange={(e) => setEditRow({ ...editRow, isPending: e.target.checked })} />
-                        Pending
-                      </label>{' '}
+                      <PendingToggle
+                        checked={!!editRow.isPending}
+                        onChange={(v) => setEditRow({ ...editRow, isPending: v })}
+                        title="Placed but not yet filled — excluded from shares/cash balance until cleared."
+                      />{' '}
                       <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
                       <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditIndex(null)} />
                     </td>

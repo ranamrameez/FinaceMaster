@@ -81,19 +81,48 @@ export function defaultTimezoneForCurrency(currency: string | undefined): string
   return browserTimezone();
 }
 
-/** Current wall-clock time on the user's OWN machine, `HH:MM` — the
- * default for a fresh add-form's optional Time field. User-reported:
- * "let the user enter minimum data and fill most by default (pick
- * timestamps from user machine...)" — every add-form's Date field already
- * defaults to today(), but most of them left Time blank, requiring the
- * user to type it by hand for an entry that's really happening right now.
- * Still freely editable/clearable for a backdated entry — this only sets
- * the initial value, same as `today()` does for Date. Deliberately NOT
- * used to backfill an EDIT form's existing `time` — a record that never
- * had a time recorded should keep reading as "unset," not silently gain
- * "right now" every time its edit modal happens to be reopened. */
-export function nowTime(): string {
-  return new Date().toTimeString().slice(0, 5);
+/** Current wall-clock time, `HH:MM` — the default for a fresh add-form's
+ * optional Time field. User-reported: "let the user enter minimum data
+ * and fill most by default (pick timestamps from user machine...)" —
+ * every add-form's Date field already defaults to today(), but most of
+ * them left Time blank, requiring the user to type it by hand for an
+ * entry that's really happening right now. Still freely editable/
+ * clearable for a backdated entry — this only sets the initial value,
+ * same as `today()` does for Date. Deliberately NOT used to backfill an
+ * EDIT form's existing `time` — a record that never had a time recorded
+ * should keep reading as "unset," not silently gain "right now" every
+ * time its edit modal happens to be reopened.
+ *
+ * User-reported (2026-09-09): "Timezone is chosen by currency, but time
+ * is according to the user's machine (recording PKR in Qatar gives
+ * timezone Pak while time Qatar as default)." Every call site already
+ * knows the record's own target timezone (it's set in the very same
+ * object literal, via `defaultTimezoneForMarket`/`defaultTimezoneForCurrency`)
+ * — pass it here so the auto-filled clock reading actually matches the
+ * timezone label sitting right next to it, instead of silently mixing
+ * the browser's own local clock with a DIFFERENT timezone's label
+ * whenever the user is physically somewhere other than that timezone
+ * (e.g. logging a PKR entry while physically in Qatar: timezone correctly
+ * defaults to Asia/Karachi, but the OLD `nowTime()` stamped Qatar's own
+ * current clock reading under that Karachi label — a real ~2-hour
+ * chronological-order error). Omitting `timezone` keeps the old browser-
+ * local behavior (a genuinely reasonable fallback for a caller that has
+ * no target timezone in scope yet, or for `commonTimezones()`/tests that
+ * want the plain local reading). */
+export function nowTime(timezone?: string): string {
+  if (!timezone) return new Date().toTimeString().slice(0, 5);
+  try {
+    return new Intl.DateTimeFormat('en-GB', {
+      timeZone: timezone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).format(new Date());
+  } catch {
+    // An invalid/unrecognized IANA name (e.g. a stale free-text value) —
+    // degrade to the browser's own local time rather than throwing.
+    return new Date().toTimeString().slice(0, 5);
+  }
 }
 
 /** True when `date` is today's real calendar date. */
@@ -122,8 +151,8 @@ export function isToday(date: string): boolean {
  * back to `undefined` when it's backdated (the real time is unknown —
  * falls back to `DEFAULT_TIME`/noon, restoring same-day tie eligibility
  * for the whole point of the reorder feature). */
-export function defaultTimeForDate(date: string): string | undefined {
-  return isToday(date) ? nowTime() : undefined;
+export function defaultTimeForDate(date: string, timezone?: string): string | undefined {
+  return isToday(date) ? nowTime(timezone) : undefined;
 }
 
 /** A record without a stored time backfills to noon — the user's own

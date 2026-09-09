@@ -6092,6 +6092,66 @@ touched those.
   both real page-by-page audits, not one fix. `npx tsc -b` / `npm run test` (624 tests,
   unchanged) / `npm run build` all clean; verified live via Playwright throughout with real
   bounding-box/pixel measurements, not visual guesses.
+- **"Add a trade" popup batch, three real bugs + a follow-up table-styling report
+  (2026-09-09) — see README Done item 280.** User's report: an oversized Pending-checkbox
+  clickable area caused an accidental pending trade; editing it afterward "didn't allow me to
+  change the status"; toasts/tooltips render behind popups. Static CSS inspection confirmed
+  `.toast{z-index:50}` sat below `.modal-overlay{z-index:100}` — deterministic, not
+  conditional — fixed by raising it to 650 (above every ordinary Modal/ConfirmDialog/
+  SignInModal and Tooltip's own 600, below the TradePlanner-fullscreen/TermsGateModal
+  999-1000 layers meant to sit above everything); Tooltip itself was re-checked live inside
+  the exact modal and confirmed already correct (z-index 600 since Done item 240) — the
+  report's "tooltips" half was very likely the same toast bug perceived together. The Pending
+  checkbox's oversized click area was root-caused, not just patched: every call site wrapped a
+  bare `<input type="checkbox">` in a `<label style={{display:'flex'}}>` with no width
+  constraint, so the block-level flex label stretched to fill its container (a `Field`'s full
+  column, or the whole form's width) — the ENTIRE stretched box was clickable. Fixed with one
+  new shared `PendingToggle` (`components/ui/PendingToggle.tsx`, a `.chip`/`.chip.active`
+  shrink-to-fit button, same pattern `ChartFilterBar` already uses) applied everywhere
+  `isPending` had its own checkbox: QSE/PSX `TransactionsPage.tsx` (add-row + edit-row),
+  `TransactionEntryModal.tsx`, Cash/Rentals/Bank's add-forms, Funds/Personal Loans' edit-rows —
+  measured the chip at 74px wide vs. the ~180px `Field` column it used to fill. "Didn't allow
+  me to change the status" turned out to be a real, separate, previously-undiscovered gap:
+  `StockPage.tsx`'s (QSE + PSX) own per-stock Trades table had ZERO `isPending` support
+  anywhere — no toggle on add, no toggle on edit, no badge, no quick-clear — despite every
+  other transaction-editing surface having it; a user following the ticker link from an
+  accidentally-pending trade to fix it there had no way to. Added the full set (add-form Order
+  toggle, edit-row `PendingToggle`, read-only `pill-warn` badge + "Mark cleared" quick action)
+  to both exchanges' `StockPage.tsx`, verified live end-to-end (toggled a seeded pending
+  trade's edit-row chip off, hit Save, read `localStorage` back — `isPending` correctly
+  cleared). Separately, same report: "Timezone is chosen by currency, but time is according to
+  the user's machine (recording PKR in Qatar gives timezone Pak while time Qatar as default)."
+  `nowTime()` (`lib/datetime.ts`) always returned the browser's own raw local clock with no
+  timezone awareness, even though every call site already knows the record's target timezone
+  in the same object literal — a PKR entry logged while physically in Qatar got Karachi's
+  timezone LABEL with Doha's own clock READING, a real ~2-hour chronological-order error.
+  `nowTime()` gained an optional `timezone` parameter (one `Intl.DateTimeFormat` call,
+  `hourCycle:'h23'`; omitting it keeps the old browser-local fallback) and
+  `defaultTimeForDate()` threads it through; every real call site across the app now passes
+  its own already-known target timezone. New tests pin the exact scenario with fake system
+  time: `nowTime('Asia/Karachi')` → `'15:00'` vs. `nowTime('Asia/Qatar')` → `'13:00'` for the
+  identical instant — a genuine 2-hour gap. **Mid-turn follow-up, same session**: "Table
+  banding is terribly coloured. Try to add bordering" — the accent-tinted
+  `tbody tr:nth-child(even)` striping (Done item 266's own earlier fix for a contrast bug) was
+  itself now reported as visually bad. The user's suggested CSS (`border`/`margin-bottom`/
+  `border-radius` on `tr`) doesn't fully render as written — `margin`/`border-radius` don't
+  apply to a `display:table-row` element in any browser — so only the `border` half was kept,
+  as a plain `border-bottom` under every row (`:last-child` excluded), reading as "each row has
+  a visible boundary" without patchy/doubled borders once merged with the table's own
+  `border-collapse:collapse`; hover tint kept, toned down (22%→10% accent mix) now that a real
+  border does most of the separation work. Verified live: `tbody tr` computed
+  `border-bottom: 1px solid rgb(211,216,222)` (`--border`), and a screenshot showed clean,
+  evenly-spaced rows with the new Pending badge/Mark-cleared action rendering correctly
+  alongside. **Still open from this same user message, tracked as README Pending items
+  128-131, none started**: nesting QSE/PSX's own page list as a real subnav under "Stock
+  Exchanges" instead of the current separate "▸ Pages" accordion (a correction — "you placed
+  it below as a stand-alone menu using ugly lines"); a transaction-detail popup on row click
+  (tables cut off long text); renaming Income/Expense to Inflow/Outflow wherever a transfer
+  can be included, plus a genuinely new true category-level Income/Expense/Ignore
+  classification feature (seeded default categories, a per-category zone picker, red/green/
+  gray expense charts, a month-over-month net-worth delta); and a first-time currency-
+  selection prompt. `npx tsc -b` / `npm run test` (627 tests, 3 new) / `npm run build` all
+  clean.
 
 ## Live URLs
 

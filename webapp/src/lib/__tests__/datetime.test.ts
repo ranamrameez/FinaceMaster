@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_TIME, defaultTimeForDate, defaultTimezoneForCurrency, defaultTimezoneForMarket, isToday, nowTime, toInstantMs } from '../datetime';
 
 describe('defaultTimezoneForMarket', () => {
@@ -81,5 +81,34 @@ describe('isToday / defaultTimeForDate', () => {
   it('defaultTimeForDate returns undefined for a backdated date, so it falls back to noon (restores same-day tie eligibility)', () => {
     expect(defaultTimeForDate(yesterday())).toBeUndefined();
     expect(defaultTimeForDate('2020-01-01')).toBeUndefined();
+  });
+});
+
+describe('nowTime(timezone) — user-reported: "Timezone is chosen by currency, but time is according to the user\'s machine"', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    // A fixed real instant: 2026-01-15T10:00:00Z.
+    vi.setSystemTime(new Date('2026-01-15T10:00:00.000Z'));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('reads the correct wall-clock time for the TARGET timezone, not the machine\'s own', () => {
+    // Karachi is UTC+5 -> 15:00; Qatar is UTC+3 -> 13:00 — a real 2-hour
+    // gap, matching the user's own reported scenario (a PKR entry logged
+    // while physically in Qatar) exactly.
+    expect(nowTime('Asia/Karachi')).toBe('15:00');
+    expect(nowTime('Asia/Qatar')).toBe('13:00');
+  });
+
+  it('defaultTimeForDate passes the timezone through, so a today-dated row gets the right clock reading', () => {
+    const todayUtc = new Date().toISOString().slice(0, 10);
+    expect(defaultTimeForDate(todayUtc, 'Asia/Karachi')).toBe('15:00');
+    expect(defaultTimeForDate(todayUtc, 'Asia/Qatar')).toBe('13:00');
+  });
+
+  it('falls back to the browser-local reading when no timezone is given, unchanged from before', () => {
+    expect(nowTime()).toBe(new Date().toTimeString().slice(0, 5));
   });
 });
