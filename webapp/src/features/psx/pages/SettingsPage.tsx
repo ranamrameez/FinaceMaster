@@ -203,19 +203,39 @@ function FeeSettings() {
             <option value="yes">Yes — already included</option>
           </Select>
         </Field>
-        <Field label="PSX fee %" width={80}>
+        <Field
+          label="PSX fee %"
+          width={80}
+          title="A small charge from the Pakistan Stock Exchange itself for processing the trade, separate from your broker's own commission."
+        >
           <TextInput type="number" step="0.0001" value={settings.psxFeePct} onChange={(e) => updateSettings({ psxFeePct: Number(e.target.value) })} />
         </Field>
-        <Field label="NCCPL fee %" width={80}>
+        <Field
+          label="NCCPL fee %"
+          width={80}
+          title="NCCPL (National Clearing Company of Pakistan) is the body that settles/clears every PSX trade — this is its small settlement fee."
+        >
           <TextInput type="number" step="0.0001" value={settings.nccplFeePct} onChange={(e) => updateSettings({ nccplFeePct: Number(e.target.value) })} />
         </Field>
-        <Field label="SECP levy %" width={80}>
+        <Field
+          label="SECP levy %"
+          width={80}
+          title="A regulatory fee charged by the SECP (Securities and Exchange Commission of Pakistan), the government body that oversees the stock market."
+        >
           <TextInput type="number" step="0.0001" value={settings.secpLevyPct} onChange={(e) => updateSettings({ secpLevyPct: Number(e.target.value) })} />
         </Field>
-        <Field label="CDC (PKR/share)" width={100}>
+        <Field
+          label="CDC (PKR/share)"
+          width={100}
+          title="A small per-share fee from the CDC (Central Depository Company) — the body that electronically holds and records who owns which shares."
+        >
           <TextInput type="number" step="0.0001" value={settings.cdcPerShare} onChange={(e) => updateSettings({ cdcPerShare: Number(e.target.value) })} />
         </Field>
-        <Field label="CVT % (buy-side)" width={90}>
+        <Field
+          label="CVT % (buy-side)"
+          width={90}
+          title="Capital Value Tax — a small government tax charged only on the BUY side of a trade (not on sells)."
+        >
           <TextInput type="number" step="0.0001" value={settings.cvtPct} onChange={(e) => updateSettings({ cvtPct: Number(e.target.value) })} />
         </Field>
         <Field label="Min fee" width={90}>

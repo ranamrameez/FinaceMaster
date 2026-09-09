@@ -5600,6 +5600,12 @@ app, not developer notes) continuously as features ship.
   code too: each landing FAB lives inside its module's own FIRST `Tabs` entry (open by
   default) or renders unconditionally outside `Tabs` entirely — the same placement class
   Done item 219 had previously found broken elsewhere, here confirmed correct everywhere.
+- **PSX Settings' 5 acronym-only fee fields explained via tooltip, continuing README Pending
+  item 55's plain-language pass (2026-09-09) — see README Done item 290.** PSX fee/NCCPL fee/
+  SECP levy/CDC/CVT had no expansion or explanation anywhere in the UI — used `Field`'s
+  existing `title` prop (the established mechanism, Done items 105/140/144) to add a
+  one-sentence plain-language explanation to each. Verified live via Playwright: all 5 show a
+  real tooltip on hover, zero console errors.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 
