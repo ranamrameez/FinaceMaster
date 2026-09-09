@@ -7772,6 +7772,28 @@ FinanceManager live link:
   own existing interactions. `npx tsc -b` / `npm run test` (630 tests, unchanged — new UI, no
   calc logic touched) / `npm run build` all clean. **Deliberately scoped to QSE/PSX's Trade
   List only, not every module** — see the new Pending item 132 for the rollout remainder.
+- **Net Worth: "this month vs. last month" delta stat, amount + percentage (2026-09-09) — see
+  Done item 285, closes Pending item 130(b)-i.** User's own formula: "month Intial minus last
+  balance can tell the Net Worth while current - previous month worth can tell a month's
+  positive/-negative impact + number + percentage." Distinct from the already-existing "This
+  month's net flow" card — that's CASH FLOW (Cash/Bank money in/out this month); this is the
+  real Net Worth itself (assets minus liabilities, every module) at the end of last month vs.
+  right now, so it also captures what flow can't: a stock's price move, an EMI loan's principal
+  paydown, a Fund's NAV change. New "This month's change" `StatCard` next to the existing
+  "Today's net flow"/"This month's net flow" cards on the Dashboard/Net Worth page, reusing
+  `netWorthAsOfDate()` (the same real, non-projected past-month computation the Monthly Summary
+  table below it already uses) for last month's end-of-month total, converted to the preferred
+  currency the exact same way `grandTotal` already is. Shows `null` (not a misleading "+100%")
+  when there's no real prior-month data yet — gated on `earliestActivityDate()`, same floor the
+  Monthly Summary table's own window already respects. Verified live via Playwright with a
+  fixed clock (`page.clock.install`) and a seeded 2-month Cash history (1000 opening, +200 in
+  February, +300 in March): rendered exactly "+300.00 USD" / "+25.0% vs. last month" — hand-
+  checked against the raw seeded numbers (1200 end-of-Feb → 1500 today, delta 300, 300/1200 =
+  25% exactly) — and a brand-new user with zero data correctly showed "— / Not enough history
+  yet" instead of a nonsensical figure. `npx tsc -b` / `npm run test` (630 tests, unchanged) /
+  `npm run build` all clean. **Still open**: item 130(b)-ii, the category-level Income/Expense/
+  Ignore classification feature itself (a real design fork on several of this app's ambiguous
+  real production categories — needs the user's own classification pass, not a guess).
 
 ## Pending
 
@@ -8687,17 +8709,20 @@ or a design decision before more code, not guessed at further:**
      a real, separate remaining rollout — see Pending item 132.**
 ~~130(a). Rename "Income"/"Expense" to Inflow/Outflow-equivalent wording wherever the figure
      can include an inter-account transfer~~ — **done (2026-09-09), see Done item 282.**
-130(b). **True category-level Income/Expense/Ignore classification, still open — see README
-     Done item 282 for the wording half already shipped.** Build a `kind: 'income' | 'expense' |
-     'ignore'` field on `Category`, seeded sensible defaults for the user's own named categories
-     (Income, Grocery, Bill, Extra, Guests, Tuition Fee, Other Fees, Other, Ignore, plus more
-     generic ones), a per-category "which zone" picker in Account/Category settings (the user's
-     own red=expense/green=income/gray=ignore framing), expense-category-split charts built on
-     this classification, and a "this month vs last month" net-worth delta shown as both an
-     amount and a percentage (this month's total minus last month's, per the user's own formula:
-     "month Intial minus last balance can tell the Net Worth while current - previous month
-     worth can tell a month's positive/-negative impact"). A real design pass, not yet started —
-     a genuinely new feature, not a wording fix.
+~~130(b)-i. The "this month vs last month" net-worth delta, shown as both an amount and a
+     percentage~~ — **done (2026-09-09), see Done item 285.**
+130(b)-ii. **True category-level Income/Expense/Ignore classification — still open.** Build a
+     `kind: 'income' | 'expense' | 'ignore'` field on `Category`, seeded sensible defaults for
+     the user's own named categories (Income, Grocery, Bill, Extra, Guests, Tuition Fee, Other
+     Fees, Other, Ignore, plus more generic ones), a per-category "which zone" picker in
+     Account/Category settings (the user's own red=expense/green=income/gray=ignore framing),
+     and expense-category-split charts built on this classification. A real design pass, not
+     yet started — genuinely new, and several of this app's real 27 production categories
+     (Extra, Misk, Reserve, Saving, Touring — see `lib/categories.ts`) have no obvious
+     income/expense/ignore mapping without guessing at the user's own real spending intent, so
+     this needs either the user's own classification pass or an explicit "leave ambiguous ones
+     unclassified by default" design confirmed with them first, not a blind guess baked into
+     seed data used for real money.
 ~~131. First-time currency-selection prompt~~ — **done (2026-09-09), see Done item 283.**
 132. **Roll the new `RecordDetailModal` (Done item 284) out beyond QSE/PSX's Trade List
      (2026-09-09).** The component itself is a generic `{label, value}[]`-driven popup, ready
