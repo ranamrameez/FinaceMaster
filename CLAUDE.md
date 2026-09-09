@@ -6191,6 +6191,23 @@ touched those.
   open: item 130(b), the genuinely new category-level Income/Expense/Ignore classification
   feature (seeded default categories, a per-category zone picker, red/green/gray expense
   charts, a month-over-month net-worth delta).
+- **First-time currency-selection prompt, closing README Pending item 131 (2026-09-09) — see
+  README Done item 283.** User: "We should ask user about his currencies on signup. then can
+  still customize in settings anytime." No formal "signup" flow exists in this sign-in-gated
+  app — fires once right after the existing Terms gate is accepted, the closest real
+  equivalent this app has. New `store/currencyOnboardingStore.ts` (mirrors `termsStore.ts`'s
+  exact shape — a global, browser-local `seen` flag, tracks only whether the prompt fired,
+  never the picked currencies) + `components/CurrencyOnboardingModal.tsx`, mounted alongside
+  `TermsGateModal` outside `HashRouter`. Reuses `useEnabledCurrenciesStore` directly — the same
+  store the ongoing Account > Currencies section already reads/writes — so this is a shortcut
+  into that existing preference, not a parallel one. Deliberately dismissible (a real X/click-
+  outside close), unlike `TermsGateModal`'s hard block — a UI nudge, not a legal requirement;
+  skipping leaves `enabledCodes` at its safe `null` default. A real backward-compatibility case
+  was handled, not assumed: an EXISTING user (terms already accepted before this shipped) still
+  sees the prompt exactly once on their next visit, since the new `seen` flag independently
+  defaults to `false` — verified live via Playwright with exactly that seeded scenario. New
+  tests: `currencyOnboardingStore.test.ts` (3 cases). `npx tsc -b` / `npm run test` (630 tests,
+  3 new) / `npm run build` all clean.
 
 ## Live URLs
 
