@@ -118,7 +118,7 @@ export function TransactionRows() {
             onTimeChange={(time) => { update(i, { time }); touchTime(i); }}
             onTimezoneChange={(timezone) => update(i, { timezone })}
           />
-          <Field label={i === 0 ? 'Order' : undefined}>
+          <Field label={i === 0 ? 'Order' : undefined} as="div">
             <PendingToggle
               checked={!!r.isPending}
               onChange={(v) => update(i, { isPending: v })}

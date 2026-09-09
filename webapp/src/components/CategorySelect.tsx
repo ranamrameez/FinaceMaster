@@ -5,6 +5,7 @@ import { Field, Select, TextInput } from './ui/Field';
 import { IconButton } from './ui/IconButton';
 import { toast } from './Toast';
 import { useCategoryStore } from '../store/categoryStore';
+import type { Category } from '../types/finance';
 
 /** Shared category picker for every Finance-based add/edit form
  * (Cash/Bank/Rentals) — a real dropdown sourced from the shared Category
@@ -17,7 +18,15 @@ export function CategorySelect({ value, onChange }: { value: string; onChange: (
   const addCategory = useCategoryStore((s) => s.addCategory);
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
-  const sorted = [...categories].sort((a, b) => a.name.localeCompare(b.name));
+  const byName = (a: Category, b: Category) => a.name.localeCompare(b.name);
+  // Two visible groups (2026-09-09, user-requested: "App level categs are
+  // for all, while custom are user specific. we need both") — a real
+  // pre-`scope` category (shouldn't exist once `categoryStore.ts`'s
+  // `normalize()` has run, but this component has no control over when
+  // that happens relative to a first render) falls into "My categories"
+  // rather than silently vanishing from the list.
+  const appCategories = categories.filter((c) => c.scope === 'app').sort(byName);
+  const customCategories = categories.filter((c) => c.scope !== 'app').sort(byName);
 
   const submitNew = () => {
     const trimmed = newName.trim();
@@ -37,7 +46,14 @@ export function CategorySelect({ value, onChange }: { value: string; onChange: (
          alone still gets floored back up by `.row > *`'s separate
          `min-width:160px` rule). */}
       <Select value={value} onChange={(e) => onChange(e.target.value)} width={110} style={{ minWidth: 110 }}>
-        {sorted.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        <optgroup label="App categories">
+          {appCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </optgroup>
+        {customCategories.length > 0 && (
+          <optgroup label="My categories">
+            {customCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </optgroup>
+        )}
       </Select>
       <IconButton label="Add a new category" icon={<PlusIcon size={13} />} onClick={() => setAdding(true)} />
       {adding && (

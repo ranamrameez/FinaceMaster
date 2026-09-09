@@ -5606,6 +5606,48 @@ app, not developer notes) continuously as features ship.
   existing `title` prop (the established mechanism, Done items 105/140/144) to add a
   one-sentence plain-language explanation to each. Verified live via Playwright: all 5 show a
   real tooltip on hover, zero console errors.
+- **Three-item user message, same day (2026-09-09) — see README Done items 291/292/293.**
+  (1) **"You falsely claimed a fix!" on the Pending chip, real root cause found and fixed —
+  Done item 291.** The user posted a screenshot of a Chrome DevTools inspector overlay reading
+  "label 180 x 52.8" over the Order/Pending field, disputing the earlier chip fix. Root-caused
+  properly instead of re-asserting the old claim: `Field`'s wrapping `<label>` STILL forwarded
+  any click on its own blank space to `PendingToggle`'s nested `<button>` — `<button>` is
+  itself a "labelable" HTML element, same as a checkbox, so swapping the checkbox for a chip
+  button never actually fixed the oversized click area. Confirmed live: clicking 10px into the
+  caption text (nowhere near the visible chip) still toggled `isPending`. **Tried
+  `e.preventDefault()` in a bubble-phase click handler on the label first — confirmed via a
+  `console.log` that the handler fires and calls it, but the click still forwarded anyway**,
+  empirically showing React's root-level event delegation doesn't suppress this particular
+  browser default action the way a direct native listener would. Fixed by giving `Field` an
+  `as="label" | "div"` prop so it renders a plain `<div>` (no label-activation behavior exists
+  for a div) wherever the wrapped content isn't a real input/select — applied to the 4 `Field`
+  call sites wrapping `PendingToggle`; every other `Field` usage is unaffected. Verified live:
+  blank-space clicks no longer toggle Pending, the chip itself still works both ways. **Lesson
+  worth repeating for any future "I fixed X" claim a user disputes with evidence**: reproduce
+  the exact reported scenario fresh and measure it directly rather than defending the earlier
+  fix — the earlier round had only verified the chip's own click, never that the wrapping
+  label's independent default click-forwarding behavior still applied to the new markup.
+  (2) **"Remove the excel headache now" — Done item 292.** User: "i have already provided all
+  sample data and its imported in the app." Removed Funds' entire XLSX Daily History Import:
+  `DailyHistoryImportSection.tsx`, `xlsxReader.ts`, the `xlsx` npm dependency itself (its
+  previously-flagged unresolved high-severity `npm audit` advisory is now gone entirely — 0
+  vulnerabilities), and the reconstruction-specific functions in `fundsDailyHistoryImport.ts`.
+  Kept `impliedFundNav` (used by the unrelated "Update balance" quick action) and the CSV
+  Snapshot Import unchanged (not what "excel" meant) as the Import tab's only remaining mode.
+  Bundle size dropped ~340KB gzip. (3) **"App level categs are for all, while custom are user
+  specific. we need both" — Done item 293.** New `Category.scope?: 'app' | 'custom'`; every
+  `DEFAULT_CATEGORIES` entry tagged `'app'` (shared, protected — `renameCategory`/
+  `deleteCategory` now refuse to touch one); anything added via `CategorySelect`'s "+" tagged
+  `'custom'` (fully owned/editable). `categoryStore.ts`'s `normalize()` backfills `scope` on
+  load with zero migration step (an id matching a default → `app`, else → `custom` — covers
+  every real pre-existing account, whose stored `categories` array already includes copies of
+  the defaults from before this field existed). `CategorySelect`'s dropdown now visibly groups
+  "App categories"/"My categories" via real `<optgroup>`s — the actual user-facing
+  manifestation of the split. New tests: `store/__tests__/categoryStore.test.ts` (this store's
+  first-ever test coverage, 6 cases) + 2 more in `lib/__tests__/categories.test.ts`. All three
+  items verified live via Playwright with real coordinate/DOM measurements, not visual guesses.
+  `npx tsc -b` / `npm run test` (623 tests, net +8 after -15 removed / +23 added) / `npm run
+  build` all clean throughout.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

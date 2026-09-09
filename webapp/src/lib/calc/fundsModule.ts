@@ -171,16 +171,14 @@ export interface ExpectedPLRate {
  * plainer average-of-history projection that needs no new data model.
  *
  * Deliberately normalizes by REAL elapsed calendar days between the first
- * and last data point, not by `averagePeriodPL(organicPLByPeriod(...))`'s
- * "average of however many distinct calendar months happen to appear" —
+ * and last data point, not by averaging however many distinct calendar
+ * months/periods `organicPLByPeriod` happens to bucket the data into —
  * for a fund with sparse or irregular updates (e.g. two NAV points 45 days
- * apart landing in 2 different months), that would silently treat the gap
- * as "2 months" worth ~22.5 days each rather than the real 45, skewing a
- * per-day/per-month rate. `averagePeriodPL` stays right for what it's
- * used for (averaging the Daily History Import preview's own real monthly
- * buckets, where each bucket genuinely is one calendar month of data) —
- * this is a different question (a smooth per-day rate), so it uses actual
- * elapsed time instead.
+ * apart landing in 2 different months), a period-bucket average would
+ * silently treat the gap as "2 months" worth ~22.5 days each rather than
+ * the real 45, skewing a per-day/per-month rate. This is a different
+ * question (a smooth per-day rate over real elapsed time), not a
+ * calendar-bucket average.
  *
  * Returns `null` when there's fewer than 2 dated data points to measure a
  * span from (e.g. a fund bought today with no NAV history yet). */

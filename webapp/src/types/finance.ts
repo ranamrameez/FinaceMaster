@@ -120,11 +120,26 @@ export interface Finance {
 }
 
 /** One entry in the shared category registry every Finance-based record
- * points at via `categoryID`. */
+ * points at via `categoryID`.
+ *
+ * `scope` (2026-09-09, user-requested: "App level categs are for all,
+ * while custom are user specific. we need both") — `'app'` marks a
+ * category from the bundled, shared `DEFAULT_CATEGORIES` set
+ * (`lib/categories.ts`); `'custom'` marks one the user added themselves
+ * via `CategorySelect`'s "+". Optional so real pre-existing stored
+ * categories (every real record has one, none has ever carried this
+ * field) keep working unmigrated — `categoryStore.ts`'s own `normalize()`
+ * backfills it on load (`'app'` for an id matching a known default,
+ * `'custom'` otherwise), so every category is tagged one way or the
+ * other by the time any code reads it. App-level categories are treated
+ * as shared, protected reference data — `renameCategory`/`deleteCategory`
+ * refuse to touch one — while custom categories are fully owned by the
+ * user and freely renameable/deletable. */
 export interface Category {
   id: string;
   serialNumber: number;
   name: string;
+  scope?: 'app' | 'custom';
 }
 
 export interface CategoriesWorkbook {

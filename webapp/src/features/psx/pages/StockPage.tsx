@@ -150,7 +150,7 @@ function TickerTransactions({ ticker }: { ticker: string }) {
           onTimeChange={(t) => { setTime(t); setTimeTouched(true); }}
           onTimezoneChange={setTimezone}
         />
-        <Field label="Order">
+        <Field label="Order" as="div">
           <PendingToggle
             checked={isPending}
             onChange={setIsPending}
