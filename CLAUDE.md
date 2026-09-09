@@ -5658,6 +5658,18 @@ app, not developer notes) continuously as features ship.
   there was nothing to trim there — this closes Pending item 121(b) for every module that
   actually has one. Verified live via Playwright: zero `ProfileEditor` fields/Sign-out buttons
   remain on either page, both show a real link to `/account`.
+- **Second concrete instance of Pending item 116's App-wide CSS cleanup, same "keep working"
+  pass (2026-09-09) — see README Done item 295.** Grepped the whole codebase for `flexWrap:
+  'wrap'` paired with `className="row"` on the same line — `theme.css`'s own `.row` rule
+  already defaults to `flex-wrap:wrap`, so every one of these 116 inline occurrences (across 29
+  files) was pure dead code, safely removable with zero visual/behavioral change. Deliberately
+  excluded the ~17 occurrences of `flexWrap: 'wrap'` NOT paired with `.row` on the same line —
+  those don't have the CSS default to fall back on, so removing them there would be a real
+  regression, not dead-code cleanup. Verified via `npx tsc -b` (clean), `npm run test` (623
+  tests, unchanged), `npm run build` (clean), plus a live Playwright visual check across 6
+  representative pages (QSE/PSX Settings, QSE Trade Transactions' multi-field "Add Trades" row,
+  Cash, Bank, Funds) with real screenshots confirming every row still wraps correctly. PR merged
+  same session, branch reset fresh from `origin/main` per this session's own standing rule.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

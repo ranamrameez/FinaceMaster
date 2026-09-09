@@ -65,7 +65,7 @@ function NewPlanForm() {
 
   return (
     <div className="card" style={{ padding: 12, marginBottom: 16 }}>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
         <Field label="Plan name" width={220}>
           <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Q3 OGDC rotation" />
         </Field>
@@ -82,7 +82,7 @@ function NewPlanForm() {
         </Field>
       </div>
       {legs.map((l, i) => (
-        <div key={i} className="row" style={{ gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+        <div key={i} className="row" style={{ gap: 8, marginBottom: 8 }}>
           <input type="date" value={l.date} onChange={(e) => update(i, { date: e.target.value })} />
           <select value={l.action} onChange={(e) => update(i, { action: e.target.value as 'BUY' | 'SELL' })}>
             <option value="BUY">BUY</option>
@@ -150,7 +150,7 @@ function WhatIfExitCalculator({
         const remaining = whatIfExit(t.effectiveShares, t.avgCost, price, calcFee);
         const full = whatIfExit(fullShares, t.avgCost, price, calcFee);
         return (
-          <div key={t.ticker} className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 6 }}>
+          <div key={t.ticker} className="row" style={{ gap: 8, alignItems: 'flex-end', marginBottom: 6 }}>
             <Field label={`${t.ticker} exit price`} width={110}>
               <TextInput
                 type="number"
@@ -400,7 +400,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
   // toggling the accordion (harmless no-op in the full-screen branch below,
   // which has no accordion to stop propagation from).
   const titleBlock: ReactNode = editingMeta ? (
-    <div className="row" style={{ gap: 8, flexWrap: 'wrap' }} onClick={(e) => e.stopPropagation()}>
+    <div className="row" style={{ gap: 8 }} onClick={(e) => e.stopPropagation()}>
       <TextInput value={name} onChange={(e) => setName(e.target.value)} />
       <TextInput value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes" />
       <TextInput
@@ -436,7 +436,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
   // these clicks never also toggle the accordion); `justifyContent:
   // 'flex-end'` keeps the buttons right-aligned even if they wrap.
   const actionButtons = (onFullScreenClick: () => void, fullScreenLabel: string): ReactNode => (
-    <div className="row" style={{ gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+    <div className="row" style={{ gap: 8, justifyContent: 'flex-end' }}>
       <button className="btn secondary small" onClick={onFullScreenClick}>{fullScreenLabel}</button>
       {!editingMeta && (
         <button
@@ -616,7 +616,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                     <tr>
                       <td colSpan={9} style={{ padding: 0 }}>
                         <Notice tone="warning" style={{ margin: '4px 0' }}>
-                          <div className="row" style={{ gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <div className="row" style={{ gap: 8, alignItems: 'center' }}>
                             <span>Pick the transaction this leg actually corresponds to:</span>
                             <select value={linkChoice} onChange={(e) => setLinkChoice(e.target.value)}>
                               <option value="">— Select a transaction —</option>
@@ -755,7 +755,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
       {fullscreen && <div className="modal-overlay show" style={{ zIndex: 999 }} />}
       {fullscreen ? (
         <div className="card" style={{ position: 'fixed', inset: 12, zIndex: 1000, overflow: 'auto', padding: 16, boxShadow: '0 8px 40px rgba(0,0,0,.4)' }}>
-          <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
+          <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
             {titleBlock}
             {actionButtons(() => setFullscreen(false), 'Exit full screen')}
           </div>

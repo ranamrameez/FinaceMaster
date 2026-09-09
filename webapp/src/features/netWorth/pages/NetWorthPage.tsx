@@ -487,7 +487,7 @@ export function NetWorthPage({
 
           <div style={{ marginTop: 12 }}>
             <div className="text-muted" style={{ marginBottom: 4 }}>Set a rate between any two currencies</div>
-            <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
               <Field label="1 unit of">
                 <Select value={rateFrom} onChange={(e) => onRateFromChange(e.target.value)} width={110}>
                   {currencyCodes.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -579,7 +579,7 @@ export function NetWorthPage({
                   </span>
                 )}
               </summary>
-              <div className="row" style={{ gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
+              <div className="row" style={{ gap: 12, marginTop: 12 }}>
                 <div className="stat-card card" style={hueStyle(r.assets >= 0 ? 'var(--profit)' : 'var(--loss)')}><div className="label">Assets</div><MoneyValue n={r.assets} currency={r.currency} /></div>
                 <div className="stat-card card" style={hueStyle('var(--loss)')}><div className="label">Liabilities</div><MoneyValue n={r.liabilities} currency={r.currency} /></div>
                 <div className="stat-card card" style={hueStyle(r.net >= 0 ? 'var(--profit)' : 'var(--loss)')}><div className="label">Net</div><MoneyValue n={r.net} currency={r.currency} /></div>
@@ -592,7 +592,7 @@ export function NetWorthPage({
                  chip-like info") mirroring the converted totals shown up
                  in the Net worth summary card, but in this currency's own
                  real, unconverted terms. */}
-              <div className="row" style={{ gap: 6, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+              <div className="row" style={{ gap: 6, marginTop: 10, alignItems: 'center' }}>
                 <Tooltip text="Net money moved in/out of Cash and Bank today, in this currency.">
                   <span className={`pill ${todayFlowC >= 0 ? 'pill-positive' : 'pill-negative'}`}>
                     Today {todayFlowC >= 0 ? '+' : ''}{fmtMoney(todayFlowC, r.currency)}
@@ -669,7 +669,7 @@ export function NetWorthPage({
             Property values aren't tracked in this app, and rental income already lands in whichever Cash/Bank
             account it was deposited to — counting it again here would double-count it.
           </div>
-          <div className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
+          <div className="row" style={{ gap: 12 }}>
             {Object.entries(rentalsNet).map(([code, amount]) => (
               <div key={code} className="stat-card card"><div className="label">{code}</div><MoneyValue n={amount} currency={code} /></div>
             ))}

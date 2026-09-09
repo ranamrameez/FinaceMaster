@@ -143,7 +143,7 @@ export function AddPropertyForm({ onSaved, initialCurrency }: { onSaved?: (id: s
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+      <div className="row" style={{ gap: 8 }}>
         <Field label="Property name" width={180} required>
           <TextInput value={p.name} onChange={(e) => setP({ ...p, name: e.target.value })} placeholder="e.g. Apartment 4B" />
         </Field>
@@ -447,7 +447,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
          the full Property object) and `saveLease` handler, since these
          fields save identically to every lease/tenant field below. */}
       <h4 style={{ margin: '0 0 8px' }}>Property details</h4>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
         <Field label="Name">
           <TextInput value={lease.name} onChange={(e) => setLease({ ...lease, name: e.target.value })} />
         </Field>
@@ -461,7 +461,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
         </Field>
       </div>
       <h4 style={{ margin: '0 0 8px' }}>Lease &amp; tenant details</h4>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
         <Field label="Monthly rent">
           <TextInput type="number" step="0.01" value={lease.monthlyRent ?? ''} onChange={(e) => setLease({ ...lease, monthlyRent: e.target.value === '' ? undefined : Number(e.target.value) })} />
         </Field>
@@ -475,7 +475,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
           <TextInput type="date" value={lease.leaseEndDate ?? ''} onChange={(e) => setLease({ ...lease, leaseEndDate: e.target.value || undefined })} />
         </Field>
       </div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
         <Field
           label="Collection cycle (optional)"
           title="Opts this property into the separate rent-collection proposal below — pick how often rent is actually collected."
@@ -495,7 +495,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
           <TextInput type="date" value={lease.lastCollectionDate ?? ''} onChange={(e) => setLease({ ...lease, lastCollectionDate: e.target.value || undefined })} />
         </Field>
       </div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
         <Field label="Tenant name">
           <TextInput value={lease.tenantName ?? ''} onChange={(e) => setLease({ ...lease, tenantName: e.target.value })} />
         </Field>
@@ -507,7 +507,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
           Utilities included in rent
         </label>
       </div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+      <div className="row" style={{ gap: 8, marginBottom: 12 }}>
         <Field label="Security deposit">
           <TextInput type="number" step="0.01" value={lease.securityDeposit ?? ''} onChange={(e) => setLease({ ...lease, securityDeposit: e.target.value === '' ? undefined : Number(e.target.value) })} />
         </Field>
@@ -546,7 +546,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
                   partial payment.</>
                 )}
               </p>
-              <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
                 <Field label="Collection date">
                   <TextInput type="date" value={collectDate} onChange={(e) => setCollectDate(e.target.value)} />
                 </Field>
@@ -663,7 +663,7 @@ function AnalyticsTab() {
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+      <div className="row" style={{ gap: 8 }}>
         {currencies.length > 1 && (
           <Field label="Currency" width={120}>
             <Select value={effectiveCurrency} onChange={(e) => setCurrency(e.target.value)}>
@@ -790,7 +790,7 @@ function EditEntryModal({ entry, onClose }: { entry: RentalEntry; onClose: () =>
 
   return (
     <FinanceEditModal titleText="Edit rental entry" onClose={onClose} onSave={save}>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+      <div className="row" style={{ gap: 8 }}>
         <Field label="Date">
           <TextInput type="date" value={draft.date} onChange={(e) => setDraft({ ...draft, date: e.target.value })} />
         </Field>
@@ -883,7 +883,7 @@ function EntriesList({ property }: { property: Property }) {
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
         <Field label="Type" width={130}>
           <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
             <option value="all">All</option>
@@ -1103,7 +1103,7 @@ function ImportTab() {
       {headers.length > 0 && (
         <Card style={{ marginTop: 12 }}>
           <h3 style={{ marginTop: 0 }}>Map columns</h3>
-          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+          <div className="row" style={{ gap: 8 }}>
             <Field label="Date column" width={160}>
               <Select value={dateCol} onChange={(e) => setDateCol(e.target.value)}>
                 {headers.map((h) => <option key={h} value={h}>{h}</option>)}
@@ -1320,7 +1320,7 @@ function DataManagement() {
   return (
     <Card>
       <h3 style={{ marginTop: 0 }}>Data management</h3>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+      <div className="row" style={{ gap: 8 }}>
         <button className="btn secondary" onClick={exportJSON}>Export JSON</button>
         <button className="btn secondary" onClick={() => fileInput.current?.click()}>Import JSON</button>
         <input
@@ -1367,7 +1367,7 @@ export function RentalsPage({
             label: 'Income & expenses',
             content: <EntriesTab properties={properties} property={property} propertyId={propertyId} setPropertyId={setPropertyId} />,
             headerExtra: hasRows ? (
-              <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
                 <Field label="From (optional)">
                   <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
                 </Field>

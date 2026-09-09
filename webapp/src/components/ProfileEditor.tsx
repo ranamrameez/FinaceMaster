@@ -41,7 +41,7 @@ export function ProfileEditor({ user }: { user: User }) {
   };
 
   return (
-    <div className="row" style={{ gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+    <div className="row" style={{ gap: 12, alignItems: 'center' }}>
       {/* `avatarEmoji` passed here is this component's own LOCAL edit state
          (see Avatar.tsx's own doc comment) — previewing a not-yet-saved
          emoji, or falling through to the real Google photo/initial exactly

@@ -101,7 +101,7 @@ function AddSubscriptionForm({ onSaved }: { onSaved?: () => void } = {}) {
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+      <div className="row" style={{ gap: 8 }}>
         <Field label="Name" width={160} required>
           <TextInput value={s.name} onChange={(e) => setS({ ...s, name: e.target.value })} placeholder="e.g. Netflix" />
         </Field>
@@ -220,7 +220,7 @@ function SubscriptionList({ onSelect }: { onSelect: (sub: Subscription) => void 
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
         <Field label="Status" width={130}>
           <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}>
             <option value="all">All</option>
@@ -315,7 +315,7 @@ function AlertsSection({ sub }: { sub: Subscription }) {
       <p className="text-muted" style={{ marginTop: 0 }}>
         Get reminded before this renews or expires — pick a suggested lead time, or set an exact date and time.
       </p>
-      <div className="row" style={{ gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+      <div className="row" style={{ gap: 8, marginBottom: 12 }}>
         {SUGGESTED_LEAD_DAYS.map((d) => {
           const already = alerts.some((a) => a.daysBefore === d);
           return (
@@ -454,7 +454,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
       <Card style={{ marginBottom: 16 }}>
         {editing ? (
           <div>
-            <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+            <div className="row" style={{ gap: 8 }}>
               <Field label="Name">
                 <TextInput value={editRow.name} onChange={(e) => setEditRow({ ...editRow, name: e.target.value })} />
               </Field>
@@ -544,7 +544,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
             months in the chosen account's Planning tab.
           </p>
         )}
-        <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
           <Field label="Pays via">
             <Select value={linkModule} onChange={(e) => setLinkModule(e.target.value as 'bank' | 'cash')}>
               <option value="bank">Bank account</option>
@@ -755,7 +755,7 @@ function DataManagement() {
   return (
     <Card>
       <h3 style={{ marginTop: 0 }}>Data management</h3>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+      <div className="row" style={{ gap: 8 }}>
         <button className="btn secondary" onClick={exportJSON}>Export JSON</button>
         <button className="btn secondary" onClick={() => fileInput.current?.click()}>Import JSON</button>
         <input

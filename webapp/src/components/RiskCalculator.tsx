@@ -154,7 +154,7 @@ export function RiskCalculator({
   return (
     <div>
       <Card style={{ marginBottom: 16 }}>
-        <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+        <div className="row" style={{ gap: 8, marginBottom: 12 }}>
           <Field label="Stock">
             <Select value={ticker} onChange={(e) => { setTicker(e.target.value); setTargetTouched(false); }}>
               {held.map((r) => (
@@ -182,7 +182,7 @@ export function RiskCalculator({
             </Select>
           </Field>
         </div>
-        <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+        <div className="row" style={{ gap: 8 }}>
           <Field label="Current price" width={100}>
             <TextInput type="number" step="0.001" value={currentPriceInput || ''} onChange={(e) => setCurrentPriceInput(Number(e.target.value))} />
           </Field>

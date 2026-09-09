@@ -214,7 +214,7 @@ export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: strin
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+      <div className="row" style={{ gap: 8 }}>
         <Field label="Person / lender" width={160} required>
           <TextInput value={l.person} onChange={(e) => setL({ ...l, person: e.target.value })} placeholder="e.g. Bilal" />
         </Field>
@@ -366,7 +366,7 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
         title={<h4 style={{ margin: 0 }}>Repayment history</h4>}
         headerExtra={
           repayments.length > 0 ? (
-            <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
               <Field label="From (optional)">
                 <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
               </Field>
@@ -595,7 +595,7 @@ function ImportRepaymentsSection({ loan }: { loan: PersonalLoan }) {
 
       {headers.length > 0 && (
         <div style={{ marginTop: 12 }}>
-          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+          <div className="row" style={{ gap: 8 }}>
             <Field label="Date column" width={160}>
               <Select value={dateCol} onChange={(e) => setDateCol(e.target.value)}>
                 {headers.map((h) => <option key={h} value={h}>{h}</option>)}
@@ -721,7 +721,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
       <Card style={{ marginBottom: 16 }}>
         {editing ? (
           <div>
-            <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+            <div className="row" style={{ gap: 8 }}>
               <Field label="Person / lender">
                 <TextInput value={editRow.person} onChange={(e) => setEditRow({ ...editRow, person: e.target.value })} />
               </Field>
@@ -854,7 +854,7 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: PersonalLoan) => void
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
         <select value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)}>
           <option value="all">All directions</option>
           <option value="owed_to_me">Money I lent out</option>

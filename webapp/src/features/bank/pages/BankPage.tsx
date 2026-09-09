@@ -117,7 +117,7 @@ function CreditCardFields({ value, onChange, datalistId }: { value: CreditCardVa
       </label>
       {value.isLiability && (
         <div style={{ marginTop: 8 }}>
-          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+          <div className="row" style={{ gap: 8 }}>
             <Field label="Credit limit (optional)" width={140}>
               <TextInput type="number" step="0.01" value={value.creditLimit ?? ''} onChange={(e) => onChange({ creditLimit: e.target.value ? Number(e.target.value) : undefined })} />
             </Field>
@@ -131,7 +131,7 @@ function CreditCardFields({ value, onChange, datalistId }: { value: CreditCardVa
               <TextInput type="number" min={1} max={31} value={value.paymentDueDate ?? ''} onChange={(e) => onChange({ paymentDueDate: e.target.value ? Number(e.target.value) : undefined })} />
             </Field>
           </div>
-          <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+          <div className="row" style={{ gap: 8, marginTop: 8 }}>
             <Field label="Late fee after due date (optional)" width={150}>
               <TextInput type="number" step="0.01" value={value.lateFeeAfterDue ?? ''} onChange={(e) => onChange({ lateFeeAfterDue: e.target.value ? Number(e.target.value) : undefined })} />
             </Field>
@@ -251,7 +251,7 @@ function IbanLookupFields({ value, onChange, onBankNameFound }: { value: IbanLoo
   };
 
   return (
-    <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+    <div className="row" style={{ gap: 8, marginTop: 8 }}>
       <Field label="IBAN (optional)" width={220} title="International Bank Account Number, if your bank issues one — used only to look up the bank name/BIC below; not every country or account has one.">
         <TextInput value={value.iban ?? ''} onChange={(e) => onChange({ iban: e.target.value || undefined })} placeholder="e.g. PK36SCBL0000001123456702" />
       </Field>
@@ -419,10 +419,10 @@ function AccountFormFields({
          identity lives — it replaces what used to be a separate `Bank`
          Select shown only once a Bank existed, and it's typing-to-create
          so "no bank yet" costs nothing extra. */}
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
         <BankIdentityField value={value} onChange={onChange} idSuffix={idSuffix} />
       </div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+      <div className="row" style={{ gap: 8 }}>
         <Field label="Account name" width={180} required>
           <TextInput value={value.name} onChange={(e) => onChange({ name: e.target.value })} placeholder="e.g. Meezan Checking" />
         </Field>
@@ -438,7 +438,7 @@ function AccountFormFields({
       {/* README item 82: branch/account-type, free-form (not a fixed enum) —
          ACCOUNT_TYPES is just a datalist of common suggestions, any value is
          accepted. */}
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+      <div className="row" style={{ gap: 8, marginTop: 8 }}>
         <Field label="Branch (optional)" width={160}>
           <TextInput value={value.branch ?? ''} onChange={(e) => onChange({ branch: e.target.value || undefined })} placeholder="e.g. Gulberg Branch" />
         </Field>
@@ -458,7 +458,7 @@ function AccountFormFields({
          transaction-import feature (nothing reads these yet — this just
          gives that feature somewhere to read from). All optional, so
          skipping them changes nothing about today's add-account flow. */}
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+      <div className="row" style={{ gap: 8, marginTop: 8 }}>
         <Field label="Account number (optional)" width={160} title="However your bank shows it on statements/SMS — often partially masked, e.g. xxxx1234.">
           <TextInput value={value.accountNumber ?? ''} onChange={(e) => onChange({ accountNumber: e.target.value || undefined })} placeholder="e.g. xxxx1234" />
         </Field>
@@ -684,7 +684,7 @@ export function BankDetailPage() {
         ) : (
           <div>
             {bank.notes && <p className="text-muted" style={{ marginTop: 0 }}>{bank.notes}</p>}
-            <div className="row" style={{ gap: 16, flexWrap: 'wrap' }}>
+            <div className="row" style={{ gap: 16 }}>
               {Object.keys(totals).length ? (
                 Object.entries(totals).map(([c, n]) => (
                   <div key={c} className="stat-card card" style={hueStyle('var(--accent)')}>
@@ -1212,7 +1212,7 @@ export function AccountDetailPage() {
         title={<h3 style={{ margin: 0 }}>Download statement</h3>}
         headerExtra={<button className="btn" onClick={exportStatement}><ExportIcon size={13} />Export CSV</button>}
       >
-        <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
           <Field label="From (optional)">
             <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
           </Field>
@@ -1293,7 +1293,7 @@ function EditTransactionModal({ tx, onClose }: { tx: BankTransaction; onClose: (
 
   return (
     <FinanceEditModal titleText="Edit transaction" onClose={onClose} onSave={save}>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+      <div className="row" style={{ gap: 8 }}>
         <Field label="Date">
           <TextInput type="date" value={draft.date} onChange={(e) => setDraft({ ...draft, date: e.target.value })} />
         </Field>
@@ -1406,7 +1406,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
         <Field label="Type" width={120}>
           <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
             <option value="all">All</option>
@@ -1621,7 +1621,7 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
+      <div className="row" style={{ gap: 8, alignItems: 'center', marginBottom: 12 }}>
         <span className="text-muted">Chart range:</span>
         <input type="month" value={fromMonth} onChange={(e) => setFromMonth(e.target.value)} aria-label="From month" />
         <span className="text-muted">to</span>
@@ -1821,7 +1821,7 @@ function ImportStatementSection({ account }: { account: BankAccount }) {
 
       {headers.length > 0 && (
         <div style={{ marginTop: 12 }}>
-          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+          <div className="row" style={{ gap: 8 }}>
             <Field label="Date column" width={160}>
               <Select value={dateCol} onChange={(e) => setDateCol(e.target.value)}>
                 {headers.map((h) => <option key={h} value={h}>{h}</option>)}
@@ -2028,7 +2028,7 @@ function AddBankPlanForm({ accountId, onSaved }: { accountId: string; onSaved?: 
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+      <div className="row" style={{ gap: 8 }}>
         <Field label="Expected date">
           <TextInput
             type="date"
@@ -2349,7 +2349,7 @@ function AnalyticsTab() {
                 </tbody>
               </table>
             </div>
-            <div className="row" style={{ gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+            <div className="row" style={{ gap: 8, marginTop: 8 }}>
               <TextInput placeholder="New category" value={newBudgetCategory} onChange={(e) => setNewBudgetCategory(e.target.value)} style={{ width: 140 }} />
               <input
                 type="number"
@@ -2454,7 +2454,7 @@ function DataManagement() {
       <div className="text-muted" style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: 11, letterSpacing: '.04em', marginBottom: 8 }}>
         Data management
       </div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+      <div className="row" style={{ gap: 8 }}>
         <button className="btn secondary" onClick={exportJSON}>Export JSON</button>
         <button className="btn secondary" onClick={() => fileInput.current?.click()}>Import JSON</button>
         <input

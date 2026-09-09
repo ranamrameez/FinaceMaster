@@ -166,7 +166,7 @@ function ActivityList({ activities }: { activities: BudgetActivity[] }) {
 
   return (
     <CollapsibleCard title={<h3 style={{ margin: 0 }}>All planned financial activity</h3>} style={{ marginBottom: 16 }}>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
         <Field label="Account" width={130}>
           <Select value={moduleFilter} onChange={(e) => setModuleFilter(e.target.value as typeof moduleFilter)}>
             <option value="all">All</option>
@@ -263,7 +263,7 @@ function AddRentalPlanForm({ rentalProperties, addPlannedRentals, onSaved }: { r
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+      <div className="row" style={{ gap: 8 }}>
         <Field label="Property" width={180} required>
           <Select value={propertyId} onChange={(e) => setPropertyId(e.target.value)}>
             {rentalProperties.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.currencyCode})</option>)}

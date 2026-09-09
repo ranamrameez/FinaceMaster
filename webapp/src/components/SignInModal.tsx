@@ -118,7 +118,7 @@ export function SignInModalHost() {
   return (
     <Modal title="Sign in" onClose={() => close(false)} zIndex={300}>
       <p>{message}</p>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginTop: 8, alignItems: 'flex-end' }}>
+      <div className="row" style={{ gap: 8, marginTop: 8, alignItems: 'flex-end' }}>
         <Field label="Email">
           <TextInput type="email" autoComplete="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
         </Field>
@@ -126,7 +126,7 @@ export function SignInModalHost() {
           <TextInput type="password" autoComplete="current-password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
         </Field>
       </div>
-      <div className="row" style={{ gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+      <div className="row" style={{ gap: 8, marginTop: 12, alignItems: 'center' }}>
         <button className="btn" disabled={busy !== null} onClick={() => run('signin', () => signInWithEmail(email, password))}>
           <LogInIcon />{busy === 'signin' ? 'Signing in…' : 'Sign in'}
         </button>

@@ -113,7 +113,7 @@ function TickerTransactions({ ticker }: { ticker: string }) {
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+      <div className="row" style={{ gap: 8, marginBottom: 16 }}>
         <Field label="Action">
           <select value={action} onChange={(e) => setAction(e.target.value as 'BUY' | 'SELL')}>
             <option value="BUY">Buy</option>
@@ -325,7 +325,7 @@ export function StockPage() {
             label: 'Trades',
             content: <TickerTransactions ticker={ticker} />,
             headerExtra: hasRows ? (
-              <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
                 <Field label="From (optional)">
                   <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
                 </Field>
