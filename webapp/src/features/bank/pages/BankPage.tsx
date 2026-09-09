@@ -737,7 +737,7 @@ function AccountsList() {
             {group.map((a) => (
               <EntityCard
                 key={a.id}
-                title={<><span className="text-muted" style={{ fontWeight: 400, fontSize: 11, marginRight: 5 }}>#{srNumOf.get(a.id)}</span>{a.name}</>}
+                title={<><span className="text-muted entity-card-sr">#{srNumOf.get(a.id)}</span>{a.name}</>}
                 subtitle={[a.accountType, a.branch].filter(Boolean).join(' · ') || undefined}
                 badge={
                   a.isLiability || a.isActive === false ? (

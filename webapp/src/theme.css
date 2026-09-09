@@ -460,6 +460,20 @@
   .entity-card{cursor:pointer; transition:transform .12s ease, box-shadow .12s ease; padding:13px 15px;}
   .entity-card:hover{transform:translateY(-2px); box-shadow:var(--shadow-lg);}
   .entity-card-title{font-weight:700; font-size:14px; line-height:1.3; overflow-wrap:anywhere;}
+  /* README Pending item 116's own suggested starting point: extract a
+     repeated inline `style={{}}` pattern into a real class. This exact
+     "muted Sr# prefix" style was copy-pasted identically across Bank/
+     Personal Loans/EMI/Rentals/Subscriptions' entity-list `title`s
+     (2026-09-09) — one shared class instead of 5 duplicated style objects.
+     A previous inline `style={{fontSize:11}}` always won over `.text-muted`
+     (11.5px) since inline styles beat any class regardless of source order
+     — replacing it with a second same-specificity class would silently
+     flip that outcome to whichever rule sits later in this file (the exact
+     "equal-specificity, later-wins" cascade trap already hit several times
+     in this project — see CLAUDE.md's chip-contrast/checkbox-uppercase/
+     stat-card-hue bugs), so this uses a compound `.text-muted.entity-card-sr`
+     selector to make the smaller size win deterministically instead. */
+  .text-muted.entity-card-sr{font-weight:400; font-size:11px; margin-right:5px;}
 
   /* User-reported (2026-08-28): "I asked to use grids to utilize space
      properly. But you are still obsessed with 100% width cards instead of

@@ -247,7 +247,7 @@ function SubscriptionList({ onSelect }: { onSelect: (sub: Subscription) => void 
             return (
               <EntityCard
                 key={s.id}
-                title={<><span className="text-muted" style={{ fontWeight: 400, fontSize: 11, marginRight: 5 }}>#{srNumOf.get(s.id)}</span>{s.name}</>}
+                title={<><span className="text-muted entity-card-sr">#{srNumOf.get(s.id)}</span>{s.name}</>}
                 subtitle={
                   <>
                     {fmtMoney(s.amount, s.currencyCode)}{CYCLE_LABEL[s.billingCycle]} ·{' '}
