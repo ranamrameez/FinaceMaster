@@ -9,6 +9,7 @@ import { ChartCard } from '../../qse/components/ChartCard';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { ArchiveIcon, CheckIcon, EditIcon, ExportIcon, ListIcon, PlusIcon, RestoreIcon, SaveIcon, StarIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Modal } from '../../../components/Modal';
+import { RecordDetailModal } from '../../../components/RecordDetailModal';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
@@ -1342,6 +1343,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
   const ensureSignedIn = useEnsureSignedIn();
   const sideLabel = useLinkSideLabel();
   const [editingTx, setEditingTx] = useState<BankTransaction | null>(null);
+  const [detailTx, setDetailTx] = useState<BankTransaction | null>(null);
   const [typeFilter, setTypeFilter] = useState<'all' | 'in' | 'out'>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   // User-requested (2026-09-06): "although we are removing sorting, we
@@ -1458,20 +1460,22 @@ function TransactionsList({ account }: { account: BankAccount }) {
             const link = linkByRecordId.get(tx.id);
             const otherSide = link ? (link.from.module === 'bank' && link.fromRecordId === tx.id ? link.to : link.from) : undefined;
             return (
-              <tr key={tx.id}>
+              <tr key={tx.id} onClick={() => setDetailTx(tx)} style={{ cursor: 'pointer' }}>
                 <td className="text-muted">
                   {tx.serialNumber ?? '—'}{' '}
-                  <ReorderButtons
-                    rows={sorted}
-                    index={i}
-                    instantOf={instantOf}
-                    idOf={(r) => r.tx.id}
-                    orderOf={(r) => r.tx.serialNumber}
-                    onMove={reorder}
-                  />
+                  <span onClick={(e) => e.stopPropagation()}>
+                    <ReorderButtons
+                      rows={sorted}
+                      index={i}
+                      instantOf={instantOf}
+                      idOf={(r) => r.tx.id}
+                      orderOf={(r) => r.tx.serialNumber}
+                      onMove={reorder}
+                    />
+                  </span>
                 </td>
                 <td>{tx.date}</td>
-                <td className="cell-clip" title={tx.description}>
+                <td className="cell-clip" title={tx.description} onClick={(e) => e.stopPropagation()}>
                   {tx.description}
                   {tx.isPending && (
                     <span className="pill-warn" style={{ marginLeft: 6 }} title="Not yet cleared — excluded from Current balance above until marked cleared.">Pending</span>
@@ -1488,7 +1492,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
                 <td className="text-muted cell-clip" title={tx.source === 'statement-import' ? `Import${tx.statementRef ? ` (${tx.statementRef})` : ''}` : 'Manual'}>
                   {tx.source === 'statement-import' ? `Import${tx.statementRef ? ` (${tx.statementRef})` : ''}` : 'Manual'}
                 </td>
-                <td>
+                <td onClick={(e) => e.stopPropagation()}>
                   {tx.isPending && (
                     <IconButton
                       label="Mark cleared"
@@ -1523,6 +1527,28 @@ function TransactionsList({ account }: { account: BankAccount }) {
       </table>
       </div>
       {editingTx && <EditTransactionModal tx={editingTx} onClose={() => setEditingTx(null)} />}
+      {detailTx && (
+        <RecordDetailModal
+          title={detailTx.amount >= 0 ? 'Deposit' : 'Withdrawal'}
+          onClose={() => setDetailTx(null)}
+          fields={[
+            { label: '#', value: detailTx.serialNumber ?? '—' },
+            { label: 'Date', value: detailTx.date },
+            { label: 'Time', value: detailTx.time ?? '— (defaults to noon)' },
+            { label: 'Timezone', value: detailTx.timezone ?? '—' },
+            { label: 'Description', value: detailTx.description || '—' },
+            { label: 'Category', value: categoryName(detailTx.categoryID, categories) },
+            { label: 'Amount', value: fmtMoney(detailTx.amount, account.currencyCode) },
+            {
+              label: 'Source',
+              value: detailTx.source === 'statement-import'
+                ? `Imported${detailTx.statementRef ? ` (${detailTx.statementRef})` : ''}`
+                : 'Manual',
+            },
+            { label: 'Status', value: detailTx.isPending ? 'Pending (not yet cleared)' : 'Cleared' },
+          ]}
+        />
+      )}
     </div>
   );
 }

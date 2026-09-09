@@ -7794,6 +7794,27 @@ FinanceManager live link:
   `npm run build` all clean. **Still open**: item 130(b)-ii, the category-level Income/Expense/
   Ignore classification feature itself (a real design fork on several of this app's ambiguous
   real production categories — needs the user's own classification pass, not a guess).
+- **`RecordDetailModal` rolled out to Cash and Bank, continuing Pending item 132 (2026-09-09) —
+  see Done item 286.** Cash's `CashStatementTable` and Bank's `TransactionsList` both gained
+  row-click detail popups (Date/Time/Timezone/Type/Amount/Category/Note/Source/Status, plus a
+  `#` for Bank's `serialNumber`), same generic `RecordDetailModal` QSE/PSX's Trade List already
+  uses. **A real bug caught before shipping, worth remembering for any future row-click
+  rollout**: the first pass put `stopPropagation` on the WHOLE Date/# `<td>` (reasoning: it
+  contains `ReorderButtons`, whose own click shouldn't also open the detail popup) — but that
+  silently blocked the row's own click handler from firing for ANY click in that column,
+  including the bare date/number text itself, not just the reorder arrows. A live Playwright
+  check (clicking the date cell, expecting a modal, getting none) caught this immediately.
+  Fixed by scoping `stopPropagation` to a `<span>` wrapping only the `ReorderButtons`, leaving
+  the rest of the cell's own click free to reach the row. **Rule for any future
+  `stopPropagation`-on-a-cell-with-a-nested-interactive-element**: scope it to the smallest
+  wrapper around the interactive element itself, never the whole cell, or a plain click
+  anywhere else in that cell silently stops doing anything. Verified live via Playwright on
+  both modules: the fixed version opens the popup correctly with all seeded fields (Note text,
+  Time, Timezone) present; the real in-table "Edit" button (scoped correctly, confirmed by
+  querying inside `tbody` specifically since the page has 2 same-labelled Edit buttons — one
+  for the transaction, one for the account itself) still opens its own edit form without also
+  opening the detail popup. `npx tsc -b` / `npm run test` (630 tests, unchanged) / `npm run
+  build` all clean. Still open: Rentals/Personal Loans/EMI/Funds/Subscriptions.
 
 ## Pending
 
@@ -8725,13 +8746,19 @@ or a design decision before more code, not guessed at further:**
      seed data used for real money.
 ~~131. First-time currency-selection prompt~~ — **done (2026-09-09), see Done item 283.**
 132. **Roll the new `RecordDetailModal` (Done item 284) out beyond QSE/PSX's Trade List
-     (2026-09-09).** The component itself is a generic `{label, value}[]`-driven popup, ready
-     to reuse — what's left per module is deciding which fields are worth surfacing in a
-     detail popup for THAT module's own record type (Cash/Bank/Rentals' shared `Finance`-based
-     ledgers, Personal Loans' repayments, EMI's schedule rows, Funds' transactions, Subscriptions)
-     and wiring row-click + `stopPropagation` on that table's own action buttons, same pattern
-     already established for QSE/PSX. Not a design question, just an incremental rollout — see
-     this project's own standing discipline of shipping one working slice first, then extending.
+     (2026-09-09) — Cash and Bank done, see Done item 286.** The component itself is a generic
+     `{label, value}[]`-driven popup, ready to reuse — Cash's own ledger table
+     (`CashStatementTable`) and Bank's account-transaction table (`TransactionsList`) both wired
+     up the same pattern: row-click opens the popup, `stopPropagation` on the Note/Description
+     cell (which has its own linked-transfer `<Link>`) and the actions cell. **A real bug caught
+     and fixed while wiring this, not present in QSE/PSX's own version**: the Date/# cell's own
+     `ReorderButtons` first got a blanket `stopPropagation` on the whole `<td>`, which silently
+     blocked the row's click handler from EVER firing when clicking anywhere in that column,
+     including the bare date text itself — caught by a live Playwright check (0 modals opened)
+     before it shipped, fixed by scoping `stopPropagation` to a `<span>` wrapping just the
+     `ReorderButtons`, not the whole cell. Still open: Rentals' entries, Personal Loans'
+     repayments, EMI's schedule rows, Funds' transactions, Subscriptions — same mechanical
+     wiring, not yet done.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

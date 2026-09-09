@@ -7,6 +7,7 @@ import { Notice } from '../../../components/Notice';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { CheckIcon, EditIcon, PlusIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Modal } from '../../../components/Modal';
+import { RecordDetailModal } from '../../../components/RecordDetailModal';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
@@ -267,6 +268,7 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
   const ensureSignedIn = useEnsureSignedIn();
   const sideLabel = useLinkSideLabel();
   const [editingEntry, setEditingEntry] = useState<CashEntry | null>(null);
+  const [detailEntry, setDetailEntry] = useState<CashEntry | null>(null);
   const [typeFilter, setTypeFilter] = useState<'all' | 'in' | 'out'>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   // User-requested (2026-09-06): "although we are removing sorting, we
@@ -364,20 +366,22 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
               const link = linkByRecordId.get(entry.id);
               const otherSide = link ? (link.from.module === 'cash' && link.fromRecordId === entry.id ? link.to : link.from) : undefined;
               return (
-                <tr key={entry.id}>
+                <tr key={entry.id} onClick={() => setDetailEntry(entry)} style={{ cursor: 'pointer' }}>
                   <td>
                     {entry.date}{' '}
-                    <ReorderButtons
-                      rows={sorted}
-                      index={i}
-                      instantOf={instantOf}
-                      idOf={(r) => r.entry.id}
-                      orderOf={(r) => r.entry.serialNumber}
-                      onMove={reorder}
-                    />
+                    <span onClick={(e) => e.stopPropagation()}>
+                      <ReorderButtons
+                        rows={sorted}
+                        index={i}
+                        instantOf={instantOf}
+                        idOf={(r) => r.entry.id}
+                        orderOf={(r) => r.entry.serialNumber}
+                        onMove={reorder}
+                      />
+                    </span>
                   </td>
                   <td className={entry.isDeposit ? 'pill-positive' : 'pill-negative'}>{entry.isDeposit ? 'Cash in' : 'Cash out'}</td>
-                  <td className="cell-clip" title={entry.note}>
+                  <td className="cell-clip" title={entry.note} onClick={(e) => e.stopPropagation()}>
                     {entry.note}
                     {entry.isPending && (
                       <span className="pill-warn" style={{ marginLeft: 6 }} title="Not yet cleared — excluded from the Balance stat above until marked cleared.">Pending</span>
@@ -394,7 +398,7 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
                   <td className="text-muted cell-clip" title={entry.source === 'statement-import' ? `Import${entry.statementRef ? ` (${entry.statementRef})` : ''}` : 'Manual'}>
                     {entry.source === 'statement-import' ? `Import${entry.statementRef ? ` (${entry.statementRef})` : ''}` : 'Manual'}
                   </td>
-                  <td>
+                  <td onClick={(e) => e.stopPropagation()}>
                     {entry.isPending && (
                       <IconButton
                         label="Mark cleared"
@@ -423,6 +427,28 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
         </table>
       </div>
       {editingEntry && <EditEntryModal entry={editingEntry} onClose={() => setEditingEntry(null)} />}
+      {detailEntry && (
+        <RecordDetailModal
+          title={detailEntry.isDeposit ? 'Cash in' : 'Cash out'}
+          onClose={() => setDetailEntry(null)}
+          fields={[
+            { label: 'Date', value: detailEntry.date },
+            { label: 'Time', value: detailEntry.time ?? '— (defaults to noon)' },
+            { label: 'Timezone', value: detailEntry.timezone ?? '—' },
+            { label: 'Type', value: detailEntry.isDeposit ? 'Cash in' : 'Cash out' },
+            { label: 'Amount', value: fmtMoney(detailEntry.amount, detailEntry.currencyCode) },
+            { label: 'Category', value: categoryName(detailEntry.categoryID, categories) },
+            { label: 'Note', value: detailEntry.note || '—' },
+            {
+              label: 'Source',
+              value: detailEntry.source === 'statement-import'
+                ? `Imported${detailEntry.statementRef ? ` (${detailEntry.statementRef})` : ''}`
+                : 'Manual',
+            },
+            { label: 'Status', value: detailEntry.isPending ? 'Pending (not yet cleared)' : 'Cleared' },
+          ]}
+        />
+      )}
     </Card>
   );
 }
