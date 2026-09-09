@@ -7464,6 +7464,28 @@ FinanceManager live link:
   unchanged) / `npm run build` all clean. **README Pending item 114 is now fully closed** —
   every module named in it (Bank, Funds, Personal Loans, EMI, Rentals, Subscriptions) has its
   main entity list on `EntityCard`s.
+- **First scoped App-wide CSS cleanup pass, per Pending item 116's own suggested starting point
+  (2026-09-09) — see Done item 275.** That item explicitly named "audit one module's most-
+  repeated inline style patterns and extract them into real theme.css classes" as the way to
+  start, rather than one blind sweep — the just-finished `EntityCard` rollout above happened to
+  leave exactly one such pattern behind: `style={{ fontWeight: 400, fontSize: 11, marginRight:
+  5 }}` was copy-pasted identically across Bank/Personal Loans/EMI/Rentals/Subscriptions'
+  entity-list `title`s (the muted "#N" Sr# prefix). Extracted into a new `.entity-card-sr` class
+  in `theme.css`, replacing all 5 inline-style instances with a plain class name. **Caught a
+  real, subtle regression before shipping, not after**: the original inline style always won
+  over the sibling `.text-muted` class's own `font-size:11.5px` (inline styles beat any class
+  regardless of source order) — naively giving the new class the same specificity as
+  `.text-muted` would have made the outcome depend on which rule happens to sit later in
+  `theme.css` (the exact "equal-specificity, later-wins" cascade trap this project has hit
+  several times before — see CLAUDE.md's chip-contrast/checkbox-uppercase/stat-card-hue bugs).
+  Confirmed the drift via a real `getComputedStyle` check (11.5px instead of the original
+  11px) before fixing it with a compound `.text-muted.entity-card-sr` selector, then
+  re-confirmed 11px live afterward. Verified live via Playwright on Bank's `AccountsList` (one
+  of the 5 touched files) — zero console errors. `npx tsc -b` / `npm run test` (624 tests,
+  unchanged) / `npm run build` all clean. **Not attempted**: a full inline-style-to-classes
+  sweep — per the item's own explicit "not one blind sweep" guidance, this stays a small,
+  incremental, per-pattern extraction; the next occasion to repeat this (a different module,
+  a different repeated pattern) is still open.
 
 ## Pending
 

@@ -226,7 +226,7 @@ function PropertiesList() {
             return (
               <EntityCard
                 key={p.id}
-                title={<><span className="text-muted" style={{ fontWeight: 400, fontSize: 11, marginRight: 5 }}>#{srNumOf.get(p.id)}</span>{p.name}</>}
+                title={<><span className="text-muted entity-card-sr">#{srNumOf.get(p.id)}</span>{p.name}</>}
                 subtitle={<>{p.currencyCode}{p.purchasePrice ? ` · Purchase price: ${fmtMoney(p.purchasePrice, p.currencyCode)}` : ''}</>}
                 badge={p.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Archived</span> : undefined}
                 statLabel="Net income (all time)"

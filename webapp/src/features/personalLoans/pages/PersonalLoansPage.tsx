@@ -850,7 +850,7 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: PersonalLoan) => void
             return (
               <EntityCard
                 key={l.id}
-                title={<><span className="text-muted" style={{ fontWeight: 400, fontSize: 11, marginRight: 5 }}>#{srNumOf.get(l.id)}</span>{l.person}</>}
+                title={<><span className="text-muted entity-card-sr">#{srNumOf.get(l.id)}</span>{l.person}</>}
                 subtitle={l.direction === 'owed_to_me' ? 'Lent out' : 'I owe'}
                 badge={l.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Archived</span> : undefined}
                 statLabel="Outstanding"

@@ -1198,7 +1198,7 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: EMILoan) => void; onE
             return (
               <EntityCard
                 key={l.id}
-                title={<><span className="text-muted" style={{ fontWeight: 400, fontSize: 11, marginRight: 5 }}>#{srNumOf.get(l.id)}</span>{l.name}</>}
+                title={<><span className="text-muted entity-card-sr">#{srNumOf.get(l.id)}</span>{l.name}</>}
                 subtitle={`${l.lender}${l.repaymentMode === 'fixedTotal' ? ' · no-interest' : ''}`}
                 badge={l.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Archived</span> : undefined}
                 statLabel="Outstanding"

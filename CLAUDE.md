@@ -6018,6 +6018,18 @@ touched those.
   broader app-wide UI/UX redesign item (Main/Often/Rare model, Credit Card/Bank/Branch
   normalization, etc.) stays open for its other remaining scope — only the "put every
   module's entity list on EntityCard" ask is now fully done.
+- **First scoped App-wide CSS cleanup pass (2026-09-09) — see README Done item 275, Pending
+  item 116's own suggested starting point.** The `EntityCard` rollout just finished left one
+  repeated inline style behind: the muted "#N" Sr# prefix (`style={{fontWeight:400,fontSize:11,
+  marginRight:5}}`) copy-pasted across Bank/Personal Loans/EMI/Rentals/Subscriptions' entity
+  lists. Extracted into `.entity-card-sr` in `theme.css`. **Caught a real regression before
+  shipping**: naively giving it the same specificity as the sibling `.text-muted` class (whose
+  own `font-size:11.5px` the original inline style always beat, since inline wins regardless of
+  source order) would have made the outcome depend on file order instead — the same
+  "equal-specificity, later-wins" trap already hit several times in this project. Fixed with a
+  compound `.text-muted.entity-card-sr` selector, confirmed via `getComputedStyle` (11px, not
+  11.5px) before and after. Deliberately small and incremental, not a full sweep, per the
+  Pending item's own explicit guidance against one blind pass.
 
 ## Live URLs
 
