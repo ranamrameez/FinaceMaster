@@ -9,6 +9,7 @@ import { ChartCard } from '../../qse/components/ChartCard';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { ArchiveIcon, CheckIcon, EditIcon, ExportIcon, ListIcon, PlusIcon, RestoreIcon, SaveIcon, StarIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Modal } from '../../../components/Modal';
+import { RecordDetailModal } from '../../../components/RecordDetailModal';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
@@ -18,7 +19,6 @@ import { IconButton } from '../../../components/ui/IconButton';
 import { AttributeList } from '../../../components/ui/AttributeList';
 import { FabButton, FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
-import { RecordDetailModal } from '../../../components/RecordDetailModal';
 import { CategorySelect } from '../../../components/CategorySelect';
 import { FinanceEditModal } from '../../../components/FinanceEditModal';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
@@ -1461,25 +1461,27 @@ function TransactionsList({ account }: { account: BankAccount }) {
             const otherSide = link ? (link.from.module === 'bank' && link.fromRecordId === tx.id ? link.to : link.from) : undefined;
             return (
               <tr key={tx.id} onClick={() => setDetailTx(tx)} style={{ cursor: 'pointer' }}>
-                <td className="text-muted" onClick={(e) => e.stopPropagation()}>
+                <td className="text-muted">
                   {tx.serialNumber ?? '—'}{' '}
-                  <ReorderButtons
-                    rows={sorted}
-                    index={i}
-                    instantOf={instantOf}
-                    idOf={(r) => r.tx.id}
-                    orderOf={(r) => r.tx.serialNumber}
-                    onMove={reorder}
-                  />
+                  <span onClick={(e) => e.stopPropagation()}>
+                    <ReorderButtons
+                      rows={sorted}
+                      index={i}
+                      instantOf={instantOf}
+                      idOf={(r) => r.tx.id}
+                      orderOf={(r) => r.tx.serialNumber}
+                      onMove={reorder}
+                    />
+                  </span>
                 </td>
                 <td>{tx.date}</td>
-                <td className="cell-clip" title={tx.description}>
+                <td className="cell-clip" title={tx.description} onClick={(e) => e.stopPropagation()}>
                   {tx.description}
                   {tx.isPending && (
                     <span className="pill-warn" style={{ marginLeft: 6 }} title="Not yet cleared — excluded from Current balance above until marked cleared.">Pending</span>
                   )}
                   {link && (
-                    <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side" onClick={(e) => e.stopPropagation()}>
+                    <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
                       🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
                     </Link>
                   )}
@@ -1527,24 +1529,23 @@ function TransactionsList({ account }: { account: BankAccount }) {
       {editingTx && <EditTransactionModal tx={editingTx} onClose={() => setEditingTx(null)} />}
       {detailTx && (
         <RecordDetailModal
-          title={detailTx.amount >= 0 ? 'Money in' : 'Money out'}
+          title={detailTx.amount >= 0 ? 'Deposit' : 'Withdrawal'}
           onClose={() => setDetailTx(null)}
           fields={[
+            { label: '#', value: detailTx.serialNumber ?? '—' },
             { label: 'Date', value: detailTx.date },
             { label: 'Time', value: detailTx.time ?? '— (defaults to noon)' },
             { label: 'Timezone', value: detailTx.timezone ?? '—' },
             { label: 'Description', value: detailTx.description || '—' },
             { label: 'Category', value: categoryName(detailTx.categoryID, categories) },
             { label: 'Amount', value: fmtMoney(detailTx.amount, account.currencyCode) },
-            { label: 'Sequence #', value: detailTx.serialNumber ?? '—' },
-            { label: 'Source', value: detailTx.source === 'statement-import' ? `Import${detailTx.statementRef ? ` (${detailTx.statementRef})` : ''}` : 'Manual' },
+            {
+              label: 'Source',
+              value: detailTx.source === 'statement-import'
+                ? `Imported${detailTx.statementRef ? ` (${detailTx.statementRef})` : ''}`
+                : 'Manual',
+            },
             { label: 'Status', value: detailTx.isPending ? 'Pending (not yet cleared)' : 'Cleared' },
-            ...(linkByRecordId.get(detailTx.id)
-              ? (() => {
-                  const l = linkByRecordId.get(detailTx.id)!;
-                  return [{ label: 'Linked', value: `${sideLabel(l.from)} → ${sideLabel(l.to)}` }];
-                })()
-              : []),
           ]}
         />
       )}

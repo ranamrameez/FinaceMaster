@@ -7794,35 +7794,80 @@ FinanceManager live link:
   `npm run build` all clean. **Still open**: item 130(b)-ii, the category-level Income/Expense/
   Ignore classification feature itself (a real design fork on several of this app's ambiguous
   real production categories — needs the user's own classification pass, not a guess).
-- **`RecordDetailModal` rolled out beyond QSE/PSX's Trade List, closing most of Pending item
-  132 (2026-09-09) — see Done item 286.** A pure, non-design-question incremental rollout of
-  the generic detail-popup component built for Done item 284 — each module builds its own
-  `{label, value}[]` field list, no shared-shape guessing. Wired into the five modules whose
-  main list is a real transaction-style table with fields genuinely truncated by column width
-  (a Note/Description cell, or Time/Timezone/link info not shown in the row at all): Cash's
-  per-currency statement table, Bank's account-detail transaction list, Rentals' per-property
-  entries list, Personal Loans' repayments table, and Funds' per-fund transaction list — each
-  gets row-click-to-open with `stopPropagation` on the row's own action buttons/links, same
-  pattern as QSE/PSX. **EMI's Schedule table was deliberately NOT touched** — unlike the five
-  above, every field (due date, installment, net paid/balance, principal/markup breakdown,
-  status) is already fully visible in the row itself, nothing is truncated, and the row's own
-  inline `overrideMonth`-driven edit UI already replaces the whole row rather than hiding
-  fields behind columns — a detail popup would add clutter, not recover lost information, so
-  this table doesn't fit the pattern the original request was about. **Subscriptions'
-  `SubscriptionList` was also deliberately skipped** — it's an `EntityCard` grid of whole
-  subscription records (not a per-transaction ledger; a `Subscription` has no dated log to
-  show truncated fields from — same reasoning already documented for why Subscriptions was
-  skipped from the time/timezone and pending-state rollouts), and its cards already open a
-  full `SubscriptionDetail` page on click, which is a strictly richer view than a
-  `RecordDetailModal` popup would be. Verified live via Playwright across all five modules
-  with seeded data (a real dev-server session, not just a code read): each module's row click
-  correctly opened a popup showing the row's full data including fields cut off in the table
-  (a long Note/Description, Time/Timezone, linked-transfer info), and closing it worked — zero
-  console errors on any of the five. `npx tsc -b` / `npm run test` (630 tests, unchanged — new
-  UI wiring onto an already-tested component, no calc logic touched) / `npm run build` all
-  clean. **What's left of Pending item 132**: nothing further is planned — the two modules
-  deliberately not converted (EMI, Subscriptions) have a stated reason each, not a "not yet
-  done" gap.
+- **`RecordDetailModal` rolled out to Cash and Bank, continuing Pending item 132 (2026-09-09) —
+  see Done item 286.** Cash's `CashStatementTable` and Bank's `TransactionsList` both gained
+  row-click detail popups (Date/Time/Timezone/Type/Amount/Category/Note/Source/Status, plus a
+  `#` for Bank's `serialNumber`), same generic `RecordDetailModal` QSE/PSX's Trade List already
+  uses. **A real bug caught before shipping, worth remembering for any future row-click
+  rollout**: the first pass put `stopPropagation` on the WHOLE Date/# `<td>` (reasoning: it
+  contains `ReorderButtons`, whose own click shouldn't also open the detail popup) — but that
+  silently blocked the row's own click handler from firing for ANY click in that column,
+  including the bare date/number text itself, not just the reorder arrows. A live Playwright
+  check (clicking the date cell, expecting a modal, getting none) caught this immediately.
+  Fixed by scoping `stopPropagation` to a `<span>` wrapping only the `ReorderButtons`, leaving
+  the rest of the cell's own click free to reach the row. **Rule for any future
+  `stopPropagation`-on-a-cell-with-a-nested-interactive-element**: scope it to the smallest
+  wrapper around the interactive element itself, never the whole cell, or a plain click
+  anywhere else in that cell silently stops doing anything. Verified live via Playwright on
+  both modules: the fixed version opens the popup correctly with all seeded fields (Note text,
+  Time, Timezone) present; the real in-table "Edit" button (scoped correctly, confirmed by
+  querying inside `tbody` specifically since the page has 2 same-labelled Edit buttons — one
+  for the transaction, one for the account itself) still opens its own edit form without also
+  opening the detail popup. `npx tsc -b` / `npm run test` (630 tests, unchanged) / `npm run
+  build` all clean. Still open: Rentals/Personal Loans/EMI/Funds/Subscriptions.
+- **Net Worth: Monthly Summary table's full-cell coloring replaced with compact chips, and
+  Today's-net-flow/This-month's-net-flow/This-month's-change surfaced per currency
+  (2026-09-09, user-reported) — see Done item 287.** User's own words: "attached view is messy
+  and confusing. Making the whole td red/green is bad idea. instead we can make it compact
+  chip-like info," plus "Per currnecy stats are missing like Today's net flow, This month's net
+  flow, This month's change." **Root cause of the first complaint**: the Monthly Summary
+  table's Net-flow/Net-worth rows applied `pill-positive`/`pill-negative` classes DIRECTLY to
+  the `<td>` — those classes are designed for a `.pill` badge (`display:inline-block;
+  padding:3px 9px; border-radius:20px`), so applying just the color half without the base
+  `.pill` shape class left the WHOLE cell solid-colored with square corners, exactly the
+  "messy" look reported. Fixed by wrapping the value in a real `<span className="pill
+  pill-positive/negative">` instead of coloring the cell itself. **Second complaint**: the new
+  "Today's net flow"/"This month's net flow"/"This month's change" stats (Done items 279/285)
+  only ever showed a single converted-to-preferred-currency total in the "Net worth summary"
+  card — each currency's own per-currency section (the "USD —"/"PKR —" cards, which already
+  show real unconverted Assets/Liabilities/Net) never got them. Added a compact chip row (NOT
+  another row of full `.stat-card` boxes, per the user's own explicit "compact chip-like"
+  wording) right below each currency's Assets/Liabilities/Net stat-cards, reusing the exact
+  same `todayFlow`/`monthFlow` per-currency maps (`flowByCurrency`) already computed for the
+  converted totals, plus a new `lastMonthByCurrency` map built alongside the existing
+  `netWorthAsOfDate()` last-month loop. A currency with no real prior-month data of its own
+  shows a neutral "not enough history" chip instead of a misleading number. Verified live via
+  Playwright with a seeded 2-currency (USD/PKR), 2-month scenario, math hand-checked exactly:
+  USD showed "Today +100.00 USD" / "This month +400.00 USD" / "Δ vs. last month +400.00 USD
+  (+33.3%)" (400/1200 = 33.3% exactly); PKR (no March activity) correctly showed all-zero flow
+  chips and "+0.00 PKR (+0.0%)"; a DOM sweep confirmed zero `<td>` elements still directly
+  carry `pill-positive`/`pill-negative` (all moved into `<span>` chips). `npx tsc -b` / `npm
+  run test` (630 tests, unchanged — UI-only) / `npm run build` all clean.
+- **`RecordDetailModal` rolled out to the remaining three modules — Rentals, Personal Loans,
+  and Funds — finishing Pending item 132 (2026-09-09, developed in parallel with Done item
+  286's Cash/Bank rollout) — see Done item 288.** Same generic component, same pattern:
+  Rentals' per-property `EntriesList`, Personal Loans' `RepaymentsSection`, and Funds'
+  per-fund transaction table all gain row-click-to-open detail popups with
+  Date/Time/Timezone/Type/Amount/Category-or-Note/Source/Status, plus a linked-transfer line
+  where applicable. **Personal Loans had the exact same `stopPropagation`-scoping bug Done
+  item 286 found and fixed for Cash/Bank**, caught here by re-checking the pattern against
+  that fix rather than trusting the first pass: the Date cell's `ReorderButtons` needed
+  `stopPropagation` scoped to a `<span>` wrapping just the buttons, not the whole `<td>` —
+  fixed the same way. Rentals needed no such fix (its Date column has no `ReorderButtons`,
+  using sortable headers instead — no nested interactive element to guard against). **EMI's
+  Schedule table and Subscriptions' `SubscriptionList` are deliberately left out, closing this
+  item without further work planned there**: EMI's row already shows every field (due date,
+  installment, net paid/balance, principal/markup breakdown, status) with nothing truncated,
+  and its own inline `overrideMonth`-driven edit UI already replaces the whole row rather than
+  hiding data behind columns — a popup would add clutter, not recover anything lost.
+  Subscriptions' list is an `EntityCard` grid of whole records, not a per-transaction ledger
+  (same reasoning already used to skip it from the time/timezone and pending-state rollouts),
+  and its cards already open a `SubscriptionDetail` page on click — strictly richer than a
+  popup. Verified live via Playwright across all three modules with seeded data: each row
+  click opened the popup with the right fields (including a long Note truncated in the table),
+  zero console errors. `npx tsc -b` / `npm run test` (630 tests, unchanged) / `npm run build`
+  all clean. **This closes Pending item 132 in full** — every module named in it is now either
+  done or has a stated reason for being skipped.
 
 ## Pending
 
@@ -8754,12 +8799,14 @@ or a design decision before more code, not guessed at further:**
      seed data used for real money.
 ~~131. First-time currency-selection prompt~~ — **done (2026-09-09), see Done item 283.**
 ~~132. Roll the new `RecordDetailModal` (Done item 284) out beyond QSE/PSX's Trade List~~ —
-     **done (2026-09-09), see Done item 286.** Cash/Bank/Rentals/Personal Loans/Funds' own
-     main transaction-style tables all got row-click detail popups. EMI's Schedule table and
-     Subscriptions' `SubscriptionList` were deliberately left out, each for a stated reason
-     (EMI's row already shows every field with nothing truncated; Subscriptions is an
-     `EntityCard` grid with no per-transaction ledger and already opens a richer detail page
-     on click) — not a remaining gap.
+     **done (2026-09-09), see Done items 286/288.** Cash and Bank (Done item 286) and Rentals/
+     Personal Loans/Funds (Done item 288, developed in parallel) all got row-click detail
+     popups on their main transaction-style tables — the latter caught and fixed the same
+     `ReorderButtons`-`stopPropagation` bug Done item 286 found, this time in Personal Loans'
+     repayments table. EMI's Schedule table and Subscriptions' `SubscriptionList` were
+     deliberately left out, each for a stated reason (EMI's row already shows every field with
+     nothing truncated; Subscriptions is an `EntityCard` grid with no per-transaction ledger
+     and already opens a richer detail page on click) — not a remaining gap.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

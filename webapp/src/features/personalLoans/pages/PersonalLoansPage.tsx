@@ -415,16 +415,18 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                   </tr>
                 ) : (
                   <tr key={r.id} onClick={() => setDetailRow(r)} style={{ cursor: 'pointer' }}>
-                    <td onClick={(e) => e.stopPropagation()}>
+                    <td>
                       {r.date}{' '}
-                      <ReorderButtons
-                        rows={sorted}
-                        index={i}
-                        instantOf={instantOf}
-                        idOf={(row) => row.id}
-                        orderOf={(row) => row.seq}
-                        onMove={reorder}
-                      />
+                      <span onClick={(e) => e.stopPropagation()}>
+                        <ReorderButtons
+                          rows={sorted}
+                          index={i}
+                          instantOf={instantOf}
+                          idOf={(row) => row.id}
+                          orderOf={(row) => row.seq}
+                          onMove={reorder}
+                        />
+                      </span>
                     </td>
                     <td>
                       {fmtMoney(r.amount, loan.currencyCode)}

@@ -7,6 +7,7 @@ import { Notice } from '../../../components/Notice';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { CheckIcon, EditIcon, PlusIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Modal } from '../../../components/Modal';
+import { RecordDetailModal } from '../../../components/RecordDetailModal';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
@@ -14,7 +15,6 @@ import { PendingToggle } from '../../../components/ui/PendingToggle';
 import { IconButton } from '../../../components/ui/IconButton';
 import { FabButton, FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
-import { RecordDetailModal } from '../../../components/RecordDetailModal';
 import { CategorySelect } from '../../../components/CategorySelect';
 import { FinanceEditModal } from '../../../components/FinanceEditModal';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
@@ -367,25 +367,27 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
               const otherSide = link ? (link.from.module === 'cash' && link.fromRecordId === entry.id ? link.to : link.from) : undefined;
               return (
                 <tr key={entry.id} onClick={() => setDetailEntry(entry)} style={{ cursor: 'pointer' }}>
-                  <td onClick={(e) => e.stopPropagation()}>
+                  <td>
                     {entry.date}{' '}
-                    <ReorderButtons
-                      rows={sorted}
-                      index={i}
-                      instantOf={instantOf}
-                      idOf={(r) => r.entry.id}
-                      orderOf={(r) => r.entry.serialNumber}
-                      onMove={reorder}
-                    />
+                    <span onClick={(e) => e.stopPropagation()}>
+                      <ReorderButtons
+                        rows={sorted}
+                        index={i}
+                        instantOf={instantOf}
+                        idOf={(r) => r.entry.id}
+                        orderOf={(r) => r.entry.serialNumber}
+                        onMove={reorder}
+                      />
+                    </span>
                   </td>
                   <td className={entry.isDeposit ? 'pill-positive' : 'pill-negative'}>{entry.isDeposit ? 'Cash in' : 'Cash out'}</td>
-                  <td className="cell-clip" title={entry.note}>
+                  <td className="cell-clip" title={entry.note} onClick={(e) => e.stopPropagation()}>
                     {entry.note}
                     {entry.isPending && (
                       <span className="pill-warn" style={{ marginLeft: 6 }} title="Not yet cleared — excluded from the Balance stat above until marked cleared.">Pending</span>
                     )}
                     {link && (
-                      <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side" onClick={(e) => e.stopPropagation()}>
+                      <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
                         🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
                       </Link>
                     )}
@@ -437,14 +439,13 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
             { label: 'Amount', value: fmtMoney(detailEntry.amount, detailEntry.currencyCode) },
             { label: 'Category', value: categoryName(detailEntry.categoryID, categories) },
             { label: 'Note', value: detailEntry.note || '—' },
-            { label: 'Source', value: detailEntry.source === 'statement-import' ? `Import${detailEntry.statementRef ? ` (${detailEntry.statementRef})` : ''}` : 'Manual' },
+            {
+              label: 'Source',
+              value: detailEntry.source === 'statement-import'
+                ? `Imported${detailEntry.statementRef ? ` (${detailEntry.statementRef})` : ''}`
+                : 'Manual',
+            },
             { label: 'Status', value: detailEntry.isPending ? 'Pending (not yet cleared)' : 'Cleared' },
-            ...(linkByRecordId.get(detailEntry.id)
-              ? (() => {
-                  const l = linkByRecordId.get(detailEntry.id)!;
-                  return [{ label: 'Linked', value: `${sideLabel(l.from)} → ${sideLabel(l.to)}` }];
-                })()
-              : []),
           ]}
         />
       )}

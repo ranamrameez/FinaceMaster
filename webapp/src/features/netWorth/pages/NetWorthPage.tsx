@@ -295,10 +295,18 @@ export function NetWorthPage({
   })();
   const earliestActivity = earliestActivityDate(netWorthAsOfInputs);
   const hasLastMonthData = !!earliestActivity && earliestActivity <= lastMonthEndDate;
+  // Per-currency version of the same figure — user-reported (2026-09-09):
+  // "Per currency stats are missing like Today's net flow, This month's
+  // net flow, This month's change" — the converted-to-preferred-currency
+  // totals above were the only place these showed; each currency's own
+  // section (below) never got them, unlike Assets/Liabilities/Net which
+  // already show there in real, unconverted terms.
+  const lastMonthByCurrency: Record<string, number> = {};
   let lastMonthTotal = 0;
   let lastMonthUnconverted = false;
   if (hasLastMonthData) {
     netWorthAsOfDate(lastMonthEndDate, netWorthAsOfInputs).forEach((r) => {
+      lastMonthByCurrency[r.currency] = r.net;
       const converted = convertAmount(r.net, r.currency, preferredCurrency, rates);
       if (converted === null) lastMonthUnconverted = true;
       else lastMonthTotal += converted;
@@ -556,6 +564,11 @@ export function NetWorthPage({
       <div className="grid-auto" style={{ ...gridAutoStyle(360, 12), marginBottom: 16 }}>
         {rows.map((r) => {
           const converted = convertAmount(r.net, r.currency, preferredCurrency, rates);
+          const todayFlowC = todayFlow[r.currency] ?? 0;
+          const monthFlowC = monthFlow[r.currency] ?? 0;
+          const lastMonthC = lastMonthByCurrency[r.currency];
+          const deltaC = lastMonthC !== undefined ? r.net - lastMonthC : null;
+          const deltaPctC = deltaC !== null && lastMonthC !== 0 ? (deltaC / Math.abs(lastMonthC)) * 100 : null;
           return (
             <details key={r.currency} open className="card" style={{ padding: 16 }}>
               <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: 16 }}>
@@ -570,6 +583,38 @@ export function NetWorthPage({
                 <div className="stat-card card" style={hueStyle(r.assets >= 0 ? 'var(--profit)' : 'var(--loss)')}><div className="label">Assets</div><MoneyValue n={r.assets} currency={r.currency} /></div>
                 <div className="stat-card card" style={hueStyle('var(--loss)')}><div className="label">Liabilities</div><MoneyValue n={r.liabilities} currency={r.currency} /></div>
                 <div className="stat-card card" style={hueStyle(r.net >= 0 ? 'var(--profit)' : 'var(--loss)')}><div className="label">Net</div><MoneyValue n={r.net} currency={r.currency} /></div>
+              </div>
+              {/* User-reported (2026-09-09): "Per currency stats are
+                 missing like Today's net flow, This month's net flow,
+                 This month's change" — compact chips (not another row of
+                 full stat-cards, per the same report: "making the whole
+                 td red/green is bad idea, instead we can make it compact
+                 chip-like info") mirroring the converted totals shown up
+                 in the Net worth summary card, but in this currency's own
+                 real, unconverted terms. */}
+              <div className="row" style={{ gap: 6, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                <Tooltip text="Net money moved in/out of Cash and Bank today, in this currency.">
+                  <span className={`pill ${todayFlowC >= 0 ? 'pill-positive' : 'pill-negative'}`}>
+                    Today {todayFlowC >= 0 ? '+' : ''}{fmtMoney(todayFlowC, r.currency)}
+                  </span>
+                </Tooltip>
+                <Tooltip text="Net money moved in/out of Cash and Bank since the 1st of this month, in this currency.">
+                  <span className={`pill ${monthFlowC >= 0 ? 'pill-positive' : 'pill-negative'}`}>
+                    This month {monthFlowC >= 0 ? '+' : ''}{fmtMoney(monthFlowC, r.currency)}
+                  </span>
+                </Tooltip>
+                {deltaC !== null ? (
+                  <Tooltip text="This currency's real net worth right now minus its real net worth at the end of last month.">
+                    <span className={`pill ${deltaC >= 0 ? 'pill-positive' : 'pill-negative'}`}>
+                      Δ vs. last month {deltaC >= 0 ? '+' : ''}{fmtMoney(deltaC, r.currency)}
+                      {deltaPctC !== null ? ` (${deltaPctC >= 0 ? '+' : ''}${deltaPctC.toFixed(1)}%)` : ''}
+                    </span>
+                  </Tooltip>
+                ) : (
+                  <span className="pill" style={{ background: 'var(--panel-2)', color: 'var(--muted)' }}>
+                    Δ vs. last month — not enough history
+                  </span>
+                )}
               </div>
               {r.breakdown.length > 0 && (
                 <div style={{ marginTop: 12 }}>
@@ -988,7 +1033,11 @@ function MonthlySummaryTable({
               {months.map((m) => {
                 const row = monthlyByMonth.get(m);
                 const net = (row?.income[currency] ?? 0) - (row?.expense[currency] ?? 0);
-                return <td key={m} className={net >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(net, currency)}</td>;
+                return (
+                  <td key={m}>
+                    <span className={`pill ${net >= 0 ? 'pill-positive' : 'pill-negative'}`}>{fmtMoney(net, currency)}</span>
+                  </td>
+                );
               })}
             </tr>
             <tr>
@@ -1000,8 +1049,12 @@ function MonthlySummaryTable({
               {months.map((m) => {
                 const value = trendByMonth.get(m)?.byCurrency[currency];
                 return (
-                  <td key={m} className={value === undefined ? 'text-muted' : value >= 0 ? 'pill-positive' : 'pill-negative'}>
-                    {value === undefined ? '—' : fmtMoney(value, currency)}
+                  <td key={m}>
+                    {value === undefined ? (
+                      <span className="text-muted">—</span>
+                    ) : (
+                      <span className={`pill ${value >= 0 ? 'pill-positive' : 'pill-negative'}`}>{fmtMoney(value, currency)}</span>
+                    )}
                   </td>
                 );
               })}
