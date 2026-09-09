@@ -16,6 +16,7 @@ import { createEmptyPSXWorkbook } from '../store/defaultPsxWorkbook';
 import { createEmptyRentalsWorkbook } from '../store/defaultRentalsWorkbook';
 import { createEmptySubscriptionsWorkbook } from '../store/defaultSubscriptionsWorkbook';
 import { createEmptyWorkbook } from '../store/defaultWorkbook';
+import { clearCachedFxRates } from './fx';
 import { useEMIWorkbookStore } from '../store/emiWorkbookStore';
 import { useFundsWorkbookStore } from '../store/fundsWorkbookStore';
 import { useInterEntityTransfersStore } from '../store/interEntityTransfersStore';
@@ -69,4 +70,10 @@ export function resetAllLocalWorkbooks() {
   usePlannedRentalsWorkbookStore.getState().setWorkbook(createEmptyPlannedRentalsWorkbook());
   useNetWorthSnapshotsWorkbookStore.getState().setWorkbook(createEmptyNetWorthSnapshotsWorkbook());
   useCategoryStore.getState().setWorkbook(createEmptyCategoriesWorkbook());
+  // User-reported (2026-09-09): "saving currency rates should belong that
+  // user only" — the FX rate cache (lib/fx.ts) isn't a per-account
+  // workbook, but it's still personal preference data that must not leak
+  // across accounts on a shared browser, same reasoning as everything else
+  // in this function.
+  clearCachedFxRates();
 }

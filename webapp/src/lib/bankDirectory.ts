@@ -74,3 +74,14 @@ export const PK_QA_BANKS_AND_WALLETS = [
   ...QATAR_BANKS,
   ...QATAR_WALLETS,
 ];
+
+/** User-requested (2026-09-09): "app should list banks by currency" — the
+ * account form's Bank picker suggests only the banks/wallets relevant to
+ * whichever currency the account is actually in, instead of one flat list
+ * spanning both markets. Falls back to the full combined list for any
+ * currency this directory doesn't have a dedicated market for. */
+export function banksForCurrency(currencyCode: string): string[] {
+  if (currencyCode === 'PKR') return [...PAKISTAN_BANKS, ...PAKISTAN_WALLETS];
+  if (currencyCode === 'QAR') return [...QATAR_BANKS, ...QATAR_WALLETS];
+  return PK_QA_BANKS_AND_WALLETS;
+}

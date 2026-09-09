@@ -6065,6 +6065,33 @@ touched those.
   not this same optional-`isActive` pattern). Verified live via Playwright across all 4 modules
   with seeded closed entities. `npx tsc -b` / `npm run test` (624 tests, unchanged) / `npm run
   build` all clean.
+- **Large app-wide batch, 3 bugs + 2 corrections + 6 features (2026-09-09) — see README Done
+  item 279.** Bugs: Net Worth's currency picker used the full global catalog instead of
+  `useEnabledCurrencies()`; clicking Settings/Account wrongly highlighted "Stock Exchanges" in
+  the sidebar (`categoryForPath()`'s fallback wasn't excluding `/account`/`/app-data`/`/legal`,
+  now returns `null` for those); the profile picture rendered as an oval, not a circle — the
+  same `.row > *{min-width:160px}` cascade trap already hit for Tooltip buttons (Done item
+  228), now excepted for `.avatar-circle` too. Corrections to earlier claims: chart
+  transparency was only ever wired into ONE chart (Net Worth's combo chart) despite being
+  documented as a general rule — fixed for real via a Chart.js plugin
+  (`chartFillTransparencyPlugin` in `chartSetup.ts`) applied to every bar/doughnut/pie chart
+  app-wide; a cramped table (Net Worth's Monthly Summary, 2-per-row) was restacked full-width.
+  Features: Bank/"Bank name" duplicate fields merged into one type-to-search
+  `BankIdentityField` (reuse-or-create a real `Bank` entity, suggestions filtered by the
+  account's own currency via new `banksForCurrency()`); Exchange rates card now hidden with
+  only 1 currency held, and its cache (`lib/fx.ts`) no longer leaks across accounts
+  (`clearCachedFxRates()` wired into `resetAllLocalWorkbooks()` — REVERSES that file's own
+  "global preference" design note); `DashboardRail`/`.rail-split` deleted from QSE/PSX
+  Dashboard (its "Upcoming" panel moved to the main Dashboard/NetWorthPage, its "Net worth"
+  mini-card dropped as a pure duplicate of that page); `Bank.color?: string` lets a bank get
+  its own real brand color via `EntityCard`'s `hue`; a red/green `CreditUsageBar` replaces the
+  old plain-text credit-limit line. Confirmed already-satisfied, not rebuilt: the sticky
+  jump-to-section bar (`Tabs.tsx`'s `.chip-tabs.subnav`) has been `position:sticky` since Done
+  item 108. Deliberately left as standing broader Pending items (README item 121): "natural
+  section order" and "many pages still have their own Settings instead of the global one" —
+  both real page-by-page audits, not one fix. `npx tsc -b` / `npm run test` (624 tests,
+  unchanged) / `npm run build` all clean; verified live via Playwright throughout with real
+  bounding-box/pixel measurements, not visual guesses.
 
 ## Live URLs
 

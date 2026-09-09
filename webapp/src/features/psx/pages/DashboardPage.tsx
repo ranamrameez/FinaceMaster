@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { CollapsibleCard, StatCard } from '../../../components/Card';
-import { DashboardRail } from '../../../components/DashboardRail';
 import { Sparkline } from '../../../components/Sparkline';
 import { TickerLogo } from '../../../components/TickerLogo';
 import { toast } from '../../../components/Toast';
@@ -234,8 +233,6 @@ export function DashboardPage() {
     <div>
       <h1 className="pagetitle">PSX Dashboard</h1>
 
-      <div className="rail-split">
-        <div>
           <div className="grid-auto" style={{ ...gridAutoStyle(160, 12), marginBottom: 20 }}>
             <StatCard label="Net Worth" value={money(summary.netWorth, currency)} title={moneyTitle(summary.netWorth)} hue={INVEST_PALETTE[3]} />
             <StatCard
@@ -344,12 +341,6 @@ export function DashboardPage() {
               View full analytics →
             </Link>
           </div>
-
-          <DashboardRail preferredCurrency={currency} />
-
-        </div>
-
-      </div>
     </div>
   );
 }

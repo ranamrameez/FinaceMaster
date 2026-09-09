@@ -107,3 +107,42 @@ export function dimColor(hex: string, dim: boolean): string {
 export function withAlpha(hex: string, fallback: string): string {
   return `${(hex || fallback).slice(0, 7)}B3`;
 }
+
+/** Applies the same translucency as `withAlpha()` to EVERY bar/doughnut/
+ * pie/polarArea dataset's fill color, app-wide, via a real Chart.js plugin
+ * rather than a per-chart call. User-reported (2026-09-09), correcting an
+ * earlier claim that this was already done: `withAlpha()` above had only
+ * ever actually been wired into ONE chart (Net Worth's combo chart) despite
+ * UI_DESIGN_GUIDELINES.md's "Charts, color, and readability" rule already
+ * stating it as a general rule — every other bar/doughnut/pie chart in the
+ * app still used fully opaque fills. Registered once in `chartSetup.ts` so
+ * it applies uniformly and can't be forgotten on a future chart, instead of
+ * touching the ~15 files that each set their own `backgroundColor`.
+ *
+ * Deliberately skips: any color already carrying an alpha channel (an
+ * 8-digit `#RRGGBBAA` — including this plugin's OWN previous pass, or a
+ * chart like the combo chart that already calls `withAlpha()` itself) or
+ * any non-`#RRGGBB` string (`rgba(...)`, `'transparent'`, a CSS var that
+ * didn't resolve to hex), so this can't double-apply or clobber a color a
+ * chart is already managing on its own. Line/point strokes are deliberately
+ * left alone — a translucent LINE reads as weaker, not "readable through,"
+ * and the rule exists because a FILL can bury whatever's underneath it,
+ * which doesn't apply to a thin stroke. */
+const CHART_FILL_TYPES = new Set(['bar', 'doughnut', 'pie', 'polarArea']);
+
+function addAlphaToColor(color: unknown): unknown {
+  if (Array.isArray(color)) return color.map(addAlphaToColor);
+  if (typeof color === 'string' && /^#[0-9a-fA-F]{6}$/.test(color)) return `${color}B3`;
+  return color;
+}
+
+export const chartFillTransparencyPlugin = {
+  id: 'chartFillTransparency',
+  beforeUpdate(chart: { config: { type: string }; data: { datasets: { type?: string; backgroundColor?: unknown }[] } }) {
+    for (const ds of chart.data.datasets) {
+      const type = ds.type ?? chart.config.type;
+      if (!CHART_FILL_TYPES.has(type)) continue;
+      ds.backgroundColor = addAlphaToColor(ds.backgroundColor);
+    }
+  },
+};

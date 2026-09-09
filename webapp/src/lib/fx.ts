@@ -7,8 +7,17 @@
  * falls back to whatever's already cached, or to the user typing a rate in
  * by hand — the user explicitly approved this "free API if it works,
  * otherwise manual" approach over paying for scheduled Cloud Functions.
- * Global preference, not per-account financial data, so it's plain
- * localStorage (same category as appearanceStore) rather than synced. */
+ *
+ * User-reported (2026-09-09): "saving currency rates should belong that
+ * user only" — this REVERSES the original design here (rates were treated
+ * as a global, account-agnostic reference table, same category as
+ * `appearanceStore`). A manually-entered rate is really a personal
+ * preference tied to whoever entered it, so on a shared browser it must not
+ * leak into the next signed-in account. Fixed via `clearCachedFxRates()`,
+ * wired into `resetLocalData.ts`'s `resetAllLocalWorkbooks()` (same
+ * clear-on-account-switch mechanism every per-account store already uses) —
+ * still plain localStorage, not synced to the cloud, just no longer
+ * shared across accounts on one browser. */
 
 export interface FxRates {
   /** All rates are expressed as 1 unit of `base` = rates[code] units of
@@ -40,6 +49,17 @@ export function saveFxRates(rates: FxRates): void {
     localStorage.setItem(FX_CACHE_KEY, JSON.stringify(rates));
   } catch {
     /* ignore — a failed persist just means it re-fetches/re-asks next time */
+  }
+}
+
+/** Called on sign-out / account switch (see `resetLocalData.ts`) so a
+ * previous account's manually-entered or auto-fetched rates never leak
+ * into the next signed-in account on the same browser. */
+export function clearCachedFxRates(): void {
+  try {
+    localStorage.removeItem(FX_CACHE_KEY);
+  } catch {
+    /* ignore */
   }
 }
 
