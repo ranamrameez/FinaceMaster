@@ -5591,6 +5591,15 @@ app, not developer notes) continuously as features ship.
   click). Verified live via a real dev-server + Playwright session across all three modules
   with seeded data — zero console errors. `npx tsc -b` / `npm run test` (630 tests,
   unchanged) / `npm run build` all clean.
+- **Verified (not rebuilt) that every linkable module's "Transfers" FAB is actually reachable
+  on page load, closing the linking-coverage audit named in README Pending item 114
+  (2026-09-09) — see README Done item 289.** A live Playwright check across all 8
+  `LinkModule` pages (Bank/Cash/EMI/Funds/Personal Loans/Rentals/QSE-Trade-Transactions/
+  PSX-Trade-Transactions) confirmed the "Transfers" action is visible either directly or
+  behind an "Open actions" toggle on first load — no regression, no gap. Cross-checked the
+  code too: each landing FAB lives inside its module's own FIRST `Tabs` entry (open by
+  default) or renders unconditionally outside `Tabs` entirely — the same placement class
+  Done item 219 had previously found broken elsewhere, here confirmed correct everywhere.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

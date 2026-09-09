@@ -7868,6 +7868,32 @@ FinanceManager live link:
   zero console errors. `npx tsc -b` / `npm run test` (630 tests, unchanged) / `npm run build`
   all clean. **This closes Pending item 132 in full** — every module named in it is now either
   done or has a stated reason for being skipped.
+- **Verified (not rebuilt) that every linkable module's "Transfers" action is actually
+  reachable on page load, closing the linking-coverage audit named in Pending item 114
+  (2026-09-09) — see Done item 289.** That item's own text explicitly asked for a verification
+  pass, not new construction, since most modules already had this per Done items 125/131/156/
+  216/219 — but Done item 219 itself found real, previously-invisible placement bugs by
+  reading the code alone wasn't enough (a component being imported/registered somewhere
+  doesn't prove it's actually mounted on page load, only that a `Tabs`-driven `CollapsibleCard`
+  nested it correctly or didn't). Re-ran that exact live-Playwright methodology across all 8
+  `LinkModule` pages (Bank, Cash, EMI, Funds, Personal Loans, Rentals, QSE's and PSX's Trade
+  Transactions) fresh, rather than trusting the prior pass's own conclusion: for each, checked
+  whether `[aria-label="Transfers"]` is visible directly, or reachable by first opening
+  `[aria-label="Open actions"]` when the page's FAB has more than one action. **Result: all 8
+  pass — no regression, no newly-discovered gap.** Cross-checked the code too (not just the
+  live result) to understand WHY: Bank's/Funds'/Personal Loans'/Rentals' landing FABs
+  (`AccountsFab`/`AddFundFab`/`AddLoanFab`/`AddPropertyFab`) all live inside each module's own
+  FIRST `Tabs` entry (`'accounts'`/`'funds'`/`'loans'`/`'properties'`, confirmed by reading each
+  `tabs={[...]}` array's own ordering) — the one tab whose `CollapsibleCard` is open by default
+  and therefore mounted on load; Cash's `CashPageFab` and EMI's `AddLoanFab` render outside any
+  `Tabs` component entirely, unconditionally; QSE's/PSX's `TransactionsPage` registers its
+  action via `usePageFabActions` at the page component's own top level (Done item 239's own
+  fix), not inside a tab's content, so it's always in the shared FAB store regardless of which
+  section is expanded. `npx tsc -b` / `npm run test` (630 tests, unchanged — a verification
+  pass, no code touched) / `npm run build` all clean. **This closes the "audit each module's
+  existing inline cross-entity-linking coverage" sub-thread of Pending item 114** — the item's
+  other remaining scope (the Credit Card/Bank/Branch normalization migration, its own separate
+  higher-risk track) stays open.
 
 ## Pending
 
@@ -8616,13 +8642,15 @@ or a design decision before more code, not guessed at further:**
      below. A future session shouldn't read "still open" here as "nothing's been done for these
      modules" — check a module against
      `UI_DESIGN_GUIDELINES.md`'s own rules directly (not just against whether it uses
-     `EntityCard`) before assuming it needs work. Also still open: audit (don't blindly rebuild)
-     each module's existing inline cross-entity-linking coverage against the "each module should
-     link without leaving its own page" ask — most already have this per Done items 125/131/156,
-     so this is a verification pass, not new construction; and the separate, higher-risk Credit
-     Card/Bank/Branch normalization migration (flagged as its own track in CLAUDE.md, not to be
-     bundled into the general UI rollout — it touches the user's real imported GCC/PCC
-     credit-card-as-liability-account data and needs its own focused session).
+     `EntityCard`) before assuming it needs work. ~~Also still open: audit (don't blindly
+     rebuild) each module's existing inline cross-entity-linking coverage against the "each
+     module should link without leaving its own page" ask~~ — **verified (2026-09-09), see Done
+     item 289**: all 8 `LinkModule` pages' "Transfers" action is confirmed reachable on page
+     load via a live Playwright check, not just a code read — no gap found. What remains open
+     for this item is only the separate, higher-risk Credit Card/Bank/Branch normalization
+     migration (flagged as its own track in CLAUDE.md, not to be bundled into the general UI
+     rollout — it touches the user's real imported GCC/PCC credit-card-as-liability-account
+     data and needs its own focused session).
 115. **Real structural asks from the same 2026-08-27 critique — see CLAUDE.md's
      "App-wide UI/UX redesign" section and Done item 214 for context.** ~~(a) **Bank as a
      normalized parent entity** — the user's own words: "A bank is main entity. User may have
