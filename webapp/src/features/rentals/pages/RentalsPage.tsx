@@ -15,6 +15,7 @@ import { PendingToggle } from '../../../components/ui/PendingToggle';
 import { IconButton } from '../../../components/ui/IconButton';
 import { FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
+import { RecordDetailModal } from '../../../components/RecordDetailModal';
 import { CategorySelect } from '../../../components/CategorySelect';
 import { FinanceEditModal } from '../../../components/FinanceEditModal';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
@@ -842,6 +843,7 @@ function EntriesList({ property }: { property: Property }) {
   const links = useInterEntityTransfersStore((s) => s.workbook.entries);
   const sideLabel = useLinkSideLabel();
   const [editingEntry, setEditingEntry] = useState<RentalEntry | null>(null);
+  const [detailEntry, setDetailEntry] = useState<RentalEntry | null>(null);
   const [typeFilter, setTypeFilter] = useState<'all' | 'in' | 'out'>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
 
@@ -909,7 +911,7 @@ function EntriesList({ property }: { property: Property }) {
             const link = linkByRecordId.get(e.id);
             const otherSide = link ? (link.from.module === 'rentals' && link.fromRecordId === e.id ? link.to : link.from) : undefined;
             return (
-              <tr key={e.id}>
+              <tr key={e.id} onClick={() => setDetailEntry(e)} style={{ cursor: 'pointer' }}>
                 <td>{e.date}</td>
                 <td className={e.isDeposit ? 'pill-positive' : 'pill-negative'}>{e.isDeposit ? 'Rent income' : 'Expense'}</td>
                 <td className={e.isDeposit ? 'pill-positive' : 'pill-negative'}>{fmtMoney(e.isDeposit ? e.amount : -e.amount, property.currencyCode)}</td>
@@ -920,7 +922,7 @@ function EntriesList({ property }: { property: Property }) {
                     <span className="pill-warn" style={{ marginLeft: 6 }} title="Not yet cleared — excluded from Net income above until marked cleared.">Pending</span>
                   )}
                   {link && (
-                    <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
+                    <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side" onClick={(ev) => ev.stopPropagation()}>
                       🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
                     </Link>
                   )}
@@ -928,7 +930,7 @@ function EntriesList({ property }: { property: Property }) {
                 <td className="text-muted cell-clip" title={e.source === 'statement-import' ? `Import${e.statementRef ? ` (${e.statementRef})` : ''}` : 'Manual'}>
                   {e.source === 'statement-import' ? `Import${e.statementRef ? ` (${e.statementRef})` : ''}` : 'Manual'}
                 </td>
-                <td>
+                <td onClick={(ev) => ev.stopPropagation()}>
                   {e.isPending && (
                     <IconButton
                       label="Mark cleared"
@@ -963,6 +965,29 @@ function EntriesList({ property }: { property: Property }) {
       </table>
       </div>
       {editingEntry && <EditEntryModal entry={editingEntry} onClose={() => setEditingEntry(null)} />}
+      {detailEntry && (
+        <RecordDetailModal
+          title={detailEntry.isDeposit ? 'Rent income' : 'Expense'}
+          onClose={() => setDetailEntry(null)}
+          fields={[
+            { label: 'Date', value: detailEntry.date },
+            { label: 'Time', value: detailEntry.time ?? '— (defaults to noon)' },
+            { label: 'Timezone', value: detailEntry.timezone ?? '—' },
+            { label: 'Type', value: detailEntry.isDeposit ? 'Rent income' : 'Expense' },
+            { label: 'Amount', value: fmtMoney(detailEntry.isDeposit ? detailEntry.amount : -detailEntry.amount, property.currencyCode) },
+            ...(detailEntry.isDeposit ? [] : [{ label: 'Category', value: categoryName(detailEntry.categoryID, categories) }]),
+            { label: 'Note', value: detailEntry.note || '—' },
+            { label: 'Source', value: detailEntry.source === 'statement-import' ? `Import${detailEntry.statementRef ? ` (${detailEntry.statementRef})` : ''}` : 'Manual' },
+            { label: 'Status', value: detailEntry.isPending ? 'Pending (not yet cleared)' : 'Cleared' },
+            ...(linkByRecordId.get(detailEntry.id)
+              ? (() => {
+                  const l = linkByRecordId.get(detailEntry.id)!;
+                  return [{ label: 'Linked', value: `${sideLabel(l.from)} → ${sideLabel(l.to)}` }];
+                })()
+              : []),
+          ]}
+        />
+      )}
     </div>
   );
 }

@@ -16,6 +16,7 @@ import { PendingToggle } from '../../../components/ui/PendingToggle';
 import { IconButton } from '../../../components/ui/IconButton';
 import { FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
+import { RecordDetailModal } from '../../../components/RecordDetailModal';
 import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { ReorderButtons } from '../../../components/ui/ReorderButtons';
@@ -285,6 +286,7 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
   const sideLabel = useLinkSideLabel();
   const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<PersonalLoanRepayment | null>(null);
+  const [detailRow, setDetailRow] = useState<PersonalLoanRepayment | null>(null);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
 
@@ -412,17 +414,19 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                     </td>
                   </tr>
                 ) : (
-                  <tr key={r.id}>
+                  <tr key={r.id} onClick={() => setDetailRow(r)} style={{ cursor: 'pointer' }}>
                     <td>
                       {r.date}{' '}
-                      <ReorderButtons
-                        rows={sorted}
-                        index={i}
-                        instantOf={instantOf}
-                        idOf={(row) => row.id}
-                        orderOf={(row) => row.seq}
-                        onMove={reorder}
-                      />
+                      <span onClick={(e) => e.stopPropagation()}>
+                        <ReorderButtons
+                          rows={sorted}
+                          index={i}
+                          instantOf={instantOf}
+                          idOf={(row) => row.id}
+                          orderOf={(row) => row.seq}
+                          onMove={reorder}
+                        />
+                      </span>
                     </td>
                     <td>
                       {fmtMoney(r.amount, loan.currencyCode)}
@@ -432,7 +436,7 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                         </Tooltip>
                       )}
                       {link && (
-                        <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
+                        <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side" onClick={(e) => e.stopPropagation()}>
                           🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
                         </Link>
                       )}
@@ -445,7 +449,7 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                     <td className="text-muted cell-clip" title={r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}>
                       {r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}
                     </td>
-                    <td>
+                    <td onClick={(e) => e.stopPropagation()}>
                       {r.isPending && (
                         <IconButton
                           label="Mark cleared"
@@ -482,6 +486,27 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
       </CollapsibleCard>
       <ImportRepaymentsSection loan={loan} />
       <RepaymentsFab loan={loan} />
+      {detailRow && (
+        <RecordDetailModal
+          title="Repayment"
+          onClose={() => setDetailRow(null)}
+          fields={[
+            { label: 'Date', value: detailRow.date },
+            { label: 'Time', value: detailRow.time ?? '— (defaults to noon)' },
+            { label: 'Timezone', value: detailRow.timezone ?? '—' },
+            { label: 'Amount', value: fmtMoney(detailRow.amount, loan.currencyCode) },
+            { label: 'Remaining after this repayment', value: fmtMoney(remaining.get(detailRow.id) ?? 0, loan.currencyCode) },
+            { label: 'Source', value: detailRow.source === 'statement-import' ? `Import${detailRow.statementRef ? ` (${detailRow.statementRef})` : ''}` : 'Manual' },
+            { label: 'Status', value: detailRow.isPending ? 'Pending (not yet cleared)' : 'Cleared' },
+            ...(linkByRecordId.get(detailRow.id)
+              ? (() => {
+                  const l = linkByRecordId.get(detailRow.id)!;
+                  return [{ label: 'Linked', value: `${sideLabel(l.from)} → ${sideLabel(l.to)}` }];
+                })()
+              : []),
+          ]}
+        />
+      )}
     </div>
   );
 }
