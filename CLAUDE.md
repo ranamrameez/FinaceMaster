@@ -5991,6 +5991,13 @@ touched those.
   Playwright with a seeded 3-loan scenario — favorite-first order, filter/archive toggle,
   card-click-to-detail, and the Favorite star's sign-in gate all confirmed working. Still open
   per Pending item 114: EMI's loan list, Rentals' `PropertiesList`, Subscriptions' list.
+- **EMI's `LoanList` also converted to an `EntityCard` grid (2026-09-09) — same pass, see
+  README Done item 272.** Identical pattern once more: dropped `useSortableRows` (only
+  remaining caller in the file), favorite-first ordering, Outstanding hued a fixed loss-red
+  (EMI debt has no direction to color by, unlike Personal Loans' owed-to-me/i-owe split).
+  Verified live via Playwright — favorite-first order, no-interest subtitle tag, archived
+  toggle/badge, card-click-to-detail, and the Favorite sign-in gate all confirmed. Still open
+  per Pending item 114: Rentals' `PropertiesList`, Subscriptions' list.
 
 ## Live URLs
 

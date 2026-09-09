@@ -2,7 +2,7 @@ import type { User } from 'firebase/auth';
 import { useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Bar, Line } from 'react-chartjs-2';
-import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
+import { Card, CollapsibleCard, EntityCard, MoneyValue } from '../../../components/Card';
 import { Modal } from '../../../components/Modal';
 import { Notice } from '../../../components/Notice';
 import { Tooltip } from '../../../components/Tooltip';
@@ -17,7 +17,6 @@ import { FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
 import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
-import { useSortableRows } from '../../../hooks/useSortableRows';
 import { emiSchedule, emiSummary, expectedEndDate, generateBigEmiOverrides, installmentDueDate, markupPercentage, markupRateEquivalents, resolvedDueDate, totalsByCurrency, whatIfExtraPayment, type EMISummary } from '../../../lib/calc/emiModule';
 import { dlBarV, dlLine, withAlpha } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
@@ -1152,6 +1151,13 @@ function OverallSummary() {
   );
 }
 
+// Converted from a sortable table to an EntityCard grid (2026-09-09) —
+// continues README Pending item 114's rollout (Bank/Banks, Funds/Brokers,
+// Personal Loans' LoanList already converted). Per UI rule 1/3: entity
+// items belong on cards in a wrap-flex grid, not a table with its own
+// per-column reorder controls — dropped useSortableRows (this was its
+// only remaining caller in this file) in favor of a fixed favorite-first
+// ordering, matching every other converted list's own precedent.
 function LoanList({ onSelect, onEdit }: { onSelect: (loan: EMILoan) => void; onEdit: (loan: EMILoan) => void }) {
   const allLoans = useEMIWorkbookStore((s) => s.workbook.entries);
   const updateEntry = useEMIWorkbookStore((s) => s.updateEntry);
@@ -1169,20 +1175,10 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: EMILoan) => void; onE
     updateEntry(l.id, { isFavorite: !l.isFavorite });
   };
 
-  type Row = { loan: EMILoan; sum: ReturnType<typeof emiSummary> };
-  const rows: Row[] = loans.map((loan) => ({ loan, sum: emiSummary(loan) }));
-  type Col = 'name' | 'lender' | 'monthly' | 'outstanding' | 'monthsLeft' | 'favorite';
-  const sortValue = (r: Row, col: Col): number | string => {
-    switch (col) {
-      case 'lender': return r.loan.lender;
-      case 'monthly': return r.sum.emi;
-      case 'outstanding': return r.sum.outstanding;
-      case 'monthsLeft': return r.sum.monthsRemaining;
-      case 'favorite': return r.loan.isFavorite ? 1 : 0;
-      default: return r.loan.name;
-    }
-  };
-  const { sorted, Th } = useSortableRows(rows, sortValue, 'name', 'asc');
+  const sorted = useMemo(
+    () => [...loans].sort((a, b) => Number(!!b.isFavorite) - Number(!!a.isFavorite)),
+    [loans],
+  );
 
   return (
     <div>
@@ -1191,50 +1187,40 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: EMILoan) => void; onE
           {showArchived ? 'Hide' : 'Show'} archived ({archivedCount})
         </button>
       )}
-      <div className="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>#</th><Th col="favorite">★</Th><Th col="name">Name</Th><Th col="lender">Lender</Th><Th col="monthly">Monthly</Th>
-              <Th col="outstanding">Outstanding</Th><Th col="monthsLeft">Months left</Th><th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map(({ loan: l, sum }) => (
-              <tr key={l.id} onClick={() => onSelect(l)} style={{ cursor: 'pointer' }}>
-                <td className="text-muted">{srNumOf.get(l.id)}</td>
-                <td>
-                  <IconButton
-                    label={l.isFavorite ? 'Unfavorite' : 'Favorite'}
-                    icon={<StarIcon size={13} filled={l.isFavorite} />}
-                    align="right"
-                    onClick={(e) => { e.stopPropagation(); toggleFavorite(l); }}
-                  />
-                </td>
-                <td>
-                  {l.name}
-                  {l.isActive === false && <span className="pill-warn" style={{ fontSize: 10, marginLeft: 6 }}>Archived</span>}
-                </td>
-                <td>{l.lender}{l.repaymentMode === 'fixedTotal' ? ' · no-interest' : ''}</td>
-                <td>{fmtMoney(sum.emi, l.currencyCode)}</td>
-                <td className="pill-negative">{fmtMoney(sum.outstanding, l.currencyCode)}</td>
-                <td>{sum.monthsRemaining}</td>
-                <td>
-                  <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={(e) => { e.stopPropagation(); onEdit(l); }} />{' '}
-                  <button className="btn secondary small" onClick={(e) => { e.stopPropagation(); onSelect(l); }}>Open</button>
-                </td>
-              </tr>
-            ))}
-            {!sorted.length && (
-              <tr>
-                <td colSpan={8} className="text-muted">
-                  {allLoans.length ? 'Every loan is archived — click "Show archived" above to see them.' : 'No loans yet — add one above.'}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      {!sorted.length ? (
+        <p className="text-muted">
+          {allLoans.length ? 'Every loan is archived — click "Show archived" above to see them.' : 'No loans yet — add one above.'}
+        </p>
+      ) : (
+        <div className="entity-card-grid">
+          {sorted.map((l) => {
+            const sum = emiSummary(l);
+            return (
+              <EntityCard
+                key={l.id}
+                title={<><span className="text-muted" style={{ fontWeight: 400, fontSize: 11, marginRight: 5 }}>#{srNumOf.get(l.id)}</span>{l.name}</>}
+                subtitle={`${l.lender}${l.repaymentMode === 'fixedTotal' ? ' · no-interest' : ''}`}
+                badge={l.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Archived</span> : undefined}
+                statLabel="Outstanding"
+                stat={<MoneyValue n={sum.outstanding} currency={l.currencyCode} />}
+                hue="var(--loss)"
+                onClick={() => onSelect(l)}
+                actions={
+                  <>
+                    <IconButton
+                      label={l.isFavorite ? 'Unfavorite' : 'Favorite'}
+                      icon={<StarIcon size={13} filled={l.isFavorite} />}
+                      align="right"
+                      onClick={() => toggleFavorite(l)}
+                    />
+                    <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => onEdit(l)} />
+                  </>
+                }
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

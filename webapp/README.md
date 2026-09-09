@@ -7408,6 +7408,22 @@ FinanceManager live link:
   direction filter and archived toggle both work exactly as before, clicking a card opens its
   detail view, and the Favorite star correctly hits the real sign-in gate. `npx tsc -b` / `npm
   run test` (624 tests, unchanged — pure UI restructuring) / `npm run build` all clean.
+- **EMI's `LoanList` converted from a sortable table to an `EntityCard` grid (2026-09-09) —
+  see Done item 272, continuing Pending item 114's rollout (Bank/Banks, Funds/Brokers, Personal
+  Loans already converted).** Same pattern applied again: dropped `useSortableRows` (its only
+  remaining caller in this file — EMI's other 2 tables are sequence-aware and already lost
+  their sortable headers per Done item 235) in favor of favorite-first ordering. Each card
+  shows Sr#, loan name, a "Lender · no-interest" subtitle when `repaymentMode === 'fixedTotal'`,
+  an Archived badge when applicable, and Outstanding as the stat (hued a fixed loss-red, same
+  as the table's old `pill-negative` styling — unlike Personal Loans' sign-based hue, EMI debt
+  is always a liability, never a receivable, so there's no direction to color by). Favorite/
+  Edit moved into `EntityCard`'s own `actions` slot; "Open" (previously a redundant secondary
+  button next to Edit, since the whole row/card is already clickable) was dropped. Verified
+  live via Playwright with a seeded 3-loan scenario (interest-mode favorited loan, fixedTotal
+  no-interest loan, an archived loan): favorite-first ordering, the no-interest tag, the
+  archived toggle/badge, card-click-to-detail, and the Favorite star's sign-in gate all
+  confirmed working. `npx tsc -b` / `npm run test` (624 tests, unchanged) / `npm run build`
+  all clean. Still open per Pending item 114: Rentals' `PropertiesList`, Subscriptions' list.
 
 ## Pending
 
@@ -8138,11 +8154,11 @@ or a design decision before more code, not guessed at further:**
      entity creation, tooltip-ified explanations — across most modules through means OTHER than
      the specific `EntityCard` component. **Verified via a direct grep, not assumed**: `EntityCard`
      was used only by Banking as of 2026-09-08; as of 2026-09-09 it's also used by Funds'
-     `BrokersList` (Done item 270) and Personal Loans' `LoanList` (Done item 271) — so the
-     literal "roll EntityCard out to N modules" ask is progressing incrementally, one module
-     at a time, per this project's own established discipline. Still open: EMI's loan list,
-     Rentals' `PropertiesList`, Subscriptions' list. A future session shouldn't
-     read "still open" here as "nothing's been done for these modules" — check a module against
+     `BrokersList` (Done item 270), Personal Loans' `LoanList` (Done item 271), and EMI's
+     `LoanList` (Done item 272) — so the literal "roll EntityCard out to N modules" ask is
+     progressing incrementally, one module at a time, per this project's own established
+     discipline. Still open: Rentals' `PropertiesList`, Subscriptions' list. A future session
+     shouldn't read "still open" here as "nothing's been done for these modules" — check a module against
      `UI_DESIGN_GUIDELINES.md`'s own rules directly (not just against whether it uses
      `EntityCard`) before assuming it needs work. Also still open: audit (don't blindly rebuild)
      each module's existing inline cross-entity-linking coverage against the "each module should
