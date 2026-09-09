@@ -1,5 +1,32 @@
 import type { BaseWorkbook } from '../store/createWorkbookStore';
 
+/** Pending item 115(b): "Same should happen with Funds and others like I
+ * have 4 brokerage and i want to see my amounts with each broker/
+ * investment firm." Mirrors `Bank` (`types/bankWorkbook.ts`) exactly —
+ * same additive, zero-migration design: `FundsWorkbook.brokers` defaults
+ * to `[]` and `Fund.brokerId` is optional, so an existing fund with no
+ * `brokerId` is simply "not grouped under a Broker yet," not broken. No
+ * automatic migration from `Fund.platform` (free text, e.g. "Al Rajhi
+ * Capital") into a real `Broker` record is performed — grouping a fund
+ * under a Broker is always an explicit user action, same "ask before
+ * touching real financial data structure" rule Bank's own version
+ * documents. Lives at the top level of `FundsWorkbook` (a sibling to
+ * `funds`), not nested in `FundsSettings` — same place `funds` itself
+ * lives, and already covered by the generic `{...createEmpty(),
+ * ...parsed}` top-level merge every store load/pull already does, so no
+ * extra defensive default is needed the way Bank's `settings.banks`
+ * needed one (Bank's settings object is itself nested and shallow-merged,
+ * Funds' `brokers` array is not). */
+export interface Broker {
+  id: string;
+  name: string;
+  notes?: string;
+  /** Same "archive, don't delete" convention as `Fund.isActive`. */
+  isActive?: boolean;
+  /** Same cosmetic sort preference as `Fund.isFavorite`. */
+  isFavorite?: boolean;
+}
+
 export interface Fund {
   id: string;
   name: string;
@@ -45,6 +72,11 @@ export interface Fund {
    * a display/sort preference — see `BankAccount.isFavorite`'s own comment
    * for why this is a separate field from `isActive`/`includeInNetWorth`. */
   isFavorite?: boolean;
+  /** Optional link to a `Broker` (`FundsWorkbook.brokers`) — which real
+   * brokerage/investment firm this fund is held with, for the "total
+   * balance with that broker" rollup. `undefined` means this fund isn't
+   * grouped under any Broker yet. */
+  brokerId?: string;
 }
 
 export interface FundsSettings {
@@ -64,4 +96,5 @@ export interface FundsSettings {
  * documented tradeoff for genuine factory reuse over a parallel type. */
 export interface FundsWorkbook extends BaseWorkbook<FundsSettings> {
   funds: Fund[];
+  brokers: Broker[];
 }

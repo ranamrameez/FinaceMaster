@@ -5972,6 +5972,16 @@ touched those.
   nothing and should be a routine first check whenever picking up a "work through the
   backlog" session — a prior session's own draft PR can silently drift into a real conflict
   from later, unrelated restructuring work, with no CI or notification to surface it.
+- **Funds/Broker parent entity built additively (2026-09-09) — closes README Pending item
+  115(b), see README Done item 270.** Mirrors Bank's own `Bank` parent entity (Done item 265)
+  exactly — new optional `Broker` type + `Fund.brokerId`, zero migration, a
+  `brokerTotalsByCurrency()` calc reusing the already-tested `fundsValueByCurrency()`. One real
+  adaptation: Funds has never adopted per-record routes (unlike Banking's `/bank/bank/:id`), so
+  `BrokerDetail` uses the SAME `selected`/`setSelected`-state-toggle convention `FundDetail`
+  itself already uses, rather than introducing new routing infra to one module. Verified live
+  via Playwright (seeded broker+fund data): correct per-currency totals, correct hand-off from
+  a broker's own linked-fund card into that fund's real detail view, "Add a broker" hits the
+  real sign-in gate, the Fund add-form's Broker picker lists correctly.
 
 ## Live URLs
 

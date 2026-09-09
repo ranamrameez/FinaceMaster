@@ -8,6 +8,7 @@ export function createEmptyFundsWorkbook(): FundsWorkbook {
   return {
     settings: { ...DEFAULT_FUNDS_SETTINGS },
     funds: [],
+    brokers: [],
     transactions: [],
     transfers: [],
     adjustments: [],

@@ -7350,6 +7350,45 @@ FinanceManager live link:
   a prior session's own draft PR can sit open and drift into a real merge conflict purely from
   later, unrelated restructuring work, with nothing about it surfacing on its own (no CI, no
   notification) until someone thinks to look.
+- **Funds/Broker parent entity built additively (2026-09-09) — closes README Pending item
+  115(b), see Done item 270.** "Same should happen with Funds and others like I have 4
+  brokerage and i want to see my amounts with each broker/investment firm." Mirrors Bank's
+  already-shipped `Bank` parent entity (Done item 265) exactly: a new optional `Broker`
+  type + `Fund.brokerId` link, zero automatic conversion of any fund's existing free-text
+  `platform` field into a real record — grouping is always an explicit user action, same
+  reasoning Bank's own version documents, so there's no "confirm a migration first" step here
+  either. `brokers: Broker[]` lives at the top level of `FundsWorkbook` (a sibling to `funds`),
+  not nested in `FundsSettings` the way Bank's `banks` had to be nested in `BankSettings` —
+  `FundsSettings` is a shallow top-level-merged object needing its own defensive default, while
+  `FundsWorkbook`'s own top-level fields are already safely defaulted by the generic
+  `{...createEmpty(), ...parsed}` merge every store load/pull already does (the same mechanism
+  that already protects `funds` itself), so no extra defensive code was needed for `brokers`.
+  New `brokerTotalsByCurrency()` (`lib/calc/fundsModule.ts`) reuses the already-tested
+  `fundsValueByCurrency()` unchanged, filtered to one broker's funds — same "reuse, don't
+  reimplement" pattern as Bank's `bankTotalsByCurrency()`. **One real structural difference
+  from Bank, handled deliberately, not overlooked**: Bank's own parent-entity detail view is a
+  real routed page (`/bank/bank/:id`), because Banking already uses routes for its own
+  `AccountDetailPage` — but Funds has never adopted per-record routes at all (`FundDetail` is
+  reached via a plain `selected`/`setSelected` state toggle inside `FundsPage` itself), so
+  `BrokerDetail` follows that SAME established convention (a second `selectedBroker` state at
+  the `FundsPage` level, not a new route) rather than introducing routing infrastructure this
+  module doesn't otherwise use. Clicking a broker's own linked-fund card correctly hands off
+  between the two states (`onSelectFund` clears `selectedBroker` and sets `selected`). New
+  "Add a broker" FAB action folded into the existing multi-action Funds landing FAB (never a
+  second floating button — the same "don't stack a second FAB" rule Bank's own "Add a bank"
+  action already follows, Done item 239); a Broker `<Select>` (optional, "No broker" default)
+  added to both the Add-fund form and `FundDetail`'s own edit form, shown only once at least
+  one broker exists — same "optional grouping, not required" rule as Bank's own Bank picker.
+  Verified live via Playwright with a seeded broker+2-fund scenario: the Brokers section shows
+  a real `EntityCard` per broker with a correct per-currency total ("Fidelity" → 1k USD,
+  matching 100 units × $10 NAV exactly) and a "1 fund" subtitle; clicking through to the
+  broker's own detail view shows the correct total and its one linked fund card; clicking that
+  fund card correctly lands on the fund's own detail page (confirming the state hand-off);
+  "Add a broker" opens correctly and hits the real sign-in gate on submit; the Add-fund form's
+  Broker select correctly lists "No broker"/"Fidelity" once a broker exists — zero console
+  errors throughout. `npx tsc -b` / `npm run test` (624 tests, unchanged — no calc logic
+  touched beyond the one thin, unstested-by-precedent wrapper function, matching
+  `bankTotalsByCurrency`'s own lack of a dedicated test) / `npm run build` all clean.
 
 ## Pending
 
@@ -8105,11 +8144,14 @@ or a design decision before more code, not guessed at further:**
      optional `Bank` type/`bankId` link, zero automatic conversion of any existing account's
      free-text bank name, so there was no real "migrate production data" step to confirm at all;
      Credit Card normalization (Pending item 114) remains its own separate, still-open track.
-     (b) **The same pattern for Funds/brokerages, still open** — "Same should happen with Funds
-     and others like I have
-     4 brokerage and i want to seem my amounts with each broker/investment firm. and then i want
-     to see break-down and overall sums for all the firms" — a `Broker` parent entity for Funds,
-     mirroring (a)'s design once that's settled. (c) **Entity active/inactive + favorite + a
+     ~~(b) **The same pattern for Funds/brokerages** — "Same should happen with Funds and others
+     like I have 4 brokerage and i want to seem my amounts with each broker/investment firm. and
+     then i want to see break-down and overall sums for all the firms."~~ **Done (2026-09-09) —
+     see Done item 270.** Built the same purely-additive way as (a): a new optional `Broker`
+     type/`Fund.brokerId` link, zero automatic conversion of any fund's existing free-text
+     `platform` field — Funds' "total balance with that broker" rollup and per-broker
+     breakdown/detail view work exactly like Banking's Bank feature, adapted to Funds' own
+     state-toggle (not routed) detail-view convention. (c) **Entity active/inactive + favorite + a
      visible Sr#/Index#** — "Option to make an entity active or Inactive/Closed like a bank/
      fund/Credit Card, so that we can focus on the active one rather than seeing dead ones. Add
      active check, numeric sequence Id with each entity which is present as Index# or Sr.# for

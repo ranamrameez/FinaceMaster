@@ -51,6 +51,20 @@ export function fundsValueByCurrency(
   return out;
 }
 
+/** Pending item 115(b): the "total balance with that broker" rollup —
+ * same per-currency-grouped shape as `bankTotalsByCurrency` (Pending item
+ * 115(a)), scoped to exactly the funds linked to one `Broker` (via
+ * `Fund.brokerId`). Reuses `fundsValueByCurrency` unchanged rather than
+ * reimplementing the same sum, so both stay correct together. */
+export function brokerTotalsByCurrency(
+  brokerId: string,
+  funds: Fund[],
+  transactions: Transaction[],
+  marketPrices: Record<string, number>,
+): Record<string, number> {
+  return fundsValueByCurrency(funds.filter((f) => f.brokerId === brokerId), transactions, marketPrices);
+}
+
 /** Current value of every fund in one currency, grouped by category —
  * feeds Funds' Analytics "Allocation by category" doughnut
  * (MODULES_PLAN.md §11). Scoped to a single currency, same rule as every
