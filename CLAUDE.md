@@ -5944,6 +5944,34 @@ touched those.
   only, since Cash/Bank now have strictly more capable sections of their own above).
   `features/budget/pages/BudgetPlannerPage.tsx` deleted; `lib/calc/budgetPlanner.ts` (the pure
   calc module) is untouched, still used by `netWorthTrend.ts` and the merged page.
+- **Standing instruction (2026-09-09): "keep working and complete all pending tasks. work on a
+  task, complete, push & repeat. if any task requires my approval keep it for last when all
+  other tasks are done."** Work continuously down README.md's Pending list from here on — one
+  item at a time, verify, commit, push, PR, self-review, merge, repeat — without per-item
+  check-ins. Any item that genuinely needs the user's own input (a design fork, their own data
+  file, a real signed-in round-trip, a specific repro) goes LAST, not skipped — the Pending
+  list's own per-item notes already flag which ones those are.
+- **Found + merged a real stray unmerged PR at the start of this pass (2026-09-09), see README
+  Done item 269 for the full writeup.** The user explicitly asked to check for one.
+  `git branch -r` found 3 branches beyond `main`/this session's own branch — 2 were empty
+  (zero diff vs `main`, safe leftover session-branch artifacts, left alone) and 1 was real:
+  **PR #92** on `claude/chrome-stock-scraper-extension-q6rts2`, open+draft since 2026-09-07,
+  containing a genuine fix (`fetchQSEStockData()` used to require BOTH `tickerNames` AND
+  `fundamentals` present before using EITHER, silently discarding real scraped ticker names
+  forever since the extension can't populate `fundamentals`) plus the extension's name-
+  scraping feature itself. It had gone `mergeable_state: dirty` purely because the 2026-09-08
+  repo-root restructuring (the `thegroup-price-sync/`→`chrome-extension/` rename, etc.)
+  landed on `main` after this PR was opened. Resolved with a normal `git merge origin/main` —
+  git's rename-detection auto-merged every renamed file; the only real conflict was the
+  repo-root `README.md` itself (this PR's copy still had the old pre-restructuring long-form
+  doc vs. `main`'s new short pointer file), resolved by taking `main`'s version outright since
+  that restructuring is a deliberate, later, superseding decision. Verified (`tsc -b`/`npm run
+  test` 624 unchanged/`npm run build` all clean, plus `node --check` on all 6 extension `.js`
+  files at their new path and a `manifest.json` JSON-validity check), pushed, marked ready,
+  self-reviewed, squash-merged. **Lesson for any future session**: `git branch -r` costs
+  nothing and should be a routine first check whenever picking up a "work through the
+  backlog" session — a prior session's own draft PR can silently drift into a real conflict
+  from later, unrelated restructuring work, with no CI or notification to surface it.
 
 ## Live URLs
 
