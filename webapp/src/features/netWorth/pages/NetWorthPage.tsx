@@ -14,8 +14,8 @@ import { ChartCard } from '../../qse/components/ChartCard';
 import { netIncomeByCurrency as rentalsNetIncomeByCurrency } from '../../../lib/calc/rentalsModule';
 import { flowByCurrency } from '../../../lib/calc/netWorth';
 import { collectBudgetActivities, monthlyIncomeExpense, monthRange, monthsBetween, currentMonth as currentMonthOf, type MonthlyIncomeExpense, type BudgetActivity } from '../../../lib/calc/budgetPlanner';
-import { projectedNetWorthTrend, type MonthlyNetWorthPoint } from '../../../lib/calc/netWorthTrend';
-import { earliestActivityDate, type NetWorthAsOfInputs } from '../../../lib/calc/netWorthAsOf';
+import { endOfMonthAsOf, projectedNetWorthTrend, type MonthlyNetWorthPoint } from '../../../lib/calc/netWorthTrend';
+import { earliestActivityDate, netWorthAsOfDate, type NetWorthAsOfInputs } from '../../../lib/calc/netWorthAsOf';
 import { upcomingRenewals } from '../../../lib/calc/subscriptionsModule';
 import { UpcomingList } from '../../../components/UpcomingList';
 import { useUpcomingItems } from '../../../hooks/useUpcomingItems';
@@ -275,6 +275,38 @@ export function NetWorthPage({
   const todayFlowTotal = sumFlow(todayFlow);
   const monthFlowTotal = sumFlow(monthFlow);
 
+  // User-requested (2026-09-09): "month Intial minus last balance can tell
+  // the Net Worth while current - previous month worth can tell a month's
+  // positive/-negative impact + number + percentage." Distinct from
+  // `monthFlowTotal` above — that's CASH FLOW (Cash/Bank money in/out this
+  // month); this is the real NET WORTH itself (assets minus liabilities,
+  // every module) at the end of last month vs. right now, so it also
+  // captures things flow doesn't: a stock's price move, an EMI loan's
+  // principal paydown, a Fund's NAV change. Reuses `netWorthAsOfDate` —
+  // the same real (not projected) past-month computation the Monthly
+  // Summary table below already uses — rather than a new calc path.
+  // `null` (not 0) when there's no real prior-month data to compare
+  // against yet (a brand-new account this month), so the UI can render
+  // "not enough history yet" instead of a misleading "+100%".
+  const lastMonthEndDate = (() => {
+    const d = new Date(`${monthStart}T00:00:00Z`);
+    d.setUTCMonth(d.getUTCMonth() - 1);
+    return endOfMonthAsOf(d.toISOString().slice(0, 7));
+  })();
+  const earliestActivity = earliestActivityDate(netWorthAsOfInputs);
+  const hasLastMonthData = !!earliestActivity && earliestActivity <= lastMonthEndDate;
+  let lastMonthTotal = 0;
+  let lastMonthUnconverted = false;
+  if (hasLastMonthData) {
+    netWorthAsOfDate(lastMonthEndDate, netWorthAsOfInputs).forEach((r) => {
+      const converted = convertAmount(r.net, r.currency, preferredCurrency, rates);
+      if (converted === null) lastMonthUnconverted = true;
+      else lastMonthTotal += converted;
+    });
+  }
+  const netWorthDelta = hasLastMonthData ? grandTotal - lastMonthTotal : null;
+  const netWorthDeltaPct = netWorthDelta !== null && lastMonthTotal !== 0 ? (netWorthDelta / Math.abs(lastMonthTotal)) * 100 : null;
+
   // Item 4: "capital split per currency" — each currency's net worth
   // converted to the preferred currency for a like-for-like comparison
   // (a currency that can't convert is omitted from the chart, same
@@ -405,6 +437,24 @@ export function NetWorthPage({
               title={monthFlowTotal.anyUnconverted ? 'Some currencies excluded — no rate available.' : undefined}
               labelTitle="Net money moved in/out of Cash and Bank since the 1st of this month, converted to the preferred currency."
             />
+            {netWorthDelta !== null ? (
+              <StatCard
+                label="This month's change"
+                value={`${netWorthDelta >= 0 ? '+' : ''}${fmtMoney(netWorthDelta, preferredCurrency)}`}
+                sub={netWorthDeltaPct !== null ? `${netWorthDeltaPct >= 0 ? '+' : ''}${netWorthDeltaPct.toFixed(1)}% vs. last month` : undefined}
+                hue={netWorthDelta >= 0 ? 'var(--profit)' : 'var(--loss)'}
+                title={lastMonthUnconverted ? 'Some currencies excluded from last month\'s total — no rate available.' : undefined}
+                labelTitle="Your real net worth right now minus your real net worth at the end of last month — the whole picture (assets and liabilities across every module), not just cash moved."
+              />
+            ) : (
+              <StatCard
+                label="This month's change"
+                value="—"
+                sub="Not enough history yet"
+                hue={HUES[4]}
+                labelTitle="Needs at least one full prior month of real data to compare against."
+              />
+            )}
           </div>
         </Card>
 

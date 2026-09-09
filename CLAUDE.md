@@ -6224,6 +6224,21 @@ touched those.
   `stopPropagation` is scoped correctly. `npx tsc -b` / `npm run test` (630 tests, unchanged) /
   `npm run build` all clean. Deliberately scoped to QSE/PSX's Trade List only — see README
   Pending item 132 for rolling the same (already-generic) component out to every other module.
+- **Net Worth: "this month vs. last month" delta stat, closing README Pending item 130(b)-i
+  (2026-09-09) — see README Done item 285.** User's own formula: "current - previous month
+  worth can tell a month's positive/-negative impact + number + percentage." Distinct from the
+  already-existing "This month's net flow" card (cash-flow only) — this is the real Net Worth
+  itself (assets minus liabilities, every module) at the end of last month vs. right now, so it
+  also captures a stock's price move, an EMI loan's paydown, a Fund's NAV change. New "This
+  month's change" `StatCard`, reusing `netWorthAsOfDate()` for last month's real end-of-month
+  total, gated on `earliestActivityDate()` so a brand-new user sees "not enough history" rather
+  than a misleading percentage. Verified live via Playwright with a fixed clock and a seeded
+  2-month Cash history: rendered exactly "+300.00 USD" / "+25.0% vs. last month", hand-checked
+  against the raw numbers (1200 end-of-Feb → 1500 today = 25% exactly). `npx tsc -b` / `npm run
+  test` (630 tests, unchanged) / `npm run build` all clean. Still open: item 130(b)-ii, the
+  category-level Income/Expense/Ignore classification feature itself — needs the user's own
+  classification pass on several ambiguous real production categories (Extra, Misk, Reserve,
+  Saving, Touring), not a guess.
 
 ## Live URLs
 
