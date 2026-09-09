@@ -7815,6 +7815,34 @@ FinanceManager live link:
   for the transaction, one for the account itself) still opens its own edit form without also
   opening the detail popup. `npx tsc -b` / `npm run test` (630 tests, unchanged) / `npm run
   build` all clean. Still open: Rentals/Personal Loans/EMI/Funds/Subscriptions.
+- **Net Worth: Monthly Summary table's full-cell coloring replaced with compact chips, and
+  Today's-net-flow/This-month's-net-flow/This-month's-change surfaced per currency
+  (2026-09-09, user-reported) — see Done item 287.** User's own words: "attached view is messy
+  and confusing. Making the whole td red/green is bad idea. instead we can make it compact
+  chip-like info," plus "Per currnecy stats are missing like Today's net flow, This month's net
+  flow, This month's change." **Root cause of the first complaint**: the Monthly Summary
+  table's Net-flow/Net-worth rows applied `pill-positive`/`pill-negative` classes DIRECTLY to
+  the `<td>` — those classes are designed for a `.pill` badge (`display:inline-block;
+  padding:3px 9px; border-radius:20px`), so applying just the color half without the base
+  `.pill` shape class left the WHOLE cell solid-colored with square corners, exactly the
+  "messy" look reported. Fixed by wrapping the value in a real `<span className="pill
+  pill-positive/negative">` instead of coloring the cell itself. **Second complaint**: the new
+  "Today's net flow"/"This month's net flow"/"This month's change" stats (Done items 279/285)
+  only ever showed a single converted-to-preferred-currency total in the "Net worth summary"
+  card — each currency's own per-currency section (the "USD —"/"PKR —" cards, which already
+  show real unconverted Assets/Liabilities/Net) never got them. Added a compact chip row (NOT
+  another row of full `.stat-card` boxes, per the user's own explicit "compact chip-like"
+  wording) right below each currency's Assets/Liabilities/Net stat-cards, reusing the exact
+  same `todayFlow`/`monthFlow` per-currency maps (`flowByCurrency`) already computed for the
+  converted totals, plus a new `lastMonthByCurrency` map built alongside the existing
+  `netWorthAsOfDate()` last-month loop. A currency with no real prior-month data of its own
+  shows a neutral "not enough history" chip instead of a misleading number. Verified live via
+  Playwright with a seeded 2-currency (USD/PKR), 2-month scenario, math hand-checked exactly:
+  USD showed "Today +100.00 USD" / "This month +400.00 USD" / "Δ vs. last month +400.00 USD
+  (+33.3%)" (400/1200 = 33.3% exactly); PKR (no March activity) correctly showed all-zero flow
+  chips and "+0.00 PKR (+0.0%)"; a DOM sweep confirmed zero `<td>` elements still directly
+  carry `pill-positive`/`pill-negative` (all moved into `<span>` chips). `npx tsc -b` / `npm
+  run test` (630 tests, unchanged — UI-only) / `npm run build` all clean.
 
 ## Pending
 

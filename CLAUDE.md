@@ -6252,6 +6252,26 @@ touched those.
   interactive-element**: scope it to the smallest wrapper around the interactive element
   itself, never the whole cell. `npx tsc -b` / `npm run test` (630 tests, unchanged) / `npm run
   build` all clean. Still open: Rentals/Personal Loans/EMI/Funds/Subscriptions.
+- **Net Worth: Monthly Summary table's full-cell coloring replaced with compact chips, and
+  Today's-net-flow/This-month's-net-flow/This-month's-change surfaced per currency, mid-turn
+  user correction (2026-09-09) — see README Done item 287.** User: "attached view is messy and
+  confusing. Making the whole td red/green is bad idea. instead we can make it compact
+  chip-like info," plus "Per currnecy stats are missing like Today's net flow, This month's net
+  flow, This month's change." Root cause of the first: `pill-positive`/`pill-negative` were
+  applied DIRECTLY to `<td>` elements — those classes are designed for a `.pill` badge
+  (`display:inline-block; padding:3px 9px; border-radius:20px`), so the color-only half without
+  the shape class left the whole cell solid-colored with square corners. Fixed by wrapping the
+  value in a real `<span className="pill pill-positive/negative">`. Second: the three new
+  flow/delta stats (Done items 279/285) only ever showed ONE converted-to-preferred-currency
+  total; each currency's own per-currency section never got them at all, unlike Assets/
+  Liabilities/Net which already show real unconverted figures there. Added a compact chip row
+  (not another row of full `.stat-card` boxes, per the user's own explicit wording) reusing the
+  same `todayFlow`/`monthFlow` per-currency maps already computed, plus a new
+  `lastMonthByCurrency` map alongside the existing last-month `netWorthAsOfDate()` loop.
+  Verified live via Playwright with a seeded 2-currency, 2-month scenario, math hand-checked
+  exactly (USD "Δ vs. last month +400.00 USD (+33.3%)" = 400/1200 exactly); a DOM sweep
+  confirmed zero `<td>` elements still directly carry `pill-positive`/`pill-negative`. `npx tsc
+  -b` / `npm run test` (630 tests, unchanged) / `npm run build` all clean.
 
 ## Live URLs
 
