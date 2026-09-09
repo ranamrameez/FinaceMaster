@@ -11,42 +11,51 @@ import type { Category } from '../types/finance';
  * those would be a judgment call on the user's own real spending history,
  * not a mechanical safe merge.
  *
- * This list is a personal-finance-tracker's own real categories, not a
- * "generic" starter set — reasonable for this single-owner app today, but
- * worth reconsidering if the app ever supports multiple independent users
- * (a fresh signup shouldn't necessarily start with someone else's real
+ * `scope: 'app'` (2026-09-09, user-requested: "App level categs are for
+ * all, while custom are user specific. we need both") marks every one of
+ * these as shared, protected reference data — see `Category`'s own doc
+ * comment for what that means for rename/delete. This list is a
+ * personal-finance-tracker's own real categories, not a "generic" starter
+ * set — reasonable for this single-owner app today, but worth
+ * reconsidering if the app ever supports multiple independent users (a
+ * fresh signup shouldn't necessarily start with someone else's real
  * category history). `serialNumber` is just this array's own fixed order,
  * 1-indexed. Ids are stable slugs (not random) so every environment/import
  * resolves to the exact same id for the exact same category. */
 export const DEFAULT_CATEGORIES: Category[] = [
-  { id: 'cat_grocery', serialNumber: 1, name: 'Grocery' },
-  { id: 'cat_inevitable', serialNumber: 2, name: 'Inevitable' },
-  { id: 'cat_accomodation', serialNumber: 3, name: 'Accomodation' },
-  { id: 'cat_travel', serialNumber: 4, name: 'Travel' },
-  { id: 'cat_health', serialNumber: 5, name: 'Health' },
-  { id: 'cat_credit_card_payment', serialNumber: 6, name: 'Credit Card Payment' },
-  { id: 'cat_income', serialNumber: 7, name: 'Income' },
-  { id: 'cat_extra', serialNumber: 8, name: 'Extra' },
-  { id: 'cat_reserve', serialNumber: 9, name: 'Reserve' },
-  { id: 'cat_misk', serialNumber: 10, name: 'Misk' },
-  { id: 'cat_touring', serialNumber: 11, name: 'Touring' },
-  { id: 'cat_saving', serialNumber: 12, name: 'Saving' },
-  { id: 'cat_pakistan', serialNumber: 13, name: 'Pakistan' },
-  { id: 'cat_medical', serialNumber: 14, name: 'Medical' },
-  { id: 'cat_food', serialNumber: 15, name: 'Food' },
-  { id: 'cat_transfer', serialNumber: 16, name: 'Transfer' },
-  { id: 'cat_ignore', serialNumber: 17, name: 'Ignore' },
-  { id: 'cat_ignore_count', serialNumber: 18, name: 'IgnoreCount' },
-  { id: 'cat_bill', serialNumber: 19, name: 'Bill' },
-  { id: 'cat_psx', serialNumber: 20, name: 'PSX' },
-  { id: 'cat_others', serialNumber: 21, name: 'Others' },
-  { id: 'cat_reconcile', serialNumber: 22, name: 'Reconcile' },
-  { id: 'cat_reconciliation_adjustment', serialNumber: 23, name: 'Reconciliation adjustment' },
-  { id: 'cat_rent', serialNumber: 24, name: 'Rent' },
-  { id: 'cat_rent_car_wash', serialNumber: 25, name: 'Rent: Car Wash' },
-  { id: 'cat_opening_balance', serialNumber: 26, name: 'Opening balance' },
-  { id: 'cat_uncategorized', serialNumber: 27, name: 'Uncategorized' },
+  { id: 'cat_grocery', serialNumber: 1, name: 'Grocery', scope: 'app' },
+  { id: 'cat_inevitable', serialNumber: 2, name: 'Inevitable', scope: 'app' },
+  { id: 'cat_accomodation', serialNumber: 3, name: 'Accomodation', scope: 'app' },
+  { id: 'cat_travel', serialNumber: 4, name: 'Travel', scope: 'app' },
+  { id: 'cat_health', serialNumber: 5, name: 'Health', scope: 'app' },
+  { id: 'cat_credit_card_payment', serialNumber: 6, name: 'Credit Card Payment', scope: 'app' },
+  { id: 'cat_income', serialNumber: 7, name: 'Income', scope: 'app' },
+  { id: 'cat_extra', serialNumber: 8, name: 'Extra', scope: 'app' },
+  { id: 'cat_reserve', serialNumber: 9, name: 'Reserve', scope: 'app' },
+  { id: 'cat_misk', serialNumber: 10, name: 'Misk', scope: 'app' },
+  { id: 'cat_touring', serialNumber: 11, name: 'Touring', scope: 'app' },
+  { id: 'cat_saving', serialNumber: 12, name: 'Saving', scope: 'app' },
+  { id: 'cat_pakistan', serialNumber: 13, name: 'Pakistan', scope: 'app' },
+  { id: 'cat_medical', serialNumber: 14, name: 'Medical', scope: 'app' },
+  { id: 'cat_food', serialNumber: 15, name: 'Food', scope: 'app' },
+  { id: 'cat_transfer', serialNumber: 16, name: 'Transfer', scope: 'app' },
+  { id: 'cat_ignore', serialNumber: 17, name: 'Ignore', scope: 'app' },
+  { id: 'cat_ignore_count', serialNumber: 18, name: 'IgnoreCount', scope: 'app' },
+  { id: 'cat_bill', serialNumber: 19, name: 'Bill', scope: 'app' },
+  { id: 'cat_psx', serialNumber: 20, name: 'PSX', scope: 'app' },
+  { id: 'cat_others', serialNumber: 21, name: 'Others', scope: 'app' },
+  { id: 'cat_reconcile', serialNumber: 22, name: 'Reconcile', scope: 'app' },
+  { id: 'cat_reconciliation_adjustment', serialNumber: 23, name: 'Reconciliation adjustment', scope: 'app' },
+  { id: 'cat_rent', serialNumber: 24, name: 'Rent', scope: 'app' },
+  { id: 'cat_rent_car_wash', serialNumber: 25, name: 'Rent: Car Wash', scope: 'app' },
+  { id: 'cat_opening_balance', serialNumber: 26, name: 'Opening balance', scope: 'app' },
+  { id: 'cat_uncategorized', serialNumber: 27, name: 'Uncategorized', scope: 'app' },
 ];
+
+/** Every id from `DEFAULT_CATEGORIES`, for cheap membership checks
+ * (`categoryStore.ts`'s `normalize()`, `renameCategory`/`deleteCategory`'s
+ * app-category guard) without re-scanning the array each time. */
+export const DEFAULT_CATEGORY_IDS = new Set(DEFAULT_CATEGORIES.map((c) => c.id));
 
 export const UNCATEGORIZED_ID = 'cat_uncategorized';
 /** Used by `lib/interEntityLink.ts`'s `buildSideRecord` for the Cash/Bank

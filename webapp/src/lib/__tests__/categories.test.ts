@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_CATEGORIES, UNCATEGORIZED_ID, categoryName, findCategoryByName, normalizeCategoryKey } from '../categories';
+import { DEFAULT_CATEGORIES, DEFAULT_CATEGORY_IDS, UNCATEGORIZED_ID, categoryName, findCategoryByName, normalizeCategoryKey } from '../categories';
 import { resolveLegacyCategoryId } from '../financeMigration';
+
+describe('DEFAULT_CATEGORIES scope', () => {
+  it('every bundled default category is tagged scope: app', () => {
+    expect(DEFAULT_CATEGORIES.every((c) => c.scope === 'app')).toBe(true);
+  });
+
+  it('DEFAULT_CATEGORY_IDS matches every default id, and only those', () => {
+    expect(DEFAULT_CATEGORY_IDS.size).toBe(DEFAULT_CATEGORIES.length);
+    expect(DEFAULT_CATEGORY_IDS.has('cat_grocery')).toBe(true);
+    expect(DEFAULT_CATEGORY_IDS.has('some-user-added-category-id')).toBe(false);
+  });
+});
 
 describe('normalizeCategoryKey', () => {
   it('recognizes the one real safe-merge pair found in the app owner\'s real data: "CC-Payment" and "CC payment"', () => {
