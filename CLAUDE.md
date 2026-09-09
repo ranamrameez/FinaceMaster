@@ -6038,6 +6038,21 @@ touched those.
   position, much bigger USD Bank balance): the rail correctly showed QAR, not USD. Still open:
   whether the rail should become a floating popup instead of a docked column (needs the user's
   own confirmation, a bigger reversal of Done item 164's design).
+- **Self-caught correction: Funds' own PRIMARY `FundList` also converted to `EntityCard`
+  (2026-09-09) — see README Done item 277, correcting the earlier "Pending item 114 is fully
+  closed" claim.** Done item 270 converted Funds' `BrokersList` — a SECONDARY list — and an
+  earlier pass in this session wrongly counted that as satisfying item 114's Funds requirement,
+  without checking whether Funds' own PRIMARY list (`FundList`, the actual fund table) had been
+  touched. It hadn't. Found while investigating a small Sr#-prefix consistency question, not by
+  re-reading item 114's text carefully the first time — **lesson worth remembering: "a related
+  list in the same module got converted" is not the same claim as "this specific list got
+  converted," so double-check which exact list a Pending item names before marking it closed.**
+  Fixed the same way as every other list in this rollout: dropped `useSortableRows`,
+  favorite-first ordering, Sr#+ticker-logo+name title, "Code · Category · XIRR" subtitle,
+  Closed badge, Value/Net P/L stat hued by sign. Verified live via Playwright with a seeded
+  3-fund scenario — favorite-first order, ticker-logo fallback, closed toggle/badge,
+  card-click-to-detail, and the Favorite sign-in gate all confirmed. Pending item 114 is now
+  genuinely fully closed.
 
 ## Live URLs
 

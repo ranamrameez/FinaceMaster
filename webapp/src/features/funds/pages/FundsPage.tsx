@@ -20,7 +20,6 @@ import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { defaultTimeForDate, defaultTimezoneForCurrency, nowTime } from '../../../lib/datetime';
 import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
-import { useSortableRows } from '../../../hooks/useSortableRows';
 import { getMarketPrice } from '../../../lib/calc';
 import { pendingShareDeltaByTicker } from '../../../lib/calc/positions';
 import { allocationByCategory, balanceUpdateHistory, brokerTotalsByCurrency, contributionVsValueSeries, expectedPLRate, fundCategoryLabel, fundNetProfit, projectInvestmentReturn } from '../../../lib/calc/fundsModule';
@@ -570,6 +569,18 @@ function OverallSummary() {
  * hidden from this default list behind a "Show closed" toggle, same
  * archive/restore pattern as `AccountsList` (see `Fund.isActive`'s doc
  * comment); their positions still contribute to every total unchanged. */
+// Converted from a sortable table to an EntityCard grid (2026-09-09) — a
+// real gap found while re-checking README Pending item 114's own scope:
+// Done item 270 converted Funds' BrokersList (a secondary list) but never
+// this file's own PRIMARY entity list, unlike every other module in that
+// rollout. Per UI rule 1/3: entity items belong on cards in a wrap-flex
+// grid — dropped this list's own `useSortableRows` usage (its only caller
+// in the file) in favor of favorite-first ordering, matching every other
+// converted list. Category/Units columns dropped from the card's own
+// visible summary (still available on the fund's detail page) — the
+// card shows Name+logo, Code, Value, and Net P/L (with XIRR folded into
+// the subtitle), same "group related figures, don't drop them" pattern
+// as every other converted list's own regrouping.
 function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
   const allFunds = useFundsWorkbookStore((s) => s.workbook.funds);
   const setWorkbook = useFundsWorkbookStore((s) => s.setWorkbook);
@@ -590,9 +601,9 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
   };
 
   // Index/Sr# column, user-requested (2026-09-03) — the fund's own stable
-  // position in `allFunds` (creation order), independent of the table's
-  // current live sort (a sorted table shouldn't renumber what row "3" is
-  // every time the sort changes).
+  // position in `allFunds` (creation order), independent of the grid's own
+  // favorite-first ordering (a re-sorted list shouldn't renumber what
+  // fund "#3" is every time favorite status changes).
   type Row = { idx: number; fund: Fund; units: number; invested: number; value: number; profit: number; profitPct: number; xirrPct: number | null };
   const rows: Row[] = funds.map((fund) => {
     const p = positions.find((pos) => pos.ticker === fund.id);
@@ -607,20 +618,10 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
     return { idx, fund, units, invested, value, profit, profitPct, xirrPct: rate !== null ? rate * 100 : null };
   });
 
-  type Col = 'idx' | 'favorite' | 'name' | 'category' | 'units' | 'value' | 'profit' | 'xirr';
-  const sortValue = (r: Row, col: Col): number | string => {
-    switch (col) {
-      case 'idx': return r.idx;
-      case 'favorite': return r.fund.isFavorite ? 1 : 0;
-      case 'category': return fundCategoryLabel(r.fund, categoryRegistry);
-      case 'units': return r.units;
-      case 'value': return r.value;
-      case 'profit': return r.profitPct;
-      case 'xirr': return r.xirrPct ?? -Infinity;
-      default: return r.fund.name;
-    }
-  };
-  const { sorted, Th } = useSortableRows(rows, sortValue, 'name', 'asc');
+  const sorted = useMemo(
+    () => [...rows].sort((a, b) => Number(!!b.fund.isFavorite) - Number(!!a.fund.isFavorite)),
+    [rows],
+  );
 
   return (
     <div>
@@ -629,53 +630,58 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
           {showClosed ? 'Hide' : 'Show'} closed ({closedCount})
         </button>
       )}
-      <div className="table-scroll">
-      <table>
-        <thead>
-          <tr>
-            <Th col="idx">#</Th><Th col="favorite">★</Th><Th col="name">Fund</Th><th>Code</th><Th col="category">Category</Th>
-            <Th col="units">Units</Th><Th col="value">Value</Th><Th col="profit">Net P/L</Th><Th col="xirr">XIRR</Th>
-          </tr>
-        </thead>
-        <tbody>
+      {!sorted.length ? (
+        <p className="text-muted">
+          {allFunds.length ? 'Every fund is closed — click "Show closed" above to see them.' : 'No funds yet — add one above.'}
+        </p>
+      ) : (
+        <div className="entity-card-grid">
           {sorted.map((r) => (
-            <tr key={r.fund.id} onClick={() => onSelect(r.fund)} style={{ cursor: 'pointer' }}>
-              <td className="text-muted">{r.idx}</td>
-              <td>
+            <EntityCard
+              key={r.fund.id}
+              title={
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span className="text-muted entity-card-sr">#{r.idx}</span>
+                  {/* Funds has no known logo CDN of its own (README item 118) — passing
+                   * exchange="psx" reuses TickerLogo's "no remote CDN, local-drop-in or
+                   * colored-initials fallback only" path rather than QSE's own CDN, which
+                   * would 404 for every fund code and burn a wasted network round trip. */}
+                  <TickerLogo ticker={r.fund.code} exchange="psx" size="sm" />
+                  {r.fund.name}
+                </span>
+              }
+              subtitle={
+                <>
+                  {r.fund.code} · {fundCategoryLabel(r.fund, categoryRegistry)}
+                  {r.xirrPct !== null && <> · XIRR {r.xirrPct.toFixed(1)}%</>}
+                </>
+              }
+              badge={r.fund.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Closed</span> : undefined}
+              statLabel="Value"
+              stat={
+                <>
+                  <MoneyValue n={r.value} currency={r.fund.currencyCode} />
+                  <div className="sub">
+                    <span className={r.profit >= 0 ? 'pill-positive' : 'pill-negative'}>
+                      {fmtMoney(r.profit, r.fund.currencyCode)} ({r.profitPct.toFixed(1)}%)
+                    </span>
+                  </div>
+                </>
+              }
+              hue={r.profit >= 0 ? 'var(--profit)' : 'var(--loss)'}
+              onClick={() => onSelect(r.fund)}
+              actions={
                 <IconButton
                   label={r.fund.isFavorite ? 'Unfavorite' : 'Favorite'}
                   icon={<StarIcon size={13} filled={r.fund.isFavorite} />}
                   align="right"
-                  onClick={(e) => { e.stopPropagation(); toggleFavorite(r.fund); }}
+                  onClick={() => toggleFavorite(r.fund)}
                 />
-              </td>
-              <td style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                {/* Funds has no known logo CDN of its own (README item 118) — passing
-                 * exchange="psx" reuses TickerLogo's "no remote CDN, local-drop-in or
-                 * colored-initials fallback only" path rather than QSE's own CDN, which
-                 * would 404 for every fund code and burn a wasted network round trip. */}
-                <TickerLogo ticker={r.fund.code} exchange="psx" size="sm" />
-                {r.fund.name}
-                {r.fund.isActive === false && <span className="pill-warn" style={{ fontSize: 10, marginLeft: 6 }}>Closed</span>}
-              </td>
-              <td>{r.fund.code}</td>
-              <td>{fundCategoryLabel(r.fund, categoryRegistry)}</td>
-              <td>{fmt(r.units, 2)}</td>
-              <td>{fmtMoney(r.value, r.fund.currencyCode)}</td>
-              <td className={r.profit >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(r.profit, r.fund.currencyCode)} ({r.profitPct.toFixed(1)}%)</td>
-              <td>{r.xirrPct !== null ? `${r.xirrPct.toFixed(1)}%` : '—'}</td>
-            </tr>
+              }
+            />
           ))}
-          {!sorted.length && (
-            <tr>
-              <td colSpan={9} className="text-muted">
-                {allFunds.length ? 'Every fund is closed — click "Show closed" above to see them.' : 'No funds yet — add one above.'}
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
