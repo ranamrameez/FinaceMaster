@@ -11,6 +11,7 @@ import { Modal } from '../../../components/Modal';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { PendingToggle } from '../../../components/ui/PendingToggle';
 import { IconButton } from '../../../components/ui/IconButton';
 import { FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
@@ -814,10 +815,14 @@ function EditEntryModal({ entry, onClose }: { entry: RentalEntry; onClose: () =>
           onTimezoneChange={(timezone) => setDraft({ ...draft, timezone })}
         />
       </div>
-      <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }} title="Not yet cleared — excluded from Net income until unchecked.">
-        <input type="checkbox" checked={!!draft.isPending} onChange={(e) => setDraft({ ...draft, isPending: e.target.checked })} />
-        Pending (not yet cleared)
-      </label>
+      <div style={{ marginTop: 8 }}>
+        <PendingToggle
+          checked={!!draft.isPending}
+          onChange={(v) => setDraft({ ...draft, isPending: v })}
+          label="Pending (not yet cleared)"
+          title="Not yet cleared — excluded from Net income until unchecked."
+        />
+      </div>
       <p className="text-muted" style={{ marginTop: 8 }}>
         {draft.source === 'statement-import' ? `Imported${draft.statementRef ? ` from ${draft.statementRef}` : ''}` : 'Entered manually'}
       </p>

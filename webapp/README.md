@@ -7606,6 +7606,70 @@ FinanceManager live link:
   pixel measurements rather than guesses, zero new console errors (only this sandbox's own
   pre-existing, already-documented network-block noise). `npx tsc -b` / `npm run test` (624
   tests, unchanged — no calc logic touched) / `npm run build` all clean.
+- **"Add a trade" popup batch, three real bugs fixed (2026-09-09) — see Done item 280.**
+  User's own report: an oversized Pending-checkbox clickable area caused an accidental pending
+  trade; editing it afterward "didn't allow me to change the status"; and toasts/tooltips
+  render behind popups.
+  **Toast-behind-modal, confirmed by static CSS inspection**: `.toast{z-index:50}` sat BELOW
+  `.modal-overlay{z-index:100}` — deterministic, not conditional — so any toast fired while a
+  Modal was open rendered genuinely behind the backdrop. Raised to 650 (above every ordinary
+  Modal/ConfirmDialog/SignInModal and Tooltip's own 600, below the TradePlanner-fullscreen/
+  TermsGateModal 999-1000 layers meant to sit above literally everything). Tooltip itself
+  (z-index 600 since Done item 240) was re-checked live inside the exact "Add a trade" modal
+  and confirmed already correct — the report's "tooltips" half was very likely this same toast
+  bug perceived together, not a second live defect.
+  **Pending checkbox's oversized click area, root-caused (not just patched)**: every call site
+  wrapped a bare `<input type="checkbox">` in a `<label style={{display:'flex', ...}}>` with no
+  width constraint — a block-level flex `<label>` stretches to fill its container (a `Field`'s
+  full column width inside the popup, or the whole form's width in Cash/Bank/Rentals' add
+  forms), so the ENTIRE stretched box was clickable, not just the checkbox+text — exactly
+  "clicked on white space." Fixed once with a new shared `PendingToggle`
+  (`components/ui/PendingToggle.tsx`) — a `.chip`/`.chip.active` shrink-to-fit toggle button
+  (the same pattern `ChartFilterBar` already uses), which can never grow past its own text —
+  applied everywhere `isPending` had its own checkbox: QSE/PSX `TransactionsPage.tsx` (add-row
+  + inline edit-row), `TransactionEntryModal.tsx` (the shared cross-module linked-transfer
+  popup), Cash/Rentals/Bank's add-forms, and Funds/Personal Loans' inline edit-rows. Measured
+  the fix live: the chip renders 74px wide, not the ~180px `Field` column it used to fill.
+  **"Didn't allow me to change the status" — a real, separate, previously-undiscovered gap,
+  not a duplicate of the checkbox bug**: `StockPage.tsx`'s (QSE + PSX) own per-stock Trades
+  table had ZERO `isPending` support anywhere — no toggle on add, no toggle on edit, no badge,
+  no quick-clear — despite every other transaction-editing surface in the app having it. A
+  user who followed the ticker link from an accidentally-pending trade to fix it there would
+  find no way to do so at all. Added the full set (add-form Order toggle, edit-row
+  `PendingToggle`, read-only `pill-warn` badge + "Mark cleared" quick action) to both
+  exchanges' `StockPage.tsx`, matching `TransactionsPage.tsx`'s existing pattern exactly.
+  Verified live end-to-end: opened Edit on a seeded pending trade, toggled the chip off, hit
+  Save, and read `localStorage` back directly — `isPending` correctly cleared.
+  **Timezone/time mismatch, a real, separate user report handled in the same pass**: "Timezone
+  is chosen by currency, but time is according to the user's machine (recording PKR in Qatar
+  gives timezone Pak while time Qatar as default)." `nowTime()` (`lib/datetime.ts`) always
+  returned the browser's own raw local clock reading with no timezone awareness at all, even
+  though every call site sets `timezone` from `defaultTimezoneForMarket`/
+  `defaultTimezoneForCurrency` in the very same object literal — so a PKR entry logged while
+  physically in Qatar got Karachi's timezone LABEL with Doha's own clock READING underneath
+  it, a real ~2-hour chronological-order error (Karachi is UTC+5, Qatar UTC+3). `nowTime()`
+  gained an optional `timezone` parameter (via one `Intl.DateTimeFormat` call, `hourCycle:
+  'h23'`) — omitting it keeps the old browser-local fallback, so nothing broke for a caller
+  not yet updated. `defaultTimeForDate()` threads the same parameter through. Every real call
+  site across the app (QSE/PSX `TransactionsPage.tsx`/`StockPage.tsx`/`DividendsSection.tsx`,
+  `TransactionEntryModal.tsx`, `FundsPage.tsx`) now passes its own already-known target
+  timezone instead of leaving it implicit. New tests in `datetime.test.ts` pin the user's
+  exact scenario with fake system time: `nowTime('Asia/Karachi')` → `'15:00'` vs.
+  `nowTime('Asia/Qatar')` → `'13:00'` for the identical real instant — a genuine 2-hour gap,
+  matching the report precisely.
+  **Table row banding, a same-turn follow-up report ("terribly coloured... add bordering")**:
+  the accent-tinted `tbody tr:nth-child(even)` striping (Done item 266's fix for the earlier
+  "rows indistinct" bug) was itself now reported as visually bad. The user's own suggested CSS
+  (`border`/`margin-bottom`/`border-radius` directly on `tr`) doesn't fully render as written —
+  `margin` and `border-radius` don't apply to a `display:table-row` element in any browser —
+  so only the `border` half was kept, as a plain `border-bottom` under every row (removes on
+  `:last-child`), which reads as "each row has a visible boundary" without patchy/doubled
+  borders once merged with the table's own `border-collapse:collapse`. Hover tint kept, toned
+  down slightly (22%→10% accent mix) now that a real border does most of the row-separation
+  work. Verified live: `tbody tr` computed `border-bottom: 1px solid rgb(211,216,222)`
+  (`--border`), and a real screenshot showed clean, evenly-spaced rows with the Pending badge/
+  Mark-cleared action rendering correctly alongside. `npx tsc -b` / `npm run test` (627 tests,
+  3 new) / `npm run build` all clean.
 
 ## Pending
 
@@ -8513,6 +8577,42 @@ or a design decision before more code, not guessed at further:**
      both now retrofit onto the same registry via an optional `categoryID`, keeping their old
      free-text/fixed-enum field as a read-only display fallback for pre-migration records.
 ~~127. Per-user selectable currency subset~~ — **done (2026-09-08), see Done item 246.**
+
+128. **Sidebar: nest QSE/PSX's own page list as a real subnav under "Stock Exchanges", not a
+     separate accordion (2026-09-09, user-corrected).** The current `usePagesOpen()` "▸ Pages"
+     block (Done items 209/210) sits BELOW the `CategoryNav` list as its own independent
+     collapsible section with a `1px solid` divider above it — the user's own framing: "I asked
+     to include individual stock Exchs. as subnavs of the SE main nav, but you placed it below
+     as a stand-alone menu using ugly lines." Needs a real design pass (how a nested item list
+     renders directly under one `CategoryNav` row, only while that category is active/expanded,
+     without breaking the QSE/PSX exchange-switcher chips that already live in roughly that
+     spot) — not attempted yet.
+129. **Transaction-detail popup on row click, since tables truncate long text (2026-09-09,
+     user-reported).** "We should also show a transaction record in a popup when clicked since
+     we are cutting the text; users can never read the full data." Scope not yet finalized —
+     likely starts with QSE/PSX Trade Transactions (the page the report's screenshot was about)
+     but could generalize to any module's transaction table. Not yet built.
+130. **Wording + true category-level Income/Expense/Ignore classification (2026-09-09,
+     user-reported, multi-part).** (a) Rename "Income"/"Expense" to "Inflow"/"Outflow" wherever
+     the figure can include an inter-account transfer (at minimum the Monthly Summary table on
+     the Dashboard/Net Worth page and `lib/calc/budgetPlanner.ts`'s own labels) — a transfer
+     between the user's own accounts is neither real income nor a real expense. (b) Separately,
+     build TRUE category-level classification: a `kind: 'income' | 'expense' | 'ignore'` field
+     on `Category`, seeded sensible defaults for the user's own named categories (Income,
+     Grocery, Bill, Extra, Guests, Tuition Fee, Other Fees, Other, Ignore, plus more generic
+     ones), a per-category "which zone" picker in Account/Category settings (the user's own
+     red=expense/green=income/gray=ignore framing), expense-category-split charts built on this
+     classification, and a "this month vs last month" net-worth delta shown as both an amount
+     and a percentage (this month's total minus last month's, per the user's own formula: "month
+     Intial minus last balance can tell the Net Worth while current - previous month worth can
+     tell a month's positive/-negative impact"). A real design pass, not yet started — (a) is a
+     small, scoped wording fix; (b) is a genuinely new feature.
+131. **First-time currency-selection prompt (2026-09-09, user-requested).** "We should ask user
+     about his currencies on signup. then can still customize in settings anytime." No formal
+     "signup" flow exists in this sign-in-gated app — most likely means firing once alongside
+     (or right after) the existing Terms gate, or on a user's first real sign-in, while leaving
+     the existing Account > Currencies section (`useEnabledCurrenciesStore`) as the ongoing
+     customization point it already is. Not yet built.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

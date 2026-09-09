@@ -13,6 +13,7 @@ import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { PendingToggle } from '../../../components/ui/PendingToggle';
 import { IconButton } from '../../../components/ui/IconButton';
 import { FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
@@ -905,7 +906,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
   // the same reason RiskCalculator's targetAmountInput is — a controlled
   // number input re-formats on every keystroke and fights typing.
   const [txAmountInput, setTxAmountInput] = useState('');
-  const [txTime, setTxTime] = useState<string | undefined>(() => nowTime());
+  const [txTime, setTxTime] = useState<string | undefined>(() => nowTime(defaultTimezoneForCurrency(fund.currencyCode)));
   const [txTimeTouched, setTxTimeTouched] = useState(false);
   const [txTimezone, setTxTimezone] = useState<string | undefined>(() => defaultTimezoneForCurrency(fund.currencyCode));
   const [txPending, setTxPending] = useState(false);
@@ -1263,7 +1264,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
             value={txDate}
             onChange={(e) => {
               setTxDate(e.target.value);
-              if (!txTimeTouched) setTxTime(defaultTimeForDate(e.target.value));
+              if (!txTimeTouched) setTxTime(defaultTimeForDate(e.target.value, txTimezone));
             }}
           />
         </Field>
@@ -1388,10 +1389,11 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                   <td><input type="number" step="0.0001" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })} style={{ width: 90 }} /></td>
                   <td>{fmtMoney(editRow.shares * editRow.price, fund.currencyCode)}</td>
                   <td>
-                    <label className="text-muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }} title="Not yet settled — excluded from units/value until unchecked.">
-                      <input type="checkbox" checked={!!editRow.isPending} onChange={(e) => setEditRow({ ...editRow, isPending: e.target.checked })} />
-                      Pending
-                    </label>{' '}
+                    <PendingToggle
+                      checked={!!editRow.isPending}
+                      onChange={(v) => setEditRow({ ...editRow, isPending: v })}
+                      title="Not yet settled — excluded from units/value until unchecked."
+                    />{' '}
                     <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
                     <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditIndex(null)} />
                   </td>

@@ -7,6 +7,7 @@ import { Field, TextInput } from './ui/Field';
 import { AmountInput } from './ui/AmountInput';
 import { DirectionChips } from './ui/DirectionChips';
 import { TimeZoneFields } from './ui/TimeZoneFields';
+import { PendingToggle } from './ui/PendingToggle';
 import { SideFields, useSideCurrency, nextUnpaidEmiMonth } from '../features/transfers/pages/TransferLinksPage';
 import { getLastTransferSource, rememberTransferSource } from '../hooks/useLastTransferSource';
 import { CategorySelect } from './CategorySelect';
@@ -139,7 +140,7 @@ function emptyRow(key: number, finance: LinkSideConfig, currencyCode?: string): 
     amount: 0,
     direction: 'in',
     date: today(),
-    time: nowTime(),
+    time: nowTime(defaultTimezoneForCurrency(currencyCode)),
     timeTouched: false,
     timezone: defaultTimezoneForCurrency(currencyCode),
     categoryID: UNCATEGORIZED_ID,
@@ -210,7 +211,7 @@ function TxRowFields({
             value={row.date}
             onChange={(e) => {
               const date = e.target.value;
-              onChange(row.timeTouched ? { ...row, date } : { ...row, date, time: defaultTimeForDate(date) });
+              onChange(row.timeTouched ? { ...row, date } : { ...row, date, time: defaultTimeForDate(date, row.timezone) });
             }}
           />
         </Field>
@@ -265,10 +266,14 @@ function TxRowFields({
         )}
       </label>
       {!row.linked && HAS_PENDING.includes(row.finance.module) && (
-        <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }} title="Money already sent/placed but not yet reflected or filled — excluded from the current balance until you mark it cleared.">
-          <input type="checkbox" checked={row.pending} onChange={(e) => onChange({ ...row, pending: e.target.checked })} />
-          Pending (not yet cleared)
-        </label>
+        <div style={{ marginTop: 8 }}>
+          <PendingToggle
+            checked={row.pending}
+            onChange={(v) => onChange({ ...row, pending: v })}
+            label="Pending (not yet cleared)"
+            title="Money already sent/placed but not yet reflected or filled — excluded from the current balance until you mark it cleared."
+          />
+        </div>
       )}
       {row.linked && (
         <div style={{ marginTop: 8 }}>
