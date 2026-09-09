@@ -5998,6 +5998,16 @@ touched those.
   Verified live via Playwright — favorite-first order, no-interest subtitle tag, archived
   toggle/badge, card-click-to-detail, and the Favorite sign-in gate all confirmed. Still open
   per Pending item 114: Rentals' `PropertiesList`, Subscriptions' list.
+- **Rentals' `PropertiesList` also converted to an `EntityCard` grid (2026-09-09) — see README
+  Done item 273.** Needed one real structural addition, not just a mechanical swap: the old
+  table's inline row-edit (Name/Currency/Purchase price) had no equivalent anywhere else, so a
+  new "Property details" section was added to the TOP of `PropertyDetailModal` (reusing the
+  same `lease` state/`saveLease` handler already there for lease/tenant fields) before removing
+  the table — otherwise those 3 fields would've become uneditable. Favorite/Edit/Archive/Delete
+  all stay in the card's own actions (not the modal, which has no header-action slot — same
+  reasoning as Done item 223). Verified live via Playwright: favorite-first order, archived
+  badge/toggle, the new modal section's fields present and saving correctly (hits the sign-in
+  gate), Favorite's sign-in gate. Only Subscriptions' list remains for Pending item 114.
 
 ## Live URLs
 
