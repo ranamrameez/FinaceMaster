@@ -189,7 +189,7 @@ export function TradeCalculator({ initialTicker }: { initialTicker?: string } = 
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+      <div className="row" style={{ gap: 8, marginBottom: 12 }}>
         <select
           value={mode}
           onChange={(e) => {
@@ -271,7 +271,7 @@ export function TradeCalculator({ initialTicker }: { initialTicker?: string } = 
 
       {mode === 'SELL' ? (
         <div>
-          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+          <div className="row" style={{ gap: 8 }}>
             <Field label="Shares to sell" width={90}>
               <TextInput type="number" value={sellShares || ''} onChange={(e) => setSellShares(Number(e.target.value))} />
             </Field>
@@ -299,7 +299,7 @@ export function TradeCalculator({ initialTicker }: { initialTicker?: string } = 
         </div>
       ) : (
         <div>
-          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+          <div className="row" style={{ gap: 8 }}>
             <Field label="Buy price" width={90}>
               <TextInput
                 type="number"

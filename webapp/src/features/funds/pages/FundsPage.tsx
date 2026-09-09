@@ -254,7 +254,7 @@ function BrokerDetail({ broker, onBack, onSelectFund }: { broker: Broker; onBack
         ) : (
           <div>
             {broker.notes && <p className="text-muted" style={{ marginTop: 0 }}>{broker.notes}</p>}
-            <div className="row" style={{ gap: 16, flexWrap: 'wrap' }}>
+            <div className="row" style={{ gap: 16 }}>
               {Object.keys(totals).length ? (
                 Object.entries(totals).map(([c, n]) => (
                   <div key={c} className="stat-card card" style={hueStyle('var(--accent)')}>
@@ -383,7 +383,7 @@ function InvestmentHelperModal({ onClose }: { onClose: () => void }) {
         <p className="text-muted">No open funds yet — add one first.</p>
       ) : (
         <>
-          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+          <div className="row" style={{ gap: 8 }}>
             <Field label="Amount to invest" width={150} required>
               <TextInput type="number" step="0.01" value={amount || ''} onChange={(e) => setAmount(Number(e.target.value))} />
             </Field>
@@ -399,7 +399,7 @@ function InvestmentHelperModal({ onClose }: { onClose: () => void }) {
               </Select>
             </Field>
           </div>
-          <div className="row" style={{ gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
+          <div className="row" style={{ gap: 12, marginTop: 12 }}>
             {panel(fundA)}
             {panel(fundB)}
           </div>
@@ -440,7 +440,7 @@ function AddFundForm({ onSaved, initialBrokerId }: { onSaved?: () => void; initi
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+      <div className="row" style={{ gap: 8 }}>
         <Field label="Fund name" width={200} required>
           <TextInput value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="e.g. Vanguard Total World Stock ETF" />
         </Field>
@@ -471,7 +471,7 @@ function AddFundForm({ onSaved, initialBrokerId }: { onSaved?: () => void; initi
         )}
       </div>
       <p className="text-muted" style={{ marginTop: 8 }}>Optional initial investment (leave amount blank to just add the fund with no transactions yet):</p>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+      <div className="row" style={{ gap: 8 }}>
         <Field label="Date">
           <TextInput type="date" value={initialDate} onChange={(e) => setInitialDate(e.target.value)} />
         </Field>
@@ -776,7 +776,7 @@ function SnapshotImportSection() {
         already has transactions here adds another entry rather than replacing anything, so this is best used once,
         as a starting point.
       </p>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+      <div className="row" style={{ gap: 8, marginBottom: 12 }}>
         <button className="btn secondary" onClick={() => fileInput.current?.click()}>Choose CSV file</button>
         <input
           ref={fileInput}
@@ -1122,7 +1122,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
       <Card style={{ marginBottom: 16 }}>
             {editingFund ? (
               <div>
-                <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+                <div className="row" style={{ gap: 8 }}>
                   <TextInput value={editFund.name} onChange={(e) => setEditFund({ ...editFund, name: e.target.value })} />
                   <TextInput value={editFund.code} onChange={(e) => setEditFund({ ...editFund, code: e.target.value.toUpperCase() })} />
                   <TextInput value={editFund.platform} onChange={(e) => setEditFund({ ...editFund, platform: e.target.value })} />
@@ -1228,7 +1228,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
       </Card>
 
       <h3>Add transaction</h3>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+      <div className="row" style={{ gap: 8, marginBottom: 16 }}>
         <Field label="Action">
           <Select value={txAction} onChange={(e) => setTxAction(e.target.value as 'BUY' | 'SELL')}>
             <option value="BUY">Invest</option>
@@ -1306,7 +1306,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
       <Card style={{ marginBottom: 16 }}>
         <h3 style={{ marginTop: 0 }}>Update balance or NAV</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
             <Field label="Update NAV" width={140}>
               <TextInput type="number" step="0.0001" value={navInput} onChange={(e) => setNavInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && commitNav()} />
             </Field>
@@ -1314,7 +1314,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
             <span className="text-muted">Current NAV: {currentNav ? fmtPrice(currentNav) : '—'}</span>
           </div>
           <div className="text-muted" style={{ textAlign: 'center' }}>OR</div>
-          <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
             <Field label="Update balance" width={150} title="Don't know the per-unit NAV? Enter your fund's current total balance instead — the app computes the implied NAV from the units you already hold, assuming no deposit/withdrawal happened since your last update.">
               <TextInput type="number" step="0.01" value={balanceInput} onChange={(e) => setBalanceInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && commitBalance()} disabled={units <= 0} />
             </Field>
@@ -1327,7 +1327,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
         title={<h3 style={{ margin: 0 }}>Transactions</h3>}
         headerExtra={
           txs.length > 0 ? (
-            <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
               <Field label="From (optional)">
                 <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
               </Field>
@@ -1722,7 +1722,7 @@ function AnalyticsTab() {
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+      <div className="row" style={{ gap: 8 }}>
         {currencies.length > 1 && (
           <Field label="Currency" width={120}>
             <Select value={effectiveCurrency} onChange={(e) => setCurrency(e.target.value)}>
@@ -1864,7 +1864,7 @@ function DataManagement() {
   return (
     <Card>
       <h3 style={{ marginTop: 0 }}>Data management</h3>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+      <div className="row" style={{ gap: 8 }}>
         <button className="btn secondary" onClick={exportJSON}>Export JSON</button>
         <button className="btn secondary" onClick={() => fileInput.current?.click()}>Import JSON</button>
         <input

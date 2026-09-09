@@ -43,7 +43,7 @@ function CurrenciesSection() {
         Pick which currencies show up in a currency picker across the app. A currency your own
         data already uses always stays available, even if unchecked here.
       </p>
-      <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+      <div className="row" style={{ gap: 6 }}>
         {CURRENCIES.map((c) => (
           <button
             key={c.code}
@@ -125,7 +125,7 @@ export function AccountPage({ syncStatuses }: { syncStatuses: ModuleSyncStatus[]
                 Signed in with: <strong>{providers.length ? providers.join(', ') : 'Unknown method'}</strong>
                 {user.email ? <> · {user.email}</> : null}
               </p>
-              <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+              <div className="row" style={{ gap: 8 }}>
                 <button className="btn secondary" onClick={() => signOutUser().then(() => toast('Signed out.'))}>
                   Sign out
                 </button>

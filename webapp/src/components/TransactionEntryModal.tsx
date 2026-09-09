@@ -204,7 +204,7 @@ function TxRowFields({
           })
         }
       />
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+      <div className="row" style={{ gap: 8, marginTop: 8 }}>
         <Field label="Date">
           <TextInput
             type="date"
@@ -289,7 +289,7 @@ function TxRowFields({
           )}
           {currencyMismatch && (
             <div style={{ marginTop: 8 }}>
-              <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+              <div className="row" style={{ gap: 8 }}>
                 <Field label={`Amount (${otherCurrency})`}>
                   <TextInput
                     type="number"

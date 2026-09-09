@@ -69,7 +69,7 @@ export function TransactionRows() {
   return (
     <div>
       {rows.map((r, i) => (
-        <div key={i} className="row entry-row" style={{ gap: 8, flexWrap: 'wrap' }}>
+        <div key={i} className="row entry-row" style={{ gap: 8 }}>
           <Field label={i === 0 ? 'Date' : undefined}>
             <input
               type="date"
@@ -185,7 +185,7 @@ function AdjustmentForm() {
   const [timeTouched, setTimeTouched] = useState(false);
 
   return (
-    <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+    <div className="row" style={{ gap: 8 }}>
       <Field label="Date">
         <input
           type="date"
@@ -551,7 +551,7 @@ function TransactionList() {
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
         <select value={filterTicker} onChange={(e) => setFilterTicker(e.target.value)}>
           <option value="ALL">All tickers</option>
           {tickers.map((t) => <option key={t} value={t}>{t}</option>)}

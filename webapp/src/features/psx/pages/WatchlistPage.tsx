@@ -29,7 +29,7 @@ export function WatchlistPage() {
       <h1 className="pagetitle">PSX Watchlist</h1>
 
       <h3>Add to watchlist</h3>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+      <div className="row" style={{ gap: 8 }}>
         <input
           placeholder="Ticker"
           value={w.ticker}

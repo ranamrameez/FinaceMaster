@@ -212,7 +212,7 @@ function EditEntryModal({ entry, onClose }: { entry: CashEntry; onClose: () => v
 
   return (
     <FinanceEditModal titleText="Edit cash entry" onClose={onClose} onSave={save}>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+      <div className="row" style={{ gap: 8 }}>
         <Field label="Date">
           <TextInput type="date" value={draft.date} onChange={(e) => setDraft({ ...draft, date: e.target.value })} />
         </Field>
@@ -321,7 +321,7 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
   return (
     <Card>
       <h4 style={{ marginTop: 0 }}>{code}</h4>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
         <Field label="Type" width={120}>
           <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
             <option value="all">All</option>
@@ -684,7 +684,7 @@ function ImportTab() {
       {headers.length > 0 && (
         <Card style={{ marginTop: 12 }}>
           <h3 style={{ marginTop: 0 }}>Map columns</h3>
-          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+          <div className="row" style={{ gap: 8 }}>
             <Field label="Date column" width={160}>
               <Select value={dateCol} onChange={(e) => setDateCol(e.target.value)}>
                 {headers.map((h) => <option key={h} value={h}>{h}</option>)}
@@ -824,7 +824,7 @@ function AddPlanForm({ onSaved }: { onSaved?: () => void }) {
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+      <div className="row" style={{ gap: 8 }}>
         <Field label="Expected date">
           <TextInput
             type="date"
@@ -933,7 +933,7 @@ function PlanList() {
 
   return (
     <CollapsibleCard title={<h3 style={{ margin: 0 }}>Plans</h3>}>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
         <Field label="Status" width={120}>
           <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}>
             <option value="all">All</option>
@@ -1159,7 +1159,7 @@ function DataManagement() {
       </Card>
       <Card>
         <h3 style={{ marginTop: 0 }}>Data management</h3>
-        <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+        <div className="row" style={{ gap: 8 }}>
           <button className="btn secondary" onClick={exportJSON}>Export JSON</button>
           <button className="btn secondary" onClick={() => fileInput.current?.click()}>Import JSON</button>
           <input

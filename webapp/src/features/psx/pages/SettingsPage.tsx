@@ -101,7 +101,7 @@ function DataManagement() {
   };
 
   return (
-    <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+    <div className="row" style={{ gap: 8 }}>
       <button className="btn secondary" onClick={exportJSON}>
         Export JSON
       </button>
@@ -138,7 +138,7 @@ function FeeSettings() {
           itemized fields by hand — one all-in % you've observed from your
           own statement, applied automatically (same-day netting still
           auto-detected from Buy/Sell/date, same as itemized mode). */}
-      <div className="row" style={{ gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+      <div className="row" style={{ gap: 12, marginBottom: 12 }}>
         <Field label="Fee calculation" width={160}>
           <Select value={feeMode} onChange={(e) => updateSettings({ feeMode: e.target.value as 'itemized' | 'simple' })}>
             <option value="itemized">Itemized (commission + SST + levies)</option>
@@ -162,7 +162,7 @@ function FeeSettings() {
           account statement and fill in what your broker actually charges.
         </p>
       )}
-      <div className="row" style={{ gap: 12, flexWrap: 'wrap', opacity: feeMode === 'simple' ? 0.5 : 1 }}>
+      <div className="row" style={{ gap: 12, opacity: feeMode === 'simple' ? 0.5 : 1 }}>
         <Field label="Commission %" width={90}>
           <TextInput type="number" step="0.001" value={settings.feePct} onChange={(e) => updateSettings({ feePct: Number(e.target.value) })} />
         </Field>
@@ -235,7 +235,7 @@ function CGTSettings() {
         Applied to gains only (a loss generates neither a charge nor a rebate) — shown as an
         estimate on stock pages and the trade calculator, not deducted from realized P/L automatically.
       </p>
-      <div className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
+      <div className="row" style={{ gap: 12 }}>
         <Field label="Filer status" width={110}>
           <Select value={settings.filerStatus} onChange={(e) => updateSettings({ filerStatus: e.target.value as 'filer' | 'nonfiler' })}>
             <option value="filer">Filer</option>
@@ -298,7 +298,7 @@ function AmountSettings() {
       <CostBasisSettings />
       <Card>
         <h3 style={{ marginTop: 0 }}>General</h3>
-        <div className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
+        <div className="row" style={{ gap: 12 }}>
           <Field label="Tick size" width={90}>
             <TextInput type="number" step="0.01" value={settings.tick} onChange={(e) => updateSettings({ tick: Number(e.target.value) })} />
           </Field>

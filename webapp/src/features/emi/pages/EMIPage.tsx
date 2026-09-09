@@ -137,7 +137,7 @@ export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: strin
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+      <div className="row" style={{ gap: 8 }}>
         <Field label="Loan name" width={160} required>
           <TextInput value={l.name} onChange={(e) => setL({ ...l, name: e.target.value })} placeholder="e.g. Home Mortgage" />
         </Field>
@@ -206,7 +206,7 @@ export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: strin
           the final month gets swept into that last installment.
         </p>
         {bigEmiEnabled && (
-          <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
             <Field label="Every N months">
               <TextInput type="number" min={1} value={bigEmiInterval || ''} onChange={(e) => setBigEmiInterval(Number(e.target.value))} style={{ width: 90 }} />
             </Field>
@@ -661,7 +661,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
         }
       >
         {editing && (
-          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+          <div className="row" style={{ gap: 8 }}>
             <Field label="Loan name">
               <TextInput value={editRow.name} onChange={(e) => setEditRow({ ...editRow, name: e.target.value })} />
             </Field>
@@ -737,7 +737,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                 every 6 months. The loan keeps its original tenure; if the remainder checkbox is on, whatever's
                 still owed at the final month gets swept into that last installment.
               </p>
-              <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
                 <Field label="Every N months">
                   <TextInput type="number" min={1} value={bigEmiInterval || ''} onChange={(e) => setBigEmiInterval(Number(e.target.value))} style={{ width: 90 }} />
                 </Field>
@@ -778,7 +778,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                 </p>
               )}
               {activeAccounts.length ? (
-                <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
                   <Field label="Bank account">
                     <Select value={linkAccountId} onChange={(e) => setLinkAccountId(e.target.value)}>
                       {activeAccounts.map((a) => (
@@ -865,7 +865,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                 <td>#{r.month}</td>
                 {overrideMonth === r.month ? (
                   <td colSpan={6}>
-                    <div className="row" style={{ gap: 6, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                    <div className="row" style={{ gap: 6, alignItems: 'flex-end' }}>
                       <Field label="Amount">
                         <TextInput type="number" step="0.01" value={overrideValue || ''} onChange={(e) => setOverrideValue(Number(e.target.value))} style={{ width: 110 }} />
                       </Field>

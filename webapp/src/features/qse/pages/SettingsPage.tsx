@@ -100,7 +100,7 @@ function DataManagement() {
   };
 
   return (
-    <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+    <div className="row" style={{ gap: 8 }}>
       <button className="btn secondary" onClick={exportJSON}>
         Export JSON
       </button>
@@ -130,7 +130,7 @@ function AmountSettings() {
   const updateSettings = useWorkbookStore((s) => s.updateSettings);
 
   return (
-    <div className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
+    <div className="row" style={{ gap: 12 }}>
       <Field label="Fee %" width={90}>
         <TextInput type="number" step="0.001" value={settings.feePct} onChange={(e) => updateSettings({ feePct: Number(e.target.value) })} />
       </Field>

@@ -33,7 +33,7 @@ export function CurrencyOnboardingModal() {
         Pick which currencies show up in a currency picker across the app — most people only
         ever use one or two. You can change this any time from Account &gt; Currencies.
       </p>
-      <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+      <div className="row" style={{ gap: 6 }}>
         {CURRENCIES.map((c) => (
           <button
             key={c.code}

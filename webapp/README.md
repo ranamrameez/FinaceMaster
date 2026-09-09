@@ -8001,6 +8001,21 @@ FinanceManager live link:
   one. Verified live via Playwright: both pages now show zero `ProfileEditor` fields and zero
   "Sign out" buttons, with a real `Account page →` link present on each. `npx tsc -b` / `npm
   run test` (623 tests, unchanged — UI-only) / `npm run build` all clean.
+- **Dead `flexWrap: 'wrap'` inline styles removed from every `.row`-classed element, second
+  concrete instance of Pending item 116's App-wide CSS cleanup (2026-09-09) — see Done item
+  295.** `theme.css`'s own `.row{display:flex; gap:12px; align-items:flex-end;
+  flex-wrap:wrap;}` rule already defaults every `.row` to wrap — a whole-codebase grep found
+  116 occurrences across 29 files of `<div className="row" style={{...flexWrap: 'wrap'...}}>`
+  explicitly re-stating the exact same default inline, pure redundant dead code left over from
+  before that CSS rule existed (or copy-pasted forward from a time it didn't). Removed with a
+  scripted sweep, explicitly excluding the ~17 occurrences of `flexWrap: 'wrap'` NOT paired with
+  `className="row"` on the same line, since those don't have the CSS default to fall back on and
+  removing them there would be a real behavior change, not dead-code removal. Verified this is a
+  strict no-op: `npx tsc -b` clean, `npm run test` (623 tests, unchanged), `npm run build` clean,
+  plus a live Playwright visual check across 6 representative `.row`-heavy pages (QSE/PSX
+  Settings, QSE Trade Transactions' "Add Trades" row, Cash, Bank, Funds) — every row still wraps
+  correctly with zero layout regression, confirmed via real screenshots, not assumed from the
+  CSS reasoning alone.
 
 ## Pending
 
@@ -8825,10 +8840,13 @@ or a design decision before more code, not guessed at further:**
      established pattern for every other large refactor) rather than one giant unreviewable
      diff. **First concrete instance done (2026-09-09) — see Done item 275**: a repeated
      "muted Sr# prefix" inline style, copy-pasted across 5 files during the same session's
-     `EntityCard` rollout, extracted into a new `.entity-card-sr` class. The exact same
-     incremental discipline (audit one repeated pattern, extract, verify, repeat) still applies
-     for every other module/pattern — this is one instance of an ongoing, repeatable practice,
-     not a closed item.
+     `EntityCard` rollout, extracted into a new `.entity-card-sr` class. **Second concrete
+     instance done (2026-09-09) — see Done item 295**: a dead/redundant `flexWrap: 'wrap'`
+     inline style on 116 `className="row"` elements across 29 files, removed since `.row`'s own
+     CSS already defaults to `flex-wrap:wrap` — pure dead code, zero visual change. The exact
+     same incremental discipline (audit one repeated pattern, extract or remove, verify, repeat)
+     still applies for every other module/pattern — this is one instance of an ongoing,
+     repeatable practice, not a closed item.
 117. ~~App-wide "everything should be a grid item except tables" principle (2026-09-06)~~ —
      **done in full (2026-09-08), see Done item 237.** Every module's landing/Settings page has
      been audited for the "short non-table cards stacked full-width" pattern; Cash's Settings

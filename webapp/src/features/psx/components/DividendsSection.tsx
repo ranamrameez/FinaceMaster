@@ -58,7 +58,7 @@ function AddDividendForm() {
   };
 
   return (
-    <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+    <div className="row" style={{ gap: 8 }}>
       <Field label="Date">
         <input
           type="date"
