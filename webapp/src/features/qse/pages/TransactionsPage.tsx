@@ -1,8 +1,9 @@
 import { Fragment, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { QSE_TICKER_DATALIST_ID } from '../../../components/TickerDatalist';
+import { TickerLogo } from '../../../components/TickerLogo';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { EditIcon, ExportIcon, PlusIcon, SaveIcon, TrashIcon, TransferIcon, XIcon } from '../../../components/icons';
+import { CheckIcon, EditIcon, ExportIcon, PlusIcon, SaveIcon, TrashIcon, TransferIcon, XIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
@@ -10,16 +11,18 @@ import { TransactionEntryModal } from '../../../components/TransactionEntryModal
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { usePageFabActions } from '../../../hooks/usePageFabActions';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
-import { computeClosedTrades } from '../../../lib/calc/closedTrades';
+import { closedPLBySellTxId, computeClosedTrades } from '../../../lib/calc/closedTrades';
+import { computeFIFOPositions, type FIFOLot } from '../../../lib/calc/fifoPositions';
 import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import { transferRunningBalance } from '../../../lib/calc/transferBalance';
 import { Field, Select } from '../../../components/ui/Field';
+import { AmountInput } from '../../../components/ui/AmountInput';
 import { IconButton } from '../../../components/ui/IconButton';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
-import { defaultTimezoneForCurrency, defaultTimezoneForMarket, nowTime } from '../../../lib/datetime';
+import { defaultTimeForDate, defaultTimezoneForCurrency, defaultTimezoneForMarket, nowTime } from '../../../lib/datetime';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { ReorderButtons } from '../../../components/ui/ReorderButtons';
-import { toInstantMs } from '../../../lib/datetime';
+import { dateOnlyMs } from '../../../lib/datetime';
 import { createEmptyWorkbook } from '../../../store/defaultWorkbook';
 import { useWorkbookStore } from '../../../store/workbookStore';
 import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
@@ -38,9 +41,19 @@ export function TransactionRows() {
   const addTransactions = useWorkbookStore((s) => s.addTransactions);
   const ensureSignedIn = useEnsureSignedIn();
   const [rows, setRows] = useState<Transaction[]>([emptyRow()]);
+  // Tracks, per queued row, whether the user has actually edited Time
+  // themselves — see `defaultTimeForDate()`'s own doc comment. Index-
+  // aligned with `rows`; rows are only ever appended/removed, never
+  // reordered, so plain array indices stay valid throughout this
+  // component's lifecycle (same convention the rest of this app uses for
+  // per-row local UI state).
+  const [timeTouched, setTimeTouched] = useState<boolean[]>([false]);
 
   const update = (i: number, patch: Partial<Transaction>) =>
     setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+  const updateDate = (i: number, date: string) =>
+    update(i, timeTouched[i] ? { date } : { date, time: defaultTimeForDate(date) });
+  const touchTime = (i: number) => setTimeTouched((ts) => ts.map((t, idx) => (idx === i ? true : t)));
 
   const submit = async () => {
     const valid = rows.filter((r) => r.ticker && r.shares > 0 && r.price > 0);
@@ -52,15 +65,16 @@ export function TransactionRows() {
     addTransactions(valid.map((r) => ({ ...r, ticker: r.ticker.toUpperCase() })));
     toast(`Added ${valid.length} transaction${valid.length > 1 ? 's' : ''}.`);
     setRows([emptyRow()]);
+    setTimeTouched([false]);
   };
 
   return (
     <div>
       {/* README item 10: enter multiple transactions at once, not just one row at a time. */}
       {rows.map((r, i) => (
-        <div key={i} className="row" style={{ gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+        <div key={i} className="row entry-row" style={{ gap: 8, flexWrap: 'wrap' }}>
           <Field label={i === 0 ? 'Date' : undefined}>
-            <input type="date" value={r.date} onChange={(e) => update(i, { date: e.target.value })} />
+            <input type="date" value={r.date} onChange={(e) => updateDate(i, e.target.value)} />
           </Field>
           <Field label={i === 0 ? 'Ticker' : undefined} required={i === 0}>
             <input
@@ -68,7 +82,6 @@ export function TransactionRows() {
               value={r.ticker}
               onChange={(e) => update(i, { ticker: e.target.value.toUpperCase() })}
               list={QSE_TICKER_DATALIST_ID}
-              style={{ width: 80 }}
             />
           </Field>
           <Field label={i === 0 ? 'Action' : undefined}>
@@ -77,41 +90,49 @@ export function TransactionRows() {
               <option value="SELL">SELL</option>
             </select>
           </Field>
-          <Field label={i === 0 ? 'Shares' : undefined} required={i === 0}>
-            <input
-              type="number"
-              placeholder="Shares"
-              value={r.shares || ''}
-              onChange={(e) => update(i, { shares: Number(e.target.value) })}
-              style={{ width: 90 }}
-            />
+          <Field label={i === 0 ? 'Shares' : undefined} required={i === 0} title={i === 0 ? 'You can type a math expression here too, e.g. 100+50.' : undefined}>
+            <AmountInput placeholder="Shares" value={r.shares} onChange={(shares) => update(i, { shares })} />
           </Field>
-          <Field label={i === 0 ? 'Price' : undefined} required={i === 0}>
-            <input
-              type="number"
-              step="0.001"
-              placeholder="Price"
-              value={r.price || ''}
-              onChange={(e) => update(i, { price: Number(e.target.value) })}
-              style={{ width: 90 }}
-            />
+          <Field label={i === 0 ? 'Price' : undefined} required={i === 0} title={i === 0 ? 'You can type a math expression here too, e.g. 10.5+5.' : undefined}>
+            <AmountInput placeholder="Price" value={r.price} onChange={(price) => update(i, { price })} />
           </Field>
           <TimeZoneFields
             time={r.time}
             timezone={r.timezone}
-            onTimeChange={(time) => update(i, { time })}
+            onTimeChange={(time) => { update(i, { time }); touchTime(i); }}
             onTimezoneChange={(timezone) => update(i, { timezone })}
           />
-          <button className="btn secondary small" onClick={() => setRows((rs) => rs.filter((_, idx) => idx !== i))}>
+          <Field label={i === 0 ? 'Order' : undefined}>
+            <label
+              className="text-muted"
+              style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+              title="Placed but not yet filled — excluded from your shares/cash balance until it clears."
+            >
+              <input type="checkbox" checked={!!r.isPending} onChange={(e) => update(i, { isPending: e.target.checked })} />
+              Pending
+            </label>
+          </Field>
+          <button
+            className="btn secondary small ml-auto align-end"
+            onClick={() => {
+              setRows((rs) => rs.filter((_, idx) => idx !== i));
+              setTimeTouched((ts) => ts.filter((_, idx) => idx !== i));
+            }}
+          >
             <TrashIcon size={12} />Remove
           </button>
         </div>
       ))}
       <div className="row" style={{ gap: 8 }}>
-        <button className="btn secondary" onClick={() => setRows((rs) => [...rs, emptyRow()])}>
+        <button
+          className="btn secondary"
+          onClick={() => { setRows((rs) => [...rs, emptyRow()]); setTimeTouched((ts) => [...ts, false]); }}
+        >
           <PlusIcon />Add row
         </button>
-        <button className="btn" onClick={submit}>
+      </div>
+      <div className="d-flex justify-center" style={{ marginTop: 16 }}>
+        <button className="btn" style={{ minWidth: 220 }} onClick={submit}>
           <SaveIcon />Save {rows.length > 1 ? `${rows.length} transactions` : 'transaction'}
         </button>
       </div>
@@ -141,11 +162,19 @@ function AdjustmentForm() {
   const ensureSignedIn = useEnsureSignedIn();
   const emptyAdjustment = (): Adjustment => ({ date: today(), amount: 0, note: '', time: nowTime(), timezone: defaultTimezoneForCurrency(currency) });
   const [a, setA] = useState<Adjustment>(emptyAdjustment);
+  const [timeTouched, setTimeTouched] = useState(false);
 
   return (
     <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
       <Field label="Date">
-        <input type="date" value={a.date} onChange={(e) => setA({ ...a, date: e.target.value })} />
+        <input
+          type="date"
+          value={a.date}
+          onChange={(e) => {
+            const date = e.target.value;
+            setA(timeTouched ? { ...a, date } : { ...a, date, time: defaultTimeForDate(date) });
+          }}
+        />
       </Field>
       <Field label="Amount">
         <input
@@ -163,7 +192,7 @@ function AdjustmentForm() {
       <TimeZoneFields
         time={a.time}
         timezone={a.timezone}
-        onTimeChange={(time) => setA({ ...a, time })}
+        onTimeChange={(time) => { setA({ ...a, time }); setTimeTouched(true); }}
         onTimezoneChange={(timezone) => setA({ ...a, timezone })}
       />
       <button
@@ -174,6 +203,7 @@ function AdjustmentForm() {
           addAdjustment(a);
           toast('Adjustment added.');
           setA(emptyAdjustment());
+          setTimeTouched(false);
         }}
       >
         <PlusIcon />Add
@@ -197,6 +227,7 @@ function TransactionList() {
   const { workbook, calcFee, positions } = useQSEDerived();
   const deleteTransaction = useWorkbookStore((s) => s.deleteTransaction);
   const updateTransaction = useWorkbookStore((s) => s.updateTransaction);
+  const ensureSignedIn = useEnsureSignedIn();
   const currency = workbook.settings.currency;
 
   const [filterTicker, setFilterTicker] = useState('ALL');
@@ -281,6 +312,43 @@ function TransactionList() {
   };
   const { sorted: sortedClosedTrades, Th: CTTh } = useSortableRows(closedTrades, ctSortValue, 'sellDate', 'desc');
 
+  // User's own ask (2026-09-08): "show the sold price and PL w.r.t. that
+  // lot's buy price... inline in the main trade row." Computed from the
+  // WHOLE workbook (not `filterTicker`-scoped like `closedTrades` above) so
+  // a row's own P&L figure never changes just because the ticker filter is
+  // narrowed to something else.
+  const sellPLById = useMemo(
+    () => closedPLBySellTxId(computeClosedTrades(workbook.transactions, calcFee)),
+    [workbook.transactions, calcFee],
+  );
+
+  // User's own words: "make separate sections for open and closed trades...
+  // it gets difficult to know the sold status and price of a lot." Same
+  // FIFO-lot view as `computeClosedTrades` above, just the still-held half
+  // of it (`computeFIFOPositions`'s own `lotsByTicker`) — a pure reporting
+  // ledger, independent of QSE's own weighted-average position calc.
+  const openLots = useMemo(() => {
+    const txs = filterTicker === 'ALL' ? workbook.transactions : workbook.transactions.filter((t) => t.ticker === filterTicker);
+    const { lotsByTicker } = computeFIFOPositions(txs, calcFee);
+    const flat: (FIFOLot & { ticker: string })[] = [];
+    for (const [ticker, lots] of Object.entries(lotsByTicker)) {
+      for (const lot of lots) flat.push({ ticker, ...lot });
+    }
+    return flat;
+  }, [workbook.transactions, calcFee, filterTicker]);
+  type OLCol = 'ticker' | 'buyDate' | 'buyPrice' | 'shares' | 'invested' | 'buyFeeTotal';
+  const olSortValue = (l: (typeof openLots)[number], col: OLCol): number | string => {
+    switch (col) {
+      case 'ticker': return l.ticker;
+      case 'buyPrice': return l.buyPrice;
+      case 'shares': return l.remainingShares;
+      case 'invested': return l.remainingShares * l.buyPrice;
+      case 'buyFeeTotal': return l.buyFeeTotal;
+      default: return l.buyDate;
+    }
+  };
+  const { sorted: sortedOpenLots, Th: OLTh } = useSortableRows(openLots, olSortValue, 'buyDate', 'desc');
+
   const startEdit = (i: number, tx: Transaction) => {
     setEditIndex(i);
     setEditRow({ ...tx });
@@ -325,6 +393,11 @@ function TransactionList() {
             <Th col="shares">Shares</Th>
             <Th col="price">Price</Th>
             <Th col="amount">Amount</Th>
+            <th>
+              <Tooltip text="Realized profit/loss for a SELL row, matched FIFO against your oldest still-open buy lot(s) for this ticker — the same figure as the Closed trades section below, shown per-row here. Blank on a BUY row (nothing realized yet).">
+                P/L
+              </Tooltip>
+            </th>
             <th></th>
           </tr>
         </thead>
@@ -333,7 +406,7 @@ function TransactionList() {
             <Fragment key={g.key || 'ungrouped'}>
               {g.key && (
                 <tr key={'hdr-' + g.key} style={{ background: 'var(--panel-2)' }}>
-                  <td colSpan={7}>
+                  <td colSpan={8}>
                     <strong>{g.key}</strong> — {g.rows.length} txns ·{' '}
                     buys {fmt(g.rows.filter((r) => r.tx.action === 'BUY').reduce((s, r) => s + r.tx.shares, 0), 0)} ·{' '}
                     sells {fmt(g.rows.filter((r) => r.tx.action === 'SELL').reduce((s, r) => s + r.tx.shares, 0), 0)} ·{' '}
@@ -356,7 +429,12 @@ function TransactionList() {
                     <td><input type="number" value={editRow.shares} onChange={(e) => setEditRow({ ...editRow, shares: Number(e.target.value) })} style={{ width: 70 }} /></td>
                     <td><input type="number" step="0.001" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })} style={{ width: 80 }} /></td>
                     <td>{fmtMoney(editRow.shares * editRow.price, currency)}</td>
+                    <td></td>
                     <td>
+                      <label className="text-muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }} title="Placed but not yet filled — excluded from shares/cash balance until cleared.">
+                        <input type="checkbox" checked={!!editRow.isPending} onChange={(e) => setEditRow({ ...editRow, isPending: e.target.checked })} />
+                        Pending
+                      </label>{' '}
                       <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
                       <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditIndex(null)} />
                     </td>
@@ -364,12 +442,34 @@ function TransactionList() {
                 ) : (
                   <tr key={i}>
                     <td>{tx.date}</td>
-                    <td><Link to={`/stock/${tx.ticker}`}>{tx.ticker}</Link></td>
-                    <td className={tx.action === 'BUY' ? 'pill-buy' : 'pill-sell'}>{tx.action}</td>
+                    <td>
+                      <TickerLogo ticker={tx.ticker} size="sm" exchange="qse" /><Link to={`/stock/${tx.ticker}`}>{tx.ticker}</Link>
+                      {tx.isPending && (
+                        <Tooltip text="Order placed but not yet filled — excluded from your shares/cash balance until cleared.">
+                          <span className="pill-warn" style={{ marginLeft: 6 }}>Pending</span>
+                        </Tooltip>
+                      )}
+                    </td>
+                    <td className={tx.action === 'BUY' ? 'pill-positive' : 'pill-negative'}>{tx.action}</td>
                     <td>{fmt(tx.shares, 0)}</td>
                     <td>{fmtPrice(tx.price)}</td>
                     <td>{fmtMoney(tx.shares * tx.price, currency)}</td>
+                    <td className={tx.id && sellPLById[tx.id] ? (sellPLById[tx.id].netPL >= 0 ? 'pill-positive' : 'pill-negative') : undefined}>
+                      {tx.id && sellPLById[tx.id] ? fmtMoney(sellPLById[tx.id].netPL, currency) : '—'}
+                    </td>
                     <td>
+                      {tx.isPending && (
+                        <IconButton
+                          label="Mark cleared"
+                          icon={<CheckIcon size={13} />}
+                          align="right"
+                          onClick={async () => {
+                            if (!(await ensureSignedIn('Sign in to update this transaction.'))) return;
+                            updateTransaction(i, { isPending: false });
+                            toast('Marked cleared.');
+                          }}
+                        />
+                      )}{' '}
                       <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(i, tx)} />{' '}
                       <IconButton
                         label="Delete"
@@ -386,7 +486,7 @@ function TransactionList() {
             </Fragment>
           ))}
           {!groups.some((g) => g.rows.length) && (
-            <tr><td colSpan={7} className="footer-note">{emptyMessage}</td></tr>
+            <tr><td colSpan={8} className="text-muted">{emptyMessage}</td></tr>
           )}
         </tbody>
       </table>
@@ -429,7 +529,47 @@ function TransactionList() {
         {renderTable(closedGroups, 'No transactions for a fully closed position yet.')}
       </details>
 
-      <details style={{ marginTop: 16 }}>
+      <details open style={{ marginTop: 16 }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 700, marginBottom: 8 }}>
+          <Tooltip text="Each buy lot that hasn't been fully sold yet, FIFO-matched against your real sells — the mirror image of Closed trades below, so it's always clear which shares are still open vs. already sold.">
+            Open trades (not yet sold)
+          </Tooltip>{' '}
+          — {sortedOpenLots.length}
+        </summary>
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <OLTh col="ticker">Ticker</OLTh>
+                <OLTh col="buyDate">Buy date</OLTh>
+                <OLTh col="buyPrice">Buy price</OLTh>
+                <OLTh col="shares">Shares</OLTh>
+                <OLTh col="invested">Invested</OLTh>
+                <OLTh col="buyFeeTotal">Buy fee</OLTh>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedOpenLots.map((l, i) => (
+                <tr key={i}>
+                  <td><TickerLogo ticker={l.ticker} size="sm" exchange="qse" /><Link to={`/stock/${l.ticker}`}>{l.ticker}</Link></td>
+                  <td>{l.buyDate}</td>
+                  <td>{fmtPrice(l.buyPrice)}</td>
+                  <td>{fmt(l.remainingShares, 0)}</td>
+                  <td>{fmtMoney(l.remainingShares * l.buyPrice, currency)}</td>
+                  <td>{fmtMoney(l.buyFeeTotal, currency)}</td>
+                  <td><span className="pill pill-info">Open</span></td>
+                </tr>
+              ))}
+              {!sortedOpenLots.length && (
+                <tr><td colSpan={7} className="text-muted">No open lots — everything bought so far has been sold.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </details>
+
+      <details open style={{ marginTop: 16 }}>
         <summary style={{ cursor: 'pointer', fontWeight: 700, marginBottom: 8 }}>
           <Tooltip text="Each fully or partially closed round-trip, matched buy-to-sell via FIFO, with its own buy price, sell price, fees on both legs, and net P/L — so a closed trade's own numbers stay separate from whatever the currently-open position shows.">
             Closed trades (realized round-trips)
@@ -450,12 +590,13 @@ function TransactionList() {
                 <CTTh col="sellFee">Sell fee</CTTh>
                 <CTTh col="netPL">Net P/L</CTTh>
                 <CTTh col="holdingDays">Days held</CTTh>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
               {sortedClosedTrades.map((t, i) => (
                 <tr key={i}>
-                  <td><Link to={`/stock/${t.ticker}`}>{t.ticker}</Link></td>
+                  <td><TickerLogo ticker={t.ticker} size="sm" exchange="qse" /><Link to={`/stock/${t.ticker}`}>{t.ticker}</Link></td>
                   <td>{t.buyDate}</td>
                   <td>{fmtPrice(t.buyPrice)}</td>
                   <td>{t.sellDate}</td>
@@ -463,12 +604,13 @@ function TransactionList() {
                   <td>{fmt(t.shares, 0)}</td>
                   <td>{fmtMoney(t.buyFee, currency)}</td>
                   <td>{fmtMoney(t.sellFee, currency)}</td>
-                  <td className={t.netPL >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(t.netPL, currency)}</td>
+                  <td className={t.netPL >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(t.netPL, currency)}</td>
                   <td>{t.holdingDays}</td>
+                  <td><span className="pill pill-info">Closed</span></td>
                 </tr>
               ))}
               {!sortedClosedTrades.length && (
-                <tr><td colSpan={10} className="footer-note">No closed round-trips yet.</td></tr>
+                <tr><td colSpan={11} className="text-muted">No closed round-trips yet.</td></tr>
               )}
             </tbody>
           </table>
@@ -521,7 +663,7 @@ function TransfersSection() {
   // sorting is gone here, replaced by `ReorderButtons` for the one thing
   // that genuinely needs fixing (two same-instant transfers in the wrong
   // relative order).
-  const instantOf = (t: Transfer) => toInstantMs(t.date, t.time, t.timezone);
+  const instantOf = (t: Transfer) => dateOnlyMs(t.date);
   const sorted = useMemo(
     () => [...filteredTransfers].sort((a, b) => instantOf(b) - instantOf(a) || (b.seq ?? 0) - (a.seq ?? 0)),
     [filteredTransfers],
@@ -620,7 +762,7 @@ function TransfersSection() {
                 </tr>
               );
             })}
-            {!sorted.length && <tr><td colSpan={6} className="footer-note">No transfers yet.</td></tr>}
+            {!sorted.length && <tr><td colSpan={6} className="text-muted">No transfers yet.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -693,7 +835,7 @@ function AdjustmentsSection() {
                 </tr>
               ),
             )}
-            {!sorted.length && <tr><td colSpan={4} className="footer-note">No adjustments yet.</td></tr>}
+            {!sorted.length && <tr><td colSpan={4} className="text-muted">No adjustments yet.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -756,11 +898,11 @@ function CashLedgerSection() {
               <td>{e.date}</td>
               <td>{e.kind}</td>
               <td>{e.label}</td>
-              <td className={e.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(e.amount, currency)}</td>
+              <td className={e.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(e.amount, currency)}</td>
               <td>{fmtMoney(e.balance, currency)}</td>
             </tr>
           ))}
-          {!sorted.length && <tr><td colSpan={5} className="footer-note">Nothing recorded yet.</td></tr>}
+          {!sorted.length && <tr><td colSpan={5} className="text-muted">Nothing recorded yet.</td></tr>}
         </tbody>
       </table>
       </div>

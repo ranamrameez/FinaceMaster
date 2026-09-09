@@ -5,10 +5,17 @@ import { sortTransactionsChronological } from './sortTransactions';
  * legacy `computePositions()` in index.html. Does not track individual buy
  * lots (a sell reduces the ticker's average cost proportionally) — this
  * matches today's behavior; FIFO lot-matching is a separate future change
- * (README item 8, PSX-focused, deferred to Phase 2). */
+ * (README item 8, PSX-focused, deferred to Phase 2).
+ *
+ * Excludes any transaction with `isPending` set (Pending-transaction-state,
+ * 2026-09-08) — a real order that hasn't filled yet shouldn't move shares/
+ * invested/realized until it does. Every other position/P&L figure in the
+ * app derives from this one function, so excluding pending here is a "fix
+ * once" change; see `pendingShareDeltaByTicker` below for the companion
+ * figure that shows what a pending order WOULD change once filled. */
 export function computePositions(transactions: Transaction[], calcFee: FeeCalculator): Position[] {
   const byTicker: Record<string, Position> = {};
-  const sorted = sortTransactionsChronological(transactions);
+  const sorted = sortTransactionsChronological(transactions.filter((t) => !t.isPending));
 
   for (const tx of sorted) {
     const t = tx.ticker;
@@ -57,4 +64,22 @@ export function computePositions(transactions: Transaction[], calcFee: FeeCalcul
   }
 
   return Object.values(byTicker);
+}
+
+/** Net pending share delta per ticker — a pending BUY contributes +shares,
+ * a pending SELL contributes -shares, so the figure reads as "this many
+ * shares will be added/removed once every pending order for this ticker
+ * fills." The companion figure to `computePositions` excluding pending
+ * entirely: lets the UI show "120 shares (+10 pending)" rather than the
+ * pending order just silently not affecting anything visible. Tickers with
+ * no pending activity are simply absent from the result, not zero-valued
+ * entries. */
+export function pendingShareDeltaByTicker(transactions: Transaction[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  transactions.forEach((tx) => {
+    if (!tx.isPending) return;
+    const delta = tx.action === 'BUY' ? tx.shares : -tx.shares;
+    out[tx.ticker] = (out[tx.ticker] || 0) + delta;
+  });
+  return out;
 }

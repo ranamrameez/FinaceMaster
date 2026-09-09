@@ -1,11 +1,14 @@
 import { useRef, useState } from 'react';
 import { Card, MoneyValue } from '../../../components/Card';
+import { CategorySelect } from '../../../components/CategorySelect';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { Notice } from '../../../components/Notice';
 import { PlusIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { UNCATEGORIZED_ID } from '../../../lib/categories';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
+import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import {
   averagePeriodPL,
@@ -19,13 +22,12 @@ import {
 } from '../../../lib/calc/fundsDailyHistoryImport';
 import { parseFundsSnapshotRows, type FundSnapshotRow } from '../../../lib/calc/fundsSnapshotImport';
 import { parseXlsxWorkbook } from '../../../lib/xlsxReader';
-import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney, fmtPrice } from '../../../lib/format';
 import { useFundsWorkbookStore } from '../../../store/fundsWorkbookStore';
 import type { Fund } from '../../../types/fundsWorkbook';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 const uid = () => crypto.randomUUID();
-const CATEGORIES: Fund['category'][] = ['Equity', 'Debt', 'Hybrid', 'International', 'Other'];
 
 interface SheetPlan {
   sheetName: string;
@@ -61,7 +63,8 @@ export function DailyHistoryImportSection() {
   const [plans, setPlans] = useState<SheetPlan[] | null>(null);
   const [ignoredSheets, setIgnoredSheets] = useState<string[]>([]);
   const [currencyCode, setCurrencyCode] = useState(lastCurrency);
-  const [defaultCategory, setDefaultCategory] = useState<Fund['category']>('Other');
+  const currencyOptions = useEnabledCurrencies(currencyCode);
+  const [defaultCategoryID, setDefaultCategoryID] = useState<string>(UNCATEGORIZED_ID);
   const [busy, setBusy] = useState(false);
 
   const onFile = (file: File) => {
@@ -172,7 +175,7 @@ export function DailyHistoryImportSection() {
           name: p.newName.trim() || p.sheetName,
           code: p.newCode.trim().toUpperCase(),
           platform: p.newPlatform.trim(),
-          category: defaultCategory,
+          categoryID: defaultCategoryID === UNCATEGORIZED_ID ? undefined : defaultCategoryID,
           currencyCode,
         };
         return { fundId, newFund, reconstruction: p.reconstruction };
@@ -189,7 +192,7 @@ export function DailyHistoryImportSection() {
 
   return (
     <div>
-      <p className="footer-note" style={{ marginBottom: 12 }}>
+      <p className="text-muted" style={{ marginBottom: 12 }}>
         For a workbook that tracks each fund's balance day by day (one sheet per fund, a Date / PrvBlc / NewBlc row
         per update) rather than just a final snapshot. This reconstructs the real buy/sell/NAV path — separating
         actual deposits and withdrawals from organic growth — so average monthly and annual P&amp;L are computed
@@ -214,13 +217,11 @@ export function DailyHistoryImportSection() {
           <>
             <Field label="Currency for new funds" width={140}>
               <Select value={currencyCode} onChange={(e) => setCurrencyCode(e.target.value)}>
-                {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+                {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
               </Select>
             </Field>
-            <Field label="Category for new funds" width={160}>
-              <Select value={defaultCategory} onChange={(e) => setDefaultCategory(e.target.value as Fund['category'])}>
-                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-              </Select>
+            <Field label="Category for new funds" width={180}>
+              <CategorySelect value={defaultCategoryID} onChange={setDefaultCategoryID} />
             </Field>
           </>
         )}
@@ -252,7 +253,7 @@ export function DailyHistoryImportSection() {
             <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
               <div>
                 <div style={{ fontWeight: 700 }}>{p.sheetName}</div>
-                <div className="footer-note">
+                <div className="text-muted">
                   {p.dailyRows[0]?.date} → {p.dailyRows[p.dailyRows.length - 1]?.date} · {p.dailyRows.length} updates ·{' '}
                   {deposits} deposit(s), {withdrawals} withdrawal(s)
                   {p.matchedIdentity && <> · matched Summary row "{p.matchedIdentity.name}" ({p.matchedIdentity.code})</>}
@@ -270,7 +271,7 @@ export function DailyHistoryImportSection() {
               </Notice>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px,1fr))', gap: 8, marginTop: 12 }}>
+            <div className="grid-auto" style={{ ...gridAutoStyle(140, 8), marginTop: 12 }}>
               <div className="stat-card card"><div className="label">Reconstructed value</div><MoneyValue n={finalValue} currency={currencyForDisplay} /></div>
               {p.matchedIdentity && (
                 <div className="stat-card card">

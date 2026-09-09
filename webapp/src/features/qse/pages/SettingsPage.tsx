@@ -40,7 +40,7 @@ function AccountSection({
   };
 
   if (!firebaseReady) {
-    return <p className="footer-note">Cloud sync is unavailable — Firebase failed to load in this browser.</p>;
+    return <p className="text-muted">Cloud sync is unavailable — Firebase failed to load in this browser.</p>;
   }
 
   if (user) {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CashEntry } from '../../../types/cashWorkbook';
 import type { Category } from '../../../types/finance';
-import { cashBalanceByCurrency, cashByCategory, cashMonthlyFlow, cashRunningLedger } from '../cashModule';
+import { cashBalanceByCurrency, cashByCategory, cashMonthlyFlow, cashPendingByCurrency, cashRunningLedger } from '../cashModule';
 
 const TEST_CATEGORIES: Category[] = [
   { id: 'cat_food', serialNumber: 1, name: 'Food' },
@@ -66,6 +66,38 @@ describe('cashBalanceByCurrency', () => {
       entry({ isDeposit: true, amount: 1000, currencyCode: 'SAR' }),
     ];
     expect(cashBalanceByCurrency(entries)).toEqual({ USD: 300, SAR: 1000 });
+  });
+
+  it('excludes pending entries from the cleared balance (2026-09-08 Pending-state feature)', () => {
+    const entries = [
+      entry({ isDeposit: true, amount: 500, currencyCode: 'USD' }),
+      entry({ isDeposit: false, amount: 100, currencyCode: 'USD', isPending: true }),
+      entry({ isDeposit: true, amount: 50, currencyCode: 'USD', isPending: false }),
+    ];
+    expect(cashBalanceByCurrency(entries)).toEqual({ USD: 550 });
+  });
+
+  it('a record with no isPending field behaves exactly as before (zero-migration)', () => {
+    const entries = [entry({ isDeposit: true, amount: 500, currencyCode: 'USD' })];
+    expect(entries[0].isPending).toBeUndefined();
+    expect(cashBalanceByCurrency(entries)).toEqual({ USD: 500 });
+  });
+});
+
+describe('cashPendingByCurrency', () => {
+  it('sums only pending entries, signed, per currency', () => {
+    const entries = [
+      entry({ isDeposit: true, amount: 500, currencyCode: 'USD' }),
+      entry({ isDeposit: true, amount: 200, currencyCode: 'USD', isPending: true }),
+      entry({ isDeposit: false, amount: 50, currencyCode: 'USD', isPending: true }),
+      entry({ isDeposit: true, amount: 1000, currencyCode: 'SAR', isPending: true }),
+    ];
+    expect(cashPendingByCurrency(entries)).toEqual({ USD: 150, SAR: 1000 });
+  });
+
+  it('returns an empty object when nothing is pending', () => {
+    const entries = [entry({ isDeposit: true, amount: 500, currencyCode: 'USD' })];
+    expect(cashPendingByCurrency(entries)).toEqual({});
   });
 });
 

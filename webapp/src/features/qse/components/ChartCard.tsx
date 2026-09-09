@@ -58,10 +58,10 @@ export function ChartCard({
   const heading = (
     <h4 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
       {titleTooltip ? <Tooltip text={titleTooltip}><span style={{ cursor: 'pointer' }}>{title}</span></Tooltip> : title}
-      {unfiltered && <span className="footer-note" style={{ fontWeight: 400, textTransform: 'none' }}>(whole portfolio — not filtered)</span>}
+      {unfiltered && <span className="text-muted" style={{ fontWeight: 400, textTransform: 'none' }}>(whole portfolio — not filtered)</span>}
     </h4>
   );
-  const body = empty ? <p className="footer-note">Not enough data yet.</p> : <div className="chart-canvas-wrap">{children}</div>;
+  const body = empty ? <p className="text-muted">Not enough data yet.</p> : <div className="chart-canvas-wrap">{children}</div>;
 
   if (flat) {
     return (

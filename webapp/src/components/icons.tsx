@@ -218,3 +218,36 @@ export function ArrowDownIcon({ size = 14 }: IconProps) {
     </svg>
   );
 }
+
+/** Full-screen toggle for `Modal` (UI_DESIGN_GUIDELINES.md: every popup
+ * must offer a full-screen escape hatch, since the default width is
+ * capped at ~half the viewport). Four corner-arrows expanding outward. */
+export function ExpandIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base} aria-hidden>
+      <path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5" />
+    </svg>
+  );
+}
+
+/** The full-screen toggle's "shrink back down" state — corner-arrows
+ * pointing inward, the reverse of `ExpandIcon`. */
+export function CollapseIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base} aria-hidden>
+      <path d="M3 8V3h5M21 8V3h-5M3 16v5h5M21 16v5h-5" />
+    </svg>
+  );
+}
+
+/** Pending item 115(c): "favorite an entity, to view it on top." Filled
+ * (solid) when the entity is favorited, outline otherwise — a stroke-only
+ * icon (this file's usual convention) doesn't read as a clear on/off toggle
+ * the way a filled star does. */
+export function StarIcon({ size = 14, filled = false }: IconProps & { filled?: boolean }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01Z" />
+    </svg>
+  );
+}

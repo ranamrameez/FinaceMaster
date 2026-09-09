@@ -197,7 +197,7 @@ export function Sidebar({
           )}
         </div>
 
-        <div className="footer-note" style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="text-muted" style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>© {new Date().getFullYear()} FinanceRecorder</span>
           <NavLink to="/legal" style={{ color: 'inherit' }}>Legal</NavLink>
         </div>

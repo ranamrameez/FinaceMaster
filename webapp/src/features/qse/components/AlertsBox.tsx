@@ -41,7 +41,7 @@ export function AlertsBox() {
   const alerts = useQSEAlerts();
 
   if (!alerts.length) {
-    return <p className="footer-note">No alerts right now — nothing above ±5% or at a watchlist target.</p>;
+    return <p className="text-muted">No alerts right now — nothing above ±5% or at a watchlist target.</p>;
   }
 
   return (
@@ -49,7 +49,7 @@ export function AlertsBox() {
       {alerts.map((a, i) => (
         <div key={i} className="result-line" style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
           <span className="k">{a.ticker}</span>
-          <span className={a.cls === 'pos' ? 'pill-buy' : 'pill-sell'}>{a.message}</span>
+          <span className={a.cls === 'pos' ? 'pill-positive' : 'pill-negative'}>{a.message}</span>
         </div>
       ))}
     </div>

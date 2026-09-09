@@ -1,0 +1,831 @@
+# FinanceRecorder — User Manual
+
+Live app: <https://ranamrameez.github.io/FinaceMaster/>
+
+This is the end-user guide — how to actually use the app. For project status/backlog see
+`README.md`; for developer/AI-continuity notes see the repo root's `CLAUDE.md`; for the
+future-modules design see `MODULES_PLAN.md`. **This manual is kept up to date alongside
+the app itself — if a feature described here changes, this file changes with it.**
+
+---
+
+## 1. What this app does
+
+FinanceRecorder tracks your investments and broader personal finances across multiple
+exchanges and account types. It covers two stock exchanges — **QSE** (Qatar Stock Exchange)
+and **PSX** (Pakistan Stock Exchange) — each with its own portfolio, transactions,
+watchlist, analytics, and settings — plus seven more modules: Cash, Personal Loans, Banking,
+EMI/Loans, Funds, Rentals, and Subscriptions (see §14-§22 below). See `MODULES_PLAN.md` for
+the design notes behind each module and any future refinements.
+
+**Before anything else**: on your first visit, you'll see a one-time disclaimer screen.
+Read it and check the box to continue — it explains that all calculations here are
+**estimates**, not guarantees, and you should always verify against your real broker
+statement before making financial decisions. You can revisit the full text any time via
+**Disclaimer & Privacy** at the bottom of the sidebar.
+
+---
+
+## 2. Browsing vs. saving
+
+You can browse every page and use the Trade Calculator **without an account**. The moment
+you try to *save* something (add a transaction, update a price, change a setting), you'll
+be prompted to sign in (email/password, or Google). This is by design — there's no
+"local-only" mode where data exists before it's tied to an account.
+
+Your data is private to your account and stored securely (Google Firebase). It syncs
+automatically between your devices once you're signed in on each of them.
+
+---
+
+## 3. Switching between modules, and between QSE and PSX
+
+The sidebar's top control is a **category dropdown** — click it to see every module (Stock
+Exchanges, Funds, Banking, Cash, Personal Loans, EMI/Loans, Rentals, Transfers), with the one
+you're currently in checked. Picking a category jumps you to it; the dropdown always shows
+what you're on, so you don't need to reopen it just to confirm where you are.
+
+Inside **Stock Exchanges**, a second **QSE / PSX** switcher (two chips) appears underneath the
+dropdown — click either one to jump to that exchange's Dashboard. Which exchange is "active"
+always matches whichever page you're on, same as the category dropdown above it.
+
+On a desktop-width screen, click the **«** button next to the "FinanceRecorder" title to
+slide the sidebar off-screen and reclaim the space — a small **»** tab stays in the top-left
+corner to bring it back. This choice is remembered, so it stays collapsed (or expanded) the
+next time you load the app. On a narrow/mobile screen the sidebar instead works as a normal
+off-canvas menu opened via the **☰ Menu** button, unaffected by this setting.
+
+Each exchange's pages, data, and settings are completely separate — QSE holdings don't mix
+with PSX holdings, and each has its own fee model (see §7).
+
+The **✦ Appearance** button (sidebar) controls font, text size, color theme, density, light/
+dark mode, and **Number display** — choose "shortened" (large stat-card numbers show as
+"10k"/"1.23M", with the exact figure available as a hover tooltip) or "full" (every stat card
+always shows the complete, un-abbreviated number). This is a global, app-wide preference, not
+per-module — change it once and it applies everywhere.
+
+---
+
+## 4. Dashboard
+
+Your at-a-glance summary for the current exchange: net worth, cash balance, portfolio
+value, realized/unrealized P/L, total fees, rewards, open positions, and portfolio ROI —
+plus a Holdings preview, an allocation chart, a P/L-by-ticker chart, a realized-P/L-over-time
+chart, and an Alerts panel (flags positions moving more than ±5%, or watchlist items near
+their target price — shown once per session as a toast, then listed at the page bottom).
+Click a slice of the allocation chart or a bar in the P/L-by-ticker chart to jump straight to
+that stock's own page.
+
+Large money amounts on stat cards (here and on every other module's summary cards) display
+abbreviated — e.g. "12.35M PKR" instead of "12,345,678.90 PKR" — for a cleaner look (switch
+to full numbers in Appearance, see §3). Hover, or tap on a touchscreen, any abbreviated
+number or other underlined-looking stat to see a popup with the exact figure or an
+explanation.
+
+The Holdings preview groups related numbers into one column each instead of a separate
+column per fact: **Stock** (ticker + company name), **Cost** (avg cost, with break-even
+underneath colored green/red against the current price), **Value** (current worth, with
+invested and a ▲/▼ indicator underneath), and **P/L** (amount, with the percentage
+underneath).
+
+On a wide enough screen, a right-hand rail sits alongside the Dashboard's main content with
+two cross-module panels: **Net worth** (your net worth in whichever currency you have the
+biggest exposure in, broken down by module, with a link to the full Net Worth page) and
+**Upcoming plans** (the next few not-yet-executed entries from Cash's and Banking's Planning
+features, merged together). On a narrower screen, this rail moves below the main content
+instead of squeezing beside it.
+
+---
+
+## 5. Portfolio
+
+Two tabs:
+- **Holdings** — every open position, grouped into scannable columns: **Stock** (ticker +
+  name), Shares, **Cost** (avg cost with break-even underneath, colored against the current
+  market price), Market Price (editable), **P/L** (amount + percentage), **Exit targets**
+  (the price you'd need to hit a +1%/+2%/+5% profit, stacked in one cell), and Status.
+- **History** — every closed position (fully sold tickers), with realized P/L.
+
+Click any ticker to open its dedicated stock page (price chart, buy/sell history, and —
+on PSX, if you've turned on FIFO cost basis in Settings — an **Open lots** table showing
+each remaining buy lot separately). Its stat cards are grouped and color-coded the same way:
+"Cost" carries avg cost + break-even; "Bought / Sold" and "Trade dates" each carry a pair of
+related figures; if you've sold any of this ticker, "Sell price" shows both your average and
+most recent sell price. In "Price range," **Median (fair value)** is a simple fair-value
+estimate — the middle price across every price you've recorded for this ticker — useful as
+a sanity check when deciding whether to buy more or sell, since the app has no live market
+data of its own. Under "Recent updates," click **Export price history CSV** to download
+every price update you've ever recorded for this ticker (not just the recent few shown on
+screen) as a spreadsheet file. On the stock page's **Transactions** tab, below the trade
+table, optionally set a from/to date range and click **Export CSV** to download that
+ticker's own trade history separately.
+
+---
+
+## 6. Transactions
+
+The Transactions page has several sections. Each one is a collapsible card, and the chip row
+at the top is a *jump-to* nav, not a switch — clicking a chip scrolls to that section and opens
+it if it was collapsed, but it doesn't hide any of the others. Only the first section starts
+open; scroll down (or click a chip) to see the rest. This applies to every chip row like this
+one across the app (Analytics' category tabs, Settings' Account/Data tabs, etc.) — nothing is
+ever hidden behind a chip, just collapsed further down the same page.
+
+### Add transaction(s)
+Enter one or more BUY/SELL rows at once (date, ticker, action, shares, price) and save them
+together. On PSX, each row also has a **Fee mode** dropdown with three options:
+- **Auto** — the fee is fully computed from your Settings. Same-day round trips (buy and sell
+  the same ticker on the same date) are auto-detected: the larger side pays full commission,
+  the smaller side is netted to government levies only (matches real PSX same-day
+  square-off rules — one side only pays commission, not both).
+- **Semi** — you decide whether *this* leg counts as the netted one via a "Netted" checkbox,
+  but the amount is still computed from Settings. Use this when your statement shows a
+  same-day netting that the date you entered doesn't quite match (e.g. you logged the
+  settlement date instead of the trade date). Every new row starts in **Auto**, including a
+  same-day BUY — there's no way to know in advance whether it'll end up being the charged or
+  netted side until you also log the matching sell (that depends on the sell's quantity, which
+  doesn't exist yet), so Auto's own same-day detection is left to figure it out once both legs
+  are there, exactly as described above.
+- **Manual** — type the exact fee from your account statement, bypassing computation
+  entirely (useful for reconciling against real broker charges down to the last rupee).
+
+Switching modes clears whatever the other mode was using, so there's no way for a leftover
+checkbox and a leftover fee number to silently conflict with each other.
+
+### Transaction list
+Split into two collapsible sections — **Open positions** (tickers you're still holding) and
+**Closed positions** (tickers you've fully exited) — so a stock you sold out of months ago
+doesn't clutter the same view as what you're actively holding. Every transaction is sortable
+and filterable/groupable by ticker, action, or month, same as before — the filter/sort just
+applies before the split, so picking one ticker shows it in whichever section it belongs to.
+Click **Edit** on any row to fix a mistaken entry (date, ticker, shares, price, and on PSX the
+same-day/fee-override fields too) — nothing here is add/delete-only. The Fee column shows
+`(netted)`, `(netted, manual)`, or `(override)` tags to explain how that fee was calculated.
+
+### Cash transfers
+Log deposits/withdrawals into your trading account's cash balance. Editable and deletable.
+A **Balance** column shows the running net cash you've contributed so far (deposits net of
+fee, minus withdrawals plus their fee) — always in true date order regardless of which column
+you've sorted the table by. This is separate from the Cash ledger's balance below, which also
+factors in trading activity.
+
+### Rewards & adjustments
+Any other cash-affecting event that isn't a trade or transfer — a broker reward, a
+correction, etc. Editable and deletable.
+
+### Cash ledger
+A read-only, chronological view of every cash-affecting event (trades, transfers,
+adjustments) with a running balance — like a bank statement for your trading account.
+
+### Dividends
+Log dividends received (by ticker, per-share rate, and/or a flat total), see your
+dividends log with a running total, edit or delete any entry, and set an estimated annual
+per-share rate for each currently-held ticker to see a projected yearly dividend income
+table.
+
+---
+
+## 7. PSX-specific: fees, CGT, and cost basis
+
+PSX has a more detailed fee model than QSE (commission, SST, PSX fee, NCCPL fee, SECP levy,
+CDC, CVT — all configurable in Settings, see §9) plus capital gains tax. A few things worth
+understanding:
+
+- **Same-day netting**: if you buy and sell the same ticker on the same date, the smaller
+  side only pays government levies, not full commission — this happens automatically.
+- **CGT (capital gains tax)**: shown as an estimate on stock pages and the Trade Calculator,
+  based on your Settings' Filer/Non-filer status and rates. It's an estimate for your
+  awareness — it isn't deducted from any number automatically.
+- **Cost basis method** (Settings → Fees & amounts): **Average cost** (default) blends
+  every buy into one running average — a sell can't be tied to a specific lot. **FIFO**
+  tracks each buy as its own lot and sells the oldest one first, giving lot-accurate
+  realized P/L and CGT. Switching this recalculates your *entire* history under the new
+  method immediately (nothing here is stored per-transaction) — it's not the default
+  because that's a real change to your computed numbers, not a cosmetic one. Try it, compare,
+  switch back if you don't like it.
+
+---
+
+## 8. Watchlist
+
+Track tickers you don't currently hold (or hold and want to keep an eye on). Add a ticker
+with a target price and optional current price; both Target and Current are editable
+in-place any time (just click into the field and type). The Gap column shows how far the
+current price is from your target. A ticker's name field itself isn't editable — if you
+mistype a ticker, remove it and re-add it correctly.
+
+---
+
+## 9. Settings
+
+- **Account** — your display name and avatar, sign-in status, cloud sync status, and
+  (if the cloud looks completely empty for your account) an explicit "upload local data to
+  cloud" button — this never happens automatically, to protect against accidentally
+  overwriting real cloud data with an empty local session.
+- **Data management** — export your entire workbook as a JSON file (a personal backup you
+  control), import a previously-exported file, or clear all local data (irreversible —
+  export a backup first if unsure).
+- **Fees & amounts** (PSX) / general settings (QSE) — commission rates, government levies,
+  CGT rates and filer status, cost-basis method, tick size, currency, and default deposit
+  fee. Change these to match your actual broker's schedule.
+
+---
+
+## 10. Trade Calculator
+
+A floating 🧮 button, available on Stock Exchanges pages (QSE and PSX). Model a hypothetical
+BUY, SELL, or (PSX "Cycle" mode) a buy-then-planned-sell — see break-even price, current P/L,
+estimated fees, and (PSX) estimated CGT — before you actually commit to a trade. You can log
+the modeled trade straight from here once you're ready. It doesn't appear on other modules
+(Cash, Banking, etc.) since a stock trade calculator wouldn't mean anything there.
+
+Opening it from a specific stock's own page pre-selects that ticker automatically — you don't
+need to re-pick it from the dropdown. Opening it from anywhere else (Dashboard, Portfolio,
+Transactions) still defaults to your first held position.
+
+---
+
+## 11. Risk Analysis
+
+Under Stock Exchanges' page nav (QSE and PSX each have their own, since they use different
+fee models). Models **averaging down** into an existing open position — adding capital at
+the current price to lower your average cost — and shows whether it's actually worth it:
+
+- **Current position**: your invested amount, break-even price, how much recovery (%) is
+  needed at the current price, and current net P/L.
+- **Target buy price / Target shares to buy / Target amount**: a linked trio — type any two
+  and the third fills in automatically (same as the Trade Calculator's price/shares/amount
+  fields). The target buy price doesn't have to match "Current price" above — use it to model
+  a specific limit order below (or above) today's price, not just today's live price.
+- **Meaningful averaging points**: a table of "if you add this much capital" scenarios, priced
+  at your target buy price — new average cost, new break-even, recovery needed, and net P/L
+  if you later sell at your target sell price. One row is marked **✓ Selected** (closest to
+  the target amount you entered).
+- **Diminishing returns**: once adding more capital stops meaningfully improving your
+  break-even (less than a quarter percentage point per step), that row is flagged
+  **⚠ Diminishing** so you know where more capital stops being worth it. Hover any stat
+  card's label, or a table header, for a plain-language explanation of what it means.
+- **Stress test**: shows what your P/L would look like after the selected averaging, if the
+  price fell further (a fixed set of drops, plus your own chosen "stress" percentage).
+
+**This is planning support, not a recovery guarantee** — averaging down doesn't guarantee a
+stock recovers, and the calculator says so directly. Only shows tickers you currently hold
+(there's nothing to "average into" without an existing position).
+
+---
+
+## 12. Trade Planner (PSX)
+
+For planning multi-leg trades ahead of time, separate from the one-shot Trade Calculator:
+
+1. **Save a plan** — give it a name, optional notes, and a **ticker**. A plan covers exactly
+   one stock (a stock can have several plans, but not the other way around), so there's no
+   per-leg ticker to fill in — just add one or more legs (action, shares, price, date).
+2. **Edit anytime** — rename the plan or change its ticker (any not-yet-executed leg updates
+   to match automatically — executed legs, which already created a real transaction, are left
+   alone), add a new leg to an already-saved plan ("Add leg" below the table), or edit/remove
+   any individual leg that hasn't been executed yet. Click any column header (Date, Ticker,
+   Action, Shares, Price, Amount, Status) to sort the legs table.
+3. **Per-ticker plan analysis**: below each plan's legs, a row of colored summary cards gives
+   an at-a-glance read (average cost, break-even, shares after the plan, planned P/L), and the
+   detailed table underneath shows — for every ticker in the plan — how many shares are
+   already executed vs. still planned (shown separately so
+   they're never conflated), your average cost (blending this plan's own *pending* buy legs
+   with any shares you already hold, so planning to sell existing stock works correctly even
+   with no buy legs in the plan), a fee-aware break-even price, shares remaining once the
+   plan executes, and planned profit/loss from the plan's pending sell legs. A "Total planned
+   P/L" also shows in the summary line once any leg is a sell — this is the actual point of a
+   *planner*: not just listing trades, but seeing whether the cycle as a whole is expected to
+   be profitable.
+4. **What if?**: right below the analysis table, type a hypothetical exit price per ticker to
+   see what selling would actually net after fees — shown two ways: just what's left after
+   this plan's own pending sells, and the full position as if those pending sells hadn't
+   happened. A quick way to check whether your planned exit price is actually the best one,
+   or a different price/quantity would net more — a sandbox for testing exit combinations
+   before committing to one.
+5. **Mark a leg done** once you've actually executed that trade — this logs it straight
+   into your real Transaction history (with an estimated fee shown per leg beforehand) so
+   you don't have to re-type it into the Transactions tab. Once executed, the plan row stays
+   **synced** to that transaction — if you later edit its shares/price/date from the
+   Transactions tab or a stock page, the plan row updates to match automatically, so you're
+   never looking at stale data in the planner. You can also click **Edit** right on that row
+   in the planner to change its shares/price/date without leaving the page at all. If a leg
+   shows **Executed (unlinked)** with a ⚠ next to its date instead (this only happens for
+   legs executed a long time ago, before this syncing existed), click **Link…** to manually
+   pick which of your real transactions it corresponds to — after that it syncs normally too.
+   A pending leg's estimated fee shows both possibilities side by side — "Full" (regular
+   commission) and "Same-day netted" (PSX's same-day round-trip rule — the larger side pays
+   commission, the smaller side pays government levies only) — so you can see the potential
+   saving before deciding whether to time it as a same-day trade.
+6. **Delete a plan** any time — this only removes the plan, not any transactions already
+   logged from marking legs done.
+7. **Collapse** a plan (button in its header) to shrink it down to just the name/summary line
+   — handy once you have several plans and only want to focus on one. **Full screen** a plan
+   to expand it to fill the whole page for distraction-free editing; click "Exit full screen"
+   (or the dimmed backdrop) to return to the normal view.
+
+QSE doesn't have this page yet, but the same functionality is available underneath
+(technically shared) if a QSE Trade Planner page ever gets built.
+
+---
+
+## 13. Analytics
+
+Deeper charts across four category tabs (exact set depends on the exchange) — allocation,
+performance, fees, and (QSE only, for now) fundamentals. See individual chart tooltips for
+details on what each one shows.
+
+**Filtering**: a filter bar at the top lets you narrow the charts to specific tickers (click
+one or more ticker chips, or "All" to reset) and/or a month range. Per-ticker charts (ROI%,
+allocation, P/L by symbol, holding period, dividends by ticker) and monthly charts (trading
+activity, dividends by month, fees by month) respect the filter. A handful of whole-portfolio
+totals — realized vs unrealized P/L, cash vs stocks split, fees breakdown, deposits vs
+invested, and the cumulative cash-balance line — always show your full history: narrowing
+those to a ticker or date window wouldn't mean what it looks like it means (your *current*
+holdings aren't a function of which window you're looking at).
+
+---
+
+## 14. Cash
+
+The first non-stock-exchange module (pick **Cash** from the sidebar's category dropdown).
+Tracks physical/informal cash — cash in hand, gifts, small informal amounts — as a simple
+ledger, separate from any exchange.
+
+- **Add an entry**: date, Cash in/Cash out, amount, currency, an optional free-text category
+  (type anything — it's never a fixed list, and previously-used categories show up as
+  autocomplete suggestions), and an optional note.
+- **Every entry is editable and deletable** from the Ledger list.
+- **Balances and category totals are shown per currency**, never blended into one number —
+  if you've logged cash in both USD and PKR, you'll see two separate balance figures, since
+  there's no reliable exchange rate to convert them with. If a currency has any upcoming
+  (not-yet-marked-done) plans from the Planning tab below, the balance card shows a note
+  with the count and net amount right there, so you don't have to open Planning to see it.
+- **Analytics tab**: a category-breakdown chart, an income-vs-expense-by-month chart, and a
+  balance-over-time chart. If you've logged entries in more than one currency, a currency
+  picker at the top switches which currency's charts you're looking at.
+- **Planning tab**: a "what if I spend on this" scenario planner, meant as a guardrail
+  against overspending. Add a **plan** (an expected future cash in/out that hasn't happened
+  yet) and see a **Real balance** (from your actual entries) alongside a **Planned balance**
+  (Real plus every plan you haven't marked done yet) — a realistic look at where you'd end up
+  if everything you've planned actually happens. Two checkboxes at the top let you choose
+  which of the two balances you want to see (both are on by default). Edit or delete a plan
+  any time while it's still pending; **"Mark as done"** turns it into a real Ledger entry
+  while keeping the plan itself around (now shown as "Done") as a record of what you'd
+  planned — it doesn't disappear or get merged into the real entry.
+- **Import tab**: import a CSV export of cash entries — pick which column is Date and which
+  is Amount (a positive amount is cash in, negative is cash out; check "Flip sign" if your
+  export does the opposite), optionally map a Category column too, pick the currency for the
+  whole imported batch, preview the first 5 rows, then import. Imported entries show
+  "Import (filename)" in the ledger's Source column so you can tell them apart from entries
+  you typed in by hand.
+- **Settings tab**: pick a default currency (only pre-fills new entries — never converts
+  existing ones), plus the same export/import/clear-all data management as other modules.
+
+---
+
+## 15. Personal Loans
+
+Informal loans with another person — money you lent out, or money you owe — tracked in
+**either direction** in one place. Pick **Personal Loans** from the category dropdown.
+
+- **Add a loan**: person/lender name, direction (lent out / I owe), currency, principal
+  amount, date, optional note.
+- **Net position summary** at the top shows, per currency, whether you're net owed money or
+  net owe money across all your personal loans combined.
+- **Click a loan to open it**: see principal, outstanding balance, edit the loan itself
+  (person, direction, currency, principal, date, note), or delete it (this also deletes its
+  logged repayments).
+- **Payoff planner**, inside a loan's detail view: enter a planned monthly repayment amount
+  and see how many months it would take to clear what's left, and roughly when. This is a
+  live "what if" estimate — nothing is saved, and there's no interest involved (an informal
+  loan just gets paid down at whatever rate you type in).
+- **Log repayments** against a loan any time — date + amount — and edit or delete any
+  repayment later. Outstanding = principal minus all repayments logged so far. The repayments
+  list has a **Remaining** column showing the loan's running balance after each repayment, in
+  true date order regardless of how you've sorted the table.
+- No interest or repayment-schedule automation here by design — if a "personal loan"
+  actually has a real repayment schedule, it belongs in EMI/Loans (§18 below) instead.
+- **Analytics tab** (back on the main Personal Loans page, alongside the loan list): an
+  outstanding-by-loan chart (green for money lent out, red for money you owe) and a
+  repayments-by-month chart. A currency picker appears if you have loans in more than one
+  currency.
+- A repayment created from the **Transfers** page (§23) is linked to a Bank or Cash entry —
+  deleting it there also removes the matching Bank/Cash record; see §23 for details.
+- **Import repayments (CSV)**: inside a loan's detail view, below its repayments table, import
+  a CSV of past repayments — map which column is Date and which is Amount, preview the first
+  5 rows, then import. Amounts are always treated as positive (a repayment doesn't have a
+  direction to flip). Imported repayments show "Import (filename)" in the Source column.
+- **Export repayments (CSV)**: below the repayments table, optionally set a from/to date
+  range and click **Export CSV** to download that loan's repayment history (with the same
+  running Remaining balance shown on screen) as a spreadsheet file.
+
+---
+
+## 16. Banking
+
+Bank account balances and transaction history, entered manually or imported from a CSV
+statement. Pick **Banking** from the category dropdown. No live bank connection (regulator
+licensing is required for that, so it's manual entry or statement import only).
+
+- **Accounts tab**: add one or more accounts (name, currency, opening balance). Each
+  account has exactly one currency. Edit or delete any account (deleting an account also
+  deletes its transactions). A "Total balance" summary at the top groups accounts by
+  currency, and shows a note underneath if that currency has any upcoming (not-yet-marked-
+  done) plans from the Planning tab. Click **Details** on any account for its current
+  balance, upcoming plans, and 20 most recent transactions in one view, plus a "Download
+  statement" section — pick an optional From/To date range and click **Export CSV** to
+  download that account's transactions (with running balance) as a CSV file. The same
+  Details view has an **Account details** section to optionally save an account number and
+  the SMS sender ID/number your bank's alert texts arrive from — nothing reads these yet,
+  they're saved for a possible future feature that imports transactions straight from those
+  SMS alerts.
+- **Transactions tab**: pick an account, then log transactions with a multi-row form (date,
+  description, a signed amount — negative for spend/debit, positive for deposit/credit —
+  and an optional free-form category with autocomplete over your own previous categories).
+  The list shows a running balance and every entry is editable/deletable. A category
+  breakdown card shows net spend/income per category.
+- **Planning tab**: the same "what if I spend on this" scenario planner as Cash's (see §14)
+  — pick an account, add a plan (expected date, description, a signed amount), and see a
+  **Real** vs. **Planned** total balance for that account's currency, with the same two
+  display checkboxes. "Mark as done" turns a plan into a real transaction on that account
+  while keeping the plan around, now shown as "Done."
+- **Import statement tab**: pick the target account, choose a CSV file exported from your
+  bank, then map which column is Date/Description/Amount (every bank's export looks
+  different, so this asks you rather than guessing) — check "Flip sign" if your bank
+  exports spending as positive numbers. Preview the first 5 mapped rows, then import. This
+  is intentionally a simple column-mapping tool, not a parser for every specific bank
+  format.
+- **Analytics tab**: pick an account (each chart is scoped to it, not a currency, since a
+  bank account's history is naturally one account's own data) — a balance-over-time chart, a
+  category breakdown of your spend (income categories aren't mixed in, since a doughnut of
+  credit and debit together wouldn't mean anything), and income vs. spend by month. Below the
+  charts, a **budget** tool: set a monthly spend target per category (type an amount, press
+  Enter to save) and see this month's actual spend against it — over-budget shows in red. A
+  category you've spent in but haven't set a target for still shows up with its actual spend
+  and a blank target, so nothing gets hidden just because you haven't budgeted for it yet.
+- **Settings tab**: same account/cloud-sync status and export/import/clear data management
+  as other modules.
+
+---
+
+## 18. EMI / Loans
+
+For a loan you're repaying on a fixed schedule — a mortgage, car financing, or similar. Pick
+**EMI / Loans** from the category dropdown. Distinct from Banking (which just tracks account
+transactions) and Personal Loans (informal, no schedule).
+
+- **Add a loan**: click the floating **+** button (bottom-right of the page) to open the
+  add-loan popup — name, lender, currency, principal, tenure (months), installment start date
+  (when the first installment is due, not necessarily when you took out the loan), and one
+  of two repayment types:
+  - **Interest rate (reducing balance)** — the standard EMI calculation: enter an annual
+    interest rate.
+  - **Fixed total to return (no-interest / Sharia)** — enter the total amount your lender
+    says you'll pay back overall instead of a rate; the markup is spread evenly across the
+    tenure with straight-line principal reduction, not compounding.
+  - **Payment day of month (optional)**: which day of the month every installment is due on
+    (e.g. 28), independent of the start date's own day. Leave blank to use the start date's
+    day instead. A day that doesn't exist in a shorter month (like 31 in a 30-day month)
+    automatically clamps to that month's actual last day.
+- **Open a loan** to see its full amortization schedule (installment, interest/markup,
+  principal, remaining balance, due date, and status) plus summary stats, grouped into three
+  zones:
+  - **Origination** — what was agreed at the start: total amount sanctioned, markup
+    percentage (the real annual rate for interest-rate loans; an equivalent derived
+    percentage for fixed-total loans, which have no rate at all), and net to return (the
+    total cost — principal plus every future markup payment).
+  - **Current status** — where things stand right now: net remaining (outstanding), net paid
+    to date, and the current monthly EMI (can differ from the original if you've set a custom
+    monthly payment or a per-month override).
+  - **Timeline** — what's coming and what's already happened: next due date, expected
+    completion date, and how many installments are paid vs. remaining.
+
+  **"Net remaining (outstanding)" means something different depending on the loan type**: for
+  an interest-rate loan it's the remaining principal only (future interest that hasn't
+  accrued yet isn't counted — the same way a bank reports an outstanding balance); for a
+  fixed-total (no-interest) loan it's the FULL remaining amount, including whatever markup is
+  still owed, since that kind of loan has no real interest-accrual concept to separate out.
+  Hover the label for a reminder of which applies.
+
+  The Schedule table shows the next 12 installments by default; check **"Show the full
+  schedule, start to end"** to see every installment from the loan's start to its final month
+  instead.
+- **Installment status**: each row in the Schedule table shows **Paid** (already past, based
+  on elapsed time since the start date), **Planned** (an upcoming installment with a
+  not-yet-done plan generated via **Link to bank**, below), or **Upcoming** (everything else
+  still ahead).
+- **Edit or delete** a loan any time; editing recalculates the whole schedule immediately.
+- **Link to bank**: pick one of your Banking accounts and click **Link to bank** to generate
+  a planned entry (in that account's Planning tab) for every installment you haven't paid
+  yet, dated on this loan's own schedule. Once linked, the button becomes **Re-link /
+  regenerate plans** — use it after editing the loan's terms, or to switch which account
+  pays it; this replaces only this loan's own not-yet-done planned installments, leaving
+  anything you've already marked done untouched.
+- Outstanding balance and paid-so-far assume **on-schedule payment** based on elapsed time
+  since the start date — there's no tracking of individually missed or late payments in
+  this version.
+- **Amortization schedule chart**: a stacked bar chart on the loan's page showing how much
+  of each month's payment goes to principal vs. interest/markup — principal grows and
+  interest shrinks over time for an interest-rate loan; both stay flat for a fixed-total
+  loan (no compounding).
+- **What if: extra payment**: enter a fixed extra amount you'd pay on top of the normal
+  installment every month to see how much sooner the loan would clear and how much
+  interest/markup you'd save. This is a live, unsaved estimate — nothing is recorded until
+  you actually change your real payments.
+- **Export full schedule (CSV)**: below the Schedule table, click **Export full schedule
+  CSV** to download every remaining installment (not just the next 12 shown on screen) as a
+  spreadsheet file, with each installment's due date.
+- **Custom installments**: if your real loan isn't a flat amount every month — e.g. a
+  property installment plan where you pay a bigger amount every 6th month — click the pencil
+  icon next to any upcoming installment in the Schedule table to set a different amount (and,
+  optionally, a different due date) for just that month. Every later month recalculates
+  automatically from what you actually paid, and the loan's remaining balance/months-
+  remaining/end-date all update to match. An overridden month shows an "(custom)" tag; click
+  the X next to it to reset that month back to the regular calculated installment/date. If a
+  bigger payment pays off the loan completely, the schedule simply stops there — you won't
+  see extra $0 installments after payoff. Check the **"Link this to a Bank account or Cash"**
+  box while setting an amount to also create a matching entry there at the same time (see §23
+  below).
+- **Big EMI every N months**: for a loan with an occasional bigger payment on a regular cycle
+  — e.g. a property installment plan with a larger payment every 6 months — open this section
+  (inside the Schedule card) instead of setting each big month by hand. Enter how often (every
+  N months, default 6) and the amount, and choose whether that amount is the *whole* payment
+  for that month or an *extra* amount stacked on top of the regular installment. Unlike the
+  "What if: extra payment" planner below, this keeps the loan's original tenure rather than
+  finishing it early — the **"Add unreconciled amount to last month"** checkbox (on by
+  default) automatically tops up the final installment with whatever's still owed once every
+  big payment is applied, so the loan still zeroes out exactly at its declared end date. Click
+  **Generate** to apply it — this uses the same per-month custom-installment mechanism above,
+  so every generated month can still be edited or reset individually afterward.
+- **Custom monthly payment**: if you'd rather pay one fixed amount every month instead of
+  the computed installment — e.g. a round number that's easier to remember, or lower than
+  the "correct" EMI — set it in the **"Custom monthly payment"** field on the add-loan form
+  or in Edit. Every month charges that fixed amount, except the very last one: since a
+  round custom number usually doesn't divide the loan evenly, the final installment
+  automatically "true's up" to whatever's actually still left owing (shown with a
+  "(final payment)" tag) instead of repeating the custom amount and over- or under-paying.
+  You can still set a per-month custom installment (above) on top of this for any specific
+  month, including the final one — a manually-set month always wins over the automatic
+  final payment.
+- **Repayment log**: below the Schedule table, a list of every actual payment recorded
+  against this loan (the same data the Schedule table's pencil icon edits, shown here as one
+  reviewable list covering every month, not just the upcoming ones). Edit an amount or
+  delete an entry directly here. This is also what a linked Bank/Cash transfer (§23 below)
+  points to when you link a real payment to a specific installment.
+
+---
+
+## 20. Funds
+
+Mutual fund unit holdings and performance. Pick **Funds** from the category dropdown.
+Structurally the closest of the new modules to QSE/PSX (buy/sell units at a NAV per unit is the same shape as buy/
+sell shares at a price), so it shares the same underlying calculation engine.
+
+- **Add a fund**: name, code, "invested via" platform, category (Equity/Debt/Hybrid/
+  International/Other), currency, and optionally an initial investment (amount + NAV) to
+  create the first transaction right away.
+- **Fund list**: units held, current value, net profit (amount and %), and **XIRR** — a
+  return measure that accounts for *when* each investment happened, not just the total, so
+  it's more accurate than a flat percentage when you've invested at different times.
+- **Open a fund** to see full stats (units, average NAV cost, invested, current value, net
+  profit, XIRR), update its current NAV (like a stock's market price), and log or edit/
+  delete Invest/Withdraw transactions (units + NAV per unit).
+- Edit or delete the fund itself any time (deleting also removes its transactions).
+- **Export statement (CSV)**: below the Transactions table, optionally set a from/to date
+  range and click **Export CSV** to download that fund's buy/sell history as a spreadsheet
+  file.
+- **Analytics tab**: pick a fund (and a currency, if you hold funds in more than one) to see
+  its NAV over time, and a "Contribution vs. value" chart comparing what you've put in against
+  what the position is actually worth at each point — useful for spotting when a fund
+  genuinely pulled ahead of (or fell behind) your own money. There's also an "Allocation by
+  category" chart showing how your total holdings split across fund categories. If you've
+  never manually updated a fund's NAV, its NAV-over-time chart stays empty until you do — but
+  the Contribution vs. value chart still works, using the price from your buy/sell
+  transactions themselves.
+- **Transfers tab**: cash moved into or out of your Funds account, separate from buying/
+  selling fund units — e.g. topping up before a purchase, or withdrawing after a redemption.
+  Log a deposit/withdrawal here, edit or delete one later, or check the linking checkbox to
+  create a matching entry in Bank/Cash at the same time (see §23 below).
+- **Import tab**: two different ways to load fund data, picked via the chip toggle at the top.
+  - **Daily history (XLSX)** — recommended if you track each fund's balance day by day (a
+    workbook with one sheet per fund, a row per update: Date / PrvBlc / NewBlc / Profit-Loss).
+    This is the richer option: it reconstructs your fund's real buy/sell/NAV path — separating
+    actual deposits and withdrawals from organic growth — so average monthly and annual P&L
+    are computed from your real update history, not guessed from a single ending number, and
+    holidays/off-days (where nothing was updated) correctly contribute nothing rather than
+    being smoothed over. Choose the .xlsx file; each recognized sheet gets its own preview card
+    showing the date range, detected deposits/withdrawals, reconstructed value vs. any matching
+    balance found on a Summary-style sheet in the same file, and average monthly/annual P&L.
+    Pick whether each sheet becomes a **new fund** (editable name/code/platform) or is matched
+    to a fund you **already have** — matching to an existing fund **replaces that fund's
+    transactions entirely** with the reconstructed history, which is the point (it stops
+    discarding your day-by-day data), but it is genuinely destructive to whatever was there
+    before, so a clear warning shows the exact number of transactions being replaced, and the
+    final Import click asks you to confirm before doing anything. When a sheet's ending balance
+    doesn't uniquely match one fund (e.g. two of your funds both closed at zero), the app
+    won't guess — it defaults to "create new fund" and lets you manually pick the right
+    existing one from the dropdown instead.
+  - **Snapshot (CSV)** — for a spreadsheet that only tracks each fund's Total Invested /
+    Withdrawn / Current Balance (no day-by-day history), a common lighter-weight way to track
+    mutual funds. Choose the CSV file, set a single "as-of" date, currency, and default
+    category for any brand-new funds it introduces, then review the preview table before
+    importing — platform/code/name are editable right there, so a typo or a misfiled row in
+    your source file can be fixed without re-exporting it. Since a snapshot has no real
+    per-trade dates, this reconstructs one buy (and, if you've withdrawn from it, one sell) per
+    fund dated on your chosen as-of date, at whatever price reproduces your reported balances —
+    it's an approximation of your real history, not a replay of it. If the same fund code
+    appears more than once in the file, each row still becomes its own entry (useful if they're
+    genuinely two separate positions) with a warning shown so you can catch a real duplicate
+    before importing. Re-importing into a fund that already has transactions adds another
+    entry rather than replacing anything — if you have the fuller daily-history file for a
+    fund, prefer the Daily History import instead, which replaces cleanly.
+
+---
+
+## 21. Rentals
+
+Rental property income and expenses. Pick **Rentals** from the category dropdown. Not
+discrete buy/sell trades like the other modules — recurring rent received and costs (maintenance, property
+tax, management fees) against one or more properties.
+
+- **Properties tab**: add a property (name, currency, optional purchase price for future
+  reference). Edit or delete any property (deleting also removes its income/expense
+  entries). A net-income summary at the top groups properties by currency.
+- **Details**: click **Details** on any property to record lease and tenant info (monthly
+  rent, the day of the month rent is due, lease start/end dates, whether utilities are
+  included, tenant name/contact) and security deposit info (amount, type — cash, cheque,
+  bank transfer, other — date, and whether it's been returned). Fill in monthly rent, a
+  cycle day, and a lease start date, then click **Generate projected rent** to create a
+  projected income plan for every upcoming rent cycle (through the lease end date, or 12
+  months ahead for an open-ended lease) — each shows in the same view with **Mark done**
+  (logs it to the Income & expenses tab as a real entry) or **Remove**. Click **Generate
+  projected rent** again any time (after editing lease terms, say) to regenerate — this
+  replaces only this property's own not-yet-done projected plans, leaving anything already
+  marked done untouched. Only rent income is auto-planned, not expenses (those are too
+  irregular to project reliably) — log expenses manually in the Income & expenses tab.
+- **Rent collection (in the same Details view)**: a simpler, separate way to stay on top of
+  collecting rent, for when you don't want to project a whole lease's worth of cycles up
+  front. Pick a **Collection cycle** (daily, weekly, monthly, or annual) and set a **Last
+  collection date** — a "Rent collection" card then shows the next due date and amount
+  (pre-filled from your monthly rent, editable), which you approve with **Approve & log**.
+  Nothing is ever created automatically — you always get to adjust the date or the amount
+  before it's logged. If a tenant only pays part of what's due, just enter the lower amount
+  you actually received; the shortfall carries forward and is added on top of the next
+  proposal automatically, so you don't lose track of what's still owed.
+- **Income & expenses tab**: pick a property, then log rent income or an expense (with a
+  free-form, autocompleted category for expenses — "Maintenance", "Property tax", etc.).
+  See a category breakdown and a monthly income/expense/net rollup table, plus the full
+  entry list with edit/delete. Below that list, optionally set a from/to date range and
+  click **Export CSV** to download that property's income/expense history as a spreadsheet
+  file.
+- No property valuation tracking or mortgage/loan tracking in this version — a property's
+  mortgage, if you have one, belongs in EMI/Loans (§18) instead.
+- **Analytics tab**: pick a currency (if you hold properties in more than one) to see a
+  "Net income by property" chart comparing all your properties side by side — profitable
+  ones in green, properties running at a loss in red. Pick a property to see its category
+  breakdown (how much of its income/expense came from where) and its monthly income vs.
+  expense trend as charts, alongside the same tables already available in the Income &
+  expenses tab.
+- **Import tab**: import a CSV of income/expense entries for one selected property — map
+  Date/Amount/an optional Category column; a positive amount is rent income, negative is an
+  expense (check "Flip sign" if your export does the opposite). Imported entries show
+  "Import (filename)" in the entry list's Source column.
+- **Settings tab**: same account/cloud-sync status and export/import/clear data management
+  as other modules.
+
+This completes the six modules originally planned in `MODULES_PLAN.md` — Cash, Personal
+Loans, Banking, EMI/Loans, Funds, and Rentals are all built alongside the original QSE/PSX
+stock exchange modules. Subscriptions (§22 below) was added afterward as a seventh module.
+
+---
+
+## 22. Subscriptions
+
+Recurring payments — streaming, gym memberships, software, anything you're billed for on a
+schedule. Pick **Subscriptions** from the category dropdown.
+
+- **Add a subscription**: name, amount, currency, billing cycle (Monthly/Yearly/Weekly, or
+  Custom with your own number of days), start date, and an optional free-form category.
+- **Subscription list**: shows each one's raw amount and cycle, its **monthly-equivalent**
+  cost (so a $120/year subscription and a $10/month one are directly comparable), category,
+  next renewal date, and whether it's active or cancelled.
+- **Open a subscription** to edit any field, see its monthly/yearly equivalent cost and next
+  renewal date, and a 12-month preview of upcoming renewal dates.
+- **Cancel** (instead of delete) keeps the subscription's history visible with a "Cancelled"
+  status and the date it was cancelled — use **Reactivate** to undo, or **Delete** if you
+  want it gone entirely.
+- **Link to a paying account**: pick whichever Bank account or Cash actually pays this
+  subscription, then click **Generate renewal plans** to create a planned (not-yet-done)
+  entry for every renewal in the next 12 months in that account's Planning tab — same
+  pattern as EMI/Loans' "Link to bank." Re-linking (to a different account, or after editing
+  the amount/cycle) replaces only the not-yet-done plans; anything already marked done is
+  left alone.
+- **Analytics tab**: total monthly recurring spend by currency, upcoming renewals in the
+  next 30 days, spend by category, and spend by paying account.
+
+---
+
+## 23. Transfers (linking money between modules)
+
+Pick **Transfers** from the category dropdown. Normally, moving money between two modules
+— say, withdrawing cash from your bank account — means entering it twice: a withdrawal in
+Banking and a cash-in entry in Cash. Do that and the two records have no idea they're
+related; edit or delete one later and the other silently goes stale. The Transfers page
+fixes that for the most common moves by creating **one linked transfer** that writes a real
+record on both sides at once, and keeps them in sync afterward.
+
+**Supported so far**: Cash ↔ Banking, Banking ↔ your QSE or PSX cash balance (a deposit or
+withdrawal), Banking/Cash ↔ a specific Rentals property (rent received, or an expense paid),
+Banking/Cash ↔ a specific Personal Loan (a repayment logged against that loan), Banking/Cash
+↔ Funds (a deposit into or withdrawal from Funds' cash balance), and Banking/Cash ↔ a
+specific EMI/Loans loan (a payment logged against that loan's next installment). Other
+pairings (e.g. Cash directly to a stock exchange) aren't wired up yet — the form tells you if
+a pairing isn't supported instead of silently doing something wrong.
+
+- **Create a link**: choose the **From** and **To** side (for Banking, also pick which
+  account; for Rentals, pick which property; for Personal Loans or EMI/Loans, pick which
+  loan), an amount, a date, and an optional note, then **Create link**. This adds a matching
+  entry to both modules' own ledgers — you'll see it appear in Cash's ledger, Banking's
+  transaction list, a property's income/expenses, a loan's repayment list (Personal Loans'
+  or EMI/Loans' — see its Repayment log, §18), or Funds' own transaction history, exactly
+  like anything else you'd entered by hand there. A Personal Loans or EMI/Loans repayment
+  created this way is always a positive amount against the chosen loan, regardless of which
+  side of the link it's on — for EMI/Loans specifically, it always applies to whichever
+  installment is next due (not yet covered by an actual payment), matching your loan's own
+  schedule automatically rather than asking you to pick a month.
+- **Different currencies**: no live conversion happens automatically — but if the two sides
+  use different currencies, check **"Different amount on the other side"** and enter the
+  real converted amount yourself (from your bank's rate, a cash exchange receipt, etc.).
+  Leave it unchecked and the same number is used on both sides as-is, which is only correct
+  when both sides share a currency (the form warns you if they don't).
+- **Editing or deleting a link** (in the "Linked transfers" list at the bottom of the page)
+  updates or removes **both** sides' records together — you don't need to (and shouldn't)
+  go edit or delete the two records separately in their own modules.
+- **Editing a linked record from its own module instead** (e.g. correcting the amount
+  directly in Cash's ledger rather than on the Transfers page) still works, but only changes
+  that one side — the other side and the link itself won't update to match. The app warns you
+  before saving in that case, so you can back out and use the Transfers page instead if you
+  want both sides to stay in sync. Deleting from either module is always safe either way — it
+  cascades to both sides automatically, same as deleting from the Transfers page.
+- **A shortcut, right where you're already adding the record**: QSE/PSX's Cash Transfers
+  form, Rentals' add-entry form, Personal Loans' add-repayment row, EMI/Loans' Schedule table
+  pencil editor, and Funds' new Transfers tab each have a **"Link this to a Bank account or
+  Cash"** checkbox — check it and the form
+  swaps its normal Fee/Add controls for a module picker and a **Link & add** button that
+  creates the same linked pair this page does, without leaving that module's own screen. It's
+  a simpler version of the full form above (both sides always share one amount, no
+  cross-currency "different amount" option), so for a cross-currency link, use the full
+  Transfers page instead. It also remembers which account/loan/property you last linked to
+  from that same spot, so it's usually already picked for you next time.
+
+---
+
+## 24. Net Worth
+
+Pick **Net Worth** from the category dropdown — a single page summarizing everything you've
+recorded across every module. Each currency you use gets its own collapsible section (click
+its header to expand/collapse, or use the responsive grid to see 2-3 side by side on a wide
+screen) showing your real, unconverted **Assets**, **Liabilities**, and **Net** total in that
+currency — plus a "By module" breakdown of exactly which modules contributed to it. Cash and
+Banking balances, your QSE/PSX portfolio value plus cash, Funds' current market value, and
+Personal Loans' net position all count as assets (or a liability, if you owe more than you're
+owed); EMI/Loans' outstanding balance always counts as a liability. **Rental income is shown
+separately below, not included in the total** — property values aren't tracked in this app,
+and the rent you've collected already landed in whichever Cash/Bank account you deposited it
+to, so adding it again here would count it twice.
+
+- **Net worth summary card**: pick a currency in "Show total in", and every section with a
+  known exchange rate gets converted and added into one grand total, shown alongside **Total
+  debts**, **Today's net flow**, and **This month's net flow** (money moved in/out of Cash
+  and Banking) — all converted sums alongside the real per-currency figures, never a
+  replacement for them.
+- **Exchange rates card**: rates come from a free exchange-rate service, refreshed
+  automatically at most once a day (never on every page load) and cached — click **Refresh
+  rates** to force an update. If the automatic fetch ever fails (no internet, the service
+  being unreachable), or a currency you use simply isn't covered, set a rate yourself between
+  **any two of your own currencies** (not just against USD) — the page works exactly the same
+  either way, and it never blocks you from seeing your real per-currency totals even with no
+  rate at all (only the converted grand-total/debt/flow figures depend on having a rate). A
+  read-only table below shows every known rate between the currencies you actually hold.
+- **Capital split by currency chart**: each currency's net worth converted to your preferred
+  currency, shown as a doughnut for an at-a-glance comparison — a currency with negative net
+  worth doesn't get a slice (a doughnut can't show a negative value meaningfully) but is still
+  fully visible in its own card above.
+- **Save snapshot / net-worth-over-time chart**: click **Save snapshot** any time to log
+  today's net worth (in every currency you hold) — clicking it again later the same day
+  updates that day's entry instead of creating a duplicate. Once you have two or more
+  snapshots, a line chart appears showing your net worth's history in your currently-selected
+  "Show total in" currency. Nothing is snapshotted automatically — this is entirely on-demand,
+  so build up a history by clicking it whenever you want a data point (e.g. once a month). A
+  saved snapshot is a frozen record of that day — editing old transactions later never
+  rewrites a past snapshot's number, only your live current totals above change.
+
+---
+
+## 25. A note on accuracy
+
+Every number in this app is an **estimate** computed from settings you configure — it is
+not a substitute for your actual broker/exchange statement, and it is not financial advice.
+See **Disclaimer & Privacy** (linked at the bottom of the sidebar) for the full legal text.
+If a number here ever disagrees with your official statement, trust the statement.

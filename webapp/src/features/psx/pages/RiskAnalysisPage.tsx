@@ -12,7 +12,7 @@ export function RiskAnalysisPage() {
   return (
     <div>
       <h1 className="pagetitle">PSX Risk Analysis</h1>
-      <p className="footer-note" style={{ marginTop: -8, marginBottom: 20 }}>
+      <p className="text-muted" style={{ marginTop: -8, marginBottom: 20 }}>
         Model averaging down into an existing position — new average cost, break-even, and a stress test on the
         result. This is planning support, not a recovery guarantee.
       </p>
@@ -24,6 +24,7 @@ export function RiskAnalysisPage() {
         tick={tick}
         calcFee={calcFee}
         stockPageUrl={(t) => `/psx/stock/${t}`}
+        exchange="psx"
       />
     </div>
   );

@@ -7,6 +7,7 @@ import { Sparkline } from '../../../components/Sparkline';
 import { TickerLogo } from '../../../components/TickerLogo';
 import { toast } from '../../../components/Toast';
 import { breakEvenPrice, getDailyPriceHistory } from '../../../lib/calc';
+import { pendingShareDeltaByTicker } from '../../../lib/calc/positions';
 import { dimColor, dlBarV, dlDoughnut, dlLine, profitColor } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
@@ -20,6 +21,7 @@ import { ChartCard } from '../components/ChartCard';
 import { useQSEDerived } from '../hooks/useQSEDerived';
 import { useQSEStockData } from '../hooks/useQSEStockData';
 import { useAppearanceStore } from '../../../store/appearanceStore';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 const INVEST_PALETTE = ['#3d4b58', '#c9a227', '#34c77b', '#3b6bd6', '#8a97a3', '#e5484d', '#7b5cd6', '#2ea3a3'];
 
@@ -58,11 +60,11 @@ function HoldingsCard() {
           if (!Number.isFinite(profit)) {
             statusRank = 3; statusLabel = 'PRICE NEEDED'; statusClass = '';
           } else if (profit >= 0) {
-            statusRank = 0; statusLabel = 'EXIT READY'; statusClass = 'pill-buy';
+            statusRank = 0; statusLabel = 'EXIT READY'; statusClass = 'pill-positive';
           } else if ((profit / p.invested) * 100 > -3) {
             statusRank = 1; statusLabel = 'WATCH'; statusClass = '';
           } else {
-            statusRank = 2; statusLabel = 'HOLD / REVIEW'; statusClass = 'pill-sell';
+            statusRank = 2; statusLabel = 'HOLD / REVIEW'; statusClass = 'pill-negative';
           }
 
           return {
@@ -88,11 +90,17 @@ function HoldingsCard() {
   };
   const { sorted: held, Th } = useSortableRows(heldRaw, sortValue, 'profit', 'desc');
 
+  // User-requested (2026-09-08): "Also show a pending share-count delta" —
+  // a placed-but-not-yet-filled order shouldn't move the real Shares figure
+  // (positions already exclude it), but shouldn't just silently vanish
+  // either, so show what it would change to once filled.
+  const pendingDelta = useMemo(() => pendingShareDeltaByTicker(workbook.transactions), [workbook.transactions]);
+
   return (
     <CollapsibleCard
       style={{ marginBottom: 16, paddingBottom: 12 }}
       title={<h3 style={{ margin: 0 }}>Holdings</h3>}
-      headerExtra={<Link to="/portfolio" className="footer-note">Full portfolio →</Link>}
+      headerExtra={<Link to="/portfolio" className="text-muted">Full portfolio →</Link>}
     >
       {held.length ? (
         <div className="table-scroll table-compact" style={{ marginTop: 8 }}>
@@ -115,11 +123,18 @@ function HoldingsCard() {
                     </div>
                   </td>
                   <td style={{ width: 70 }}><Sparkline data={r.sparkData} formatValue={fmtPrice} width={56} height={20} /></td>
-                  <td onClick={() => navigate(`/stock/${r.ticker}`)}>{fmt(r.shares, 0)}</td>
+                  <td onClick={() => navigate(`/stock/${r.ticker}`)}>
+                    {fmt(r.shares, 0)}
+                    {!!pendingDelta[r.ticker] && (
+                      <div className="text-muted" title="Placed but not yet filled orders for this ticker — shares will change by this much once they clear.">
+                        {pendingDelta[r.ticker] > 0 ? '+' : ''}{fmt(pendingDelta[r.ticker], 0)} pending
+                      </div>
+                    )}
+                  </td>
                   <td onClick={() => navigate(`/stock/${r.ticker}`)}>
                     <div>{fmtPrice(r.avgCost)}</div>
                     <div
-                      className="footer-note"
+                      className="text-muted"
                       style={{ color: r.mp > 0 ? (r.mp >= r.be ? 'var(--profit)' : 'var(--loss)') : undefined }}
                     >
                       BE {fmtPrice(r.be)}
@@ -149,16 +164,16 @@ function HoldingsCard() {
                   </td>
                   <td onClick={() => navigate(`/stock/${r.ticker}`)}>
                     <div>{r.mp > 0 ? fmtMoney(r.value, currency) : '—'}</div>
-                    <div className="footer-note">
+                    <div className="text-muted">
                       {r.mp > 0 && (r.value >= r.invested ? <span style={{ color: 'var(--profit)' }}>▲</span> : <span style={{ color: 'var(--loss)' }}>▼</span>)}
                       {' '}Inv {fmtMoney(r.invested, currency)}
                     </div>
                   </td>
-                  <td onClick={() => navigate(`/stock/${r.ticker}`)} className={Number.isFinite(r.profit) ? (r.profit >= 0 ? 'pill-buy' : 'pill-sell') : ''}>
+                  <td onClick={() => navigate(`/stock/${r.ticker}`)} className={Number.isFinite(r.profit) ? (r.profit >= 0 ? 'pill-positive' : 'pill-negative') : ''}>
                     <div>{Number.isFinite(r.profit) ? fmtMoney(r.profit, currency) : '—'}</div>
-                    <div className="footer-note">{Number.isFinite(r.profitPct) ? `${r.profitPct >= 0 ? '+' : ''}${r.profitPct.toFixed(1)}%` : ''}</div>
+                    <div className="text-muted">{Number.isFinite(r.profitPct) ? `${r.profitPct >= 0 ? '+' : ''}${r.profitPct.toFixed(1)}%` : ''}</div>
                   </td>
-                  <td onClick={() => navigate(`/stock/${r.ticker}`)} className="footer-note" style={{ whiteSpace: 'nowrap' }}>
+                  <td onClick={() => navigate(`/stock/${r.ticker}`)} className="text-muted" style={{ whiteSpace: 'nowrap' }}>
                     +1% {fmtPrice(r.t1)}<br />+2% {fmtPrice(r.t2)}<br />+5% {fmtPrice(r.t3)}
                   </td>
                   <td onClick={() => navigate(`/stock/${r.ticker}`)} className={r.statusClass}>{r.statusLabel}</td>
@@ -168,7 +183,7 @@ function HoldingsCard() {
           </table>
         </div>
       ) : (
-        <p className="footer-note">No open positions yet.</p>
+        <p className="text-muted">No open positions yet.</p>
       )}
     </CollapsibleCard>
   );
@@ -189,6 +204,13 @@ export function DashboardPage() {
   const moneyTitle = (n: number) => (raw ? undefined : fmtMoney(n, currency));
   const totalInvestment = rows.reduce((s, r) => s + r.invested, 0);
   const portfolioROIPct = totalInvestment > 0 ? (summary.unrealizedPL / totalInvestment) * 100 : 0;
+  // User-requested (2026-09-08): "Current Deposit (Deposits - Withdrawals)
+  // & Current Deposits vs Current NET Worth (Cash Bal + Port. value)."
+  // Both fields already exist on `summary` (cashSummary() already computes
+  // netWorth as cashBalance + portfolioValue, matching the user's own
+  // definition exactly) — no new calc logic, just two new stat cards.
+  const currentDeposit = summary.totalInward - summary.totalOutward;
+  const growthVsDeposit = summary.netWorth - currentDeposit;
 
   // Pending item 17's hover-cross-highlighting: hovering a ticker's slice/bar
   // in either chart dims every OTHER ticker in BOTH charts, so the two
@@ -230,15 +252,39 @@ export function DashboardPage() {
 
       <div className="rail-split">
         <div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
+          <div className="grid-auto" style={{ ...gridAutoStyle(160, 12), marginBottom: 20 }}>
             <StatCard label="Net Worth" value={money(summary.netWorth, currency)} title={moneyTitle(summary.netWorth)} hue={INVEST_PALETTE[3]} />
-            <StatCard label="Cash Balance" value={money(summary.cashBalance, currency)} title={moneyTitle(summary.cashBalance)} hue={INVEST_PALETTE[7]} />
+            <StatCard
+              label="Cash Balance"
+              value={money(summary.cashBalance, currency)}
+              title={moneyTitle(summary.cashBalance)}
+              hue={INVEST_PALETTE[7]}
+              sub={
+                summary.pendingCashImpact !== 0
+                  ? `${summary.pendingCashImpact > 0 ? '+' : ''}${money(summary.pendingCashImpact, currency)} pending orders → ${money(summary.cashBalance + summary.pendingCashImpact, currency)} incl. pending`
+                  : undefined
+              }
+            />
             <StatCard label="Portfolio Value" value={money(summary.portfolioValue, currency)} title={moneyTitle(summary.portfolioValue)} hue={INVEST_PALETTE[6]} />
             <StatCard label="Realized P/L" value={money(summary.realizedPL, currency)} title={moneyTitle(summary.realizedPL)} hue={summary.realizedPL >= 0 ? 'var(--profit)' : 'var(--loss)'} labelTitle="Profit or loss already locked in — from stock you've fully sold." />
             <StatCard label="Unrealized P/L" value={money(summary.unrealizedPL, currency)} title={moneyTitle(summary.unrealizedPL)} hue={summary.unrealizedPL >= 0 ? 'var(--profit)' : 'var(--loss)'} labelTitle="Profit or loss on paper only — from stock you still hold, based on its current price." />
             <StatCard label="Net P/L" value={money(summary.netPL, currency)} title={moneyTitle(summary.netPL)} hue={summary.netPL >= 0 ? 'var(--profit)' : 'var(--loss)'} labelTitle="Realized plus unrealized P/L combined — your total profit or loss so far." />
             <StatCard label="Total Deposits" value={money(summary.totalInward, currency)} title={moneyTitle(summary.totalInward)} hue={INVEST_PALETTE[1]} />
             <StatCard label="Total Withdrawals" value={money(summary.totalOutward, currency)} title={moneyTitle(summary.totalOutward)} hue={INVEST_PALETTE[5]} />
+            <StatCard
+              label="Current Deposit"
+              value={money(currentDeposit, currency)}
+              title={moneyTitle(currentDeposit)}
+              hue={INVEST_PALETTE[1]}
+              labelTitle="Total deposits minus total withdrawals — your net capital currently put into this account."
+            />
+            <StatCard
+              label="Deposits vs. Net Worth"
+              value={money(growthVsDeposit, currency)}
+              title={moneyTitle(growthVsDeposit)}
+              hue={growthVsDeposit >= 0 ? 'var(--profit)' : 'var(--loss)'}
+              labelTitle="Current Net Worth (Cash Balance + Portfolio Value) minus Current Deposit — how much your account has grown (or shrunk) beyond what you've actually put in."
+            />
             <StatCard label="Total Fees" value={money(summary.totalCharges, currency)} title={moneyTitle(summary.totalCharges)} hue={INVEST_PALETTE[4]} />
             <StatCard label="Rewards" value={money(summary.totalRewards, currency)} title={moneyTitle(summary.totalRewards)} hue={INVEST_PALETTE[2]} />
             <StatCard label="Open Positions" value={fmt(rows.length, 0)} hue={INVEST_PALETTE[0]} title="Number of distinct tickers you currently hold shares in." />
@@ -252,7 +298,7 @@ export function DashboardPage() {
 
           <HoldingsCard />
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
+          <div className="grid-auto" style={gridAutoStyle(320, 16)}>
             <ChartCard title="Allocation by ticker (cost basis)" empty={!rows.length}>
               <Doughnut
                 data={{

@@ -18,15 +18,17 @@ speculative — but only QSE is actually built so far. Design new architecture
 to extend cleanly to the rest; don't build the rest speculatively.
 
 **Standing instruction (added 2026-08-23, user-requested): always update
-`README.md`'s Done/Pending sections for the latest developments and state**
-whenever a feature lands, changes, or gets deferred — do this as part of
-finishing the work, not as an afterthought. `README.md` is the project's
-actual backlog/status doc; this file is continuity notes for an AI session
-picking the project back up, not a substitute for it. Keep both current.
+`webapp/README.md`'s Done/Pending sections for the latest developments and
+state** whenever a feature lands, changes, or gets deferred — do this as
+part of finishing the work, not as an afterthought. `webapp/README.md` is
+the project's actual backlog/status doc (moved there from the repo root on
+2026-09-08 — see "Repo layout" below); this file is continuity notes for
+an AI session picking the project back up, not a substitute for it. Keep
+both current.
 
 **Standing instruction (added 2026-08-23, user-requested): auto-commit and
 push tested changes without asking first, and keep building the modules in
-`MODULES_PLAN.md`'s suggested order without waiting for per-step
+`webapp/MODULES_PLAN.md`'s suggested order without waiting for per-step
 confirmation.** The user is this repo's sole owner (solo project, `main`
 branch, no other collaborators) and explicitly asked to remove the
 per-commit "should I push?" and per-module "should I start this?" checkpoints
@@ -36,8 +38,8 @@ confirmation step, not the quality bar. This does not extend to genuinely
 destructive or undesigned actions (force-push, deleting real user data,
 anything not already covered by a written plan) — use judgment and still
 ask if something outside already-decided scope comes up. Also maintain a
-**user manual** (`USER_MANUAL.md`, end-user facing — how to use the app,
-not developer notes) continuously as features ship.
+**user manual** (`webapp/USER_MANUAL.md`, end-user facing — how to use the
+app, not developer notes) continuously as features ship.
 
 ## Current status (as of 2026-08-23)
 
@@ -5860,25 +5862,195 @@ app — zero new console errors anywhere. `npx tsc -b` / `npm run test` (442 tes
 115's four structural items (Bank-as-parent-entity, Funds/broker-as-parent-entity, entity
 active/favorite/Sr#, Bank's Analytics date-range filtering) — none of this round's fixes
 touched those.
+- **Six PRs merged 2026-09-08, working down README's Pending backlog per the user's own
+  "continue until all pending items are completed" standing instruction — see README Done
+  items 247/248, the numbering-collision fix, 262/263, and 264 for the full per-item
+  writeups; this file's own detailed narrative wasn't updated per-PR during that stretch (a
+  real gap — `webapp/README.md` is the source of truth for this window, not this file's
+  prose) to keep pace with a fast run of small, well-scoped PRs.** Highlights, each its own
+  merged PR: ticker-logo rollout finished (closes Pending item 118); Funds gained the shared
+  category-registry (`lib/categories.ts`) migration Cash/Bank/Rentals already had (closes
+  Pending item 126); a real 13-way Done-item numbering collision in README.md (two
+  independently-grown numbering conventions colliding across the 232-246 range) found and
+  fixed via a scripted zero-collision re-check, not by eyeballing; a stale Pending item 114
+  cross-reference corrected to point at `UI_DESIGN_GUIDELINES.md`, discovered mid-audit; a
+  real reorder-arrows bug fixed (backdated same-day Bank/Cash/etc. transactions weren't
+  tying for the same-day reorder feature because `nowTime()`'s wall-clock auto-fill never
+  re-synced after the Date field was backdated — new `defaultTimeForDate()` in
+  `lib/datetime.ts` re-stamps `nowTime()` only when the chosen date is genuinely today, else
+  clears back to the noon default); and Rentals' semi-automated "Rent collection" approve
+  flow gained the same account-linking shortcut every sibling module's own "approve and log"
+  action already had (it had none at all before this fix — a real, if unconfirmed-as-a-
+  regression, gap). **Same day, a five-item batch of further bugs — see README Done item
+  264**: (1) a real financial-correctness bug where a cross-currency linked-transfer
+  suggestion (`toAmount`, auto-computed from `lib/fx.ts`'s cached rates) went stale and leaked
+  into a LATER same-currency pair on the same popup row — the user's own real report (QIB→BOP
+  RDA cross-currency, then UBL→MCB same-currency on the same row, producing a nonsensical
+  ~85.555... amount) — fixed by explicitly resetting `toAmount`/`toAmountTouched` on every
+  `finance`/`other` change and on the link checkbox itself, the same "only-nudge-forward,
+  reset-on-the-real-transition" discipline as Done item 77; (2) picking a Category on a
+  LINKED transfer row was silently discarded (`buildSideRecord` always hardcodes
+  `TRANSFER_CATEGORY_ID` for a linked record by design) — fixed by hiding the Category field
+  entirely while linked, with a `Tooltip` explaining why, rather than pretending the picked
+  category would apply; (3) the same-day reorder-arrows feature (Done item 235) was
+  broadened from same-real-INSTANT to same-CALENDAR-DATE — new `dateOnlyMs()` in
+  `lib/datetime.ts`, wired into every display ledger with `ReorderButtons` (9 call sites
+  across 8 files) as both the sort key and the tie-detector, deliberately NOT touched in the
+  core FIFO/realized-P&L calc engine's own `sortTransactionsChronological()`, which still
+  needs the finer real-instant ordering for financial correctness; (4) the Transfers popup's
+  "Other finance" side now defaults to Banking (`LIKELY_OTHER_MODULE`) instead of a hardcoded
+  Cash, since Bank is the most common real "other side" per the user's own examples; (5) a
+  new optional `rateSource?: string` field on `InterEntityTransferInput`/`InterEntityTransfer`
+  records where a cross-currency link's real conversion rate came from (e.g. "UBL bank rate"),
+  shown only when the two sides' currencies differ. `npx tsc -b` / `npm run test` (624 tests,
+  unchanged across all five — pure UI-defaulting/wiring, no calc-engine formula touched) /
+  `npm run build` all clean; every one of the five verified live via Playwright, including a
+  real reproduction of the exact reported stale-toAmount sequence.
+- **Bank parent entity built additively (2026-09-08) — closes README Pending item 115(a), see
+  README Done item 265 — plus a real row-banding contrast bug fixed (Done item 266).** Bank
+  as a normalized parent entity ("add bank first... see the total balance with that bank") was
+  built with ZERO migration risk: a new optional `Bank` type + `BankAccount.bankId` link, no
+  automatic conversion of any account's existing free-text bank name into a real record —
+  grouping is always an explicit user action, so there was no "confirm a migration first" step
+  needed despite this being flagged as high-risk schema surgery in the original Pending item.
+  Funds/brokerage parent entity (item 115(b)) is the still-open twin. Separately, a real,
+  measured CSS bug: table row banding used `color-mix` between `--panel`/`--panel-2`, two
+  tokens only a few RGB values apart on the default theme, making alternating rows nearly
+  invisible — fixed by mixing in `--accent` instead (always a distinct hue from panel/panel-2
+  on every theme).
+- **"SERIOUS BUG: Add & Edit popups are lossing data while prefilling and saving" — root-caused
+  and fixed same day (2026-09-08), see README Done item 267.** A broad sweep of every module's
+  Add/Edit draft-state pattern (Funds/EMI/Personal Loans/Subscriptions/Rentals/Bank/Cash) found
+  no systemic "field silently dropped" bug — every module uses the safe full-record-spread +
+  merge/replace pattern. Asked the user which popup; answer: "Plans." The real gap: Cash's
+  `PlanList` and Bank's `BankPlanList` inline edit rows never exposed Currency (Cash) or
+  Recurrence (both) for editing at all — the underlying `editRow` state DID preserve them (an
+  untouched full spread), so nothing was actually being wiped on save, but a user opening Edit
+  on a recurring/foreign-currency plan saw no sign those fields existed, reading exactly like
+  "lost." Fixed by wiring the already-existing `RecurrenceFields` component (built for the ADD
+  forms, never also added to either module's EDIT row) plus a Currency `<select>` into both
+  inline edit rows, with the Date field's `onChange` also re-syncing `recurrence.startDate` on
+  edit (matching what the ADD forms already did). Verified live: changing a plan's recurrence
+  cycle and saving persisted correctly while every other field stayed intact.
+- **"Planning & Budget Planner are two faces of a single feature, confusing, complex and still
+  incomplete" — merged into one page same day (2026-09-08), see README Done item 268.** Asked
+  the user how to resolve it; chose "merge into one page." Confirmed the complaint was accurate
+  (both pages let you add a Cash/Bank plan with neither a strict superset of the other) before
+  merging. Kept the `/planning` route; `/budget` now redirects there; the "Budget Planner"
+  `CategoryNav` entry is gone. New page order: Upcoming (30 days) → the old Budget Planner's
+  combined filterable Cash/Bank/Rentals activity table → Cash's own Planning tools (now with the
+  fixed recurrence-capable plan list) → Banking's own Planning tools → a new Rentals-only
+  "Add a one-off plan" section (Budget Planner's old generic add-plan form, narrowed to Rentals
+  only, since Cash/Bank now have strictly more capable sections of their own above).
+  `features/budget/pages/BudgetPlannerPage.tsx` deleted; `lib/calc/budgetPlanner.ts` (the pure
+  calc module) is untouched, still used by `netWorthTrend.ts` and the merged page.
 
 ## Live URLs
 
-- New React app (QSE + PSX, `#/` and `#/psx`, now including a native Risk
-  Analysis page for both — see Current status): **https://ranamrameez.github.io/FinaceMaster/webapp/**
-- Legacy apps (`PSX_Trade_Planner.html` and `Risk_Analysis_Calculator.html`
-  are both now superseded by React equivalents but left in place — see
-  Current status above): **https://ranamrameez.github.io/FinaceMaster/**
+- **https://ranamrameez.github.io/FinaceMaster/** — the React app (QSE + PSX,
+  `#/` and `#/psx`), now the ONLY thing this repo deploys. The legacy static
+  apps this repo used to ALSO serve (`index.html`/QSE, `PSX_Trade_Planner.html`,
+  `Risk_Analysis_Calculator.html`, both a duplicate `PSX_Trade_Planner .html`
+  with a trailing space in its filename, and their `css/`/`js/` assets) are
+  gone as of 2026-09-08 — see "Repo root cleanup" below for why and what
+  else went with them. The app used to live at a `/webapp/` subpath
+  alongside those legacy files; it's now deployed at the site root instead
+  (`webapp/vite.config.ts`'s `base` and `.github/workflows/static.yml` both
+  updated together — keep them in sync if the deploy path ever changes
+  again).
+
+## Repo root cleanup (2026-09-08)
+
+**User-requested, framed as a real risk**: *"clean & restructure the repo
+root now because legacy pages can destroy our db. we dont need the stale/
+isolated sample data, docs and htmls etc."* Two real, distinct problems
+were found and fixed, not just tidying:
+
+1. **The legacy static apps could still write to the exact same Firebase
+   project this app uses**, with older/unmaintained logic no longer
+   compatible with the real calc-engine fixes made throughout this file's
+   own history (fee calibration, same-day netting, FIFO ordering, etc.) —
+   a page still reachable at a stable URL was a real risk of a stale write
+   corrupting real data. Deleted outright:
+   `index.html`, `PSX_Trade_Planner.html`, `PSX_Trade_Planner .html` (an
+   accidental duplicate with a trailing space in its own filename), `Risk_
+   Analysis_Calculator.html`, and their supporting `css/`/`js/` folders —
+   every one of these has a real, tested React equivalent already (see
+   Current status above), so nothing was lost.
+2. **A second, more serious issue found while investigating the first,
+   not something the user named directly**: `.github/workflows/static.yml`
+   used to `rsync` the ENTIRE repo root into the deploy output (minus a
+   short denylist: `_site`/`webapp`/`.github`/`.git`/`node_modules`) — which
+   meant every OTHER repo-root file was also being served publicly by
+   GitHub Pages, including the real personal financial data snapshots
+   (`qse-workbook-backup.json`, `psx/psx-workbook-backup.json`) at
+   predictable, guessable URLs. This repo's own deploy step (`actions/
+   deploy-pages`) doesn't run Jekyll's dotfile-exclusion either, so even
+   `.firebaserc` was reachable. **Fixed by switching from an implicit
+   denylist to an explicit allowlist**: the workflow now uploads ONLY
+   `webapp/dist` — nothing else in the repo root is ever staged for
+   deploy, regardless of what gets added there in the future. Verified
+   live (a local static server, not the real GitHub Pages endpoint —
+   this sandbox's own network policy blocks github.io) that the rebuilt
+   app loads with zero console errors at the new root path before this
+   shipped.
+3. **Stale/isolated sample data removed** (per the user's own explicit
+   wording), all confirmed via grep to have zero remaining references
+   from any code or doc before deletion: `psx/trades/aug_2026_*.png` (5
+   raw screenshot working-files from the contract-note extraction
+   sessions — fully transcribed into `psx/trades/psx_sample_statement.html`
+   already, nothing lost), `CGPT -  SNGPL  Analyze.pdf` (an unreferenced
+   one-off analysis export), `JS_Zindigi_SNGP_Trading_Analysis.xlsx`
+   (a SNGP-only trade log now fully superseded by the much more complete
+   `psx_sample_statement.html`, which covers every ticker with a real
+   FIFO Open/Closed ledger and an Export CSV button), and
+   `reference/finance-suite-prototype/` (the external reference prototype
+   used while building Cash/Personal Loans/Banking/EMI/Funds/Rentals —
+   all of those modules are long since built, so there's nothing left to
+   port from it).
+4. **Explicitly kept, checked individually rather than swept along with
+   everything else**: `functions/` (a real, deliberate Cloud Function
+   scaffold for scheduled FX-rate fetching — unused by the shipped Net
+   Worth feature, which ended up fetching client-side instead, per that
+   feature's own earlier entry in this file, but it represents real
+   architecture work matching this app's own "no live market-data API
+   calls from a page load" principle, not junk); `thegroup-price-sync/`
+   (a genuinely separate, fully-documented Chrome extension for feeding
+   the shared `stockData/QSE` Firebase node — see its own README, not
+   something built in this project's main session history but a real,
+   working tool, not sample data); `qse-workbook-backup.json`/`psx/
+   psx-workbook-backup.json` (real user data snapshots, deliberately kept
+   as the source the Vitest fixtures under `webapp/src/lib/calc/__tests__/
+   fixtures/` are refreshed from — see Data safety below); `firebase.json`/
+   `.firebaserc` (real project config, referenced by `functions/`).
+5. **Not done, flagged rather than guessed at**: whether the app should
+   ALSO gain a real `.nojekyll`/robots-style safeguard, or whether
+   `qse-workbook-backup.json`/`psx/psx-workbook-backup.json` should move
+   somewhere not deploy-adjacent at all (they're no longer served now that
+   the allowlist fix is in, but they still sit in the same repo root a
+   future workflow change could accidentally re-expose) — worth a second
+   look if this pattern ever gets touched again.
 
 ## Repo layout
 
+**Restructured 2026-09-08, same session as the "Repo root cleanup" above, same user
+instruction ("deep cleaning... use qualified names for folders... root repo should list
+general files... platform specific info should stay inside its directory").** The repo
+root now holds only genuinely general/cross-platform things: this file (kept at the root
+so it keeps auto-loading for future sessions — see the note below), a short general
+`README.md`, `.github/`, `functions/`+`firebase.json`+`.firebaserc` (the one Firebase
+project every platform in this repo shares), and three qualified top-level folders —
+`webapp/` (the web app, with all of ITS OWN detailed docs now living inside it),
+`chrome-extension/` (renamed from `thegroup-price-sync/`), and `sample/` (real QSE/PSX
+data snapshots, moved out of the root and out of a bare unlabeled `psx/` folder). There
+is no Android/iOS app in this repo today — those names only came up as examples of the
+qualified-naming pattern to follow if one is ever added, not a placeholder to create now.
+
 ```
-MODULES_PLAN.md                                                     design plan for Funds/Banking/Cash/Rentals/EMI-Loans/Personal-Loans (Cash is built, 2026-08-23 — see its own entry; the rest aren't yet)
-USER_MANUAL.md                                                      end-user-facing docs — kept up to date alongside features, not a substitute for this file
-reference/finance-suite-prototype/                                  external reference prototype (different tech stack, not wired into this app) — see its NOTE.md
-index.html, PSX_Trade_Planner.html, Risk_Analysis_Calculator.html   legacy static apps (untouched)
-css/, js/, psx/                                                     legacy assets/data
-qse-workbook-backup.json, psx/psx-workbook-backup.json              real user data snapshots (see Data safety below)
-webapp/                                                              the new React app — all new work happens here
+functions/                                                          Cloud Function scaffold (FX-rate fetch) — unused by the shipped feature, kept as real infra, see "Repo root cleanup" above
+chrome-extension/                                                   Chrome extension feeding the shared stockData/QSE Firebase node (renamed from thegroup-price-sync/) — see its own README, not sample data
+sample/qse-workbook-backup.json, sample/psx/psx-workbook-backup.json, sample/psx/trades/  real QSE/PSX data snapshots + the crystallized PSX statement doc (see Data safety below) — moved out of the repo root into their own qualified folder
+webapp/                                                              the web app — all new web-platform work happens here; also now holds README.md/MODULES_PLAN.md/USER_MANUAL.md/UI_DESIGN_GUIDELINES.md, since all four are entirely about this one platform
   src/lib/calc/            pure calc engine (fees, positions, cash ledger, P/L) — exchange-agnostic,
                             parametrized by a FeeCalculator; psxFees.ts has the PSX-specific one
   src/store/                createWorkbookStore.ts is a generic factory; workbookStore.ts (QSE) and
@@ -5910,8 +6082,8 @@ webapp/                                                              the new Rea
                             see its own entry above and MODULES_PLAN.md §12
   src/components/           shared UI: Modal, ConfirmDialog, SignInModal, Sparkline, Tabs, Sidebar, etc.
   src/types/workbook.ts     QSE types; psxWorkbook.ts has PSX's parallel types
-.github/workflows/static.yml   CI: builds webapp/ and deploys it to /webapp/ alongside the legacy
-                                root files (see Deployment below — this had a real bug, now fixed)
+.github/workflows/static.yml   CI: builds webapp/ and deploys ONLY webapp/dist, at the site root
+                                (see Deployment below and "Repo root cleanup" above)
 ```
 
 ## Design decisions worth knowing before you change anything
@@ -6113,17 +6285,25 @@ to be on PATH properly and simplify it).
 
 ## Deployment (GitHub Pages)
 
-`.github/workflows/static.yml` builds `webapp/` in CI and assembles a clean
-`_site/` staging directory (legacy root files + only `webapp/dist`'s
-*built* output at `/webapp/`) before uploading — **do not revert to
-uploading the whole repo as-is** (`path: '.'`), that was a real bug: it let
-`webapp/index.html` (Vite's *unbuilt* dev entry template, which also exists
-at that path) shadow the actual built `webapp/dist/index.html` at the same
-URL, so GitHub Pages served the raw dev-mode page instead of the app.
+`.github/workflows/static.yml` builds `webapp/` in CI and uploads ONLY
+`webapp/dist` — **never revert this to uploading the whole repo, or the
+whole repo root again** (`path: '.'`, or a step that `rsync`s the repo root
+into a staging directory): both are real bugs already hit once each.
+`path: '.'` lets `webapp/index.html` (Vite's *unbuilt* dev entry template,
+which also exists at that path) shadow the actual built
+`webapp/dist/index.html` at the same URL, serving the raw dev-mode page
+instead of the app. The repo-root `rsync` (used from 2026-08-23 until the
+2026-09-08 "Repo root cleanup" above) publicly served every OTHER file in
+the repo root too, including real personal financial data snapshots — see
+that section for the full story. The allowlist (`webapp/dist` only, nothing
+else) is deliberate; keep it that way even if something new gets added to
+the repo root later.
 
-`webapp/vite.config.ts` sets `base: '/FinaceMaster/webapp/'` to match this
-subpath deployment. If the deploy path ever changes, update both the
-workflow's staging step and this `base` value together.
+`webapp/vite.config.ts` sets `base: '/FinaceMaster/'` to match this
+root-of-the-site deployment (changed from `/FinaceMaster/webapp/` in the
+same 2026-09-08 cleanup, once the legacy root files it used to sit
+alongside were gone). If the deploy path ever changes again, update both
+the workflow and this `base` value together.
 
 Push to `main` to deploy (auto-triggers the workflow). Watching a deploy
 without `gh` CLI (not installed on the dev machine): poll
@@ -6137,16 +6317,18 @@ window/prompt on their screen rather than assuming failure.
 
 ## Data safety note
 
-`qse-workbook-backup.json` and `psx/psx-workbook-backup.json` at the repo
-root are **real personal trading data snapshots** the user provided, kept in
-sync manually. They're also used as Vitest fixtures
-(`webapp/src/lib/calc/__tests__/fixtures/`) — `qse-workbook-backup.json`'s
-copy is pinned to specific hand-verified expected values in `calc.test.ts`;
-`psx-workbook-backup.json`'s copy (added 2026-08-23) is used more loosely by
-`psxFees.test.ts` (pipeline-runs-clean + a couple of settings-dependent spot
-checks, not fully hand-traced per-row). Don't casually overwrite either
-fixture copy when refreshing the root backup files without checking whether
-the tests' expected values still hold.
+`sample/qse-workbook-backup.json` and `sample/psx/psx-workbook-backup.json`
+(moved out of the repo root into `sample/` on 2026-09-08, alongside
+`sample/psx/trades/psx_sample_statement.html`) are **real personal trading
+data snapshots** the user provided, kept in sync manually. They're also
+used as Vitest fixtures (`webapp/src/lib/calc/__tests__/fixtures/`) —
+`qse-workbook-backup.json`'s copy is pinned to specific hand-verified
+expected values in `calc.test.ts`; `psx-workbook-backup.json`'s copy
+(added 2026-08-23) is used more loosely by `psxFees.test.ts` (pipeline-
+runs-clean + a couple of settings-dependent spot checks, not fully
+hand-traced per-row). Don't casually overwrite either fixture copy when
+refreshing the `sample/` backup files without checking whether the tests'
+expected values still hold.
 
 ## Firebase
 

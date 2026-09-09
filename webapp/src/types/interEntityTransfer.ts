@@ -76,6 +76,17 @@ export interface InterEntityTransferInput {
   from: LinkSideConfig;
   to: LinkSideConfig;
   note?: string;
+  /** User-requested (2026-09-08): "for inter-currency transfer, we should
+   * store source as well like FX name" — a free-text record of WHERE the
+   * conversion rate came from (e.g. "UBL bank rate", "Sarafa exchange",
+   * "Open market") for a cross-currency link. Purely a record of the
+   * user's own real conversion, same "no live FX lookup" rule as
+   * `fromAmount`/`toAmount` themselves — never resolved against
+   * `lib/fx.ts`'s cached rates, just remembered alongside the two amounts
+   * the user already entered from that real source. Only meaningful when
+   * `fromAmount`'s and `toAmount`'s currencies actually differ; left
+   * unset for a same-currency link. */
+  rateSource?: string;
 }
 
 export interface InterEntityTransfer extends InterEntityTransferInput {

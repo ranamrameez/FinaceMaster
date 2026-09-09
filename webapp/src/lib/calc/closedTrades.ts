@@ -3,6 +3,15 @@ import { sortTransactionsChronological } from './sortTransactions';
 
 export interface ClosedTrade {
   ticker: string;
+  /** The originating SELL transaction's stable `id` (see `Transaction.id`'s
+   * own doc comment), when it has one — lets a caller aggregate every
+   * ClosedTrade produced by ONE sell (a sell that drained more than one buy
+   * lot produces several records) back into a single per-row P&L figure for
+   * that specific sell transaction, without re-deriving the FIFO match.
+   * User's own ask (2026-09-08): "show the sold price and PL w.r.t. that
+   * lot's buy price... inline in the main trade row." Undefined only for
+   * genuinely id-less legacy data that predates the retrofit. */
+  sellTxId?: string;
   buyDate: string;
   buyPrice: number;
   /** Fee for just the matched shares of the original buy (prorated if the
@@ -51,7 +60,9 @@ const EPSILON = 1e-7;
 export function computeClosedTrades(transactions: Transaction[], calcFee: FeeCalculator): ClosedTrade[] {
   const lotsByTicker: Record<string, OpenLot[]> = {};
   const trades: ClosedTrade[] = [];
-  const sorted = sortTransactionsChronological(transactions);
+  // Excludes pending transactions (Pending-transaction-state, 2026-09-08) —
+  // a not-yet-filled sell hasn't actually closed anything yet.
+  const sorted = sortTransactionsChronological(transactions.filter((t) => !t.isPending));
 
   for (const tx of sorted) {
     const t = tx.ticker;
@@ -79,6 +90,7 @@ export function computeClosedTrades(transactions: Transaction[], calcFee: FeeCal
       const holdingDays = Math.max(0, Math.round((sellMs - buyMs) / 86400000));
       trades.push({
         ticker: t,
+        sellTxId: tx.id,
         buyDate: lot.buyDate,
         buyPrice: lot.buyPrice,
         buyFee: buyFeeShare,
@@ -96,4 +108,26 @@ export function computeClosedTrades(transactions: Transaction[], calcFee: FeeCal
   }
 
   return trades;
+}
+
+/** Per-sell-transaction realized P&L, for showing inline in the main trade
+ * row rather than only in the separate Closed Trades section — user's own
+ * ask (2026-09-08): "show the sold price and PL w.r.t. that lot's buy
+ * price... inline in the main trade row." A single sell can drain more
+ * than one buy lot (several `ClosedTrade` records sharing one `sellTxId`),
+ * so this sums across all of them: the row shows ONE net figure for that
+ * sell, blending across lots if it touched more than one — matches this
+ * project's own existing "the trade row is the unit the user thinks in
+ * terms of" convention (same reasoning as `Position`'s own weighted-average
+ * roll-up), while the untouched `computeClosedTrades()` output still shows
+ * each lot's own separate price/P&L for anyone who wants that detail. */
+export function closedPLBySellTxId(trades: ClosedTrade[]): Record<string, { netPL: number; shares: number }> {
+  const out: Record<string, { netPL: number; shares: number }> = {};
+  for (const t of trades) {
+    if (!t.sellTxId) continue;
+    if (!out[t.sellTxId]) out[t.sellTxId] = { netPL: 0, shares: 0 };
+    out[t.sellTxId].netPL += t.netPL;
+    out[t.sellTxId].shares += t.shares;
+  }
+  return out;
 }

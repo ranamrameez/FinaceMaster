@@ -14,6 +14,7 @@ import { requireSignIn } from '../../../components/SignInModal';
 import { createEmptyPSXWorkbook } from '../../../store/defaultPsxWorkbook';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
 import type { PSXWorkbook } from '../../../types/psxWorkbook';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 function AccountSection({
   user,
@@ -41,7 +42,7 @@ function AccountSection({
   };
 
   if (!firebaseReady) {
-    return <p className="footer-note">Cloud sync is unavailable — Firebase failed to load in this browser.</p>;
+    return <p className="text-muted">Cloud sync is unavailable — Firebase failed to load in this browser.</p>;
   }
 
   if (user) {
@@ -173,12 +174,12 @@ function FeeSettings() {
         )}
       </div>
       {feeMode === 'simple' ? (
-        <p className="footer-note" style={{ marginTop: -4 }}>
+        <p className="text-muted" style={{ marginTop: -4 }}>
           Simple mode replaces the itemized fields below — they're kept (and used again) if you
           switch back to Itemized, but have no effect while Simple is selected.
         </p>
       ) : (
-        <p className="footer-note" style={{ marginTop: -4 }}>
+        <p className="text-muted" style={{ marginTop: -4 }}>
           Government levies (PSX/NCCPL/SECP/CVT) default to 0 since they vary by broker — check your
           account statement and fill in what your broker actually charges.
         </p>
@@ -232,7 +233,7 @@ function CGTSettings() {
   return (
     <Card>
       <h3 style={{ marginTop: 0 }}>Capital gains tax</h3>
-      <p className="footer-note" style={{ marginTop: -4 }}>
+      <p className="text-muted" style={{ marginTop: -4 }}>
         Applied to gains only (a loss generates neither a charge nor a rebate) — shown as an
         estimate on stock pages and the trade calculator, not deducted from realized P/L automatically.
       </p>
@@ -261,7 +262,7 @@ function CostBasisSettings() {
   return (
     <Card>
       <h3 style={{ marginTop: 0 }}>Cost basis method</h3>
-      <p className="footer-note" style={{ marginTop: -4 }}>
+      <p className="text-muted" style={{ marginTop: -4 }}>
         Average cost blends every buy into one running average, so a sell can't be tied to a
         specific lot. FIFO tracks each buy as its own lot and sells the oldest one first — more
         accurate, but everything (realized P/L, invested amount, CGT) is recalculated from your
@@ -291,7 +292,7 @@ function AmountSettings() {
   // by far, so it's left spanning both columns on its own row rather than
   // forced narrow next to a 3-field card.
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, alignItems: 'start' }}>
+    <div className="grid-auto" style={{ ...gridAutoStyle(320, 16), alignItems: 'start' }}>
       <div style={{ gridColumn: '1 / -1' }}>
         <FeeSettings />
       </div>

@@ -4,9 +4,28 @@ import type { Property, RentalEntry } from '../../types/rentalsWorkbook';
 
 const entryDelta = (e: RentalEntry) => (e.isDeposit ? e.amount : -e.amount);
 
-/** Net income (rent income minus expenses) for one property, all time. */
+/** Net income (rent income minus expenses) for one property, all time —
+ * excludes any entry with `isPending` set (Pending-transaction-state,
+ * 2026-09-08, rolled out to Rentals via the shared `Finance.isPending`
+ * field it already inherits): a rent payment or expense that's been logged
+ * but hasn't actually cleared yet shouldn't count toward net income until
+ * it does. Every other Rentals total in the app derives from this one
+ * function, so excluding pending here is a "fix once" change — see
+ * `propertyPendingNetImpact` below for the companion figure. */
 export function propertyNetIncome(property: Property, entries: RentalEntry[]): number {
-  return entries.filter((e) => e.propertyId === property.id).reduce((s, e) => s + entryDelta(e), 0);
+  return entries
+    .filter((e) => e.propertyId === property.id && !e.isPending)
+    .reduce((s, e) => s + entryDelta(e), 0);
+}
+
+/** The net amount currently sitting in pending entries for one property —
+ * the companion figure to `propertyNetIncome` above, so the UI can show
+ * "Net: X" and "+Y pending" side by side rather than the pending amount
+ * just silently vanishing. */
+export function propertyPendingNetImpact(property: Property, entries: RentalEntry[]): number {
+  return entries
+    .filter((e) => e.propertyId === property.id && e.isPending)
+    .reduce((s, e) => s + entryDelta(e), 0);
 }
 
 /** Portfolio-wide net income, grouped by currency — never blended/converted
@@ -15,6 +34,16 @@ export function netIncomeByCurrency(properties: Property[], entries: RentalEntry
   const out: Record<string, number> = {};
   properties.forEach((p) => {
     out[p.currencyCode] = (out[p.currencyCode] || 0) + propertyNetIncome(p, entries);
+  });
+  return out;
+}
+
+/** Portfolio-wide pending net impact, grouped by currency — the companion
+ * figure to `netIncomeByCurrency` above. */
+export function netIncomePendingByCurrency(properties: Property[], entries: RentalEntry[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  properties.forEach((p) => {
+    out[p.currencyCode] = (out[p.currencyCode] || 0) + propertyPendingNetImpact(p, entries);
   });
   return out;
 }

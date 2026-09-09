@@ -86,6 +86,37 @@ export interface Finance {
    * value via `isRecordLinked(module, id)` (`lib/linkCascade.ts`) at
    * display time instead. */
   isLinked?: boolean;
+  /** User-requested (2026-09-08): "an important state of transactions
+   * (PENDING) where balances just disappear and may flow in both direction
+   * on success/failure... locks real balances." Optional, absent/false =
+   * cleared (zero migration — no real existing record has ever had this
+   * field, so every current balance/total is completely unaffected until a
+   * user actually marks something pending). A pending record is a REAL
+   * transaction the user already knows is happening (a transfer sent but
+   * not yet reflected on the other side, a stock order placed but not yet
+   * filled) — genuinely different from the Planning feature's hypothetical/
+   * estimated/recurring entries, which never touch a real balance at all.
+   * `cashBalanceByCurrency`/`accountBalance` (the two functions every other
+   * balance/total in the app derives from) exclude a pending record from
+   * the headline "available" figure by design — the user explicitly asked
+   * that pending money "disappear" from what's actually spendable right
+   * now — while `cashPendingByCurrency`/`accountPendingBalance` expose the
+   * pending amount separately so the UI can show BOTH the cleared and the
+   * including-pending figure side by side, never just silently dropping
+   * the pending amount from view entirely ("rather than giving user a
+   * heart attack by excluding pending amounts and not showing them in the
+   * stats"). Clearing a pending record (or deleting it, for a failed/
+   * cancelled one) is a plain `updateEntry`/`updateTransaction` patch — no
+   * new store action needed. **A plain boolean, not a string status enum
+   * (`'pending'|'cleared'`) — the user's own explicit design call
+   * (2026-09-08): "use boolean flag... a standard DB practice."** This is
+   * a retrofit of the field's original shipped shape (Cash/Banking, same
+   * day) — safe since the field is itself optional/brand-new, so this is a
+   * rename+type-narrow, not a data migration; no real record has ever had
+   * either shape stored. Shipped first for Cash + Banking; QSE/PSX and the
+   * remaining modules follow the identical pattern in a later pass — see
+   * `webapp/README.md`'s own Pending list. */
+  isPending?: boolean;
 }
 
 /** One entry in the shared category registry every Finance-based record

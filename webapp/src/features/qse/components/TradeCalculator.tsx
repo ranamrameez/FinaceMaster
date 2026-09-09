@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { breakEvenPrice, requiredSellPrice, roundTick } from '../../../lib/calc';
 import { PlusIcon, SaveIcon } from '../../../components/icons';
+import { TickerLogo } from '../../../components/TickerLogo';
 import { toast } from '../../../components/Toast';
 import { Field, TextInput } from '../../../components/ui/Field';
 import { Tooltip } from '../../../components/Tooltip';
@@ -10,6 +11,7 @@ import { useWorkbookStore } from '../../../store/workbookStore';
 import { useQSEDerived } from '../hooks/useQSEDerived';
 import { useQSEStockData } from '../hooks/useQSEStockData';
 import { hueStyle } from '../../../lib/statCardHues';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 type Mode = 'BUY' | 'SELL' | 'CYCLE';
 
@@ -219,6 +221,7 @@ export function TradeCalculator({ initialTicker }: { initialTicker?: string } = 
             </optgroup>
           )}
         </select>
+        {ticker && <TickerLogo ticker={ticker} exchange="qse" />}
       </div>
 
       {ticker && (
@@ -253,7 +256,7 @@ export function TradeCalculator({ initialTicker }: { initialTicker?: string } = 
             </Tooltip>
           )}
           {position && (
-            <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 8, flex: 1 }}>
+            <div className="grid-auto" style={{ ...gridAutoStyle(120, 8), flex: 1 }}>
               <div className="stat-card card"><div className="label">Avg cost</div><div className="value">{fmtPrice(avg)}</div></div>
               <div className="stat-card card" style={currentPrice > 0 ? hueStyle(currentPrice >= be ? 'var(--profit)' : 'var(--loss)') : undefined}>
                 <div className="label">Break-even</div>
@@ -279,17 +282,17 @@ export function TradeCalculator({ initialTicker }: { initialTicker?: string } = 
               <TextInput type="number" step="0.01" value={targetProfit || ''} onChange={(e) => setTargetProfit(Number(e.target.value))} />
             </Field>
           </div>
-          {overCap && <p className="footer-note" style={{ color: 'var(--loss)' }}>Capped at {shares} shares held.</p>}
+          {overCap && <p className="text-muted" style={{ color: 'var(--loss)' }}>Capped at {shares} shares held.</p>}
           {solvedSellPriceForProfit !== null && (
-            <p className="footer-note">
+            <p className="text-muted">
               Sell price needed for {fmtMoney(targetProfit, currency)} profit: {fmtPrice(solvedSellPriceForProfit)}{' '}
               <button className="btn secondary small" onClick={() => setSellPrice(roundTick(solvedSellPriceForProfit, tick))}>Use</button>
             </p>
           )}
           {sellCap > 0 && sellPrice > 0 && (
-            <div className="footer-note" style={{ marginTop: 8 }}>
+            <div className="text-muted" style={{ marginTop: 8 }}>
               Net proceeds {fmtMoney(sellNet, currency)} · Realized P/L{' '}
-              <span className={realized >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(realized, currency)}</span> · Remaining{' '}
+              <span className={realized >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(realized, currency)}</span> · Remaining{' '}
               {fmt(remainingShares, 0)} shares ({fmtMoney(remainingInvested, currency)} invested)
             </div>
           )}
@@ -341,7 +344,7 @@ export function TradeCalculator({ initialTicker }: { initialTicker?: string } = 
             )}
           </div>
           {solvedSharesForAvg !== null && (
-            <p className="footer-note">
+            <p className="text-muted">
               Buy ~{fmt(solvedSharesForAvg, 0)} shares to bring average cost to {fmtPrice(targetAvg)}{' '}
               <button
                 className="btn secondary small"
@@ -356,17 +359,17 @@ export function TradeCalculator({ initialTicker }: { initialTicker?: string } = 
             </p>
           )}
           {buyPrice > 0 && (
-            <p className="footer-note">Affordable with current cash ({fmtMoney(cashBalance, currency)}): {fmt(affordableShares, 0)} shares</p>
+            <p className="text-muted">Affordable with current cash ({fmtMoney(cashBalance, currency)}): {fmt(affordableShares, 0)} shares</p>
           )}
           {newShares > 0 && buyPrice > 0 && (
-            <div className="footer-note" style={{ marginTop: 8 }}>
+            <div className="text-muted" style={{ marginTop: 8 }}>
               New avg cost {fmtPrice(newAvg)} · New break-even {fmtPrice(newBe)} · Needs {bounceRequired.toFixed(1)}% bounce from buy price
             </div>
           )}
           {mode === 'CYCLE' && totalShares > 0 && targetSell > 0 && (
-            <div className="footer-note" style={{ marginTop: 4 }}>
+            <div className="text-muted" style={{ marginTop: 4 }}>
               If sold at target: proceeds {fmtMoney(cycleSellProceeds, currency)} · Cycle P/L{' '}
-              <span className={cycleNetPL >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(cycleNetPL, currency)}</span> ({cycleRoi.toFixed(1)}%)
+              <span className={cycleNetPL >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(cycleNetPL, currency)}</span> ({cycleRoi.toFixed(1)}%)
             </div>
           )}
         </div>
@@ -376,7 +379,7 @@ export function TradeCalculator({ initialTicker }: { initialTicker?: string } = 
         <PlusIcon />Add {mode === 'SELL' ? 'sell' : mode === 'CYCLE' ? 'buy (cycle)' : 'buy'} to transactions
       </button>
       {mode === 'CYCLE' && (
-        <p className="footer-note" style={{ marginTop: 4 }}>
+        <p className="text-muted" style={{ marginTop: 4 }}>
           Only the buy leg is logged now — add the sell as its own transaction when you actually sell.
         </p>
       )}

@@ -3,17 +3,19 @@ import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
+import { CategorySelect } from '../../../components/CategorySelect';
 import { Modal } from '../../../components/Modal';
 import { Notice } from '../../../components/Notice';
 import { Tooltip } from '../../../components/Tooltip';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { EditIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { EditIcon, PlusIcon, SaveIcon, StarIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
 import { FabButton } from '../../../components/ui/Fab';
+import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import {
@@ -27,21 +29,24 @@ import {
 } from '../../../lib/calc/subscriptionsModule';
 import { dlBarV, dlDoughnut } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
+import { categoryName, UNCATEGORIZED_ID } from '../../../lib/categories';
 import { cssVar, tickerColor } from '../../../lib/cssVar';
-import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
 import { useAppearanceStore } from '../../../store/appearanceStore';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
+import { useCategoryStore } from '../../../store/categoryStore';
 import { createEmptySubscriptionsWorkbook } from '../../../store/defaultSubscriptionsWorkbook';
 import { usePlannedBankWorkbookStore } from '../../../store/plannedBankWorkbookStore';
 import { usePlannedCashWorkbookStore } from '../../../store/plannedCashWorkbookStore';
 import { useSubscriptionsWorkbookStore } from '../../../store/subscriptionsWorkbookStore';
 import type { Subscription, SubscriptionAlert, SubscriptionsWorkbook } from '../../../types/subscriptionsWorkbook';
+import type { Category } from '../../../types/finance';
 import type { PlannedBankTransaction } from '../../../types/plannedBank';
 import type { PlannedCashEntry } from '../../../types/plannedCash';
 import { ChartCard } from '../../qse/components/ChartCard';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -82,13 +87,14 @@ function AddSubscriptionForm({ onSaved }: { onSaved?: () => void } = {}) {
   const [lastCurrency, setLastCurrency] = useLastCurrency('subscriptions', defaultCurrency);
   const ensureSignedIn = useEnsureSignedIn();
   const [s, setS] = useState<Subscription>(() => emptySubscription(lastCurrency));
+  const currencyOptions = useEnabledCurrencies(s.currencyCode);
 
   const submit = async () => {
     if (!s.name.trim()) return toast('Enter a subscription name.');
     if (!s.amount || s.amount <= 0) return toast('Enter an amount.');
     if (s.billingCycle === 'custom' && (!s.customDays || s.customDays <= 0)) return toast('Enter the custom cycle length in days.');
     if (!(await ensureSignedIn('Sign in to save subscriptions.'))) return;
-    addEntry({ ...s, id: crypto.randomUUID(), name: s.name.trim(), category: s.category?.trim() || undefined });
+    addEntry({ ...s, id: crypto.randomUUID(), name: s.name.trim() });
     toast(`Subscription "${s.name.trim()}" added.`);
     setS(emptySubscription(s.currencyCode));
     onSaved?.();
@@ -105,7 +111,7 @@ function AddSubscriptionForm({ onSaved }: { onSaved?: () => void } = {}) {
         </Field>
         <Field label="Currency" width={100} required>
           <Select value={s.currencyCode} onChange={(e) => { setS({ ...s, currencyCode: e.target.value }); setLastCurrency(e.target.value); }}>
-            {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+            {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>
         <Field label="Billing cycle" width={140}>
@@ -124,8 +130,8 @@ function AddSubscriptionForm({ onSaved }: { onSaved?: () => void } = {}) {
         <Field label="Start date">
           <TextInput type="date" value={s.startDate} onChange={(e) => setS({ ...s, startDate: e.target.value })} />
         </Field>
-        <Field label="Category (optional)" width={150}>
-          <TextInput list="subscriptions-category-datalist" value={s.category ?? ''} onChange={(e) => setS({ ...s, category: e.target.value })} placeholder="e.g. Streaming" />
+        <Field label="Category" width={180}>
+          <CategorySelect value={s.categoryID ?? UNCATEGORIZED_ID} onChange={(categoryID) => setS({ ...s, categoryID })} />
         </Field>
       </div>
       <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
@@ -144,7 +150,7 @@ function OverallSummary() {
   if (!codes.length) return null;
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px,1fr))', gap: 8, marginBottom: 16 }}>
+    <div className="grid-auto" style={{ ...gridAutoStyle(150, 8), marginBottom: 16 }}>
       {codes.map((code) => (
         <div key={code} className="stat-card card" style={hueStyle('var(--loss)')}>
           <div className="label">Monthly recurring spend ({code})</div>
@@ -159,32 +165,57 @@ function OverallSummary() {
 /* ============================== List ============================== */
 
 /** User-requested (2026-09-03): "add filters to other tables as well." */
+/** Resolves a subscription's category to a display name — the shared
+ * registry (`categoryID`) when set, falling back to the pre-retrofit
+ * free-text `category` field for old data, then "Uncategorized". Reused
+ * everywhere the category shows up (cell, sort, filter) so all three stay
+ * in sync by construction. */
+function subCategoryLabel(s: Subscription, categoryRegistry: Category[]): string {
+  return s.categoryID ? categoryName(s.categoryID, categoryRegistry) : s.category?.trim() || 'Uncategorized';
+}
+
 function SubscriptionList({ onSelect }: { onSelect: (sub: Subscription) => void }) {
   const subs = useSubscriptionsWorkbookStore((s) => s.workbook.entries);
-  const knownCategories = useMemo(() => [...new Set(subs.map((s) => s.category).filter((c): c is string => !!c))].sort(), [subs]);
+  const updateEntry = useSubscriptionsWorkbookStore((s) => s.updateEntry);
+  const categoryRegistry = useCategoryStore((s) => s.workbook.categories);
+  const ensureSignedIn = useEnsureSignedIn();
+  const knownCategories = useMemo(
+    () => [...new Set(subs.map((s) => subCategoryLabel(s, categoryRegistry)))].sort(),
+    [subs, categoryRegistry],
+  );
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'cancelled'>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  // Pending item 115(c): Sr# = the subscription's own stable position in
+  // the underlying (unfiltered) array, creation order — same convention as
+  // every other module's entity list.
+  const srNumOf = useMemo(() => new Map(subs.map((s, i) => [s.id, i + 1])), [subs]);
+
+  const toggleFavorite = async (s: Subscription) => {
+    if (!(await ensureSignedIn(s.isFavorite ? 'Sign in to unfavorite this subscription.' : 'Sign in to favorite this subscription.'))) return;
+    updateEntry(s.id, { isFavorite: !s.isFavorite });
+  };
 
   const filteredSubs = useMemo(
     () => subs.filter((s) => {
       if (statusFilter === 'active' && !s.active) return false;
       if (statusFilter === 'cancelled' && s.active) return false;
-      if (categoryFilter !== 'all' && (s.category || '') !== categoryFilter) return false;
+      if (categoryFilter !== 'all' && subCategoryLabel(s, categoryRegistry) !== categoryFilter) return false;
       return true;
     }),
-    [subs, statusFilter, categoryFilter],
+    [subs, statusFilter, categoryFilter, categoryRegistry],
   );
 
   type Row = { sub: Subscription; monthly: number; next: string };
   const rows: Row[] = filteredSubs.map((s) => ({ sub: s, monthly: monthlyEquivalent(s), next: s.active ? nextBillingDate(s) : '' }));
-  type Col = 'name' | 'amount' | 'monthly' | 'category' | 'next' | 'status';
+  type Col = 'name' | 'amount' | 'monthly' | 'category' | 'next' | 'status' | 'favorite';
   const sortValue = (r: Row, col: Col): number | string => {
     switch (col) {
       case 'amount': return r.sub.amount;
       case 'monthly': return r.monthly;
-      case 'category': return r.sub.category ?? '';
+      case 'category': return subCategoryLabel(r.sub, categoryRegistry);
       case 'next': return r.next || 'zzzz';
       case 'status': return r.sub.active ? 0 : 1;
+      case 'favorite': return r.sub.isFavorite ? 1 : 0;
       default: return r.sub.name;
     }
   };
@@ -208,31 +239,37 @@ function SubscriptionList({ onSelect }: { onSelect: (sub: Subscription) => void 
         </Field>
       </div>
       <div className="table-scroll">
-      <datalist id="subscriptions-category-datalist">
-        {knownCategories.map((c) => <option key={c} value={c} />)}
-      </datalist>
       <table>
         <thead>
           <tr>
-            <Th col="name">Name</Th><Th col="amount">Amount</Th><Th col="monthly">Monthly equiv.</Th>
+            <th>#</th><Th col="favorite">★</Th><Th col="name">Name</Th><Th col="amount">Amount</Th><Th col="monthly">Monthly equiv.</Th>
             <Th col="category">Category</Th><Th col="next">Next renewal</Th><Th col="status">Status</Th><th></th>
           </tr>
         </thead>
         <tbody>
           {sorted.map(({ sub: s, monthly, next }) => (
             <tr key={s.id} onClick={() => onSelect(s)} style={{ cursor: 'pointer' }}>
+              <td className="text-muted">{srNumOf.get(s.id)}</td>
+              <td>
+                <IconButton
+                  label={s.isFavorite ? 'Unfavorite' : 'Favorite'}
+                  icon={<StarIcon size={13} filled={s.isFavorite} />}
+                  align="right"
+                  onClick={(e) => { e.stopPropagation(); toggleFavorite(s); }}
+                />
+              </td>
               <td>{s.name}</td>
               <td>{fmtMoney(s.amount, s.currencyCode)}{CYCLE_LABEL[s.billingCycle]}</td>
               <td>{fmtMoney(monthly, s.currencyCode)}</td>
-              <td>{s.category || '—'}</td>
+              <td><span className="pill-info">{subCategoryLabel(s, categoryRegistry)}</span></td>
               <td>{next || '—'}</td>
-              <td className={s.active ? 'pill-buy' : 'pill-sell'}>{s.active ? 'Active' : 'Cancelled'}</td>
+              <td className={s.active ? 'pill-positive' : 'pill-negative'}>{s.active ? 'Active' : 'Cancelled'}</td>
               <td><button className="btn secondary small" onClick={(e) => { e.stopPropagation(); onSelect(s); }}>Open</button></td>
             </tr>
           ))}
           {!sorted.length && (
             <tr>
-              <td colSpan={7} className="footer-note">
+              <td colSpan={9} className="text-muted">
                 {subs.length ? 'No subscriptions match these filters.' : 'No subscriptions yet — add one above.'}
               </td>
             </tr>
@@ -280,7 +317,7 @@ function AlertsSection({ sub }: { sub: Subscription }) {
 
   return (
     <CollapsibleCard title={<h3 style={{ margin: 0 }}>Renewal / expiry alerts</h3>} style={{ marginBottom: 16 }}>
-      <p className="footer-note" style={{ marginTop: 0 }}>
+      <p className="text-muted" style={{ marginTop: 0 }}>
         Get reminded before this renews or expires — pick a suggested lead time, or set an exact date and time.
       </p>
       <div className="row" style={{ gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
@@ -316,7 +353,7 @@ function AlertsSection({ sub }: { sub: Subscription }) {
               {alerts.map((a) => (
                 <tr key={a.id}>
                   <td>{describe(a)}</td>
-                  <td className="footer-note">
+                  <td className="text-muted">
                     {sub.active ? new Date(alertTriggerMs(sub, a) ?? 0).toLocaleString() : 'Subscription cancelled'}
                   </td>
                   <td><IconButton label="Remove" icon={<TrashIcon size={13} />} align="right" onClick={() => removeAlert(a.id)} /></td>
@@ -326,7 +363,7 @@ function AlertsSection({ sub }: { sub: Subscription }) {
           </table>
         </div>
       ) : (
-        <p className="footer-note" style={{ marginBottom: 0 }}>No alerts configured yet.</p>
+        <p className="text-muted" style={{ marginBottom: 0 }}>No alerts configured yet.</p>
       )}
     </CollapsibleCard>
   );
@@ -335,9 +372,11 @@ function AlertsSection({ sub }: { sub: Subscription }) {
 function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => void }) {
   const updateEntry = useSubscriptionsWorkbookStore((s) => s.updateEntry);
   const deleteEntry = useSubscriptionsWorkbookStore((s) => s.deleteEntry);
+  const categoryRegistry = useCategoryStore((s) => s.workbook.categories);
   const ensureSignedIn = useEnsureSignedIn();
   const [editing, setEditing] = useState(false);
   const [editRow, setEditRow] = useState<Subscription>(sub);
+  const currencyOptions = useEnabledCurrencies(editRow.currencyCode);
 
   const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
   // Archived accounts stay findable (so an already-linked archived account
@@ -398,9 +437,15 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
       updateEntry(sub.id, { paidVia: { module: 'bank', ref: account.id } });
       toast(`${newPlans.length} planned renewal${newPlans.length > 1 ? 's' : ''} added to ${account.name}'s Planning tab.`);
     } else {
+      // A generated plan's own `category` is free text (Planning predates the
+      // shared registry) — only pass a real category name through, not the
+      // generic "Uncategorized" fallback `subCategoryLabel` uses for display.
+      const planCategory = sub.categoryID && sub.categoryID !== UNCATEGORIZED_ID
+        ? categoryName(sub.categoryID, categoryRegistry)
+        : sub.category;
       const newPlans: PlannedCashEntry[] = occurrences.map((o) => ({
         id: crypto.randomUUID(), date: o.date, type: 'OUT', amount: o.amount, currencyCode: sub.currencyCode,
-        category: sub.category, note: `Subscription: ${sub.name}`, executed: false, sourceSubscriptionId: sub.id,
+        category: planCategory, note: `Subscription: ${sub.name}`, executed: false, sourceSubscriptionId: sub.id,
       }));
       addPlannedCashEntries(newPlans);
       updateEntry(sub.id, { paidVia: { module: 'cash' } });
@@ -423,7 +468,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
               </Field>
               <Field label="Currency">
                 <Select value={editRow.currencyCode} onChange={(e) => setEditRow({ ...editRow, currencyCode: e.target.value })}>
-                  {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+                  {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
                 </Select>
               </Field>
               <Field label="Billing cycle">
@@ -442,8 +487,8 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
               <Field label="Start date">
                 <TextInput type="date" value={editRow.startDate} onChange={(e) => setEditRow({ ...editRow, startDate: e.target.value })} />
               </Field>
-              <Field label="Category (optional)">
-                <TextInput value={editRow.category ?? ''} onChange={(e) => setEditRow({ ...editRow, category: e.target.value })} />
+              <Field label="Category">
+                <CategorySelect value={editRow.categoryID ?? UNCATEGORIZED_ID} onChange={(categoryID) => setEditRow({ ...editRow, categoryID })} />
               </Field>
             </div>
             <div className="row" style={{ gap: 8, marginTop: 8 }}>
@@ -455,8 +500,8 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
             <div>
               <div style={{ fontWeight: 700, fontSize: 16 }}>{sub.name}</div>
-              <div className="footer-note">
-                {fmtMoney(sub.amount, sub.currencyCode)}{CYCLE_LABEL[sub.billingCycle]} · {sub.category || 'Uncategorized'} · since {sub.startDate}
+              <div className="text-muted">
+                {fmtMoney(sub.amount, sub.currencyCode)}{CYCLE_LABEL[sub.billingCycle]} · {subCategoryLabel(sub, categoryRegistry)} · since {sub.startDate}
                 {!sub.active && sub.cancelledDate && ` · cancelled ${sub.cancelledDate}`}
               </div>
             </div>
@@ -474,7 +519,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
             </div>
           </div>
         )}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px,1fr))', gap: 8, marginTop: 12 }}>
+        <div className="grid-auto" style={{ ...gridAutoStyle(130, 8), marginTop: 12 }}>
           <div className="stat-card card" style={hueStyle(HUES[3])}>
             <Tooltip text="What this costs per month on average — converted from its real billing cycle (weekly, yearly, etc.) so you can compare it to other subscriptions.">
               <div className="label" style={{ cursor: 'pointer' }}>Monthly equivalent</div>
@@ -495,11 +540,11 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
       <Card style={{ marginBottom: 16 }}>
         <h4 style={{ margin: '0 0 8px' }}>Link to a paying account</h4>
         {linkedLabel ? (
-          <p className="footer-note" style={{ marginBottom: 8 }}>
+          <p className="text-muted" style={{ marginBottom: 8 }}>
             Paid via <strong>{linkedLabel}</strong> — upcoming renewals are planned in its Planning tab.
           </p>
         ) : (
-          <p className="footer-note" style={{ marginBottom: 8 }}>
+          <p className="text-muted" style={{ marginBottom: 8 }}>
             Not linked yet. Linking generates a planned (not-yet-done) entry for every renewal in the next 12
             months in the chosen account's Planning tab.
           </p>
@@ -519,7 +564,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
                 </Select>
               </Field>
             ) : (
-              <p className="footer-note">No active bank accounts — add or unarchive one on the Banking page first.</p>
+              <p className="text-muted">No active bank accounts — add or unarchive one on the Banking page first.</p>
             )
           )}
           <button className="btn" onClick={generatePlans} disabled={linkModule === 'bank' && !activeAccounts.length}>
@@ -538,7 +583,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
               {occurrences.map((o, i) => (
                 <tr key={i}><td>{o.date}</td><td>{fmtMoney(o.amount, sub.currencyCode)}</td></tr>
               ))}
-              {!occurrences.length && <tr><td colSpan={2} className="footer-note">No upcoming occurrences (subscription is cancelled).</td></tr>}
+              {!occurrences.length && <tr><td colSpan={2} className="text-muted">No upcoming occurrences (subscription is cancelled).</td></tr>}
             </tbody>
           </table>
         </div>
@@ -551,6 +596,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
 
 function AnalyticsTab() {
   const subs = useSubscriptionsWorkbookStore((s) => s.workbook.entries);
+  const categoryRegistry = useCategoryStore((s) => s.workbook.categories);
   useAppearanceStore((s) => s.appearance);
   applyChartTheme();
 
@@ -558,7 +604,7 @@ function AnalyticsTab() {
   const [currency, setCurrency] = useState(currencies[0] ?? 'USD');
   const effectiveCurrency = currencies.includes(currency) ? currency : (currencies[0] ?? currency);
 
-  const byCategory = useMemo(() => spendByCategory(subs, effectiveCurrency), [subs, effectiveCurrency]);
+  const byCategory = useMemo(() => spendByCategory(subs, effectiveCurrency, categoryRegistry), [subs, effectiveCurrency, categoryRegistry]);
   const categories = Object.keys(byCategory);
   const renewals = useMemo(() => upcomingRenewals(subs, 30), [subs]);
 
@@ -574,7 +620,7 @@ function AnalyticsTab() {
   const accountLabels = Object.keys(byAccount);
 
   if (!subs.length) {
-    return <p className="footer-note">Add a subscription first to see charts here.</p>;
+    return <p className="text-muted">Add a subscription first to see charts here.</p>;
   }
 
   return (
@@ -586,7 +632,7 @@ function AnalyticsTab() {
           </Select>
         </Field>
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginTop: 12 }}>
+      <div className="grid-auto" style={{ ...gridAutoStyle(320, 16), marginTop: 12 }}>
         <ChartCard title="Spend by category (monthly equivalent)" empty={!categories.length}>
           <Doughnut
             data={{
@@ -750,7 +796,7 @@ export function SubscriptionsPage({
   return (
     <div>
       <h1 className="pagetitle">Subscriptions</h1>
-      <p className="footer-note" style={{ marginBottom: 12 }}>
+      <p className="text-muted" style={{ marginBottom: 12 }}>
         Recurring payments — streaming, gym, software, memberships — tracked independently and optionally
         linked to whichever Bank account or Cash actually pays them.
       </p>
@@ -776,7 +822,7 @@ export function SubscriptionsPage({
               label: 'Settings',
               content: (
                 <div>
-                  <p className="footer-note" style={{ marginTop: 0 }}>
+                  <p className="text-muted" style={{ marginTop: 0 }}>
                     Sign-in, profile, appearance, and a whole-app backup live on the{' '}
                     <Link to="/account">Account page →</Link>. What's below is specific to Subscriptions.
                   </p>

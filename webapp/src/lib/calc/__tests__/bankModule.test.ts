@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { BankAccount, BankTransaction } from '../../../types/bankWorkbook';
 import type { Category } from '../../../types/finance';
-import { accountBalance, accountBalanceAsOfMonth, accountByCategory, accountRunningLedger, assetBalanceByCurrency, bankMonthlyFlow, budgetVsActual, creditCardLiabilityByCurrency, totalBalanceByCurrency } from '../bankModule';
+import { accountBalance, accountBalanceAsOfMonth, accountByCategory, accountPendingBalance, accountRunningLedger, assetBalanceByCurrency, bankMonthlyFlow, budgetVsActual, creditCardLiabilityByCurrency, totalBalanceByCurrency } from '../bankModule';
 
 const TEST_CATEGORIES: Category[] = [
   { id: 'cat_food', serialNumber: 1, name: 'Food' },
@@ -42,6 +42,40 @@ describe('accountBalance', () => {
     const a = account({ id: 'a1', openingBalance: 1000 });
     const txs = [tx({ accountId: 'a1', amount: -50 }), tx({ id: 't2', accountId: 'a2', amount: 9999 })];
     expect(accountBalance(a, txs)).toBe(950);
+  });
+
+  it('excludes pending transactions (2026-09-08 Pending-state feature)', () => {
+    const a = account({ openingBalance: 1000 });
+    const txs = [
+      tx({ id: 't1', amount: -50, isPending: false }),
+      tx({ id: 't2', amount: -300, isPending: true }),
+    ];
+    expect(accountBalance(a, txs)).toBe(950);
+  });
+
+  it('a transaction with no isPending field behaves exactly as before (zero-migration)', () => {
+    const a = account({ openingBalance: 1000 });
+    const txs = [tx({ amount: -50 })];
+    expect(txs[0].isPending).toBeUndefined();
+    expect(accountBalance(a, txs)).toBe(950);
+  });
+});
+
+describe('accountPendingBalance', () => {
+  it('sums only pending transactions for that account', () => {
+    const a = account({ id: 'a1' });
+    const txs = [
+      tx({ id: 't1', accountId: 'a1', amount: -300, isPending: true }),
+      tx({ id: 't2', accountId: 'a1', amount: 100, isPending: true }),
+      tx({ id: 't3', accountId: 'a1', amount: 50, isPending: false }),
+      tx({ id: 't4', accountId: 'a2', amount: 9999, isPending: true }),
+    ];
+    expect(accountPendingBalance(a, txs)).toBe(-200);
+  });
+
+  it('returns 0 when nothing is pending', () => {
+    const a = account({});
+    expect(accountPendingBalance(a, [tx({ amount: -50 })])).toBe(0);
   });
 });
 

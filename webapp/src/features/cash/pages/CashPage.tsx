@@ -5,7 +5,7 @@ import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { EditIcon, PlusIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { CheckIcon, EditIcon, PlusIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Modal } from '../../../components/Modal';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
@@ -17,17 +17,18 @@ import { CategorySelect } from '../../../components/CategorySelect';
 import { FinanceEditModal } from '../../../components/FinanceEditModal';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { useAmountFormat } from '../../../hooks/useAmountFormat';
+import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { ReorderButtons } from '../../../components/ui/ReorderButtons';
 import { RecurrenceFields } from '../../../components/ui/RecurrenceFields';
-import { toInstantMs } from '../../../lib/datetime';
+import { dateOnlyMs } from '../../../lib/datetime';
 import { nextRecurrenceOccurrence } from '../../../lib/calc/recurrence';
 import { recurrenceLabel } from '../../../lib/recurrenceLabel';
 import { hueStyle } from '../../../lib/statCardHues';
 import { categoryName, UNCATEGORIZED_ID } from '../../../lib/categories';
 import { useCategoryStore } from '../../../store/categoryStore';
-import { cashBalanceByCurrency, cashByCategory, cashMonthlyFlow, cashRunningLedger, type CashLedgerRow } from '../../../lib/calc/cashModule';
+import { cashBalanceByCurrency, cashByCategory, cashMonthlyFlow, cashPendingByCurrency, cashRunningLedger, type CashLedgerRow } from '../../../lib/calc/cashModule';
 import { plannedCashProjection } from '../../../lib/calc/plannedBalance';
 import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
@@ -35,7 +36,6 @@ import { cssVar, tickerColor } from '../../../lib/cssVar';
 import { useAppearanceStore } from '../../../store/appearanceStore';
 import { ChartCard } from '../../qse/components/ChartCard';
 import { parseCSV } from '../../../lib/csv';
-import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
 import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
@@ -47,6 +47,7 @@ import { useInterEntityTransfersStore } from '../../../store/interEntityTransfer
 import { linkTargetPath, useLinkSideLabel } from '../../transfers/pages/TransferLinksPage';
 import type { CashEntry, CashWorkbook } from '../../../types/cashWorkbook';
 import type { PlannedCashEntry } from '../../../types/plannedCash';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -96,6 +97,7 @@ function BalancesSummary() {
   const plannedEntries = usePlannedCashWorkbookStore((s) => s.workbook.entries);
   const { num } = useAmountFormat();
   const balances = cashBalanceByCurrency(entries);
+  const pendingBalances = cashPendingByCurrency(entries);
   const codes = Object.keys(balances);
   if (!codes.length) return null;
 
@@ -106,14 +108,23 @@ function BalancesSummary() {
   const upcoming = plannedEntries.filter((p) => !p.executed);
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px,1fr))', gap: 8, marginBottom: 16 }}>
+    <div className="grid-auto" style={{ ...gridAutoStyle(140, 8), marginBottom: 16 }}>
       {codes.map((code) => {
         const pending = upcoming.filter((p) => p.currencyCode === code);
         const net = pending.reduce((s, p) => s + (p.type === 'IN' ? p.amount : -p.amount), 0);
+        const realPending = pendingBalances[code] ?? 0;
         return (
           <div key={code} className="stat-card card" style={hueStyle(balances[code] >= 0 ? 'var(--profit)' : 'var(--loss)')}>
             <div className="label">Balance ({code})</div>
             <MoneyValue n={balances[code]} currency={code} />
+            {/* User-requested (2026-09-08): don't just exclude pending money
+               from the headline balance — show it too, so nothing that's
+               actually part of the picture is silently invisible. */}
+            {realPending !== 0 && (
+              <div className="sub">
+                {realPending > 0 ? '+' : ''}{num(realPending)} {code} pending → {num(balances[code] + realPending)} {code} incl. pending
+              </div>
+            )}
             {pending.length > 0 && (
               <div className="sub">
                 {pending.length} upcoming plan{pending.length > 1 ? 's' : ''} (net {net >= 0 ? '+' : ''}
@@ -144,7 +155,7 @@ function CategoryBreakdown() {
   const currencies = Object.keys(byCategory);
   const [search, setSearch] = useState('');
 
-  if (!currencies.length) return <p className="footer-note">No cash entries yet.</p>;
+  if (!currencies.length) return <p className="text-muted">No cash entries yet.</p>;
 
   const q = search.trim().toLowerCase();
   const filtered = currencies.map((code) => ({
@@ -167,10 +178,10 @@ function CategoryBreakdown() {
                   {rows.map(([cat, amount]) => (
                     <tr key={cat}>
                       <td>{cat}</td>
-                      <td className={amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(amount, code)}</td>
+                      <td className={amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(amount, code)}</td>
                     </tr>
                   ))}
-                  {!rows.length && <tr><td className="footer-note">No matching categories.</td></tr>}
+                  {!rows.length && <tr><td className="text-muted">No matching categories.</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -225,7 +236,11 @@ function EditEntryModal({ entry, onClose }: { entry: CashEntry; onClose: () => v
           onTimezoneChange={(timezone) => setDraft({ ...draft, timezone })}
         />
       </div>
-      <p className="footer-note" style={{ marginTop: 8 }}>
+      <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }} title="Not yet cleared — excluded from the Balance stat until unchecked.">
+        <input type="checkbox" checked={!!draft.isPending} onChange={(e) => setDraft({ ...draft, isPending: e.target.checked })} />
+        Pending (not yet cleared)
+      </label>
+      <p className="text-muted" style={{ marginTop: 8 }}>
         {draft.source === 'statement-import' ? `Imported${draft.statementRef ? ` from ${draft.statementRef}` : ''}` : 'Entered manually'}
       </p>
     </FinanceEditModal>
@@ -290,7 +305,7 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
   // genuinely needs fixing (two same-instant rows in the wrong relative
   // order).
   const sorted = rows; // buildCashLedger already returns ascending chronological order
-  const instantOf = (r: (typeof sorted)[number]) => toInstantMs(r.entry.date, r.entry.time, r.entry.timezone);
+  const instantOf = (r: (typeof sorted)[number]) => dateOnlyMs(r.entry.date);
   const reorder = async (pair: [{ id: string; order: number }, { id: string; order: number }]) => {
     if (!(await ensureSignedIn('Sign in to reorder entries.'))) return;
     for (const p of pair) updateEntry(p.id, { serialNumber: p.order });
@@ -356,9 +371,12 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
                       onMove={reorder}
                     />
                   </td>
-                  <td className={entry.isDeposit ? 'pill-buy' : 'pill-sell'}>{entry.isDeposit ? 'Cash in' : 'Cash out'}</td>
+                  <td className={entry.isDeposit ? 'pill-positive' : 'pill-negative'}>{entry.isDeposit ? 'Cash in' : 'Cash out'}</td>
                   <td className="cell-clip" title={entry.note}>
                     {entry.note}
+                    {entry.isPending && (
+                      <span className="pill-warn" style={{ marginLeft: 6 }} title="Not yet cleared — excluded from the Balance stat above until marked cleared.">Pending</span>
+                    )}
                     {link && (
                       <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
                         🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
@@ -368,10 +386,22 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
                   <td><span className="pill-info">{categoryName(entry.categoryID, categories)}</span></td>
                   <td>{fmtMoney(entry.amount, entry.currencyCode)}</td>
                   <td>{fmtMoney(balance, entry.currencyCode)}</td>
-                  <td className="footer-note cell-clip" title={entry.source === 'statement-import' ? `Import${entry.statementRef ? ` (${entry.statementRef})` : ''}` : 'Manual'}>
+                  <td className="text-muted cell-clip" title={entry.source === 'statement-import' ? `Import${entry.statementRef ? ` (${entry.statementRef})` : ''}` : 'Manual'}>
                     {entry.source === 'statement-import' ? `Import${entry.statementRef ? ` (${entry.statementRef})` : ''}` : 'Manual'}
                   </td>
                   <td>
+                    {entry.isPending && (
+                      <IconButton
+                        label="Mark cleared"
+                        icon={<CheckIcon size={13} />}
+                        align="right"
+                        onClick={async () => {
+                          if (!(await ensureSignedIn('Sign in to update this entry.'))) return;
+                          updateEntry(entry.id, { isPending: false });
+                          toast('Marked cleared.');
+                        }}
+                      />
+                    )}{' '}
                     <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => setEditingEntry(entry)} />{' '}
                     <IconButton
                       label="Delete"
@@ -383,7 +413,7 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
                 </tr>
               );
             })}
-            {!sorted.length && <tr><td colSpan={8} className="footer-note">No matching entries.</td></tr>}
+            {!sorted.length && <tr><td colSpan={8} className="text-muted">No matching entries.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -412,7 +442,7 @@ function CashStatementGrid() {
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [ledger]);
 
-  if (!byCurrency.length) return <p className="footer-note">No cash entries yet — use the + button below to add one.</p>;
+  if (!byCurrency.length) return <p className="text-muted">No cash entries yet — use the + button below to add one.</p>;
 
   return (
     <div className="detail-grid">
@@ -459,7 +489,7 @@ function AnalyticsTab() {
   );
 
   if (!currencies.length) {
-    return <p className="footer-note">Add a cash entry first (Ledger tab) to see charts here.</p>;
+    return <p className="text-muted">Add a cash entry first (Ledger tab) to see charts here.</p>;
   }
 
   return (
@@ -471,7 +501,7 @@ function AnalyticsTab() {
           </Select>
         </Field>
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginTop: 12 }}>
+      <div className="grid-auto" style={{ ...gridAutoStyle(320, 16), marginTop: 12 }}>
         <ChartCard title="Category breakdown" empty={!categories.length}>
           <Doughnut
             data={{
@@ -527,6 +557,7 @@ function ImportTab() {
   const [categoryCol, setCategoryCol] = useState('');
   const [flipSign, setFlipSign] = useState(false);
   const [currencyCode, setCurrencyCode] = useState(defaultCurrency);
+  const currencyOptions = useEnabledCurrencies(currencyCode);
 
   const onFile = (file: File) => {
     const reader = new FileReader();
@@ -589,14 +620,14 @@ function ImportTab() {
 
   return (
     <div>
-      <p className="footer-note" style={{ marginBottom: 12 }}>
+      <p className="text-muted" style={{ marginBottom: 12 }}>
         Import a CSV export of cash entries. This is a simple "map these columns" tool, not a parser for a
         specific spreadsheet format — pick which column is which below. A positive amount is treated as cash in,
         negative as cash out (check "Flip sign" if your export does the opposite).
       </p>
       <Field label="Currency for imported entries" width={140}>
         <Select value={currencyCode} onChange={(e) => setCurrencyCode(e.target.value)}>
-          {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+          {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
         </Select>
       </Field>
       <div style={{ marginTop: 8 }}>
@@ -612,7 +643,7 @@ function ImportTab() {
             e.target.value = '';
           }}
         />
-        {fileName && <span className="footer-note" style={{ marginLeft: 8 }}>{fileName} ({rows.length} rows)</span>}
+        {fileName && <span className="text-muted" style={{ marginLeft: 8 }}>{fileName} ({rows.length} rows)</span>}
       </div>
 
       {headers.length > 0 && (
@@ -635,7 +666,7 @@ function ImportTab() {
                 {headers.map((h) => <option key={h} value={h}>{h}</option>)}
               </Select>
             </Field>
-            <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 20 }} title="Check this if your export uses positive numbers for cash out.">
+            <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 20 }} title="Check this if your export uses positive numbers for cash out.">
               <input type="checkbox" checked={flipSign} onChange={(e) => setFlipSign(e.target.checked)} />
               Flip sign
             </label>
@@ -649,7 +680,7 @@ function ImportTab() {
                 {mappedPreview.map((r, i) => (
                   <tr key={i}>
                     <td>{r.date}</td>
-                    <td className={r.isDeposit ? 'pill-buy' : 'pill-sell'}>{r.isDeposit ? 'Cash in' : 'Cash out'}</td>
+                    <td className={r.isDeposit ? 'pill-positive' : 'pill-negative'}>{r.isDeposit ? 'Cash in' : 'Cash out'}</td>
                     <td>{fmtMoney(r.amount, currencyCode)}</td>
                     <td>{r.category || '—'}</td>
                   </tr>
@@ -685,32 +716,32 @@ function BalanceProjectionSummary() {
 
   return (
     <CollapsibleCard title={<h3 style={{ margin: 0 }}>Balance projection</h3>} style={{ marginBottom: 16 }}>
-      <p className="footer-note" style={{ marginTop: 0 }}>
+      <p className="text-muted" style={{ marginTop: 0 }}>
         See what your balance would look like if every plan below actually happened — a reality check before you
         spend. Choose what you want to see:
       </p>
       <div className="row" style={{ gap: 16, marginBottom: 12 }}>
-        <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <input type="checkbox" checked={settings.showRealBalance} onChange={(e) => updateSettings({ showRealBalance: e.target.checked })} />
           Real balance
         </label>
-        <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <input type="checkbox" checked={settings.showPlannedBalance} onChange={(e) => updateSettings({ showPlannedBalance: e.target.checked })} />
           Planned balance
         </label>
       </div>
       {!codes.length ? (
-        <p className="footer-note">No balance yet — add a cash entry or a plan below.</p>
+        <p className="text-muted">No balance yet — add a cash entry or a plan below.</p>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px,1fr))', gap: 8 }}>
+        <div className="grid-auto" style={gridAutoStyle(180, 8)}>
           {codes.map((code) => (
             <div key={code} className="stat-card card">
               <div className="label">{code}</div>
               {settings.showRealBalance && (
-                <div className={projection[code].real >= 0 ? 'pill-buy' : 'pill-sell'}>Real: {fmtMoney(projection[code].real, code)}</div>
+                <div className={projection[code].real >= 0 ? 'pill-positive' : 'pill-negative'}>Real: {fmtMoney(projection[code].real, code)}</div>
               )}
               {settings.showPlannedBalance && (
-                <div className={projection[code].planned >= 0 ? 'pill-buy' : 'pill-sell'}>
+                <div className={projection[code].planned >= 0 ? 'pill-positive' : 'pill-negative'}>
                   Planned: {fmtMoney(projection[code].planned, code)}
                 </div>
               )}
@@ -745,6 +776,7 @@ function AddPlanForm({ onSaved }: { onSaved?: () => void }) {
   const [lastCurrency, setLastCurrency] = useLastCurrency('cash', defaultCurrency);
   const ensureSignedIn = useEnsureSignedIn();
   const [p, setP] = useState<PlannedCashEntry>(() => emptyPlan(lastCurrency));
+  const currencyOptions = useEnabledCurrencies(p.currencyCode);
 
   const submit = async () => {
     if (!p.amount || p.amount <= 0) return toast('Enter an amount.');
@@ -776,7 +808,7 @@ function AddPlanForm({ onSaved }: { onSaved?: () => void }) {
         </Field>
         <Field label="Currency" width={110}>
           <Select value={p.currencyCode} onChange={(e) => { setP({ ...p, currencyCode: e.target.value }); setLastCurrency(e.target.value); }}>
-            {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+            {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>
         <Field label="Category (optional)" width={140}>
@@ -839,6 +871,7 @@ function PlanList() {
     setEditId(null);
     setEditRow(null);
   };
+  const currencyOptions = useEnabledCurrencies(editRow?.currencyCode);
 
   const markDone = async (p: PlannedCashEntry) => {
     const occurrenceDate = p.recurrence ? nextRecurrenceOccurrence(p.recurrence)?.toISOString().slice(0, 10) : p.date;
@@ -885,15 +918,22 @@ function PlanList() {
         <table>
           <thead>
             <tr>
-              <Th col="date">Date</Th><Th col="type">Type</Th><Th col="amount">Amount</Th>
-              <th>Category</th><th>Note</th><Th col="status">Status</Th><th></th>
+              <Th col="date">Date</Th><Th col="type">Type</Th><Th col="amount">Amount</Th><th>Currency</th>
+              <th>Category</th><th>Note</th><Th col="status">Repeats / status</Th><th></th>
             </tr>
           </thead>
           <tbody>
             {sorted.map((p) =>
               editId === p.id && editRow ? (
                 <tr key={p.id}>
-                  <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
+                  <td>
+                    <input
+                      type="date"
+                      value={editRow.date}
+                      onChange={(e) => setEditRow({ ...editRow, date: e.target.value, recurrence: editRow.recurrence ? { ...editRow.recurrence, startDate: e.target.value } : undefined })}
+                      style={{ width: 130 }}
+                    />
+                  </td>
                   <td>
                     <select value={editRow.type} onChange={(e) => setEditRow({ ...editRow, type: e.target.value as 'IN' | 'OUT' })}>
                       <option value="IN">Cash in</option>
@@ -901,9 +941,22 @@ function PlanList() {
                     </select>
                   </td>
                   <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 90 }} /></td>
+                  <td>
+                    <select value={editRow.currencyCode} onChange={(e) => setEditRow({ ...editRow, currencyCode: e.target.value })} style={{ width: 80 }}>
+                      {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+                    </select>
+                  </td>
                   <td><input value={editRow.category ?? ''} onChange={(e) => setEditRow({ ...editRow, category: e.target.value })} style={{ width: 100 }} /></td>
                   <td><input value={editRow.note ?? ''} onChange={(e) => setEditRow({ ...editRow, note: e.target.value })} /></td>
-                  <td></td>
+                  <td>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                      <RecurrenceFields
+                        startDate={editRow.date}
+                        value={editRow.recurrence}
+                        onChange={(recurrence) => setEditRow({ ...editRow, recurrence })}
+                      />
+                    </div>
+                  </td>
                   <td>
                     <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
                     <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditId(null)} />
@@ -912,11 +965,12 @@ function PlanList() {
               ) : (
                 <tr key={p.id}>
                   <td>{p.date}</td>
-                  <td className={p.type === 'IN' ? 'pill-buy' : 'pill-sell'}>{p.type === 'IN' ? 'Cash in' : 'Cash out'}</td>
+                  <td className={p.type === 'IN' ? 'pill-positive' : 'pill-negative'}>{p.type === 'IN' ? 'Cash in' : 'Cash out'}</td>
                   <td>{fmtMoney(p.amount, p.currencyCode)}</td>
+                  <td>{p.currencyCode}</td>
                   <td>{p.category || '—'}</td>
                   <td>{p.note}</td>
-                  <td className="footer-note">{p.recurrence ? recurrenceLabel(p.recurrence) : p.executed ? 'Done' : 'Planned'}</td>
+                  <td className="text-muted">{p.recurrence ? recurrenceLabel(p.recurrence) : p.executed ? 'Done' : 'Planned'}</td>
                   <td>
                     {(p.recurrence || !p.executed) && (
                       <button className="btn secondary small" onClick={() => markDone(p)}>Mark as done</button>
@@ -934,7 +988,7 @@ function PlanList() {
                 </tr>
               ),
             )}
-            {!sorted.length && <tr><td colSpan={7} className="footer-note">No plans yet — add one above.</td></tr>}
+            {!sorted.length && <tr><td colSpan={8} className="text-muted">No plans yet — add one above.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -1020,6 +1074,7 @@ function DataManagement() {
   const workbook = useCashWorkbookStore((s) => s.workbook);
   const setWorkbook = useCashWorkbookStore((s) => s.setWorkbook);
   const updateSettings = useCashWorkbookStore((s) => s.updateSettings);
+  const currencyOptions = useEnabledCurrencies(workbook.settings.defaultCurrency);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const exportJSON = () => {
@@ -1054,12 +1109,16 @@ function DataManagement() {
   };
 
   return (
-    <div>
-      <Card style={{ marginBottom: 16 }}>
+    // Pending item 117: "everything should be a grid item except tables" —
+    // these two short, non-table cards used to stack full-width for no
+    // reason; side by side in a responsive grid, same `AccountPage.tsx`
+    // precedent (`grid-auto` + `gridAutoStyle`).
+    <div className="grid-auto" style={{ ...gridAutoStyle(280, 16), alignItems: 'start' }}>
+      <Card>
         <h3 style={{ marginTop: 0 }}>General</h3>
         <Field label="Default currency (pre-fills new entries only)" width={140}>
           <Select value={workbook.settings.defaultCurrency} onChange={(e) => updateSettings({ defaultCurrency: e.target.value })}>
-            {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+            {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>
       </Card>
@@ -1153,7 +1212,7 @@ export function CashPage({
   return (
     <div>
       <h1 className="pagetitle">Cash</h1>
-      <p className="footer-note" style={{ marginBottom: 12 }}>
+      <p className="text-muted" style={{ marginBottom: 12 }}>
         Track physical/informal cash — cash in hand, gifts, small informal amounts. Each entry keeps its own
         currency; balances and category totals are grouped per currency, never converted.
       </p>
@@ -1184,7 +1243,7 @@ export function CashPage({
             label: 'Settings',
             content: (
               <div>
-                <p className="footer-note" style={{ marginTop: 0 }}>
+                <p className="text-muted" style={{ marginTop: 0 }}>
                   Sign-in, profile, appearance, and a whole-app backup live on the{' '}
                   <Link to="/account">Account page →</Link>. What's below is specific to Cash.
                 </p>

@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>PSX Sample Statement</title>
+	<style>
+		body {
+			font-family: Arial, sans-serif;
+			margin: 20px;
+		}
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			margin-bottom: 28px;
+		}
+		th, td {
+			border: 1px solid #ddd;
+			padding: 8px;
+			text-align: left;
+		}
+		th {
+			background-color: #f2f2f2;
+		}
+		.toolbar {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 12px;
+			margin-bottom: 16px;
+		}
+		.toolbar p {
+			margin: 0;
+			color: #555;
+			font-size: 13px;
+		}
+		#exportCsvBtn {
+			background: #1a7f37;
+			color: #fff;
+			border: none;
+			border-radius: 6px;
+			padding: 8px 16px;
+			font-size: 14px;
+			font-weight: 600;
+			cursor: pointer;
+			white-space: nowrap;
+		}
+		#exportCsvBtn:hover {
+			background: #146c2e;
+		}
+		h2 {
+			font-size: 16px;
+			margin: 28px 0 8px 0;
+			border-bottom: 1px solid #ddd;
+			padding-bottom: 6px;
+		}
+		table.lots-table td, table.lots-table th {
+			text-align: right;
+		}
+		table.lots-table td:first-child, table.lots-table th:first-child,
+		table.lots-table td:nth-child(2), table.lots-table th:nth-child(2) {
+			text-align: left;
+		}
+		.tag {
+			display: inline-block;
+			padding: 2px 10px;
+			border-radius: 999px;
+			font-size: 11px;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.02em;
+		}
+		.tag-open {
+			background: #e8eef7;
+			color: #2b4a7a;
+		}
+		.tag-closed-profit {
+			background: #e3f6e8;
+			color: #1a7f37;
+		}
+		.tag-closed-loss {
+			background: #fbe7e7;
+			color: #b3261e;
+		}
+		.pl-pos { color: #1a7f37; font-weight: 600; }
+		.pl-neg { color: #b3261e; font-weight: 600; }
+	</style>
+</head>
+<body>
+	<div class="toolbar">
+		<div>
+			<h1 style="margin:0 0 4px 0;">PSX Sample Statement</h1>
+			<p>Real broker contract-note data (JS Global Capital / JSBL-ZINDIGI), used to cross-check this app's own
+			PSX fee/CGT calc engine against real numbers. Open Trades / Closed Trades below are a FIFO-matched
+			per-lot view (each buy lot paired with the sale price and date that closed it) &mdash; the full
+			statement further down is every real contract note, unmatched, grouped by broker statement.</p>
+		</div>
+		<button id="exportCsvBtn" onclick="exportAllTablesToCSV()">Export CSV</button>
+	</div>
+
+	<h2>Open Trades (not yet sold)</h2>
+	<table class="lots-table" data-label="Open Trades">
+		<thead>
+			<tr><th>Symbol</th><th>Buy Date</th><th>Buy Price</th><th>Shares</th><th>Invested</th><th>Buy Fee</th><th>Status</th></tr>
+		</thead>
+		<tbody>
+			<tr><td>EPQL</td><td>2026-09-01</td><td>24.77</td><td>10</td><td>247.70</td><td>0.60</td><td><span class="tag tag-open">Open</span></td></tr>
+			<tr><td>EPQL</td><td>2026-09-01</td><td>24.65</td><td>50</td><td>1,232.50</td><td>3.02</td><td><span class="tag tag-open">Open</span></td></tr>
+			<tr><td>EPQL</td><td>2026-09-01</td><td>24.74</td><td>25</td><td>618.50</td><td>1.51</td><td><span class="tag tag-open">Open</span></td></tr>
+			<tr><td>EPQL</td><td>2026-09-02</td><td>24.18</td><td>22</td><td>531.96</td><td>1.33</td><td><span class="tag tag-open">Open</span></td></tr>
+			<tr><td>EPQL</td><td>2026-09-02</td><td>24.00</td><td>25</td><td>600.00</td><td>1.51</td><td><span class="tag tag-open">Open</span></td></tr>
+			<tr><td>EPQL</td><td>2026-09-02</td><td>24.05</td><td>12</td><td>288.60</td><td>0.72</td><td><span class="tag tag-open">Open</span></td></tr>
+			<tr><td>EPQL</td><td>2026-09-02</td><td>24.40</td><td>19</td><td>463.60</td><td>1.15</td><td><span class="tag tag-open">Open</span></td></tr>
+			<tr><td>EPQL</td><td>2026-09-02</td><td>24.10</td><td>25</td><td>602.50</td><td>1.51</td><td><span class="tag tag-open">Open</span></td></tr>
+			<tr><td>EPQL</td><td>2026-09-07</td><td>23.79</td><td>62</td><td>1,474.98</td><td>3.74</td><td><span class="tag tag-open">Open</span></td></tr>
+			<tr><td>OGDC</td><td>2026-09-07</td><td>322.00</td><td>1</td><td>322.00</td><td>0.78</td><td><span class="tag tag-open">Open</span></td></tr>
+			<tr><td>OGDC</td><td>2026-09-07</td><td>321.52</td><td>5</td><td>1,607.60</td><td>3.89</td><td><span class="tag tag-open">Open</span></td></tr>
+		</tbody>
+		<tfoot>
+			<tr class="grand-total"><th colspan="4">Total open (still held)</th><th>7,989.94</th><th></th><th></th></tr>
+		</tfoot>
+	</table>
+
+	<h2>Closed Trades (sold, FIFO-matched)</h2>
+	<table class="lots-table" data-label="Closed Trades">
+		<thead>
+			<tr><th>Symbol</th><th>Buy Date</th><th>Buy Price</th><th>Sell Date</th><th>Sale Price</th><th>Shares</th><th>Buy Fee</th><th>Sell Fee</th><th>Net P&amp;L</th><th>Held (days)</th><th>Status</th></tr>
+		</thead>
+		<tbody>
+			<tr><td>OGDC</td><td>2026-08-17</td><td>319.00</td><td>2026-08-17</td><td>319.00</td><td>1</td><td>0.77</td><td>0.04</td><td class="pl-neg">-0.81</td><td>0</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>CNERGY</td><td>2026-08-18</td><td>15.25</td><td>2026-08-18</td><td>15.36</td><td>5</td><td>0.30</td><td>0.01</td><td class="pl-pos">0.24</td><td>0</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>DCR</td><td>2026-08-18</td><td>38.80</td><td>2026-08-18</td><td>38.90</td><td>1</td><td>0.09</td><td>0.00</td><td class="pl-pos">0.01</td><td>0</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>OGDC</td><td>2026-08-18</td><td>314.50</td><td>2026-08-19</td><td>319.05</td><td>5</td><td>3.81</td><td>3.86</td><td class="pl-pos">15.08</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>OGDC</td><td>2026-08-18</td><td>314.55</td><td>2026-08-19</td><td>319.05</td><td>2</td><td>1.52</td><td>1.54</td><td class="pl-pos">5.94</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>OGDC</td><td>2026-08-18</td><td>314.90</td><td>2026-08-19</td><td>319.05</td><td>5</td><td>3.81</td><td>3.86</td><td class="pl-pos">13.08</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>OGDC</td><td>2026-08-18</td><td>315.80</td><td>2026-08-19</td><td>319.05</td><td>10</td><td>7.64</td><td>7.72</td><td class="pl-pos">17.14</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>OGDC</td><td>2026-08-18</td><td>315.91</td><td>2026-08-19</td><td>319.05</td><td>10</td><td>7.65</td><td>7.72</td><td class="pl-pos">16.03</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>OGDC</td><td>2026-08-18</td><td>317.55</td><td>2026-08-19</td><td>319.05</td><td>2</td><td>1.54</td><td>1.54</td><td class="pl-neg">-0.08</td><td>1</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-18</td><td>104.20</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-neg">-1.76</td><td>3</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-18</td><td>105.60</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.26</td><td>0.25</td><td class="pl-neg">-3.17</td><td>3</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-19</td><td>101.85</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-pos">0.59</td><td>2</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-19</td><td>101.90</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-pos">0.54</td><td>2</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-19</td><td>102.00</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-pos">0.44</td><td>2</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-19</td><td>102.20</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-pos">0.24</td><td>2</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-19</td><td>102.60</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-neg">-0.16</td><td>2</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-19</td><td>102.75</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-neg">-0.31</td><td>2</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-19</td><td>103.00</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-neg">-0.56</td><td>2</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>101.50</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-pos">0.94</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>101.60</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-pos">0.84</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>101.61</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-pos">0.83</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>101.75</td><td>2026-08-21</td><td>102.94</td><td>2</td><td>0.49</td><td>0.50</td><td class="pl-pos">1.39</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>101.80</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-pos">0.64</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>101.90</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-pos">0.54</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>102.00</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-pos">0.44</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>102.10</td><td>2026-08-21</td><td>102.94</td><td>2</td><td>0.49</td><td>0.50</td><td class="pl-pos">0.69</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>102.20</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-pos">0.24</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>102.30</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-pos">0.14</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>102.31</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-pos">0.13</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>102.40</td><td>2026-08-21</td><td>102.94</td><td>2</td><td>0.50</td><td>0.50</td><td class="pl-pos">0.08</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>102.41</td><td>2026-08-21</td><td>102.94</td><td>2</td><td>0.50</td><td>0.50</td><td class="pl-pos">0.06</td><td>1</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>102.50</td><td>2026-08-21</td><td>102.94</td><td>2</td><td>0.50</td><td>0.50</td><td class="pl-neg">-0.12</td><td>1</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>102.51</td><td>2026-08-21</td><td>102.94</td><td>2</td><td>0.50</td><td>0.50</td><td class="pl-neg">-0.14</td><td>1</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>102.61</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-neg">-0.17</td><td>1</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>102.70</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-neg">-0.26</td><td>1</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-20</td><td>102.81</td><td>2026-08-21</td><td>102.94</td><td>1</td><td>0.25</td><td>0.25</td><td class="pl-neg">-0.37</td><td>1</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-21</td><td>101.10</td><td>2026-08-21</td><td>102.94</td><td>6</td><td>0.07</td><td>1.49</td><td class="pl-pos">9.48</td><td>0</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-21</td><td>101.27</td><td>2026-08-21</td><td>102.94</td><td>3</td><td>0.04</td><td>0.75</td><td class="pl-pos">4.22</td><td>0</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-21</td><td>101.31</td><td>2026-08-21</td><td>102.94</td><td>5</td><td>0.06</td><td>1.25</td><td class="pl-pos">6.84</td><td>0</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>OGDC</td><td>2026-08-24</td><td>330.50</td><td>2026-08-24</td><td>334.50</td><td>1</td><td>0.80</td><td>0.04</td><td class="pl-pos">3.16</td><td>0</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>OGDC</td><td>2026-08-24</td><td>331.46</td><td>2026-08-24</td><td>334.50</td><td>1</td><td>0.80</td><td>0.04</td><td class="pl-pos">2.20</td><td>0</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>PPL</td><td>2026-08-24</td><td>242.50</td><td>2026-08-24</td><td>243.89</td><td>1</td><td>0.03</td><td>0.03</td><td class="pl-pos">1.33</td><td>0</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>PSO</td><td>2026-08-24</td><td>378.80</td><td>2026-08-24</td><td>380.00</td><td>2</td><td>1.83</td><td>0.09</td><td class="pl-pos">0.48</td><td>0</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>SNGP</td><td>2026-08-24</td><td>102.61</td><td>2026-08-24</td><td>103.14</td><td>1</td><td>0.01</td><td>0.01</td><td class="pl-pos">0.51</td><td>0</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>OGDC</td><td>2026-08-27</td><td>327.80</td><td>2026-09-01</td><td>330.50</td><td>1</td><td>0.79</td><td>0.80</td><td class="pl-pos">1.11</td><td>5</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>OGDC</td><td>2026-08-27</td><td>327.75</td><td>2026-09-01</td><td>330.50</td><td>1</td><td>0.79</td><td>0.80</td><td class="pl-pos">1.16</td><td>5</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>OGDC</td><td>2026-08-27</td><td>327.70</td><td>2026-09-01</td><td>330.50</td><td>2</td><td>1.59</td><td>1.60</td><td class="pl-pos">2.41</td><td>5</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>OGDC</td><td>2026-08-27</td><td>327.50</td><td>2026-09-01</td><td>330.50</td><td>2</td><td>1.59</td><td>1.60</td><td class="pl-pos">2.81</td><td>5</td><td><span class="tag tag-closed-profit">Closed</span></td></tr>
+			<tr><td>PSO</td><td>2026-08-24</td><td>378.20</td><td>2026-09-04</td><td>357.50</td><td>10</td><td>9.15</td><td>8.65</td><td class="pl-neg">-224.80</td><td>11</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>PSO</td><td>2026-08-24</td><td>377.70</td><td>2026-09-04</td><td>357.50</td><td>10</td><td>9.14</td><td>8.65</td><td class="pl-neg">-219.79</td><td>11</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>PSO</td><td>2026-08-24</td><td>376.25</td><td>2026-09-04</td><td>357.50</td><td>10</td><td>9.11</td><td>8.65</td><td class="pl-neg">-205.26</td><td>11</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>PSO</td><td>2026-08-24</td><td>378.03</td><td>2026-09-04</td><td>357.50</td><td>10</td><td>9.15</td><td>8.65</td><td class="pl-neg">-223.10</td><td>11</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>PSO</td><td>2026-08-24</td><td>377.10</td><td>2026-09-04</td><td>357.50</td><td>10</td><td>9.13</td><td>8.65</td><td class="pl-neg">-213.78</td><td>11</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>PSO</td><td>2026-08-24</td><td>376.12</td><td>2026-09-04</td><td>357.80</td><td>10</td><td>9.10</td><td>8.66</td><td class="pl-neg">-200.96</td><td>11</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>PSO</td><td>2026-08-24</td><td>374.51</td><td>2026-09-04</td><td>357.80</td><td>4</td><td>3.63</td><td>3.46</td><td class="pl-neg">-73.93</td><td>11</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>PSO</td><td>2026-08-24</td><td>374.25</td><td>2026-09-04</td><td>357.80</td><td>15</td><td>13.59</td><td>12.99</td><td class="pl-neg">-273.33</td><td>11</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>PSO</td><td>2026-08-25</td><td>374.00</td><td>2026-09-04</td><td>357.80</td><td>26</td><td>23.53</td><td>22.51</td><td class="pl-neg">-467.24</td><td>10</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>PSO</td><td>2026-08-25</td><td>372.50</td><td>2026-09-04</td><td>357.80</td><td>15</td><td>13.52</td><td>12.99</td><td class="pl-neg">-247.01</td><td>10</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+			<tr><td>PSO</td><td>2026-08-27</td><td>371.50</td><td>2026-09-04</td><td>357.80</td><td>10</td><td>8.99</td><td>8.66</td><td class="pl-neg">-154.65</td><td>8</td><td><span class="tag tag-closed-loss">Closed</span></td></tr>
+		</tbody>
+		<tfoot>
+			<tr class="grand-total"><th colspan="8">Total realized P&amp;L</th><th>-2,399.75</th><th></th><th></th></tr>
+		</tfoot>
+	</table>
+
+	<h2>Full Broker Statement (every real contract note, by statement)</h2>
+    <table class="trade-transactions" data-label="Statement 1">
+    <thead>
+        <tr>
+            <th>Transaction</th>
+            <th>Contract #</th>
+            <th>Sett. Date</th>
+            <th>Symbol</th>
+            <th>Quantity</th>
+            <th>Rate</th>
+            <th>Brok. Rate</th>
+            <th>Brok. Amount</th>
+            <th>Net Rate</th>
+            <th>SST Amount</th>
+            <th>Levies</th>
+            <th>Amount</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Purchase</td>
+            <td>01967521</td>
+            <td>17-08-2026</td>
+            <td>OGDC</td>
+            <td>1</td>
+            <td>319.0000</td>
+            <td>0.6380</td>
+            <td>0.64</td>
+            <td>319.6380</td>
+            <td>0.10</td>
+            <td>0.04</td>
+            <td>319.77</td>
+        </tr>
+        <tr>
+            <td>Sale</td>
+            <td>01057026</td>
+            <td>17-08-2026</td>
+            <td>OGDC</td>
+            <td>1</td>
+            <td>319.0000</td>
+            <td>0.0000</td>
+            <td>0.00</td>
+            <td>319.0000</td>
+            <td>0.00</td>
+            <td>0.04</td>
+            <td>-318.96</td>
+        </tr>
+    </tbody>
+    <tfoot>
+        <tr>
+            <th colspan="4">Grand Total</th>
+            <th>0</th>
+            <th></th>
+            <th></th>
+            <th>0.64</th>
+            <th></th>
+            <th>0.10</th>
+            <th>0.08</th>
+            <th>0.81</th>
+        </tr>
+    </tfoot>
+</table>
+
+	<table class="trade-transactions" data-label="Statement 2">
+    <thead>
+        <tr>
+            <th>Transaction</th>
+            <th>Contract #</th>
+            <th>Market</th>
+            <th>Sett. Date</th>
+            <th>Symbol</th>
+            <th>Quantity</th>
+            <th>Rate</th>
+            <th>Brok. Rate</th>
+            <th>Brok. Amount</th>
+            <th>Net Rate</th>
+            <th>SST Amount</th>
+            <th>Levies</th>
+            <th>Amount</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        <!-- PURCHASES -->
+        <tr class="section-header">
+            <td colspan="13">
+                We confirm the execution of your Purchase orders as under :-
+            </td>
+        </tr>
+
+        <tr>
+            <td>Purchase</td>
+            <td>01984117</td>
+            <td>Ready</td>
+            <td>18-08-26</td>
+            <td>CNERGY</td>
+            <td>5</td>
+            <td>15.2500</td>
+            <td>0.0500</td>
+            <td>0.25</td>
+            <td>15.3000</td>
+            <td>0.04</td>
+            <td>0.01</td>
+            <td>76.55</td>
+        </tr>
+
+        <tr class="total-row">
+            <td colspan="5">Total :</td>
+            <td>5</td>
+            <td></td>
+            <td></td>
+            <td>0.25</td>
+            <td></td>
+            <td>0.04</td>
+            <td>0.01</td>
+            <td>76.55</td>
+        </tr>
+
+        <tr>
+            <td>Purchase</td>
+            <td>01984118</td>
+            <td>Ready</td>
+            <td>18-08-26</td>
+            <td>DCR</td>
+            <td>1</td>
+            <td>38.8000</td>
+            <td>0.0776</td>
+            <td>0.08</td>
+            <td>38.8776</td>
+            <td>0.01</td>
+            <td>0.00</td>
+            <td>38.89</td>
+        </tr>
+
+        <tr class="total-row">
+            <td colspan="5">Total :</td>
+            <td>1</td>
+            <td></td>
+            <td></td>
+            <td>0.08</td>
+            <td></td>
+            <td>0.01</td>
+            <td>0.00</td>
+            <td>38.89</td>
+        </tr>
+
+        <!-- OGDC -->
+        <tr>
+            <td>Purchase</td>
+            <td>01984119</td>
+            <td>Ready</td>
+            <td>18-08-26</td>
+            <td>OGDC</td>
+            <td>5</td>
+            <td>314.5000</td>
+            <td>0.6290</td>
+            <td>3.15</td>
+            <td>315.1290</td>
+            <td>0.47</td>
+            <td>0.19</td>
+            <td>1,576.31</td>
+        </tr>
+
+        <tr>
+            <td>Purchase</td>
+            <td>01984119</td>
+            <td>Ready</td>
+            <td>18-08-26</td>
+            <td>OGDC</td>
+            <td>2</td>
+            <td>314.5500</td>
+            <td>0.6291</td>
+            <td>1.26</td>
+            <td>315.1791</td>
+            <td>0.19</td>
+            <td>0.08</td>
+            <td>630.62</td>
+        </tr>
+
+        <tr>
+            <td>Purchase</td>
+            <td>01984119</td>
+            <td>Ready</td>
+            <td>18-08-26</td>
+            <td>OGDC</td>
+            <td>5</td>
+            <td>314.9000</td>
+            <td>0.6298</td>
+            <td>3.15</td>
+            <td>315.5298</td>
+            <td>0.47</td>
+            <td>0.19</td>
+            <td>1,578.31</td>
+        </tr>
+
+        <tr>
+            <td>Purchase</td>
+            <td>01984119</td>
+            <td>Ready</td>
+            <td>18-08-26</td>
+            <td>OGDC</td>
+            <td>10</td>
+            <td>315.8000</td>
+            <td>0.6316</td>
+            <td>6.32</td>
+            <td>316.4316</td>
+            <td>0.95</td>
+            <td>0.38</td>
+            <td>3,165.64</td>
+        </tr>
+
+        <tr>
+            <td>Purchase</td>
+            <td>01984119</td>
+            <td>Ready</td>
+            <td>18-08-26</td>
+            <td>OGDC</td>
+            <td>10</td>
+            <td>315.9100</td>
+            <td>0.6318</td>
+            <td>6.32</td>
+            <td>316.5418</td>
+            <td>0.95</td>
+            <td>0.38</td>
+            <td>3,166.74</td>
+        </tr>
+
+        <tr>
+            <td>Purchase</td>
+            <td>01984119</td>
+            <td>Ready</td>
+            <td>18-08-26</td>
+            <td>OGDC</td>
+            <td>2</td>
+            <td>317.5500</td>
+            <td>0.6351</td>
+            <td>1.27</td>
+            <td>318.1851</td>
+            <td>0.19</td>
+            <td>0.08</td>
+            <td>636.64</td>
+        </tr>
+
+        <tr class="total-row">
+            <td colspan="5">Total :</td>
+            <td>34</td>
+            <td></td>
+            <td></td>
+            <td>21.46</td>
+            <td></td>
+            <td>3.22</td>
+            <td>1.29</td>
+            <td>10,754.26</td>
+        </tr>
+
+        <!-- SNGP -->
+        <tr>
+            <td>Purchase</td>
+            <td>01984120</td>
+            <td>Ready</td>
+            <td>18-08-26</td>
+            <td>SNGP</td>
+            <td>1</td>
+            <td>104.2000</td>
+            <td>0.2084</td>
+            <td>0.21</td>
+            <td>104.4084</td>
+            <td>0.03</td>
+            <td>0.01</td>
+            <td>104.45</td>
+        </tr>
+
+        <tr>
+            <td>Purchase</td>
+            <td>01984120</td>
+            <td>Ready</td>
+            <td>18-08-26</td>
+            <td>SNGP</td>
+            <td>1</td>
+            <td>105.6000</td>
+            <td>0.2112</td>
+            <td>0.21</td>
+            <td>105.8112</td>
+            <td>0.03</td>
+            <td>0.01</td>
+            <td>105.86</td>
+        </tr>
+
+        <tr class="total-row">
+            <td colspan="5">Total :</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>0.42</td>
+            <td></td>
+            <td>0.06</td>
+            <td>0.03</td>
+            <td>210.31</td>
+        </tr>
+
+        <!-- SALES -->
+        <tr class="section-header">
+            <td colspan="13">
+                We confirm the execution of your Sale orders as under :-
+            </td>
+        </tr>
+
+        <tr>
+            <td>Sale</td>
+            <td>01066016</td>
+            <td>Ready</td>
+            <td>18-08-26</td>
+            <td>CNERGY</td>
+            <td>5</td>
+            <td>15.3600</td>
+            <td>0.0000</td>
+            <td>0.00</td>
+            <td>15.3600</td>
+            <td>0.00</td>
+            <td>0.01</td>
+            <td>-76.79</td>
+        </tr>
+
+        <tr class="total-row">
+            <td colspan="5">Total :</td>
+            <td>5</td>
+            <td></td>
+            <td></td>
+            <td>0.00</td>
+            <td></td>
+            <td>0.00</td>
+            <td>0.01</td>
+            <td>-76.79</td>
+        </tr>
+
+        <tr>
+            <td>Sale</td>
+            <td>01066017</td>
+            <td>Ready</td>
+            <td>18-08-26</td>
+            <td>DCR</td>
+            <td>1</td>
+            <td>38.9000</td>
+            <td>0.0000</td>
+            <td>0.00</td>
+            <td>38.9000</td>
+            <td>0.00</td>
+            <td>0.00</td>
+            <td>-38.90</td>
+        </tr>
+
+        <tr class="total-row">
+            <td colspan="5">Total :</td>
+            <td>1</td>
+            <td></td>
+            <td></td>
+            <td>0.00</td>
+            <td></td>
+            <td>0.00</td>
+            <td>0.00</td>
+            <td>-38.90</td>
+        </tr>
+    </tbody>
+
+    <tfoot>
+        <tr class="grand-total">
+            <th colspan="5">Grand Total :</th>
+            <th>36</th>
+            <th></th>
+            <th></th>
+            <th>22.20</th>
+            <th></th>
+            <th>3.33</th>
+            <th>1.34</th>
+            <th>10,964.32</th>
+        </tr>
+    </tfoot>
+</table>
+
+	<table class="trade-transactions" data-label="Statement 3">
+    <thead>
+        <tr>
+            <th>Transaction</th>
+            <th>Contract #</th>
+            <th>Market</th>
+            <th>Sett. Date</th>
+            <th>Symbol</th>
+            <th>Quantity</th>
+            <th>Rate</th>
+            <th>Brok. Rate</th>
+            <th>Brok. Amount</th>
+            <th>Net Rate</th>
+            <th>SST Amount</th>
+            <th>Levies</th>
+            <th>Amount</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        <!-- PURCHASES -->
+        <tr class="section-header">
+            <td colspan="13">
+                We confirm the execution of your Purchase orders as under :-
+            </td>
+        </tr>
+
+        <tr>
+            <td>Purchase</td>
+            <td>02038897</td>
+            <td>Ready</td>
+            <td>25-08-26</td>
+            <td>OGDC</td>
+            <td>1</td>
+            <td>330.5000</td>
+            <td>0.6610</td>
+            <td>0.66</td>
+            <td>331.1610</td>
+            <td>0.10</td>
+            <td>0.04</td>
+            <td>331.30</td>
+        </tr>
+
+        <tr>
+            <td>Purchase</td>
+            <td>02038897</td>
+            <td>Ready</td>
+            <td>25-08-26</td>
+            <td>OGDC</td>
+            <td>1</td>
+            <td>331.4600</td>
+            <td>0.6629</td>
+            <td>0.66</td>
+            <td>332.1229</td>
+            <td>0.10</td>
+            <td>0.04</td>
+            <td>332.26</td>
+        </tr>
+
+        <tr class="total-row">
+            <td colspan="5">Total :</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>1.32</td>
+            <td></td>
+            <td>0.20</td>
+            <td>0.08</td>
+            <td>663.56</td>
+        </tr>
+
+        <tr>
+            <td>Purchase</td>
+            <td>02038898</td>
+            <td>Ready</td>
+            <td>25-08-26</td>
+            <td>PPL</td>
+            <td>1</td>
+            <td>242.5000</td>
+            <td>0.4850</td>
+            <td>0.49</td>
+            <td>242.9850</td>
+            <td>0.07</td>
+            <td>0.03</td>
+            <td>243.09</td>
+        </tr>
+
+        <tr class="total-row">
+            <td colspan="5">Total :</td>
+            <td>1</td>
+            <td></td>
+            <td></td>
+            <td>0.49</td>
+            <td></td>
+            <td>0.07</td>
+            <td>0.03</td>
+            <td>243.09</td>
+        </tr>
+
+        <tr>
+            <td>Purchase</td>
+            <td>02038899</td>
+            <td>Ready</td>
+            <td>25-08-26</td>
+            <td>PSO</td>
+            <td>15</td>
+            <td>374.2500</td>
+            <td>0.7485</td>
+            <td>11.23</td>
+            <td>374.9985</td>
+            <td>1.68</td>
+            <td>0.67</td>
+            <td>5,627.34</td>
+        </tr>
+
+        <tr>
+            <td>Purchase</td>
+            <td>02038899</td>
+            <td>Ready</td>
+            <td>25-08-26</td>
+            <td>PSO</td>
+            <td>4</td>
+            <td>374.5100</td>
+            <td>0.7490</td>
+            <td>3.00</td>
+            <td>375.2590</td>
+            <td>0.45</td>
+            <td>0.18</td>
+            <td>1,501.67</td>
+        </tr>
+
+        <tr>
+            <td>Purchase</td>
+            <td>02038899</td>
+            <td>Ready</td>
+            <td>25-08-26</td>
+            <td>PSO</td>
+            <td>10</td>
+            <td>376.1200</td>
+            <td>0.7522</td>
+            <td>7.52</td>
+            <td>376.8722</td>
+            <td>1.13</td>
+            <td>0.45</td>
+            <td>3,770.30</td>
+        </tr>
+
+        <tr>
+            <td>Purchase</td>
+            <td>02038899</td>
+            <td>Ready</td>
+            <td>25-08-26</td>
+            <td>PSO</td>
+            <td>10</td>
+            <td>376.2500</td>
+            <td>0.7525</td>
+            <td>7.53</td>
+            <td>377.0025</td>
+            <td>1.13</td>
+            <td>0.45</td>
+            <td>3,771.61</td>
+        </tr>
+
+        <tr>
+            <td>Purchase</td>
+            <td>02038899</td>
+            <td>Ready</td>
+            <td>25-08-26</td>
+            <td>PSO</td>
+            <td>10</td>
+            <td>377.1000</td>
+            <td>0.7542</td>
+            <td>7.54</td>
+            <td>377.8542</td>
+            <td>1.13</td>
+            <td>0.45</td>
+            <td>3,780.13</td>
+        </tr>
+
+        <tr>
+            <td>Purchase</td>
+            <td>02038899</td>
+            <td>Ready</td>
+            <td>25-08-26</td>
+            <td>PSO</td>
+            <td>10</td>
+            <td>377.7000</td>
+            <td>0.7554</td>
+            <td>7.55</td>
+            <td>378.4554</td>
+            <td>1.13</td>
+            <td>0.45</td>
+            <td>3,786.14</td>
+        </tr>
+
+        <tr>
+            <td>Purchase</td>
+            <td>02038899</td>
+            <td>Ready</td>
+            <td>25-08-26</td>
+            <td>PSO</td>
+            <td>10</td>
+            <td>378.0300</td>
+            <td>0.7561</td>
+            <td>7.56</td>
+            <td>378.7861</td>
+            <td>1.13</td>
+            <td>0.45</td>
+            <td>3,789.45</td>
+        </tr>
+
+        <tr>
+            <td>Purchase</td>
+            <td>02038899</td>
+            <td>Ready</td>
+            <td>25-08-26</td>
+            <td>PSO</td>
+            <td>10</td>
+            <td>378.2000</td>
+            <td>0.7564</td>
+            <td>7.56</td>
+            <td>378.9564</td>
+            <td>1.13</td>
+            <td>0.45</td>
+            <td>3,791.15</td>
+        </tr>
+
+        <tr>
+            <td>Purchase</td>
+            <td>02038899</td>
+            <td>Ready</td>
+            <td>25-08-26</td>
+            <td>PSO</td>
+            <td>2</td>
+            <td>378.8000</td>
+            <td>0.7576</td>
+            <td>1.52</td>
+            <td>379.5576</td>
+            <td>0.23</td>
+            <td>0.09</td>
+            <td>759.43</td>
+        </tr>
+
+        <tr class="total-row">
+            <td colspan="5">Total :</td>
+            <td>81</td>
+            <td></td>
+            <td></td>
+            <td>61.01</td>
+            <td></td>
+            <td>9.15</td>
+            <td>3.66</td>
+            <td>30,577.21</td>
+        </tr>
+
+        <tr>
+            <td>Purchase</td>
+            <td>02038900</td>
+            <td>Ready</td>
+            <td>25-08-26</td>
+            <td>SNGP</td>
+            <td>1</td>
+            <td>102.6100</td>
+            <td>0.2052</td>
+            <td>0.21</td>
+            <td>102.8152</td>
+            <td>0.03</td>
+            <td>0.01</td>
+            <td>102.86</td>
+        </tr>
+
+        <tr class="total-row">
+            <td colspan="5">Total :</td>
+            <td>1</td>
+            <td></td>
+            <td></td>
+            <td>0.21</td>
+            <td></td>
+            <td>0.03</td>
+            <td>0.01</td>
+            <td>102.86</td>
+        </tr>
+
+        <!-- SALES -->
+        <tr class="section-header">
+            <td colspan="13">
+                We confirm the execution of your Sale orders as under :-
+            </td>
+        </tr>
+
+        <tr>
+            <td>Sale</td>
+            <td>01092117</td>
+            <td>Ready</td>
+            <td>25-08-26</td>
+            <td>OGDC</td>
+            <td>2</td>
+            <td>334.5000</td>
+            <td>0.0000</td>
+            <td>0.00</td>
+            <td>334.5000</td>
+            <td>0.00</td>
+            <td>0.08</td>
+            <td>-668.92</td>
+        </tr>
+
+        <tr class="total-row">
+            <td colspan="5">Total :</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>0.00</td>
+            <td></td>
+            <td>0.00</td>
+            <td>0.08</td>
+            <td>-668.92</td>
+        </tr>
+
+        <tr>
+            <td>Sale</td>
+            <td>01092118</td>
+            <td>Ready</td>
+            <td>25-08-26</td>
+            <td>PPL</td>
+            <td>1</td>
+            <td>243.8900</td>
+            <td>0.0000</td>
+            <td>0.00</td>
+            <td>243.8900</td>
+            <td>0.00</td>
+            <td>0.03</td>
+            <td>-243.86</td>
+        </tr>
+
+        <tr class="total-row">
+            <td colspan="5">Total :</td>
+            <td>1</td>
+            <td></td>
+            <td></td>
+            <td>0.00</td>
+            <td></td>
+            <td>0.00</td>
+            <td>0.03</td>
+            <td>-243.86</td>
+        </tr>
+
+        <tr>
+            <td>Sale</td>
+            <td>01092119</td>
+            <td>Ready</td>
+            <td>25-08-26</td>
+            <td>PSO</td>
+            <td>2</td>
+            <td>380.0000</td>
+            <td>0.0000</td>
+            <td>0.00</td>
+            <td>380.0000</td>
+            <td>0.00</td>
+            <td>0.09</td>
+            <td>-759.91</td>
+        </tr>
+
+        <tr class="total-row">
+            <td colspan="5">Total :</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>0.00</td>
+            <td></td>
+            <td>0.00</td>
+            <td>0.09</td>
+            <td>-759.91</td>
+        </tr>
+
+        <tr>
+            <td>Sale</td>
+            <td>01092120</td>
+            <td>Ready</td>
+            <td>25-08-26</td>
+            <td>SNGP</td>
+            <td>1</td>
+            <td>103.1400</td>
+            <td>0.0000</td>
+            <td>0.00</td>
+            <td>103.1400</td>
+            <td>0.00</td>
+            <td>0.01</td>
+            <td>-103.13</td>
+        </tr>
+
+        <tr class="total-row">
+            <td colspan="5">Total :</td>
+            <td>1</td>
+            <td></td>
+            <td></td>
+            <td>0.00</td>
+            <td></td>
+            <td>0.00</td>
+            <td>0.01</td>
+            <td>-103.13</td>
+        </tr>
+    </tbody>
+
+    <tfoot>
+        <tr class="grand-total">
+            <th colspan="5">Grand Total :</th>
+            <th>79</th>
+            <th></th>
+            <th></th>
+            <th>63.02</th>
+            <th></th>
+            <th>9.45</th>
+            <th>3.99</th>
+            <th>29,810.90</th>
+        </tr>
+    </tfoot>
+</table>
+
+	<table class="trade-transactions" data-label="Statement 4">
+    <thead>
+        <tr>
+            <th>Trade Date</th>
+            <th>Transaction</th>
+            <th>Contract #</th>
+            <th>Market</th>
+            <th>Sett. Date</th>
+            <th>Symbol</th>
+            <th>Quantity</th>
+            <th>Rate</th>
+            <th>Brok. Rate</th>
+            <th>Brok. Amount</th>
+            <th>Net Rate</th>
+            <th>SST Amount</th>
+            <th>Levies Charges</th>
+            <th>Amount</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>25-08-2026</td>
+            <td>Purchase</td>
+            <td>02051421</td>
+            <td>Ready</td>
+            <td>27-08-26</td>
+            <td>PSO</td>
+            <td>15</td>
+            <td>372.5000</td>
+            <td>0.7450</td>
+            <td>11.18</td>
+            <td>373.2450</td>
+            <td>1.68</td>
+            <td>0.67</td>
+            <td>5,601.02</td>
+        </tr>
+        <tr>
+            <td>25-08-2026</td>
+            <td>Purchase</td>
+            <td>02051421</td>
+            <td>Ready</td>
+            <td>27-08-26</td>
+            <td>PSO</td>
+            <td>26</td>
+            <td>374.0000</td>
+            <td>0.7480</td>
+            <td>19.45</td>
+            <td>374.7480</td>
+            <td>2.92</td>
+            <td>1.17</td>
+            <td>9,747.53</td>
+        </tr>
+        <tr class="total-row">
+            <td colspan="6">Total :</td>
+            <td>41</td>
+            <td></td><td></td>
+            <td>30.63</td>
+            <td></td>
+            <td>4.60</td>
+            <td>1.84</td>
+            <td>15,348.55</td>
+        </tr>
+        <tr>
+            <td>27-08-2026</td>
+            <td>Purchase</td>
+            <td>02064099</td>
+            <td>Ready</td>
+            <td>28-08-26</td>
+            <td>OGDC</td>
+            <td>2</td>
+            <td>327.5000</td>
+            <td>0.6550</td>
+            <td>1.31</td>
+            <td>328.1550</td>
+            <td>0.20</td>
+            <td>0.08</td>
+            <td>656.59</td>
+        </tr>
+        <tr>
+            <td>27-08-2026</td>
+            <td>Purchase</td>
+            <td>02064099</td>
+            <td>Ready</td>
+            <td>28-08-26</td>
+            <td>OGDC</td>
+            <td>2</td>
+            <td>327.7000</td>
+            <td>0.6554</td>
+            <td>1.31</td>
+            <td>328.3554</td>
+            <td>0.20</td>
+            <td>0.08</td>
+            <td>656.99</td>
+        </tr>
+        <tr>
+            <td>27-08-2026</td>
+            <td>Purchase</td>
+            <td>02064099</td>
+            <td>Ready</td>
+            <td>28-08-26</td>
+            <td>OGDC</td>
+            <td>1</td>
+            <td>327.7500</td>
+            <td>0.6555</td>
+            <td>0.66</td>
+            <td>328.4055</td>
+            <td>0.10</td>
+            <td>0.04</td>
+            <td>328.54</td>
+        </tr>
+        <tr>
+            <td>27-08-2026</td>
+            <td>Purchase</td>
+            <td>02064099</td>
+            <td>Ready</td>
+            <td>28-08-26</td>
+            <td>OGDC</td>
+            <td>1</td>
+            <td>327.8000</td>
+            <td>0.6556</td>
+            <td>0.66</td>
+            <td>328.4556</td>
+            <td>0.10</td>
+            <td>0.04</td>
+            <td>328.59</td>
+        </tr>
+        <tr class="total-row">
+            <td colspan="6">Total :</td>
+            <td>6</td>
+            <td></td><td></td>
+            <td>3.94</td>
+            <td></td>
+            <td>0.60</td>
+            <td>0.24</td>
+            <td>1,970.71</td>
+        </tr>
+        <tr>
+            <td>27-08-2026</td>
+            <td>Purchase</td>
+            <td>02064100</td>
+            <td>Ready</td>
+            <td>28-08-26</td>
+            <td>PSO</td>
+            <td>10</td>
+            <td>371.5000</td>
+            <td>0.7430</td>
+            <td>7.43</td>
+            <td>372.2430</td>
+            <td>1.11</td>
+            <td>0.45</td>
+            <td>3,723.99</td>
+        </tr>
+        <tr class="total-row">
+            <td colspan="6">Total :</td>
+            <td>10</td>
+            <td></td><td></td>
+            <td>7.43</td>
+            <td></td>
+            <td>1.11</td>
+            <td>0.45</td>
+            <td>3,723.99</td>
+        </tr>
+        <tr>
+            <td>01-09-2026</td>
+            <td>Purchase</td>
+            <td>02104098</td>
+            <td>Ready</td>
+            <td>02-09-26</td>
+            <td>EPQL</td>
+            <td>50</td>
+            <td>24.6500</td>
+            <td>0.0500</td>
+            <td>2.50</td>
+            <td>24.7000</td>
+            <td>0.38</td>
+            <td>0.15</td>
+            <td>1,235.52</td>
+        </tr>
+        <tr>
+            <td>01-09-2026</td>
+            <td>Purchase</td>
+            <td>02104098</td>
+            <td>Ready</td>
+            <td>02-09-26</td>
+            <td>EPQL</td>
+            <td>25</td>
+            <td>24.7400</td>
+            <td>0.0500</td>
+            <td>1.25</td>
+            <td>24.7900</td>
+            <td>0.19</td>
+            <td>0.07</td>
+            <td>620.01</td>
+        </tr>
+        <tr>
+            <td>01-09-2026</td>
+            <td>Purchase</td>
+            <td>02104098</td>
+            <td>Ready</td>
+            <td>02-09-26</td>
+            <td>EPQL</td>
+            <td>10</td>
+            <td>24.7700</td>
+            <td>0.0500</td>
+            <td>0.50</td>
+            <td>24.8200</td>
+            <td>0.08</td>
+            <td>0.03</td>
+            <td>248.30</td>
+        </tr>
+        <tr class="total-row">
+            <td colspan="6">Total :</td>
+            <td>85</td>
+            <td></td><td></td>
+            <td>4.25</td>
+            <td></td>
+            <td>0.65</td>
+            <td>0.25</td>
+            <td>2,103.83</td>
+        </tr>
+        <tr>
+            <td>01-09-2026</td>
+            <td>Sale</td>
+            <td>01127242</td>
+            <td>Ready</td>
+            <td>02-09-26</td>
+            <td>OGDC</td>
+            <td>6</td>
+            <td>330.5000</td>
+            <td>0.6610</td>
+            <td>3.97</td>
+            <td>329.8390</td>
+            <td>0.59</td>
+            <td>0.24</td>
+            <td>-1,978.20</td>
+        </tr>
+        <tr class="total-row">
+            <td colspan="6">Total :</td>
+            <td>-6</td>
+            <td></td><td></td>
+            <td>3.97</td>
+            <td></td>
+            <td>0.59</td>
+            <td>0.24</td>
+            <td>-1,978.20</td>
+        </tr>
+        <tr>
+            <td>02-09-2026</td>
+            <td>Purchase</td>
+            <td>02118365</td>
+            <td>Ready</td>
+            <td>03-09-26</td>
+            <td>EPQL</td>
+            <td>25</td>
+            <td>24.0000</td>
+            <td>0.0500</td>
+            <td>1.25</td>
+            <td>24.0500</td>
+            <td>0.19</td>
+            <td>0.07</td>
+            <td>601.51</td>
+        </tr>
+        <tr>
+            <td>02-09-2026</td>
+            <td>Purchase</td>
+            <td>02118365</td>
+            <td>Ready</td>
+            <td>03-09-26</td>
+            <td>EPQL</td>
+            <td>12</td>
+            <td>24.0500</td>
+            <td>0.0500</td>
+            <td>0.60</td>
+            <td>24.1000</td>
+            <td>0.09</td>
+            <td>0.03</td>
+            <td>289.32</td>
+        </tr>
+        <tr>
+            <td>02-09-2026</td>
+            <td>Purchase</td>
+            <td>02118365</td>
+            <td>Ready</td>
+            <td>03-09-26</td>
+            <td>EPQL</td>
+            <td>25</td>
+            <td>24.1000</td>
+            <td>0.0500</td>
+            <td>1.25</td>
+            <td>24.1500</td>
+            <td>0.19</td>
+            <td>0.07</td>
+            <td>604.01</td>
+        </tr>
+        <tr>
+            <td>02-09-2026</td>
+            <td>Purchase</td>
+            <td>02118365</td>
+            <td>Ready</td>
+            <td>03-09-26</td>
+            <td>EPQL</td>
+            <td>22</td>
+            <td>24.1800</td>
+            <td>0.0500</td>
+            <td>1.10</td>
+            <td>24.2300</td>
+            <td>0.17</td>
+            <td>0.06</td>
+            <td>533.29</td>
+        </tr>
+        <tr>
+            <td>02-09-2026</td>
+            <td>Purchase</td>
+            <td>02118365</td>
+            <td>Ready</td>
+            <td>03-09-26</td>
+            <td>EPQL</td>
+            <td>19</td>
+            <td>24.4000</td>
+            <td>0.0500</td>
+            <td>0.95</td>
+            <td>24.4500</td>
+            <td>0.14</td>
+            <td>0.06</td>
+            <td>464.75</td>
+        </tr>
+        <tr class="total-row">
+            <td colspan="6">Total :</td>
+            <td>103</td>
+            <td></td><td></td>
+            <td>5.15</td>
+            <td></td>
+            <td>0.78</td>
+            <td>0.29</td>
+            <td>2,492.88</td>
+        </tr>
+        <tr>
+            <td>04-09-2026</td>
+            <td>Sale</td>
+            <td>01144656</td>
+            <td>Ready</td>
+            <td>07-09-26</td>
+            <td>PSO</td>
+            <td>50</td>
+            <td>357.5000</td>
+            <td>0.7150</td>
+            <td>35.75</td>
+            <td>356.7850</td>
+            <td>5.36</td>
+            <td>2.15</td>
+            <td>-17,831.74</td>
+        </tr>
+        <tr>
+            <td>04-09-2026</td>
+            <td>Sale</td>
+            <td>01144656</td>
+            <td>Ready</td>
+            <td>07-09-26</td>
+            <td>PSO</td>
+            <td>80</td>
+            <td>357.8000</td>
+            <td>0.7156</td>
+            <td>57.25</td>
+            <td>357.0844</td>
+            <td>8.59</td>
+            <td>3.43</td>
+            <td>-28,554.73</td>
+        </tr>
+        <tr class="total-row">
+            <td colspan="6">Total :</td>
+            <td>-130</td>
+            <td></td><td></td>
+            <td>93.00</td>
+            <td></td>
+            <td>13.95</td>
+            <td>5.58</td>
+            <td>-46,386.47</td>
+        </tr>
+        <tr>
+            <td>07-09-2026</td>
+            <td>Purchase</td>
+            <td>02155473</td>
+            <td>Ready</td>
+            <td>08-09-26</td>
+            <td>EPQL</td>
+            <td>62</td>
+            <td>23.7900</td>
+            <td>0.0500</td>
+            <td>3.10</td>
+            <td>23.8400</td>
+            <td>0.47</td>
+            <td>0.18</td>
+            <td>1,478.72</td>
+        </tr>
+        <tr class="total-row">
+            <td colspan="6">Total :</td>
+            <td>62</td>
+            <td></td><td></td>
+            <td>3.10</td>
+            <td></td>
+            <td>0.47</td>
+            <td>0.18</td>
+            <td>1,478.72</td>
+        </tr>
+        <tr>
+            <td>07-09-2026</td>
+            <td>Purchase</td>
+            <td>02155474</td>
+            <td>Ready</td>
+            <td>08-09-26</td>
+            <td>OGDC</td>
+            <td>5</td>
+            <td>321.5200</td>
+            <td>0.6430</td>
+            <td>3.22</td>
+            <td>322.1630</td>
+            <td>0.48</td>
+            <td>0.19</td>
+            <td>1,611.49</td>
+        </tr>
+        <tr>
+            <td>07-09-2026</td>
+            <td>Purchase</td>
+            <td>02155474</td>
+            <td>Ready</td>
+            <td>08-09-26</td>
+            <td>OGDC</td>
+            <td>1</td>
+            <td>322.0000</td>
+            <td>0.6440</td>
+            <td>0.64</td>
+            <td>322.6440</td>
+            <td>0.10</td>
+            <td>0.04</td>
+            <td>322.78</td>
+        </tr>
+        <tr class="total-row">
+            <td colspan="6">Total :</td>
+            <td>6</td>
+            <td></td><td></td>
+            <td>3.86</td>
+            <td></td>
+            <td>0.58</td>
+            <td>0.23</td>
+            <td>1,934.27</td>
+        </tr>
+    </tbody>
+    <tfoot>
+        <tr class="grand-total">
+            <th colspan="6">Grand Total :</th>
+            <th>177</th>
+            <th></th><th></th>
+            <th>155.33</th>
+            <th></th>
+            <th>23.33</th>
+            <th>9.30</th>
+            <th>-19,311.72</th>
+        </tr>
+    </tfoot>
+</table>
+
+<script>
+function csvEscape(value) {
+	var v = String(value == null ? '' : value);
+	if (/["\n,]/.test(v)) {
+		return '"' + v.replace(/"/g, '""') + '"';
+	}
+	return v;
+}
+
+function tableRowsToCSV(table) {
+	var lines = [];
+	var headCells = table.querySelectorAll('thead th');
+	if (headCells.length) {
+		lines.push(Array.prototype.map.call(headCells, function (th) {
+			return csvEscape(th.textContent.trim());
+		}).join(','));
+	}
+	var bodyRows = table.querySelectorAll('tbody tr, tfoot tr');
+	Array.prototype.forEach.call(bodyRows, function (tr) {
+		var cells = tr.querySelectorAll('td, th');
+		lines.push(Array.prototype.map.call(cells, function (cell) {
+			return csvEscape(cell.textContent.trim());
+		}).join(','));
+	});
+	return lines.join('\n');
+}
+
+function exportAllTablesToCSV() {
+	var tables = document.querySelectorAll('table');
+	var blocks = [];
+	tables.forEach(function (table, i) {
+		blocks.push(table.getAttribute('data-label') || ('Statement ' + (i + 1)));
+		blocks.push(tableRowsToCSV(table));
+		blocks.push('');
+	});
+	var csv = blocks.join('\n');
+	var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+	var url = URL.createObjectURL(blob);
+	var a = document.createElement('a');
+	a.href = url;
+	a.download = 'psx_sample_statement.csv';
+	document.body.appendChild(a);
+	a.click();
+	document.body.removeChild(a);
+	URL.revokeObjectURL(url);
+}
+</script>
+
+</body>
+</html>

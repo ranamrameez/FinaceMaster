@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { PSX_TICKER_DATALIST_ID } from '../../../components/PSXTickerDatalist';
+import { TickerLogo } from '../../../components/TickerLogo';
 import { EditIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { Field } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { fmt, fmtMoney } from '../../../lib/format';
-import { defaultTimezoneForCurrency, nowTime } from '../../../lib/datetime';
+import { defaultTimeForDate, defaultTimezoneForCurrency, nowTime } from '../../../lib/datetime';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
@@ -27,6 +29,7 @@ function AddDividendForm() {
   const [amount, setAmount] = useState(0);
   const [sharesTouched, setSharesTouched] = useState(false);
   const [time, setTime] = useState<string | undefined>(() => nowTime());
+  const [timeTouched, setTimeTouched] = useState(false);
   const [timezone, setTimezone] = useState<string | undefined>(() => defaultTimezoneForCurrency(currency));
 
   const onTickerChange = (v: string) => {
@@ -57,7 +60,14 @@ function AddDividendForm() {
   return (
     <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
       <Field label="Date">
-        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => {
+            setDate(e.target.value);
+            if (!timeTouched) setTime(defaultTimeForDate(e.target.value));
+          }}
+        />
       </Field>
       <Field label="Ticker">
         <input placeholder="Ticker" value={ticker} onChange={(e) => onTickerChange(e.target.value)} list={PSX_TICKER_DATALIST_ID} style={{ width: 90 }} />
@@ -80,9 +90,14 @@ function AddDividendForm() {
       <Field label="Total received">
         <input type="number" step="0.01" placeholder={preview ? preview.toFixed(2) : 'Total received'} value={amount || ''} onChange={(e) => setAmount(Number(e.target.value))} style={{ width: 100 }} />
       </Field>
-      <TimeZoneFields time={time} timezone={timezone} onTimeChange={setTime} onTimezoneChange={setTimezone} />
+      <TimeZoneFields
+        time={time}
+        timezone={timezone}
+        onTimeChange={(t) => { setTime(t); setTimeTouched(true); }}
+        onTimezoneChange={setTimezone}
+      />
       <button className="btn" onClick={submit}>Add</button>
-      {preview > 0 && !amount && <span className="footer-note">{fmt(shares, 0)} shares × {perShare} = {preview.toFixed(2)}</span>}
+      {preview > 0 && !amount && <span className="text-muted">{fmt(shares, 0)} shares × {perShare} = {preview.toFixed(2)}</span>}
     </div>
   );
 }
@@ -191,10 +206,10 @@ export function DividendsSection() {
               ) : (
                 <tr key={d.i}>
                   <td>{d.date}</td>
-                  <td>{d.ticker}</td>
+                  <td><TickerLogo ticker={d.ticker} size="sm" exchange="psx" /><Link to={`/psx/stock/${d.ticker}`}>{d.ticker}</Link></td>
                   <td>{d.perShare || '—'}</td>
                   <td>{d.shares || '—'}</td>
-                  <td className="pill-buy">{fmtMoney(d.amount, currency)}</td>
+                  <td className="pill-positive">{fmtMoney(d.amount, currency)}</td>
                   <td>
                     <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(d.i, d)} />{' '}
                     <IconButton label="Delete" icon={<TrashIcon size={13} />} align="right" onClick={() => removeDividend(d.i)} />
@@ -204,14 +219,14 @@ export function DividendsSection() {
             )}
             {!rows.length && (
               <tr>
-                <td colSpan={6} className="footer-note">
+                <td colSpan={6} className="text-muted">
                   {workbook.dividends.length ? 'No dividends match this filter.' : 'No dividends logged yet.'}
                 </td>
               </tr>
             )}
           </tbody>
           <tfoot>
-            <tr><td colSpan={4}>Total collected</td><td className="pill-buy">{fmtMoney(total, currency)}</td><td></td></tr>
+            <tr><td colSpan={4}>Total collected</td><td className="pill-positive">{fmtMoney(total, currency)}</td><td></td></tr>
           </tfoot>
         </table>
       </div>
@@ -219,14 +234,14 @@ export function DividendsSection() {
       {held.length > 0 && (
         <>
           <h3 style={{ marginTop: 24 }}>Yearly projection</h3>
-          <p className="footer-note">Enter an estimated annual per-share dividend rate for each held ticker; projection = rate × shares held.</p>
+          <p className="text-muted">Enter an estimated annual per-share dividend rate for each held ticker; projection = rate × shares held.</p>
           <div className="table-scroll">
             <table>
               <thead><tr><HeldTh col="ticker">Ticker</HeldTh><HeldTh col="shares">Shares</HeldTh><HeldTh col="estPerShare">Est. annual/share</HeldTh><HeldTh col="projected">Projected annual</HeldTh></tr></thead>
               <tbody>
                 {sortedHeld.map((p) => (
                   <tr key={p.ticker}>
-                    <td>{p.ticker}</td>
+                    <td><TickerLogo ticker={p.ticker} size="sm" exchange="psx" /><Link to={`/psx/stock/${p.ticker}`}>{p.ticker}</Link></td>
                     <td>{fmt(p.shares, 0)}</td>
                     <td>
                       <input
@@ -242,7 +257,7 @@ export function DividendsSection() {
                 ))}
               </tbody>
               <tfoot>
-                <tr><td colSpan={3}>Total projected</td><td className="pill-buy">{fmtMoney(totalProjected, currency)}</td></tr>
+                <tr><td colSpan={3}>Total projected</td><td className="pill-positive">{fmtMoney(totalProjected, currency)}</td></tr>
               </tfoot>
             </table>
           </div>

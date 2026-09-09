@@ -28,7 +28,7 @@ export function UpcomingList({
   emptyText?: string;
 }) {
   const shown = limit ? items.slice(0, limit) : items;
-  if (!shown.length) return <p className="footer-note" style={{ marginTop: 0 }}>{emptyText}</p>;
+  if (!shown.length) return <p className="text-muted" style={{ marginTop: 0 }}>{emptyText}</p>;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -43,12 +43,12 @@ export function UpcomingList({
           }}
         >
           <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
-            <span className="footer-note" style={{ marginRight: 8 }}>{item.date}</span>
+            <span className="text-muted" style={{ marginRight: 8 }}>{item.date}</span>
             {item.label}
-            <span className="footer-note" style={{ marginLeft: 8 }}>({MODULE_LABELS[item.module]})</span>
-            {item.overdue && <span className="pill-sell" style={{ marginLeft: 8 }}>Overdue</span>}
+            <span className="text-muted" style={{ marginLeft: 8 }}>({MODULE_LABELS[item.module]})</span>
+            {item.overdue && <span className="pill-negative" style={{ marginLeft: 8 }}>Overdue</span>}
           </span>
-          <span className={item.kind === 'income' ? 'pill-buy' : 'pill-sell'} style={{ flexShrink: 0 }}>
+          <span className={item.kind === 'income' ? 'pill-positive' : 'pill-negative'} style={{ flexShrink: 0 }}>
             {item.kind === 'income' ? '+' : '-'}{fmtMoney(item.amount, item.currencyCode)}
           </span>
         </Link>

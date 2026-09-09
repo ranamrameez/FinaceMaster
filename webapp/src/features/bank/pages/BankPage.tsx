@@ -7,7 +7,7 @@ import { Notice } from '../../../components/Notice';
 import { Tooltip } from '../../../components/Tooltip';
 import { ChartCard } from '../../qse/components/ChartCard';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { ArchiveIcon, EditIcon, ExportIcon, ListIcon, PlusIcon, RestoreIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { ArchiveIcon, CheckIcon, EditIcon, ExportIcon, ListIcon, PlusIcon, RestoreIcon, SaveIcon, StarIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Modal } from '../../../components/Modal';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
@@ -21,6 +21,7 @@ import { CategorySelect } from '../../../components/CategorySelect';
 import { FinanceEditModal } from '../../../components/FinanceEditModal';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { useAmountFormat } from '../../../hooks/useAmountFormat';
+import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { ReorderButtons } from '../../../components/ui/ReorderButtons';
 import { RecurrenceFields } from '../../../components/ui/RecurrenceFields';
@@ -29,16 +30,15 @@ import { recurrenceLabel } from '../../../lib/recurrenceLabel';
 import { hueStyle } from '../../../lib/statCardHues';
 import { categoryName, UNCATEGORIZED_ID } from '../../../lib/categories';
 import { useCategoryStore } from '../../../store/categoryStore';
-import { accountBalance, accountBalanceAsOfMonth, accountByCategory, accountRunningLedger, bankMonthlyFlow, budgetVsActual, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
+import { accountBalance, accountBalanceAsOfMonth, accountByCategory, accountPendingBalance, accountRunningLedger, bankMonthlyFlow, bankTotalsByCurrency, budgetVsActual, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
 import { monthRange } from '../../../lib/calc/budgetPlanner';
 import { plannedBankProjection } from '../../../lib/calc/plannedBalance';
 import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar, tickerColor } from '../../../lib/cssVar';
 import { parseCSV, toCSV } from '../../../lib/csv';
-import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
-import { toInstantMs } from '../../../lib/datetime';
+import { dateOnlyMs } from '../../../lib/datetime';
 import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import { isValidIbanFormat, lookupIban } from '../../../lib/ibanLookup';
 import { isValidBin, lookupBin } from '../../../lib/binLookup';
@@ -53,12 +53,13 @@ import { useInterEntityTransfersStore } from '../../../store/interEntityTransfer
 import { linkTargetPath, useLinkSideLabel } from '../../transfers/pages/TransferLinksPage';
 import type { BankAccount, BankTransaction, BankWorkbook } from '../../../types/bankWorkbook';
 import type { PlannedBankTransaction } from '../../../types/plannedBank';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const uid = () => crypto.randomUUID();
 
-function emptyAccount(defaultCurrency: string): Omit<BankAccount, 'id'> {
-  return { name: '', currencyCode: defaultCurrency, openingBalance: 0 };
+function emptyAccount(defaultCurrency: string, bankId?: string): Omit<BankAccount, 'id'> {
+  return { name: '', currencyCode: defaultCurrency, openingBalance: 0, bankId };
 }
 
 const ACCOUNT_TYPES = ['Savings', 'Current', 'Checking', 'Salary', 'Business', 'Fixed deposit'];
@@ -108,7 +109,7 @@ function CreditCardFields({ value, onChange, datalistId }: { value: CreditCardVa
 
   return (
     <div style={{ marginTop: 8 }}>
-      <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <input type="checkbox" checked={!!value.isLiability} onChange={(e) => onChange({ isLiability: e.target.checked })} />
         This is a credit card (counts as a debt in Net Worth, not a balance)
       </label>
@@ -175,7 +176,7 @@ function TotalBalances() {
   const upcoming = plannedEntries.filter((p) => !p.executed);
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px,1fr))', gap: 8, marginBottom: 16 }}>
+    <div className="grid-auto" style={{ ...gridAutoStyle(150, 8), marginBottom: 16 }}>
       {codes.map((code) => {
         const pending = upcoming.filter((p) => currencyByAccount.get(p.accountId) === code);
         const net = pending.reduce((s, p) => s + p.amount, 0);
@@ -273,13 +274,29 @@ function IbanLookupFields({ value, onChange, bankNameDatalistId }: { value: Iban
  * button. Bank's "Add an account" action stays exactly as it was — only
  * the wrapper changed. */
 function AccountsFab() {
-  const [open, setOpen] = useState<'account' | 'transfer' | null>(null);
+  const [open, setOpen] = useState<'account' | 'transfer' | 'bank' | null>(null);
+  const addBank = useBankWorkbookStore((s) => s.addBank);
+  const ensureSignedIn = useEnsureSignedIn();
+  const [bankName, setBankName] = useState('');
+  const submitBank = async () => {
+    if (!bankName.trim()) return toast('Enter a bank name.');
+    if (!(await ensureSignedIn('Sign in to save a bank.'))) return;
+    addBank({ id: uid(), name: bankName.trim() });
+    toast('Bank added.');
+    setBankName('');
+    setOpen(null);
+  };
   return (
     <>
       <FabPanel
         actions={[
           { label: 'Add an account', icon: <PlusIcon />, onClick: () => setOpen('account') },
           { label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen('transfer') },
+          // Pending item 115(a): grouped here rather than a second floating
+          // button, so it can't stack/overlap with this panel (same class
+          // of bug already fixed once for the app-wide Transfers FAB —
+          // see Done item 239).
+          { label: 'Add a bank', icon: <PlusIcon />, onClick: () => setOpen('bank') },
         ]}
       />
       {open === 'account' && (
@@ -288,6 +305,16 @@ function AccountsFab() {
         </Modal>
       )}
       {open === 'transfer' && <TransactionEntryModal onClose={() => setOpen(null)} />}
+      {open === 'bank' && (
+        <Modal title="Add a bank" onClose={() => setOpen(null)}>
+          <Field label="Bank name" width={220} required>
+            <TextInput value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="e.g. UBL" />
+          </Field>
+          <div className="d-flex justify-center" style={{ marginTop: 16 }}>
+            <button className="btn" onClick={submitBank}><SaveIcon />Save</button>
+          </div>
+        </Modal>
+      )}
     </>
   );
 }
@@ -316,15 +343,31 @@ function AccountFormFields({
   onChange: (patch: Partial<BankAccount>) => void;
   idSuffix: string;
 }) {
+  const currencyOptions = useEnabledCurrencies(value.currencyCode);
+  const banks = useBankWorkbookStore((s) => s.workbook.settings.banks ?? []);
+  const visibleBanks = useMemo(() => banks.filter((b) => b.isActive !== false), [banks]);
   return (
     <div>
+      {/* Pending item 115(a): grouping under a real Bank entity is
+         optional — "no bank yet" is a completely valid, common state, so
+         this is a plain Select with a "No bank" option, never required. */}
+      {visibleBanks.length > 0 && (
+        <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+          <Field label="Bank (optional)" width={180} title="Group this account under a Bank entity to see a combined total for everything at that bank.">
+            <Select value={value.bankId ?? ''} onChange={(e) => onChange({ bankId: e.target.value || undefined })}>
+              <option value="">No bank</option>
+              {visibleBanks.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </Select>
+          </Field>
+        </div>
+      )}
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
         <Field label="Account name" width={180} required>
           <TextInput value={value.name} onChange={(e) => onChange({ name: e.target.value })} placeholder="e.g. Meezan Checking" />
         </Field>
         <Field label="Currency" width={100} required>
           <Select value={value.currencyCode} onChange={(e) => onChange({ currencyCode: e.target.value })}>
-            {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+            {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>
         <Field label="Opening balance (optional)" width={140}>
@@ -377,11 +420,11 @@ function AccountFormFields({
  * the caller (still optional, still fires with no meaningful argument for
  * the existing `AddAccountFab` caller, which only used it to close its own
  * modal) so that same picker can auto-select the new account immediately. */
-export function AddAccountForm({ onSaved, initialCurrency }: { onSaved?: (id: string) => void; initialCurrency?: string }) {
+export function AddAccountForm({ onSaved, initialCurrency, initialBankId }: { onSaved?: (id: string) => void; initialCurrency?: string; initialBankId?: string }) {
   const addAccount = useBankWorkbookStore((s) => s.addAccount);
   const [lastCurrency, setLastCurrency] = useLastCurrency('bank-account', 'USD');
   const ensureSignedIn = useEnsureSignedIn();
-  const [a, setA] = useState(() => emptyAccount(initialCurrency ?? lastCurrency));
+  const [a, setA] = useState(() => emptyAccount(initialCurrency ?? lastCurrency, initialBankId));
 
   const submit = async () => {
     if (!a.name.trim()) return toast('Enter an account name.');
@@ -389,7 +432,7 @@ export function AddAccountForm({ onSaved, initialCurrency }: { onSaved?: (id: st
     const id = uid();
     addAccount({ ...a, id, name: a.name.trim() });
     toast(`Account "${a.name.trim()}" added.`);
-    setA(emptyAccount(a.currencyCode));
+    setA(emptyAccount(a.currencyCode, initialBankId));
     onSaved?.(id);
   };
 
@@ -406,7 +449,7 @@ export function AddAccountForm({ onSaved, initialCurrency }: { onSaved?: (id: st
       <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
         <PlusIcon />Add account
       </button>
-      <p className="footer-note" style={{ marginTop: 8 }}><span style={{ color: 'var(--loss)' }}>*</span> Required. Everything else on this form is optional.</p>
+      <p className="text-muted" style={{ marginTop: 8 }}><span style={{ color: 'var(--loss)' }}>*</span> Required. Everything else on this form is optional.</p>
     </div>
   );
 }
@@ -426,6 +469,188 @@ export function AddAccountForm({ onSaved, initialCurrency }: { onSaved?: (id: st
  * both moved to `AccountDetailPage` (its own Account Details card's Edit
  * icon, and a dedicated red "Delete account" button) — this card no longer
  * mutates anything itself, it's a pure Main-tier summary + navigation. */
+/** Pending item 115(a): "add bank first and then on its details page, give
+ * ability to add extra accounts. and see the total balance with that
+ * bank. and on Banking homepage see their breakdown and summary." A
+ * collapsed-by-default `CollapsibleCard` above the plain `AccountsList`
+ * below (rule 1: additive, doesn't restructure that already-tested view)
+ * — a Bank is purely optional grouping, so most workbooks (no banks
+ * created yet) show nothing extra here at all. */
+function BanksList() {
+  const banks = useBankWorkbookStore((s) => s.workbook.settings.banks ?? []);
+  const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
+  const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
+  const navigate = useNavigate();
+  const [showArchived, setShowArchived] = useState(false);
+  const archivedCount = useMemo(() => banks.filter((b) => b.isActive === false).length, [banks]);
+  const visibleBanks = useMemo(
+    () => (showArchived ? banks : banks.filter((b) => b.isActive !== false)).sort((a, b) => Number(!!b.isFavorite) - Number(!!a.isFavorite)),
+    [banks, showArchived],
+  );
+  if (!banks.length) return null;
+  return (
+    <CollapsibleCard title="Banks" defaultOpen={false}>
+      {archivedCount > 0 && (
+        <button className="btn secondary small" style={{ marginBottom: 12 }} onClick={() => setShowArchived((v) => !v)}>
+          {showArchived ? 'Hide' : 'Show'} archived ({archivedCount})
+        </button>
+      )}
+      <div className="entity-card-grid">
+        {visibleBanks.map((b) => {
+          const totals = bankTotalsByCurrency(b.id, accounts, transactions);
+          const currencies = Object.keys(totals);
+          const accountCount = accounts.filter((a) => a.bankId === b.id).length;
+          return (
+            <EntityCard
+              key={b.id}
+              title={b.name}
+              subtitle={`${accountCount} account${accountCount === 1 ? '' : 's'}`}
+              badge={b.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Archived</span> : undefined}
+              statLabel={currencies.length > 1 ? 'Total (by currency)' : 'Total'}
+              stat={
+                currencies.length ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {currencies.map((c) => <MoneyValue key={c} n={totals[c]} currency={c} />)}
+                  </div>
+                ) : (
+                  <span className="text-muted">No accounts yet</span>
+                )
+              }
+              onClick={() => navigate(`/bank/bank/${b.id}`)}
+            />
+          );
+        })}
+      </div>
+    </CollapsibleCard>
+  );
+}
+
+/** Pending item 115(a)'s own detail page — mirrors `AccountDetailPage`'s
+ * read-only+Edit-icon convention. Lists every account linked to this
+ * Bank (reusing `EntityCard`, same styling as `AccountsList` itself) with
+ * an "Add account" FAB that pre-fills `bankId` so a new account created
+ * from here is grouped under this Bank from the start. */
+export function BankDetailPage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const banks = useBankWorkbookStore((s) => s.workbook.settings.banks ?? []);
+  const bank = banks.find((b) => b.id === id);
+  const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
+  const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
+  const updateBank = useBankWorkbookStore((s) => s.updateBank);
+  const deleteBank = useBankWorkbookStore((s) => s.deleteBank);
+  const ensureSignedIn = useEnsureSignedIn();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState({ name: bank?.name ?? '', notes: bank?.notes ?? '' });
+  const linkedAccounts = useMemo(() => accounts.filter((a) => a.bankId === id), [accounts, id]);
+  const totals = useMemo(() => (bank ? bankTotalsByCurrency(bank.id, accounts, transactions) : {}), [bank, accounts, transactions]);
+  const [addOpen, setAddOpen] = useState(false);
+
+  const startEdit = () => {
+    if (!bank) return;
+    setDraft({ name: bank.name, notes: bank.notes ?? '' });
+    setEditing(true);
+  };
+  const save = async () => {
+    if (!bank) return;
+    if (!draft.name.trim()) return toast('Enter a bank name.');
+    if (!(await ensureSignedIn('Sign in to save bank details.'))) return;
+    updateBank(bank.id, { name: draft.name.trim(), notes: draft.notes.trim() || undefined });
+    toast('Bank updated.');
+    setEditing(false);
+  };
+  const remove = async () => {
+    if (!bank) return;
+    if (!(await confirmDialog(`Delete "${bank.name}"? Its accounts stay, just no longer grouped under this bank.`))) return;
+    if (!(await ensureSignedIn('Sign in to delete this bank.'))) return;
+    deleteBank(bank.id);
+    toast('Bank deleted.');
+    navigate('/bank');
+  };
+
+  if (!bank) {
+    return (
+      <div>
+        <Link to="/bank">← Back to Banking</Link>
+        <p className="text-muted">Bank not found.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <Link to="/bank">← Back to Banking</Link>
+      <CollapsibleCard
+        title={editing ? 'Edit bank' : bank.name}
+        defaultOpen
+        headerExtra={
+          !editing && (
+            <>
+              <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={startEdit} />
+              <IconButton label="Delete" icon={<TrashIcon size={13} />} align="right" onClick={remove} />
+            </>
+          )
+        }
+      >
+        {editing ? (
+          <div>
+            <Field label="Bank name" width={220} required>
+              <TextInput value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+            </Field>
+            <Field label="Notes (optional)" width={220}>
+              <TextInput value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
+            </Field>
+            <div className="row" style={{ gap: 8, marginTop: 8 }}>
+              <button className="btn" onClick={save}><SaveIcon />Save</button>
+              <button className="btn secondary" onClick={() => setEditing(false)}><XIcon />Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <div>
+            {bank.notes && <p className="text-muted" style={{ marginTop: 0 }}>{bank.notes}</p>}
+            <div className="row" style={{ gap: 16, flexWrap: 'wrap' }}>
+              {Object.keys(totals).length ? (
+                Object.entries(totals).map(([c, n]) => (
+                  <div key={c} className="stat-card card" style={hueStyle('var(--accent)')}>
+                    <div className="label">Total ({c})</div>
+                    <MoneyValue n={n} currency={c} />
+                  </div>
+                ))
+              ) : (
+                <p className="text-muted">No accounts linked yet.</p>
+              )}
+            </div>
+          </div>
+        )}
+      </CollapsibleCard>
+      <div style={{ marginTop: 16 }}>
+        <div className="entity-card-grid">
+          {linkedAccounts.map((a) => (
+            <EntityCard
+              key={a.id}
+              title={a.name}
+              subtitle={[a.accountType, a.branch].filter(Boolean).join(' · ') || undefined}
+              statLabel={a.isLiability ? 'Owed' : 'Balance'}
+              stat={<MoneyValue n={a.isLiability ? Math.max(0, -accountBalance(a, transactions)) : accountBalance(a, transactions)} currency={a.currencyCode} />}
+              hue={a.isLiability ? (accountBalance(a, transactions) < 0 ? 'var(--loss)' : 'var(--profit)') : (accountBalance(a, transactions) >= 0 ? 'var(--profit)' : 'var(--loss)')}
+              onClick={() => navigate(`/bank/account/${a.id}`)}
+            />
+          ))}
+        </div>
+        {!linkedAccounts.length && <p className="text-muted">No accounts linked to this bank yet.</p>}
+      </div>
+      <FabButton label="Add account" onClick={() => setAddOpen(true)}>
+        <PlusIcon />
+      </FabButton>
+      {addOpen && (
+        <Modal title="Add an account" onClose={() => setAddOpen(false)}>
+          <AddAccountForm initialBankId={bank.id} onSaved={() => setAddOpen(false)} />
+        </Modal>
+      )}
+    </div>
+  );
+}
+
 /** User-requested (2026-09-03): "isActive flag to archive accounts." An
  * archived account is hidden from this default grid (and from every
  * "pick where a NEW transaction/plan goes" picker elsewhere — see
@@ -436,15 +661,29 @@ export function AddAccountForm({ onSaved, initialCurrency }: { onSaved?: (id: st
 function AccountsList() {
   const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
   const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
+  const updateAccount = useBankWorkbookStore((s) => s.updateAccount);
   const navigate = useNavigate();
+  const ensureSignedIn = useEnsureSignedIn();
   const [showArchived, setShowArchived] = useState(false);
   const { num } = useAmountFormat();
+
+  // Pending item 115(c): "add numeric sequence Id with each entity... for
+  // correct data ordering" — the account's own stable position in the
+  // underlying array (creation order), NOT the currency-grouped/favorite-
+  // sorted display order below. Same convention Funds' own Sr# column
+  // already established (Done item 226).
+  const srNumOf = useMemo(() => new Map(accounts.map((a, i) => [a.id, i + 1])), [accounts]);
 
   const archivedCount = useMemo(() => accounts.filter((a) => a.isActive === false).length, [accounts]);
   const visibleAccounts = useMemo(
     () => (showArchived ? accounts : accounts.filter((a) => a.isActive !== false)),
     [accounts, showArchived],
   );
+
+  const toggleFavorite = async (a: BankAccount) => {
+    if (!(await ensureSignedIn(a.isFavorite ? 'Sign in to unfavorite this account.' : 'Sign in to favorite this account.'))) return;
+    updateAccount(a.id, { isFavorite: !a.isFavorite });
+  };
 
   const currencyGroups = useMemo(() => {
     const byCurrency = new Map<string, BankAccount[]>();
@@ -453,11 +692,14 @@ function AccountsList() {
       list.push(a);
       byCurrency.set(a.currencyCode, list);
     }
+    // Favorites float to the top of each currency group; a stable sort
+    // otherwise leaves creation order (matching Sr#) as the tiebreak.
+    for (const list of byCurrency.values()) list.sort((a, b) => Number(!!b.isFavorite) - Number(!!a.isFavorite));
     return [...byCurrency.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [visibleAccounts]);
 
   if (!accounts.length) {
-    return <p className="footer-note">No accounts yet — use the + button below to add one.</p>;
+    return <p className="text-muted">No accounts yet — use the + button below to add one.</p>;
   }
 
   return (
@@ -472,7 +714,7 @@ function AccountsList() {
         </button>
       )}
       {!visibleAccounts.length && (
-        <p className="footer-note">Every account is archived — click "Show archived" above to see them.</p>
+        <p className="text-muted">Every account is archived — click "Show archived" above to see them.</p>
       )}
       {currencyGroups.map(([currency, group]) => {
         // User-requested (2026-09-06): "give sums in a tag for each
@@ -486,7 +728,7 @@ function AccountsList() {
         return (
         <div key={currency} style={{ marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <span className="footer-note" style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: 11, letterSpacing: '.04em' }}>
+            <span className="text-muted" style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: 11, letterSpacing: '.04em' }}>
               {currency}
             </span>
             <span className={`pill-info`} style={{ fontSize: 11 }}>{num(groupSum)} {currency}</span>
@@ -495,12 +737,12 @@ function AccountsList() {
             {group.map((a) => (
               <EntityCard
                 key={a.id}
-                title={a.name}
+                title={<><span className="text-muted" style={{ fontWeight: 400, fontSize: 11, marginRight: 5 }}>#{srNumOf.get(a.id)}</span>{a.name}</>}
                 subtitle={[a.accountType, a.branch].filter(Boolean).join(' · ') || undefined}
                 badge={
                   a.isLiability || a.isActive === false ? (
                     <span style={{ display: 'flex', gap: 4 }}>
-                      {a.isLiability && <span className="pill-sell" style={{ fontSize: 10 }}>Credit card</span>}
+                      {a.isLiability && <span className="pill-negative" style={{ fontSize: 10 }}>Credit card</span>}
                       {a.isActive === false && <span className="pill-warn" style={{ fontSize: 10 }}>Archived</span>}
                     </span>
                   ) : undefined
@@ -519,12 +761,20 @@ function AccountsList() {
                 }
                 onClick={() => navigate(`/bank/account/${a.id}`)}
                 actions={
-                  <IconButton
-                    label="Transactions"
-                    icon={<ListIcon size={13} />}
-                    align="right"
-                    onClick={() => navigate(`/bank/account/${a.id}`)}
-                  />
+                  <>
+                    <IconButton
+                      label={a.isFavorite ? 'Unfavorite' : 'Favorite'}
+                      icon={<StarIcon size={13} filled={a.isFavorite} />}
+                      align="right"
+                      onClick={() => toggleFavorite(a)}
+                    />
+                    <IconButton
+                      label="Transactions"
+                      icon={<ListIcon size={13} />}
+                      align="right"
+                      onClick={() => navigate(`/bank/account/${a.id}`)}
+                    />
+                  </>
                 }
               />
             ))}
@@ -595,6 +845,7 @@ export function AccountDetailPage() {
     minPaymentAmount: a?.minPaymentAmount,
     cardNetwork: a?.cardNetwork,
     cardBin: a?.cardBin,
+    bankId: a?.bankId,
   });
   const [meta, setMeta] = useState<Omit<BankAccount, 'id'>>(() => accountToFormValue(account));
   const saveMeta = async () => {
@@ -655,8 +906,8 @@ export function AccountDetailPage() {
   if (!account) {
     return (
       <div>
-        <Link to="/bank" className="footer-note">← Back to Banking</Link>
-        <p className="footer-note" style={{ marginTop: 12 }}>Account not found.</p>
+        <Link to="/bank" className="text-muted">← Back to Banking</Link>
+        <p className="text-muted" style={{ marginTop: 12 }}>Account not found.</p>
       </div>
     );
   }
@@ -681,7 +932,7 @@ export function AccountDetailPage() {
 
   return (
     <div>
-      <Link to="/bank" className="footer-note">← Back to Banking</Link>
+      <Link to="/bank" className="text-muted">← Back to Banking</Link>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
         <h1 className="pagetitle" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
           {account.name}
@@ -702,14 +953,25 @@ export function AccountDetailPage() {
           </button>
         </div>
       </div>
-      <p className="footer-note" style={{ marginBottom: 16 }}>
+      <p className="text-muted" style={{ marginBottom: 16 }}>
         {account.isLiability ? 'Amount owed:' : 'Current balance:'}{' '}
         <strong title={fmtMoney(account.isLiability ? Math.max(0, -accountBalance(account, transactions)) : accountBalance(account, transactions), account.currencyCode)}>
           {num(account.isLiability ? Math.max(0, -accountBalance(account, transactions)) : accountBalance(account, transactions))} {account.currencyCode}
         </strong>
         {account.isLiability && account.creditLimit ? (
-          <span className="footer-note"> · {num(Math.max(0, account.creditLimit - Math.max(0, -accountBalance(account, transactions))))} {account.currencyCode} available of {num(account.creditLimit)} limit</span>
+          <span className="text-muted"> · {num(Math.max(0, account.creditLimit - Math.max(0, -accountBalance(account, transactions))))} {account.currencyCode} available of {num(account.creditLimit)} limit</span>
         ) : null}
+        {/* User-requested (2026-09-08): show pending money too, not just
+           exclude it silently — the cleared figure above already excludes
+           any `isPending` transaction. */}
+        {(() => {
+          const pendingAmt = accountPendingBalance(account, transactions);
+          if (pendingAmt === 0) return null;
+          const withPending = account.isLiability ? Math.max(0, -(accountBalance(account, transactions) + pendingAmt)) : accountBalance(account, transactions) + pendingAmt;
+          return (
+            <span> · {pendingAmt > 0 ? '+' : ''}{num(pendingAmt)} {account.currencyCode} pending → {num(withPending)} {account.currencyCode} incl. pending</span>
+          );
+        })()}
       </p>
 
       {/* User-reported (2026-08-28): "UI ordering still pathetic. Account
@@ -779,7 +1041,7 @@ export function AccountDetailPage() {
                     <tr key={p.id}>
                       <td>{p.date}</td>
                       <td>{p.description}</td>
-                      <td className={p.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(p.amount, account.currencyCode)}</td>
+                      <td className={p.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(p.amount, account.currencyCode)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -859,6 +1121,7 @@ function AccountsTab() {
   return (
     <div>
       <TotalBalances />
+      <BanksList />
       <AccountsList />
       <AccountsFab />
     </div>
@@ -945,7 +1208,11 @@ function EditTransactionModal({ tx, onClose }: { tx: BankTransaction; onClose: (
           onTimezoneChange={(timezone) => setDraft({ ...draft, timezone })}
         />
       </div>
-      <p className="footer-note" style={{ marginTop: 8 }}>
+      <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }} title="Not yet cleared — excluded from Current balance until unchecked.">
+        <input type="checkbox" checked={!!draft.isPending} onChange={(e) => setDraft({ ...draft, isPending: e.target.checked })} />
+        Pending (not yet cleared)
+      </label>
+      <p className="text-muted" style={{ marginTop: 8 }}>
         {draft.source === 'statement-import' ? `Imported${draft.statementRef ? ` from ${draft.statementRef}` : ''}` : 'Entered manually'}
       </p>
     </FinanceEditModal>
@@ -1018,7 +1285,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
   // rows genuinely tied on the same real instant — never scramble the
   // table into a different, unrelated order.
   const sorted = useMemo(() => [...ledger].reverse(), [ledger]);
-  const instantOf = (r: (typeof sorted)[number]) => toInstantMs(r.tx.date, r.tx.time, r.tx.timezone);
+  const instantOf = (r: (typeof sorted)[number]) => dateOnlyMs(r.tx.date);
   const reorder = async (pair: [{ id: string; order: number }, { id: string; order: number }]) => {
     if (!(await ensureSignedIn('Sign in to reorder transactions.'))) return;
     for (const p of pair) updateTransaction(p.id, { serialNumber: p.order });
@@ -1081,7 +1348,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
             const otherSide = link ? (link.from.module === 'bank' && link.fromRecordId === tx.id ? link.to : link.from) : undefined;
             return (
               <tr key={tx.id}>
-                <td className="footer-note">
+                <td className="text-muted">
                   {tx.serialNumber ?? '—'}{' '}
                   <ReorderButtons
                     rows={sorted}
@@ -1095,6 +1362,9 @@ function TransactionsList({ account }: { account: BankAccount }) {
                 <td>{tx.date}</td>
                 <td className="cell-clip" title={tx.description}>
                   {tx.description}
+                  {tx.isPending && (
+                    <span className="pill-warn" style={{ marginLeft: 6 }} title="Not yet cleared — excluded from Current balance above until marked cleared.">Pending</span>
+                  )}
                   {link && (
                     <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
                       🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
@@ -1102,12 +1372,24 @@ function TransactionsList({ account }: { account: BankAccount }) {
                   )}
                 </td>
                 <td><span className="pill-info">{categoryName(tx.categoryID, categories)}</span></td>
-                <td className={tx.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(tx.amount, account.currencyCode)}</td>
+                <td className={tx.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(tx.amount, account.currencyCode)}</td>
                 <td>{fmtMoney(balance, account.currencyCode)}</td>
-                <td className="footer-note cell-clip" title={tx.source === 'statement-import' ? `Import${tx.statementRef ? ` (${tx.statementRef})` : ''}` : 'Manual'}>
+                <td className="text-muted cell-clip" title={tx.source === 'statement-import' ? `Import${tx.statementRef ? ` (${tx.statementRef})` : ''}` : 'Manual'}>
                   {tx.source === 'statement-import' ? `Import${tx.statementRef ? ` (${tx.statementRef})` : ''}` : 'Manual'}
                 </td>
                 <td>
+                  {tx.isPending && (
+                    <IconButton
+                      label="Mark cleared"
+                      icon={<CheckIcon size={13} />}
+                      align="right"
+                      onClick={async () => {
+                        if (!(await ensureSignedIn('Sign in to update this transaction.'))) return;
+                        updateTransaction(tx.id, { isPending: false });
+                        toast('Marked cleared.');
+                      }}
+                    />
+                  )}{' '}
                   <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => setEditingTx(tx)} />{' '}
                   <IconButton
                     label="Delete"
@@ -1121,7 +1403,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
           })}
           {!sorted.length && (
             <tr>
-              <td colSpan={7} className="footer-note">
+              <td colSpan={7} className="text-muted">
                 {allLedger.length ? 'No transactions match these filters.' : 'No transactions for this account yet.'}
               </td>
             </tr>
@@ -1162,6 +1444,27 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
   const ledger = useMemo(() => accountRunningLedger(account, transactions), [account, transactions]);
   const monthlyFlow = useMemo(() => bankMonthlyFlow(transactions, [account.id]), [transactions, account.id]);
 
+  // Pending item 115(d): "charts should be interactive... right now they are
+  // dumping lifetime data all at once" — a from/to month range narrows the
+  // two full-history charts (Balance over time, Income vs. spend by month).
+  // Deliberately a local `<input type="month">` pair rather than reusing
+  // QSE/PSX's `ChartFilterBar`/`ChartFilter` (lib/calc/chartFilters.ts) —
+  // that type's `tickers` field has no meaning for a bank account, and the
+  // shapes here (a running ledger, a `{month,income,expense}[]` series)
+  // don't match its `{months,values}` helpers either. The Category
+  // breakdown card + its own ◀/▶ month nav below is a separate, more
+  // specific tool (one exact month at a time) and is left untouched.
+  const [fromMonth, setFromMonth] = useState('');
+  const [toMonth, setToMonth] = useState('');
+  const filteredLedger = useMemo(
+    () => ledger.filter((r) => (!fromMonth || r.tx.date.slice(0, 7) >= fromMonth) && (!toMonth || r.tx.date.slice(0, 7) <= toMonth)),
+    [ledger, fromMonth, toMonth],
+  );
+  const filteredMonthlyFlow = useMemo(
+    () => monthlyFlow.filter((f) => (!fromMonth || f.month >= fromMonth) && (!toMonth || f.month <= toMonth)),
+    [monthlyFlow, fromMonth, toMonth],
+  );
+
   const [monthOffset, setMonthOffset] = useState(0);
   const selectedMonth = monthRange(monthOffset, monthOffset)[0];
   const selectedMonthLabel = new Date(`${selectedMonth}-01`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
@@ -1176,28 +1479,38 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
   const endOfMonthBalance = accountBalanceAsOfMonth(ledger, selectedMonth, account.openingBalance);
 
   if (!ledger.length) {
-    return <p className="footer-note" style={{ margin: 0 }}>No transactions yet — analytics will appear once you log some.</p>;
+    return <p className="text-muted" style={{ margin: 0 }}>No transactions yet — analytics will appear once you log some.</p>;
   }
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginBottom: 16 }}>
-        <ChartCard flat title="Balance over time">
+      <div className="row" style={{ gap: 8, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
+        <span className="text-muted">Chart range:</span>
+        <input type="month" value={fromMonth} onChange={(e) => setFromMonth(e.target.value)} aria-label="From month" />
+        <span className="text-muted">to</span>
+        <input type="month" value={toMonth} onChange={(e) => setToMonth(e.target.value)} aria-label="To month" />
+        {(fromMonth || toMonth) && (
+          <button type="button" className="btn secondary small" onClick={() => { setFromMonth(''); setToMonth(''); }}>Clear</button>
+        )}
+        <Tooltip text="Narrows the Balance over time and Income vs. spend charts below to this window. Doesn't affect Category breakdown, which already has its own month navigation, or any lifetime total shown elsewhere." />
+      </div>
+      <div className="grid-auto" style={{ ...gridAutoStyle(300, 16), marginBottom: 16 }}>
+        <ChartCard flat title="Balance over time" empty={!filteredLedger.length}>
           <Line
             data={{
-              labels: ledger.map((r) => r.tx.date),
-              datasets: [{ label: 'Balance', data: ledger.map((r) => r.balance), borderColor: '#5aa9c9', backgroundColor: '#5aa9c933', fill: true, tension: 0.2 }],
+              labels: filteredLedger.map((r) => r.tx.date),
+              datasets: [{ label: 'Balance', data: filteredLedger.map((r) => r.balance), borderColor: '#5aa9c9', backgroundColor: '#5aa9c933', fill: true, tension: 0.2 }],
             }}
             options={{ plugins: { legend: { display: false }, datalabels: dlLine((v) => fmtMoney(v, account.currencyCode)) } }}
           />
         </ChartCard>
-        <ChartCard flat title="Income vs. spend by month">
+        <ChartCard flat title="Income vs. spend by month" empty={!filteredMonthlyFlow.length}>
           <Bar
             data={{
-              labels: monthlyFlow.map((f) => f.month),
+              labels: filteredMonthlyFlow.map((f) => f.month),
               datasets: [
-                { label: 'Income', data: monthlyFlow.map((f) => f.income), backgroundColor: cssVar('--profit') || '#3ecf8e' },
-                { label: 'Expense', data: monthlyFlow.map((f) => f.expense), backgroundColor: cssVar('--loss') || '#e5484d' },
+                { label: 'Income', data: filteredMonthlyFlow.map((f) => f.income), backgroundColor: cssVar('--profit') || '#3ecf8e' },
+                { label: 'Expense', data: filteredMonthlyFlow.map((f) => f.expense), backgroundColor: cssVar('--loss') || '#e5484d' },
               ],
             }}
             options={{ plugins: { datalabels: dlBarV((v) => fmtMoney(v, account.currencyCode)) } }}
@@ -1228,13 +1541,13 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
             <tr><td>Expense</td><td>{fmtMoney(monthFlowRow?.expense ?? 0, account.currencyCode)}</td></tr>
             <tr>
               <td>Net flow</td>
-              <td className={(monthFlowRow?.net ?? 0) >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(monthFlowRow?.net ?? 0, account.currencyCode)}</td>
+              <td className={(monthFlowRow?.net ?? 0) >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(monthFlowRow?.net ?? 0, account.currencyCode)}</td>
             </tr>
             <tr><td>Balance at month end</td><td>{fmtMoney(endOfMonthBalance, account.currencyCode)}</td></tr>
             {spendCategories.map((c) => (
               <tr key={c}><td>{c}</td><td>{fmtMoney(Math.abs(byCategoryThisMonth[c]), account.currencyCode)}</td></tr>
             ))}
-            {!spendCategories.length && <tr><td colSpan={2} className="footer-note">No spend this month.</td></tr>}
+            {!spendCategories.length && <tr><td colSpan={2} className="text-muted">No spend this month.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -1247,7 +1560,7 @@ function CategoryBreakdownBody({ account }: { account: BankAccount }) {
   const categories = useCategoryStore((s) => s.workbook.categories);
   const byCategory = accountByCategory(account, transactions, categories);
   const cats = Object.keys(byCategory);
-  if (!cats.length) return <p className="footer-note" style={{ margin: 0 }}>No categorized transactions yet.</p>;
+  if (!cats.length) return <p className="text-muted" style={{ margin: 0 }}>No categorized transactions yet.</p>;
 
   return (
       <div className="table-scroll">
@@ -1256,7 +1569,7 @@ function CategoryBreakdownBody({ account }: { account: BankAccount }) {
             {cats.map((cat) => (
               <tr key={cat}>
                 <td>{cat}</td>
-                <td className={byCategory[cat] >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(byCategory[cat], account.currencyCode)}</td>
+                <td className={byCategory[cat] >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(byCategory[cat], account.currencyCode)}</td>
               </tr>
             ))}
           </tbody>
@@ -1345,7 +1658,7 @@ function ImportStatementSection({ account }: { account: BankAccount }) {
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-        <span className="footer-note">Import a CSV export from your bank into {account.name}.</span>
+        <span className="text-muted">Import a CSV export from your bank into {account.name}.</span>
         <Tooltip text={'This is a simple "map these columns" tool, not a per-bank-format parser — pick which column is which below, since every bank\'s export looks a little different.'} />
       </div>
       <div>
@@ -1361,7 +1674,7 @@ function ImportStatementSection({ account }: { account: BankAccount }) {
             e.target.value = '';
           }}
         />
-        {fileName && <span className="footer-note" style={{ marginLeft: 8 }}>{fileName} ({rows.length} rows)</span>}
+        {fileName && <span className="text-muted" style={{ marginLeft: 8 }}>{fileName} ({rows.length} rows)</span>}
       </div>
 
       {headers.length > 0 && (
@@ -1382,7 +1695,7 @@ function ImportStatementSection({ account }: { account: BankAccount }) {
                 {headers.map((h) => <option key={h} value={h}>{h}</option>)}
               </Select>
             </Field>
-            <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 20 }} title="Check this if your bank exports spending as positive numbers instead of negative.">
+            <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 20 }} title="Check this if your bank exports spending as positive numbers instead of negative.">
               <input type="checkbox" checked={flipSign} onChange={(e) => setFlipSign(e.target.checked)} />
               Flip sign
             </label>
@@ -1397,7 +1710,7 @@ function ImportStatementSection({ account }: { account: BankAccount }) {
                   <tr key={i}>
                     <td>{r.date}</td>
                     <td>{r.description}</td>
-                    <td className={r.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(r.amount, account.currencyCode)}</td>
+                    <td className={r.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(r.amount, account.currencyCode)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1503,27 +1816,27 @@ function BalanceProjectionSummary() {
       style={{ marginBottom: 16 }}
     >
       <div className="row" style={{ gap: 16, marginBottom: 12 }}>
-        <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <input type="checkbox" checked={settings.showRealBalance} onChange={(e) => updateSettings({ showRealBalance: e.target.checked })} />
           Real balance
         </label>
-        <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <input type="checkbox" checked={settings.showPlannedBalance} onChange={(e) => updateSettings({ showPlannedBalance: e.target.checked })} />
           Planned balance
         </label>
       </div>
       {!codes.length ? (
-        <p className="footer-note">No balance yet — add an account or a plan below.</p>
+        <p className="text-muted">No balance yet — add an account or a plan below.</p>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px,1fr))', gap: 8 }}>
+        <div className="grid-auto" style={gridAutoStyle(180, 8)}>
           {codes.map((code) => (
             <div key={code} className="stat-card card">
               <div className="label">{code}</div>
               {settings.showRealBalance && (
-                <div className={projection[code].real >= 0 ? 'pill-buy' : 'pill-sell'}>Real: {fmtMoney(projection[code].real, code)}</div>
+                <div className={projection[code].real >= 0 ? 'pill-positive' : 'pill-negative'}>Real: {fmtMoney(projection[code].real, code)}</div>
               )}
               {settings.showPlannedBalance && (
-                <div className={projection[code].planned >= 0 ? 'pill-buy' : 'pill-sell'}>
+                <div className={projection[code].planned >= 0 ? 'pill-positive' : 'pill-negative'}>
                   Planned: {fmtMoney(projection[code].planned, code)}
                 </div>
               )}
@@ -1661,17 +1974,32 @@ function BankPlanList({ account }: { account: BankAccount }) {
       <div className="table-scroll">
         <table>
           <thead>
-            <tr><th>Date</th><th>Description</th><th>Amount</th><th>Category</th><th>Status</th><th></th></tr>
+            <tr><th>Date</th><th>Description</th><th>Amount</th><th>Category</th><th>Repeats / status</th><th></th></tr>
           </thead>
           <tbody>
             {sorted.map((p) =>
               editId === p.id && editRow ? (
                 <tr key={p.id}>
-                  <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
+                  <td>
+                    <input
+                      type="date"
+                      value={editRow.date}
+                      onChange={(e) => setEditRow({ ...editRow, date: e.target.value, recurrence: editRow.recurrence ? { ...editRow.recurrence, startDate: e.target.value } : undefined })}
+                      style={{ width: 130 }}
+                    />
+                  </td>
                   <td><input value={editRow.description} onChange={(e) => setEditRow({ ...editRow, description: e.target.value })} /></td>
                   <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 100 }} /></td>
                   <td><input value={editRow.category ?? ''} onChange={(e) => setEditRow({ ...editRow, category: e.target.value })} style={{ width: 100 }} /></td>
-                  <td></td>
+                  <td>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                      <RecurrenceFields
+                        startDate={editRow.date}
+                        value={editRow.recurrence}
+                        onChange={(recurrence) => setEditRow({ ...editRow, recurrence })}
+                      />
+                    </div>
+                  </td>
                   <td>
                     <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
                     <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditId(null)} />
@@ -1681,9 +2009,9 @@ function BankPlanList({ account }: { account: BankAccount }) {
                 <tr key={p.id}>
                   <td>{p.date}</td>
                   <td>{p.description}</td>
-                  <td className={p.amount >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(p.amount, account.currencyCode)}</td>
+                  <td className={p.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(p.amount, account.currencyCode)}</td>
                   <td>{p.category || '—'}</td>
-                  <td className="footer-note">{p.recurrence ? recurrenceLabel(p.recurrence) : p.executed ? 'Done' : 'Planned'}</td>
+                  <td className="text-muted">{p.recurrence ? recurrenceLabel(p.recurrence) : p.executed ? 'Done' : 'Planned'}</td>
                   <td>
                     {(p.recurrence || !p.executed) && (
                       <button className="btn secondary small" onClick={() => markDone(p)}>Mark as done</button>
@@ -1701,7 +2029,7 @@ function BankPlanList({ account }: { account: BankAccount }) {
                 </tr>
               ),
             )}
-            {!sorted.length && <tr><td colSpan={6} className="footer-note">No plans for this account yet.</td></tr>}
+            {!sorted.length && <tr><td colSpan={6} className="text-muted">No plans for this account yet.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -1790,7 +2118,7 @@ function AnalyticsTab() {
   const [newBudgetAmount, setNewBudgetAmount] = useState(0);
 
   if (!accounts.length) {
-    return <p className="footer-note">Add a bank account first (Accounts tab) to see charts here.</p>;
+    return <p className="text-muted">Add a bank account first (Accounts tab) to see charts here.</p>;
   }
 
   return (
@@ -1802,7 +2130,7 @@ function AnalyticsTab() {
       </Field>
       {account && (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginTop: 12 }}>
+          <div className="grid-auto" style={{ ...gridAutoStyle(320, 16), marginTop: 12 }}>
             <ChartCard flat title="Balance over time" empty={!balanceOverTime.length}>
               <Line
                 data={{
@@ -1836,7 +2164,7 @@ function AnalyticsTab() {
           </div>
 
           <CollapsibleCard title={<h3 style={{ margin: 0 }}>Budget — {thisMonth}</h3>} style={{ marginTop: 16 }}>
-            <p className="footer-note" style={{ marginTop: 0 }}>
+            <p className="text-muted" style={{ marginTop: 0 }}>
               Set a monthly spend target per category for {account.name}; compared against what you've actually
               spent there this month.
             </p>
@@ -1864,13 +2192,13 @@ function AnalyticsTab() {
                           }}
                         />
                       </td>
-                      <td className={r.budget > 0 && r.actual > r.budget ? 'pill-sell' : ''}>{fmtMoney(r.actual, account.currencyCode)}</td>
-                      <td className={r.budget > 0 ? (r.budget - r.actual >= 0 ? 'pill-buy' : 'pill-sell') : ''}>
+                      <td className={r.budget > 0 && r.actual > r.budget ? 'pill-negative' : ''}>{fmtMoney(r.actual, account.currencyCode)}</td>
+                      <td className={r.budget > 0 ? (r.budget - r.actual >= 0 ? 'pill-positive' : 'pill-negative') : ''}>
                         {r.budget > 0 ? fmtMoney(r.budget - r.actual, account.currencyCode) : '—'}
                       </td>
                     </tr>
                   ))}
-                  {!budgetRows.length && <tr><td colSpan={4} className="footer-note">No spend or budget targets for this account yet.</td></tr>}
+                  {!budgetRows.length && <tr><td colSpan={4} className="text-muted">No spend or budget targets for this account yet.</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -1916,7 +2244,7 @@ export function PlanningTab({
   const { accounts, account, accountId, setAccountId } = useAccountPicker();
 
   if (!accounts.length) {
-    return <p className="footer-note">Add a bank account first (Accounts tab) before planning transactions.</p>;
+    return <p className="text-muted">Add a bank account first (Accounts tab) before planning transactions.</p>;
   }
 
   return (
@@ -1976,7 +2304,7 @@ function DataManagement() {
 
   return (
     <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, marginTop: 12 }}>
-      <div className="footer-note" style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: 11, letterSpacing: '.04em', marginBottom: 8 }}>
+      <div className="text-muted" style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: 11, letterSpacing: '.04em', marginBottom: 8 }}>
         Data management
       </div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
@@ -2038,7 +2366,7 @@ export function BankPage({
             label: 'Settings',
             content: (
               <div>
-                <p className="footer-note" style={{ marginTop: 0 }}>
+                <p className="text-muted" style={{ marginTop: 0 }}>
                   Sign-in, profile, appearance, and a whole-app backup live on the{' '}
                   <Link to="/account">Account page →</Link>. What's below is specific to Banking.
                 </p>

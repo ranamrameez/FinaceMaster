@@ -25,7 +25,7 @@ import { useAuthState } from '../../../lib/firebase/useAuthState';
 import { firebaseReady } from '../../../lib/firebase/client';
 import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
-import { dlDoughnut, dlLine } from '../../../lib/chartLabels';
+import { dlDoughnut, dlLine, withAlpha } from '../../../lib/chartLabels';
 import type { ChartDataset } from 'chart.js';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar } from '../../../lib/cssVar';
@@ -53,6 +53,7 @@ import type { BankAccount } from '../../../types/bankWorkbook';
 import type { PersonalLoan } from '../../../types/personalLoansWorkbook';
 import type { EMILoan } from '../../../types/emiWorkbook';
 import type { Fund, FundsWorkbook } from '../../../types/fundsWorkbook';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const monthLabel = (m: string) => new Date(`${m}-01`).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
@@ -335,7 +336,7 @@ export function NetWorthPage({
               </span>
             ))}
           </div>
-          <Link to="/subscriptions" className="footer-note" style={{ display: 'inline-block', marginTop: 6 }}>Manage subscriptions →</Link>
+          <Link to="/subscriptions" className="text-muted" style={{ display: 'inline-block', marginTop: 6 }}>Manage subscriptions →</Link>
         </Notice>
       )}
 
@@ -343,7 +344,7 @@ export function NetWorthPage({
           roughly-equal Cards side by side — "Net worth summary" (the
           currency picker grouped directly with the big number it controls)
           and "Exchange rates" (its own Card, with a From/To pair). */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginBottom: 16, alignItems: 'start' }}>
+      <div className="grid-auto" style={{ ...gridAutoStyle(320, 16), marginBottom: 16, alignItems: 'start' }}>
         <Card>
           <h3 style={{ marginTop: 0 }}>Net worth summary</h3>
           <Field label="Show total in" width={150}>
@@ -358,12 +359,12 @@ export function NetWorthPage({
             {todaysSnapshot ? 'Update today\'s snapshot' : 'Save snapshot'}
           </button>
           {unconverted.length > 0 && (
-            <div className="footer-note" style={{ marginTop: 8 }}>
+            <div className="text-muted" style={{ marginTop: 8 }}>
               No {preferredCurrency} rate available for {unconverted.join(', ')} — those currencies' totals
               aren't included above; see their own sections below for real figures.
             </div>
           )}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px,1fr))', gap: 8, marginTop: 12 }}>
+          <div className="grid-auto" style={{ ...gridAutoStyle(140, 8), marginTop: 12 }}>
             <StatCard
               label="Total debts"
               value={fmtMoney(totalDebts, preferredCurrency)}
@@ -389,7 +390,7 @@ export function NetWorthPage({
 
         <Card>
           <h3 style={{ marginTop: 0 }}>Exchange rates</h3>
-          <div className="footer-note">
+          <div className="text-muted">
             {rates
               ? `Rates as of ${new Date(rates.fetchedAt).toLocaleString()} (${rates.source === 'api' ? 'auto-fetched' : 'manually entered'}).`
               : 'No exchange rates loaded yet.'}
@@ -400,7 +401,7 @@ export function NetWorthPage({
           </button>
 
           <div style={{ marginTop: 12 }}>
-            <div className="footer-note" style={{ marginBottom: 4 }}>Set a rate between any two currencies</div>
+            <div className="text-muted" style={{ marginBottom: 4 }}>Set a rate between any two currencies</div>
             <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
               <Field label="1 unit of">
                 <Select value={rateFrom} onChange={(e) => onRateFromChange(e.target.value)} width={110}>
@@ -421,7 +422,7 @@ export function NetWorthPage({
 
           {ownCurrencies.length > 1 && (
             <div style={{ marginTop: 14 }}>
-              <div className="footer-note" style={{ marginBottom: 4 }}>Rates between your own currencies</div>
+              <div className="text-muted" style={{ marginBottom: 4 }}>Rates between your own currencies</div>
               {ownCurrencies.flatMap((a) =>
                 ownCurrencies.filter((b) => b > a).map((b) => {
                   const rAB = effectiveRate(a, b, rates);
@@ -429,11 +430,11 @@ export function NetWorthPage({
                   return (
                     <div key={`${a}-${b}`} style={{ padding: '3px 0', borderBottom: '1px solid var(--border)' }}>
                       <div className="row" style={{ justifyContent: 'space-between' }}>
-                        <span className="footer-note">1 {a} =</span>
+                        <span className="text-muted">1 {a} =</span>
                         <span style={{ fontFamily: 'var(--mono)' }}>{rAB !== null ? `${rAB.toFixed(4)} ${b}` : `— ${b} (no rate yet)`}</span>
                       </div>
                       <div className="row" style={{ justifyContent: 'space-between' }}>
-                        <span className="footer-note">1 {b} =</span>
+                        <span className="text-muted">1 {b} =</span>
                         <span style={{ fontFamily: 'var(--mono)' }}>{rBA !== null ? `${rBA.toFixed(4)} ${a}` : `— ${a} (no rate yet)`}</span>
                       </div>
                     </div>
@@ -468,13 +469,13 @@ export function NetWorthPage({
       />
 
       {rows.length === 0 && (
-        <Card><div className="footer-note">No balances recorded yet across any account.</div></Card>
+        <Card><div className="text-muted">No balances recorded yet across any account.</div></Card>
       )}
 
       {/* Grid of per-currency account summaries (user-specified order,
           2026-09-04) — a responsive grid lets 2-3 currency sections sit
           side by side on a wide viewport instead of stacking. */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 12, marginBottom: 16 }}>
+      <div className="grid-auto" style={{ ...gridAutoStyle(360, 12), marginBottom: 16 }}>
         {rows.map((r) => {
           const converted = convertAmount(r.net, r.currency, preferredCurrency, rates);
           return (
@@ -482,7 +483,7 @@ export function NetWorthPage({
               <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: 16 }}>
                 {r.currency} — {fmtMoney(r.net, r.currency)}
                 {converted !== null && r.currency !== preferredCurrency && (
-                  <span className="footer-note" style={{ marginLeft: 8, fontWeight: 400 }}>
+                  <span className="text-muted" style={{ marginLeft: 8, fontWeight: 400 }}>
                     ≈ {fmtMoney(converted, preferredCurrency)}
                   </span>
                 )}
@@ -494,8 +495,8 @@ export function NetWorthPage({
               </div>
               {r.breakdown.length > 0 && (
                 <div style={{ marginTop: 12 }}>
-                  <div className="footer-note" style={{ marginBottom: 4 }}>By account</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 6 }}>
+                  <div className="text-muted" style={{ marginBottom: 4 }}>By account</div>
+                  <div className="grid-auto" style={gridAutoStyle(120, 6)}>
                     {r.breakdown.map((b) => (
                       <div key={b.module} className="stat-card card" style={hueStyle(b.amount >= 0 ? 'var(--profit)' : 'var(--loss)')}>
                         <div className="label">{b.module}</div>
@@ -541,7 +542,7 @@ export function NetWorthPage({
       {Object.keys(rentalsNet).length > 0 && (
         <Card style={{ marginTop: 12 }}>
           <div className="label" style={{ marginBottom: 8 }}>Rental net income (informational — not included above)</div>
-          <div className="footer-note" style={{ marginBottom: 8 }}>
+          <div className="text-muted" style={{ marginBottom: 8 }}>
             Property values aren't tracked in this app, and rental income already lands in whichever Cash/Bank
             account it was deposited to — counting it again here would double-count it.
           </div>
@@ -629,7 +630,7 @@ function IncludeInNetWorthFab({
       <FabButton label="Include in Net Worth" onClick={() => setOpen(true)}><SettingsIcon size={18} /></FabButton>
       {open && (
         <Modal title="Include in Net Worth" onClose={() => setOpen(false)}>
-          <p className="footer-note" style={{ marginTop: 0 }}>
+          <p className="text-muted" style={{ marginTop: 0 }}>
             Unchecked items are left out of every total on this page — e.g. an EMI loan you closed
             early that the schedule still thinks is owed.
           </p>
@@ -642,7 +643,7 @@ function IncludeInNetWorthFab({
 
             {bankAccounts.length > 0 && (
               <div>
-                <div className="footer-note" style={{ marginBottom: 6, fontWeight: 600 }}>Banking</div>
+                <div className="text-muted" style={{ marginBottom: 6, fontWeight: 600 }}>Banking</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {bankAccounts.map((a) => (
                     <IncludeChip key={a.id} label={`${a.name} (${a.currencyCode})`} checked={a.includeInNetWorth !== false} onToggle={() => toggleInclude(() => updateBankAccount(a.id, { includeInNetWorth: a.includeInNetWorth === false }))} />
@@ -653,7 +654,7 @@ function IncludeInNetWorthFab({
 
             {personalLoans.length > 0 && (
               <div>
-                <div className="footer-note" style={{ marginBottom: 6, fontWeight: 600 }}>Personal Loans</div>
+                <div className="text-muted" style={{ marginBottom: 6, fontWeight: 600 }}>Personal Loans</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {personalLoans.map((l) => (
                     <IncludeChip key={l.id} label={`${l.person} (${l.currencyCode})`} checked={l.includeInNetWorth !== false} onToggle={() => toggleInclude(() => updatePersonalLoan(l.id, { includeInNetWorth: l.includeInNetWorth === false }))} />
@@ -664,7 +665,7 @@ function IncludeInNetWorthFab({
 
             {emiLoans.length > 0 && (
               <div>
-                <div className="footer-note" style={{ marginBottom: 6, fontWeight: 600 }}>EMI / Loans</div>
+                <div className="text-muted" style={{ marginBottom: 6, fontWeight: 600 }}>EMI / Loans</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {emiLoans.map((l) => (
                     <IncludeChip key={l.id} label={`${l.name} (${l.currencyCode})`} checked={l.includeInNetWorth !== false} onToggle={() => toggleInclude(() => updateEmiLoan(l.id, { includeInNetWorth: l.includeInNetWorth === false }))} />
@@ -675,7 +676,7 @@ function IncludeInNetWorthFab({
 
             {funds.funds.length > 0 && (
               <div>
-                <div className="footer-note" style={{ marginBottom: 6, fontWeight: 600 }}>Funds</div>
+                <div className="text-muted" style={{ marginBottom: 6, fontWeight: 600 }}>Funds</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {funds.funds.map((f) => (
                     <IncludeChip key={f.id} label={`${f.name} (${f.currencyCode})`} checked={f.includeInNetWorth !== false} onToggle={() => toggleFund(f)} />
@@ -767,13 +768,13 @@ function NetWorthMonthlySection({
         <button className="btn secondary small" onClick={() => setWindowStart((w) => w + 1)}>Later ▶</button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 16, marginBottom: 16 }}>
+      <div className="grid-auto" style={{ ...gridAutoStyle(380, 16), marginBottom: 16 }}>
         {ownCurrencies.map((currency) => (
           <NetWorthComboChart key={currency} currency={currency} months={months} trend={trend} />
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 16 }}>
+      <div className="grid-auto" style={gridAutoStyle(420, 16)}>
         {ownCurrencies.map((currency) => (
           <MonthlySummaryTable key={currency} currency={currency} months={months} nowMonth={nowMonth} monthly={monthly} trend={trend} />
         ))}
@@ -802,7 +803,6 @@ function NetWorthMonthlySection({
  * foreground series. */
 function NetWorthComboChart({ currency, months, trend }: { currency: string; months: string[]; trend: MonthlyNetWorthPoint[] }) {
   const byMonth = new Map(trend.map((t) => [t.month, t]));
-  const withAlpha = (hex: string, fallback: string) => `${(hex || fallback).slice(0, 7)}B3`;
   return (
     <ChartCard title={`Net worth — ${currency}`}>
       <Chart
@@ -869,7 +869,7 @@ function MonthlySummaryTable({
               {months.map((m) => (
                 <th key={m} style={{ minWidth: 130 }}>
                   {new Date(`${m}-01`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}<br />
-                  <span className="footer-note" style={{ fontWeight: statusFor(m) === 'Current' ? 700 : 400 }}>
+                  <span className="text-muted" style={{ fontWeight: statusFor(m) === 'Current' ? 700 : 400 }}>
                     {statusFor(m)}
                   </span>
                 </th>
@@ -894,7 +894,7 @@ function MonthlySummaryTable({
               {months.map((m) => {
                 const row = monthlyByMonth.get(m);
                 const net = (row?.income[currency] ?? 0) - (row?.expense[currency] ?? 0);
-                return <td key={m} className={net >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(net, currency)}</td>;
+                return <td key={m} className={net >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(net, currency)}</td>;
               })}
             </tr>
             <tr>
@@ -906,7 +906,7 @@ function MonthlySummaryTable({
               {months.map((m) => {
                 const value = trendByMonth.get(m)?.byCurrency[currency];
                 return (
-                  <td key={m} className={value === undefined ? 'footer-note' : value >= 0 ? 'pill-buy' : 'pill-sell'}>
+                  <td key={m} className={value === undefined ? 'text-muted' : value >= 0 ? 'pill-positive' : 'pill-negative'}>
                     {value === undefined ? '—' : fmtMoney(value, currency)}
                   </td>
                 );
@@ -915,7 +915,7 @@ function MonthlySummaryTable({
           </tbody>
         </table>
       </div>
-      <p className="footer-note" style={{ marginTop: 8, marginBottom: 0 }}>
+      <p className="text-muted" style={{ marginTop: 8, marginBottom: 0 }}>
         Net worth shows "—" only where this currency had no activity yet as of that month.
       </p>
     </CollapsibleCard>

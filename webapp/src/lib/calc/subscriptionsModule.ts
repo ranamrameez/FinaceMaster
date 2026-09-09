@@ -1,5 +1,7 @@
 import type { Subscription, SubscriptionAlert } from '../../types/subscriptionsWorkbook';
 import type { RecurrenceRule } from '../../types/recurrence';
+import type { Category } from '../../types/finance';
+import { categoryName } from '../categories';
 import { nextRecurrenceOccurrence, recurrenceMonthlyEquivalent, recurrenceOccurrencesWithin } from './recurrence';
 
 const MAX_HORIZON_MONTHS = 12;
@@ -60,14 +62,17 @@ export function upcomingRenewals(subs: Subscription[], days = 30, asOf: Date = n
 }
 
 /** Monthly-equivalent spend by category, scoped to one currency — active
- * subscriptions only. An uncategorized subscription buckets into
- * "Uncategorized" rather than being dropped. */
-export function spendByCategory(subs: Subscription[], currencyCode: string): Record<string, number> {
+ * subscriptions only. Resolves via the shared category registry
+ * (`lib/categories.ts`'s `categoryName`), same as Cash/Bank/Rentals — a
+ * subscription predating the `categoryID` retrofit (2026-09-08) falls back
+ * to its old free-text `category` field so its spend doesn't just vanish
+ * into "Uncategorized"; an uncategorized subscription buckets there. */
+export function spendByCategory(subs: Subscription[], currencyCode: string, categories: Category[]): Record<string, number> {
   const out: Record<string, number> = {};
   subs
     .filter((s) => s.active && s.currencyCode === currencyCode)
     .forEach((s) => {
-      const cat = s.category?.trim() || 'Uncategorized';
+      const cat = s.categoryID ? categoryName(s.categoryID, categories) : s.category?.trim() || 'Uncategorized';
       out[cat] = (out[cat] || 0) + monthlyEquivalent(s);
     });
   return out;

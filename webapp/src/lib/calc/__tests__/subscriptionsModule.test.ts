@@ -96,13 +96,22 @@ describe('upcomingRenewals', () => {
 });
 
 describe('spendByCategory', () => {
-  it('buckets by category, defaulting to Uncategorized, scoped to one currency', () => {
+  it('buckets by legacy free-text category, defaulting to Uncategorized, scoped to one currency', () => {
     const subs = [
       sub({ id: 'a', amount: 10, category: 'Streaming', currencyCode: 'USD' }),
       sub({ id: 'b', amount: 5, currencyCode: 'USD' }),
       sub({ id: 'c', amount: 999, category: 'Streaming', currencyCode: 'PKR' }),
     ];
-    expect(spendByCategory(subs, 'USD')).toEqual({ Streaming: 10, Uncategorized: 5 });
+    expect(spendByCategory(subs, 'USD', [])).toEqual({ Streaming: 10, Uncategorized: 5 });
+  });
+
+  it('resolves categoryID via the shared registry (2026-09-08), preferring it over a legacy category string', () => {
+    const categories = [{ id: 'cat_stream', serialNumber: 1, name: 'Streaming' }];
+    const subs = [
+      sub({ id: 'a', amount: 10, categoryID: 'cat_stream', currencyCode: 'USD' }),
+      sub({ id: 'b', amount: 5, category: 'Old free-text value', categoryID: 'cat_stream', currencyCode: 'USD' }),
+    ];
+    expect(spendByCategory(subs, 'USD', categories)).toEqual({ Streaming: 15 });
   });
 });
 

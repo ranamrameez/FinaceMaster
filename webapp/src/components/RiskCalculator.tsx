@@ -12,9 +12,11 @@ import { fmt, fmtMoney, fmtPrice } from '../lib/format';
 import type { FeeCalculator } from '../types/workbook';
 import { Card, StatCard } from './Card';
 import { Notice } from './Notice';
+import { TickerLogo } from './TickerLogo';
 import { Tooltip } from './Tooltip';
 import { Field, Select, TextInput } from './ui/Field';
 import { HUES, hueStyle } from '../lib/statCardHues';
+import { gridAutoStyle } from '../lib/gridStyle';
 
 export interface RiskCalculatorRow {
   ticker: string;
@@ -40,6 +42,7 @@ export function RiskCalculator({
   calcFee,
   initialTicker,
   stockPageUrl,
+  exchange = 'qse',
 }: {
   rows: RiskCalculatorRow[];
   tickerNames: Record<string, string>;
@@ -58,6 +61,12 @@ export function RiskCalculator({
    * call sites; StockPage.tsx's embedded tab omits it since the user is
    * already on that ticker's own page (a link there would point at itself). */
   stockPageUrl?: (ticker: string) => string;
+  /** Which exchange's ticker-logo fallback chain to use (README item 118's
+   * ticker-logo rollout) — QSE has a known logo CDN, PSX doesn't, so this
+   * decides whether TickerLogo tries a remote fetch before falling back to
+   * the colored-initials badge. Defaults to 'qse' since this component
+   * predates PSX passing it explicitly; both real callers pass their own. */
+  exchange?: 'qse' | 'psx';
 }) {
   const held = useMemo(() => [...rows].filter((r) => r.shares > 0).sort((a, b) => a.ticker.localeCompare(b.ticker)), [rows]);
   const [ticker, setTicker] = useState(initialTicker || '');
@@ -136,7 +145,7 @@ export function RiskCalculator({
   if (!held.length) {
     return (
       <Card>
-        <p className="footer-note">No open positions to analyze yet — the Risk Calculator plans averaging into an
+        <p className="text-muted">No open positions to analyze yet — the Risk Calculator plans averaging into an
           existing position, so add a trade first.</p>
       </Card>
     );
@@ -153,6 +162,11 @@ export function RiskCalculator({
               ))}
             </Select>
           </Field>
+          {ticker && (
+            <Field label=" ">
+              <TickerLogo ticker={ticker} exchange={exchange} />
+            </Field>
+          )}
           {stockPageUrl && ticker && (
             <Field label=" ">
               <Link to={stockPageUrl(ticker)} className="btn secondary" style={{ display: 'inline-block' }}>
@@ -227,7 +241,7 @@ export function RiskCalculator({
             </Select>
           </Field>
         </div>
-        <p className="footer-note" style={{ marginTop: 8, marginBottom: 0 }}>
+        <p className="text-muted" style={{ marginTop: 8, marginBottom: 0 }}>
           Risk mode only changes the suggested capital ceiling below — it never overrides the math or guarantees
           recovery. Averaging down is not a recovery strategy by itself.
         </p>
@@ -249,7 +263,7 @@ export function RiskCalculator({
 
           <Card style={{ marginBottom: 16 }}>
             <h3 style={{ marginTop: 0 }}>Current position</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 8 }}>
+            <div className="grid-auto" style={gridAutoStyle(120, 8)}>
               <StatCard label="Invested" value={fmtMoney(currentMetrics.invested, currency)} hue={HUES[0]} labelTitle="Total cost basis of your current position, fees included." />
               <StatCard
                 label="Break-even"
@@ -296,20 +310,20 @@ export function RiskCalculator({
                         <td>{fmtPrice(s.newAvg)}</td>
                         <td>{fmtPrice(s.breakEven)}</td>
                         <td>{fmt(s.recoveryNeededPct, 2)}%</td>
-                        <td style={{ padding: '10px 12px' }}><span className={s.netAtTarget >= 0 ? 'pill pill-buy' : 'pill pill-sell'}>{fmtMoney(s.netAtTarget, currency)}</span></td>
+                        <td style={{ padding: '10px 12px' }}><span className={s.netAtTarget >= 0 ? 'pill pill-positive' : 'pill pill-negative'}>{fmtMoney(s.netAtTarget, currency)}</span></td>
                         <td>
                           {isDiminishing ? (
                             <span className="pill pill-warn">⚠ Diminishing</span>
                           ) : isBest ? (
                             <span className="pill pill-info">✓ Selected</span>
                           ) : (
-                            <span className="pill pill-buy">Useful</span>
+                            <span className="pill pill-positive">Useful</span>
                           )}
                         </td>
                       </tr>
                     );
                   })}
-                  {!scenarios.length && <tr><td colSpan={7} className="footer-note">Not enough data to model scenarios.</td></tr>}
+                  {!scenarios.length && <tr><td colSpan={7} className="text-muted">Not enough data to model scenarios.</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -317,7 +331,7 @@ export function RiskCalculator({
 
           <Card style={{ marginBottom: 16 }}>
             <h3 style={{ marginTop: 0 }}>Capital efficiency &amp; diminishing returns</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 8, marginBottom: 10 }}>
+            <div className="grid-auto" style={{ ...gridAutoStyle(120, 8), marginBottom: 10 }}>
               <StatCard label="Risk level" value={riskMode.toUpperCase()} hue={HUES[6]} labelTitle="Conservative/Balanced/Aggressive only changes the suggested ceiling above — never the math." />
               <StatCard
                 label="Suggested ceiling"
@@ -348,7 +362,7 @@ export function RiskCalculator({
 
           <Card>
             <h3 style={{ marginTop: 0 }}>Stress test after selected average</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px,1fr))', gap: 8 }}>
+            <div className="grid-auto" style={gridAutoStyle(90, 8)}>
               {stress.map((p) => (
                 <div key={p.label} className="stat-card card" style={hueStyle(p.pl >= 0 ? 'var(--profit)' : 'var(--loss)')}>
                   <div className="label">{p.label}</div>
@@ -356,7 +370,7 @@ export function RiskCalculator({
                 </div>
               ))}
             </div>
-            <p className="footer-note" style={{ marginTop: 8, marginBottom: 0 }}>
+            <p className="text-muted" style={{ marginTop: 8, marginBottom: 0 }}>
               Stress P/L includes the original position plus the selected additional purchase. A lower average can
               coexist with a larger monetary loss if the decline continues.
             </p>

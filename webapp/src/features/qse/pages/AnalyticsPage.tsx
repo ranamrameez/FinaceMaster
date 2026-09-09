@@ -24,8 +24,9 @@ import { useChartData } from '../hooks/useChartData';
 import { useQSEDerived } from '../hooks/useQSEDerived';
 import { useQSEStockData } from '../hooks/useQSEStockData';
 import { useAppearanceStore } from '../../../store/appearanceStore';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
-const chartGrid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 } as const;
+const chartGrid = gridAutoStyle(320, 16);
 
 /** Pending item 17's remainder: click-to-drill-down (Done item 137) AND
  * hover cross-highlighting (this pass — Dashboard's two ticker charts got
@@ -96,13 +97,13 @@ export function AnalyticsPage() {
   return (
     <div>
       <h1 className="pagetitle">Analytics</h1>
-      <p className="footer-note" style={{ marginTop: -8, marginBottom: 20 }}>
+      <p className="text-muted" style={{ marginTop: -8, marginBottom: 20 }}>
         The full chart library — head back to Dashboard for a quick overview.
       </p>
 
       <ChartFilterBar tickers={allTickers} filter={filter} onChange={setFilter} />
       {isChartFilterActive(filter) && !rows.length && !lifetimeRows.length && (
-        <p className="footer-note" style={{ marginTop: -8, marginBottom: 16 }}>
+        <p className="text-muted" style={{ marginTop: -8, marginBottom: 16 }}>
           No data matches the current filter.
         </p>
       )}
@@ -113,7 +114,7 @@ export function AnalyticsPage() {
             key: 'performance',
             label: 'Performance',
             content: (
-              <div style={chartGrid}>
+              <div className="grid-auto" style={chartGrid}>
                 <ChartCard title="ROI % by ticker" empty={!rows.length}>
                   <Bar
                     data={{ labels: rows.map((r) => r.ticker), datasets: [{ data: rows.map((r) => r.roiPct), backgroundColor: rows.map((r) => dimColor(profitColor(r.roiPct), !!hoveredTicker && hoveredTicker !== r.ticker)) }] }}
@@ -170,7 +171,7 @@ export function AnalyticsPage() {
             key: 'allocation',
             label: 'Allocation',
             content: (
-              <div style={chartGrid}>
+              <div className="grid-auto" style={chartGrid}>
                 <ChartCard title="Portfolio allocation (market value)" empty={!allocRows.length}>
                   <Doughnut
                     data={{ labels: allocRows.map((r) => r.ticker), datasets: [{ data: allocRows.map((r) => r.value), backgroundColor: allocRows.map((r) => dimColor(tickerColor(r.ticker), !!hoveredTicker && hoveredTicker !== r.ticker)) }] }}
@@ -190,7 +191,7 @@ export function AnalyticsPage() {
             key: 'cash-fees',
             label: 'Cash & fees',
             content: (
-              <div style={chartGrid}>
+              <div className="grid-auto" style={chartGrid}>
                 <ChartCard title="Cash balance over time" unfiltered empty={!ledger.length}>
                   <Line
                     data={{
@@ -225,7 +226,7 @@ export function AnalyticsPage() {
             key: 'activity-dividends',
             label: 'Activity & dividends',
             content: (
-              <div style={chartGrid}>
+              <div className="grid-auto" style={chartGrid}>
                 <ChartCard title="Monthly trading activity" empty={!activityByMonth.months.length}>
                   <Bar
                     data={{
@@ -318,7 +319,7 @@ function FundamentalsCard({
           </table>
         </div>
       ) : (
-        <p className="footer-note">No fundamentals data for currently held tickers.</p>
+        <p className="text-muted">No fundamentals data for currently held tickers.</p>
       )}
     </Card>
   );

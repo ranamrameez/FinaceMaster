@@ -1,16 +1,18 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal } from './Modal';
-import { Notice } from './Notice';
 import { toast } from './Toast';
+import { Tooltip } from './Tooltip';
 import { PlusIcon, SaveIcon, TrashIcon } from './icons';
 import { Field, TextInput } from './ui/Field';
+import { AmountInput } from './ui/AmountInput';
 import { DirectionChips } from './ui/DirectionChips';
 import { TimeZoneFields } from './ui/TimeZoneFields';
 import { SideFields, useSideCurrency, nextUnpaidEmiMonth } from '../features/transfers/pages/TransferLinksPage';
 import { getLastTransferSource, rememberTransferSource } from '../hooks/useLastTransferSource';
 import { CategorySelect } from './CategorySelect';
 import { UNCATEGORIZED_ID } from '../lib/categories';
-import { defaultTimezoneForCurrency, nowTime } from '../lib/datetime';
+import { defaultTimeForDate, defaultTimezoneForCurrency, nowTime } from '../lib/datetime';
+import { convertAmount, loadCachedFxRates } from '../lib/fx';
 import { useEnsureSignedIn } from '../lib/firebase/useEnsureSignedIn';
 import { isSupportedLinkPair } from '../lib/interEntityLink';
 import { createLinkedTransfer } from '../lib/linkCascade';
@@ -67,6 +69,17 @@ const HAS_NOTE: LinkModule[] = ['cash', 'rentals'];
  * back to the category text or the literal string "Transaction" — the app
  * substituting a value instead of taking real user input. */
 const HAS_DESCRIPTION: LinkModule[] = ['bank'];
+/** User-requested (2026-09-08): a "Pending" state — a real transaction the
+ * user already knows is happening but hasn't cleared yet (a sent transfer
+ * not yet reflected, a stock order not yet filled). Shipped first for
+ * Cash + Banking, the user's own two worked examples — see
+ * `Finance.isPending`'s own doc comment for the full design and why this is
+ * genuinely different from the Planning feature's hypothetical entries.
+ * Deliberately not offered on a LINKED row: a cross-entity transfer is two
+ * real records written together via `createLinkedTransfer`, and "pending"
+ * for a link needs its own design (does one side clear independently of
+ * the other?) not attempted here. */
+const HAS_PENDING: LinkModule[] = ['cash', 'bank', 'rentals', 'personalLoans'];
 
 interface TxRow {
   key: number;
@@ -74,29 +87,67 @@ interface TxRow {
   linked: boolean;
   other: LinkSideConfig;
   amount: number;
+  /** The "other" side's own amount for a cross-currency linked transfer —
+   * see the currency-mismatch block in `TxRowFields` below for why this
+   * exists. Kept in sync with the live FX-cache suggestion (via a
+   * `useEffect` in `TxRowFields`) as long as `toAmountTouched` is false, so
+   * `submit()` below can just read this field directly rather than
+   * needing to recompute the suggestion itself (which it can't — currency
+   * resolution is a hook, only callable from a component's render). */
+  toAmount?: number;
+  /** True once the user has actually edited the suggested `toAmount` — from
+   * then on it's their own real number, and the `useEffect` stops
+   * overwriting it as `amount`/currencies keep changing. */
+  toAmountTouched: boolean;
+  /** User-requested: where a cross-currency link's conversion rate came
+   * from (e.g. "UBL bank rate", "Sarafa exchange") — see
+   * `InterEntityTransfer.rateSource`'s own doc comment. Only shown/used
+   * while the two sides' currencies actually differ. */
+  rateSource: string;
   direction: 'in' | 'out';
   date: string;
   time?: string;
+  /** True once the user has actually edited the Time field themselves —
+   * from then on it's their own real choice, and the Date field's own
+   * onChange stops re-stamping it. See `defaultTimeForDate()`'s own doc
+   * comment for why this exists (README item: "some transactions are not
+   * showing up down arrows"). */
+  timeTouched: boolean;
   timezone?: string;
   categoryID: string;
   description: string;
   note: string;
+  pending: boolean;
 }
+
+/** User-reported (2026-09-08): "try to choose the same/logical module by
+ * default for max UX. like Bank to Bank, Cash to Bank." `bank` is the most
+ * likely real "other side" for every module — including Bank itself
+ * (Bank-to-Bank, the user's own first example) — so this is a plain
+ * constant default rather than a per-module lookup table; still named and
+ * documented so a future session doesn't have to re-derive why. Only a
+ * prefill: `getLastTransferSource()` (checked first, wherever this is
+ * used) and the user's own pick both still win over it. */
+const LIKELY_OTHER_MODULE: LinkModule = 'bank';
 
 function emptyRow(key: number, finance: LinkSideConfig, currencyCode?: string): TxRow {
   return {
     key,
     finance,
     linked: false,
-    other: { module: 'cash', currencyCode },
+    other: { module: LIKELY_OTHER_MODULE, currencyCode },
     amount: 0,
     direction: 'in',
     date: today(),
     time: nowTime(),
+    timeTouched: false,
     timezone: defaultTimezoneForCurrency(currencyCode),
     categoryID: UNCATEGORIZED_ID,
     description: '',
     note: '',
+    pending: false,
+    toAmountTouched: false,
+    rateSource: '',
   };
 }
 
@@ -106,13 +157,11 @@ function emptyRow(key: number, finance: LinkSideConfig, currencyCode?: string): 
  * number of rows changes as they're added/removed. */
 function TxRowFields({
   row,
-  isFirst,
   onChange,
   onRemove,
   canRemove,
 }: {
   row: TxRow;
-  isFirst: boolean;
   onChange: (row: TxRow) => void;
   onRemove: () => void;
   canRemove: boolean;
@@ -124,31 +173,61 @@ function TxRowFields({
   const sameEntity = row.linked && row.finance.module === row.other.module && !!row.finance.ref && row.finance.ref === row.other.ref;
   const pairSupported = !row.linked || (isSupportedLinkPair(row.finance.module, row.other.module) && isSupportedLinkPair(row.other.module, row.finance.module));
 
+  // User-requested (2026-09-08, design confirmed via AskUserQuestion):
+  // "allow the automated editable converted values" — suggests the other
+  // side's amount from the same cached FX rate table Net Worth already
+  // uses (`lib/fx.ts`), kept live-updating in `row.toAmount` as `amount`/
+  // currencies change until the user actually edits the field (then
+  // `toAmountTouched` stops this effect from overwriting their own value).
+  const cachedRates = loadCachedFxRates();
+  const suggestedToAmount = currencyMismatch ? convertAmount(row.amount, financeCurrency!, otherCurrency!, cachedRates) : null;
+  useEffect(() => {
+    if (currencyMismatch && !row.toAmountTouched && row.toAmount !== (suggestedToAmount ?? undefined)) {
+      onChange({ ...row, toAmount: suggestedToAmount ?? undefined });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currencyMismatch, suggestedToAmount, row.toAmountTouched]);
+
   return (
-    <div style={{ borderTop: isFirst ? undefined : '1px solid var(--border)', paddingTop: isFirst ? 0 : 12, marginTop: isFirst ? 0 : 12 }}>
+    <div className="entry-row">
       <SideFields
         label="Finance"
         cfg={row.finance}
-        onChange={(finance) => onChange({ ...row, finance, timezone: defaultTimezoneForCurrency(useSideCurrencyStatic(finance)) })}
+        onChange={(finance) =>
+          onChange({
+            ...row,
+            finance,
+            timezone: defaultTimezoneForCurrency(useSideCurrencyStatic(finance)),
+            toAmount: undefined,
+            toAmountTouched: false,
+          })
+        }
       />
       <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
         <Field label="Date">
-          <TextInput type="date" value={row.date} onChange={(e) => onChange({ ...row, date: e.target.value })} />
+          <TextInput
+            type="date"
+            value={row.date}
+            onChange={(e) => {
+              const date = e.target.value;
+              onChange(row.timeTouched ? { ...row, date } : { ...row, date, time: defaultTimeForDate(date) });
+            }}
+          />
         </Field>
         {direction && (
           <Field label="Direction">
             <DirectionChips value={row.direction} onChange={(d) => onChange({ ...row, direction: d })} labels={direction} />
           </Field>
         )}
-        <Field label="Amount" required title={!direction ? 'A repayment is always entered as a positive amount, regardless of which way the debt runs.' : undefined}>
-          <TextInput type="number" step="0.01" min={direction ? 0 : undefined} value={row.amount || ''} onChange={(e) => onChange({ ...row, amount: Number(e.target.value) })} />
+        <Field label="Amount" required title={!direction ? 'A repayment is always entered as a positive amount, regardless of which way the debt runs.' : 'You can type a math expression here too, e.g. 10.5+5 — it evaluates once you leave the field.'}>
+          <AmountInput value={row.amount} onChange={(amount) => onChange({ ...row, amount })} />
         </Field>
         {HAS_DESCRIPTION.includes(row.finance.module) && (
           <Field label="Description" required>
             <TextInput value={row.description} onChange={(e) => onChange({ ...row, description: e.target.value })} placeholder="e.g. Rent, Grocery run" />
           </Field>
         )}
-        {HAS_CATEGORY.includes(row.finance.module) && (
+        {HAS_CATEGORY.includes(row.finance.module) && !row.linked && (
           <Field label="Category">
             <CategorySelect value={row.categoryID} onChange={(categoryID) => onChange({ ...row, categoryID })} />
           </Field>
@@ -161,11 +240,11 @@ function TxRowFields({
         <TimeZoneFields
           time={row.time}
           timezone={row.timezone}
-          onTimeChange={(time) => onChange({ ...row, time })}
+          onTimeChange={(time) => onChange({ ...row, time, timeTouched: true })}
           onTimezoneChange={(timezone) => onChange({ ...row, timezone })}
         />
       </div>
-      <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
+      <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
         <input
           type="checkbox"
           checked={row.linked}
@@ -174,29 +253,73 @@ function TxRowFields({
             // Same "remember the last used source" convenience every other
             // linking entry point already has — prefills, never forces.
             const remembered = linked ? getLastTransferSource(row.finance) : undefined;
-            onChange({ ...row, linked, other: remembered ?? row.other });
+            onChange({ ...row, linked, other: remembered ?? row.other, toAmount: undefined, toAmountTouched: false });
           }}
         />
-        Link to another finance (a transfer between two accounts)
+        {HAS_CATEGORY.includes(row.finance.module) ? (
+          <Tooltip text="A linked transfer is always categorized as Transfer on this side — the Category picker above is hidden while this is checked, not silently ignored.">
+            <span>Link to another finance (a transfer between two accounts)</span>
+          </Tooltip>
+        ) : (
+          'Link to another finance (a transfer between two accounts)'
+        )}
       </label>
+      {!row.linked && HAS_PENDING.includes(row.finance.module) && (
+        <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }} title="Money already sent/placed but not yet reflected or filled — excluded from the current balance until you mark it cleared.">
+          <input type="checkbox" checked={row.pending} onChange={(e) => onChange({ ...row, pending: e.target.checked })} />
+          Pending (not yet cleared)
+        </label>
+      )}
       {row.linked && (
         <div style={{ marginTop: 8 }}>
-          <SideFields label="Other finance" cfg={row.other} onChange={(other) => onChange({ ...row, other })} preferredCurrency={financeCurrency ?? undefined} />
-          {sameEntity && <p className="footer-note" style={{ color: 'var(--warn, orange)' }}>Pick a different account — this is the same one.</p>}
+          <SideFields
+            label="Other finance"
+            cfg={row.other}
+            onChange={(other) => onChange({ ...row, other, toAmount: undefined, toAmountTouched: false })}
+            preferredCurrency={financeCurrency ?? undefined}
+          />
+          {sameEntity && <p className="text-muted" style={{ color: 'var(--warn, orange)' }}>Pick a different account — this is the same one.</p>}
           {!pairSupported && !sameEntity && (
-            <p className="footer-note" style={{ color: 'var(--warn, orange)' }}>Linking these two isn't supported yet.</p>
+            <p className="text-muted" style={{ color: 'var(--warn, orange)' }}>Linking these two isn't supported yet.</p>
           )}
           {currencyMismatch && (
-            <Notice tone="warning" style={{ marginTop: 8 }}>
-              <p style={{ margin: 0 }}>{financeCurrency} vs. {otherCurrency} — no live conversion, both sides record the same numeric amount.</p>
-            </Notice>
+            <div style={{ marginTop: 8 }}>
+              <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+                <Field label={`Amount (${otherCurrency})`}>
+                  <TextInput
+                    type="number"
+                    step="0.01"
+                    value={row.toAmount ?? ''}
+                    onChange={(e) => onChange({ ...row, toAmount: e.target.value === '' ? undefined : Number(e.target.value), toAmountTouched: true })}
+                  />
+                </Field>
+                <Field label="Rate source (optional)" title="Where this conversion rate came from — e.g. your bank's rate, a specific exchange name — for your own future reference.">
+                  <TextInput
+                    value={row.rateSource}
+                    onChange={(e) => onChange({ ...row, rateSource: e.target.value })}
+                    placeholder="e.g. UBL bank rate"
+                  />
+                </Field>
+              </div>
+              <p className="text-muted" style={{ margin: '4px 0 0' }}>
+                {financeCurrency} → {otherCurrency}
+                {' — '}
+                {row.toAmountTouched
+                  ? 'entered manually.'
+                  : cachedRates && suggestedToAmount !== null
+                    ? `via cached FX rate (updated ${new Date(cachedRates.fetchedAt).toLocaleDateString()}) — editable.`
+                    : 'no cached FX rate available — enter the converted amount yourself.'}
+              </p>
+            </div>
           )}
         </div>
       )}
       {canRemove && (
-        <button className="btn secondary small" style={{ marginTop: 8 }} onClick={onRemove}>
-          <TrashIcon size={12} />Remove row
-        </button>
+        <div className="d-flex justify-end" style={{ marginTop: 8 }}>
+          <button className="btn secondary small" onClick={onRemove}>
+            <TrashIcon size={12} />Remove row
+          </button>
+        </div>
       )}
     </div>
   );
@@ -268,13 +391,22 @@ export function TransactionEntryModal({ defaultFinance, onClose }: { defaultFina
         const abs = Math.abs(r.amount);
         const emiLoan = r.other.module === 'emi' ? emiLoans.find((l) => l.id === r.other.ref) : undefined;
         const resolvedOther = emiLoan ? { ...r.other, emiMonth: nextUnpaidEmiMonth(emiLoan) } : r.other;
+        // `r.amount` is always the FINANCE side's own amount; `r.toAmount`
+        // (when set — a cross-currency link) is always the OTHER side's —
+        // `from`/`to` below swap which is which based on direction, so
+        // fromAmount/toAmount need the same conditional swap, not a flat
+        // `abs` on both sides (that was only correct back when every
+        // linked transfer shared one numeric amount for both currencies).
+        const financeAmount = abs;
+        const otherAmount = r.toAmount ?? abs;
         const result = createLinkedTransfer({
           date: r.date,
-          fromAmount: abs,
-          toAmount: abs,
+          fromAmount: r.direction === 'out' ? financeAmount : otherAmount,
+          toAmount: r.direction === 'out' ? otherAmount : financeAmount,
           from: r.direction === 'out' ? r.finance : resolvedOther,
           to: r.direction === 'out' ? resolvedOther : r.finance,
           note: r.note.trim() || r.description.trim() || undefined,
+          rateSource: r.rateSource.trim() || undefined,
         });
         if ('error' in result) {
           toast(`Couldn't save one linked row: ${result.error}`);
@@ -298,6 +430,7 @@ export function TransactionEntryModal({ defaultFinance, onClose }: { defaultFina
             id: uid(), accountId: r.finance.ref, date: r.date, time: r.time, timezone: r.timezone,
             amount: signedAmount, isDeposit: signedAmount >= 0, description: r.description.trim(),
             categoryID: r.categoryID, source: 'manual',
+            isPending: r.pending || undefined,
           }]);
           break;
         }
@@ -307,6 +440,7 @@ export function TransactionEntryModal({ defaultFinance, onClose }: { defaultFina
             isDeposit: r.direction === 'in', amount: Math.abs(r.amount),
             currencyCode: r.finance.currencyCode || 'USD',
             categoryID: r.categoryID, note: r.note.trim() || undefined, source: 'manual',
+            isPending: r.pending || undefined,
           });
           break;
         case 'rentals':
@@ -315,11 +449,15 @@ export function TransactionEntryModal({ defaultFinance, onClose }: { defaultFina
             id: uid(), propertyId: r.finance.ref, date: r.date, time: r.time, timezone: r.timezone,
             isDeposit: r.direction === 'in', amount: Math.abs(r.amount),
             categoryID: r.categoryID, note: r.note.trim() || undefined,
+            isPending: r.pending || undefined,
           });
           break;
         case 'personalLoans':
           if (!r.finance.ref) { toast('Pick a loan first.'); continue; }
-          addPersonalLoanRepayment({ id: uid(), loanId: r.finance.ref, date: r.date, time: r.time, timezone: r.timezone, amount: Math.abs(r.amount) });
+          addPersonalLoanRepayment({
+            id: uid(), loanId: r.finance.ref, date: r.date, time: r.time, timezone: r.timezone,
+            amount: Math.abs(r.amount), isPending: r.pending || undefined,
+          });
           break;
         case 'emi': {
           if (!r.finance.ref) { toast('Pick a loan first.'); continue; }
@@ -347,19 +485,20 @@ export function TransactionEntryModal({ defaultFinance, onClose }: { defaultFina
 
   return (
     <Modal title="Transfers" onClose={onClose}>
-      {rows.map((r, i) => (
+      {rows.map((r) => (
         <TxRowFields
           key={r.key}
           row={r}
-          isFirst={i === 0}
           onChange={(row) => updateRow(r.key, row)}
           onRemove={() => removeRow(r.key)}
           canRemove={rows.length > 1}
         />
       ))}
-      <div className="row" style={{ gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
+      <div className="row" style={{ gap: 8, marginTop: 16 }}>
         <button className="btn secondary" onClick={addRow}><PlusIcon size={12} />Add row</button>
-        <button className="btn" onClick={submit}><SaveIcon />Save</button>
+      </div>
+      <div className="d-flex justify-center" style={{ marginTop: 16 }}>
+        <button className="btn" style={{ minWidth: 220 }} onClick={submit}><SaveIcon />Save</button>
       </div>
     </Modal>
   );

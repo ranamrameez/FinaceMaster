@@ -3,7 +3,7 @@ import { toInstantMs } from '../lib/datetime';
 import { assignSerialNumbersForEntities, backfillSerialNumber, nextSerialNumberForEntity } from '../lib/financeSerial';
 import { resolveLegacyCategoryId } from '../lib/financeMigration';
 import { createEmptyBankWorkbook } from './defaultBankWorkbook';
-import type { BankAccount, BankTransaction, BankWorkbook } from '../types/bankWorkbook';
+import type { Bank, BankAccount, BankTransaction, BankWorkbook } from '../types/bankWorkbook';
 
 const STORAGE_KEY = 'financerecorder_bank_workbook_v1';
 
@@ -35,7 +35,16 @@ function normalize(wb: BankWorkbook): BankWorkbook {
   const chronological = [...withFields].sort(
     (a, b) => toInstantMs(a.date, a.time, a.timezone) - toInstantMs(b.date, b.time, b.timezone),
   );
-  return { ...wb, transactions: backfillSerialNumber(withFields, chronological) };
+  return {
+    ...wb,
+    // `settings` is a shallow top-level merge onto the default workbook
+    // (loadFromLocalStorage/setWorkbook), so an older stored `settings`
+    // object with no `banks` key at all replaces the default wholesale,
+    // not merges into it — defend here rather than trusting `?? []` at
+    // every read site.
+    settings: { ...wb.settings, banks: wb.settings.banks ?? [] },
+    transactions: backfillSerialNumber(withFields, chronological),
+  };
 }
 
 /** Banking has accounts (nested under settings) plus transactions — a
@@ -52,6 +61,12 @@ interface BankStoreState {
   addAccount: (account: BankAccount) => void;
   updateAccount: (id: string, patch: Partial<BankAccount>) => void;
   deleteAccount: (id: string) => void;
+  addBank: (bank: Bank) => void;
+  updateBank: (id: string, patch: Partial<Bank>) => void;
+  /** Deletes the Bank record itself but never any account — every account
+   * previously linked to it just has its `bankId` cleared, becoming
+   * "not grouped under a Bank" again rather than being touched. */
+  deleteBank: (id: string) => void;
   addTransaction: (tx: BankTransaction) => void;
   addTransactions: (txs: BankTransaction[]) => void;
   updateTransaction: (id: string, patch: Partial<BankTransaction>) => void;
@@ -107,6 +122,25 @@ export const useBankWorkbookStore = create<BankStoreState>((set, get) => {
         ...wb,
         settings: { ...wb.settings, accounts: wb.settings.accounts.filter((a) => a.id !== id) },
         transactions: wb.transactions.filter((t) => t.accountId !== id),
+      })),
+
+    addBank: (bank) =>
+      mutate((wb) => ({ ...wb, settings: { ...wb.settings, banks: [...(wb.settings.banks ?? []), bank] } })),
+
+    updateBank: (id, patch) =>
+      mutate((wb) => ({
+        ...wb,
+        settings: { ...wb.settings, banks: (wb.settings.banks ?? []).map((b) => (b.id === id ? { ...b, ...patch } : b)) },
+      })),
+
+    deleteBank: (id) =>
+      mutate((wb) => ({
+        ...wb,
+        settings: {
+          ...wb.settings,
+          banks: (wb.settings.banks ?? []).filter((b) => b.id !== id),
+          accounts: wb.settings.accounts.map((a) => (a.bankId === id ? { ...a, bankId: undefined } : a)),
+        },
       })),
 
     // Scoped by account — same reasoning as Cash's scoping-by-currency above.

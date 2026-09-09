@@ -10,14 +10,6 @@ import { PlusIcon } from './icons';
 import { FabPanel } from './ui/Fab';
 import { useFabActionsStore } from '../store/fabActionsStore';
 
-/** Roughly 40-50% viewport width on a typical desktop, per the user's own
- * ask ("try to make 40% to 50% width popups instead of winning the
- * horizons") — a floor keeps it usable on mobile (this popup's own small
- * ticker/action/shares/price form doesn't need the shared Modal's default
- * 920px cap), a ceiling keeps it from creeping back toward that same
- * "wins the whole screen" feel on a very wide monitor. */
-const NARROW_MODAL_WIDTH = 'clamp(320px, 45vw, 640px)';
-
 /** Trade Calculator as an on-demand popup, available from anywhere via this
  * floating button. Route-aware: shows the QSE calculator on QSE routes and
  * the PSX calculator on /psx/* routes, since each exchange has its own fee
@@ -99,7 +91,7 @@ export function CalculatorLauncher() {
         </Modal>
       )}
       {tradeOpen && (
-        <Modal title="Add a trade" onClose={() => setTradeOpen(false)} width={NARROW_MODAL_WIDTH}>
+        <Modal title="Add a trade" onClose={() => setTradeOpen(false)}>
           {isPSX ? <PSXTransactionRows /> : <QSETransactionRows />}
         </Modal>
       )}

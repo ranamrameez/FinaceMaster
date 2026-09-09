@@ -41,13 +41,39 @@ export function cashSummary(
       portfolioValue += netValue;
     });
 
-  const ledger = buildCashLedger(transactions, transfers, adjustments, calcFee);
+  // Excludes pending transactions from the headline cash balance (Pending-
+  // transaction-state, 2026-09-08) — a not-yet-filled BUY/SELL order hasn't
+  // actually moved cash yet, same "locks real balances" rule already
+  // applied to Cash/Bank. The caller's own separately-computed `ledger`
+  // (built directly from `buildCashLedger`, not through here) keeps
+  // showing every event including pending ones, tagged, for the full
+  // statement view — only THIS headline figure excludes them.
+  const ledger = buildCashLedger(
+    transactions.filter((t) => !t.isPending),
+    transfers,
+    adjustments,
+    calcFee,
+  );
   const cashBalance = ledger.length ? ledger[ledger.length - 1].balance : 0;
   const netWorth = cashBalance + portfolioValue;
   const totalCharges = transferFees + tradingFees;
   // buy/sell commissions are already inside realized/unrealized; transfer fees
   // aren't, so subtract them here; broker rewards are found money, so add them.
   const netPL = realizedPL + unrealizedPL - transferFees + totalRewards;
+
+  // The companion figure to excluding pending above: what cash WOULD move
+  // by if every currently-pending order filled right now, at today's
+  // computed fee — a pending BUY locks cash (negative), a pending SELL
+  // would add it (positive). Never silently hidden from the user, per
+  // their own "rather than giving user a heart attack by excluding pending
+  // amounts and not showing them" instruction.
+  const pendingCashImpact = transactions
+    .filter((t) => t.isPending)
+    .reduce((sum, t) => {
+      const amount = t.shares * t.price;
+      const fee = calcFee(amount, t.action === 'BUY', { shares: t.shares, tx: t });
+      return sum + (t.action === 'BUY' ? -(amount + fee) : amount - fee);
+    }, 0);
 
   return {
     totalInward,
@@ -63,5 +89,6 @@ export function cashSummary(
     portfolioValue,
     netWorth,
     ledger,
+    pendingCashImpact,
   };
 }

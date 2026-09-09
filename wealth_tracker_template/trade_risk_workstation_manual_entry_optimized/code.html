@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>WealthPro - Trade Workstation</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Manrope:wght@600;700&amp;family=Work+Sans:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary": "#000000",
+                        "surface-container-highest": "#d3e4fe",
+                        "on-tertiary": "#ffffff",
+                        "primary": "#000000",
+                        "secondary-fixed": "#6ffbbe",
+                        "on-surface": "#0b1c30",
+                        "on-error": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-container": "#7c839b",
+                        "secondary-container": "#6cf8bb",
+                        "on-background": "#0b1c30",
+                        "secondary": "#006c49",
+                        "error": "#ba1a1a",
+                        "on-tertiary-fixed-variant": "#653e00",
+                        "tertiary-container": "#2a1700",
+                        "surface-bright": "#f8f9ff",
+                        "on-primary": "#ffffff",
+                        "surface": "#f8f9ff",
+                        "primary-fixed": "#dae2fd",
+                        "outline-variant": "#c6c6cd",
+                        "on-primary-fixed": "#131b2e",
+                        "tertiary-fixed-dim": "#ffb95f",
+                        "on-secondary-fixed-variant": "#005236",
+                        "on-secondary-container": "#00714d",
+                        "primary-fixed-dim": "#bec6e0",
+                        "error-container": "#ffdad6",
+                        "inverse-primary": "#bec6e0",
+                        "on-surface-variant": "#45464d",
+                        "background": "#f8f9ff",
+                        "outline": "#76777d",
+                        "secondary-fixed-dim": "#4edea3",
+                        "on-tertiary-container": "#b87500",
+                        "inverse-on-surface": "#eaf1ff",
+                        "surface-container-high": "#dce9ff",
+                        "on-error-container": "#93000a",
+                        "surface-dim": "#cbdbf5",
+                        "on-secondary-fixed": "#002113",
+                        "surface-variant": "#d3e4fe",
+                        "surface-container-low": "#eff4ff",
+                        "inverse-surface": "#213145",
+                        "tertiary-fixed": "#ffddb8",
+                        "surface-container": "#e5eeff",
+                        "primary-container": "#131b2e",
+                        "on-tertiary-fixed": "#2a1700",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "on-secondary": "#ffffff",
+                        "surface-tint": "#565e74"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "base": "4px",
+                        "lg": "48px",
+                        "xs": "8px",
+                        "gutter": "24px",
+                        "sm": "16px",
+                        "xl": "80px",
+                        "md": "24px",
+                        "container-max": "1440px"
+                    },
+                    "fontFamily": {
+                        "headline-sm": ["Manrope"],
+                        "body-md": ["Work Sans"],
+                        "body-sm": ["Work Sans"],
+                        "body-lg": ["Work Sans"],
+                        "label-caps": ["Work Sans"],
+                        "headline-md": ["Manrope"],
+                        "display-lg": ["Manrope"],
+                        "data-tabular": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "headline-sm": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-md": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "data-tabular": ["14px", { "lineHeight": "20px", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Work Sans', sans-serif; background-color: theme('colors.background'); color: theme('colors.on-background'); }
+        h1, h2, h3, h4, h5, h6, .font-headline { font-family: 'Manrope', sans-serif; }
+        .data-font { font-family: 'JetBrains Mono', monospace; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: theme('colors.outline-variant'); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: theme('colors.outline'); }
+    </style>
+</head>
+<body class="flex flex-col md:flex-row h-screen overflow-hidden antialiased selection:bg-surface-container-highest selection:text-primary">
+<!-- SideNav - Fixed -->
+<nav class="hidden md:flex h-screen w-64 fixed left-0 top-0 bg-surface-container-low dark:bg-inverse-surface flex-col py-md px-sm border-r border-surface-variant z-40">
+<div class="mb-lg px-sm">
+<h1 class="font-display-lg text-headline-sm font-bold text-primary dark:text-inverse-primary tracking-tight">WealthPro</h1>
+<p class="font-label-caps text-label-caps text-on-surface-variant mt-1">Premium Management</p>
+</div>
+<ul class="flex flex-col gap-xs flex-1">
+<li>
+<a class="flex items-center gap-md px-sm py-xs rounded-lg hover:bg-surface-container-high transition-colors text-on-surface-variant" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-body-md text-body-md">Dashboard</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md px-sm py-xs rounded-lg hover:bg-surface-container-high transition-colors text-on-surface-variant" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance">account_balance</span>
+<span class="font-body-md text-body-md">Banking</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md px-sm py-xs rounded-lg hover:bg-surface-container-high transition-colors text-on-surface-variant" href="#">
+<span class="material-symbols-outlined" data-icon="trending_up">trending_up</span>
+<span class="font-body-md text-body-md">Investments</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md px-sm py-xs rounded-lg hover:bg-surface-container-high transition-colors text-on-surface-variant" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="font-body-md text-body-md">Loans</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md px-sm py-xs rounded-lg hover:bg-surface-container-high transition-colors text-on-surface-variant" href="#">
+<span class="material-symbols-outlined" data-icon="subscriptions">subscriptions</span>
+<span class="font-body-md text-body-md">Subscriptions</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md px-sm py-xs rounded-lg text-primary font-bold border-r-4 border-secondary bg-surface-container-high cursor-pointer active:scale-95 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="show_chart">show_chart</span>
+<span class="font-body-md text-body-md">Stock Exchange</span>
+</a>
+</li>
+</ul>
+<div class="mt-auto flex flex-col gap-sm border-t border-outline-variant pt-md">
+<button class="w-full py-xs px-sm bg-primary text-on-primary rounded-lg font-body-sm text-body-sm font-semibold hover:bg-on-surface transition-colors">
+                Open New Account
+            </button>
+<a class="flex items-center gap-md px-sm py-xs rounded-lg hover:bg-surface-container-high transition-colors text-on-surface-variant" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-body-sm text-body-sm">Settings</span>
+</a>
+<a class="flex items-center gap-md px-sm py-xs rounded-lg hover:bg-surface-container-high transition-colors text-on-surface-variant" href="#">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+<span class="font-body-sm text-body-sm">Support</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<div class="flex-1 flex flex-col md:ml-64 h-full relative">
+<!-- TopNav -->
+<header class="flex justify-between items-center h-16 px-xl bg-surface border-b border-outline-variant sticky top-0 z-30 w-full transition-all duration-200 ease-in-out">
+<div class="flex items-center gap-lg hidden lg:flex">
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Global View</a>
+<a class="font-body-sm text-body-sm text-primary border-b-2 border-primary py-4" href="#">Analytics</a>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Reports</a>
+</div>
+<div class="flex items-center gap-md ml-auto">
+<div class="hidden sm:flex items-center gap-2 bg-surface-container-low px-3 py-1.5 rounded-full border border-surface-variant">
+<span class="font-label-caps text-label-caps text-on-surface-variant">Currency: USD</span>
+</div>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors relative">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Main Workspace -->
+<main class="flex-1 overflow-y-auto p-4 md:p-gutter flex flex-col xl:flex-row gap-gutter">
+<!-- Left Column: Calculators & Planners -->
+<div class="flex-1 flex flex-col gap-gutter min-w-0">
+<!-- Trade Calculator -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-sm">
+<div class="flex justify-between items-center mb-md border-b border-surface-variant pb-sm">
+<h2 class="font-headline-sm text-headline-sm text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">calculate</span>
+                            Trade Calculator
+                        </h2>
+<div class="flex items-center gap-4"><div class="flex items-center bg-surface-container-low rounded-lg p-1 border border-outline-variant"><button class="px-3 py-1 text-xs font-label-caps bg-primary text-on-primary rounded-md transition-colors">Manual</button><button class="px-3 py-1 text-xs font-label-caps text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">sync</span> Fetch</button></div><div class="text-right"><p class="text-[10px] font-label-caps text-on-surface-variant uppercase">Last Update</p><p class="text-data-tabular text-xs text-primary">10:45:22 AM</p></div></div></div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-md">
+<!-- Initial Position -->
+<div class="space-y-4">
+<h3 class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Initial Position</h3>
+<div>
+<label class="block font-body-sm text-body-sm text-on-surface mb-1">Buy Price</label>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 flex items-center pl-3 font-data-tabular text-on-surface-variant">$</span>
+<input class="w-full pl-8 pr-3 py-2 bg-surface border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary font-data-tabular text-data-tabular text-on-surface transition-shadow" type="number" value="150.25"/>
+</div>
+</div>
+<div>
+<label class="block font-body-sm text-body-sm text-on-surface mb-1">Quantity</label>
+<input class="w-full px-3 py-2 bg-surface border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary font-data-tabular text-data-tabular text-on-surface transition-shadow" type="number" value="100"/>
+</div>
+<div class="p-3 bg-surface-container-low rounded-lg border border-surface-variant flex justify-between items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Initial Value</span>
+<span class="font-data-tabular text-data-tabular text-primary font-semibold">$15,025.00</span>
+</div>
+</div>
+<!-- Average Down Scenario -->
+<div class="space-y-4 bg-surface-bright p-sm rounded-lg border border-dashed border-outline-variant">
+<div class="flex items-center justify-between">
+<h3 class="font-label-caps text-label-caps text-secondary uppercase tracking-wider flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">trending_down</span> Average Down
+                                </h3>
+<label class="flex items-center cursor-pointer">
+<div class="relative">
+<input checked="" class="sr-only" type="checkbox"/>
+<div class="block bg-surface-variant w-10 h-6 rounded-full"></div>
+<div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition transform translate-x-4 bg-primary"></div>
+</div>
+</label>
+</div>
+<div>
+<label class="block font-body-sm text-body-sm text-on-surface mb-1">New Buy Price</label>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 flex items-center pl-3 font-data-tabular text-on-surface-variant">$</span>
+<input class="w-full pl-8 pr-3 py-2 bg-surface border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary font-data-tabular text-data-tabular text-on-surface" type="number" value="142.50"/>
+</div>
+</div>
+<div>
+<label class="block font-body-sm text-body-sm text-on-surface mb-1">Additional Quantity</label>
+<input class="w-full px-3 py-2 bg-surface border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary font-data-tabular text-data-tabular text-on-surface" type="number" value="50"/>
+</div>
+<div class="p-3 bg-surface-container rounded-lg border border-surface-variant flex justify-between items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant">New Break-Even</span>
+<span class="font-data-tabular text-data-tabular text-secondary font-bold">$147.66</span>
+</div>
+</div>
+</div><div class="mt-md pt-md border-t border-surface-variant flex justify-end"><button class="flex items-center gap-2 px-sm py-2 bg-secondary text-on-secondary rounded-lg font-body-sm font-semibold hover:bg-on-secondary-fixed-variant transition-colors shadow-sm"><span class="material-symbols-outlined text-sm">save</span> Save to Portfolio</button></div>
+</section>
+<!-- Trade Cycle Planner -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-sm">
+<div class="flex justify-between items-center mb-md border-b border-surface-variant pb-sm">
+<h2 class="font-headline-sm text-headline-sm text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-tertiary-fixed-dim">timeline</span>
+                            Trade Cycle Planner
+                        </h2>
+<button class="text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1 font-label-caps text-xs"><span class="material-symbols-outlined text-sm">settings_alt</span> Configure</button></div>
+<div class="relative h-48 w-full mb-6 rounded-lg overflow-hidden border border-surface-variant bg-surface-bright flex items-center justify-center">
+<div class="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary to-transparent"></div>
+<!-- Placeholder for Chart -->
+<div class="w-full h-full relative" data-alt="A clean, minimalist financial chart visualizing a trade cycle. The chart features a dark blue line graph representing stock price movement against a bright white background. Horizontal grid lines are light gray. Specific price points are highlighted: 'Entry' marked with a subtle blue dot, 'Scaling' marked with a secondary dot, and 'Exit Targets' indicated by thin green horizontal lines. The style is modern corporate, prioritizing data density and clarity without heavy shadows or 3D effects." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBYlE8dIvJjikv_hHk6jIPa37R9Lj0GLl_TBT4Ta1nrGIqkzkDKnS8DAMZasgJJphJoAWQKak8kb203eLgBRYyNAuZHvW3ZJSE-wL0GfQP0bPv5sIaupWcfrRx1qFK2C9CGmGnDM-FVOdxbVMAtGKoJCPO0M7T3sUPjUWkEX1Y6z2ifbWuNQsCwTzaP2D0U1QNzcJvuuzTMcfYU-8vCcJhbYvvUqtf6qkVmg0fzwaM96VCDUy-GHTrw')">
+<!-- Visual overlay mimicking chart elements -->
+<div class="absolute bottom-1/4 left-1/4 w-3 h-3 bg-primary rounded-full ring-4 ring-primary-fixed"></div>
+<div class="absolute bottom-1/2 left-1/2 w-3 h-3 bg-secondary rounded-full ring-4 ring-secondary-container"></div>
+<div class="absolute top-1/4 right-1/4 w-3 h-3 bg-secondary rounded-full ring-4 ring-secondary-container"></div>
+<svg class="absolute inset-0 h-full w-full" preserveaspectratio="none" viewbox="0 0 100 100">
+<path d="M0,80 Q25,80 25,75 T50,50 T75,25 T100,20" fill="none" stroke="theme('colors.outline-variant')" stroke-dasharray="2,2" stroke-width="0.5"></path>
+<path d="M25,75 L50,50 L75,25" fill="none" stroke="theme('colors.primary')" stroke-width="2"></path>
+</svg>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-sm">
+<div class="p-sm border border-outline-variant rounded-lg bg-surface">
+<p class="font-label-caps text-label-caps text-on-surface-variant">Entry Target</p>
+<p class="font-data-tabular text-body-lg text-primary mt-1">$145.00</p>
+</div>
+<div class="p-sm border border-outline-variant rounded-lg bg-surface">
+<p class="font-label-caps text-label-caps text-on-surface-variant">Scale In (x2)</p>
+<p class="font-data-tabular text-body-lg text-primary mt-1">$140.00</p>
+</div>
+<div class="p-sm border border-outline-variant rounded-lg bg-surface">
+<p class="font-label-caps text-label-caps text-on-surface-variant">Exit Strategy</p>
+<p class="font-data-tabular text-body-lg text-secondary mt-1">$160.00 <span class="text-xs text-on-surface-variant ml-1">(+10%)</span></p>
+</div>
+</div><div class="mt-md pt-md border-t border-surface-variant flex justify-end"><button class="flex items-center gap-2 px-sm py-2 border border-primary text-primary rounded-lg font-body-sm font-semibold hover:bg-surface-container-high transition-colors"><span class="material-symbols-outlined text-sm">edit_note</span> Save Trade Plan</button></div>
+</section>
+<!-- Risk Analysis Calculator -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-sm">
+<div class="flex justify-between items-center mb-md border-b border-surface-variant pb-sm">
+<h2 class="font-headline-sm text-headline-sm text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-error">warning</span>
+                            Risk Analysis
+                        </h2>
+</div>
+<div class="flex flex-col lg:flex-row gap-lg">
+<div class="flex-1 space-y-4">
+<div>
+<label class="block font-body-sm text-body-sm text-on-surface mb-1">Account Balance</label>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 flex items-center pl-3 font-data-tabular text-on-surface-variant">$</span>
+<input class="w-full pl-8 pr-3 py-2 bg-surface-container-low border border-outline-variant rounded-lg font-data-tabular text-data-tabular text-on-surface" readonly="" type="number" value="125000"/>
+</div>
+</div>
+<div class="flex gap-4">
+<div class="flex-1">
+<label class="block font-body-sm text-body-sm text-on-surface mb-1">Risk %</label>
+<div class="relative">
+<input class="w-full pr-8 pl-3 py-2 bg-surface border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary font-data-tabular text-data-tabular text-on-surface" step="0.1" type="number" value="1.5"/>
+<span class="absolute inset-y-0 right-0 flex items-center pr-3 font-data-tabular text-on-surface-variant">%</span>
+</div>
+</div>
+<div class="flex-1">
+<label class="block font-body-sm text-body-sm text-on-surface mb-1">Risk Amount</label>
+<div class="p-2 bg-error-container text-on-error-container rounded-lg border border-error/20 font-data-tabular text-data-tabular flex items-center h-[42px]">
+                                        $1,875.00
+                                    </div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 pt-2">
+<div>
+<label class="block font-body-sm text-body-sm text-on-surface mb-1">Stop Loss</label>
+<input class="w-full px-3 py-2 bg-surface border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary font-data-tabular text-data-tabular text-on-surface" type="number" value="138.50"/>
+</div>
+<div>
+<label class="block font-body-sm text-body-sm text-on-surface mb-1">Take Profit</label>
+<input class="w-full px-3 py-2 bg-surface border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary font-data-tabular text-data-tabular text-on-surface" type="number" value="165.00"/>
+</div>
+</div>
+</div>
+<div class="w-full lg:w-64 flex flex-col justify-center items-center p-md bg-surface-bright border border-surface-variant rounded-xl">
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-2">Recommended Position Size</p>
+<div class="font-display-lg text-display-lg text-primary mb-1">288 <span class="text-body-sm text-on-surface-variant font-normal">shares</span></div>
+<p class="font-data-tabular text-body-sm text-on-surface-variant mb-6">≈ $43,200.00</p>
+<div class="w-full space-y-2">
+<div class="flex justify-between font-label-caps text-label-caps">
+<span class="text-error">Risk: $1,875</span>
+<span class="text-secondary">Reward: $4,248</span>
+</div>
+<div class="h-2 w-full bg-surface-variant rounded-full overflow-hidden flex">
+<div class="h-full bg-error" style="width: 30%"></div>
+<div class="h-full bg-secondary" style="width: 70%"></div>
+</div>
+<div class="text-center font-data-tabular text-body-sm text-primary font-bold pt-1">
+                                    R:R Ratio 1:2.26
+                                </div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Sidebar: Account & History -->
+<aside class="w-full xl:w-80 flex flex-col gap-gutter flex-shrink-0">
+<!-- Linked Account Overview -->
+<div class="bg-primary text-on-primary rounded-xl p-md shadow-md relative overflow-hidden">
+<!-- Subtle background pattern -->
+<div class="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full -mr-16 -mt-16 pointer-events-none"></div>
+<div class="absolute bottom-0 left-0 w-24 h-24 bg-white opacity-5 rounded-full -ml-12 -mb-12 pointer-events-none"></div>
+<h3 class="font-label-caps text-label-caps opacity-80 uppercase tracking-wider mb-1">Available Buying Power</h3>
+<div class="font-headline-md text-headline-md font-bold mb-4 font-data-tabular">$125,000.00</div>
+<div class="flex items-center justify-between text-sm opacity-90 border-t border-white/20 pt-3">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">account_balance</span> Chase Bank ****4592</span>
+<button class="font-label-caps text-label-caps hover:underline">Manage</button>
+</div>
+</div>
+<!-- Recent Trade History -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm flex-1 flex flex-col">
+<div class="p-sm border-b border-surface-variant flex justify-between items-center">
+<h3 class="font-body-md text-body-md font-semibold text-primary">Recent Trades</h3>
+<button class="text-primary hover:bg-surface-container-low p-1 rounded transition-colors">
+<span class="material-symbols-outlined">filter_list</span>
+</button>
+</div>
+<div class="overflow-y-auto flex-1 p-sm space-y-3">
+<!-- Completed Trade -->
+<div class="flex justify-between items-center p-2 hover:bg-surface-container-low rounded-lg transition-colors border border-transparent hover:border-surface-variant">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-primary font-bold text-xs">AAPL</div>
+<div>
+<div class="font-body-sm text-body-sm font-semibold">Buy</div>
+<div class="font-label-caps text-label-caps text-on-surface-variant">Today, 09:30 AM</div>
+</div>
+</div>
+<div class="text-right">
+<div class="font-data-tabular text-body-sm">100 @ 175.20</div>
+<div class="font-data-tabular text-xs text-on-surface-variant">-$17,520.00</div>
+</div>
+</div>
+<!-- Pending Trade -->
+<div class="flex justify-between items-center p-2 hover:bg-surface-container-low rounded-lg transition-colors border border-transparent hover:border-surface-variant">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-primary font-bold text-xs">MSFT</div>
+<div>
+<div class="font-body-sm text-body-sm font-semibold flex items-center gap-1">Sell Limit <span class="material-symbols-outlined text-[12px] text-tertiary-fixed-dim">schedule</span></div>
+<div class="font-label-caps text-label-caps text-on-surface-variant">Yesterday</div>
+</div>
+</div>
+<div class="text-right">
+<div class="font-data-tabular text-body-sm">50 @ 410.50</div>
+<div class="font-data-tabular text-xs text-tertiary-fixed-dim">Pending</div>
+</div>
+</div>
+<!-- Completed Trade (Sell) -->
+<div class="flex justify-between items-center p-2 hover:bg-surface-container-low rounded-lg transition-colors border border-transparent hover:border-surface-variant">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-primary font-bold text-xs">TSLA</div>
+<div>
+<div class="font-body-sm text-body-sm font-semibold">Sell</div>
+<div class="font-label-caps text-label-caps text-on-surface-variant">Oct 24</div>
+</div>
+</div>
+<div class="text-right">
+<div class="font-data-tabular text-body-sm">20 @ 215.00</div>
+<div class="font-data-tabular text-xs text-secondary">+$4,300.00</div>
+</div>
+</div>
+</div>
+<div class="p-sm border-t border-surface-variant">
+<button class="w-full py-2 border border-outline-variant rounded-lg font-body-sm text-body-sm text-on-surface-variant hover:bg-surface-container-low hover:text-primary transition-colors">
+                            View Full Ledger
+                        </button>
+</div>
+</div>
+</aside>
+</main>
+</div>
+</body></html>

@@ -1,7 +1,7 @@
 import { categoryName } from '../categories';
 import type { Category } from '../../types/finance';
 import type { BankAccount, BankTransaction } from '../../types/bankWorkbook';
-import { toInstantMs } from '../datetime';
+import { dateOnlyMs } from '../datetime';
 
 export interface BankLedgerRow {
   tx: BankTransaction;
@@ -9,17 +9,17 @@ export interface BankLedgerRow {
 }
 
 /** Running balance for one account, starting from its opening balance, in
- * real-instant chronological order; two transactions tied at the same
- * instant (the common case for untimed records, which default to the
- * same noon-UTC placeholder) are then ordered by `serialNumber` — a
- * stable, persisted per-transaction counter (see `Finance.serialNumber`'s
- * doc comment) — rather than relying on `Array.prototype.sort`'s
- * stability. */
+ * calendar-date order; two transactions on the same DATE (Done item 235's
+ * reorder feature, extended 2026-09-08 to same-date rather than
+ * same-instant — see `dateOnlyMs`'s own doc comment) are then ordered by
+ * `serialNumber` — a stable, persisted per-transaction counter (see
+ * `Finance.serialNumber`'s doc comment) — rather than relying on
+ * `Array.prototype.sort`'s stability or an untimed time-of-day guess. */
 export function accountRunningLedger(account: BankAccount, transactions: BankTransaction[]): BankLedgerRow[] {
   const accountTxs = transactions.filter((t) => t.accountId === account.id);
   const sorted = [...accountTxs].sort((a, b) => {
-    const byInstant = toInstantMs(a.date, a.time, a.timezone) - toInstantMs(b.date, b.time, b.timezone);
-    return byInstant !== 0 ? byInstant : (a.serialNumber ?? 0) - (b.serialNumber ?? 0);
+    const byDate = dateOnlyMs(a.date) - dateOnlyMs(b.date);
+    return byDate !== 0 ? byDate : (a.serialNumber ?? 0) - (b.serialNumber ?? 0);
   });
   let balance = account.openingBalance;
   return sorted.map((tx) => {
@@ -28,11 +28,26 @@ export function accountRunningLedger(account: BankAccount, transactions: BankTra
   });
 }
 
-/** Current balance for one account: opening balance + all its transactions. */
+/** Current (cleared, available) balance for one account: opening balance +
+ * every CLEARED transaction — excludes any transaction with `isPending`
+ * set (see `Finance.isPending`'s own doc comment). Every other Bank
+ * balance/total in the app derives from this one function, so excluding
+ * pending here is a "fix once" change. Zero-migration: no real existing
+ * transaction has ever had `isPending` set, so this returns exactly what
+ * it always did until a user actually marks something pending. */
 export function accountBalance(account: BankAccount, transactions: BankTransaction[]): number {
   return transactions
-    .filter((t) => t.accountId === account.id)
+    .filter((t) => t.accountId === account.id && !t.isPending)
     .reduce((sum, t) => sum + t.amount, 0) + account.openingBalance;
+}
+
+/** The net amount currently sitting in pending transactions for one
+ * account — the companion figure to `accountBalance` above, so the UI can
+ * show "Cleared: X" and "+Y pending" side by side. */
+export function accountPendingBalance(account: BankAccount, transactions: BankTransaction[]): number {
+  return transactions
+    .filter((t) => t.accountId === account.id && t.isPending)
+    .reduce((sum, t) => sum + t.amount, 0);
 }
 
 /** Total balance across all accounts, grouped by currency — never
@@ -77,6 +92,15 @@ export function creditCardLiabilityByCurrency(accounts: BankAccount[], transacti
     if (owed > 0) out[a.currencyCode] = (out[a.currencyCode] || 0) + owed;
   });
   return out;
+}
+
+/** Pending item 115(a): the "total balance with that bank" rollup — same
+ * per-currency-grouped shape as `totalBalanceByCurrency`, scoped to
+ * exactly the accounts linked to one `Bank` (via `BankAccount.bankId`).
+ * Reuses `totalBalanceByCurrency` unchanged rather than reimplementing the
+ * same sum, so both stay correct together. */
+export function bankTotalsByCurrency(bankId: string, accounts: BankAccount[], transactions: BankTransaction[]): Record<string, number> {
+  return totalBalanceByCurrency(accounts.filter((a) => a.bankId === bankId), transactions);
 }
 
 /** Category breakdown for one account (net credit minus debit per

@@ -1,4 +1,4 @@
-import { HashRouter, Route, Routes } from 'react-router-dom';
+import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
 import { CalculatorLauncher } from './components/CalculatorLauncher';
 import { ConfirmDialogHost } from './components/ConfirmDialog';
@@ -35,7 +35,7 @@ import { useCashFirebaseSync } from './lib/firebase/useCashFirebaseSync';
 import { usePlannedCashFirebaseSync } from './lib/firebase/usePlannedCashFirebaseSync';
 import { PersonalLoansPage } from './features/personalLoans/pages/PersonalLoansPage';
 import { usePersonalLoansFirebaseSync } from './lib/firebase/usePersonalLoansFirebaseSync';
-import { BankPage, AccountDetailPage } from './features/bank/pages/BankPage';
+import { BankPage, AccountDetailPage, BankDetailPage } from './features/bank/pages/BankPage';
 import { useBankFirebaseSync } from './lib/firebase/useBankFirebaseSync';
 import { usePlannedBankFirebaseSync } from './lib/firebase/usePlannedBankFirebaseSync';
 import { EMIPage } from './features/emi/pages/EMIPage';
@@ -52,7 +52,6 @@ import { useInterEntityTransfersFirebaseSync } from './lib/firebase/useInterEnti
 import { useNetWorthSnapshotsFirebaseSync } from './lib/firebase/useNetWorthSnapshotsFirebaseSync';
 import { LegalPage } from './pages/LegalPage';
 import { NetWorthPage } from './features/netWorth/pages/NetWorthPage';
-import { BudgetPlannerPage } from './features/budget/pages/BudgetPlannerPage';
 import { AppDataPage } from './features/appData/pages/AppDataPage';
 import { AccountPage } from './features/account/pages/AccountPage';
 
@@ -221,6 +220,7 @@ function App() {
                 }
               />
               <Route path="/bank/account/:id" element={<AccountDetailPage />} />
+              <Route path="/bank/bank/:id" element={<BankDetailPage />} />
               <Route
                 path="/emi-loans"
                 element={
@@ -288,7 +288,7 @@ function App() {
                   />
                 }
               />
-              <Route path="/budget" element={<BudgetPlannerPage />} />
+              <Route path="/budget" element={<Navigate to="/planning" replace />} />
               <Route path="/app-data" element={<AppDataPage />} />
               <Route path="/account" element={<AccountPage syncStatuses={syncStatuses} />} />
               <Route path="/legal" element={<LegalPage />} />

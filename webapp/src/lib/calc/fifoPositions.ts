@@ -49,7 +49,9 @@ export interface FIFOResult {
  * as zero-cost-basis, same as `computePositions`' epsilon-clamp-to-zero. */
 export function computeFIFOPositions(transactions: Transaction[], calcFee: FeeCalculator): FIFOResult {
   const byTicker: Record<string, TickerState> = {};
-  const sorted = sortTransactionsChronological(transactions);
+  // Excludes pending transactions, same reasoning/rule as computePositions'
+  // own doc comment — a not-yet-filled order shouldn't open or drain a lot.
+  const sorted = sortTransactionsChronological(transactions.filter((t) => !t.isPending));
   const realizedSeries: RealizedPLPoint[] = [];
   let runningRealized = 0;
 

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"success":"#006c49","error-container":"#ffdad6","on-secondary":"#ffffff","inverse-on-surface":"#eff0f6","on-tertiary-fixed-variant":"#3e465b","inverse-surface":"#2e3135","surface-container-low":"#f2f3f9","primary-container":"#1b1b1b","primary":"#000000","primary-fixed":"#e2e2e2","tertiary-fixed":"#dae2fc","tertiary":"#000000","surface-tint":"#5e5e5e","outline":"#7e7576","surface-container-high":"#e7e8ee","surface-bright":"#f8f9ff","surface-container-lowest":"#ffffff","surface-container":"#eceef3","on-background":"#191c20","surface-variant":"#e1e2e8","surface":"#f8f9ff","on-tertiary":"#ffffff","on-primary-fixed-variant":"#474747","on-secondary-fixed-variant":"#005236","on-primary-fixed":"#1b1b1b","on-secondary-container":"#0c714d","secondary-container":"#9af2c5","tertiary-fixed-dim":"#bec6e0","on-primary-container":"#848484","currency-secondary":"#45464d","on-secondary-fixed":"#002113","error":"#ba1a1a","primary-fixed-dim":"#c6c6c6","on-surface":"#191c20","inverse-primary":"#c6c6c6","on-primary":"#ffffff","on-tertiary-fixed":"#131b2e","on-tertiary-container":"#7b839b","surface-container-highest":"#e1e2e8","on-surface-variant":"#4c4546","secondary-fixed":"#9df4c8","background":"#f8f9ff","surface-dim":"#d8dae0","tertiary-container":"#131b2e","on-error":"#ffffff","secondary":"#006c49","currency-primary":"#0b1c30","outline-variant":"#cfc4c5","secondary-fixed-dim":"#81d8ad","on-error-container":"#93000a"},"borderRadius":{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},"spacing":{"base":"4px","lg":"48px","gutter":"24px","xl":"80px","sm":"16px","xs":"8px","md":"24px"},"fontFamily":{"body-sm":["Work Sans"],"label-caps":["Work Sans"],"data-tabular":["JetBrains Mono"],"currency-display":["JetBrains Mono"],"headline-sm":["Manrope"],"body-lg":["Work Sans"],"headline-lg":["Manrope"],"body-md":["Work Sans"],"headline-md":["Manrope"]},"fontSize":{"body-sm":["14px",{"lineHeight":"20px","fontWeight":"400"}],"label-caps":["12px",{"lineHeight":"16px","letterSpacing":"0.05em","fontWeight":"600"}],"data-tabular":["14px",{"lineHeight":"20px","fontWeight":"500"}],"currency-display":["24px",{"lineHeight":"32px","letterSpacing":"-0.02em","fontWeight":"600"}],"headline-sm":["24px",{"lineHeight":"32px","fontWeight":"600"}],"body-lg":["18px",{"lineHeight":"28px","fontWeight":"400"}],"headline-lg":["48px",{"lineHeight":"56px","letterSpacing":"-0.02em","fontWeight":"700"}],"body-md":["16px",{"lineHeight":"24px","fontWeight":"400"}],"headline-md":["32px",{"lineHeight":"40px","letterSpacing":"-0.01em","fontWeight":"600"}]}}}}</script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@100..900&family=Work+Sans:wght@100..900&display=swap" rel="stylesheet"/></head><body class="bg-surface font-body-md text-on-surface"><aside class="fixed left-0 top-0 h-full w-72 bg-surface-container-low z-50 flex flex-col border-r border-outline-variant/30 shadow-[4px_0_24px_rgba(0,0,0,0.02)]"><div class="px-gutter h-20 flex items-center mb-xs"><div class="flex items-center gap-sm"><div class="w-10 h-10 bg-primary flex items-center justify-center rounded-xl"><span class="material-symbols-outlined text-on-primary">payments</span></div><span class="font-headline-sm text-headline-sm tracking-tight text-primary">WealthPro</span></div></div><nav class="flex-1 px-sm overflow-y-auto space-y-base" data-active-classes="bg-secondary-container text-on-secondary-container font-bold"><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all group" data-path="dashboard" href="#"><span class="material-symbols-outlined mr-md">dashboard</span><span class="font-body-md">Dashboard</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="banking" href="#"><span class="material-symbols-outlined mr-md">account_balance</span><span class="font-body-md">Banking</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="investments" href="#"><span class="material-symbols-outlined mr-md">monitoring</span><span class="font-body-md">Investments</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="loans" href="#"><span class="material-symbols-outlined mr-md">request_quote</span><span class="font-body-md">Loans</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="subscriptions" href="#"><span class="material-symbols-outlined mr-md">event_repeat</span><span class="font-body-md">Subscriptions</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="stock-exchange" href="#"><span class="material-symbols-outlined mr-md">show_chart</span><span class="font-body-md">Stock Exchange</span></a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="property-management" href="#"><span class="material-symbols-outlined mr-md">apartment</span><span class="font-body-md">Property</span></a><a aria-current="page" class="flex items-center px-md py-3 rounded-lg transition-all bg-secondary-container text-on-secondary-container font-bold" data-path="fx-workstation" href="#"><span class="material-symbols-outlined mr-md">currency_exchange</span><span class="font-body-md">FX Workstation</span></a></nav><div class="p-gutter border-t border-outline-variant/30"><div class="flex items-center gap-sm p-sm rounded-xl bg-surface-container"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div><div class="flex-1 overflow-hidden"><p class="text-body-sm font-label-caps truncate">John Doe</p><p class="text-[10px] text-on-surface-variant">Private Wealth</p></div><span class="material-symbols-outlined text-on-surface-variant text-sm">settings</span></div></div></aside><div class="pl-72"><header class="fixed top-0 left-72 right-0 h-20 bg-surface/80 backdrop-blur-xl z-40 px-gutter flex items-center justify-between border-b border-outline-variant/20 shadow-sm"><div class="flex items-center gap-md"><div class="flex items-center gap-xs px-md py-2 bg-surface-container-lowest border border-outline-variant rounded-full shadow-sm"><span class="w-2 h-2 rounded-full bg-success"></span><span class="font-label-caps text-on-surface-variant uppercase">Active:</span><span class="font-data-tabular text-currency-primary font-bold">USD</span></div><div class="h-8 w-[1px] bg-outline-variant"></div><div class="relative group"><button class="flex items-center gap-sm px-md py-2 rounded-lg bg-surface-container-high hover:bg-primary hover:text-on-primary transition-all"><span class="material-symbols-outlined text-sm">currency_exchange</span><span class="font-label-caps">Multi-Currency</span><span class="material-symbols-outlined text-sm">expand_more</span></button><div class="absolute top-full mt-xs left-0 w-64 bg-surface-container-lowest rounded-xl shadow-[0_10px_25px_-5px_rgba(11,28,48,0.1)] border border-outline-variant hidden group-hover:block py-sm z-50"><div class="px-md py-xs text-xs font-label-caps text-on-surface-variant">Select View</div><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">Global (Total)</span><span class="material-symbols-outlined text-sm">public</span></button><div class="h-[1px] bg-outline-variant my-xs mx-md"></div><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">US Dollar</span><span class="font-data-tabular">USD</span></button><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">Euro</span><span class="font-data-tabular">EUR</span></button><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">PK Rupee</span><span class="font-data-tabular">PKR</span></button><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">QA Riyal</span><span class="font-data-tabular">QAR</span></button></div></div></div><div class="flex items-center gap-gutter"><div class="relative flex items-center bg-surface-container px-md py-2 rounded-lg border border-outline-variant"><span class="material-symbols-outlined text-on-surface-variant mr-sm">search</span><input class="bg-transparent border-none outline-none text-sm text-on-surface w-48 placeholder:text-on-surface-variant" placeholder="Search portfolios..." type="text"/></div><button class="p-sm rounded-full hover:bg-surface-container-high transition-colors relative"><span class="material-symbols-outlined text-on-surface-variant">notifications</span><span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-surface"></span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center cursor-pointer"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></header><main class="relative pt-20 bg-surface min-h-screen"><div class="flex flex-col w-full">
+<div class="flex flex-col w-full px-xl py-lg gap-lg">
+<!-- Header / Status Bar -->
+<div class="flex items-end justify-between w-full">
+<div class="relative">
+<div class="absolute -left-8 -top-8 w-32 h-32 bg-secondary/10 rounded-full blur-3xl -z-10"></div>
+<h1 class="font-headline-md text-headline-md text-on-surface tracking-tight">PSX Workstation</h1>
+<div class="flex items-center gap-xs mt-xs">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<p class="font-body-md text-body-md text-on-surface-variant">Karachi Stock Exchange • Market Open</p>
+</div>
+</div>
+<div class="flex gap-md">
+<div class="flex flex-col items-end bg-surface-container-lowest p-sm rounded-xl shadow-sm">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Est. Net Worth</span>
+<div class="flex items-baseline gap-xs">
+<span class="font-label-caps text-label-caps text-on-surface opacity-70">PKR</span>
+<span class="font-data-tabular text-headline-sm text-on-surface tracking-tight">14,250,000.00</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Main Workspace Grid -->
+<div class="grid grid-cols-12 gap-gutter w-full">
+<!-- Left Area: Charts & Heatmap -->
+<div class="col-span-12 lg:col-span-8 flex flex-col gap-gutter">
+<!-- Chart Widget -->
+<div class="bg-surface-container-lowest rounded-2xl shadow-md p-md flex flex-col gap-md relative overflow-hidden">
+<div class="absolute top-0 right-0 w-64 h-64 bg-primary-fixed/30 rounded-full blur-[80px] -z-10 translate-x-1/2 -translate-y-1/2"></div>
+<div class="flex justify-between items-start">
+<div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">KSE-100 Index</h2>
+<div class="flex items-center gap-xs mt-xs">
+<span class="font-data-tabular text-headline-md text-on-surface">65,432.10</span>
+<span class="flex items-center text-secondary bg-secondary/10 px-sm py-[2px] rounded-sm">
+<span class="material-symbols-outlined text-sm">arrow_upward</span>
+<span class="font-data-tabular text-body-sm font-bold">+412.50 (0.63%)</span>
+</span>
+</div>
+</div>
+<div class="flex bg-surface-container rounded-lg p-base shadow-inner">
+<button class="px-sm py-xs bg-surface-container-lowest rounded-md shadow-sm font-label-caps text-label-caps text-on-surface">1D</button>
+<button class="px-sm py-xs font-label-caps text-label-caps text-on-surface-variant hover:text-on-surface transition-colors">1W</button>
+<button class="px-sm py-xs font-label-caps text-label-caps text-on-surface-variant hover:text-on-surface transition-colors">1M</button>
+</div>
+</div>
+<div class="h-64 w-full relative mt-sm">
+<!-- Inline SVG Chart -->
+<svg class="w-full h-full drop-shadow-sm" preserveaspectratio="none" viewbox="0 0 800 200">
+<defs>
+<lineargradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
+<stop class="text-secondary" offset="0%" stop-color="currentColor" stop-opacity="0.2"></stop>
+<stop class="text-secondary" offset="100%" stop-color="currentColor" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+<!-- Grid lines -->
+<line class="text-surface-container-high" stroke="currentColor" stroke-dasharray="4" x1="0" x2="800" y1="50" y2="50"></line>
+<line class="text-surface-container-high" stroke="currentColor" stroke-dasharray="4" x1="0" x2="800" y1="100" y2="100"></line>
+<line class="text-surface-container-high" stroke="currentColor" stroke-dasharray="4" x1="0" x2="800" y1="150" y2="150"></line>
+<!-- Data Path -->
+<path class="text-secondary" d="M0,180 C50,170 100,190 150,150 C200,110 250,130 300,90 C350,50 400,100 450,70 C500,40 550,80 600,50 C650,20 700,60 750,40 C800,20 800,20 800,20" fill="none" stroke="currentColor" stroke-width="3"></path>
+<!-- Area fill -->
+<path d="M0,180 C50,170 100,190 150,150 C200,110 250,130 300,90 C350,50 400,100 450,70 C500,40 550,80 600,50 C650,20 700,60 750,40 C800,20 800,20 800,20 L800,200 L0,200 Z" fill="url(#chartGradient)"></path>
+</svg>
+</div>
+</div>
+<!-- Sector Heatmap -->
+<div class="bg-surface-container-lowest rounded-2xl shadow-md p-md flex flex-col gap-md">
+<div class="flex justify-between items-center">
+<h3 class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest">Sector Heatmap</h3>
+<span class="material-symbols-outlined text-on-surface-variant text-sm">dashboard</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-sm h-40">
+<!-- Banks -->
+<div class="bg-secondary p-sm rounded-xl flex flex-col justify-between text-on-secondary shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group cursor-pointer">
+<div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent group-hover:from-white/20 transition-all"></div>
+<div class="relative z-10 flex justify-between items-start">
+<span class="font-label-caps text-label-caps">Commercial Banks</span>
+<span class="material-symbols-outlined text-sm opacity-70">account_balance</span>
+</div>
+<div class="relative z-10">
+<span class="font-data-tabular text-headline-sm block">+1.24%</span>
+<span class="font-data-tabular text-xs opacity-80 mt-1">MEBL, UBL, MCB</span>
+</div>
+</div>
+<!-- Cement -->
+<div class="bg-error p-sm rounded-xl flex flex-col justify-between text-on-error shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group cursor-pointer">
+<div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent group-hover:from-white/20 transition-all"></div>
+<div class="relative z-10 flex justify-between items-start">
+<span class="font-label-caps text-label-caps">Cement</span>
+<span class="material-symbols-outlined text-sm opacity-70">factory</span>
+</div>
+<div class="relative z-10">
+<span class="font-data-tabular text-headline-sm block">-0.85%</span>
+<span class="font-data-tabular text-xs opacity-80 mt-1">LUCK, MLCF, DGKC</span>
+</div>
+</div>
+<!-- Tech -->
+<div class="bg-secondary-fixed-dim p-sm rounded-xl flex flex-col justify-between text-on-secondary-fixed shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group cursor-pointer">
+<div class="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent group-hover:from-white/30 transition-all"></div>
+<div class="relative z-10 flex justify-between items-start">
+<span class="font-label-caps text-label-caps">Tech & Comm</span>
+<span class="material-symbols-outlined text-sm opacity-70">memory</span>
+</div>
+<div class="relative z-10">
+<span class="font-data-tabular text-headline-sm block">+2.10%</span>
+<span class="font-data-tabular text-xs opacity-80 mt-1">SYS, TRG, PTC</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Area: Order Panel & History -->
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-gutter">
+<!-- Order Panel -->
+<div class="bg-surface-container-lowest rounded-2xl shadow-xl p-md flex flex-col gap-sm relative">
+<!-- Subtle top accent -->
+<div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-secondary to-primary-fixed rounded-t-2xl"></div>
+<div class="flex bg-surface-container rounded-lg p-base mb-xs">
+<button class="flex-1 py-xs bg-secondary rounded-md shadow-sm font-label-caps text-label-caps text-on-secondary transition-colors">BUY</button>
+<button class="flex-1 py-xs font-label-caps text-label-caps text-on-surface-variant hover:text-on-surface transition-colors">SELL</button>
+</div>
+<div class="flex flex-col gap-xs group">
+<label class="font-label-caps text-label-caps text-on-surface-variant transition-colors group-focus-within:text-secondary">Symbol</label>
+<div class="bg-surface-container px-md py-sm rounded-lg flex items-center shadow-inner group-focus-within:ring-2 group-focus-within:ring-secondary/50 transition-all">
+<span class="material-symbols-outlined text-on-surface-variant mr-sm">search</span>
+<input class="bg-transparent border-none outline-none text-on-surface font-data-tabular text-body-md w-full uppercase" type="text" value="ENGRO"/>
+</div>
+</div>
+<div class="flex gap-sm">
+<div class="flex-1 flex flex-col gap-xs group">
+<label class="font-label-caps text-label-caps text-on-surface-variant transition-colors group-focus-within:text-secondary">Qty</label>
+<input class="bg-surface-container px-md py-sm rounded-lg border-none outline-none text-on-surface font-data-tabular text-body-md w-full shadow-inner group-focus-within:ring-2 group-focus-within:ring-secondary/50 transition-all" type="number" value="1000"/>
+</div>
+<div class="flex-1 flex flex-col gap-xs group">
+<label class="font-label-caps text-label-caps text-on-surface-variant transition-colors group-focus-within:text-secondary">Price (PKR)</label>
+<input class="bg-surface-container px-md py-sm rounded-lg border-none outline-none text-on-surface font-data-tabular text-body-md w-full shadow-inner group-focus-within:ring-2 group-focus-within:ring-secondary/50 transition-all" type="number" value="295.50"/>
+</div>
+</div>
+<!-- PSX Specific Tax Calc -->
+<div class="mt-sm bg-surface-container-low p-sm rounded-xl flex flex-col gap-sm shadow-inner">
+<div class="flex justify-between items-center pb-xs border-b border-outline-variant/20">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Tax & Levies</span>
+<div class="flex items-center gap-xs cursor-pointer" onclick="const t=this.querySelector('.toggle-dot'); t.classList.toggle('translate-x-4'); const bg=this.querySelector('.toggle-bg'); bg.classList.toggle('bg-secondary'); bg.classList.toggle('bg-outline-variant');">
+<span class="font-label-caps text-[10px] text-on-surface-variant uppercase">Active Filer</span>
+<div class="toggle-bg w-8 h-4 bg-secondary rounded-full relative transition-colors duration-300">
+<div class="toggle-dot w-3 h-3 bg-surface-container-lowest rounded-full absolute top-[2px] left-[2px] transition-transform duration-300 translate-x-4 shadow-sm"></div>
+</div>
+</div>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Brokerage (0.15%)</span>
+<span class="font-data-tabular text-data-tabular text-on-surface">PKR 443.25</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant">CVT & SECP Fee</span>
+<span class="font-data-tabular text-data-tabular text-on-surface">PKR 29.55</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant">WHT (15% Filer)</span>
+<span class="font-data-tabular text-data-tabular text-on-surface">PKR 66.49</span>
+</div>
+<div class="w-full h-[1px] bg-outline-variant/30 my-xs"></div>
+<div class="flex justify-between items-end">
+<span class="font-label-caps text-label-caps text-on-surface uppercase tracking-widest">Est. Total</span>
+<span class="font-data-tabular text-headline-sm text-secondary tracking-tight">PKR 296,039.29</span>
+</div>
+</div>
+<button class="w-full bg-secondary text-on-secondary font-label-caps text-label-caps py-md rounded-xl mt-xs shadow-md hover:shadow-lg hover:-translate-y-[1px] transition-all duration-200 uppercase tracking-widest">Submit Buy Order</button>
+</div>
+<!-- Open Orders -->
+<div class="bg-surface-container-lowest rounded-2xl shadow-md p-md flex-1 flex flex-col gap-sm">
+<div class="flex justify-between items-center">
+<h3 class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest">Today's Orders</h3>
+<button class="font-label-caps text-[10px] text-secondary uppercase hover:underline">View All</button>
+</div>
+<div class="flex flex-col gap-xs mt-xs">
+<div class="flex justify-between items-center bg-surface-container-low p-sm rounded-lg hover:bg-surface-container transition-colors cursor-pointer">
+<div class="flex items-center gap-sm">
+<span class="w-1.5 h-6 bg-secondary rounded-full"></span>
+<div>
+<span class="font-data-tabular text-body-md text-on-surface font-bold block leading-none">HUBC</span>
+<span class="font-label-caps text-[10px] text-on-surface-variant uppercase">Buy Limit</span>
+</div>
+</div>
+<div class="text-right flex flex-col items-end">
+<span class="font-data-tabular text-body-sm text-on-surface">500 @ 112.50</span>
+<span class="flex items-center gap-[2px] text-secondary mt-[2px]">
+<span class="material-symbols-outlined text-[12px]">check_circle</span>
+<span class="font-label-caps text-[10px] uppercase">Filled</span>
+</span>
+</div>
+</div>
+<div class="flex justify-between items-center bg-surface-container-low p-sm rounded-lg hover:bg-surface-container transition-colors cursor-pointer">
+<div class="flex items-center gap-sm">
+<span class="w-1.5 h-6 bg-error rounded-full"></span>
+<div>
+<span class="font-data-tabular text-body-md text-on-surface font-bold block leading-none">KEL</span>
+<span class="font-label-caps text-[10px] text-on-surface-variant uppercase">Sell Limit</span>
+</div>
+</div>
+<div class="text-right flex flex-col items-end">
+<span class="font-data-tabular text-body-sm text-on-surface">2000 @ 4.15</span>
+<span class="flex items-center gap-[2px] text-on-surface-variant mt-[2px]">
+<span class="material-symbols-outlined text-[12px]">schedule</span>
+<span class="font-label-caps text-[10px] uppercase">Pending</span>
+</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div></main></div></body></html>

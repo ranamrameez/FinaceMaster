@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}.sidebar-transition{transition:width 0.3s cubic-bezier(0.4, 0, 0.2, 1);}.nav-group:not(:last-child){margin-bottom:16px;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"inverse-primary":"#bec6e0","surface-tint":"#565e74","on-tertiary-fixed":"#2a1700","background":"#f8f9ff","surface-bright":"#f8f9ff","surface-container":"#e5eeff","primary":"#000000","surface-container-high":"#dce9ff","on-secondary-container":"#00714d","on-surface":"#0b1c30","primary-fixed-dim":"#bec6e0","on-secondary":"#ffffff","on-background":"#0b1c30","surface":"#f8f9ff","tertiary-fixed":"#ffddb8","on-tertiary-fixed-variant":"#653e00","outline":"#76777d","surface-variant":"#d3e4fe","primary-fixed":"#dae2fd","on-surface-variant":"#45464d","on-primary":"#ffffff","on-secondary-fixed":"#002113","on-tertiary-container":"#b87500","on-tertiary":"#ffffff","inverse-on-surface":"#eaf1ff","on-primary-fixed":"#131b2e","outline-variant":"#c6c6cd","surface-container-highest":"#d3e4fe","inverse-surface":"#213145","secondary-container":"#6cf8bb","secondary":"#006c49","on-secondary-fixed-variant":"#005236","on-primary-container":"#7c839b","surface-container-low":"#eff4ff","error-container":"#ffdad6","secondary-fixed-dim":"#4edea3","surface-dim":"#cbdbf5","tertiary-container":"#2a1700","secondary-fixed":"#6ffbbe","primary-container":"#131b2e","on-error":"#ffffff","surface-container-lowest":"#ffffff","error":"#ba1a1a","on-error-container":"#93000a","tertiary-fixed-dim":"#ffb95f","tertiary":"#000000","on-primary-fixed-variant":"#3f465c"},"borderRadius":{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},"spacing":{"sm":"16px","gutter":"24px","md":"24px","base":"4px","xs":"8px","container-max":"1440px","lg":"48px","xl":"80px"},"fontFamily":{"data-tabular":["JetBrains Mono"],"display-lg":["Manrope"],"body-md":["Work Sans"],"body-lg":["Work Sans"],"headline-md":["Manrope"],"label-caps":["Work Sans"],"body-sm":["Work Sans"],"headline-sm":["Manrope"]},"fontSize":{"data-tabular":["14px",{"lineHeight":"20px","fontWeight":"500"}],"display-lg":["48px",{"lineHeight":"56px","letterSpacing":"-0.02em","fontWeight":"700"}],"body-md":["16px",{"lineHeight":"24px","fontWeight":"400"}],"body-lg":["18px",{"lineHeight":"28px","fontWeight":"400"}],"headline-md":["32px",{"lineHeight":"40px","letterSpacing":"-0.01em","fontWeight":"600"}],"label-caps":["12px",{"lineHeight":"16px","letterSpacing":"0.05em","fontWeight":"600"}],"body-sm":["14px",{"lineHeight":"20px","fontWeight":"400"}],"headline-sm":["24px",{"lineHeight":"32px","fontWeight":"600"}]}}}}</script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@100..900&amp;family=Work+Sans:wght@100..900&amp;display=swap" rel="stylesheet"/></head><body class="bg-surface font-body-md text-on-surface"><aside class="sidebar-transition fixed left-0 top-0 h-full w-72 bg-surface-container-low z-50 flex flex-col border-r border-outline-variant/30 shadow-[4px_0_24px_rgba(0,0,0,0.02)] overflow-hidden" id="main-sidebar"><div class="px-gutter h-20 flex items-center shrink-0 mb-xs"><div class="flex items-center gap-sm"><div class="w-10 h-10 bg-primary flex items-center justify-center rounded-xl shrink-0"><span class="material-symbols-outlined text-on-primary">payments</span></div><span class="font-headline-sm text-headline-sm tracking-tight text-primary whitespace-nowrap overflow-hidden sidebar-label">WealthPro</span></div></div><nav class="flex-1 px-sm overflow-y-auto space-y-base custom-scrollbar" data-active-classes="bg-secondary-container text-on-secondary-container font-bold"><div class="nav-group"><p class="px-md py-xs text-[10px] font-label-caps text-on-surface-variant uppercase tracking-widest sidebar-label">Wealth Overview</p><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="dashboard" href="#">Dashboard</a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="unified-summary" href="#">Unified Summary</a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="forecast" href="#">Forecast</a></div><div class="nav-group"><p class="px-md py-xs text-[10px] font-label-caps text-on-surface-variant uppercase tracking-widest sidebar-label">Markets</p><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="stock-exchange" href="#">Stock Exchange</a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="psx-workstation" href="#">PSX Workstation</a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="qse-workstation" href="#">QSE Workstation</a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="fx-workstation" href="#">FX Workstation</a></div><div class="nav-group"><p class="px-md py-xs text-[10px] font-label-caps text-on-surface-variant uppercase tracking-widest sidebar-label">Asset Management</p><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="banking-loans" href="#">Banking &amp; Loans</a><div class="pl-sm border-l border-outline-variant/30 ml-md my-xs"><a class="block px-sm py-2 text-body-sm text-on-surface-variant/80 hover:text-primary transition-colors" data-path="global-checking" href="#">Global Checking</a><a class="block px-sm py-2 text-body-sm text-on-surface-variant/80 hover:text-primary transition-colors" data-path="savings" href="#">Savings Account</a><a class="block px-sm py-2 text-body-sm text-on-surface-variant/80 hover:text-primary transition-colors" data-path="investment-account" href="#">Investment Account</a></div><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="property-management" href="#">Property Management</a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="cash-physical-assets" href="#">Cash &amp; Physical Assets</a></div><div class="nav-group"><p class="px-md py-xs text-[10px] font-label-caps text-on-surface-variant uppercase tracking-widest sidebar-label">Operations</p><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="transfer-hub" href="#">Transfer Hub</a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="transaction-history" href="#">Transaction History</a><a class="flex items-center px-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-path="alerts-notifications" href="#">Alerts &amp; Notifications</a></div></nav><div class="p-gutter border-t border-outline-variant/30 mt-auto shrink-0"><button class="w-full flex items-center justify-center p-sm rounded-xl bg-surface-container hover:bg-surface-container-high transition-colors" onclick="const s=document.getElementById('main-sidebar'); const m=document.getElementById('main-content'); const l=document.querySelectorAll('.sidebar-label'); if(s.classList.contains('w-72')){s.classList.replace('w-72','w-20'); m.classList.replace('pl-72','pl-20'); l.forEach(x=&gt;x.classList.add('hidden'));}else{s.classList.replace('w-20','w-72'); m.classList.replace('pl-20','pl-72'); l.forEach(x=&gt;x.classList.remove('hidden'));}"><span class="material-symbols-outlined text-on-surface-variant">menu_open</span></button></div></aside><div class="sidebar-transition pl-72" id="main-content"><header class="fixed top-0 left-0 right-0 h-20 bg-surface/80 backdrop-blur-xl z-40 px-gutter flex items-center justify-between border-b border-outline-variant/20 shadow-sm ml-auto sidebar-transition pl-[inherit]"><div class="flex items-center gap-md"><div class="flex items-center gap-xs px-md py-2 bg-surface-container-lowest border border-outline-variant rounded-full shadow-sm"><span class="w-2 h-2 rounded-full bg-secondary"></span><span class="font-label-caps text-on-surface-variant uppercase">Active:</span><span class="font-data-tabular text-on-surface font-bold">USD</span></div><div class="h-8 w-[1px] bg-outline-variant"></div><div class="relative group"><button class="flex items-center gap-sm px-md py-2 rounded-lg bg-surface-container-high hover:bg-primary hover:text-on-primary transition-all"><span class="material-symbols-outlined text-sm">currency_exchange</span><span class="font-label-caps">Multi-Currency</span><span class="material-symbols-outlined text-sm">expand_more</span></button><div class="absolute top-full mt-xs left-0 w-64 bg-surface-container-lowest rounded-xl shadow-[0_10px_25px_-5px_rgba(11,28,48,0.1)] border border-outline-variant hidden group-hover:block py-sm z-50"><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">Global (Total)</span><span class="material-symbols-outlined text-sm">public</span></button><div class="h-[1px] bg-outline-variant my-xs mx-md"></div><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">US Dollar</span><span class="font-data-tabular">USD</span></button><button class="w-full text-left px-md py-sm hover:bg-primary-container hover:text-on-primary-container flex justify-between items-center"><span class="font-body-md">Euro</span><span class="font-data-tabular">EUR</span></button></div></div></div><div class="flex items-center gap-gutter"><div class="relative flex items-center bg-surface-container px-md py-2 rounded-lg border border-outline-variant"><span class="material-symbols-outlined text-on-surface-variant mr-sm">search</span><input class="bg-transparent border-none outline-none text-sm text-on-surface w-48 placeholder:text-on-surface-variant" placeholder="Search portfolios..." type="text"/></div><button class="p-sm rounded-full hover:bg-surface-container-high transition-colors relative"><span class="material-symbols-outlined text-on-surface-variant">notifications</span><span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-surface"></span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center cursor-pointer"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></header><main class="relative pt-20 bg-surface min-h-screen"><div class="flex flex-col w-full">
+<!-- Hero / Header Summary Area -->
+<div class="px-gutter pt-lg pb-md bg-surface flex flex-col md:flex-row md:items-end justify-between gap-md">
+<div>
+<div class="flex items-center gap-xs mb-xs">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="font-label-caps text-on-surface-variant uppercase">Multi-Currency Hub</span>
+</div>
+<h1 class="font-headline-md text-on-surface tracking-tight">Global Accounts &amp; Cash Liquidity</h1>
+<p class="font-body-md text-on-surface-variant mt-xs max-w-2xl">Manage distinct currency ledgers, manual account records, physical vault balances, and multi-jurisdictional liquidity in real-time without external feeds.</p>
+</div>
+<div class="flex items-center gap-sm">
+<button class="flex items-center gap-xs px-md py-3 rounded-xl bg-primary text-on-primary font-label-caps hover:bg-surface-tint transition-all shadow-sm" onclick="openModal('addAccountModal')">
+<span class="material-symbols-outlined text-[18px]">add_card</span>
+<span>New Currency Ledger</span>
+</button>
+<button class="flex items-center gap-xs px-md py-3 rounded-xl bg-surface-container-high text-on-surface font-label-caps hover:bg-surface-container-highest transition-all" onclick="openModal('transferModal')">
+<span class="material-symbols-outlined text-[18px]">swap_horiz</span>
+<span>Cross-Border Transfer</span>
+</button>
+</div>
+</div>
+<!-- Consolidated Global Metrics Ribbon -->
+<div class="px-gutter pb-gutter">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-sm">
+<div class="p-md rounded-xl bg-surface-container-low flex flex-col justify-between">
+<span class="font-label-caps text-on-surface-variant uppercase">Total Consolidated Value</span>
+<div class="flex items-baseline gap-xs mt-xs">
+<span class="font-data-tabular text-headline-sm text-on-surface">$1,482,900.50</span>
+<span class="font-data-tabular text-sm text-secondary font-bold">+2.4%</span>
+</div>
+</div>
+<div class="p-md rounded-xl bg-surface-container-low flex flex-col justify-between">
+<span class="font-label-caps text-on-surface-variant uppercase">Active Currencies</span>
+<div class="flex items-baseline gap-xs mt-xs">
+<span class="font-data-tabular text-headline-sm text-on-surface">4 Ledgers</span>
+<span class="font-data-tabular text-sm text-on-surface-variant">USD, PKR, QAR, EUR</span>
+</div>
+</div>
+<div class="p-md rounded-xl bg-surface-container-low flex flex-col justify-between">
+<span class="font-label-caps text-on-surface-variant uppercase">Physical Vault Assets</span>
+<div class="flex items-baseline gap-xs mt-xs">
+<span class="font-data-tabular text-headline-sm text-on-surface">$142,500.00</span>
+<span class="font-data-tabular text-sm text-on-surface-variant">Bullion &amp; Cash</span>
+</div>
+</div>
+<div class="p-md rounded-xl bg-surface-container-low flex flex-col justify-between">
+<span class="font-label-caps text-on-surface-variant uppercase">Pending Manual Clears</span>
+<div class="flex items-baseline gap-xs mt-xs">
+<span class="font-data-tabular text-headline-sm text-on-surface">2 Items</span>
+<span class="font-data-tabular text-sm text-on-secondary-container">Action Req.</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Strict Currency-Grouped Sections -->
+<div class="px-gutter pb-xl space-y-lg">
+<!-- USD Accounts Section -->
+<div class="bg-surface-container-low rounded-2xl p-gutter border border-outline-variant/30">
+<div class="flex items-center justify-between pb-md border-b border-outline-variant/20 mb-md">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-on-primary font-data-tabular text-base font-bold">US</div>
+<div>
+<h2 class="font-headline-sm text-on-surface text-xl">USD Accounts</h2>
+<span class="font-label-caps text-on-surface-variant">Federal Reserve / Chase &amp; Associated Ledgers</span>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<span class="px-md py-2 rounded-lg bg-surface-container-lowest font-data-tabular text-headline-sm text-on-surface border border-outline-variant/30">$840,250.00</span>
+<button class="py-2 px-md rounded-lg bg-primary text-on-primary font-label-caps text-center hover:bg-surface-tint transition-colors" onclick="openModal('updateBalanceModal')">Update Balance</button>
+<button class="py-2 px-md rounded-lg bg-surface-container text-on-surface font-label-caps text-center hover:bg-surface-container-high transition-colors" onclick="openModal('addTxModal')">+ Tx</button>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-md">
+<div class="p-md rounded-xl bg-surface-container-lowest border border-outline-variant/20 flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start mb-xs">
+<h3 class="font-headline-sm text-on-surface text-base">USD Checking Account</h3>
+<span class="px-xs py-1 rounded bg-secondary-container text-on-secondary-container font-label-caps text-[10px]">Primary</span>
+</div>
+<div class="font-data-tabular text-xs text-on-surface-variant mb-md">IBAN: US44CHAS000000192837</div>
+<div class="font-data-tabular text-headline-md text-on-surface">$840,250.00</div>
+</div>
+<div class="mt-md pt-sm border-t border-outline-variant/10">
+<span class="font-label-caps text-[10px] text-on-surface-variant block mb-xs">Recent Transactions</span>
+<div class="space-y-xs">
+<div class="flex items-center justify-between p-sm rounded bg-surface-container-low">
+<div>
+<p class="font-body-sm text-on-surface font-medium">Wire In - Client Retainer</p>
+<span class="font-data-tabular text-[10px] text-on-surface-variant">Oct 24, 2023</span>
+</div>
+<span class="font-data-tabular text-xs text-secondary font-bold">+$45,000.00</span>
+</div>
+<div class="flex items-center justify-between p-sm rounded bg-surface-container-low">
+<div>
+<p class="font-body-sm text-on-surface font-medium">Tax Provision Outflow</p>
+<span class="font-data-tabular text-[10px] text-on-surface-variant">Oct 20, 2023</span>
+</div>
+<span class="font-data-tabular text-xs text-error font-bold">-$12,500.00</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- PKR Accounts Section -->
+<div class="bg-surface-container-low rounded-2xl p-gutter border border-outline-variant/30">
+<div class="flex items-center justify-between pb-md border-b border-outline-variant/20 mb-md">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-on-primary font-data-tabular text-base font-bold">PK</div>
+<div>
+<h2 class="font-headline-sm text-on-surface text-xl">PKR Accounts</h2>
+<span class="font-label-caps text-on-surface-variant">Meezan Bank Ltd &amp; Associated Ledgers</span>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<span class="px-md py-2 rounded-lg bg-surface-container-lowest font-data-tabular text-headline-sm text-on-surface border border-outline-variant/30">₨ 42,500,000</span>
+<button class="py-2 px-md rounded-lg bg-primary text-on-primary font-label-caps text-center hover:bg-surface-tint transition-colors" onclick="openModal('updateBalanceModal')">Update Balance</button>
+<button class="py-2 px-md rounded-lg bg-surface-container text-on-surface font-label-caps text-center hover:bg-surface-container-high transition-colors" onclick="openModal('addTxModal')">+ Tx</button>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-md">
+<div class="p-md rounded-xl bg-surface-container-lowest border border-outline-variant/20 flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start mb-xs">
+<h3 class="font-headline-sm text-on-surface text-base">PKR Corporate Ledger</h3>
+<span class="px-xs py-1 rounded bg-surface-container text-on-surface-variant font-label-caps text-[10px]">Secondary</span>
+</div>
+<div class="font-data-tabular text-xs text-on-surface-variant mb-md">IBAN: PK38MEZN000000554433</div>
+<div class="font-data-tabular text-headline-md text-on-surface">₨ 42,500,000</div>
+</div>
+<div class="mt-md pt-sm border-t border-outline-variant/10">
+<span class="font-label-caps text-[10px] text-on-surface-variant block mb-xs">Recent Transactions</span>
+<div class="space-y-xs">
+<div class="flex items-center justify-between p-sm rounded bg-surface-container-low">
+<div>
+<p class="font-body-sm text-on-surface font-medium">Real Estate Dividend</p>
+<span class="font-data-tabular text-[10px] text-on-surface-variant">Oct 22, 2023</span>
+</div>
+<span class="font-data-tabular text-xs text-secondary font-bold">+₨ 2,500,000</span>
+</div>
+<div class="flex items-center justify-between p-sm rounded bg-surface-container-low">
+<div>
+<p class="font-body-sm text-on-surface font-medium">Operations Payroll</p>
+<span class="font-data-tabular text-[10px] text-on-surface-variant">Oct 15, 2023</span>
+</div>
+<span class="font-data-tabular text-xs text-error font-bold">-₨ 850,000</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- QAR Accounts Section -->
+<div class="bg-surface-container-low rounded-2xl p-gutter border border-outline-variant/30">
+<div class="flex items-center justify-between pb-md border-b border-outline-variant/20 mb-md">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-on-primary font-data-tabular text-base font-bold">QA</div>
+<div>
+<h2 class="font-headline-sm text-on-surface text-xl">QAR Accounts</h2>
+<span class="font-label-caps text-on-surface-variant">QNB Group &amp; Associated Ledgers</span>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<span class="px-md py-2 rounded-lg bg-surface-container-lowest font-data-tabular text-headline-sm text-on-surface border border-outline-variant/30">QR 310,400.00</span>
+<button class="py-2 px-md rounded-lg bg-primary text-on-primary font-label-caps text-center hover:bg-surface-tint transition-colors" onclick="openModal('updateBalanceModal')">Update Balance</button>
+<button class="py-2 px-md rounded-lg bg-surface-container text-on-surface font-label-caps text-center hover:bg-surface-container-high transition-colors" onclick="openModal('addTxModal')">+ Tx</button>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-md">
+<div class="p-md rounded-xl bg-surface-container-lowest border border-outline-variant/20 flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start mb-xs">
+<h3 class="font-headline-sm text-on-surface text-base">QAR Regional Ledger</h3>
+<span class="px-xs py-1 rounded bg-surface-container text-on-surface-variant font-label-caps text-[10px]">Regional</span>
+</div>
+<div class="font-data-tabular text-xs text-on-surface-variant mb-md">IBAN: QA99QNBA000000778899</div>
+<div class="font-data-tabular text-headline-md text-on-surface">QR 310,400.00</div>
+</div>
+<div class="mt-md pt-sm border-t border-outline-variant/10">
+<span class="font-label-caps text-[10px] text-on-surface-variant block mb-xs">Recent Transactions</span>
+<div class="space-y-xs">
+<div class="flex items-center justify-between p-sm rounded bg-surface-container-low">
+<div>
+<p class="font-body-sm text-on-surface font-medium">Consulting Fee</p>
+<span class="font-data-tabular text-[10px] text-on-surface-variant">Oct 19, 2023</span>
+</div>
+<span class="font-data-tabular text-xs text-secondary font-bold">+QR 45,000.00</span>
+</div>
+<div class="flex items-center justify-between p-sm rounded bg-surface-container-low">
+<div>
+<p class="font-body-sm text-on-surface font-medium">Office Lease Deposit</p>
+<span class="font-data-tabular text-[10px] text-on-surface-variant">Oct 10, 2023</span>
+</div>
+<span class="font-data-tabular text-xs text-error font-bold">-QR 20,000.00</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- EUR Accounts Section -->
+<div class="bg-surface-container-low rounded-2xl p-gutter border border-outline-variant/30">
+<div class="flex items-center justify-between pb-md border-b border-outline-variant/20 mb-md">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-on-primary font-data-tabular text-base font-bold">EU</div>
+<div>
+<h2 class="font-headline-sm text-on-surface text-xl">EUR Accounts</h2>
+<span class="font-label-caps text-on-surface-variant">Deutsche Bank AG &amp; Holding Ledgers</span>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<span class="px-md py-2 rounded-lg bg-surface-container-lowest font-data-tabular text-headline-sm text-on-surface border border-outline-variant/30">€ 215,800.00</span>
+<button class="py-2 px-md rounded-lg bg-primary text-on-primary font-label-caps text-center hover:bg-surface-tint transition-colors" onclick="openModal('updateBalanceModal')">Update Balance</button>
+<button class="py-2 px-md rounded-lg bg-surface-container text-on-surface font-label-caps text-center hover:bg-surface-container-high transition-colors" onclick="openModal('addTxModal')">+ Tx</button>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-md">
+<div class="p-md rounded-xl bg-surface-container-lowest border border-outline-variant/20 flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start mb-xs">
+<h3 class="font-headline-sm text-on-surface text-base">EUR Holding Ledger</h3>
+<span class="px-xs py-1 rounded bg-surface-container text-on-surface-variant font-label-caps text-[10px]">Holding</span>
+</div>
+<div class="font-data-tabular text-xs text-on-surface-variant mb-md">IBAN: DE89DEUT100100203040</div>
+<div class="font-data-tabular text-headline-md text-on-surface">€ 215,800.00</div>
+</div>
+<div class="mt-md pt-sm border-t border-outline-variant/10">
+<span class="font-label-caps text-[10px] text-on-surface-variant block mb-xs">Recent Transactions</span>
+<div class="space-y-xs">
+<div class="flex items-center justify-between p-sm rounded bg-surface-container-low">
+<div>
+<p class="font-body-sm text-on-surface font-medium">Bond Interest Payment</p>
+<span class="font-data-tabular text-[10px] text-on-surface-variant">Oct 23, 2023</span>
+</div>
+<span class="font-data-tabular text-xs text-secondary font-bold">+€ 8,400.00</span>
+</div>
+<div class="flex items-center justify-between p-sm rounded bg-surface-container-low">
+<div>
+<p class="font-body-sm text-on-surface font-medium">Legal Retainer</p>
+<span class="font-data-tabular text-[10px] text-on-surface-variant">Oct 14, 2023</span>
+</div>
+<span class="font-data-tabular text-xs text-error font-bold">-€ 3,200.00</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Manual Cash Vaults & Physical Assets Section -->
+<div class="px-gutter pb-xl">
+<div class="p-gutter rounded-xl bg-surface-container-low flex flex-col gap-md">
+<div class="flex items-center justify-between">
+<div>
+<h2 class="font-headline-sm text-on-surface">Physical Vaults &amp; Cash Holdings</h2>
+<p class="font-body-sm text-on-surface-variant mt-xs">Manual inventory of physical cash boxes, safety deposit box gold bullion, and bearer certificates.</p>
+</div>
+<button class="px-md py-2 rounded-lg bg-primary text-on-primary font-label-caps hover:bg-surface-tint transition-colors" onclick="openModal('addVaultModal')">Add Physical Vault</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-md">
+<div class="p-md rounded-lg bg-surface-container-lowest flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="font-label-caps text-on-surface-variant">Zurich Depository #4</span>
+<span class="material-symbols-outlined text-secondary">lock</span>
+</div>
+<div class="my-sm">
+<p class="font-headline-sm text-on-surface">Gold Bullion (1kg bars)</p>
+<span class="font-data-tabular text-headline-md text-on-surface mt-xs block">2.5 kg Fine Gold</span>
+</div>
+<div class="flex items-center justify-between pt-xs text-xs text-on-surface-variant font-data-tabular">
+<span>Valuation: $162,000</span>
+<span>Manual Audit: Oct 01</span>
+</div>
+</div>
+<div class="p-md rounded-lg bg-surface-container-lowest flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="font-label-caps text-on-surface-variant">Geneva Safe Box</span>
+<span class="material-symbols-outlined text-secondary">lock</span>
+</div>
+<div class="my-sm">
+<p class="font-headline-sm text-on-surface">Physical USD Cash Reserve</p>
+<span class="font-data-tabular text-headline-md text-on-surface mt-xs block">$50,000.00</span>
+</div>
+<div class="flex items-center justify-between pt-xs text-xs text-on-surface-variant font-data-tabular">
+<span>Denominations: $100 bills</span>
+<span>Manual Audit: Sep 15</span>
+</div>
+</div>
+<div class="p-md rounded-lg bg-surface-container-lowest flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="font-label-caps text-on-surface-variant">Dubai Office Safe</span>
+<span class="material-symbols-outlined text-secondary">lock</span>
+</div>
+<div class="my-sm">
+<p class="font-headline-sm text-on-surface">Physical AED Reserve</p>
+<span class="font-data-tabular text-headline-md text-on-surface mt-xs block">AED 75,000</span>
+</div>
+<div class="flex items-center justify-between pt-xs text-xs text-on-surface-variant font-data-tabular">
+<span>Valuation: ~$20,400</span>
+<span>Manual Audit: Oct 18</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Unified Manual Audit Log -->
+<div class="px-gutter pb-xl">
+<div class="p-gutter rounded-xl bg-surface-container-low">
+<div class="flex items-center justify-between mb-md">
+<div>
+<h2 class="font-headline-sm text-on-surface">Manual Transaction Ledger &amp; Adjustments</h2>
+<p class="font-body-sm text-on-surface-variant mt-xs">Chronological record of manual entries across all currency accounts.</p>
+</div>
+<div class="flex gap-sm">
+<input class="px-md py-2 bg-surface-container-lowest rounded-lg border border-outline-variant text-sm text-on-surface outline-none" placeholder="Filter transactions..." type="text"/>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline-variant/30 text-on-surface-variant font-label-caps text-[11px]">
+<th class="pb-sm px-sm">Date</th>
+<th class="pb-sm px-sm">Ledger / Currency</th>
+<th class="pb-sm px-sm">Description</th>
+<th class="pb-sm px-sm">Type</th>
+<th class="pb-sm px-sm text-right">Amount</th>
+<th class="pb-sm px-sm text-center">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10 font-data-tabular text-sm">
+<tr>
+<td class="py-md px-sm text-on-surface-variant">2023-10-24</td>
+<td class="py-md px-sm text-on-surface font-bold">USD Account</td>
+<td class="py-md px-sm text-on-surface">Wire In - Client Retainer</td>
+<td class="py-md px-sm text-on-surface-variant">Credit</td>
+<td class="py-md px-sm text-right text-secondary font-bold">+$45,000.00</td>
+<td class="py-md px-sm text-center"><span class="px-xs py-1 rounded bg-secondary-container text-on-secondary-container text-[10px] font-label-caps">Verified</span></td>
+</tr>
+<tr>
+<td class="py-md px-sm text-on-surface-variant">2023-10-23</td>
+<td class="py-md px-sm text-on-surface font-bold">EUR Account</td>
+<td class="py-md px-sm text-on-surface">Bond Interest Payment</td>
+<td class="py-md px-sm text-on-surface-variant">Credit</td>
+<td class="py-md px-sm text-right text-secondary font-bold">+€8,400.00</td>
+<td class="py-md px-sm text-center"><span class="px-xs py-1 rounded bg-secondary-container text-on-secondary-container text-[10px] font-label-caps">Verified</span></td>
+</tr>
+<tr>
+<td class="py-md px-sm text-on-surface-variant">2023-10-22</td>
+<td class="py-md px-sm text-on-surface font-bold">PKR Account</td>
+<td class="py-md px-sm text-on-surface">Real Estate Dividend</td>
+<td class="py-md px-sm text-on-surface-variant">Credit</td>
+<td class="py-md px-sm text-right text-secondary font-bold">+₨2,500,000</td>
+<td class="py-md px-sm text-center"><span class="px-xs py-1 rounded bg-surface-container text-on-surface-variant text-[10px] font-label-caps">Pending</span></td>
+</tr>
+<tr>
+<td class="py-md px-sm text-on-surface-variant">2023-10-20</td>
+<td class="py-md px-sm text-on-surface font-bold">USD Account</td>
+<td class="py-md px-sm text-on-surface">Tax Provision Outflow</td>
+<td class="py-md px-sm text-on-surface-variant">Debit</td>
+<td class="py-md px-sm text-right text-error font-bold">-$12,500.00</td>
+<td class="py-md px-sm text-center"><span class="px-xs py-1 rounded bg-secondary-container text-on-secondary-container text-[10px] font-label-caps">Verified</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Modals (Hidden by default) -->
+<div class="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-gutter" id="addAccountModal">
+<div class="bg-surface-container-lowest rounded-2xl max-w-md w-full p-lg shadow-xl relative">
+<h3 class="font-headline-md text-on-surface mb-xs">Add Currency Ledger</h3>
+<p class="font-body-sm text-on-surface-variant mb-md">Create a new institutional bank account ledger for manual record-keeping.</p>
+<div class="space-y-md">
+<div>
+<label class="block font-label-caps text-on-surface-variant mb-xs">Bank Name / Institution</label>
+<input class="w-full px-md py-3 rounded-lg bg-surface-container-low border border-outline-variant text-on-surface outline-none" placeholder="e.g. HSBC London" type="text"/>
+</div>
+<div>
+<label class="block font-label-caps text-on-surface-variant mb-xs">Currency Code</label>
+<select class="w-full px-md py-3 rounded-lg bg-surface-container-low border border-outline-variant text-on-surface outline-none">
+<option>USD - US Dollar</option>
+<option>GBP - British Pound</option>
+<option>CHF - Swiss Franc</option>
+<option>AED - UAE Dirham</option>
+</select>
+</div>
+<div>
+<label class="block font-label-caps text-on-surface-variant mb-xs">Initial Balance</label>
+<input class="w-full px-md py-3 rounded-lg bg-surface-container-low border border-outline-variant text-on-surface outline-none" placeholder="0.00" type="number"/>
+</div>
+</div>
+<div class="flex justify-end gap-sm mt-lg">
+<button class="px-md py-2 rounded-lg bg-surface-container text-on-surface font-label-caps" onclick="closeModal('addAccountModal')">Cancel</button>
+<button class="px-md py-2 rounded-lg bg-primary text-on-primary font-label-caps" onclick="closeModal('addAccountModal')">Create Ledger</button>
+</div>
+</div>
+</div>
+<div class="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-gutter" id="updateBalanceModal">
+<div class="bg-surface-container-lowest rounded-2xl max-w-md w-full p-lg shadow-xl relative">
+<h3 class="font-headline-md text-on-surface mb-xs">Update Ledger Balance</h3>
+<p class="font-body-sm text-on-surface-variant mb-md">Manually override or adjust the recorded balance for reconciliation.</p>
+<div class="space-y-md">
+<div>
+<label class="block font-label-caps text-on-surface-variant mb-xs">New Exact Balance</label>
+<input class="w-full px-md py-3 rounded-lg bg-surface-container-low border border-outline-variant text-on-surface outline-none" placeholder="840250.00" type="number"/>
+</div>
+<div>
+<label class="block font-label-caps text-on-surface-variant mb-xs">Audit Notes / Reason</label>
+<textarea class="w-full px-md py-3 rounded-lg bg-surface-container-low border border-outline-variant text-on-surface outline-none" placeholder="Quarterly statement reconciliation..." rows="3"></textarea>
+</div>
+</div>
+<div class="flex justify-end gap-sm mt-lg">
+<button class="px-md py-2 rounded-lg bg-surface-container text-on-surface font-label-caps" onclick="closeModal('updateBalanceModal')">Cancel</button>
+<button class="px-md py-2 rounded-lg bg-primary text-on-primary font-label-caps" onclick="closeModal('updateBalanceModal')">Save Balance</button>
+</div>
+</div>
+</div>
+<div class="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-gutter" id="addTxModal">
+<div class="bg-surface-container-lowest rounded-2xl max-w-md w-full p-lg shadow-xl relative">
+<h3 class="font-headline-md text-on-surface mb-xs">Record Manual Transaction</h3>
+<p class="font-body-sm text-on-surface-variant mb-md">Add a manual credit or debit entry into this currency ledger.</p>
+<div class="space-y-md">
+<div>
+<label class="block font-label-caps text-on-surface-variant mb-xs">Transaction Type</label>
+<select class="w-full px-md py-3 rounded-lg bg-surface-container-low border border-outline-variant text-on-surface outline-none">
+<option>Credit (+)</option>
+<option>Debit (-)</option>
+</select>
+</div>
+<div>
+<label class="block font-label-caps text-on-surface-variant mb-xs">Amount</label>
+<input class="w-full px-md py-3 rounded-lg bg-surface-container-low border border-outline-variant text-on-surface outline-none" placeholder="0.00" type="number"/>
+</div>
+<div>
+<label class="block font-label-caps text-on-surface-variant mb-xs">Description / Payee</label>
+<input class="w-full px-md py-3 rounded-lg bg-surface-container-low border border-outline-variant text-on-surface outline-none" placeholder="e.g. Dividend distribution" type="text"/>
+</div>
+</div>
+<div class="flex justify-end gap-sm mt-lg">
+<button class="px-md py-2 rounded-lg bg-surface-container text-on-surface font-label-caps" onclick="closeModal('addTxModal')">Cancel</button>
+<button class="px-md py-2 rounded-lg bg-primary text-on-primary font-label-caps" onclick="closeModal('addTxModal')">Add Entry</button>
+</div>
+</div>
+</div>
+<div class="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-gutter" id="transferModal">
+<div class="bg-surface-container-lowest rounded-2xl max-w-md w-full p-lg shadow-xl relative">
+<h3 class="font-headline-md text-on-surface mb-xs">Cross-Border Transfer</h3>
+<p class="font-body-sm text-on-surface-variant mb-md">Record an internal transfer between your multi-currency ledgers.</p>
+<div class="space-y-md">
+<div>
+<label class="block font-label-caps text-on-surface-variant mb-xs">Source Ledger</label>
+<select class="w-full px-md py-3 rounded-lg bg-surface-container-low border border-outline-variant text-on-surface outline-none">
+<option>USD Account ($840,250.00)</option>
+<option>EUR Account (€215,800.00)</option>
+</select>
+</div>
+<div>
+<label class="block font-label-caps text-on-surface-variant mb-xs">Destination Ledger</label>
+<select class="w-full px-md py-3 rounded-lg bg-surface-container-low border border-outline-variant text-on-surface outline-none">
+<option>PKR Account (₨42,500,000)</option>
+<option>QAR Account (QR310,400.00)</option>
+</select>
+</div>
+<div>
+<label class="block font-label-caps text-on-surface-variant mb-xs">Transfer Amount</label>
+<input class="w-full px-md py-3 rounded-lg bg-surface-container-low border border-outline-variant text-on-surface outline-none" placeholder="0.00" type="number"/>
+</div>
+</div>
+<div class="flex justify-end gap-sm mt-lg">
+<button class="px-md py-2 rounded-lg bg-surface-container text-on-surface font-label-caps" onclick="closeModal('transferModal')">Cancel</button>
+<button class="px-md py-2 rounded-lg bg-primary text-on-primary font-label-caps" onclick="closeModal('transferModal')">Execute Transfer</button>
+</div>
+</div>
+</div>
+<script>
+    function openModal(id) {
+      document.getElementById(id).classList.remove('hidden');
+    }
+    function closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
+    }
+  </script>
+</div></main></div></body></html>

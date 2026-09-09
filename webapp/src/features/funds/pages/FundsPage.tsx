@@ -5,9 +5,10 @@ import { Doughnut, Line } from 'react-chartjs-2';
 import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Modal } from '../../../components/Modal';
 import { Notice } from '../../../components/Notice';
+import { TickerLogo } from '../../../components/TickerLogo';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { ArchiveIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { ArchiveIcon, CheckIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, StarIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
@@ -16,11 +17,16 @@ import { IconButton } from '../../../components/ui/IconButton';
 import { FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
-import { defaultTimezoneForCurrency, nowTime } from '../../../lib/datetime';
+import { defaultTimeForDate, defaultTimezoneForCurrency, nowTime } from '../../../lib/datetime';
+import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { getMarketPrice } from '../../../lib/calc';
-import { allocationByCategory, balanceUpdateHistory, contributionVsValueSeries, expectedPLRate, fundNetProfit, projectInvestmentReturn } from '../../../lib/calc/fundsModule';
+import { pendingShareDeltaByTicker } from '../../../lib/calc/positions';
+import { allocationByCategory, balanceUpdateHistory, contributionVsValueSeries, expectedPLRate, fundCategoryLabel, fundNetProfit, projectInvestmentReturn } from '../../../lib/calc/fundsModule';
+import { CategorySelect } from '../../../components/CategorySelect';
+import { useCategoryStore } from '../../../store/categoryStore';
+import { UNCATEGORIZED_ID } from '../../../lib/categories';
 import { impliedFundNav } from '../../../lib/calc/fundsDailyHistoryImport';
 import {
   buildFundsImportPlan,
@@ -33,14 +39,13 @@ import { toCSV } from '../../../lib/csv';
 import { DailyHistoryImportSection } from '../components/DailyHistoryImportSection';
 import { getDailyPriceHistory } from '../../../lib/calc/priceHistory';
 import { transferRunningBalance } from '../../../lib/calc/transferBalance';
-import { CURRENCIES } from '../../../lib/currencies';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { dlDoughnut, dlLine } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar, tickerColor } from '../../../lib/cssVar';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { ReorderButtons } from '../../../components/ui/ReorderButtons';
-import { toInstantMs } from '../../../lib/datetime';
+import { dateOnlyMs } from '../../../lib/datetime';
 import { firebaseReady } from '../../../lib/firebase/client';
 import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import { useAppearanceStore } from '../../../store/appearanceStore';
@@ -52,13 +57,13 @@ import type { Fund, FundsWorkbook } from '../../../types/fundsWorkbook';
 import type { Transaction, Transfer } from '../../../types/workbook';
 import { useFundsDerived } from '../hooks/useFundsDerived';
 import { ChartCard } from '../../qse/components/ChartCard';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const uid = () => crypto.randomUUID();
-const CATEGORIES: Fund['category'][] = ['Equity', 'Debt', 'Hybrid', 'International', 'Other'];
 
 function emptyFund(defaultCurrency: string): Fund {
-  return { id: '', name: '', code: '', platform: '', category: 'Equity', currencyCode: defaultCurrency };
+  return { id: '', name: '', code: '', platform: '', currencyCode: defaultCurrency };
 }
 
 /* ============================== Add fund ============================== */
@@ -139,11 +144,11 @@ function InvestmentHelperModal({ onClose }: { onClose: () => void }) {
     const projected = rate ? projectInvestmentReturn(amount, rate) : null;
     return (
       <div key={fund.id} className="card" style={{ padding: 12, flex: 1, minWidth: 220 }}>
-        <div className="footer-note" style={{ marginBottom: 6 }}>{fund.name} ({fund.currencyCode})</div>
+        <div className="text-muted" style={{ marginBottom: 6 }}>{fund.name} ({fund.currencyCode})</div>
         {!projected ? (
-          <p className="footer-note" style={{ margin: 0 }}>Not enough price history yet to project returns for this fund.</p>
+          <p className="text-muted" style={{ margin: 0 }}>Not enough price history yet to project returns for this fund.</p>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px,1fr))', gap: 8 }}>
+          <div className="grid-auto" style={gridAutoStyle(90, 8)}>
             <div className="stat-card card" style={hueStyle(projected.dailyAmount >= 0 ? 'var(--profit)' : 'var(--loss)')}>
               <div className="label">Day</div>
               <MoneyValue n={projected.dailyValue} currency={fund.currencyCode} after={` (${projected.dailyAmount >= 0 ? '+' : ''}${fmtMoney(projected.dailyAmount, fund.currencyCode)})`} />
@@ -165,10 +170,10 @@ function InvestmentHelperModal({ onClose }: { onClose: () => void }) {
   return (
     <Modal title="Investment helper" onClose={onClose}>
       <Tooltip text="Projects what a hypothetical investment might return, based on each fund's own real historical average daily/monthly growth rate — the same rate already shown as 'Expected daily/monthly P/L' elsewhere on this page. Not a promise of future returns.">
-        <p className="footer-note" style={{ marginTop: 0, cursor: 'pointer' }}>How this works</p>
+        <p className="text-muted" style={{ marginTop: 0, cursor: 'pointer' }}>How this works</p>
       </Tooltip>
       {!funds.length ? (
-        <p className="footer-note">No open funds yet — add one first.</p>
+        <p className="text-muted">No open funds yet — add one first.</p>
       ) : (
         <>
           <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
@@ -204,6 +209,7 @@ function AddFundForm({ onSaved }: { onSaved?: () => void } = {}) {
   const [lastCurrency, setLastCurrency] = useLastCurrency('funds', 'USD');
   const ensureSignedIn = useEnsureSignedIn();
   const [f, setF] = useState<Fund>(() => emptyFund(lastCurrency));
+  const currencyOptions = useEnabledCurrencies(f.currencyCode);
   const [initialDate, setInitialDate] = useState(today());
   const [initialAmount, setInitialAmount] = useState(0);
   const [initialNav, setInitialNav] = useState(1);
@@ -235,18 +241,16 @@ function AddFundForm({ onSaved }: { onSaved?: () => void } = {}) {
         <Field label="Invested via" width={140}>
           <TextInput value={f.platform} onChange={(e) => setF({ ...f, platform: e.target.value })} placeholder="e.g. Fidelity" />
         </Field>
-        <Field label="Category" width={130}>
-          <Select value={f.category} onChange={(e) => setF({ ...f, category: e.target.value as Fund['category'] })}>
-            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </Select>
+        <Field label="Category" width={160}>
+          <CategorySelect value={f.categoryID ?? UNCATEGORIZED_ID} onChange={(categoryID) => setF({ ...f, categoryID })} />
         </Field>
         <Field label="Currency" width={100} required>
           <Select value={f.currencyCode} onChange={(e) => { setF({ ...f, currencyCode: e.target.value }); setLastCurrency(e.target.value); }}>
-            {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+            {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>
       </div>
-      <p className="footer-note" style={{ marginTop: 8 }}>Optional initial investment (leave amount blank to just add the fund with no transactions yet):</p>
+      <p className="text-muted" style={{ marginTop: 8 }}>Optional initial investment (leave amount blank to just add the fund with no transactions yet):</p>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
         <Field label="Date">
           <TextInput type="date" value={initialDate} onChange={(e) => setInitialDate(e.target.value)} />
@@ -309,7 +313,7 @@ function OverallSummary() {
   if (!codes.length) return null;
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px,1fr))', gap: 8, marginBottom: 16 }}>
+    <div className="grid-auto" style={{ ...gridAutoStyle(150, 8), marginBottom: 16 }}>
       {codes.map((code) => {
         const t = totals[code];
         const profitPct = t.invested > 0 ? (t.profit / t.invested) * 100 : 0;
@@ -317,8 +321,8 @@ function OverallSummary() {
         const expMonthlyPct = t.invested > 0 ? (t.expMonthly / t.invested) * 100 : 0;
         return (
           <div key={code} className="card" style={{ padding: 12 }}>
-            <div className="footer-note" style={{ marginBottom: 6 }}>{code}</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px,1fr))', gap: 8 }}>
+            <div className="text-muted" style={{ marginBottom: 6 }}>{code}</div>
+            <div className="grid-auto" style={gridAutoStyle(110, 8)}>
               <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Invested</div><MoneyValue n={t.invested} currency={code} /></div>
               <div className="stat-card card" style={hueStyle(HUES[6])}><div className="label">Current value</div><MoneyValue n={t.value} currency={code} /></div>
               <div className="stat-card card" style={hueStyle(t.profit >= 0 ? 'var(--profit)' : 'var(--loss)')}><div className="label">Net profit</div><MoneyValue n={t.profit} currency={code} after={` (${profitPct.toFixed(1)}%)`} /></div>
@@ -348,10 +352,22 @@ function OverallSummary() {
  * comment); their positions still contribute to every total unchanged. */
 function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
   const allFunds = useFundsWorkbookStore((s) => s.workbook.funds);
+  const setWorkbook = useFundsWorkbookStore((s) => s.setWorkbook);
+  const ensureSignedIn = useEnsureSignedIn();
   const { positions, fundXIRR, workbook } = useFundsDerived();
+  const categoryRegistry = useCategoryStore((s) => s.workbook.categories);
   const [showClosed, setShowClosed] = useState(false);
   const closedCount = useMemo(() => allFunds.filter((f) => f.isActive === false).length, [allFunds]);
   const funds = useMemo(() => (showClosed ? allFunds : allFunds.filter((f) => f.isActive !== false)), [allFunds, showClosed]);
+
+  // Pending item 115(c): "favorite an entity, to view it on top." Fund CRUD
+  // goes through `setWorkbook` directly (no dedicated `updateFund` store
+  // action — see this file's own earlier comment on that), same pattern
+  // already used for the Archive/Reopen toggle on `FundDetail`.
+  const toggleFavorite = async (fund: Fund) => {
+    if (!(await ensureSignedIn(fund.isFavorite ? 'Sign in to unfavorite this fund.' : 'Sign in to favorite this fund.'))) return;
+    setWorkbook({ ...workbook, funds: workbook.funds.map((f) => (f.id === fund.id ? { ...f, isFavorite: !f.isFavorite } : f)) });
+  };
 
   // Index/Sr# column, user-requested (2026-09-03) — the fund's own stable
   // position in `allFunds` (creation order), independent of the table's
@@ -371,11 +387,12 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
     return { idx, fund, units, invested, value, profit, profitPct, xirrPct: rate !== null ? rate * 100 : null };
   });
 
-  type Col = 'idx' | 'name' | 'category' | 'units' | 'value' | 'profit' | 'xirr';
+  type Col = 'idx' | 'favorite' | 'name' | 'category' | 'units' | 'value' | 'profit' | 'xirr';
   const sortValue = (r: Row, col: Col): number | string => {
     switch (col) {
       case 'idx': return r.idx;
-      case 'category': return r.fund.category;
+      case 'favorite': return r.fund.isFavorite ? 1 : 0;
+      case 'category': return fundCategoryLabel(r.fund, categoryRegistry);
       case 'units': return r.units;
       case 'value': return r.value;
       case 'profit': return r.profitPct;
@@ -396,29 +413,42 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
       <table>
         <thead>
           <tr>
-            <Th col="idx">#</Th><Th col="name">Fund</Th><th>Code</th><Th col="category">Category</Th>
+            <Th col="idx">#</Th><Th col="favorite">★</Th><Th col="name">Fund</Th><th>Code</th><Th col="category">Category</Th>
             <Th col="units">Units</Th><Th col="value">Value</Th><Th col="profit">Net P/L</Th><Th col="xirr">XIRR</Th>
           </tr>
         </thead>
         <tbody>
           {sorted.map((r) => (
             <tr key={r.fund.id} onClick={() => onSelect(r.fund)} style={{ cursor: 'pointer' }}>
-              <td className="footer-note">{r.idx}</td>
+              <td className="text-muted">{r.idx}</td>
               <td>
+                <IconButton
+                  label={r.fund.isFavorite ? 'Unfavorite' : 'Favorite'}
+                  icon={<StarIcon size={13} filled={r.fund.isFavorite} />}
+                  align="right"
+                  onClick={(e) => { e.stopPropagation(); toggleFavorite(r.fund); }}
+                />
+              </td>
+              <td style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                {/* Funds has no known logo CDN of its own (README item 118) — passing
+                 * exchange="psx" reuses TickerLogo's "no remote CDN, local-drop-in or
+                 * colored-initials fallback only" path rather than QSE's own CDN, which
+                 * would 404 for every fund code and burn a wasted network round trip. */}
+                <TickerLogo ticker={r.fund.code} exchange="psx" size="sm" />
                 {r.fund.name}
                 {r.fund.isActive === false && <span className="pill-warn" style={{ fontSize: 10, marginLeft: 6 }}>Closed</span>}
               </td>
               <td>{r.fund.code}</td>
-              <td>{r.fund.category}</td>
+              <td>{fundCategoryLabel(r.fund, categoryRegistry)}</td>
               <td>{fmt(r.units, 2)}</td>
               <td>{fmtMoney(r.value, r.fund.currencyCode)}</td>
-              <td className={r.profit >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(r.profit, r.fund.currencyCode)} ({r.profitPct.toFixed(1)}%)</td>
+              <td className={r.profit >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(r.profit, r.fund.currencyCode)} ({r.profitPct.toFixed(1)}%)</td>
               <td>{r.xirrPct !== null ? `${r.xirrPct.toFixed(1)}%` : '—'}</td>
             </tr>
           ))}
           {!sorted.length && (
             <tr>
-              <td colSpan={8} className="footer-note">
+              <td colSpan={9} className="text-muted">
                 {allFunds.length ? 'Every fund is closed — click "Show closed" above to see them.' : 'No funds yet — add one above.'}
               </td>
             </tr>
@@ -477,7 +507,8 @@ function SnapshotImportSection() {
   const [rows, setRows] = useState<FundSnapshotRow[] | null>(null);
   const [snapshotDate, setSnapshotDate] = useState(today());
   const [currencyCode, setCurrencyCode] = useState(lastCurrency);
-  const [defaultCategory, setDefaultCategory] = useState<Fund['category']>('Other');
+  const currencyOptions = useEnabledCurrencies(currencyCode);
+  const [defaultCategoryID, setDefaultCategoryID] = useState<string>(UNCATEGORIZED_ID);
   const [busy, setBusy] = useState(false);
 
   const plan: FundSnapshotPlanRow[] = useMemo(
@@ -516,7 +547,11 @@ function SnapshotImportSection() {
     if (!(await ensureSignedIn('Sign in to import funds.'))) return;
     setBusy(true);
     try {
-      const { newFunds, transactions, navUpdates } = materializeFundsImport(plan, { snapshotDate, currencyCode, defaultCategory });
+      const { newFunds, transactions, navUpdates } = materializeFundsImport(plan, {
+        snapshotDate,
+        currencyCode,
+        defaultCategoryID: defaultCategoryID === UNCATEGORIZED_ID ? undefined : defaultCategoryID,
+      });
       if (newFunds.length) setWorkbook({ ...workbook, funds: [...workbook.funds, ...newFunds] });
       if (transactions.length) addTransactions(transactions);
       navUpdates.forEach((u) => setMarketPrice(u.ticker, u.price));
@@ -530,7 +565,7 @@ function SnapshotImportSection() {
 
   return (
     <div>
-      <p className="footer-note" style={{ marginBottom: 12 }}>
+      <p className="text-muted" style={{ marginBottom: 12 }}>
         For a spreadsheet that tracks Total Invested / Withdrawn / Current Balance per fund rather than individual
         dated trades. Since there's no real transaction history in that shape, this reconstructs a buy (and, if
         withdrawn, a sell) dated on the single "as of" date below, at whatever NAV reproduces your reported balances
@@ -558,13 +593,11 @@ function SnapshotImportSection() {
             </Field>
             <Field label="Currency" width={100}>
               <Select value={currencyCode} onChange={(e) => setCurrencyCode(e.target.value)}>
-                {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+                {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
               </Select>
             </Field>
-            <Field label="Category for new funds" width={160}>
-              <Select value={defaultCategory} onChange={(e) => setDefaultCategory(e.target.value as Fund['category'])}>
-                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-              </Select>
+            <Field label="Category for new funds" width={180}>
+              <CategorySelect value={defaultCategoryID} onChange={setDefaultCategoryID} />
             </Field>
           </>
         )}
@@ -596,7 +629,7 @@ function SnapshotImportSection() {
                     <td>{fmtMoney(p.row.totalInvested, currencyCode)}</td>
                     <td>{fmtMoney(p.row.withdrawn, currencyCode)}</td>
                     <td>{fmtMoney(p.row.currentBalance, currencyCode)}</td>
-                    <td className={p.closed ? 'pill-sell' : 'pill-buy'}>{p.closed ? 'Closed' : 'Open'}</td>
+                    <td className={p.closed ? 'pill-negative' : 'pill-positive'}>{p.closed ? 'Closed' : 'Open'}</td>
                     <td>{p.navUpdate !== null ? fmtPrice(p.navUpdate) : '—'}</td>
                   </tr>
                 ))}
@@ -624,9 +657,11 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
   const updatePricePoint = useFundsWorkbookStore((s) => s.updatePricePoint);
   const deletePricePoint = useFundsWorkbookStore((s) => s.deletePricePoint);
   const ensureSignedIn = useEnsureSignedIn();
+  const categoryRegistry = useCategoryStore((s) => s.workbook.categories);
 
   const [editingFund, setEditingFund] = useState(false);
   const [editFund, setEditFund] = useState<Fund>(fund);
+  const editFundCurrencyOptions = useEnabledCurrencies(editFund.currencyCode);
   const [navInput, setNavInput] = useState('');
   const [balanceInput, setBalanceInput] = useState('');
   const [txAction, setTxAction] = useState<'BUY' | 'SELL'>('BUY');
@@ -643,12 +678,18 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
   // number input re-formats on every keystroke and fights typing.
   const [txAmountInput, setTxAmountInput] = useState('');
   const [txTime, setTxTime] = useState<string | undefined>(() => nowTime());
+  const [txTimeTouched, setTxTimeTouched] = useState(false);
   const [txTimezone, setTxTimezone] = useState<string | undefined>(() => defaultTimezoneForCurrency(fund.currencyCode));
+  const [txPending, setTxPending] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editRow, setEditRow] = useState<Transaction | null>(null);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'BUY' | 'SELL'>('all');
+  // User-requested (2026-09-08): "Also show a pending share-count delta" —
+  // same reasoning/mechanism as QSE/PSX's Dashboard (Done item 243), reused
+  // as-is since Funds shares the exact same Transaction type.
+  const pendingUnitDelta = useMemo(() => pendingShareDeltaByTicker(workbook.transactions)[fund.id] || 0, [workbook.transactions, fund.id]);
 
   // Balance Update History — user-requested (2026-09-03): "ability to see
   // balance updates," then (same day) "missing crucial data. Add all data
@@ -848,11 +889,15 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
     if (!txNav) return toast('Enter a NAV (or an amount, once a NAV is known).');
     if (!txUnits) return toast('Enter units, or an amount to compute them from the NAV.');
     if (!(await ensureSignedIn('Sign in to save this transaction.'))) return;
-    addTransaction({ date: txDate, ticker: fund.id, action: txAction, shares: txUnits, price: txNav, time: txTime, timezone: txTimezone });
+    addTransaction({
+      date: txDate, ticker: fund.id, action: txAction, shares: txUnits, price: txNav, time: txTime, timezone: txTimezone,
+      isPending: txPending || undefined,
+    });
     toast(`${txAction === 'BUY' ? 'Invested' : 'Withdrew'} logged.`);
     setTxUnits(0);
     setTxAmountInput('');
     setTxTime(undefined);
+    setTxPending(false);
   };
 
   const startEdit = (i: number, t: Transaction) => { setEditIndex(i); setEditRow({ ...t }); };
@@ -875,11 +920,9 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                   <TextInput value={editFund.name} onChange={(e) => setEditFund({ ...editFund, name: e.target.value })} />
                   <TextInput value={editFund.code} onChange={(e) => setEditFund({ ...editFund, code: e.target.value.toUpperCase() })} />
                   <TextInput value={editFund.platform} onChange={(e) => setEditFund({ ...editFund, platform: e.target.value })} />
-                  <Select value={editFund.category} onChange={(e) => setEditFund({ ...editFund, category: e.target.value as Fund['category'] })}>
-                    {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </Select>
+                  <CategorySelect value={editFund.categoryID ?? UNCATEGORIZED_ID} onChange={(categoryID) => setEditFund({ ...editFund, categoryID })} />
                   <Select value={editFund.currencyCode} onChange={(e) => setEditFund({ ...editFund, currencyCode: e.target.value })}>
-                    {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+                    {editFundCurrencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
                   </Select>
                 </div>
                 <div className="row" style={{ gap: 8, marginTop: 8 }}>
@@ -891,10 +934,11 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <TickerLogo ticker={fund.code} exchange="psx" size="lg" />
                     {fund.name}
                     {fund.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Closed</span>}
                   </div>
-                  <div className="footer-note">{fund.code} · {fund.platform} · {fund.category} · {fund.currencyCode}</div>
+                  <div className="text-muted">{fund.code} · {fund.platform} · {fundCategoryLabel(fund, categoryRegistry)} · {fund.currencyCode}</div>
                 </div>
                 <div className="row" style={{ gap: 8 }}>
                   <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => { setEditFund(fund); setEditingFund(true); }} />
@@ -908,8 +952,16 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                 </div>
               </div>
             )}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 8, marginTop: 12 }}>
-              <div className="stat-card card"><div className="label">Units held</div><div className="value">{fmt(units, 2)}</div></div>
+            <div className="grid-auto" style={{ ...gridAutoStyle(120, 8), marginTop: 12 }}>
+              <div className="stat-card card">
+                <div className="label">Units held</div>
+                <div className="value">{fmt(units, 2)}</div>
+                {!!pendingUnitDelta && (
+                  <div className="sub" title="Placed but not yet settled orders for this fund — units will change by this much once they clear.">
+                    {pendingUnitDelta > 0 ? '+' : ''}{fmt(pendingUnitDelta, 2)} pending
+                  </div>
+                )}
+              </div>
               <div className="stat-card card">
                 <Tooltip text="NAV = Net Asset Value, the price of one unit of this fund. This is the average price you paid per unit across all your purchases.">
                   <div className="label" style={{ cursor: 'pointer' }}>Avg NAV cost</div>
@@ -972,7 +1024,14 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
           </Select>
         </Field>
         <Field label="Date">
-          <TextInput type="date" value={txDate} onChange={(e) => setTxDate(e.target.value)} />
+          <TextInput
+            type="date"
+            value={txDate}
+            onChange={(e) => {
+              setTxDate(e.target.value);
+              if (!txTimeTouched) setTxTime(defaultTimeForDate(e.target.value));
+            }}
+          />
         </Field>
         <Field label="NAV">
           <TextInput
@@ -1011,7 +1070,18 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
             style={{ width: 110 }}
           />
         </Field>
-        <TimeZoneFields time={txTime} timezone={txTimezone} onTimeChange={setTxTime} onTimezoneChange={setTxTimezone} />
+        <TimeZoneFields
+          time={txTime}
+          timezone={txTimezone}
+          onTimeChange={(t) => { setTxTime(t); setTxTimeTouched(true); }}
+          onTimezoneChange={setTxTimezone}
+        />
+        <Field label="Order">
+          <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 6 }} title="Placed but not yet settled — excluded from your units/value until it clears.">
+            <input type="checkbox" checked={txPending} onChange={(e) => setTxPending(e.target.checked)} />
+            Pending
+          </label>
+        </Field>
         <button className="btn" onClick={submitTx}><PlusIcon />Add</button>
       </div>
 
@@ -1029,9 +1099,9 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
               <TextInput type="number" step="0.0001" value={navInput} onChange={(e) => setNavInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && commitNav()} />
             </Field>
             <button className="btn secondary small" onClick={commitNav}><SaveIcon size={12} />Save NAV</button>
-            <span className="footer-note">Current NAV: {currentNav ? fmtPrice(currentNav) : '—'}</span>
+            <span className="text-muted">Current NAV: {currentNav ? fmtPrice(currentNav) : '—'}</span>
           </div>
-          <div className="footer-note" style={{ textAlign: 'center' }}>OR</div>
+          <div className="text-muted" style={{ textAlign: 'center' }}>OR</div>
           <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <Field label="Update balance" width={150} title="Don't know the per-unit NAV? Enter your fund's current total balance instead — the app computes the implied NAV from the units you already hold, assuming no deposit/withdrawal happened since your last update.">
               <TextInput type="number" step="0.01" value={balanceInput} onChange={(e) => setBalanceInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && commitBalance()} disabled={units <= 0} />
@@ -1084,18 +1154,41 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                   <td><input type="number" step="0.0001" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })} style={{ width: 90 }} /></td>
                   <td>{fmtMoney(editRow.shares * editRow.price, fund.currencyCode)}</td>
                   <td>
+                    <label className="text-muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }} title="Not yet settled — excluded from units/value until unchecked.">
+                      <input type="checkbox" checked={!!editRow.isPending} onChange={(e) => setEditRow({ ...editRow, isPending: e.target.checked })} />
+                      Pending
+                    </label>{' '}
                     <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
                     <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditIndex(null)} />
                   </td>
                 </tr>
               ) : (
                 <tr key={i}>
-                  <td>{t.date}</td>
-                  <td className={t.action === 'BUY' ? 'pill-buy' : 'pill-sell'}>{t.action === 'BUY' ? 'Invested' : 'Withdrew'}</td>
+                  <td>
+                    {t.date}
+                    {t.isPending && (
+                      <Tooltip text="Order placed but not yet settled — excluded from units/value until cleared.">
+                        <span className="pill-warn" style={{ marginLeft: 6 }}>Pending</span>
+                      </Tooltip>
+                    )}
+                  </td>
+                  <td className={t.action === 'BUY' ? 'pill-positive' : 'pill-negative'}>{t.action === 'BUY' ? 'Invested' : 'Withdrew'}</td>
                   <td>{fmt(t.shares, 2)}</td>
                   <td>{fmtPrice(t.price)}</td>
                   <td>{fmtMoney(t.shares * t.price, fund.currencyCode)}</td>
                   <td>
+                    {t.isPending && (
+                      <IconButton
+                        label="Mark cleared"
+                        icon={<CheckIcon size={13} />}
+                        align="right"
+                        onClick={async () => {
+                          if (!(await ensureSignedIn('Sign in to update this transaction.'))) return;
+                          updateTransaction(i, { isPending: false });
+                          toast('Marked cleared.');
+                        }}
+                      />
+                    )}{' '}
                     <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(i, t)} />{' '}
                     <IconButton
                       label="Delete"
@@ -1111,7 +1204,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
             )}
             {!txs.length && (
               <tr>
-                <td colSpan={6} className="footer-note">
+                <td colSpan={6} className="text-muted">
                   {allTxs.length ? 'No transactions match this filter.' : 'No transactions for this fund yet.'}
                 </td>
               </tr>
@@ -1129,7 +1222,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
         style={{ marginTop: 16 }}
         headerExtra={balanceRows.length > 0 ? <button className="btn secondary" onClick={exportBalanceHistory}>Export CSV</button> : undefined}
       >
-        {!balanceRows.length && <p className="footer-note">No balance/NAV updates recorded yet — use "Update balance or NAV" above.</p>}
+        {!balanceRows.length && <p className="text-muted">No balance/NAV updates recorded yet — use "Update balance or NAV" above.</p>}
         {balanceRows.length > 0 && (
           <>
             {balanceRows.length > 8 && (
@@ -1149,14 +1242,14 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                     const rawIndex = rawPriceHistory.indexOf(r.point);
                     return editUpdateIndex === rawIndex && editUpdateRow ? (
                       <tr key={rawIndex}>
-                        <td className="footer-note">{r.index}</td>
+                        <td className="text-muted">{r.index}</td>
                         <td><input type="date" value={editUpdateRow.date} onChange={(e) => setEditUpdateRow({ ...editUpdateRow, date: e.target.value })} style={{ width: 130 }} /></td>
                         <td>{fmtMoney(r.prevBalance, fund.currencyCode)}</td>
                         <td>{fmtPrice(r.prevNav)}</td>
-                        <td className="footer-note">—</td>
+                        <td className="text-muted">—</td>
                         <td><input type="number" step="0.0001" value={editUpdateRow.price} onChange={(e) => setEditUpdateRow({ ...editUpdateRow, price: Number(e.target.value) })} style={{ width: 90 }} /></td>
-                        <td className="footer-note">—</td>
-                        <td className="footer-note">—</td>
+                        <td className="text-muted">—</td>
+                        <td className="text-muted">—</td>
                         <td>
                           <IconButton label="Save" icon={<SaveIcon size={12} />} align="right" onClick={saveEditUpdate} />
                           <IconButton label="Cancel" icon={<XIcon size={12} />} align="right" onClick={() => { setEditUpdateIndex(null); setEditUpdateRow(null); }} />
@@ -1164,14 +1257,14 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                       </tr>
                     ) : (
                       <tr key={rawIndex}>
-                        <td className="footer-note">{r.index}</td>
+                        <td className="text-muted">{r.index}</td>
                         <td>{r.time ? new Date(r.time).toLocaleString() : r.date}</td>
                         <td>{fmtMoney(r.prevBalance, fund.currencyCode)}</td>
                         <td>{fmtPrice(r.prevNav)}</td>
                         <td>{fmtMoney(r.newBalance, fund.currencyCode)}</td>
                         <td>{fmtPrice(r.newNav)}</td>
-                        <td className={r.change >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(r.change, fund.currencyCode)}</td>
-                        <td className={r.change >= 0 ? 'pill-buy' : 'pill-sell'}>{r.changePct.toFixed(2)}%</td>
+                        <td className={r.change >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(r.change, fund.currencyCode)}</td>
+                        <td className={r.change >= 0 ? 'pill-positive' : 'pill-negative'}>{r.changePct.toFixed(2)}%</td>
                         <td>
                           <IconButton label="Edit" icon={<EditIcon size={12} />} align="right" onClick={() => startEditUpdate(rawIndex, r.point)} />
                           <IconButton label="Delete" icon={<TrashIcon size={12} />} align="right" onClick={() => removeUpdate(rawIndex)} />
@@ -1245,7 +1338,7 @@ function FundsTransfersSection() {
   // fixing (two same-instant transfers in the wrong relative order).
   const ensureSignedIn = useEnsureSignedIn();
   const sideLabel = useLinkSideLabel();
-  const instantOf = (t: Transfer) => toInstantMs(t.date, t.time, t.timezone);
+  const instantOf = (t: Transfer) => dateOnlyMs(t.date);
   const filteredTransfers = useMemo(
     () => (typeFilter === 'all' ? workbook.transfers : workbook.transfers.filter((t) => t.type === typeFilter)),
     [workbook.transfers, typeFilter],
@@ -1271,7 +1364,7 @@ function FundsTransfersSection() {
 
   return (
     <div>
-      <p className="footer-note" style={{ marginBottom: 12 }}>
+      <p className="text-muted" style={{ marginBottom: 12 }}>
         Cash moved into or out of this Funds account, separate from buying/selling fund units —
         e.g. topping up before a purchase, or withdrawing after a redemption.
       </p>
@@ -1352,7 +1445,7 @@ function FundsTransfersSection() {
                 </tr>
               );
             })}
-            {!sorted.length && <tr><td colSpan={6} className="footer-note">No transfers yet.</td></tr>}
+            {!sorted.length && <tr><td colSpan={6} className="text-muted">No transfers yet.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -1365,6 +1458,7 @@ function FundsTransfersSection() {
 function AnalyticsTab() {
   const funds = useFundsWorkbookStore((s) => s.workbook.funds);
   const { workbook } = useFundsDerived();
+  const categoryRegistry = useCategoryStore((s) => s.workbook.categories);
   // Charts read CSS-var-derived colors — subscribe so this re-renders (and
   // recomputes those colors) on a live theme switch, same pattern as every
   // other chart-bearing page in this app.
@@ -1379,8 +1473,8 @@ function AnalyticsTab() {
   const selectedFund = funds.find((f) => f.id === fundId) ?? funds[0] ?? null;
 
   const allocation = useMemo(
-    () => allocationByCategory(funds, workbook.transactions, workbook.marketPrices, effectiveCurrency),
-    [funds, workbook.transactions, workbook.marketPrices, effectiveCurrency],
+    () => allocationByCategory(funds, workbook.transactions, workbook.marketPrices, effectiveCurrency, categoryRegistry),
+    [funds, workbook.transactions, workbook.marketPrices, effectiveCurrency, categoryRegistry],
   );
   const categories = Object.keys(allocation);
 
@@ -1394,7 +1488,7 @@ function AnalyticsTab() {
   );
 
   if (!funds.length) {
-    return <p className="footer-note">Add a fund first (Funds tab) to see charts here.</p>;
+    return <p className="text-muted">Add a fund first (Funds tab) to see charts here.</p>;
   }
 
   return (
@@ -1413,7 +1507,7 @@ function AnalyticsTab() {
           </Select>
         </Field>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginTop: 12 }}>
+      <div className="grid-auto" style={{ ...gridAutoStyle(320, 16), marginTop: 12 }}>
         <ChartCard title="Allocation by category" empty={!categories.length}>
           <Doughnut
             data={{
@@ -1577,7 +1671,7 @@ export function FundsPage({
   return (
     <div>
       <h1 className="pagetitle">Funds</h1>
-      <p className="footer-note" style={{ marginBottom: 12 }}>
+      <p className="text-muted" style={{ marginBottom: 12 }}>
         Mutual fund unit holdings and performance — buy/sell units at a NAV per unit, same shape as a stock
         trade. Returns are shown as XIRR, which accounts for when each investment happened, not just totals.
       </p>
@@ -1605,7 +1699,7 @@ export function FundsPage({
               label: 'Settings',
               content: (
                 <div>
-                  <p className="footer-note" style={{ marginTop: 0 }}>
+                  <p className="text-muted" style={{ marginTop: 0 }}>
                     Sign-in, profile, appearance, and a whole-app backup live on the{' '}
                     <Link to="/account">Account page →</Link>. What's below is specific to Funds.
                   </p>

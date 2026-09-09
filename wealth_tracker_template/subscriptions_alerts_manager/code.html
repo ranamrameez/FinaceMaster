@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Subscription &amp; Alerts Manager - WealthPro</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Manrope:wght@600;700&amp;family=Work+Sans:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-tint": "#565e74",
+                      "inverse-surface": "#213145",
+                      "surface-container-highest": "#d3e4fe",
+                      "on-surface-variant": "#45464d",
+                      "secondary-container": "#6cf8bb",
+                      "on-tertiary-fixed": "#2a1700",
+                      "primary-fixed": "#dae2fd",
+                      "background": "#f8f9ff",
+                      "on-primary-fixed": "#131b2e",
+                      "secondary-fixed": "#6ffbbe",
+                      "on-secondary-fixed": "#002113",
+                      "surface": "#f8f9ff",
+                      "surface-container": "#e5eeff",
+                      "surface-variant": "#d3e4fe",
+                      "on-secondary-container": "#00714d",
+                      "primary-fixed-dim": "#bec6e0",
+                      "on-secondary": "#ffffff",
+                      "surface-container-lowest": "#ffffff",
+                      "outline-variant": "#c6c6cd",
+                      "primary": "#000000",
+                      "on-secondary-fixed-variant": "#005236",
+                      "on-error-container": "#93000a",
+                      "secondary-fixed-dim": "#4edea3",
+                      "on-surface": "#0b1c30",
+                      "surface-container-high": "#dce9ff",
+                      "tertiary": "#000000",
+                      "surface-dim": "#cbdbf5",
+                      "error": "#ba1a1a",
+                      "on-tertiary-container": "#b87500",
+                      "tertiary-fixed": "#ffddb8",
+                      "on-background": "#0b1c30",
+                      "on-tertiary-fixed-variant": "#653e00",
+                      "on-primary-container": "#7c839b",
+                      "on-tertiary": "#ffffff",
+                      "tertiary-fixed-dim": "#ffb95f",
+                      "error-container": "#ffdad6",
+                      "inverse-on-surface": "#eaf1ff",
+                      "on-error": "#ffffff",
+                      "primary-container": "#131b2e",
+                      "tertiary-container": "#2a1700",
+                      "inverse-primary": "#bec6e0",
+                      "surface-container-low": "#eff4ff",
+                      "secondary": "#006c49",
+                      "on-primary-fixed-variant": "#3f465c",
+                      "surface-bright": "#f8f9ff",
+                      "on-primary": "#ffffff",
+                      "outline": "#76777d"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "xl": "80px",
+                      "lg": "48px",
+                      "md": "24px",
+                      "container-max": "1440px",
+                      "sm": "16px",
+                      "xs": "8px",
+                      "base": "4px",
+                      "gutter": "24px"
+              },
+              "fontFamily": {
+                      "headline-md": [
+                              "Manrope"
+                      ],
+                      "body-lg": [
+                              "Work Sans"
+                      ],
+                      "label-caps": [
+                              "Work Sans"
+                      ],
+                      "body-sm": [
+                              "Work Sans"
+                      ],
+                      "display-lg": [
+                              "Manrope"
+                      ],
+                      "body-md": [
+                              "Work Sans"
+                      ],
+                      "data-tabular": [
+                              "JetBrains Mono"
+                      ],
+                      "headline-sm": [
+                              "Manrope"
+                      ]
+              },
+              "fontSize": {
+                      "headline-md": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-caps": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-sm": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "56px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "data-tabular": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "headline-sm": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+            },
+          }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+          font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        /* Smooth scrolling */
+        html { scroll-behavior: smooth; }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #c6c6cd; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #76777d; }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex">
+<!-- SideNavBar -->
+<nav class="fixed left-0 top-0 h-full w-64 flex flex-col border-r border-outline-variant dark:border-outline bg-surface-container-low dark:bg-inverse-surface hidden md:flex z-40">
+<!-- Header -->
+<div class="px-md py-lg border-b border-outline-variant dark:border-outline">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined">account_balance</span>
+</div>
+<div>
+<h1 class="font-headline-sm text-headline-sm font-bold text-on-surface dark:text-inverse-on-surface">WealthPro</h1>
+<p class="font-label-caps text-label-caps text-on-surface-variant">Wealth Management Suite</p>
+</div>
+</div>
+</div>
+<!-- Main Nav -->
+<div class="flex-1 overflow-y-auto py-md px-sm space-y-xs">
+<a class="flex items-center gap-md text-on-surface-variant dark:text-outline-variant px-sm py-md rounded-xl hover:bg-surface-variant dark:hover:bg-on-primary-container transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-caps text-label-caps">Dashboard</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant dark:text-outline-variant px-sm py-md rounded-xl hover:bg-surface-variant dark:hover:bg-on-primary-container transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance">account_balance</span>
+<span class="font-label-caps text-label-caps">Banking</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant dark:text-outline-variant px-sm py-md rounded-xl hover:bg-surface-variant dark:hover:bg-on-primary-container transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="trending_up">trending_up</span>
+<span class="font-label-caps text-label-caps">Investments</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant dark:text-outline-variant px-sm py-md rounded-xl hover:bg-surface-variant dark:hover:bg-on-primary-container transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="font-label-caps text-label-caps">Loans</span>
+</a>
+<!-- ACTIVE TAB -->
+<a class="flex items-center gap-md bg-secondary-container dark:bg-on-secondary-fixed-variant text-on-secondary-container dark:text-secondary-fixed-dim rounded-xl px-sm py-md scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="subscriptions" style="font-variation-settings: 'FILL' 1;">subscriptions</span>
+<span class="font-label-caps text-label-caps">Subscriptions</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant dark:text-outline-variant px-sm py-md rounded-xl hover:bg-surface-variant dark:hover:bg-on-primary-container transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="show_chart">show_chart</span>
+<span class="font-label-caps text-label-caps">Stock Exchange</span>
+</a>
+</div>
+<!-- Footer Nav -->
+<div class="px-sm py-md border-t border-outline-variant dark:border-outline space-y-xs">
+<button class="w-full mb-md bg-primary text-on-primary py-xs px-sm rounded-lg font-label-caps text-label-caps hover:bg-primary-container hover:text-on-primary-container transition-colors">
+                Transfer Hub
+            </button>
+<a class="flex items-center gap-md text-on-surface-variant dark:text-outline-variant px-sm py-md rounded-xl hover:bg-surface-variant dark:hover:bg-on-primary-container transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span class="font-label-caps text-label-caps">Support</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant dark:text-outline-variant px-sm py-md rounded-xl hover:bg-surface-variant dark:hover:bg-on-primary-container transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span class="font-label-caps text-label-caps">Sign Out</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 md:ml-64 flex flex-col min-h-screen">
+<!-- TopNavBar -->
+<header class="flex justify-between items-center w-full px-lg h-20 max-w-container-max mx-auto border-b border-outline-variant dark:border-outline bg-surface dark:bg-surface-container-low sticky top-0 z-30">
+<!-- Mobile Menu Toggle -->
+<button class="md:hidden text-on-surface hover:text-primary transition-colors">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<!-- Contextual Title (Mobile primarily, or breadcrumb) -->
+<div class="hidden md:block">
+<h2 class="font-headline-sm text-headline-sm font-bold text-on-surface">Subscriptions &amp; Alerts</h2>
+</div>
+<div class="md:hidden">
+<span class="font-headline-sm text-headline-sm font-bold text-primary dark:text-primary-fixed">WealthPro</span>
+</div>
+<!-- Trailing Actions -->
+<div class="flex items-center gap-md">
+<div class="hidden md:flex items-center bg-surface-container-high rounded-full px-sm py-xs">
+<span class="material-symbols-outlined text-outline mr-xs">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-body-sm font-body-sm w-48 text-on-surface placeholder-outline-variant" placeholder="Search..." type="text"/>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors relative">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-0 right-0 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors hidden sm:block">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<div class="h-8 w-px bg-outline-variant mx-xs hidden sm:block"></div>
+<div class="flex items-center gap-xs font-data-tabular text-data-tabular font-bold text-on-surface">
+<span>USD</span>
+<span class="material-symbols-outlined text-sm">expand_more</span>
+</div>
+<img alt="User profile" class="w-10 h-10 rounded-full object-cover border border-outline-variant ml-sm" data-alt="A professional headshot of a corporate executive in a modern, well-lit office setting. The lighting is crisp and neutral, reflecting a high-end financial environment. The executive is wearing a dark navy suit and looking confidently slightly off-camera. The background is a slightly blurred modern office space with glass partitions, conveying a premium, minimalist corporate aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA0iZ2cQZfY9NtW2IPR_QEU-u14vxfeTNngOAiOlguNFHHmWtcIq-Jif-udzCNM9oO5KPXUaRE9wX2yqsIef3m714q8tDD6Ycef2c-IIIM1-CLqM5YvhG7CgjNM9FSjSKzs7mMd2kSC9s7wPL_KHyfTL9fplwgPolfR8YFaXTskQYz7GuJJt-qg_2_HTKO7Zqh4wBBvHbnUHjkexKGJ29cXay5cINDory7QgA4wncM6beuQSCw55Qzh"/>
+</div>
+</header>
+<!-- Canvas -->
+<div class="flex-1 p-md md:p-lg max-w-container-max mx-auto w-full overflow-y-auto">
+<!-- Dashboard Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- Total Spend Widget (Bento Grid Style) -->
+<div class="lg:col-span-12 xl:col-span-8 bg-surface-container-lowest rounded-xl border border-outline-variant p-lg shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[240px]">
+<!-- Abstract Background Pattern -->
+<div class="absolute inset-0 opacity-5 pointer-events-none" style="background-image: radial-gradient(#000000 1px, transparent 1px); background-size: 24px 24px;"></div>
+<div class="relative z-10 flex justify-between items-start">
+<div>
+<h3 class="font-label-caps text-label-caps text-on-surface-variant mb-xs">Total Monthly Spend</h3>
+<div class="flex items-baseline gap-sm">
+<span class="font-display-lg text-display-lg text-on-surface">$2,450.00</span>
+<span class="font-label-caps text-label-caps text-outline">USD</span>
+</div>
+</div>
+<div class="bg-secondary-container text-on-secondary-container px-sm py-xs rounded-full font-label-caps text-label-caps flex items-center gap-xs">
+<span class="material-symbols-outlined text-sm">arrow_upward</span>
+                            +4.2% vs Last Month
+                        </div>
+</div>
+<div class="relative z-10 mt-lg grid grid-cols-3 gap-md">
+<div class="border-l-2 border-primary pl-sm">
+<p class="font-label-caps text-label-caps text-outline mb-xs">Software &amp; IT</p>
+<p class="font-data-tabular text-data-tabular text-on-surface font-semibold">$1,800.00</p>
+</div>
+<div class="border-l-2 border-secondary pl-sm">
+<p class="font-label-caps text-label-caps text-outline mb-xs">Information Data</p>
+<p class="font-data-tabular text-data-tabular text-on-surface font-semibold">$550.00</p>
+</div>
+<div class="border-l-2 border-surface-tint pl-sm">
+<p class="font-label-caps text-label-caps text-outline mb-xs">Entertainment</p>
+<p class="font-data-tabular text-data-tabular text-on-surface font-semibold">$100.00</p>
+</div>
+</div>
+</div>
+<!-- Upcoming Alerts Widget -->
+<div class="lg:col-span-12 xl:col-span-4 bg-surface-container-lowest rounded-xl border border-outline-variant p-md flex flex-col h-full">
+<div class="flex justify-between items-center mb-md border-b border-outline-variant pb-xs">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Alerts</h3>
+<button class="text-primary font-label-caps text-label-caps hover:underline">View All</button>
+</div>
+<div class="flex-1 space-y-sm overflow-y-auto pr-xs">
+<!-- Alert Item (Upcoming Payment) -->
+<div class="flex items-start gap-sm bg-surface-container-low p-sm rounded-lg border border-transparent hover:border-outline-variant transition-colors">
+<div class="w-8 h-8 rounded-full bg-error-container text-on-error-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-sm">calendar_clock</span>
+</div>
+<div>
+<p class="font-body-sm text-body-sm text-on-surface font-semibold">AWS Hosting Bill Due</p>
+<p class="font-label-caps text-label-caps text-on-surface-variant">Tomorrow • Est. $1,200.00</p>
+</div>
+</div>
+<!-- Alert Item (Price Alert) -->
+<div class="flex items-start gap-sm bg-surface-container-low p-sm rounded-lg border border-transparent hover:border-outline-variant transition-colors">
+<div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+</div>
+<div>
+<p class="font-body-sm text-body-sm text-on-surface font-semibold">AAPL Price Target Hit</p>
+<p class="font-label-caps text-label-caps text-on-surface-variant">Crossed $185.00</p>
+</div>
+</div>
+<!-- Alert Item (Renewal) -->
+<div class="flex items-start gap-sm bg-surface-container-low p-sm rounded-lg border border-transparent hover:border-outline-variant transition-colors">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest text-on-surface-variant flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-sm">autorenew</span>
+</div>
+<div>
+<p class="font-body-sm text-body-sm text-on-surface font-semibold">Bloomberg Terminal Renewal</p>
+<p class="font-label-caps text-label-caps text-on-surface-variant">In 5 Days • $550.00</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Active Subscriptions List -->
+<div class="lg:col-span-12 xl:col-span-8 bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden flex flex-col">
+<div class="p-md border-b border-outline-variant flex justify-between items-center bg-surface-bright">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Active Subscriptions</h3>
+<div class="flex gap-sm">
+<button class="bg-surface border border-outline-variant text-on-surface px-sm py-xs rounded-lg font-label-caps text-label-caps flex items-center gap-xs hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-sm">filter_list</span> Filter
+                            </button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant font-label-caps text-label-caps text-on-surface-variant">
+<th class="p-sm font-semibold">Service</th>
+<th class="p-sm font-semibold">Category</th>
+<th class="p-sm font-semibold text-right">Original Cost</th>
+<th class="p-sm font-semibold text-right">Preferred (USD)</th>
+<th class="p-sm font-semibold text-center">Status</th>
+<th class="p-sm font-semibold text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="p-sm">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded bg-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant">cloud</span>
+</div>
+<div>
+<p class="font-body-md text-body-md text-on-surface font-semibold">AWS Enterprise</p>
+<p class="font-label-caps text-label-caps text-outline">Monthly • Auto-renew</p>
+</div>
+</div>
+</td>
+<td class="p-sm font-body-sm text-body-sm text-on-surface-variant">Infrastructure</td>
+<td class="p-sm font-data-tabular text-data-tabular text-on-surface text-right">1,200.00 <span class="text-outline text-xs">USD</span></td>
+<td class="p-sm font-data-tabular text-data-tabular text-on-surface text-right font-semibold">$1,200.00</td>
+<td class="p-sm text-center">
+<span class="inline-block px-xs py-[2px] bg-[#eaf1ff] text-[#0b1c30] rounded-full font-label-caps text-[10px] border border-outline-variant">Active</span>
+</td>
+<td class="p-sm text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors"><span class="material-symbols-outlined text-sm">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="p-sm">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded bg-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant">monitoring</span>
+</div>
+<div>
+<p class="font-body-md text-body-md text-on-surface font-semibold">Bloomberg Terminal</p>
+<p class="font-label-caps text-label-caps text-outline">Monthly • Auto-renew</p>
+</div>
+</div>
+</td>
+<td class="p-sm font-body-sm text-body-sm text-on-surface-variant">Financial Data</td>
+<td class="p-sm font-data-tabular text-data-tabular text-on-surface text-right">500.00 <span class="text-outline text-xs">EUR</span></td>
+<td class="p-sm font-data-tabular text-data-tabular text-on-surface text-right font-semibold">$550.00</td>
+<td class="p-sm text-center">
+<span class="inline-block px-xs py-[2px] bg-[#eaf1ff] text-[#0b1c30] rounded-full font-label-caps text-[10px] border border-outline-variant">Active</span>
+</td>
+<td class="p-sm text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors"><span class="material-symbols-outlined text-sm">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-lowest transition-colors opacity-75">
+<td class="p-sm">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded bg-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant">movie</span>
+</div>
+<div>
+<p class="font-body-md text-body-md text-on-surface font-semibold">Netflix Premium</p>
+<p class="font-label-caps text-label-caps text-outline">Monthly • Canceling</p>
+</div>
+</div>
+</td>
+<td class="p-sm font-body-sm text-body-sm text-on-surface-variant">Entertainment</td>
+<td class="p-sm font-data-tabular text-data-tabular text-on-surface text-right">22.99 <span class="text-outline text-xs">USD</span></td>
+<td class="p-sm font-data-tabular text-data-tabular text-on-surface text-right font-semibold">$22.99</td>
+<td class="p-sm text-center">
+<span class="inline-block px-xs py-[2px] bg-[#ffdad6] text-[#ba1a1a] rounded-full font-label-caps text-[10px] border border-error">Pending Cancel</span>
+</td>
+<td class="p-sm text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors"><span class="material-symbols-outlined text-sm">more_vert</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Add/Edit Subscription Form (Sidebar style within grid) -->
+<div class="lg:col-span-12 xl:col-span-4 bg-surface-container-lowest rounded-xl border border-outline-variant p-md flex flex-col">
+<h3 class="font-headline-sm text-headline-sm text-on-surface border-b border-outline-variant pb-xs mb-md">Add New Sub</h3>
+<form class="space-y-md flex-1">
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-xs">Service Name</label>
+<input class="w-full bg-surface border border-outline-variant rounded-lg px-sm py-xs font-body-sm text-on-surface focus:ring-2 focus:ring-primary focus:border-primary" placeholder="e.g., GitHub Copilot" type="text"/>
+</div>
+<div class="grid grid-cols-2 gap-sm">
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-xs">Amount</label>
+<input class="w-full bg-surface border border-outline-variant rounded-lg px-sm py-xs font-data-tabular text-on-surface focus:ring-2 focus:ring-primary focus:border-primary" placeholder="0.00" type="number"/>
+</div>
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-xs">Currency</label>
+<select class="w-full bg-surface border border-outline-variant rounded-lg px-sm py-xs font-data-tabular text-on-surface focus:ring-2 focus:ring-primary focus:border-primary">
+<option>USD</option>
+<option>EUR</option>
+<option>GBP</option>
+</select>
+</div>
+</div>
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-xs">Category</label>
+<select class="w-full bg-surface border border-outline-variant rounded-lg px-sm py-xs font-body-sm text-on-surface focus:ring-2 focus:ring-primary focus:border-primary">
+<option>Software &amp; IT</option>
+<option>Financial Data</option>
+<option>Marketing</option>
+<option>Other</option>
+</select>
+</div>
+<div class="bg-surface-container-low p-sm rounded-lg border border-outline-variant">
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-sm">Notification Preferences</p>
+<label class="flex items-center gap-xs cursor-pointer mb-xs">
+<input checked="" class="rounded text-primary focus:ring-primary border-outline-variant" type="checkbox"/>
+<span class="font-body-sm text-body-sm text-on-surface">Alert 3 days before billing</span>
+</label>
+<label class="flex items-center gap-xs cursor-pointer">
+<input class="rounded text-primary focus:ring-primary border-outline-variant" type="checkbox"/>
+<span class="font-body-sm text-body-sm text-on-surface">Alert if price increases</span>
+</label>
+</div>
+<div class="pt-sm mt-auto">
+<button class="w-full bg-primary text-on-primary py-sm rounded-lg font-label-caps text-label-caps hover:bg-primary-container transition-colors shadow-sm" type="button">
+                                Save Subscription
+                            </button>
+</div>
+</form>
+</div>
+</div>
+</div>
+</main>
+</body></html>

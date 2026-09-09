@@ -8,21 +8,21 @@ import { Notice } from '../../../components/Notice';
 import { Tooltip } from '../../../components/Tooltip';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { ArchiveIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { ArchiveIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, StarIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { toCSV } from '../../../lib/csv';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
 import { FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
+import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { emiSchedule, emiSummary, expectedEndDate, generateBigEmiOverrides, installmentDueDate, markupPercentage, markupRateEquivalents, resolvedDueDate, totalsByCurrency, whatIfExtraPayment, type EMISummary } from '../../../lib/calc/emiModule';
-import { dlBarV, dlLine } from '../../../lib/chartLabels';
+import { dlBarV, dlLine, withAlpha } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar } from '../../../lib/cssVar';
 import { useAppearanceStore } from '../../../store/appearanceStore';
-import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
@@ -37,6 +37,7 @@ import { linkTargetPath, useLinkSideLabel } from '../../transfers/pages/Transfer
 import type { LinkSideConfig } from '../../../types/interEntityTransfer';
 import type { EMILoan, EMIRepayment } from '../../../types/emiWorkbook';
 import type { PlannedBankTransaction } from '../../../types/plannedBank';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -96,6 +97,7 @@ export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: strin
   const [lastCurrency, setLastCurrency] = useLastCurrency('emi', defaultCurrency);
   const ensureSignedIn = useEnsureSignedIn();
   const [l, setL] = useState<EMILoan>(() => emptyLoan(initialCurrency ?? lastCurrency));
+  const currencyOptions = useEnabledCurrencies(l.currencyCode);
 
   /** User-reported (2026-08-28, repeated after an earlier round only added
    * a "jump to edit mode after saving" workaround instead of what was
@@ -145,7 +147,7 @@ export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: strin
         </Field>
         <Field label="Currency" width={100} required>
           <Select value={l.currencyCode} onChange={(e) => { setL({ ...l, currencyCode: e.target.value }); setLastCurrency(e.target.value); }}>
-            {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+            {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>
         <Field label="Principal" width={120} required title="The original loan amount, before any interest/markup or repayments.">
@@ -199,7 +201,7 @@ export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: strin
           <input type="checkbox" checked={bigEmiEnabled} onChange={(e) => setBigEmiEnabled(e.target.checked)} />
           <span style={{ fontWeight: 600 }}>Big EMI every N months (optional)</span>
         </label>
-        <p className="footer-note" style={{ marginTop: 4, marginBottom: bigEmiEnabled ? 8 : 0 }}>
+        <p className="text-muted" style={{ marginTop: 4, marginBottom: bigEmiEnabled ? 8 : 0 }}>
           For loans with an occasional bigger payment — e.g. a property installment plan with a larger payment every
           6 months. The loan keeps its original tenure; if the remainder checkbox is on, whatever's still owed at
           the final month gets swept into that last installment.
@@ -280,7 +282,7 @@ function LinkedEMIRepaymentFields({ loan, month, amount, date, onLinked }: { loa
             {bankAccounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.currencyCode})</option>)}
           </select>
         ) : (
-          <span className="footer-note">No bank accounts yet.</span>
+          <span className="text-muted">No bank accounts yet.</span>
         )
       )}
       <button className="btn small" onClick={create}>Link &amp; add</button>
@@ -315,13 +317,13 @@ function LoanStatZones({ loan, sum, loanRepayments }: { loan: EMILoan; sum: EMIS
 
   const zone = (title: string, cards: ReactNode) => (
     <div>
-      <div className="footer-note" style={{ marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>{title}</div>
+      <div className="text-muted" style={{ marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>{title}</div>
       <div style={{ display: 'grid', gap: 8 }}>{cards}</div>
     </div>
   );
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px,1fr))', gap: 16, marginTop: 12 }}>
+    <div className="grid-auto" style={{ ...gridAutoStyle(220, 16), marginTop: 12 }}>
       {zone('Origination', (
         <>
           <div className="stat-card card" style={hueStyle(HUES[3])}>
@@ -405,6 +407,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
   const loanRepayments = repayments.filter((r) => r.loanId === loan.id);
   const [editing, setEditing] = useState(!!startInEditMode);
   const [editRow, setEditRow] = useState<EMILoan>(loan);
+  const currencyOptions = useEnabledCurrencies(editRow.currencyCode);
   const sum = emiSummary(loan);
   const netToReturn = loan.principal + sum.totalInterest;
   const ensureSignedIn = useEnsureSignedIn();
@@ -609,7 +612,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                 {loan.name}
                 {loan.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Archived</span>}
               </div>
-              <div className="footer-note" style={{ fontWeight: 400 }}>
+              <div className="text-muted" style={{ fontWeight: 400 }}>
                 {loan.lender} · {loan.currencyCode} · {loan.repaymentMode === 'fixedTotal' ? 'Fixed total (no interest)' : `${loan.annualRatePct}% p.a.`} · {loan.tenureMonths} months
               </div>
             </div>
@@ -668,7 +671,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
             </Field>
             <Field label="Currency">
               <Select value={editRow.currencyCode} onChange={(e) => setEditRow({ ...editRow, currencyCode: e.target.value })}>
-                {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+                {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
               </Select>
             </Field>
             <Field label="Principal">
@@ -727,10 +730,10 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
            Pending item 90. */}
         {editing && (
           <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-            <div className="footer-note" style={{ marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Advanced</div>
+            <div className="text-muted" style={{ marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Advanced</div>
             <div style={{ marginBottom: 16 }}>
               <h4 style={{ margin: '0 0 4px' }}>Big EMI every N months</h4>
-              <p className="footer-note" style={{ marginTop: 0 }}>
+              <p className="text-muted" style={{ marginTop: 0 }}>
                 For loans with an occasional bigger payment — e.g. a property installment plan with a larger payment
                 every 6 months. The loan keeps its original tenure; if the remainder checkbox is on, whatever's
                 still owed at the final month gets swept into that last installment.
@@ -766,11 +769,11 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
             <div>
               <h4 style={{ margin: '0 0 4px' }}>Link to bank</h4>
               {linkedAccount ? (
-                <p className="footer-note" style={{ marginBottom: 8 }}>
+                <p className="text-muted" style={{ marginBottom: 8 }}>
                   Linked to <strong>{linkedAccount.name}</strong> — remaining installments are planned in its Planning tab.
                 </p>
               ) : (
-                <p className="footer-note" style={{ marginBottom: 8 }}>
+                <p className="text-muted" style={{ marginBottom: 8 }}>
                   Not linked yet. Linking generates a planned (not-yet-done) entry for every remaining installment in
                   the chosen account's Planning tab, dated on this loan's own schedule.
                 </p>
@@ -789,7 +792,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                   </button>
                 </div>
               ) : (
-                <p className="footer-note">No active bank accounts — add or unarchive one on the Banking page first.</p>
+                <p className="text-muted">No active bank accounts — add or unarchive one on the Banking page first.</p>
               )}
             </div>
           </div>
@@ -806,7 +809,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
         title={<h3 style={{ margin: 0 }}>Schedule {showFullSchedule ? '(full, start to end)' : '(next 12 installments from today)'}</h3>}
         headerExtra={<button className="btn secondary" onClick={exportSchedule}>Export full schedule CSV</button>}
       >
-      <p className="footer-note" style={{ marginTop: 0 }}>
+      <p className="text-muted" style={{ marginTop: 0 }}>
         Click the pencil on any upcoming installment to set a different amount (and, optionally, a different due
         date) for just that month. Every later month recalculates from what's actually paid.
       </p>
@@ -896,26 +899,26 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                     <td>{resolvedDueDate(loan, r.month, loanRepayments)}</td>
                     <td>
                       {fmtMoney(r.emi, loan.currencyCode)}
-                      {r.overridden && <span className="footer-note"> (custom)</span>}
+                      {r.overridden && <span className="text-muted"> (custom)</span>}
                       {r.isBalloon && (
                         <Tooltip text="This final payment was automatically true'd up to whatever was actually still owed, since your custom monthly payment doesn't exactly clear the loan by the last month.">
-                          <span className="footer-note" style={{ cursor: 'pointer' }}> (final payment)</span>
+                          <span className="text-muted" style={{ cursor: 'pointer' }}> (final payment)</span>
                         </Tooltip>
                       )}
                       {!!rowRepayment?.fine && (
                         <Tooltip text="A late fee/penalty paid alongside this installment — not counted against the loan's own balance.">
-                          <div className="footer-note" style={{ cursor: 'pointer' }}>+ {fmtMoney(rowRepayment.fine, loan.currencyCode)} fine</div>
+                          <div className="text-muted" style={{ cursor: 'pointer' }}>+ {fmtMoney(rowRepayment.fine, loan.currencyCode)} fine</div>
                         </Tooltip>
                       )}
                     </td>
                     <td>{fmtMoney(paidSoFar, loan.currencyCode)} ({paidPct.toFixed(1)}%)</td>
                     <td>{fmtMoney(r.balance, loan.currencyCode)} ({balancePct.toFixed(1)}%)</td>
                     <td>
-                      <div className="footer-note">Principal: {fmtMoney(r.principalComp, loan.currencyCode)} ({principalPct.toFixed(1)}%)</div>
-                      <div className="footer-note">{loan.repaymentMode === 'fixedTotal' ? 'Markup' : 'Interest'}: {fmtMoney(r.interest, loan.currencyCode)} ({markupPct.toFixed(1)}%)</div>
+                      <div className="text-muted">Principal: {fmtMoney(r.principalComp, loan.currencyCode)} ({principalPct.toFixed(1)}%)</div>
+                      <div className="text-muted">{loan.repaymentMode === 'fixedTotal' ? 'Markup' : 'Interest'}: {fmtMoney(r.interest, loan.currencyCode)} ({markupPct.toFixed(1)}%)</div>
                     </td>
                     <td>
-                      <span className={status === 'paid' ? 'pill-buy' : status === 'planned' ? 'pill-info' : 'pill-warn'}>
+                      <span className={status === 'paid' ? 'pill-positive' : status === 'planned' ? 'pill-info' : 'pill-warn'}>
                         {status === 'paid' ? 'Paid' : status === 'planned' ? 'Planned' : 'Upcoming'}
                       </span>
                     </td>
@@ -937,9 +940,9 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
               </tr>
               );
             })}
-            {sum.elapsed >= sum.rows.length && <tr><td colSpan={8} className="footer-note">Loan fully repaid.</td></tr>}
+            {sum.elapsed >= sum.rows.length && <tr><td colSpan={8} className="text-muted">Loan fully repaid.</td></tr>}
             {!visibleScheduleRows.length && sum.elapsed < sum.rows.length && (
-              <tr><td colSpan={8} className="footer-note">No installments match this filter.</td></tr>
+              <tr><td colSpan={8} className="text-muted">No installments match this filter.</td></tr>
             )}
           </tbody>
         </table>
@@ -959,8 +962,8 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
             data={{
               labels: schedule.rows.map((r) => r.month),
               datasets: [
-                { label: 'Principal', data: schedule.rows.map((r) => r.principalComp), backgroundColor: cssVar('--profit') || '#3ecf8e', stack: 's' },
-                { label: loan.repaymentMode === 'fixedTotal' ? 'Markup' : 'Interest', data: schedule.rows.map((r) => r.interest), backgroundColor: cssVar('--loss') || '#e5484d', stack: 's' },
+                { label: 'Principal', data: schedule.rows.map((r) => r.principalComp), backgroundColor: withAlpha(cssVar('--profit'), '#3ecf8e'), stack: 's' },
+                { label: loan.repaymentMode === 'fixedTotal' ? 'Markup' : 'Interest', data: schedule.rows.map((r) => r.interest), backgroundColor: withAlpha(cssVar('--loss'), '#e5484d'), stack: 's' },
               ],
             }}
             options={{
@@ -1002,7 +1005,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
       </CollapsibleCard>
 
       <CollapsibleCard title={<h3 style={{ margin: 0 }}>What if: extra payment</h3>} style={{ marginBottom: 16 }}>
-        <p className="footer-note" style={{ marginTop: 0 }}>
+        <p className="text-muted" style={{ marginTop: 0 }}>
           See how much sooner this loan clears — and how much {loan.repaymentMode === 'fixedTotal' ? 'markup' : 'interest'} you'd
           save — by paying a fixed extra amount on top of the normal installment every month. A live estimate, nothing is saved.
         </p>
@@ -1010,7 +1013,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
           <TextInput type="number" step="0.01" value={extraPayment || ''} onChange={(e) => setExtraPayment(Number(e.target.value))} />
         </Field>
         {extraPayment > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px,1fr))', gap: 8, marginTop: 12 }}>
+          <div className="grid-auto" style={{ ...gridAutoStyle(130, 8), marginTop: 12 }}>
             <div className="stat-card card" style={hueStyle(HUES[0])}><div className="label">New months</div><div className="value">{whatIf.months}</div><div className="sub">{whatIf.monthsSaved} sooner</div></div>
             <div className="stat-card card" style={hueStyle(HUES[7])}><div className="label">New end date</div><div className="value" style={{ fontSize: 14 }}>{whatIf.newEndDate}</div></div>
             <div className="stat-card card" style={hueStyle('var(--profit)')}>
@@ -1066,7 +1069,7 @@ function RepaymentLog({ loan, repayments }: { loan: EMILoan; repayments: EMIRepa
 
   return (
     <CollapsibleCard title={<h3 style={{ margin: 0 }}>Repayment log</h3>} style={{ marginBottom: 16 }}>
-      <p className="footer-note" style={{ marginTop: 0 }}>
+      <p className="text-muted" style={{ marginTop: 0 }}>
         Every actual payment recorded against this loan. Linking it to a Bank/Cash account (via the "Link" option
         next to a schedule row, or the Transfers action) keeps deleting one side in sync with the other.
       </p>
@@ -1129,11 +1132,11 @@ function OverallSummary() {
   if (!codes.length) return null;
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px,1fr))', gap: 8, marginBottom: 16 }}>
+    <div className="grid-auto" style={{ ...gridAutoStyle(150, 8), marginBottom: 16 }}>
       {codes.map((code) => (
         <div key={code} className="card" style={{ padding: 12 }}>
-          <div className="footer-note" style={{ marginBottom: 6 }}>{code}</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px,1fr))', gap: 8 }}>
+          <div className="text-muted" style={{ marginBottom: 6 }}>{code}</div>
+          <div className="grid-auto" style={gridAutoStyle(110, 8)}>
             <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Monthly total</div><MoneyValue n={totals[code].monthlyInstallment} currency={code} /></div>
             <div className="stat-card card" style={hueStyle('var(--loss)')}>
               <Tooltip text="How much you still owe across your loans in this currency — remaining principal only for interest-rate loans, the full remaining amount (including markup) for fixed-total loans.">
@@ -1151,19 +1154,31 @@ function OverallSummary() {
 
 function LoanList({ onSelect, onEdit }: { onSelect: (loan: EMILoan) => void; onEdit: (loan: EMILoan) => void }) {
   const allLoans = useEMIWorkbookStore((s) => s.workbook.entries);
+  const updateEntry = useEMIWorkbookStore((s) => s.updateEntry);
+  const ensureSignedIn = useEnsureSignedIn();
   const [showArchived, setShowArchived] = useState(false);
   const archivedCount = useMemo(() => allLoans.filter((l) => l.isActive === false).length, [allLoans]);
   const loans = useMemo(() => (showArchived ? allLoans : allLoans.filter((l) => l.isActive !== false)), [allLoans, showArchived]);
+  // Pending item 115(c): Sr# = the loan's own stable position in the
+  // underlying (unfiltered) array, creation order — same convention as
+  // Bank/Personal Loans/Funds.
+  const srNumOf = useMemo(() => new Map(allLoans.map((l, i) => [l.id, i + 1])), [allLoans]);
+
+  const toggleFavorite = async (l: EMILoan) => {
+    if (!(await ensureSignedIn(l.isFavorite ? 'Sign in to unfavorite this loan.' : 'Sign in to favorite this loan.'))) return;
+    updateEntry(l.id, { isFavorite: !l.isFavorite });
+  };
 
   type Row = { loan: EMILoan; sum: ReturnType<typeof emiSummary> };
   const rows: Row[] = loans.map((loan) => ({ loan, sum: emiSummary(loan) }));
-  type Col = 'name' | 'lender' | 'monthly' | 'outstanding' | 'monthsLeft';
+  type Col = 'name' | 'lender' | 'monthly' | 'outstanding' | 'monthsLeft' | 'favorite';
   const sortValue = (r: Row, col: Col): number | string => {
     switch (col) {
       case 'lender': return r.loan.lender;
       case 'monthly': return r.sum.emi;
       case 'outstanding': return r.sum.outstanding;
       case 'monthsLeft': return r.sum.monthsRemaining;
+      case 'favorite': return r.loan.isFavorite ? 1 : 0;
       default: return r.loan.name;
     }
   };
@@ -1180,20 +1195,29 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: EMILoan) => void; onE
         <table>
           <thead>
             <tr>
-              <Th col="name">Name</Th><Th col="lender">Lender</Th><Th col="monthly">Monthly</Th>
+              <th>#</th><Th col="favorite">★</Th><Th col="name">Name</Th><Th col="lender">Lender</Th><Th col="monthly">Monthly</Th>
               <Th col="outstanding">Outstanding</Th><Th col="monthsLeft">Months left</Th><th></th>
             </tr>
           </thead>
           <tbody>
             {sorted.map(({ loan: l, sum }) => (
               <tr key={l.id} onClick={() => onSelect(l)} style={{ cursor: 'pointer' }}>
+                <td className="text-muted">{srNumOf.get(l.id)}</td>
+                <td>
+                  <IconButton
+                    label={l.isFavorite ? 'Unfavorite' : 'Favorite'}
+                    icon={<StarIcon size={13} filled={l.isFavorite} />}
+                    align="right"
+                    onClick={(e) => { e.stopPropagation(); toggleFavorite(l); }}
+                  />
+                </td>
                 <td>
                   {l.name}
                   {l.isActive === false && <span className="pill-warn" style={{ fontSize: 10, marginLeft: 6 }}>Archived</span>}
                 </td>
                 <td>{l.lender}{l.repaymentMode === 'fixedTotal' ? ' · no-interest' : ''}</td>
                 <td>{fmtMoney(sum.emi, l.currencyCode)}</td>
-                <td className="pill-sell">{fmtMoney(sum.outstanding, l.currencyCode)}</td>
+                <td className="pill-negative">{fmtMoney(sum.outstanding, l.currencyCode)}</td>
                 <td>{sum.monthsRemaining}</td>
                 <td>
                   <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={(e) => { e.stopPropagation(); onEdit(l); }} />{' '}
@@ -1203,7 +1227,7 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: EMILoan) => void; onE
             ))}
             {!sorted.length && (
               <tr>
-                <td colSpan={6} className="footer-note">
+                <td colSpan={8} className="text-muted">
                   {allLoans.length ? 'Every loan is archived — click "Show archived" above to see them.' : 'No loans yet — add one above.'}
                 </td>
               </tr>
@@ -1282,7 +1306,7 @@ export function EMIPage({
   return (
     <div>
       <h1 className="pagetitle">EMI / Loans</h1>
-      <p className="footer-note" style={{ marginBottom: 12 }}>
+      <p className="text-muted" style={{ marginBottom: 12 }}>
         A loan you're repaying on a fixed schedule — a mortgage, car financing, or similar — with an
         auto-calculated amortization schedule. Assumes on-schedule payment; doesn't track missed/late payments.
       </p>

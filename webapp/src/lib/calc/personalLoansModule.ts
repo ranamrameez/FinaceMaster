@@ -1,14 +1,29 @@
 import type { PersonalLoan, PersonalLoanRepayment } from '../../types/personalLoansWorkbook';
-import { toInstantMs } from '../datetime';
+import { dateOnlyMs } from '../datetime';
 
+/** Excludes any repayment with `isPending` set (Pending-transaction-state,
+ * 2026-09-08) — a repayment the user's logged but that hasn't actually
+ * cleared yet shouldn't reduce the loan's real outstanding balance until it
+ * does. Every other Personal Loans outstanding/net-position figure in the
+ * app derives from this one function, so excluding pending here is a "fix
+ * once" change — see `loanPendingImpact` below for the companion figure. */
 export function loanOutstanding(loan: PersonalLoan, repayments: PersonalLoanRepayment[]): number {
-  const repaid = repayments.filter((r) => r.loanId === loan.id).reduce((s, r) => s + r.amount, 0);
+  const repaid = repayments.filter((r) => r.loanId === loan.id && !r.isPending).reduce((s, r) => s + r.amount, 0);
   return Math.max(0, loan.principal - repaid);
 }
 
+/** The sum of pending repayments against one loan — the companion figure to
+ * `loanOutstanding` above, so the UI can show "Outstanding: X" and "-Y
+ * pending" side by side rather than the pending amount just vanishing. */
+export function loanPendingImpact(loan: PersonalLoan, repayments: PersonalLoanRepayment[]): number {
+  return repayments.filter((r) => r.loanId === loan.id && r.isPending).reduce((s, r) => s + r.amount, 0);
+}
+
 /** Running "remaining outstanding" after each repayment to this loan, in
- * date order — user-reported gap: no running balance column on the
- * repayments list, only the loan's current total (`loanOutstanding`).
+ * calendar-date order (same-date ties broken by `seq`, see
+ * `dateOnlyMs`'s own doc comment — Done item 235, extended 2026-09-08) —
+ * user-reported gap: no running balance column on the repayments list,
+ * only the loan's current total (`loanOutstanding`).
  * Returns a map keyed by `PersonalLoanRepayment.id` so the caller can look
  * up a value regardless of what order the table is currently sorted in
  * (same pattern as `transferRunningBalance`). Clamped at 0 per-row like
@@ -17,7 +32,7 @@ export function loanOutstanding(loan: PersonalLoan, repayments: PersonalLoanRepa
 export function repaymentRunningOutstanding(loan: PersonalLoan, repayments: PersonalLoanRepayment[]): Map<string, number> {
   const forLoan = repayments
     .filter((r) => r.loanId === loan.id)
-    .sort((a, b) => toInstantMs(a.date, a.time, a.timezone) - toInstantMs(b.date, b.time, b.timezone) || (a.seq ?? 0) - (b.seq ?? 0))
+    .sort((a, b) => dateOnlyMs(a.date) - dateOnlyMs(b.date) || (a.seq ?? 0) - (b.seq ?? 0))
     .map((r) => ({ r }));
   const out = new Map<string, number>();
   let remaining = loan.principal;
@@ -39,7 +54,7 @@ export function repaymentRunningOutstanding(loan: PersonalLoan, repayments: Pers
 export function loanBalanceHistory(loan: PersonalLoan, repayments: PersonalLoanRepayment[]): { date: string; balance: number }[] {
   const forLoan = repayments
     .filter((r) => r.loanId === loan.id)
-    .sort((a, b) => toInstantMs(a.date, a.time, a.timezone) - toInstantMs(b.date, b.time, b.timezone) || (a.seq ?? 0) - (b.seq ?? 0))
+    .sort((a, b) => dateOnlyMs(a.date) - dateOnlyMs(b.date) || (a.seq ?? 0) - (b.seq ?? 0))
     .map((r) => ({ r }));
   const points: { date: string; balance: number }[] = [{ date: loan.date, balance: loan.principal }];
   let remaining = loan.principal;
@@ -59,6 +74,21 @@ export function netPositionByCurrency(loans: PersonalLoan[], repayments: Persona
     const outstanding = loanOutstanding(loan, repayments);
     const sign = loan.direction === 'owed_to_me' ? 1 : -1;
     out[loan.currencyCode] = (out[loan.currencyCode] || 0) + sign * outstanding;
+  });
+  return out;
+}
+
+/** Portfolio-wide pending repayment impact, grouped by currency — the
+ * companion figure to `netPositionByCurrency` above. A pending repayment
+ * reduces outstanding once cleared, so its impact on NET POSITION carries
+ * the opposite sign convention from `loanOutstanding` itself (paying down a
+ * debt you owe moves your net position UP, toward zero or positive). */
+export function netPendingByCurrency(loans: PersonalLoan[], repayments: PersonalLoanRepayment[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  loans.forEach((loan) => {
+    const pending = loanPendingImpact(loan, repayments);
+    const sign = loan.direction === 'owed_to_me' ? -1 : 1;
+    out[loan.currencyCode] = (out[loan.currencyCode] || 0) + sign * pending;
   });
   return out;
 }

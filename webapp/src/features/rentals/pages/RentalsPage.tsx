@@ -6,7 +6,7 @@ import { Card, CollapsibleCard, MoneyValue } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
 import { hueStyle } from '../../../lib/statCardHues';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { ArchiveIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { ArchiveIcon, CheckIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, StarIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Modal } from '../../../components/Modal';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
@@ -17,16 +17,20 @@ import { TransactionEntryModal } from '../../../components/TransactionEntryModal
 import { CategorySelect } from '../../../components/CategorySelect';
 import { FinanceEditModal } from '../../../components/FinanceEditModal';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
+import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { categoryName, RENT_CATEGORY_ID, UNCATEGORIZED_ID } from '../../../lib/categories';
 import { useCategoryStore } from '../../../store/categoryStore';
-import { netIncomeByCurrency, netIncomeByProperty, propertyByCategory, propertyMonthlyRollup, propertyNetIncome } from '../../../lib/calc/rentalsModule';
+import { netIncomeByCurrency, netIncomeByProperty, netIncomePendingByCurrency, propertyByCategory, propertyMonthlyRollup, propertyNetIncome } from '../../../lib/calc/rentalsModule';
 import { generateLeaseRentPlans, nextPendingBalance, proposeRentCollection } from '../../../lib/calc/rentalPlanning';
 import { parseCSV, toCSV } from '../../../lib/csv';
-import { CURRENCIES } from '../../../lib/currencies';
 import { fmtMoney } from '../../../lib/format';
-import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
+import { confirmAndDeleteLinkable, createLinkedTransfer, warnIfLinked } from '../../../lib/linkCascade';
+import { getLastTransferSource, rememberTransferSource } from '../../../hooks/useLastTransferSource';
+import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
+import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
+import type { LinkSideConfig } from '../../../types/interEntityTransfer';
 import { dlBarV, dlDoughnut } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar, tickerColor } from '../../../lib/cssVar';
@@ -40,6 +44,7 @@ import { linkTargetPath, useLinkSideLabel } from '../../transfers/pages/Transfer
 import { usePlannedRentalsWorkbookStore } from '../../../store/plannedRentalsWorkbookStore';
 import type { Property, RentalEntry, RentalsWorkbook } from '../../../types/rentalsWorkbook';
 import { ChartCard } from '../../qse/components/ChartCard';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const uid = () => crypto.randomUUID();
@@ -54,17 +59,28 @@ function NetIncomeSummary() {
   const properties = useRentalsWorkbookStore((s) => s.workbook.settings.properties);
   const entries = useRentalsWorkbookStore((s) => s.workbook.entries);
   const totals = netIncomeByCurrency(properties, entries);
+  const pending = netIncomePendingByCurrency(properties, entries);
   const codes = Object.keys(totals);
   if (!codes.length) return null;
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px,1fr))', gap: 8, marginBottom: 16 }}>
-      {codes.map((code) => (
-        <div key={code} className="stat-card card" style={hueStyle(totals[code] >= 0 ? 'var(--profit)' : 'var(--loss)')}>
-          <div className="label">Net income ({code})</div>
-          <MoneyValue n={totals[code]} currency={code} />
-        </div>
-      ))}
+    <div className="grid-auto" style={{ ...gridAutoStyle(150, 8), marginBottom: 16 }}>
+      {codes.map((code) => {
+        const realPending = pending[code] ?? 0;
+        return (
+          <div key={code} className="stat-card card" style={hueStyle(totals[code] >= 0 ? 'var(--profit)' : 'var(--loss)')}>
+            <div className="label">Net income ({code})</div>
+            <MoneyValue n={totals[code]} currency={code} />
+            {/* User-requested (2026-09-08): don't just exclude pending money
+               from the headline figure — show it too. */}
+            {realPending !== 0 && (
+              <div className="sub">
+                {realPending > 0 ? '+' : ''}{fmtMoney(realPending, code)} pending → {fmtMoney(totals[code] + realPending, code)} incl. pending
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -111,6 +127,7 @@ export function AddPropertyForm({ onSaved, initialCurrency }: { onSaved?: (id: s
   const [lastCurrency, setLastCurrency] = useLastCurrency('rentals', 'USD');
   const ensureSignedIn = useEnsureSignedIn();
   const [p, setP] = useState(() => emptyProperty(initialCurrency ?? lastCurrency));
+  const currencyOptions = useEnabledCurrencies(p.currencyCode);
 
   const submit = async () => {
     if (!p.name.trim()) return toast('Enter a property name.');
@@ -130,7 +147,7 @@ export function AddPropertyForm({ onSaved, initialCurrency }: { onSaved?: (id: s
         </Field>
         <Field label="Currency" width={100} required>
           <Select value={p.currencyCode} onChange={(e) => { setP({ ...p, currencyCode: e.target.value }); setLastCurrency(e.target.value); }}>
-            {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+            {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>
         <Field label="Purchase price (optional)" width={160}>
@@ -152,10 +169,15 @@ function PropertiesList() {
   const ensureSignedIn = useEnsureSignedIn();
   const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<Property | null>(null);
+  const editCurrencyOptions = useEnabledCurrencies(editRow?.currencyCode);
   const [detailProperty, setDetailProperty] = useState<Property | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const archivedCount = useMemo(() => allProperties.filter((p) => p.isActive === false).length, [allProperties]);
   const properties = useMemo(() => (showArchived ? allProperties : allProperties.filter((p) => p.isActive !== false)), [allProperties, showArchived]);
+  // Pending item 115(c): Sr# = the property's own stable position in the
+  // underlying (unfiltered) array, creation order — same convention as
+  // Bank/Personal Loans/EMI/Funds.
+  const srNumOf = useMemo(() => new Map(allProperties.map((p, i) => [p.id, i + 1])), [allProperties]);
 
   // User-requested (2026-09-03): "add isActive flag to all modules where
   // applicable" — same archive/restore pattern as `BankAccount.isActive`.
@@ -163,6 +185,11 @@ function PropertiesList() {
     if (!(await ensureSignedIn(p.isActive === false ? 'Sign in to restore this property.' : 'Sign in to archive this property.'))) return;
     updateProperty(p.id, { isActive: p.isActive === false ? true : false });
     toast(p.isActive === false ? 'Property restored.' : 'Property archived.');
+  };
+
+  const toggleFavorite = async (p: Property) => {
+    if (!(await ensureSignedIn(p.isFavorite ? 'Sign in to unfavorite this property.' : 'Sign in to favorite this property.'))) return;
+    updateProperty(p.id, { isFavorite: !p.isFavorite });
   };
 
   const startEdit = (p: Property) => { setEditId(p.id); setEditRow({ ...p }); };
@@ -174,12 +201,13 @@ function PropertiesList() {
     setEditRow(null);
   };
 
-  type Col = 'name' | 'currency' | 'purchasePrice' | 'netIncome';
+  type Col = 'name' | 'currency' | 'purchasePrice' | 'netIncome' | 'favorite';
   const sortValue = (p: Property, col: Col): number | string => {
     switch (col) {
       case 'currency': return p.currencyCode;
       case 'purchasePrice': return p.purchasePrice ?? 0;
       case 'netIncome': return propertyNetIncome(p, entries);
+      case 'favorite': return p.isFavorite ? 1 : 0;
       default: return p.name;
     }
   };
@@ -194,15 +222,17 @@ function PropertiesList() {
       )}
       <div className="table-scroll">
       <table>
-        <thead><tr><Th col="name">Name</Th><Th col="currency">Currency</Th><Th col="purchasePrice">Purchase price</Th><Th col="netIncome">Net income (all time)</Th><th></th></tr></thead>
+        <thead><tr><th>#</th><Th col="favorite">★</Th><Th col="name">Name</Th><Th col="currency">Currency</Th><Th col="purchasePrice">Purchase price</Th><Th col="netIncome">Net income (all time)</Th><th></th></tr></thead>
         <tbody>
           {sorted.map((p) =>
             editId === p.id && editRow ? (
               <tr key={p.id}>
+                <td className="text-muted">{srNumOf.get(p.id)}</td>
+                <td></td>
                 <td><input value={editRow.name} onChange={(e) => setEditRow({ ...editRow, name: e.target.value })} /></td>
                 <td>
                   <select value={editRow.currencyCode} onChange={(e) => setEditRow({ ...editRow, currencyCode: e.target.value })}>
-                    {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+                    {editCurrencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
                   </select>
                 </td>
                 <td><input type="number" step="0.01" value={editRow.purchasePrice ?? ''} onChange={(e) => setEditRow({ ...editRow, purchasePrice: e.target.value === '' ? undefined : Number(e.target.value) })} style={{ width: 110 }} /></td>
@@ -214,13 +244,22 @@ function PropertiesList() {
               </tr>
             ) : (
               <tr key={p.id} onClick={() => setDetailProperty(p)} style={{ cursor: 'pointer' }}>
+                <td className="text-muted">{srNumOf.get(p.id)}</td>
+                <td>
+                  <IconButton
+                    label={p.isFavorite ? 'Unfavorite' : 'Favorite'}
+                    icon={<StarIcon size={13} filled={p.isFavorite} />}
+                    align="right"
+                    onClick={(e) => { e.stopPropagation(); toggleFavorite(p); }}
+                  />
+                </td>
                 <td>
                   {p.name}
                   {p.isActive === false && <span className="pill-warn" style={{ fontSize: 10, marginLeft: 6 }}>Archived</span>}
                 </td>
                 <td>{p.currencyCode}</td>
                 <td>{p.purchasePrice ? fmtMoney(p.purchasePrice, p.currencyCode) : '—'}</td>
-                <td className={propertyNetIncome(p, entries) >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(propertyNetIncome(p, entries), p.currencyCode)}</td>
+                <td className={propertyNetIncome(p, entries) >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(propertyNetIncome(p, entries), p.currencyCode)}</td>
                 <td>
                   <button className="btn secondary small" onClick={(e) => { e.stopPropagation(); setDetailProperty(p); }}>Details</button>{' '}
                   <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={(e) => { e.stopPropagation(); startEdit(p); }} />{' '}
@@ -245,7 +284,7 @@ function PropertiesList() {
           )}
           {!sorted.length && (
             <tr>
-              <td colSpan={5} className="footer-note">
+              <td colSpan={7} className="text-muted">
                 {allProperties.length ? 'Every property is archived — click "Show archived" above to see them.' : 'No properties yet — add one above.'}
               </td>
             </tr>
@@ -254,6 +293,72 @@ function PropertiesList() {
       </table>
       {detailProperty && <PropertyDetailModal property={detailProperty} onClose={() => setDetailProperty(null)} />}
       </div>
+    </div>
+  );
+}
+
+/** User-reported (2026-09-08): "Rental Income linking with an account
+ * option is gone." The regular Income & expenses add flow (the shared
+ * `TransactionEntryModal` "Transfers" popup) still has this — confirmed
+ * live, its own "Link to another finance" checkbox + Account picker work
+ * correctly for Rentals. The genuine gap turned out to be here instead:
+ * the semi-automated "Rent collection" approve flow (`logCollection`
+ * below) always called `addRentalEntry` directly with no linking option
+ * at all — unlike every other module's own "approve and log" shortcut
+ * (EMI's `LinkedEMIRepaymentFields`, which this mirrors exactly), so
+ * approving a real rent collection never actually credited the real
+ * Bank/Cash account it was deposited into. Rent is always RENT_INCOME
+ * (never EXPENSE) here, so — per `interEntityLink.ts`'s own documented
+ * exception for Rentals having no real balance of its own — the property
+ * is always the `from` side and the real Bank/Cash account is always
+ * `to`, unlike EMI where the paying account is always `from`. */
+function LinkedRentCollectionFields({
+  property,
+  amount,
+  date,
+  onLinked,
+}: {
+  property: Property;
+  amount: number;
+  date: string;
+  onLinked: () => void;
+}) {
+  const ensureSignedIn = useEnsureSignedIn();
+  const bankAccounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
+  const cashCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
+  const propertySide: LinkSideConfig = { module: 'rentals', ref: property.id };
+  const remembered = getLastTransferSource(propertySide);
+  const [otherModule, setOtherModule] = useState<'bank' | 'cash'>(remembered?.module === 'cash' ? 'cash' : 'bank');
+  const [otherAccountId, setOtherAccountId] = useState(remembered?.ref ?? bankAccounts[0]?.id ?? '');
+
+  const create = async () => {
+    if (!(amount > 0)) return toast('Enter an amount greater than zero.');
+    if (otherModule === 'bank' && !otherAccountId) return toast('Add a bank account on the Banking page first.');
+    if (!(await ensureSignedIn('Sign in to link this collection.'))) return;
+    const other: LinkSideConfig = otherModule === 'bank' ? { module: 'bank', ref: otherAccountId } : { module: 'cash', currencyCode: cashCurrency };
+    const result = createLinkedTransfer({ date, fromAmount: amount, toAmount: amount, from: propertySide, to: other });
+    if ('error' in result) return toast(result.error);
+    rememberTransferSource(propertySide, other);
+    toast('Linked rent collection logged — also recorded on the other side.');
+    onLinked();
+  };
+
+  return (
+    <div className="row" style={{ gap: 6, alignItems: 'flex-end' }}>
+      <select value={otherModule} onChange={(e) => setOtherModule(e.target.value as 'bank' | 'cash')}>
+        <option value="bank">Bank account</option>
+        <option value="cash">Cash</option>
+      </select>
+      {otherModule === 'bank' && (
+        bankAccounts.length ? (
+          <select value={otherAccountId} onChange={(e) => setOtherAccountId(e.target.value)}>
+            {bankAccounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.currencyCode})</option>)}
+          </select>
+        ) : (
+          <span className="text-muted">No bank accounts yet.</span>
+        )
+      )}
+      <button className="btn small" onClick={create}>Link &amp; log</button>
     </div>
   );
 }
@@ -288,12 +393,26 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
   const proposal = proposeRentCollection(property);
   const [collectDate, setCollectDate] = useState(proposal?.dueDate ?? '');
   const [collectAmount, setCollectAmount] = useState(proposal?.amount ?? 0);
+  const [collectLinkMode, setCollectLinkMode] = useState(false);
   const lastProposalDueDate = useRef(proposal?.dueDate);
   if (proposal && lastProposalDueDate.current !== proposal.dueDate) {
     lastProposalDueDate.current = proposal.dueDate;
     setCollectDate(proposal.dueDate);
     setCollectAmount(proposal.amount);
   }
+
+  // Shared post-collection bookkeeping (advance the collection cycle's own
+  // anchor date + carry any partial-payment shortfall forward) — used by
+  // both the plain and the linked-to-a-real-account path below, since
+  // `LinkedRentCollectionFields` only knows how to create the linked
+  // transfer itself, not this property-specific cycle state.
+  const applyCollectionResult = () => {
+    if (!proposal) return;
+    const pendingRentBalance = nextPendingBalance(proposal.amount, collectAmount);
+    updateProperty(property.id, { lastCollectionDate: collectDate, pendingRentBalance });
+    setLease((prev) => ({ ...prev, lastCollectionDate: collectDate, pendingRentBalance }));
+    return pendingRentBalance;
+  };
 
   const logCollection = async () => {
     if (!proposal) return;
@@ -304,10 +423,8 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
     if (!ok) return;
     if (!(await ensureSignedIn('Sign in to record this transaction.'))) return;
     addRentalEntry({ id: uid(), propertyId: property.id, date: collectDate, isDeposit: true, amount: collectAmount, categoryID: RENT_CATEGORY_ID });
-    const pendingRentBalance = nextPendingBalance(proposal.amount, collectAmount);
-    updateProperty(property.id, { lastCollectionDate: collectDate, pendingRentBalance });
-    setLease((prev) => ({ ...prev, lastCollectionDate: collectDate, pendingRentBalance }));
-    toast(pendingRentBalance > 0 ? `Logged — ${fmtMoney(pendingRentBalance, property.currencyCode)} still pending, carried to next cycle.` : 'Logged to the ledger.');
+    const pendingRentBalance = applyCollectionResult();
+    toast(pendingRentBalance ? `Logged — ${fmtMoney(pendingRentBalance, property.currencyCode)} still pending, carried to next cycle.` : 'Logged to the ledger.');
   };
 
   const saveLease = async () => {
@@ -424,7 +541,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
           <h4 style={{ margin: '0 0 6px' }}>Rent collection</h4>
           {proposal ? (
             <>
-              <p className="footer-note" style={{ marginBottom: 8 }}>
+              <p className="text-muted" style={{ marginBottom: 8 }}>
                 {proposal.isDue ? 'Due for collection' : 'Next collection'} — approve to log it, or adjust the date/amount first
                 (e.g. a partial payment).
                 {(property.pendingRentBalance ?? 0) > 0 && (
@@ -439,11 +556,24 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
                 <Field label="Amount" title="Pre-filled with the full expected amount — lower it to record a partial payment; the shortfall carries into the next proposal.">
                   <TextInput type="number" step="0.01" value={collectAmount} onChange={(e) => setCollectAmount(Number(e.target.value))} />
                 </Field>
-                <button className="btn" onClick={logCollection}>Approve &amp; log</button>
+                {collectLinkMode ? (
+                  <LinkedRentCollectionFields
+                    property={property}
+                    amount={collectAmount}
+                    date={collectDate}
+                    onLinked={() => { applyCollectionResult(); setCollectLinkMode(false); }}
+                  />
+                ) : (
+                  <button className="btn" onClick={logCollection}>Approve &amp; log</button>
+                )}
               </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>
+                <input type="checkbox" checked={collectLinkMode} onChange={(e) => setCollectLinkMode(e.target.checked)} />
+                Link this to a Bank account or Cash (creates a matching entry there too, instead of just here)
+              </label>
             </>
           ) : (
-            <p className="footer-note">Set a Last collection date (or a Lease start) above so the next due date can be computed.</p>
+            <p className="text-muted">Set a Last collection date (or a Lease start) above so the next due date can be computed.</p>
           )}
         </Card>
       )}
@@ -457,7 +587,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
               <tr key={p.id}>
                 <td>{p.date}</td>
                 <td>{fmtMoney(p.amount, property.currencyCode)}</td>
-                <td>{p.executed ? <span className="pill-buy">Done</span> : <span className="footer-note">Planned</span>}</td>
+                <td>{p.executed ? <span className="pill-positive">Done</span> : <span className="text-muted">Planned</span>}</td>
                 <td>
                   {!p.executed && (
                     <>
@@ -468,7 +598,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
                 </td>
               </tr>
             ))}
-            {!propertyPlans.length && <tr><td colSpan={4} className="footer-note">No projected plans yet — fill in lease details above and click "Generate projected rent."</td></tr>}
+            {!propertyPlans.length && <tr><td colSpan={4} className="text-muted">No projected plans yet — fill in lease details above and click "Generate projected rent."</td></tr>}
           </tbody>
         </table>
       </div>
@@ -531,7 +661,7 @@ function AnalyticsTab() {
   const rollup = useMemo(() => (selectedProperty ? propertyMonthlyRollup(selectedProperty, entries) : []), [selectedProperty, entries]);
 
   if (!properties.length) {
-    return <p className="footer-note">Add a property first (Properties tab) to see charts here.</p>;
+    return <p className="text-muted">Add a property first (Properties tab) to see charts here.</p>;
   }
 
   return (
@@ -550,7 +680,7 @@ function AnalyticsTab() {
           </Select>
         </Field>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginTop: 12 }}>
+      <div className="grid-auto" style={{ ...gridAutoStyle(320, 16), marginTop: 12 }}>
         <ChartCard title="Net income by property" empty={!netByProperty.length}>
           <Bar
             data={{
@@ -689,7 +819,11 @@ function EditEntryModal({ entry, onClose }: { entry: RentalEntry; onClose: () =>
           onTimezoneChange={(timezone) => setDraft({ ...draft, timezone })}
         />
       </div>
-      <p className="footer-note" style={{ marginTop: 8 }}>
+      <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }} title="Not yet cleared — excluded from Net income until unchecked.">
+        <input type="checkbox" checked={!!draft.isPending} onChange={(e) => setDraft({ ...draft, isPending: e.target.checked })} />
+        Pending (not yet cleared)
+      </label>
+      <p className="text-muted" style={{ marginTop: 8 }}>
         {draft.source === 'statement-import' ? `Imported${draft.statementRef ? ` from ${draft.statementRef}` : ''}` : 'Entered manually'}
       </p>
     </FinanceEditModal>
@@ -702,6 +836,8 @@ function EditEntryModal({ entry, onClose }: { entry: RentalEntry; onClose: () =>
 function EntriesList({ property }: { property: Property }) {
   const allEntries = useRentalsWorkbookStore((s) => s.workbook.entries);
   const deleteEntry = useRentalsWorkbookStore((s) => s.deleteEntry);
+  const updateEntry = useRentalsWorkbookStore((s) => s.updateEntry);
+  const ensureSignedIn = useEnsureSignedIn();
   const categories = useCategoryStore((s) => s.workbook.categories);
   const links = useInterEntityTransfersStore((s) => s.workbook.entries);
   const sideLabel = useLinkSideLabel();
@@ -775,21 +911,36 @@ function EntriesList({ property }: { property: Property }) {
             return (
               <tr key={e.id}>
                 <td>{e.date}</td>
-                <td className={e.isDeposit ? 'pill-buy' : 'pill-sell'}>{e.isDeposit ? 'Rent income' : 'Expense'}</td>
-                <td className={e.isDeposit ? 'pill-buy' : 'pill-sell'}>{fmtMoney(e.isDeposit ? e.amount : -e.amount, property.currencyCode)}</td>
+                <td className={e.isDeposit ? 'pill-positive' : 'pill-negative'}>{e.isDeposit ? 'Rent income' : 'Expense'}</td>
+                <td className={e.isDeposit ? 'pill-positive' : 'pill-negative'}>{fmtMoney(e.isDeposit ? e.amount : -e.amount, property.currencyCode)}</td>
                 <td>{e.isDeposit ? '—' : <span className="pill-info">{categoryName(e.categoryID, categories)}</span>}</td>
                 <td className="cell-clip" title={e.note}>
                   {e.note}
+                  {e.isPending && (
+                    <span className="pill-warn" style={{ marginLeft: 6 }} title="Not yet cleared — excluded from Net income above until marked cleared.">Pending</span>
+                  )}
                   {link && (
                     <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
                       🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
                     </Link>
                   )}
                 </td>
-                <td className="footer-note cell-clip" title={e.source === 'statement-import' ? `Import${e.statementRef ? ` (${e.statementRef})` : ''}` : 'Manual'}>
+                <td className="text-muted cell-clip" title={e.source === 'statement-import' ? `Import${e.statementRef ? ` (${e.statementRef})` : ''}` : 'Manual'}>
                   {e.source === 'statement-import' ? `Import${e.statementRef ? ` (${e.statementRef})` : ''}` : 'Manual'}
                 </td>
                 <td>
+                  {e.isPending && (
+                    <IconButton
+                      label="Mark cleared"
+                      icon={<CheckIcon size={13} />}
+                      align="right"
+                      onClick={async () => {
+                        if (!(await ensureSignedIn('Sign in to update this entry.'))) return;
+                        updateEntry(e.id, { isPending: false });
+                        toast('Marked cleared.');
+                      }}
+                    />
+                  )}{' '}
                   <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => setEditingEntry(e)} />{' '}
                   <IconButton
                     label="Delete"
@@ -803,7 +954,7 @@ function EntriesList({ property }: { property: Property }) {
           })}
           {!sorted.length && (
             <tr>
-              <td colSpan={7} className="footer-note">
+              <td colSpan={7} className="text-muted">
                 {allPropertyEntries.length ? 'No entries match these filters.' : 'No entries for this property yet.'}
               </td>
             </tr>
@@ -893,12 +1044,12 @@ function ImportTab() {
   };
 
   if (!properties.length) {
-    return <p className="footer-note">Add a property first (Properties tab) before importing entries.</p>;
+    return <p className="text-muted">Add a property first (Properties tab) before importing entries.</p>;
   }
 
   return (
     <div>
-      <p className="footer-note" style={{ marginBottom: 12 }}>
+      <p className="text-muted" style={{ marginBottom: 12 }}>
         Import a CSV export of rent/expense entries for one property. This is a simple "map these columns" tool —
         pick which column is which below. A positive amount is treated as rent income, negative as an expense
         (check "Flip sign" if your export does the opposite).
@@ -921,7 +1072,7 @@ function ImportTab() {
             e.target.value = '';
           }}
         />
-        {fileName && <span className="footer-note" style={{ marginLeft: 8 }}>{fileName} ({rows.length} rows)</span>}
+        {fileName && <span className="text-muted" style={{ marginLeft: 8 }}>{fileName} ({rows.length} rows)</span>}
       </div>
 
       {headers.length > 0 && (
@@ -944,7 +1095,7 @@ function ImportTab() {
                 {headers.map((h) => <option key={h} value={h}>{h}</option>)}
               </Select>
             </Field>
-            <label className="footer-note" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 20 }} title="Check this if your export uses positive numbers for expenses.">
+            <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 20 }} title="Check this if your export uses positive numbers for expenses.">
               <input type="checkbox" checked={flipSign} onChange={(e) => setFlipSign(e.target.checked)} />
               Flip sign
             </label>
@@ -958,7 +1109,7 @@ function ImportTab() {
                 {mappedPreview.map((r, i) => (
                   <tr key={i}>
                     <td>{r.date}</td>
-                    <td className={r.isDeposit ? 'pill-buy' : 'pill-sell'}>{r.isDeposit ? 'Rent income' : 'Expense'}</td>
+                    <td className={r.isDeposit ? 'pill-positive' : 'pill-negative'}>{r.isDeposit ? 'Rent income' : 'Expense'}</td>
                     <td>{property ? fmtMoney(r.amount, property.currencyCode) : r.amount}</td>
                     <td>{r.category || '—'}</td>
                   </tr>
@@ -983,7 +1134,7 @@ function CategoryAndRollup({ property }: { property: Property }) {
   const cats = Object.keys(byCategory);
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px,1fr))', gap: 16, marginBottom: 16 }}>
+    <div className="grid-auto" style={{ ...gridAutoStyle(260, 16), marginBottom: 16 }}>
       {cats.length > 0 && (
         <CollapsibleCard title={<h3 style={{ margin: 0 }}>By category</h3>}>
           <div className="table-scroll">
@@ -992,7 +1143,7 @@ function CategoryAndRollup({ property }: { property: Property }) {
                 {cats.map((cat) => (
                   <tr key={cat}>
                     <td>{cat}</td>
-                    <td className={byCategory[cat] >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(byCategory[cat], property.currencyCode)}</td>
+                    <td className={byCategory[cat] >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(byCategory[cat], property.currencyCode)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1011,7 +1162,7 @@ function CategoryAndRollup({ property }: { property: Property }) {
                     <td>{r.month}</td>
                     <td>{fmtMoney(r.income, property.currencyCode)}</td>
                     <td>{fmtMoney(r.expense, property.currencyCode)}</td>
-                    <td className={r.net >= 0 ? 'pill-buy' : 'pill-sell'}>{fmtMoney(r.net, property.currencyCode)}</td>
+                    <td className={r.net >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(r.net, property.currencyCode)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1035,7 +1186,7 @@ function EntriesTab({
   setPropertyId: (id: string) => void;
 }) {
   if (!properties.length) {
-    return <p className="footer-note">Add a property first (Properties tab) before logging income/expenses.</p>;
+    return <p className="text-muted">Add a property first (Properties tab) before logging income/expenses.</p>;
   }
 
   return (
@@ -1179,7 +1330,7 @@ export function RentalsPage({
   return (
     <div>
       <h1 className="pagetitle">Rentals</h1>
-      <p className="footer-note" style={{ marginBottom: 12 }}>
+      <p className="text-muted" style={{ marginBottom: 12 }}>
         Rental property income and expenses — recurring rent received and costs (maintenance, property tax,
         management fees) against one or more properties, not discrete buy/sell trades.
       </p>
@@ -1209,7 +1360,7 @@ export function RentalsPage({
             label: 'Settings',
             content: (
               <div>
-                <p className="footer-note" style={{ marginTop: 0 }}>
+                <p className="text-muted" style={{ marginTop: 0 }}>
                   Sign-in, profile, appearance, and a whole-app backup live on the{' '}
                   <Link to="/account">Account page →</Link>. What's below is specific to Rentals.
                 </p>

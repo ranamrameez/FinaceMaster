@@ -7,7 +7,7 @@ import { Modal } from '../../../components/Modal';
 import { Notice } from '../../../components/Notice';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { hueStyle } from '../../../lib/statCardHues';
-import { ArchiveIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { ArchiveIcon, CheckIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, StarIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
@@ -15,17 +15,19 @@ import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
 import { FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
+import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { ReorderButtons } from '../../../components/ui/ReorderButtons';
-import { toInstantMs } from '../../../lib/datetime';
-import { CURRENCIES } from '../../../lib/currencies';
+import { dateOnlyMs } from '../../../lib/datetime';
 import { parseCSV, toCSV } from '../../../lib/csv';
 import { fmtMoney } from '../../../lib/format';
 import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
 import {
   loanBalanceHistory,
   loanOutstanding,
+  loanPendingImpact,
+  netPendingByCurrency,
   netPositionByCurrency,
   outstandingByLoan,
   projectPayoff,
@@ -43,6 +45,7 @@ import { useInterEntityTransfersStore } from '../../../store/interEntityTransfer
 import { linkTargetPath, useLinkSideLabel } from '../../transfers/pages/TransferLinksPage';
 import type { PersonalLoan, PersonalLoanRepayment } from '../../../types/personalLoansWorkbook';
 import { ChartCard } from '../../qse/components/ChartCard';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -54,18 +57,29 @@ function NetPositionSummary() {
   const loans = usePersonalLoansWorkbookStore((s) => s.workbook.loans);
   const repayments = usePersonalLoansWorkbookStore((s) => s.workbook.repayments);
   const net = netPositionByCurrency(loans, repayments);
+  const pending = netPendingByCurrency(loans, repayments);
   const codes = Object.keys(net);
   if (!codes.length) return null;
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px,1fr))', gap: 8, marginBottom: 16 }}>
-      {codes.map((code) => (
-        <div key={code} className="stat-card card" style={hueStyle(net[code] >= 0 ? 'var(--profit)' : 'var(--loss)')}>
-          <div className="label">Net position ({code})</div>
-          <MoneyValue n={net[code]} currency={code} />
-          <div className="sub">{net[code] >= 0 ? 'Net owed to you' : 'Net you owe'}</div>
-        </div>
-      ))}
+    <div className="grid-auto" style={{ ...gridAutoStyle(150, 8), marginBottom: 16 }}>
+      {codes.map((code) => {
+        const realPending = pending[code] ?? 0;
+        return (
+          <div key={code} className="stat-card card" style={hueStyle(net[code] >= 0 ? 'var(--profit)' : 'var(--loss)')}>
+            <div className="label">Net position ({code})</div>
+            <MoneyValue n={net[code]} currency={code} />
+            <div className="sub">{net[code] >= 0 ? 'Net owed to you' : 'Net you owe'}</div>
+            {/* User-requested (2026-09-08): don't just exclude pending
+               repayments from the headline figure — show it too. */}
+            {realPending !== 0 && (
+              <div className="sub">
+                {realPending > 0 ? '+' : ''}{fmtMoney(realPending, code)} pending → {fmtMoney(net[code] + realPending, code)} incl. pending
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -95,7 +109,7 @@ function AnalyticsTab() {
   );
 
   if (!currencies.length) {
-    return <p className="footer-note">Add a loan first to see charts here.</p>;
+    return <p className="text-muted">Add a loan first to see charts here.</p>;
   }
 
   return (
@@ -107,7 +121,7 @@ function AnalyticsTab() {
           </Select>
         </Field>
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginTop: 12 }}>
+      <div className="grid-auto" style={{ ...gridAutoStyle(320, 16), marginTop: 12 }}>
         <ChartCard title="Outstanding by loan" empty={!outstandingRows.length}>
           <Bar
             data={{
@@ -184,6 +198,7 @@ export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: strin
   const [lastCurrency, setLastCurrency] = useLastCurrency('personalLoans', defaultCurrency);
   const ensureSignedIn = useEnsureSignedIn();
   const [l, setL] = useState<PersonalLoan>(() => emptyLoan(initialCurrency ?? lastCurrency));
+  const currencyOptions = useEnabledCurrencies(l.currencyCode);
 
   const submit = async () => {
     if (!l.person.trim()) return toast('Enter a person/lender name.');
@@ -210,7 +225,7 @@ export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: strin
         </Field>
         <Field label="Currency" width={100} required>
           <Select value={l.currencyCode} onChange={(e) => { setL({ ...l, currencyCode: e.target.value }); setLastCurrency(e.target.value); }}>
-            {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+            {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </Select>
         </Field>
         <Field label="Principal" width={110} required title="The original amount of the loan, before any repayments.">
@@ -327,7 +342,7 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
   // sorting is gone here, replaced by `ReorderButtons` for the one thing
   // that genuinely needs fixing (two same-instant repayments in the wrong
   // relative order).
-  const instantOf = (r: PersonalLoanRepayment) => toInstantMs(r.date, r.time, r.timezone);
+  const instantOf = (r: PersonalLoanRepayment) => dateOnlyMs(r.date);
   const sorted = useMemo(
     () => [...filteredRepayments].sort((a, b) => instantOf(b) - instantOf(a) || (b.seq ?? 0) - (a.seq ?? 0)),
     [filteredRepayments],
@@ -385,8 +400,12 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                     <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
                     <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 90 }} /></td>
                     <td></td>
-                    <td className="footer-note cell-clip">{r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}</td>
+                    <td className="text-muted cell-clip">{r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}</td>
                     <td>
+                      <label className="text-muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }} title="Not yet cleared — excluded from Outstanding until unchecked.">
+                        <input type="checkbox" checked={!!editRow.isPending} onChange={(e) => setEditRow({ ...editRow, isPending: e.target.checked })} />
+                        Pending
+                      </label>{' '}
                       <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
                       <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditId(null)} />
                     </td>
@@ -406,6 +425,11 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                     </td>
                     <td>
                       {fmtMoney(r.amount, loan.currencyCode)}
+                      {r.isPending && (
+                        <Tooltip text="Not yet cleared — excluded from Outstanding above until marked cleared.">
+                          <span className="pill-warn" style={{ marginLeft: 6 }}>Pending</span>
+                        </Tooltip>
+                      )}
                       {link && (
                         <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
                           🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
@@ -417,10 +441,22 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                         <span>{fmtMoney(remaining.get(r.id) ?? 0, loan.currencyCode)}</span>
                       </Tooltip>
                     </td>
-                    <td className="footer-note cell-clip" title={r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}>
+                    <td className="text-muted cell-clip" title={r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}>
                       {r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}
                     </td>
                     <td>
+                      {r.isPending && (
+                        <IconButton
+                          label="Mark cleared"
+                          icon={<CheckIcon size={13} />}
+                          align="right"
+                          onClick={async () => {
+                            if (!(await ensureSignedIn('Sign in to update this repayment.'))) return;
+                            updateRepayment(r.id, { isPending: false });
+                            toast('Marked cleared.');
+                          }}
+                        />
+                      )}{' '}
                       <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(r)} />{' '}
                       <IconButton
                         label="Delete"
@@ -434,7 +470,7 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
               })}
               {!sorted.length && (
                 <tr>
-                  <td colSpan={5} className="footer-note">
+                  <td colSpan={5} className="text-muted">
                     {repayments.length ? 'No repayments match this filter.' : 'No repayments logged yet.'}
                   </td>
                 </tr>
@@ -528,7 +564,7 @@ function ImportRepaymentsSection({ loan }: { loan: PersonalLoan }) {
             e.target.value = '';
           }}
         />
-        {fileName && <span className="footer-note">{fileName} ({rows.length} rows)</span>}
+        {fileName && <span className="text-muted">{fileName} ({rows.length} rows)</span>}
       </div>
 
       {headers.length > 0 && (
@@ -611,7 +647,7 @@ function PayoffPlanner({ loan, outstanding }: { loan: PersonalLoan; outstanding:
   return (
     <Card style={{ marginBottom: 16 }}>
       <h4 style={{ marginTop: 0 }}>Payoff planner</h4>
-      <p className="footer-note" style={{ marginTop: 0 }}>
+      <p className="text-muted" style={{ marginTop: 0 }}>
         A quick "what if" — see how many months it'd take to clear the remaining {fmtMoney(outstanding, loan.currencyCode)}
         {' '}at a repayment rate you pick. Not saved anywhere, just a live estimate.
       </p>
@@ -625,7 +661,7 @@ function PayoffPlanner({ loan, outstanding }: { loan: PersonalLoan; outstanding:
             <strong>{projection.months} month{projection.months === 1 ? '' : 's'}</strong>, around <strong>{projection.payoffDate}</strong>.
           </p>
         ) : (
-          <p className="footer-note" style={{ marginBottom: 0 }}>Enter a positive monthly amount to project a payoff date.</p>
+          <p className="text-muted" style={{ marginBottom: 0 }}>Enter a positive monthly amount to project a payoff date.</p>
         )
       )}
     </Card>
@@ -639,7 +675,9 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
   const ensureSignedIn = useEnsureSignedIn();
   const [editing, setEditing] = useState(!!startInEditMode);
   const [editRow, setEditRow] = useState<PersonalLoan>(loan);
+  const currencyOptions = useEnabledCurrencies(editRow.currencyCode);
   const outstanding = loanOutstanding(loan, repayments);
+  const pendingImpact = loanPendingImpact(loan, repayments);
 
   // User-requested (2026-09-03): "add isActive flag to all modules where
   // applicable" — same archive/restore pattern as `BankAccount.isActive`.
@@ -669,7 +707,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
               </Field>
               <Field label="Currency">
                 <Select value={editRow.currencyCode} onChange={(e) => setEditRow({ ...editRow, currencyCode: e.target.value })}>
-                  {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+                  {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
                 </Select>
               </Field>
               <Field label="Principal">
@@ -699,10 +737,10 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
                 {loan.person}
                 {loan.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Archived</span>}
               </div>
-              <div className="footer-note">
+              <div className="text-muted">
                 {loan.direction === 'owed_to_me' ? 'Money lent out' : 'Money I owe'} · {loan.currencyCode} · since {loan.date}
               </div>
-              {loan.note && <div className="footer-note">{loan.note}</div>}
+              {loan.note && <div className="text-muted">{loan.note}</div>}
             </div>
             <div className="row" style={{ gap: 8 }}>
               <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => { setEditRow(loan); setEditing(true); }} />
@@ -726,7 +764,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
             </div>
           </div>
         )}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: 8, marginTop: 12 }}>
+        <div className="grid-auto" style={{ ...gridAutoStyle(120, 8), marginTop: 12 }}>
           <div className="stat-card card">
             <Tooltip text="The original amount of the loan, before any repayments.">
               <div className="label" style={{ cursor: 'pointer' }}>Principal</div>
@@ -738,6 +776,11 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
               <div className="label" style={{ cursor: 'pointer' }}>Outstanding</div>
             </Tooltip>
             <MoneyValue n={outstanding} currency={loan.currencyCode} />
+            {pendingImpact !== 0 && (
+              <div className="sub">
+                -{fmtMoney(pendingImpact, loan.currencyCode)} pending → {fmtMoney(Math.max(0, outstanding - pendingImpact), loan.currencyCode)} incl. pending
+              </div>
+            )}
           </div>
         </div>
       </Card>
@@ -755,19 +798,31 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
 function LoanList({ onSelect, onEdit }: { onSelect: (loan: PersonalLoan) => void; onEdit: (loan: PersonalLoan) => void }) {
   const allLoans = usePersonalLoansWorkbookStore((s) => s.workbook.loans);
   const repayments = usePersonalLoansWorkbookStore((s) => s.workbook.repayments);
+  const updateLoan = usePersonalLoansWorkbookStore((s) => s.updateLoan);
+  const ensureSignedIn = useEnsureSignedIn();
   const [filter, setFilter] = useState<'all' | 'owed_to_me' | 'i_owe'>('all');
   const [showArchived, setShowArchived] = useState(false);
   const archivedCount = useMemo(() => allLoans.filter((l) => l.isActive === false).length, [allLoans]);
   const loans = useMemo(() => (showArchived ? allLoans : allLoans.filter((l) => l.isActive !== false)), [allLoans, showArchived]);
   const filtered = filter === 'all' ? loans : loans.filter((l) => l.direction === filter);
+  // Pending item 115(c): Sr# = the loan's own stable position in the
+  // underlying (unfiltered) array, creation order — not this table's own
+  // live sort. Same convention as Bank/Funds.
+  const srNumOf = useMemo(() => new Map(allLoans.map((l, i) => [l.id, i + 1])), [allLoans]);
+
+  const toggleFavorite = async (l: PersonalLoan) => {
+    if (!(await ensureSignedIn(l.isFavorite ? 'Sign in to unfavorite this loan.' : 'Sign in to favorite this loan.'))) return;
+    updateLoan(l.id, { isFavorite: !l.isFavorite });
+  };
 
   type Row = { loan: PersonalLoan; outstanding: number };
   const rows: Row[] = filtered.map((loan) => ({ loan, outstanding: loanOutstanding(loan, repayments) }));
-  type Col = 'person' | 'direction' | 'outstanding';
+  type Col = 'person' | 'direction' | 'outstanding' | 'favorite';
   const sortValue = (r: Row, col: Col): number | string => {
     switch (col) {
       case 'direction': return r.loan.direction;
       case 'outstanding': return r.outstanding;
+      case 'favorite': return r.loan.isFavorite ? 1 : 0;
       default: return r.loan.person;
     }
   };
@@ -789,15 +844,24 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: PersonalLoan) => void
       </div>
       <div className="table-scroll">
         <table>
-          <thead><tr><Th col="person">Person</Th><Th col="direction">Direction</Th><Th col="outstanding">Outstanding</Th><th></th></tr></thead>
+          <thead><tr><th>#</th><Th col="favorite">★</Th><Th col="person">Person</Th><Th col="direction">Direction</Th><Th col="outstanding">Outstanding</Th><th></th></tr></thead>
           <tbody>
             {sorted.map(({ loan: l, outstanding }) => (
               <tr key={l.id} onClick={() => onSelect(l)} style={{ cursor: 'pointer' }}>
+                <td className="text-muted">{srNumOf.get(l.id)}</td>
+                <td>
+                  <IconButton
+                    label={l.isFavorite ? 'Unfavorite' : 'Favorite'}
+                    icon={<StarIcon size={13} filled={l.isFavorite} />}
+                    align="right"
+                    onClick={(e) => { e.stopPropagation(); toggleFavorite(l); }}
+                  />
+                </td>
                 <td>
                   {l.person}
                   {l.isActive === false && <span className="pill-warn" style={{ fontSize: 10, marginLeft: 6 }}>Archived</span>}
                 </td>
-                <td className={l.direction === 'owed_to_me' ? 'pill-buy' : 'pill-sell'}>{l.direction === 'owed_to_me' ? 'Lent out' : 'I owe'}</td>
+                <td className={l.direction === 'owed_to_me' ? 'pill-positive' : 'pill-negative'}>{l.direction === 'owed_to_me' ? 'Lent out' : 'I owe'}</td>
                 <td>{fmtMoney(outstanding, l.currencyCode)}</td>
                 <td>
                   <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={(e) => { e.stopPropagation(); onEdit(l); }} />{' '}
@@ -807,7 +871,7 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: PersonalLoan) => void
             ))}
             {!sorted.length && (
               <tr>
-                <td colSpan={4} className="footer-note">
+                <td colSpan={6} className="text-muted">
                   {allLoans.length ? 'Every loan is archived — click "Show archived" above to see them.' : 'No personal loans yet.'}
                 </td>
               </tr>
@@ -888,7 +952,7 @@ export function PersonalLoansPage({
   return (
     <div>
       <h1 className="pagetitle">Personal Loans</h1>
-      <p className="footer-note" style={{ marginBottom: 12 }}>
+      <p className="text-muted" style={{ marginBottom: 12 }}>
         Informal loans with another person, tracked in either direction — money you lent out, or money you owe —
         with a combined net position. No repayment schedule automation; if this loan actually has a real interest
         schedule, it probably belongs in EMI/Loans instead.
