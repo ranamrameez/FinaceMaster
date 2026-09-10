@@ -137,7 +137,7 @@ export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: strin
 
   return (
     <div>
-      <div className="row" style={{ gap: 8 }}>
+      <div className="row gap-sm">
         <Field label="Loan name" width={160} required>
           <TextInput value={l.name} onChange={(e) => setL({ ...l, name: e.target.value })} placeholder="e.g. Home Mortgage" />
         </Field>
@@ -619,7 +619,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
         }
         headerExtra={
           editing ? (
-            <div className="row" style={{ gap: 8 }}>
+            <div className="row gap-sm">
               <IconButton
                 label="Save"
                 icon={<SaveIcon size={13} />}
@@ -633,7 +633,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
               <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditing(false)} />
             </div>
           ) : (
-            <div className="row" style={{ gap: 8 }}>
+            <div className="row gap-sm">
               <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => { setEditRow(loan); setEditing(true); }} />
               <IconButton
                 label={loan.isActive === false ? 'Reopen' : 'Close'}
@@ -661,7 +661,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
         }
       >
         {editing && (
-          <div className="row" style={{ gap: 8 }}>
+          <div className="row gap-sm">
             <Field label="Loan name">
               <TextInput value={editRow.name} onChange={(e) => setEditRow({ ...editRow, name: e.target.value })} />
             </Field>

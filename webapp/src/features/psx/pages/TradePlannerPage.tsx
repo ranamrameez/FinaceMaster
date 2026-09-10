@@ -108,7 +108,7 @@ function NewPlanForm() {
           </button>
         </div>
       ))}
-      <div className="row" style={{ gap: 8 }}>
+      <div className="row gap-sm">
         <button className="btn secondary" onClick={() => setLegs((rs) => [...rs, { date: today(), action: 'BUY', shares: 0, price: 0 }])}>
           <PlusIcon />Add leg
         </button>
@@ -400,7 +400,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
   // toggling the accordion (harmless no-op in the full-screen branch below,
   // which has no accordion to stop propagation from).
   const titleBlock: ReactNode = editingMeta ? (
-    <div className="row" style={{ gap: 8 }} onClick={(e) => e.stopPropagation()}>
+    <div className="row gap-sm" onClick={(e) => e.stopPropagation()}>
       <TextInput value={name} onChange={(e) => setName(e.target.value)} />
       <TextInput value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes" />
       <TextInput

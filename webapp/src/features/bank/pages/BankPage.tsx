@@ -117,7 +117,7 @@ function CreditCardFields({ value, onChange, datalistId }: { value: CreditCardVa
       </label>
       {value.isLiability && (
         <div style={{ marginTop: 8 }}>
-          <div className="row" style={{ gap: 8 }}>
+          <div className="row gap-sm">
             <Field label="Credit limit (optional)" width={140}>
               <TextInput type="number" step="0.01" value={value.creditLimit ?? ''} onChange={(e) => onChange({ creditLimit: e.target.value ? Number(e.target.value) : undefined })} />
             </Field>
@@ -422,7 +422,7 @@ function AccountFormFields({
       <div className="row" style={{ gap: 8, marginBottom: 8 }}>
         <BankIdentityField value={value} onChange={onChange} idSuffix={idSuffix} />
       </div>
-      <div className="row" style={{ gap: 8 }}>
+      <div className="row gap-sm">
         <Field label="Account name" width={180} required>
           <TextInput value={value.name} onChange={(e) => onChange({ name: e.target.value })} placeholder="e.g. Meezan Checking" />
         </Field>
@@ -1293,7 +1293,7 @@ function EditTransactionModal({ tx, onClose }: { tx: BankTransaction; onClose: (
 
   return (
     <FinanceEditModal titleText="Edit transaction" onClose={onClose} onSave={save}>
-      <div className="row" style={{ gap: 8 }}>
+      <div className="row gap-sm">
         <Field label="Date">
           <TextInput type="date" value={draft.date} onChange={(e) => setDraft({ ...draft, date: e.target.value })} />
         </Field>
@@ -1821,7 +1821,7 @@ function ImportStatementSection({ account }: { account: BankAccount }) {
 
       {headers.length > 0 && (
         <div style={{ marginTop: 12 }}>
-          <div className="row" style={{ gap: 8 }}>
+          <div className="row gap-sm">
             <Field label="Date column" width={160}>
               <Select value={dateCol} onChange={(e) => setDateCol(e.target.value)}>
                 {headers.map((h) => <option key={h} value={h}>{h}</option>)}
@@ -2028,7 +2028,7 @@ function AddBankPlanForm({ accountId, onSaved }: { accountId: string; onSaved?: 
 
   return (
     <div>
-      <div className="row" style={{ gap: 8 }}>
+      <div className="row gap-sm">
         <Field label="Expected date">
           <TextInput
             type="date"
@@ -2454,7 +2454,7 @@ function DataManagement() {
       <div className="text-muted" style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: 11, letterSpacing: '.04em', marginBottom: 8 }}>
         Data management
       </div>
-      <div className="row" style={{ gap: 8 }}>
+      <div className="row gap-sm">
         <button className="btn secondary" onClick={exportJSON}>Export JSON</button>
         <button className="btn secondary" onClick={() => fileInput.current?.click()}>Import JSON</button>
         <input

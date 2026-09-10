@@ -101,7 +101,7 @@ function AddSubscriptionForm({ onSaved }: { onSaved?: () => void } = {}) {
 
   return (
     <div>
-      <div className="row" style={{ gap: 8 }}>
+      <div className="row gap-sm">
         <Field label="Name" width={160} required>
           <TextInput value={s.name} onChange={(e) => setS({ ...s, name: e.target.value })} placeholder="e.g. Netflix" />
         </Field>
@@ -454,7 +454,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
       <Card style={{ marginBottom: 16 }}>
         {editing ? (
           <div>
-            <div className="row" style={{ gap: 8 }}>
+            <div className="row gap-sm">
               <Field label="Name">
                 <TextInput value={editRow.name} onChange={(e) => setEditRow({ ...editRow, name: e.target.value })} />
               </Field>
@@ -500,7 +500,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
                 {!sub.active && sub.cancelledDate && ` · cancelled ${sub.cancelledDate}`}
               </div>
             </div>
-            <div className="row" style={{ gap: 8 }}>
+            <div className="row gap-sm">
               <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => { setEditRow(sub); setEditing(true); }} />
               <button className="btn secondary small" onClick={toggleActive}>{sub.active ? 'Cancel' : 'Reactivate'}</button>
               <IconButton
@@ -755,7 +755,7 @@ function DataManagement() {
   return (
     <Card>
       <h3 style={{ marginTop: 0 }}>Data management</h3>
-      <div className="row" style={{ gap: 8 }}>
+      <div className="row gap-sm">
         <button className="btn secondary" onClick={exportJSON}>Export JSON</button>
         <button className="btn secondary" onClick={() => fileInput.current?.click()}>Import JSON</button>
         <input

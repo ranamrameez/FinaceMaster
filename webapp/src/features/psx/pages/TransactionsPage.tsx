@@ -69,7 +69,7 @@ export function TransactionRows() {
   return (
     <div>
       {rows.map((r, i) => (
-        <div key={i} className="row entry-row" style={{ gap: 8 }}>
+        <div key={i} className="row entry-row gap-sm">
           <Field label={i === 0 ? 'Date' : undefined}>
             <input
               type="date"
@@ -136,7 +136,7 @@ export function TransactionRows() {
           </button>
         </div>
       ))}
-      <div className="row" style={{ gap: 8 }}>
+      <div className="row gap-sm">
         <button
           className="btn secondary"
           onClick={() => { setRows((rs) => [...rs, emptyRow()]); setTimeTouched((ts) => [...ts, false]); }}
@@ -185,7 +185,7 @@ function AdjustmentForm() {
   const [timeTouched, setTimeTouched] = useState(false);
 
   return (
-    <div className="row" style={{ gap: 8 }}>
+    <div className="row gap-sm">
       <Field label="Date">
         <input
           type="date"

@@ -214,7 +214,7 @@ export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: strin
 
   return (
     <div>
-      <div className="row" style={{ gap: 8 }}>
+      <div className="row gap-sm">
         <Field label="Person / lender" width={160} required>
           <TextInput value={l.person} onChange={(e) => setL({ ...l, person: e.target.value })} placeholder="e.g. Bilal" />
         </Field>
@@ -595,7 +595,7 @@ function ImportRepaymentsSection({ loan }: { loan: PersonalLoan }) {
 
       {headers.length > 0 && (
         <div style={{ marginTop: 12 }}>
-          <div className="row" style={{ gap: 8 }}>
+          <div className="row gap-sm">
             <Field label="Date column" width={160}>
               <Select value={dateCol} onChange={(e) => setDateCol(e.target.value)}>
                 {headers.map((h) => <option key={h} value={h}>{h}</option>)}
@@ -721,7 +721,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
       <Card style={{ marginBottom: 16 }}>
         {editing ? (
           <div>
-            <div className="row" style={{ gap: 8 }}>
+            <div className="row gap-sm">
               <Field label="Person / lender">
                 <TextInput value={editRow.person} onChange={(e) => setEditRow({ ...editRow, person: e.target.value })} />
               </Field>
@@ -768,7 +768,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
               </div>
               {loan.note && <div className="text-muted">{loan.note}</div>}
             </div>
-            <div className="row" style={{ gap: 8 }}>
+            <div className="row gap-sm">
               <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => { setEditRow(loan); setEditing(true); }} />
               <IconButton
                 label={loan.isActive === false ? 'Reopen' : 'Close'}

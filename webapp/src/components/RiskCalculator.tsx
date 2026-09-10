@@ -182,7 +182,7 @@ export function RiskCalculator({
             </Select>
           </Field>
         </div>
-        <div className="row" style={{ gap: 8 }}>
+        <div className="row gap-sm">
           <Field label="Current price" width={100}>
             <TextInput type="number" step="0.001" value={currentPriceInput || ''} onChange={(e) => setCurrentPriceInput(Number(e.target.value))} />
           </Field>

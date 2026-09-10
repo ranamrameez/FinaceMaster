@@ -125,7 +125,7 @@ export function AccountPage({ syncStatuses }: { syncStatuses: ModuleSyncStatus[]
                 Signed in with: <strong>{providers.length ? providers.join(', ') : 'Unknown method'}</strong>
                 {user.email ? <> · {user.email}</> : null}
               </p>
-              <div className="row" style={{ gap: 8 }}>
+              <div className="row gap-sm">
                 <button className="btn secondary" onClick={() => signOutUser().then(() => toast('Signed out.'))}>
                   Sign out
                 </button>

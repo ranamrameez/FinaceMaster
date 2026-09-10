@@ -675,6 +675,14 @@
      wraps onto additional lines once its fields would otherwise drop
      below a usable width, at any viewport size, not just mobile. */
   .row{display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;}
+  /* App-wide CSS cleanup (README Pending item 116, 2026-09-10): a tighter
+     8px gap was hand-repeated 56 times as `style={{ gap: 8 }}` on a
+     `.row` element — always paired with the `row` class, never used
+     alone — extracted into one compound-selector utility class instead.
+     `.row.gap-sm` (specificity 0,2,0) beats the base `.row` rule (0,1,0)
+     unconditionally regardless of source order, so this is a safe,
+     behavior-preserving replacement for the inline override. */
+  .row.gap-sm{gap:8px;}
   /* User-reported (2026-08-27): "Input sizes still inconsistent and taking
      whole 100% width." Root cause: `flex:1` (flex-basis:0%) ignores each
      field's own explicit `width` prop entirely and instead divides the

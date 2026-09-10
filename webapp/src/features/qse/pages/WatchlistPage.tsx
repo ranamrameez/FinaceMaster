@@ -28,7 +28,7 @@ export function WatchlistPage() {
       <h1 className="pagetitle">Watchlist</h1>
 
       <h3>Add to watchlist</h3>
-      <div className="row" style={{ gap: 8 }}>
+      <div className="row gap-sm">
         <input
           placeholder="Ticker"
           value={w.ticker}
