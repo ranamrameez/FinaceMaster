@@ -548,13 +548,13 @@ function OverallSummary() {
               <div className="stat-card card" style={hueStyle(t.profit >= 0 ? 'var(--profit)' : 'var(--loss)')}><div className="label">Net profit</div><MoneyValue n={t.profit} currency={code} after={` (${profitPct.toFixed(1)}%)`} /></div>
               <div className="stat-card card" style={hueStyle(t.expDaily >= 0 ? 'var(--profit)' : 'var(--loss)')}>
                 <Tooltip text="An average of what your funds actually earned/lost per day, based on their real NAV/balance history — not a promise of future returns.">
-                  <div className="label" style={{ cursor: 'pointer' }}>Expected daily P/L</div>
+                  <div className="label clickable">Expected daily P/L</div>
                 </Tooltip>
                 <MoneyValue n={t.expDaily} currency={code} after={` (${expDailyPct.toFixed(2)}%)`} />
               </div>
               <div className="stat-card card" style={hueStyle(t.expMonthly >= 0 ? 'var(--profit)' : 'var(--loss)')}>
                 <Tooltip text="The same average daily rate, scaled to a typical calendar month.">
-                  <div className="label" style={{ cursor: 'pointer' }}>Expected monthly P/L</div>
+                  <div className="label clickable">Expected monthly P/L</div>
                 </Tooltip>
                 <MoneyValue n={t.expMonthly} currency={code} after={` (${expMonthlyPct.toFixed(2)}%)`} />
               </div>
@@ -1176,7 +1176,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
               </div>
               <div className="stat-card card">
                 <Tooltip text="NAV = Net Asset Value, the price of one unit of this fund. This is the average price you paid per unit across all your purchases.">
-                  <div className="label" style={{ cursor: 'pointer' }}>Avg NAV cost</div>
+                  <div className="label clickable">Avg NAV cost</div>
                 </Tooltip>
                 <div className="value">{fmtPrice(avgNav)}</div>
               </div>
@@ -1184,13 +1184,13 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
               <div className="stat-card card"><div className="label">Current value</div><MoneyValue n={currentValue} currency={fund.currencyCode} /></div>
               <div className="stat-card card" style={hueStyle(profit >= 0 ? 'var(--profit)' : 'var(--loss)')}>
                 <Tooltip text="Realized profit from every past withdrawal/sell, plus unrealized profit on units still held — your true total gain, not just what's sitting in the fund right now.">
-                  <div className="label" style={{ cursor: 'pointer' }}>Net profit</div>
+                  <div className="label clickable">Net profit</div>
                 </Tooltip>
                 <MoneyValue n={profit} currency={fund.currencyCode} after={` (${profitPct.toFixed(1)}%)`} />
               </div>
               <div className="stat-card card">
                 <Tooltip text="XIRR: your annualized rate of return, accounting for the exact dates and amounts of every purchase — a fairer comparison than a flat percentage when you've invested at different times.">
-                  <div className="label" style={{ cursor: 'pointer' }}>XIRR</div>
+                  <div className="label clickable">XIRR</div>
                 </Tooltip>
                 <div className="value">{rate !== null ? `${(rate * 100).toFixed(1)}%` : '—'}</div>
               </div>
@@ -1198,13 +1198,13 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                   PL+PL%age... on each item page." */}
               <div className="stat-card card" style={hueStyle(plRate && plRate.dailyAmount < 0 ? 'var(--loss)' : 'var(--profit)')}>
                 <Tooltip text="An average of what this fund actually earned/lost per day, based on its real NAV/balance history — not a promise of future returns.">
-                  <div className="label" style={{ cursor: 'pointer' }}>Expected daily P/L</div>
+                  <div className="label clickable">Expected daily P/L</div>
                 </Tooltip>
                 <div className="value">{plRate ? <>{fmtMoney(plRate.dailyAmount, fund.currencyCode)} <span style={{ fontSize: 12 }}>({plRate.dailyPct.toFixed(2)}%)</span></> : '—'}</div>
               </div>
               <div className="stat-card card" style={hueStyle(plRate && plRate.monthlyAmount < 0 ? 'var(--loss)' : 'var(--profit)')}>
                 <Tooltip text="The same average daily rate, scaled to a typical calendar month.">
-                  <div className="label" style={{ cursor: 'pointer' }}>Expected monthly P/L</div>
+                  <div className="label clickable">Expected monthly P/L</div>
                 </Tooltip>
                 <div className="value">{plRate ? <>{fmtMoney(plRate.monthlyAmount, fund.currencyCode)} <span style={{ fontSize: 12 }}>({plRate.monthlyPct.toFixed(2)}%)</span></> : '—'}</div>
               </div>
@@ -1376,7 +1376,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                   </td>
                 </tr>
               ) : (
-                <tr key={i} onClick={() => setDetailTx(t)} style={{ cursor: 'pointer' }}>
+                <tr key={i} onClick={() => setDetailTx(t)} className="clickable">
                   <td>
                     {t.date}
                     {t.isPending && (

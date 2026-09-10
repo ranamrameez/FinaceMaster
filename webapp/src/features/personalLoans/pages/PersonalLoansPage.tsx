@@ -414,7 +414,7 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                     </td>
                   </tr>
                 ) : (
-                  <tr key={r.id} onClick={() => setDetailRow(r)} style={{ cursor: 'pointer' }}>
+                  <tr key={r.id} onClick={() => setDetailRow(r)} className="clickable">
                     <td>
                       {r.date}{' '}
                       <span onClick={(e) => e.stopPropagation()}>
@@ -793,13 +793,13 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
         <div className="grid-auto" style={{ ...gridAutoStyle(120, 8), marginTop: 12 }}>
           <div className="stat-card card">
             <Tooltip text="The original amount of the loan, before any repayments.">
-              <div className="label" style={{ cursor: 'pointer' }}>Principal</div>
+              <div className="label clickable">Principal</div>
             </Tooltip>
             <MoneyValue n={loan.principal} currency={loan.currencyCode} />
           </div>
           <div className="stat-card card" style={hueStyle(loan.direction === 'owed_to_me' ? 'var(--profit)' : 'var(--loss)')}>
             <Tooltip text="How much of this loan is still unpaid, after subtracting all repayments logged so far.">
-              <div className="label" style={{ cursor: 'pointer' }}>Outstanding</div>
+              <div className="label clickable">Outstanding</div>
             </Tooltip>
             <MoneyValue n={outstanding} currency={loan.currencyCode} />
             {pendingImpact !== 0 && (

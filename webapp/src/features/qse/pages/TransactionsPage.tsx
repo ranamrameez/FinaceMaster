@@ -441,7 +441,7 @@ function TransactionList() {
                     </td>
                   </tr>
                 ) : (
-                  <tr key={i} onClick={() => setDetailTx(tx)} style={{ cursor: 'pointer' }}>
+                  <tr key={i} onClick={() => setDetailTx(tx)} className="clickable">
                     <td>{tx.date}</td>
                     <td onClick={(e) => e.stopPropagation()}>
                       <TickerLogo ticker={tx.ticker} size="sm" exchange="qse" /><Link to={`/stock/${tx.ticker}`}>{tx.ticker}</Link>

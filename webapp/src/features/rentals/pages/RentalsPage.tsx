@@ -911,7 +911,7 @@ function EntriesList({ property }: { property: Property }) {
             const link = linkByRecordId.get(e.id);
             const otherSide = link ? (link.from.module === 'rentals' && link.fromRecordId === e.id ? link.to : link.from) : undefined;
             return (
-              <tr key={e.id} onClick={() => setDetailEntry(e)} style={{ cursor: 'pointer' }}>
+              <tr key={e.id} onClick={() => setDetailEntry(e)} className="clickable">
                 <td>{e.date}</td>
                 <td className={e.isDeposit ? 'pill-positive' : 'pill-negative'}>{e.isDeposit ? 'Rent income' : 'Expense'}</td>
                 <td className={e.isDeposit ? 'pill-positive' : 'pill-negative'}>{fmtMoney(e.isDeposit ? e.amount : -e.amount, property.currencyCode)}</td>

@@ -8055,6 +8055,23 @@ FinanceManager live link:
   in that order, zero console errors beyond the same pre-existing sandbox network-block noise
   this project has documented repeatedly. `npx tsc -b` / `npm run test` (623 tests, unchanged
   — pure JSX-array reorder, no logic touched) / `npm run build` all clean.
+- **`cursor:pointer` extracted into a real `.clickable` class, third concrete instance of the
+  App-wide CSS cleanup (Pending item 116) — see Done item 298 (2026-09-10).** Grepped for the
+  most-repeated exact inline-style literal app-wide and found `style={{ cursor: 'pointer' }}`
+  used 62 times across 24 files (Tooltip trigger `<span>`s and stat-card `.label`s, sortable-
+  looking Dividends `<th>` headers not wired into `useSortableRows`, clickable table `<tr>`
+  rows opening a `RecordDetailModal`, and accordion `<summary>` elements) with no existing
+  shared class to converge on (confirmed via a direct grep of `theme.css` — no `.clickable`/
+  cursor-pointer utility existed before this). Added
+  `.clickable{cursor:pointer;}` to `theme.css` and replaced every exact-match occurrence via a
+  scripted two-pass regex: first merging into any existing `className` on the same element
+  (`className="label" style={{ cursor: 'pointer' }}` → `className="label clickable"`), then
+  adding a bare `className="clickable"` to whatever was left (elements with no prior
+  `className`, mostly `<tr onClick=...>` rows). Verified live via Playwright on two different
+  pages (a seeded Cash statement row, and Dashboard's Tooltip-labeled stat cards): both
+  correctly render `cursor:pointer` via the new class, zero new console errors. `npx tsc -b` /
+  `npm run test` (623 tests, unchanged — pure CSS extraction, no logic touched) / `npm run
+  build` all clean.
 
 ## Pending
 
@@ -8887,8 +8904,13 @@ or a design decision before more code, not guessed at further:**
      `EntityCard` rollout, extracted into a new `.entity-card-sr` class. **Second concrete
      instance done (2026-09-09) — see Done item 295**: a dead/redundant `flexWrap: 'wrap'`
      inline style on 116 `className="row"` elements across 29 files, removed since `.row`'s own
-     CSS already defaults to `flex-wrap:wrap` — pure dead code, zero visual change. The exact
-     same incremental discipline (audit one repeated pattern, extract or remove, verify, repeat)
+     CSS already defaults to `flex-wrap:wrap` — pure dead code, zero visual change. **Third
+     concrete instance done (2026-09-10) — see Done item 298**: a repeated
+     `style={{ cursor: 'pointer' }}` (62 occurrences across 24 files — Tooltip triggers,
+     sortable-ish `<th>` headers, clickable table rows, accordion `<summary>` elements)
+     extracted into one new `.clickable{cursor:pointer;}` class in `theme.css`, merged into
+     each element's existing `className` where one was already present. The exact same
+     incremental discipline (audit one repeated pattern, extract or remove, verify, repeat)
      still applies for every other module/pattern — this is one instance of an ongoing,
      repeatable practice, not a closed item.
 117. ~~App-wide "everything should be a grid item except tables" principle (2026-09-06)~~ —

@@ -575,7 +575,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                       {fmtMoney(legFee(leg), currency)}
                       {scenarios && (
                         <Tooltip text="Shown regardless of what else is in this plan — a lone leg is priced at full commission unless it actually pairs with an opposite same-day trade.">
-                          <div className="text-muted" style={{ cursor: 'pointer' }}>
+                          <div className="text-muted clickable">
                             Full {fmtMoney(scenarios.full, currency)} · Same-day netted {fmtMoney(scenarios.netted, currency)}
                           </div>
                         </Tooltip>
@@ -585,7 +585,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                       {leg.executed ? (
                         linkedTx ? (
                           <Tooltip text="Synced with its transaction — edit it below or from the Transactions page.">
-                            <span className="pill-positive" style={{ cursor: 'pointer' }}>Executed</span>
+                            <span className="pill-positive clickable">Executed</span>
                           </Tooltip>
                         ) : (
                           <span className="pill-negative">Executed (unlinked)</span>

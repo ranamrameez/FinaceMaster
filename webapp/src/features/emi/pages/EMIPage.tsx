@@ -331,12 +331,12 @@ function LoanStatZones({ loan, sum, loanRepayments }: { loan: EMILoan; sum: EMIS
           </div>
           <div className="stat-card card" style={hueStyle(HUES[4])}>
             <Tooltip text={loan.repaymentMode === 'fixedTotal' ? 'Equivalent markup, as a percentage of the principal — this loan has no annual rate, just a flat total to return.' : 'The annual interest rate this loan was agreed at.'}>
-              <div className="label" style={{ cursor: 'pointer' }}>{markupLabel}</div>
+              <div className="label clickable">{markupLabel}</div>
             </Tooltip>
             <div className="value">{markupPercentage(loan).toFixed(2)}%</div>
             {loan.repaymentMode === 'fixedTotal' ? (
               <Tooltip text="Assumes the flat lifetime markup is spread evenly across the tenure — not a real compounding rate, just a comparable run-rate since this loan has no annual rate of its own.">
-                <div className="sub" style={{ cursor: 'pointer' }}>
+                <div className="sub clickable">
                   Annual equiv.: {markupRateEquivalents(loan).annual.toFixed(2)}% · Monthly equiv.: {markupRateEquivalents(loan).monthly.toFixed(2)}%
                 </div>
               </Tooltip>
@@ -346,7 +346,7 @@ function LoanStatZones({ loan, sum, loanRepayments }: { loan: EMILoan; sum: EMIS
           </div>
           <div className="stat-card card" style={hueStyle(HUES[6])}>
             <Tooltip text="Principal plus every interest/markup payment across the whole loan — the total amount you'll have paid by the time it's fully repaid.">
-              <div className="label" style={{ cursor: 'pointer' }}>Net to return (total cost)</div>
+              <div className="label clickable">Net to return (total cost)</div>
             </Tooltip>
             <MoneyValue n={netToReturn} currency={loan.currencyCode} />
           </div>
@@ -356,7 +356,7 @@ function LoanStatZones({ loan, sum, loanRepayments }: { loan: EMILoan; sum: EMIS
         <>
           <div className="stat-card card" style={hueStyle('var(--loss)')}>
             <Tooltip text={loan.repaymentMode === 'fixedTotal' ? 'How much you still owe in total to fully repay this loan, including remaining markup.' : 'The remaining principal you still owe — doesn\'t include interest that hasn\'t accrued yet.'}>
-              <div className="label" style={{ cursor: 'pointer' }}>Net remaining (outstanding)</div>
+              <div className="label clickable">Net remaining (outstanding)</div>
             </Tooltip>
             <MoneyValue n={sum.outstanding} currency={loan.currencyCode} />
           </div>
@@ -366,7 +366,7 @@ function LoanStatZones({ loan, sum, loanRepayments }: { loan: EMILoan; sum: EMIS
           </div>
           <div className="stat-card card" style={hueStyle(HUES[0])}>
             <Tooltip text="The current effective installment — can differ from a plain origination EMI if a custom monthly payment or per-month override is set.">
-              <div className="label" style={{ cursor: 'pointer' }}>Monthly EMI</div>
+              <div className="label clickable">Monthly EMI</div>
             </Tooltip>
             <MoneyValue n={sum.emi} currency={loan.currencyCode} />
           </div>
@@ -901,12 +901,12 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                       {r.overridden && <span className="text-muted"> (custom)</span>}
                       {r.isBalloon && (
                         <Tooltip text="This final payment was automatically true'd up to whatever was actually still owed, since your custom monthly payment doesn't exactly clear the loan by the last month.">
-                          <span className="text-muted" style={{ cursor: 'pointer' }}> (final payment)</span>
+                          <span className="text-muted clickable"> (final payment)</span>
                         </Tooltip>
                       )}
                       {!!rowRepayment?.fine && (
                         <Tooltip text="A late fee/penalty paid alongside this installment — not counted against the loan's own balance.">
-                          <div className="text-muted" style={{ cursor: 'pointer' }}>+ {fmtMoney(rowRepayment.fine, loan.currencyCode)} fine</div>
+                          <div className="text-muted clickable">+ {fmtMoney(rowRepayment.fine, loan.currencyCode)} fine</div>
                         </Tooltip>
                       )}
                     </td>
@@ -1139,7 +1139,7 @@ function OverallSummary() {
             <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Monthly total</div><MoneyValue n={totals[code].monthlyInstallment} currency={code} /></div>
             <div className="stat-card card" style={hueStyle('var(--loss)')}>
               <Tooltip text="How much you still owe across your loans in this currency — remaining principal only for interest-rate loans, the full remaining amount (including markup) for fixed-total loans.">
-                <div className="label" style={{ cursor: 'pointer' }}>Outstanding</div>
+                <div className="label clickable">Outstanding</div>
               </Tooltip>
               <MoneyValue n={totals[code].outstanding} currency={code} />
             </div>

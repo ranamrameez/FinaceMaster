@@ -185,7 +185,7 @@ function TotalBalances() {
         return (
           <div key={code} className="stat-card card" style={hueStyle(totals[code] >= 0 ? 'var(--profit)' : 'var(--loss)')}>
             <Tooltip text={`Sum of your bank accounts that use ${code} — no live currency conversion, just accounts that happen to share this currency.`}>
-              <div className="label" style={{ cursor: 'pointer' }}>Accounts in {code}</div>
+              <div className="label clickable">Accounts in {code}</div>
             </Tooltip>
             <MoneyValue n={totals[code]} currency={code} />
             {pending.length > 0 && (
@@ -1460,7 +1460,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
             const link = linkByRecordId.get(tx.id);
             const otherSide = link ? (link.from.module === 'bank' && link.fromRecordId === tx.id ? link.to : link.from) : undefined;
             return (
-              <tr key={tx.id} onClick={() => setDetailTx(tx)} style={{ cursor: 'pointer' }}>
+              <tr key={tx.id} onClick={() => setDetailTx(tx)} className="clickable">
                 <td className="text-muted">
                   {tx.serialNumber ?? '—'}{' '}
                   <span onClick={(e) => e.stopPropagation()}>

@@ -203,14 +203,14 @@ export function PositionDetail({ ticker }: { ticker: string }) {
             <div className="stat-card card" style={hueStyle(HUES[0])}><div className="label">Shares</div><div className="value">{fmt(shares, 0)}</div></div>
             <div className="stat-card card" style={hueStyle(HUES[1])}>
               <Tooltip text="Cost: what you paid per share on average. BE (break-even): the price you'd need to sell at to get your money back, including fees.">
-                <div className="label" style={{ cursor: 'pointer' }}>Cost</div>
+                <div className="label clickable">Cost</div>
               </Tooltip>
               <div className="value">{fmtPrice(avg)}</div>
               <div className="sub" style={{ color: mp > 0 ? (mp >= be ? 'var(--profit)' : 'var(--loss)') : undefined }}>BE {fmtPrice(be)}</div>
             </div>
             <div className="stat-card card" style={hueStyle(HUES[1])}>
               <Tooltip text="PSX nets commission when you buy and sell the same ticker on the same day — the smaller-quantity leg (ties go to the buy) pays no commission or SST, only government levies. 'Same-day' assumes this sell nets against a same-day buy; 'Other day' assumes the full commission applies, same as a regular trade.">
-                <div className="label" style={{ cursor: 'pointer' }}>BE: same-day vs. other day</div>
+                <div className="label clickable">BE: same-day vs. other day</div>
               </Tooltip>
               <div className="value" style={{ fontSize: 14 }}>{fmtPrice(beSameDay)}</div>
               <div className="sub">same-day · other day {fmtPrice(be)}</div>
@@ -228,7 +228,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
             {grossValue > 0 && (
               <div className="stat-card card" style={hueStyle(HUES[5])}>
                 <Tooltip text="CGT = Capital Gains Tax, a government tax on profit from selling stock. This is only an estimate of what you'd owe if you sold at today's price — it's not withheld automatically.">
-                  <div className="label" style={{ cursor: 'pointer' }}>Est. CGT if sold now</div>
+                  <div className="label clickable">Est. CGT if sold now</div>
                 </Tooltip>
                 <div className="value">{fmtMoney(estCGT, currency)}</div>
                 <div className="sub">{workbook.settings.filerStatus === 'filer' ? `${workbook.settings.cgtFilerPct}% filer rate` : `${workbook.settings.cgtNonFilerPct}% non-filer rate`}</div>
@@ -397,7 +397,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
             <div className="stat-card card" style={hueStyle(HUES[2])}><div className="label">Highest</div><div className="value">{fmtPrice(stats.max)}</div><div className="sub">{stats.maxDate}</div></div>
           </div>
           <details>
-            <summary className="text-muted" style={{ cursor: 'pointer' }}>
+            <summary className="text-muted clickable">
               {showAllPrices ? `All updates (${stats.totalUpdates})` : `Recent updates (${stats.recent.length} of ${stats.totalUpdates})`}
             </summary>
             {stats.totalUpdates > stats.recent.length && (

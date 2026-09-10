@@ -5718,6 +5718,20 @@ app, not developer notes) continuously as features ship.
   natural read order). Verified live via Playwright: Bank's tab-chip row now reads "Accounts,
   Planning, Analytics, Settings." Item 121(a) stays open as a standing thing to re-check per
   its own original framing, not closed out in one pass.
+- **App-wide CSS cleanup, third concrete instance — see README Done item 298 (2026-09-10),
+  continuing Pending item 116.** Picked the next safely-actionable item off the same list
+  rather than asking again — this item's own text explicitly invites "one repeated pattern,
+  extract, verify, repeat" as an ongoing practice, not a design-fork item needing approval.
+  Grepped every `style={{...}}` literal app-wide for the most-repeated exact match:
+  `style={{ cursor: 'pointer' }}`, 62 occurrences across 24 files, with genuinely no existing
+  shared class to converge on (confirmed via a direct grep of `theme.css`). Added a new
+  `.clickable{cursor:pointer;}` utility class and replaced every occurrence via a scripted
+  two-pass regex (merge into an existing `className` first, then add a bare one where none
+  existed) — a purely mechanical, behavior-preserving extraction, the same class of fix as the
+  two instances before it (Done items 275/295). Verified live via Playwright on two different
+  pages (a seeded Cash statement row's `<tr>`, Dashboard's Tooltip-labeled stat-card `.label`s)
+  that `cursor:pointer` still renders correctly through the new class. `npx tsc -b` / `npm run
+  test` (623 tests, unchanged) / `npm run build` all clean.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

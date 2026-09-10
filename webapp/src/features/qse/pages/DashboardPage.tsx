@@ -109,7 +109,7 @@ function HoldingsCard() {
             </thead>
             <tbody>
               {held.map((r) => (
-                <tr key={r.ticker} style={{ cursor: 'pointer' }}>
+                <tr key={r.ticker} className="clickable">
                   <td onClick={() => navigate(`/stock/${r.ticker}`)} style={{ maxWidth: 170 }}>
                     <div className="hd-name">
                       <TickerLogo ticker={r.ticker} size="sm" exchange="qse" />
