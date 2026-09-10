@@ -2497,8 +2497,12 @@ export function BankPage({
       <Tabs
         tabs={[
           { key: 'accounts', label: 'Accounts', content: <AccountsTab /> },
-          { key: 'analytics', label: 'Analytics', content: <AnalyticsTab /> },
           {
+            // Placed before Analytics to match Cash's own explicit tab order
+            // for this exact same Planning feature (README Done item 224:
+            // "Cash statement, Plans, Analytics, Categs..") — Bank had
+            // Planning after Analytics with no stated reason, a real
+            // page-order inconsistency (README Pending item 121(a)).
             key: 'planning',
             label: 'Planning',
             content: (
@@ -2508,6 +2512,7 @@ export function BankPage({
               />
             ),
           },
+          { key: 'analytics', label: 'Analytics', content: <AnalyticsTab /> },
           {
             key: 'settings',
             label: 'Settings',

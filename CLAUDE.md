@@ -5686,6 +5686,38 @@ app, not developer notes) continuously as features ship.
   tree) rather than trusting old Done-item prose, and documented a real pairing (Bank ↔ Bank)
   and two real charts (Assets vs. liabilities by currency, Breakdown by module) that existed
   in the app but were never in the manual at all. Doc-only — no code touched.
+- **Repo branch cleanup (2026-09-10), user-requested ("merge all branches").** Investigation
+  found no open PRs and 5 stale non-`main` remote branches — 3 (including this session's own
+  `claude/app-audit-ui-guidelines-xjd6bs`) were 0 commits ahead of `main`, already fully
+  merged; the other 2 (`claude/chrome-stock-scraper-extension-q6rts2`,
+  `claude/extension-div-grid-scraping-jlkfjc`) looked like they had unmerged commits by raw
+  commit count, but a direct tip-to-tip diff against `main`'s current state (not the usual
+  ancestry-based three-dot diff, which was misleading here since content can land in `main`
+  via a squash-merge with a different commit history) showed their real changes were already
+  in `main` byte-for-byte — nothing to merge. **`git push --delete` was blocked by this
+  session's own git proxy (403), and the GitHub MCP tools available here expose no delete-
+  branch/delete-ref operation** — asked the user to delete them manually via GitHub's branches
+  page, which they did; confirmed via `git fetch --prune` that only `main` remains. **Lesson
+  for any future "merge/clean up branches" request in this specific harness**: branch deletion
+  itself is outside this session's write access regardless of authorization — the honest
+  answer is to verify what's safe to delete and hand the user a precise list, not to keep
+  retrying the push.
+- **Page-order audit, first concrete fix — see README Done item 297 (2026-09-10), closing part
+  of Pending item 121(a).** User picked this from a menu of "what's next" options after the
+  branch cleanup. Audited every module's own tab order for a genuine, non-subjective
+  inconsistency: Bank's Planning tab sat AFTER Analytics with no stated reason, while Cash —
+  sharing the exact same Planning feature — has Plans explicitly BEFORE Analytics per the
+  user's own locked spec (Done item 224's own code comment: "Order: Cash statement, Plans,
+  Analytics, Categs.."). Reordering Bank to match applies the user's own already-stated
+  preference for the SAME feature, not a new guess — the safe kind of "natural order" fix this
+  broader item's own text calls for. Checked but left alone: Cash's own Import-tab position
+  (explicitly NOT part of that locked spec — "Import/Settings... stay after, unchanged," so
+  moving it now would go against a recent explicit instruction, even though Funds/Rentals both
+  independently agree with each other on Import-before-Analytics); QSE's/PSX's `StockPage.tsx`
+  (Summary → Trades → Risk Analysis, already consistent between both exchanges and already a
+  natural read order). Verified live via Playwright: Bank's tab-chip row now reads "Accounts,
+  Planning, Analytics, Settings." Item 121(a) stays open as a standing thing to re-check per
+  its own original framing, not closed out in one pass.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 
