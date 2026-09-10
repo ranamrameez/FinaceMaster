@@ -790,6 +790,11 @@
      accordion summaries) with no shared class to converge on — extracted
      into one real utility class rather than one more inline style. */
   .clickable{cursor:pointer;}
+  /* Same cleanup, fourth instance: every one of these is a hidden native
+     `<input type="file">` triggered programmatically via a ref (13
+     occurrences across 11 files) - never conditionally toggled, so a
+     static class is a safe 1:1 swap for the repeated inline style. */
+  .hidden-file-input{display:none;}
   /* Required-field marker (components/ui/Field.tsx) - a single ::after rule
      so the label text and its asterisk are one indivisible inline box, with
      no separate DOM node for a line break to land between. \00a0 is a real

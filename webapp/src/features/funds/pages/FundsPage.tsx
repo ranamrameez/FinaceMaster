@@ -782,7 +782,7 @@ function SnapshotImportSection() {
           ref={fileInput}
           type="file"
           accept=".csv,text/csv"
-          style={{ display: 'none' }}
+          className="hidden-file-input"
           onChange={(e) => {
             const file = e.target.files?.[0];
             if (file) onFile(file);
@@ -1871,7 +1871,7 @@ function DataManagement() {
           ref={fileInput}
           type="file"
           accept="application/json"
-          style={{ display: 'none' }}
+          className="hidden-file-input"
           onChange={(e) => {
             const file = e.target.files?.[0];
             if (file) importJSON(file);
