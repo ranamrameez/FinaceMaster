@@ -263,7 +263,7 @@ function AddRentalPlanForm({ rentalProperties, addPlannedRentals, onSaved }: { r
 
   return (
     <div>
-      <div className="row" style={{ gap: 8 }}>
+      <div className="row gap-sm">
         <Field label="Property" width={180} required>
           <Select value={propertyId} onChange={(e) => setPropertyId(e.target.value)}>
             {rentalProperties.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.currencyCode})</option>)}

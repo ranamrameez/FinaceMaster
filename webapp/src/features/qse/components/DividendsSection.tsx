@@ -58,7 +58,7 @@ function AddDividendForm() {
   };
 
   return (
-    <div className="row" style={{ gap: 8 }}>
+    <div className="row gap-sm">
       <Field label="Date">
         <input
           type="date"

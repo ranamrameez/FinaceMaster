@@ -100,7 +100,7 @@ function DataManagement() {
   };
 
   return (
-    <div className="row" style={{ gap: 8 }}>
+    <div className="row gap-sm">
       <button className="btn secondary" onClick={exportJSON}>
         Export JSON
       </button>

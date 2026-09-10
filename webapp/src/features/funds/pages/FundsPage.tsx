@@ -383,7 +383,7 @@ function InvestmentHelperModal({ onClose }: { onClose: () => void }) {
         <p className="text-muted">No open funds yet — add one first.</p>
       ) : (
         <>
-          <div className="row" style={{ gap: 8 }}>
+          <div className="row gap-sm">
             <Field label="Amount to invest" width={150} required>
               <TextInput type="number" step="0.01" value={amount || ''} onChange={(e) => setAmount(Number(e.target.value))} />
             </Field>
@@ -440,7 +440,7 @@ function AddFundForm({ onSaved, initialBrokerId }: { onSaved?: () => void; initi
 
   return (
     <div>
-      <div className="row" style={{ gap: 8 }}>
+      <div className="row gap-sm">
         <Field label="Fund name" width={200} required>
           <TextInput value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="e.g. Vanguard Total World Stock ETF" />
         </Field>
@@ -471,7 +471,7 @@ function AddFundForm({ onSaved, initialBrokerId }: { onSaved?: () => void; initi
         )}
       </div>
       <p className="text-muted" style={{ marginTop: 8 }}>Optional initial investment (leave amount blank to just add the fund with no transactions yet):</p>
-      <div className="row" style={{ gap: 8 }}>
+      <div className="row gap-sm">
         <Field label="Date">
           <TextInput type="date" value={initialDate} onChange={(e) => setInitialDate(e.target.value)} />
         </Field>
@@ -1122,7 +1122,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
       <Card style={{ marginBottom: 16 }}>
             {editingFund ? (
               <div>
-                <div className="row" style={{ gap: 8 }}>
+                <div className="row gap-sm">
                   <TextInput value={editFund.name} onChange={(e) => setEditFund({ ...editFund, name: e.target.value })} />
                   <TextInput value={editFund.code} onChange={(e) => setEditFund({ ...editFund, code: e.target.value.toUpperCase() })} />
                   <TextInput value={editFund.platform} onChange={(e) => setEditFund({ ...editFund, platform: e.target.value })} />
@@ -1152,7 +1152,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                   </div>
                   <div className="text-muted">{fund.code} · {fund.platform} · {fundCategoryLabel(fund, categoryRegistry)} · {fund.currencyCode}</div>
                 </div>
-                <div className="row" style={{ gap: 8 }}>
+                <div className="row gap-sm">
                   <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => { setEditFund(fund); setEditingFund(true); }} />
                   <IconButton
                     label={fund.isActive === false ? 'Reopen' : 'Close'}
@@ -1722,7 +1722,7 @@ function AnalyticsTab() {
 
   return (
     <div>
-      <div className="row" style={{ gap: 8 }}>
+      <div className="row gap-sm">
         {currencies.length > 1 && (
           <Field label="Currency" width={120}>
             <Select value={effectiveCurrency} onChange={(e) => setCurrency(e.target.value)}>
@@ -1864,7 +1864,7 @@ function DataManagement() {
   return (
     <Card>
       <h3 style={{ marginTop: 0 }}>Data management</h3>
-      <div className="row" style={{ gap: 8 }}>
+      <div className="row gap-sm">
         <button className="btn secondary" onClick={exportJSON}>Export JSON</button>
         <button className="btn secondary" onClick={() => fileInput.current?.click()}>Import JSON</button>
         <input

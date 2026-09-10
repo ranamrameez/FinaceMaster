@@ -289,7 +289,7 @@ function TxRowFields({
           )}
           {currencyMismatch && (
             <div style={{ marginTop: 8 }}>
-              <div className="row" style={{ gap: 8 }}>
+              <div className="row gap-sm">
                 <Field label={`Amount (${otherCurrency})`}>
                   <TextInput
                     type="number"

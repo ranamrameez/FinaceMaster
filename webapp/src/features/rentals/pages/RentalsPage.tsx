@@ -143,7 +143,7 @@ export function AddPropertyForm({ onSaved, initialCurrency }: { onSaved?: (id: s
 
   return (
     <div>
-      <div className="row" style={{ gap: 8 }}>
+      <div className="row gap-sm">
         <Field label="Property name" width={180} required>
           <TextInput value={p.name} onChange={(e) => setP({ ...p, name: e.target.value })} placeholder="e.g. Apartment 4B" />
         </Field>
@@ -663,7 +663,7 @@ function AnalyticsTab() {
 
   return (
     <div>
-      <div className="row" style={{ gap: 8 }}>
+      <div className="row gap-sm">
         {currencies.length > 1 && (
           <Field label="Currency" width={120}>
             <Select value={effectiveCurrency} onChange={(e) => setCurrency(e.target.value)}>
@@ -790,7 +790,7 @@ function EditEntryModal({ entry, onClose }: { entry: RentalEntry; onClose: () =>
 
   return (
     <FinanceEditModal titleText="Edit rental entry" onClose={onClose} onSave={save}>
-      <div className="row" style={{ gap: 8 }}>
+      <div className="row gap-sm">
         <Field label="Date">
           <TextInput type="date" value={draft.date} onChange={(e) => setDraft({ ...draft, date: e.target.value })} />
         </Field>
@@ -1103,7 +1103,7 @@ function ImportTab() {
       {headers.length > 0 && (
         <Card style={{ marginTop: 12 }}>
           <h3 style={{ marginTop: 0 }}>Map columns</h3>
-          <div className="row" style={{ gap: 8 }}>
+          <div className="row gap-sm">
             <Field label="Date column" width={160}>
               <Select value={dateCol} onChange={(e) => setDateCol(e.target.value)}>
                 {headers.map((h) => <option key={h} value={h}>{h}</option>)}
@@ -1320,7 +1320,7 @@ function DataManagement() {
   return (
     <Card>
       <h3 style={{ marginTop: 0 }}>Data management</h3>
-      <div className="row" style={{ gap: 8 }}>
+      <div className="row gap-sm">
         <button className="btn secondary" onClick={exportJSON}>Export JSON</button>
         <button className="btn secondary" onClick={() => fileInput.current?.click()}>Import JSON</button>
         <input
