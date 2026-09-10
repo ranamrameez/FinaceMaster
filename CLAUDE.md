@@ -5732,6 +5732,23 @@ app, not developer notes) continuously as features ship.
   pages (a seeded Cash statement row's `<tr>`, Dashboard's Tooltip-labeled stat-card `.label`s)
   that `cursor:pointer` still renders correctly through the new class. `npx tsc -b` / `npm run
   test` (623 tests, unchanged) / `npm run build` all clean.
+- **App-wide CSS cleanup, fourth concrete instance + a stale-doc fix — see README Done item 299
+  (2026-09-10), continuing Pending item 116.** Same session, continued down the list.
+  `style={{ display: 'none' }}` was the next-most-repeated exact literal (13 occurrences, 11
+  files) — checked each one first and confirmed every single one is a hidden native
+  `<input type="file">` triggered via a `ref` (App Data's import, plus each module's own JSON
+  export/import), never conditionally toggled by JS state, so a static `.hidden-file-input`
+  class is a safe 1:1 swap with zero behavioral risk — unlike the `margin`/`marginTop` literals
+  (the next-most-repeated after this), which sit on headings/paragraphs with real box-model
+  interactions and no guarantee some other CSS rule doesn't already compete for the same
+  property at equal specificity; deliberately left those alone rather than risk repeating this
+  project's own well-documented "equal-specificity cascade trap" class of bug a fourth time.
+  Also, while re-scanning the Pending list for this task, found Pending item 115's own text
+  never got a closing note even though all four of its lettered sub-items had independently
+  been marked Done across earlier sessions — closed the item in full (doc-only, no code
+  change). Verified live via Playwright: the App Data page's file input computes
+  `display: none` and Playwright's own `isVisible()` correctly reads `false` post-change. `npx
+  tsc -b` / `npm run test` (623 tests, unchanged) / `npm run build` all clean.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

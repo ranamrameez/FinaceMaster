@@ -8072,6 +8072,25 @@ FinanceManager live link:
   correctly render `cursor:pointer` via the new class, zero new console errors. `npx tsc -b` /
   `npm run test` (623 tests, unchanged — pure CSS extraction, no logic touched) / `npm run
   build` all clean.
+- **`display:none` on every hidden `<input type="file">` extracted into a `.hidden-file-input`
+  class, fourth concrete instance of the App-wide CSS cleanup (Pending item 116) — see Done
+  item 299 (2026-09-10).** Same discipline as the `cursor:pointer` fix immediately above:
+  grepped for the next-most-repeated exact literal, `style={{ display: 'none' }}`, and found it
+  13 times across 11 files — every single one a native `<input type="file">` triggered
+  programmatically via a `ref` (App Data's whole-app import, and each module's own JSON
+  export/import), never conditionally toggled by a ternary, so a static class is a genuinely
+  safe 1:1 swap. Confirmed via grep first that none of the 13 already carried a `className` to
+  merge into, and that no existing `theme.css` rule targets `display` on an `input[type=file]`
+  or anything that could compete with the new class. Added
+  `.hidden-file-input{display:none;}` to `theme.css` and did the mechanical swap. Verified live
+  via Playwright on the App Data page: the input's computed `display` is `none` and
+  Playwright's own `isVisible()` correctly reads `false`, zero new console errors. `npx tsc -b`
+  / `npm run test` (623 tests, unchanged) / `npm run build` all clean. Also, while re-auditing
+  Pending item 115 for this same "what's next" pass, found all four of its sub-items ((a) Bank
+  parent entity, (b) Funds/broker parent entity, (c) active/favorite/Sr#, (d) Bank Analytics
+  date-range filter) already independently marked Done in earlier sessions with no item-level
+  closing note ever added — closed the item in full in the Pending list (doc-only, no code
+  change).
 
 ## Pending
 
@@ -8844,7 +8863,8 @@ or a design decision before more code, not guessed at further:**
      rollout — it touches the user's real imported GCC/PCC credit-card-as-liability-account
      data and needs its own focused session).
 115. **Real structural asks from the same 2026-08-27 critique — see CLAUDE.md's
-     "App-wide UI/UX redesign" section and Done item 214 for context.** ~~(a) **Bank as a
+     "App-wide UI/UX redesign" section and Done item 214 for context. All four sub-items below
+     are now done (2026-09-10) — closing this item in full.** ~~(a) **Bank as a
      normalized parent entity** — the user's own words: "A bank is main entity. User may have
      multiple accounts with same bank. so we must add bank first and then on its details page,
      give ability to add extra accounts. and see the total balance with that bank. and on
@@ -8909,7 +8929,11 @@ or a design decision before more code, not guessed at further:**
      `style={{ cursor: 'pointer' }}` (62 occurrences across 24 files — Tooltip triggers,
      sortable-ish `<th>` headers, clickable table rows, accordion `<summary>` elements)
      extracted into one new `.clickable{cursor:pointer;}` class in `theme.css`, merged into
-     each element's existing `className` where one was already present. The exact same
+     each element's existing `className` where one was already present. **Fourth concrete
+     instance done (2026-09-10) — see Done item 299**: a repeated
+     `style={{ display: 'none' }}` (13 occurrences across 11 files, every one a native
+     `<input type="file">` triggered via a `ref`, never conditionally toggled) extracted into
+     one new `.hidden-file-input{display:none;}` class. The exact same
      incremental discipline (audit one repeated pattern, extract or remove, verify, repeat)
      still applies for every other module/pattern — this is one instance of an ongoing,
      repeatable practice, not a closed item.
