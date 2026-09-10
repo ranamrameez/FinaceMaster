@@ -8040,6 +8040,21 @@ FinanceManager live link:
   newer Assets-vs-liabilities/Breakdown-by-module charts (Done item 195), neither of which was
   documented at all. Doc-only change — no code touched, `npx tsc -b` / `npm run test` (623
   tests) / `npm run build` all unaffected.
+- **Bank's Planning tab reordered to before Analytics, first real fix from the page-order
+  audit (Pending item 121(a)) — see Done item 297 (2026-09-10).** Audited every module's own
+  tab order for a genuine inconsistency, not a subjective "what feels right" call: Bank's
+  order was Accounts → Analytics → Planning → Settings, while Cash — which shares the exact
+  same Planning feature (same component, same underlying store shape) — has an explicitly
+  user-specified order of Statement → Plans → Analytics → Categories → Import → Settings (Done
+  item 224). Reordering Bank to Accounts → Planning → Analytics → Settings applies the user's
+  own already-stated preference for this identical feature rather than guessing at a new one.
+  Also checked QSE's/PSX's `StockPage.tsx` (Summary → Trades → Risk Analysis, already
+  consistent between both exchanges) and Funds'/Rentals' tab orders (both already agree with
+  each other, Import before Analytics) — no further inconsistency found in this pass. Verified
+  live via Playwright: Bank's tab-chip row now reads "Accounts, Planning, Analytics, Settings"
+  in that order, zero console errors beyond the same pre-existing sandbox network-block noise
+  this project has documented repeatedly. `npx tsc -b` / `npm run test` (623 tests, unchanged
+  — pure JSX-array reorder, no logic touched) / `npm run build` all clean.
 
 ## Pending
 
@@ -8933,7 +8948,16 @@ or a design decision before more code, not guessed at further:**
      (a) "use natural order for UI sections (Entity detail, trans, analytics, etc.)" — several
      module pages already follow something close to this (e.g. Banking's `AccountDetailPage`,
      reordered by Done item 215 to lead with Account details), but this hasn't been checked
-     against every module's own page consistently — **still open**.
+     against every module's own page consistently. **First real instance found and fixed
+     (2026-09-10) — see Done item 297**: Bank's own tab order had Planning AFTER Analytics
+     with no stated reason, while Cash — sharing the exact same Planning feature — has it
+     BEFORE Analytics per the user's own explicit spec (Done item 224). Aligned Bank to match.
+     Also checked QSE's/PSX's `StockPage.tsx` (Summary → Trades → Risk Analysis, already
+     consistent between both exchanges and already natural) and every other module's tab
+     order (Funds/Rentals both already agree with each other on Import-before-Analytics;
+     Settings already sits last everywhere it exists) — no further inconsistency found this
+     pass. **Still open** as a standing thing to re-check whenever a new page ships, per this
+     item's own original framing — not a one-time audit to close out.
      ~~(b) "many pages still have settings while asked to make them global & centralized"~~ —
      **done for every module that has a Settings tab at all (2026-09-09) — see Done item 294.**
      Cash/Funds/Rentals/Subscriptions already had this fix (own Done items, see the app-wide
