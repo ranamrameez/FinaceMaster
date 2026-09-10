@@ -140,6 +140,23 @@ export interface BankAccount {
    * default). Toggled directly from the account's own `EntityCard` in
    * `AccountsList`. */
   isFavorite?: boolean;
+  /** Set once, by the one-time migration off this module's own
+   * `isLiability`-on-`BankAccount` credit-card model (2026-09-10) into the
+   * real, separate `CreditCard` entity (`types/creditCard.ts`) — the id of
+   * the `CreditCard` this account's own history was converted into.
+   * Migration also sets `isActive:false` (same "hide, never delete"
+   * convention as everywhere else), but `isActive` alone must NEVER be the
+   * signal that excludes an account from a total (see that field's own
+   * locked "archiving must never silently change a real financial figure"
+   * rule) — this field is the deliberate, narrowly-scoped exception:
+   * `assetBalanceByCurrency`/`creditCardLiabilityByCurrency`/
+   * `totalBalanceByCurrency` (`lib/calc/bankModule.ts`) skip any account
+   * with this set, regardless of `isActive`, specifically so a migrated
+   * account's real balance — which now lives entirely in the new
+   * `CreditCard` record — is never counted twice. The account record and
+   * its transaction history are kept in place for audit/undo, never
+   * deleted. */
+  migratedToCreditCardId?: string;
 }
 
 /** Extends the shared `Finance` base (2026-09-03 restructure — see

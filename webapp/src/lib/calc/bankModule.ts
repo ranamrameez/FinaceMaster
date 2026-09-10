@@ -60,7 +60,7 @@ export function accountPendingBalance(account: BankAccount, transactions: BankTr
  * `assetBalanceByCurrency`/`creditCardLiabilityByCurrency` instead. */
 export function totalBalanceByCurrency(accounts: BankAccount[], transactions: BankTransaction[]): Record<string, number> {
   const out: Record<string, number> = {};
-  accounts.forEach((a) => {
+  accounts.filter((a) => !a.migratedToCreditCardId).forEach((a) => {
     out[a.currencyCode] = (out[a.currencyCode] || 0) + accountBalance(a, transactions);
   });
   return out;
@@ -71,7 +71,7 @@ export function totalBalanceByCurrency(accounts: BankAccount[], transactions: Ba
  * positive contribution. */
 export function assetBalanceByCurrency(accounts: BankAccount[], transactions: BankTransaction[]): Record<string, number> {
   const out: Record<string, number> = {};
-  accounts.filter((a) => !a.isLiability).forEach((a) => {
+  accounts.filter((a) => !a.isLiability && !a.migratedToCreditCardId).forEach((a) => {
     out[a.currencyCode] = (out[a.currencyCode] || 0) + accountBalance(a, transactions);
   });
   return out;
@@ -84,10 +84,19 @@ export function assetBalanceByCurrency(accounts: BankAccount[], transactions: Ba
  * it to the positive-debt convention Net Worth's `emiOutstanding`/
  * `personalLoansNet` liability inputs already use). A card that's paid
  * off or in credit (a positive `accountBalance`) contributes 0, never a
- * negative "liability." */
+ * negative "liability."
+ *
+ * `BankAccount.migratedToCreditCardId`'s own doc comment: an account
+ * that's been converted to a real `CreditCard` entity is excluded here
+ * ENTIRELY, regardless of `isActive` — its real balance now lives in
+ * `creditCardModule.ts`'s own `creditCardLiabilityByCurrency`, and every
+ * caller of this function is expected to merge both sources together (see
+ * `features/netWorth/hooks/useNetWorthSummary.ts`) so a migrated card's
+ * debt is counted exactly once, from exactly one source, at any point
+ * during the transition. */
 export function creditCardLiabilityByCurrency(accounts: BankAccount[], transactions: BankTransaction[]): Record<string, number> {
   const out: Record<string, number> = {};
-  accounts.filter((a) => a.isLiability).forEach((a) => {
+  accounts.filter((a) => a.isLiability && !a.migratedToCreditCardId).forEach((a) => {
     const owed = Math.max(0, -accountBalance(a, transactions));
     if (owed > 0) out[a.currencyCode] = (out[a.currencyCode] || 0) + owed;
   });

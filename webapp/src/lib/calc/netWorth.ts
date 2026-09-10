@@ -55,6 +55,21 @@ function mergeCurrencyKeys(...maps: Record<string, number>[]): string[] {
   return [...keys].sort();
 }
 
+/** Added 2026-09-10 alongside the `CreditCard` entity: `creditCards` above
+ * needs to combine TWO sources during the migration transition — a card
+ * still on the old `BankAccount.isLiability` model
+ * (`bankModule.ts`'s own `creditCardLiabilityByCurrency`) and a card
+ * already migrated to the real `CreditCard` entity
+ * (`creditCardModule.ts`'s own same-named function) — each account only
+ * ever contributes to ONE of the two (see `BankAccount.migratedToCreditCardId`'s
+ * own doc comment for the exclusion that guarantees this), so a plain
+ * per-currency sum of both maps is always correct, never a double-count. */
+export function mergeCurrencyTotals(...maps: Record<string, number>[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  maps.forEach((m) => Object.entries(m).forEach(([code, amount]) => { out[code] = (out[code] ?? 0) + amount; }));
+  return out;
+}
+
 export function computeNetWorthByCurrency(inputs: NetWorthInputs): CurrencyNetWorth[] {
   const { cash, bank, qse, psx, funds, personalLoansNet, emiOutstanding, creditCards } = inputs;
   const currencies = mergeCurrencyKeys(cash, bank, qse, psx, funds, personalLoansNet, emiOutstanding, creditCards);

@@ -22,10 +22,17 @@
  * 2026-08-26 once `EMIRepayment` (see `types/emiWorkbook.ts`) closed that
  * gap: same shape as Personal Loans (pick a loan; amount is always
  * positive regardless of link direction, since a payment always reduces
- * what's owed). */
-export type LinkModule = 'cash' | 'bank' | 'qse' | 'psx' | 'rentals' | 'personalLoans' | 'funds' | 'emi';
+ * what's owed).
+ *
+ * Extended 2026-09-10 to include `'creditCard'` (Bank/Cash <-> a specific
+ * credit card, `types/creditCard.ts`) — same "direction doesn't flip the
+ * sign" exception as `personalLoans`/`emi`: a linked transfer only ever
+ * means "pay the card down," so `buildSideRecord` always creates a
+ * `kind:'payment'` `CreditCardTransaction` regardless of which side of the
+ * link the card sits on. */
+export type LinkModule = 'cash' | 'bank' | 'qse' | 'psx' | 'rentals' | 'personalLoans' | 'funds' | 'emi' | 'creditCard';
 
-export const LINK_MODULES: LinkModule[] = ['cash', 'bank', 'qse', 'psx', 'rentals', 'personalLoans', 'funds', 'emi'];
+export const LINK_MODULES: LinkModule[] = ['cash', 'bank', 'qse', 'psx', 'rentals', 'personalLoans', 'funds', 'emi', 'creditCard'];
 
 export const LINK_MODULE_LABELS: Record<LinkModule, string> = {
   cash: 'Cash',
@@ -36,15 +43,16 @@ export const LINK_MODULE_LABELS: Record<LinkModule, string> = {
   personalLoans: 'Personal Loans',
   funds: 'Funds',
   emi: 'EMI / Loans',
+  creditCard: 'Credit Cards',
 };
 
 export interface LinkSideConfig {
   module: LinkModule;
   /** A `BankAccount.id` when `module === 'bank'`, a `Property.id` when
    * `module === 'rentals'`, a `PersonalLoan.id` when
-   * `module === 'personalLoans'`, or an `EMILoan.id` when
-   * `module === 'emi'` — the sides with more than one sub-entity to choose
-   * from. Ignored otherwise. */
+   * `module === 'personalLoans'`, an `EMILoan.id` when `module === 'emi'`,
+   * or a `CreditCard.id` when `module === 'creditCard'` — the sides with
+   * more than one sub-entity to choose from. Ignored otherwise. */
   ref?: string;
   /** A `CashEntry.currencyCode` when `module === 'cash'` — the only side
    * whose ledger record needs its own currency field (Bank/Rentals derive

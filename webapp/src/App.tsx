@@ -39,6 +39,7 @@ import { usePersonalLoansFirebaseSync } from './lib/firebase/usePersonalLoansFir
 import { BankPage, AccountDetailPage, BankDetailPage } from './features/bank/pages/BankPage';
 import { useBankFirebaseSync } from './lib/firebase/useBankFirebaseSync';
 import { usePlannedBankFirebaseSync } from './lib/firebase/usePlannedBankFirebaseSync';
+import { useCreditCardFirebaseSync } from './lib/firebase/useCreditCardFirebaseSync';
 import { EMIPage } from './features/emi/pages/EMIPage';
 import { useEMIFirebaseSync } from './lib/firebase/useEMIFirebaseSync';
 import { FundsPage } from './features/funds/pages/FundsPage';
@@ -95,6 +96,7 @@ function App() {
   const personalLoansSync = usePersonalLoansFirebaseSync();
   const bankSync = useBankFirebaseSync();
   const plannedBankSync = usePlannedBankFirebaseSync();
+  const creditCardSync = useCreditCardFirebaseSync();
   const emiSync = useEMIFirebaseSync();
   const fundsSync = useFundsFirebaseSync();
   const rentalsSync = useRentalsFirebaseSync();
@@ -126,6 +128,7 @@ function App() {
     { name: 'Cash', status: cashSync.status },
     { name: 'Personal Loans', status: personalLoansSync.status },
     { name: 'Banking', status: bankSync.status },
+    { name: 'Credit Cards', status: creditCardSync.status },
     { name: 'EMI / Loans', status: emiSync.status },
     { name: 'Funds', status: fundsSync.status },
     { name: 'Rentals', status: rentalsSync.status },

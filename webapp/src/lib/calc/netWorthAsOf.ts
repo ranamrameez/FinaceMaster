@@ -2,14 +2,16 @@ import { cashSummary } from './cashSummary';
 import { makeQSEFeeCalculator } from './fees';
 import { makePSXFeeCalculator } from './psxFees';
 import { cashBalanceByCurrency } from './cashModule';
-import { assetBalanceByCurrency, creditCardLiabilityByCurrency } from './bankModule';
+import { assetBalanceByCurrency, creditCardLiabilityByCurrency as legacyCreditCardLiabilityByCurrency } from './bankModule';
+import { creditCardLiabilityByCurrency } from './creditCardModule';
 import { netPositionByCurrency } from './personalLoansModule';
 import { totalsByCurrency as emiTotalsByCurrency } from './emiModule';
 import { fundsValueByCurrency } from './fundsModule';
-import { computeNetWorthByCurrency, type CurrencyNetWorth } from './netWorth';
-import { includedBankAccounts, includedEmiLoans, includedFunds, includedPersonalLoans } from './netWorthInclusion';
+import { computeNetWorthByCurrency, mergeCurrencyTotals, type CurrencyNetWorth } from './netWorth';
+import { includedBankAccounts, includedCreditCards, includedEmiLoans, includedFunds, includedPersonalLoans } from './netWorthInclusion';
 import type { CashEntry, CashSettings } from '../../types/cashWorkbook';
 import type { BankAccount, BankTransaction } from '../../types/bankWorkbook';
+import type { CreditCard, CreditCardTransaction } from '../../types/creditCard';
 import type { PersonalLoan, PersonalLoanRepayment } from '../../types/personalLoansWorkbook';
 import type { EMILoan } from '../../types/emiWorkbook';
 import type { Fund } from '../../types/fundsWorkbook';
@@ -44,6 +46,8 @@ export interface NetWorthAsOfInputs {
   cashSettings: CashSettings;
   bankAccounts: BankAccount[];
   bankTransactions: BankTransaction[];
+  creditCards: CreditCard[];
+  creditCardTransactions: CreditCardTransaction[];
   personalLoans: PersonalLoan[];
   personalLoanRepayments: PersonalLoanRepayment[];
   emiLoans: EMILoan[];
@@ -129,7 +133,11 @@ export function netWorthAsOfDate(asOfDate: string, inputs: NetWorthAsOfInputs): 
   );
   const bankTxAsOf = inputs.bankTransactions.filter((t) => t.date <= asOfDate);
   const bank = assetBalanceByCurrency(includedAccounts, bankTxAsOf);
-  const creditCards = creditCardLiabilityByCurrency(includedAccounts, bankTxAsOf);
+  const creditCardTxAsOf = inputs.creditCardTransactions.filter((t) => t.date <= asOfDate);
+  const creditCards = mergeCurrencyTotals(
+    legacyCreditCardLiabilityByCurrency(includedAccounts, bankTxAsOf),
+    creditCardLiabilityByCurrency(includedCreditCards(inputs.creditCards), creditCardTxAsOf),
+  );
 
   const loansAsOf = includedPersonalLoans(inputs.personalLoans).filter((l) => l.date <= asOfDate);
   const repaymentsAsOf = inputs.personalLoanRepayments.filter((r) => r.date <= asOfDate);
@@ -189,6 +197,7 @@ export function earliestActivityDate(inputs: NetWorthAsOfInputs): string | undef
   const dates: string[] = [
     ...inputs.cashEntries.map((e) => e.date),
     ...inputs.bankTransactions.map((t) => t.date),
+    ...inputs.creditCardTransactions.map((t) => t.date),
     ...inputs.personalLoans.map((l) => l.date),
     ...inputs.personalLoanRepayments.map((r) => r.date),
     ...inputs.emiLoans.map((l) => l.startDate),

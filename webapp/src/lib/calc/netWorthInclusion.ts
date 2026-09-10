@@ -33,6 +33,7 @@
  * repayment filtering needed.
  */
 import type { BankAccount } from '../../types/bankWorkbook';
+import type { CreditCard } from '../../types/creditCard';
 import type { EMILoan } from '../../types/emiWorkbook';
 import type { PersonalLoan } from '../../types/personalLoansWorkbook';
 import type { Fund } from '../../types/fundsWorkbook';
@@ -45,3 +46,10 @@ export const includedBankAccounts = (accounts: BankAccount[]): BankAccount[] => 
 export const includedEmiLoans = (loans: EMILoan[]): EMILoan[] => includedOnly(loans);
 export const includedPersonalLoans = (loans: PersonalLoan[]): PersonalLoan[] => includedOnly(loans);
 export const includedFunds = (funds: Fund[]): Fund[] => includedOnly(funds);
+/** Added 2026-09-10 alongside the `CreditCard` entity — same pattern as
+ * every other entity type above; `creditCardModule.ts`'s own
+ * `creditCardLiabilityByCurrency` also filters internally as a second,
+ * self-contained safeguard on real money, so this is belt-and-suspenders
+ * consistency with the rest of the app's UI-level filtering, not the only
+ * place this gets applied. */
+export const includedCreditCards = (cards: CreditCard[]): CreditCard[] => includedOnly(cards);

@@ -38,6 +38,7 @@ import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
 import { usePlannedCashWorkbookStore } from '../../../store/plannedCashWorkbookStore';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
+import { useCreditCardWorkbookStore } from '../../../store/creditCardWorkbookStore';
 import { usePlannedBankWorkbookStore } from '../../../store/plannedBankWorkbookStore';
 import { useNetWorthSnapshotsWorkbookStore } from '../../../store/netWorthSnapshotsWorkbookStore';
 import { useRentalsWorkbookStore } from '../../../store/rentalsWorkbookStore';
@@ -90,6 +91,7 @@ export function NetWorthPage({
   const plannedCash = usePlannedCashWorkbookStore((s) => s.workbook.entries);
   const bank = useBankWorkbookStore((s) => s.workbook);
   const updateBankAccount = useBankWorkbookStore((s) => s.updateAccount);
+  const creditCardsWb = useCreditCardWorkbookStore((s) => s.workbook);
   const plannedBank = usePlannedBankWorkbookStore((s) => s.workbook.entries);
   const rentals = useRentalsWorkbookStore((s) => s.workbook);
   const plannedRentals = usePlannedRentalsWorkbookStore((s) => s.workbook.entries);
@@ -161,6 +163,7 @@ export function NetWorthPage({
   const netWorthAsOfInputs: NetWorthAsOfInputs = useMemo(() => ({
     cashEntries, cashSettings,
     bankAccounts: bank.settings.accounts, bankTransactions: bank.transactions,
+    creditCards: creditCardsWb.cards, creditCardTransactions: creditCardsWb.transactions,
     personalLoans: personalLoans.loans, personalLoanRepayments: personalLoans.repayments,
     emiLoans,
     fundsFunds: funds.funds, fundsTransactions: funds.transactions, fundsPriceHistory: funds.priceHistory,
@@ -168,7 +171,7 @@ export function NetWorthPage({
     qsePriceHistory: qse.priceHistory, qseSettings: qse.settings,
     psxTransactions: psx.transactions, psxTransfers: psx.transfers, psxAdjustments: psx.adjustments,
     psxPriceHistory: psx.priceHistory, psxSettings: psx.settings,
-  }), [cashEntries, cashSettings, bank, personalLoans, emiLoans, funds, qse, psx]);
+  }), [cashEntries, cashSettings, bank, creditCardsWb, personalLoans, emiLoans, funds, qse, psx]);
 
   const [rates, setRates] = useState<FxRates | null>(() => loadCachedFxRates());
   const [fetchError, setFetchError] = useState<string | null>(null);

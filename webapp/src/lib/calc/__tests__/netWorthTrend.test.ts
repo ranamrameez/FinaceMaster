@@ -21,6 +21,7 @@ function activity(partial: Partial<BudgetActivity>): BudgetActivity {
 
 const emptyNetWorthAsOfInputs: NetWorthAsOfInputs = {
   cashEntries: [], cashSettings: { defaultCurrency: 'USD' }, bankAccounts: [], bankTransactions: [],
+  creditCards: [], creditCardTransactions: [],
   personalLoans: [], personalLoanRepayments: [], emiLoans: [],
   fundsFunds: [], fundsTransactions: [], fundsPriceHistory: {},
   qseTransactions: [], qseTransfers: [], qseAdjustments: [], qsePriceHistory: {},

@@ -1,12 +1,14 @@
 import { cashBalanceByCurrency } from '../../../lib/calc/cashModule';
-import { assetBalanceByCurrency, creditCardLiabilityByCurrency } from '../../../lib/calc/bankModule';
+import { assetBalanceByCurrency, creditCardLiabilityByCurrency as legacyCreditCardLiabilityByCurrency } from '../../../lib/calc/bankModule';
+import { creditCardLiabilityByCurrency } from '../../../lib/calc/creditCardModule';
 import { netPositionByCurrency } from '../../../lib/calc/personalLoansModule';
 import { totalsByCurrency as emiTotalsByCurrency } from '../../../lib/calc/emiModule';
 import { fundsValueByCurrency } from '../../../lib/calc/fundsModule';
-import { computeNetWorthByCurrency, type CurrencyNetWorth } from '../../../lib/calc/netWorth';
-import { includedBankAccounts, includedEmiLoans, includedFunds, includedPersonalLoans } from '../../../lib/calc/netWorthInclusion';
+import { computeNetWorthByCurrency, mergeCurrencyTotals, type CurrencyNetWorth } from '../../../lib/calc/netWorth';
+import { includedBankAccounts, includedCreditCards, includedEmiLoans, includedFunds, includedPersonalLoans } from '../../../lib/calc/netWorthInclusion';
 import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
+import { useCreditCardWorkbookStore } from '../../../store/creditCardWorkbookStore';
 import { usePersonalLoansWorkbookStore } from '../../../store/personalLoansWorkbookStore';
 import { useEMIWorkbookStore } from '../../../store/emiWorkbookStore';
 import { useFundsWorkbookStore } from '../../../store/fundsWorkbookStore';
@@ -40,6 +42,7 @@ export function useNetWorthSummary(): NetWorthSummary {
   const personalLoans = usePersonalLoansWorkbookStore((s) => s.workbook);
   const emiLoans = useEMIWorkbookStore((s) => s.workbook.entries);
   const funds = useFundsWorkbookStore((s) => s.workbook);
+  const creditCardsWb = useCreditCardWorkbookStore((s) => s.workbook);
   const qseSettings = useWorkbookStore((s) => s.workbook.settings);
   const psxSettings = usePSXWorkbookStore((s) => s.workbook.settings);
   const qse = useQSEDerived();
@@ -55,7 +58,13 @@ export function useNetWorthSummary(): NetWorthSummary {
   const includedAccounts = includedBankAccounts(bank.settings.accounts);
   const cash = cashSettings.includeInNetWorth === false ? {} : cashBalanceByCurrency(cashEntries);
   const bankTotals = assetBalanceByCurrency(includedAccounts, bank.transactions);
-  const creditCards = creditCardLiabilityByCurrency(includedAccounts, bank.transactions);
+  // Merges both sources during the isLiability -> real-CreditCard-entity
+  // migration transition — see `mergeCurrencyTotals`'s own doc comment for
+  // why this is always a correct sum, never a double-count.
+  const creditCards = mergeCurrencyTotals(
+    legacyCreditCardLiabilityByCurrency(includedAccounts, bank.transactions),
+    creditCardLiabilityByCurrency(includedCreditCards(creditCardsWb.cards), creditCardsWb.transactions),
+  );
   const personalLoansNet = netPositionByCurrency(includedPersonalLoans(personalLoans.loans), personalLoans.repayments);
   const emiOutstanding: Record<string, number> = {};
   Object.entries(emiTotalsByCurrency(includedEmiLoans(emiLoans))).forEach(([code, t]) => { emiOutstanding[code] = t.outstanding; });
