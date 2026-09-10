@@ -8715,40 +8715,62 @@ everything below is started. Working down it in priority order across following 
      forms remain intentionally out of scope**: they sit inside the same `<table>`/`<thead>` as
      their own add-row, so the column headers already convey what's expected — the same
      established convention Done item 199 already relied on for labeling.
-104. A second, real, keyless IBAN-lookup provider for `lib/ibanLookup.ts`'s `IBAN_PROVIDERS`
-     chain (see Done item 171 for why only one was confidently wired in) — needs a specific
-     provider confirmed to have a genuinely public, no-registration endpoint before adding, not
-     a repeat of the same guessing risk. Also: the openiban.com success path itself is
-     unverified in this sandbox (network blocked) — a future session with real browser access
-     should confirm a real IBAN actually returns a real bank name before trusting this beyond
-     the local-checksum unit tests.
-105. ~~Credit card spend tracking, linked to a Bank account, so Net Worth counts it
-     accurately.~~ **Done (2026-08-26) — see Done item 175.** A credit card is its own
-     `BankAccount` with `isLiability: true`; Net Worth counts its debt separately from asset
-     accounts. Also delivered in the same batch: card-network detection from a BIN, and a
+~~104. A second, real, keyless IBAN-lookup provider for `lib/ibanLookup.ts`'s `IBAN_PROVIDERS`
+     chain.~~ **Dropped, per explicit user instruction (2026-09-10): "second IBAN provide
+     remove."** Not pursuing a second provider — `IBAN_PROVIDERS` stays a single-entry array
+     (`openIbanProvider`, see Done item 171), no dead/placeholder second entry was ever added to
+     the code so there was nothing to delete there, just this backlog wish itself. One real
+     related item remains, genuinely separate from "add a second provider": the openiban.com
+     success path itself is still unverified in this sandbox (network blocked) — a future
+     session with real browser access should confirm a real IBAN actually returns a real bank
+     name before trusting this beyond the local-checksum unit tests.
+105. **Credit card spend tracking, linked to a Bank account, so Net Worth counts it
+     accurately.** First built 2026-08-26 (Done item 175) as a credit card modeled as its own
+     `BankAccount` with `isLiability: true`. **Reopened (2026-09-10) — the user rejected this
+     design outright: "Credit Card can never behave like a bank."** Correct: a credit card is a
+     revolving line of credit (a real financial obligation that can accrue interest/markup on a
+     carried balance and has a hard credit-limit ceiling, a billing/statement cycle, and
+     charge/payment actions), not a store of money like a checking account — modeling it as a
+     `BankAccount` variant conflated two genuinely different financial primitives. See the new
+     design proposal in `CLAUDE.md`'s "Credit Card redesign" entry (2026-09-10) for the real
+     replacement: a first-class `CreditCard` entity, its own store/ledger (`kind: 'charge' |
+     'payment' | 'fee' | 'interest'`, not deposit/withdrawal), and a one-time migration from any
+     existing `isLiability` `BankAccount` — not yet built, design confirmed with the user before
+     writing migration code, per this project's own locked "ask before touching real financial
+     data structure" rule (the user's real GCC/PCC credit-card accounts are live data). Also
+     delivered in the original batch, unaffected by this reopening: card-network detection from
+     a BIN lookup, and a
      prefilled Pakistan/Qatar bank+wallet suggestion list.
 106. ~~A cross-module "Budget Planner".~~ **Done (2026-08-26) — see Done item 176.** Unifies
      Cash/Bank/Rentals' existing planned entries into one view + a 3-month projection, with an
      add-plan shortcut writing into whichever module's own store is picked.
-107. The user has a sample monthly-expense-tracker Excel sheet and wants the app to "show/
+~~107. The user has a sample monthly-expense-tracker Excel sheet and wants the app to "show/
      answer all the capabilities just like this sheet is providing," on top of Net Worth being
      "capable to answer each finance's summary + user's worth in 3 months," with "detailed
-     calculation" of financial activity over time available on request. **The concrete UI half
-     is done (2026-08-27) — see Done item 201.** The user clarified this specifically meant a
-     scrollable multi-month summary table (their real data was already imported earlier, Done
-     item 178) matching their reference Google Sheet's per-month table layout — Budget Planner
-     now has one, 6 months by default (3 past + current + 2 future) and scrollable further in
-     either direction via ◀/▶. Also raised in the same message: an EMI's own 36-month
-     amortization makes Net Worth look permanently negative with no way to "zoom in" on the real
-     trajectory — answered with a new Net Worth trend row in the same table (see Done item 201
-     for the full calc design). **Still open**: the reference Google Sheet image itself was
-     never actually available in this session (it scrolled out of visible context before this
-     request), so the table was built from the user's text description alone — needs the user's
-     own visual confirmation once they can re-share that image, in case the exact column/row
-     layout should match it more closely. The broader "detailed calculation... available on
-     request" wording and any other capability specific to the user's real sheet beyond what's
-     already built remain unconfirmed without seeing that file's actual columns/formulas — per
-     this project's own "work from the real file" lesson, still not guessed at further than
+     calculation" of financial activity over time available on request.~~ **Fully done — closing
+     this item in full (2026-09-10). Correction of a stale characterization**: an earlier status
+     summary in this session's own chat described this as still partly blocked on a promised
+     file — wrong, and the user corrected it directly ("sample excel was imported multiple
+     times in various sessions. none noted it! all data is live now!"). The real sample data
+     was imported into the user's real, live account across several sessions, not just once:
+     the original QR.Expense/RTDB merge (Done item 178), a second Pakistan-side ledger merge
+     (documented in `CLAUDE.md`'s own dedicated entry, "Second real-data merge, Pakistan-side
+     ledger this time" — not separately numbered in this README), and Funds' own Daily History
+     Import (Done item 151) — and the
+     feature that consumed that last file was later intentionally removed once its job was done
+     (Done item 292: "i have already provided all sample data and its imported in the app").
+     **The concrete UI half was done earlier (2026-08-27) — see Done item 201.** The user
+     clarified this specifically meant a scrollable multi-month summary table matching their
+     reference Google Sheet's per-month table layout — Budget Planner now has one, 6 months by
+     default (3 past + current + 2 future) and scrollable further in either direction via ◀/▶.
+     Also raised in the same message: an EMI's own 36-month amortization makes Net Worth look
+     permanently negative with no way to "zoom in" on the real trajectory — answered with a new
+     Net Worth trend row in the same table (see Done item 201 for the full calc design).
+     **Genuinely still open, but not a blocker on this item being closed**: the reference
+     Google Sheet's own exact column/row layout was described in text, never actually seen as
+     an image in this session — if the user ever wants the table's layout to match that sheet
+     more literally, that's a small follow-up, not something holding this item open. Do NOT
+     re-read this item in a future session as "waiting on a file" — the file(s) are already
      what's now shipped.
 
 **New large UI/UX critique batch, 2026-08-27 (screenshot-backed) — see Done item 202 for what
@@ -8859,9 +8881,10 @@ or a design decision before more code, not guessed at further:**
      item 289**: all 8 `LinkModule` pages' "Transfers" action is confirmed reachable on page
      load via a live Playwright check, not just a code read — no gap found. What remains open
      for this item is only the separate, higher-risk Credit Card/Bank/Branch normalization
-     migration (flagged as its own track in CLAUDE.md, not to be bundled into the general UI
-     rollout — it touches the user's real imported GCC/PCC credit-card-as-liability-account
-     data and needs its own focused session).
+     migration — now tracked as Pending item 105 (reopened 2026-09-10, the user rejected the
+     original `isLiability`-on-`BankAccount` design) rather than only in CLAUDE.md's prose, not
+     to be bundled into the general UI rollout — it touches the user's real imported GCC/PCC
+     credit-card-as-liability-account data and needs its own focused session.
 115. **Real structural asks from the same 2026-08-27 critique — see CLAUDE.md's
      "App-wide UI/UX redesign" section and Done item 214 for context. All four sub-items below
      are now done (2026-09-10) — closing this item in full.** ~~(a) **Bank as a

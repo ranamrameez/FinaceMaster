@@ -5877,6 +5877,72 @@ dropped when migrating a module's existing modal (e.g. Banking's `AccountDetailP
   correctly post-migration — a credit card must keep counting as a liability, never flip to
   being silently double-counted or dropped.
 
+#### Credit Card redesign — concrete proposal (2026-09-10, NOT YET BUILT)
+
+**The user rejected the `isLiability`-on-`BankAccount` design outright**, verbatim: "Credit
+Card can never behave like a bank... now you tell me how!" — see README Pending item 105
+(reopened). They're right: a bank/cash account is a store of money you own (balance = your
+money, "deposit"/"withdrawal" are the real actions); a credit card is a revolving line of
+CREDIT you borrow against — its "balance" is money you OWE, it has a hard ceiling (credit
+limit), a real billing/statement cycle with a due date and minimum payment, and — the biggest
+gap this project never modeled — a carried balance can accrue real INTEREST/markup, something
+no `BankAccount` has any concept of. Squeezing that onto the same type as a checking account
+was wrong, not just a taste call.
+
+**Proposed replacement — a genuinely separate `CreditCard` entity, own store, own ledger:**
+
+- New `types/creditCard.ts`: `CreditCard { id, name, bankId?, currencyCode, creditLimit?,
+  statementDate?, paymentDueDate?, minPaymentAmount?, lateFeeAfterDue?, annualFee?,
+  cardNetwork?, cardBin?, isActive?, isFavorite?, color?, includeInNetWorth?, seq? }` — every
+  field here already exists verbatim on `BankAccount` today (Done item 175), so this is a
+  rename/relocation of already-designed fields, not new design surface. `bankId` links to the
+  existing `Bank` entity (Done item 265) — a credit card IS issued by a real bank, that part of
+  the original design was right, only the "is a BankAccount" part was wrong.
+- `CreditCardTransaction { id, cardId, date, time?, timezone?, kind: 'charge' | 'payment' |
+  'fee' | 'interest', amount (always positive — `kind` decides the effect, not the sign),
+  description, category?, categoryID?, source?, statementRef?, isPending?, seq?, timestamp? }`
+  — deliberately NOT reusing Bank's signed deposit/withdrawal convention: "Charge"/"Payment" are
+  the real actions a cardholder takes, semantically distinct from "Deposit"/"Withdrawal" even
+  where the arithmetic happens to rhyme, and a `kind` field is what makes it possible to add
+  `'interest'` as a real accrual line later without contorting the model further.
+  `outstandingBalance = Σ(charge+fee+interest) − Σ(payment)`.
+- New hand-written `creditCardWorkbookStore.ts` (own `cards[]`/`transactions[]`, mirrors
+  Bank's own hand-written store shape), own Firebase path `users/{uid}/creditCards`. New
+  `lib/calc/creditCardModule.ts`: `outstandingBalanceByCard`, `creditCardLiabilityByCurrency`
+  (replaces the `BankAccount.isLiability`-driven one Net Worth reads today —
+  `computeNetWorthByCurrency` swaps its source, the liability-vs-asset split itself is
+  unchanged), `availableCredit(card, balance)`.
+- **Placement recommendation**: a new "Credit Cards" tab inside the existing Banking module
+  (alongside Accounts/Planning/Analytics/Settings), not a whole new top-level `CategoryNav`
+  entry — a credit card is still squarely in the "banking" domain (issued by a `Bank`, usually
+  paid down from a Bank/Cash account) even though it's a structurally distinct entity from a
+  checking/savings `BankAccount`. This mirrors how Funds already houses two distinct entity
+  types (`Fund` and `Broker`) under one module rather than splitting Brokers into their own
+  top-level category.
+- Cross-entity linking: add `'creditCard'` to `LinkModule` in `lib/interEntityLink.ts` — a
+  linked payment from Bank/Cash into a credit card always creates a `kind:'payment'` record
+  regardless of link direction (same documented exception already used for Personal Loans: a
+  credit-card link only ever means "pay it down," never "receive a purchase," so there's no
+  real bidirectional balance-transfer semantic to encode).
+- **Migration, the real-data-touching part**: a one-time, EXPLICIT, user-confirmed action (a
+  button on the Banking page listing every `BankAccount{isLiability:true}` it finds and what it
+  will do, not a silent on-load side effect) converts each into a `CreditCard` record
+  (field-for-field copy, see above) plus its transactions (`amount > 0` → `kind:'payment'`,
+  `amount < 0` → `kind:'charge'`, magnitude preserved, every other field — date/time/timezone/
+  description/category/source/statementRef/seq/timestamp/isPending — carried over unchanged).
+  The old `BankAccount` gets archived (`isActive:false`), never deleted outright, so nothing is
+  destroyed if something needs re-checking. **Low-stakes to verify in practice**: the user's
+  real GCC/PCC cards both currently sit at exactly 0.00 owed (confirmed in the big real-data
+  merge writeup above) — after migration both should still read exactly 0.00, an easy sanity
+  check before trusting the conversion on anything with a real nonzero balance.
+
+**Not yet built — this is the design being proposed to the user, not a completed feature.**
+Two genuinely open questions were put to them directly rather than guessed at: (1) confirm the
+placement (a Banking sub-tab, per the recommendation above, vs. a new top-level module); (2)
+confirm the `charge`/`payment`/`fee`/`interest` ledger shape (vs. keeping the existing signed
+deposit/withdrawal convention just relabeled). Do not start the migration or any UI work here
+until both are confirmed — this touches the user's real live financial data.
+
 ### Progress (2026-08-27) — Phase 1 + Banking pilot DONE, see README Done item 213 for the full
 write-up. Read this before assuming any of the below is still "not started."
 
