@@ -5877,11 +5877,11 @@ dropped when migrating a module's existing modal (e.g. Banking's `AccountDetailP
   correctly post-migration — a credit card must keep counting as a liability, never flip to
   being silently double-counted or dropped.
 
-#### Credit Card redesign — concrete proposal (2026-09-10, NOT YET BUILT)
+#### Credit Card redesign — BUILT (2026-09-10, see README Done item 300)
 
 **The user rejected the `isLiability`-on-`BankAccount` design outright**, verbatim: "Credit
 Card can never behave like a bank... now you tell me how!" — see README Pending item 105
-(reopened). They're right: a bank/cash account is a store of money you own (balance = your
+(now closed, see Done item 300). They're right: a bank/cash account is a store of money you own (balance = your
 money, "deposit"/"withdrawal" are the real actions); a credit card is a revolving line of
 CREDIT you borrow against — its "balance" is money you OWE, it has a hard ceiling (credit
 limit), a real billing/statement cycle with a due date and minimum payment, and — the biggest
@@ -6050,19 +6050,25 @@ each finding shapes the design below.** Sources: [Citi](https://www.citi.com/cre
   merge writeup above) — after migration both should still read exactly 0.00, an easy sanity
   check before trusting the conversion on anything with a real nonzero balance.
 
-**Not yet built — this is the design being proposed to the user, not a completed feature.**
-Placement (Banking sub-tab), the `charge`/`payment`/`fee`/`markup`/`cashAdvance` ledger shape,
-and the research-backed general model above (grace-period gate, a selectable-but-v1-single-
-method markup engine, a generalized minimum-payment formula instead of one fixed number) are
-all now spec-complete per the user's own explicit "complete the plan before diving in... research
-how CCs work, do different banks have different rules" instruction (2026-09-10) — this is no
-longer a placeholder translation of one example, it's checked against how real conventional and
-Islamic issuers actually differ (see the Research block above, with sources). **Still needs one
-final go-ahead before coding**, per this file's own locked rule for any change touching real
-financial data structure: confirm the v1 scope choices explicitly (flat-rate-on-carried-balance
-as the only implemented markup method; cash advances tagged but not separately priced; the
-migration plan for the user's real GCC/PCC cards) rather than assuming silence means agreement,
-since the migration will touch their real live card data.
+**BUILT (2026-09-10) — see README Done item 300 for the full writeup.** The user gave the
+final go-ahead this same day, in two messages: "make sure that user gets his bill calculated
+and visualized all info of the card and progress bar for limit tracking" and "account linking
+option as well to ensure seamless experience" — both requirements are shipped. Everything
+spec'd above is built exactly as designed: placement (a Banking sub-tab), the
+`charge`/`payment`/`fee`/`markup`/`cashAdvance` ledger shape, the research-backed general
+model (grace-period gate, `'flatOnCarried'` as the only v1-implemented markup method — the
+`'averageDailyBalance'`/`'previousBalance'` slots stay reserved-but-unbuilt, per this section's
+own reasoning above, not guessed at without a real conventional-card user to verify against —
+and a generalized minimum-payment formula covering all three real-world shapes found in the
+research). The one-time migration off `isLiability`-on-`BankAccount` is explicit and
+user-confirmed (a banner listing exactly what it will do, never automatic), and a new
+`BankAccount.migratedToCreditCardId` field plus `mergeCurrencyTotals()` keep Net Worth's
+`assetBalanceByCurrency`/`creditCardLiabilityByCurrency` split correct through the transition —
+a migrated account counts exactly once, never double-counted or dropped. Verified live via
+Playwright: statement/progress-bar math, the minimum-payment approve flow (plain and linked),
+the migration banner's full confirm→sign-in chain, and Net Worth's live/historical figures all
+matched hand-traced expectations exactly, with zero real console errors. `npx tsc -b` / `npm
+run test` (645 tests, 22 new) / `npm run build` all clean.
 
 ### Progress (2026-08-27) — Phase 1 + Banking pilot DONE, see README Done item 213 for the full
 write-up. Read this before assuming any of the below is still "not started."

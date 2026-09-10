@@ -53,6 +53,7 @@ import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
 import { usePlannedBankWorkbookStore } from '../../../store/plannedBankWorkbookStore';
 import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
 import { linkTargetPath, useLinkSideLabel } from '../../transfers/pages/TransferLinksPage';
+import { CreditCardsTab } from './CreditCardsSection';
 import type { BankAccount, BankTransaction, BankWorkbook } from '../../../types/bankWorkbook';
 import type { PlannedBankTransaction } from '../../../types/plannedBank';
 import { gridAutoStyle } from '../../../lib/gridStyle';
@@ -2497,6 +2498,7 @@ export function BankPage({
       <Tabs
         tabs={[
           { key: 'accounts', label: 'Accounts', content: <AccountsTab /> },
+          { key: 'creditCards', label: 'Credit Cards', content: <CreditCardsTab /> },
           {
             // Placed before Analytics to match Cash's own explicit tab order
             // for this exact same Planning feature (README Done item 224:

@@ -1,6 +1,7 @@
 import { TRANSFER_CATEGORY_ID } from './categories';
 import type { BankTransaction } from '../types/bankWorkbook';
 import type { CashEntry } from '../types/cashWorkbook';
+import type { CreditCardTransaction } from '../types/creditCard';
 import type { EMIRepayment } from '../types/emiWorkbook';
 import type { InterEntityTransfer, InterEntityTransferInput, LinkModule, LinkSideConfig } from '../types/interEntityTransfer';
 import type { PersonalLoanRepayment } from '../types/personalLoansWorkbook';
@@ -16,7 +17,8 @@ export type LinkSideRecord =
   | { module: 'qse' | 'psx' | 'funds'; record: Transfer }
   | { module: 'rentals'; record: RentalEntry }
   | { module: 'personalLoans'; record: PersonalLoanRepayment }
-  | { module: 'emi'; record: EMIRepayment };
+  | { module: 'emi'; record: EMIRepayment }
+  | { module: 'creditCard'; record: CreditCardTransaction };
 
 function buildSideRecord(
   cfg: LinkSideConfig,
@@ -134,6 +136,17 @@ function buildSideRecord(
         module: 'emi',
         record: { id, loanId: cfg.ref, month: cfg.emiMonth, amount, date },
       };
+    case 'creditCard':
+      // Same "direction doesn't flip the sign" exception as personalLoans/
+      // emi above — a linked transfer into or out of a credit card only
+      // ever means "pay it down." Always a real `kind:'payment'`
+      // transaction, regardless of which side of the link the card sits
+      // on — there's no "receive a purchase" side to a linked transfer.
+      if (!cfg.ref) throw new Error('Credit Cards side of a linked transfer needs a card.');
+      return {
+        module: 'creditCard',
+        record: { id, cardId: cfg.ref, date, kind: 'payment', amount, description: note || 'Linked payment', source: 'manual' },
+      };
   }
 }
 
@@ -191,6 +204,10 @@ export function isSupportedLinkPair(from: LinkModule, to: LinkModule): boolean {
     ['emi', 'bank'],
     ['cash', 'emi'],
     ['emi', 'cash'],
+    ['bank', 'creditCard'],
+    ['creditCard', 'bank'],
+    ['cash', 'creditCard'],
+    ['creditCard', 'cash'],
   ];
   return supported.some(([a, b]) => a === from && b === to);
 }

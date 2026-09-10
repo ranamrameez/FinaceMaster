@@ -19,6 +19,7 @@ import { isSupportedLinkPair } from '../lib/interEntityLink';
 import { createLinkedTransfer } from '../lib/linkCascade';
 import { useBankWorkbookStore } from '../store/bankWorkbookStore';
 import { useCashWorkbookStore } from '../store/cashWorkbookStore';
+import { useCreditCardWorkbookStore } from '../store/creditCardWorkbookStore';
 import { useEMIWorkbookStore } from '../store/emiWorkbookStore';
 import { useFundsWorkbookStore } from '../store/fundsWorkbookStore';
 import { usePersonalLoansWorkbookStore } from '../store/personalLoansWorkbookStore';
@@ -364,6 +365,7 @@ export function TransactionEntryModal({ defaultFinance, onClose }: { defaultFina
   const addQSETransfer = useWorkbookStore((s) => s.addTransfer);
   const addPSXTransfer = usePSXWorkbookStore((s) => s.addTransfer);
   const addFundsTransfer = useFundsWorkbookStore((s) => s.addTransfer);
+  const addCreditCardTransaction = useCreditCardWorkbookStore((s) => s.addTransaction);
 
   const [rows, setRows] = useState<TxRow[]>(() => [emptyRow(0, defaultFinance ?? { module: 'cash' }, defaultFinance?.currencyCode)]);
   const [nextKey, setNextKey] = useState(1);
@@ -479,6 +481,16 @@ export function TransactionEntryModal({ defaultFinance, onClose }: { defaultFina
           break;
         case 'funds':
           addFundsTransfer({ id: uid(), date: r.date, time: r.time, timezone: r.timezone, type: r.direction === 'in' ? 'DEPOSIT' : 'WITHDRAWAL', gross: Math.abs(r.amount), fee: 0 });
+          break;
+        case 'creditCard':
+          // No direction control (see DIRECTION_LABELS — same "always one
+          // fixed effect" precedent as personalLoans/emi): using this
+          // generic popup for a card always means logging a payment
+          // toward it, matching interEntityLink.ts's own `creditCard` case.
+          // A charge/fee/markup still goes through the card's own dedicated
+          // "Add a transaction" form, which has a real kind picker.
+          if (!r.finance.ref) { toast('Pick a credit card first.'); continue; }
+          addCreditCardTransaction({ id: uid(), cardId: r.finance.ref, date: r.date, time: r.time, timezone: r.timezone, kind: 'payment', amount: Math.abs(r.amount), description: r.description.trim() || 'Payment', source: 'manual' });
           break;
       }
       plainCount++;

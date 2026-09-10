@@ -8,6 +8,8 @@ const emptyInputs = () => ({
   cashSettings: { defaultCurrency: 'USD' },
   bankAccounts: [],
   bankTransactions: [],
+  creditCards: [],
+  creditCardTransactions: [],
   personalLoans: [],
   personalLoanRepayments: [],
   emiLoans: [],

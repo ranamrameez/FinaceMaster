@@ -6,11 +6,13 @@ import { IconButton } from '../../../components/ui/IconButton';
 import { emiSummary } from '../../../lib/calc/emiModule';
 import { CURRENCIES } from '../../../lib/currencies';
 import { AddAccountForm } from '../../bank/pages/BankPage';
+import { AddCreditCardForm } from '../../bank/pages/CreditCardsSection';
 import { AddLoanForm as AddEMILoanForm } from '../../emi/pages/EMIPage';
 import { AddLoanForm as AddPersonalLoanForm } from '../../personalLoans/pages/PersonalLoansPage';
 import { AddPropertyForm } from '../../rentals/pages/RentalsPage';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
 import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
+import { useCreditCardWorkbookStore } from '../../../store/creditCardWorkbookStore';
 import { useEMIWorkbookStore } from '../../../store/emiWorkbookStore';
 import { useFundsWorkbookStore } from '../../../store/fundsWorkbookStore';
 import { usePersonalLoansWorkbookStore } from '../../../store/personalLoansWorkbookStore';
@@ -39,6 +41,7 @@ interface CurrencyContext {
   properties: { id: string; currencyCode: string }[];
   loans: { id: string; currencyCode: string }[];
   emiLoans: { id: string; currencyCode: string }[];
+  creditCards: { id: string; currencyCode: string }[];
 }
 
 /** EMI/Loans has no per-repayment picker in v1 — a link always applies to
@@ -70,6 +73,7 @@ function resolveCurrency(cfg: LinkSideConfig, ctx: CurrencyContext): string | nu
     case 'rentals': return ctx.properties.find((p) => p.id === cfg.ref)?.currencyCode ?? null;
     case 'personalLoans': return ctx.loans.find((l) => l.id === cfg.ref)?.currencyCode ?? null;
     case 'emi': return ctx.emiLoans.find((l) => l.id === cfg.ref)?.currencyCode ?? null;
+    case 'creditCard': return ctx.creditCards.find((c) => c.id === cfg.ref)?.currencyCode ?? null;
   }
 }
 
@@ -87,7 +91,8 @@ export function useSideCurrency(cfg: LinkSideConfig): string | null {
   const properties = useRentalsWorkbookStore((s) => s.workbook.settings.properties);
   const loans = usePersonalLoansWorkbookStore((s) => s.workbook.loans);
   const emiLoans = useEMIWorkbookStore((s) => s.workbook.entries);
-  return resolveCurrency(cfg, { cashCurrency, bankAccounts, qseCurrency, psxCurrency, fundsCurrency, properties, loans, emiLoans });
+  const creditCards = useCreditCardWorkbookStore((s) => s.workbook.cards);
+  return resolveCurrency(cfg, { cashCurrency, bankAccounts, qseCurrency, psxCurrency, fundsCurrency, properties, loans, emiLoans, creditCards });
 }
 
 interface NameContext {
@@ -95,6 +100,7 @@ interface NameContext {
   properties: { id: string; name: string }[];
   loans: { id: string; person: string }[];
   emiLoans: { id: string; name: string }[];
+  creditCards: { id: string; name: string }[];
 }
 
 /** Same "plain function + a `use*` wrapper that reads the stores once"
@@ -124,6 +130,10 @@ function describeSide(cfg: LinkSideConfig, ctx: NameContext): string {
       const name = ctx.emiLoans.find((l) => l.id === cfg.ref)?.name;
       return name ? `${base} (${name})` : base;
     }
+    case 'creditCard': {
+      const name = ctx.creditCards.find((c) => c.id === cfg.ref)?.name;
+      return name ? `${base} (${name})` : base;
+    }
     default:
       return base;
   }
@@ -144,7 +154,8 @@ export function useLinkSideLabel(): (cfg: LinkSideConfig) => string {
   const properties = useRentalsWorkbookStore((s) => s.workbook.settings.properties);
   const loans = usePersonalLoansWorkbookStore((s) => s.workbook.loans);
   const emiLoans = useEMIWorkbookStore((s) => s.workbook.entries);
-  return (cfg: LinkSideConfig) => describeSide(cfg, { bankAccounts, properties, loans, emiLoans });
+  const creditCards = useCreditCardWorkbookStore((s) => s.workbook.cards);
+  return (cfg: LinkSideConfig) => describeSide(cfg, { bankAccounts, properties, loans, emiLoans, creditCards });
 }
 
 /** Best-effort "go see the other side" route for a linked transaction's tag
@@ -162,6 +173,7 @@ export function linkTargetPath(cfg: LinkSideConfig): string {
     case 'personalLoans': return '/personal-loans';
     case 'emi': return '/emi-loans';
     case 'funds': return '/funds';
+    case 'creditCard': return '/bank';
   }
 }
 
@@ -170,6 +182,7 @@ const REF_PICKER_LABELS: Partial<Record<LinkModule, string>> = {
   rentals: 'Property',
   personalLoans: 'Loan',
   emi: 'Loan',
+  creditCard: 'Card',
 };
 
 /** One "side" of a transaction — which finance it belongs to, and (for the
@@ -205,6 +218,7 @@ export function SideFields({ label, cfg, onChange, preferredCurrency }: { label:
   const properties = useRentalsWorkbookStore((s) => s.workbook.settings.properties);
   const loans = usePersonalLoansWorkbookStore((s) => s.workbook.loans);
   const emiLoans = useEMIWorkbookStore((s) => s.workbook.entries);
+  const creditCards = useCreditCardWorkbookStore((s) => s.workbook.cards);
   const cashCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
   const currency = useSideCurrency(cfg);
   const [addOpen, setAddOpen] = useState(false);
@@ -222,10 +236,11 @@ export function SideFields({ label, cfg, onChange, preferredCurrency }: { label:
       case 'rentals': return properties.filter((p) => p.isActive !== false).map((p) => ({ id: p.id, label: `${p.name} (${p.currencyCode})`, currencyCode: p.currencyCode }));
       case 'personalLoans': return loans.filter((l) => l.isActive !== false).map((l) => ({ id: l.id, label: `${l.person} (${l.currencyCode})`, currencyCode: l.currencyCode }));
       case 'emi': return emiLoans.filter((l) => l.isActive !== false).map((l) => ({ id: l.id, label: `${l.name} (${l.currencyCode})`, currencyCode: l.currencyCode }));
+      case 'creditCard': return creditCards.filter((c) => c.isActive !== false).map((c) => ({ id: c.id, label: `${c.name} (${c.currencyCode})`, currencyCode: c.currencyCode }));
       default: return [];
     }
   };
-  const hasRefPicker = cfg.module === 'bank' || cfg.module === 'rentals' || cfg.module === 'personalLoans' || cfg.module === 'emi';
+  const hasRefPicker = cfg.module === 'bank' || cfg.module === 'rentals' || cfg.module === 'personalLoans' || cfg.module === 'emi' || cfg.module === 'creditCard';
   const entities = entitiesForModule(cfg.module);
   const filteredEntities = cfg.currencyCode ? entities.filter((e) => e.currencyCode === cfg.currencyCode) : entities;
   const refLabel = REF_PICKER_LABELS[cfg.module];
@@ -349,6 +364,11 @@ export function SideFields({ label, cfg, onChange, preferredCurrency }: { label:
       {addOpen && cfg.module === 'emi' && (
         <Modal title="Add a missing loan" onClose={() => setAddOpen(false)}>
           <AddEMILoanForm initialCurrency={cfg.currencyCode} onSaved={(id) => { onChange({ ...cfg, ref: id }); setAddOpen(false); }} />
+        </Modal>
+      )}
+      {addOpen && cfg.module === 'creditCard' && (
+        <Modal title="Add a missing credit card" onClose={() => setAddOpen(false)}>
+          <AddCreditCardForm initialCurrency={cfg.currencyCode} onSaved={(id) => { onChange({ ...cfg, ref: id }); setAddOpen(false); }} />
         </Modal>
       )}
     </div>

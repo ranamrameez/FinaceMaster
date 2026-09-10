@@ -8091,6 +8091,70 @@ FinanceManager live link:
   date-range filter) already independently marked Done in earlier sessions with no item-level
   closing note ever added — closed the item in full in the Pending list (doc-only, no code
   change).
+- **Credit Card module built as a real, separate entity — see Done item 300 (2026-09-10),
+  closes Pending item 105 in full, per the user's explicit go-ahead ("make sure that user
+  gets his bill calculated and visualized all info of the card and progress bar for limit
+  tracking" + "account linking option as well to ensure seamless experience").** Implements
+  the design `CLAUDE.md`'s "Credit Card redesign" section spec-locked earlier the same day
+  (research-backed: conditional grace period, a real billing-cycle statement, a generalized
+  minimum-payment formula, cash advances tagged but not separately priced in v1). New types
+  (`types/creditCard.ts`), store (`store/creditCardWorkbookStore.ts`, own Firebase path
+  `users/{uid}/creditCards`), and calc module (`lib/calc/creditCardModule.ts`, 22 tests):
+  `currentStatement()` splits a card's transactions at its own `statementDate` cutoffs into
+  previous-balance/charges/payments/statement-balance/minimum-due/due-date, using the same
+  UTC-only pure-integer date arithmetic already established for EMI's `installmentDueDate`
+  (Done item 167) to avoid local/UTC `Date`-mixing bugs; `markupThisCycle()` gates on a real
+  grace period (no markup if the prior statement was cleared in full) before applying the
+  card's own `markupMethod`/`markupRatePct`/`markupThresholdAmount` (`'flatOnCarried'` is the
+  only v1-implemented method — `'averageDailyBalance'`/`'previousBalance'` are reserved type
+  slots, not built, since guessing at either without a real conventional-card user to verify
+  against risks shipping a wrong number on someone's real bill); `computeMinimumDue()` handles
+  all three real-world formulas found in the research (`'fixed'`/`'percentOfBalance'`/
+  `'greaterOfFixedOrPercent'`); `proposeMinPayment()`/`nextPendingMinDue()` mirror Rentals'
+  `proposeRentCollection()`/`nextPendingBalance()` exactly (semi-automated "propose, user
+  approves or logs a partial amount" — this app has no real bank-API access to actually debit
+  anything). UI (`features/bank/pages/CreditCardsSection.tsx`): `CreditCardsList` (an
+  `EntityCard` grid, same Main/Often/Rare pattern as every other module) and
+  `CreditCardDetail` — a read-only-by-default popup showing every card attribute
+  (`AttributeList`), a red/green `CreditUsageBar` progress bar for limit tracking (the user's
+  own explicit ask), the full computed statement with a Log-markup action, the minimum-payment
+  approve flow (plain or linked), and the transaction ledger with a kind-picker add-form
+  (charge/payment/fee/markup/cash advance). **Cross-entity linking** (the user's second
+  explicit ask): `LinkModule` gained `'creditCard'`, wired through `interEntityLink.ts` (always
+  `kind:'payment'` regardless of link direction — the same "direction doesn't flip the sign"
+  precedent already established for `personalLoans`/`emi`) and `linkCascade.ts`'s three
+  dispatch switches; `TransferLinksPage.tsx`'s shared `SideFields`/`resolveCurrency`/
+  `describeSide`/`useSideCurrency`/`linkTargetPath`/`REF_PICKER_LABELS` all gained a
+  `creditCard` case (including a "+" quick-add reusing `AddCreditCardForm`), and the app-wide
+  "Transfers" `TransactionEntryModal` gained a `case 'creditCard':` too (logging a plain
+  payment when used unlinked, matching the same one-fixed-effect convention). **Net Worth
+  double-counting avoidance**: rather than a silent auto-migration, `BankAccount` gained
+  `migratedToCreditCardId?: string` — a deliberate, narrow exception to the locked "archiving
+  must never silently change a real financial figure" rule (this field, not `isActive`,
+  excludes a migrated account from Bank's own totals in `bankModule.ts`); a new
+  `mergeCurrencyTotals()` helper (`lib/calc/netWorth.ts`) combines the legacy
+  `BankAccount.isLiability`-sourced totals with the new `CreditCard`-sourced ones at both
+  `useNetWorthSummary.ts` (today's live figure) and `netWorthAsOf.ts` (every past month/the
+  Monthly Summary trend), so a credit card counts exactly once regardless of which model it's
+  currently in. **The one-time migration is explicit, never automatic** — a new
+  `MigrateLegacyCreditCards` banner (shown only when a legacy `isLiability` account exists)
+  lists exactly what it will do and requires a real confirm + sign-in before converting: moves
+  every transaction across (`amount >= 0` → `payment`, else → `charge`), closes the original
+  account (`isActive: false`), and tags it `migratedToCreditCardId` — never deletes anything.
+  Verified live via Playwright end-to-end with seeded data: the entity card/detail popup
+  render every field correctly, the progress bar and statement math matched hand-traced
+  numbers exactly (7,000 charges − 3,000 payments = 4,000 statement balance; grace period
+  correctly returned 0 markup on a card's very first cycle, since there was nothing to carry),
+  the minimum-payment approve flow (both plain and linked) and the Add-transaction form both
+  correctly hit the real sign-in gate and made zero writes when the gate was declined, the
+  migration banner's Migrate → Confirm → sign-in-gate chain worked correctly end-to-end, the
+  FAB's "Add a card" flow hit the sign-in gate, and Net Worth correctly merged a 10,000 PKR
+  bank asset against a 4,500 PKR credit-card liability into a 5,500 PKR net figure — reflected
+  correctly in the live summary, the "By account" breakdown (a new "Credit Cards" row
+  alongside "Bank"), the historical trend chart, and the Monthly Summary table, confirming the
+  new `netWorthAsOf.ts`/`earliestActivityDate()` wiring picks up credit card transactions for
+  past-month computation too. `npx tsc -b` / `npm run test` (645 tests, 22 new) / `npm run
+  build` all clean.
 
 ## Pending
 
@@ -8724,31 +8788,17 @@ everything below is started. Working down it in priority order across following 
      success path itself is still unverified in this sandbox (network blocked) — a future
      session with real browser access should confirm a real IBAN actually returns a real bank
      name before trusting this beyond the local-checksum unit tests.
-105. **Credit card spend tracking, linked to a Bank account, so Net Worth counts it
-     accurately.** First built 2026-08-26 (Done item 175) as a credit card modeled as its own
-     `BankAccount` with `isLiability: true`. **Reopened (2026-09-10) — the user rejected this
-     design outright: "Credit Card can never behave like a bank."** Correct: a credit card is a
-     revolving line of credit (a real financial obligation that can accrue interest/markup on a
-     carried balance and has a hard credit-limit ceiling, a billing/statement cycle, and
-     charge/payment actions), not a store of money like a checking account — modeling it as a
-     `BankAccount` variant conflated two genuinely different financial primitives. See the new
-     design proposal in `CLAUDE.md`'s "Credit Card redesign" entry (2026-09-10) for the real
-     replacement: a first-class `CreditCard` entity, its own store/ledger (`kind: 'charge' |
-     'payment' | 'fee' | 'markup'`, not deposit/withdrawal), a real billing-cycle statement
-     computation, a flat-rate-with-threshold markup rule, and Rentals-style semi-automated
-     minimum-payment collection — the user's own 2026-09-10 follow-up added these three on top
-     of the original sketch, in response to their real Sharia-compliant-card example. **Two
-     things are now confirmed** (placement: a Banking sub-tab; ledger shape:
-     charge/payment/fee/markup, not deposit/withdrawal). **One thing still needs an explicit
-     go-ahead before any code**: the exact markup/statement model itself — the user's own
-     closing line ("we may need to study... normal CCs as well") flagged it as not fully settled
-     even in their own head, so this session presented a concrete v1 proposal back to them
-     rather than guessing it was already approved. Not yet built — this touches the user's real
-     live GCC/PCC credit-card data, per this project's own locked "ask before touching real
-     financial data structure" rule. Also
-     delivered in the original batch, unaffected by this reopening: card-network detection from
-     a BIN lookup, and a
-     prefilled Pakistan/Qatar bank+wallet suggestion list.
+~~105. Credit card spend tracking, linked to a Bank account, so Net Worth counts it
+     accurately.~~ **Done (2026-09-10) — see Done item 300.** A real, separate `CreditCard`
+     entity (not a `BankAccount` variant — the user's own explicit rejection of that first
+     design, "Credit Card can never behave like a bank," is why this needed a full rebuild),
+     with a real billing-cycle statement computation, a flat-rate-with-threshold markup rule
+     gated by a real grace period, a generalized minimum-payment formula, a limit-tracking
+     progress bar, cross-entity linking, and an explicit (never automatic) migration off the
+     old `isLiability` model — every open question this item's own text left unresolved is
+     settled and built. Card-network detection (BIN lookup) and the prefilled Pakistan/Qatar
+     bank+wallet suggestion list from the original 2026-08-26 batch are unaffected and already
+     wired into the new `CreditCard` form.
 106. ~~A cross-module "Budget Planner".~~ **Done (2026-08-26) — see Done item 176.** Unifies
      Cash/Bank/Rentals' existing planned entries into one view + a 3-month projection, with an
      add-plan shortcut writing into whichever module's own store is picked.
