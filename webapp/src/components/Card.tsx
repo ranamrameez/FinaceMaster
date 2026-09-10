@@ -127,7 +127,7 @@ export function StatCard({
     <div className="card stat-card" style={hue ? ({ '--card-hue': hue } as CSSProperties) : undefined}>
       {labelTitle ? (
         <Tooltip text={labelTitle}>
-          <div className="label" style={{ cursor: 'pointer' }}>{label}</div>
+          <div className="label clickable">{label}</div>
         </Tooltip>
       ) : (
         <div className="label">{label}</div>

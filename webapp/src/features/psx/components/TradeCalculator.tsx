@@ -264,7 +264,7 @@ export function TradeCalculator({ initialTicker }: { initialTicker?: string } = 
               <div className="stat-card card"><div className="label">Avg cost</div><div className="value">{fmtPrice(avg)}</div></div>
               <div className="stat-card card" style={currentPrice > 0 ? hueStyle(currentPrice >= be ? 'var(--profit)' : 'var(--loss)') : undefined}>
                 <Tooltip text="PSX nets commission when you buy and sell the same ticker on the same day — the smaller-quantity leg (ties go to the buy) pays no commission or SST, only government levies. 'Same-day' assumes this sell nets against a same-day buy; 'other day' assumes the full commission applies.">
-                  <div className="label" style={{ cursor: 'pointer' }}>Break-even</div>
+                  <div className="label clickable">Break-even</div>
                 </Tooltip>
                 <div className="value">{fmtPrice(be)}</div>
                 <div className="sub">other day · same-day {fmtPrice(beSameDay)}</div>

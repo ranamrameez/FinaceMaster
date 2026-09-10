@@ -57,7 +57,7 @@ export function ChartCard({
 }) {
   const heading = (
     <h4 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-      {titleTooltip ? <Tooltip text={titleTooltip}><span style={{ cursor: 'pointer' }}>{title}</span></Tooltip> : title}
+      {titleTooltip ? <Tooltip text={titleTooltip}><span className="clickable">{title}</span></Tooltip> : title}
       {unfiltered && <span className="text-muted" style={{ fontWeight: 400, textTransform: 'none' }}>(whole portfolio — not filtered)</span>}
     </h4>
   );

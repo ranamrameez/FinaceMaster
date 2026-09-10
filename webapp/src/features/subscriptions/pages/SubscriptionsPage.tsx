@@ -517,13 +517,13 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
         <div className="grid-auto" style={{ ...gridAutoStyle(130, 8), marginTop: 12 }}>
           <div className="stat-card card" style={hueStyle(HUES[3])}>
             <Tooltip text="What this costs per month on average — converted from its real billing cycle (weekly, yearly, etc.) so you can compare it to other subscriptions.">
-              <div className="label" style={{ cursor: 'pointer' }}>Monthly equivalent</div>
+              <div className="label clickable">Monthly equivalent</div>
             </Tooltip>
             <MoneyValue n={monthlyEquivalent(sub)} currency={sub.currencyCode} />
           </div>
           <div className="stat-card card" style={hueStyle(HUES[2])}>
             <Tooltip text="The monthly equivalent multiplied by 12 — what this subscription costs you over a full year.">
-              <div className="label" style={{ cursor: 'pointer' }}>Yearly equivalent</div>
+              <div className="label clickable">Yearly equivalent</div>
             </Tooltip>
             <MoneyValue n={monthlyEquivalent(sub) * 12} currency={sub.currencyCode} />
           </div>

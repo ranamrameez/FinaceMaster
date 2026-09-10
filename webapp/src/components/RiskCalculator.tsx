@@ -294,9 +294,9 @@ export function RiskCalculator({
                 <thead>
                   <tr>
                     <th>Add</th><th>Shares</th><th>New avg</th><th>New break-even</th>
-                    <th><Tooltip text="How far the price needs to rise from the new average to reach the new break-even."><span style={{ cursor: 'pointer' }}>Recovery</span></Tooltip></th>
-                    <th><Tooltip text="What you'd net (after fees) if you sold everything at Target sell price, using this scenario's new average cost."><span style={{ cursor: 'pointer' }}>Net P/L @ target</span></Tooltip></th>
-                    <th><Tooltip text="Selected = closest to your Target amount above. Diminishing = past this point, adding more barely helps. Useful = still meaningfully improves your position."><span style={{ cursor: 'pointer' }}>Signal</span></Tooltip></th>
+                    <th><Tooltip text="How far the price needs to rise from the new average to reach the new break-even."><span className="clickable">Recovery</span></Tooltip></th>
+                    <th><Tooltip text="What you'd net (after fees) if you sold everything at Target sell price, using this scenario's new average cost."><span className="clickable">Net P/L @ target</span></Tooltip></th>
+                    <th><Tooltip text="Selected = closest to your Target amount above. Diminishing = past this point, adding more barely helps. Useful = still meaningfully improves your position."><span className="clickable">Signal</span></Tooltip></th>
                   </tr>
                 </thead>
                 <tbody>

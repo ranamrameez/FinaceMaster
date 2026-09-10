@@ -181,11 +181,11 @@ export function DividendsSection() {
         <table>
           <thead>
             <tr>
-              <th onClick={() => toggleSort('date')} style={{ cursor: 'pointer' }}>Date{arrow('date')}</th>
-              <th onClick={() => toggleSort('ticker')} style={{ cursor: 'pointer' }}>Ticker{arrow('ticker')}</th>
-              <th onClick={() => toggleSort('perShare')} style={{ cursor: 'pointer' }}>Per share{arrow('perShare')}</th>
-              <th onClick={() => toggleSort('shares')} style={{ cursor: 'pointer' }}>Shares{arrow('shares')}</th>
-              <th onClick={() => toggleSort('amount')} style={{ cursor: 'pointer' }}>Amount{arrow('amount')}</th>
+              <th onClick={() => toggleSort('date')} className="clickable">Date{arrow('date')}</th>
+              <th onClick={() => toggleSort('ticker')} className="clickable">Ticker{arrow('ticker')}</th>
+              <th onClick={() => toggleSort('perShare')} className="clickable">Per share{arrow('perShare')}</th>
+              <th onClick={() => toggleSort('shares')} className="clickable">Shares{arrow('shares')}</th>
+              <th onClick={() => toggleSort('amount')} className="clickable">Amount{arrow('amount')}</th>
               <th></th>
             </tr>
           </thead>

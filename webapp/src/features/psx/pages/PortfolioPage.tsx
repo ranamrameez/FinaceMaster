@@ -94,7 +94,7 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
         </thead>
         <tbody>
           {sorted.map((r) => (
-            <tr key={r.ticker} style={{ cursor: 'pointer' }}>
+            <tr key={r.ticker} className="clickable">
               <td onClick={() => onSelect(r.ticker)} style={{ maxWidth: 190 }}>
                 <div className="hd-name">
                   <TickerLogo ticker={r.ticker} size="sm" exchange="psx" />
@@ -189,7 +189,7 @@ function ClosedPositionsTable({ onSelect }: { onSelect: (ticker: string) => void
         </thead>
         <tbody>
           {sorted.map((p) => (
-            <tr key={p.ticker} style={{ cursor: 'pointer' }} onClick={() => onSelect(p.ticker)}>
+            <tr key={p.ticker} className="clickable" onClick={() => onSelect(p.ticker)}>
               <td style={{ maxWidth: 190 }}>
                 <div className="hd-name">
                   <TickerLogo ticker={p.ticker} size="sm" exchange="psx" />

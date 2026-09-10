@@ -480,7 +480,7 @@ function TransactionList() {
                     </td>
                   </tr>
                 ) : (
-                  <tr key={i} onClick={() => setDetailTx(tx)} style={{ cursor: 'pointer' }}>
+                  <tr key={i} onClick={() => setDetailTx(tx)} className="clickable">
                     <td>{tx.date}</td>
                     <td onClick={(e) => e.stopPropagation()}>
                       <TickerLogo ticker={tx.ticker} size="sm" exchange="psx" /><Link to={`/psx/stock/${tx.ticker}`}>{tx.ticker}</Link>
@@ -498,14 +498,14 @@ function TransactionList() {
                       {fmtMoney(calcFee(tx.shares * tx.price, tx.action === 'BUY', { shares: tx.shares, tx }), currency)}
                       {tx.feeOverride !== undefined ? (
                         <Tooltip text="This fee was manually entered, overriding the computed value.">
-                          <span className="text-muted" style={{ cursor: 'pointer' }}>{' '}(override)</span>
+                          <span className="text-muted clickable">{' '}(override)</span>
                         </Tooltip>
                       ) : (
                         isNettedLeg(workbook.transactions, tx) && (
                           <Tooltip
                             text={tx.manualSameDay ? 'Manually marked as a same-day netted leg — government levies only.' : 'Same-day round trip — netted, government levies only.'}
                           >
-                            <span className="text-muted" style={{ cursor: 'pointer' }}>{' '}(netted{tx.manualSameDay ? ', manual' : ''})</span>
+                            <span className="text-muted clickable">{' '}(netted{tx.manualSameDay ? ', manual' : ''})</span>
                           </Tooltip>
                         )
                       )}

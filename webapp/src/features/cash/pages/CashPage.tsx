@@ -366,7 +366,7 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
               const link = linkByRecordId.get(entry.id);
               const otherSide = link ? (link.from.module === 'cash' && link.fromRecordId === entry.id ? link.to : link.from) : undefined;
               return (
-                <tr key={entry.id} onClick={() => setDetailEntry(entry)} style={{ cursor: 'pointer' }}>
+                <tr key={entry.id} onClick={() => setDetailEntry(entry)} className="clickable">
                   <td>
                     {entry.date}{' '}
                     <span onClick={(e) => e.stopPropagation()}>

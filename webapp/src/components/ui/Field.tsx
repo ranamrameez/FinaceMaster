@@ -86,7 +86,7 @@ export function Field({ label, children, width = 180, title, required, as = 'lab
   const Tag = as;
   return (
     <Tag style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 4, fontSize: 12, color: 'var(--muted)', width, marginBottom: 0 }}>
-      {title ? <Tooltip text={title}><span style={{ cursor: 'pointer' }}>{labelContent}</span></Tooltip> : labelContent}
+      {title ? <Tooltip text={title}><span className="clickable">{labelContent}</span></Tooltip> : labelContent}
       {children}
     </Tag>
   );
