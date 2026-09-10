@@ -5889,15 +5889,67 @@ gap this project never modeled — a carried balance can accrue real INTEREST/ma
 no `BankAccount` has any concept of. Squeezing that onto the same type as a checking account
 was wrong, not just a taste call.
 
+**Research (2026-09-10, per the user's explicit "research how CCs work, do different banks
+have different rules and formulas" instruction) — real-world credit card mechanics, and how
+each finding shapes the design below.** Sources: [Citi](https://www.citi.com/credit-cards/understanding-credit-cards/how-to-calculate-credit-card-interest),
+[Experian — average daily balance](https://www.experian.com/blogs/ask-experian/how-to-calculate-average-daily-balance/),
+[Experian — minimum payment](https://www.experian.com/blogs/ask-experian/how-is-your-credit-card-minimum-payment-calculated/),
+[Chase — minimum payment](https://www.chase.com/personal/credit-cards/education/basics/how-to-calculate-your-minimum-credit-card-payment),
+[Chase — cash advances](https://www.chase.com/personal/credit-cards/education/basics/how-do-credit-card-cash-advances-work),
+[Bank of America — cash advances](https://bettermoneyhabits.bankofamerica.com/en/credit/what-is-a-credit-card-cash-advance),
+[Institute of Islamic Banking and Insurance — Islamic credit cards](https://islamic-banking.com/islamic-credit-cards/),
+[Islamic Bankers Resource Centre — Ujrah](https://islamicbankers.center/islamic-banking-islamic-contracts/credit-cards-ujrah/).
+  - **Grace period is conditional, not unconditional.** A card only waives markup on a NEW
+    purchase if the PRIOR statement was paid in full by its due date — carrying any balance
+    forward removes the grace period on new purchases too, so they start accruing from the
+    purchase date, not just the unpaid old balance. This is a real behavioral rule the original
+    sketch's flat "rate × carried balance" formula didn't model at all — it only priced the
+    carried amount, never asked "was last cycle even eligible for a grace period."
+  - **Interest/markup calculation genuinely differs by issuer, confirming the user's own
+    suspicion.** Conventional (non-Islamic) issuers mostly use one of: **Average Daily Balance**
+    (the balance is tracked day-by-day through the cycle, time-weighted, then the daily periodic
+    rate applied — the most common US method, favorable to the cardholder since it credits
+    mid-cycle payments immediately) or the simpler **Previous Balance** method (interest is
+    charged on whatever the balance was at the START of the cycle, ignoring any payment made
+    during it — less common, less favorable). Neither is a flat single-rate-on-ending-balance
+    formula. **Islamic/Sharia-compliant cards are a structurally different mechanism, not a
+    simplified version of the same one** — most commonly a **murabaha/tawarruq** structure
+    (the bank buys a commodity and resells it to the cardholder at cost-plus-a-disclosed-profit-
+    margin for whatever amount is being revolved) or an **ujrah** structure (a flat usage/
+    service fee, not tied to the revolved amount at all). The user's own "1% on unsettled amount
+    ≥ 100 QAR" is a real, recognized instance of the murabaha/tawarruq pattern — a flat disclosed
+    profit rate on the revolved amount, with a threshold below which the bank doesn't bother
+    running the transaction — not an invented simplification.
+  - **Minimum payment formulas vary by issuer, with no single universal formula.** The common
+    shapes are: a flat percentage of the statement balance (typically 1-3%); a percentage PLUS
+    that cycle's own accrued interest/fees; or "a flat floor amount OR a percentage, whichever
+    is GREATER" (Chase's own published example: $40 or 1% of the statement balance plus interest/
+    fees since the last cycle, whichever is greater). A single fixed `minPaymentAmount` field
+    can't represent any of these — it needs to be a small formula, not one number.
+  - **Cash advances are a materially different transaction, not just a bigger charge.** They
+    typically carry a separate, usually higher, rate; have NO grace period at all (interest
+    starts the moment cash is withdrawn, even if the rest of the balance would otherwise be
+    grace-eligible); and carry their own separate fee (typically 3-5% of the amount, or a flat
+    fee, whichever is greater) on top of whatever rate applies. Worth a distinct `kind` in the
+    ledger for tracking, even though full separate-APR modeling is out of scope for v1 (see
+    below).
+  - **A late fee's DESTINATION can differ (bank income vs. charity) without changing the
+    CARDHOLDER's own liability.** Many Sharia boards require a late fee's proceeds be donated to
+    charity rather than kept as bank profit, specifically to avoid the fee itself being read as
+    disguised interest — but the cardholder still owes the exact same amount either way. This
+    doesn't need its own schema field (it doesn't change any calc the app performs for the
+    user), just worth a plain-language note if/when a late-fee field ever gets a tooltip.
+
 **Proposed replacement — a genuinely separate `CreditCard` entity, own store, own ledger:**
 
 - New `types/creditCard.ts`: `CreditCard { id, name, bankId?, currencyCode, creditLimit?,
-  statementDate?, paymentDueDate?, minPaymentAmount?, lateFeeAfterDue?, annualFee?,
+  statementDate?, paymentDueDate?, lateFeeAfterDue?, annualFee?,
   cardNetwork?, cardBin?, isActive?, isFavorite?, color?, includeInNetWorth?, seq? }` — every
   field here already exists verbatim on `BankAccount` today (Done item 175), so this is a
-  rename/relocation of already-designed fields, not new design surface. `bankId` links to the
-  existing `Bank` entity (Done item 265) — a credit card IS issued by a real bank, that part of
-  the original design was right, only the "is a BankAccount" part was wrong.
+  rename/relocation of already-designed fields, not new design surface (minimum-payment fields
+  move to their own generalized block below, replacing the single `minPaymentAmount`). `bankId`
+  links to the existing `Bank` entity (Done item 265) — a credit card IS issued by a real bank,
+  that part of the original design was right, only the "is a BankAccount" part was wrong.
 - `CreditCardTransaction { id, cardId, date, time?, timezone?, kind: 'charge' | 'payment' |
   'fee' | 'markup', amount (always positive — `kind` decides the effect, not the sign),
   description, category?, categoryID?, source?, statementRef?, isPending?, seq?, timestamp? }`
@@ -5918,23 +5970,43 @@ was wrong, not just a taste call.
      returns `{ previousBalance, paymentsThisCycle, chargesThisCycle, statementBalance,
      minimumDue, dueDate }` — `statementBalance` is literally the user's own "100% amount to be
      charged this month" (the real bill), computed, not eyeballed off a running total.
-  2. **A concrete markup rule, not a generic "interest exists" placeholder**: the user's own
-     real example — "sharia-compliant cards... charge 1% on unsettled amount if amount is >=
-     100qar" — a flat rate applied to the CARRIED (unpaid) balance, with a minimum-threshold
-     EXEMPTION below which no charge applies at all ("charges on unpaid with a max threshold
-     like under 100 where charges don't hit"). New `CreditCard` fields:
-     `markupRatePct?: number` (e.g. `1.0`), `markupThresholdAmount?: number` (e.g. `100` — below
-     this, `markupThisCycle` is forced to 0 regardless of rate). New pure
-     `markupThisCycle(card, statement)` computes it. **Deliberately a flat-rate-on-carried-
-     balance model, not a compounding daily/monthly APR** — the user's own closing line ("we may
-     need to study and take care of normal CCs as well, use neutral language") signals they
-     themselves aren't sure this generalizes to conventional (non-Sharia) cards, so this needs
-     to be confirmed as the v1 model rather than guessed as universal — same documented-
-     simplification precedent as EMI's `whatIfExtraPayment` (never claimed to replicate any one
-     specific lender's exact real terms, stated as such in its own doc comment). If a real
-     conventional-APR user later needs true daily-compounding interest, that's a genuinely
-     different formula needing its own design pass, not an extension of this one.
-  3. **Semi-automated minimum-payment collection**, mirroring Rentals' existing "propose →
+  2. **A markup engine with a selectable method, not one hardcoded formula** — the research
+     above confirms real issuers genuinely differ, so the schema needs to allow more than one
+     method even though v1 only ever implements the one the user actually has real cards for:
+     `CreditCard.markupMethod?: 'flatOnCarried'` (the only method actually implemented in v1 —
+     future values like `'averageDailyBalance'`/`'previousBalance'` are reserved slots for a
+     later session with a real conventional-card user to design against, NOT built now: ADB
+     needs a real day-by-day transaction walk this app has never needed before, previous-
+     balance needs its own cycle-start-balance snapshot — both genuinely bigger than this v1's
+     scope, and guessing at either without a real card to verify against risks shipping a wrong
+     number on someone's real bill). `markupRatePct?: number` (e.g. `1.0`),
+     `markupThresholdAmount?: number` (e.g. `100` — below this, `markupThisCycle` is forced to 0
+     regardless of rate) — the user's own real example, and per the research above a real,
+     recognized murabaha/tawarruq pattern, not an invented simplification. **Grace-period gate,
+     new since the research**: `markupThisCycle(card, priorStatement, thisStatement)` first
+     checks whether `priorStatement` was paid in full by its own due date — if so, and no cash
+     advance was involved, THIS cycle's markup is 0 regardless of `markupRatePct`, even on a
+     balance that will show up next cycle if unpaid; only once a balance has genuinely been
+     carried does the flat-rate formula apply. This one gate is the general mechanic every
+     method (present or future) needs, so it lives in the shared function, not inside
+     `'flatOnCarried'`'s own branch. **Cash advances get their own `kind` in the transaction
+     type** (`'cashAdvance'`, alongside `charge`/`payment`/`fee`/`markup`) purely so real-world
+     spend is tagged and reportable — v1 deliberately does NOT give them their own rate/no-
+     grace-period treatment (that's real future scope, see the research note above), so a cash
+     advance is priced exactly like a charge for now; this is a stated, not hidden,
+     simplification.
+  3. **A minimum-payment FORMULA, not one fixed number** — the research confirms this varies by
+     issuer, so a single `minPaymentAmount` field can't represent it.
+     `CreditCard.minPaymentMethod?: 'fixed' | 'percentOfBalance' | 'greaterOfFixedOrPercent'`
+     (default `'fixed'`, so an existing/simple card just keeps one number), `minPaymentAmount?:
+     number` (the fixed floor, used by `'fixed'` and as the floor half of
+     `'greaterOfFixedOrPercent'`), `minPaymentPct?: number` (e.g. `2` for 2% of the statement
+     balance, used by `'percentOfBalance'` and the percent half of `'greaterOfFixedOrPercent'`).
+     `minimumDue()` (folded into `currentStatement()`'s own return) computes from whichever
+     method is set — this covers every real published formula found in the research (a flat %,
+     a flat floor, and the "$X or Y%, whichever is greater" shape) without hardcoding any one
+     bank's own numbers.
+  4. **Semi-automated minimum-payment collection**, mirroring Rentals' existing "propose →
      approve/partial → carry the remainder forward" pattern (Done item 124) — NOT a real
      automatic bank debit, since this app has no open-banking/bank-API access (a locked design
      decision, see "Also locked in 2026-08-23" above) and can never actually pull money on its
@@ -5948,11 +6020,12 @@ was wrong, not just a taste call.
      Rentals' own partial-payment UI already uses with zero new concept needed.
 - New hand-written `creditCardWorkbookStore.ts` (own `cards[]`/`transactions[]`, mirrors
   Bank's own hand-written store shape), own Firebase path `users/{uid}/creditCards`. New
-  `lib/calc/creditCardModule.ts`: `outstandingBalanceByCard`, `currentStatement`,
-  `markupThisCycle`, `proposeMinPayment`/`nextPendingMinDue`, `creditCardLiabilityByCurrency`
-  (replaces the `BankAccount.isLiability`-driven one Net Worth reads today —
-  `computeNetWorthByCurrency` swaps its source, the liability-vs-asset split itself is
-  unchanged), `availableCredit(card, balance)`.
+  `lib/calc/creditCardModule.ts`: `outstandingBalanceByCard`, `currentStatement` (now also
+  returning `minimumDue` per the generalized formula above), `markupThisCycle` (now gated by
+  the grace-period check above), `proposeMinPayment`/`nextPendingMinDue`,
+  `creditCardLiabilityByCurrency` (replaces the `BankAccount.isLiability`-driven one Net Worth
+  reads today — `computeNetWorthByCurrency` swaps its source, the liability-vs-asset split
+  itself is unchanged), `availableCredit(card, balance)`.
 - **Placement recommendation**: a new "Credit Cards" tab inside the existing Banking module
   (alongside Accounts/Planning/Analytics/Settings), not a whole new top-level `CategoryNav`
   entry — a credit card is still squarely in the "banking" domain (issued by a `Bank`, usually
@@ -5978,14 +6051,18 @@ was wrong, not just a taste call.
   check before trusting the conversion on anything with a real nonzero balance.
 
 **Not yet built — this is the design being proposed to the user, not a completed feature.**
-Placement (Banking sub-tab) and the `charge`/`payment`/`fee`/`markup` ledger shape are both
-CONFIRMED by the user's 2026-09-10 answers. **Still genuinely open, needs one more explicit
-confirmation before coding**: the exact markup/statement model above (flat-rate-on-carried-
-balance with a threshold exemption, semi-automated min-payment collection) is this session's
-own best-effort translation of the user's real example into a general v1 spec — since the
-user's own closing words ("we may need to study... normal CCs as well") flagged this as not
-fully settled even in their own mind, present the model back to them in plain terms and get an
-explicit go before writing migration code that touches their real live GCC/PCC card data.
+Placement (Banking sub-tab), the `charge`/`payment`/`fee`/`markup`/`cashAdvance` ledger shape,
+and the research-backed general model above (grace-period gate, a selectable-but-v1-single-
+method markup engine, a generalized minimum-payment formula instead of one fixed number) are
+all now spec-complete per the user's own explicit "complete the plan before diving in... research
+how CCs work, do different banks have different rules" instruction (2026-09-10) — this is no
+longer a placeholder translation of one example, it's checked against how real conventional and
+Islamic issuers actually differ (see the Research block above, with sources). **Still needs one
+final go-ahead before coding**, per this file's own locked rule for any change touching real
+financial data structure: confirm the v1 scope choices explicitly (flat-rate-on-carried-balance
+as the only implemented markup method; cash advances tagged but not separately priced; the
+migration plan for the user's real GCC/PCC cards) rather than assuming silence means agreement,
+since the migration will touch their real live card data.
 
 ### Progress (2026-08-27) — Phase 1 + Banking pilot DONE, see README Done item 213 for the full
 write-up. Read this before assuming any of the below is still "not started."
