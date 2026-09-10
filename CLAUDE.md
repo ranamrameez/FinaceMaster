@@ -5899,16 +5899,57 @@ was wrong, not just a taste call.
   existing `Bank` entity (Done item 265) — a credit card IS issued by a real bank, that part of
   the original design was right, only the "is a BankAccount" part was wrong.
 - `CreditCardTransaction { id, cardId, date, time?, timezone?, kind: 'charge' | 'payment' |
-  'fee' | 'interest', amount (always positive — `kind` decides the effect, not the sign),
+  'fee' | 'markup', amount (always positive — `kind` decides the effect, not the sign),
   description, category?, categoryID?, source?, statementRef?, isPending?, seq?, timestamp? }`
   — deliberately NOT reusing Bank's signed deposit/withdrawal convention: "Charge"/"Payment" are
   the real actions a cardholder takes, semantically distinct from "Deposit"/"Withdrawal" even
-  where the arithmetic happens to rhyme, and a `kind` field is what makes it possible to add
-  `'interest'` as a real accrual line later without contorting the model further.
-  `outstandingBalance = Σ(charge+fee+interest) − Σ(payment)`.
+  where the arithmetic happens to rhyme. `'markup'` (not `'interest'`) is the deliberate neutral
+  term the user asked for by name ("use neutral language") — this project already established
+  "markup" as its own Sharia-neutral word for interest-equivalent cost (EMI's own
+  `interest`-mode fields are internally typed `interest` but every user-facing label says
+  "Markup," see Done item 190's "Total interest/markup (life)") — reusing the same word here is
+  consistency, not a new coinage. `outstandingBalance = Σ(charge+fee+markup) − Σ(payment)`.
+- **The user's follow-up answer (2026-09-10) added real requirements beyond the original
+  sketch — this is the actual spec, not the placeholder `kind:'markup'` line alone:**
+  1. **A real statement/billing-cycle computation**, not just a running balance. `CreditCard`
+     gains `statementDate` (day-of-month cutoff, already planned) and a new pure
+     `currentStatement(card, transactions, asOfDate)`: splits transactions at the two most
+     recent `statementDate` cutoffs bracketing `asOfDate` into "this cycle" vs. "prior," and
+     returns `{ previousBalance, paymentsThisCycle, chargesThisCycle, statementBalance,
+     minimumDue, dueDate }` — `statementBalance` is literally the user's own "100% amount to be
+     charged this month" (the real bill), computed, not eyeballed off a running total.
+  2. **A concrete markup rule, not a generic "interest exists" placeholder**: the user's own
+     real example — "sharia-compliant cards... charge 1% on unsettled amount if amount is >=
+     100qar" — a flat rate applied to the CARRIED (unpaid) balance, with a minimum-threshold
+     EXEMPTION below which no charge applies at all ("charges on unpaid with a max threshold
+     like under 100 where charges don't hit"). New `CreditCard` fields:
+     `markupRatePct?: number` (e.g. `1.0`), `markupThresholdAmount?: number` (e.g. `100` — below
+     this, `markupThisCycle` is forced to 0 regardless of rate). New pure
+     `markupThisCycle(card, statement)` computes it. **Deliberately a flat-rate-on-carried-
+     balance model, not a compounding daily/monthly APR** — the user's own closing line ("we may
+     need to study and take care of normal CCs as well, use neutral language") signals they
+     themselves aren't sure this generalizes to conventional (non-Sharia) cards, so this needs
+     to be confirmed as the v1 model rather than guessed as universal — same documented-
+     simplification precedent as EMI's `whatIfExtraPayment` (never claimed to replicate any one
+     specific lender's exact real terms, stated as such in its own doc comment). If a real
+     conventional-APR user later needs true daily-compounding interest, that's a genuinely
+     different formula needing its own design pass, not an extension of this one.
+  3. **Semi-automated minimum-payment collection**, mirroring Rentals' existing "propose →
+     approve/partial → carry the remainder forward" pattern (Done item 124) — NOT a real
+     automatic bank debit, since this app has no open-banking/bank-API access (a locked design
+     decision, see "Also locked in 2026-08-23" above) and can never actually pull money on its
+     own. New `CreditCard.pendingMinDue?: number` (carried-forward shortfall from a partial
+     "attempt," never negative on an overpayment — same shape as `Property.pendingRentBalance`)
+     plus a `proposeMinPayment(card, statement)`/`nextPendingMinDue()` pair mirroring
+     `proposeRentCollection()`/`nextPendingBalance()` exactly. UI: an "Approve & log" action on
+     the due minimum, editable down to record a partial "attempt" — entering less than proposed
+     IS how "N attempts" gets recorded, each attempt a real `kind:'payment'` transaction,
+     `pendingMinDue` recomputed from what was actually entered each time, same mechanism
+     Rentals' own partial-payment UI already uses with zero new concept needed.
 - New hand-written `creditCardWorkbookStore.ts` (own `cards[]`/`transactions[]`, mirrors
   Bank's own hand-written store shape), own Firebase path `users/{uid}/creditCards`. New
-  `lib/calc/creditCardModule.ts`: `outstandingBalanceByCard`, `creditCardLiabilityByCurrency`
+  `lib/calc/creditCardModule.ts`: `outstandingBalanceByCard`, `currentStatement`,
+  `markupThisCycle`, `proposeMinPayment`/`nextPendingMinDue`, `creditCardLiabilityByCurrency`
   (replaces the `BankAccount.isLiability`-driven one Net Worth reads today —
   `computeNetWorthByCurrency` swaps its source, the liability-vs-asset split itself is
   unchanged), `availableCredit(card, balance)`.
@@ -5937,11 +5978,14 @@ was wrong, not just a taste call.
   check before trusting the conversion on anything with a real nonzero balance.
 
 **Not yet built — this is the design being proposed to the user, not a completed feature.**
-Two genuinely open questions were put to them directly rather than guessed at: (1) confirm the
-placement (a Banking sub-tab, per the recommendation above, vs. a new top-level module); (2)
-confirm the `charge`/`payment`/`fee`/`interest` ledger shape (vs. keeping the existing signed
-deposit/withdrawal convention just relabeled). Do not start the migration or any UI work here
-until both are confirmed — this touches the user's real live financial data.
+Placement (Banking sub-tab) and the `charge`/`payment`/`fee`/`markup` ledger shape are both
+CONFIRMED by the user's 2026-09-10 answers. **Still genuinely open, needs one more explicit
+confirmation before coding**: the exact markup/statement model above (flat-rate-on-carried-
+balance with a threshold exemption, semi-automated min-payment collection) is this session's
+own best-effort translation of the user's real example into a general v1 spec — since the
+user's own closing words ("we may need to study... normal CCs as well") flagged this as not
+fully settled even in their own mind, present the model back to them in plain terms and get an
+explicit go before writing migration code that touches their real live GCC/PCC card data.
 
 ### Progress (2026-08-27) — Phase 1 + Banking pilot DONE, see README Done item 213 for the full
 write-up. Read this before assuming any of the below is still "not started."
