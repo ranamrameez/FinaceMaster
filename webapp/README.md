@@ -8734,10 +8734,18 @@ everything below is started. Working down it in priority order across following 
      `BankAccount` variant conflated two genuinely different financial primitives. See the new
      design proposal in `CLAUDE.md`'s "Credit Card redesign" entry (2026-09-10) for the real
      replacement: a first-class `CreditCard` entity, its own store/ledger (`kind: 'charge' |
-     'payment' | 'fee' | 'interest'`, not deposit/withdrawal), and a one-time migration from any
-     existing `isLiability` `BankAccount` — not yet built, design confirmed with the user before
-     writing migration code, per this project's own locked "ask before touching real financial
-     data structure" rule (the user's real GCC/PCC credit-card accounts are live data). Also
+     'payment' | 'fee' | 'markup'`, not deposit/withdrawal), a real billing-cycle statement
+     computation, a flat-rate-with-threshold markup rule, and Rentals-style semi-automated
+     minimum-payment collection — the user's own 2026-09-10 follow-up added these three on top
+     of the original sketch, in response to their real Sharia-compliant-card example. **Two
+     things are now confirmed** (placement: a Banking sub-tab; ledger shape:
+     charge/payment/fee/markup, not deposit/withdrawal). **One thing still needs an explicit
+     go-ahead before any code**: the exact markup/statement model itself — the user's own
+     closing line ("we may need to study... normal CCs as well") flagged it as not fully settled
+     even in their own head, so this session presented a concrete v1 proposal back to them
+     rather than guessing it was already approved. Not yet built — this touches the user's real
+     live GCC/PCC credit-card data, per this project's own locked "ask before touching real
+     financial data structure" rule. Also
      delivered in the original batch, unaffected by this reopening: card-network detection from
      a BIN lookup, and a
      prefilled Pakistan/Qatar bank+wallet suggestion list.
