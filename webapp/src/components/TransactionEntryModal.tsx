@@ -205,7 +205,7 @@ function TxRowFields({
           })
         }
       />
-      <div className="row" style={{ gap: 8, marginTop: 8 }}>
+      <div className="row gap-sm mt-sm">
         <Field label="Date">
           <TextInput
             type="date"

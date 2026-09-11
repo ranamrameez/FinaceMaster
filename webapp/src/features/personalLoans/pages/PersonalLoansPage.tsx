@@ -746,7 +746,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
                 <TextInput value={editRow.note ?? ''} onChange={(e) => setEditRow({ ...editRow, note: e.target.value })} />
               </Field>
             </div>
-            <div className="row" style={{ gap: 8, marginTop: 8 }}>
+            <div className="row gap-sm mt-sm">
               <IconButton
                 label="Save"
                 icon={<SaveIcon size={13} />}
