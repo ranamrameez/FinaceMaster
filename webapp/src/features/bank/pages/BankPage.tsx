@@ -132,7 +132,7 @@ function CreditCardFields({ value, onChange, datalistId }: { value: CreditCardVa
               <TextInput type="number" min={1} max={31} value={value.paymentDueDate ?? ''} onChange={(e) => onChange({ paymentDueDate: e.target.value ? Number(e.target.value) : undefined })} />
             </Field>
           </div>
-          <div className="row" style={{ gap: 8, marginTop: 8 }}>
+          <div className="row gap-sm mt-sm">
             <Field label="Late fee after due date (optional)" width={150}>
               <TextInput type="number" step="0.01" value={value.lateFeeAfterDue ?? ''} onChange={(e) => onChange({ lateFeeAfterDue: e.target.value ? Number(e.target.value) : undefined })} />
             </Field>
@@ -252,7 +252,7 @@ function IbanLookupFields({ value, onChange, onBankNameFound }: { value: IbanLoo
   };
 
   return (
-    <div className="row" style={{ gap: 8, marginTop: 8 }}>
+    <div className="row gap-sm mt-sm">
       <Field label="IBAN (optional)" width={220} title="International Bank Account Number, if your bank issues one — used only to look up the bank name/BIC below; not every country or account has one.">
         <TextInput value={value.iban ?? ''} onChange={(e) => onChange({ iban: e.target.value || undefined })} placeholder="e.g. PK36SCBL0000001123456702" />
       </Field>
@@ -439,7 +439,7 @@ function AccountFormFields({
       {/* README item 82: branch/account-type, free-form (not a fixed enum) —
          ACCOUNT_TYPES is just a datalist of common suggestions, any value is
          accepted. */}
-      <div className="row" style={{ gap: 8, marginTop: 8 }}>
+      <div className="row gap-sm mt-sm">
         <Field label="Branch (optional)" width={160}>
           <TextInput value={value.branch ?? ''} onChange={(e) => onChange({ branch: e.target.value || undefined })} placeholder="e.g. Gulberg Branch" />
         </Field>
@@ -459,7 +459,7 @@ function AccountFormFields({
          transaction-import feature (nothing reads these yet — this just
          gives that feature somewhere to read from). All optional, so
          skipping them changes nothing about today's add-account flow. */}
-      <div className="row" style={{ gap: 8, marginTop: 8 }}>
+      <div className="row gap-sm mt-sm">
         <Field label="Account number (optional)" width={160} title="However your bank shows it on statements/SMS — often partially masked, e.g. xxxx1234.">
           <TextInput value={value.accountNumber ?? ''} onChange={(e) => onChange({ accountNumber: e.target.value || undefined })} placeholder="e.g. xxxx1234" />
         </Field>
@@ -677,7 +677,7 @@ export function BankDetailPage() {
                 )}
               </div>
             </Field>
-            <div className="row" style={{ gap: 8, marginTop: 8 }}>
+            <div className="row gap-sm mt-sm">
               <button className="btn" onClick={save}><SaveIcon />Save</button>
               <button className="btn secondary" onClick={() => setEditing(false)}><XIcon />Cancel</button>
             </div>
@@ -2350,7 +2350,7 @@ function AnalyticsTab() {
                 </tbody>
               </table>
             </div>
-            <div className="row" style={{ gap: 8, marginTop: 8 }}>
+            <div className="row gap-sm mt-sm">
               <TextInput placeholder="New category" value={newBudgetCategory} onChange={(e) => setNewBudgetCategory(e.target.value)} style={{ width: 140 }} />
               <input
                 type="number"

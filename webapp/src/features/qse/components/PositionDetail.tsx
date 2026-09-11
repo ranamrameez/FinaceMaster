@@ -292,7 +292,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
       ) : (
         <p className="text-muted">No price history recorded for {ticker} yet.</p>
       )}
-      <div className="row" style={{ gap: 8, marginTop: 8 }}>
+      <div className="row gap-sm mt-sm">
         <input
           type="number"
           step="0.001"

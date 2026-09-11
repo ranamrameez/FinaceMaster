@@ -246,7 +246,7 @@ function BrokerDetail({ broker, onBack, onSelectFund }: { broker: Broker; onBack
             <Field label="Notes (optional)" width={220}>
               <TextInput value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
             </Field>
-            <div className="row" style={{ gap: 8, marginTop: 8 }}>
+            <div className="row gap-sm mt-sm">
               <button className="btn" onClick={save}><SaveIcon />Save</button>
               <button className="btn secondary" onClick={() => setEditing(false)}><XIcon />Cancel</button>
             </div>
@@ -1137,7 +1137,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                     </Select>
                   )}
                 </div>
-                <div className="row" style={{ gap: 8, marginTop: 8 }}>
+                <div className="row gap-sm mt-sm">
                   <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveFund} />
                   <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditingFund(false)} />
                 </div>

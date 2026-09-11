@@ -8186,6 +8186,17 @@ FinanceManager live link:
   element's `getComputedStyle()` read `gap:8px`/`align-items:flex-end` exactly as before, zero
   new console errors. `npx tsc -b` / `npm run test` (645 tests, unchanged) / `npm run build`
   all clean.
+- **App-wide CSS cleanup, seventh concrete instance — see Done item 303 (2026-09-11),
+  continuing Pending item 116.** `style={{ gap: 8, marginTop: 8 }}` — 13 occurrences across 7
+  files, the same `.row.gap-sm` case with a leading top margin instead of the trailing bottom
+  one Done item 301 already extracted. Confirmed no existing rule touches `margin-top` on
+  `.row` before adding anything, then added a symmetric standalone `.mt-sm{margin-top:8px;}`
+  utility (same "don't couple into `.row.gap-sm` itself" reasoning as `.mb-sm`). Replaced every
+  occurrence via a scripted `sed` pass — `className="row" style={{ gap: 8, marginTop: 8 }}` →
+  `className="row gap-sm mt-sm"`. Verified live via Playwright (a seeded QSE stock page's
+  "Update price" row): the resulting element's `getComputedStyle()` read `gap:8px`/
+  `marginTop:8px` exactly as before, zero new console errors. `npx tsc -b` / `npm run test`
+  (645 tests, unchanged) / `npm run build` all clean.
 
 ## Pending
 
@@ -9052,10 +9063,14 @@ or a design decision before more code, not guessed at further:**
      instance done (2026-09-11) — see Done item 302**: `style={{ gap: 8, alignItems:
      'flex-end' }}` (15 occurrences across 12 files) — the `alignItems:'flex-end'` half turned
      out to be pure dead code (`.row`'s own base rule already sets it), so this one was a
-     removal, not just an extraction; replaced with `className="row gap-sm"`. The exact same
-     incremental discipline (audit one repeated pattern, extract or remove, verify, repeat)
-     still applies for every other module/pattern — this is one instance of an ongoing,
-     repeatable practice, not a closed item.
+     removal, not just an extraction; replaced with `className="row gap-sm"`. **Seventh
+     concrete instance done (2026-09-11) — see Done item 303**: `style={{ gap: 8, marginTop:
+     8 }}` (13 occurrences across 7 files) — the same `.row.gap-sm` case with a leading top
+     margin instead of Done item 301's trailing bottom one; extracted into a symmetric
+     `.mt-sm{margin-top:8px;}` utility. The exact same incremental discipline (audit one
+     repeated pattern, extract or remove, verify, repeat) still applies for every other
+     module/pattern — this is one instance of an ongoing, repeatable practice, not a closed
+     item.
 117. ~~App-wide "everything should be a grid item except tables" principle (2026-09-06)~~ —
      **done in full (2026-09-08), see Done item 237.** Every module's landing/Settings page has
      been audited for the "short non-table cards stacked full-width" pattern; Cash's Settings
