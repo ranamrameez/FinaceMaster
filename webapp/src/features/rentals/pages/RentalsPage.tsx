@@ -28,7 +28,7 @@ import { netIncomeByCurrency, netIncomeByProperty, netIncomePendingByCurrency, p
 import { generateLeaseRentPlans, nextPendingBalance, proposeRentCollection } from '../../../lib/calc/rentalPlanning';
 import { parseCSV, toCSV } from '../../../lib/csv';
 import { fmtMoney } from '../../../lib/format';
-import { confirmAndDeleteLinkable, createLinkedTransfer, warnIfLinked } from '../../../lib/linkCascade';
+import { confirmAndDeleteLinkable, createLinkedTransfer, propagateLinkedEdit, resolveLinkedEdit } from '../../../lib/linkCascade';
 import { getLastTransferSource, rememberTransferSource } from '../../../hooks/useLastTransferSource';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
 import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
@@ -782,9 +782,16 @@ function EditEntryModal({ entry, onClose }: { entry: RentalEntry; onClose: () =>
   const [draft, setDraft] = useState<RentalEntry>({ ...entry });
 
   const save = async () => {
-    if (!(await warnIfLinked('rentals', entry.id))) return;
+    const choice = await resolveLinkedEdit('rentals', entry.id);
+    if (choice === 'cancel') return;
     updateEntry(entry.id, draft);
-    toast('Entry updated.');
+    let msg = 'Entry updated.';
+    if (choice === 'both') {
+      const result = propagateLinkedEdit('rentals', entry.id, { date: draft.date, amount: draft.amount, note: draft.note });
+      if (result.error) msg = result.error;
+      else if (result.message) msg = result.message;
+    }
+    toast(msg);
     onClose();
   };
 

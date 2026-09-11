@@ -12,7 +12,7 @@ import { RecordDetailModal } from '../../../components/RecordDetailModal';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { usePageFabActions } from '../../../hooks/usePageFabActions';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
-import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
+import { confirmAndDeleteLinkable, propagateLinkedEdit, resolveLinkedEdit } from '../../../lib/linkCascade';
 import { closedPLBySellTxId, computeClosedTrades } from '../../../lib/calc/closedTrades';
 import { computeFIFOPositions, type FIFOLot } from '../../../lib/calc/fifoPositions';
 import { isNettedLeg } from '../../../lib/calc/psxFees';
@@ -759,9 +759,16 @@ function TransfersSection() {
   const startEdit = (t: Transfer) => { setEditId(t.id); setEditRow({ ...t }); };
   const saveEdit = async () => {
     if (editId === null || !editRow) return;
-    if (!(await warnIfLinked('psx', editId))) return;
+    const choice = await resolveLinkedEdit('psx', editId);
+    if (choice === 'cancel') return;
     updateTransfer(editId, editRow);
-    toast('Transfer updated.');
+    let msg = 'Transfer updated.';
+    if (choice === 'both') {
+      const result = propagateLinkedEdit('psx', editId, { date: editRow.date, amount: editRow.gross });
+      if (result.error) msg = result.error;
+      else if (result.message) msg = result.message;
+    }
+    toast(msg);
     setEditId(null);
     setEditRow(null);
   };

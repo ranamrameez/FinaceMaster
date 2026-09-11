@@ -23,7 +23,7 @@ import { ReorderButtons } from '../../../components/ui/ReorderButtons';
 import { dateOnlyMs } from '../../../lib/datetime';
 import { parseCSV, toCSV } from '../../../lib/csv';
 import { fmtMoney } from '../../../lib/format';
-import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
+import { confirmAndDeleteLinkable, propagateLinkedEdit, resolveLinkedEdit } from '../../../lib/linkCascade';
 import {
   loanBalanceHistory,
   loanOutstanding,
@@ -323,9 +323,16 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
   const startEdit = (r: PersonalLoanRepayment) => { setEditId(r.id); setEditRow({ ...r }); };
   const saveEdit = async () => {
     if (editId === null || !editRow) return;
-    if (!(await warnIfLinked('personalLoans', editId))) return;
+    const choice = await resolveLinkedEdit('personalLoans', editId);
+    if (choice === 'cancel') return;
     updateRepayment(editId, editRow);
-    toast('Repayment updated.');
+    let msg = 'Repayment updated.';
+    if (choice === 'both') {
+      const result = propagateLinkedEdit('personalLoans', editId, { date: editRow.date, amount: editRow.amount });
+      if (result.error) msg = result.error;
+      else if (result.message) msg = result.message;
+    }
+    toast(msg);
     setEditId(null);
     setEditRow(null);
   };

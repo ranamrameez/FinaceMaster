@@ -4,11 +4,15 @@ import {
   createLinkedTransfer,
   deleteLinkCascade,
   findLinkForRecord,
+  propagateLinkedEdit,
+  resolveLinkedEdit,
   updateLinkedTransfer,
   warnIfLinked,
 } from '../linkCascade';
 
 vi.mock('../../components/ConfirmDialog', () => ({ confirmDialog: vi.fn() }));
+vi.mock('../../components/LinkedEditChoiceDialog', () => ({ linkedEditChoiceDialog: vi.fn() }));
+import { linkedEditChoiceDialog } from '../../components/LinkedEditChoiceDialog';
 import { useBankWorkbookStore } from '../../store/bankWorkbookStore';
 import { useCashWorkbookStore } from '../../store/cashWorkbookStore';
 import { createEmptyBankWorkbook } from '../../store/defaultBankWorkbook';
@@ -177,5 +181,89 @@ describe('warnIfLinked', () => {
 
     mockedConfirm.mockResolvedValueOnce(true);
     await expect(warnIfLinked('bank', created.link.toRecordId)).resolves.toBe(true);
+  });
+});
+
+// User-reported (2026-09-11): the old confirm-dialog gate (`warnIfLinked`,
+// above) told the user to "use the Transfers page instead for a
+// fully-synced edit" — a page that no longer exists (README Done item
+// 216). `resolveLinkedEdit`/`propagateLinkedEdit` replace that for every
+// single-record edit flow with a real three-way choice that can actually
+// deliver the fully-synced edit right there.
+describe('resolveLinkedEdit', () => {
+  it("resolves 'this' without prompting when the record is not part of any link", async () => {
+    const mockedDialog = vi.mocked(linkedEditChoiceDialog);
+    mockedDialog.mockClear();
+    await expect(resolveLinkedEdit('cash', 'not-a-real-id')).resolves.toBe('this');
+    expect(mockedDialog).not.toHaveBeenCalled();
+  });
+
+  it('prompts with the OTHER side\'s module label and returns the dialog\'s choice when linked', async () => {
+    const created = createLinkedTransfer(cashToBankInput);
+    if (!('link' in created)) throw new Error('expected success');
+
+    const mockedDialog = vi.mocked(linkedEditChoiceDialog);
+    mockedDialog.mockResolvedValueOnce('both');
+    await expect(resolveLinkedEdit('cash', created.link.fromRecordId)).resolves.toBe('both');
+    expect(mockedDialog).toHaveBeenCalledWith('Banking');
+
+    mockedDialog.mockResolvedValueOnce('cancel');
+    await expect(resolveLinkedEdit('bank', created.link.toRecordId)).resolves.toBe('cancel');
+    expect(mockedDialog).toHaveBeenCalledWith('Cash');
+  });
+});
+
+describe('propagateLinkedEdit', () => {
+  it('is a no-op when the record is not linked', () => {
+    expect(propagateLinkedEdit('cash', 'not-a-real-id', { amount: 999 })).toEqual({});
+  });
+
+  it('mirrors a new amount onto BOTH sides when they share a currency, without touching the edited side a second time', () => {
+    const created = createLinkedTransfer(cashToBankInput);
+    if (!('link' in created)) throw new Error('expected success');
+
+    // Simulate the native module already having saved this side's own
+    // record with a value `propagateLinkedEdit` should never see or touch
+    // (a `note` it doesn't take as a `changes` field here) — proves the
+    // function only re-dispatches the OTHER side.
+    useCashWorkbookStore.getState().updateEntry(created.link.fromRecordId, { amount: 250, note: 'set by the native edit form' });
+
+    const result = propagateLinkedEdit('cash', created.link.fromRecordId, { date: '2026-02-01', amount: 250 });
+    expect(result.error).toBeUndefined();
+    expect(result.message).toBeUndefined();
+
+    expect(useCashWorkbookStore.getState().workbook.entries[0].note).toBe('set by the native edit form');
+    expect(useBankWorkbookStore.getState().workbook.transactions[0].amount).toBe(250);
+    expect(useBankWorkbookStore.getState().workbook.transactions[0].date).toBe('2026-02-01');
+    expect(useInterEntityTransfersStore.getState().workbook.entries[0]).toMatchObject({ fromAmount: 250, toAmount: 250, date: '2026-02-01' });
+  });
+
+  it('leaves the other side\'s own amount untouched when the currencies differ, and says so', () => {
+    useBankWorkbookStore.getState().setWorkbook({
+      ...useBankWorkbookStore.getState().workbook,
+      settings: { accounts: [{ id: bankAccountId, name: 'Checking', currencyCode: 'PKR', openingBalance: 0 }] },
+    });
+    const created = createLinkedTransfer(cashToBankInput); // cash is USD, bank is now PKR
+    if (!('link' in created)) throw new Error('expected success');
+
+    const result = propagateLinkedEdit('cash', created.link.fromRecordId, { amount: 250 });
+    expect(result.error).toBeUndefined();
+    expect(result.message).toMatch(/currency differs/i);
+
+    expect(useBankWorkbookStore.getState().workbook.transactions[0].amount).toBe(100); // unchanged
+    const link = useInterEntityTransfersStore.getState().workbook.entries[0];
+    expect(link.fromAmount).toBe(250); // the edited side's own link figure still updates
+    expect(link.toAmount).toBe(100); // the other side's is left alone
+  });
+
+  it('propagates the date/note even when amount is not being changed', () => {
+    const created = createLinkedTransfer(cashToBankInput);
+    if (!('link' in created)) throw new Error('expected success');
+
+    propagateLinkedEdit('cash', created.link.fromRecordId, { date: '2026-03-15', note: 'renamed' });
+
+    expect(useBankWorkbookStore.getState().workbook.transactions[0].date).toBe('2026-03-15');
+    expect(useBankWorkbookStore.getState().workbook.transactions[0].amount).toBe(100); // unchanged
+    expect(useInterEntityTransfersStore.getState().workbook.entries[0].note).toBe('renamed');
   });
 });

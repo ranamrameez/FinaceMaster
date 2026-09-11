@@ -39,7 +39,7 @@ import { useAppearanceStore } from '../../../store/appearanceStore';
 import { ChartCard } from '../../qse/components/ChartCard';
 import { parseCSV } from '../../../lib/csv';
 import { fmtMoney } from '../../../lib/format';
-import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
+import { confirmAndDeleteLinkable, propagateLinkedEdit, resolveLinkedEdit } from '../../../lib/linkCascade';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
 import { createEmptyCashWorkbook } from '../../../store/defaultCashWorkbook';
@@ -204,9 +204,16 @@ function EditEntryModal({ entry, onClose }: { entry: CashEntry; onClose: () => v
   const [draft, setDraft] = useState<CashEntry>({ ...entry });
 
   const save = async () => {
-    if (!(await warnIfLinked('cash', entry.id))) return;
+    const choice = await resolveLinkedEdit('cash', entry.id);
+    if (choice === 'cancel') return;
     updateEntry(entry.id, draft);
-    toast('Entry updated.');
+    let msg = 'Entry updated.';
+    if (choice === 'both') {
+      const result = propagateLinkedEdit('cash', entry.id, { date: draft.date, amount: draft.amount, note: draft.note });
+      if (result.error) msg = result.error;
+      else if (result.message) msg = result.message;
+    }
+    toast(msg);
     onClose();
   };
 
