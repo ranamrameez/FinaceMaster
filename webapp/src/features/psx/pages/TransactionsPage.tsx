@@ -111,6 +111,7 @@ export function TransactionRows() {
             onManualSameDayChange={(v) => update(i, { manualSameDay: v })}
             feeOverride={r.feeOverride}
             onFeeOverrideChange={(v) => update(i, { feeOverride: v })}
+            tradeAmount={r.shares * r.price}
           />
           <TimeZoneFields
             time={r.time}
@@ -466,6 +467,7 @@ function TransactionList() {
                         onManualSameDayChange={(v) => setEditRow({ ...editRow, manualSameDay: v })}
                         feeOverride={editRow.feeOverride}
                         onFeeOverrideChange={(v) => setEditRow({ ...editRow, feeOverride: v })}
+                        tradeAmount={editRow.shares * editRow.price}
                       />
                     </td>
                     <td></td>

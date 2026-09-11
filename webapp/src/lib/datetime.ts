@@ -125,9 +125,35 @@ export function nowTime(timezone?: string): string {
   }
 }
 
+/** Today's real calendar date, `YYYY-MM-DD`, in a given IANA timezone —
+ * the date-only counterpart to `nowTime()`. Omitting `timezone` keeps the
+ * old browser-local/UTC reading (`new Date().toISOString()` is always
+ * UTC). Needed wherever "is this today" has to agree with a specific
+ * market's own trading day rather than the viewer's own — see
+ * `psxFees.ts`'s same-day-buy provisional-fee logic, which must compare
+ * against PSX's own calendar date (`defaultTimezoneForMarket('PSX')`),
+ * not the browser's, for the same reason `nowTime(timezone)` exists: a
+ * user physically elsewhere would otherwise get "today" computed in the
+ * wrong place relative to the market's own trading day. */
+export function todayISODate(timezone?: string): string {
+  if (!timezone) return new Date().toISOString().slice(0, 10);
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(new Date());
+    const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
+    return `${get('year')}-${get('month')}-${get('day')}`;
+  } catch {
+    return new Date().toISOString().slice(0, 10);
+  }
+}
+
 /** True when `date` is today's real calendar date. */
-export function isToday(date: string): boolean {
-  return date === new Date().toISOString().slice(0, 10);
+export function isToday(date: string, timezone?: string): boolean {
+  return date === todayISODate(timezone);
 }
 
 /** User-reported (2026-09-08): "Some transactions are not showing up down

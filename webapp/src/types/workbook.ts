@@ -150,6 +150,18 @@ export interface TradePlanLeg {
    * was later deleted — the UI falls back to the leg's own snapshot in
    * either case. */
   executedTransactionId?: string;
+  /** User-reported (2026-09-11): "make sure fee apply UI is available at
+   * all places (Trade Planner lost worth bcz it silently applied the
+   * commission on the same day buys as well...)" — a pending leg's fee
+   * used to be entirely automatic (`calcLegFee` in the planner page) with
+   * no way to see or override which fee mode applied to it, unlike every
+   * other transaction-entry surface (`Transaction.manualSameDay`/
+   * `feeOverride`, wired through `FeeModeControl`). Same two optional
+   * fields, same meaning, so a leg's fee mode can be inspected/overridden
+   * exactly like a real transaction's, and `feeModeFor()` works unchanged
+   * on either type. */
+  manualSameDay?: boolean;
+  feeOverride?: number;
 }
 
 /** README item 9: a saved, multi-leg trade sketch — plan several buys/sells

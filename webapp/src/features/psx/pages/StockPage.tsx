@@ -143,6 +143,7 @@ function TickerTransactions({ ticker }: { ticker: string }) {
           onManualSameDayChange={setManualSameDay}
           feeOverride={feeOverrideInput}
           onFeeOverrideChange={setFeeOverrideInput}
+          tradeAmount={Number(sharesInput) * Number(priceInput) || 0}
         />
         <TimeZoneFields
           time={time}
@@ -191,6 +192,7 @@ function TickerTransactions({ ticker }: { ticker: string }) {
                       onManualSameDayChange={(v) => setEditRow({ ...editRow, manualSameDay: v })}
                       feeOverride={editRow.feeOverride}
                       onFeeOverrideChange={(v) => setEditRow({ ...editRow, feeOverride: v })}
+                      tradeAmount={editRow.shares * editRow.price}
                     />
                   </td>
                   <td>

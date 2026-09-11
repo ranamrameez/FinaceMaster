@@ -2,7 +2,16 @@ import { describe, expect, it } from 'vitest';
 import fixture from './fixtures/psx-workbook-backup.json';
 import type { Transaction } from '../../../types/workbook';
 import type { PSXSettings } from '../../../types/psxWorkbook';
-import { calcCGT, calcFeeBreakdown, feeScenarios, isNettedLeg, makePSXFeeCalculator, sameDayChargedSide } from '../psxFees';
+import {
+  calcCGT,
+  calcFeeBreakdown,
+  feeScenarios,
+  isNettedLeg,
+  isProvisionalSameDayBuy,
+  makePSXFeeCalculator,
+  sameDayChargedSide,
+} from '../psxFees';
+import { defaultTimezoneForMarket, todayISODate } from '../../datetime';
 import { computePositions } from '../positions';
 import { cashSummary } from '../cashSummary';
 import { DEFAULT_PSX_SETTINGS } from '../../../store/defaultPsxWorkbook';
@@ -211,6 +220,68 @@ describe('makePSXFeeCalculator — same-day netting (README items 6/7)', () => {
     const calcFee = makePSXFeeCalculator(netSettings, []);
     const fee = calcFee(10000, false, { shares: 100 });
     expect(fee).toBeCloseTo(calcFeeBreakdown(10000, false, 100, netSettings).total, 5);
+  });
+});
+
+// User-reported (2026-09-11): Auto mode "silently applied commission on
+// same-day buys... making final price far higher than the benefit." A lone
+// BUY dated today with no matching SELL *yet* used to price at full
+// commission; it should now show 0 (provisional) until either a same-day
+// SELL appears (falls through to the existing charged/netted split) or the
+// calendar date moves on (reverts to full, same as any unpaired historical
+// transaction always has).
+describe('makePSXFeeCalculator — provisional zero fee for an unpaired same-day BUY', () => {
+  const netSettings: PSXSettings = { ...BASE_SETTINGS, psxFeePct: 0.005, nccplFeePct: 0.011 };
+  const psxToday = todayISODate(defaultTimezoneForMarket('PSX'));
+  const yesterday = (() => {
+    const [y, m, d] = psxToday.split('-').map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    dt.setUTCDate(dt.getUTCDate() - 1);
+    return dt.toISOString().slice(0, 10);
+  })();
+
+  it('a lone BUY dated today, no matching sell, is netted-provisional', () => {
+    const buyTx: Transaction = { date: psxToday, ticker: 'TEST', action: 'BUY', shares: 10, price: 100 };
+    expect(isProvisionalSameDayBuy([buyTx], buyTx)).toBe(true);
+    const calcFee = makePSXFeeCalculator(netSettings, [buyTx]);
+    expect(calcFee(1000, true, { shares: 10, tx: buyTx })).toBe(0);
+  });
+
+  it('once a matching same-day SELL exists, falls through to the normal charged/netted split', () => {
+    const buyTx: Transaction = { date: psxToday, ticker: 'TEST', action: 'BUY', shares: 10, price: 100 };
+    const sellTx: Transaction = { date: psxToday, ticker: 'TEST', action: 'SELL', shares: 40, price: 100 };
+    const all = [buyTx, sellTx];
+    expect(isProvisionalSameDayBuy(all, buyTx)).toBe(false);
+    const calcFee = makePSXFeeCalculator(netSettings, all);
+    // SELL is the larger side => charged (full); BUY is netted (levies only).
+    const buyFee = calcFee(1000, true, { shares: 10, tx: buyTx });
+    const sellFee = calcFee(4000, false, { shares: 40, tx: sellTx });
+    expect(buyFee).toBeGreaterThan(0);
+    expect(buyFee).toBeLessThan(sellFee);
+    expect(sellFee).toBeCloseTo(calcFeeBreakdown(4000, false, 40, netSettings).total, 5);
+  });
+
+  it('a BUY dated yesterday, still unpaired, is full fee — not provisional (the trading day has closed)', () => {
+    const buyTx: Transaction = { date: yesterday, ticker: 'TEST', action: 'BUY', shares: 10, price: 100 };
+    expect(isProvisionalSameDayBuy([buyTx], buyTx)).toBe(false);
+    const calcFee = makePSXFeeCalculator(netSettings, [buyTx]);
+    expect(calcFee(1000, true, { shares: 10, tx: buyTx })).toBeCloseTo(calcFeeBreakdown(1000, true, 10, netSettings).total, 5);
+  });
+
+  it('manualSameDay still wins outright over the provisional case', () => {
+    const buyTx: Transaction = { date: psxToday, ticker: 'TEST', action: 'BUY', shares: 10, price: 100, manualSameDay: true };
+    const calcFee = makePSXFeeCalculator(netSettings, [buyTx]);
+    // manualSameDay forces netted (levies-only), not provisional-zero and not full.
+    const fee = calcFee(1000, true, { shares: 10, tx: buyTx });
+    const fb = calcFeeBreakdown(1000, true, 10, netSettings);
+    expect(fee).toBeCloseTo(fb.psxFee + fb.nccplFee + fb.secpLevy + fb.cdc + fb.cvt, 5);
+  });
+
+  it('a lone SELL dated today is unaffected — the provisional case is BUY-only', () => {
+    const sellTx: Transaction = { date: psxToday, ticker: 'TEST', action: 'SELL', shares: 10, price: 100 };
+    expect(isProvisionalSameDayBuy([sellTx], sellTx)).toBe(false);
+    const calcFee = makePSXFeeCalculator(netSettings, [sellTx]);
+    expect(calcFee(1000, false, { shares: 10, tx: sellTx })).toBeCloseTo(calcFeeBreakdown(1000, false, 10, netSettings).total, 5);
   });
 });
 
