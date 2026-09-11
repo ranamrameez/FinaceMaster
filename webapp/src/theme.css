@@ -1009,37 +1009,29 @@
 
   /* ---------- Collapsible sections ---------- */
 
-  /* ---------- Sub-nav chip row (reuses .chip-tabs / .chip) ----------
-     `.subnav` is only ever paired with `.chip-tabs` (see Tabs.tsx) — a
-     standalone `.subnav{margin-bottom:20px; margin-top:-6px;}` rule used
-     to live here, but the `.chip-tabs.subnav` rule below always wins
-     (higher specificity, same element) and sets its own full margin
-     shorthand, so the standalone rule was dead code. Removed rather than
-     left as a second, contradicting definition for the next session to
-     trip over. Always visible while scrolling a page — sticks to the
-     viewport instead of scrolling away with the content above it, so the
-     jump-to-section chips stay reachable no matter how far down the page
-     you are. Solid page-matching background so content scrolling
-     underneath doesn't show through, plus a hairline + shadow once it's
-     actually pinned so it doesn't blend invisibly into the page. */
-.chip-tabs.subnav {
-	/* User-reported (item 1): this bar's own negative top margin used to
-	   pull it up 14px from its normal position right after a page's
-	   <h1 class="pagetitle">, which visually clipped into the title text
-	   itself — confirmed by measuring the real rects (`h1.bottom` at 59px,
-	   `.subnav.top` at 49px, a genuine 10px overlap, not a rendering
-	   artifact). Every real page using `Tabs` puts this bar directly under
-	   an `<h1>`, so the negative offset never had a legitimate case to
-	   compensate for; a small positive gap instead. */
+  /* ---------- App-wide fixed top bar (TopBar.tsx) ----------
+     Reused verbatim from the old `.chip-tabs.subnav` rule this replaces
+     (README item 1's own tuned padding/shadow/positive-gap fix still
+     applies) — see TopBar.tsx's own doc comment for why rendering it as
+     `.main`'s first child, ahead of the page's own <h1>, is what actually
+     makes it "visible immediately on load" rather than only once scrolled
+     to; `position:sticky` here is unchanged, just relocated. Wraps the
+     `.chip-tabs` chip row (no longer rendered by Tabs.tsx itself) plus an
+     optional right-side slot (e.g. Net Worth's currency switcher), so it's
+     a flex row rather than being `.chip-tabs` directly. */
+  .page-topbar {
 	position: sticky;
 	top: 0;
 	z-index: 30;
 	background: var(--bg);
-	padding: 14px 0 12px 12px;
+	padding: 14px 12px 12px 12px;
 	margin: 8px -5px 20px -5px;
 	border-bottom: 1px solid var(--border);
 	box-shadow: 0 4px 10px rgba(0,0,0,.06);
-}
+	display: flex;
+	align-items: center;
+	gap: 12px;
+  }
     /* Final Material palette guard: ensures component backgrounds/text follow
      the selected Material palette instead of the generic root palette. */
   html[data-color^="material-"] body{background:var(--bg);color:var(--text);}
@@ -1294,6 +1286,8 @@ html[data-color^="material-"][data-theme="dark"] select{
    picking a module is one click instead of two. */
 .category-list{margin-bottom:6px; padding-bottom:6px; border-bottom:1px solid var(--border);}
 .category-item.active{background:var(--accent-soft); color:var(--on-accent-soft); font-weight:600;}
+/* One small icon per module (2026-09-11, design reference: wealth_tracker_template/). */
+.category-item-icon{display:flex; flex-shrink:0; opacity:.8;}
 /* User-corrected (2026-09-09): "I asked to include individual stock Exchs.
    as subnavs of the SE main nav, but you placed it below as a stand-alone
    menu using ugly lines." Was a separate bordered block below the whole

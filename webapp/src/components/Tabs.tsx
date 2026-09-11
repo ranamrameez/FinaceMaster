@@ -1,5 +1,7 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { CollapsibleCard } from './Card';
+import { usePageTopBarChips } from '../hooks/usePageTopBar';
+import type { TopBarChip } from '../store/pageTopBarStore';
 
 export interface TabDef {
   key: string;
@@ -38,29 +40,18 @@ export function Tabs({ tabs, defaultKey }: { tabs: TabDef[]; defaultKey?: string
   const allOpen = tabs.every((t) => openKeys[t.key]);
   const expandAll = () => setOpenKeys(Object.fromEntries(tabs.map((t) => [t.key, true])));
 
+  // Pushed into the app-wide fixed TopBar (see that component's own doc
+  // comment) instead of rendered inline here — "All" first, same as
+  // before, its own active state reflecting whether every section is
+  // already open rather than which chip was last clicked.
+  const chips: TopBarChip[] = [
+    { key: '__all__', label: 'All', active: allOpen, onClick: expandAll },
+    ...tabs.map((t) => ({ key: t.key, label: t.label, active: !!openKeys[t.key], onClick: () => jumpTo(t.key) })),
+  ];
+  usePageTopBarChips(chips);
+
   return (
     <div>
-      {/* User-requested: "Top chips should have an 'All' option to expand all
-         at once" — a page with many sections otherwise needs one click per
-         section to see everything. Doesn't scroll anywhere on click (there's
-         no single section to jump to); its own active state reflects
-         whether every section is already open, not which chip was last
-         clicked. */}
-      <div className="chip-tabs subnav">
-        <button type="button" className={`chip${allOpen ? ' active' : ''}`} onClick={expandAll}>
-          All
-        </button>
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            className={`chip${openKeys[t.key] ? ' active' : ''}`}
-            onClick={() => jumpTo(t.key)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
       {tabs.map((t) => (
         <div key={t.key} ref={(el) => { sectionRefs.current[t.key] = el; }} style={{ marginTop: 20 }}>
           <CollapsibleCard

@@ -2,6 +2,7 @@ import type { User } from 'firebase/auth';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
+import { TopBar } from './TopBar';
 
 const COLLAPSE_KEY = 'financerecorder_sidebar_collapsed_v1';
 
@@ -63,6 +64,7 @@ export function AppShell({ user, children }: { user: User | null; children: Reac
         <button className="mobile-menu-btn" onClick={() => setMobileOpen((v) => !v)} type="button">
           ☰ Menu
         </button>
+        <TopBar />
         {children}
       </div>
     </div>

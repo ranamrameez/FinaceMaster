@@ -251,3 +251,102 @@ export function StarIcon({ size = 14, filled = false }: IconProps & { filled?: b
     </svg>
   );
 }
+
+/** A small icon per sidebar module (2026-09-11, design reference:
+ * `wealth_tracker_template/` in this repo — every mockup's sidebar pairs
+ * one simple line icon with each module label). Grid = Dashboard,
+ * trending line = Stock Exchanges, pie = Funds, columned building = Bank,
+ * banknote = Cash, handshake-ish two-arrow = Personal Loans, calendar =
+ * EMI/Loans, house = Rentals, repeat arrows = Subscriptions, checked
+ * calendar = Planning — a deliberately simple, recognizable-at-a-glance
+ * shape per module rather than a precise pictogram of the thing itself. */
+export function DashboardIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base} aria-hidden>
+      <rect x="3" y="3" width="7" height="9" rx="1" />
+      <rect x="14" y="3" width="7" height="5" rx="1" />
+      <rect x="14" y="12" width="7" height="9" rx="1" />
+      <rect x="3" y="16" width="7" height="5" rx="1" />
+    </svg>
+  );
+}
+
+export function StocksIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base} aria-hidden>
+      <path d="M3 17 9 11l4 4 8-8" />
+      <path d="M15 7h6v6" />
+    </svg>
+  );
+}
+
+export function FundsIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base} aria-hidden>
+      <path d="M12 2v10l8.66 5A10 10 0 1 0 12 2Z" />
+      <path d="M12 12 3.34 17" />
+    </svg>
+  );
+}
+
+export function BankIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base} aria-hidden>
+      <path d="M3 10 12 4l9 6M4 10v9M9 10v9M15 10v9M20 10v9M2 21h20" />
+    </svg>
+  );
+}
+
+export function CashIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base} aria-hidden>
+      <rect x="2" y="6" width="20" height="12" rx="2" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+export function PersonalLoanIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base} aria-hidden>
+      <path d="M7 12h4l2-2 2 2h2" />
+      <path d="M2 12a5 5 0 0 1 5-5h1M22 12a5 5 0 0 1-5 5h-1" />
+    </svg>
+  );
+}
+
+export function EMIIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base} aria-hidden>
+      <rect x="3" y="4" width="18" height="17" rx="2" />
+      <path d="M3 9h18M8 2v4M16 2v4" />
+    </svg>
+  );
+}
+
+export function RentalsIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base} aria-hidden>
+      <path d="m3 11 9-7 9 7" />
+      <path d="M5 10v10h14V10" />
+    </svg>
+  );
+}
+
+export function SubscriptionsIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base} aria-hidden>
+      <path d="M17 2 21 6l-4 4M3 12v-2a4 4 0 0 1 4-4h14" />
+      <path d="M7 22 3 18l4-4M21 12v2a4 4 0 0 1-4 4H3" />
+    </svg>
+  );
+}
+
+export function PlanningIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base} aria-hidden>
+      <rect x="3" y="4" width="18" height="17" rx="2" />
+      <path d="M3 9h18M8 2v4M16 2v4m-8.5 7 2 2 4-4" />
+    </svg>
+  );
+}

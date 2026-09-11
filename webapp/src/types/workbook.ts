@@ -238,6 +238,14 @@ export interface Appearance {
    * appearance JSON without this field still parses; `undefined` is treated
    * as `'compact'` (today's unchanged default) wherever it's read. */
   numberDisplay?: 'compact' | 'raw';
+  /** User-requested (2026-09-11): "FAB panel collapsing state should be
+   * configurable in settings... I always need it to be open." `FabPanel`
+   * (`components/ui/Fab.tsx`) normally starts collapsed and expands on
+   * click; this lets a user who frequently reaches for its actions (the
+   * Trade Calculator, Add Trade, Transfers, ...) skip that extra click by
+   * always rendering it expanded. Optional, `undefined`/false keeps
+   * today's default (collapsed-until-clicked). */
+  fabAlwaysOpen?: boolean;
 }
 
 export interface Workbook {
