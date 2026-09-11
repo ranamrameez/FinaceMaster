@@ -47,7 +47,7 @@ import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { ReorderButtons } from '../../../components/ui/ReorderButtons';
 import { dateOnlyMs } from '../../../lib/datetime';
 import { firebaseReady } from '../../../lib/firebase/client';
-import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
+import { confirmAndDeleteLinkable, propagateLinkedEdit, resolveLinkedEdit } from '../../../lib/linkCascade';
 import { useAppearanceStore } from '../../../store/appearanceStore';
 import { createEmptyFundsWorkbook } from '../../../store/defaultFundsWorkbook';
 import { useFundsWorkbookStore } from '../../../store/fundsWorkbookStore';
@@ -120,7 +120,7 @@ function AddFundFab() {
           <Field label="Broker name" width={220} required>
             <TextInput value={brokerName} onChange={(e) => setBrokerName(e.target.value)} placeholder="e.g. Al Rajhi Capital" />
           </Field>
-          <div className="d-flex justify-center" style={{ marginTop: 16 }}>
+          <div className="d-flex justify-center mt-md">
             <button className="btn" onClick={submitBroker}><SaveIcon />Save</button>
           </div>
         </Modal>
@@ -149,7 +149,7 @@ function BrokersList({ onSelect }: { onSelect: (broker: Broker) => void }) {
   return (
     <CollapsibleCard title="Brokers" defaultOpen={false}>
       {archivedCount > 0 && (
-        <button className="btn secondary small" style={{ marginBottom: 12 }} onClick={() => setShowArchived((v) => !v)}>
+        <button className="btn secondary small mb-12" onClick={() => setShowArchived((v) => !v)}>
           {showArchived ? 'Hide' : 'Show'} closed ({archivedCount})
         </button>
       )}
@@ -225,7 +225,7 @@ function BrokerDetail({ broker, onBack, onSelectFund }: { broker: Broker; onBack
 
   return (
     <div>
-      <button className="btn secondary small" style={{ marginBottom: 12 }} onClick={onBack}>← All funds</button>
+      <button className="btn secondary small mb-12" onClick={onBack}>← All funds</button>
       <CollapsibleCard
         title={editing ? 'Edit broker' : broker.name}
         defaultOpen
@@ -246,14 +246,14 @@ function BrokerDetail({ broker, onBack, onSelectFund }: { broker: Broker; onBack
             <Field label="Notes (optional)" width={220}>
               <TextInput value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
             </Field>
-            <div className="row" style={{ gap: 8, marginTop: 8 }}>
+            <div className="row gap-sm mt-sm">
               <button className="btn" onClick={save}><SaveIcon />Save</button>
               <button className="btn secondary" onClick={() => setEditing(false)}><XIcon />Cancel</button>
             </div>
           </div>
         ) : (
           <div>
-            {broker.notes && <p className="text-muted" style={{ marginTop: 0 }}>{broker.notes}</p>}
+            {broker.notes && <p className="text-muted mt-0">{broker.notes}</p>}
             <div className="row" style={{ gap: 16 }}>
               {Object.keys(totals).length ? (
                 Object.entries(totals).map(([c, n]) => (
@@ -269,7 +269,7 @@ function BrokerDetail({ broker, onBack, onSelectFund }: { broker: Broker; onBack
           </div>
         )}
       </CollapsibleCard>
-      <div style={{ marginTop: 16 }}>
+      <div className="mt-md">
         <div className="entity-card-grid">
           {linkedFunds.map((f) => {
             const nav = getMarketPrice(f.id, workbook.marketPrices, workbook.transactions);
@@ -353,7 +353,7 @@ function InvestmentHelperModal({ onClose }: { onClose: () => void }) {
       <div key={fund.id} className="card" style={{ padding: 12, flex: 1, minWidth: 220 }}>
         <div className="text-muted" style={{ marginBottom: 6 }}>{fund.name} ({fund.currencyCode})</div>
         {!projected ? (
-          <p className="text-muted" style={{ margin: 0 }}>Not enough price history yet to project returns for this fund.</p>
+          <p className="text-muted m-0">Not enough price history yet to project returns for this fund.</p>
         ) : (
           <div className="grid-auto" style={gridAutoStyle(90, 8)}>
             <div className="stat-card card" style={hueStyle(projected.dailyAmount >= 0 ? 'var(--profit)' : 'var(--loss)')}>
@@ -470,7 +470,7 @@ function AddFundForm({ onSaved, initialBrokerId }: { onSaved?: () => void; initi
           </Field>
         )}
       </div>
-      <p className="text-muted" style={{ marginTop: 8 }}>Optional initial investment (leave amount blank to just add the fund with no transactions yet):</p>
+      <p className="text-muted mt-sm">Optional initial investment (leave amount blank to just add the fund with no transactions yet):</p>
       <div className="row gap-sm">
         <Field label="Date">
           <TextInput type="date" value={initialDate} onChange={(e) => setInitialDate(e.target.value)} />
@@ -482,7 +482,7 @@ function AddFundForm({ onSaved, initialBrokerId }: { onSaved?: () => void; initi
           <TextInput type="number" step="0.0001" value={initialNav || ''} onChange={(e) => setInitialNav(Number(e.target.value))} />
         </Field>
       </div>
-      <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
+      <button className="btn mt-12" onClick={submit}>
         <PlusIcon />Add fund
       </button>
     </div>
@@ -627,7 +627,7 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
   return (
     <div>
       {closedCount > 0 && (
-        <button className="btn secondary small" style={{ marginBottom: 12 }} onClick={() => setShowClosed((v) => !v)}>
+        <button className="btn secondary small mb-12" onClick={() => setShowClosed((v) => !v)}>
           {showClosed ? 'Hide' : 'Show'} closed ({closedCount})
         </button>
       )}
@@ -641,7 +641,7 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
             <EntityCard
               key={r.fund.id}
               title={
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span className="flex-center-gap4">
                   <span className="text-muted entity-card-sr">#{r.idx}</span>
                   {/* Funds has no known logo CDN of its own (README item 118) — passing
                    * exchange="psx" reuses TickerLogo's "no remote CDN, local-drop-in or
@@ -768,7 +768,7 @@ function SnapshotImportSection() {
 
   return (
     <div>
-      <p className="text-muted" style={{ marginBottom: 12 }}>
+      <p className="text-muted mb-12">
         For a spreadsheet that tracks Total Invested / Withdrawn / Current Balance per fund rather than individual
         dated trades. Since there's no real transaction history in that shape, this reconstructs a buy (and, if
         withdrawn, a sell) dated on the single "as of" date below, at whatever NAV reproduces your reported balances
@@ -807,7 +807,7 @@ function SnapshotImportSection() {
       </div>
 
       {rows && duplicateCodes.length > 0 && (
-        <Notice tone="warning" style={{ marginBottom: 12 }}>
+        <Notice tone="warning" className="mb-12">
           Fund code{duplicateCodes.length > 1 ? 's' : ''} {duplicateCodes.join(', ')} appear{duplicateCodes.length === 1 ? 's' : ''} more
           than once — each row below still becomes its own fund. If a row is actually a mistake (wrong platform/code
           typed into the wrong line), fix it in the table below before importing rather than after.
@@ -816,7 +816,7 @@ function SnapshotImportSection() {
 
       {rows && (
         <>
-          <div className="table-scroll" style={{ marginBottom: 12 }}>
+          <div className="table-scroll mb-12">
             <table>
               <thead>
                 <tr>
@@ -1117,9 +1117,9 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
 
   return (
     <div>
-      <button className="btn secondary small" style={{ marginBottom: 12 }} onClick={onBack}>← All funds</button>
+      <button className="btn secondary small mb-12" onClick={onBack}>← All funds</button>
 
-      <Card style={{ marginBottom: 16 }}>
+      <Card className="mb-md">
             {editingFund ? (
               <div>
                 <div className="row gap-sm">
@@ -1137,7 +1137,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                     </Select>
                   )}
                 </div>
-                <div className="row" style={{ gap: 8, marginTop: 8 }}>
+                <div className="row gap-sm mt-sm">
                   <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveFund} />
                   <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditingFund(false)} />
                 </div>
@@ -1211,7 +1211,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
             </div>
             {/* User-requested (2026-09-03): "add a chart to view periodic
                 growth with balance & PL indications over time." */}
-            <div style={{ marginTop: 12 }}>
+            <div className="mt-12">
               <ChartCard title="Growth over time" empty={!contribution.length}>
                 <Line
                   data={{
@@ -1303,10 +1303,10 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
           "Transfers" card here, redundant with the Transactions table
           right below). Two stacked options, "OR" between them, not two
           side-by-side rows. */}
-      <Card style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0 }}>Update balance or NAV</h3>
+      <Card className="mb-md">
+        <h3 className="mt-0">Update balance or NAV</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+          <div className="row gap-sm">
             <Field label="Update NAV" width={140}>
               <TextInput type="number" step="0.0001" value={navInput} onChange={(e) => setNavInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && commitNav()} />
             </Field>
@@ -1314,7 +1314,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
             <span className="text-muted">Current NAV: {currentNav ? fmtPrice(currentNav) : '—'}</span>
           </div>
           <div className="text-muted" style={{ textAlign: 'center' }}>OR</div>
-          <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+          <div className="row gap-sm">
             <Field label="Update balance" width={150} title="Don't know the per-unit NAV? Enter your fund's current total balance instead — the app computes the implied NAV from the units you already hold, assuming no deposit/withdrawal happened since your last update.">
               <TextInput type="number" step="0.01" value={balanceInput} onChange={(e) => setBalanceInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && commitBalance()} disabled={units <= 0} />
             </Field>
@@ -1324,10 +1324,10 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
       </Card>
 
       <CollapsibleCard
-        title={<h3 style={{ margin: 0 }}>Transactions</h3>}
+        title={<h3 className="m-0">Transactions</h3>}
         headerExtra={
           txs.length > 0 ? (
-            <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+            <div className="row gap-sm">
               <Field label="From (optional)">
                 <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
               </Field>
@@ -1339,7 +1339,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
           ) : undefined
         }
       >
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <Field label="Type" width={140}>
           <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
             <option value="all">All</option>
@@ -1431,8 +1431,8 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
           then "missing crucial data. Add all data like Index, Date, prv
           balnce + NAV, new balance + NAV, change + %age, Actions etc." */}
       <CollapsibleCard
-        title={<h3 style={{ margin: 0 }}>Balance Update History</h3>}
-        style={{ marginTop: 16 }}
+        title={<h3 className="m-0">Balance Update History</h3>}
+        className="mt-md"
         headerExtra={balanceRows.length > 0 ? <button className="btn secondary" onClick={exportBalanceHistory}>Export CSV</button> : undefined}
       >
         {!balanceRows.length && <p className="text-muted">No balance/NAV updates recorded yet — use "Update balance or NAV" above.</p>}
@@ -1584,20 +1584,27 @@ function FundsTransfersSection() {
   const startEdit = (t: Transfer) => { setEditId(t.id); setEditRow({ ...t }); };
   const saveEdit = async () => {
     if (editId === null || !editRow) return;
-    if (!(await warnIfLinked('funds', editId))) return;
+    const choice = await resolveLinkedEdit('funds', editId);
+    if (choice === 'cancel') return;
     updateTransfer(editId, editRow);
-    toast('Transfer updated.');
+    let msg = 'Transfer updated.';
+    if (choice === 'both') {
+      const result = propagateLinkedEdit('funds', editId, { date: editRow.date, amount: editRow.gross });
+      if (result.error) msg = result.error;
+      else if (result.message) msg = result.message;
+    }
+    toast(msg);
     setEditId(null);
     setEditRow(null);
   };
 
   return (
     <div>
-      <p className="text-muted" style={{ marginBottom: 12 }}>
+      <p className="text-muted mb-12">
         Cash moved into or out of this Funds account, separate from buying/selling fund units —
         e.g. topping up before a purchase, or withdrawing after a redemption.
       </p>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <Field label="Type" width={140}>
           <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
             <option value="all">All</option>
@@ -1606,7 +1613,7 @@ function FundsTransfersSection() {
           </Select>
         </Field>
       </div>
-      <div className="table-scroll" style={{ marginTop: 8 }}>
+      <div className="table-scroll mt-sm">
         <table>
           <thead>
             <tr>
@@ -1794,10 +1801,10 @@ function AccountSection({
 
   if (!firebaseReady || !cloudEmpty) return null;
   return (
-    <Card style={{ marginBottom: 16 }}>
+    <Card className="mb-md">
       {cloudEmpty && (
         <Notice tone="warning" style={{ marginTop: 8 }}>
-          <p style={{ marginTop: 0 }}>No data found in the cloud for this account's Funds workbook. This won't upload automatically.</p>
+          <p className="mt-0">No data found in the cloud for this account's Funds workbook. This won't upload automatically.</p>
           <button
             className="btn secondary"
             disabled={busy}
@@ -1863,7 +1870,7 @@ function DataManagement() {
 
   return (
     <Card>
-      <h3 style={{ marginTop: 0 }}>Data management</h3>
+      <h3 className="mt-0">Data management</h3>
       <div className="row gap-sm">
         <button className="btn secondary" onClick={exportJSON}>Export JSON</button>
         <button className="btn secondary" onClick={() => fileInput.current?.click()}>Import JSON</button>
@@ -1903,7 +1910,7 @@ export function FundsPage({
   return (
     <div>
       <h1 className="pagetitle">Funds</h1>
-      <p className="text-muted" style={{ marginBottom: 12 }}>
+      <p className="text-muted mb-12">
         Mutual fund unit holdings and performance — buy/sell units at a NAV per unit, same shape as a stock
         trade. Returns are shown as XIRR, which accounts for when each investment happened, not just totals.
       </p>
@@ -1938,7 +1945,7 @@ export function FundsPage({
               label: 'Settings',
               content: (
                 <div>
-                  <p className="text-muted" style={{ marginTop: 0 }}>
+                  <p className="text-muted mt-0">
                     Sign-in, profile, appearance, and a whole-app backup live on the{' '}
                     <Link to="/account">Account page →</Link>. What's below is specific to Funds.
                   </p>

@@ -95,31 +95,31 @@ export function PlanningPage({
   return (
     <div>
       <h1 className="pagetitle">Planning</h1>
-      <p className="text-muted" style={{ marginBottom: 12 }}>
+      <p className="text-muted mb-12">
         Everything expected to happen soon, across every module — a plan can repeat (e.g. a monthly salary or a
         recurring bill), so you only set it up once. Browse every planned Cash/Banking/Rentals activity below, or
         manage a specific module's own plans (add, edit, delete, mark done) further down.
       </p>
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Upcoming (next 30 days)</h3>} style={{ marginBottom: 16 }}>
+      <CollapsibleCard title={<h3 className="m-0">Upcoming (next 30 days)</h3>} className="mb-md">
         <UpcomingList items={upcoming} emptyText="Nothing expected in the next 30 days." />
       </CollapsibleCard>
       <ActivityList activities={activities} />
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Cash</h3>} style={{ marginBottom: 16 }}>
+      <CollapsibleCard title={<h3 className="m-0">Cash</h3>} className="mb-md">
         <CashPlanningTab
           plannedSyncStatus={cashPlannedSyncStatus}
           plannedCloudEmpty={cashPlannedCloudEmpty}
           uploadPlannedLocalToCloud={uploadCashPlannedLocalToCloud}
         />
       </CollapsibleCard>
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Banking</h3>} style={{ marginBottom: 16 }}>
+      <CollapsibleCard title={<h3 className="m-0">Banking</h3>} className="mb-md">
         <BankPlanningTab
           plannedSyncStatus={bankPlannedSyncStatus}
           plannedCloudEmpty={bankPlannedCloudEmpty}
           uploadPlannedLocalToCloud={uploadBankPlannedLocalToCloud}
         />
       </CollapsibleCard>
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Rentals</h3>}>
-        <p className="text-muted" style={{ marginTop: 0 }}>
+      <CollapsibleCard title={<h3 className="m-0">Rentals</h3>}>
+        <p className="text-muted mt-0">
           Rentals plans its own recurring rent per property (see a property's own "Details" view for lease-based
           projection and rent collection) — use this for a one-off plan that doesn't fit either of those, like a
           planned repair expense.
@@ -165,8 +165,8 @@ function ActivityList({ activities }: { activities: BudgetActivity[] }) {
   const { sorted, Th } = useSortableRows(filtered, sortValue, 'date', 'desc');
 
   return (
-    <CollapsibleCard title={<h3 style={{ margin: 0 }}>All planned financial activity</h3>} style={{ marginBottom: 16 }}>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+    <CollapsibleCard title={<h3 className="m-0">All planned financial activity</h3>} className="mb-md">
+      <div className="row gap-sm mb-sm">
         <Field label="Account" width={130}>
           <Select value={moduleFilter} onChange={(e) => setModuleFilter(e.target.value as typeof moduleFilter)}>
             <option value="all">All</option>
@@ -291,10 +291,10 @@ function AddRentalPlanForm({ rentalProperties, addPlannedRentals, onSaved }: { r
       <datalist id="rental-plan-category-datalist">
         {categoryOptions.map((c) => <option key={c} value={c} />)}
       </datalist>
-      <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
+      <button className="btn mt-12" onClick={submit}>
         <PlusIcon />Add plan
       </button>
-      <p className="text-muted" style={{ marginTop: 8 }}><span style={{ color: 'var(--loss)' }}>*</span> Required. Everything else on this form is optional.</p>
+      <p className="text-muted mt-sm"><span style={{ color: 'var(--loss)' }}>*</span> Required. Everything else on this form is optional.</p>
     </div>
   );
 }

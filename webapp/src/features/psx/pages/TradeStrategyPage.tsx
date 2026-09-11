@@ -781,7 +781,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                         <span style={{ cursor: 'pointer', color: 'var(--warn)' }}> ⚠</span>
                       </Tooltip>
                     )}</td>
-                    <td style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <td className="flex-center-gap4">
                       <TickerLogo ticker={display.ticker} exchange="psx" size="sm" />
                       {display.ticker}
                     </td>
@@ -893,12 +893,12 @@ function PlanCard({ plan }: { plan: TradePlan }) {
       </div>
 
       {!addingLeg && (
-        <button className="btn secondary small" style={{ marginTop: 8 }} onClick={() => setAddingLeg({ date: today(), action: 'BUY', shares: 0, price: 0 })}>
+        <button className="btn secondary small mt-sm" onClick={() => setAddingLeg({ date: today(), action: 'BUY', shares: 0, price: 0 })}>
           <PlusIcon size={12} />Add leg
         </button>
       )}
 
-      <p className="text-muted" style={{ marginTop: 8 }}>
+      <p className="text-muted mt-sm">
         Planned buys {fmtMoney(totalBuy, currency)} · Planned sells {fmtMoney(totalSell, currency)}
         {tickerAnalysis.some((t) => t.plannedSold > 0) && (
           <> · Total planned P/L {fmtMoney(tickerAnalysis.reduce((s, t) => s + t.realizedPL, 0), currency)}</>
@@ -978,7 +978,7 @@ export function TradeStrategyPage() {
   return (
     <div>
       <h1 className="pagetitle">PSX Trade Strategy</h1>
-      <p className="text-muted" style={{ marginBottom: 12 }}>
+      <p className="text-muted mb-12">
         Buy/Sell &amp; Avg Down, and Trade Planner &amp; Partial Trade — sketch out trades ahead of time, or get
         advice on lots you already hold.
       </p>

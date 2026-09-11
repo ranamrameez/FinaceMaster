@@ -23,7 +23,7 @@ import { ReorderButtons } from '../../../components/ui/ReorderButtons';
 import { dateOnlyMs } from '../../../lib/datetime';
 import { parseCSV, toCSV } from '../../../lib/csv';
 import { fmtMoney } from '../../../lib/format';
-import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
+import { confirmAndDeleteLinkable, propagateLinkedEdit, resolveLinkedEdit } from '../../../lib/linkCascade';
 import {
   loanBalanceHistory,
   loanOutstanding,
@@ -239,7 +239,7 @@ export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: strin
           <TextInput value={l.note} onChange={(e) => setL({ ...l, note: e.target.value })} />
         </Field>
       </div>
-      <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
+      <button className="btn mt-12" onClick={submit}>
         <PlusIcon />Add loan
       </button>
     </div>
@@ -323,9 +323,16 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
   const startEdit = (r: PersonalLoanRepayment) => { setEditId(r.id); setEditRow({ ...r }); };
   const saveEdit = async () => {
     if (editId === null || !editRow) return;
-    if (!(await warnIfLinked('personalLoans', editId))) return;
+    const choice = await resolveLinkedEdit('personalLoans', editId);
+    if (choice === 'cancel') return;
     updateRepayment(editId, editRow);
-    toast('Repayment updated.');
+    let msg = 'Repayment updated.';
+    if (choice === 'both') {
+      const result = propagateLinkedEdit('personalLoans', editId, { date: editRow.date, amount: editRow.amount });
+      if (result.error) msg = result.error;
+      else if (result.message) msg = result.message;
+    }
+    toast(msg);
     setEditId(null);
     setEditRow(null);
   };
@@ -363,10 +370,10 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
        * the table + export controls below it split off cleanly into their
        * own collapsible section. */}
       <CollapsibleCard
-        title={<h4 style={{ margin: 0 }}>Repayment history</h4>}
+        title={<h4 className="m-0">Repayment history</h4>}
         headerExtra={
           repayments.length > 0 ? (
-            <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+            <div className="row gap-sm">
               <Field label="From (optional)">
                 <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
               </Field>
@@ -377,11 +384,11 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
             </div>
           ) : undefined
         }
-        style={{ marginBottom: 16 }}
+        className="mb-md"
       >
         {/* User-requested (2026-09-03): "add filters to other tables as
            well." */}
-        <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+        <div className="row gap-sm mb-sm">
           <Field label="Source" width={140}>
             <Select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value as typeof sourceFilter)}>
               <option value="all">All</option>
@@ -575,8 +582,14 @@ function ImportRepaymentsSection({ loan }: { loan: PersonalLoan }) {
   };
 
   return (
-    <Card style={{ marginTop: 12 }}>
-      <h4 style={{ marginTop: 0 }}>Import repayments (CSV)</h4>
+    <Card className="mt-12">
+      <h4 className="mt-0">Import repayments (CSV)</h4>
+      <p className="text-muted mb-12">
+        Import a CSV export of repayments against this loan. This is a simple "map these columns" tool —
+        pick which column is which below; every repayment is recorded as a positive amount regardless of
+        the loan's direction. Date values must be in YYYY-MM-DD format (e.g. 2026-01-15) — other date
+        formats will sort incorrectly once imported.
+      </p>
       <div className="row" style={{ gap: 8, alignItems: 'center' }}>
         <button className="btn secondary small" onClick={() => fileInput.current?.click()}>Choose CSV file</button>
         <input
@@ -594,7 +607,7 @@ function ImportRepaymentsSection({ loan }: { loan: PersonalLoan }) {
       </div>
 
       {headers.length > 0 && (
-        <div style={{ marginTop: 12 }}>
+        <div className="mt-12">
           <div className="row gap-sm">
             <Field label="Date column" width={160}>
               <Select value={dateCol} onChange={(e) => setDateCol(e.target.value)}>
@@ -607,7 +620,7 @@ function ImportRepaymentsSection({ loan }: { loan: PersonalLoan }) {
               </Select>
             </Field>
           </div>
-          <div className="table-scroll" style={{ marginTop: 8 }}>
+          <div className="table-scroll mt-sm">
             <table>
               <thead><tr><th>Date</th><th>Amount</th></tr></thead>
               <tbody>
@@ -620,7 +633,7 @@ function ImportRepaymentsSection({ loan }: { loan: PersonalLoan }) {
               </tbody>
             </table>
           </div>
-          <button className="btn secondary" style={{ marginTop: 12 }} onClick={doImport}>
+          <button className="btn secondary mt-12" onClick={doImport}>
             <PlusIcon />Import {rows.length} repayment{rows.length === 1 ? '' : 's'}
           </button>
         </div>
@@ -671,9 +684,9 @@ function PayoffPlanner({ loan, outstanding }: { loan: PersonalLoan; outstanding:
   if (outstanding <= 0) return null;
 
   return (
-    <Card style={{ marginBottom: 16 }}>
-      <h4 style={{ marginTop: 0 }}>Payoff planner</h4>
-      <p className="text-muted" style={{ marginTop: 0 }}>
+    <Card className="mb-md">
+      <h4 className="mt-0">Payoff planner</h4>
+      <p className="text-muted mt-0">
         A quick "what if" — see how many months it'd take to clear the remaining {fmtMoney(outstanding, loan.currencyCode)}
         {' '}at a repayment rate you pick. Not saved anywhere, just a live estimate.
       </p>
@@ -717,8 +730,8 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
 
   return (
     <div>
-      <button className="btn secondary small" style={{ marginBottom: 12 }} onClick={onBack}>← All personal loans</button>
-      <Card style={{ marginBottom: 16 }}>
+      <button className="btn secondary small mb-12" onClick={onBack}>← All personal loans</button>
+      <Card className="mb-md">
         {editing ? (
           <div>
             <div className="row gap-sm">
@@ -746,7 +759,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
                 <TextInput value={editRow.note ?? ''} onChange={(e) => setEditRow({ ...editRow, note: e.target.value })} />
               </Field>
             </div>
-            <div className="row" style={{ gap: 8, marginTop: 8 }}>
+            <div className="row gap-sm mt-sm">
               <IconButton
                 label="Save"
                 icon={<SaveIcon size={13} />}
@@ -854,7 +867,7 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: PersonalLoan) => void
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <select value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)}>
           <option value="all">All directions</option>
           <option value="owed_to_me">Money I lent out</option>
@@ -923,7 +936,7 @@ function AccountSection({
     <Card>
       {cloudEmpty && (
         <Notice tone="warning" style={{ marginTop: 8 }}>
-          <p style={{ marginTop: 0 }}>
+          <p className="mt-0">
             No data found in the cloud for this account's Personal Loans workbook. This won't upload automatically.
           </p>
           <button
@@ -973,7 +986,7 @@ export function PersonalLoansPage({
   return (
     <div>
       <h1 className="pagetitle">Personal Loans</h1>
-      <p className="text-muted" style={{ marginBottom: 12 }}>
+      <p className="text-muted mb-12">
         Informal loans with another person, tracked in either direction — money you lent out, or money you owe —
         with a combined net position. No repayment schedule automation; if this loan actually has a real interest
         schedule, it probably belongs in EMI/Loans instead.
@@ -998,7 +1011,7 @@ export function PersonalLoansPage({
               { key: 'analytics', label: 'Analytics', content: <AnalyticsTab /> },
             ]}
           />
-          <div style={{ marginTop: 16 }}>
+          <div className="mt-md">
             <AccountSection cloudEmpty={cloudEmpty} uploadLocalToCloud={uploadLocalToCloud} />
           </div>
         </div>

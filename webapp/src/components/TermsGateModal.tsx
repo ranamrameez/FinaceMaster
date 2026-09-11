@@ -23,7 +23,7 @@ export function TermsGateModal() {
     // gate, defeating the point.
     <div className="modal-overlay show" style={{ zIndex: 1000 }}>
       <div className="modal-box" style={{ maxWidth: 520 }}>
-        <h3 style={{ marginTop: 0 }}>Before you continue</h3>
+        <h3 className="mt-0">Before you continue</h3>
         <p>
           FinanceRecorder computes fees, taxes, break-even prices, and profit/loss using settings you configure —
           these are <strong>estimates</strong>, not guarantees. Brokers, exchanges, and regulators change fee
@@ -45,7 +45,7 @@ export function TermsGateModal() {
           <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} style={{ marginTop: 3 }} />
           <span>I have read and accept the Disclaimer, Terms &amp; Privacy.</span>
         </label>
-        <button className="btn" disabled={!checked} style={{ marginTop: 12 }} onClick={accept}>
+        <button className="btn mt-12" disabled={!checked} onClick={accept}>
           Accept &amp; continue
         </button>
       </div>

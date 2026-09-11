@@ -11,7 +11,7 @@ import { gridAutoStyle } from '../../lib/gridStyle';
 export function AttributeList({ items }: { items: { label: string; value: ReactNode }[] }) {
   const shown = items.filter((i) => i.value !== undefined && i.value !== null && i.value !== '');
   if (!shown.length) {
-    return <p className="text-muted" style={{ margin: 0 }}>Nothing set yet — click Edit to add details.</p>;
+    return <p className="text-muted m-0">Nothing set yet — click Edit to add details.</p>;
   }
   return (
     <div className="grid-auto" style={gridAutoStyle(180, '10px 16px')}>

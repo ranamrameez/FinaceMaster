@@ -38,7 +38,7 @@ function CurrenciesSection() {
   const isEnabled = (code: string) => enabledCodes === null || enabledCodes.includes(code);
 
   return (
-    <CollapsibleCard title={<h3 style={{ margin: 0 }}>Currencies</h3>}>
+    <CollapsibleCard title={<h3 className="m-0">Currencies</h3>}>
       <p className="text-muted" style={{ marginTop: 0, marginBottom: 8 }}>
         Pick which currencies show up in a currency picker across the app. A currency your own
         data already uses always stays available, even if unchecked here.
@@ -57,7 +57,7 @@ function CurrenciesSection() {
         ))}
       </div>
       {enabledCodes !== null && (
-        <button className="btn secondary small" style={{ marginTop: 8 }} onClick={() => setEnabledCodes(null)}>
+        <button className="btn secondary small mt-sm" onClick={() => setEnabledCodes(null)}>
           Reset to all currencies
         </button>
       )}
@@ -106,7 +106,7 @@ export function AccountPage({ syncStatuses }: { syncStatuses: ModuleSyncStatus[]
       <div className="grid-auto" style={{ ...gridAutoStyle(300, 16), marginBottom: 16, alignItems: 'start' }}>
         {!user ? (
           <Card>
-            <p className="text-muted" style={{ marginTop: 0 }}>
+            <p className="text-muted mt-0">
               You're browsing without an account — calculators and pages all work, but saving anything
               (a transaction, an entity, a plan) requires signing in first.
             </p>
@@ -116,12 +116,12 @@ export function AccountPage({ syncStatuses }: { syncStatuses: ModuleSyncStatus[]
           </Card>
         ) : (
           <>
-            <CollapsibleCard title={<h3 style={{ margin: 0 }}>Profile</h3>}>
+            <CollapsibleCard title={<h3 className="m-0">Profile</h3>}>
               <ProfileEditor user={user} />
             </CollapsibleCard>
 
-            <CollapsibleCard title={<h3 style={{ margin: 0 }}>Security</h3>}>
-              <p className="text-muted" style={{ marginTop: 0 }}>
+            <CollapsibleCard title={<h3 className="m-0">Security</h3>}>
+              <p className="text-muted mt-0">
                 Signed in with: <strong>{providers.length ? providers.join(', ') : 'Unknown method'}</strong>
                 {user.email ? <> · {user.email}</> : null}
               </p>
@@ -135,7 +135,7 @@ export function AccountPage({ syncStatuses }: { syncStatuses: ModuleSyncStatus[]
               </div>
             </CollapsibleCard>
 
-            <CollapsibleCard title={<h3 style={{ margin: 0 }}>Sync status</h3>}>
+            <CollapsibleCard title={<h3 className="m-0">Sync status</h3>}>
               <p className="text-muted" style={{ marginTop: 0, marginBottom: 8 }}>
                 One line per module — click to see which, if any, has a sync issue.
               </p>
@@ -144,7 +144,7 @@ export function AccountPage({ syncStatuses }: { syncStatuses: ModuleSyncStatus[]
           </>
         )}
 
-        <CollapsibleCard title={<h3 style={{ margin: 0 }}>Appearance</h3>}>
+        <CollapsibleCard title={<h3 className="m-0">Appearance</h3>}>
           <div style={{ maxWidth: 320 }}>
             <AppearanceFields />
           </div>
@@ -152,8 +152,8 @@ export function AccountPage({ syncStatuses }: { syncStatuses: ModuleSyncStatus[]
 
         <CurrenciesSection />
 
-        <CollapsibleCard title={<h3 style={{ margin: 0 }}>Data</h3>}>
-          <p className="text-muted" style={{ marginTop: 0 }}>
+        <CollapsibleCard title={<h3 className="m-0">Data</h3>}>
+          <p className="text-muted mt-0">
             Export every module's data to one JSON file, or import one back in — a full backup, or a way to
             move data between devices.
           </p>
@@ -161,8 +161,8 @@ export function AccountPage({ syncStatuses }: { syncStatuses: ModuleSyncStatus[]
         </CollapsibleCard>
       </div>
 
-      <Notice tone="info" style={{ marginBottom: 16 }}>
-        <p style={{ margin: 0 }}>
+      <Notice tone="info" className="mb-md">
+        <p className="m-0">
           Every figure in this app is an estimate — verify against your official statement.{' '}
           <Link to="/legal" style={{ color: 'inherit' }}>Read the full Disclaimer, Terms &amp; Privacy →</Link>
         </p>

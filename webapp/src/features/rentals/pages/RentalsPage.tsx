@@ -28,7 +28,7 @@ import { netIncomeByCurrency, netIncomeByProperty, netIncomePendingByCurrency, p
 import { generateLeaseRentPlans, nextPendingBalance, proposeRentCollection } from '../../../lib/calc/rentalPlanning';
 import { parseCSV, toCSV } from '../../../lib/csv';
 import { fmtMoney } from '../../../lib/format';
-import { confirmAndDeleteLinkable, createLinkedTransfer, warnIfLinked } from '../../../lib/linkCascade';
+import { confirmAndDeleteLinkable, createLinkedTransfer, propagateLinkedEdit, resolveLinkedEdit } from '../../../lib/linkCascade';
 import { getLastTransferSource, rememberTransferSource } from '../../../hooks/useLastTransferSource';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
 import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
@@ -156,7 +156,7 @@ export function AddPropertyForm({ onSaved, initialCurrency }: { onSaved?: (id: s
           <TextInput type="number" step="0.01" value={p.purchasePrice ?? ''} onChange={(e) => setP({ ...p, purchasePrice: e.target.value === '' ? undefined : Number(e.target.value) })} />
         </Field>
       </div>
-      <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
+      <button className="btn mt-12" onClick={submit}>
         <PlusIcon />Add property
       </button>
     </div>
@@ -447,7 +447,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
          the full Property object) and `saveLease` handler, since these
          fields save identically to every lease/tenant field below. */}
       <h4 style={{ margin: '0 0 8px' }}>Property details</h4>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <Field label="Name">
           <TextInput value={lease.name} onChange={(e) => setLease({ ...lease, name: e.target.value })} />
         </Field>
@@ -461,7 +461,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
         </Field>
       </div>
       <h4 style={{ margin: '0 0 8px' }}>Lease &amp; tenant details</h4>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <Field label="Monthly rent">
           <TextInput type="number" step="0.01" value={lease.monthlyRent ?? ''} onChange={(e) => setLease({ ...lease, monthlyRent: e.target.value === '' ? undefined : Number(e.target.value) })} />
         </Field>
@@ -475,7 +475,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
           <TextInput type="date" value={lease.leaseEndDate ?? ''} onChange={(e) => setLease({ ...lease, leaseEndDate: e.target.value || undefined })} />
         </Field>
       </div>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <Field
           label="Collection cycle (optional)"
           title="Opts this property into the separate rent-collection proposal below — pick how often rent is actually collected."
@@ -495,7 +495,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
           <TextInput type="date" value={lease.lastCollectionDate ?? ''} onChange={(e) => setLease({ ...lease, lastCollectionDate: e.target.value || undefined })} />
         </Field>
       </div>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <Field label="Tenant name">
           <TextInput value={lease.tenantName ?? ''} onChange={(e) => setLease({ ...lease, tenantName: e.target.value })} />
         </Field>
@@ -534,7 +534,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
       </div>
 
       {property.collectionCycle && (
-        <Card style={{ marginBottom: 16 }}>
+        <Card className="mb-md">
           <h4 style={{ margin: '0 0 6px' }}>Rent collection</h4>
           {proposal ? (
             <>
@@ -546,7 +546,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
                   partial payment.</>
                 )}
               </p>
-              <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+              <div className="row gap-sm">
                 <Field label="Collection date">
                   <TextInput type="date" value={collectDate} onChange={(e) => setCollectDate(e.target.value)} />
                 </Field>
@@ -782,9 +782,16 @@ function EditEntryModal({ entry, onClose }: { entry: RentalEntry; onClose: () =>
   const [draft, setDraft] = useState<RentalEntry>({ ...entry });
 
   const save = async () => {
-    if (!(await warnIfLinked('rentals', entry.id))) return;
+    const choice = await resolveLinkedEdit('rentals', entry.id);
+    if (choice === 'cancel') return;
     updateEntry(entry.id, draft);
-    toast('Entry updated.');
+    let msg = 'Entry updated.';
+    if (choice === 'both') {
+      const result = propagateLinkedEdit('rentals', entry.id, { date: draft.date, amount: draft.amount, note: draft.note });
+      if (result.error) msg = result.error;
+      else if (result.message) msg = result.message;
+    }
+    toast(msg);
     onClose();
   };
 
@@ -816,7 +823,7 @@ function EditEntryModal({ entry, onClose }: { entry: RentalEntry; onClose: () =>
           onTimezoneChange={(timezone) => setDraft({ ...draft, timezone })}
         />
       </div>
-      <div style={{ marginTop: 8 }}>
+      <div className="mt-sm">
         <PendingToggle
           checked={!!draft.isPending}
           onChange={(v) => setDraft({ ...draft, isPending: v })}
@@ -824,7 +831,7 @@ function EditEntryModal({ entry, onClose }: { entry: RentalEntry; onClose: () =>
           title="Not yet cleared — excluded from Net income until unchecked."
         />
       </div>
-      <p className="text-muted" style={{ marginTop: 8 }}>
+      <p className="text-muted mt-sm">
         {draft.source === 'statement-import' ? `Imported${draft.statementRef ? ` from ${draft.statementRef}` : ''}` : 'Entered manually'}
       </p>
     </FinanceEditModal>
@@ -883,7 +890,7 @@ function EntriesList({ property }: { property: Property }) {
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <Field label="Type" width={130}>
           <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
             <option value="all">All</option>
@@ -1074,17 +1081,18 @@ function ImportTab() {
 
   return (
     <div>
-      <p className="text-muted" style={{ marginBottom: 12 }}>
+      <p className="text-muted mb-12">
         Import a CSV export of rent/expense entries for one property. This is a simple "map these columns" tool —
         pick which column is which below. A positive amount is treated as rent income, negative as an expense
-        (check "Flip sign" if your export does the opposite).
+        (check "Flip sign" if your export does the opposite). Date values must be in YYYY-MM-DD format
+        (e.g. 2026-01-15) — other date formats will sort incorrectly once imported.
       </p>
       <Field label="Import into property" width={220}>
         <Select value={propertyId} onChange={(e) => setPropertyId(e.target.value)}>
           {properties.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.currencyCode})</option>)}
         </Select>
       </Field>
-      <div style={{ marginTop: 8 }}>
+      <div className="mt-sm">
         <button className="btn secondary" onClick={() => fileInput.current?.click()}>Choose CSV file</button>
         <input
           ref={fileInput}
@@ -1101,8 +1109,8 @@ function ImportTab() {
       </div>
 
       {headers.length > 0 && (
-        <Card style={{ marginTop: 12 }}>
-          <h3 style={{ marginTop: 0 }}>Map columns</h3>
+        <Card className="mt-12">
+          <h3 className="mt-0">Map columns</h3>
           <div className="row gap-sm">
             <Field label="Date column" width={160}>
               <Select value={dateCol} onChange={(e) => setDateCol(e.target.value)}>
@@ -1142,7 +1150,7 @@ function ImportTab() {
               </tbody>
             </table>
           </div>
-          <button className="btn" style={{ marginTop: 12 }} onClick={doImport}>
+          <button className="btn mt-12" onClick={doImport}>
             <PlusIcon />Import {rows.length} entr{rows.length === 1 ? 'y' : 'ies'}
           </button>
         </Card>
@@ -1161,7 +1169,7 @@ function CategoryAndRollup({ property }: { property: Property }) {
   return (
     <div className="grid-auto" style={{ ...gridAutoStyle(260, 16), marginBottom: 16 }}>
       {cats.length > 0 && (
-        <CollapsibleCard title={<h3 style={{ margin: 0 }}>By category</h3>}>
+        <CollapsibleCard title={<h3 className="m-0">By category</h3>}>
           <div className="table-scroll">
             <table>
               <tbody>
@@ -1177,7 +1185,7 @@ function CategoryAndRollup({ property }: { property: Property }) {
         </CollapsibleCard>
       )}
       {rollup.length > 0 && (
-        <CollapsibleCard title={<h3 style={{ margin: 0 }}>Monthly rollup</h3>}>
+        <CollapsibleCard title={<h3 className="m-0">Monthly rollup</h3>}>
           <div className="table-scroll">
             <table>
               <thead><tr><th>Month</th><th>Income</th><th>Expense</th><th>Net</th></tr></thead>
@@ -1222,7 +1230,7 @@ function EntriesTab({
         </Select>
       </Field>
       {property && (
-        <div style={{ marginTop: 12 }}>
+        <div className="mt-12">
           <CategoryAndRollup property={property} />
           <EntriesList property={property} />
           <EntriesFab propertyId={property.id} currencyCode={property.currencyCode} />
@@ -1250,10 +1258,10 @@ function AccountSection({
 
   if (!firebaseReady || !cloudEmpty) return null;
   return (
-    <Card style={{ marginBottom: 16 }}>
+    <Card className="mb-md">
       {cloudEmpty && (
         <Notice tone="warning" style={{ marginTop: 8 }}>
-          <p style={{ marginTop: 0 }}>No data found in the cloud for this account's Rentals workbook. This won't upload automatically.</p>
+          <p className="mt-0">No data found in the cloud for this account's Rentals workbook. This won't upload automatically.</p>
           <button
             className="btn secondary"
             disabled={busy}
@@ -1319,7 +1327,7 @@ function DataManagement() {
 
   return (
     <Card>
-      <h3 style={{ marginTop: 0 }}>Data management</h3>
+      <h3 className="mt-0">Data management</h3>
       <div className="row gap-sm">
         <button className="btn secondary" onClick={exportJSON}>Export JSON</button>
         <button className="btn secondary" onClick={() => fileInput.current?.click()}>Import JSON</button>
@@ -1355,7 +1363,7 @@ export function RentalsPage({
   return (
     <div>
       <h1 className="pagetitle">Rentals</h1>
-      <p className="text-muted" style={{ marginBottom: 12 }}>
+      <p className="text-muted mb-12">
         Rental property income and expenses — recurring rent received and costs (maintenance, property tax,
         management fees) against one or more properties, not discrete buy/sell trades.
       </p>
@@ -1367,7 +1375,7 @@ export function RentalsPage({
             label: 'Income & expenses',
             content: <EntriesTab properties={properties} property={property} propertyId={propertyId} setPropertyId={setPropertyId} />,
             headerExtra: hasRows ? (
-              <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+              <div className="row gap-sm">
                 <Field label="From (optional)">
                   <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
                 </Field>
@@ -1385,7 +1393,7 @@ export function RentalsPage({
             label: 'Settings',
             content: (
               <div>
-                <p className="text-muted" style={{ marginTop: 0 }}>
+                <p className="text-muted mt-0">
                   Sign-in, profile, appearance, and a whole-app backup live on the{' '}
                   <Link to="/account">Account page →</Link>. What's below is specific to Rentals.
                 </p>

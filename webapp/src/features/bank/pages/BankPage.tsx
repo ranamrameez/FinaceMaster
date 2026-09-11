@@ -41,7 +41,7 @@ import { cssVar, tickerColor } from '../../../lib/cssVar';
 import { parseCSV, toCSV } from '../../../lib/csv';
 import { fmtMoney } from '../../../lib/format';
 import { dateOnlyMs } from '../../../lib/datetime';
-import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
+import { confirmAndDeleteLinkable, propagateLinkedEdit, resolveLinkedEdit } from '../../../lib/linkCascade';
 import { isValidIbanFormat, lookupIban } from '../../../lib/ibanLookup';
 import { isValidBin, lookupBin } from '../../../lib/binLookup';
 import { banksForCurrency } from '../../../lib/bankDirectory';
@@ -111,13 +111,13 @@ function CreditCardFields({ value, onChange, datalistId }: { value: CreditCardVa
   };
 
   return (
-    <div style={{ marginTop: 8 }}>
+    <div className="mt-sm">
       <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <input type="checkbox" checked={!!value.isLiability} onChange={(e) => onChange({ isLiability: e.target.checked })} />
         This is a credit card (counts as a debt in Net Worth, not a balance)
       </label>
       {value.isLiability && (
-        <div style={{ marginTop: 8 }}>
+        <div className="mt-sm">
           <div className="row gap-sm">
             <Field label="Credit limit (optional)" width={140}>
               <TextInput type="number" step="0.01" value={value.creditLimit ?? ''} onChange={(e) => onChange({ creditLimit: e.target.value ? Number(e.target.value) : undefined })} />
@@ -132,7 +132,7 @@ function CreditCardFields({ value, onChange, datalistId }: { value: CreditCardVa
               <TextInput type="number" min={1} max={31} value={value.paymentDueDate ?? ''} onChange={(e) => onChange({ paymentDueDate: e.target.value ? Number(e.target.value) : undefined })} />
             </Field>
           </div>
-          <div className="row" style={{ gap: 8, marginTop: 8 }}>
+          <div className="row gap-sm mt-sm">
             <Field label="Late fee after due date (optional)" width={150}>
               <TextInput type="number" step="0.01" value={value.lateFeeAfterDue ?? ''} onChange={(e) => onChange({ lateFeeAfterDue: e.target.value ? Number(e.target.value) : undefined })} />
             </Field>
@@ -252,7 +252,7 @@ function IbanLookupFields({ value, onChange, onBankNameFound }: { value: IbanLoo
   };
 
   return (
-    <div className="row" style={{ gap: 8, marginTop: 8 }}>
+    <div className="row gap-sm mt-sm">
       <Field label="IBAN (optional)" width={220} title="International Bank Account Number, if your bank issues one — used only to look up the bank name/BIC below; not every country or account has one.">
         <TextInput value={value.iban ?? ''} onChange={(e) => onChange({ iban: e.target.value || undefined })} placeholder="e.g. PK36SCBL0000001123456702" />
       </Field>
@@ -378,7 +378,7 @@ function AccountsFab() {
           <Field label="Bank name" width={220} required>
             <TextInput value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="e.g. UBL" />
           </Field>
-          <div className="d-flex justify-center" style={{ marginTop: 16 }}>
+          <div className="d-flex justify-center mt-md">
             <button className="btn" onClick={submitBank}><SaveIcon />Save</button>
           </div>
         </Modal>
@@ -420,7 +420,7 @@ function AccountFormFields({
          identity lives — it replaces what used to be a separate `Bank`
          Select shown only once a Bank existed, and it's typing-to-create
          so "no bank yet" costs nothing extra. */}
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <BankIdentityField value={value} onChange={onChange} idSuffix={idSuffix} />
       </div>
       <div className="row gap-sm">
@@ -439,7 +439,7 @@ function AccountFormFields({
       {/* README item 82: branch/account-type, free-form (not a fixed enum) —
          ACCOUNT_TYPES is just a datalist of common suggestions, any value is
          accepted. */}
-      <div className="row" style={{ gap: 8, marginTop: 8 }}>
+      <div className="row gap-sm mt-sm">
         <Field label="Branch (optional)" width={160}>
           <TextInput value={value.branch ?? ''} onChange={(e) => onChange({ branch: e.target.value || undefined })} placeholder="e.g. Gulberg Branch" />
         </Field>
@@ -459,7 +459,7 @@ function AccountFormFields({
          transaction-import feature (nothing reads these yet — this just
          gives that feature somewhere to read from). All optional, so
          skipping them changes nothing about today's add-account flow. */}
-      <div className="row" style={{ gap: 8, marginTop: 8 }}>
+      <div className="row gap-sm mt-sm">
         <Field label="Account number (optional)" width={160} title="However your bank shows it on statements/SMS — often partially masked, e.g. xxxx1234.">
           <TextInput value={value.accountNumber ?? ''} onChange={(e) => onChange({ accountNumber: e.target.value || undefined })} placeholder="e.g. xxxx1234" />
         </Field>
@@ -511,10 +511,10 @@ export function AddAccountForm({ onSaved, initialCurrency, initialBankId }: { on
         }}
         idSuffix="add"
       />
-      <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
+      <button className="btn mt-12" onClick={submit}>
         <PlusIcon />Add account
       </button>
-      <p className="text-muted" style={{ marginTop: 8 }}><span style={{ color: 'var(--loss)' }}>*</span> Required. Everything else on this form is optional.</p>
+      <p className="text-muted mt-sm"><span style={{ color: 'var(--loss)' }}>*</span> Required. Everything else on this form is optional.</p>
     </div>
   );
 }
@@ -556,7 +556,7 @@ function BanksList() {
   return (
     <CollapsibleCard title="Banks" defaultOpen={false}>
       {archivedCount > 0 && (
-        <button className="btn secondary small" style={{ marginBottom: 12 }} onClick={() => setShowArchived((v) => !v)}>
+        <button className="btn secondary small mb-12" onClick={() => setShowArchived((v) => !v)}>
           {showArchived ? 'Hide' : 'Show'} closed ({archivedCount})
         </button>
       )}
@@ -677,14 +677,14 @@ export function BankDetailPage() {
                 )}
               </div>
             </Field>
-            <div className="row" style={{ gap: 8, marginTop: 8 }}>
+            <div className="row gap-sm mt-sm">
               <button className="btn" onClick={save}><SaveIcon />Save</button>
               <button className="btn secondary" onClick={() => setEditing(false)}><XIcon />Cancel</button>
             </div>
           </div>
         ) : (
           <div>
-            {bank.notes && <p className="text-muted" style={{ marginTop: 0 }}>{bank.notes}</p>}
+            {bank.notes && <p className="text-muted mt-0">{bank.notes}</p>}
             <div className="row" style={{ gap: 16 }}>
               {Object.keys(totals).length ? (
                 Object.entries(totals).map(([c, n]) => (
@@ -700,7 +700,7 @@ export function BankDetailPage() {
           </div>
         )}
       </CollapsibleCard>
-      <div style={{ marginTop: 16 }}>
+      <div className="mt-md">
         <div className="entity-card-grid">
           {linkedAccounts.map((a) => (
             <EntityCard
@@ -783,8 +783,7 @@ function AccountsList() {
     <div>
       {archivedCount > 0 && (
         <button
-          className="btn secondary small"
-          style={{ marginBottom: 12 }}
+          className="btn secondary small mb-12"
           onClick={() => setShowArchived((v) => !v)}
         >
           {showArchived ? 'Hide' : 'Show'} closed ({archivedCount})
@@ -872,7 +871,7 @@ function AccountsList() {
 function CreditUsageBar({ used, limit, currency }: { used: number; limit: number; currency: string }) {
   const usedPct = limit > 0 ? Math.min(100, Math.max(0, (used / limit) * 100)) : 0;
   return (
-    <div style={{ marginBottom: 16 }}>
+    <div className="mb-md">
       <div style={{ display: 'flex', height: 10, borderRadius: 6, overflow: 'hidden', background: 'color-mix(in srgb, var(--profit) 30%, var(--panel-2))' }}>
         <div style={{ width: `${usedPct}%`, background: 'var(--loss)' }} />
       </div>
@@ -1005,7 +1004,7 @@ export function AccountDetailPage() {
     return (
       <div>
         <Link to="/bank" className="text-muted">← Back to Banking</Link>
-        <p className="text-muted" style={{ marginTop: 12 }}>Account not found.</p>
+        <p className="text-muted mt-12">Account not found.</p>
       </div>
     );
   }
@@ -1051,7 +1050,7 @@ export function AccountDetailPage() {
           </button>
         </div>
       </div>
-      <p className="text-muted" style={{ marginBottom: 16 }}>
+      <p className="text-muted mb-md">
         {account.isLiability ? 'Amount owed:' : 'Current balance:'}{' '}
         <strong title={fmtMoney(account.isLiability ? Math.max(0, -accountBalance(account, transactions)) : accountBalance(account, transactions), account.currencyCode)}>
           {num(account.isLiability ? Math.max(0, -accountBalance(account, transactions)) : accountBalance(account, transactions))} {account.currencyCode}
@@ -1089,8 +1088,8 @@ export function AccountDetailPage() {
          attributes read first. */}
       <CollapsibleCard
         defaultOpen={false}
-        style={{ marginBottom: 16 }}
-        title={<h3 style={{ margin: 0 }}>Account details</h3>}
+        className="mb-md"
+        title={<h3 className="m-0">Account details</h3>}
         headerExtra={
           editingMeta ? (
             <>
@@ -1135,13 +1134,13 @@ export function AccountDetailPage() {
          side" — now that "Add a transaction" is gone (replaced by the
          Transfers FAB below), this grid holds By category + Upcoming plans
          side by side instead of either claiming the full page width. */}
-      <div className="detail-grid" style={{ marginBottom: 16 }}>
-        <CollapsibleCard defaultOpen={false} title={<h3 style={{ margin: 0 }}>By category</h3>}>
+      <div className="detail-grid mb-md">
+        <CollapsibleCard defaultOpen={false} title={<h3 className="m-0">By category</h3>}>
           <CategoryBreakdownBody account={account} />
         </CollapsibleCard>
 
         {upcoming.length > 0 && (
-          <CollapsibleCard defaultOpen={false} title={<h3 style={{ margin: 0 }}>Upcoming plans ({upcoming.length})</h3>}>
+          <CollapsibleCard defaultOpen={false} title={<h3 className="m-0">Upcoming plans ({upcoming.length})</h3>}>
             <div className="table-scroll">
               <table>
                 <thead><tr><th>Date</th><th>Description</th><th>Amount</th></tr></thead>
@@ -1168,7 +1167,7 @@ export function AccountDetailPage() {
          picker — this brings the same three charts directly onto the
          account's own page, pre-scoped to it, plus a month-nav'd exact-
          numbers table (see `AccountAnalyticsSection`'s own doc comment). */}
-      <CollapsibleCard defaultOpen={false} style={{ marginBottom: 16 }} title={<h3 style={{ margin: 0 }}>Analytics</h3>}>
+      <CollapsibleCard defaultOpen={false} className="mb-md" title={<h3 className="m-0">Analytics</h3>}>
         <AccountAnalyticsSection account={account} />
       </CollapsibleCard>
 
@@ -1194,8 +1193,8 @@ export function AccountDetailPage() {
          box entirely; the table now just grows with the page (one scroll
          axis: the page itself), with `.table-scroll` still handling
          horizontal overflow on a narrow viewport as it always did. */}
-      <Card style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0 }}>Transactions</h3>
+      <Card className="mb-md">
+        <h3 className="mt-0">Transactions</h3>
         <TransactionsList account={account} />
       </Card>
 
@@ -1203,17 +1202,17 @@ export function AccountDetailPage() {
          moved in from the old standalone tab (see ImportStatementSection's
          own comment). Collapsed by default — importing a statement is rare
          once an account's history is caught up. */}
-      <CollapsibleCard defaultOpen={false} style={{ marginBottom: 16 }} title={<h3 style={{ margin: 0 }}>Import statement</h3>}>
+      <CollapsibleCard defaultOpen={false} className="mb-md" title={<h3 className="m-0">Import statement</h3>}>
         <ImportStatementSection account={account} />
       </CollapsibleCard>
 
       <CollapsibleCard
         defaultOpen={false}
-        style={{ marginBottom: 16 }}
-        title={<h3 style={{ margin: 0 }}>Download statement</h3>}
+        className="mb-md"
+        title={<h3 className="m-0">Download statement</h3>}
         headerExtra={<button className="btn" onClick={exportStatement}><ExportIcon size={13} />Export CSV</button>}
       >
-        <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+        <div className="row gap-sm">
           <Field label="From (optional)">
             <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
           </Field>
@@ -1286,9 +1285,16 @@ function EditTransactionModal({ tx, onClose }: { tx: BankTransaction; onClose: (
   const setMagnitude = (m: number) => setDraft({ ...draft, amount: direction === 'in' ? m : -m });
 
   const save = async () => {
-    if (!(await warnIfLinked('bank', tx.id))) return;
+    const choice = await resolveLinkedEdit('bank', tx.id);
+    if (choice === 'cancel') return;
     updateTransaction(tx.id, draft);
-    toast('Transaction updated.');
+    let msg = 'Transaction updated.';
+    if (choice === 'both') {
+      const result = propagateLinkedEdit('bank', tx.id, { date: draft.date, amount: Math.abs(draft.amount), note: draft.description });
+      if (result.error) msg = result.error;
+      else if (result.message) msg = result.message;
+    }
+    toast(msg);
     onClose();
   };
 
@@ -1317,7 +1323,7 @@ function EditTransactionModal({ tx, onClose }: { tx: BankTransaction; onClose: (
           onTimezoneChange={(timezone) => setDraft({ ...draft, timezone })}
         />
       </div>
-      <div style={{ marginTop: 8 }}>
+      <div className="mt-sm">
         <PendingToggle
           checked={!!draft.isPending}
           onChange={(v) => setDraft({ ...draft, isPending: v })}
@@ -1325,7 +1331,7 @@ function EditTransactionModal({ tx, onClose }: { tx: BankTransaction; onClose: (
           title="Not yet cleared — excluded from Current balance until unchecked."
         />
       </div>
-      <p className="text-muted" style={{ marginTop: 8 }}>
+      <p className="text-muted mt-sm">
         {draft.source === 'statement-import' ? `Imported${draft.statementRef ? ` from ${draft.statementRef}` : ''}` : 'Entered manually'}
       </p>
     </FinanceEditModal>
@@ -1407,7 +1413,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <Field label="Type" width={120}>
           <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
             <option value="all">All</option>
@@ -1617,7 +1623,7 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
   const endOfMonthBalance = accountBalanceAsOfMonth(ledger, selectedMonth, account.openingBalance);
 
   if (!ledger.length) {
-    return <p className="text-muted" style={{ margin: 0 }}>No transactions yet — analytics will appear once you log some.</p>;
+    return <p className="text-muted m-0">No transactions yet — analytics will appear once you log some.</p>;
   }
 
   return (
@@ -1670,7 +1676,7 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
         </ChartCard>
       </div>
 
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <button className="btn secondary small" onClick={() => setMonthOffset((o) => o - 1)}>◀ Prev month</button>
         <button className="btn secondary small" onClick={() => setMonthOffset(0)}>This month</button>
         <button className="btn secondary small" onClick={() => setMonthOffset((o) => o + 1)}>Next month ▶</button>
@@ -1703,7 +1709,7 @@ function CategoryBreakdownBody({ account }: { account: BankAccount }) {
   const categories = useCategoryStore((s) => s.workbook.categories);
   const byCategory = accountByCategory(account, transactions, categories);
   const cats = Object.keys(byCategory);
-  if (!cats.length) return <p className="text-muted" style={{ margin: 0 }}>No categorized transactions yet.</p>;
+  if (!cats.length) return <p className="text-muted m-0">No categorized transactions yet.</p>;
 
   return (
       <div className="table-scroll">
@@ -1802,7 +1808,7 @@ function ImportStatementSection({ account }: { account: BankAccount }) {
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
         <span className="text-muted">Import a CSV export from your bank into {account.name}.</span>
-        <Tooltip text={'This is a simple "map these columns" tool, not a per-bank-format parser — pick which column is which below, since every bank\'s export looks a little different.'} />
+        <Tooltip text={'This is a simple "map these columns" tool, not a per-bank-format parser — pick which column is which below, since every bank\'s export looks a little different. Date values must be in YYYY-MM-DD format (e.g. 2026-01-15) — other date formats will sort incorrectly once imported.'} />
       </div>
       <div>
         <button className="btn secondary" onClick={() => fileInput.current?.click()}>Choose CSV file</button>
@@ -1821,7 +1827,7 @@ function ImportStatementSection({ account }: { account: BankAccount }) {
       </div>
 
       {headers.length > 0 && (
-        <div style={{ marginTop: 12 }}>
+        <div className="mt-12">
           <div className="row gap-sm">
             <Field label="Date column" width={160}>
               <Select value={dateCol} onChange={(e) => setDateCol(e.target.value)}>
@@ -1897,7 +1903,7 @@ function AccountSection({
     <div>
       {cloudEmpty && (
         <Notice tone="warning" style={{ marginTop: 8 }}>
-          <p style={{ marginTop: 0 }}>
+          <p className="mt-0">
             No data found in the cloud for this account's Banking workbook. This won't upload automatically.
           </p>
           <button
@@ -1956,14 +1962,14 @@ function BalanceProjectionSummary() {
           <h3 style={{ margin: 0, cursor: 'pointer' }}>Balance projection</h3>
         </Tooltip>
       }
-      style={{ marginBottom: 16 }}
+      className="mb-md"
     >
       <div className="row" style={{ gap: 16, marginBottom: 12 }}>
-        <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <label className="text-muted flex-center-gap4">
           <input type="checkbox" checked={settings.showRealBalance} onChange={(e) => updateSettings({ showRealBalance: e.target.checked })} />
           Real balance
         </label>
-        <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <label className="text-muted flex-center-gap4">
           <input type="checkbox" checked={settings.showPlannedBalance} onChange={(e) => updateSettings({ showPlannedBalance: e.target.checked })} />
           Planned balance
         </label>
@@ -2061,7 +2067,7 @@ function AddBankPlanForm({ accountId, onSaved }: { accountId: string; onSaved?: 
         </Field>
         <RecurrenceFields startDate={p.date} value={p.recurrence} onChange={(recurrence) => setP({ ...p, recurrence })} />
       </div>
-      <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
+      <button className="btn mt-12" onClick={submit}>
         <PlusIcon />Add plan
       </button>
     </div>
@@ -2113,7 +2119,7 @@ function BankPlanList({ account }: { account: BankAccount }) {
   };
 
   return (
-    <CollapsibleCard title={<h3 style={{ margin: 0 }}>Plans</h3>}>
+    <CollapsibleCard title={<h3 className="m-0">Plans</h3>}>
       <div className="table-scroll">
         <table>
           <thead>
@@ -2199,8 +2205,8 @@ function PlanningAccountSection({
 
   if (!firebaseReady || !cloudEmpty) return null;
   return (
-    <Notice tone="warning" style={{ marginTop: 16 }}>
-      <p style={{ marginTop: 0 }}>No data found in the cloud for this account's plans. This won't upload automatically.</p>
+    <Notice tone="warning" className="mt-md">
+      <p className="mt-0">No data found in the cloud for this account's plans. This won't upload automatically.</p>
       <button
         className="btn secondary"
         disabled={busy}
@@ -2311,8 +2317,8 @@ function AnalyticsTab() {
             </ChartCard>
           </div>
 
-          <CollapsibleCard title={<h3 style={{ margin: 0 }}>Budget — {thisMonth}</h3>} style={{ marginTop: 16 }}>
-            <p className="text-muted" style={{ marginTop: 0 }}>
+          <CollapsibleCard title={<h3 className="m-0">Budget — {thisMonth}</h3>} className="mt-md">
+            <p className="text-muted mt-0">
               Set a monthly spend target per category for {account.name}; compared against what you've actually
               spent there this month.
             </p>
@@ -2350,7 +2356,7 @@ function AnalyticsTab() {
                 </tbody>
               </table>
             </div>
-            <div className="row" style={{ gap: 8, marginTop: 8 }}>
+            <div className="row gap-sm mt-sm">
               <TextInput placeholder="New category" value={newBudgetCategory} onChange={(e) => setNewBudgetCategory(e.target.value)} style={{ width: 140 }} />
               <input
                 type="number"
@@ -2404,7 +2410,7 @@ export function PlanningTab({
         </Select>
       </Field>
       {account && (
-        <div style={{ marginTop: 12 }}>
+        <div className="mt-12">
           <BankPlanList account={account} />
           <AddBankPlanFab accountId={account.id} />
         </div>
@@ -2492,7 +2498,7 @@ export function BankPage({
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-        <h1 className="pagetitle" style={{ margin: 0 }}>Banking</h1>
+        <h1 className="pagetitle m-0">Banking</h1>
         <Tooltip text="Bank account balances and transaction history, entered manually or imported from a CSV statement — no live bank connection (see Disclaimer & Privacy for why)." />
       </div>
       <Tabs
@@ -2520,7 +2526,7 @@ export function BankPage({
             label: 'Settings',
             content: (
               <div>
-                <p className="text-muted" style={{ marginTop: 0 }}>
+                <p className="text-muted mt-0">
                   Sign-in, profile, appearance, and a whole-app backup live on the{' '}
                   <Link to="/account">Account page →</Link>. What's below is specific to Banking.
                 </p>

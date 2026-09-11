@@ -290,7 +290,7 @@ export function TradeCalculator({ initialTicker }: { initialTicker?: string } = 
             </p>
           )}
           {sellCap > 0 && sellPrice > 0 && (
-            <div className="text-muted" style={{ marginTop: 8 }}>
+            <div className="text-muted mt-sm">
               Net proceeds {fmtMoney(sellNet, currency)} · Realized P/L{' '}
               <span className={realized >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(realized, currency)}</span> · Remaining{' '}
               {fmt(remainingShares, 0)} shares ({fmtMoney(remainingInvested, currency)} invested)
@@ -362,7 +362,7 @@ export function TradeCalculator({ initialTicker }: { initialTicker?: string } = 
             <p className="text-muted">Affordable with current cash ({fmtMoney(cashBalance, currency)}): {fmt(affordableShares, 0)} shares</p>
           )}
           {newShares > 0 && buyPrice > 0 && (
-            <div className="text-muted" style={{ marginTop: 8 }}>
+            <div className="text-muted mt-sm">
               New avg cost {fmtPrice(newAvg)} · New break-even {fmtPrice(newBe)} · Needs {bounceRequired.toFixed(1)}% bounce from buy price
             </div>
           )}
@@ -375,7 +375,7 @@ export function TradeCalculator({ initialTicker }: { initialTicker?: string } = 
         </div>
       )}
 
-      <button className="btn" style={{ marginTop: 12 }} onClick={addTrade}>
+      <button className="btn mt-12" onClick={addTrade}>
         <PlusIcon />Add {mode === 'SELL' ? 'sell' : mode === 'CYCLE' ? 'buy (cycle)' : 'buy'} to transactions
       </button>
       {mode === 'CYCLE' && (

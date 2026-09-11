@@ -396,15 +396,15 @@ export function NetWorthPage({
           and "Exchange rates" (its own Card, with a From/To pair). */}
       <div className="grid-auto" style={{ ...gridAutoStyle(320, 16), marginBottom: 16, alignItems: 'start' }}>
         <Card>
-          <h3 style={{ marginTop: 0 }}>Net worth summary</h3>
-          <div style={{ marginTop: 12 }}>
+          <h3 className="mt-0">Net worth summary</h3>
+          <div className="mt-12">
             <StatCard label={`Estimated net worth (${preferredCurrency})`} value={fmtMoney(grandTotal, preferredCurrency)} hue={grandTotal >= 0 ? 'var(--profit)' : 'var(--loss)'} />
           </div>
-          <button type="button" className="btn secondary small" style={{ marginTop: 8 }} onClick={saveSnapshot}>
+          <button type="button" className="btn secondary small mt-sm" onClick={saveSnapshot}>
             {todaysSnapshot ? 'Update today\'s snapshot' : 'Save snapshot'}
           </button>
           {unconverted.length > 0 && (
-            <div className="text-muted" style={{ marginTop: 8 }}>
+            <div className="text-muted mt-sm">
               No {preferredCurrency} rate available for {unconverted.join(', ')} — those currencies' totals
               aren't included above; see their own sections below for real figures.
             </div>
@@ -464,7 +464,7 @@ export function NetWorthPage({
         // tier as a permanently-open sibling of the summary card;
         // collapsed by default now, same tier as every other Often/Rare
         // section on this page.
-        <CollapsibleCard title={<h3 style={{ margin: 0 }}>Exchange rates</h3>} defaultOpen={false}>
+        <CollapsibleCard title={<h3 className="m-0">Exchange rates</h3>} defaultOpen={false}>
           <div className="text-muted">
             {rates
               ? `Rates as of ${new Date(rates.fetchedAt).toLocaleString()} (${rates.source === 'api' ? 'auto-fetched' : 'manually entered'}).`
@@ -475,9 +475,9 @@ export function NetWorthPage({
             {fetching ? 'Refreshing…' : 'Refresh rates'}
           </button>
 
-          <div style={{ marginTop: 12 }}>
+          <div className="mt-12">
             <div className="text-muted" style={{ marginBottom: 4 }}>Set a rate between any two currencies</div>
-            <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+            <div className="row gap-sm">
               <Field label="1 unit of">
                 <Select value={rateFrom} onChange={(e) => onRateFromChange(e.target.value)} width={110}>
                   {currencyCodes.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -526,7 +526,7 @@ export function NetWorthPage({
           the "homepage" — a compact list, not the full per-subscription
           detail (which lives on the Subscriptions page itself). */}
       {renewalsSoon.length > 0 && (
-        <Notice tone="warning" style={{ marginBottom: 16 }}>
+        <Notice tone="warning" className="mb-md">
           <div style={{ fontWeight: 600, marginBottom: 4 }}>
             {renewalsSoon.length} subscription{renewalsSoon.length > 1 ? 's' : ''} renewing in the next 14 days
           </div>
@@ -541,7 +541,7 @@ export function NetWorthPage({
         </Notice>
       )}
 
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Upcoming</h3>} style={{ marginBottom: 16 }} defaultOpen={upcomingItems.length > 0}>
+      <CollapsibleCard title={<h3 className="m-0">Upcoming</h3>} className="mb-md" defaultOpen={upcomingItems.length > 0}>
         <UpcomingList items={upcomingItems} limit={8} emptyText="Nothing expected in the next 14 days." />
         <Link to="/planning" className="text-muted" style={{ display: 'block', marginTop: 10 }}>See all →</Link>
       </CollapsibleCard>
@@ -632,7 +632,7 @@ export function NetWorthPage({
                 )}
               </div>
               {r.breakdown.length > 0 && (
-                <div style={{ marginTop: 12 }}>
+                <div className="mt-12">
                   <div className="text-muted" style={{ marginBottom: 4 }}>By account</div>
                   <div className="grid-auto" style={gridAutoStyle(120, 6)}>
                     {r.breakdown.map((b) => (
@@ -678,7 +678,7 @@ export function NetWorthPage({
       )}
 
       {Object.keys(rentalsNet).length > 0 && (
-        <Card style={{ marginTop: 12 }}>
+        <Card className="mt-12">
           <div className="label" style={{ marginBottom: 8 }}>Rental net income (informational — not included above)</div>
           <div className="text-muted" style={{ marginBottom: 8 }}>
             Property values aren't tracked in this app, and rental income already lands in whichever Cash/Bank
@@ -693,8 +693,8 @@ export function NetWorthPage({
       )}
 
       {firebaseReady && cloudEmpty && (
-        <Notice tone="warning" style={{ marginTop: 12 }}>
-          <p style={{ marginTop: 0 }}>No net worth snapshots found in the cloud for this account. This won't upload automatically.</p>
+        <Notice tone="warning" className="mt-12">
+          <p className="mt-0">No net worth snapshots found in the cloud for this account. This won't upload automatically.</p>
           <button
             className="btn secondary"
             onClick={async () => {
@@ -768,7 +768,7 @@ function IncludeInNetWorthFab({
       <FabButton label="Include in Net Worth" onClick={() => setOpen(true)}><SettingsIcon size={18} /></FabButton>
       {open && (
         <Modal title="Include in Net Worth" onClose={() => setOpen(false)}>
-          <p className="text-muted" style={{ marginTop: 0 }}>
+          <p className="text-muted mt-0">
             Unchecked items are left out of every total on this page — e.g. an EMI loan you closed
             early that the schedule still thinks is owed.
           </p>
@@ -892,7 +892,7 @@ function NetWorthMonthlySection({
   const atFloor = windowStart <= floorWindowStart;
 
   return (
-    <div style={{ marginBottom: 16 }}>
+    <div className="mb-md">
       <div className="row" style={{ gap: 8, marginBottom: 12 }}>
         <button
           className="btn secondary small"
@@ -1006,7 +1006,7 @@ function MonthlySummaryTable({
     m < nowMonth ? 'Actual' : m === nowMonth ? 'Current' : 'Projected';
 
   return (
-    <CollapsibleCard title={<h3 style={{ margin: 0 }}>Monthly summary — {currency}</h3>}>
+    <CollapsibleCard title={<h3 className="m-0">Monthly summary — {currency}</h3>}>
       <div className="table-scroll">
         <table>
           <thead>

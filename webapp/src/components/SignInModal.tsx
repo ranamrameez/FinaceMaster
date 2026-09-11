@@ -138,9 +138,8 @@ export function SignInModalHost() {
         </button>
       </div>
       <button
-        className="btn ghost small"
+        className="btn ghost small mt-sm"
         disabled={busy !== null}
-        style={{ marginTop: 8 }}
         onClick={async () => {
           if (!email.trim()) return toast('Enter your email above first.');
           setBusy('reset');

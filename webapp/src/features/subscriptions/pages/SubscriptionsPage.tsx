@@ -133,7 +133,7 @@ function AddSubscriptionForm({ onSaved }: { onSaved?: () => void } = {}) {
           <CategorySelect value={s.categoryID ?? UNCATEGORIZED_ID} onChange={(categoryID) => setS({ ...s, categoryID })} />
         </Field>
       </div>
-      <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
+      <button className="btn mt-12" onClick={submit}>
         <PlusIcon />Add subscription
       </button>
     </div>
@@ -220,7 +220,7 @@ function SubscriptionList({ onSelect }: { onSelect: (sub: Subscription) => void 
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <Field label="Status" width={130}>
           <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}>
             <option value="all">All</option>
@@ -311,8 +311,8 @@ function AlertsSection({ sub }: { sub: Subscription }) {
   };
 
   return (
-    <CollapsibleCard title={<h3 style={{ margin: 0 }}>Renewal / expiry alerts</h3>} style={{ marginBottom: 16 }}>
-      <p className="text-muted" style={{ marginTop: 0 }}>
+    <CollapsibleCard title={<h3 className="m-0">Renewal / expiry alerts</h3>} className="mb-md">
+      <p className="text-muted mt-0">
         Get reminded before this renews or expires — pick a suggested lead time, or set an exact date and time.
       </p>
       <div className="row" style={{ gap: 8, marginBottom: 12 }}>
@@ -450,8 +450,8 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
 
   return (
     <div>
-      <button className="btn secondary small" style={{ marginBottom: 12 }} onClick={onBack}>← All subscriptions</button>
-      <Card style={{ marginBottom: 16 }}>
+      <button className="btn secondary small mb-12" onClick={onBack}>← All subscriptions</button>
+      <Card className="mb-md">
         {editing ? (
           <div>
             <div className="row gap-sm">
@@ -486,7 +486,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
                 <CategorySelect value={editRow.categoryID ?? UNCATEGORIZED_ID} onChange={(categoryID) => setEditRow({ ...editRow, categoryID })} />
               </Field>
             </div>
-            <div className="row" style={{ gap: 8, marginTop: 8 }}>
+            <div className="row gap-sm mt-sm">
               <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />
               <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditing(false)} />
             </div>
@@ -532,7 +532,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
         </div>
       </Card>
 
-      <Card style={{ marginBottom: 16 }}>
+      <Card className="mb-md">
         <h4 style={{ margin: '0 0 8px' }}>Link to a paying account</h4>
         {linkedLabel ? (
           <p className="text-muted" style={{ marginBottom: 8 }}>
@@ -544,7 +544,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
             months in the chosen account's Planning tab.
           </p>
         )}
-        <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+        <div className="row gap-sm">
           <Field label="Pays via">
             <Select value={linkModule} onChange={(e) => setLinkModule(e.target.value as 'bank' | 'cash')}>
               <option value="bank">Bank account</option>
@@ -570,7 +570,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
 
       <AlertsSection sub={sub} />
 
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Upcoming occurrences (next 12 months)</h3>}>
+      <CollapsibleCard title={<h3 className="m-0">Upcoming occurrences (next 12 months)</h3>}>
         <div className="table-scroll">
           <table>
             <thead><tr><th>Date</th><th>Amount</th></tr></thead>
@@ -685,10 +685,10 @@ function AccountSection({
 
   if (!firebaseReady || !cloudEmpty) return null;
   return (
-    <Card style={{ marginBottom: 16 }}>
+    <Card className="mb-md">
       {cloudEmpty && (
         <Notice tone="warning" style={{ marginTop: 8 }}>
-          <p style={{ marginTop: 0 }}>No data found in the cloud for this account's Subscriptions workbook. This won't upload automatically.</p>
+          <p className="mt-0">No data found in the cloud for this account's Subscriptions workbook. This won't upload automatically.</p>
           <button
             className="btn secondary"
             disabled={busy}
@@ -754,7 +754,7 @@ function DataManagement() {
 
   return (
     <Card>
-      <h3 style={{ marginTop: 0 }}>Data management</h3>
+      <h3 className="mt-0">Data management</h3>
       <div className="row gap-sm">
         <button className="btn secondary" onClick={exportJSON}>Export JSON</button>
         <button className="btn secondary" onClick={() => fileInput.current?.click()}>Import JSON</button>
@@ -791,7 +791,7 @@ export function SubscriptionsPage({
   return (
     <div>
       <h1 className="pagetitle">Subscriptions</h1>
-      <p className="text-muted" style={{ marginBottom: 12 }}>
+      <p className="text-muted mb-12">
         Recurring payments — streaming, gym, software, memberships — tracked independently and optionally
         linked to whichever Bank account or Cash actually pays them.
       </p>
@@ -817,7 +817,7 @@ export function SubscriptionsPage({
               label: 'Settings',
               content: (
                 <div>
-                  <p className="text-muted" style={{ marginTop: 0 }}>
+                  <p className="text-muted mt-0">
                     Sign-in, profile, appearance, and a whole-app backup live on the{' '}
                     <Link to="/account">Account page →</Link>. What's below is specific to Subscriptions.
                   </p>

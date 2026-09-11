@@ -34,7 +34,7 @@ function AccountSection({
   if (!firebaseReady || !cloudEmpty) return null;
   return (
     <Notice tone="warning" style={{ marginTop: 8 }}>
-      <p style={{ marginTop: 0 }}>
+      <p className="mt-0">
         No data found in the cloud for this account's PSX workbook. This app will <strong>not</strong>{' '}
         upload anything automatically — if you expected existing data here and don't see it, stop and
         investigate before uploading rather than overwriting.
@@ -133,7 +133,7 @@ function FeeSettings() {
 
   return (
     <Card>
-      <h3 style={{ marginTop: 0 }}>Commission &amp; fees</h3>
+      <h3 className="mt-0">Commission &amp; fees</h3>
       {/* User-requested 2026-08-27: an alternative to reconciling several
           itemized fields by hand — one all-in % you've observed from your
           own statement, applied automatically (same-day netting still
@@ -230,7 +230,7 @@ function CGTSettings() {
 
   return (
     <Card>
-      <h3 style={{ marginTop: 0 }}>Capital gains tax</h3>
+      <h3 className="mt-0">Capital gains tax</h3>
       <p className="text-muted" style={{ marginTop: -4 }}>
         Applied to gains only (a loss generates neither a charge nor a rebate) — shown as an
         estimate on stock pages and the trade calculator, not deducted from realized P/L automatically.
@@ -259,7 +259,7 @@ function CostBasisSettings() {
 
   return (
     <Card>
-      <h3 style={{ marginTop: 0 }}>Cost basis method</h3>
+      <h3 className="mt-0">Cost basis method</h3>
       <p className="text-muted" style={{ marginTop: -4 }}>
         Average cost blends every buy into one running average, so a sell can't be tied to a
         specific lot. FIFO tracks each buy as its own lot and sells the oldest one first — more
@@ -297,7 +297,7 @@ function AmountSettings() {
       <CGTSettings />
       <CostBasisSettings />
       <Card>
-        <h3 style={{ marginTop: 0 }}>General</h3>
+        <h3 className="mt-0">General</h3>
         <div className="row" style={{ gap: 12 }}>
           <Field label="Tick size" width={90}>
             <TextInput type="number" step="0.01" value={settings.tick} onChange={(e) => updateSettings({ tick: Number(e.target.value) })} />
@@ -333,7 +333,7 @@ export function SettingsPage({
             label: 'Account',
             content: (
               <div>
-                <p className="text-muted" style={{ marginTop: 0 }}>
+                <p className="text-muted mt-0">
                   Sign-in, profile, appearance, and a whole-app backup live on the{' '}
                   <Link to="/account">Account page →</Link>. What's below is specific to PSX.
                 </p>

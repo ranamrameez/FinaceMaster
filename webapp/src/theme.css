@@ -683,6 +683,66 @@
      unconditionally regardless of source order, so this is a safe,
      behavior-preserving replacement for the inline override. */
   .row.gap-sm{gap:8px;}
+  /* Same cleanup, fifth instance (2026-09-11): `style={{ gap: 8, marginBottom: 8 }}`
+     was hand-repeated 27 times, always the SAME literal pairing `.row.gap-sm`
+     with a trailing 8px bottom margin. A standalone `.mb-sm` (not folded into
+     `.row.gap-sm` itself) since most `.row.gap-sm` call sites do NOT want the
+     margin — coupling them would silently change layout at every other site. */
+  .mb-sm{margin-bottom:8px;}
+  /* Same cleanup, seventh instance (2026-09-11): `style={{ gap: 8,
+     marginTop: 8 }}` was hand-repeated 13 times, the same `.row.gap-sm`
+     case with a leading top margin instead of a trailing bottom one —
+     symmetric with `.mb-sm` above, same "no existing rule touches
+     margin-top on .row" safety check. */
+  .mt-sm{margin-top:8px;}
+  /* Same cleanup, eighth instance (2026-09-11): `style={{ display: 'flex',
+     alignItems: 'center', gap: 4 }}` was hand-repeated 8 times across
+     label/span/td/div elements — a plain inline-content row with a small
+     gap, no existing class covered it (checked theme.css for any
+     `display`/`align-items` rule on label/span/td that could compete —
+     none found, so a bare class is safe at any specificity). */
+  .flex-center-gap4{display:flex;align-items:center;gap:4px;}
+  /* Same cleanup, tenth instance (2026-09-11): `style={{ marginBottom: 16 }}`
+     was hand-repeated 54 times, mostly on `Card`/`CollapsibleCard`/`Notice`.
+     `CollapsibleCard`/`Notice` had no `className` prop to merge into before
+     this pass — added it to both, following the exact same additive-prop
+     pattern already used elsewhere in this codebase (e.g. `Field`'s `as`
+     prop). Symmetric with `.mb-sm`/`.mt-sm` above at a 16px value instead
+     of 8px. */
+  .mb-md{margin-bottom:16px;}
+  /* Same cleanup, eleventh instance (2026-09-11): `style={{ marginTop: 0 }}`
+     was hand-repeated 69 times — almost always the first child inside a
+     `Card`/`CollapsibleCard` (an `<h3>`/`<h4>`/`<p>`) zeroing the browser's
+     own default top margin, since this app has no global `h1..h6`/`p`
+     margin reset in `theme.css`. Only one existing rule touches
+     `margin-top:0` (`.notice-body p:first-child`), scoped to inside
+     `Notice` and unrelated to this — safe to add a bare class. */
+  .mt-0{margin-top:0;}
+  /* Same cleanup, twelfth instance (2026-09-11): `style={{ margin: 0 }}`
+     (all four sides, not just top) was hand-repeated 63 times — almost
+     always an `<h3>`/`<h4>` passed as a `CollapsibleCard`'s own `title`
+     prop, zeroing every side of the browser's default heading margin so
+     it sits flush inside the card header row. Confirmed no `margin:0`
+     rule already exists in `theme.css` that this could compete with. */
+  .m-0{margin:0;}
+  /* Same cleanup, thirteenth instance (2026-09-11): `style={{ marginBottom:
+     12 }}` and `style={{ marginTop: 12 }}` — 34 occurrences each, mostly a
+     `<p className="text-muted">` intro paragraph or a `CollapsibleCard`'s
+     own `style` prop (now `className`-mergeable per the `.mb-md` instance
+     above). 12px doesn't fit the existing `sm`(8)/`md`(16) semantic scale,
+     so named literally by value rather than inventing a third semantic
+     tier for one specific number. Checked `theme.css` for a competing
+     `margin-top:12px`/`margin-bottom:12px` rule first — the 3 hits found
+     are all scoped to a specific class (`.sidebar-title-row`, `.pagesub`
+     under a density attribute, one more), none of them bare/generic. */
+  .mb-12{margin-bottom:12px;}
+  .mt-12{margin-top:12px;}
+  /* Same cleanup, fourteenth instance (2026-09-11): `style={{ marginTop:
+     16 }}` was hand-repeated 24 times — symmetric with `.mb-md` (16px)
+     but on the top side instead, so named to match rather than inventing
+     a fourth spacing class. Confirmed no competing bare `margin-top:16px`
+     rule in `theme.css`. */
+  .mt-md{margin-top:16px;}
   /* User-reported (2026-08-27): "Input sizes still inconsistent and taking
      whole 100% width." Root cause: `flex:1` (flex-basis:0%) ignores each
      field's own explicit `width` prop entirely and instead divides the

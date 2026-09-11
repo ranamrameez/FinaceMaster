@@ -55,7 +55,7 @@ export function Tabs({ tabs, defaultKey }: { tabs: TabDef[]; defaultKey?: string
       {tabs.map((t) => (
         <div key={t.key} ref={(el) => { sectionRefs.current[t.key] = el; }} style={{ marginTop: 20 }}>
           <CollapsibleCard
-            title={<h3 style={{ margin: 0 }}>{t.label}</h3>}
+            title={<h3 className="m-0">{t.label}</h3>}
             headerExtra={t.headerExtra}
             open={!!openKeys[t.key]}
             onToggle={(open) => setOpenKeys((prev) => ({ ...prev, [t.key]: open }))}

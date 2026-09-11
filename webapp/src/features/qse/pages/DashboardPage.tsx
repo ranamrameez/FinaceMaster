@@ -98,11 +98,11 @@ function HoldingsCard() {
   return (
     <CollapsibleCard
       style={{ marginBottom: 16, paddingBottom: 12 }}
-      title={<h3 style={{ margin: 0 }}>Holdings</h3>}
+      title={<h3 className="m-0">Holdings</h3>}
       headerExtra={<Link to="/portfolio" className="text-muted">Full portfolio →</Link>}
     >
       {held.length ? (
-        <div className="table-scroll table-compact" style={{ marginTop: 8 }}>
+        <div className="table-scroll table-compact mt-sm">
           <table className="holdings-table">
             <thead>
               <tr><Th col="ticker">Stock</Th><th>Trend</th><Th col="shares">Shares</Th><Th col="avgCost">Cost</Th><Th col="mp">Current Price</Th><Th col="value">Value</Th><Th col="profit">P/L</Th><th>Exit targets</th><Th col="status">Status</Th></tr>
@@ -348,7 +348,7 @@ export function DashboardPage() {
             </ChartCard>
           </div>
 
-          <CollapsibleCard style={{ marginTop: 16 }} title={<h3 style={{ margin: 0 }}>Alerts</h3>} defaultOpen={false}>
+          <CollapsibleCard className="mt-md" title={<h3 className="m-0">Alerts</h3>} defaultOpen={false}>
             <AlertsBox />
           </CollapsibleCard>
 

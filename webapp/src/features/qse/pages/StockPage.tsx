@@ -261,7 +261,7 @@ export function StockPage() {
             label: 'Trades',
             content: <TickerTransactions ticker={ticker} />,
             headerExtra: hasRows ? (
-              <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+              <div className="row gap-sm">
                 <Field label="From (optional)">
                   <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
                 </Field>

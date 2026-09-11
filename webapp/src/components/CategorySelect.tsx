@@ -61,7 +61,7 @@ export function CategorySelect({ value, onChange }: { value: string; onChange: (
           <Field label="Category name">
             <TextInput value={newName} onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submitNew()} />
           </Field>
-          <button className="btn" style={{ marginTop: 12 }} onClick={submitNew}>
+          <button className="btn mt-12" onClick={submitNew}>
             <PlusIcon size={12} />Add category
           </button>
         </Modal>

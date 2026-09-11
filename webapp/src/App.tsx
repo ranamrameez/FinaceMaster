@@ -3,6 +3,7 @@ import { AppShell } from './components/AppShell';
 import { CalculatorLauncher } from './components/CalculatorLauncher';
 import { ConfirmDialogHost } from './components/ConfirmDialog';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { LinkedEditChoiceDialogHost } from './components/LinkedEditChoiceDialog';
 import { PSXTickerDatalist } from './components/PSXTickerDatalist';
 import { SignInModalHost } from './components/SignInModal';
 import { SubscriptionAlertsPopup } from './components/SubscriptionAlertsPopup';
@@ -145,6 +146,7 @@ function App() {
       <TermsGateModal />
       <CurrencyOnboardingModal />
       <ConfirmDialogHost />
+      <LinkedEditChoiceDialogHost />
       <SignInModalHost />
       <HashRouter>
         <AppShell user={user}>

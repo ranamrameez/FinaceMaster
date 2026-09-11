@@ -25,7 +25,7 @@ import { useAppearanceStore } from '../../../store/appearanceStore';
 import { fmtMoney } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
-import { confirmAndDeleteLinkable, createLinkedTransfer, warnIfLinked } from '../../../lib/linkCascade';
+import { confirmAndDeleteLinkable, createLinkedTransfer, propagateLinkedEdit, resolveLinkedEdit, warnIfLinked } from '../../../lib/linkCascade';
 import { getLastTransferSource, rememberTransferSource } from '../../../hooks/useLastTransferSource';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
 import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
@@ -206,7 +206,7 @@ export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: strin
           the final month gets swept into that last installment.
         </p>
         {bigEmiEnabled && (
-          <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+          <div className="row gap-sm">
             <Field label="Every N months">
               <TextInput type="number" min={1} value={bigEmiInterval || ''} onChange={(e) => setBigEmiInterval(Number(e.target.value))} style={{ width: 90 }} />
             </Field>
@@ -232,7 +232,7 @@ export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: strin
         )}
       </div>
 
-      <button className="btn" style={{ marginTop: 16 }} onClick={submit}>
+      <button className="btn mt-md" onClick={submit}>
         <PlusIcon />Add loan
       </button>
     </div>
@@ -294,13 +294,13 @@ function LinkedEMIRepaymentFields({ loan, month, amount, date, onLinked }: { loa
  * and didn't group related ones together). Each zone answers one distinct
  * question about the loan:
  * - **Origination**: what was agreed at the start — never changes once the
- *   loan is created (Total Amount Sanctioned, Markup Percentage, Net to
- *   Return).
+ * loan is created (Total Amount Sanctioned, Markup Percentage, Net to
+ * Return).
  * - **Current Status**: where things stand right now (Net Remaining, Net
- *   Paid, the current Monthly EMI — which CAN differ from origination if a
- *   `customMonthlyPayment` or per-month override is set).
+ * Paid, the current Monthly EMI — which CAN differ from origination if a
+ * `customMonthlyPayment` or per-month override is set).
  * - **Timeline**: what's coming (Next Due Date, Expected Completion Date,
- *   Remaining EMI Count).
+ * Remaining EMI Count).
  * "Overdue Balance / Penalties" (part of the user's original zone spec) is
  * deliberately NOT included here — the user's own explicit call, via
  * AskUserQuestion, was to skip it for now rather than build a fake or
@@ -468,21 +468,27 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
    * instead of writing `installmentOverrides` directly — those actions keep
    * `installmentOverrides` in sync as a side effect, so the schedule engine
    * itself is untouched, but the payment is now a real ledger row a
-   * Bank/Cash transfer can link to (see the Transfers page). */
+   * Bank/Cash transfer can link to (see the "Transfers" FAB action). */
   const saveOverride = async (month: number, value: number, date?: string, fine?: number) => {
     if (!(value > 0)) return toast('Enter an amount greater than zero.');
     if (!(await ensureSignedIn('Sign in to customize this loan\'s schedule.'))) return;
     const dueDate = date || installmentDueDate(loan, month);
     const fineValue = fine && fine > 0 ? fine : undefined;
     const existing = loanRepayments.find((r) => r.month === month);
+    let linkNote: string | undefined;
     if (existing) {
-      if (!(await warnIfLinked('emi', existing.id))) return;
+      const choice = await resolveLinkedEdit('emi', existing.id);
+      if (choice === 'cancel') return;
       updateRepayment(existing.id, { amount: value, date: dueDate, fine: fineValue });
+      if (choice === 'both') {
+        const result = propagateLinkedEdit('emi', existing.id, { date: dueDate, amount: value });
+        linkNote = result.error ?? result.message;
+      }
     } else {
       addRepayment({ id: crypto.randomUUID(), loanId: loan.id, month, amount: value, date: dueDate, source: 'manual', fine: fineValue });
     }
     setOverrideMonth(null);
-    toast(`Month #${month} set to ${fmtMoney(value, loan.currencyCode)}${fineValue ? ` + ${fmtMoney(fineValue, loan.currencyCode)} fine` : ''}.`);
+    toast(linkNote ?? `Month #${month} set to ${fmtMoney(value, loan.currencyCode)}${fineValue ? ` + ${fmtMoney(fineValue, loan.currencyCode)} fine` : ''}.`);
   };
 
   const clearOverride = async (month: number) => {
@@ -591,7 +597,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
 
   return (
     <div>
-      <button className="btn secondary small" style={{ marginBottom: 12 }} onClick={onBack}>← All loans</button>
+      <button className="btn secondary small mb-12" onClick={onBack}>← All loans</button>
       {/* README item 66 (2026-08-26 feedback): Save/Cancel (and Edit/Delete)
          should sit at the card's top-right corner like every other single-
          stranded-action card in the app (Done item 121) — this previously
@@ -601,10 +607,10 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
          slots so the action buttons live in a fixed header position in
          both modes, only the body content underneath changes. */}
       <CollapsibleCard
-        style={{ marginBottom: 16 }}
+        className="mb-md"
         title={
           editing ? (
-            <h3 style={{ margin: 0 }}>Editing {loan.name}</h3>
+            <h3 className="m-0">Editing {loan.name}</h3>
           ) : (
             <div>
               <div style={{ fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -730,14 +736,14 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
         {editing && (
           <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
             <div className="text-muted" style={{ marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Advanced</div>
-            <div style={{ marginBottom: 16 }}>
+            <div className="mb-md">
               <h4 style={{ margin: '0 0 4px' }}>Big EMI every N months</h4>
-              <p className="text-muted" style={{ marginTop: 0 }}>
+              <p className="text-muted mt-0">
                 For loans with an occasional bigger payment — e.g. a property installment plan with a larger payment
                 every 6 months. The loan keeps its original tenure; if the remainder checkbox is on, whatever's
                 still owed at the final month gets swept into that last installment.
               </p>
-              <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+              <div className="row gap-sm">
                 <Field label="Every N months">
                   <TextInput type="number" min={1} value={bigEmiInterval || ''} onChange={(e) => setBigEmiInterval(Number(e.target.value))} style={{ width: 90 }} />
                 </Field>
@@ -778,7 +784,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                 </p>
               )}
               {activeAccounts.length ? (
-                <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+                <div className="row gap-sm">
                   <Field label="Bank account">
                     <Select value={linkAccountId} onChange={(e) => setLinkAccountId(e.target.value)}>
                       {activeAccounts.map((a) => (
@@ -805,10 +811,10 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
          target position in that request) all moved together as a group to
          right after the Schedule, keeping their own relative order. */}
       <CollapsibleCard
-        title={<h3 style={{ margin: 0 }}>Schedule {showFullSchedule ? '(full, start to end)' : '(next 12 installments from today)'}</h3>}
+        title={<h3 className="m-0">Schedule {showFullSchedule ? '(full, start to end)' : '(next 12 installments from today)'}</h3>}
         headerExtra={<button className="btn secondary" onClick={exportSchedule}>Export full schedule CSV</button>}
       >
-      <p className="text-muted" style={{ marginTop: 0 }}>
+      <p className="text-muted mt-0">
         Click the pencil on any upcoming installment to set a different amount (and, optionally, a different due
         date) for just that month. Every later month recalculates from what's actually paid.
       </p>
@@ -817,7 +823,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
         Show the full schedule, start to end (instead of just the next 12 installments)
       </label>
       {/* User-requested (2026-09-03): "add filters to other tables as well." */}
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <Field label="Status" width={140}>
           <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}>
             <option value="all">All</option>
@@ -954,7 +960,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
             <h3 style={{ margin: 0, cursor: 'pointer' }}>Amortization schedule</h3>
           </Tooltip>
         }
-        style={{ marginBottom: 16 }}
+        className="mb-md"
       >
         <div style={{ height: 220 }}>
           <Bar
@@ -984,7 +990,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
          amortizing loan (unlike Personal Loans, where balance-over-time
          depends on actual sparse repayment events that haven't all
          happened yet). */}
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Balance over time</h3>} style={{ marginBottom: 16 }}>
+      <CollapsibleCard title={<h3 className="m-0">Balance over time</h3>} className="mb-md">
         <div style={{ height: 220 }}>
           <Line
             data={{
@@ -1003,8 +1009,8 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
         </div>
       </CollapsibleCard>
 
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>What if: extra payment</h3>} style={{ marginBottom: 16 }}>
-        <p className="text-muted" style={{ marginTop: 0 }}>
+      <CollapsibleCard title={<h3 className="m-0">What if: extra payment</h3>} className="mb-md">
+        <p className="text-muted mt-0">
           See how much sooner this loan clears — and how much {loan.repaymentMode === 'fixedTotal' ? 'markup' : 'interest'} you'd
           save — by paying a fixed extra amount on top of the normal installment every month. A live estimate, nothing is saved.
         </p>
@@ -1060,15 +1066,22 @@ function RepaymentLog({ loan, repayments }: { loan: EMILoan; repayments: EMIRepa
   const saveEdit = async (r: EMIRepayment) => {
     if (!(editAmount > 0)) return toast('Enter an amount greater than zero.');
     if (!(await ensureSignedIn('Sign in to edit this loan\'s repayments.'))) return;
-    if (!(await warnIfLinked('emi', r.id))) return;
+    const choice = await resolveLinkedEdit('emi', r.id);
+    if (choice === 'cancel') return;
     updateRepayment(r.id, { amount: editAmount });
+    let msg = 'Repayment updated.';
+    if (choice === 'both') {
+      const result = propagateLinkedEdit('emi', r.id, { amount: editAmount });
+      if (result.error) msg = result.error;
+      else if (result.message) msg = result.message;
+    }
     setEditId(null);
-    toast('Repayment updated.');
+    toast(msg);
   };
 
   return (
-    <CollapsibleCard title={<h3 style={{ margin: 0 }}>Repayment log</h3>} style={{ marginBottom: 16 }}>
-      <p className="text-muted" style={{ marginTop: 0 }}>
+    <CollapsibleCard title={<h3 className="m-0">Repayment log</h3>} className="mb-md">
+      <p className="text-muted mt-0">
         Every actual payment recorded against this loan. Linking it to a Bank/Cash account (via the "Link" option
         next to a schedule row, or the Transfers action) keeps deleting one side in sync with the other.
       </p>
@@ -1241,10 +1254,10 @@ function AccountSection({
 
   if (!firebaseReady || !cloudEmpty) return null;
   return (
-    <Card style={{ marginTop: 16 }}>
+    <Card className="mt-md">
       {cloudEmpty && (
         <Notice tone="warning" style={{ marginTop: 8 }}>
-          <p style={{ marginTop: 0 }}>No data found in the cloud for this account's EMI/Loans workbook. This won't upload automatically.</p>
+          <p className="mt-0">No data found in the cloud for this account's EMI/Loans workbook. This won't upload automatically.</p>
           <button
             className="btn secondary"
             disabled={busy}
@@ -1292,7 +1305,7 @@ export function EMIPage({
   return (
     <div>
       <h1 className="pagetitle">EMI / Loans</h1>
-      <p className="text-muted" style={{ marginBottom: 12 }}>
+      <p className="text-muted mb-12">
         A loan you're repaying on a fixed schedule — a mortgage, car financing, or similar — with an
         auto-calculated amortization schedule. Assumes on-schedule payment; doesn't track missed/late payments.
       </p>

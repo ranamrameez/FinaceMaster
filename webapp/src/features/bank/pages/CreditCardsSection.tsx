@@ -90,7 +90,7 @@ export function AddCreditCardForm({ onSaved, initialCurrency }: { onSaved?: (id:
           <TextInput type="number" step="0.01" value={c.creditLimit ?? ''} onChange={(e) => setC({ ...c, creditLimit: e.target.value === '' ? undefined : Number(e.target.value) })} />
         </Field>
       </div>
-      <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
+      <button className="btn mt-12" onClick={submit}>
         <PlusIcon />Add card
       </button>
     </div>
@@ -104,7 +104,7 @@ export function AddCreditCardForm({ onSaved, initialCurrency }: { onSaved?: (id:
 function CreditUsageBar({ used, limit, currency }: { used: number; limit: number; currency: string }) {
   const usedPct = limit > 0 ? Math.min(100, Math.max(0, (used / limit) * 100)) : 0;
   return (
-    <div style={{ marginBottom: 16 }}>
+    <div className="mb-md">
       <div style={{ display: 'flex', height: 10, borderRadius: 6, overflow: 'hidden', background: 'color-mix(in srgb, var(--profit) 30%, var(--panel-2))' }}>
         <div style={{ width: `${usedPct}%`, background: 'var(--loss)' }} />
       </div>
@@ -240,7 +240,7 @@ function TransactionsTable({ card }: { card: CreditCard }) {
     () => [...transactions].filter((t) => t.cardId === card.id).sort((a, b) => b.date.localeCompare(a.date) || (b.seq ?? 0) - (a.seq ?? 0)),
     [transactions, card.id],
   );
-  if (!cardTxs.length) return <p className="text-muted" style={{ margin: 0 }}>No transactions yet.</p>;
+  if (!cardTxs.length) return <p className="text-muted m-0">No transactions yet.</p>;
   return (
     <div className="table-wrap">
       <table>
@@ -373,7 +373,7 @@ function CreditCardDetail({ card, onClose }: { card: CreditCard; onClose: () => 
 
       {card.creditLimit ? <CreditUsageBar used={Math.max(0, balance)} limit={card.creditLimit} currency={card.currencyCode} /> : null}
 
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Card details</h3>} style={{ marginBottom: 16 }}>
+      <CollapsibleCard title={<h3 className="m-0">Card details</h3>} className="mb-md">
         {editing ? (
           <div>
             <div className="row gap-sm">
@@ -386,7 +386,7 @@ function CreditCardDetail({ card, onClose }: { card: CreditCard; onClose: () => 
               <Field label="Credit limit"><TextInput type="number" step="0.01" value={draft.creditLimit ?? ''} onChange={(e) => setDraft({ ...draft, creditLimit: e.target.value === '' ? undefined : Number(e.target.value) })} /></Field>
               <Field label="Network"><TextInput value={draft.cardNetwork ?? ''} onChange={(e) => setDraft({ ...draft, cardNetwork: e.target.value })} placeholder="e.g. Visa" /></Field>
             </div>
-            <div className="row gap-sm" style={{ marginTop: 8 }}>
+            <div className="row gap-sm mt-sm">
               <Field label="Statement date (day of month)" title="The day of the month your billing cycle closes and a new statement generates.">
                 <TextInput type="number" min={1} max={31} value={draft.statementDate ?? ''} onChange={(e) => setDraft({ ...draft, statementDate: e.target.value === '' ? undefined : Number(e.target.value) })} />
               </Field>
@@ -396,7 +396,7 @@ function CreditCardDetail({ card, onClose }: { card: CreditCard; onClose: () => 
               <Field label="Late fee after due"><TextInput type="number" step="0.01" value={draft.lateFeeAfterDue ?? ''} onChange={(e) => setDraft({ ...draft, lateFeeAfterDue: e.target.value === '' ? undefined : Number(e.target.value) })} /></Field>
               <Field label="Annual fee"><TextInput type="number" step="0.01" value={draft.annualFee ?? ''} onChange={(e) => setDraft({ ...draft, annualFee: e.target.value === '' ? undefined : Number(e.target.value) })} /></Field>
             </div>
-            <div className="row gap-sm" style={{ marginTop: 8 }}>
+            <div className="row gap-sm mt-sm">
               <Field label="Minimum payment method">
                 <Select value={draft.minPaymentMethod ?? 'fixed'} onChange={(e) => setDraft({ ...draft, minPaymentMethod: e.target.value as CreditCard['minPaymentMethod'] })}>
                   <option value="fixed">Fixed amount</option>
@@ -407,7 +407,7 @@ function CreditCardDetail({ card, onClose }: { card: CreditCard; onClose: () => 
               <Field label="Fixed minimum"><TextInput type="number" step="0.01" value={draft.minPaymentAmount ?? ''} onChange={(e) => setDraft({ ...draft, minPaymentAmount: e.target.value === '' ? undefined : Number(e.target.value) })} /></Field>
               <Field label="Minimum %"><TextInput type="number" step="0.01" value={draft.minPaymentPct ?? ''} onChange={(e) => setDraft({ ...draft, minPaymentPct: e.target.value === '' ? undefined : Number(e.target.value) })} /></Field>
             </div>
-            <div className="row gap-sm" style={{ marginTop: 8 }}>
+            <div className="row gap-sm mt-sm">
               <Field label="Markup method" title="How this card computes markup/interest on a carried balance. 'Flat on carried balance' is the only method built so far — a disclosed flat rate applied to whatever survives a real grace period.">
                 <Select value={draft.markupMethod ?? ''} onChange={(e) => setDraft({ ...draft, markupMethod: (e.target.value || undefined) as CreditCard['markupMethod'] })}>
                   <option value="">None</option>
@@ -419,7 +419,7 @@ function CreditCardDetail({ card, onClose }: { card: CreditCard; onClose: () => 
                 <TextInput type="number" step="0.01" value={draft.markupThresholdAmount ?? ''} onChange={(e) => setDraft({ ...draft, markupThresholdAmount: e.target.value === '' ? undefined : Number(e.target.value) })} />
               </Field>
             </div>
-            <button className="btn" style={{ marginTop: 12 }} onClick={saveDetails}><SaveIcon size={13} />Save</button>
+            <button className="btn mt-12" onClick={saveDetails}><SaveIcon size={13} />Save</button>
           </div>
         ) : (
           <AttributeList
@@ -442,7 +442,7 @@ function CreditCardDetail({ card, onClose }: { card: CreditCard; onClose: () => 
       </CollapsibleCard>
 
       {statement && (
-        <CollapsibleCard title={<h3 style={{ margin: 0 }}>Current statement</h3>} style={{ marginBottom: 16 }}>
+        <CollapsibleCard title={<h3 className="m-0">Current statement</h3>} className="mb-md">
           <div className="grid-auto" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 10 }}>
             <div className="stat-card card" style={hueStyle('var(--accent)')}>
               <div className="label">Previous balance</div>
@@ -476,7 +476,7 @@ function CreditCardDetail({ card, onClose }: { card: CreditCard; onClose: () => 
             {statement.dueDate && <> · Due {statement.dueDate}</>}
           </p>
           {markup > 0 && (
-            <button className="btn secondary small" style={{ marginTop: 8 }} onClick={logMarkup}>Log markup for this cycle</button>
+            <button className="btn secondary small mt-sm" onClick={logMarkup}>Log markup for this cycle</button>
           )}
           {proposal && (
             <div style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
@@ -490,22 +490,22 @@ function CreditCardDetail({ card, onClose }: { card: CreditCard; onClose: () => 
                 Link this to a Bank account or Cash (pays it down for real)
               </label>
               {linkMode ? (
-                <div style={{ marginTop: 8 }}>
+                <div className="mt-sm">
                   <LinkedCardPaymentFields card={card} amount={collectAmount} date={collectDate} onLinked={() => { const pendingMinDue = nextPendingMinDue(proposal.amount, collectAmount); updateCard(card.id, { pendingMinDue }); }} />
                 </div>
               ) : (
-                <button className="btn small" style={{ marginTop: 8 }} onClick={logMinPayment}>Approve &amp; log</button>
+                <button className="btn small mt-sm" onClick={logMinPayment}>Approve &amp; log</button>
               )}
             </div>
           )}
         </CollapsibleCard>
       )}
 
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Add a transaction</h3>} style={{ marginBottom: 16 }}>
+      <CollapsibleCard title={<h3 className="m-0">Add a transaction</h3>} className="mb-md">
         <AddCardTransactionForm card={card} />
       </CollapsibleCard>
 
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Transactions</h3>}>
+      <CollapsibleCard title={<h3 className="m-0">Transactions</h3>}>
         <TransactionsTable card={card} />
       </CollapsibleCard>
     </Modal>
@@ -660,7 +660,7 @@ function MigrateLegacyCreditCards() {
   };
 
   return (
-    <Notice tone="warning" style={{ marginBottom: 16 }}>
+    <Notice tone="warning" className="mb-md">
       <p style={{ margin: '0 0 8px' }}>
         {legacy.length} bank account{legacy.length > 1 ? 's' : ''} still on the old "liability account" model — a credit card really
         works differently from a bank account (a billing cycle, a minimum due, real markup). Migrate {legacy.length > 1 ? 'each' : 'it'} into a real Credit Card record below.

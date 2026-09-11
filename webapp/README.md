@@ -8155,6 +8155,184 @@ FinanceManager live link:
   new `netWorthAsOf.ts`/`earliestActivityDate()` wiring picks up credit card transactions for
   past-month computation too. `npx tsc -b` / `npm run test` (645 tests, 22 new) / `npm run
   build` all clean.
+- **App-wide CSS cleanup, fifth concrete instance — see Done item 301 (2026-09-11), continuing
+  Pending item 116.** Same "audit one repeated pattern, extract, verify, repeat" discipline as
+  the four instances before it. Grepped for the next most-repeated exact `style={{...}}`
+  literal that wasn't a bare property (the previous instance already covered `.row.gap-sm`'s
+  own `gap:8`) and found `style={{ gap: 8, marginBottom: 8 }}` — 27 occurrences across 13
+  files, always the identical pairing on a `className="row"` element, i.e. the SAME `.row.
+  gap-sm` case with one extra `marginBottom:8` layered on top. Confirmed via a grep of
+  `theme.css` that no existing rule touches `margin-bottom` on `.row` or a bare `div` before
+  adding anything, so a standalone `.mb-sm{margin-bottom:8px;}` utility (deliberately NOT
+  folded into `.row.gap-sm` itself, since most `.row.gap-sm` call sites do not want the extra
+  margin and coupling them would silently change their layout) is a safe, behavior-preserving
+  1:1 swap. Replaced every occurrence via a scripted `sed` pass: `className="row" style={{
+  gap: 8, marginBottom: 8 }}` → `className="row gap-sm mb-sm"`. Verified live via Playwright
+  (a seeded Cash page): the resulting element's `getComputedStyle()` read `gap:8px`/
+  `marginBottom:8px` exactly as before, zero new console errors. `npx tsc -b` / `npm run test`
+  (645 tests, unchanged — pure CSS extraction) / `npm run build` all clean.
+- **App-wide CSS cleanup, sixth concrete instance — see Done item 302 (2026-09-11), continuing
+  Pending item 116.** Grepped for the next most-repeated multi-property `style={{...}}`
+  literal and found `style={{ gap: 8, alignItems: 'flex-end' }}` — 15 occurrences across 12
+  files, always on a `className="row"` element. **This one was pure dead code, the same class
+  of finding as Done item 295's `flexWrap:'wrap'` removal**: `.row`'s own base rule in
+  `theme.css` already sets `align-items:flex-end` (confirmed via a grep of every rule touching
+  `align-items` on `.row` — exactly one, no density/media override competing), so the inline
+  `alignItems: 'flex-end'` was silently repeating the CSS default, never actually changing
+  anything. Replaced every occurrence via a scripted `sed` pass — `className="row" style={{
+  gap: 8, alignItems: 'flex-end' }}` → `className="row gap-sm"` (dropping the dead property,
+  keeping `gap-sm` for the real `gap:8` override, per the same class already extracted in Done
+  item 275/298). Verified live via Playwright (a seeded EMI loan detail page): the resulting
+  element's `getComputedStyle()` read `gap:8px`/`align-items:flex-end` exactly as before, zero
+  new console errors. `npx tsc -b` / `npm run test` (645 tests, unchanged) / `npm run build`
+  all clean.
+- **App-wide CSS cleanup, seventh concrete instance — see Done item 303 (2026-09-11),
+  continuing Pending item 116.** `style={{ gap: 8, marginTop: 8 }}` — 13 occurrences across 7
+  files, the same `.row.gap-sm` case with a leading top margin instead of the trailing bottom
+  one Done item 301 already extracted. Confirmed no existing rule touches `margin-top` on
+  `.row` before adding anything, then added a symmetric standalone `.mt-sm{margin-top:8px;}`
+  utility (same "don't couple into `.row.gap-sm` itself" reasoning as `.mb-sm`). Replaced every
+  occurrence via a scripted `sed` pass — `className="row" style={{ gap: 8, marginTop: 8 }}` →
+  `className="row gap-sm mt-sm"`. Verified live via Playwright (a seeded QSE stock page's
+  "Update price" row): the resulting element's `getComputedStyle()` read `gap:8px`/
+  `marginTop:8px` exactly as before, zero new console errors. `npx tsc -b` / `npm run test`
+  (645 tests, unchanged) / `npm run build` all clean.
+- **App-wide CSS cleanup, eighth concrete instance — see Done item 304 (2026-09-11),
+  continuing Pending item 116.** `style={{ display: 'flex', alignItems: 'center', gap: 4 }}` —
+  8 occurrences across 4 files (Cash/Funds/Bank/PSX Trade Planner), on label/span/td/div
+  elements with no shared parent pattern. Confirmed no existing `theme.css` rule sets
+  `display`/`align-items`/`gap` on any of those element types at a competing specificity
+  before adding a new standalone `.flex-center-gap4{display:flex;align-items:center;gap:4px;}`
+  utility. Replaced every occurrence via a scripted pass — merged into an existing
+  `className` where one was present (`text-muted`, `label`), added a bare
+  `className="flex-center-gap4"` where none was. Verified live via Playwright on two pages:
+  Cash's Planning tab (a `<label>`) and PSX's Trade Planner (a `<td>` inside its per-ticker
+  summary table plus a `<div>` stat-card label, after expanding the plan's own collapsed-by-
+  default card) — every element's `getComputedStyle()` read `display:flex`/
+  `alignItems:center`/`gap:4px` exactly as before, zero new console errors on either page.
+  `npx tsc -b` / `npm run test` (645 tests, unchanged) / `npm run build` all clean.
+- **App-wide CSS cleanup, ninth concrete instance — see Done item 305 (2026-09-11), continuing
+  Pending item 116.** `style={{ marginTop: 8 }}` (the bare single-property literal, without a
+  `gap`) — 56 occurrences across 25 files. This one genuinely reuses the existing
+  `.mt-sm{margin-top:8px;}` class from Done item 303 rather than adding a new one — same 8px
+  semantic value, just no `.row`/`gap` involved this time. **9 of the 56 use `<Notice
+  tone="warning" style={{ marginTop: 8 }}>`** — `Notice` (`components/Notice.tsx`) has no
+  `className` prop to merge into, only `style`, so those 9 were deliberately left as inline
+  style rather than widening `Notice`'s own API in the same mechanical pass; a future instance
+  could add `className` support to `Notice` first, then convert those 9 separately. The
+  remaining 47 were converted via a scripted pass (merge into an existing `className`, or add a
+  bare one) plus a cleanup pass removing the resulting blank/whitespace-only lines and stray
+  double-spaces left behind by the attribute removal — confirmed via `git diff` that every
+  "added" blank-looking line was a genuine formatting artifact (a line that held nothing but
+  the removed `style` attr) before deleting it, not a pre-existing intentional blank. Verified
+  live via Playwright on a seeded QSE stock page: the reused `.mt-sm` class (via `Card.tsx`'s
+  `CollapsibleCard` body, the highest-traffic call site of this exact pattern) computed
+  `margin-top: 8px` exactly as before, zero new console errors. `npx tsc -b` / `npm run test`
+  (645 tests, unchanged) / `npm run build` all clean.
+- **App-wide CSS cleanup, tenth concrete instance — see Done item 306 (2026-09-11), continuing
+  Pending item 116.** `style={{ marginBottom: 16 }}` — 54 occurrences across 17 files, mostly
+  on `Card`/`CollapsibleCard`/`Notice`. Unlike the previous instance's `<Notice>` deferral,
+  this one followed through on it: `CollapsibleCard` and `Notice` (`components/Card.tsx`/
+  `components/Notice.tsx`) neither had a `className` prop before this pass — added it to both,
+  following the exact same additive-prop pattern already used elsewhere in this codebase
+  (`Field`'s `as` prop, `ChartCard`'s `flat` prop, `StatCard`'s `hue` prop). `CollapsibleCard`
+  forwards its `className` straight through to the inner `Card` it already wraps (same as its
+  existing `style` forwarding); `Notice` appends it to its own `notice notice-${tone}` class
+  string. With both widened, every one of the 54 occurrences converts the same way as every
+  prior instance — merge into an existing `className`, or add a bare `className="mb-md"` — a
+  new symmetric `.mb-md{margin-bottom:16px;}` utility (matching `.mb-sm`/`.mt-sm`'s 8px value
+  at 16px instead). Verified live via Playwright: Bank's `AccountDetailPage` (a `Card` and
+  several `CollapsibleCard`s converted to `.card.mb-md`) computed `margin-bottom: 16px`
+  correctly across 5 elements; the Account page's disclaimer `<Notice>` rendered
+  `class="notice notice-info mb-md"` with `margin-bottom: 16px` — confirming the new
+  className-forwarding on both widened components works exactly as the removed inline style
+  did. Zero new console errors on either page. `npx tsc -b` / `npm run test` (651 tests,
+  unchanged — the +6 vs. the prior instance's count came from an unrelated PR merged in
+  between) / `npm run build` all clean.
+- **App-wide CSS cleanup, eleventh concrete instance — see Done item 307 (2026-09-11),
+  continuing Pending item 116.** `style={{ marginTop: 0 }}` — 69 occurrences across 20 files,
+  the biggest single instance so far. Almost always the first child inside a `Card`/
+  `CollapsibleCard` (an `<h3>`/`<h4>`/`<p>`) zeroing the browser's own default top margin —
+  this app has no global `h1..h6`/`p` margin reset in `theme.css`, so this per-instance zero is
+  genuinely load-bearing, not dead code. Checked `theme.css` for a competing `margin-top:0`
+  rule first — found only `.notice-body p:first-child{margin-top:0;}`, scoped inside `Notice`
+  and unrelated — so a bare `.mt-0{margin-top:0;}` class was safe to add. Converted all 69 via
+  the same scripted pass (merge into an existing `className`, or add a bare one) plus the same
+  whitespace-artifact cleanup as every prior instance. Verified live via Playwright: the Legal
+  page's 5 `<h3 className="mt-0">` disclaimer headings and the Account page's merged
+  `<p className="text-muted mt-0">` both computed `margin-top: 0px` exactly as the removed
+  inline style did, zero new console errors on either page. `npx tsc -b` / `npm run test`
+  (651 tests, unchanged) / `npm run build` all clean.
+- **App-wide CSS cleanup, twelfth concrete instance — see Done item 308 (2026-09-11),
+  continuing Pending item 116.** `style={{ margin: 0 }}` (all four sides, not just top) — 63
+  occurrences across 18 files, almost always an `<h3>`/`<h4>` passed as a `CollapsibleCard`'s
+  own `title` prop, zeroing every side of the browser's default heading margin so it sits
+  flush inside the card header row. Confirmed no existing `margin:0` rule in `theme.css`
+  before adding a bare `.m-0{margin:0;}` class — distinct from `.mt-0` (top-only) added in the
+  prior instance, since this needs all four sides zeroed, not just one. Converted all 63 via
+  the same scripted pass; the heuristic tag-boundary approach worked identically for headings
+  embedded inside a JSX prop expression (`title={<h3 ...>...</h3>}`), not just direct children.
+  Verified live via Playwright on the Account page: 3 `<h3 className="m-0">` `CollapsibleCard`
+  titles all computed `margin-top`/`margin-bottom`/`margin-left`/`margin-right` as `0px` on
+  every side, exactly as the removed inline style did, zero new console errors. `npx tsc -b` /
+  `npm run test` (651 tests, unchanged) / `npm run build` all clean.
+- **App-wide CSS cleanup, thirteenth concrete instance — see Done item 309 (2026-09-11),
+  continuing Pending item 116.** `style={{ marginBottom: 12 }}` and `style={{ marginTop: 12
+  }}` — 34 occurrences each (68 total) across 20 files, done together in one pass since
+  they're the identical value on opposite sides. Mostly a `<p className="text-muted">` intro
+  paragraph or a `CollapsibleCard`'s own `style`/`className` prop. 12px doesn't fit the
+  existing `sm`(8)/`md`(16) semantic scale from prior instances, so named literally by pixel
+  value (`.mb-12`/`.mt-12`) rather than inventing a third semantic tier for one specific
+  number. Confirmed the only `margin-top:12px`/`margin-bottom:12px` rules already in
+  `theme.css` are scoped to specific classes (`.sidebar-title-row`, a density-gated
+  `.pagesub`, one more), not bare/generic — safe to add. Converted all 68 via the same
+  scripted pass; `CollapsibleCard`'s own `style={{ marginBottom: 12 }}` cases merged into
+  `className="mb-12"` directly (the `className` support added in the `.mb-md` instance made
+  this possible). Verified live via Playwright: a seeded QSE stock page's `.card.mb-12`
+  computed `margin-bottom: 12px`, and the first-visit Terms gate's "Accept & continue"
+  button (`button.mt-12`) computed `margin-top: 12px` — both exactly as the removed inline
+  style did, zero new console errors. `npx tsc -b` / `npm run test` (651 tests, unchanged) /
+  `npm run build` all clean.
+- **App-wide CSS cleanup, fourteenth concrete instance — see Done item 310 (2026-09-11),
+  continuing Pending item 116.** `style={{ marginTop: 16 }}` — 24 occurrences across 14 files —
+  symmetric with the existing `.mb-md` (16px) but on the top side, so named `.mt-md` to match
+  rather than inventing a fourth spacing class. Confirmed no competing bare `margin-top:16px`
+  rule in `theme.css`. 22 of the 24 converted via the same scripted pass; 2 needed manual
+  handling (`<CollapsibleCard style={{ marginTop: 16 }} title={<h3 className="m-0">Alerts</h3>}
+  ...>` on both exchanges' Dashboard pages) — the script correctly detected that the nested
+  `<h3 className="m-0">` inside the `title` prop belonged to a DIFFERENT element than
+  `CollapsibleCard`'s own `style` attribute, and declined to merge into the wrong element's
+  className rather than guessing; fixed by hand (`className="mt-md"` on the outer
+  `CollapsibleCard` itself, which already accepts `className` from the `.mb-md` instance).
+  Verified live via Playwright: the Dashboard's "Alerts" `CollapsibleCard` (`.card.mt-md`) and
+  Watchlist's table wrapper (`.table-scroll.mt-md`) both computed `margin-top: 16px` exactly as
+  the removed inline style did, zero new console errors. `npx tsc -b` / `npm run test` (651
+  tests, unchanged) / `npm run build` all clean.
+- **CSV import date-format note added to all 4 "map these columns" importers — see Done item
+  311 (2026-09-11), closes the concrete half of Pending item 95.** Every column mapper
+  (Bank's/Cash's/Rentals'/Personal Loans' statement importers) stores whatever raw string sits
+  in the mapped date column with no format validation, and `lib/datetime.ts`'s `toInstantMs()`
+  parses that string with `date.split('-').map(Number)` — a hard `YYYY-MM-DD` requirement with
+  no error surfaced if a different format sneaks in; it just silently sorts wrong. None of the
+  4 importers told the user this before they picked a file, matching Pending item 95's own
+  framing exactly ("today they just have to try the mapper and see what happens"). Added one
+  consistent sentence — "Date values must be in YYYY-MM-DD format (e.g. 2026-01-15) — other
+  date formats will sort incorrectly once imported." — to Bank's existing `Tooltip`, and to
+  Cash's/Rentals' existing intro `<p>`. Personal Loans' importer had NO explanatory text at
+  all before this (a real, standalone gap, not just missing the date note) — added a full
+  intro paragraph matching Cash's/Rentals' established style, including the date-format
+  sentence. Verified live via Playwright with seeded data on all 4 pages: Bank's tooltip
+  content read back exactly as written on hover; Cash's, Rentals', and Personal Loans' body
+  text all contained the note verbatim (Personal Loans' full new paragraph confirmed via a
+  complete body-text dump after opening a seeded loan's detail view) — zero new console
+  errors on any page. Funds' Snapshot Import deliberately excluded — it uses a native
+  `<input type="date">` for its one shared "as of" date (always emits `YYYY-MM-DD` natively),
+  not a per-row CSV date column, so there's no format-mismatch risk there. `npx tsc -b` /
+  `npm run test` (651 tests, unchanged) / `npm run build` all clean. Pending item 95's other
+  half — "needs confirming which modules' import flows the user actually tried before
+  assuming this is a universal gap vs. a discoverability one" — stays open; this closes the
+  concrete, code-confirmable part (the date-format silent-failure risk was real and
+  reproducible from the code alone, independent of which flows the user has tried).
 
 - **301. Trade Strategy: merged Buy/Sell+Avg Down and Trade Planner+Partial Trade (new
   strategy), PSX fee-mode redesign, an app-wide fixed top bar, and several smaller UI fixes
@@ -8800,12 +8978,13 @@ everything below is started. Working down it in priority order across following 
 95. App-wide: data import should be "a well-planned operation" with a documented/discoverable
     required file format and column-matching UI. This pattern ALREADY EXISTS for Bank/Cash/
     Rentals/Personal Loans' CSV imports (map-your-columns UI, Done items 40/41) and Funds'
-    two import modes (Done items 146/151) — the gap is likely that none of these publish a
-    clear "here's the expected format" reference a user can check BEFORE attempting an import
-    (today they just have to try the mapper and see what happens), which is a real, addressable
-    documentation/UX gap distinct from "build column-matching" (already built). Needs
-    confirming which modules' import flows the user actually tried before assuming this is a
-    universal gap vs. a discoverability one.
+    two import modes (Done items 146/151). **The concrete date-format-silent-failure half is
+    done (2026-09-11) — see Done item 311**: every "map these columns" importer now tells the
+    user up front that the date column must be `YYYY-MM-DD`, since `toInstantMs()` parses it
+    with no validation and a different format would silently sort wrong; Personal Loans'
+    importer also gained an intro paragraph it previously had none of. **Still open**: whether
+    there's a BROADER discoverability gap beyond the date-format risk — needs confirming which
+    modules' import flows the user actually tried before assuming more is needed here.
 96. App-wide, reinforced instruction: autofill time/timezone/currency more aggressively.
     Time/timezone autofill already exists on every module's primary add-form (Done items
     133/135/136) and currency remembers the last pick (Done item 49) — this repeated ask
@@ -9092,10 +9271,47 @@ or a design decision before more code, not guessed at further:**
      instance done (2026-09-10) — see Done item 299**: a repeated
      `style={{ display: 'none' }}` (13 occurrences across 11 files, every one a native
      `<input type="file">` triggered via a `ref`, never conditionally toggled) extracted into
-     one new `.hidden-file-input{display:none;}` class. The exact same
-     incremental discipline (audit one repeated pattern, extract or remove, verify, repeat)
-     still applies for every other module/pattern — this is one instance of an ongoing,
-     repeatable practice, not a closed item.
+     one new `.hidden-file-input{display:none;}` class. **Fifth concrete instance done
+     (2026-09-11) — see Done item 301**: `style={{ gap: 8, marginBottom: 8 }}` (27 occurrences
+     across 13 files, always the same `.row.gap-sm` case with an extra bottom margin layered
+     on) extracted into a new standalone `.mb-sm{margin-bottom:8px;}` utility. **Sixth concrete
+     instance done (2026-09-11) — see Done item 302**: `style={{ gap: 8, alignItems:
+     'flex-end' }}` (15 occurrences across 12 files) — the `alignItems:'flex-end'` half turned
+     out to be pure dead code (`.row`'s own base rule already sets it), so this one was a
+     removal, not just an extraction; replaced with `className="row gap-sm"`. **Seventh
+     concrete instance done (2026-09-11) — see Done item 303**: `style={{ gap: 8, marginTop:
+     8 }}` (13 occurrences across 7 files) — the same `.row.gap-sm` case with a leading top
+     margin instead of Done item 301's trailing bottom one; extracted into a symmetric
+     `.mt-sm{margin-top:8px;}` utility. **Eighth concrete instance done (2026-09-11) — see Done
+     item 304**: `style={{ display: 'flex', alignItems: 'center', gap: 4 }}` (8 occurrences
+     across 4 files — label/span/td/div elements, no shared parent pattern this time) —
+     extracted into a new standalone `.flex-center-gap4{display:flex;align-items:center;
+     gap:4px;}` utility. **Ninth concrete instance done (2026-09-11) — see Done item 305**:
+     `style={{ marginTop: 8 }}` (56 occurrences across 25 files) — reused the existing
+     `.mt-sm` class from the seventh instance rather than adding a new one; 9 occurrences on
+     `<Notice>` (which has no `className` prop) were deliberately left inline, the remaining 47
+     converted. **Tenth concrete instance done (2026-09-11) — see Done item 306**:
+     `style={{ marginBottom: 16 }}` (54 occurrences across 17 files) — this one followed
+     through on the ninth instance's own deferral by adding `className` support to
+     `CollapsibleCard` and `Notice` (neither had it before), then converted all 54 into a new
+     `.mb-md{margin-bottom:16px;}` utility. **Eleventh concrete instance done (2026-09-11) —
+     see Done item 307**: `style={{ marginTop: 0 }}` (69 occurrences across 20 files, the
+     biggest single instance so far) — mostly the first child inside a `Card`/`CollapsibleCard`
+     zeroing the browser's own default heading/paragraph top margin; extracted into a new
+     `.mt-0{margin-top:0;}` utility. **Twelfth concrete instance done (2026-09-11) — see Done
+     item 308**: `style={{ margin: 0 }}` (all four sides, 63 occurrences across 18 files) —
+     mostly an `<h3>`/`<h4>` passed as a `CollapsibleCard`'s own `title` prop; extracted into a
+     new `.m-0{margin:0;}` utility, distinct from `.mt-0` since this zeroes every side.
+     **Thirteenth concrete instance done (2026-09-11) — see Done item 309**:
+     `style={{ marginBottom: 12 }}` and `style={{ marginTop: 12 }}` (34 occurrences each, 68
+     total across 20 files) — done together since they're the same value on opposite sides;
+     12px doesn't fit the existing `sm`(8)/`md`(16) scale, so named literally by value
+     (`.mb-12`/`.mt-12`). **Fourteenth concrete instance done (2026-09-11) — see Done item
+     310**: `style={{ marginTop: 16 }}` (24 occurrences across 14 files) — symmetric with
+     `.mb-md`(16px) on the top side, so named `.mt-md` to match. The exact same incremental
+     discipline (audit one repeated pattern, extract or remove, verify, repeat) still applies
+     for every other module/pattern — this is one instance of an ongoing, repeatable practice,
+     not a closed item.
 117. ~~App-wide "everything should be a grid item except tables" principle (2026-09-06)~~ —
      **done in full (2026-09-08), see Done item 237.** Every module's landing/Settings page has
      been audited for the "short non-table cards stacked full-width" pattern; Cash's Settings

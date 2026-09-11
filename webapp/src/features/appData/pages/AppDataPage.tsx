@@ -227,18 +227,18 @@ export function AppDataPage() {
   return (
     <div>
       <h1 className="pagetitle">App Data</h1>
-      <p className="text-muted" style={{ marginBottom: 12 }}>
+      <p className="text-muted mb-12">
         Backup or restore your ENTIRE FinanceRecorder account in one file — every module at once, instead of each
         module's own Settings tab (still there, unchanged, for a per-module backup).
       </p>
-      <Card style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0 }}>Export everything</h3>
+      <Card className="mb-md">
+        <h3 className="mt-0">Export everything</h3>
         <p className="text-muted">Downloads one JSON file with every module's data.</p>
         <button className="btn" onClick={exportAll}>Export full backup</button>
       </Card>
       <Card>
-        <h3 style={{ marginTop: 0 }}>Import everything</h3>
-        <Notice tone="warning" style={{ marginBottom: 12 }}>
+        <h3 className="mt-0">Import everything</h3>
+        <Notice tone="warning" className="mb-12">
           This overwrites whichever modules are present in the file, for every one of THIS account's stores. Export
           a backup first if you're not sure.
         </Notice>

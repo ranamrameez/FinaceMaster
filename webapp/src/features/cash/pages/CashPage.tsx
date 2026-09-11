@@ -39,7 +39,7 @@ import { useAppearanceStore } from '../../../store/appearanceStore';
 import { ChartCard } from '../../qse/components/ChartCard';
 import { parseCSV } from '../../../lib/csv';
 import { fmtMoney } from '../../../lib/format';
-import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
+import { confirmAndDeleteLinkable, propagateLinkedEdit, resolveLinkedEdit } from '../../../lib/linkCascade';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
 import { createEmptyCashWorkbook } from '../../../store/defaultCashWorkbook';
@@ -170,10 +170,10 @@ function CategoryBreakdown() {
       <Field label="Filter by category" width={220}>
         <TextInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="e.g. Rent" />
       </Field>
-      <div className="detail-grid" style={{ marginTop: 12 }}>
+      <div className="detail-grid mt-12">
         {filtered.map(({ code, rows }) => (
           <Card key={code}>
-            <h4 style={{ marginTop: 0 }}>{code}</h4>
+            <h4 className="mt-0">{code}</h4>
             <div className="table-scroll">
               <table>
                 <tbody>
@@ -204,9 +204,16 @@ function EditEntryModal({ entry, onClose }: { entry: CashEntry; onClose: () => v
   const [draft, setDraft] = useState<CashEntry>({ ...entry });
 
   const save = async () => {
-    if (!(await warnIfLinked('cash', entry.id))) return;
+    const choice = await resolveLinkedEdit('cash', entry.id);
+    if (choice === 'cancel') return;
     updateEntry(entry.id, draft);
-    toast('Entry updated.');
+    let msg = 'Entry updated.';
+    if (choice === 'both') {
+      const result = propagateLinkedEdit('cash', entry.id, { date: draft.date, amount: draft.amount, note: draft.note });
+      if (result.error) msg = result.error;
+      else if (result.message) msg = result.message;
+    }
+    toast(msg);
     onClose();
   };
 
@@ -238,7 +245,7 @@ function EditEntryModal({ entry, onClose }: { entry: CashEntry; onClose: () => v
           onTimezoneChange={(timezone) => setDraft({ ...draft, timezone })}
         />
       </div>
-      <div style={{ marginTop: 8 }}>
+      <div className="mt-sm">
         <PendingToggle
           checked={!!draft.isPending}
           onChange={(v) => setDraft({ ...draft, isPending: v })}
@@ -246,7 +253,7 @@ function EditEntryModal({ entry, onClose }: { entry: CashEntry; onClose: () => v
           title="Not yet cleared — excluded from the Balance stat until unchecked."
         />
       </div>
-      <p className="text-muted" style={{ marginTop: 8 }}>
+      <p className="text-muted mt-sm">
         {draft.source === 'statement-import' ? `Imported${draft.statementRef ? ` from ${draft.statementRef}` : ''}` : 'Entered manually'}
       </p>
     </FinanceEditModal>
@@ -320,8 +327,8 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
 
   return (
     <Card>
-      <h4 style={{ marginTop: 0 }}>{code}</h4>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <h4 className="mt-0">{code}</h4>
+      <div className="row gap-sm mb-sm">
         <Field label="Type" width={120}>
           <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
             <option value="all">All</option>
@@ -655,17 +662,18 @@ function ImportTab() {
 
   return (
     <div>
-      <p className="text-muted" style={{ marginBottom: 12 }}>
+      <p className="text-muted mb-12">
         Import a CSV export of cash entries. This is a simple "map these columns" tool, not a parser for a
         specific spreadsheet format — pick which column is which below. A positive amount is treated as cash in,
-        negative as cash out (check "Flip sign" if your export does the opposite).
+        negative as cash out (check "Flip sign" if your export does the opposite). Date values must be in
+        YYYY-MM-DD format (e.g. 2026-01-15) — other date formats will sort incorrectly once imported.
       </p>
       <Field label="Currency for imported entries" width={140}>
         <Select value={currencyCode} onChange={(e) => setCurrencyCode(e.target.value)}>
           {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
         </Select>
       </Field>
-      <div style={{ marginTop: 8 }}>
+      <div className="mt-sm">
         <button className="btn secondary" onClick={() => fileInput.current?.click()}>Choose CSV file</button>
         <input
           ref={fileInput}
@@ -682,8 +690,8 @@ function ImportTab() {
       </div>
 
       {headers.length > 0 && (
-        <Card style={{ marginTop: 12 }}>
-          <h3 style={{ marginTop: 0 }}>Map columns</h3>
+        <Card className="mt-12">
+          <h3 className="mt-0">Map columns</h3>
           <div className="row gap-sm">
             <Field label="Date column" width={160}>
               <Select value={dateCol} onChange={(e) => setDateCol(e.target.value)}>
@@ -723,7 +731,7 @@ function ImportTab() {
               </tbody>
             </table>
           </div>
-          <button className="btn" style={{ marginTop: 12 }} onClick={doImport}>
+          <button className="btn mt-12" onClick={doImport}>
             <PlusIcon />Import {rows.length} entr{rows.length === 1 ? 'y' : 'ies'}
           </button>
         </Card>
@@ -750,17 +758,17 @@ function BalanceProjectionSummary() {
   const codes = Object.keys(projection);
 
   return (
-    <CollapsibleCard title={<h3 style={{ margin: 0 }}>Balance projection</h3>} style={{ marginBottom: 16 }}>
-      <p className="text-muted" style={{ marginTop: 0 }}>
+    <CollapsibleCard title={<h3 className="m-0">Balance projection</h3>} className="mb-md">
+      <p className="text-muted mt-0">
         See what your balance would look like if every plan below actually happened — a reality check before you
         spend. Choose what you want to see:
       </p>
       <div className="row" style={{ gap: 16, marginBottom: 12 }}>
-        <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <label className="text-muted flex-center-gap4">
           <input type="checkbox" checked={settings.showRealBalance} onChange={(e) => updateSettings({ showRealBalance: e.target.checked })} />
           Real balance
         </label>
-        <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <label className="text-muted flex-center-gap4">
           <input type="checkbox" checked={settings.showPlannedBalance} onChange={(e) => updateSettings({ showPlannedBalance: e.target.checked })} />
           Planned balance
         </label>
@@ -854,7 +862,7 @@ function AddPlanForm({ onSaved }: { onSaved?: () => void }) {
         </Field>
         <RecurrenceFields startDate={p.date} value={p.recurrence} onChange={(recurrence) => setP({ ...p, recurrence })} />
       </div>
-      <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
+      <button className="btn mt-12" onClick={submit}>
         <PlusIcon />Add plan
       </button>
     </div>
@@ -909,7 +917,7 @@ function PlanCurrencyTable({
   };
 
   return (
-    <CollapsibleCard title={<h3 style={{ margin: 0 }}>Plans — {code}</h3>}>
+    <CollapsibleCard title={<h3 className="m-0">Plans — {code}</h3>}>
       <div className="table-scroll">
         <table>
           <thead>
@@ -1092,8 +1100,8 @@ function PlanningAccountSection({
 
   if (!firebaseReady || !cloudEmpty) return null;
   return (
-    <Notice tone="warning" style={{ marginTop: 16 }}>
-      <p style={{ marginTop: 0 }}>No data found in the cloud for this account's plans. This won't upload automatically.</p>
+    <Notice tone="warning" className="mt-md">
+      <p className="mt-0">No data found in the cloud for this account's plans. This won't upload automatically.</p>
       <button
         className="btn secondary"
         disabled={busy}
@@ -1193,7 +1201,7 @@ function DataManagement() {
     // precedent (`grid-auto` + `gridAutoStyle`).
     <div className="grid-auto" style={{ ...gridAutoStyle(280, 16), alignItems: 'start' }}>
       <Card>
-        <h3 style={{ marginTop: 0 }}>General</h3>
+        <h3 className="mt-0">General</h3>
         <Field label="Default currency (pre-fills new entries only)" width={140}>
           <Select value={workbook.settings.defaultCurrency} onChange={(e) => updateSettings({ defaultCurrency: e.target.value })}>
             {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
@@ -1201,7 +1209,7 @@ function DataManagement() {
         </Field>
       </Card>
       <Card>
-        <h3 style={{ marginTop: 0 }}>Data management</h3>
+        <h3 className="mt-0">Data management</h3>
         <div className="row gap-sm">
           <button className="btn secondary" onClick={exportJSON}>Export JSON</button>
           <button className="btn secondary" onClick={() => fileInput.current?.click()}>Import JSON</button>
@@ -1238,10 +1246,10 @@ function AccountSection({
 
   if (!firebaseReady || !cloudEmpty) return null;
   return (
-    <Card style={{ marginBottom: 16 }}>
+    <Card className="mb-md">
       {cloudEmpty && (
         <Notice tone="warning" style={{ marginTop: 8 }}>
-          <p style={{ marginTop: 0 }}>
+          <p className="mt-0">
             No data found in the cloud for this account's Cash workbook. This app will <strong>not</strong> upload
             anything automatically — if you expected existing data here and don't see it, stop and investigate
             before uploading rather than overwriting.
@@ -1290,7 +1298,7 @@ export function CashPage({
   return (
     <div>
       <h1 className="pagetitle">Cash</h1>
-      <p className="text-muted" style={{ marginBottom: 12 }}>
+      <p className="text-muted mb-12">
         Track physical/informal cash — cash in hand, gifts, small informal amounts. Each entry keeps its own
         currency; balances and category totals are grouped per currency, never converted.
       </p>
@@ -1321,7 +1329,7 @@ export function CashPage({
             label: 'Settings',
             content: (
               <div>
-                <p className="text-muted" style={{ marginTop: 0 }}>
+                <p className="text-muted mt-0">
                   Sign-in, profile, appearance, and a whole-app backup live on the{' '}
                   <Link to="/account">Account page →</Link>. What's below is specific to Cash.
                 </p>

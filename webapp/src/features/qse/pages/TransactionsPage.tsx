@@ -14,7 +14,7 @@ import { usePageFabActions } from '../../../hooks/usePageFabActions';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { closedPLBySellTxId, computeClosedTrades } from '../../../lib/calc/closedTrades';
 import { computeFIFOPositions, type FIFOLot } from '../../../lib/calc/fifoPositions';
-import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
+import { confirmAndDeleteLinkable, propagateLinkedEdit, resolveLinkedEdit } from '../../../lib/linkCascade';
 import { transferRunningBalance } from '../../../lib/calc/transferBalance';
 import { Field, Select } from '../../../components/ui/Field';
 import { AmountInput } from '../../../components/ui/AmountInput';
@@ -132,7 +132,7 @@ export function TransactionRows({ initial }: { initial?: Partial<Transaction> } 
           <PlusIcon />Add row
         </button>
       </div>
-      <div className="d-flex justify-center" style={{ marginTop: 16 }}>
+      <div className="d-flex justify-center mt-md">
         <button className="btn" style={{ minWidth: 220 }} onClick={submit}>
           <SaveIcon />Save {rows.length > 1 ? `${rows.length} transactions` : 'transaction'}
         </button>
@@ -498,7 +498,7 @@ function TransactionList() {
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <select value={filterTicker} onChange={(e) => setFilterTicker(e.target.value)}>
           <option value="ALL">All tickers</option>
           {tickers.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -518,7 +518,7 @@ function TransactionList() {
         <IconButton label="Clear all" icon={<TrashIcon size={14} />} className="btn secondary" align="right" onClick={clearAll} />
       </div>
 
-      <details open style={{ marginBottom: 16 }}>
+      <details open className="mb-md">
         <summary style={{ cursor: 'pointer', fontWeight: 700, marginBottom: 8 }}>
           Open positions — {openSorted.length} txns
         </summary>
@@ -532,7 +532,7 @@ function TransactionList() {
         {renderTable(closedGroups, 'No transactions for a fully closed position yet.')}
       </details>
 
-      <details open style={{ marginTop: 16 }}>
+      <details open className="mt-md">
         <summary style={{ cursor: 'pointer', fontWeight: 700, marginBottom: 8 }}>
           <Tooltip text="Each buy lot that hasn't been fully sold yet, FIFO-matched against your real sells — the mirror image of Closed trades below, so it's always clear which shares are still open vs. already sold.">
             Open trades (not yet sold)
@@ -572,7 +572,7 @@ function TransactionList() {
         </div>
       </details>
 
-      <details open style={{ marginTop: 16 }}>
+      <details open className="mt-md">
         <summary style={{ cursor: 'pointer', fontWeight: 700, marginBottom: 8 }}>
           <Tooltip text="Each fully or partially closed round-trip, matched buy-to-sell via FIFO, with its own buy price, sell price, fees on both legs, and net P/L — so a closed trade's own numbers stay separate from whatever the currently-open position shows.">
             Closed trades (realized round-trips)
@@ -700,16 +700,23 @@ function TransfersSection() {
   const startEdit = (t: Transfer) => { setEditId(t.id); setEditRow({ ...t }); };
   const saveEdit = async () => {
     if (editId === null || !editRow) return;
-    if (!(await warnIfLinked('qse', editId))) return;
+    const choice = await resolveLinkedEdit('qse', editId);
+    if (choice === 'cancel') return;
     updateTransfer(editId, editRow);
-    toast('Transfer updated.');
+    let msg = 'Transfer updated.';
+    if (choice === 'both') {
+      const result = propagateLinkedEdit('qse', editId, { date: editRow.date, amount: editRow.gross });
+      if (result.error) msg = result.error;
+      else if (result.message) msg = result.message;
+    }
+    toast(msg);
     setEditId(null);
     setEditRow(null);
   };
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <Field label="Type" width={140}>
           <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
             <option value="all">All</option>
@@ -825,7 +832,7 @@ function AdjustmentsSection() {
   return (
     <div>
       <AdjustmentForm />
-      <div className="table-scroll" style={{ marginTop: 8 }}>
+      <div className="table-scroll mt-sm">
         <table>
           <thead>
             <tr>
@@ -895,7 +902,7 @@ function CashLedgerSection() {
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <Field label="Kind" width={140}>
           <Select value={kindFilter} onChange={(e) => setKindFilter(e.target.value as typeof kindFilter)}>
             <option value="all">All</option>

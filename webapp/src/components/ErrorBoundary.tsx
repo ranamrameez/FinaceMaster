@@ -26,7 +26,7 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.error) {
       return (
         <div className="card" style={{ margin: 24, maxWidth: 480 }}>
-          <h3 style={{ marginTop: 0 }}>Something went wrong</h3>
+          <h3 className="mt-0">Something went wrong</h3>
           <p className="text-muted">
             This part of the app hit an unexpected error. Your data is safe — it's saved independently of this
             view. Reloading the page usually fixes it.

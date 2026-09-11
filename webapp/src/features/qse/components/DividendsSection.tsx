@@ -169,7 +169,7 @@ export function DividendsSection() {
       <AddDividendForm />
 
       <h3 style={{ marginTop: 24 }}>Dividends log</h3>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <Field label="Ticker">
           <select value={tickerFilter} onChange={(e) => setTickerFilter(e.target.value)}>
             <option value="ALL">All tickers</option>

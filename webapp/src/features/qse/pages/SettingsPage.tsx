@@ -32,7 +32,7 @@ function AccountSection({
   if (!firebaseReady || !cloudEmpty) return null;
   return (
     <Notice tone="warning" style={{ marginTop: 8 }}>
-      <p style={{ marginTop: 0 }}>
+      <p className="mt-0">
         No data found in the cloud for this account's QSE workbook. This app will <strong>not</strong> upload
         anything automatically — if you expected existing data here and don't see it, stop and investigate
         before uploading (see the on-screen notice from your last session, or ask for help) rather than
@@ -169,7 +169,7 @@ export function SettingsPage({
             label: 'Account',
             content: (
               <div>
-                <p className="text-muted" style={{ marginTop: 0 }}>
+                <p className="text-muted mt-0">
                   Sign-in, profile, appearance, and a whole-app backup live on the{' '}
                   <Link to="/account">Account page →</Link>. What's below is specific to QSE.
                 </p>

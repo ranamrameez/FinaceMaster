@@ -42,7 +42,7 @@ export function Modal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="d-flex justify-between align-center">
-          <h3 style={{ margin: 0 }}>{title}</h3>
+          <h3 className="m-0">{title}</h3>
           <div className="d-flex align-center" style={{ gap: 4 }}>
             <button
               aria-label={fullScreen ? 'Exit full screen' : 'Full screen'}
@@ -57,7 +57,7 @@ export function Modal({
             </button>
           </div>
         </div>
-        <div style={{ marginTop: 12 }}>{children}</div>
+        <div className="mt-12">{children}</div>
       </div>
     </div>
   );
