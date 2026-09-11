@@ -370,7 +370,7 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
        * the table + export controls below it split off cleanly into their
        * own collapsible section. */}
       <CollapsibleCard
-        title={<h4 style={{ margin: 0 }}>Repayment history</h4>}
+        title={<h4 className="m-0">Repayment history</h4>}
         headerExtra={
           repayments.length > 0 ? (
             <div className="row gap-sm">

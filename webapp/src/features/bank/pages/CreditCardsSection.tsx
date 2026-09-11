@@ -240,7 +240,7 @@ function TransactionsTable({ card }: { card: CreditCard }) {
     () => [...transactions].filter((t) => t.cardId === card.id).sort((a, b) => b.date.localeCompare(a.date) || (b.seq ?? 0) - (a.seq ?? 0)),
     [transactions, card.id],
   );
-  if (!cardTxs.length) return <p className="text-muted" style={{ margin: 0 }}>No transactions yet.</p>;
+  if (!cardTxs.length) return <p className="text-muted m-0">No transactions yet.</p>;
   return (
     <div className="table-wrap">
       <table>
@@ -373,7 +373,7 @@ function CreditCardDetail({ card, onClose }: { card: CreditCard; onClose: () => 
 
       {card.creditLimit ? <CreditUsageBar used={Math.max(0, balance)} limit={card.creditLimit} currency={card.currencyCode} /> : null}
 
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Card details</h3>} className="mb-md">
+      <CollapsibleCard title={<h3 className="m-0">Card details</h3>} className="mb-md">
         {editing ? (
           <div>
             <div className="row gap-sm">
@@ -442,7 +442,7 @@ function CreditCardDetail({ card, onClose }: { card: CreditCard; onClose: () => 
       </CollapsibleCard>
 
       {statement && (
-        <CollapsibleCard title={<h3 style={{ margin: 0 }}>Current statement</h3>} className="mb-md">
+        <CollapsibleCard title={<h3 className="m-0">Current statement</h3>} className="mb-md">
           <div className="grid-auto" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 10 }}>
             <div className="stat-card card" style={hueStyle('var(--accent)')}>
               <div className="label">Previous balance</div>
@@ -501,11 +501,11 @@ function CreditCardDetail({ card, onClose }: { card: CreditCard; onClose: () => 
         </CollapsibleCard>
       )}
 
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Add a transaction</h3>} className="mb-md">
+      <CollapsibleCard title={<h3 className="m-0">Add a transaction</h3>} className="mb-md">
         <AddCardTransactionForm card={card} />
       </CollapsibleCard>
 
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Transactions</h3>}>
+      <CollapsibleCard title={<h3 className="m-0">Transactions</h3>}>
         <TransactionsTable card={card} />
       </CollapsibleCard>
     </Modal>

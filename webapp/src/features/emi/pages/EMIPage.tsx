@@ -610,7 +610,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
         className="mb-md"
         title={
           editing ? (
-            <h3 style={{ margin: 0 }}>Editing {loan.name}</h3>
+            <h3 className="m-0">Editing {loan.name}</h3>
           ) : (
             <div>
               <div style={{ fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -811,7 +811,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
          target position in that request) all moved together as a group to
          right after the Schedule, keeping their own relative order. */}
       <CollapsibleCard
-        title={<h3 style={{ margin: 0 }}>Schedule {showFullSchedule ? '(full, start to end)' : '(next 12 installments from today)'}</h3>}
+        title={<h3 className="m-0">Schedule {showFullSchedule ? '(full, start to end)' : '(next 12 installments from today)'}</h3>}
         headerExtra={<button className="btn secondary" onClick={exportSchedule}>Export full schedule CSV</button>}
       >
       <p className="text-muted mt-0">
@@ -990,7 +990,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
          amortizing loan (unlike Personal Loans, where balance-over-time
          depends on actual sparse repayment events that haven't all
          happened yet). */}
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Balance over time</h3>} className="mb-md">
+      <CollapsibleCard title={<h3 className="m-0">Balance over time</h3>} className="mb-md">
         <div style={{ height: 220 }}>
           <Line
             data={{
@@ -1009,7 +1009,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
         </div>
       </CollapsibleCard>
 
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>What if: extra payment</h3>} className="mb-md">
+      <CollapsibleCard title={<h3 className="m-0">What if: extra payment</h3>} className="mb-md">
         <p className="text-muted mt-0">
           See how much sooner this loan clears — and how much {loan.repaymentMode === 'fixedTotal' ? 'markup' : 'interest'} you'd
           save — by paying a fixed extra amount on top of the normal installment every month. A live estimate, nothing is saved.
@@ -1080,7 +1080,7 @@ function RepaymentLog({ loan, repayments }: { loan: EMILoan; repayments: EMIRepa
   };
 
   return (
-    <CollapsibleCard title={<h3 style={{ margin: 0 }}>Repayment log</h3>} className="mb-md">
+    <CollapsibleCard title={<h3 className="m-0">Repayment log</h3>} className="mb-md">
       <p className="text-muted mt-0">
         Every actual payment recorded against this loan. Linking it to a Bank/Cash account (via the "Link" option
         next to a schedule row, or the Transfers action) keeps deleting one side in sync with the other.

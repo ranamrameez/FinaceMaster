@@ -1168,7 +1168,7 @@ function CategoryAndRollup({ property }: { property: Property }) {
   return (
     <div className="grid-auto" style={{ ...gridAutoStyle(260, 16), marginBottom: 16 }}>
       {cats.length > 0 && (
-        <CollapsibleCard title={<h3 style={{ margin: 0 }}>By category</h3>}>
+        <CollapsibleCard title={<h3 className="m-0">By category</h3>}>
           <div className="table-scroll">
             <table>
               <tbody>
@@ -1184,7 +1184,7 @@ function CategoryAndRollup({ property }: { property: Property }) {
         </CollapsibleCard>
       )}
       {rollup.length > 0 && (
-        <CollapsibleCard title={<h3 style={{ margin: 0 }}>Monthly rollup</h3>}>
+        <CollapsibleCard title={<h3 className="m-0">Monthly rollup</h3>}>
           <div className="table-scroll">
             <table>
               <thead><tr><th>Month</th><th>Income</th><th>Expense</th><th>Net</th></tr></thead>

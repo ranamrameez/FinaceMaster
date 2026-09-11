@@ -93,7 +93,7 @@ function HoldingsCard() {
   return (
     <CollapsibleCard
       style={{ marginBottom: 16, paddingBottom: 12 }}
-      title={<h3 style={{ margin: 0 }}>Holdings</h3>}
+      title={<h3 className="m-0">Holdings</h3>}
       headerExtra={<Link to="/psx/portfolio" className="text-muted">Full portfolio →</Link>}
     >
       {held.length ? (
@@ -332,7 +332,7 @@ export function DashboardPage() {
             </ChartCard>
           </div>
 
-          <CollapsibleCard style={{ marginTop: 16 }} title={<h3 style={{ margin: 0 }}>Alerts</h3>} defaultOpen={false}>
+          <CollapsibleCard style={{ marginTop: 16 }} title={<h3 className="m-0">Alerts</h3>} defaultOpen={false}>
             <AlertsBox />
           </CollapsibleCard>
 

@@ -311,7 +311,7 @@ function AlertsSection({ sub }: { sub: Subscription }) {
   };
 
   return (
-    <CollapsibleCard title={<h3 style={{ margin: 0 }}>Renewal / expiry alerts</h3>} className="mb-md">
+    <CollapsibleCard title={<h3 className="m-0">Renewal / expiry alerts</h3>} className="mb-md">
       <p className="text-muted mt-0">
         Get reminded before this renews or expires — pick a suggested lead time, or set an exact date and time.
       </p>
@@ -570,7 +570,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
 
       <AlertsSection sub={sub} />
 
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Upcoming occurrences (next 12 months)</h3>}>
+      <CollapsibleCard title={<h3 className="m-0">Upcoming occurrences (next 12 months)</h3>}>
         <div className="table-scroll">
           <table>
             <thead><tr><th>Date</th><th>Amount</th></tr></thead>

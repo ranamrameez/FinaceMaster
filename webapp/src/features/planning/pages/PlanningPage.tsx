@@ -100,25 +100,25 @@ export function PlanningPage({
         recurring bill), so you only set it up once. Browse every planned Cash/Banking/Rentals activity below, or
         manage a specific module's own plans (add, edit, delete, mark done) further down.
       </p>
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Upcoming (next 30 days)</h3>} className="mb-md">
+      <CollapsibleCard title={<h3 className="m-0">Upcoming (next 30 days)</h3>} className="mb-md">
         <UpcomingList items={upcoming} emptyText="Nothing expected in the next 30 days." />
       </CollapsibleCard>
       <ActivityList activities={activities} />
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Cash</h3>} className="mb-md">
+      <CollapsibleCard title={<h3 className="m-0">Cash</h3>} className="mb-md">
         <CashPlanningTab
           plannedSyncStatus={cashPlannedSyncStatus}
           plannedCloudEmpty={cashPlannedCloudEmpty}
           uploadPlannedLocalToCloud={uploadCashPlannedLocalToCloud}
         />
       </CollapsibleCard>
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Banking</h3>} className="mb-md">
+      <CollapsibleCard title={<h3 className="m-0">Banking</h3>} className="mb-md">
         <BankPlanningTab
           plannedSyncStatus={bankPlannedSyncStatus}
           plannedCloudEmpty={bankPlannedCloudEmpty}
           uploadPlannedLocalToCloud={uploadBankPlannedLocalToCloud}
         />
       </CollapsibleCard>
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Rentals</h3>}>
+      <CollapsibleCard title={<h3 className="m-0">Rentals</h3>}>
         <p className="text-muted mt-0">
           Rentals plans its own recurring rent per property (see a property's own "Details" view for lease-based
           projection and rent collection) — use this for a one-off plan that doesn't fit either of those, like a
@@ -165,7 +165,7 @@ function ActivityList({ activities }: { activities: BudgetActivity[] }) {
   const { sorted, Th } = useSortableRows(filtered, sortValue, 'date', 'desc');
 
   return (
-    <CollapsibleCard title={<h3 style={{ margin: 0 }}>All planned financial activity</h3>} className="mb-md">
+    <CollapsibleCard title={<h3 className="m-0">All planned financial activity</h3>} className="mb-md">
       <div className="row gap-sm mb-sm">
         <Field label="Account" width={130}>
           <Select value={moduleFilter} onChange={(e) => setModuleFilter(e.target.value as typeof moduleFilter)}>
