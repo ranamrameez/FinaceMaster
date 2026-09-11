@@ -1084,7 +1084,8 @@ function ImportTab() {
       <p className="text-muted mb-12">
         Import a CSV export of rent/expense entries for one property. This is a simple "map these columns" tool —
         pick which column is which below. A positive amount is treated as rent income, negative as an expense
-        (check "Flip sign" if your export does the opposite).
+        (check "Flip sign" if your export does the opposite). Date values must be in YYYY-MM-DD format
+        (e.g. 2026-01-15) — other date formats will sort incorrectly once imported.
       </p>
       <Field label="Import into property" width={220}>
         <Select value={propertyId} onChange={(e) => setPropertyId(e.target.value)}>

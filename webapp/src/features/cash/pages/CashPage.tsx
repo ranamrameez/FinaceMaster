@@ -665,7 +665,8 @@ function ImportTab() {
       <p className="text-muted mb-12">
         Import a CSV export of cash entries. This is a simple "map these columns" tool, not a parser for a
         specific spreadsheet format — pick which column is which below. A positive amount is treated as cash in,
-        negative as cash out (check "Flip sign" if your export does the opposite).
+        negative as cash out (check "Flip sign" if your export does the opposite). Date values must be in
+        YYYY-MM-DD format (e.g. 2026-01-15) — other date formats will sort incorrectly once imported.
       </p>
       <Field label="Currency for imported entries" width={140}>
         <Select value={currencyCode} onChange={(e) => setCurrencyCode(e.target.value)}>

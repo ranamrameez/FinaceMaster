@@ -8308,6 +8308,31 @@ FinanceManager live link:
   Watchlist's table wrapper (`.table-scroll.mt-md`) both computed `margin-top: 16px` exactly as
   the removed inline style did, zero new console errors. `npx tsc -b` / `npm run test` (651
   tests, unchanged) / `npm run build` all clean.
+- **CSV import date-format note added to all 4 "map these columns" importers — see Done item
+  311 (2026-09-11), closes the concrete half of Pending item 95.** Every column mapper
+  (Bank's/Cash's/Rentals'/Personal Loans' statement importers) stores whatever raw string sits
+  in the mapped date column with no format validation, and `lib/datetime.ts`'s `toInstantMs()`
+  parses that string with `date.split('-').map(Number)` — a hard `YYYY-MM-DD` requirement with
+  no error surfaced if a different format sneaks in; it just silently sorts wrong. None of the
+  4 importers told the user this before they picked a file, matching Pending item 95's own
+  framing exactly ("today they just have to try the mapper and see what happens"). Added one
+  consistent sentence — "Date values must be in YYYY-MM-DD format (e.g. 2026-01-15) — other
+  date formats will sort incorrectly once imported." — to Bank's existing `Tooltip`, and to
+  Cash's/Rentals' existing intro `<p>`. Personal Loans' importer had NO explanatory text at
+  all before this (a real, standalone gap, not just missing the date note) — added a full
+  intro paragraph matching Cash's/Rentals' established style, including the date-format
+  sentence. Verified live via Playwright with seeded data on all 4 pages: Bank's tooltip
+  content read back exactly as written on hover; Cash's, Rentals', and Personal Loans' body
+  text all contained the note verbatim (Personal Loans' full new paragraph confirmed via a
+  complete body-text dump after opening a seeded loan's detail view) — zero new console
+  errors on any page. Funds' Snapshot Import deliberately excluded — it uses a native
+  `<input type="date">` for its one shared "as of" date (always emits `YYYY-MM-DD` natively),
+  not a per-row CSV date column, so there's no format-mismatch risk there. `npx tsc -b` /
+  `npm run test` (651 tests, unchanged) / `npm run build` all clean. Pending item 95's other
+  half — "needs confirming which modules' import flows the user actually tried before
+  assuming this is a universal gap vs. a discoverability one" — stays open; this closes the
+  concrete, code-confirmable part (the date-format silent-failure risk was real and
+  reproducible from the code alone, independent of which flows the user has tried).
 
 ## Pending
 
@@ -8875,12 +8900,13 @@ everything below is started. Working down it in priority order across following 
 95. App-wide: data import should be "a well-planned operation" with a documented/discoverable
     required file format and column-matching UI. This pattern ALREADY EXISTS for Bank/Cash/
     Rentals/Personal Loans' CSV imports (map-your-columns UI, Done items 40/41) and Funds'
-    two import modes (Done items 146/151) — the gap is likely that none of these publish a
-    clear "here's the expected format" reference a user can check BEFORE attempting an import
-    (today they just have to try the mapper and see what happens), which is a real, addressable
-    documentation/UX gap distinct from "build column-matching" (already built). Needs
-    confirming which modules' import flows the user actually tried before assuming this is a
-    universal gap vs. a discoverability one.
+    two import modes (Done items 146/151). **The concrete date-format-silent-failure half is
+    done (2026-09-11) — see Done item 311**: every "map these columns" importer now tells the
+    user up front that the date column must be `YYYY-MM-DD`, since `toInstantMs()` parses it
+    with no validation and a different format would silently sort wrong; Personal Loans'
+    importer also gained an intro paragraph it previously had none of. **Still open**: whether
+    there's a BROADER discoverability gap beyond the date-format risk — needs confirming which
+    modules' import flows the user actually tried before assuming more is needed here.
 96. App-wide, reinforced instruction: autofill time/timezone/currency more aggressively.
     Time/timezone autofill already exists on every module's primary add-form (Done items
     133/135/136) and currency remembers the last pick (Done item 49) — this repeated ask

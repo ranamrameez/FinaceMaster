@@ -584,6 +584,12 @@ function ImportRepaymentsSection({ loan }: { loan: PersonalLoan }) {
   return (
     <Card className="mt-12">
       <h4 className="mt-0">Import repayments (CSV)</h4>
+      <p className="text-muted mb-12">
+        Import a CSV export of repayments against this loan. This is a simple "map these columns" tool —
+        pick which column is which below; every repayment is recorded as a positive amount regardless of
+        the loan's direction. Date values must be in YYYY-MM-DD format (e.g. 2026-01-15) — other date
+        formats will sort incorrectly once imported.
+      </p>
       <div className="row" style={{ gap: 8, alignItems: 'center' }}>
         <button className="btn secondary small" onClick={() => fileInput.current?.click()}>Choose CSV file</button>
         <input
