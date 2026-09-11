@@ -256,7 +256,7 @@ function NewPlanFab() {
   const addTradePlan = useWorkbookStore((s) => s.addTradePlan);
   const ensureSignedIn = useEnsureSignedIn();
   const [open, setOpen] = useState(false);
-  usePageFabActions(useMemo(() => [{ label: 'Add plan', icon: <PlusIcon size={18} />, onClick: () => setOpen(true) }], []));
+  usePageFabActions('qse-trade-plan', useMemo(() => [{ label: 'Add plan', icon: <PlusIcon size={18} />, onClick: () => setOpen(true) }], []));
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
   const [ticker, setTicker] = useState('');

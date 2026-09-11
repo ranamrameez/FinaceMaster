@@ -300,7 +300,7 @@ function NewPlanFab() {
   // stock) instead of a second independent position:fixed button fighting
   // it for the same corner — the exact bug class Done item 239 already
   // fixed once for this same corner.
-  usePageFabActions(useMemo(() => [{ label: 'Add plan', icon: <PlusIcon size={18} />, onClick: () => setOpen(true) }], []));
+  usePageFabActions('psx-trade-plan', useMemo(() => [{ label: 'Add plan', icon: <PlusIcon size={18} />, onClick: () => setOpen(true) }], []));
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
   const [ticker, setTicker] = useState('');

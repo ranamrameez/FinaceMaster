@@ -8461,6 +8461,26 @@ FinanceManager live link:
   duplication; the Cash Plan grid rendering one real table per seeded currency. `npx tsc -b` /
   `npm run test` (663 tests, 18 new) / `npm run build` all clean at every phase, committed and
   pushed incrementally rather than as one unreviewable change.
+- **Critical: `main` left broken by the direct-push Trade Strategy commit above — see Done item
+  313 (2026-09-11).** `npx tsc -b` on `origin/main`'s own tip failed with two real type errors:
+  `usePageFabActions(useMemo(...))` in both `features/qse/pages/TradeStrategyPage.tsx` and
+  `features/psx/pages/TradeStrategyPage.tsx` called the hook with only its `actions` argument,
+  omitting the required `key: string` first parameter every other call site in the app already
+  passes (`usePageFabActions('qse-transfers', ...)`, `'bank-accounts'`, etc. — confirmed by
+  grepping every real call site before fixing, not guessing at the missing arg). This wasn't
+  a type-only nit: `key` is how `fabActionsStore.ts` keeps each page's own FAB contribution
+  from clobbering another's, and a run-time call with `actions` alone would have silently
+  passed the actions array itself as `key` had this been JS instead of TS — TypeScript is what
+  actually caught it here. Fixed by adding the same `'qse-trade-plan'`/`'psx-trade-plan'` key
+  convention used everywhere else. **Lesson for any future direct-to-`main` push**: this file's
+  own standing instruction to verify before every commit still applies with no PR/CI safety net
+  to catch a miss — a `tsc -b` failure that reaches `main` blocks every other session's own
+  clean-checkout verification too, not just the pushing session's. Verified live via
+  Playwright on both exchanges' `/trade-strategy` and `/psx/trade-strategy` routes: the FAB
+  renders, opening it and clicking "Add plan" (found via its real `aria-label`, not visible
+  text — `FabPanel`'s secondary actions are icon-only with a hover `Tooltip`, not a text label)
+  correctly opens the "New trade plan" modal on both pages, zero real console errors. `npx tsc
+  -b` / `npm run test` (671 tests, unchanged) / `npm run build` all clean.
 
 ## Pending
 
