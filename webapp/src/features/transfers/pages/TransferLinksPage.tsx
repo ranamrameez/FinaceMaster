@@ -246,7 +246,7 @@ export function SideFields({ label, cfg, onChange, preferredCurrency }: { label:
   const refLabel = REF_PICKER_LABELS[cfg.module];
 
   return (
-    <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+    <div className="row gap-sm">
       <Field label={label}>
         <Select
           value={cfg.module}

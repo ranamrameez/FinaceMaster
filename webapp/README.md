@@ -8171,6 +8171,21 @@ FinanceManager live link:
   (a seeded Cash page): the resulting element's `getComputedStyle()` read `gap:8px`/
   `marginBottom:8px` exactly as before, zero new console errors. `npx tsc -b` / `npm run test`
   (645 tests, unchanged — pure CSS extraction) / `npm run build` all clean.
+- **App-wide CSS cleanup, sixth concrete instance — see Done item 302 (2026-09-11), continuing
+  Pending item 116.** Grepped for the next most-repeated multi-property `style={{...}}`
+  literal and found `style={{ gap: 8, alignItems: 'flex-end' }}` — 15 occurrences across 12
+  files, always on a `className="row"` element. **This one was pure dead code, the same class
+  of finding as Done item 295's `flexWrap:'wrap'` removal**: `.row`'s own base rule in
+  `theme.css` already sets `align-items:flex-end` (confirmed via a grep of every rule touching
+  `align-items` on `.row` — exactly one, no density/media override competing), so the inline
+  `alignItems: 'flex-end'` was silently repeating the CSS default, never actually changing
+  anything. Replaced every occurrence via a scripted `sed` pass — `className="row" style={{
+  gap: 8, alignItems: 'flex-end' }}` → `className="row gap-sm"` (dropping the dead property,
+  keeping `gap-sm` for the real `gap:8` override, per the same class already extracted in Done
+  item 275/298). Verified live via Playwright (a seeded EMI loan detail page): the resulting
+  element's `getComputedStyle()` read `gap:8px`/`align-items:flex-end` exactly as before, zero
+  new console errors. `npx tsc -b` / `npm run test` (645 tests, unchanged) / `npm run build`
+  all clean.
 
 ## Pending
 
@@ -9033,7 +9048,11 @@ or a design decision before more code, not guessed at further:**
      one new `.hidden-file-input{display:none;}` class. **Fifth concrete instance done
      (2026-09-11) — see Done item 301**: `style={{ gap: 8, marginBottom: 8 }}` (27 occurrences
      across 13 files, always the same `.row.gap-sm` case with an extra bottom margin layered
-     on) extracted into a new standalone `.mb-sm{margin-bottom:8px;}` utility. The exact same
+     on) extracted into a new standalone `.mb-sm{margin-bottom:8px;}` utility. **Sixth concrete
+     instance done (2026-09-11) — see Done item 302**: `style={{ gap: 8, alignItems:
+     'flex-end' }}` (15 occurrences across 12 files) — the `alignItems:'flex-end'` half turned
+     out to be pure dead code (`.row`'s own base rule already sets it), so this one was a
+     removal, not just an extraction; replaced with `className="row gap-sm"`. The exact same
      incremental discipline (audit one repeated pattern, extract or remove, verify, repeat)
      still applies for every other module/pattern — this is one instance of an ongoing,
      repeatable practice, not a closed item.

@@ -206,7 +206,7 @@ export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: strin
           the final month gets swept into that last installment.
         </p>
         {bigEmiEnabled && (
-          <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+          <div className="row gap-sm">
             <Field label="Every N months">
               <TextInput type="number" min={1} value={bigEmiInterval || ''} onChange={(e) => setBigEmiInterval(Number(e.target.value))} style={{ width: 90 }} />
             </Field>
@@ -737,7 +737,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                 every 6 months. The loan keeps its original tenure; if the remainder checkbox is on, whatever's
                 still owed at the final month gets swept into that last installment.
               </p>
-              <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+              <div className="row gap-sm">
                 <Field label="Every N months">
                   <TextInput type="number" min={1} value={bigEmiInterval || ''} onChange={(e) => setBigEmiInterval(Number(e.target.value))} style={{ width: 90 }} />
                 </Field>
@@ -778,7 +778,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                 </p>
               )}
               {activeAccounts.length ? (
-                <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+                <div className="row gap-sm">
                   <Field label="Bank account">
                     <Select value={linkAccountId} onChange={(e) => setLinkAccountId(e.target.value)}>
                       {activeAccounts.map((a) => (
