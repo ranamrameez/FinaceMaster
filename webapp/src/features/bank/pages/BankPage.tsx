@@ -41,7 +41,7 @@ import { cssVar, tickerColor } from '../../../lib/cssVar';
 import { parseCSV, toCSV } from '../../../lib/csv';
 import { fmtMoney } from '../../../lib/format';
 import { dateOnlyMs } from '../../../lib/datetime';
-import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
+import { confirmAndDeleteLinkable, propagateLinkedEdit, resolveLinkedEdit } from '../../../lib/linkCascade';
 import { isValidIbanFormat, lookupIban } from '../../../lib/ibanLookup';
 import { isValidBin, lookupBin } from '../../../lib/binLookup';
 import { banksForCurrency } from '../../../lib/bankDirectory';
@@ -1286,9 +1286,16 @@ function EditTransactionModal({ tx, onClose }: { tx: BankTransaction; onClose: (
   const setMagnitude = (m: number) => setDraft({ ...draft, amount: direction === 'in' ? m : -m });
 
   const save = async () => {
-    if (!(await warnIfLinked('bank', tx.id))) return;
+    const choice = await resolveLinkedEdit('bank', tx.id);
+    if (choice === 'cancel') return;
     updateTransaction(tx.id, draft);
-    toast('Transaction updated.');
+    let msg = 'Transaction updated.';
+    if (choice === 'both') {
+      const result = propagateLinkedEdit('bank', tx.id, { date: draft.date, amount: Math.abs(draft.amount), note: draft.description });
+      if (result.error) msg = result.error;
+      else if (result.message) msg = result.message;
+    }
+    toast(msg);
     onClose();
   };
 

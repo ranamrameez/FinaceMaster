@@ -14,7 +14,7 @@ import { usePageFabActions } from '../../../hooks/usePageFabActions';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { closedPLBySellTxId, computeClosedTrades } from '../../../lib/calc/closedTrades';
 import { computeFIFOPositions, type FIFOLot } from '../../../lib/calc/fifoPositions';
-import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
+import { confirmAndDeleteLinkable, propagateLinkedEdit, resolveLinkedEdit } from '../../../lib/linkCascade';
 import { transferRunningBalance } from '../../../lib/calc/transferBalance';
 import { Field, Select } from '../../../components/ui/Field';
 import { AmountInput } from '../../../components/ui/AmountInput';
@@ -698,9 +698,16 @@ function TransfersSection() {
   const startEdit = (t: Transfer) => { setEditId(t.id); setEditRow({ ...t }); };
   const saveEdit = async () => {
     if (editId === null || !editRow) return;
-    if (!(await warnIfLinked('qse', editId))) return;
+    const choice = await resolveLinkedEdit('qse', editId);
+    if (choice === 'cancel') return;
     updateTransfer(editId, editRow);
-    toast('Transfer updated.');
+    let msg = 'Transfer updated.';
+    if (choice === 'both') {
+      const result = propagateLinkedEdit('qse', editId, { date: editRow.date, amount: editRow.gross });
+      if (result.error) msg = result.error;
+      else if (result.message) msg = result.message;
+    }
+    toast(msg);
     setEditId(null);
     setEditRow(null);
   };

@@ -47,7 +47,7 @@ import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { ReorderButtons } from '../../../components/ui/ReorderButtons';
 import { dateOnlyMs } from '../../../lib/datetime';
 import { firebaseReady } from '../../../lib/firebase/client';
-import { confirmAndDeleteLinkable, warnIfLinked } from '../../../lib/linkCascade';
+import { confirmAndDeleteLinkable, propagateLinkedEdit, resolveLinkedEdit } from '../../../lib/linkCascade';
 import { useAppearanceStore } from '../../../store/appearanceStore';
 import { createEmptyFundsWorkbook } from '../../../store/defaultFundsWorkbook';
 import { useFundsWorkbookStore } from '../../../store/fundsWorkbookStore';
@@ -1584,9 +1584,16 @@ function FundsTransfersSection() {
   const startEdit = (t: Transfer) => { setEditId(t.id); setEditRow({ ...t }); };
   const saveEdit = async () => {
     if (editId === null || !editRow) return;
-    if (!(await warnIfLinked('funds', editId))) return;
+    const choice = await resolveLinkedEdit('funds', editId);
+    if (choice === 'cancel') return;
     updateTransfer(editId, editRow);
-    toast('Transfer updated.');
+    let msg = 'Transfer updated.';
+    if (choice === 'both') {
+      const result = propagateLinkedEdit('funds', editId, { date: editRow.date, amount: editRow.gross });
+      if (result.error) msg = result.error;
+      else if (result.message) msg = result.message;
+    }
+    toast(msg);
     setEditId(null);
     setEditRow(null);
   };

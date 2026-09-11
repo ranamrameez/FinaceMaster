@@ -25,7 +25,7 @@ import { useAppearanceStore } from '../../../store/appearanceStore';
 import { fmtMoney } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
-import { confirmAndDeleteLinkable, createLinkedTransfer, warnIfLinked } from '../../../lib/linkCascade';
+import { confirmAndDeleteLinkable, createLinkedTransfer, propagateLinkedEdit, resolveLinkedEdit, warnIfLinked } from '../../../lib/linkCascade';
 import { getLastTransferSource, rememberTransferSource } from '../../../hooks/useLastTransferSource';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
 import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
@@ -468,21 +468,27 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
    * instead of writing `installmentOverrides` directly — those actions keep
    * `installmentOverrides` in sync as a side effect, so the schedule engine
    * itself is untouched, but the payment is now a real ledger row a
-   * Bank/Cash transfer can link to (see the Transfers page). */
+   * Bank/Cash transfer can link to (see the "Transfers" FAB action). */
   const saveOverride = async (month: number, value: number, date?: string, fine?: number) => {
     if (!(value > 0)) return toast('Enter an amount greater than zero.');
     if (!(await ensureSignedIn('Sign in to customize this loan\'s schedule.'))) return;
     const dueDate = date || installmentDueDate(loan, month);
     const fineValue = fine && fine > 0 ? fine : undefined;
     const existing = loanRepayments.find((r) => r.month === month);
+    let linkNote: string | undefined;
     if (existing) {
-      if (!(await warnIfLinked('emi', existing.id))) return;
+      const choice = await resolveLinkedEdit('emi', existing.id);
+      if (choice === 'cancel') return;
       updateRepayment(existing.id, { amount: value, date: dueDate, fine: fineValue });
+      if (choice === 'both') {
+        const result = propagateLinkedEdit('emi', existing.id, { date: dueDate, amount: value });
+        linkNote = result.error ?? result.message;
+      }
     } else {
       addRepayment({ id: crypto.randomUUID(), loanId: loan.id, month, amount: value, date: dueDate, source: 'manual', fine: fineValue });
     }
     setOverrideMonth(null);
-    toast(`Month #${month} set to ${fmtMoney(value, loan.currencyCode)}${fineValue ? ` + ${fmtMoney(fineValue, loan.currencyCode)} fine` : ''}.`);
+    toast(linkNote ?? `Month #${month} set to ${fmtMoney(value, loan.currencyCode)}${fineValue ? ` + ${fmtMoney(fineValue, loan.currencyCode)} fine` : ''}.`);
   };
 
   const clearOverride = async (month: number) => {
@@ -1060,10 +1066,17 @@ function RepaymentLog({ loan, repayments }: { loan: EMILoan; repayments: EMIRepa
   const saveEdit = async (r: EMIRepayment) => {
     if (!(editAmount > 0)) return toast('Enter an amount greater than zero.');
     if (!(await ensureSignedIn('Sign in to edit this loan\'s repayments.'))) return;
-    if (!(await warnIfLinked('emi', r.id))) return;
+    const choice = await resolveLinkedEdit('emi', r.id);
+    if (choice === 'cancel') return;
     updateRepayment(r.id, { amount: editAmount });
+    let msg = 'Repayment updated.';
+    if (choice === 'both') {
+      const result = propagateLinkedEdit('emi', r.id, { amount: editAmount });
+      if (result.error) msg = result.error;
+      else if (result.message) msg = result.message;
+    }
     setEditId(null);
-    toast('Repayment updated.');
+    toast(msg);
   };
 
   return (
