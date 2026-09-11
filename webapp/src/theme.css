@@ -702,6 +702,14 @@
      `display`/`align-items` rule on label/span/td that could compete —
      none found, so a bare class is safe at any specificity). */
   .flex-center-gap4{display:flex;align-items:center;gap:4px;}
+  /* Same cleanup, tenth instance (2026-09-11): `style={{ marginBottom: 16 }}`
+     was hand-repeated 54 times, mostly on `Card`/`CollapsibleCard`/`Notice`.
+     `CollapsibleCard`/`Notice` had no `className` prop to merge into before
+     this pass — added it to both, following the exact same additive-prop
+     pattern already used elsewhere in this codebase (e.g. `Field`'s `as`
+     prop). Symmetric with `.mb-sm`/`.mt-sm` above at a 16px value instead
+     of 8px. */
+  .mb-md{margin-bottom:16px;}
   /* User-reported (2026-08-27): "Input sizes still inconsistent and taking
      whole 100% width." Root cause: `flex:1` (flex-basis:0%) ignores each
      field's own explicit `width` prop entirely and instead divides the

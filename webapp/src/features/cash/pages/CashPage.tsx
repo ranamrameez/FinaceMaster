@@ -757,7 +757,7 @@ function BalanceProjectionSummary() {
   const codes = Object.keys(projection);
 
   return (
-    <CollapsibleCard title={<h3 style={{ margin: 0 }}>Balance projection</h3>} style={{ marginBottom: 16 }}>
+    <CollapsibleCard title={<h3 style={{ margin: 0 }}>Balance projection</h3>} className="mb-md">
       <p className="text-muted" style={{ marginTop: 0 }}>
         See what your balance would look like if every plan below actually happened — a reality check before you
         spend. Choose what you want to see:
@@ -1202,7 +1202,7 @@ function AccountSection({
 
   if (!firebaseReady || !cloudEmpty) return null;
   return (
-    <Card style={{ marginBottom: 16 }}>
+    <Card className="mb-md">
       {cloudEmpty && (
         <Notice tone="warning" style={{ marginTop: 8 }}>
           <p style={{ marginTop: 0 }}>

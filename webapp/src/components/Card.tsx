@@ -40,6 +40,7 @@ export function CollapsibleCard({
   defaultOpen = true,
   open: openProp,
   onToggle,
+  className,
   style,
   children,
 }: {
@@ -55,6 +56,7 @@ export function CollapsibleCard({
    * call site already relies on. */
   open?: boolean;
   onToggle?: (open: boolean) => void;
+  className?: string;
   style?: CSSProperties;
   children: ReactNode;
 }) {
@@ -66,7 +68,7 @@ export function CollapsibleCard({
     else setInternalOpen(next);
   };
   return (
-    <Card style={style}>
+    <Card className={className} style={style}>
       <div
         style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}
         onClick={toggle}

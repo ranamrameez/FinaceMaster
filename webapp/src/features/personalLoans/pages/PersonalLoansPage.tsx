@@ -384,7 +384,7 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
             </div>
           ) : undefined
         }
-        style={{ marginBottom: 16 }}
+        className="mb-md"
       >
         {/* User-requested (2026-09-03): "add filters to other tables as
            well." */}
@@ -678,7 +678,7 @@ function PayoffPlanner({ loan, outstanding }: { loan: PersonalLoan; outstanding:
   if (outstanding <= 0) return null;
 
   return (
-    <Card style={{ marginBottom: 16 }}>
+    <Card className="mb-md">
       <h4 style={{ marginTop: 0 }}>Payoff planner</h4>
       <p className="text-muted" style={{ marginTop: 0 }}>
         A quick "what if" — see how many months it'd take to clear the remaining {fmtMoney(outstanding, loan.currencyCode)}
@@ -725,7 +725,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
   return (
     <div>
       <button className="btn secondary small" style={{ marginBottom: 12 }} onClick={onBack}>← All personal loans</button>
-      <Card style={{ marginBottom: 16 }}>
+      <Card className="mb-md">
         {editing ? (
           <div>
             <div className="row gap-sm">

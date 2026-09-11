@@ -11,9 +11,9 @@ const NOTICE_ICON: Record<NoticeTone, string> = { info: 'ℹ', warning: '⚠', d
  * thin left-border accent looks bad on its own. Uses a full tinted
  * background + matching border instead of a left bar, plus a leading icon,
  * so a notice is unmistakably not just another card. */
-export function Notice({ tone = 'info', children, style }: { tone?: NoticeTone; children: ReactNode; style?: CSSProperties }) {
+export function Notice({ tone = 'info', className, children, style }: { tone?: NoticeTone; className?: string; children: ReactNode; style?: CSSProperties }) {
   return (
-    <div className={`notice notice-${tone}`} style={style}>
+    <div className={`notice notice-${tone}${className ? ` ${className}` : ''}`} style={style}>
       <span className="notice-icon" aria-hidden="true">{NOTICE_ICON[tone]}</span>
       <div className="notice-body">{children}</div>
     </div>

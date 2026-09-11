@@ -153,7 +153,7 @@ export function RiskCalculator({
 
   return (
     <div>
-      <Card style={{ marginBottom: 16 }}>
+      <Card className="mb-md">
         <div className="row" style={{ gap: 8, marginBottom: 12 }}>
           <Field label="Stock">
             <Select value={ticker} onChange={(e) => { setTicker(e.target.value); setTargetTouched(false); }}>
@@ -261,7 +261,7 @@ export function RiskCalculator({
             )}
           </Notice>
 
-          <Card style={{ marginBottom: 16 }}>
+          <Card className="mb-md">
             <h3 style={{ marginTop: 0 }}>Current position</h3>
             <div className="grid-auto" style={gridAutoStyle(120, 8)}>
               <StatCard label="Invested" value={fmtMoney(currentMetrics.invested, currency)} hue={HUES[0]} labelTitle="Total cost basis of your current position, fees included." />
@@ -287,7 +287,7 @@ export function RiskCalculator({
             </div>
           </Card>
 
-          <Card style={{ marginBottom: 16 }}>
+          <Card className="mb-md">
             <h3 style={{ marginTop: 0 }}>Meaningful averaging points</h3>
             <div className="table-scroll">
               <table>
@@ -329,7 +329,7 @@ export function RiskCalculator({
             </div>
           </Card>
 
-          <Card style={{ marginBottom: 16 }}>
+          <Card className="mb-md">
             <h3 style={{ marginTop: 0 }}>Capital efficiency &amp; diminishing returns</h3>
             <div className="grid-auto" style={{ ...gridAutoStyle(120, 8), marginBottom: 10 }}>
               <StatCard label="Risk level" value={riskMode.toUpperCase()} hue={HUES[6]} labelTitle="Conservative/Balanced/Aggressive only changes the suggested ceiling above — never the math." />

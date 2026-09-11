@@ -311,7 +311,7 @@ function AlertsSection({ sub }: { sub: Subscription }) {
   };
 
   return (
-    <CollapsibleCard title={<h3 style={{ margin: 0 }}>Renewal / expiry alerts</h3>} style={{ marginBottom: 16 }}>
+    <CollapsibleCard title={<h3 style={{ margin: 0 }}>Renewal / expiry alerts</h3>} className="mb-md">
       <p className="text-muted" style={{ marginTop: 0 }}>
         Get reminded before this renews or expires — pick a suggested lead time, or set an exact date and time.
       </p>
@@ -451,7 +451,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
   return (
     <div>
       <button className="btn secondary small" style={{ marginBottom: 12 }} onClick={onBack}>← All subscriptions</button>
-      <Card style={{ marginBottom: 16 }}>
+      <Card className="mb-md">
         {editing ? (
           <div>
             <div className="row gap-sm">
@@ -532,7 +532,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
         </div>
       </Card>
 
-      <Card style={{ marginBottom: 16 }}>
+      <Card className="mb-md">
         <h4 style={{ margin: '0 0 8px' }}>Link to a paying account</h4>
         {linkedLabel ? (
           <p className="text-muted" style={{ marginBottom: 8 }}>
@@ -685,7 +685,7 @@ function AccountSection({
 
   if (!firebaseReady || !cloudEmpty) return null;
   return (
-    <Card style={{ marginBottom: 16 }}>
+    <Card className="mb-md">
       {cloudEmpty && (
         <Notice tone="warning" style={{ marginTop: 8 }}>
           <p style={{ marginTop: 0 }}>No data found in the cloud for this account's Subscriptions workbook. This won't upload automatically.</p>
