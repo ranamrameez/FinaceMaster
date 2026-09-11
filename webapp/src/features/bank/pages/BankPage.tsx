@@ -1808,7 +1808,7 @@ function ImportStatementSection({ account }: { account: BankAccount }) {
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
         <span className="text-muted">Import a CSV export from your bank into {account.name}.</span>
-        <Tooltip text={'This is a simple "map these columns" tool, not a per-bank-format parser — pick which column is which below, since every bank\'s export looks a little different.'} />
+        <Tooltip text={'This is a simple "map these columns" tool, not a per-bank-format parser — pick which column is which below, since every bank\'s export looks a little different. Date values must be in YYYY-MM-DD format (e.g. 2026-01-15) — other date formats will sort incorrectly once imported.'} />
       </div>
       <div>
         <button className="btn secondary" onClick={() => fileInput.current?.click()}>Choose CSV file</button>
