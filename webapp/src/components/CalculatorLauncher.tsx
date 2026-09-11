@@ -8,7 +8,7 @@ import { categoryForPath } from './CategoryNav';
 import { Modal } from './Modal';
 import { PlusIcon } from './icons';
 import { FabPanel } from './ui/Fab';
-import { useFabActionsStore } from '../store/fabActionsStore';
+import { allExtraActions, useFabActionsStore } from '../store/fabActionsStore';
 
 /** Trade Calculator as an on-demand popup, available from anywhere via this
  * floating button. Route-aware: shows the QSE calculator on QSE routes and
@@ -72,7 +72,8 @@ export function CalculatorLauncher() {
   const isPSX = location.pathname.startsWith('/psx');
   const isStocks = categoryForPath(location.pathname) === 'stocks';
   const initialTicker = stockTickerFromPath(location.pathname, isPSX);
-  const extraActions = useFabActionsStore((s) => s.extraActions);
+  const actionsByKey = useFabActionsStore((s) => s.actionsByKey);
+  const extraActions = allExtraActions(actionsByKey);
 
   if (!isStocks) return null;
 

@@ -177,7 +177,7 @@ export function TransactionRows({ initial }: { initial?: Partial<Transaction> } 
 function TransfersFab() {
   const [open, setOpen] = useState(false);
   const actions = useMemo(() => [{ label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen(true) }], []);
-  usePageFabActions(actions);
+  usePageFabActions('psx-transfers', actions);
   return open ? <TransactionEntryModal defaultFinance={{ module: 'psx' }} onClose={() => setOpen(false)} /> : null;
 }
 

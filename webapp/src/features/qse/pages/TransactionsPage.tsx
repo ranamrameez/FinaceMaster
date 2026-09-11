@@ -153,7 +153,7 @@ export function TransactionRows({ initial }: { initial?: Partial<Transaction> } 
 function TransfersFab() {
   const [open, setOpen] = useState(false);
   const actions = useMemo(() => [{ label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen(true) }], []);
-  usePageFabActions(actions);
+  usePageFabActions('qse-transfers', actions);
   return open ? <TransactionEntryModal defaultFinance={{ module: 'qse' }} onClose={() => setOpen(false)} /> : null;
 }
 

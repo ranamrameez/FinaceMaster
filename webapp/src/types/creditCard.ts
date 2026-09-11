@@ -37,6 +37,16 @@ export interface CreditCard {
    * issued this card, same pattern as `BankAccount.bankId`. */
   bankId?: string;
   currencyCode: string;
+  /** Debt that already existed before this card started being tracked in
+   * the app — same role as `BankAccount.openingBalance`, and just as
+   * necessary here: a card someone's had for years needs a real starting
+   * point, not an implicit "you owed nothing before your first logged
+   * transaction." A POSITIVE number here means money owed (opposite sign
+   * from `BankAccount.openingBalance`'s own convention, since a credit
+   * card's balance is tracked in "amount owed" terms throughout this
+   * module — see `CreditCardTransaction.amount`'s own doc comment).
+   * Missing/0 for a card that's always been tracked from a clean slate. */
+  openingBalance?: number;
   creditLimit?: number;
   /** Day of month (1-31, clamped to the actual month length) the billing
    * cycle closes / statement generates. */

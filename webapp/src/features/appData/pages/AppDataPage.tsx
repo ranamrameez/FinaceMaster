@@ -11,6 +11,7 @@ import { stripUndefinedDeep } from '../../../lib/firebase/useWorkbookCloudSync';
 import { useWorkbookStore } from '../../../store/workbookStore';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
+import { useCreditCardWorkbookStore } from '../../../store/creditCardWorkbookStore';
 import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
 import { useEMIWorkbookStore } from '../../../store/emiWorkbookStore';
 import { useFundsWorkbookStore } from '../../../store/fundsWorkbookStore';
@@ -26,6 +27,7 @@ import { useCategoryStore } from '../../../store/categoryStore';
 import { createEmptyWorkbook } from '../../../store/defaultWorkbook';
 import { createEmptyPSXWorkbook } from '../../../store/defaultPsxWorkbook';
 import { createEmptyBankWorkbook } from '../../../store/defaultBankWorkbook';
+import { createEmptyCreditCardWorkbook } from '../../../store/defaultCreditCardWorkbook';
 import { createEmptyCashWorkbook } from '../../../store/defaultCashWorkbook';
 import { createEmptyEMIWorkbook } from '../../../store/defaultEmiWorkbook';
 import { createEmptyFundsWorkbook } from '../../../store/defaultFundsWorkbook';
@@ -44,21 +46,24 @@ const today = () => new Date().toISOString().slice(0, 10);
 /** README item 77 (user-requested, 2026-08-26): whole-app import/export,
  * not just per-module — every module already exports/imports its own
  * workbook as JSON from its own Settings tab (unchanged, still there);
- * this is the same idea at the app level. Every one of this app's 14
- * stores exposes the exact same `{workbook, setWorkbook}` shape
+ * this is the same idea at the app level. Every one of this app's stores
+ * exposes the exact same `{workbook, setWorkbook}` shape
  * (`MinimalWorkbookStore`, see CLAUDE.md's own design-decisions note), so
- * a whole-app export is just "read `.workbook` from all 14 and combine
- * into one object keyed by module name" — the SAME key names the app's
- * own Firebase RTDB structure already uses (`bank`, `cash`, `emiLoans`,
- * `funds`, `personalLoans`, `plannedBank`, `plannedCash`, `plannedRentals`,
- * `psx`, `qse`, `rentals`, `subscriptions`, `interEntityTransfers`,
- * `netWorthSnapshots`), so a file exported here is also directly
- * comparable to (though not identical in shape to — this omits the
- * `_updated` timestamp Firebase adds) a raw RTDB export for the same
- * account. Import is a straight per-module `setWorkbook()`, exactly the
- * same call each module's own JSON import already makes — nothing new
+ * a whole-app export is just "read `.workbook` from every store and
+ * combine into one object keyed by module name" — the SAME key names the
+ * app's own Firebase RTDB structure already uses, so a file exported here
+ * is also directly comparable to (though not identical in shape to — this
+ * omits the `_updated` timestamp Firebase adds) a raw RTDB export for the
+ * same account. Import is a straight per-module `setWorkbook()`, exactly
+ * the same call each module's own JSON import already makes — nothing new
  * about HOW a workbook gets loaded, only that this does it for every
- * module in one file/one click instead of 14. */
+ * module in one file/one click instead of one at a time.
+ *
+ * `creditCards` was a real gap here, user-reported (2026-09-11): the
+ * Credit Card module (added after this whole-app export was first built)
+ * was never added to any of the four maps below, so a "full backup" never
+ * actually contained a signed-in user's real credit card data at all —
+ * confirmed against a real exported backup missing the key entirely. */
 /** Every module's real Firebase RTDB path suffix under `users/{uid}/...` —
  * matches each module's own `use<Module>FirebaseSync.ts` call to
  * `useWorkbookCloudSync(suffix, ...)`. QSE is the one irregular case: its
@@ -66,7 +71,7 @@ const today = () => new Date().toISOString().slice(0, 10);
  * cloud path (kept for backwards compatibility with the pre-rewrite legacy
  * app) is `workbook`, not `qse`. */
 const CLOUD_PATH_SUFFIX = {
-  qse: 'workbook', psx: 'psx', bank: 'bank', cash: 'cash', emiLoans: 'emiLoans',
+  qse: 'workbook', psx: 'psx', bank: 'bank', creditCards: 'creditCards', cash: 'cash', emiLoans: 'emiLoans',
   funds: 'funds', personalLoans: 'personalLoans', rentals: 'rentals', subscriptions: 'subscriptions',
   plannedBank: 'plannedBank', plannedCash: 'plannedCash', plannedRentals: 'plannedRentals',
   interEntityTransfers: 'interEntityTransfers', netWorthSnapshots: 'netWorthSnapshots',
@@ -94,6 +99,7 @@ const CLOUD_PATH_SUFFIX = {
  * place. */
 const CREATE_EMPTY = {
   qse: createEmptyWorkbook, psx: createEmptyPSXWorkbook, bank: createEmptyBankWorkbook,
+  creditCards: createEmptyCreditCardWorkbook,
   cash: createEmptyCashWorkbook, emiLoans: createEmptyEMIWorkbook, funds: createEmptyFundsWorkbook,
   personalLoans: createEmptyPersonalLoansWorkbook, rentals: createEmptyRentalsWorkbook,
   subscriptions: createEmptySubscriptionsWorkbook, plannedBank: createEmptyPlannedBankWorkbook,
@@ -111,6 +117,7 @@ export function AppDataPage() {
   const qse = useWorkbookStore();
   const psx = usePSXWorkbookStore();
   const bank = useBankWorkbookStore();
+  const creditCards = useCreditCardWorkbookStore();
   const cash = useCashWorkbookStore();
   const emiLoans = useEMIWorkbookStore();
   const funds = useFundsWorkbookStore();
@@ -125,12 +132,12 @@ export function AppDataPage() {
   const categories = useCategoryStore();
 
   const stores = {
-    qse, psx, bank, cash, emiLoans, funds, personalLoans, rentals, subscriptions,
+    qse, psx, bank, creditCards, cash, emiLoans, funds, personalLoans, rentals, subscriptions,
     plannedBank, plannedCash, plannedRentals, interEntityTransfers, netWorthSnapshots, categories,
   } as const;
   type ModuleKey = keyof typeof stores;
   const moduleLabels: Record<ModuleKey, string> = {
-    qse: 'QSE stocks', psx: 'PSX stocks', bank: 'Banking', cash: 'Cash', emiLoans: 'EMI/Loans',
+    qse: 'QSE stocks', psx: 'PSX stocks', bank: 'Banking', creditCards: 'Credit Cards', cash: 'Cash', emiLoans: 'EMI/Loans',
     funds: 'Funds', personalLoans: 'Personal Loans', rentals: 'Rentals', subscriptions: 'Subscriptions',
     plannedBank: 'Bank Planning', plannedCash: 'Cash Planning', plannedRentals: 'Rentals Planning',
     interEntityTransfers: 'Transfers', netWorthSnapshots: 'Net Worth history', categories: 'Categories',
