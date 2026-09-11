@@ -386,7 +386,7 @@ function CreditCardDetail({ card, onClose }: { card: CreditCard; onClose: () => 
               <Field label="Credit limit"><TextInput type="number" step="0.01" value={draft.creditLimit ?? ''} onChange={(e) => setDraft({ ...draft, creditLimit: e.target.value === '' ? undefined : Number(e.target.value) })} /></Field>
               <Field label="Network"><TextInput value={draft.cardNetwork ?? ''} onChange={(e) => setDraft({ ...draft, cardNetwork: e.target.value })} placeholder="e.g. Visa" /></Field>
             </div>
-            <div className="row gap-sm" style={{ marginTop: 8 }}>
+            <div className="row gap-sm mt-sm">
               <Field label="Statement date (day of month)" title="The day of the month your billing cycle closes and a new statement generates.">
                 <TextInput type="number" min={1} max={31} value={draft.statementDate ?? ''} onChange={(e) => setDraft({ ...draft, statementDate: e.target.value === '' ? undefined : Number(e.target.value) })} />
               </Field>
@@ -396,7 +396,7 @@ function CreditCardDetail({ card, onClose }: { card: CreditCard; onClose: () => 
               <Field label="Late fee after due"><TextInput type="number" step="0.01" value={draft.lateFeeAfterDue ?? ''} onChange={(e) => setDraft({ ...draft, lateFeeAfterDue: e.target.value === '' ? undefined : Number(e.target.value) })} /></Field>
               <Field label="Annual fee"><TextInput type="number" step="0.01" value={draft.annualFee ?? ''} onChange={(e) => setDraft({ ...draft, annualFee: e.target.value === '' ? undefined : Number(e.target.value) })} /></Field>
             </div>
-            <div className="row gap-sm" style={{ marginTop: 8 }}>
+            <div className="row gap-sm mt-sm">
               <Field label="Minimum payment method">
                 <Select value={draft.minPaymentMethod ?? 'fixed'} onChange={(e) => setDraft({ ...draft, minPaymentMethod: e.target.value as CreditCard['minPaymentMethod'] })}>
                   <option value="fixed">Fixed amount</option>
@@ -407,7 +407,7 @@ function CreditCardDetail({ card, onClose }: { card: CreditCard; onClose: () => 
               <Field label="Fixed minimum"><TextInput type="number" step="0.01" value={draft.minPaymentAmount ?? ''} onChange={(e) => setDraft({ ...draft, minPaymentAmount: e.target.value === '' ? undefined : Number(e.target.value) })} /></Field>
               <Field label="Minimum %"><TextInput type="number" step="0.01" value={draft.minPaymentPct ?? ''} onChange={(e) => setDraft({ ...draft, minPaymentPct: e.target.value === '' ? undefined : Number(e.target.value) })} /></Field>
             </div>
-            <div className="row gap-sm" style={{ marginTop: 8 }}>
+            <div className="row gap-sm mt-sm">
               <Field label="Markup method" title="How this card computes markup/interest on a carried balance. 'Flat on carried balance' is the only method built so far — a disclosed flat rate applied to whatever survives a real grace period.">
                 <Select value={draft.markupMethod ?? ''} onChange={(e) => setDraft({ ...draft, markupMethod: (e.target.value || undefined) as CreditCard['markupMethod'] })}>
                   <option value="">None</option>
@@ -476,7 +476,7 @@ function CreditCardDetail({ card, onClose }: { card: CreditCard; onClose: () => 
             {statement.dueDate && <> · Due {statement.dueDate}</>}
           </p>
           {markup > 0 && (
-            <button className="btn secondary small" style={{ marginTop: 8 }} onClick={logMarkup}>Log markup for this cycle</button>
+            <button className="btn secondary small mt-sm" onClick={logMarkup}>Log markup for this cycle</button>
           )}
           {proposal && (
             <div style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
@@ -490,11 +490,11 @@ function CreditCardDetail({ card, onClose }: { card: CreditCard; onClose: () => 
                 Link this to a Bank account or Cash (pays it down for real)
               </label>
               {linkMode ? (
-                <div style={{ marginTop: 8 }}>
+                <div className="mt-sm">
                   <LinkedCardPaymentFields card={card} amount={collectAmount} date={collectDate} onLinked={() => { const pendingMinDue = nextPendingMinDue(proposal.amount, collectAmount); updateCard(card.id, { pendingMinDue }); }} />
                 </div>
               ) : (
-                <button className="btn small" style={{ marginTop: 8 }} onClick={logMinPayment}>Approve &amp; log</button>
+                <button className="btn small mt-sm" onClick={logMinPayment}>Approve &amp; log</button>
               )}
             </div>
           )}

@@ -102,7 +102,7 @@ function HoldingsCard() {
       headerExtra={<Link to="/portfolio" className="text-muted">Full portfolio →</Link>}
     >
       {held.length ? (
-        <div className="table-scroll table-compact" style={{ marginTop: 8 }}>
+        <div className="table-scroll table-compact mt-sm">
           <table className="holdings-table">
             <thead>
               <tr><Th col="ticker">Stock</Th><th>Trend</th><Th col="shares">Shares</Th><Th col="avgCost">Cost</Th><Th col="mp">Current Price</Th><Th col="value">Value</Th><Th col="profit">P/L</Th><th>Exit targets</th><Th col="status">Status</Th></tr>

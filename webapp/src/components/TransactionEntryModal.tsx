@@ -267,7 +267,7 @@ function TxRowFields({
         )}
       </label>
       {!row.linked && HAS_PENDING.includes(row.finance.module) && (
-        <div style={{ marginTop: 8 }}>
+        <div className="mt-sm">
           <PendingToggle
             checked={row.pending}
             onChange={(v) => onChange({ ...row, pending: v })}
@@ -277,7 +277,7 @@ function TxRowFields({
         </div>
       )}
       {row.linked && (
-        <div style={{ marginTop: 8 }}>
+        <div className="mt-sm">
           <SideFields
             label="Other finance"
             cfg={row.other}
@@ -289,7 +289,7 @@ function TxRowFields({
             <p className="text-muted" style={{ color: 'var(--warn, orange)' }}>Linking these two isn't supported yet.</p>
           )}
           {currencyMismatch && (
-            <div style={{ marginTop: 8 }}>
+            <div className="mt-sm">
               <div className="row gap-sm">
                 <Field label={`Amount (${otherCurrency})`}>
                   <TextInput
@@ -321,7 +321,7 @@ function TxRowFields({
         </div>
       )}
       {canRemove && (
-        <div className="d-flex justify-end" style={{ marginTop: 8 }}>
+        <div className="d-flex justify-end mt-sm">
           <button className="btn secondary small" onClick={onRemove}>
             <TrashIcon size={12} />Remove row
           </button>

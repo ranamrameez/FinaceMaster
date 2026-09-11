@@ -483,7 +483,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
 
   const bodyContent = (
     <>
-      <div className="table-scroll" style={{ marginTop: 8 }}>
+      <div className="table-scroll mt-sm">
         <table>
           <thead>
             <tr>
@@ -665,7 +665,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
       </div>
 
       {!addingLeg && (
-        <button className="btn secondary small" style={{ marginTop: 8 }} onClick={() => setAddingLeg({ date: today(), action: 'BUY', shares: 0, price: 0 })}>
+        <button className="btn secondary small mt-sm" onClick={() => setAddingLeg({ date: today(), action: 'BUY', shares: 0, price: 0 })}>
           <PlusIcon size={12} />Add leg
         </button>
       )}
@@ -741,7 +741,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
         </div>
       )}
 
-      <p className="text-muted" style={{ marginTop: 8 }}>
+      <p className="text-muted mt-sm">
         Planned buys {fmtMoney(totalBuy, currency)} · Planned sells {fmtMoney(totalSell, currency)}
         {tickerAnalysis.some((t) => t.plannedSold > 0) && (
           <> · Total planned P/L {fmtMoney(tickerAnalysis.reduce((s, t) => s + t.realizedPL, 0), currency)}</>

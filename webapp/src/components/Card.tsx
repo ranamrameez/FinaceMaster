@@ -89,7 +89,7 @@ export function CollapsibleCard({
         </div>
         {headerExtra && <div onClick={(e) => e.stopPropagation()}>{headerExtra}</div>}
       </div>
-      {open && <div style={{ marginTop: 8 }}>{children}</div>}
+      {open && <div className="mt-sm">{children}</div>}
     </Card>
   );
 }

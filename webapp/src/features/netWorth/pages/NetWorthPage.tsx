@@ -418,11 +418,11 @@ export function NetWorthPage({
           <div style={{ marginTop: 12 }}>
             <StatCard label={`Estimated net worth (${preferredCurrency})`} value={fmtMoney(grandTotal, preferredCurrency)} hue={grandTotal >= 0 ? 'var(--profit)' : 'var(--loss)'} />
           </div>
-          <button type="button" className="btn secondary small" style={{ marginTop: 8 }} onClick={saveSnapshot}>
+          <button type="button" className="btn secondary small mt-sm" onClick={saveSnapshot}>
             {todaysSnapshot ? 'Update today\'s snapshot' : 'Save snapshot'}
           </button>
           {unconverted.length > 0 && (
-            <div className="text-muted" style={{ marginTop: 8 }}>
+            <div className="text-muted mt-sm">
               No {preferredCurrency} rate available for {unconverted.join(', ')} — those currencies' totals
               aren't included above; see their own sections below for real figures.
             </div>

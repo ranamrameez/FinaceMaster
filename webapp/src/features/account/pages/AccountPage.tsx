@@ -57,7 +57,7 @@ function CurrenciesSection() {
         ))}
       </div>
       {enabledCodes !== null && (
-        <button className="btn secondary small" style={{ marginTop: 8 }} onClick={() => setEnabledCodes(null)}>
+        <button className="btn secondary small mt-sm" onClick={() => setEnabledCodes(null)}>
           Reset to all currencies
         </button>
       )}
