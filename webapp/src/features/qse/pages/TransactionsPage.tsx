@@ -39,10 +39,12 @@ function emptyRow(): Transaction {
   return { date: today(), ticker: '', action: 'BUY', shares: 0, price: 0, time: nowTime(defaultTimezoneForMarket('QSE')), timezone: defaultTimezoneForMarket('QSE') };
 }
 
-export function TransactionRows() {
+export function TransactionRows({ initial }: { initial?: Partial<Transaction> } = {}) {
   const addTransactions = useWorkbookStore((s) => s.addTransactions);
   const ensureSignedIn = useEnsureSignedIn();
-  const [rows, setRows] = useState<Transaction[]>([emptyRow()]);
+  // Partial Trade's "Sell this lot" pre-fills ticker/action/shares/price
+  // via this optional prop, mirroring PSX's TransactionRows.
+  const [rows, setRows] = useState<Transaction[]>([{ ...emptyRow(), ...initial }]);
   // Tracks, per queued row, whether the user has actually edited Time
   // themselves — see `defaultTimeForDate()`'s own doc comment. Index-
   // aligned with `rows`; rows are only ever appended/removed, never

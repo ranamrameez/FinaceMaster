@@ -156,7 +156,7 @@ export function isProvisionalSameDayBuy(transactions: Transaction[], tx: Transac
  * still planning, exactly when seeing it could change whether the user times
  * the trade as a same-day round trip. Pure and stateless — doesn't care what
  * else is in the plan or the real transaction log, unlike `calcLegFee` in
- * `TradePlannerPage.tsx`, which still remains the "best automatic guess"
+ * `TradeStrategyPage.tsx`, which still remains the "best automatic guess"
  * fee shown for an already-paired leg. */
 export function feeScenarios(amount: number, isBuy: boolean, shares: number, settings: PSXSettings): { full: number; netted: number } {
   const fb = calcFeeBreakdown(amount, isBuy, shares, settings);

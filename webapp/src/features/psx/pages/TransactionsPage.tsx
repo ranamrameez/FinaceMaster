@@ -41,10 +41,14 @@ function emptyRow(): Transaction {
   return { date: today(), ticker: '', action: 'BUY', shares: 0, price: 0, time: nowTime(defaultTimezoneForMarket('PSX')), timezone: defaultTimezoneForMarket('PSX') };
 }
 
-export function TransactionRows() {
+export function TransactionRows({ initial }: { initial?: Partial<Transaction> } = {}) {
   const addTransactions = usePSXWorkbookStore((s) => s.addTransactions);
   const ensureSignedIn = useEnsureSignedIn();
-  const [rows, setRows] = useState<Transaction[]>([emptyRow()]);
+  // Partial Trade's "Sell this lot" (one click into this same Add-trade
+  // flow, per the confirmed design) pre-fills ticker/action/shares/price
+  // via this optional prop — every other caller (the app-wide FAB, this
+  // page's own toolbar) omits it and gets the same blank row as before.
+  const [rows, setRows] = useState<Transaction[]>([{ ...emptyRow(), ...initial }]);
   const [timeTouched, setTimeTouched] = useState<boolean[]>([false]);
 
   const update = (i: number, patch: Partial<Transaction>) =>
