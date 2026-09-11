@@ -383,7 +383,7 @@ export function NetWorthPage({
           the "homepage" — a compact list, not the full per-subscription
           detail (which lives on the Subscriptions page itself). */}
       {renewalsSoon.length > 0 && (
-        <Notice tone="warning" style={{ marginBottom: 16 }}>
+        <Notice tone="warning" className="mb-md">
           <div style={{ fontWeight: 600, marginBottom: 4 }}>
             {renewalsSoon.length} subscription{renewalsSoon.length > 1 ? 's' : ''} renewing in the next 14 days
           </div>
@@ -398,7 +398,7 @@ export function NetWorthPage({
         </Notice>
       )}
 
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Upcoming</h3>} style={{ marginBottom: 16 }} defaultOpen={upcomingItems.length > 0}>
+      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Upcoming</h3>} className="mb-md" defaultOpen={upcomingItems.length > 0}>
         <UpcomingList items={upcomingItems} limit={8} emptyText="Nothing expected in the next 14 days." />
         <Link to="/planning" className="text-muted" style={{ display: 'block', marginTop: 10 }}>See all →</Link>
       </CollapsibleCard>
@@ -880,7 +880,7 @@ function NetWorthMonthlySection({
   const atFloor = windowStart <= floorWindowStart;
 
   return (
-    <div style={{ marginBottom: 16 }}>
+    <div className="mb-md">
       <div className="row" style={{ gap: 8, marginBottom: 12 }}>
         <button
           className="btn secondary small"

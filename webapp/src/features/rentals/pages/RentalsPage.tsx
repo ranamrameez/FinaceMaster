@@ -534,7 +534,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
       </div>
 
       {property.collectionCycle && (
-        <Card style={{ marginBottom: 16 }}>
+        <Card className="mb-md">
           <h4 style={{ margin: '0 0 6px' }}>Rent collection</h4>
           {proposal ? (
             <>
@@ -1257,7 +1257,7 @@ function AccountSection({
 
   if (!firebaseReady || !cloudEmpty) return null;
   return (
-    <Card style={{ marginBottom: 16 }}>
+    <Card className="mb-md">
       {cloudEmpty && (
         <Notice tone="warning" style={{ marginTop: 8 }}>
           <p style={{ marginTop: 0 }}>No data found in the cloud for this account's Rentals workbook. This won't upload automatically.</p>

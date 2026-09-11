@@ -1119,7 +1119,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
     <div>
       <button className="btn secondary small" style={{ marginBottom: 12 }} onClick={onBack}>← All funds</button>
 
-      <Card style={{ marginBottom: 16 }}>
+      <Card className="mb-md">
             {editingFund ? (
               <div>
                 <div className="row gap-sm">
@@ -1303,7 +1303,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
           "Transfers" card here, redundant with the Transactions table
           right below). Two stacked options, "OR" between them, not two
           side-by-side rows. */}
-      <Card style={{ marginBottom: 16 }}>
+      <Card className="mb-md">
         <h3 style={{ marginTop: 0 }}>Update balance or NAV</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div className="row gap-sm">
@@ -1801,7 +1801,7 @@ function AccountSection({
 
   if (!firebaseReady || !cloudEmpty) return null;
   return (
-    <Card style={{ marginBottom: 16 }}>
+    <Card className="mb-md">
       {cloudEmpty && (
         <Notice tone="warning" style={{ marginTop: 8 }}>
           <p style={{ marginTop: 0 }}>No data found in the cloud for this account's Funds workbook. This won't upload automatically.</p>

@@ -294,13 +294,13 @@ function LinkedEMIRepaymentFields({ loan, month, amount, date, onLinked }: { loa
  * and didn't group related ones together). Each zone answers one distinct
  * question about the loan:
  * - **Origination**: what was agreed at the start — never changes once the
- *   loan is created (Total Amount Sanctioned, Markup Percentage, Net to
- *   Return).
+ * loan is created (Total Amount Sanctioned, Markup Percentage, Net to
+ * Return).
  * - **Current Status**: where things stand right now (Net Remaining, Net
- *   Paid, the current Monthly EMI — which CAN differ from origination if a
- *   `customMonthlyPayment` or per-month override is set).
+ * Paid, the current Monthly EMI — which CAN differ from origination if a
+ * `customMonthlyPayment` or per-month override is set).
  * - **Timeline**: what's coming (Next Due Date, Expected Completion Date,
- *   Remaining EMI Count).
+ * Remaining EMI Count).
  * "Overdue Balance / Penalties" (part of the user's original zone spec) is
  * deliberately NOT included here — the user's own explicit call, via
  * AskUserQuestion, was to skip it for now rather than build a fake or
@@ -607,7 +607,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
          slots so the action buttons live in a fixed header position in
          both modes, only the body content underneath changes. */}
       <CollapsibleCard
-        style={{ marginBottom: 16 }}
+        className="mb-md"
         title={
           editing ? (
             <h3 style={{ margin: 0 }}>Editing {loan.name}</h3>
@@ -736,7 +736,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
         {editing && (
           <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
             <div className="text-muted" style={{ marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Advanced</div>
-            <div style={{ marginBottom: 16 }}>
+            <div className="mb-md">
               <h4 style={{ margin: '0 0 4px' }}>Big EMI every N months</h4>
               <p className="text-muted" style={{ marginTop: 0 }}>
                 For loans with an occasional bigger payment — e.g. a property installment plan with a larger payment
@@ -960,7 +960,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
             <h3 style={{ margin: 0, cursor: 'pointer' }}>Amortization schedule</h3>
           </Tooltip>
         }
-        style={{ marginBottom: 16 }}
+        className="mb-md"
       >
         <div style={{ height: 220 }}>
           <Bar
@@ -990,7 +990,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
          amortizing loan (unlike Personal Loans, where balance-over-time
          depends on actual sparse repayment events that haven't all
          happened yet). */}
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Balance over time</h3>} style={{ marginBottom: 16 }}>
+      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Balance over time</h3>} className="mb-md">
         <div style={{ height: 220 }}>
           <Line
             data={{
@@ -1009,7 +1009,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
         </div>
       </CollapsibleCard>
 
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>What if: extra payment</h3>} style={{ marginBottom: 16 }}>
+      <CollapsibleCard title={<h3 style={{ margin: 0 }}>What if: extra payment</h3>} className="mb-md">
         <p className="text-muted" style={{ marginTop: 0 }}>
           See how much sooner this loan clears — and how much {loan.repaymentMode === 'fixedTotal' ? 'markup' : 'interest'} you'd
           save — by paying a fixed extra amount on top of the normal installment every month. A live estimate, nothing is saved.
@@ -1080,7 +1080,7 @@ function RepaymentLog({ loan, repayments }: { loan: EMILoan; repayments: EMIRepa
   };
 
   return (
-    <CollapsibleCard title={<h3 style={{ margin: 0 }}>Repayment log</h3>} style={{ marginBottom: 16 }}>
+    <CollapsibleCard title={<h3 style={{ margin: 0 }}>Repayment log</h3>} className="mb-md">
       <p className="text-muted" style={{ marginTop: 0 }}>
         Every actual payment recorded against this loan. Linking it to a Bank/Cash account (via the "Link" option
         next to a schedule row, or the Transfers action) keeps deleting one side in sync with the other.

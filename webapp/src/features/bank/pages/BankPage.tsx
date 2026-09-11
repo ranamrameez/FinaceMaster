@@ -872,7 +872,7 @@ function AccountsList() {
 function CreditUsageBar({ used, limit, currency }: { used: number; limit: number; currency: string }) {
   const usedPct = limit > 0 ? Math.min(100, Math.max(0, (used / limit) * 100)) : 0;
   return (
-    <div style={{ marginBottom: 16 }}>
+    <div className="mb-md">
       <div style={{ display: 'flex', height: 10, borderRadius: 6, overflow: 'hidden', background: 'color-mix(in srgb, var(--profit) 30%, var(--panel-2))' }}>
         <div style={{ width: `${usedPct}%`, background: 'var(--loss)' }} />
       </div>
@@ -1051,7 +1051,7 @@ export function AccountDetailPage() {
           </button>
         </div>
       </div>
-      <p className="text-muted" style={{ marginBottom: 16 }}>
+      <p className="text-muted mb-md">
         {account.isLiability ? 'Amount owed:' : 'Current balance:'}{' '}
         <strong title={fmtMoney(account.isLiability ? Math.max(0, -accountBalance(account, transactions)) : accountBalance(account, transactions), account.currencyCode)}>
           {num(account.isLiability ? Math.max(0, -accountBalance(account, transactions)) : accountBalance(account, transactions))} {account.currencyCode}
@@ -1089,7 +1089,7 @@ export function AccountDetailPage() {
          attributes read first. */}
       <CollapsibleCard
         defaultOpen={false}
-        style={{ marginBottom: 16 }}
+        className="mb-md"
         title={<h3 style={{ margin: 0 }}>Account details</h3>}
         headerExtra={
           editingMeta ? (
@@ -1135,7 +1135,7 @@ export function AccountDetailPage() {
          side" — now that "Add a transaction" is gone (replaced by the
          Transfers FAB below), this grid holds By category + Upcoming plans
          side by side instead of either claiming the full page width. */}
-      <div className="detail-grid" style={{ marginBottom: 16 }}>
+      <div className="detail-grid mb-md">
         <CollapsibleCard defaultOpen={false} title={<h3 style={{ margin: 0 }}>By category</h3>}>
           <CategoryBreakdownBody account={account} />
         </CollapsibleCard>
@@ -1168,7 +1168,7 @@ export function AccountDetailPage() {
          picker — this brings the same three charts directly onto the
          account's own page, pre-scoped to it, plus a month-nav'd exact-
          numbers table (see `AccountAnalyticsSection`'s own doc comment). */}
-      <CollapsibleCard defaultOpen={false} style={{ marginBottom: 16 }} title={<h3 style={{ margin: 0 }}>Analytics</h3>}>
+      <CollapsibleCard defaultOpen={false} className="mb-md" title={<h3 style={{ margin: 0 }}>Analytics</h3>}>
         <AccountAnalyticsSection account={account} />
       </CollapsibleCard>
 
@@ -1194,7 +1194,7 @@ export function AccountDetailPage() {
          box entirely; the table now just grows with the page (one scroll
          axis: the page itself), with `.table-scroll` still handling
          horizontal overflow on a narrow viewport as it always did. */}
-      <Card style={{ marginBottom: 16 }}>
+      <Card className="mb-md">
         <h3 style={{ marginTop: 0 }}>Transactions</h3>
         <TransactionsList account={account} />
       </Card>
@@ -1203,13 +1203,13 @@ export function AccountDetailPage() {
          moved in from the old standalone tab (see ImportStatementSection's
          own comment). Collapsed by default — importing a statement is rare
          once an account's history is caught up. */}
-      <CollapsibleCard defaultOpen={false} style={{ marginBottom: 16 }} title={<h3 style={{ margin: 0 }}>Import statement</h3>}>
+      <CollapsibleCard defaultOpen={false} className="mb-md" title={<h3 style={{ margin: 0 }}>Import statement</h3>}>
         <ImportStatementSection account={account} />
       </CollapsibleCard>
 
       <CollapsibleCard
         defaultOpen={false}
-        style={{ marginBottom: 16 }}
+        className="mb-md"
         title={<h3 style={{ margin: 0 }}>Download statement</h3>}
         headerExtra={<button className="btn" onClick={exportStatement}><ExportIcon size={13} />Export CSV</button>}
       >
@@ -1963,7 +1963,7 @@ function BalanceProjectionSummary() {
           <h3 style={{ margin: 0, cursor: 'pointer' }}>Balance projection</h3>
         </Tooltip>
       }
-      style={{ marginBottom: 16 }}
+      className="mb-md"
     >
       <div className="row" style={{ gap: 16, marginBottom: 12 }}>
         <label className="text-muted flex-center-gap4">

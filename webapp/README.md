@@ -8229,6 +8229,26 @@ FinanceManager live link:
   `CollapsibleCard` body, the highest-traffic call site of this exact pattern) computed
   `margin-top: 8px` exactly as before, zero new console errors. `npx tsc -b` / `npm run test`
   (645 tests, unchanged) / `npm run build` all clean.
+- **App-wide CSS cleanup, tenth concrete instance — see Done item 306 (2026-09-11), continuing
+  Pending item 116.** `style={{ marginBottom: 16 }}` — 54 occurrences across 17 files, mostly
+  on `Card`/`CollapsibleCard`/`Notice`. Unlike the previous instance's `<Notice>` deferral,
+  this one followed through on it: `CollapsibleCard` and `Notice` (`components/Card.tsx`/
+  `components/Notice.tsx`) neither had a `className` prop before this pass — added it to both,
+  following the exact same additive-prop pattern already used elsewhere in this codebase
+  (`Field`'s `as` prop, `ChartCard`'s `flat` prop, `StatCard`'s `hue` prop). `CollapsibleCard`
+  forwards its `className` straight through to the inner `Card` it already wraps (same as its
+  existing `style` forwarding); `Notice` appends it to its own `notice notice-${tone}` class
+  string. With both widened, every one of the 54 occurrences converts the same way as every
+  prior instance — merge into an existing `className`, or add a bare `className="mb-md"` — a
+  new symmetric `.mb-md{margin-bottom:16px;}` utility (matching `.mb-sm`/`.mt-sm`'s 8px value
+  at 16px instead). Verified live via Playwright: Bank's `AccountDetailPage` (a `Card` and
+  several `CollapsibleCard`s converted to `.card.mb-md`) computed `margin-bottom: 16px`
+  correctly across 5 elements; the Account page's disclaimer `<Notice>` rendered
+  `class="notice notice-info mb-md"` with `margin-bottom: 16px` — confirming the new
+  className-forwarding on both widened components works exactly as the removed inline style
+  did. Zero new console errors on either page. `npx tsc -b` / `npm run test` (651 tests,
+  unchanged — the +6 vs. the prior instance's count came from an unrelated PR merged in
+  between) / `npm run build` all clean.
 
 ## Pending
 
@@ -9107,9 +9127,14 @@ or a design decision before more code, not guessed at further:**
      `style={{ marginTop: 8 }}` (56 occurrences across 25 files) — reused the existing
      `.mt-sm` class from the seventh instance rather than adding a new one; 9 occurrences on
      `<Notice>` (which has no `className` prop) were deliberately left inline, the remaining 47
-     converted. The exact same incremental discipline (audit one repeated pattern, extract or
-     remove, verify, repeat) still applies for every other module/pattern — this is one
-     instance of an ongoing, repeatable practice, not a closed item.
+     converted. **Tenth concrete instance done (2026-09-11) — see Done item 306**:
+     `style={{ marginBottom: 16 }}` (54 occurrences across 17 files) — this one followed
+     through on the ninth instance's own deferral by adding `className` support to
+     `CollapsibleCard` and `Notice` (neither had it before), then converted all 54 into a new
+     `.mb-md{margin-bottom:16px;}` utility. The exact same incremental discipline (audit one
+     repeated pattern, extract or remove, verify, repeat) still applies for every other
+     module/pattern — this is one instance of an ongoing, repeatable practice, not a closed
+     item.
 117. ~~App-wide "everything should be a grid item except tables" principle (2026-09-06)~~ —
      **done in full (2026-09-08), see Done item 237.** Every module's landing/Settings page has
      been audited for the "short non-table cards stacked full-width" pattern; Cash's Settings

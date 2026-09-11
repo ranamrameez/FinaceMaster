@@ -104,7 +104,7 @@ export function AddCreditCardForm({ onSaved, initialCurrency }: { onSaved?: (id:
 function CreditUsageBar({ used, limit, currency }: { used: number; limit: number; currency: string }) {
   const usedPct = limit > 0 ? Math.min(100, Math.max(0, (used / limit) * 100)) : 0;
   return (
-    <div style={{ marginBottom: 16 }}>
+    <div className="mb-md">
       <div style={{ display: 'flex', height: 10, borderRadius: 6, overflow: 'hidden', background: 'color-mix(in srgb, var(--profit) 30%, var(--panel-2))' }}>
         <div style={{ width: `${usedPct}%`, background: 'var(--loss)' }} />
       </div>
@@ -373,7 +373,7 @@ function CreditCardDetail({ card, onClose }: { card: CreditCard; onClose: () => 
 
       {card.creditLimit ? <CreditUsageBar used={Math.max(0, balance)} limit={card.creditLimit} currency={card.currencyCode} /> : null}
 
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Card details</h3>} style={{ marginBottom: 16 }}>
+      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Card details</h3>} className="mb-md">
         {editing ? (
           <div>
             <div className="row gap-sm">
@@ -442,7 +442,7 @@ function CreditCardDetail({ card, onClose }: { card: CreditCard; onClose: () => 
       </CollapsibleCard>
 
       {statement && (
-        <CollapsibleCard title={<h3 style={{ margin: 0 }}>Current statement</h3>} style={{ marginBottom: 16 }}>
+        <CollapsibleCard title={<h3 style={{ margin: 0 }}>Current statement</h3>} className="mb-md">
           <div className="grid-auto" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 10 }}>
             <div className="stat-card card" style={hueStyle('var(--accent)')}>
               <div className="label">Previous balance</div>
@@ -501,7 +501,7 @@ function CreditCardDetail({ card, onClose }: { card: CreditCard; onClose: () => 
         </CollapsibleCard>
       )}
 
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Add a transaction</h3>} style={{ marginBottom: 16 }}>
+      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Add a transaction</h3>} className="mb-md">
         <AddCardTransactionForm card={card} />
       </CollapsibleCard>
 
@@ -660,7 +660,7 @@ function MigrateLegacyCreditCards() {
   };
 
   return (
-    <Notice tone="warning" style={{ marginBottom: 16 }}>
+    <Notice tone="warning" className="mb-md">
       <p style={{ margin: '0 0 8px' }}>
         {legacy.length} bank account{legacy.length > 1 ? 's' : ''} still on the old "liability account" model — a credit card really
         works differently from a bank account (a billing cycle, a minimum due, real markup). Migrate {legacy.length > 1 ? 'each' : 'it'} into a real Credit Card record below.

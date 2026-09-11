@@ -516,7 +516,7 @@ function TransactionList() {
         <IconButton label="Clear all" icon={<TrashIcon size={14} />} className="btn secondary" align="right" onClick={clearAll} />
       </div>
 
-      <details open style={{ marginBottom: 16 }}>
+      <details open className="mb-md">
         <summary style={{ cursor: 'pointer', fontWeight: 700, marginBottom: 8 }}>
           Open positions — {openSorted.length} txns
         </summary>

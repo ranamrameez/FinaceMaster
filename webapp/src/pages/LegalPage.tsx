@@ -10,7 +10,7 @@ export function LegalPage() {
     <div>
       <h1 className="pagetitle">Disclaimer, Terms &amp; Privacy</h1>
 
-      <Card style={{ marginBottom: 16 }}>
+      <Card className="mb-md">
         <h3 style={{ marginTop: 0 }}>Calculation accuracy</h3>
         <p>
           FinanceRecorder computes fees, taxes, break-even prices, and profit/loss using settings you configure
@@ -25,7 +25,7 @@ export function LegalPage() {
         </p>
       </Card>
 
-      <Card style={{ marginBottom: 16 }}>
+      <Card className="mb-md">
         <h3 style={{ marginTop: 0 }}>Not financial advice</h3>
         <p>
           Nothing in this app — including exit-price suggestions, alerts, projections, or the trade calculator —
@@ -34,7 +34,7 @@ export function LegalPage() {
         </p>
       </Card>
 
-      <Card style={{ marginBottom: 16 }}>
+      <Card className="mb-md">
         <h3 style={{ marginTop: 0 }}>Limitation of liability</h3>
         <p>
           This app is provided "as is," without warranty of any kind, express or implied. To the fullest extent
@@ -44,7 +44,7 @@ export function LegalPage() {
         </p>
       </Card>
 
-      <Card style={{ marginBottom: 16 }}>
+      <Card className="mb-md">
         <h3 style={{ marginTop: 0 }}>Feedback and suggestions</h3>
         <p>
           Feature suggestions, bug reports, and other feedback you submit may be used to improve the app without
@@ -52,7 +52,7 @@ export function LegalPage() {
         </p>
       </Card>
 
-      <Card style={{ marginBottom: 16 }}>
+      <Card className="mb-md">
         <h3 style={{ marginTop: 0 }}>Privacy</h3>
         <p>
           When you sign in, we store the trading data you enter (transactions, prices, watchlist, notes) and

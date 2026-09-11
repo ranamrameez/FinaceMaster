@@ -161,7 +161,7 @@ export function AccountPage({ syncStatuses }: { syncStatuses: ModuleSyncStatus[]
         </CollapsibleCard>
       </div>
 
-      <Notice tone="info" style={{ marginBottom: 16 }}>
+      <Notice tone="info" className="mb-md">
         <p style={{ margin: 0 }}>
           Every figure in this app is an estimate — verify against your official statement.{' '}
           <Link to="/legal" style={{ color: 'inherit' }}>Read the full Disclaimer, Terms &amp; Privacy →</Link>
