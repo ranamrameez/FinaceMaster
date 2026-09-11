@@ -683,6 +683,12 @@
      unconditionally regardless of source order, so this is a safe,
      behavior-preserving replacement for the inline override. */
   .row.gap-sm{gap:8px;}
+  /* Same cleanup, fifth instance (2026-09-11): `style={{ gap: 8, marginBottom: 8 }}`
+     was hand-repeated 27 times, always the SAME literal pairing `.row.gap-sm`
+     with a trailing 8px bottom margin. A standalone `.mb-sm` (not folded into
+     `.row.gap-sm` itself) since most `.row.gap-sm` call sites do NOT want the
+     margin — coupling them would silently change layout at every other site. */
+  .mb-sm{margin-bottom:8px;}
   /* User-reported (2026-08-27): "Input sizes still inconsistent and taking
      whole 100% width." Root cause: `flex:1` (flex-basis:0%) ignores each
      field's own explicit `width` prop entirely and instead divides the

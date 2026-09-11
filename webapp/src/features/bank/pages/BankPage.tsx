@@ -420,7 +420,7 @@ function AccountFormFields({
          identity lives — it replaces what used to be a separate `Bank`
          Select shown only once a Bank existed, and it's typing-to-create
          so "no bank yet" costs nothing extra. */}
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <BankIdentityField value={value} onChange={onChange} idSuffix={idSuffix} />
       </div>
       <div className="row gap-sm">
@@ -1407,7 +1407,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <Field label="Type" width={120}>
           <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
             <option value="all">All</option>
@@ -1670,7 +1670,7 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
         </ChartCard>
       </div>
 
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <button className="btn secondary small" onClick={() => setMonthOffset((o) => o - 1)}>◀ Prev month</button>
         <button className="btn secondary small" onClick={() => setMonthOffset(0)}>This month</button>
         <button className="btn secondary small" onClick={() => setMonthOffset((o) => o + 1)}>Next month ▶</button>

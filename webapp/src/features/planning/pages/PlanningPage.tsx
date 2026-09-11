@@ -166,7 +166,7 @@ function ActivityList({ activities }: { activities: BudgetActivity[] }) {
 
   return (
     <CollapsibleCard title={<h3 style={{ margin: 0 }}>All planned financial activity</h3>} style={{ marginBottom: 16 }}>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <Field label="Account" width={130}>
           <Select value={moduleFilter} onChange={(e) => setModuleFilter(e.target.value as typeof moduleFilter)}>
             <option value="all">All</option>

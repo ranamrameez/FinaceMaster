@@ -8155,6 +8155,22 @@ FinanceManager live link:
   new `netWorthAsOf.ts`/`earliestActivityDate()` wiring picks up credit card transactions for
   past-month computation too. `npx tsc -b` / `npm run test` (645 tests, 22 new) / `npm run
   build` all clean.
+- **App-wide CSS cleanup, fifth concrete instance — see Done item 301 (2026-09-11), continuing
+  Pending item 116.** Same "audit one repeated pattern, extract, verify, repeat" discipline as
+  the four instances before it. Grepped for the next most-repeated exact `style={{...}}`
+  literal that wasn't a bare property (the previous instance already covered `.row.gap-sm`'s
+  own `gap:8`) and found `style={{ gap: 8, marginBottom: 8 }}` — 27 occurrences across 13
+  files, always the identical pairing on a `className="row"` element, i.e. the SAME `.row.
+  gap-sm` case with one extra `marginBottom:8` layered on top. Confirmed via a grep of
+  `theme.css` that no existing rule touches `margin-bottom` on `.row` or a bare `div` before
+  adding anything, so a standalone `.mb-sm{margin-bottom:8px;}` utility (deliberately NOT
+  folded into `.row.gap-sm` itself, since most `.row.gap-sm` call sites do not want the extra
+  margin and coupling them would silently change their layout) is a safe, behavior-preserving
+  1:1 swap. Replaced every occurrence via a scripted `sed` pass: `className="row" style={{
+  gap: 8, marginBottom: 8 }}` → `className="row gap-sm mb-sm"`. Verified live via Playwright
+  (a seeded Cash page): the resulting element's `getComputedStyle()` read `gap:8px`/
+  `marginBottom:8px` exactly as before, zero new console errors. `npx tsc -b` / `npm run test`
+  (645 tests, unchanged — pure CSS extraction) / `npm run build` all clean.
 
 ## Pending
 
@@ -9014,7 +9030,10 @@ or a design decision before more code, not guessed at further:**
      instance done (2026-09-10) — see Done item 299**: a repeated
      `style={{ display: 'none' }}` (13 occurrences across 11 files, every one a native
      `<input type="file">` triggered via a `ref`, never conditionally toggled) extracted into
-     one new `.hidden-file-input{display:none;}` class. The exact same
+     one new `.hidden-file-input{display:none;}` class. **Fifth concrete instance done
+     (2026-09-11) — see Done item 301**: `style={{ gap: 8, marginBottom: 8 }}` (27 occurrences
+     across 13 files, always the same `.row.gap-sm` case with an extra bottom margin layered
+     on) extracted into a new standalone `.mb-sm{margin-bottom:8px;}` utility. The exact same
      incremental discipline (audit one repeated pattern, extract or remove, verify, repeat)
      still applies for every other module/pattern — this is one instance of an ongoing,
      repeatable practice, not a closed item.

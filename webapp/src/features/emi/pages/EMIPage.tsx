@@ -817,7 +817,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
         Show the full schedule, start to end (instead of just the next 12 installments)
       </label>
       {/* User-requested (2026-09-03): "add filters to other tables as well." */}
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <Field label="Status" width={140}>
           <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}>
             <option value="all">All</option>

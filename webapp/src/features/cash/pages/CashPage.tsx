@@ -321,7 +321,7 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
   return (
     <Card>
       <h4 style={{ marginTop: 0 }}>{code}</h4>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <Field label="Type" width={120}>
           <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
             <option value="all">All</option>
@@ -933,7 +933,7 @@ function PlanList() {
 
   return (
     <CollapsibleCard title={<h3 style={{ margin: 0 }}>Plans</h3>}>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <Field label="Status" width={120}>
           <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}>
             <option value="all">All</option>
