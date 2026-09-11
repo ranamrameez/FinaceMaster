@@ -8249,6 +8249,20 @@ FinanceManager live link:
   did. Zero new console errors on either page. `npx tsc -b` / `npm run test` (651 tests,
   unchanged — the +6 vs. the prior instance's count came from an unrelated PR merged in
   between) / `npm run build` all clean.
+- **App-wide CSS cleanup, eleventh concrete instance — see Done item 307 (2026-09-11),
+  continuing Pending item 116.** `style={{ marginTop: 0 }}` — 69 occurrences across 20 files,
+  the biggest single instance so far. Almost always the first child inside a `Card`/
+  `CollapsibleCard` (an `<h3>`/`<h4>`/`<p>`) zeroing the browser's own default top margin —
+  this app has no global `h1..h6`/`p` margin reset in `theme.css`, so this per-instance zero is
+  genuinely load-bearing, not dead code. Checked `theme.css` for a competing `margin-top:0`
+  rule first — found only `.notice-body p:first-child{margin-top:0;}`, scoped inside `Notice`
+  and unrelated — so a bare `.mt-0{margin-top:0;}` class was safe to add. Converted all 69 via
+  the same scripted pass (merge into an existing `className`, or add a bare one) plus the same
+  whitespace-artifact cleanup as every prior instance. Verified live via Playwright: the Legal
+  page's 5 `<h3 className="mt-0">` disclaimer headings and the Account page's merged
+  `<p className="text-muted mt-0">` both computed `margin-top: 0px` exactly as the removed
+  inline style did, zero new console errors on either page. `npx tsc -b` / `npm run test`
+  (651 tests, unchanged) / `npm run build` all clean.
 
 ## Pending
 
@@ -9131,10 +9145,13 @@ or a design decision before more code, not guessed at further:**
      `style={{ marginBottom: 16 }}` (54 occurrences across 17 files) — this one followed
      through on the ninth instance's own deferral by adding `className` support to
      `CollapsibleCard` and `Notice` (neither had it before), then converted all 54 into a new
-     `.mb-md{margin-bottom:16px;}` utility. The exact same incremental discipline (audit one
-     repeated pattern, extract or remove, verify, repeat) still applies for every other
-     module/pattern — this is one instance of an ongoing, repeatable practice, not a closed
-     item.
+     `.mb-md{margin-bottom:16px;}` utility. **Eleventh concrete instance done (2026-09-11) —
+     see Done item 307**: `style={{ marginTop: 0 }}` (69 occurrences across 20 files, the
+     biggest single instance so far) — mostly the first child inside a `Card`/`CollapsibleCard`
+     zeroing the browser's own default heading/paragraph top margin; extracted into a new
+     `.mt-0{margin-top:0;}` utility. The exact same incremental discipline (audit one repeated
+     pattern, extract or remove, verify, repeat) still applies for every other module/pattern —
+     this is one instance of an ongoing, repeatable practice, not a closed item.
 117. ~~App-wide "everything should be a grid item except tables" principle (2026-09-06)~~ —
      **done in full (2026-09-08), see Done item 237.** Every module's landing/Settings page has
      been audited for the "short non-table cards stacked full-width" pattern; Cash's Settings

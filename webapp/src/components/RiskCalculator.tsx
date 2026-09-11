@@ -262,7 +262,7 @@ export function RiskCalculator({
           </Notice>
 
           <Card className="mb-md">
-            <h3 style={{ marginTop: 0 }}>Current position</h3>
+            <h3 className="mt-0">Current position</h3>
             <div className="grid-auto" style={gridAutoStyle(120, 8)}>
               <StatCard label="Invested" value={fmtMoney(currentMetrics.invested, currency)} hue={HUES[0]} labelTitle="Total cost basis of your current position, fees included." />
               <StatCard
@@ -288,7 +288,7 @@ export function RiskCalculator({
           </Card>
 
           <Card className="mb-md">
-            <h3 style={{ marginTop: 0 }}>Meaningful averaging points</h3>
+            <h3 className="mt-0">Meaningful averaging points</h3>
             <div className="table-scroll">
               <table>
                 <thead>
@@ -330,7 +330,7 @@ export function RiskCalculator({
           </Card>
 
           <Card className="mb-md">
-            <h3 style={{ marginTop: 0 }}>Capital efficiency &amp; diminishing returns</h3>
+            <h3 className="mt-0">Capital efficiency &amp; diminishing returns</h3>
             <div className="grid-auto" style={{ ...gridAutoStyle(120, 8), marginBottom: 10 }}>
               <StatCard label="Risk level" value={riskMode.toUpperCase()} hue={HUES[6]} labelTitle="Conservative/Balanced/Aggressive only changes the suggested ceiling above — never the math." />
               <StatCard
@@ -361,7 +361,7 @@ export function RiskCalculator({
           </Card>
 
           <Card>
-            <h3 style={{ marginTop: 0 }}>Stress test after selected average</h3>
+            <h3 className="mt-0">Stress test after selected average</h3>
             <div className="grid-auto" style={gridAutoStyle(90, 8)}>
               {stress.map((p) => (
                 <div key={p.label} className="stat-card card" style={hueStyle(p.pl >= 0 ? 'var(--profit)' : 'var(--loss)')}>

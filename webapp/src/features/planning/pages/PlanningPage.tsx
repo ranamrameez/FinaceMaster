@@ -119,7 +119,7 @@ export function PlanningPage({
         />
       </CollapsibleCard>
       <CollapsibleCard title={<h3 style={{ margin: 0 }}>Rentals</h3>}>
-        <p className="text-muted" style={{ marginTop: 0 }}>
+        <p className="text-muted mt-0">
           Rentals plans its own recurring rent per property (see a property's own "Details" view for lease-based
           projection and rent collection) — use this for a one-off plan that doesn't fit either of those, like a
           planned repair expense.

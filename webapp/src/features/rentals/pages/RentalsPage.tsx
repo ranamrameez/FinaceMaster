@@ -1109,7 +1109,7 @@ function ImportTab() {
 
       {headers.length > 0 && (
         <Card style={{ marginTop: 12 }}>
-          <h3 style={{ marginTop: 0 }}>Map columns</h3>
+          <h3 className="mt-0">Map columns</h3>
           <div className="row gap-sm">
             <Field label="Date column" width={160}>
               <Select value={dateCol} onChange={(e) => setDateCol(e.target.value)}>
@@ -1260,7 +1260,7 @@ function AccountSection({
     <Card className="mb-md">
       {cloudEmpty && (
         <Notice tone="warning" style={{ marginTop: 8 }}>
-          <p style={{ marginTop: 0 }}>No data found in the cloud for this account's Rentals workbook. This won't upload automatically.</p>
+          <p className="mt-0">No data found in the cloud for this account's Rentals workbook. This won't upload automatically.</p>
           <button
             className="btn secondary"
             disabled={busy}
@@ -1326,7 +1326,7 @@ function DataManagement() {
 
   return (
     <Card>
-      <h3 style={{ marginTop: 0 }}>Data management</h3>
+      <h3 className="mt-0">Data management</h3>
       <div className="row gap-sm">
         <button className="btn secondary" onClick={exportJSON}>Export JSON</button>
         <button className="btn secondary" onClick={() => fileInput.current?.click()}>Import JSON</button>
@@ -1392,7 +1392,7 @@ export function RentalsPage({
             label: 'Settings',
             content: (
               <div>
-                <p className="text-muted" style={{ marginTop: 0 }}>
+                <p className="text-muted mt-0">
                   Sign-in, profile, appearance, and a whole-app backup live on the{' '}
                   <Link to="/account">Account page →</Link>. What's below is specific to Rentals.
                 </p>

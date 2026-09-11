@@ -684,7 +684,7 @@ export function BankDetailPage() {
           </div>
         ) : (
           <div>
-            {bank.notes && <p className="text-muted" style={{ marginTop: 0 }}>{bank.notes}</p>}
+            {bank.notes && <p className="text-muted mt-0">{bank.notes}</p>}
             <div className="row" style={{ gap: 16 }}>
               {Object.keys(totals).length ? (
                 Object.entries(totals).map(([c, n]) => (
@@ -1195,7 +1195,7 @@ export function AccountDetailPage() {
          axis: the page itself), with `.table-scroll` still handling
          horizontal overflow on a narrow viewport as it always did. */}
       <Card className="mb-md">
-        <h3 style={{ marginTop: 0 }}>Transactions</h3>
+        <h3 className="mt-0">Transactions</h3>
         <TransactionsList account={account} />
       </Card>
 
@@ -1904,7 +1904,7 @@ function AccountSection({
     <div>
       {cloudEmpty && (
         <Notice tone="warning" style={{ marginTop: 8 }}>
-          <p style={{ marginTop: 0 }}>
+          <p className="mt-0">
             No data found in the cloud for this account's Banking workbook. This won't upload automatically.
           </p>
           <button
@@ -2207,7 +2207,7 @@ function PlanningAccountSection({
   if (!firebaseReady || !cloudEmpty) return null;
   return (
     <Notice tone="warning" style={{ marginTop: 16 }}>
-      <p style={{ marginTop: 0 }}>No data found in the cloud for this account's plans. This won't upload automatically.</p>
+      <p className="mt-0">No data found in the cloud for this account's plans. This won't upload automatically.</p>
       <button
         className="btn secondary"
         disabled={busy}
@@ -2319,7 +2319,7 @@ function AnalyticsTab() {
           </div>
 
           <CollapsibleCard title={<h3 style={{ margin: 0 }}>Budget — {thisMonth}</h3>} style={{ marginTop: 16 }}>
-            <p className="text-muted" style={{ marginTop: 0 }}>
+            <p className="text-muted mt-0">
               Set a monthly spend target per category for {account.name}; compared against what you've actually
               spent there this month.
             </p>
@@ -2527,7 +2527,7 @@ export function BankPage({
             label: 'Settings',
             content: (
               <div>
-                <p className="text-muted" style={{ marginTop: 0 }}>
+                <p className="text-muted mt-0">
                   Sign-in, profile, appearance, and a whole-app backup live on the{' '}
                   <Link to="/account">Account page →</Link>. What's below is specific to Banking.
                 </p>
