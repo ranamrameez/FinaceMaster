@@ -671,7 +671,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
       )}
 
       {tickerAnalysis.length > 0 && (
-        <div style={{ marginTop: 12 }}>
+        <div className="mt-12">
           <div className="text-muted" style={{ marginBottom: 4 }}>
             Per-ticker plan analysis — average cost blends this plan's pending buys with any shares you already
             hold; already-executed legs are shown separately and never double-counted into it.
@@ -782,7 +782,7 @@ export function TradePlannerPage() {
   return (
     <div>
       <h1 className="pagetitle">PSX Trade Planner</h1>
-      <p className="text-muted" style={{ marginBottom: 12 }}>
+      <p className="text-muted mb-12">
         Sketch out multi-leg trades ahead of time, save as many plans as you like, and mark each leg done —
         once it's actually executed — to log it straight into your transaction history without re-entering it.
       </p>

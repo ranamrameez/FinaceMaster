@@ -57,7 +57,7 @@ export function Modal({
             </button>
           </div>
         </div>
-        <div style={{ marginTop: 12 }}>{children}</div>
+        <div className="mt-12">{children}</div>
       </div>
     </div>
   );

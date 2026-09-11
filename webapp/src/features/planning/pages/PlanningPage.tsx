@@ -95,7 +95,7 @@ export function PlanningPage({
   return (
     <div>
       <h1 className="pagetitle">Planning</h1>
-      <p className="text-muted" style={{ marginBottom: 12 }}>
+      <p className="text-muted mb-12">
         Everything expected to happen soon, across every module — a plan can repeat (e.g. a monthly salary or a
         recurring bill), so you only set it up once. Browse every planned Cash/Banking/Rentals activity below, or
         manage a specific module's own plans (add, edit, delete, mark done) further down.
@@ -291,7 +291,7 @@ function AddRentalPlanForm({ rentalProperties, addPlannedRentals, onSaved }: { r
       <datalist id="rental-plan-category-datalist">
         {categoryOptions.map((c) => <option key={c} value={c} />)}
       </datalist>
-      <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
+      <button className="btn mt-12" onClick={submit}>
         <PlusIcon />Add plan
       </button>
       <p className="text-muted mt-sm"><span style={{ color: 'var(--loss)' }}>*</span> Required. Everything else on this form is optional.</p>

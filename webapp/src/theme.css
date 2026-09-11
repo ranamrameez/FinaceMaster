@@ -725,6 +725,18 @@
      it sits flush inside the card header row. Confirmed no `margin:0`
      rule already exists in `theme.css` that this could compete with. */
   .m-0{margin:0;}
+  /* Same cleanup, thirteenth instance (2026-09-11): `style={{ marginBottom:
+     12 }}` and `style={{ marginTop: 12 }}` — 34 occurrences each, mostly a
+     `<p className="text-muted">` intro paragraph or a `CollapsibleCard`'s
+     own `style` prop (now `className`-mergeable per the `.mb-md` instance
+     above). 12px doesn't fit the existing `sm`(8)/`md`(16) semantic scale,
+     so named literally by value rather than inventing a third semantic
+     tier for one specific number. Checked `theme.css` for a competing
+     `margin-top:12px`/`margin-bottom:12px` rule first — the 3 hits found
+     are all scoped to a specific class (`.sidebar-title-row`, `.pagesub`
+     under a density attribute, one more), none of them bare/generic. */
+  .mb-12{margin-bottom:12px;}
+  .mt-12{margin-top:12px;}
   /* User-reported (2026-08-27): "Input sizes still inconsistent and taking
      whole 100% width." Root cause: `flex:1` (flex-basis:0%) ignores each
      field's own explicit `width` prop entirely and instead divides the

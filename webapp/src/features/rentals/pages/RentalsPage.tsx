@@ -156,7 +156,7 @@ export function AddPropertyForm({ onSaved, initialCurrency }: { onSaved?: (id: s
           <TextInput type="number" step="0.01" value={p.purchasePrice ?? ''} onChange={(e) => setP({ ...p, purchasePrice: e.target.value === '' ? undefined : Number(e.target.value) })} />
         </Field>
       </div>
-      <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
+      <button className="btn mt-12" onClick={submit}>
         <PlusIcon />Add property
       </button>
     </div>
@@ -1081,7 +1081,7 @@ function ImportTab() {
 
   return (
     <div>
-      <p className="text-muted" style={{ marginBottom: 12 }}>
+      <p className="text-muted mb-12">
         Import a CSV export of rent/expense entries for one property. This is a simple "map these columns" tool —
         pick which column is which below. A positive amount is treated as rent income, negative as an expense
         (check "Flip sign" if your export does the opposite).
@@ -1108,7 +1108,7 @@ function ImportTab() {
       </div>
 
       {headers.length > 0 && (
-        <Card style={{ marginTop: 12 }}>
+        <Card className="mt-12">
           <h3 className="mt-0">Map columns</h3>
           <div className="row gap-sm">
             <Field label="Date column" width={160}>
@@ -1149,7 +1149,7 @@ function ImportTab() {
               </tbody>
             </table>
           </div>
-          <button className="btn" style={{ marginTop: 12 }} onClick={doImport}>
+          <button className="btn mt-12" onClick={doImport}>
             <PlusIcon />Import {rows.length} entr{rows.length === 1 ? 'y' : 'ies'}
           </button>
         </Card>
@@ -1229,7 +1229,7 @@ function EntriesTab({
         </Select>
       </Field>
       {property && (
-        <div style={{ marginTop: 12 }}>
+        <div className="mt-12">
           <CategoryAndRollup property={property} />
           <EntriesList property={property} />
           <EntriesFab propertyId={property.id} currencyCode={property.currencyCode} />
@@ -1362,7 +1362,7 @@ export function RentalsPage({
   return (
     <div>
       <h1 className="pagetitle">Rentals</h1>
-      <p className="text-muted" style={{ marginBottom: 12 }}>
+      <p className="text-muted mb-12">
         Rental property income and expenses — recurring rent received and costs (maintenance, property tax,
         management fees) against one or more properties, not discrete buy/sell trades.
       </p>

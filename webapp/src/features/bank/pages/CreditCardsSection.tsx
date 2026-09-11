@@ -90,7 +90,7 @@ export function AddCreditCardForm({ onSaved, initialCurrency }: { onSaved?: (id:
           <TextInput type="number" step="0.01" value={c.creditLimit ?? ''} onChange={(e) => setC({ ...c, creditLimit: e.target.value === '' ? undefined : Number(e.target.value) })} />
         </Field>
       </div>
-      <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
+      <button className="btn mt-12" onClick={submit}>
         <PlusIcon />Add card
       </button>
     </div>
@@ -419,7 +419,7 @@ function CreditCardDetail({ card, onClose }: { card: CreditCard; onClose: () => 
                 <TextInput type="number" step="0.01" value={draft.markupThresholdAmount ?? ''} onChange={(e) => setDraft({ ...draft, markupThresholdAmount: e.target.value === '' ? undefined : Number(e.target.value) })} />
               </Field>
             </div>
-            <button className="btn" style={{ marginTop: 12 }} onClick={saveDetails}><SaveIcon size={13} />Save</button>
+            <button className="btn mt-12" onClick={saveDetails}><SaveIcon size={13} />Save</button>
           </div>
         ) : (
           <AttributeList

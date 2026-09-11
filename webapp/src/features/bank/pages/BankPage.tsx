@@ -511,7 +511,7 @@ export function AddAccountForm({ onSaved, initialCurrency, initialBankId }: { on
         }}
         idSuffix="add"
       />
-      <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
+      <button className="btn mt-12" onClick={submit}>
         <PlusIcon />Add account
       </button>
       <p className="text-muted mt-sm"><span style={{ color: 'var(--loss)' }}>*</span> Required. Everything else on this form is optional.</p>
@@ -556,7 +556,7 @@ function BanksList() {
   return (
     <CollapsibleCard title="Banks" defaultOpen={false}>
       {archivedCount > 0 && (
-        <button className="btn secondary small" style={{ marginBottom: 12 }} onClick={() => setShowArchived((v) => !v)}>
+        <button className="btn secondary small mb-12" onClick={() => setShowArchived((v) => !v)}>
           {showArchived ? 'Hide' : 'Show'} closed ({archivedCount})
         </button>
       )}
@@ -783,8 +783,7 @@ function AccountsList() {
     <div>
       {archivedCount > 0 && (
         <button
-          className="btn secondary small"
-          style={{ marginBottom: 12 }}
+          className="btn secondary small mb-12"
           onClick={() => setShowArchived((v) => !v)}
         >
           {showArchived ? 'Hide' : 'Show'} closed ({archivedCount})
@@ -1005,7 +1004,7 @@ export function AccountDetailPage() {
     return (
       <div>
         <Link to="/bank" className="text-muted">← Back to Banking</Link>
-        <p className="text-muted" style={{ marginTop: 12 }}>Account not found.</p>
+        <p className="text-muted mt-12">Account not found.</p>
       </div>
     );
   }
@@ -1828,7 +1827,7 @@ function ImportStatementSection({ account }: { account: BankAccount }) {
       </div>
 
       {headers.length > 0 && (
-        <div style={{ marginTop: 12 }}>
+        <div className="mt-12">
           <div className="row gap-sm">
             <Field label="Date column" width={160}>
               <Select value={dateCol} onChange={(e) => setDateCol(e.target.value)}>
@@ -2068,7 +2067,7 @@ function AddBankPlanForm({ accountId, onSaved }: { accountId: string; onSaved?: 
         </Field>
         <RecurrenceFields startDate={p.date} value={p.recurrence} onChange={(recurrence) => setP({ ...p, recurrence })} />
       </div>
-      <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
+      <button className="btn mt-12" onClick={submit}>
         <PlusIcon />Add plan
       </button>
     </div>
@@ -2411,7 +2410,7 @@ export function PlanningTab({
         </Select>
       </Field>
       {account && (
-        <div style={{ marginTop: 12 }}>
+        <div className="mt-12">
           <BankPlanList account={account} />
           <AddBankPlanFab accountId={account.id} />
         </div>

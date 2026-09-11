@@ -239,7 +239,7 @@ export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: strin
           <TextInput value={l.note} onChange={(e) => setL({ ...l, note: e.target.value })} />
         </Field>
       </div>
-      <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
+      <button className="btn mt-12" onClick={submit}>
         <PlusIcon />Add loan
       </button>
     </div>
@@ -582,7 +582,7 @@ function ImportRepaymentsSection({ loan }: { loan: PersonalLoan }) {
   };
 
   return (
-    <Card style={{ marginTop: 12 }}>
+    <Card className="mt-12">
       <h4 className="mt-0">Import repayments (CSV)</h4>
       <div className="row" style={{ gap: 8, alignItems: 'center' }}>
         <button className="btn secondary small" onClick={() => fileInput.current?.click()}>Choose CSV file</button>
@@ -601,7 +601,7 @@ function ImportRepaymentsSection({ loan }: { loan: PersonalLoan }) {
       </div>
 
       {headers.length > 0 && (
-        <div style={{ marginTop: 12 }}>
+        <div className="mt-12">
           <div className="row gap-sm">
             <Field label="Date column" width={160}>
               <Select value={dateCol} onChange={(e) => setDateCol(e.target.value)}>
@@ -627,7 +627,7 @@ function ImportRepaymentsSection({ loan }: { loan: PersonalLoan }) {
               </tbody>
             </table>
           </div>
-          <button className="btn secondary" style={{ marginTop: 12 }} onClick={doImport}>
+          <button className="btn secondary mt-12" onClick={doImport}>
             <PlusIcon />Import {rows.length} repayment{rows.length === 1 ? '' : 's'}
           </button>
         </div>
@@ -724,7 +724,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
 
   return (
     <div>
-      <button className="btn secondary small" style={{ marginBottom: 12 }} onClick={onBack}>← All personal loans</button>
+      <button className="btn secondary small mb-12" onClick={onBack}>← All personal loans</button>
       <Card className="mb-md">
         {editing ? (
           <div>
@@ -980,7 +980,7 @@ export function PersonalLoansPage({
   return (
     <div>
       <h1 className="pagetitle">Personal Loans</h1>
-      <p className="text-muted" style={{ marginBottom: 12 }}>
+      <p className="text-muted mb-12">
         Informal loans with another person, tracked in either direction — money you lent out, or money you owe —
         with a combined net position. No repayment schedule automation; if this loan actually has a real interest
         schedule, it probably belongs in EMI/Loans instead.

@@ -8276,6 +8276,24 @@ FinanceManager live link:
   titles all computed `margin-top`/`margin-bottom`/`margin-left`/`margin-right` as `0px` on
   every side, exactly as the removed inline style did, zero new console errors. `npx tsc -b` /
   `npm run test` (651 tests, unchanged) / `npm run build` all clean.
+- **App-wide CSS cleanup, thirteenth concrete instance — see Done item 309 (2026-09-11),
+  continuing Pending item 116.** `style={{ marginBottom: 12 }}` and `style={{ marginTop: 12
+  }}` — 34 occurrences each (68 total) across 20 files, done together in one pass since
+  they're the identical value on opposite sides. Mostly a `<p className="text-muted">` intro
+  paragraph or a `CollapsibleCard`'s own `style`/`className` prop. 12px doesn't fit the
+  existing `sm`(8)/`md`(16) semantic scale from prior instances, so named literally by pixel
+  value (`.mb-12`/`.mt-12`) rather than inventing a third semantic tier for one specific
+  number. Confirmed the only `margin-top:12px`/`margin-bottom:12px` rules already in
+  `theme.css` are scoped to specific classes (`.sidebar-title-row`, a density-gated
+  `.pagesub`, one more), not bare/generic — safe to add. Converted all 68 via the same
+  scripted pass; `CollapsibleCard`'s own `style={{ marginBottom: 12 }}` cases merged into
+  `className="mb-12"` directly (the `className` support added in the `.mb-md` instance made
+  this possible). Verified live via Playwright: a seeded QSE stock page's `.card.mb-12`
+  computed `margin-bottom: 12px`, and the first-visit Terms gate's "Accept & continue"
+  button (`button.mt-12`) computed `margin-top: 12px` — both exactly as the removed inline
+  style did, zero new console errors. `npx tsc -b` / `npm run test` (651 tests, unchanged) /
+  `npm run build` all clean.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`
@@ -9164,10 +9182,14 @@ or a design decision before more code, not guessed at further:**
      `.mt-0{margin-top:0;}` utility. **Twelfth concrete instance done (2026-09-11) — see Done
      item 308**: `style={{ margin: 0 }}` (all four sides, 63 occurrences across 18 files) —
      mostly an `<h3>`/`<h4>` passed as a `CollapsibleCard`'s own `title` prop; extracted into a
-     new `.m-0{margin:0;}` utility, distinct from `.mt-0` since this zeroes every side. The
-     exact same incremental discipline (audit one repeated pattern, extract or remove, verify,
-     repeat) still applies for every other module/pattern — this is one instance of an ongoing,
-     repeatable practice, not a closed item.
+     new `.m-0{margin:0;}` utility, distinct from `.mt-0` since this zeroes every side.
+     **Thirteenth concrete instance done (2026-09-11) — see Done item 309**:
+     `style={{ marginBottom: 12 }}` and `style={{ marginTop: 12 }}` (34 occurrences each, 68
+     total across 20 files) — done together since they're the same value on opposite sides;
+     12px doesn't fit the existing `sm`(8)/`md`(16) scale, so named literally by value
+     (`.mb-12`/`.mt-12`). The exact same incremental discipline (audit one repeated pattern,
+     extract or remove, verify, repeat) still applies for every other module/pattern — this is
+     one instance of an ongoing, repeatable practice, not a closed item.
 117. ~~App-wide "everything should be a grid item except tables" principle (2026-09-06)~~ —
      **done in full (2026-09-08), see Done item 237.** Every module's landing/Settings page has
      been audited for the "short non-table cards stacked full-width" pattern; Cash's Settings

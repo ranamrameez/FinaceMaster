@@ -133,7 +133,7 @@ function AddSubscriptionForm({ onSaved }: { onSaved?: () => void } = {}) {
           <CategorySelect value={s.categoryID ?? UNCATEGORIZED_ID} onChange={(categoryID) => setS({ ...s, categoryID })} />
         </Field>
       </div>
-      <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
+      <button className="btn mt-12" onClick={submit}>
         <PlusIcon />Add subscription
       </button>
     </div>
@@ -450,7 +450,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
 
   return (
     <div>
-      <button className="btn secondary small" style={{ marginBottom: 12 }} onClick={onBack}>← All subscriptions</button>
+      <button className="btn secondary small mb-12" onClick={onBack}>← All subscriptions</button>
       <Card className="mb-md">
         {editing ? (
           <div>
@@ -791,7 +791,7 @@ export function SubscriptionsPage({
   return (
     <div>
       <h1 className="pagetitle">Subscriptions</h1>
-      <p className="text-muted" style={{ marginBottom: 12 }}>
+      <p className="text-muted mb-12">
         Recurring payments — streaming, gym, software, memberships — tracked independently and optionally
         linked to whichever Bank account or Cash actually pays them.
       </p>
