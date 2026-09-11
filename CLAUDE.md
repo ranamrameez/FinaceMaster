@@ -5750,6 +5750,36 @@ app, not developer notes) continuously as features ship.
   `display: none` and Playwright's own `isVisible()` correctly reads `false` post-change. `npx
   tsc -b` / `npm run test` (623 tests, unchanged) / `npm run build` all clean.
 
+- **Trade Strategy: merged Buy/Sell+Avg Down and Trade Planner+Partial Trade (new
+  strategy), PSX fee-mode redesign, an app-wide fixed top bar (2026-09-11) — see
+  `webapp/README.md`'s Done item 301 for the full writeup, this is a pointer.** Triggered by
+  the user's own real QSE IQCD position (50 sh @10.40 + 14 sh @9.962) showing that a blended
+  break-even can hide an individually-profitable cheap lot — new
+  `lib/calc/partialTradeStrategy.ts` gives per-lot break-even/P&L/sell-or-hold advice, a
+  30-day "missed opportunity" retrospective, and a per-share-commission "should I dive into
+  the dip" helper. New `features/{qse,psx}/pages/TradeStrategyPage.tsx` (QSE had none before;
+  `/psx/trade-planner` now redirects) merges Simple Buy/Sell + Avg Down into one calculator
+  with a toggle, and folds Partial Trade INTO the Trade Planner (not a sibling) — its lot
+  table renders above the legs table (summary-first, a real reported layout bug), works
+  standalone without a plan, and "Sell this lot" opens the existing Add-trade flow pre-filled.
+  Separately redesigned PSX's Auto fee mode (`psxFees.ts`'s `isProvisionalSameDayBuy()`): a
+  lone same-day BUY with no matching SELL yet now prices at a live, derived $0 (never a
+  persisted flag — self-corrects once a SELL appears or the day passes), replacing the old
+  behavior that "silently applied commission on same-day buys" per the user's own report.
+  **App-wide**: `Tabs.tsx`'s sub-nav chip row moved into a new `TopBar.tsx` (rendered by
+  `AppShell.tsx` as `.main`'s first child, via new `pageTopBarStore`/`usePageTopBar` — same
+  shape as the existing FAB-grouping mechanism) so it's visible immediately on load instead of
+  only once scrolled to — reaches every module page at once since `Tabs` is the one shared
+  component ~25+ pages already render through. Design reference: `wealth_tracker_template/`
+  (a "WealthPro" PRD + mockups) added to the repo root this session. Also in the same pass:
+  sidebar module icons, a "keep quick-actions panel always open" setting, an opt-in
+  portfolio-wide "Partial Trade Alerts" popup, Dashboard reordered summary-first with
+  Exchange rates demoted to collapsed and the currency picker moved into the new top bar's
+  right slot, and Cash's Plan list split per-currency (same bug class already fixed once for
+  the main ledger). `npx tsc -b` / `npm run test` (663 tests, 18 new) / `npm run build` clean
+  at every phase; each part verified live via Playwright, including reproducing the user's
+  exact real IQCD numbers (Hold/-4.36 vs Sell/+4.93 at the real 10.37 peak price).
+
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 
 **Locked, final decision — read this before touching anything below.** The user floated a
