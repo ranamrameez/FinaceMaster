@@ -1213,7 +1213,7 @@ export function AccountDetailPage() {
         title={<h3 style={{ margin: 0 }}>Download statement</h3>}
         headerExtra={<button className="btn" onClick={exportStatement}><ExportIcon size={13} />Export CSV</button>}
       >
-        <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+        <div className="row gap-sm">
           <Field label="From (optional)">
             <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
           </Field>

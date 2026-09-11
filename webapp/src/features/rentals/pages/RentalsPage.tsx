@@ -546,7 +546,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
                   partial payment.</>
                 )}
               </p>
-              <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+              <div className="row gap-sm">
                 <Field label="Collection date">
                   <TextInput type="date" value={collectDate} onChange={(e) => setCollectDate(e.target.value)} />
                 </Field>
@@ -1367,7 +1367,7 @@ export function RentalsPage({
             label: 'Income & expenses',
             content: <EntriesTab properties={properties} property={property} propertyId={propertyId} setPropertyId={setPropertyId} />,
             headerExtra: hasRows ? (
-              <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+              <div className="row gap-sm">
                 <Field label="From (optional)">
                   <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
                 </Field>

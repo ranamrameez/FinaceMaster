@@ -366,7 +366,7 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
         title={<h4 style={{ margin: 0 }}>Repayment history</h4>}
         headerExtra={
           repayments.length > 0 ? (
-            <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+            <div className="row gap-sm">
               <Field label="From (optional)">
                 <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
               </Field>

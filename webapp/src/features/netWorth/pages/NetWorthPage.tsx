@@ -490,7 +490,7 @@ export function NetWorthPage({
 
           <div style={{ marginTop: 12 }}>
             <div className="text-muted" style={{ marginBottom: 4 }}>Set a rate between any two currencies</div>
-            <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+            <div className="row gap-sm">
               <Field label="1 unit of">
                 <Select value={rateFrom} onChange={(e) => onRateFromChange(e.target.value)} width={110}>
                   {currencyCodes.map((c) => <option key={c} value={c}>{c}</option>)}

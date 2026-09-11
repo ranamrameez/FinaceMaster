@@ -544,7 +544,7 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
             months in the chosen account's Planning tab.
           </p>
         )}
-        <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+        <div className="row gap-sm">
           <Field label="Pays via">
             <Select value={linkModule} onChange={(e) => setLinkModule(e.target.value as 'bank' | 'cash')}>
               <option value="bank">Bank account</option>

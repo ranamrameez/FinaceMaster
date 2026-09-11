@@ -1306,7 +1306,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
       <Card style={{ marginBottom: 16 }}>
         <h3 style={{ marginTop: 0 }}>Update balance or NAV</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+          <div className="row gap-sm">
             <Field label="Update NAV" width={140}>
               <TextInput type="number" step="0.0001" value={navInput} onChange={(e) => setNavInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && commitNav()} />
             </Field>
@@ -1314,7 +1314,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
             <span className="text-muted">Current NAV: {currentNav ? fmtPrice(currentNav) : '—'}</span>
           </div>
           <div className="text-muted" style={{ textAlign: 'center' }}>OR</div>
-          <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+          <div className="row gap-sm">
             <Field label="Update balance" width={150} title="Don't know the per-unit NAV? Enter your fund's current total balance instead — the app computes the implied NAV from the units you already hold, assuming no deposit/withdrawal happened since your last update.">
               <TextInput type="number" step="0.01" value={balanceInput} onChange={(e) => setBalanceInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && commitBalance()} disabled={units <= 0} />
             </Field>
@@ -1327,7 +1327,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
         title={<h3 style={{ margin: 0 }}>Transactions</h3>}
         headerExtra={
           txs.length > 0 ? (
-            <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+            <div className="row gap-sm">
               <Field label="From (optional)">
                 <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
               </Field>
