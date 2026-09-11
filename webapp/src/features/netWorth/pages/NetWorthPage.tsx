@@ -398,7 +398,7 @@ export function NetWorthPage({
         </Notice>
       )}
 
-      <CollapsibleCard title={<h3 style={{ margin: 0 }}>Upcoming</h3>} className="mb-md" defaultOpen={upcomingItems.length > 0}>
+      <CollapsibleCard title={<h3 className="m-0">Upcoming</h3>} className="mb-md" defaultOpen={upcomingItems.length > 0}>
         <UpcomingList items={upcomingItems} limit={8} emptyText="Nothing expected in the next 14 days." />
         <Link to="/planning" className="text-muted" style={{ display: 'block', marginTop: 10 }}>See all →</Link>
       </CollapsibleCard>
@@ -994,7 +994,7 @@ function MonthlySummaryTable({
     m < nowMonth ? 'Actual' : m === nowMonth ? 'Current' : 'Projected';
 
   return (
-    <CollapsibleCard title={<h3 style={{ margin: 0 }}>Monthly summary — {currency}</h3>}>
+    <CollapsibleCard title={<h3 className="m-0">Monthly summary — {currency}</h3>}>
       <div className="table-scroll">
         <table>
           <thead>

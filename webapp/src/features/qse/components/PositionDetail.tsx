@@ -178,7 +178,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
     <div className="position-split-left">
 
       {isOpen && (
-        <CollapsibleCard title={<h4 style={{ margin: 0 }}>Current position</h4>} style={{ marginBottom: 12 }}>
+        <CollapsibleCard title={<h4 className="m-0">Current position</h4>} style={{ marginBottom: 12 }}>
           <div className="grid-auto" style={gridAutoStyle(100, 8)}>
             <div className="stat-card card" style={hueStyle(HUES[2])}>
               <div className="label">Trend</div>
@@ -222,7 +222,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
           realized, and over what period) is exactly what you'd want to
           look back on. */}
       {position && (position.buyCount > 0 || position.sellCount > 0) && (
-        <CollapsibleCard title={<h4 style={{ margin: 0 }}>All-time stats</h4>} style={{ marginBottom: 12 }}>
+        <CollapsibleCard title={<h4 className="m-0">All-time stats</h4>} style={{ marginBottom: 12 }}>
           <div className="grid-auto" style={gridAutoStyle(100, 8)}>
             <div className="stat-card card" style={hueStyle(HUES[0])}>
               <div className="label">Bought / Sold</div>
@@ -258,7 +258,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
 
       {/* Daily price — the single most-asked-about number, so it leads
           instead of being buried under other sections. */}
-      <CollapsibleCard title={<h4 style={{ margin: 0 }}>Daily price</h4>} style={{ marginBottom: 12 }}>
+      <CollapsibleCard title={<h4 className="m-0">Daily price</h4>} style={{ marginBottom: 12 }}>
       {stats ? (
         <CompactChart height={130}>
           <Line
@@ -308,7 +308,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
       </CollapsibleCard>
 
       {isOpen && (
-        <CollapsibleCard title={<h4 style={{ margin: 0 }}>Buy vs. current vs. break-even</h4>} style={{ marginBottom: 12 }}>
+        <CollapsibleCard title={<h4 className="m-0">Buy vs. current vs. break-even</h4>} style={{ marginBottom: 12 }}>
           <CompactChart height={lastSellPrice > 0 ? 150 : 115}>
             <Bar
               data={{
@@ -337,7 +337,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
       )}
 
       {stats && (
-        <CollapsibleCard title={<h4 style={{ margin: 0 }}>Price range</h4>}>
+        <CollapsibleCard title={<h4 className="m-0">Price range</h4>}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 8 }}>
             <div className="stat-card card" style={hueStyle(HUES[5])}><div className="label">Lowest</div><div className="value">{fmtPrice(stats.min)}</div><div className="sub">{stats.minDate}</div></div>
             <div className="stat-card card" style={hueStyle(HUES[1])}>

@@ -757,7 +757,7 @@ function BalanceProjectionSummary() {
   const codes = Object.keys(projection);
 
   return (
-    <CollapsibleCard title={<h3 style={{ margin: 0 }}>Balance projection</h3>} className="mb-md">
+    <CollapsibleCard title={<h3 className="m-0">Balance projection</h3>} className="mb-md">
       <p className="text-muted mt-0">
         See what your balance would look like if every plan below actually happened — a reality check before you
         spend. Choose what you want to see:
@@ -939,7 +939,7 @@ function PlanList() {
   };
 
   return (
-    <CollapsibleCard title={<h3 style={{ margin: 0 }}>Plans</h3>}>
+    <CollapsibleCard title={<h3 className="m-0">Plans</h3>}>
       <div className="row gap-sm mb-sm">
         <Field label="Status" width={120}>
           <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}>

@@ -353,7 +353,7 @@ function InvestmentHelperModal({ onClose }: { onClose: () => void }) {
       <div key={fund.id} className="card" style={{ padding: 12, flex: 1, minWidth: 220 }}>
         <div className="text-muted" style={{ marginBottom: 6 }}>{fund.name} ({fund.currencyCode})</div>
         {!projected ? (
-          <p className="text-muted" style={{ margin: 0 }}>Not enough price history yet to project returns for this fund.</p>
+          <p className="text-muted m-0">Not enough price history yet to project returns for this fund.</p>
         ) : (
           <div className="grid-auto" style={gridAutoStyle(90, 8)}>
             <div className="stat-card card" style={hueStyle(projected.dailyAmount >= 0 ? 'var(--profit)' : 'var(--loss)')}>
@@ -1324,7 +1324,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
       </Card>
 
       <CollapsibleCard
-        title={<h3 style={{ margin: 0 }}>Transactions</h3>}
+        title={<h3 className="m-0">Transactions</h3>}
         headerExtra={
           txs.length > 0 ? (
             <div className="row gap-sm">
@@ -1431,7 +1431,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
           then "missing crucial data. Add all data like Index, Date, prv
           balnce + NAV, new balance + NAV, change + %age, Actions etc." */}
       <CollapsibleCard
-        title={<h3 style={{ margin: 0 }}>Balance Update History</h3>}
+        title={<h3 className="m-0">Balance Update History</h3>}
         style={{ marginTop: 16 }}
         headerExtra={balanceRows.length > 0 ? <button className="btn secondary" onClick={exportBalanceHistory}>Export CSV</button> : undefined}
       >

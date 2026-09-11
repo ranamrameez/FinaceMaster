@@ -1090,7 +1090,7 @@ export function AccountDetailPage() {
       <CollapsibleCard
         defaultOpen={false}
         className="mb-md"
-        title={<h3 style={{ margin: 0 }}>Account details</h3>}
+        title={<h3 className="m-0">Account details</h3>}
         headerExtra={
           editingMeta ? (
             <>
@@ -1136,12 +1136,12 @@ export function AccountDetailPage() {
          Transfers FAB below), this grid holds By category + Upcoming plans
          side by side instead of either claiming the full page width. */}
       <div className="detail-grid mb-md">
-        <CollapsibleCard defaultOpen={false} title={<h3 style={{ margin: 0 }}>By category</h3>}>
+        <CollapsibleCard defaultOpen={false} title={<h3 className="m-0">By category</h3>}>
           <CategoryBreakdownBody account={account} />
         </CollapsibleCard>
 
         {upcoming.length > 0 && (
-          <CollapsibleCard defaultOpen={false} title={<h3 style={{ margin: 0 }}>Upcoming plans ({upcoming.length})</h3>}>
+          <CollapsibleCard defaultOpen={false} title={<h3 className="m-0">Upcoming plans ({upcoming.length})</h3>}>
             <div className="table-scroll">
               <table>
                 <thead><tr><th>Date</th><th>Description</th><th>Amount</th></tr></thead>
@@ -1168,7 +1168,7 @@ export function AccountDetailPage() {
          picker — this brings the same three charts directly onto the
          account's own page, pre-scoped to it, plus a month-nav'd exact-
          numbers table (see `AccountAnalyticsSection`'s own doc comment). */}
-      <CollapsibleCard defaultOpen={false} className="mb-md" title={<h3 style={{ margin: 0 }}>Analytics</h3>}>
+      <CollapsibleCard defaultOpen={false} className="mb-md" title={<h3 className="m-0">Analytics</h3>}>
         <AccountAnalyticsSection account={account} />
       </CollapsibleCard>
 
@@ -1203,14 +1203,14 @@ export function AccountDetailPage() {
          moved in from the old standalone tab (see ImportStatementSection's
          own comment). Collapsed by default — importing a statement is rare
          once an account's history is caught up. */}
-      <CollapsibleCard defaultOpen={false} className="mb-md" title={<h3 style={{ margin: 0 }}>Import statement</h3>}>
+      <CollapsibleCard defaultOpen={false} className="mb-md" title={<h3 className="m-0">Import statement</h3>}>
         <ImportStatementSection account={account} />
       </CollapsibleCard>
 
       <CollapsibleCard
         defaultOpen={false}
         className="mb-md"
-        title={<h3 style={{ margin: 0 }}>Download statement</h3>}
+        title={<h3 className="m-0">Download statement</h3>}
         headerExtra={<button className="btn" onClick={exportStatement}><ExportIcon size={13} />Export CSV</button>}
       >
         <div className="row gap-sm">
@@ -1624,7 +1624,7 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
   const endOfMonthBalance = accountBalanceAsOfMonth(ledger, selectedMonth, account.openingBalance);
 
   if (!ledger.length) {
-    return <p className="text-muted" style={{ margin: 0 }}>No transactions yet — analytics will appear once you log some.</p>;
+    return <p className="text-muted m-0">No transactions yet — analytics will appear once you log some.</p>;
   }
 
   return (
@@ -1710,7 +1710,7 @@ function CategoryBreakdownBody({ account }: { account: BankAccount }) {
   const categories = useCategoryStore((s) => s.workbook.categories);
   const byCategory = accountByCategory(account, transactions, categories);
   const cats = Object.keys(byCategory);
-  if (!cats.length) return <p className="text-muted" style={{ margin: 0 }}>No categorized transactions yet.</p>;
+  if (!cats.length) return <p className="text-muted m-0">No categorized transactions yet.</p>;
 
   return (
       <div className="table-scroll">
@@ -2120,7 +2120,7 @@ function BankPlanList({ account }: { account: BankAccount }) {
   };
 
   return (
-    <CollapsibleCard title={<h3 style={{ margin: 0 }}>Plans</h3>}>
+    <CollapsibleCard title={<h3 className="m-0">Plans</h3>}>
       <div className="table-scroll">
         <table>
           <thead>
@@ -2318,7 +2318,7 @@ function AnalyticsTab() {
             </ChartCard>
           </div>
 
-          <CollapsibleCard title={<h3 style={{ margin: 0 }}>Budget — {thisMonth}</h3>} style={{ marginTop: 16 }}>
+          <CollapsibleCard title={<h3 className="m-0">Budget — {thisMonth}</h3>} style={{ marginTop: 16 }}>
             <p className="text-muted mt-0">
               Set a monthly spend target per category for {account.name}; compared against what you've actually
               spent there this month.
@@ -2499,7 +2499,7 @@ export function BankPage({
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-        <h1 className="pagetitle" style={{ margin: 0 }}>Banking</h1>
+        <h1 className="pagetitle m-0">Banking</h1>
         <Tooltip text="Bank account balances and transaction history, entered manually or imported from a CSV statement — no live bank connection (see Disclaimer & Privacy for why)." />
       </div>
       <Tabs

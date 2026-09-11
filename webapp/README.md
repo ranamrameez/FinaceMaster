@@ -8263,7 +8263,19 @@ FinanceManager live link:
   `<p className="text-muted mt-0">` both computed `margin-top: 0px` exactly as the removed
   inline style did, zero new console errors on either page. `npx tsc -b` / `npm run test`
   (651 tests, unchanged) / `npm run build` all clean.
-
+- **App-wide CSS cleanup, twelfth concrete instance — see Done item 308 (2026-09-11),
+  continuing Pending item 116.** `style={{ margin: 0 }}` (all four sides, not just top) — 63
+  occurrences across 18 files, almost always an `<h3>`/`<h4>` passed as a `CollapsibleCard`'s
+  own `title` prop, zeroing every side of the browser's default heading margin so it sits
+  flush inside the card header row. Confirmed no existing `margin:0` rule in `theme.css`
+  before adding a bare `.m-0{margin:0;}` class — distinct from `.mt-0` (top-only) added in the
+  prior instance, since this needs all four sides zeroed, not just one. Converted all 63 via
+  the same scripted pass; the heuristic tag-boundary approach worked identically for headings
+  embedded inside a JSX prop expression (`title={<h3 ...>...</h3>}`), not just direct children.
+  Verified live via Playwright on the Account page: 3 `<h3 className="m-0">` `CollapsibleCard`
+  titles all computed `margin-top`/`margin-bottom`/`margin-left`/`margin-right` as `0px` on
+  every side, exactly as the removed inline style did, zero new console errors. `npx tsc -b` /
+  `npm run test` (651 tests, unchanged) / `npm run build` all clean.
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`
@@ -9149,9 +9161,13 @@ or a design decision before more code, not guessed at further:**
      see Done item 307**: `style={{ marginTop: 0 }}` (69 occurrences across 20 files, the
      biggest single instance so far) — mostly the first child inside a `Card`/`CollapsibleCard`
      zeroing the browser's own default heading/paragraph top margin; extracted into a new
-     `.mt-0{margin-top:0;}` utility. The exact same incremental discipline (audit one repeated
-     pattern, extract or remove, verify, repeat) still applies for every other module/pattern —
-     this is one instance of an ongoing, repeatable practice, not a closed item.
+     `.mt-0{margin-top:0;}` utility. **Twelfth concrete instance done (2026-09-11) — see Done
+     item 308**: `style={{ margin: 0 }}` (all four sides, 63 occurrences across 18 files) —
+     mostly an `<h3>`/`<h4>` passed as a `CollapsibleCard`'s own `title` prop; extracted into a
+     new `.m-0{margin:0;}` utility, distinct from `.mt-0` since this zeroes every side. The
+     exact same incremental discipline (audit one repeated pattern, extract or remove, verify,
+     repeat) still applies for every other module/pattern — this is one instance of an ongoing,
+     repeatable practice, not a closed item.
 117. ~~App-wide "everything should be a grid item except tables" principle (2026-09-06)~~ —
      **done in full (2026-09-08), see Done item 237.** Every module's landing/Settings page has
      been audited for the "short non-table cards stacked full-width" pattern; Cash's Settings
