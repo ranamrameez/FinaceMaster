@@ -111,13 +111,13 @@ function CreditCardFields({ value, onChange, datalistId }: { value: CreditCardVa
   };
 
   return (
-    <div style={{ marginTop: 8 }}>
+    <div className="mt-sm">
       <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <input type="checkbox" checked={!!value.isLiability} onChange={(e) => onChange({ isLiability: e.target.checked })} />
         This is a credit card (counts as a debt in Net Worth, not a balance)
       </label>
       {value.isLiability && (
-        <div style={{ marginTop: 8 }}>
+        <div className="mt-sm">
           <div className="row gap-sm">
             <Field label="Credit limit (optional)" width={140}>
               <TextInput type="number" step="0.01" value={value.creditLimit ?? ''} onChange={(e) => onChange({ creditLimit: e.target.value ? Number(e.target.value) : undefined })} />
@@ -514,7 +514,7 @@ export function AddAccountForm({ onSaved, initialCurrency, initialBankId }: { on
       <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
         <PlusIcon />Add account
       </button>
-      <p className="text-muted" style={{ marginTop: 8 }}><span style={{ color: 'var(--loss)' }}>*</span> Required. Everything else on this form is optional.</p>
+      <p className="text-muted mt-sm"><span style={{ color: 'var(--loss)' }}>*</span> Required. Everything else on this form is optional.</p>
     </div>
   );
 }
@@ -1317,7 +1317,7 @@ function EditTransactionModal({ tx, onClose }: { tx: BankTransaction; onClose: (
           onTimezoneChange={(timezone) => setDraft({ ...draft, timezone })}
         />
       </div>
-      <div style={{ marginTop: 8 }}>
+      <div className="mt-sm">
         <PendingToggle
           checked={!!draft.isPending}
           onChange={(v) => setDraft({ ...draft, isPending: v })}
@@ -1325,7 +1325,7 @@ function EditTransactionModal({ tx, onClose }: { tx: BankTransaction; onClose: (
           title="Not yet cleared — excluded from Current balance until unchecked."
         />
       </div>
-      <p className="text-muted" style={{ marginTop: 8 }}>
+      <p className="text-muted mt-sm">
         {draft.source === 'statement-import' ? `Imported${draft.statementRef ? ` from ${draft.statementRef}` : ''}` : 'Entered manually'}
       </p>
     </FinanceEditModal>

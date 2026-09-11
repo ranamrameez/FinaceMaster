@@ -823,7 +823,7 @@ function AdjustmentsSection() {
   return (
     <div>
       <AdjustmentForm />
-      <div className="table-scroll" style={{ marginTop: 8 }}>
+      <div className="table-scroll mt-sm">
         <table>
           <thead>
             <tr>

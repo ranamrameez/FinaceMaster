@@ -470,7 +470,7 @@ function AddFundForm({ onSaved, initialBrokerId }: { onSaved?: () => void; initi
           </Field>
         )}
       </div>
-      <p className="text-muted" style={{ marginTop: 8 }}>Optional initial investment (leave amount blank to just add the fund with no transactions yet):</p>
+      <p className="text-muted mt-sm">Optional initial investment (leave amount blank to just add the fund with no transactions yet):</p>
       <div className="row gap-sm">
         <Field label="Date">
           <TextInput type="date" value={initialDate} onChange={(e) => setInitialDate(e.target.value)} />
@@ -1606,7 +1606,7 @@ function FundsTransfersSection() {
           </Select>
         </Field>
       </div>
-      <div className="table-scroll" style={{ marginTop: 8 }}>
+      <div className="table-scroll mt-sm">
         <table>
           <thead>
             <tr>

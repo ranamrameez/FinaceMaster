@@ -607,7 +607,7 @@ function ImportRepaymentsSection({ loan }: { loan: PersonalLoan }) {
               </Select>
             </Field>
           </div>
-          <div className="table-scroll" style={{ marginTop: 8 }}>
+          <div className="table-scroll mt-sm">
             <table>
               <thead><tr><th>Date</th><th>Amount</th></tr></thead>
               <tbody>

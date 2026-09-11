@@ -294,7 +294,7 @@ function AddRentalPlanForm({ rentalProperties, addPlannedRentals, onSaved }: { r
       <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
         <PlusIcon />Add plan
       </button>
-      <p className="text-muted" style={{ marginTop: 8 }}><span style={{ color: 'var(--loss)' }}>*</span> Required. Everything else on this form is optional.</p>
+      <p className="text-muted mt-sm"><span style={{ color: 'var(--loss)' }}>*</span> Required. Everything else on this form is optional.</p>
     </div>
   );
 }

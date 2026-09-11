@@ -354,14 +354,13 @@ export function PositionDetail({ ticker }: { ticker: string }) {
             </summary>
             {stats.totalUpdates > stats.recent.length && (
               <button
-                className="btn secondary small"
-                style={{ marginTop: 8 }}
+                className="btn secondary small mt-sm"
                 onClick={() => setShowAllPrices((v) => !v)}
               >
                 {showAllPrices ? 'Show recent 8 only' : `Show all ${stats.totalUpdates} updates`}
               </button>
             )}
-            <div className="table-scroll" style={{ marginTop: 8 }}>
+            <div className="table-scroll mt-sm">
               <table>
                 <thead><tr><RecentTh col="when">When</RecentTh><RecentTh col="price">Price</RecentTh><th></th></tr></thead>
                 <tbody>
@@ -390,7 +389,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
                 </tbody>
               </table>
             </div>
-            <button className="btn secondary small" style={{ marginTop: 8 }} onClick={exportPriceHistory}>Export price history CSV</button>
+            <button className="btn secondary small mt-sm" onClick={exportPriceHistory}>Export price history CSV</button>
           </details>
         </CollapsibleCard>
       )}

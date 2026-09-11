@@ -238,7 +238,7 @@ function EditEntryModal({ entry, onClose }: { entry: CashEntry; onClose: () => v
           onTimezoneChange={(timezone) => setDraft({ ...draft, timezone })}
         />
       </div>
-      <div style={{ marginTop: 8 }}>
+      <div className="mt-sm">
         <PendingToggle
           checked={!!draft.isPending}
           onChange={(v) => setDraft({ ...draft, isPending: v })}
@@ -246,7 +246,7 @@ function EditEntryModal({ entry, onClose }: { entry: CashEntry; onClose: () => v
           title="Not yet cleared — excluded from the Balance stat until unchecked."
         />
       </div>
-      <p className="text-muted" style={{ marginTop: 8 }}>
+      <p className="text-muted mt-sm">
         {draft.source === 'statement-import' ? `Imported${draft.statementRef ? ` from ${draft.statementRef}` : ''}` : 'Entered manually'}
       </p>
     </FinanceEditModal>
@@ -665,7 +665,7 @@ function ImportTab() {
           {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
         </Select>
       </Field>
-      <div style={{ marginTop: 8 }}>
+      <div className="mt-sm">
         <button className="btn secondary" onClick={() => fileInput.current?.click()}>Choose CSV file</button>
         <input
           ref={fileInput}

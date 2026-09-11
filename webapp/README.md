@@ -8211,6 +8211,24 @@ FinanceManager live link:
   default card) — every element's `getComputedStyle()` read `display:flex`/
   `alignItems:center`/`gap:4px` exactly as before, zero new console errors on either page.
   `npx tsc -b` / `npm run test` (645 tests, unchanged) / `npm run build` all clean.
+- **App-wide CSS cleanup, ninth concrete instance — see Done item 305 (2026-09-11), continuing
+  Pending item 116.** `style={{ marginTop: 8 }}` (the bare single-property literal, without a
+  `gap`) — 56 occurrences across 25 files. This one genuinely reuses the existing
+  `.mt-sm{margin-top:8px;}` class from Done item 303 rather than adding a new one — same 8px
+  semantic value, just no `.row`/`gap` involved this time. **9 of the 56 use `<Notice
+  tone="warning" style={{ marginTop: 8 }}>`** — `Notice` (`components/Notice.tsx`) has no
+  `className` prop to merge into, only `style`, so those 9 were deliberately left as inline
+  style rather than widening `Notice`'s own API in the same mechanical pass; a future instance
+  could add `className` support to `Notice` first, then convert those 9 separately. The
+  remaining 47 were converted via a scripted pass (merge into an existing `className`, or add a
+  bare one) plus a cleanup pass removing the resulting blank/whitespace-only lines and stray
+  double-spaces left behind by the attribute removal — confirmed via `git diff` that every
+  "added" blank-looking line was a genuine formatting artifact (a line that held nothing but
+  the removed `style` attr) before deleting it, not a pre-existing intentional blank. Verified
+  live via Playwright on a seeded QSE stock page: the reused `.mt-sm` class (via `Card.tsx`'s
+  `CollapsibleCard` body, the highest-traffic call site of this exact pattern) computed
+  `margin-top: 8px` exactly as before, zero new console errors. `npx tsc -b` / `npm run test`
+  (645 tests, unchanged) / `npm run build` all clean.
 
 ## Pending
 
@@ -9085,9 +9103,13 @@ or a design decision before more code, not guessed at further:**
      item 304**: `style={{ display: 'flex', alignItems: 'center', gap: 4 }}` (8 occurrences
      across 4 files — label/span/td/div elements, no shared parent pattern this time) —
      extracted into a new standalone `.flex-center-gap4{display:flex;align-items:center;
-     gap:4px;}` utility. The exact same incremental discipline (audit one repeated pattern,
-     extract or remove, verify, repeat) still applies for every other module/pattern — this is
-     one instance of an ongoing, repeatable practice, not a closed item.
+     gap:4px;}` utility. **Ninth concrete instance done (2026-09-11) — see Done item 305**:
+     `style={{ marginTop: 8 }}` (56 occurrences across 25 files) — reused the existing
+     `.mt-sm` class from the seventh instance rather than adding a new one; 9 occurrences on
+     `<Notice>` (which has no `className` prop) were deliberately left inline, the remaining 47
+     converted. The exact same incremental discipline (audit one repeated pattern, extract or
+     remove, verify, repeat) still applies for every other module/pattern — this is one
+     instance of an ongoing, repeatable practice, not a closed item.
 117. ~~App-wide "everything should be a grid item except tables" principle (2026-09-06)~~ —
      **done in full (2026-09-08), see Done item 237.** Every module's landing/Settings page has
      been audited for the "short non-table cards stacked full-width" pattern; Cash's Settings
