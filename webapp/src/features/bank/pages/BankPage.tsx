@@ -1959,11 +1959,11 @@ function BalanceProjectionSummary() {
       style={{ marginBottom: 16 }}
     >
       <div className="row" style={{ gap: 16, marginBottom: 12 }}>
-        <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <label className="text-muted flex-center-gap4">
           <input type="checkbox" checked={settings.showRealBalance} onChange={(e) => updateSettings({ showRealBalance: e.target.checked })} />
           Real balance
         </label>
-        <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <label className="text-muted flex-center-gap4">
           <input type="checkbox" checked={settings.showPlannedBalance} onChange={(e) => updateSettings({ showPlannedBalance: e.target.checked })} />
           Planned balance
         </label>

@@ -563,7 +563,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                         <span style={{ cursor: 'pointer', color: 'var(--warn)' }}> ⚠</span>
                       </Tooltip>
                     )}</td>
-                    <td style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <td className="flex-center-gap4">
                       <TickerLogo ticker={display.ticker} exchange="psx" size="sm" />
                       {display.ticker}
                     </td>
@@ -683,7 +683,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
           <div className="grid-auto" style={{ ...gridAutoStyle(200, 8), marginBottom: 12 }}>
             {sortedTickerAnalysis.map((t, idx) => (
               <div key={t.ticker} className="card stat-card" style={hueStyle(HUES[idx % HUES.length])}>
-                <div className="label" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <div className="label flex-center-gap4">
                   <TickerLogo ticker={t.ticker} exchange="psx" size="sm" />
                   {t.ticker}
                 </div>
@@ -712,7 +712,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
               <tbody>
                 {sortedTickerAnalysis.map((t) => (
                   <tr key={t.ticker}>
-                    <td style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <td className="flex-center-gap4">
                       <TickerLogo ticker={t.ticker} exchange="psx" size="sm" />
                       {t.ticker}
                     </td>
