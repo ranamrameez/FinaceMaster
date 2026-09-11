@@ -381,7 +381,7 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
       >
         {/* User-requested (2026-09-03): "add filters to other tables as
            well." */}
-        <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+        <div className="row gap-sm mb-sm">
           <Field label="Source" width={140}>
             <Select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value as typeof sourceFilter)}>
               <option value="all">All</option>
@@ -854,7 +854,7 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: PersonalLoan) => void
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <select value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)}>
           <option value="all">All directions</option>
           <option value="owed_to_me">Money I lent out</option>

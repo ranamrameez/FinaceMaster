@@ -551,7 +551,7 @@ function TransactionList() {
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <select value={filterTicker} onChange={(e) => setFilterTicker(e.target.value)}>
           <option value="ALL">All tickers</option>
           {tickers.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -768,7 +768,7 @@ function TransfersSection() {
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <Field label="Type" width={140}>
           <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
             <option value="all">All</option>
@@ -950,7 +950,7 @@ function CashLedgerSection() {
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <Field label="Kind" width={140}>
           <Select value={kindFilter} onChange={(e) => setKindFilter(e.target.value as typeof kindFilter)}>
             <option value="all">All</option>
