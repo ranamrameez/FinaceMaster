@@ -51,6 +51,10 @@ export interface PSXSettings {
    * (true) when absent. Checked from the Dashboard's "Include in Net
    * Worth" panel. */
   includeInNetWorth?: boolean;
+  /** User-requested (2026-09-11): opt-in, off by default — "it should be
+   * configurable in settings, if user like to opt this risky strategy."
+   * See `QSESettings.partialTradeAlertsEnabled`'s identical doc comment. */
+  partialTradeAlertsEnabled?: boolean;
 }
 
 export interface PSXWorkbook {

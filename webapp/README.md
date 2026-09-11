@@ -8334,6 +8334,84 @@ FinanceManager live link:
   concrete, code-confirmable part (the date-format silent-failure risk was real and
   reproducible from the code alone, independent of which flows the user has tried).
 
+- **301. Trade Strategy: merged Buy/Sell+Avg Down and Trade Planner+Partial Trade (new
+  strategy), PSX fee-mode redesign, an app-wide fixed top bar, and several smaller UI fixes
+  (2026-09-11), the largest single change since the credit-card module.** Triggered by the
+  user's own real IQCD (QSE) position -- 50 sh @10.40 + 14 sh @9.962 -- where the price rose to
+  10.37, close to but not past the *blended* break-even, then fell; every sell that window came
+  out of the expensive 50-share lot (FIFO always drains the oldest lot first), so the cheap
+  14-share lot (BE ~10.02, already ~4-5% profit at 10.37) was never touched. **New Partial
+  Trade Strategy** (`lib/calc/partialTradeStrategy.ts`): `computeLotAdvice()` gives each open
+  FIFO lot (reused from `computeFIFOPositions`, called purely for display -- never implies
+  switching a workbook's real `costBasisMethod`, which changes historical P/L) its own
+  fee-aware break-even and live unrealized P/L, flagging `sell`/`hold` independently per lot --
+  "hold the expensive, sell the cheaper lots that are already green" (user's own words).
+  `findMissedOpportunity()` is the retrospective: scans the last 30 days of price history for
+  its peak and reports which lots would have cleared their own BE there. `perShareCommission()`
+  answers a separate user ask ("show buy & sell commission/1 share at current price for a quick
+  decision if the user should dive in the dip"). Verified against the user's exact real numbers:
+  at 10.37 the 50-share lot shows Hold/-4.36, the 14-share lot Sell/+4.93.
+  **New Trade Strategy page, both exchanges** (`features/{qse,psx}/pages/TradeStrategyPage.tsx`,
+  replacing PSX-only `TradePlannerPage.tsx` -- QSE had no trade-planning tooling before this;
+  `/psx/trade-planner` now redirects). Per the user's confirmed design: strategies #1+#2 unify
+  into one "Buy/Sell & Avg Down" calculator with an Average-down toggle (reusing
+  `riskAnalysis.ts`'s already-tested `computeAveragingScenario`, fed `add = shares*price` so
+  its capital-driven math recovers the exact shares typed -- no second averaging formula);
+  strategies #3+#4 are "one integrated tool," not siblings -- Partial Trade's lot table renders
+  above the legs table (summary-first, fixing a real user-reported layout bug: the plan's own
+  summary used to sit buried below a long, horizontally-scrolling legs table) and works
+  standalone without a plan, with "Sell this lot" opening the existing Add-trade flow
+  pre-filled and "+Add as plan leg" bridging into the planner. Risk-class `Notice`s on both
+  merged sections, linking to `/legal`. "Add plan" is now a FAB grouped with the existing
+  Trade-calculator/Buy-sell-stock actions (`usePageFabActions`) instead of a permanent card or
+  -- a real bug caught by its own Playwright verification -- a second competing
+  `position:fixed` button.
+  **PSX Auto fee-mode redesign** (`psxFees.ts`'s `isProvisionalSameDayBuy()`): a lone BUY dated
+  *today* (PSX's own timezone, `defaultTimezoneForMarket('PSX')` -- never the browser's raw
+  local date, the same bug class already fixed once for `installmentDueDate`) with no matching
+  same-day SELL yet now prices at $0 (provisional), falling through to the existing
+  charged/netted broker-rule split once a SELL appears, and reverting to full fee once the
+  date is no longer today -- a live, derived third outcome, never a persisted flag, which is
+  what makes it self-correcting rather than repeating the earlier, reverted Done-item-67-style
+  staleness bug. Trade Planner legs also gained real fee-mode UI (`FeeModeControl` for PSX,
+  incl. a new %-vs-amount toggle on Manual mode; a plain optional override for QSE) -- a leg's
+  fee used to be fully automatic with zero visibility or override, the literal thing that made
+  the old planner "lose worth" per the user's own report.
+  **Partial Trade Alerts** (`PartialTradeAlertsPopup.tsx`, opt-in via a new
+  `partialTradeAlertsEnabled` setting per exchange, off by default -- explicitly a "risky
+  strategy" the user opts into): a portfolio-wide, auto-hiding, dismissible popup (mirrors
+  `SubscriptionAlertsPopup`'s exact shape) listing every ticker across both exchanges with a
+  sellable lot, link-only per the confirmed design.
+  **App-wide fixed top bar**: `Tabs.tsx`'s own sub-nav chip row was already `position:sticky`
+  but rendered after a page's `<h1>`, so on load it sat below that content instead of being
+  immediately visible -- fixed not by changing the sticky mechanism but by relocating it: new
+  `pageTopBarStore`/`usePageTopBar` hooks (same "page registers, one globally-mounted
+  component renders" shape as the existing FAB-grouping mechanism) let `Tabs` push its chips
+  into a new `TopBar.tsx`, rendered by `AppShell.tsx` as `.main`'s very first child -- reaches
+  every module at once since `Tabs` is already the one shared component ~25+ pages render
+  their sections through. Also: one small icon per sidebar module (`CategoryNav`), a new
+  "keep quick-actions panel always open" Appearance setting for `FabPanel`, and (via the new
+  `rightSlot` on the top-bar store) the Dashboard's currency picker moved out of the "Net
+  worth summary" card into the pinned top-right corner.
+  **Smaller Dashboard/Cash fixes from the same batch**: Dashboard reordered so "Net worth
+  summary" renders before the subscription-renewals notice and Upcoming card (was buried
+  below both); "Exchange rates" is now a collapsed `CollapsibleCard` instead of a
+  permanently-open sibling of the summary, since it's a rarely-touched control; Cash's Plan
+  list -- the same "every currency dumped into one table" bug already fixed once for the main
+  ledger (Done item 224) -- split into one table per currency in a `.detail-grid`.
+  Design reference for the nav work: `wealth_tracker_template/` (a "WealthPro" PRD + ~40 HTML
+  mockups) added to the repo root this session, with the user's own explicit warning not to
+  copy its top-bar's page-vs-app-scope ambiguity literally.
+  Verified live via Playwright throughout, each part independently: the real IQCD numbers
+  (Hold/-4.36 vs Sell/+4.93 at 10.37); the FAB-overlap bug found and fixed mid-verification;
+  the provisional-$0/charged-netted/full-fee three-way fee-calc transition; the alerts popup
+  correctly gated on/off by its setting; the top bar visible immediately on load (no scroll)
+  with correct default-active chip and working chip-click; the Dashboard reorder, the
+  Exchange-rates collapse, and the currency picker's new top-bar location with zero
+  duplication; the Cash Plan grid rendering one real table per seeded currency. `npx tsc -b` /
+  `npm run test` (663 tests, 18 new) / `npm run build` all clean at every phase, committed and
+  pushed incrementally rather than as one unreviewable change.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`

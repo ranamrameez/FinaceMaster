@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Field } from './Field';
 import { Tooltip } from '../Tooltip';
 import type { Transaction } from '../../types/workbook';
@@ -38,6 +39,7 @@ export function FeeModeControl({
   onManualSameDayChange,
   feeOverride,
   onFeeOverrideChange,
+  tradeAmount,
 }: {
   mode: FeeMode;
   onModeChange: (mode: FeeMode) => void;
@@ -45,7 +47,18 @@ export function FeeModeControl({
   onManualSameDayChange: (value: boolean) => void;
   feeOverride: number | undefined;
   onFeeOverrideChange: (value: number | undefined) => void;
+  /** User-requested (2026-09-11): "let user enter excel like formula with
+   * %age of PKR toggle" — Manual mode's one stored field stays
+   * `feeOverride` (an absolute amount, unchanged), but when this leg's own
+   * trade amount (shares × price) is known, a %-vs-amount toggle lets the
+   * user type a percentage instead and have it converted live — no new
+   * persisted field, purely a UI entry convenience. Omit to keep the
+   * plain amount-only input (e.g. a caller with no trade amount in scope
+   * yet). */
+  tradeAmount?: number;
 }) {
+  const [pctMode, setPctMode] = useState(false);
+  const pctValue = tradeAmount && tradeAmount > 0 && feeOverride !== undefined ? (feeOverride / tradeAmount) * 100 : undefined;
   return (
     <div className="row" style={{ gap: 6, alignItems: 'flex-end', flex: '0 0 auto' }}>
       <Field label="Fee mode" width={100}>
@@ -68,16 +81,42 @@ export function FeeModeControl({
         </Field>
       )}
       {mode === 'manual' && (
-        <Field label="Fee amount" width={110}>
-          <input
-            type="number"
-            step="0.01"
-            className="price-input"
-            placeholder="e.g. 25.00"
-            value={feeOverride ?? ''}
-            onChange={(e) => onFeeOverrideChange(e.target.value === '' ? undefined : Number(e.target.value))}
-          />
-        </Field>
+        <>
+          <Field label={pctMode ? 'Fee %' : 'Fee amount'} width={110}>
+            {pctMode ? (
+              <input
+                type="number"
+                step="0.001"
+                className="price-input"
+                placeholder="e.g. 0.2"
+                value={pctValue ?? ''}
+                onChange={(e) => {
+                  if (e.target.value === '') return onFeeOverrideChange(undefined);
+                  const pct = Number(e.target.value);
+                  onFeeOverrideChange(tradeAmount ? Math.round(tradeAmount * (pct / 100) * 100) / 100 : 0);
+                }}
+              />
+            ) : (
+              <input
+                type="number"
+                step="0.01"
+                className="price-input"
+                placeholder="e.g. 25.00"
+                value={feeOverride ?? ''}
+                onChange={(e) => onFeeOverrideChange(e.target.value === '' ? undefined : Number(e.target.value))}
+              />
+            )}
+          </Field>
+          {!!tradeAmount && tradeAmount > 0 && (
+            <Field label=" " width={70}>
+              <Tooltip text="Switch between typing the fee as an exact amount or as a percentage of this leg's own trade value.">
+                <button type="button" className="btn secondary small" onClick={() => setPctMode((v) => !v)}>
+                  {pctMode ? 'Use amount' : 'Use %'}
+                </button>
+              </Tooltip>
+            </Field>
+          )}
+        </>
       )}
     </div>
   );

@@ -74,6 +74,14 @@ export function AppearanceFields() {
       >
         {appearance.theme === 'light' ? '● Dark mode' : '☀ Light mode'}
       </button>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }} title="Keep the floating action button (Trade Calculator, Add Trade, Transfers, ...) expanded by default instead of collapsed until clicked.">
+        <input
+          type="checkbox"
+          checked={!!appearance.fabAlwaysOpen}
+          onChange={(e) => updateAppearance({ fabAlwaysOpen: e.target.checked })}
+        />
+        Keep quick-actions panel always open
+      </label>
     </div>
   );
 }

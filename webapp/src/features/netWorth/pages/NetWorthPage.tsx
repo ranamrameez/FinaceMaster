@@ -19,6 +19,7 @@ import { earliestActivityDate, netWorthAsOfDate, type NetWorthAsOfInputs } from 
 import { upcomingRenewals } from '../../../lib/calc/subscriptionsModule';
 import { UpcomingList } from '../../../components/UpcomingList';
 import { useUpcomingItems } from '../../../hooks/useUpcomingItems';
+import { usePageTopBarRightSlot } from '../../../hooks/usePageTopBar';
 import { useSubscriptionsWorkbookStore } from '../../../store/subscriptionsWorkbookStore';
 import { useNetWorthSummary } from '../hooks/useNetWorthSummary';
 import { convertAmount, effectiveRate, fetchFxRates, isFxStale, loadCachedFxRates, saveFxRates, setCrossRate, type FxRates } from '../../../lib/fx';
@@ -144,6 +145,17 @@ export function NetWorthPage({
   // the same enabled/held-currency list every other picker in the app
   // already uses (`AccountFormFields`, etc.) — this is that same list.
   const preferredCurrencyOptions = useEnabledCurrencies(preferredCurrency);
+  // User-reported (2026-09-11): "its confusing how currency switch works.
+  // move it to top right corner pinned in the topnavbar" — was buried
+  // inside the "Net worth summary" card; now the page's own top-bar
+  // right-slot (see usePageTopBar.ts), pinned regardless of scroll.
+  usePageTopBarRightSlot(
+    <Field label="Show total in" width={150}>
+      <Select value={preferredCurrency} onChange={(e) => setPreferredCurrency(e.target.value)} width={150}>
+        {preferredCurrencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+      </Select>
+    </Field>,
+  );
 
   const categories = useCategoryStore((s) => s.workbook.categories);
   // User-reported (2026-09-04): "Inter-account transfers are counting as
@@ -378,31 +390,6 @@ export function NetWorthPage({
   return (
     <div>
       <h1>Dashboard</h1>
-
-      {/* User-requested (2026-08-26): subscription renewal/expiry alerts on
-          the "homepage" — a compact list, not the full per-subscription
-          detail (which lives on the Subscriptions page itself). */}
-      {renewalsSoon.length > 0 && (
-        <Notice tone="warning" className="mb-md">
-          <div style={{ fontWeight: 600, marginBottom: 4 }}>
-            {renewalsSoon.length} subscription{renewalsSoon.length > 1 ? 's' : ''} renewing in the next 14 days
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-            {renewalsSoon.map((r) => (
-              <span key={r.subscription.id}>
-                {r.subscription.name} — {fmtMoney(r.subscription.amount, r.subscription.currencyCode)} on {r.date}
-              </span>
-            ))}
-          </div>
-          <Link to="/subscriptions" className="text-muted" style={{ display: 'inline-block', marginTop: 6 }}>Manage subscriptions →</Link>
-        </Notice>
-      )}
-
-      <CollapsibleCard title={<h3 className="m-0">Upcoming</h3>} className="mb-md" defaultOpen={upcomingItems.length > 0}>
-        <UpcomingList items={upcomingItems} limit={8} emptyText="Nothing expected in the next 14 days." />
-        <Link to="/planning" className="text-muted" style={{ display: 'block', marginTop: 10 }}>See all →</Link>
-      </CollapsibleCard>
-
       {/* Items 2/3/4/5 of a 2026-08-26 follow-up batch: two separate,
           roughly-equal Cards side by side — "Net worth summary" (the
           currency picker grouped directly with the big number it controls)
@@ -410,11 +397,6 @@ export function NetWorthPage({
       <div className="grid-auto" style={{ ...gridAutoStyle(320, 16), marginBottom: 16, alignItems: 'start' }}>
         <Card>
           <h3 className="mt-0">Net worth summary</h3>
-          <Field label="Show total in" width={150}>
-            <Select value={preferredCurrency} onChange={(e) => setPreferredCurrency(e.target.value)} width={150}>
-              {preferredCurrencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
-            </Select>
-          </Field>
           <div className="mt-12">
             <StatCard label={`Estimated net worth (${preferredCurrency})`} value={fmtMoney(grandTotal, preferredCurrency)} hue={grandTotal >= 0 ? 'var(--profit)' : 'var(--loss)'} />
           </div>
@@ -476,8 +458,13 @@ export function NetWorthPage({
            (currencies with real data), the same list already used for the
            "Rates between your own currencies" table further down. */}
         {ownCurrencies.length > 1 && (
-        <Card>
-          <h3 className="mt-0">Exchange rates</h3>
+        // User-reported (2026-09-11): "Exchange rates is infrequent,
+        // opposite the UI elements preference rule (Frequent, often,
+        // rare)" — a rarely-touched control shouldn't sit in the Main
+        // tier as a permanently-open sibling of the summary card;
+        // collapsed by default now, same tier as every other Often/Rare
+        // section on this page.
+        <CollapsibleCard title={<h3 className="m-0">Exchange rates</h3>} defaultOpen={false}>
           <div className="text-muted">
             {rates
               ? `Rates as of ${new Date(rates.fetchedAt).toLocaleString()} (${rates.source === 'api' ? 'auto-fetched' : 'manually entered'}).`
@@ -531,9 +518,34 @@ export function NetWorthPage({
               )}
             </div>
           )}
-        </Card>
+        </CollapsibleCard>
         )}
       </div>
+
+      {/* User-requested (2026-08-26): subscription renewal/expiry alerts on
+          the "homepage" — a compact list, not the full per-subscription
+          detail (which lives on the Subscriptions page itself). */}
+      {renewalsSoon.length > 0 && (
+        <Notice tone="warning" className="mb-md">
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>
+            {renewalsSoon.length} subscription{renewalsSoon.length > 1 ? 's' : ''} renewing in the next 14 days
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+            {renewalsSoon.map((r) => (
+              <span key={r.subscription.id}>
+                {r.subscription.name} — {fmtMoney(r.subscription.amount, r.subscription.currencyCode)} on {r.date}
+              </span>
+            ))}
+          </div>
+          <Link to="/subscriptions" className="text-muted" style={{ display: 'inline-block', marginTop: 6 }}>Manage subscriptions →</Link>
+        </Notice>
+      )}
+
+      <CollapsibleCard title={<h3 className="m-0">Upcoming</h3>} className="mb-md" defaultOpen={upcomingItems.length > 0}>
+        <UpcomingList items={upcomingItems} limit={8} emptyText="Nothing expected in the next 14 days." />
+        <Link to="/planning" className="text-muted" style={{ display: 'block', marginTop: 10 }}>See all →</Link>
+      </CollapsibleCard>
+
 
       {/* User-reported (2026-09-06), correcting the previous round's own
          layout: "USE GRID FOR ALL NON_TABLE DATA... YOU DUMPED THE WHOLE

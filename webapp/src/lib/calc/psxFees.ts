@@ -1,5 +1,6 @@
 import type { FeeCalculator, Transaction } from '../../types/workbook';
 import type { PSXSettings } from '../../types/psxWorkbook';
+import { defaultTimezoneForMarket, todayISODate } from '../datetime';
 
 export interface PSXFeeBreakdown {
   commission: number;
@@ -99,6 +100,44 @@ export function isNettedLeg(transactions: Transaction[], tx: Transaction): boole
   return charged !== null && tx.action !== charged;
 }
 
+/** User-reported (2026-09-11): Auto mode "silently applied commission on
+ * same-day buys... making final price far higher than the benefit." The
+ * root cause: a lone BUY dated today, with no matching SELL logged *yet*,
+ * only ever had two outcomes to pick from — full commission (nothing to
+ * net against) or netted (a real pair exists) — so it always priced at
+ * full commission while the trading day was still open, even though it
+ * might close same-day within the hour.
+ *
+ * This is a genuine THIRD outcome, not a variant of either: **provisional
+ * zero**, live-derived from comparing the transaction's own date against
+ * PSX's real current calendar date (`defaultTimezoneForMarket('PSX')` —
+ * never the browser's raw local date, the same class of bug already fixed
+ * once for `installmentDueDate`). It only ever applies to
+ * - a BUY (not a SELL — the user's own spec: "commission 0 for all buys
+ *   where date is today"),
+ * - dated exactly today in PSX's own timezone,
+ * - with no matching same-day SELL yet (`sameDayChargedSide` returns
+ *   `null` — the moment a SELL appears, this stops applying and the
+ *   normal charged/netted split below takes over instead).
+ *
+ * Once the calendar date moves past "today" with the BUY still unpaired,
+ * this predicate goes false on its own (the date comparison itself
+ * changes, nothing is stored) and `makePSXFeeCalculator` falls through to
+ * its existing full-fee default — the same behavior an unpaired
+ * historical transaction has always had. This is what makes the
+ * provisional zero self-correcting rather than a permanent stale flag:
+ * unlike the earlier, reverted `manualSameDay` pre-check default (see
+ * `CLAUDE.md`'s Done items 67/127), nothing is ever *written* here — it's
+ * a live comparison re-evaluated on every read, so it can never go stale
+ * the way a persisted flag did. `tx.manualSameDay` (an explicit user
+ * override) is checked first in `makePSXFeeCalculator` and always wins
+ * over this, same as it already wins over everything else. */
+export function isProvisionalSameDayBuy(transactions: Transaction[], tx: Transaction): boolean {
+  if (tx.action !== 'BUY') return false;
+  if (tx.date !== todayISODate(defaultTimezoneForMarket('PSX'))) return false;
+  return sameDayChargedSide(transactions, tx.ticker, tx.date) === null;
+}
+
 /** Builds a same-day-aware fee calculator over a fixed transaction list.
  * README item 11: `tx.feeOverride`, when set, wins outright before anything
  * else runs — a manual correction for reconciling against the real account
@@ -117,7 +156,7 @@ export function isNettedLeg(transactions: Transaction[], tx: Transaction): boole
  * still planning, exactly when seeing it could change whether the user times
  * the trade as a same-day round trip. Pure and stateless — doesn't care what
  * else is in the plan or the real transaction log, unlike `calcLegFee` in
- * `TradePlannerPage.tsx`, which still remains the "best automatic guess"
+ * `TradeStrategyPage.tsx`, which still remains the "best automatic guess"
  * fee shown for an already-paired leg. */
 export function feeScenarios(amount: number, isBuy: boolean, shares: number, settings: PSXSettings): { full: number; netted: number } {
   const fb = calcFeeBreakdown(amount, isBuy, shares, settings);
@@ -130,6 +169,12 @@ export function makePSXFeeCalculator(settings: PSXSettings, allTransactions: Tra
     const tx = context?.tx;
     if (tx?.feeOverride !== undefined) return tx.feeOverride;
     if (!tx) return calcFeeBreakdown(amount, isBuy, shares, settings).total;
+
+    // An explicit manual override always wins outright, same as it already
+    // does for every other case — checked here (not just inside
+    // isNettedLeg) so it's the one deliberate exception to the provisional-
+    // zero case right below it.
+    if (!tx.manualSameDay && isProvisionalSameDayBuy(allTransactions, tx)) return 0;
 
     if (!isNettedLeg(allTransactions, tx)) {
       return calcFeeBreakdown(amount, isBuy, shares, settings).total;

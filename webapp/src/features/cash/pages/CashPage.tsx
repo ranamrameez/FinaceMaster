@@ -874,26 +874,27 @@ function AddPlanForm({ onSaved }: { onSaved?: () => void }) {
  * (`useSortableRows`, defaulting to ascending/oldest-first — it was already
  * ascending by a plain date-string compare, now made explicit and matching
  * every other table on this page) plus Status and Type filters. */
-function PlanList() {
-  const allPlans = usePlannedCashWorkbookStore((s) => s.workbook.entries);
-  const updatePlan = usePlannedCashWorkbookStore((s) => s.updateEntry);
-  const deletePlan = usePlannedCashWorkbookStore((s) => s.deleteEntry);
-  const addEntry = useCashWorkbookStore((s) => s.addEntry);
-  const ensureSignedIn = useEnsureSignedIn();
+/** User-reported (2026-09-11), the same bug class as `CashStatementGrid`
+ * above (Done item 224) found for the main ledger: the Plan list's own
+ * "Currency" column was a plain display field on ONE shared table, mixing
+ * every currency's plans together. Split the same way — one table per
+ * currency in a `.detail-grid`, each with its own independent sort. */
+function PlanCurrencyTable({
+  code,
+  plans,
+  updatePlan,
+  deletePlan,
+  markDone,
+}: {
+  code: string;
+  plans: PlannedCashEntry[];
+  updatePlan: (id: string, patch: Partial<PlannedCashEntry>) => void;
+  deletePlan: (id: string) => void;
+  markDone: (p: PlannedCashEntry) => void;
+}) {
   const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<PlannedCashEntry | null>(null);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'planned' | 'done'>('all');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'IN' | 'OUT'>('all');
-
-  const plans = useMemo(
-    () => allPlans.filter((p) => {
-      if (statusFilter === 'planned' && p.executed) return false;
-      if (statusFilter === 'done' && !p.executed) return false;
-      if (typeFilter !== 'all' && p.type !== typeFilter) return false;
-      return true;
-    }),
-    [allPlans, statusFilter, typeFilter],
-  );
+  const currencyOptions = useEnabledCurrencies(editRow?.currencyCode);
 
   type Col = 'date' | 'type' | 'amount' | 'status';
   const sortValue = (p: PlannedCashEntry, col: Col): number | string => {
@@ -914,54 +915,14 @@ function PlanList() {
     setEditId(null);
     setEditRow(null);
   };
-  const currencyOptions = useEnabledCurrencies(editRow?.currencyCode);
-
-  const markDone = async (p: PlannedCashEntry) => {
-    const occurrenceDate = p.recurrence ? nextRecurrenceOccurrence(p.recurrence)?.toISOString().slice(0, 10) : p.date;
-    if (!occurrenceDate) return toast('This plan has no more occurrences left (past its end date).');
-    if (!(await ensureSignedIn('Sign in to save cash entries.'))) return;
-    addEntry({
-      id: crypto.randomUUID(),
-      date: occurrenceDate,
-      isDeposit: p.type === 'IN',
-      amount: p.amount,
-      currencyCode: p.currencyCode,
-      category: p.category,
-      note: p.note,
-      source: 'manual',
-    });
-    if (p.recurrence) {
-      updatePlan(p.id, { executedThrough: occurrenceDate });
-      toast(`Marked ${occurrenceDate} as done — added to your Cash ledger. This plan keeps recurring.`);
-    } else {
-      updatePlan(p.id, { executed: true });
-      toast('Marked as done — added to your Cash ledger.');
-    }
-  };
 
   return (
-    <CollapsibleCard title={<h3 className="m-0">Plans</h3>}>
-      <div className="row gap-sm mb-sm">
-        <Field label="Status" width={120}>
-          <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}>
-            <option value="all">All</option>
-            <option value="planned">Planned</option>
-            <option value="done">Done</option>
-          </Select>
-        </Field>
-        <Field label="Type" width={120}>
-          <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
-            <option value="all">All</option>
-            <option value="IN">Cash in</option>
-            <option value="OUT">Cash out</option>
-          </Select>
-        </Field>
-      </div>
+    <CollapsibleCard title={<h3 className="m-0">Plans — {code}</h3>}>
       <div className="table-scroll">
         <table>
           <thead>
             <tr>
-              <Th col="date">Date</Th><Th col="type">Type</Th><Th col="amount">Amount</Th><th>Currency</th>
+              <Th col="date">Date</Th><Th col="type">Type</Th><Th col="amount">Amount</Th>
               <th>Category</th><th>Note</th><Th col="status">Repeats / status</Th><th></th>
             </tr>
           </thead>
@@ -983,8 +944,8 @@ function PlanList() {
                       <option value="OUT">Cash out</option>
                     </select>
                   </td>
-                  <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 90 }} /></td>
                   <td>
+                    <input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 90 }} />{' '}
                     <select value={editRow.currencyCode} onChange={(e) => setEditRow({ ...editRow, currencyCode: e.target.value })} style={{ width: 80 }}>
                       {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
                     </select>
@@ -1010,7 +971,6 @@ function PlanList() {
                   <td>{p.date}</td>
                   <td className={p.type === 'IN' ? 'pill-positive' : 'pill-negative'}>{p.type === 'IN' ? 'Cash in' : 'Cash out'}</td>
                   <td>{fmtMoney(p.amount, p.currencyCode)}</td>
-                  <td>{p.currencyCode}</td>
                   <td>{p.category || '—'}</td>
                   <td>{p.note}</td>
                   <td className="text-muted">{p.recurrence ? recurrenceLabel(p.recurrence) : p.executed ? 'Done' : 'Planned'}</td>
@@ -1031,11 +991,94 @@ function PlanList() {
                 </tr>
               ),
             )}
-            {!sorted.length && <tr><td colSpan={8} className="text-muted">No plans yet — add one above.</td></tr>}
+            {!sorted.length && <tr><td colSpan={7} className="text-muted">No plans yet — add one above.</td></tr>}
           </tbody>
         </table>
       </div>
     </CollapsibleCard>
+  );
+}
+
+function PlanList() {
+  const allPlans = usePlannedCashWorkbookStore((s) => s.workbook.entries);
+  const updatePlan = usePlannedCashWorkbookStore((s) => s.updateEntry);
+  const deletePlan = usePlannedCashWorkbookStore((s) => s.deleteEntry);
+  const addEntry = useCashWorkbookStore((s) => s.addEntry);
+  const ensureSignedIn = useEnsureSignedIn();
+  const [statusFilter, setStatusFilter] = useState<'all' | 'planned' | 'done'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'IN' | 'OUT'>('all');
+
+  const plans = useMemo(
+    () => allPlans.filter((p) => {
+      if (statusFilter === 'planned' && p.executed) return false;
+      if (statusFilter === 'done' && !p.executed) return false;
+      if (typeFilter !== 'all' && p.type !== typeFilter) return false;
+      return true;
+    }),
+    [allPlans, statusFilter, typeFilter],
+  );
+
+  const byCurrency = useMemo(() => {
+    const map = new Map<string, PlannedCashEntry[]>();
+    for (const p of plans) {
+      const list = map.get(p.currencyCode) ?? [];
+      list.push(p);
+      map.set(p.currencyCode, list);
+    }
+    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
+  }, [plans]);
+
+  const markDone = async (p: PlannedCashEntry) => {
+    const occurrenceDate = p.recurrence ? nextRecurrenceOccurrence(p.recurrence)?.toISOString().slice(0, 10) : p.date;
+    if (!occurrenceDate) return toast('This plan has no more occurrences left (past its end date).');
+    if (!(await ensureSignedIn('Sign in to save cash entries.'))) return;
+    addEntry({
+      id: crypto.randomUUID(),
+      date: occurrenceDate,
+      isDeposit: p.type === 'IN',
+      amount: p.amount,
+      currencyCode: p.currencyCode,
+      category: p.category,
+      note: p.note,
+      source: 'manual',
+    });
+    if (p.recurrence) {
+      updatePlan(p.id, { executedThrough: occurrenceDate });
+      toast(`Marked ${occurrenceDate} as done — added to your Cash ledger. This plan keeps recurring.`);
+    } else {
+      updatePlan(p.id, { executed: true });
+      toast('Marked as done — added to your Cash ledger.');
+    }
+  };
+
+  return (
+    <div>
+      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+        <Field label="Status" width={120}>
+          <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as 'all' | 'planned' | 'done')}>
+            <option value="all">All</option>
+            <option value="planned">Planned</option>
+            <option value="done">Done</option>
+          </Select>
+        </Field>
+        <Field label="Type" width={120}>
+          <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as 'all' | 'IN' | 'OUT')}>
+            <option value="all">All</option>
+            <option value="IN">Cash in</option>
+            <option value="OUT">Cash out</option>
+          </Select>
+        </Field>
+      </div>
+      {byCurrency.length ? (
+        <div className="detail-grid">
+          {byCurrency.map(([code, currencyPlans]) => (
+            <PlanCurrencyTable key={code} code={code} plans={currencyPlans} updatePlan={updatePlan} deletePlan={deletePlan} markDone={markDone} />
+          ))}
+        </div>
+      ) : (
+        <p className="text-muted">No plans yet — add one above.</p>
+      )}
+    </div>
   );
 }
 

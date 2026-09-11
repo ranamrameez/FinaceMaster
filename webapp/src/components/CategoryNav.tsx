@@ -1,5 +1,17 @@
 import { Fragment, type ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import {
+  BankIcon,
+  CashIcon,
+  DashboardIcon,
+  EMIIcon,
+  FundsIcon,
+  PersonalLoanIcon,
+  PlanningIcon,
+  RentalsIcon,
+  StocksIcon,
+  SubscriptionsIcon,
+} from './icons';
 
 export type CategoryKey = 'netWorth' | 'stocks' | 'funds' | 'bank' | 'cash' | 'personalLoans' | 'emi' | 'rentals' | 'subscriptions' | 'planning';
 
@@ -8,17 +20,17 @@ export type CategoryKey = 'netWorth' | 'stocks' | 'funds' | 'bank' | 'cash' | 'p
 // Transfers page/route/nav entry is gone, replaced by an app-wide
 // "Transfers" FAB (`components/ui/Fab.tsx`'s `FabPanel`) reachable from
 // every module page.
-const CATEGORIES: { key: CategoryKey; label: string; to: string }[] = [
-  { key: 'netWorth', label: 'Dashboard', to: '/net-worth' },
-  { key: 'stocks', label: 'Stock Exchanges', to: '/' },
-  { key: 'funds', label: 'Funds', to: '/funds' },
-  { key: 'bank', label: 'Banking', to: '/bank' },
-  { key: 'cash', label: 'Cash', to: '/cash' },
-  { key: 'personalLoans', label: 'Personal Loans', to: '/personal-loans' },
-  { key: 'emi', label: 'EMI / Loans', to: '/emi-loans' },
-  { key: 'rentals', label: 'Rentals', to: '/rentals' },
-  { key: 'subscriptions', label: 'Subscriptions', to: '/subscriptions' },
-  { key: 'planning', label: 'Planning', to: '/planning' },
+const CATEGORIES: { key: CategoryKey; label: string; to: string; icon: ReactNode }[] = [
+  { key: 'netWorth', label: 'Dashboard', to: '/net-worth', icon: <DashboardIcon /> },
+  { key: 'stocks', label: 'Stock Exchanges', to: '/', icon: <StocksIcon /> },
+  { key: 'funds', label: 'Funds', to: '/funds', icon: <FundsIcon /> },
+  { key: 'bank', label: 'Banking', to: '/bank', icon: <BankIcon /> },
+  { key: 'cash', label: 'Cash', to: '/cash', icon: <CashIcon /> },
+  { key: 'personalLoans', label: 'Personal Loans', to: '/personal-loans', icon: <PersonalLoanIcon /> },
+  { key: 'emi', label: 'EMI / Loans', to: '/emi-loans', icon: <EMIIcon /> },
+  { key: 'rentals', label: 'Rentals', to: '/rentals', icon: <RentalsIcon /> },
+  { key: 'subscriptions', label: 'Subscriptions', to: '/subscriptions', icon: <SubscriptionsIcon /> },
+  { key: 'planning', label: 'Planning', to: '/planning', icon: <PlanningIcon /> },
 ];
 
 /** Derives the active category from the route rather than storing it
@@ -86,6 +98,7 @@ export function CategoryNav({ onNavigate, stocksSubnav }: { onNavigate?: () => v
             onClick={onNavigate}
             className={`navbtn category-item${c.key === active ? ' active' : ''}`}
           >
+            <span className="category-item-icon" aria-hidden="true">{c.icon}</span>
             {c.label}
           </NavLink>
           {c.key === 'stocks' && active === 'stocks' && stocksSubnav}

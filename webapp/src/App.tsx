@@ -7,6 +7,7 @@ import { LinkedEditChoiceDialogHost } from './components/LinkedEditChoiceDialog'
 import { PSXTickerDatalist } from './components/PSXTickerDatalist';
 import { SignInModalHost } from './components/SignInModal';
 import { SubscriptionAlertsPopup } from './components/SubscriptionAlertsPopup';
+import { PartialTradeAlertsPopup } from './components/PartialTradeAlertsPopup';
 import { TermsGateModal } from './components/TermsGateModal';
 import { CurrencyOnboardingModal } from './components/CurrencyOnboardingModal';
 import { TickerDatalist } from './components/TickerDatalist';
@@ -23,6 +24,7 @@ import { WatchlistPage } from './features/qse/pages/WatchlistPage';
 import { StockPage } from './features/qse/pages/StockPage';
 import { SettingsPage } from './features/qse/pages/SettingsPage';
 import { RiskAnalysisPage } from './features/qse/pages/RiskAnalysisPage';
+import { TradeStrategyPage } from './features/qse/pages/TradeStrategyPage';
 import { AnalyticsPage as PSXAnalyticsPage } from './features/psx/pages/AnalyticsPage';
 import { DashboardPage as PSXDashboardPage } from './features/psx/pages/DashboardPage';
 import { PortfolioPage as PSXPortfolioPage } from './features/psx/pages/PortfolioPage';
@@ -30,7 +32,7 @@ import { TransactionsPage as PSXTransactionsPage } from './features/psx/pages/Tr
 import { WatchlistPage as PSXWatchlistPage } from './features/psx/pages/WatchlistPage';
 import { StockPage as PSXStockPage } from './features/psx/pages/StockPage';
 import { SettingsPage as PSXSettingsPage } from './features/psx/pages/SettingsPage';
-import { TradePlannerPage as PSXTradePlannerPage } from './features/psx/pages/TradePlannerPage';
+import { TradeStrategyPage as PSXTradeStrategyPage } from './features/psx/pages/TradeStrategyPage';
 import { RiskAnalysisPage as PSXRiskAnalysisPage } from './features/psx/pages/RiskAnalysisPage';
 import { CashPage } from './features/cash/pages/CashPage';
 import { useCashFirebaseSync } from './lib/firebase/useCashFirebaseSync';
@@ -157,6 +159,7 @@ function App() {
               <Route path="/stock/:ticker" element={<StockPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />
               <Route path="/risk-analysis" element={<RiskAnalysisPage />} />
+              <Route path="/trade-strategy" element={<TradeStrategyPage />} />
               <Route
                 path="/settings"
                 element={
@@ -174,7 +177,8 @@ function App() {
               <Route path="/psx/watchlist" element={<PSXWatchlistPage />} />
               <Route path="/psx/stock/:ticker" element={<PSXStockPage />} />
               <Route path="/psx/analytics" element={<PSXAnalyticsPage />} />
-              <Route path="/psx/trade-planner" element={<PSXTradePlannerPage />} />
+              <Route path="/psx/trade-planner" element={<Navigate to="/psx/trade-strategy" replace />} />
+              <Route path="/psx/trade-strategy" element={<PSXTradeStrategyPage />} />
               <Route path="/psx/risk-analysis" element={<PSXRiskAnalysisPage />} />
               <Route
                 path="/psx/settings"
@@ -304,6 +308,7 @@ function App() {
         </AppShell>
         <CalculatorLauncher />
         <SubscriptionAlertsPopup />
+        <PartialTradeAlertsPopup />
         <Toast />
         <TickerDatalist />
         <PSXTickerDatalist />

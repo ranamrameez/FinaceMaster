@@ -14,7 +14,8 @@ const QSE_NAV_ITEMS = [
   { num: '04', label: 'Watchlist', to: '/watchlist' },
   { num: '05', label: 'Analytics', to: '/analytics' },
   { num: '06', label: 'Risk Analysis', to: '/risk-analysis' },
-  { num: '07', label: 'Settings', to: '/settings' },
+  { num: '07', label: 'Trade Strategy', to: '/trade-strategy' },
+  { num: '08', label: 'Settings', to: '/settings' },
 ];
 
 const PSX_NAV_ITEMS = [
@@ -24,7 +25,7 @@ const PSX_NAV_ITEMS = [
   { num: '04', label: 'Watchlist', to: '/psx/watchlist' },
   { num: '05', label: 'Analytics', to: '/psx/analytics' },
   { num: '06', label: 'Risk Analysis', to: '/psx/risk-analysis' },
-  { num: '07', label: 'Trade Planner', to: '/psx/trade-planner' },
+  { num: '07', label: 'Trade Strategy', to: '/psx/trade-strategy' },
   { num: '08', label: 'Settings', to: '/psx/settings' },
 ];
 
