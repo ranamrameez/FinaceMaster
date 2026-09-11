@@ -223,6 +223,11 @@ export interface QSESettings {
    * (true) when absent. Checked from the Dashboard's "Include in Net
    * Worth" panel. */
   includeInNetWorth?: boolean;
+  /** User-requested (2026-09-11): "it should be configurable in settings,
+   * if user like to opt this risky strategy" — Partial Trade Alerts (a
+   * portfolio-wide popup listing every ticker with a sell-the-cheap-lot
+   * opportunity) is opt-in, off by default. */
+  partialTradeAlertsEnabled?: boolean;
 }
 
 export interface Appearance {

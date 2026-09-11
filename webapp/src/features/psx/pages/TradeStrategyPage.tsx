@@ -972,6 +972,8 @@ function StandalonePartialTrade() {
 export function TradeStrategyPage() {
   const tradePlans = usePSXWorkbookStore((s) => s.workbook.tradePlans);
   const sorted = [...tradePlans].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const alertsEnabled = usePSXWorkbookStore((s) => !!s.workbook.settings.partialTradeAlertsEnabled);
+  const updateSettings = usePSXWorkbookStore((s) => s.updateSettings);
 
   return (
     <div>
@@ -980,6 +982,10 @@ export function TradeStrategyPage() {
         Buy/Sell &amp; Avg Down, and Trade Planner &amp; Partial Trade — sketch out trades ahead of time, or get
         advice on lots you already hold.
       </p>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, fontSize: 13 }} title="A popup on app load listing every ticker with a Partial Trade opportunity, across both exchanges — off by default since this is an opt-in, riskier strategy.">
+        <input type="checkbox" checked={alertsEnabled} onChange={(e) => updateSettings({ partialTradeAlertsEnabled: e.target.checked })} />
+        Show Partial Trade Alerts popup on app load
+      </label>
 
       <BuySellAvgDownCalculator />
 

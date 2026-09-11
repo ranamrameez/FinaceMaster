@@ -6,6 +6,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { PSXTickerDatalist } from './components/PSXTickerDatalist';
 import { SignInModalHost } from './components/SignInModal';
 import { SubscriptionAlertsPopup } from './components/SubscriptionAlertsPopup';
+import { PartialTradeAlertsPopup } from './components/PartialTradeAlertsPopup';
 import { TermsGateModal } from './components/TermsGateModal';
 import { CurrencyOnboardingModal } from './components/CurrencyOnboardingModal';
 import { TickerDatalist } from './components/TickerDatalist';
@@ -305,6 +306,7 @@ function App() {
         </AppShell>
         <CalculatorLauncher />
         <SubscriptionAlertsPopup />
+        <PartialTradeAlertsPopup />
         <Toast />
         <TickerDatalist />
         <PSXTickerDatalist />

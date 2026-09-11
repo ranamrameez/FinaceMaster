@@ -42,7 +42,7 @@ function BuySellAvgDownCalculator() {
   const { workbook, calcFee, rows } = useQSEDerived();
   const currency = workbook.settings.currency;
   const feePct = workbook.settings.feePct;
-  const tick = 0.01;
+  const tick = workbook.settings.tick;
 
   const [ticker, setTicker] = useState('');
   const [buyPrice, setBuyPrice] = useState('');
@@ -150,7 +150,7 @@ function PartialTradeAdvisor({ ticker, onSellLot }: { ticker: string; onSellLot:
   const { workbook, calcFee, rows } = useQSEDerived();
   const currency = workbook.settings.currency;
   const feePct = workbook.settings.feePct;
-  const tick = 0.01;
+  const tick = workbook.settings.tick;
 
   const { lotsByTicker } = useMemo(() => computeFIFOPositions(workbook.transactions, calcFee), [workbook.transactions, calcFee]);
   const lots = lotsByTicker[ticker.toUpperCase()] || [];
@@ -385,7 +385,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
     setEditTxRow(null);
   };
 
-  const tickerAnalysis = analyzeTradePlanByTicker(plan.legs, rows, calcFee, workbook.settings.feePct, 0.01, calcLegFee);
+  const tickerAnalysis = analyzeTradePlanByTicker(plan.legs, rows, calcFee, workbook.settings.feePct, workbook.settings.tick, calcLegFee);
   type AnalysisCol = 'ticker' | 'avgCost' | 'breakEven' | 'effectiveShares' | 'realizedPL';
   const analysisSortValue = (t: (typeof tickerAnalysis)[number], col: AnalysisCol): number | string =>
     col === 'ticker' ? t.ticker : t[col];
@@ -820,6 +820,8 @@ function StandalonePartialTrade() {
 export function TradeStrategyPage() {
   const tradePlans = useWorkbookStore((s) => s.workbook.tradePlans);
   const sorted = [...tradePlans].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const alertsEnabled = useWorkbookStore((s) => !!s.workbook.settings.partialTradeAlertsEnabled);
+  const updateSettings = useWorkbookStore((s) => s.updateSettings);
 
   return (
     <div>
@@ -828,6 +830,10 @@ export function TradeStrategyPage() {
         Buy/Sell &amp; Avg Down, and Trade Planner &amp; Partial Trade — sketch out trades ahead of time, or get
         advice on lots you already hold.
       </p>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, fontSize: 13 }} title="A popup on app load listing every ticker with a Partial Trade opportunity, across both exchanges — off by default since this is an opt-in, riskier strategy.">
+        <input type="checkbox" checked={alertsEnabled} onChange={(e) => updateSettings({ partialTradeAlertsEnabled: e.target.checked })} />
+        Show Partial Trade Alerts popup on app load
+      </label>
 
       <BuySellAvgDownCalculator />
 
