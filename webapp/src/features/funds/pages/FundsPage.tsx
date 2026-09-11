@@ -149,7 +149,7 @@ function BrokersList({ onSelect }: { onSelect: (broker: Broker) => void }) {
   return (
     <CollapsibleCard title="Brokers" defaultOpen={false}>
       {archivedCount > 0 && (
-        <button className="btn secondary small" style={{ marginBottom: 12 }} onClick={() => setShowArchived((v) => !v)}>
+        <button className="btn secondary small mb-12" onClick={() => setShowArchived((v) => !v)}>
           {showArchived ? 'Hide' : 'Show'} closed ({archivedCount})
         </button>
       )}
@@ -225,7 +225,7 @@ function BrokerDetail({ broker, onBack, onSelectFund }: { broker: Broker; onBack
 
   return (
     <div>
-      <button className="btn secondary small" style={{ marginBottom: 12 }} onClick={onBack}>← All funds</button>
+      <button className="btn secondary small mb-12" onClick={onBack}>← All funds</button>
       <CollapsibleCard
         title={editing ? 'Edit broker' : broker.name}
         defaultOpen
@@ -482,7 +482,7 @@ function AddFundForm({ onSaved, initialBrokerId }: { onSaved?: () => void; initi
           <TextInput type="number" step="0.0001" value={initialNav || ''} onChange={(e) => setInitialNav(Number(e.target.value))} />
         </Field>
       </div>
-      <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
+      <button className="btn mt-12" onClick={submit}>
         <PlusIcon />Add fund
       </button>
     </div>
@@ -627,7 +627,7 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
   return (
     <div>
       {closedCount > 0 && (
-        <button className="btn secondary small" style={{ marginBottom: 12 }} onClick={() => setShowClosed((v) => !v)}>
+        <button className="btn secondary small mb-12" onClick={() => setShowClosed((v) => !v)}>
           {showClosed ? 'Hide' : 'Show'} closed ({closedCount})
         </button>
       )}
@@ -768,7 +768,7 @@ function SnapshotImportSection() {
 
   return (
     <div>
-      <p className="text-muted" style={{ marginBottom: 12 }}>
+      <p className="text-muted mb-12">
         For a spreadsheet that tracks Total Invested / Withdrawn / Current Balance per fund rather than individual
         dated trades. Since there's no real transaction history in that shape, this reconstructs a buy (and, if
         withdrawn, a sell) dated on the single "as of" date below, at whatever NAV reproduces your reported balances
@@ -807,7 +807,7 @@ function SnapshotImportSection() {
       </div>
 
       {rows && duplicateCodes.length > 0 && (
-        <Notice tone="warning" style={{ marginBottom: 12 }}>
+        <Notice tone="warning" className="mb-12">
           Fund code{duplicateCodes.length > 1 ? 's' : ''} {duplicateCodes.join(', ')} appear{duplicateCodes.length === 1 ? 's' : ''} more
           than once — each row below still becomes its own fund. If a row is actually a mistake (wrong platform/code
           typed into the wrong line), fix it in the table below before importing rather than after.
@@ -816,7 +816,7 @@ function SnapshotImportSection() {
 
       {rows && (
         <>
-          <div className="table-scroll" style={{ marginBottom: 12 }}>
+          <div className="table-scroll mb-12">
             <table>
               <thead>
                 <tr>
@@ -1117,7 +1117,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
 
   return (
     <div>
-      <button className="btn secondary small" style={{ marginBottom: 12 }} onClick={onBack}>← All funds</button>
+      <button className="btn secondary small mb-12" onClick={onBack}>← All funds</button>
 
       <Card className="mb-md">
             {editingFund ? (
@@ -1211,7 +1211,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
             </div>
             {/* User-requested (2026-09-03): "add a chart to view periodic
                 growth with balance & PL indications over time." */}
-            <div style={{ marginTop: 12 }}>
+            <div className="mt-12">
               <ChartCard title="Growth over time" empty={!contribution.length}>
                 <Line
                   data={{
@@ -1600,7 +1600,7 @@ function FundsTransfersSection() {
 
   return (
     <div>
-      <p className="text-muted" style={{ marginBottom: 12 }}>
+      <p className="text-muted mb-12">
         Cash moved into or out of this Funds account, separate from buying/selling fund units —
         e.g. topping up before a purchase, or withdrawing after a redemption.
       </p>
@@ -1910,7 +1910,7 @@ export function FundsPage({
   return (
     <div>
       <h1 className="pagetitle">Funds</h1>
-      <p className="text-muted" style={{ marginBottom: 12 }}>
+      <p className="text-muted mb-12">
         Mutual fund unit holdings and performance — buy/sell units at a NAV per unit, same shape as a stock
         trade. Returns are shown as XIRR, which accounts for when each investment happened, not just totals.
       </p>

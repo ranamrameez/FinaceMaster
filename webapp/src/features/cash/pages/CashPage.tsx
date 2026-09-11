@@ -170,7 +170,7 @@ function CategoryBreakdown() {
       <Field label="Filter by category" width={220}>
         <TextInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="e.g. Rent" />
       </Field>
-      <div className="detail-grid" style={{ marginTop: 12 }}>
+      <div className="detail-grid mt-12">
         {filtered.map(({ code, rows }) => (
           <Card key={code}>
             <h4 className="mt-0">{code}</h4>
@@ -662,7 +662,7 @@ function ImportTab() {
 
   return (
     <div>
-      <p className="text-muted" style={{ marginBottom: 12 }}>
+      <p className="text-muted mb-12">
         Import a CSV export of cash entries. This is a simple "map these columns" tool, not a parser for a
         specific spreadsheet format — pick which column is which below. A positive amount is treated as cash in,
         negative as cash out (check "Flip sign" if your export does the opposite).
@@ -689,7 +689,7 @@ function ImportTab() {
       </div>
 
       {headers.length > 0 && (
-        <Card style={{ marginTop: 12 }}>
+        <Card className="mt-12">
           <h3 className="mt-0">Map columns</h3>
           <div className="row gap-sm">
             <Field label="Date column" width={160}>
@@ -730,7 +730,7 @@ function ImportTab() {
               </tbody>
             </table>
           </div>
-          <button className="btn" style={{ marginTop: 12 }} onClick={doImport}>
+          <button className="btn mt-12" onClick={doImport}>
             <PlusIcon />Import {rows.length} entr{rows.length === 1 ? 'y' : 'ies'}
           </button>
         </Card>
@@ -861,7 +861,7 @@ function AddPlanForm({ onSaved }: { onSaved?: () => void }) {
         </Field>
         <RecurrenceFields startDate={p.date} value={p.recurrence} onChange={(recurrence) => setP({ ...p, recurrence })} />
       </div>
-      <button className="btn" style={{ marginTop: 12 }} onClick={submit}>
+      <button className="btn mt-12" onClick={submit}>
         <PlusIcon />Add plan
       </button>
     </div>
@@ -1254,7 +1254,7 @@ export function CashPage({
   return (
     <div>
       <h1 className="pagetitle">Cash</h1>
-      <p className="text-muted" style={{ marginBottom: 12 }}>
+      <p className="text-muted mb-12">
         Track physical/informal cash — cash in hand, gifts, small informal amounts. Each entry keeps its own
         currency; balances and category totals are grouped per currency, never converted.
       </p>

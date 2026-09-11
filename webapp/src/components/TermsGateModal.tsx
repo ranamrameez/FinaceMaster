@@ -45,7 +45,7 @@ export function TermsGateModal() {
           <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} style={{ marginTop: 3 }} />
           <span>I have read and accept the Disclaimer, Terms &amp; Privacy.</span>
         </label>
-        <button className="btn" disabled={!checked} style={{ marginTop: 12 }} onClick={accept}>
+        <button className="btn mt-12" disabled={!checked} onClick={accept}>
           Accept &amp; continue
         </button>
       </div>

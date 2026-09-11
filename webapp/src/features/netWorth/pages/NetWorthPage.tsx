@@ -415,7 +415,7 @@ export function NetWorthPage({
               {preferredCurrencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
             </Select>
           </Field>
-          <div style={{ marginTop: 12 }}>
+          <div className="mt-12">
             <StatCard label={`Estimated net worth (${preferredCurrency})`} value={fmtMoney(grandTotal, preferredCurrency)} hue={grandTotal >= 0 ? 'var(--profit)' : 'var(--loss)'} />
           </div>
           <button type="button" className="btn secondary small mt-sm" onClick={saveSnapshot}>
@@ -488,7 +488,7 @@ export function NetWorthPage({
             {fetching ? 'Refreshing…' : 'Refresh rates'}
           </button>
 
-          <div style={{ marginTop: 12 }}>
+          <div className="mt-12">
             <div className="text-muted" style={{ marginBottom: 4 }}>Set a rate between any two currencies</div>
             <div className="row gap-sm">
               <Field label="1 unit of">
@@ -620,7 +620,7 @@ export function NetWorthPage({
                 )}
               </div>
               {r.breakdown.length > 0 && (
-                <div style={{ marginTop: 12 }}>
+                <div className="mt-12">
                   <div className="text-muted" style={{ marginBottom: 4 }}>By account</div>
                   <div className="grid-auto" style={gridAutoStyle(120, 6)}>
                     {r.breakdown.map((b) => (
@@ -666,7 +666,7 @@ export function NetWorthPage({
       )}
 
       {Object.keys(rentalsNet).length > 0 && (
-        <Card style={{ marginTop: 12 }}>
+        <Card className="mt-12">
           <div className="label" style={{ marginBottom: 8 }}>Rental net income (informational — not included above)</div>
           <div className="text-muted" style={{ marginBottom: 8 }}>
             Property values aren't tracked in this app, and rental income already lands in whichever Cash/Bank
@@ -681,7 +681,7 @@ export function NetWorthPage({
       )}
 
       {firebaseReady && cloudEmpty && (
-        <Notice tone="warning" style={{ marginTop: 12 }}>
+        <Notice tone="warning" className="mt-12">
           <p className="mt-0">No net worth snapshots found in the cloud for this account. This won't upload automatically.</p>
           <button
             className="btn secondary"

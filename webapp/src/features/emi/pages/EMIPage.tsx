@@ -597,7 +597,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
 
   return (
     <div>
-      <button className="btn secondary small" style={{ marginBottom: 12 }} onClick={onBack}>← All loans</button>
+      <button className="btn secondary small mb-12" onClick={onBack}>← All loans</button>
       {/* README item 66 (2026-08-26 feedback): Save/Cancel (and Edit/Delete)
          should sit at the card's top-right corner like every other single-
          stranded-action card in the app (Done item 121) — this previously
@@ -1305,7 +1305,7 @@ export function EMIPage({
   return (
     <div>
       <h1 className="pagetitle">EMI / Loans</h1>
-      <p className="text-muted" style={{ marginBottom: 12 }}>
+      <p className="text-muted mb-12">
         A loan you're repaying on a fixed schedule — a mortgage, car financing, or similar — with an
         auto-calculated amortization schedule. Assumes on-schedule payment; doesn't track missed/late payments.
       </p>

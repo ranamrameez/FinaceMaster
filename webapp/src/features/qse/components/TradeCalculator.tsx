@@ -375,7 +375,7 @@ export function TradeCalculator({ initialTicker }: { initialTicker?: string } = 
         </div>
       )}
 
-      <button className="btn" style={{ marginTop: 12 }} onClick={addTrade}>
+      <button className="btn mt-12" onClick={addTrade}>
         <PlusIcon />Add {mode === 'SELL' ? 'sell' : mode === 'CYCLE' ? 'buy (cycle)' : 'buy'} to transactions
       </button>
       {mode === 'CYCLE' && (
