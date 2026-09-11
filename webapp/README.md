@@ -8197,6 +8197,20 @@ FinanceManager live link:
   "Update price" row): the resulting element's `getComputedStyle()` read `gap:8px`/
   `marginTop:8px` exactly as before, zero new console errors. `npx tsc -b` / `npm run test`
   (645 tests, unchanged) / `npm run build` all clean.
+- **App-wide CSS cleanup, eighth concrete instance — see Done item 304 (2026-09-11),
+  continuing Pending item 116.** `style={{ display: 'flex', alignItems: 'center', gap: 4 }}` —
+  8 occurrences across 4 files (Cash/Funds/Bank/PSX Trade Planner), on label/span/td/div
+  elements with no shared parent pattern. Confirmed no existing `theme.css` rule sets
+  `display`/`align-items`/`gap` on any of those element types at a competing specificity
+  before adding a new standalone `.flex-center-gap4{display:flex;align-items:center;gap:4px;}`
+  utility. Replaced every occurrence via a scripted pass — merged into an existing
+  `className` where one was present (`text-muted`, `label`), added a bare
+  `className="flex-center-gap4"` where none was. Verified live via Playwright on two pages:
+  Cash's Planning tab (a `<label>`) and PSX's Trade Planner (a `<td>` inside its per-ticker
+  summary table plus a `<div>` stat-card label, after expanding the plan's own collapsed-by-
+  default card) — every element's `getComputedStyle()` read `display:flex`/
+  `alignItems:center`/`gap:4px` exactly as before, zero new console errors on either page.
+  `npx tsc -b` / `npm run test` (645 tests, unchanged) / `npm run build` all clean.
 
 ## Pending
 
@@ -9067,10 +9081,13 @@ or a design decision before more code, not guessed at further:**
      concrete instance done (2026-09-11) — see Done item 303**: `style={{ gap: 8, marginTop:
      8 }}` (13 occurrences across 7 files) — the same `.row.gap-sm` case with a leading top
      margin instead of Done item 301's trailing bottom one; extracted into a symmetric
-     `.mt-sm{margin-top:8px;}` utility. The exact same incremental discipline (audit one
-     repeated pattern, extract or remove, verify, repeat) still applies for every other
-     module/pattern — this is one instance of an ongoing, repeatable practice, not a closed
-     item.
+     `.mt-sm{margin-top:8px;}` utility. **Eighth concrete instance done (2026-09-11) — see Done
+     item 304**: `style={{ display: 'flex', alignItems: 'center', gap: 4 }}` (8 occurrences
+     across 4 files — label/span/td/div elements, no shared parent pattern this time) —
+     extracted into a new standalone `.flex-center-gap4{display:flex;align-items:center;
+     gap:4px;}` utility. The exact same incremental discipline (audit one repeated pattern,
+     extract or remove, verify, repeat) still applies for every other module/pattern — this is
+     one instance of an ongoing, repeatable practice, not a closed item.
 117. ~~App-wide "everything should be a grid item except tables" principle (2026-09-06)~~ —
      **done in full (2026-09-08), see Done item 237.** Every module's landing/Settings page has
      been audited for the "short non-table cards stacked full-width" pattern; Cash's Settings

@@ -641,7 +641,7 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
             <EntityCard
               key={r.fund.id}
               title={
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span className="flex-center-gap4">
                   <span className="text-muted entity-card-sr">#{r.idx}</span>
                   {/* Funds has no known logo CDN of its own (README item 118) — passing
                    * exchange="psx" reuses TickerLogo's "no remote CDN, local-drop-in or

@@ -695,6 +695,13 @@
      symmetric with `.mb-sm` above, same "no existing rule touches
      margin-top on .row" safety check. */
   .mt-sm{margin-top:8px;}
+  /* Same cleanup, eighth instance (2026-09-11): `style={{ display: 'flex',
+     alignItems: 'center', gap: 4 }}` was hand-repeated 8 times across
+     label/span/td/div elements — a plain inline-content row with a small
+     gap, no existing class covered it (checked theme.css for any
+     `display`/`align-items` rule on label/span/td that could compete —
+     none found, so a bare class is safe at any specificity). */
+  .flex-center-gap4{display:flex;align-items:center;gap:4px;}
   /* User-reported (2026-08-27): "Input sizes still inconsistent and taking
      whole 100% width." Root cause: `flex:1` (flex-basis:0%) ignores each
      field's own explicit `width` prop entirely and instead divides the
