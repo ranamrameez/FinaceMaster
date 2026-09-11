@@ -38,6 +38,7 @@ import { usePlannedCashFirebaseSync } from './lib/firebase/usePlannedCashFirebas
 import { PersonalLoansPage } from './features/personalLoans/pages/PersonalLoansPage';
 import { usePersonalLoansFirebaseSync } from './lib/firebase/usePersonalLoansFirebaseSync';
 import { BankPage, AccountDetailPage, BankDetailPage } from './features/bank/pages/BankPage';
+import { CreditCardDetailPage } from './features/bank/pages/CreditCardsSection';
 import { useBankFirebaseSync } from './lib/firebase/useBankFirebaseSync';
 import { usePlannedBankFirebaseSync } from './lib/firebase/usePlannedBankFirebaseSync';
 import { useCreditCardFirebaseSync } from './lib/firebase/useCreditCardFirebaseSync';
@@ -228,6 +229,7 @@ function App() {
               />
               <Route path="/bank/account/:id" element={<AccountDetailPage />} />
               <Route path="/bank/bank/:id" element={<BankDetailPage />} />
+              <Route path="/bank/card/:id" element={<CreditCardDetailPage />} />
               <Route
                 path="/emi-loans"
                 element={

@@ -44,6 +44,22 @@ describe('outstandingBalanceByCard', () => {
     ];
     expect(outstandingBalanceByCard(card(), txs)).toBe(160);
   });
+
+  // Real bug (user-reported, 2026-09-11): migrating a legacy liability
+  // BankAccount into a real CreditCard dropped its `openingBalance`
+  // entirely, since `CreditCard` had no equivalent field — a card with
+  // real pre-app debt silently lost it. Confirmed against the user's own
+  // real numbers: GCC's old account had `openingBalance: -7553.11`
+  // (negative = owed, BankAccount's convention) and a post-migration
+  // `accountBalance` of -705.89 (i.e. really owed 705.89) — the migrated-
+  // transactions-only balance (opposite sign, CreditCard's convention)
+  // came out to exactly -6847.22 without this field, when the real
+  // correct figure is +705.89 owed.
+  it('includes card.openingBalance (positive = owed) in the running balance', () => {
+    const txs = [tx({ kind: 'charge', amount: 500, date: '2026-01-10' }), tx({ kind: 'payment', amount: 200, date: '2026-01-15' })];
+    expect(outstandingBalanceByCard(card({ openingBalance: 1000 }), txs)).toBe(1300);
+    expect(outstandingBalanceByCard(card({ openingBalance: -1000 }), txs)).toBe(-700);
+  });
 });
 
 describe('currentStatement', () => {
@@ -69,6 +85,13 @@ describe('currentStatement', () => {
     expect(s!.paymentsThisCycle).toBe(400);
     expect(s!.statementBalance).toBe(900); // 1000 + 300 - 400
     expect(s!.dueDate).toBe('2026-02-25'); // same month, since 25 >= 5
+  });
+
+  it('carries card.openingBalance into previousBalance and statementBalance', () => {
+    const txs = [tx({ date: '2026-01-10', kind: 'charge', amount: 300 }), tx({ date: '2026-01-20', kind: 'payment', amount: 400 })];
+    const s = currentStatement(card({ openingBalance: 1000 }), txs, '2026-02-10');
+    expect(s!.previousBalance).toBe(1000); // no prior-cycle txs, so this IS the opening balance
+    expect(s!.statementBalance).toBe(900); // 1000 + 300 - 400
   });
 
   it('due date rolls into the following month when paymentDueDate < statementDate', () => {

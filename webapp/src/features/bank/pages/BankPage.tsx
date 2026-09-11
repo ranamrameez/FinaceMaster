@@ -25,6 +25,8 @@ import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { useAmountFormat } from '../../../hooks/useAmountFormat';
 import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
+import { usePageFabActions } from '../../../hooks/usePageFabActions';
+import { allExtraActions, useFabActionsStore } from '../../../store/fabActionsStore';
 import { ReorderButtons } from '../../../components/ui/ReorderButtons';
 import { RecurrenceFields } from '../../../components/ui/RecurrenceFields';
 import { nextRecurrenceOccurrence } from '../../../lib/calc/recurrence';
@@ -43,7 +45,6 @@ import { fmtMoney } from '../../../lib/format';
 import { dateOnlyMs } from '../../../lib/datetime';
 import { confirmAndDeleteLinkable, propagateLinkedEdit, resolveLinkedEdit } from '../../../lib/linkCascade';
 import { isValidIbanFormat, lookupIban } from '../../../lib/ibanLookup';
-import { isValidBin, lookupBin } from '../../../lib/binLookup';
 import { banksForCurrency } from '../../../lib/bankDirectory';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { firebaseReady } from '../../../lib/firebase/client';
@@ -66,99 +67,6 @@ function emptyAccount(defaultCurrency: string, bankId?: string): Omit<BankAccoun
 }
 
 const ACCOUNT_TYPES = ['Savings', 'Current', 'Checking', 'Salary', 'Business', 'Fixed deposit'];
-
-const CARD_NETWORKS = ['Visa', 'Mastercard', 'American Express', 'UnionPay', 'Discover', 'JCB'];
-
-interface CreditCardValue {
-  isLiability?: boolean;
-  creditLimit?: number;
-  annualFee?: number;
-  statementDate?: number;
-  paymentDueDate?: number;
-  lateFeeAfterDue?: number;
-  minPaymentAmount?: number;
-  cardNetwork?: string;
-  cardBin?: string;
-}
-
-/** User-requested (2026-08-26): credit card tracking as a liability
- * account — "Is this a credit card?" reveals card-specific fields (all
- * optional beyond the toggle itself). `cardBin` (first 6-8 digits only,
- * never a full card number — see `lib/binLookup.ts`) optionally
- * auto-fills the network via a free public lookup; the network field
- * stays a normal free-editable input either way. */
-function CreditCardFields({ value, onChange, datalistId }: { value: CreditCardValue; onChange: (patch: Partial<CreditCardValue>) => void; datalistId: string }) {
-  const [detecting, setDetecting] = useState(false);
-
-  const detectNetwork = async () => {
-    const bin = (value.cardBin ?? '').trim();
-    if (!bin) return toast('Enter the first 6-8 digits of the card first.');
-    if (!isValidBin(bin)) return toast('That should be 6-8 digits — never the full card number.');
-    setDetecting(true);
-    try {
-      const result = await lookupBin(bin);
-      if (!result) {
-        toast('Card network not detected — pick it manually below.');
-        return;
-      }
-      onChange({ cardNetwork: result.network ? result.network[0].toUpperCase() + result.network.slice(1) : value.cardNetwork });
-      toast(`Detected: ${result.network ?? 'unknown network'}${result.bankName ? ` (${result.bankName})` : ''}.`);
-    } catch {
-      toast('Card network not detected — pick it manually below.');
-    } finally {
-      setDetecting(false);
-    }
-  };
-
-  return (
-    <div className="mt-sm">
-      <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <input type="checkbox" checked={!!value.isLiability} onChange={(e) => onChange({ isLiability: e.target.checked })} />
-        This is a credit card (counts as a debt in Net Worth, not a balance)
-      </label>
-      {value.isLiability && (
-        <div className="mt-sm">
-          <div className="row gap-sm">
-            <Field label="Credit limit (optional)" width={140}>
-              <TextInput type="number" step="0.01" value={value.creditLimit ?? ''} onChange={(e) => onChange({ creditLimit: e.target.value ? Number(e.target.value) : undefined })} />
-            </Field>
-            <Field label="Annual fee (optional)" width={130}>
-              <TextInput type="number" step="0.01" value={value.annualFee ?? ''} onChange={(e) => onChange({ annualFee: e.target.value ? Number(e.target.value) : undefined })} />
-            </Field>
-            <Field label="Statement day of month (optional)" width={110}>
-              <TextInput type="number" min={1} max={31} value={value.statementDate ?? ''} onChange={(e) => onChange({ statementDate: e.target.value ? Number(e.target.value) : undefined })} />
-            </Field>
-            <Field label="Payment due day of month (optional)" width={110}>
-              <TextInput type="number" min={1} max={31} value={value.paymentDueDate ?? ''} onChange={(e) => onChange({ paymentDueDate: e.target.value ? Number(e.target.value) : undefined })} />
-            </Field>
-          </div>
-          <div className="row gap-sm mt-sm">
-            <Field label="Late fee after due date (optional)" width={150}>
-              <TextInput type="number" step="0.01" value={value.lateFeeAfterDue ?? ''} onChange={(e) => onChange({ lateFeeAfterDue: e.target.value ? Number(e.target.value) : undefined })} />
-            </Field>
-            <Field label="Minimum amount due (optional)" width={150}>
-              <TextInput type="number" step="0.01" value={value.minPaymentAmount ?? ''} onChange={(e) => onChange({ minPaymentAmount: e.target.value ? Number(e.target.value) : undefined })} />
-            </Field>
-            <Field label="Card network (optional)" width={140}>
-              <TextInput list={datalistId} value={value.cardNetwork ?? ''} onChange={(e) => onChange({ cardNetwork: e.target.value || undefined })} placeholder="e.g. Visa" />
-            </Field>
-            <Field label="First 6-8 digits (optional)" width={140} title="Never the full card number — just enough to detect the network/issuer.">
-              <TextInput value={value.cardBin ?? ''} onChange={(e) => onChange({ cardBin: e.target.value || undefined })} placeholder="e.g. 411111" />
-            </Field>
-            <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 1 }}>
-              <button type="button" className="btn secondary small" disabled={detecting} onClick={detectNetwork}>
-                {detecting ? 'Detecting…' : 'Detect network'}
-              </button>
-            </div>
-          </div>
-          <datalist id={datalistId}>
-            {CARD_NETWORKS.map((n) => <option key={n} value={n} />)}
-          </datalist>
-        </div>
-      )}
-    </div>
-  );
-}
 
 /* ============================== Accounts ============================== */
 
@@ -341,6 +249,16 @@ function BankIdentityField({ value, onChange, idSuffix }: { value: Pick<BankAcco
  * (`FabPanel`) instead of each page showing its own single always-visible
  * button. Bank's "Add an account" action stays exactly as it was — only
  * the wrapper changed. */
+/** User-reported (2026-09-11): "CC is stuck in a popup" batch also found a
+ * real, separate bug while checking — `Tabs.tsx`'s own "a chip click
+ * force-opens a section without closing the others" design (see that
+ * file's own comment) means Banking's Accounts/Credit Cards/Planning tabs
+ * can easily all be open at once, each rendering its OWN independent
+ * `FabPanel` at the identical fixed corner — confirmed live via Playwright
+ * (two "Open actions" buttons stacked at the exact same coordinates).
+ * Fixed by registering via the keyed `usePageFabActions` (same mechanism
+ * QSE's/PSX's Transfers FAB already used for the single-writer case) —
+ * `BankPage` itself renders the one merged `FabPanel` for the whole page. */
 function AccountsFab() {
   const [open, setOpen] = useState<'account' | 'transfer' | 'bank' | null>(null);
   const addBank = useBankWorkbookStore((s) => s.addBank);
@@ -354,19 +272,21 @@ function AccountsFab() {
     setBankName('');
     setOpen(null);
   };
+  const actions = useMemo(
+    () => [
+      { label: 'Add an account', icon: <PlusIcon />, onClick: () => setOpen('account') },
+      { label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen('transfer') },
+      // Pending item 115(a): grouped here rather than a second floating
+      // button, so it can't stack/overlap with this panel (same class
+      // of bug already fixed once for the app-wide Transfers FAB —
+      // see Done item 239).
+      { label: 'Add a bank', icon: <PlusIcon />, onClick: () => setOpen('bank') },
+    ],
+    [],
+  );
+  usePageFabActions('bank-accounts', actions);
   return (
     <>
-      <FabPanel
-        actions={[
-          { label: 'Add an account', icon: <PlusIcon />, onClick: () => setOpen('account') },
-          { label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen('transfer') },
-          // Pending item 115(a): grouped here rather than a second floating
-          // button, so it can't stack/overlap with this panel (same class
-          // of bug already fixed once for the app-wide Transfers FAB —
-          // see Done item 239).
-          { label: 'Add a bank', icon: <PlusIcon />, onClick: () => setOpen('bank') },
-        ]}
-      />
       {open === 'account' && (
         <Modal title="Add an account" onClose={() => setOpen(null)}>
           <AddAccountForm onSaved={() => setOpen(null)} />
@@ -453,7 +373,6 @@ function AccountFormFields({
          (its own `currentName` falls back to `bankName` while `bankId`
          isn't set yet) rather than a separate field of its own. */}
       <IbanLookupFields value={value} onChange={onChange} onBankNameFound={(name) => onChange({ bankName: name })} />
-      <CreditCardFields value={value} onChange={onChange} datalistId={`card-network-datalist-${idSuffix}`} />
       {/* User-requested: save an account number + the SMS sender details a
          bank alert actually arrives from, for a future SMS-based
          transaction-import feature (nothing reads these yet — this just
@@ -1999,12 +1918,19 @@ function BalanceProjectionSummary() {
 
 /** README item 86 (2026-08-26 feedback): "Add a plan" shouldn't be
  * permanently visible either — same FAB+popup treatment as "Add a loan"
- * (Done item 166) and "Add an account" above. */
+ * (Done item 166) and "Add an account" above.
+ *
+ * 2026-09-11: registers via the keyed `usePageFabActions` instead of
+ * rendering its own `FabButton` — see `AccountsFab`'s own comment on the
+ * real FAB-stacking bug this fixes (Planning is a third simultaneous
+ * contributor alongside Accounts/Credit Cards once more than one Banking
+ * tab is open at once). */
 function AddBankPlanFab({ accountId }: { accountId: string }) {
   const [open, setOpen] = useState(false);
+  const actions = useMemo(() => [{ label: 'Add a plan', icon: <PlusIcon />, onClick: () => setOpen(true) }], []);
+  usePageFabActions('bank-planning', actions);
   return (
     <>
-      <FabButton label="Add a plan" onClick={() => setOpen(true)}><PlusIcon /></FabButton>
       {open && (
         <Modal title="Add a plan" onClose={() => setOpen(false)}>
           <AddBankPlanForm accountId={accountId} onSaved={() => setOpen(false)} />
@@ -2495,6 +2421,19 @@ export function BankPage({
   plannedCloudEmpty: boolean;
   uploadPlannedLocalToCloud: () => Promise<void>;
 }) {
+  // Real bug, user-reported (2026-09-11): `Tabs.tsx`'s own "a chip click
+  // force-opens a section without closing the others" design means this
+  // page's Accounts/Credit Cards/Planning tabs can all be open, hence all
+  // mounted, at once — each used to render its OWN independent `FabPanel`
+  // at the identical fixed corner (confirmed live: two "Open actions"
+  // buttons stacked at the exact same coordinates). Fixed by having each
+  // of those tabs register its own actions via the keyed
+  // `usePageFabActions` instead, merged into the ONE panel rendered here —
+  // same mechanism `CalculatorLauncher` already uses for Stock Exchanges
+  // routes, just consumed directly by this page instead of a second
+  // globally-mounted component.
+  const actionsByKey = useFabActionsStore((s) => s.actionsByKey);
+  const fabActions = allExtraActions(actionsByKey);
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
@@ -2537,6 +2476,7 @@ export function BankPage({
           },
         ]}
       />
+      <FabPanel actions={fabActions} />
     </div>
   );
 }

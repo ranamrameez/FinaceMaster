@@ -8333,6 +8333,56 @@ FinanceManager live link:
   assuming this is a universal gap vs. a discoverability one" — stays open; this closes the
   concrete, code-confirmable part (the date-format silent-failure risk was real and
   reproducible from the code alone, independent of which flows the user has tried).
+- **Credit Card: real correctness bug (missing `openingBalance`) found and fixed, plus 4
+  related gaps — see Done item 312 (2026-09-11).** User reported the GCC/PCC migration off the
+  old `isLiability`-on-`BankAccount` model (Done item 300) produced wrong figures, attaching a
+  real screenshot (Outstanding Balance -6,847.22 QAR vs. the Banking homepage's own stale
+  "Owed 705.89 QAR"). Root-caused directly from the user's own attached full-app backup (not
+  guessed): `MigrateLegacyCreditCards`'s `migrate()` never carried the old account's
+  `openingBalance` (-7,553.11, debt predating the account's own logged transactions) into the
+  new `CreditCard` record — which had NO equivalent field at all — so the migrated card's
+  balance was computed purely from its (much shorter) transaction history, off by the entire
+  opening amount. Confirmed the exact arithmetic reproduces the reported -6,847.22 exactly.
+  Fixed generally, not as a one-off: added `CreditCard.openingBalance?: number` (positive =
+  owed, opposite sign convention from `BankAccount.openingBalance`), wired into
+  `creditCardModule.ts`'s shared `balanceAsOf()` (used by both `outstandingBalanceByCard` and
+  `currentStatement`), added to both the Add-card and Edit-card forms, and fixed the migration
+  function to carry it over (negated) for any FUTURE migration. Per the user's own explicit
+  "don't build a costly one-time conversion tool — just tell me what to enter": the fix is a
+  real, permanent field a user fills in themselves (their own already-migrated GCC/PCC need
+  their real opening balances re-entered once by hand — this session cannot safely guess-write
+  into a live signed-in account). Four more gaps found/fixed in the same investigation: (1) the
+  whole-app export/import (`AppDataPage.tsx`) never included the `creditCards` module at all
+  (added after that export was built) — confirmed via the user's own attached backup missing
+  the key entirely; fixed by adding it to all 4 maps that drive that page. (2) Bank's Add/Edit
+  account form still showed the old "This is a credit card" checkbox + card-specific fields —
+  removed entirely (`CreditCardFields`/`CreditCardValue`, dead since real cards are a separate
+  entity now); the read-side display logic for any still-un-migrated legacy account is left
+  untouched. (3) "CC is stuck in a popup with no edition options for transactions" — converted
+  `CreditCardDetail` from a `<Modal>` into a real routed page (`/bank/card/:id`, mirroring
+  `AccountDetailPage`'s exact shape) and added inline edit-row capability to the transactions
+  table (previously Delete + a read-only detail popup only). (4) A real, separate FAB-stacking
+  bug found live while verifying (3): `Tabs.tsx`'s own "a chip click force-opens a section
+  without closing the others" design means Banking's Accounts/Credit Cards/Planning tabs can
+  all be open — hence all mounted — at once, each rendering its OWN independent `FabPanel` at
+  the identical fixed corner (confirmed via Playwright: two "Open actions" buttons stacked at
+  the exact same coordinates). Generalized `fabActionsStore.ts`'s single-slot design (only ever
+  had one real simultaneous writer before — QSE's/PSX's Transactions pages are mutually
+  exclusive by route) to a keyed registry so any number of simultaneous contributors merge
+  correctly; `BankPage` now renders the one merged panel for its own tabs.
+  Verified live via Playwright throughout: the exact reported scenario (openingBalance
+  -7,553.11 seeded, transactions netting -100) now shows Used 7,253.11/Available 8,746.89 of
+  16,000 — matching the derivation exactly; the Bank Add form no longer mentions credit cards;
+  `/bank/card/:id` is a real URL, not a modal; editing a transaction's amount persists; opening
+  every Banking tab at once still shows exactly one FAB with all 5 actions merged; zero console
+  errors. New tests: `creditCardModule.test.ts` gained 2 cases pinning the exact GCC arithmetic.
+  `npx tsc -b` / `npm run test` (653 tests, 2 new) / `npm run build` all clean.
+  **Deliberately not done in this pass**: the user's separate "Cash showing scrollable tables,
+  dense UI but still unreadable" + "all other modules should [use Bank's page-per-entity flow]"
+  ask — Cash's own shape (per-currency ledgers, not a list of named entities like Bank's
+  accounts) doesn't map onto the same pattern as directly as Personal Loans'/EMI's/Rentals'
+  lists already do (Done items 271-274) — needs the user's own concrete example of what's
+  unreadable before guessing at a redesign, tracked as its own open item rather than assumed.
 
 ## Pending
 
@@ -8412,12 +8462,18 @@ wave" section)**:
     couldn't reproduce locally (both primary sign-in entry points open the real modal
     correctly). Needs a specific page/button from the user to chase further if it recurs.
 27. ~~Editing (not deleting) a linked record directly in its native module still doesn't
-    propagate to the other side of the link or the link record itself.~~ **Warned about, not
-    auto-synced — see Done item 106.** Full propagation isn't safe to do blindly (a
+    propagate to the other side of the link or the link record itself.~~ **Now fully done
+    (2026-09-11) — see `lib/linkCascade.ts`'s `resolveLinkedEdit`/`propagateLinkedEdit`.**
+    Originally just a warning (Done item 106): full propagation wasn't safe to do blindly (a
     cross-currency link has no live FX rate to derive one side's new amount from the other's
-    edit), so every native edit-save now confirms with the user first, naming the other module
-    and explaining the edit stays one-sided if they proceed. Full sync still only happens via
-    the Transfers page itself.
+    edit), so every native edit-save confirmed with the user first, naming the other module,
+    with the edit always staying one-sided if they proceeded — "full sync" meant leaving the
+    native module and using the (since-removed, Done item 216) standalone Transfers page.
+    Replaced with a real three-way choice (cancel / this side only / both sides) offered right
+    there in the same confirm step: "both sides" now genuinely propagates the date/note and,
+    when the two sides share a currency, the amount too — cross-currency links still only sync
+    date/note (correctly, since guessing a conversion would be wrong), with the toast saying so
+    rather than silently claiming a full sync that didn't happen.
 28. **Planning v2 — real-but-pending transfers + balance reconciliation (2026-08-23,
     user-requested, design captured but explicitly NOT started).** The Planning feature
     (item 43 below) needs to also handle a second case beyond a pure hypothetical: a real
@@ -9137,7 +9193,17 @@ or a design decision before more code, not guessed at further:**
      (2026-09-08) — see Done item 265.** Built purely additively instead of a migration — a new
      optional `Bank` type/`bankId` link, zero automatic conversion of any existing account's
      free-text bank name, so there was no real "migrate production data" step to confirm at all;
-     Credit Card normalization (Pending item 114) remains its own separate, still-open track.
+     Credit Card normalization (Pending item 114) remains its own separate, still-open track —
+     though "normalization" itself is done (CLAUDE.md's own "Credit Card redesign" section,
+     Done item 300, 2026-09-10, built it as a real separate entity, not a `BankAccount` field);
+     what's left is real bugs found in that build, not the design itself — see Done item 312
+     (2026-09-11): a missing `openingBalance` field that undercounted a migrated card's real
+     debt, the whole-app export never including the new module, stale credit-card fields left
+     on Bank's own Add/Edit form, the card's own detail view still stuck in a popup with no
+     transaction-editing, and a real FAB-stacking bug on the Banking page itself found while
+     fixing that. All five fixed; the user's own already-migrated GCC/PCC cards still need their
+     real opening balances re-entered by hand (this session can't safely write into their live
+     signed-in account) — flagged to them directly, not silently left as a gap.
      ~~(b) **The same pattern for Funds/brokerages** — "Same should happen with Funds and others
      like I have 4 brokerage and i want to seem my amounts with each broker/investment firm. and
      then i want to see break-down and overall sums for all the firms."~~ **Done (2026-09-09) —
@@ -9367,6 +9433,18 @@ or a design decision before more code, not guessed at further:**
      deliberately left out, each for a stated reason (EMI's row already shows every field with
      nothing truncated; Subscriptions is an `EntityCard` grid with no per-transaction ledger
      and already opens a richer detail page on click) — not a remaining gap.
+133. **Cash's own UI called out as "showing scrollable tables, dense UI but still unreadable,"
+     alongside "all other modules should [use Bank's per-entity page flow]" (2026-09-11).**
+     Real complaint, not yet acted on — needs the user's own concrete example before guessing
+     at a redesign. Bank's own page-per-entity flow (a homepage list of named accounts, click
+     into a dedicated `/bank/account/:id` page) doesn't map onto Cash as directly as it did onto
+     Personal Loans'/EMI's/Rentals' lists (Done items 271-273): Cash's primary view is a
+     per-currency STATEMENT (one ledger per currency the user holds), not a list of several
+     independently-named entities the way a bank account or a loan is — there's no obvious
+     "entity" to click into for a page of its own beyond "this currency's whole statement,"
+     which is already what the existing per-currency `CashStatementTable` shows. Don't guess at
+     a specific fix here; ask which table/section reads as unreadable and why (too many columns?
+     too small text? wrong density setting?) before redesigning.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

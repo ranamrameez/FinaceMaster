@@ -72,19 +72,22 @@ function dueDateForCutoff(card: CreditCard, cutoff: string): string | null {
 
 /** This card's real running balance as of (and including) `asOfDate` — the
  * one place `outstandingBalanceByCard` and `currentStatement` both derive
- * from, so they can never drift apart. A payment reduces it, everything
- * else (charge/fee/markup/cashAdvance) increases it. */
-function balanceAsOf(cardTransactions: CreditCardTransaction[], asOfDate: string): number {
+ * from, so they can never drift apart. Starts from `card.openingBalance`
+ * (debt that predates this card's own transaction log — see that field's
+ * own doc comment; omitting it here was a real bug, see README Done item
+ * "Credit Card: openingBalance"). A payment reduces it, everything else
+ * (charge/fee/markup/cashAdvance) increases it. */
+function balanceAsOf(card: CreditCard, cardTransactions: CreditCardTransaction[], asOfDate: string): number {
   return cardTransactions
     .filter((t) => t.date <= asOfDate)
-    .reduce((sum, t) => sum + (t.kind === 'payment' ? -t.amount : t.amount), 0);
+    .reduce((sum, t) => sum + (t.kind === 'payment' ? -t.amount : t.amount), card.openingBalance ?? 0);
 }
 
 /** The card's real, current outstanding balance — always up to date,
- * regardless of billing cycle. `Σ(charge+fee+markup+cashAdvance) −
- * Σ(payment)`. */
+ * regardless of billing cycle. `openingBalance + Σ(charge+fee+markup+
+ * cashAdvance) − Σ(payment)`. */
 export function outstandingBalanceByCard(card: CreditCard, transactions: CreditCardTransaction[]): number {
-  return balanceAsOf(transactions.filter((t) => t.cardId === card.id), '9999-12-31');
+  return balanceAsOf(card, transactions.filter((t) => t.cardId === card.id), '9999-12-31');
 }
 
 export interface CreditCardStatement {
@@ -119,7 +122,7 @@ export function currentStatement(
   if (!cycleEnd) return null;
   const cycleStart = oneCutoffBack(card, cycleEnd);
   const cardTxs = transactions.filter((t) => t.cardId === card.id);
-  const previousBalance = balanceAsOf(cardTxs, cycleStart);
+  const previousBalance = balanceAsOf(card, cardTxs, cycleStart);
   const cycleTxs = cardTxs.filter((t) => t.date > cycleStart && t.date <= cycleEnd);
   const chargesThisCycle = round2(cycleTxs.filter((t) => t.kind !== 'payment').reduce((s, t) => s + t.amount, 0));
   const paymentsThisCycle = round2(cycleTxs.filter((t) => t.kind === 'payment').reduce((s, t) => s + t.amount, 0));

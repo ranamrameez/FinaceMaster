@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { CollapsibleCard, EntityCard, MoneyValue } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
 import { Tooltip } from '../../../components/Tooltip';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { ArchiveIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, StarIcon, TransferIcon, TrashIcon } from '../../../components/icons';
+import { ArchiveIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, StarIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Modal } from '../../../components/Modal';
 import { RecordDetailModal } from '../../../components/RecordDetailModal';
 import { toast } from '../../../components/Toast';
@@ -11,12 +12,12 @@ import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { AmountInput } from '../../../components/ui/AmountInput';
 import { IconButton } from '../../../components/ui/IconButton';
 import { AttributeList } from '../../../components/ui/AttributeList';
-import { FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
 import { CategorySelect } from '../../../components/CategorySelect';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
+import { usePageFabActions } from '../../../hooks/usePageFabActions';
 import { getLastTransferSource, rememberTransferSource } from '../../../hooks/useLastTransferSource';
 import { hueStyle } from '../../../lib/statCardHues';
 import { categoryName, UNCATEGORIZED_ID } from '../../../lib/categories';
@@ -88,6 +89,9 @@ export function AddCreditCardForm({ onSaved, initialCurrency }: { onSaved?: (id:
         </Field>
         <Field label="Credit limit (optional)" width={140}>
           <TextInput type="number" step="0.01" value={c.creditLimit ?? ''} onChange={(e) => setC({ ...c, creditLimit: e.target.value === '' ? undefined : Number(e.target.value) })} />
+        </Field>
+        <Field label="Already owed (optional)" width={140} title="Debt that already exists on this card before you start tracking it here — e.g. from a real statement you already have. Leave blank for a brand-new card with nothing owed yet.">
+          <TextInput type="number" step="0.01" value={c.openingBalance ?? ''} onChange={(e) => setC({ ...c, openingBalance: e.target.value === '' ? undefined : Number(e.target.value) })} />
         </Field>
       </div>
       <button className="btn mt-12" onClick={submit}>
@@ -231,15 +235,35 @@ function AddCardTransactionForm({ card }: { card: CreditCard }) {
   );
 }
 
+/** User-reported (2026-09-11): "CC is stuck in a popup with no edition
+ * options for transactions" — this table only ever offered Delete + a
+ * read-only detail popup; there was no way to correct a typo'd amount or
+ * description without deleting and re-adding the row. Mirrors Bank's own
+ * `TransactionsList` inline-edit-row pattern (`BankPage.tsx`). */
 function TransactionsTable({ card }: { card: CreditCard }) {
   const transactions = useCreditCardWorkbookStore((s) => s.workbook.transactions);
+  const updateTransaction = useCreditCardWorkbookStore((s) => s.updateTransaction);
   const deleteTransaction = useCreditCardWorkbookStore((s) => s.deleteTransaction);
   const categories = useCategoryStore((s) => s.workbook.categories);
   const [detail, setDetail] = useState<CreditCardTransaction | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editRow, setEditRow] = useState<CreditCardTransaction | null>(null);
   const cardTxs = useMemo(
     () => [...transactions].filter((t) => t.cardId === card.id).sort((a, b) => b.date.localeCompare(a.date) || (b.seq ?? 0) - (a.seq ?? 0)),
     [transactions, card.id],
   );
+
+  const startEdit = (t: CreditCardTransaction) => { setEditId(t.id); setEditRow({ ...t }); };
+  const saveEdit = () => {
+    if (!editRow) return;
+    if (!(editRow.amount > 0)) return toast('Enter an amount greater than zero.');
+    if (!editRow.description.trim()) return toast('Enter a description.');
+    updateTransaction(editRow.id, { ...editRow, description: editRow.description.trim() });
+    toast('Transaction updated.');
+    setEditId(null);
+    setEditRow(null);
+  };
+
   if (!cardTxs.length) return <p className="text-muted m-0">No transactions yet.</p>;
   return (
     <div className="table-wrap">
@@ -249,23 +273,42 @@ function TransactionsTable({ card }: { card: CreditCard }) {
         </thead>
         <tbody>
           {cardTxs.map((t) => (
-            <tr key={t.id} className="clickable" onClick={() => setDetail(t)}>
-              <td>{t.date}</td>
-              <td className={t.kind === 'payment' ? 'pill pill-buy' : 'pill pill-sell'} style={{ display: 'inline-block' }}>{KIND_LABELS[t.kind]}</td>
-              <td>{t.description}</td>
-              <td>{categoryName(t.categoryID, categories)}</td>
-              <td>{fmtMoney(t.amount, card.currencyCode)}</td>
-              <td onClick={(e) => e.stopPropagation()}>
-                <IconButton
-                  label="Delete"
-                  icon={<TrashIcon size={12} />}
-                  align="right"
-                  onClick={async () => {
-                    if (await confirmDialog('This cannot be undone.', 'Delete this transaction?')) deleteTransaction(t.id);
-                  }}
-                />
-              </td>
-            </tr>
+            editId === t.id && editRow ? (
+              <tr key={t.id}>
+                <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
+                <td>
+                  <select value={editRow.kind} onChange={(e) => setEditRow({ ...editRow, kind: e.target.value as CreditCardTransactionKind })}>
+                    {(Object.keys(KIND_LABELS) as CreditCardTransactionKind[]).map((k) => <option key={k} value={k}>{KIND_LABELS[k]}</option>)}
+                  </select>
+                </td>
+                <td><input value={editRow.description} onChange={(e) => setEditRow({ ...editRow, description: e.target.value })} style={{ width: 140 }} /></td>
+                <td><CategorySelect value={editRow.categoryID ?? UNCATEGORIZED_ID} onChange={(categoryID) => setEditRow({ ...editRow, categoryID })} /></td>
+                <td><input type="number" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 90 }} /></td>
+                <td onClick={(e) => e.stopPropagation()}>
+                  <IconButton label="Save" icon={<SaveIcon size={12} />} align="right" onClick={saveEdit} />
+                  <IconButton label="Cancel" icon={<XIcon size={12} />} align="right" onClick={() => { setEditId(null); setEditRow(null); }} />
+                </td>
+              </tr>
+            ) : (
+              <tr key={t.id} className="clickable" onClick={() => setDetail(t)}>
+                <td>{t.date}</td>
+                <td className={t.kind === 'payment' ? 'pill pill-buy' : 'pill pill-sell'} style={{ display: 'inline-block' }}>{KIND_LABELS[t.kind]}</td>
+                <td>{t.description}</td>
+                <td>{categoryName(t.categoryID, categories)}</td>
+                <td>{fmtMoney(t.amount, card.currencyCode)}</td>
+                <td onClick={(e) => e.stopPropagation()}>
+                  <IconButton label="Edit" icon={<EditIcon size={12} />} align="right" onClick={() => startEdit(t)} />
+                  <IconButton
+                    label="Delete"
+                    icon={<TrashIcon size={12} />}
+                    align="right"
+                    onClick={async () => {
+                      if (await confirmDialog('This cannot be undone.', 'Delete this transaction?')) deleteTransaction(t.id);
+                    }}
+                  />
+                </td>
+              </tr>
+            )
           ))}
         </tbody>
       </table>
@@ -289,32 +332,59 @@ function TransactionsTable({ card }: { card: CreditCard }) {
   );
 }
 
-/** The user's own explicit requirements: "user gets his bill calculated
- * and visualized all info of the card and progress bar for limit
- * tracking" + "account linking option... for a seamless experience."
- * Often-tier detail view: read-only attributes + Edit icon, the progress
- * bar, a real statement/bill card (previous balance, this cycle's charges/
- * payments, the statement balance itself, minimum due + due date, with a
- * semi-automated "Approve & log" flow mirroring Rentals' rent collection),
- * the computed markup for this cycle with a "Log markup" action, and the
- * full transaction ledger with a kind-based add-transaction form. */
-function CreditCardDetail({ card, onClose }: { card: CreditCard; onClose: () => void }) {
+/** User-reported (2026-09-11): "CC is stuck in a popup" — Banking's own
+ * accounts already moved to a real routed page (`AccountDetailPage`,
+ * mirrored exactly here), while a card was still stuck behind a `<Modal>`
+ * with no URL of its own, no back-button-friendly history entry, and no
+ * dedicated screen real estate. Converted to a routed page at
+ * `/bank/card/:id` — every section below (Card details, Current statement,
+ * Add transaction, Transactions) is otherwise unchanged from the old
+ * Modal-based `CreditCardDetail`.
+ *
+ * The user's own explicit requirements this whole page satisfies: "user
+ * gets his bill calculated and visualized all info of the card and
+ * progress bar for limit tracking" + "account linking option... for a
+ * seamless experience." Often-tier detail view: read-only attributes +
+ * Edit icon, the progress bar, a real statement/bill card (previous
+ * balance, this cycle's charges/payments, the statement balance itself,
+ * minimum due + due date, with a semi-automated "Approve & log" flow
+ * mirroring Rentals' rent collection), the computed markup for this cycle
+ * with a "Log markup" action, and the full transaction ledger with a
+ * kind-based add-transaction form. */
+export function CreditCardDetailPage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const cards = useCreditCardWorkbookStore((s) => s.workbook.cards);
+  const card = cards.find((c) => c.id === id);
   const updateCard = useCreditCardWorkbookStore((s) => s.updateCard);
   const deleteCard = useCreditCardWorkbookStore((s) => s.deleteCard);
   const addTransaction = useCreditCardWorkbookStore((s) => s.addTransaction);
   const transactions = useCreditCardWorkbookStore((s) => s.workbook.transactions);
   const ensureSignedIn = useEnsureSignedIn();
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState<CreditCard>(card);
+  // Every hook below must run unconditionally on every render (rules of
+  // hooks) — the "card not found" guard has to come AFTER all of them, so
+  // this fallback just keeps the initial render safe for an id that
+  // doesn't resolve, same discipline `AccountDetailPage` already follows.
+  const [draft, setDraft] = useState<CreditCard>(() => card ?? { id: '', name: '', currencyCode: 'USD' });
   const currencyOptions = useEnabledCurrencies(draft.currencyCode);
 
-  const balance = outstandingBalanceByCard(card, transactions);
-  const statement = currentStatement(card, transactions);
-  const markup = statement ? markupThisCycle(card, statement) : 0;
-  const proposal = statement ? proposeMinPayment(card, statement) : null;
+  const balance = card ? outstandingBalanceByCard(card, transactions) : 0;
+  const statement = card ? currentStatement(card, transactions) : null;
+  const markup = statement && card ? markupThisCycle(card, statement) : 0;
+  const proposal = statement ? proposeMinPayment(card!, statement) : null;
   const [collectAmount, setCollectAmount] = useState(proposal?.amount ?? 0);
   const [collectDate, setCollectDate] = useState(proposal?.dueDate ?? today());
   const [linkMode, setLinkMode] = useState(false);
+
+  if (!card) {
+    return (
+      <div>
+        <Link to="/bank" className="text-muted">← Back to Banking</Link>
+        <p className="text-muted mt-12">Card not found.</p>
+      </div>
+    );
+  }
 
   const saveDetails = async () => {
     if (!draft.name.trim()) return toast('Enter a card name.');
@@ -359,16 +429,27 @@ function CreditCardDetail({ card, onClose }: { card: CreditCard; onClose: () => 
     if (!(await confirmDialog('This deletes the card and all its transactions — this cannot be undone.', `Delete "${card.name}"?`))) return;
     deleteCard(card.id);
     toast('Card deleted.');
-    onClose();
+    navigate('/bank');
   };
 
   return (
-    <Modal title={card.name} onClose={onClose}>
-      <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-        <IconButton label={card.isFavorite ? 'Unfavorite' : 'Favorite'} icon={<StarIcon size={13} filled={card.isFavorite} />} onClick={toggleFavorite} />
-        <IconButton label={editing ? 'Cancel' : 'Edit'} icon={<EditIcon size={13} />} onClick={() => { setDraft(card); setEditing((v) => !v); }} />
-        <IconButton label={card.isActive === false ? 'Reopen' : 'Close'} icon={card.isActive === false ? <RestoreIcon size={13} /> : <ArchiveIcon size={13} />} onClick={toggleArchived} />
-        <IconButton label="Delete" icon={<TrashIcon size={13} />} className="btn danger small" onClick={deleteThisCard} />
+    <div>
+      <Link to="/bank" className="text-muted">← Back to Banking</Link>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
+        <h1 className="pagetitle" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+          {card.name}
+          {card.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Closed</span>}
+        </h1>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <IconButton label={card.isFavorite ? 'Unfavorite' : 'Favorite'} icon={<StarIcon size={13} filled={card.isFavorite} />} align="right" onClick={toggleFavorite} />
+          <IconButton label={editing ? 'Cancel' : 'Edit'} icon={<EditIcon size={13} />} align="right" onClick={() => { setDraft(card); setEditing((v) => !v); }} />
+          <button className="btn secondary small" onClick={toggleArchived}>
+            {card.isActive === false ? <><RestoreIcon size={13} />Reopen card</> : <><ArchiveIcon size={13} />Close card</>}
+          </button>
+          <button className="btn danger small" onClick={deleteThisCard}>
+            <TrashIcon size={13} />Delete card
+          </button>
+        </div>
       </div>
 
       {card.creditLimit ? <CreditUsageBar used={Math.max(0, balance)} limit={card.creditLimit} currency={card.currencyCode} /> : null}
@@ -385,6 +466,9 @@ function CreditCardDetail({ card, onClose }: { card: CreditCard; onClose: () => 
               </Field>
               <Field label="Credit limit"><TextInput type="number" step="0.01" value={draft.creditLimit ?? ''} onChange={(e) => setDraft({ ...draft, creditLimit: e.target.value === '' ? undefined : Number(e.target.value) })} /></Field>
               <Field label="Network"><TextInput value={draft.cardNetwork ?? ''} onChange={(e) => setDraft({ ...draft, cardNetwork: e.target.value })} placeholder="e.g. Visa" /></Field>
+              <Field label="Already owed" title="Debt that existed on this card before its own transaction log started here — see this card's own opening balance.">
+                <TextInput type="number" step="0.01" value={draft.openingBalance ?? ''} onChange={(e) => setDraft({ ...draft, openingBalance: e.target.value === '' ? undefined : Number(e.target.value) })} />
+              </Field>
             </div>
             <div className="row gap-sm mt-sm">
               <Field label="Statement date (day of month)" title="The day of the month your billing cycle closes and a new statement generates.">
@@ -426,6 +510,7 @@ function CreditCardDetail({ card, onClose }: { card: CreditCard; onClose: () => 
             items={[
               { label: 'Currency', value: card.currencyCode },
               { label: 'Outstanding balance', value: fmtMoney(balance, card.currencyCode) },
+              { label: 'Already owed (opening balance)', value: card.openingBalance ? fmtMoney(card.openingBalance, card.currencyCode) : undefined },
               { label: 'Credit limit', value: card.creditLimit ? fmtMoney(card.creditLimit, card.currencyCode) : undefined },
               { label: 'Network', value: card.cardNetwork },
               { label: 'BIN', value: card.cardBin },
@@ -508,22 +593,29 @@ function CreditCardDetail({ card, onClose }: { card: CreditCard; onClose: () => 
       <CollapsibleCard title={<h3 className="m-0">Transactions</h3>}>
         <TransactionsTable card={card} />
       </CollapsibleCard>
-    </Modal>
+    </div>
   );
 }
 
 /** Landing FAB — "Add a card" + the app-wide "Transfers" action, same
  * 2-action shape every other module's landing page already uses. */
+/** 2026-09-11: registers via the keyed `usePageFabActions` instead of
+ * rendering its own `FabPanel` — see `BankPage.tsx`'s `AccountsFab` for the
+ * real FAB-stacking bug this fixes (`Tabs.tsx`'s own design lets Banking's
+ * Accounts/Credit Cards/Planning tabs all be open, hence all mounted, at
+ * once). `BankPage` itself renders the one merged panel for the page. */
 function CreditCardsFab() {
   const [open, setOpen] = useState<'card' | 'transfer' | null>(null);
+  const actions = useMemo(
+    () => [
+      { label: 'Add a card', icon: <PlusIcon />, onClick: () => setOpen('card') },
+      { label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen('transfer') },
+    ],
+    [],
+  );
+  usePageFabActions('bank-creditcards', actions);
   return (
     <>
-      <FabPanel
-        actions={[
-          { label: 'Add a card', icon: <PlusIcon />, onClick: () => setOpen('card') },
-          { label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen('transfer') },
-        ]}
-      />
       {open === 'card' && (
         <Modal title="Add a credit card" onClose={() => setOpen(null)}>
           <AddCreditCardForm onSaved={() => setOpen(null)} />
@@ -535,19 +627,14 @@ function CreditCardsFab() {
 }
 
 function CreditCardsList() {
+  const navigate = useNavigate();
   const allCards = useCreditCardWorkbookStore((s) => s.workbook.cards);
   const transactions = useCreditCardWorkbookStore((s) => s.workbook.transactions);
-  const [detailCard, setDetailCard] = useState<CreditCard | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const archivedCount = useMemo(() => allCards.filter((c) => c.isActive === false).length, [allCards]);
   const cards = useMemo(() => (showArchived ? allCards : allCards.filter((c) => c.isActive !== false)), [allCards, showArchived]);
   const srNumOf = useMemo(() => new Map(allCards.map((c, i) => [c.id, i + 1])), [allCards]);
   const sorted = useMemo(() => [...cards].sort((a, b) => Number(!!b.isFavorite) - Number(!!a.isFavorite)), [cards]);
-
-  // Keeps the open detail modal's own `card` prop fresh after an edit —
-  // same "look the live record back up by id" pattern `AccountDetailPage`
-  // uses, so Save inside the modal doesn't leave it showing stale data.
-  const liveDetailCard = detailCard ? allCards.find((c) => c.id === detailCard.id) ?? null : null;
 
   return (
     <div>
@@ -573,14 +660,13 @@ function CreditCardsList() {
                 statLabel="Owed"
                 stat={<MoneyValue n={balance} currency={c.currencyCode} />}
                 hue={balance > 0 ? 'var(--loss)' : 'var(--profit)'}
-                onClick={() => setDetailCard(c)}
-                actions={<IconButton label="Open" icon={<EditIcon size={13} />} align="right" onClick={() => setDetailCard(c)} />}
+                onClick={() => navigate(`/bank/card/${c.id}`)}
+                actions={<IconButton label="Open" icon={<EditIcon size={13} />} align="right" onClick={() => navigate(`/bank/card/${c.id}`)} />}
               />
             );
           })}
         </div>
       )}
-      {liveDetailCard && <CreditCardDetail card={liveDetailCard} onClose={() => setDetailCard(null)} />}
     </div>
   );
 }
@@ -626,6 +712,13 @@ function MigrateLegacyCreditCards() {
       name: account.name,
       bankId: account.bankId,
       currencyCode: account.currencyCode,
+      // Real bug, user-reported (2026-09-11): debt that predated this
+      // account's own logged transactions (`BankAccount.openingBalance`,
+      // negative = owed) was silently dropped here — `CreditCard` had no
+      // equivalent field at all. Its convention is the OPPOSITE sign
+      // (positive = owed, see `CreditCard.openingBalance`'s own doc
+      // comment), so this negates it.
+      openingBalance: account.openingBalance ? -account.openingBalance : undefined,
       creditLimit: account.creditLimit,
       statementDate: account.statementDate,
       paymentDueDate: account.paymentDueDate,

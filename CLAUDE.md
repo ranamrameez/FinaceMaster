@@ -6637,6 +6637,63 @@ touched those.
   exactly (USD "Δ vs. last month +400.00 USD (+33.3%)" = 400/1200 exactly); a DOM sweep
   confirmed zero `<td>` elements still directly carry `pill-positive`/`pill-negative`. `npx tsc
   -b` / `npm run test` (630 tests, unchanged) / `npm run build` all clean.
+- **Editing a linked record: the stale "use the Transfers page" warning replaced with a real
+  three-way choice (2026-09-11), closes README Pending item 27 in full.** `warnIfLinked`'s own
+  confirm dialog told the user to use the Transfers page for a fully-synced edit — a page that
+  no longer exists (Done item 216). New `resolveLinkedEdit()`/`propagateLinkedEdit()`
+  (`lib/linkCascade.ts`) + `components/LinkedEditChoiceDialog.tsx` offer cancel/this-side-only/
+  both-sides right there; "both sides" mirrors the new date/note onto the other side and the
+  link record, and mirrors the amount too when both sides share a currency (a deliberate,
+  user-initiated sync, not the silent "always assume equal" the `fromAmount`/`toAmount` split
+  was designed to avoid) — cross-currency links still only sync date/note, with the toast
+  saying so. Wired into all 9 single-record native edit flows that can touch a linked record;
+  the one batch-loop caller (EMI's "apply a bigger installment to N months") keeps the original
+  simple yes/no gate, reworded to drop the same stale reference. Verified live via Playwright
+  against a seeded Cash↔Bank link: same-currency mirrors both ways correctly, cross-currency
+  leaves the other side alone with a clear message, Cancel saves nothing. 651 tests (7 new) /
+  `npx tsc -b` / `npm run build` all clean.
+- **Credit Card: real correctness bug fixed (missing `openingBalance`), plus 4 related gaps
+  found in the same investigation (2026-09-11) — see README Done item 312 for the full
+  writeup.** User reported the GCC/PCC migration off the old `isLiability`-on-`BankAccount`
+  model (Done item 300, above) produced wrong figures, attaching a real screenshot. Root-caused
+  directly from the user's own attached full-app backup: `MigrateLegacyCreditCards`'s
+  `migrate()` never carried the old account's `openingBalance` (debt predating its own logged
+  transactions) into the new `CreditCard` record, which had no equivalent field at all —
+  confirmed the exact reported -6,847.22 figure reproduces from this one omission. Added a real
+  `CreditCard.openingBalance` field (permanent, not a one-off — any card someone's had for
+  years needs a starting point), wired into `creditCardModule.ts`'s shared `balanceAsOf()`,
+  exposed on both Add/Edit forms, and fixed the migration to carry it over for any future
+  migration. Per the user's own explicit "don't build a costly one-time conversion tool, just
+  tell me what to enter": **their own already-migrated GCC/PCC need their real opening balances
+  re-entered by hand once** (GCC: 7,553.11 QAR owed; PCC: 2,433.26 QAR owed, both derived from
+  their own old `BankAccount.openingBalance` in the attached backup) — flagged to them directly
+  rather than silently left as a gap or auto-written into their live account. Four more found
+  and fixed in the same pass: the whole-app export (`AppDataPage.tsx`) never included the
+  `creditCards` module at all (confirmed via the attached backup missing the key entirely);
+  Bank's Add/Edit account form still showed the dead "This is a credit card" checkbox + fields
+  (removed, `CreditCardFields`/`CreditCardValue` deleted); the card's own detail view was stuck
+  in a `<Modal>` with no transaction-editing — converted to a real routed page (`/bank/card/
+  :id`, mirroring `AccountDetailPage`) and added inline edit-row capability to its transactions
+  table; and a real, separate FAB-stacking bug found live while verifying that page conversion
+  — `Tabs.tsx`'s own "a chip click force-opens a section without closing the others" design
+  means Banking's Accounts/Credit Cards/Planning tabs can all be mounted at once, each
+  rendering its own independent `FabPanel` at the identical fixed corner (confirmed via
+  Playwright: two "Open actions" buttons stacked at the exact same coordinates). Generalized
+  `fabActionsStore.ts` from a single-slot design (only ever had one real simultaneous writer
+  before — QSE's/PSX's Transactions pages are mutually exclusive by route) to a keyed registry
+  so any number of simultaneous contributors merge correctly instead of clobbering each other;
+  `BankPage` now renders the one merged panel. Verified live via Playwright throughout: the
+  exact reported scenario (seeded openingBalance -7,553.11) now shows Used/Available numbers
+  matching the derivation exactly; Bank's Add form no longer mentions credit cards; `/bank/
+  card/:id` is a real URL; transaction edits persist; opening every Banking tab at once still
+  shows exactly one FAB with all 5 actions merged; zero console errors. New tests:
+  `creditCardModule.test.ts` gained 2 cases pinning the exact GCC arithmetic. `npx tsc -b` /
+  `npm run test` (653 tests, 2 new) / `npm run build` all clean. **Deliberately not done**: the
+  user's separate "Cash showing scrollable tables, dense UI but still unreadable" + "all other
+  modules should [use Bank's per-entity page flow]" ask (README Pending item 133) — Cash's own
+  shape (per-currency ledgers, not a list of named entities) doesn't map onto Bank's exact
+  pattern as directly as Personal Loans'/EMI's/Rentals' lists already did — needs the user's
+  own concrete example of what reads as unreadable before guessing at a redesign.
 
 ## Live URLs
 
