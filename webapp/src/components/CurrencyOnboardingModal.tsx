@@ -29,7 +29,7 @@ export function CurrencyOnboardingModal() {
 
   return (
     <Modal title="Which currencies do you use?" onClose={dismiss}>
-      <p className="text-muted" style={{ marginTop: 0 }}>
+      <p className="text-muted mt-0">
         Pick which currencies show up in a currency picker across the app — most people only
         ever use one or two. You can change this any time from Account &gt; Currencies.
       </p>

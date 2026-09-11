@@ -28,7 +28,7 @@ export function UpcomingList({
   emptyText?: string;
 }) {
   const shown = limit ? items.slice(0, limit) : items;
-  if (!shown.length) return <p className="text-muted" style={{ marginTop: 0 }}>{emptyText}</p>;
+  if (!shown.length) return <p className="text-muted mt-0">{emptyText}</p>;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

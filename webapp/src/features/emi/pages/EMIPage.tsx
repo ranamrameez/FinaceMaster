@@ -738,7 +738,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
             <div className="text-muted" style={{ marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Advanced</div>
             <div className="mb-md">
               <h4 style={{ margin: '0 0 4px' }}>Big EMI every N months</h4>
-              <p className="text-muted" style={{ marginTop: 0 }}>
+              <p className="text-muted mt-0">
                 For loans with an occasional bigger payment — e.g. a property installment plan with a larger payment
                 every 6 months. The loan keeps its original tenure; if the remainder checkbox is on, whatever's
                 still owed at the final month gets swept into that last installment.
@@ -814,7 +814,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
         title={<h3 style={{ margin: 0 }}>Schedule {showFullSchedule ? '(full, start to end)' : '(next 12 installments from today)'}</h3>}
         headerExtra={<button className="btn secondary" onClick={exportSchedule}>Export full schedule CSV</button>}
       >
-      <p className="text-muted" style={{ marginTop: 0 }}>
+      <p className="text-muted mt-0">
         Click the pencil on any upcoming installment to set a different amount (and, optionally, a different due
         date) for just that month. Every later month recalculates from what's actually paid.
       </p>
@@ -1010,7 +1010,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
       </CollapsibleCard>
 
       <CollapsibleCard title={<h3 style={{ margin: 0 }}>What if: extra payment</h3>} className="mb-md">
-        <p className="text-muted" style={{ marginTop: 0 }}>
+        <p className="text-muted mt-0">
           See how much sooner this loan clears — and how much {loan.repaymentMode === 'fixedTotal' ? 'markup' : 'interest'} you'd
           save — by paying a fixed extra amount on top of the normal installment every month. A live estimate, nothing is saved.
         </p>
@@ -1081,7 +1081,7 @@ function RepaymentLog({ loan, repayments }: { loan: EMILoan; repayments: EMIRepa
 
   return (
     <CollapsibleCard title={<h3 style={{ margin: 0 }}>Repayment log</h3>} className="mb-md">
-      <p className="text-muted" style={{ marginTop: 0 }}>
+      <p className="text-muted mt-0">
         Every actual payment recorded against this loan. Linking it to a Bank/Cash account (via the "Link" option
         next to a schedule row, or the Transfers action) keeps deleting one side in sync with the other.
       </p>
@@ -1257,7 +1257,7 @@ function AccountSection({
     <Card style={{ marginTop: 16 }}>
       {cloudEmpty && (
         <Notice tone="warning" style={{ marginTop: 8 }}>
-          <p style={{ marginTop: 0 }}>No data found in the cloud for this account's EMI/Loans workbook. This won't upload automatically.</p>
+          <p className="mt-0">No data found in the cloud for this account's EMI/Loans workbook. This won't upload automatically.</p>
           <button
             className="btn secondary"
             disabled={busy}

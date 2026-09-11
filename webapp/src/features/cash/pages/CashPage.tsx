@@ -173,7 +173,7 @@ function CategoryBreakdown() {
       <div className="detail-grid" style={{ marginTop: 12 }}>
         {filtered.map(({ code, rows }) => (
           <Card key={code}>
-            <h4 style={{ marginTop: 0 }}>{code}</h4>
+            <h4 className="mt-0">{code}</h4>
             <div className="table-scroll">
               <table>
                 <tbody>
@@ -327,7 +327,7 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
 
   return (
     <Card>
-      <h4 style={{ marginTop: 0 }}>{code}</h4>
+      <h4 className="mt-0">{code}</h4>
       <div className="row gap-sm mb-sm">
         <Field label="Type" width={120}>
           <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
@@ -690,7 +690,7 @@ function ImportTab() {
 
       {headers.length > 0 && (
         <Card style={{ marginTop: 12 }}>
-          <h3 style={{ marginTop: 0 }}>Map columns</h3>
+          <h3 className="mt-0">Map columns</h3>
           <div className="row gap-sm">
             <Field label="Date column" width={160}>
               <Select value={dateCol} onChange={(e) => setDateCol(e.target.value)}>
@@ -758,7 +758,7 @@ function BalanceProjectionSummary() {
 
   return (
     <CollapsibleCard title={<h3 style={{ margin: 0 }}>Balance projection</h3>} className="mb-md">
-      <p className="text-muted" style={{ marginTop: 0 }}>
+      <p className="text-muted mt-0">
         See what your balance would look like if every plan below actually happened — a reality check before you
         spend. Choose what you want to see:
       </p>
@@ -1057,7 +1057,7 @@ function PlanningAccountSection({
   if (!firebaseReady || !cloudEmpty) return null;
   return (
     <Notice tone="warning" style={{ marginTop: 16 }}>
-      <p style={{ marginTop: 0 }}>No data found in the cloud for this account's plans. This won't upload automatically.</p>
+      <p className="mt-0">No data found in the cloud for this account's plans. This won't upload automatically.</p>
       <button
         className="btn secondary"
         disabled={busy}
@@ -1157,7 +1157,7 @@ function DataManagement() {
     // precedent (`grid-auto` + `gridAutoStyle`).
     <div className="grid-auto" style={{ ...gridAutoStyle(280, 16), alignItems: 'start' }}>
       <Card>
-        <h3 style={{ marginTop: 0 }}>General</h3>
+        <h3 className="mt-0">General</h3>
         <Field label="Default currency (pre-fills new entries only)" width={140}>
           <Select value={workbook.settings.defaultCurrency} onChange={(e) => updateSettings({ defaultCurrency: e.target.value })}>
             {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
@@ -1165,7 +1165,7 @@ function DataManagement() {
         </Field>
       </Card>
       <Card>
-        <h3 style={{ marginTop: 0 }}>Data management</h3>
+        <h3 className="mt-0">Data management</h3>
         <div className="row gap-sm">
           <button className="btn secondary" onClick={exportJSON}>Export JSON</button>
           <button className="btn secondary" onClick={() => fileInput.current?.click()}>Import JSON</button>
@@ -1205,7 +1205,7 @@ function AccountSection({
     <Card className="mb-md">
       {cloudEmpty && (
         <Notice tone="warning" style={{ marginTop: 8 }}>
-          <p style={{ marginTop: 0 }}>
+          <p className="mt-0">
             No data found in the cloud for this account's Cash workbook. This app will <strong>not</strong> upload
             anything automatically — if you expected existing data here and don't see it, stop and investigate
             before uploading rather than overwriting.
@@ -1285,7 +1285,7 @@ export function CashPage({
             label: 'Settings',
             content: (
               <div>
-                <p className="text-muted" style={{ marginTop: 0 }}>
+                <p className="text-muted mt-0">
                   Sign-in, profile, appearance, and a whole-app backup live on the{' '}
                   <Link to="/account">Account page →</Link>. What's below is specific to Cash.
                 </p>

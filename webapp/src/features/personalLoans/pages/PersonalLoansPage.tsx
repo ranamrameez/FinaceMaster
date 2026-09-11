@@ -583,7 +583,7 @@ function ImportRepaymentsSection({ loan }: { loan: PersonalLoan }) {
 
   return (
     <Card style={{ marginTop: 12 }}>
-      <h4 style={{ marginTop: 0 }}>Import repayments (CSV)</h4>
+      <h4 className="mt-0">Import repayments (CSV)</h4>
       <div className="row" style={{ gap: 8, alignItems: 'center' }}>
         <button className="btn secondary small" onClick={() => fileInput.current?.click()}>Choose CSV file</button>
         <input
@@ -679,8 +679,8 @@ function PayoffPlanner({ loan, outstanding }: { loan: PersonalLoan; outstanding:
 
   return (
     <Card className="mb-md">
-      <h4 style={{ marginTop: 0 }}>Payoff planner</h4>
-      <p className="text-muted" style={{ marginTop: 0 }}>
+      <h4 className="mt-0">Payoff planner</h4>
+      <p className="text-muted mt-0">
         A quick "what if" — see how many months it'd take to clear the remaining {fmtMoney(outstanding, loan.currencyCode)}
         {' '}at a repayment rate you pick. Not saved anywhere, just a live estimate.
       </p>
@@ -930,7 +930,7 @@ function AccountSection({
     <Card>
       {cloudEmpty && (
         <Notice tone="warning" style={{ marginTop: 8 }}>
-          <p style={{ marginTop: 0 }}>
+          <p className="mt-0">
             No data found in the cloud for this account's Personal Loans workbook. This won't upload automatically.
           </p>
           <button

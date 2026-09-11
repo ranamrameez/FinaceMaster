@@ -409,7 +409,7 @@ export function NetWorthPage({
           and "Exchange rates" (its own Card, with a From/To pair). */}
       <div className="grid-auto" style={{ ...gridAutoStyle(320, 16), marginBottom: 16, alignItems: 'start' }}>
         <Card>
-          <h3 style={{ marginTop: 0 }}>Net worth summary</h3>
+          <h3 className="mt-0">Net worth summary</h3>
           <Field label="Show total in" width={150}>
             <Select value={preferredCurrency} onChange={(e) => setPreferredCurrency(e.target.value)} width={150}>
               {preferredCurrencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
@@ -477,7 +477,7 @@ export function NetWorthPage({
            "Rates between your own currencies" table further down. */}
         {ownCurrencies.length > 1 && (
         <Card>
-          <h3 style={{ marginTop: 0 }}>Exchange rates</h3>
+          <h3 className="mt-0">Exchange rates</h3>
           <div className="text-muted">
             {rates
               ? `Rates as of ${new Date(rates.fetchedAt).toLocaleString()} (${rates.source === 'api' ? 'auto-fetched' : 'manually entered'}).`
@@ -682,7 +682,7 @@ export function NetWorthPage({
 
       {firebaseReady && cloudEmpty && (
         <Notice tone="warning" style={{ marginTop: 12 }}>
-          <p style={{ marginTop: 0 }}>No net worth snapshots found in the cloud for this account. This won't upload automatically.</p>
+          <p className="mt-0">No net worth snapshots found in the cloud for this account. This won't upload automatically.</p>
           <button
             className="btn secondary"
             onClick={async () => {
@@ -756,7 +756,7 @@ function IncludeInNetWorthFab({
       <FabButton label="Include in Net Worth" onClick={() => setOpen(true)}><SettingsIcon size={18} /></FabButton>
       {open && (
         <Modal title="Include in Net Worth" onClose={() => setOpen(false)}>
-          <p className="text-muted" style={{ marginTop: 0 }}>
+          <p className="text-muted mt-0">
             Unchecked items are left out of every total on this page — e.g. an EMI loan you closed
             early that the schedule still thinks is owed.
           </p>

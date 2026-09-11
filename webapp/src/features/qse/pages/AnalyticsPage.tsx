@@ -285,7 +285,7 @@ function FundamentalsCard({
 
   return (
     <Card style={{ marginTop: 16 }}>
-      <h3 style={{ marginTop: 0 }}>Fundamentals (held tickers)</h3>
+      <h3 className="mt-0">Fundamentals (held tickers)</h3>
       {sorted.length ? (
         <div className="table-scroll">
           <table>

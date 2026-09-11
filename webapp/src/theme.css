@@ -710,6 +710,14 @@
      prop). Symmetric with `.mb-sm`/`.mt-sm` above at a 16px value instead
      of 8px. */
   .mb-md{margin-bottom:16px;}
+  /* Same cleanup, eleventh instance (2026-09-11): `style={{ marginTop: 0 }}`
+     was hand-repeated 69 times — almost always the first child inside a
+     `Card`/`CollapsibleCard` (an `<h3>`/`<h4>`/`<p>`) zeroing the browser's
+     own default top margin, since this app has no global `h1..h6`/`p`
+     margin reset in `theme.css`. Only one existing rule touches
+     `margin-top:0` (`.notice-body p:first-child`), scoped to inside
+     `Notice` and unrelated to this — safe to add a bare class. */
+  .mt-0{margin-top:0;}
   /* User-reported (2026-08-27): "Input sizes still inconsistent and taking
      whole 100% width." Root cause: `flex:1` (flex-basis:0%) ignores each
      field's own explicit `width` prop entirely and instead divides the

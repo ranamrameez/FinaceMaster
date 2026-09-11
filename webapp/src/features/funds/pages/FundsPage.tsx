@@ -253,7 +253,7 @@ function BrokerDetail({ broker, onBack, onSelectFund }: { broker: Broker; onBack
           </div>
         ) : (
           <div>
-            {broker.notes && <p className="text-muted" style={{ marginTop: 0 }}>{broker.notes}</p>}
+            {broker.notes && <p className="text-muted mt-0">{broker.notes}</p>}
             <div className="row" style={{ gap: 16 }}>
               {Object.keys(totals).length ? (
                 Object.entries(totals).map(([c, n]) => (
@@ -1304,7 +1304,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
           right below). Two stacked options, "OR" between them, not two
           side-by-side rows. */}
       <Card className="mb-md">
-        <h3 style={{ marginTop: 0 }}>Update balance or NAV</h3>
+        <h3 className="mt-0">Update balance or NAV</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div className="row gap-sm">
             <Field label="Update NAV" width={140}>
@@ -1804,7 +1804,7 @@ function AccountSection({
     <Card className="mb-md">
       {cloudEmpty && (
         <Notice tone="warning" style={{ marginTop: 8 }}>
-          <p style={{ marginTop: 0 }}>No data found in the cloud for this account's Funds workbook. This won't upload automatically.</p>
+          <p className="mt-0">No data found in the cloud for this account's Funds workbook. This won't upload automatically.</p>
           <button
             className="btn secondary"
             disabled={busy}
@@ -1870,7 +1870,7 @@ function DataManagement() {
 
   return (
     <Card>
-      <h3 style={{ marginTop: 0 }}>Data management</h3>
+      <h3 className="mt-0">Data management</h3>
       <div className="row gap-sm">
         <button className="btn secondary" onClick={exportJSON}>Export JSON</button>
         <button className="btn secondary" onClick={() => fileInput.current?.click()}>Import JSON</button>
@@ -1945,7 +1945,7 @@ export function FundsPage({
               label: 'Settings',
               content: (
                 <div>
-                  <p className="text-muted" style={{ marginTop: 0 }}>
+                  <p className="text-muted mt-0">
                     Sign-in, profile, appearance, and a whole-app backup live on the{' '}
                     <Link to="/account">Account page →</Link>. What's below is specific to Funds.
                   </p>
