@@ -1005,7 +1005,7 @@ export function PersonalLoansPage({
               { key: 'analytics', label: 'Analytics', content: <AnalyticsTab /> },
             ]}
           />
-          <div style={{ marginTop: 16 }}>
+          <div className="mt-md">
             <AccountSection cloudEmpty={cloudEmpty} uploadLocalToCloud={uploadLocalToCloud} />
           </div>
         </div>

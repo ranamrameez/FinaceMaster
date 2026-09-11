@@ -514,7 +514,7 @@ export function TransactionEntryModal({ defaultFinance, onClose }: { defaultFina
       <div className="row" style={{ gap: 8, marginTop: 16 }}>
         <button className="btn secondary" onClick={addRow}><PlusIcon size={12} />Add row</button>
       </div>
-      <div className="d-flex justify-center" style={{ marginTop: 16 }}>
+      <div className="d-flex justify-center mt-md">
         <button className="btn" style={{ minWidth: 220 }} onClick={submit}><SaveIcon />Save</button>
       </div>
     </Modal>

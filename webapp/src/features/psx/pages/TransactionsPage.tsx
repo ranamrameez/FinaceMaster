@@ -144,7 +144,7 @@ export function TransactionRows() {
           <PlusIcon />Add row
         </button>
       </div>
-      <div className="d-flex justify-center" style={{ marginTop: 16 }}>
+      <div className="d-flex justify-center mt-md">
         <button className="btn" style={{ minWidth: 220 }} onClick={submit}>
           <SaveIcon />Save {rows.length > 1 ? `${rows.length} transactions` : 'transaction'}
         </button>
@@ -585,7 +585,7 @@ function TransactionList() {
         {renderTable(closedGroups, 'No transactions for a fully closed position yet.')}
       </details>
 
-      <details open style={{ marginTop: 16 }}>
+      <details open className="mt-md">
         <summary style={{ cursor: 'pointer', fontWeight: 700, marginBottom: 8 }}>
           <Tooltip text="Each buy lot that hasn't been fully sold yet, FIFO-matched against your real sells — the mirror image of Closed trades below, so it's always clear which shares are still open vs. already sold.">
             Open trades (not yet sold)
@@ -625,7 +625,7 @@ function TransactionList() {
         </div>
       </details>
 
-      <details open style={{ marginTop: 16 }}>
+      <details open className="mt-md">
         <summary style={{ cursor: 'pointer', fontWeight: 700, marginBottom: 8 }}>
           <Tooltip text="Each fully or partially closed round-trip, matched buy-to-sell via FIFO, with its own buy price, sell price, fees on both legs, and net P/L — so a closed trade's own numbers stay separate from whatever the currently-open position shows.">
             Closed trades (realized round-trips)

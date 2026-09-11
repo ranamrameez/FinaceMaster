@@ -232,7 +232,7 @@ export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: strin
         )}
       </div>
 
-      <button className="btn" style={{ marginTop: 16 }} onClick={submit}>
+      <button className="btn mt-md" onClick={submit}>
         <PlusIcon />Add loan
       </button>
     </div>
@@ -1254,7 +1254,7 @@ function AccountSection({
 
   if (!firebaseReady || !cloudEmpty) return null;
   return (
-    <Card style={{ marginTop: 16 }}>
+    <Card className="mt-md">
       {cloudEmpty && (
         <Notice tone="warning" style={{ marginTop: 8 }}>
           <p className="mt-0">No data found in the cloud for this account's EMI/Loans workbook. This won't upload automatically.</p>
