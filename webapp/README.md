@@ -8293,6 +8293,21 @@ FinanceManager live link:
   button (`button.mt-12`) computed `margin-top: 12px` — both exactly as the removed inline
   style did, zero new console errors. `npx tsc -b` / `npm run test` (651 tests, unchanged) /
   `npm run build` all clean.
+- **App-wide CSS cleanup, fourteenth concrete instance — see Done item 310 (2026-09-11),
+  continuing Pending item 116.** `style={{ marginTop: 16 }}` — 24 occurrences across 14 files —
+  symmetric with the existing `.mb-md` (16px) but on the top side, so named `.mt-md` to match
+  rather than inventing a fourth spacing class. Confirmed no competing bare `margin-top:16px`
+  rule in `theme.css`. 22 of the 24 converted via the same scripted pass; 2 needed manual
+  handling (`<CollapsibleCard style={{ marginTop: 16 }} title={<h3 className="m-0">Alerts</h3>}
+  ...>` on both exchanges' Dashboard pages) — the script correctly detected that the nested
+  `<h3 className="m-0">` inside the `title` prop belonged to a DIFFERENT element than
+  `CollapsibleCard`'s own `style` attribute, and declined to merge into the wrong element's
+  className rather than guessing; fixed by hand (`className="mt-md"` on the outer
+  `CollapsibleCard` itself, which already accepts `className` from the `.mb-md` instance).
+  Verified live via Playwright: the Dashboard's "Alerts" `CollapsibleCard` (`.card.mt-md`) and
+  Watchlist's table wrapper (`.table-scroll.mt-md`) both computed `margin-top: 16px` exactly as
+  the removed inline style did, zero new console errors. `npx tsc -b` / `npm run test` (651
+  tests, unchanged) / `npm run build` all clean.
 
 ## Pending
 
@@ -9187,9 +9202,12 @@ or a design decision before more code, not guessed at further:**
      `style={{ marginBottom: 12 }}` and `style={{ marginTop: 12 }}` (34 occurrences each, 68
      total across 20 files) — done together since they're the same value on opposite sides;
      12px doesn't fit the existing `sm`(8)/`md`(16) scale, so named literally by value
-     (`.mb-12`/`.mt-12`). The exact same incremental discipline (audit one repeated pattern,
-     extract or remove, verify, repeat) still applies for every other module/pattern — this is
-     one instance of an ongoing, repeatable practice, not a closed item.
+     (`.mb-12`/`.mt-12`). **Fourteenth concrete instance done (2026-09-11) — see Done item
+     310**: `style={{ marginTop: 16 }}` (24 occurrences across 14 files) — symmetric with
+     `.mb-md`(16px) on the top side, so named `.mt-md` to match. The exact same incremental
+     discipline (audit one repeated pattern, extract or remove, verify, repeat) still applies
+     for every other module/pattern — this is one instance of an ongoing, repeatable practice,
+     not a closed item.
 117. ~~App-wide "everything should be a grid item except tables" principle (2026-09-06)~~ —
      **done in full (2026-09-08), see Done item 237.** Every module's landing/Settings page has
      been audited for the "short non-table cards stacked full-width" pattern; Cash's Settings

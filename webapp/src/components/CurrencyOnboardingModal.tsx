@@ -46,7 +46,7 @@ export function CurrencyOnboardingModal() {
           </button>
         ))}
       </div>
-      <button className="btn" style={{ marginTop: 16 }} onClick={dismiss}>
+      <button className="btn mt-md" onClick={dismiss}>
         Done
       </button>
     </Modal>

@@ -332,7 +332,7 @@ export function DashboardPage() {
             </ChartCard>
           </div>
 
-          <CollapsibleCard style={{ marginTop: 16 }} title={<h3 className="m-0">Alerts</h3>} defaultOpen={false}>
+          <CollapsibleCard className="mt-md" title={<h3 className="m-0">Alerts</h3>} defaultOpen={false}>
             <AlertsBox />
           </CollapsibleCard>
 

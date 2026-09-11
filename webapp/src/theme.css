@@ -737,6 +737,12 @@
      under a density attribute, one more), none of them bare/generic. */
   .mb-12{margin-bottom:12px;}
   .mt-12{margin-top:12px;}
+  /* Same cleanup, fourteenth instance (2026-09-11): `style={{ marginTop:
+     16 }}` was hand-repeated 24 times — symmetric with `.mb-md` (16px)
+     but on the top side instead, so named to match rather than inventing
+     a fourth spacing class. Confirmed no competing bare `margin-top:16px`
+     rule in `theme.css`. */
+  .mt-md{margin-top:16px;}
   /* User-reported (2026-08-27): "Input sizes still inconsistent and taking
      whole 100% width." Root cause: `flex:1` (flex-basis:0%) ignores each
      field's own explicit `width` prop entirely and instead divides the

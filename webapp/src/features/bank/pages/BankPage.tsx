@@ -378,7 +378,7 @@ function AccountsFab() {
           <Field label="Bank name" width={220} required>
             <TextInput value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="e.g. UBL" />
           </Field>
-          <div className="d-flex justify-center" style={{ marginTop: 16 }}>
+          <div className="d-flex justify-center mt-md">
             <button className="btn" onClick={submitBank}><SaveIcon />Save</button>
           </div>
         </Modal>
@@ -700,7 +700,7 @@ export function BankDetailPage() {
           </div>
         )}
       </CollapsibleCard>
-      <div style={{ marginTop: 16 }}>
+      <div className="mt-md">
         <div className="entity-card-grid">
           {linkedAccounts.map((a) => (
             <EntityCard
@@ -2205,7 +2205,7 @@ function PlanningAccountSection({
 
   if (!firebaseReady || !cloudEmpty) return null;
   return (
-    <Notice tone="warning" style={{ marginTop: 16 }}>
+    <Notice tone="warning" className="mt-md">
       <p className="mt-0">No data found in the cloud for this account's plans. This won't upload automatically.</p>
       <button
         className="btn secondary"
@@ -2317,7 +2317,7 @@ function AnalyticsTab() {
             </ChartCard>
           </div>
 
-          <CollapsibleCard title={<h3 className="m-0">Budget — {thisMonth}</h3>} style={{ marginTop: 16 }}>
+          <CollapsibleCard title={<h3 className="m-0">Budget — {thisMonth}</h3>} className="mt-md">
             <p className="text-muted mt-0">
               Set a monthly spend target per category for {account.name}; compared against what you've actually
               spent there this month.

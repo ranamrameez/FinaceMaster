@@ -120,7 +120,7 @@ function AddFundFab() {
           <Field label="Broker name" width={220} required>
             <TextInput value={brokerName} onChange={(e) => setBrokerName(e.target.value)} placeholder="e.g. Al Rajhi Capital" />
           </Field>
-          <div className="d-flex justify-center" style={{ marginTop: 16 }}>
+          <div className="d-flex justify-center mt-md">
             <button className="btn" onClick={submitBroker}><SaveIcon />Save</button>
           </div>
         </Modal>
@@ -269,7 +269,7 @@ function BrokerDetail({ broker, onBack, onSelectFund }: { broker: Broker; onBack
           </div>
         )}
       </CollapsibleCard>
-      <div style={{ marginTop: 16 }}>
+      <div className="mt-md">
         <div className="entity-card-grid">
           {linkedFunds.map((f) => {
             const nav = getMarketPrice(f.id, workbook.marketPrices, workbook.transactions);
@@ -1432,7 +1432,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
           balnce + NAV, new balance + NAV, change + %age, Actions etc." */}
       <CollapsibleCard
         title={<h3 className="m-0">Balance Update History</h3>}
-        style={{ marginTop: 16 }}
+        className="mt-md"
         headerExtra={balanceRows.length > 0 ? <button className="btn secondary" onClick={exportBalanceHistory}>Export CSV</button> : undefined}
       >
         {!balanceRows.length && <p className="text-muted">No balance/NAV updates recorded yet — use "Update balance or NAV" above.</p>}

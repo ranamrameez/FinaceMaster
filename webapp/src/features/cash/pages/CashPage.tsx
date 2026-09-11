@@ -1056,7 +1056,7 @@ function PlanningAccountSection({
 
   if (!firebaseReady || !cloudEmpty) return null;
   return (
-    <Notice tone="warning" style={{ marginTop: 16 }}>
+    <Notice tone="warning" className="mt-md">
       <p className="mt-0">No data found in the cloud for this account's plans. This won't upload automatically.</p>
       <button
         className="btn secondary"

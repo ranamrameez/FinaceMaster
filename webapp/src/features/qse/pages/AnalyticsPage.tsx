@@ -284,7 +284,7 @@ function FundamentalsCard({
   const { sorted, Th } = useSortableRows(fundamentalsRows, sortValue, 'ticker', 'asc');
 
   return (
-    <Card style={{ marginTop: 16 }}>
+    <Card className="mt-md">
       <h3 className="mt-0">Fundamentals (held tickers)</h3>
       {sorted.length ? (
         <div className="table-scroll">

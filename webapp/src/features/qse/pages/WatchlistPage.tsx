@@ -103,7 +103,7 @@ function WatchlistTable({
   const { sorted, Th } = useSortableRows(rows, sortValue, 'ticker', 'asc');
 
   return (
-    <div className="table-scroll" style={{ marginTop: 16 }}>
+    <div className="table-scroll mt-md">
       <table>
         <thead>
           <tr>
