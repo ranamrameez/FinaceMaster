@@ -65,7 +65,7 @@ function NewPlanForm() {
 
   return (
     <div className="card" style={{ padding: 12, marginBottom: 16 }}>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <Field label="Plan name" width={220}>
           <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Q3 OGDC rotation" />
         </Field>
@@ -82,7 +82,7 @@ function NewPlanForm() {
         </Field>
       </div>
       {legs.map((l, i) => (
-        <div key={i} className="row" style={{ gap: 8, marginBottom: 8 }}>
+        <div key={i} className="row gap-sm mb-sm">
           <input type="date" value={l.date} onChange={(e) => update(i, { date: e.target.value })} />
           <select value={l.action} onChange={(e) => update(i, { action: e.target.value as 'BUY' | 'SELL' })}>
             <option value="BUY">BUY</option>

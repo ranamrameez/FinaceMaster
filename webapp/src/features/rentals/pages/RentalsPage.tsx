@@ -447,7 +447,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
          the full Property object) and `saveLease` handler, since these
          fields save identically to every lease/tenant field below. */}
       <h4 style={{ margin: '0 0 8px' }}>Property details</h4>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <Field label="Name">
           <TextInput value={lease.name} onChange={(e) => setLease({ ...lease, name: e.target.value })} />
         </Field>
@@ -461,7 +461,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
         </Field>
       </div>
       <h4 style={{ margin: '0 0 8px' }}>Lease &amp; tenant details</h4>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <Field label="Monthly rent">
           <TextInput type="number" step="0.01" value={lease.monthlyRent ?? ''} onChange={(e) => setLease({ ...lease, monthlyRent: e.target.value === '' ? undefined : Number(e.target.value) })} />
         </Field>
@@ -475,7 +475,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
           <TextInput type="date" value={lease.leaseEndDate ?? ''} onChange={(e) => setLease({ ...lease, leaseEndDate: e.target.value || undefined })} />
         </Field>
       </div>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <Field
           label="Collection cycle (optional)"
           title="Opts this property into the separate rent-collection proposal below — pick how often rent is actually collected."
@@ -495,7 +495,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
           <TextInput type="date" value={lease.lastCollectionDate ?? ''} onChange={(e) => setLease({ ...lease, lastCollectionDate: e.target.value || undefined })} />
         </Field>
       </div>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <Field label="Tenant name">
           <TextInput value={lease.tenantName ?? ''} onChange={(e) => setLease({ ...lease, tenantName: e.target.value })} />
         </Field>
@@ -883,7 +883,7 @@ function EntriesList({ property }: { property: Property }) {
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <Field label="Type" width={130}>
           <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
             <option value="all">All</option>
