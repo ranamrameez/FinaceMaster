@@ -83,7 +83,7 @@ function BuySellAvgDownCalculator() {
   return (
     <div className="card" style={{ padding: 12, marginBottom: 16 }}>
       <h3 style={{ marginTop: 0 }}>Buy/Sell &amp; Avg Down</h3>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <Field label="Ticker" width={140}>
           <TextInput value={ticker} onChange={(e) => setTicker(e.target.value.toUpperCase())} list={QSE_TICKER_DATALIST_ID} placeholder="e.g. QIBK" />
         </Field>
@@ -105,13 +105,13 @@ function BuySellAvgDownCalculator() {
       </div>
 
       {perShare && (
-        <p className="text-muted" style={{ marginBottom: 8 }}>
+        <p className="text-muted mb-sm">
           Commission per share @ {fmtPrice(price)}: Buy {fmtMoney(perShare.buy, currency)} · Sell {fmtMoney(perShare.sell, currency)}
         </p>
       )}
 
       {avgDown && (
-        <Notice tone="warning" style={{ marginBottom: 8 }}>
+        <Notice tone="warning" className="mb-sm">
           Averaging down increases your exposure to a losing position — it lowers your break-even, but only by
           committing more capital to a stock that's currently down. <Link to="/legal">Read more</Link>
         </Notice>
@@ -165,16 +165,16 @@ function PartialTradeAdvisor({ ticker, onSellLot }: { ticker: string; onSellLot:
 
   return (
     <div style={{ marginBottom: 16 }}>
-      <Notice tone="warning" style={{ marginBottom: 8 }}>
+      <Notice tone="warning" className="mb-sm">
         Partial Trade Strategy concentrates your remaining position in your worst-performing lots — you keep
         holding whatever doesn't sell. <Link to="/legal">Read more</Link>
       </Notice>
       {sellable > 0 ? (
-        <p style={{ marginBottom: 8 }}>
+        <p className="mb-sm">
           <span className="pill-positive">{fmt(sellable, 0)} of {fmt(total, 0)} shares</span> of {ticker.toUpperCase()} are already profitable at the current price ({fmtPrice(currentPrice)}).
         </p>
       ) : (
-        <p className="text-muted" style={{ marginBottom: 8 }}>No lot of {ticker.toUpperCase()} is profitable at the current price ({fmtPrice(currentPrice)}) yet.</p>
+        <p className="text-muted mb-sm">No lot of {ticker.toUpperCase()} is profitable at the current price ({fmtPrice(currentPrice)}) yet.</p>
       )}
       <div className="table-scroll">
         <table>
@@ -297,7 +297,7 @@ function NewPlanFab() {
     <>
       {open && (
         <Modal title="New trade plan" onClose={() => { reset(); setOpen(false); }}>
-          <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+          <div className="row gap-sm mb-sm">
             <Field label="Plan name" width={220}>
               <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Q3 QIBK rotation" />
             </Field>
@@ -309,7 +309,7 @@ function NewPlanFab() {
             </Field>
           </div>
           {legs.map((l, i) => (
-            <div key={i} className="row" style={{ gap: 8, marginBottom: 8 }}>
+            <div key={i} className="row gap-sm mb-sm">
               <input type="date" value={l.date} onChange={(e) => update(i, { date: e.target.value })} />
               <select value={l.action} onChange={(e) => update(i, { action: e.target.value as 'BUY' | 'SELL' })}>
                 <option value="BUY">BUY</option>

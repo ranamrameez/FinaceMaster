@@ -679,8 +679,8 @@ export function NetWorthPage({
 
       {Object.keys(rentalsNet).length > 0 && (
         <Card className="mt-12">
-          <div className="label" style={{ marginBottom: 8 }}>Rental net income (informational — not included above)</div>
-          <div className="text-muted" style={{ marginBottom: 8 }}>
+          <div className="label mb-sm">Rental net income (informational — not included above)</div>
+          <div className="text-muted mb-sm">
             Property values aren't tracked in this app, and rental income already lands in whichever Cash/Bank
             account it was deposited to — counting it again here would double-count it.
           </div>
