@@ -230,7 +230,7 @@ function PropertiesList() {
                 key={p.id}
                 title={<><span className="text-muted entity-card-sr">#{srNumOf.get(p.id)}</span>{p.name}</>}
                 subtitle={<>{p.currencyCode}{p.purchasePrice ? ` · Purchase price: ${fmtMoney(p.purchasePrice, p.currencyCode)}` : ''}</>}
-                badge={p.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Closed</span> : undefined}
+                badge={p.isActive === false ? <span className="pill-warn fs-10">Closed</span> : undefined}
                 statLabel="Net income (all time)"
                 stat={<MoneyValue n={netIncome} currency={p.currencyCode} />}
                 hue={netIncome >= 0 ? 'var(--profit)' : 'var(--loss)'}

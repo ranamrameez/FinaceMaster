@@ -489,7 +489,7 @@ function BanksList() {
               key={b.id}
               title={b.name}
               subtitle={`${accountCount} account${accountCount === 1 ? '' : 's'}`}
-              badge={b.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Closed</span> : undefined}
+              badge={b.isActive === false ? <span className="pill-warn fs-10">Closed</span> : undefined}
               statLabel={currencies.length > 1 ? 'Total (by currency)' : 'Total'}
               stat={
                 currencies.length ? (
@@ -726,7 +726,7 @@ function AccountsList() {
             <span className="text-muted" style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: 11, letterSpacing: '.04em' }}>
               {currency}
             </span>
-            <span className={`pill-info`} style={{ fontSize: 11 }}>{num(groupSum)} {currency}</span>
+            <span className="pill-info fs-11">{num(groupSum)} {currency}</span>
           </div>
           <div className="entity-card-grid">
             {group.map((a) => (
@@ -737,8 +737,8 @@ function AccountsList() {
                 badge={
                   a.isLiability || a.isActive === false ? (
                     <span style={{ display: 'flex', gap: 4 }}>
-                      {a.isLiability && <span className="pill-negative" style={{ fontSize: 10 }}>Credit card</span>}
-                      {a.isActive === false && <span className="pill-warn" style={{ fontSize: 10 }}>Closed</span>}
+                      {a.isLiability && <span className="pill-negative fs-10">Credit card</span>}
+                      {a.isActive === false && <span className="pill-warn fs-10">Closed</span>}
                     </span>
                   ) : undefined
                 }
@@ -952,7 +952,7 @@ export function AccountDetailPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
         <h1 className="pagetitle" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
           {account.name}
-          {account.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Closed</span>}
+          {account.isActive === false && <span className="pill-warn fs-11">Closed</span>}
         </h1>
         {/* User-requested (2026-08-27): "Delete and Edit are rare operations
            they should [be] on details page only... with delete as a red

@@ -797,6 +797,27 @@
      `!important` needed. */
   .text-loss{color:var(--loss);}
   .text-profit{color:var(--profit);}
+  /* Same cleanup, twenty-third instance (2026-09-13): `style={{ fontSize:
+     10 }}`/`style={{ fontSize: 11 }}` on small "Closed"/"Credit card"
+     badge `<span>`s that use ONLY `.pill-warn`/`.pill-negative`/etc (not
+     the base `.pill` class, so they don't inherit `.pill`'s own
+     `font-size:11.5px` — this class only overrides the size, nothing
+     else). Checked `.pill-warn`/`.pill-info` themselves for a competing
+     `font-size` first — neither sets one — and confirmed no global
+     `span{}` rule exists either, so a plain class (no `!important`) is
+     safe here, unlike `.fs-14` just below. */
+  .fs-10{font-size:10px;}
+  .fs-11{font-size:11px;}
+  /* Same cleanup, twenty-fourth instance (2026-09-13): `style={{ fontSize:
+     14 }}` on a `<div className="value">` nested inside a `.stat-card`
+     container (a smaller-text stat value, e.g. a status label/date rather
+     than a big number) — all 8 occurrences sit inside `.stat-card .value`,
+     whose own base rule (`font-size:17px`) has specificity (0,2,0), which
+     beats a plain `.fs-14` class (0,1,0) regardless of source order —
+     the same class of trap as `.w-90` above, just via a descendant
+     selector instead of a `:not()` chain. `!important` needed for the
+     same reason. */
+  .fs-14{font-size:14px!important;}
   /* User-reported (2026-08-27): "Input sizes still inconsistent and taking
      whole 100% width." Root cause: `flex:1` (flex-basis:0%) ignores each
      field's own explicit `width` prop entirely and instead divides the

@@ -163,7 +163,7 @@ function BrokersList({ onSelect }: { onSelect: (broker: Broker) => void }) {
               key={b.id}
               title={b.name}
               subtitle={`${fundCount} fund${fundCount === 1 ? '' : 's'}`}
-              badge={b.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Closed</span> : undefined}
+              badge={b.isActive === false ? <span className="pill-warn fs-10">Closed</span> : undefined}
               statLabel={currencies.length > 1 ? 'Total (by currency)' : 'Total'}
               stat={
                 currencies.length ? (
@@ -657,7 +657,7 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
                   {r.xirrPct !== null && <> · XIRR {r.xirrPct.toFixed(1)}%</>}
                 </>
               }
-              badge={r.fund.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Closed</span> : undefined}
+              badge={r.fund.isActive === false ? <span className="pill-warn fs-10">Closed</span> : undefined}
               statLabel="Value"
               stat={
                 <>
@@ -1148,7 +1148,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                   <div style={{ fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                     <TickerLogo ticker={fund.code} exchange="psx" size="lg" />
                     {fund.name}
-                    {fund.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Closed</span>}
+                    {fund.isActive === false && <span className="pill-warn fs-11">Closed</span>}
                   </div>
                   <div className="text-muted">{fund.code} · {fund.platform} · {fundCategoryLabel(fund, categoryRegistry)} · {fund.currencyCode}</div>
                 </div>

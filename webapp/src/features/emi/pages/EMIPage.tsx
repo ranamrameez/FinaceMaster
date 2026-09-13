@@ -615,7 +615,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
             <div>
               <div style={{ fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 {loan.name}
-                {loan.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Closed</span>}
+                {loan.isActive === false && <span className="pill-warn fs-11">Closed</span>}
               </div>
               <div className="text-muted" style={{ fontWeight: 400 }}>
                 {loan.lender} · {loan.currencyCode} · {loan.repaymentMode === 'fixedTotal' ? 'Fixed total (no interest)' : `${loan.annualRatePct}% p.a.`} · {loan.tenureMonths} months
@@ -1020,7 +1020,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
         {extraPayment > 0 && (
           <div className="grid-auto" style={{ ...gridAutoStyle(130, 8), marginTop: 12 }}>
             <div className="stat-card card" style={hueStyle(HUES[0])}><div className="label">New months</div><div className="value">{whatIf.months}</div><div className="sub">{whatIf.monthsSaved} sooner</div></div>
-            <div className="stat-card card" style={hueStyle(HUES[7])}><div className="label">New end date</div><div className="value" style={{ fontSize: 14 }}>{whatIf.newEndDate}</div></div>
+            <div className="stat-card card" style={hueStyle(HUES[7])}><div className="label">New end date</div><div className="value fs-14">{whatIf.newEndDate}</div></div>
             <div className="stat-card card" style={hueStyle('var(--profit)')}>
               <div className="label">{loan.repaymentMode === 'fixedTotal' ? 'Markup' : 'Interest'} saved</div>
               <MoneyValue n={whatIf.interestSaved} currency={loan.currencyCode} />
@@ -1213,7 +1213,7 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: EMILoan) => void; onE
                 key={l.id}
                 title={<><span className="text-muted entity-card-sr">#{srNumOf.get(l.id)}</span>{l.name}</>}
                 subtitle={`${l.lender}${l.repaymentMode === 'fixedTotal' ? ' · no-interest' : ''}`}
-                badge={l.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Closed</span> : undefined}
+                badge={l.isActive === false ? <span className="pill-warn fs-10">Closed</span> : undefined}
                 statLabel="Outstanding"
                 stat={<MoneyValue n={sum.outstanding} currency={l.currencyCode} />}
                 hue="var(--loss)"
