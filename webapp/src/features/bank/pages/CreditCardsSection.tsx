@@ -281,7 +281,7 @@ function TransactionsTable({ card }: { card: CreditCard }) {
                     {(Object.keys(KIND_LABELS) as CreditCardTransactionKind[]).map((k) => <option key={k} value={k}>{KIND_LABELS[k]}</option>)}
                   </select>
                 </td>
-                <td><input value={editRow.description} onChange={(e) => setEditRow({ ...editRow, description: e.target.value })} style={{ width: 140 }} /></td>
+                <td><input value={editRow.description} onChange={(e) => setEditRow({ ...editRow, description: e.target.value })} className="w-140" /></td>
                 <td><CategorySelect value={editRow.categoryID ?? UNCATEGORIZED_ID} onChange={(categoryID) => setEditRow({ ...editRow, categoryID })} /></td>
                 <td><input type="number" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} className="w-90" /></td>
                 <td onClick={(e) => e.stopPropagation()}>

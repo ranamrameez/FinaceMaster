@@ -774,6 +774,18 @@
      name landed in the DOM. */
   .w-90{width:90px!important;}
   .w-130{width:130px!important;}
+  /* Same cleanup, remaining width-value instances from the same family
+     (2026-09-13) — same reasoning/`!important` requirement as `.w-90`/
+     `.w-130` above, all bare with no existing `className` to merge into:
+     `width:80` (19), `width:100` (19), `width:70` (17), `width:120` (7),
+     `width:96` (5), `width:82` (4), `width:140` (4) — 75 occurrences. */
+  .w-70{width:70px!important;}
+  .w-80{width:80px!important;}
+  .w-82{width:82px!important;}
+  .w-96{width:96px!important;}
+  .w-100{width:100px!important;}
+  .w-120{width:120px!important;}
+  .w-140{width:140px!important;}
   /* User-reported (2026-08-27): "Input sizes still inconsistent and taking
      whole 100% width." Root cause: `flex:1` (flex-basis:0%) ignores each
      field's own explicit `width` prop entirely and instead divides the

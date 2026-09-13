@@ -121,7 +121,7 @@ function HoldingsCard() {
                       </div>
                     </div>
                   </td>
-                  <td style={{ width: 70 }}><Sparkline data={r.sparkData} formatValue={fmtPrice} width={56} height={20} /></td>
+                  <td className="w-70"><Sparkline data={r.sparkData} formatValue={fmtPrice} width={56} height={20} /></td>
                   <td onClick={() => navigate(`/stock/${r.ticker}`)}>
                     {fmt(r.shares, 0)}
                     {!!pendingDelta[r.ticker] && (
@@ -144,10 +144,10 @@ function HoldingsCard() {
                       key={r.mp}
                       type="number"
                       step="0.001"
-                      className="price-input"
+                      className="price-input w-96"
                       defaultValue={r.mp || ''}
                       placeholder="—"
-                      style={{ width: 96 }}
+                      
                       onKeyDown={async (e) => {
                         if (e.key === 'Enter') {
                           const target = e.target as HTMLInputElement;
