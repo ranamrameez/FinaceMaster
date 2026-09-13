@@ -5851,6 +5851,25 @@ app, not developer notes) continuously as features ship.
   the 9.96 lot (netPL +2.59, strictly better), round-trip back to FIFO matched exactly, and the
   Open trades table (14@9.960 + 36@10.40) stayed identical regardless of the toggle — zero
   console errors. `npx tsc -b` / `npm run test` (682 tests, 4 new) / `npm run build` all clean.
+- **Same-day follow-up, user-prompted ("one feature rolled out should be reflected in all
+  related views") — a real consistency gap found and fixed in the feature just above.** The
+  new match-order toggle only reached the Closed Trades table itself; `sellPLById` — the SAME
+  per-sell realized-P&L figure, also shown as an inline pill on each SELL row in the main
+  Trade List table and as "Realized P/L" in that row's click-to-open `RecordDetailModal`
+  popup (Done item 284) — was still hardcoded to `computeClosedTrades(transactions, calcFee)`
+  with no `matchOrder` argument, so it stayed FIFO-only no matter what the table below was set
+  to. This let the exact same sell show two contradicting P&L figures on one page. Fixed by
+  threading `ctMatchOrder` into `sellPLById` in both QSE's and PSX's `TransactionsPage.tsx`,
+  and updating the "P/L" column tooltip (previously said "matched FIFO," now says it follows
+  whichever Match order is picked below) so the copy can't go stale the moment a user switches
+  views. **Lesson worth repeating for any future toggle added to one view of a computed
+  number**: grep for every OTHER consumer of that same function/value before calling the
+  rollout done — a toggle that reaches the headline table but not a same-page pill/popup
+  showing the identical figure is a real, confusing inconsistency, not a cosmetic gap.
+  Verified live via Playwright with the same seeded scenario: the inline row pill and the
+  popup's "Realized P/L" both read −3.59 QAR under FIFO and both flipped to +2.59 QAR the
+  moment the table's own toggle switched to Cheapest-lot-first — one toggle, every view in
+  sync. `npx tsc -b` / `npm run test` (682 tests, unchanged) / `npm run build` all clean.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

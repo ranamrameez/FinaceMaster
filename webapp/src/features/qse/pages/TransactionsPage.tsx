@@ -325,10 +325,14 @@ function TransactionList() {
   // lot's buy price... inline in the main trade row." Computed from the
   // WHOLE workbook (not `filterTicker`-scoped like `closedTrades` above) so
   // a row's own P&L figure never changes just because the ticker filter is
-  // narrowed to something else.
+  // narrowed to something else. Shares `ctMatchOrder` with the Closed Trades
+  // table above (2026-09-13) — a feature rolled out to one view of a sell's
+  // realized P&L must stay consistent with every other view of the same
+  // number, or this row's own pill and the table below could show two
+  // contradicting figures for the identical sell.
   const sellPLById = useMemo(
-    () => closedPLBySellTxId(computeClosedTrades(workbook.transactions, calcFee)),
-    [workbook.transactions, calcFee],
+    () => closedPLBySellTxId(computeClosedTrades(workbook.transactions, calcFee, ctMatchOrder)),
+    [workbook.transactions, calcFee, ctMatchOrder],
   );
 
   // User's own words: "make separate sections for open and closed trades...
@@ -403,7 +407,7 @@ function TransactionList() {
             <Th col="price">Price</Th>
             <Th col="amount">Amount</Th>
             <th>
-              <Tooltip text="Realized profit/loss for a SELL row, matched FIFO against your oldest still-open buy lot(s) for this ticker — the same figure as the Closed trades section below, shown per-row here. Blank on a BUY row (nothing realized yet).">
+              <Tooltip text="Realized profit/loss for a SELL row, matched against your still-open buy lot(s) for this ticker — follows whichever Match order (FIFO or cheapest-lot-first) is picked in the Closed trades section below, since it's the same figure shown per-row here. Blank on a BUY row (nothing realized yet).">
                 P/L
               </Tooltip>
             </th>
