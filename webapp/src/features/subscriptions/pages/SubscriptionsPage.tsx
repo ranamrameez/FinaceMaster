@@ -255,7 +255,7 @@ function SubscriptionList({ onSelect }: { onSelect: (sub: Subscription) => void 
                     {next && <> · Next: {next}</>}
                   </>
                 }
-                badge={<span className={s.active ? 'pill-positive' : 'pill-negative'} style={{ fontSize: 10 }}>{s.active ? 'Active' : 'Cancelled'}</span>}
+                badge={<span className={`${s.active ? 'pill-positive' : 'pill-negative'} fs-10`}>{s.active ? 'Active' : 'Cancelled'}</span>}
                 statLabel="Monthly equiv."
                 stat={<MoneyValue n={monthly} currency={s.currencyCode} />}
                 onClick={() => onSelect(s)}
@@ -527,8 +527,8 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
             </Tooltip>
             <MoneyValue n={monthlyEquivalent(sub) * 12} currency={sub.currencyCode} />
           </div>
-          <div className="stat-card card" style={hueStyle(HUES[0])}><div className="label">Next renewal</div><div className="value" style={{ fontSize: 14 }}>{sub.active ? nextBillingDate(sub) : '—'}</div></div>
-          <div className="stat-card card" style={hueStyle(sub.active ? 'var(--profit)' : 'var(--loss)')}><div className="label">Status</div><div className="value" style={{ fontSize: 14 }}>{sub.active ? 'Active' : 'Cancelled'}</div></div>
+          <div className="stat-card card" style={hueStyle(HUES[0])}><div className="label">Next renewal</div><div className="value fs-14">{sub.active ? nextBillingDate(sub) : '—'}</div></div>
+          <div className="stat-card card" style={hueStyle(sub.active ? 'var(--profit)' : 'var(--loss)')}><div className="label">Status</div><div className="value fs-14">{sub.active ? 'Active' : 'Cancelled'}</div></div>
         </div>
       </Card>
 

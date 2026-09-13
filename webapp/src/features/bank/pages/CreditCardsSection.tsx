@@ -438,7 +438,7 @@ export function CreditCardDetailPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
         <h1 className="pagetitle" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
           {card.name}
-          {card.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Closed</span>}
+          {card.isActive === false && <span className="pill-warn fs-11">Closed</span>}
         </h1>
         <div style={{ display: 'flex', gap: 6 }}>
           <IconButton label={card.isFavorite ? 'Unfavorite' : 'Favorite'} icon={<StarIcon size={13} filled={card.isFavorite} />} align="right" onClick={toggleFavorite} />
@@ -656,7 +656,7 @@ function CreditCardsList() {
                 key={c.id}
                 title={<><span className="text-muted entity-card-sr">#{srNumOf.get(c.id)}</span>{c.name}</>}
                 subtitle={<>{c.currencyCode}{c.cardNetwork ? ` · ${c.cardNetwork}` : ''}{c.creditLimit ? ` · Limit ${fmtMoney(c.creditLimit, c.currencyCode)}` : ''}</>}
-                badge={c.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Closed</span> : undefined}
+                badge={c.isActive === false ? <span className="pill-warn fs-10">Closed</span> : undefined}
                 statLabel="Owed"
                 stat={<MoneyValue n={balance} currency={c.currencyCode} />}
                 hue={balance > 0 ? 'var(--loss)' : 'var(--profit)'}

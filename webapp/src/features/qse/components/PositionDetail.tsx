@@ -210,7 +210,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
             </div>
             <div className="stat-card card" style={hueStyle(statusHue || HUES[6])}>
               <div className="label">Status</div>
-              <div className="value" style={{ fontSize: 14 }}>{statusLabel}</div>
+              <div className="value fs-14">{statusLabel}</div>
             </div>
           </div>
         </CollapsibleCard>
@@ -245,7 +245,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
             <div className="stat-card card" style={hueStyle(HUES[4])}><div className="label">Fees paid</div><div className="value">{fmtMoney(position.buyFees + position.sellFees, currency)}</div></div>
             <div className="stat-card card" style={hueStyle(HUES[3])}>
               <div className="label">Trade dates</div>
-              <div className="value" style={{ fontSize: 14 }}>{position.firstDate}</div>
+              <div className="value fs-14">{position.firstDate}</div>
               <div className="sub">to {position.lastDate}</div>
             </div>
             {!isOpen && <div className="stat-card card" style={hueStyle(HUES[6])}><div className="label">Held</div><div className="value">{holdingDays}d</div></div>}

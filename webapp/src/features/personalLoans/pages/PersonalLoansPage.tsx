@@ -774,7 +774,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
             <div>
               <div style={{ fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 {loan.person}
-                {loan.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Closed</span>}
+                {loan.isActive === false && <span className="pill-warn fs-11">Closed</span>}
               </div>
               <div className="text-muted">
                 {loan.direction === 'owed_to_me' ? 'Money lent out' : 'Money I owe'} · {loan.currencyCode} · since {loan.date}
@@ -892,7 +892,7 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: PersonalLoan) => void
                 key={l.id}
                 title={<><span className="text-muted entity-card-sr">#{srNumOf.get(l.id)}</span>{l.person}</>}
                 subtitle={l.direction === 'owed_to_me' ? 'Lent out' : 'I owe'}
-                badge={l.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Closed</span> : undefined}
+                badge={l.isActive === false ? <span className="pill-warn fs-10">Closed</span> : undefined}
                 statLabel="Outstanding"
                 stat={<MoneyValue n={outstanding} currency={l.currencyCode} />}
                 hue={l.direction === 'owed_to_me' ? 'var(--profit)' : 'var(--loss)'}

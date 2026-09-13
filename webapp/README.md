@@ -8696,6 +8696,27 @@ FinanceManager live link:
   ruleset sets a competing `color` on a bare `<span>`/`<p>`. Verified live via Playwright with
   a seeded QSE position: `.text-loss` computed `rgb(200, 48, 47)` exactly, zero console
   errors. `npx tsc -b` / `npm run test` (682 tests, unchanged) / `npm run build` all clean.
+- **App-wide CSS cleanup, twenty-third/twenty-fourth concrete instances — see Done item 321
+  (2026-09-13).** `style={{ fontSize: 10 }}`/`style={{ fontSize: 11 }}` on small "Closed"/
+  "Credit card" `.pill-warn`/`.pill-negative`/`.pill-info` badge `<span>`s (16 occurrences) —
+  extracted into `.fs-10`/`.fs-11`, no `!important` needed (checked `.pill-warn`/`.pill-info`
+  themselves for a competing `font-size` first — neither sets one). **Caught by `tsc -b`, not
+  live verification this time**: 2 of the 16 used `className={...}` (a JS expression/template
+  literal) rather than a plain string literal, which the bulk regex's "merge into existing
+  className" step doesn't match — same shape as Done item 319's arrow-function trap, a
+  different JSX construct tripping the same class of bulk-script blind spot. Fixed both by
+  hand. Separately, `style={{ fontSize: 14 }}` (8 occurrences) on a `<div className="value">`
+  nested inside a `.stat-card` container — checked FIRST, before converting, whether this
+  would hit the same specificity trap as `.w-90` (Done item 318): `.stat-card .value`'s own
+  base rule (`font-size:17px`) has specificity (0,2,0) via its descendant-selector, which beats
+  a plain `.fs-14` class (0,1,0) regardless of source order — the same trap, just via a
+  descendant combinator instead of a `:not()` chain. Added `!important` up front this time,
+  confirmed correct by comparing against a plain (non-`.fs-14`) `.stat-card .value`'s own
+  17px on the same page. Verified live via Playwright: a seeded Funds "Closed" badge's
+  `.fs-10` computed exactly `10px`; a seeded Subscription detail's `.value.fs-14` (Next
+  renewal/Status stat cards) computed exactly `14px`, next to an unrelated plain `.stat-card
+  .value` on the same page correctly still showing `17px` — zero console errors. `npx tsc -b`
+  / `npm run test` (682 tests, unchanged) / `npm run build` all clean.
 
 ## Pending
 
@@ -9645,6 +9666,15 @@ or a design decision before more code, not guessed at further:**
      Done item 320**: `color:var(--loss)`/`color:var(--profit)` on plain inline text/spans (16
      occurrences), extracted into `.text-loss`/`.text-profit` — no `!important` needed, since
      `color` (unlike `width` on an `<input>`) has no competing high-specificity base rule here.
+     **Twenty-third/twenty-fourth instances done (2026-09-13) — see Done item 321**:
+     `fontSize:10/11` on `.pill-*` badge spans (16 occurrences, extracted into `.fs-10`/`.fs-11`,
+     no `!important` needed) and `fontSize:14` on a `.stat-card .value` div (8 occurrences,
+     extracted into `.fs-14`, `!important` needed since `.stat-card .value`'s own descendant
+     selector beats a plain class — the same trap as `.w-90`, checked and handled up front this
+     time rather than found by a live-verification surprise). Also caught a second bulk-script
+     blind spot: `className={...}` (a JS expression, not a plain string literal) doesn't match
+     the "merge into existing className" regex, same class of gap as Done item 319's arrow-
+     function trap — 2 instances fixed by hand.
 117. ~~App-wide "everything should be a grid item except tables" principle (2026-09-06)~~ —
      **done in full (2026-09-08), see Done item 237.** Every module's landing/Settings page has
      been audited for the "short non-table cards stacked full-width" pattern; Cash's Settings
