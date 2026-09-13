@@ -8383,6 +8383,1472 @@ FinanceManager live link:
   accounts) doesn't map onto the same pattern as directly as Personal Loans'/EMI's/Rentals'
   lists already do (Done items 271-274) — needs the user's own concrete example of what's
   unreadable before guessing at a redesign, tracked as its own open item rather than assumed.
+
+- **301. Trade Strategy: merged Buy/Sell+Avg Down and Trade Planner+Partial Trade (new
+  strategy), PSX fee-mode redesign, an app-wide fixed top bar, and several smaller UI fixes
+  (2026-09-11), the largest single change since the credit-card module.** Triggered by the
+  user's own real IQCD (QSE) position -- 50 sh @10.40 + 14 sh @9.962 -- where the price rose to
+  10.37, close to but not past the *blended* break-even, then fell; every sell that window came
+  out of the expensive 50-share lot (FIFO always drains the oldest lot first), so the cheap
+  14-share lot (BE ~10.02, already ~4-5% profit at 10.37) was never touched. **New Partial
+  Trade Strategy** (`lib/calc/partialTradeStrategy.ts`): `computeLotAdvice()` gives each open
+  FIFO lot (reused from `computeFIFOPositions`, called purely for display -- never implies
+  switching a workbook's real `costBasisMethod`, which changes historical P/L) its own
+  fee-aware break-even and live unrealized P/L, flagging `sell`/`hold` independently per lot --
+  "hold the expensive, sell the cheaper lots that are already green" (user's own words).
+  `findMissedOpportunity()` is the retrospective: scans the last 30 days of price history for
+  its peak and reports which lots would have cleared their own BE there. `perShareCommission()`
+  answers a separate user ask ("show buy & sell commission/1 share at current price for a quick
+  decision if the user should dive in the dip"). Verified against the user's exact real numbers:
+  at 10.37 the 50-share lot shows Hold/-4.36, the 14-share lot Sell/+4.93.
+  **New Trade Strategy page, both exchanges** (`features/{qse,psx}/pages/TradeStrategyPage.tsx`,
+  replacing PSX-only `TradePlannerPage.tsx` -- QSE had no trade-planning tooling before this;
+  `/psx/trade-planner` now redirects). Per the user's confirmed design: strategies #1+#2 unify
+  into one "Buy/Sell & Avg Down" calculator with an Average-down toggle (reusing
+  `riskAnalysis.ts`'s already-tested `computeAveragingScenario`, fed `add = shares*price` so
+  its capital-driven math recovers the exact shares typed -- no second averaging formula);
+  strategies #3+#4 are "one integrated tool," not siblings -- Partial Trade's lot table renders
+  above the legs table (summary-first, fixing a real user-reported layout bug: the plan's own
+  summary used to sit buried below a long, horizontally-scrolling legs table) and works
+  standalone without a plan, with "Sell this lot" opening the existing Add-trade flow
+  pre-filled and "+Add as plan leg" bridging into the planner. Risk-class `Notice`s on both
+  merged sections, linking to `/legal`. "Add plan" is now a FAB grouped with the existing
+  Trade-calculator/Buy-sell-stock actions (`usePageFabActions`) instead of a permanent card or
+  -- a real bug caught by its own Playwright verification -- a second competing
+  `position:fixed` button.
+  **PSX Auto fee-mode redesign** (`psxFees.ts`'s `isProvisionalSameDayBuy()`): a lone BUY dated
+  *today* (PSX's own timezone, `defaultTimezoneForMarket('PSX')` -- never the browser's raw
+  local date, the same bug class already fixed once for `installmentDueDate`) with no matching
+  same-day SELL yet now prices at $0 (provisional), falling through to the existing
+  charged/netted broker-rule split once a SELL appears, and reverting to full fee once the
+  date is no longer today -- a live, derived third outcome, never a persisted flag, which is
+  what makes it self-correcting rather than repeating the earlier, reverted Done-item-67-style
+  staleness bug. Trade Planner legs also gained real fee-mode UI (`FeeModeControl` for PSX,
+  incl. a new %-vs-amount toggle on Manual mode; a plain optional override for QSE) -- a leg's
+  fee used to be fully automatic with zero visibility or override, the literal thing that made
+  the old planner "lose worth" per the user's own report.
+  **Partial Trade Alerts** (`PartialTradeAlertsPopup.tsx`, opt-in via a new
+  `partialTradeAlertsEnabled` setting per exchange, off by default -- explicitly a "risky
+  strategy" the user opts into): a portfolio-wide, auto-hiding, dismissible popup (mirrors
+  `SubscriptionAlertsPopup`'s exact shape) listing every ticker across both exchanges with a
+  sellable lot, link-only per the confirmed design.
+  **App-wide fixed top bar**: `Tabs.tsx`'s own sub-nav chip row was already `position:sticky`
+  but rendered after a page's `<h1>`, so on load it sat below that content instead of being
+  immediately visible -- fixed not by changing the sticky mechanism but by relocating it: new
+  `pageTopBarStore`/`usePageTopBar` hooks (same "page registers, one globally-mounted
+  component renders" shape as the existing FAB-grouping mechanism) let `Tabs` push its chips
+  into a new `TopBar.tsx`, rendered by `AppShell.tsx` as `.main`'s very first child -- reaches
+  every module at once since `Tabs` is already the one shared component ~25+ pages render
+  their sections through. Also: one small icon per sidebar module (`CategoryNav`), a new
+  "keep quick-actions panel always open" Appearance setting for `FabPanel`, and (via the new
+  `rightSlot` on the top-bar store) the Dashboard's currency picker moved out of the "Net
+  worth summary" card into the pinned top-right corner.
+  **Smaller Dashboard/Cash fixes from the same batch**: Dashboard reordered so "Net worth
+  summary" renders before the subscription-renewals notice and Upcoming card (was buried
+  below both); "Exchange rates" is now a collapsed `CollapsibleCard` instead of a
+  permanently-open sibling of the summary, since it's a rarely-touched control; Cash's Plan
+  list -- the same "every currency dumped into one table" bug already fixed once for the main
+  ledger (Done item 224) -- split into one table per currency in a `.detail-grid`.
+  Design reference for the nav work: `wealth_tracker_template/` (a "WealthPro" PRD + ~40 HTML
+  mockups) added to the repo root this session, with the user's own explicit warning not to
+  copy its top-bar's page-vs-app-scope ambiguity literally.
+  Verified live via Playwright throughout, each part independently: the real IQCD numbers
+  (Hold/-4.36 vs Sell/+4.93 at 10.37); the FAB-overlap bug found and fixed mid-verification;
+  the provisional-$0/charged-netted/full-fee three-way fee-calc transition; the alerts popup
+  correctly gated on/off by its setting; the top bar visible immediately on load (no scroll)
+  with correct default-active chip and working chip-click; the Dashboard reorder, the
+  Exchange-rates collapse, and the currency picker's new top-bar location with zero
+  duplication; the Cash Plan grid rendering one real table per seeded currency. `npx tsc -b` /
+  `npm run test` (663 tests, 18 new) / `npm run build` all clean at every phase, committed and
+  pushed incrementally rather than as one unreviewable change.
+- **Critical: `main` left broken by the direct-push Trade Strategy commit above — see Done item
+  313 (2026-09-11).** `npx tsc -b` on `origin/main`'s own tip failed with two real type errors:
+  `usePageFabActions(useMemo(...))` in both `features/qse/pages/TradeStrategyPage.tsx` and
+  `features/psx/pages/TradeStrategyPage.tsx` called the hook with only its `actions` argument,
+  omitting the required `key: string` first parameter every other call site in the app already
+  passes (`usePageFabActions('qse-transfers', ...)`, `'bank-accounts'`, etc. — confirmed by
+  grepping every real call site before fixing, not guessing at the missing arg). This wasn't
+  a type-only nit: `key` is how `fabActionsStore.ts` keeps each page's own FAB contribution
+  from clobbering another's, and a run-time call with `actions` alone would have silently
+  passed the actions array itself as `key` had this been JS instead of TS — TypeScript is what
+  actually caught it here. Fixed by adding the same `'qse-trade-plan'`/`'psx-trade-plan'` key
+  convention used everywhere else. **Lesson for any future direct-to-`main` push**: this file's
+  own standing instruction to verify before every commit still applies with no PR/CI safety net
+  to catch a miss — a `tsc -b` failure that reaches `main` blocks every other session's own
+  clean-checkout verification too, not just the pushing session's. Verified live via
+  Playwright on both exchanges' `/trade-strategy` and `/psx/trade-strategy` routes: the FAB
+  renders, opening it and clicking "Add plan" (found via its real `aria-label`, not visible
+  text — `FabPanel`'s secondary actions are icon-only with a hover `Tooltip`, not a text label)
+  correctly opens the "New trade plan" modal on both pages, zero real console errors. `npx tsc
+  -b` / `npm run test` (671 tests, unchanged) / `npm run build` all clean.
+- **Critical, user-reported (2026-09-13): Partial Trade Strategy's "Sell this lot" could
+  misattribute a sale under PSX's opt-in FIFO cost-basis mode — see Done item 314.** User's own
+  framing: "after selling the cheaper shares, avg buy price and break even etc. are calculated
+  according to the remaining share's prices. We cannot let avg and break even prices misleading
+  due to the partial cheaper lots selling." Root-caused, not guessed at: `computeFIFOPositions`
+  always drains the OLDEST open lot first (standard FIFO) — correct for a normal sell, but the
+  whole point of "Sell this lot" (the real IQCD case this feature exists for: hold the
+  expensive 50@10.40 lot, sell the cheap 14@9.962 lot once IT clears its own break-even) is to
+  close a NON-oldest lot. Selling that lot's own share count under strict FIFO would silently
+  drain the OLD lot instead, leaving a wrong post-sale lot composition and a misleading average
+  cost/break-even for what's actually left. **Confirmed the bug is scoped to PSX's opt-in
+  `costBasisMethod: 'fifo'` only** — QSE always uses `computePositions` (weighted average),
+  where remaining-share average cost is mathematically invariant to which lot conceptually
+  sold, so this class of bug cannot occur there; PSX's own default `'average'` mode is equally
+  unaffected. Fixed with real specific-lot identification (a recognized cost-basis convention,
+  distinct from FIFO/average): new `Transaction.targetLotBuyId?: string` references a specific
+  BUY's own `id`; `computeFIFOPositions` drains that lot FIRST when set (falling through to
+  normal oldest-first FIFO for any shares beyond what it holds, or when unset — fully
+  backward-compatible, zero change for every existing transaction). `FIFOLot`/`LotAdvice` both
+  gained a `buyId` field so the Trade Strategy page's "Sell this lot" button (both QSE and PSX,
+  for consistency of the FIFO lot ADVISORY view both exchanges show regardless of their real
+  `costBasisMethod`) can pass `targetLotBuyId: lot.buyId` straight through into the pre-filled
+  Add Trade popup. **A second, real reliability gap found while wiring this, not introduced by
+  it**: `addTransaction`/`addTransactions` never assigned a new transaction's `id` immediately
+  — only `normalize()` (load/cloud-sync-pull time) backfilled it — so a lot bought moments
+  earlier in the SAME session (no reload/cloud round-trip yet) would have had no id to target,
+  silently defeating the whole fix for the exact live-trading scenario it's meant for. Fixed by
+  assigning `id: crypto.randomUUID()` immediately in both actions, mirroring the same pattern
+  `seq`/`timestamp` and `executeTradePlanLeg` already use. **Deliberately not extended to
+  `lib/calc/closedTrades.ts`** — that "Closed trades" reporting ledger is explicitly documented
+  as its own independent FIFO simulation, by design decoupled from `computeFIFOPositions`/
+  `costBasisMethod` for every ticker regardless of exchange; teaching it about
+  `targetLotBuyId` too is a real, separate follow-up (tracked as a new Pending item below), not
+  bundled into this fix since it doesn't drive the Avg Cost/Break-even figures the user
+  actually flagged. New tests: `fifoPositions.test.ts` (4 cases, incl. the real IQCD numbers
+  both with and without targeting, a partial-lot-overflow case, and an unmatched-id fallback),
+  `partialTradeStrategy.test.ts` (2 cases, `buyId` passthrough + an end-to-end sell), and
+  `createWorkbookStore.test.ts` (1 case, immediate id assignment). Verified live via Playwright
+  with the real IQCD-shaped scenario seeded under `costBasisMethod: 'fifo'`: only the cheap lot
+  showed "Sell this lot," clicking it opened the Add Trade popup pre-filled with the correct
+  ticker/shares/break-even price, and submitting correctly hit the real sign-in gate — zero
+  console errors. `npx tsc -b` / `npm run test` (678 tests, 7 new) / `npm run build` all clean.
+- **App-wide CSS cleanup, fifteenth/sixteenth concrete instances — see Done item 315
+  (2026-09-13).** Continuing README Pending item 116's ongoing incremental practice, resumed
+  after syncing with `origin/main` and confirming its build/test/lint health first (`tsc -b` /
+  678 tests / `npm run build` all clean on the synced tip before touching anything). Two more
+  repeated inline-style patterns found via a fresh grep of every `style={{...}}` literal
+  app-wide: (1) a bare `style={{ marginBottom: 8 }}` with no `gap`/`.row` involved — 22
+  occurrences across 9 files (Sidebar's chip-tabs row, several "Show archived/closed" toggle
+  buttons, several `Notice`/`<p>`/`<div>` intro blocks) — converted to the already-existing
+  `.mb-sm` utility (Done item 301), merging into each element's existing `className` where
+  present. This also caught 7 NEW occurrences of the already-established `className="row"
+  style={{ gap: 8, marginBottom: 8 }}` → `.row.gap-sm.mb-sm` pattern (Done item 168) that had
+  crept back in via pages added after that cleanup ran (mostly `TradeStrategyPage.tsx`, which
+  didn't exist yet at the time) — converted the same way. (2) A genuinely new composite pattern,
+  not a coincidental value match: `style={{ cursor: 'pointer', fontWeight: 700, marginBottom: 8
+  }}` on every collapsible-section `<summary>` in QSE's/PSX's Trade Transactions page (8
+  occurrences across 2 files, byte-identical) — extracted into a new semantically-named
+  `.summary-heading{cursor:pointer;font-weight:700;margin-bottom:8px;}` class rather than a
+  literal-value name, since every instance is the same real UI role (a clickable accordion-
+  section header). Verified live via Playwright: the `.summary-heading` elements are collapsed
+  by default inside `Tabs`-driven `CollapsibleCard` sections (the same "collapsed content
+  genuinely unmounts" fact this file has documented many times before — an initial count came
+  back 0 until clicking the page's own "All" chip to force-open every section), and once
+  visible, `getComputedStyle` confirmed `cursor:pointer`/`font-weight:700`/`margin-bottom:8px`
+  all render correctly; the `.row.gap-sm.mb-sm` conversions on Trade Strategy rendered
+  identically to before. Zero real console errors (the one `ERR_CONNECTION_RESET` is this
+  sandbox's own documented network-block artifact, unrelated to this change). `npx tsc -b` /
+  `npm run test` (678 tests, unchanged — pure CSS extraction) / `npm run build` all clean.
+- **App-wide CSS cleanup, seventeenth/eighteenth concrete instances — see Done item 316
+  (2026-09-13).** Continuing the same incremental practice. `style={{ marginTop: 8 }}` (bare, no
+  `.row`/`gap` involved — 13 occurrences across 11 files, mostly a cloud-sync-empty `Notice`)
+  reused the existing `.mt-sm` utility. Separately, two more repeated patterns sharing the same
+  6px left-margin: `style={{ marginLeft: 6 }}` on a "Pending" `.pill-warn` badge placed after
+  some text (9 occurrences) and `style={{ marginLeft: 6, textDecoration: 'none' }}` on the
+  "🔗 Linked" `.pill-info` tag `<Link>` (8 occurrences) — checking `theme.css` first found the
+  Link's own `textDecoration:'none'` half is dead code, since the base `a{color:inherit;
+  text-decoration:none;}` rule (from Done item 103's earlier fix) already zeroes link
+  underlines app-wide, so this was a removal as well as an extraction, same as the earlier
+  `alignItems:'flex-end'` dead-code find (Done item 302). Both share the identical 6px value,
+  which doesn't fit the existing 8px `sm`/16px `md` scale, so extracted into one literal-value
+  `.ml-6{margin-left:6px;}` class (matching the `.mb-12`/`.mt-12` naming precedent) rather than
+  two separate classes. Verified live via Playwright: a seeded pending Cash entry's `.pill-warn
+  .ml-6` badge computed `margin-left: 6px` exactly, zero real console errors. `npx tsc -b` /
+  `npm run test` (678 tests, unchanged) / `npm run build` all clean.
+- **Closed Trades reporting ledger gains a "Cheapest lot first" alternative view alongside
+  FIFO, user-requested (2026-09-13) — see Done item 317.** First analyzed the user's own real
+  MARK (QSE) trade history against an uploaded full-app backup and reported the full FIFO
+  ledger + weighted-average comparison + reconciliation in chat (no code change needed for
+  that half). User then observed: "FIFO maybe correct for PSX but QSE behaves different. WHY?
+  bcz shares are charged fix fee 0.275 for each buy/sell. so buy order doesn't matter, just the
+  price is important. so, we can try to sell to most cheaper to most expensive ones" — correct,
+  confirmed by reading the actual fee code: QSE's fee is a flat % of trade value with no
+  per-lot term, and PSX's own same-day netting operates at the whole-TRANSACTION level (that
+  day's total buy vs. sell quantity), never at the individual-lot level `computeClosedTrades`
+  matches within — so for BOTH exchanges, which lot a sale is credited to in this REPORTING
+  table never changes any real fee, buy cost, sell proceeds, or the true total
+  (realized+unrealized) P/L; it only changes which story the itemized ledger tells. Asked via
+  `AskUserQuestion` whether to replace FIFO outright, add a second view, or leave it — the user
+  picked **"Add a second view, keep FIFO default (Recommended)."** `computeClosedTrades()`
+  (`lib/calc/closedTrades.ts`) gained a third parameter, `matchOrder: 'fifo' | 'lowestCostFirst'
+  = 'fifo'` — `'lowestCostFirst'` picks the open lot with the lowest `buyPrice` for each match
+  instead of always `lots[0]`, falling through to the next-cheapest lot once one is exhausted.
+  **Explicitly does NOT touch `computeFIFOPositions`'s own real "Open trades" (open lots)
+  table** — that stays genuine oldest-first FIFO regardless of this toggle, since it feeds
+  PSX's actual opt-in cost-basis mode, not just a report; verified live that toggling the
+  Closed Trades view leaves the Open trades table completely unchanged. A real correctness
+  subtlety was caught while writing tests, not assumed: total realized P/L across the two match
+  orders is identical ONLY once every bought share has been sold — with shares still open, the
+  two methods leave genuinely DIFFERENT residual lots behind (FIFO: a mix; lowestCostFirst:
+  only the priciest lot), so their realized-so-far totals legitimately differ on a partial
+  close; a dedicated test proves both halves (a partial-close case where the totals differ, and
+  a fully-closed case where they converge to the cent). Wired into both `TransactionsPage.tsx`
+  files (QSE and PSX) as a chip-toggle row ("FIFO (oldest first)" / "Cheapest lot first") right
+  above the Closed Trades table, each with its own exchange-specific `Tooltip` explaining why
+  the toggle exists and that it never changes real fees/positions. Verified live via Playwright
+  with a seeded old-expensive-lot (50@10.40) + newer-cheap-lot (14@9.96) + one 14-share sell at
+  10.20: FIFO showed the 10.40 lot (netPL −3.59), Cheapest-lot-first showed the 9.96 lot (netPL
+  +2.59, strictly better as the test predicts), switching back to FIFO reproduced the original
+  row exactly, and the Open trades table (14@9.960 untouched + 36@10.40 leftover) stayed
+  identical regardless of which Closed Trades view was active — zero console errors. New tests:
+  `closedTrades.test.ts` gained 4 cases. `npx tsc -b` / `npm run test` (682 tests, 4 new) / `npm
+  run build` all clean. **Deliberately not done**: `closedTrades.ts` still doesn't honor
+  `Transaction.targetLotBuyId` (Pending item 134, unrelated to this feature — that's about a
+  SPECIFIC lot a user explicitly targeted via "Sell this lot," this is about re-sorting ALL
+  open lots by price for comparison).
+  **Same-day follow-up, user-prompted ("one feature rolled out should be reflected in all
+  related views"): the toggle above was missing from two other views showing the exact same
+  per-sell realized-P&L figure.** Audited every consumer of `computeClosedTrades`/
+  `closedPLBySellTxId` on the page rather than trusting the toggle's own scope — found
+  `sellPLById` (the inline "P/L" pill shown on each SELL row in the main Trade List table, and
+  the same figure surfacing as "Realized P/L" in that row's click-to-open `RecordDetailModal`
+  popup, Done item 284) was still hardcoded to `computeClosedTrades(transactions, calcFee)`
+  with no third argument — always FIFO, regardless of what the Closed Trades table right below
+  it was set to. This meant the SAME sell's realized P&L could show two contradicting numbers
+  on one page: the row's own pill in FIFO, the Closed Trades table's row in cheapest-lot-first.
+  Fixed by threading `ctMatchOrder` into `sellPLById`'s computation in both QSE's and PSX's
+  `TransactionsPage.tsx`, and updated the "P/L" column header's tooltip (previously worded
+  "matched FIFO," now says the figure follows whichever Match order is picked below) so the
+  copy doesn't go stale the moment a user picks the other view. **Lesson worth repeating**:
+  when a toggle is added to one view of a number, grep for every OTHER place that same number
+  (or the function that computes it) surfaces before calling the rollout done — a toggle that
+  only reaches the headline table while a same-page pill/popup keeps showing the old fixed
+  view is a real, confusing inconsistency, not a cosmetic gap. Verified live via Playwright
+  with the same seeded scenario as the original feature: the inline row pill and the popup's
+  "Realized P/L" both read −3.59 QAR under FIFO and both flipped to +2.59 QAR the moment the
+  Closed Trades toggle was switched to Cheapest-lot-first — same number, same toggle, every
+  view. `npx tsc -b` / `npm run test` (682 tests, unchanged — pure wiring, no new calc logic) /
+  `npm run build` all clean.
+- **App-wide CSS cleanup, nineteenth/twentieth concrete instances — a real regression caught
+  by live verification BEFORE shipping, not after — see Done item 318 (2026-09-13).**
+  Continuing the same practice onto the two most-repeated width values: a bare
+  `style={{ width: 90 }}` (37 occurrences — Shares/Price/Amount/short-text inputs across
+  every module's edit-rows) and `style={{ width: 130 }}` (25 occurrences — Date inputs,
+  same context), both consistently the same field type wherever they appear. **First attempt
+  used a plain `.w-90{width:90px}`/`.w-130{width:130px}` class — live Playwright verification
+  caught it not actually applying**: computed width came back 180px/full-width instead of
+  90px/130px. Root cause: the base `input:not([type=checkbox]):not([type=radio]):not([type=
+  file]):not([type=range]), select, textarea{width:100%; ...}` reset rule has specificity
+  (0,4,1) from its four `:not()` clauses — a single class selector (0,1,0) can never beat
+  that regardless of source order, whereas the inline `style` these fields used to carry
+  always wins over ANY selector-based rule no matter its specificity, which is exactly why
+  the original inline styles worked and a naive class-based swap silently didn't. **Lesson
+  for any future `width`/`height`-style CSS-cleanup instance specifically**: these properties
+  are much more likely to collide with an existing high-specificity reset rule than
+  `margin`/`cursor`/`display` ever are (nothing in this app's base ruleset sets a default
+  margin or cursor on every input) — verify computed style live before considering a
+  width/height extraction done, not just that the className landed in the DOM. Fixed by
+  adding `!important` to both classes, with the reasoning documented directly in `theme.css`
+  — a deliberate, narrow exception to this app's general "compound selectors beat `!important`"
+  practice, since matching the base rule's own four-`:not()` selector would be fragile (tied to
+  wording that could change silently) for a two-line utility class whose only job is to
+  override that exact reset. Verified live via Playwright after the fix: a real Dividends-form
+  `.w-90` input (QSE) computed exactly `90px`, and a real Trade-Transactions edit-row `.w-130`
+  date input computed exactly `130px` — both confirmed broken before the `!important` fix and
+  correct after, not assumed. Zero real console errors. `npx tsc -b` / `npm run test` (678
+  tests, unchanged) / `npm run build` all clean.
+- **App-wide CSS cleanup, remaining width-value instances from the same family — see Done item
+  319 (2026-09-13).** Finished the width family Done item 318 started: `width:80` (19),
+  `width:100` (19), `width:70` (17), `width:120` (7), `width:96` (5), `width:82` (4),
+  `width:140` (4) — 75 more occurrences, extracted into `.w-70`/`.w-80`/`.w-82`/`.w-96`/
+  `.w-100`/`.w-120`/`.w-140` (same `!important` treatment as `.w-90`/`.w-130`, same reasoning).
+  **A real mechanical-conversion bug caught by `tsc -b`, not shipped blind**: the bulk regex
+  script correctly merged a width class into an element's EXISTING `className` only when the
+  two attributes sat adjacent with nothing but whitespace between them — several elements had
+  `className="price-input"` several attribute-lines away from `style={{width:...}}` within the
+  same JSX tag (a `value`/`onChange`/`placeholder` in between), so the script's "no existing
+  className" fallback fired anyway, producing a SECOND `className` attribute on the same
+  element — a real `TS17001: JSX elements cannot have multiple attributes with the same name`
+  compile error, not a runtime bug, caught immediately by `tsc -b` before ever reaching a test
+  or build step. Fixed a first batch (5 files) with a smarter merge regex; QSE's and PSX's
+  `WatchlistPage.tsx` needed manual fixes instead (8 occurrences total) — the JSX in question
+  contains `onChange={(e) => ...}` arrow functions, whose own `=>` embeds a literal `>`
+  character that broke a `[^<>]`-based "stay inside this tag" regex, a trap worth remembering
+  for any future JSX-aware regex on this codebase's own arrow-function-heavy event handlers.
+  **Lesson for any future bulk find/merge-into-className script**: verify with `tsc -b`
+  immediately after running it, before assuming a clean count of "matched N occurrences" means
+  the merge itself was correct — a script that successfully finds every occurrence of the OLD
+  pattern can still silently produce two DIFFERENT kinds of wrong output (a class that never
+  applies, per Done item 318; a duplicate attribute, per this one) depending on what shape the
+  surrounding JSX happens to take. Verified live via Playwright after all fixes: a Dashboard
+  `.w-70` Sparkline cell computed `70px`, a merged `.price-input.w-96` input computed `96px`,
+  and Watchlist's `.w-90`/`.w-120` (merged `.price-input.w-120`) computed `90px`/`120px`
+  respectively — zero real console errors. `npx tsc -b` / `npm run test` (682 tests, unchanged)
+  / `npm run build` all clean.
+- **App-wide CSS cleanup, twenty-second concrete instance — see Done item 320 (2026-09-13).**
+  `style={{ color: 'var(--loss)' }}`/`style={{ color: 'var(--profit)' }}` on plain inline text/
+  spans — a required-field `*`, a ▲/▼ direction arrow, a "Used:"/"Available:" credit-limit
+  label (16 occurrences total across 9 files) — extracted into `.text-loss`/`.text-profit`.
+  Distinct from `hueStyle()`/`.pill-positive`/`.pill-negative`, which color a whole card/badge
+  background — this is for plain colored TEXT with no background. No `!important` needed this
+  time: unlike `width` on an `<input>` (Done items 318/319), nothing in this app's base
+  ruleset sets a competing `color` on a bare `<span>`/`<p>`. Verified live via Playwright with
+  a seeded QSE position: `.text-loss` computed `rgb(200, 48, 47)` exactly, zero console
+  errors. `npx tsc -b` / `npm run test` (682 tests, unchanged) / `npm run build` all clean.
+- **App-wide CSS cleanup, twenty-third/twenty-fourth concrete instances — see Done item 321
+  (2026-09-13).** `style={{ fontSize: 10 }}`/`style={{ fontSize: 11 }}` on small "Closed"/
+  "Credit card" `.pill-warn`/`.pill-negative`/`.pill-info` badge `<span>`s (16 occurrences) —
+  extracted into `.fs-10`/`.fs-11`, no `!important` needed (checked `.pill-warn`/`.pill-info`
+  themselves for a competing `font-size` first — neither sets one). **Caught by `tsc -b`, not
+  live verification this time**: 2 of the 16 used `className={...}` (a JS expression/template
+  literal) rather than a plain string literal, which the bulk regex's "merge into existing
+  className" step doesn't match — same shape as Done item 319's arrow-function trap, a
+  different JSX construct tripping the same class of bulk-script blind spot. Fixed both by
+  hand. Separately, `style={{ fontSize: 14 }}` (8 occurrences) on a `<div className="value">`
+  nested inside a `.stat-card` container — checked FIRST, before converting, whether this
+  would hit the same specificity trap as `.w-90` (Done item 318): `.stat-card .value`'s own
+  base rule (`font-size:17px`) has specificity (0,2,0) via its descendant-selector, which beats
+  a plain `.fs-14` class (0,1,0) regardless of source order — the same trap, just via a
+  descendant combinator instead of a `:not()` chain. Added `!important` up front this time,
+  confirmed correct by comparing against a plain (non-`.fs-14`) `.stat-card .value`'s own
+  17px on the same page. Verified live via Playwright: a seeded Funds "Closed" badge's
+  `.fs-10` computed exactly `10px`; a seeded Subscription detail's `.value.fs-14` (Next
+  renewal/Status stat cards) computed exactly `14px`, next to an unrelated plain `.stat-card
+  .value` on the same page correctly still showing `17px` — zero console errors. `npx tsc -b`
+  / `npm run test` (682 tests, unchanged) / `npm run build` all clean.
+
+- **322. Repair pass for already-migrated Credit Cards missing their opening balance
+  (2026-09-13) — a real bug found while re-diagnosing PR #181's own report, which GitHub shows
+  merged but whose actual code was never present on `main`'s tip when this session started
+  (unclear why — possibly a later reset; the important part is `main` was genuinely missing the
+  fix, which is exactly why the user was still seeing the same wrong figures).** Re-applied
+  PR #181's original `CreditCard.openingBalance` fix unchanged, then investigated the user's
+  fresh backup + two new screenshots showing the SAME wrong balance plus a confusing second page
+  for the same real card. Root cause: their GCC card was migrated by an OLDER version of
+  `migrate()` — from before `openingBalance` carryover existed at all, and from before this
+  code even set `isActive: false` on the source `BankAccount` — so the resulting `CreditCard`
+  is permanently missing `openingBalance`, and the old `BankAccount` is still active, showing
+  up as its own separate, fully-editable duplicate of the same real card (confirmed exactly by
+  reconstructing the reported numbers from the attached backup: without `openingBalance`, the
+  card's own "Owed" figure clamps to 0 via `Math.max(0, balance)`, matching the screenshot's
+  "Used: 0.00 QAR"). New `RepairStaleMigrations` banner (`CreditCardsSection.tsx`): detects any
+  already-migrated account still missing this backfill and, on one sign-in-gated click, fixes
+  both — backfills the card's `openingBalance` from the source account (never overwriting a
+  value already set) and closes the stale duplicate account. General and idempotent, not a
+  one-off script for this user's data — protects against the same staleness recurring for any
+  future migration-logic fix. Also: `BankDetailPage`'s linked-accounts list now excludes
+  migrated accounts (they were still listed under their bank as a normal account), and
+  `AccountDetailPage` shows a redirect notice + link to the real Credit Card page if a migrated
+  account is reached directly. Verified live via Playwright, seeding the exact reported
+  scenario: the repair banner correctly detects the stale account and lists it, the card's own
+  "Owed" stat reads 0 QAR before repair (reproducing the bug), "Repair now" hits the real
+  sign-in gate, Bank's own detail page no longer lists the migrated account, and a direct link
+  to the stale account page shows the new redirect notice — zero console errors. `npx tsc -b` /
+  `npm run test` (682 tests, unchanged) / `npm run build` all clean.
+
+## Pending
+
+1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`
+   as a fallback. The intended shared `stockData/QSE` Firebase node (finance data belonging
+   to no single user) exists as a concept the app already prefers when present, but it
+   hasn't actually been seeded in Firebase yet — needs real seeding, ideally via the
+   scheduled-refresh-job architecture described under item 13 below, not manual entry.
+12. Ability to read account statement PDFs/Excel files/images to auto-populate trade
+    history — **superseded/expanded by item 25 below** (now includes CSV/JSON/PDF/image
+    import across every module, not just QSE trades, and locks in a Python backend for the
+    PDF/image half). See `MODULES_PLAN.md` §13.
+13. Find APIs to fetch symbols, logos, stock prices, historical data, and finance news —
+    **architecture constraint locked in 2026-08-23**: these must never be called live from
+    the app itself (free/cheap tiers rate-limit fast). Fetch on a schedule (cron/worker)
+    into our own database and serve the app from that store, same pattern already used for
+    QSE's `stockData/QSE` node (item 1 above) and PSX's bundled `psxSeed.ts`.
+17. ~~Charts could get more interactive beyond the ticker/month filters shipped in Done item 31
+    (e.g. click-to-drill-down, hover cross-highlighting between charts).~~ **Now fully done.**
+    Click-to-drill-down done (2026-08-25) — see Done items 134/137: every ticker-indexed chart
+    in the app (Dashboard's Allocation/P-L-by-ticker, and Analytics' ROI%/Invested-vs-value/
+    Total P&L/Holding period/Portfolio allocation/Dividend-by-ticker, on both QSE and PSX) now
+    navigates to that ticker's own stock page on click. Hover cross-highlighting: first pass on
+    Dashboard done (2026-08-25) — see Done item 147; **the deferred Analytics remainder (12
+    charts across both exchanges) done (2026-08-26) — see Done item 155**, closing this item
+    in full: every ticker-indexed chart on QSE's/PSX's Analytics pages now dims every other
+    ticker across every tab section when one is hovered, the same as Dashboard's pair.
+19. ~~Cross-entity transaction linking beyond v1 scope (see Done item 29): Funds/Rentals/EMI/
+    Personal Loans aren't wired into the Transfers page yet — only Cash↔Bank and
+    Bank↔QSE/PSX.~~ **Superseded — see item 21 below, which is now fully done (Done item
+    156, 2026-08-26): every module this project supports (Cash, Bank, QSE, PSX, Funds,
+    Rentals, Personal Loans, EMI/Loans) is wired into cross-entity linking.** One real gap
+    from this item's original text is still genuinely open, tracked here rather than
+    silently dropped: **a real signed-in browser round-trip** (create/edit/delete a link,
+    confirm both sides update, across every module pair — not just the unit tests and
+    signed-out sign-in-gate checks every session so far has relied on) has never actually
+    been done, since every session so far has avoided creating even a throwaway account
+    against the real production Firebase project, per this project's own locked cloud-sync-
+    safety principle. This needs the user to either do it themselves once, or explicitly
+    authorize a throwaway test account for it.
+
+**New wave, 2026-08-23 (user-requested, full design detail in `MODULES_PLAN.md`'s "Next
+wave" section)**:
+
+21. ~~Cross-entity linking remainder: Funds needs its hidden `Transfer` field exposed in the
+    UI.~~ **Done (2026-08-24) — see Done item 100.** Bank/Cash↔Funds now works, same pattern
+    as every other linked module pair. ~~EMI has no repayment ledger at all to link into.~~
+    **Done (2026-08-26) — see Done item 156.** A real, addressable `EMIRepayment` ledger now
+    exists and EMI is a fully linkable module — every module named in this project's linking
+    system is now wired in.
+22. Calculator button remainder: it's module-aware now (hidden outside Stock Exchanges, see
+    Done item 32) — the longer-term goal of a *relevant* calculator per module (an EMI payoff
+    calculator, a Cash quick-math tool, etc.) is now largely covered by each module's own
+    what-if/planner tools built during item 23's Analytics wave (EMI's extra-payment planner,
+    Personal Loans' payoff planner, Cash/Banking's Planning tab) rather than a dedicated
+    Calculator-button variant per module — no separate work item left here unless a module-
+    specific popup calculator is explicitly requested later.
+~~23. Per-module Analytics for Cash/Banking/Personal Loans/EMI-Loans/Funds/Rentals~~ —
+    **done (2026-08-24), see Done items 44/45/90/91/92/93.** Every one of the six non-exchange
+    modules now has a real Analytics tab with charts, matching QSE/PSX's Analytics page in
+    spirit (fewer charts per module, all fit for that module's own data shape — see
+    `MODULES_PLAN.md` §11 for what each module got). Module-specific "planning" tools
+    (distinct from Analytics) are tracked separately and are not all done: Cash/Banking have
+    the Planning tab (item 43), EMI/Rentals have auto-generated plans (items 59/60), but QSE/
+    PSX's Trade-Planner-style multi-scenario planner has no equivalent yet in Personal Loans/
+    Funds — not tracked as a gap here since nothing in this wave's scope promised one.
+24. ~~New Subscriptions module — recurring payments (streaming, gym, etc.) linked to a paying
+    entity (a Bank account or Cash).~~ **Done (2026-08-24) — see Done item 99, MODULES_PLAN.md
+    §12.** Uses the same generate-a-planned-entry pattern as EMI/Rentals rather than the
+    heavier full cross-entity-link record (item 21's own remainder is unrelated/still open).
+25. Import pipeline: CSV/JSON import — **✅ done for Cash, Rentals, and Personal Loans (see
+    Done items 40/41)**, browser-only, no new infra. PDF/image import still needs **a
+    separate Python backend service** (locked decision) for OCR/parsing, hosted on
+    infrastructure the user chooses — real new infra outside a single coding session's
+    control. Not started — see `MODULES_PLAN.md` §13.
+26. "Only a toast shows instead of the sign-in popup" (see Done item 38) — investigated,
+    couldn't reproduce locally (both primary sign-in entry points open the real modal
+    correctly). Needs a specific page/button from the user to chase further if it recurs.
+27. ~~Editing (not deleting) a linked record directly in its native module still doesn't
+    propagate to the other side of the link or the link record itself.~~ **Now fully done
+    (2026-09-11) — see `lib/linkCascade.ts`'s `resolveLinkedEdit`/`propagateLinkedEdit`.**
+    Originally just a warning (Done item 106): full propagation wasn't safe to do blindly (a
+    cross-currency link has no live FX rate to derive one side's new amount from the other's
+    edit), so every native edit-save confirmed with the user first, naming the other module,
+    with the edit always staying one-sided if they proceeded — "full sync" meant leaving the
+    native module and using the (since-removed, Done item 216) standalone Transfers page.
+    Replaced with a real three-way choice (cancel / this side only / both sides) offered right
+    there in the same confirm step: "both sides" now genuinely propagates the date/note and,
+    when the two sides share a currency, the amount too — cross-currency links still only sync
+    date/note (correctly, since guessing a conversion would be wrong), with the toast saying so
+    rather than silently claiming a full sync that didn't happen.
+28. **Planning v2 — real-but-pending transfers + balance reconciliation (2026-08-23,
+    user-requested, design captured but explicitly NOT started).** The Planning feature
+    (item 43 below) needs to also handle a second case beyond a pure hypothetical: a real
+    transfer the user has already sent that takes a few business days to clear, during
+    which the observed account balance doesn't yet reflect it (their own example: an
+    account with a small daily profit accrual, where the app would need to tell "just
+    another day's profit" apart from "my pending deposit cleared" by comparing the actual
+    new balance against the expected ordinary increment). If it detects a match, it should
+    suggest — never silently apply — that a specific hanging plan has settled, including
+    which date profit-basis should switch on, for the user's explicit approval. **Blocked on
+    the user's own sample Excel data**, which they said they'll attach in a future turn —
+    per their explicit instruction, no code exists for this yet. Full design writeup,
+    including the open unresolved gaps (no "expected profit rate" field exists yet, no
+    single "observed balance" event exists to hook a reconciliation check into, ambiguous-
+    match tolerance undesigned) is in `MODULES_PLAN.md` §15 — read that before touching this.
+    **Refined same day**: the "expected ordinary increment" isn't necessarily flat every
+    day — some accounts pay a noticeably larger payout on one specific weekday (the user's
+    example: Friday pays 15 instead of the regular 2) — so the eventual "expected profit
+    rate" field needs to support at least a day-of-week-varying rate, not just one flat
+    number. Still blocked on the sample data for the exact shape.
+
+**New batch of user feedback, 2026-08-23 (mid-session) — see Done item 51 for item (1),
+already fixed; the rest tracked here**:
+
+40. ~~Account/record detail drill-down + statement export for every module besides
+    Banking.~~ **Done (2026-08-24) — see Done items 58/94/95/96.** Every module now has a
+    statement export from its own primary record's detail view: Bank (accounts), Personal
+    Loans (repayments), EMI/Loans (full schedule), Funds (transactions), Rentals
+    (income/expenses), and QSE/PSX (trade statement + a separate price-history export, since
+    those needed two distinct logs rather than one table like every other module).
+39. ~~A net-worth dashboard summarizing everything across every module, with collapsible
+    per-currency sections.~~ **Done — see Done item 66.** The user later overrode the
+    Cloud-Function plan below ("leave blaze plan. if you have any free api, okay otherwise
+    manual inputs accepted") in favor of a free client-side fetch with a manual-entry
+    fallback, so the Blaze-plan Cloud Function scaffolded in `functions/index.js`
+    (MODULES_PLAN.md §16) is now superseded and unused — left in the repo in case a real
+    scheduled backend is wanted later, but the shipped dashboard doesn't depend on it.
+
+41. ~~Standing instruction: "All tables should be sortable having index/id for chronological
+    sorting. also, add time with all transaction dates for true chronology."~~ **Sortability
+    done earlier; the time-of-day half done (2026-08-25), user-confirmed backfill/timezone
+    approach — see Done item 133.** Missing time backfills to noon; a timezone selector
+    prefills from the record's market (QSE/PSX) or currency, always overridable. Calc-engine
+    side (real instant-based sorting) is wired in everywhere via `lib/datetime.ts`/
+    `sortTransactionsChronological`/`buildCashLedger`, so every module's same-day-ordering
+    already benefits regardless of whether that module's own add-form captures a time yet.
+    UI capture (an actual Time+Timezone input on the add-form) shipped for QSE's/PSX's Trade
+    Transactions and Cash Transfers forms — the highest-value case, since same-day ordering is
+    exactly where this matters. **QSE's/PSX's Adjustments and Dividends forms also done
+    (2026-08-25) — see Done item 135. Now fully done (2026-08-25) — see Done item 136**: Cash,
+    Bank, Personal Loans, and Rentals' primary add-forms all have `TimeZoneFields` now, and each
+    module's own running-balance/ledger calc (`cashRunningLedger`/`accountRunningLedger`/
+    `repaymentRunningOutstanding`) sorts by real instant via `toInstantMs`, same upgrade pattern
+    as Done item 133. Funds reuses the shared `Transaction` type (already had `time`/`timezone`
+    from Done item 133), so it only needed the UI field, no type/calc change. Subscriptions is
+    deliberately skipped — a `Subscription` record has only a `startDate`/`cancelledDate` on
+    the subscription itself, no per-transaction dated log, so there's no same-day-ordering
+    scenario for a time field to resolve. This closes Pending item 41 in full.
+42. ~~Roll out `CollapsibleCard` further, including chart cards on Analytics pages.~~ **Done —
+    see Done items 74, 82, 101, and 107.** Chart cards across every Dashboard/Analytics page
+    are collapsible (fixed once at the shared `ChartCard` component). Portfolio's Holdings/
+    History tables turned out to already be collapsible as a side effect of the later Tabs
+    redesign (Done item 103) — each is rendered through the shared `Tabs` component, which now
+    wraps every section in its own `CollapsibleCard`; this line was stale by the time it was
+    re-checked, not actually still open. Personal Loans' `RepaymentsSection` needed a real
+    split (Done item 107): the add-form stays outside any collapsible (collapsing a form
+    mid-fill is a UX trap, same rule the rest of this rollout followed), and the table + export
+    controls now sit inside their own "Repayment History" `CollapsibleCard`. The Trade
+    Planner's per-ticker analysis table remains uncollapsed on purpose — it's already inside a
+    collapsible `PlanCard`, so a second nested toggle would add clutter, not clarity.
+43. ~~Roll out `StatCard`'s `hue` prop beyond QSE/PSX's Dashboard.~~ **Done — see Done items
+    87/88.** StockPage's Summary tab and every non-exchange module's landing stat cards
+    (Cash/Bank/Personal Loans/EMI/Funds/Rentals) now have distinct colors, backed by a shared
+    `lib/statCardHues.ts`.
+
+**User feedback, 2026-08-24 (mid-session, "preferred tasks" list) — not started yet**:
+
+44. ~~A running-balance column for Cash's ledger and other transaction-style tables.~~ **Done
+    — see Done item 84.** Cash/Bank already had one; QSE/PSX Transfers and Personal Loans
+    repayments were the real gaps and now have one too.
+45. ~~QSE's/PSX's Dashboard Holdings, Portfolio page, and StockPage's Summary tab should
+    group related figures instead of one column/card per fact.~~ **Done (2026-08-24) — see
+    Done items 85/86/87/97.** Portfolio's own closed-positions (History) table was the last
+    one-fact-per-column table in QSE/PSX; every other module's own list views (Personal
+    Loans, EMI, Funds, Rentals, Bank) were never part of this item's original ask and are a
+    separate, much larger undertaking if wanted later — not tracked as a gap here.
+46. ~~A raw-vs-concise number display toggle in Appearance settings (1,000 vs 1k).~~ **Done —
+    see Done item 83.**
+~~47. Tooltip/native-`title` sweep~~ — **done, see Done items 85/89/98, plus a final audit
+    (2026-08-26).** `components/
+    Tooltip.tsx` now backs `StatCard`/`MoneyValue`/`FeeModeControl`'s tooltips, the Fee
+    column's "(netted)"/"(override)" tags, the Trade Planner's sync indicators, QSE's/PSX's
+    `PositionDetail` stat cards, and the per-transaction/per-repayment "Balance"/"Remaining"
+    table cells. Re-grepped every remaining native `title=` attribute app-wide (2026-08-26):
+    the overwhelming majority turned out to already be `Field`'s own `title` prop (which
+    itself wraps the label in a real `Tooltip` — a naming coincidence, not a native-attribute
+    gap) or `ChartCard`'s `title` (a plain heading string, not a tooltip at all). The genuine
+    remaining native-attribute spots are all deliberate, reasoned exceptions, not oversights:
+    single-word `<select>` labels and import-flow "Flip sign" checkboxes (Done item 98's own
+    prior reasoning), the sidebar collapse/expand buttons (already self-explanatory one-word
+    labels, not jargon needing an explanatory popup), and the Watchlist/avatar-emoji inputs
+    (deliberately NOT wrapped in `Tooltip` — these are directly click-to-edit inputs, and
+    `Tooltip`'s own `onClick` toggle would pop a tooltip open every time a user clicks in to
+    type, a real UX regression the CollapsibleCard-header idea never had). Closing this out —
+    no further native-`title` gaps remain worth converting.
+
+**Design-system critique, remaining items (2026-08-24) — see Done item 103 for what shipped
+from this same batch.** Three items deliberately not attempted in that pass, since each is a
+large, subjective, high-regression-risk redesign that deserves its own scoped session rather
+than a guess folded into a mixed batch:
+48. ~~Body font choice for continuous reading/focus — the user's complaint was about the
+    typeface itself, not size (font *size* presets already exist in Appearance). Needs an
+    actual font pick (a real reading-optimized typeface, likely still from Google Fonts) and a
+    visual before/after check, not a blind swap.~~ **A real bug found and fixed instead of a
+    missing feature (2026-08-25) — see Done item 141.** The font pick was already made — the
+    Appearance panel's font selector already offers 6 options, including two literally billed
+    as reading-optimized ("Atkinson Hyperlegible (max readability)", "Lexend (reading-friendly)")
+    — but none of the 6 web fonts it references (`Inter`, `Space Grotesk`, `JetBrains Mono`,
+    `Atkinson Hyperlegible`, `Lexend`, `Source Serif 4`) were ever actually loaded via a
+    stylesheet or `@font-face`, so every one of them silently fell back to the same generic
+    system sans-serif — the "different" fonts were indistinguishable from each other and from
+    the plain "system" option. Fixed by adding the missing Google Fonts `<link>` to
+    `webapp/index.html`. **Verification is real but incomplete, stated rather than assumed
+    complete**: confirmed via `curl` that both `fonts.googleapis.com` and the exact
+    `fonts.gstatic.com` font-file URL the stylesheet references are reachable and return the
+    real font data; confirmed via Playwright that the app itself has zero new regressions from
+    the change. But this sandbox's own Chromium browser (not just this session's `curl`) hits a
+    `net::ERR_CONNECTION_RESET` specifically fetching the Google Fonts stylesheet — the exact
+    same class of sandbox-only browser-vs-curl network gap already documented for the Net Worth
+    dashboard's FX-rate fetch (Done item 66) — so the actual visual font swap could not be
+    screenshotted from this session. A future session with real browser access (or the user
+    checking the live deployed site) should confirm the 6 font options actually render
+    differently and drop this caveat once confirmed.
+49. "Assess a stock in one go" — the user's complaint is that a stock's info is spread across
+    Dashboard/Portfolio/StockPage/Risk Analysis with no single at-a-glance view. **Risk Analysis
+    half done (2026-08-25) — see Done item 143**: the specific named gap (Risk Analysis existing
+    only as a separate whole-portfolio page, unreachable from a stock's own page) is closed —
+    `StockPage.tsx` gained a "Risk Analysis" tab, pre-scoped to that ticker, alongside Summary
+    and Trades. **Still open**: the deeper IA question — whether Dashboard/Portfolio's own
+    per-ticker views should also feed into or link from this single-stock page, and whether
+    `PositionDetail`'s own information order is truly optimal for "assess in one go" — hasn't
+    been attempted; that's a genuine redesign exercise, not a tab-addition.
+50. "Themes and densities are deception" — the user's complaint is that switching a color theme
+    or density mostly just recolors/respaces the same layout rather than being a genuinely
+    different reading experience. **Density half addressed (2026-08-25) — see Done item 142**:
+    Console density now hides stat cards' secondary "sub" line entirely (break-even color hint,
+    avg/last sell price, etc.) rather than just shrinking it — a real "less information shown"
+    difference, not only smaller text. **Still open**: the color-theme half of the complaint
+    (do Material-family themes vs. the wine/ocean/forest/etc. color families need a genuinely
+    different visual treatment — different shadow/elevation conventions, different component
+    styling — beyond swapping CSS custom-property values?) hasn't been scoped or attempted; a
+    real answer needs deciding what "meaningfully different" means for a color theme
+    specifically, which is a more speculative design question than density's fairly literal
+    "hide vs. show information" framing. **The user repeated this specifically about stat-card
+    gradients on 2026-08-26** ("each theme should be different from other") right after the
+    gradient itself was made subtler (Done item 153, item 7's "glassy" half) — the subtler-
+    gradient fix is done, but it doesn't touch this still-open, larger "themes need structurally
+    different treatment" question; still the same speculative design work this note has always
+    described, not newly scoped by the repeat mention.
+
+**Trade Planner follow-up, user-reported (2026-08-24, arrived mid-session right after Done
+item 103) — all three now fixed, see Done item 104:**
+51. ~~Every record type across every module should carry a stable, unique `id`.~~ **Partially
+    done — see Done item 104.** `Adjustment`/`Dividend` retrofitted with `id?: string` (same
+    pattern as `Transaction`/`Transfer`). Still open: `WatchlistItem` (has a natural key,
+    `ticker`, so lower priority), `TradePlanLeg` (addressed by index within its own plan, a
+    narrower scope than a top-level workbook array), Funds' own CRUD (already gets `id` for
+    free since it reuses the `Transaction` shape).
+52. ~~Real bug: executing a Trade Planner leg, then editing its transaction, left the plan
+    showing stale data.~~ **Investigated and fixed — see Done item 104.** Root cause: the
+    live-resolution mechanism itself was correct (confirmed by reading through
+    `resolveExecutedTx`/`updateTransaction`'s index-based addressing — both preserve `id`
+    correctly), so the user's specific report was very likely a leg executed *before* Done
+    item 81's linking existed at all (no `executedTransactionId` to resolve from — a real gap
+    in the fix's coverage, just not a bug in the fix itself). Added a manual "Link…" picker for
+    any executed leg with no live link, and made a linked transaction directly editable inline
+    from the Trade Planner.
+53. ~~Trade Planner always prices a leg at full commission; summary table buried.~~ **Done —
+    see Done item 104.** Every pending leg's fee now shows both the full-commission and
+    same-day-netted price side by side; a row of colored summary cards sits above the detailed
+    per-ticker table for an at-a-glance read.
+54. "Utilize all page spaces and add useful infos on sides — fintech apps are data heavy
+    rather than decorations" (2026-08-24). **Partially addressed (2026-08-25) — see Done item
+    139**: the per-stock `PositionDetail` page now uses its wide-viewport space for a right-hand
+    chart/Price-range stack instead of one long centered column. **A second, app-wide half done
+    (2026-08-25) — see Done item 145**: `.main`'s hard `max-width:1180px` cap was measured to
+    leave ~520px of dead space on a 1920px-wide viewport (sidebar 220px + content 1180px =
+    1400px) on literally every page — bumped to 1600px, which the existing `repeat(auto-fit,
+    minmax(...))` stat-card/chart grids already fill with extra columns for free, no per-page
+    layout work needed. **A genuine right-rail content addition — first slice done (2026-08-26)
+    — see Done item 164**: QSE's and PSX's Dashboard pages now have a real right-rail (a "live
+    summary panel," per this item's own suggested direction) with a Net worth panel and an
+    Upcoming plans panel, both pulling in cross-module data that wasn't otherwise visible from
+    the Dashboard. **Still open**: this only covers Dashboard — Portfolio, module landing pages,
+    and a third rail panel (e.g. a contextual glossary, or the "today's movers" among held
+    positions idea considered but not built this pass) are all still a blank page each needing
+    its own per-page judgment call about what actually belongs there, same as before; this also
+    still ties into Pending item 49's "assess a stock in one go" IA rework for the per-stock page
+    specifically.
+55. Simplest-possible-language pass (2026-08-24 app-wide note, item 3 of the Risk Analysis
+    batch) — Done item 105 added tooltips explaining jargon terms on the Risk Analysis page
+    specifically. **First app-wide pass done (2026-08-25) — see Done item 140**: the highest-
+    traffic jargon (P/L breakdown, Break-even, CGT, Outstanding, NAV, XIRR) across Dashboard/
+    PositionDetail/EMI/Personal Loans/Funds now has an explanatory tooltip. **Second pass done
+    (2026-08-25) — see Done item 144**: "Principal" (Personal Loans + EMI), "Amortization
+    schedule" (EMI), "Total interest/markup (life)" (EMI), and "Monthly/Yearly equivalent"
+    (Subscriptions) now have tooltips too. **Third pass done (2026-09-09) — see Done item
+    290**: PSX Settings' 5 acronym-only fee fields (PSX/NCCPL/SECP/CDC/CVT) now explain what
+    each body/charge actually is. **Still open**: Bank/Cash/Rentals' own labels (their
+    section headings — "By category", "Net income", "Monthly rollup" — read as plain English
+    already and weren't judged to need one) and every table column header/form field hint
+    across the app haven't had a dedicated audit pass — this was three real, meaningful passes
+    on the terms most likely to confuse a non-trader/non-accountant, not an exhaustive audit of
+    every string in the app.
+~~56. Portfolio page overhaul (2026-08-24, item 12 of the original screenshot batch)~~ — a real,
+    multi-part redesign; re-audited against the live page (2026-08-25), most items already
+    resolved by later fixes in this same project, one real bug found and fixed — see Done item
+    138.** The user's own list, verbatim, with current status: (a) "no live market data makes
+    the price chart too big/almost flat" — the Daily Price chart is a compact fixed 130px height
+    and already handles real multi-point price history correctly (Done item 78's raw-price-
+    history fix); not reproduced against live data, no further action without a concrete repro.
+    (b) "CGT shows 0" — checked live with a real open+part-sold PSX position: CGT computes and
+    displays a correct non-zero value; a literal 0 only happens when the position is at a loss
+    or the workbook's own CGT rate setting is 0, both correct behavior, not a bug. (c) "current-
+    position card missing some attributes" — the card already shows Shares/Cost+break-even/
+    Invested/CGT (PSX) or Shares/Cost+break-even/Invested (QSE); vague without a specific
+    missing field named, no action taken. (d) **"chart missing sold-price and break-even
+    reference labels" — a REAL bug, found and fixed, see Done item 138**: the reference-line bar
+    chart already plotted all 4 bars (Buy/Sold/Current/Break-even) but Chart.js's default
+    `autoSkip` silently dropped 2 of the 4 category-axis labels since the chart was too short —
+    the bars were there, just visually unlabeled. (e) "chart may need resizing" — addressed as
+    part of (d)'s fix (110/90px → 150/115px, just enough for 4 unskipped labels, not a broader
+    resize). (f) "right-hand stack layout" — genuinely not done, still single-column
+    `CollapsibleCard`s top to bottom; the real structural ask remaining from this whole item.
+    (g) "current price input is full-width" — checked live: it's `width: 150`, not full-width;
+    not reproduced, no action taken. (h) "colored stat cards" — done, see Done item 88 (already
+    correctly noted as likely-resolved when this item was first written). **(f) done (2026-08-25)
+    — see Done item 139**, closing this item and Pending item 57's identical ask in full.
+57. ~~Side-by-side layout instead of vertical scrolling (2026-08-24, item 11 of the original
+    screenshot batch: "We can show UI components side by side instead of scrolling to see one
+    by one").~~ **Done for the per-stock page (2026-08-25) — see Done item 139, closing item 56's
+    remainder too.** `PositionDetail.tsx` (QSE+PSX) now splits into a left stack (stat cards)
+    and a right stack (charts + Price range) on wide viewports via a new `.position-split` CSS
+    grid, collapsing to one column under 900px. **Still open**: Pending item 54's broader
+    "utilize page space" ask was about *every* page, not just the per-stock one — this closes
+    the one page with the clearest charts-vs-stats split; other pages (Dashboard, Portfolio,
+    module landing pages) haven't been touched and would each need their own judgment call
+    about what, if anything, belongs in a right rail.
+
+**New Transfers-page feedback batch, remainder (2026-08-25) — see Done items 117-120 for
+what's already shipped from this same message**:
+
+58. ~~Card action buttons (Edit/Delete/Save/Cancel/Export/etc.) should consistently sit at the
+    top-right corner of their card's header.~~ **Done (2026-08-25) — see Done items 121/132.**
+    Every `CollapsibleCard` with a single stranded card-level action uses the `headerExtra`
+    slot; `Tabs` itself gained the same slot per tab, closing the QSE/PSX Trades-tab and
+    Rentals Income & expenses cases that needed it extended first. QSE's/PSX's PositionDetail
+    "Export price history CSV" stays put on purpose — it's nested inside a native `<details>`
+    *within* a `CollapsibleCard`, one level too deep for the outer card's header to correctly
+    represent what it exports.
+59. ~~Colored `<span>`/pill text-only backgrounds should become whole-card coloring instead.~~
+    **Done (2026-08-25) — see Done item 122.** The actual bug wasn't a missing mechanism (both
+    `StatCard`'s `hue` and `.pill-*` already existed and are correct) — it was roughly a dozen
+    stat-cards stacking BOTH on the same element (a colored card with a redundant colored pill
+    inside it), which read as "text has its own bg" even though `.pill` itself is the sanctioned
+    mechanism. Fixed by making the card's own hue carry the sign and dropping the inner pill.
+60. ~~Sidebar background/text contrast is reportedly still poor in some spots.~~ **Done
+    (2026-08-25) — see Done item 123.** Investigated first, per this file's own standing
+    practice, rather than guessing: computed real WCAG contrast ratios for the sidebar's nav
+    text/active state across all 12 color themes × both light/dark — every single one already
+    passed AA (4.97–16.11:1), and a pixel-level screenshot check of the Appearance/Category
+    dropdown menus found their backgrounds correctly themed too. The actual bug was elsewhere:
+    `color-scheme` was never set anywhere in the app, so every native browser control (a
+    `<select>`'s own opened dropdown list chief among them) rendered in the browser's default
+    LIGHT appearance regardless of the app's dark theme — exactly a "menu" whose bg/text
+    contrast looks wrong, and it happens at literally every `<select>` in the app ("many
+    places"), matching the report far better than the sidebar theory did.
+61. ~~Rentals: semi-automated rent-collection cycles.~~ **Done (2026-08-25) — see Done item
+    124.** Built as a genuinely separate mechanism from `generateLeaseRentPlans()` (Done item
+    60), per this item's own note that it needed its own design pass rather than a bolt-on.
+62. ~~"We may give the option to all entities to directly link the transfers on its page (per
+    cycle, or regular, check feasibility)"~~ **Done (2026-08-25) — see Done items 125/131.**
+    Built for QSE/PSX first, then Rentals/Personal Loans/Funds, each with its own "what does
+    linking mean here" answer worked out. ~~EMI was the sole exception, blocked on having no
+    repayment ledger to link into.~~ **Unblocked and done (2026-08-26) — see Done item 156.**
+    EMI now works through the standalone Transfers page like every other linked module.
+    ~~A native inline "Link this to a Bank account or Cash" shortcut... is not built for EMI
+    specifically~~ **Done (2026-08-26) — see Done item 162.** The Schedule table's own
+    inline pencil-editor (a different shape than a blank add-form, but still EMI's real
+    "add a transaction" moment) now has the same checkbox, closing this item in full.
+
+**2026-08-25, Net Worth page feedback batch — see Done item 148 for what shipped from this
+same batch**:
+
+63. "Cards in multiple columns (2 or 3 depending upon the amount of data) to avoid scrolling,
+    rather than eating whole page width with blank spaces" (app-wide note attached to a Net
+    Worth page report). Net Worth's own per-currency `<details>` cards now do this (Done item
+    147, item 6) — a responsive `repeat(auto-fit, minmax(360px, 1fr))` grid instead of a
+    single-column stack. Net Worth's own "Net worth summary"/"Exchange rates" pair (Done item
+    153) and PSX Settings' "Fees & amounts" tab (Done item 159, 2026-08-26) followed the same
+    pattern. **Still open**: a full app-wide audit — every other module's landing/Settings
+    pages were checked in the Done item 159 pass and found to genuinely not fit (each card
+    serves a different purpose in a form→list→Account shape, or there's only one small card
+    to begin with) except PSX's, but that was one focused pass, not an exhaustive sweep of
+    every page in the app — this is a real, repeatable pattern worth re-checking whenever a
+    new page ships, not a one-time audit to close out.
+
+**2026-08-26, second Net Worth feedback batch — see Done item 153 for what shipped from this
+same batch**:
+
+64. ~~"Add charts to view... worth difference by time" (item 4 of the same batch; the "capital
+    split per currency" half of this item is done — see Done item 153).~~ **Done (2026-08-26)
+    — see Done item 157.** Locked the three open design decisions this item named (cadence,
+    storage, staleness) — an explicit on-demand "Save snapshot" button (never automatic), its
+    own Firebase node kept separate from every module's workbook, and a snapshot that's a
+    frozen point-in-time copy never rewritten by later backdated data — and built a real
+    net-worth-over-time line chart on top, for the currently-selected preferred currency.
+
+**2026-08-26, EMI stat-card feedback batch — see Done items 165/166 for what shipped**:
+
+65. EMI/Loans "Overdue Balance / Penalties" — part of the user's own 3-zone stat-card request,
+    explicitly deferred at the user's own choice (via AskUserQuestion) rather than built as a
+    fake or inconsistent figure. This app has no missed-payment or late-payment tracking
+    anywhere: every existing EMI figure (Outstanding, Paid so far, elapsed months) already
+    assumes on-schedule payment regardless of whether a repayment was actually logged in the
+    Repayment log. A real "Overdue" figure needs its own design pass — at minimum, deciding
+    whether "overdue" means "past-due with no matching Repayment-log entry" (computable from
+    existing data, but only meaningful for a user who logs repayments individually — someone
+    who doesn't would see every past-due installment flagged overdue, a false positive) or
+    something else. "Penalties" has no data model at all yet — not even a field to hold one.
+    Not started; needs the user's own direction on what "overdue"/"penalty" should mean before
+    any code, same bar this file always applies to a genuine design fork.
+
+**2026-08-26, large cross-page UI/UX critique batch (screenshots of EMI/Net Worth/Banking) —
+right after Done item 167 shipped the date-off-by-one fix + row-wrap CSS fix from the same
+batch. Everything else below is tracked here per the user's own explicit "update docs and
+list all these" instruction — genuinely too large for one sitting (dozens of items across
+4+ pages plus several app-wide principles), so this is the full backlog, not a promise
+everything below is started. Working down it in priority order across following sessions.**
+
+66. ~~EMI: buttons (Save/Cancel on the edit-loan form, and elsewhere) should sit at the card's
+    top-right corner, the same `headerExtra` pattern already used for single stranded actions
+    elsewhere in the app (Done item 121).~~ **Done (2026-08-26) — see Done item 172.**
+    Restructured onto `CollapsibleCard`'s `title`/`headerExtra` slots.
+67. ~~EMI: "Big EMI every N months" and "Link to bank" should be attached to the loan add/edit
+    flow rather than living as separate always-visible cards on the loan-detail page.~~ **Done
+    (2026-08-27) — see Done item 196.** Moved into an "Advanced" section of the EDIT form
+    specifically, per the item's own proposed design — a plain bordered sub-section, not a
+    nested Card (would repeat the Pending item 90 "cards inside cards" complaint).
+68. ~~EMI: reorder the loan-detail page to Stats → Schedule → Charts → What-if.~~ **Done
+    (2026-08-26) — see Done item 168.** The Amortization chart/What-if/Link-to-bank group
+    moved together, right after Schedule, keeping their own relative order.
+69. ~~EMI Schedule table: reorder to `#, Due Date, Installment, (Net Paid + %), (Net Balance +
+    %), Breakdown (Principal + %, Markup + %), Status, Actions`.~~ **Done (2026-08-27) — see
+    Done item 188.**
+70. ~~EMI: "Markup percentage" should also show the ANNUAL and MONTHLY equivalent, not just the
+    one lifetime figure.~~ **Done (2026-08-27) — see Done item 190.** fixedTotal mode's
+    interpretation went with the item's own stated most-likely reading (markup-per-month ÷
+    principal) — flagged as an assumption both in the code's own doc comment and in the UI's
+    tooltip, not silently presented as a real rate.
+71. ~~EMI: add "Paid EMI count" to the Timeline zone (currently only "Remaining EMI count").~~
+    **Done (2026-08-26) — see Done item 168.**
+72. ~~EMI: real charts showing loan history/progress.~~ **Done (2026-08-27) — see Done item
+    197.** Built the item's own named candidate: a "Balance over time" line chart, matching
+    Personal Loans' equivalent (Done item 172), placed right after the existing Amortization
+    chart.
+73. ~~Net Worth: daily snapshot should be automatic, not an on-demand button.~~ **Done
+    (2026-08-27) — see Done item 193.** This DIRECTLY REVERSES Done item 157's own locked
+    decision (on-demand-only, to avoid an accidental history point) — implemented exactly as
+    this item's own text proposed: auto-save once per calendar day on page load, idempotent,
+    and never firing for a signed-out visitor. The manual button still works too.
+74. ~~Net Worth: the pairwise "Rates between your own currencies" table only shows one
+    direction (A→B) — should show the reverse (B→A) alongside it.~~ **Done (2026-08-26) — see
+    Done item 168.** `effectiveRate()` already derives either direction symmetrically, so this
+    was purely a rendering change.
+75. ~~Net Worth: "Net worth over time" chart should render AFTER the per-currency summary
+    sections, not before them.~~ **Done (2026-08-26) — see Done item 169.**
+76. ~~Net Worth / app-wide: "Account Synced · [timestamp]" sync-status text is currently only
+    shown inside a few modules' own "Account" sections... should live in the sidebar/nav
+    instead of being "buried in a few modules."~~ **Done (2026-08-27) — see Done item 189.**
+    Picked worst-of-N as the headline plus a click-to-expand per-module breakdown popover,
+    rather than one or the other. Each module's own "Account" section still shows its own
+    status text too — this adds the unified nav view, doesn't replace the per-module detail.
+77. ~~App-wide: whole-app import/export through Settings.~~ **Done (2026-08-26) — see Done item
+    177.** One combined JSON file, all 14 modules. **Still open**: every table exporting to
+    Excel/HTML/PDF (only CSV/JSON exist today — see README item 40 for CSV, Done item 177 for
+    whole-app JSON). **Note (2026-09-09): the `xlsx` npm dependency itself (whose unpatched
+    advisory this item used to flag as a reason for caution) is gone entirely as of Done item
+    292** — removed along with Funds' XLSX Daily History Import at the user's own request, once
+    their real data no longer needed it. A future Excel EXPORT feature would need to add a
+    dependency fresh (this one or another), not "lean on" one already in the codebase.
+78. ~~Net Worth: add charts comparing the distribution of finances, both per-currency and within
+    one selected currency.~~ **Done (2026-08-27) — see Done item 195.** Built the item's own
+    named hypothesis: an Assets-vs-Liabilities-by-currency bar chart, and a per-module
+    Breakdown-within-one-currency bar chart (reusing Done item 169's already-computed
+    `breakdown` data, not a new calc function).
+79. ~~Net Worth: per-module contributions should render as small cards instead of long
+    table-style rows.~~ **Done (2026-08-26) — see Done item 169.**
+80. ~~Banking: the "Total balance (PKR)"/"(QAR)" stat-card labels read as if they're LIVE-
+    CONVERTED figures.~~ **Done (2026-08-26) — see Done item 168.** Renamed to "Accounts in
+    CODE" with an explanatory tooltip, a lighter-touch fix than the user's own literal
+    "Pakistani Banks Total Balance" suggestion (which assumes currency implies country).
+81. ~~Banking: "Add account" shouldn't be a permanently-visible form (same "rare operation"
+    reasoning already applied to EMI's own add-loan form, Done item 166's floating-FAB
+    pattern) — move to a floating "+" button + popup, mirroring EMI.~~ **Done (2026-08-26) —
+    see Done item 170.**
+82. ~~Banking: `BankAccount` should carry Branch and/or Account Type fields — new fields, not
+    yet in the data model at all.~~ **Done (2026-08-26) — see Done item 170.**
+83. ~~Banking / app-wide: clicking a Bank account (or Cash, or a Personal Loan) row should
+    navigate to that item's own detail page rather than opening a popup/modal in place.~~
+    **Done for Banking (2026-08-27) — see Done item 198.** A real `/bank/account/:id` route,
+    matching QSE/PSX's `/stock/:ticker` precedent. **Still open**: Cash and Personal Loans still
+    use their own modal pattern — scoped to Banking first as a verified working instance before
+    a wider rollout, same "ship one first" precedent this project always follows.
+84. ~~Banking: `AccountDetailModal` currently shows the (rare) account-EDIT form prominently and
+    has NO way to add a transaction from inside it at all.~~ **Done (2026-08-26) — see Done
+    item 183.** The modal now leads with an inline "Add a transaction" form (reusing
+    `AddTransactionsForm`); the account-metadata edit form is demoted into a collapsed
+    `CollapsibleCard` below it.
+85. ~~Banking / app-wide: a transaction/repayment/entry conceptually belongs to its parent
+    Account/Fund/Loan, so it should be logged and reviewed from THAT item's own detail
+    page/view.~~ **Banking's own gap closed (2026-08-26) — see Done item 183, same fix as item
+    84.** EMI/Personal Loans/Rentals/Funds already had their own transaction/repayment logs on
+    their detail views; Cash still has no per-"account" concept to attach to (a single ledger,
+    not multiple accounts) — not a gap, just not applicable there.
+86. ~~App-wide: "Add a plan" (Cash/Banking's Planning-tab add-form) shouldn't be permanently
+    visible either — same FAB+popup treatment as items 81/166.~~ **Done (2026-08-26) — see
+    Done item 170.**
+87. ~~App-wide: the FinanceRecorder app logo isn't in the navbar/sidebar at all.~~ **Done
+    (2026-08-27) — see Done item 191.** A real designed mark now exists (`LogoMark` in
+    `icons.tsx` + `public/favicon.svg`), replacing the browser tab's leftover generic Vite
+    scaffold art too.
+88. ~~QSE/PSX Dashboard: the new right-rail's Net worth and Upcoming-plans cards (Done item 164)
+    are reported as visually CUTTING OFF/clipped.~~ **The layout-bug half is done (2026-08-26)
+    — see Done item 186.** Real cause: `.row`'s shared `min-width:160px`-per-child CSS forcing
+    a plain two-item row wider than the rail's own 320px column. ~~**Still open**: the rail's
+    money figures should show in the CURRENT STOCK EXCHANGE's own currency (QAR for QSE, PKR
+    for PSX) rather than whatever `useNetWorthSummary()`'s biggest-exposure currency happens to
+    be~~ **Currency half done (2026-09-09) — see Done item 276.** New optional
+    `DashboardRail`/`NetWorthRailCard` `preferredCurrency` prop, passed as `currency` (each
+    exchange's own `workbook.settings.currency`) from both QSE's and PSX's `DashboardPage.tsx` —
+    falls back to `biggestExposureCurrency` when that currency has no Net Worth row yet, or when
+    a future non-exchange caller of the generic `DashboardRail` doesn't pass one at all. Verified
+    live via Playwright with a deliberately adversarial seed (a small QSE QAR position alongside
+    a much bigger USD Bank balance, so the two currency choices would visibly disagree): the
+    rail correctly showed QAR, not USD. **Still open**: the rail itself becoming a floating
+    button + popup instead of a permanently-docked column — a bigger reversal of Done item 164's
+    own "docked right-rail" design, still needs the user's own confirmation before rebuilding it
+    that way.
+89. ~~App-wide: every tooltip-bearing label should carry a small visible icon.~~ **Done
+    (2026-08-26) — see Done item 169.** Fixed once in `Tooltip.tsx` itself.
+90. App-wide: "cards inside cards" — **re-audited (2026-08-26)**: checked every module's
+    `Tabs`-driven tab content for the exact Done-item-114 bug (a single inner `Card` whose own
+    heading duplicates its parent tab's label) — none found beyond the QSE/PSX Settings
+    instance already fixed; every module's Settings tab has 2+ distinctly-headed sub-cards,
+    every other single-content tab is a bare `<div>`. What's still open is the BROADER framing
+    ("cards inside cards are terrible" as a general visual complaint, not just literal
+    duplicate-heading text) — that's a more subjective design-judgment call (does a Card
+    visually nested inside another Card's border/shadow look bad even with different headings?)
+    that a code-level audit can't resolve alone; needs specific screenshot examples from the
+    user of what still looks wrong, rather than guessing at a redesign.
+91. ~~App-wide: `StatCard`'s background is "still very vague" — try solid colors with a subtle
+    shine/glassy effect instead.~~ **Done (2026-08-27) — see Done item 194.** Bumped the hue-mix
+    ratio from Done item 153's softened 7% to 24% (above even the original pre-softening 16%,
+    since the user asked for MORE solid than either prior state) — the glassy sheen overlay
+    itself was left untouched, keeping the part of the ask that wanted it kept.
+92. ~~App-wide: every table row / card representing a record that HAS a detail page should link
+    to it.~~ **Done (2026-08-26) — see Done item 185.** Banking's account rows and Rentals'
+    property rows were the two real gaps (Personal Loans/EMI/Funds/Subscriptions/QSE/PSX
+    already had it); both now open their detail modal on a row click, not just their "Details"
+    button.
+93. ~~App-wide: "Plans" (the Cash/Banking Planning feature) should be part of the main nav.~~
+    **Done (2026-08-27) — see Done item 192.** Promoted to a real `CategoryNav` entry (like
+    Transfers, Done item 100), reusing each module's own `PlanningTab` unchanged rather than a
+    parallel implementation. Each module's own "Planning" tab still works too.
+94. App-wide: "maximize space usage by using grids instead of infinite scrolling" — a broad
+    principle in the same spirit as Pending item 54/63 (right-rail content, multi-column
+    cards) — not a single scoped task, tracked here as a standing direction to apply
+    opportunistically per-page rather than one big sweep.
+95. App-wide: data import should be "a well-planned operation" with a documented/discoverable
+    required file format and column-matching UI. This pattern ALREADY EXISTS for Bank/Cash/
+    Rentals/Personal Loans' CSV imports (map-your-columns UI, Done items 40/41) and Funds'
+    two import modes (Done items 146/151). **The concrete date-format-silent-failure half is
+    done (2026-09-11) — see Done item 311**: every "map these columns" importer now tells the
+    user up front that the date column must be `YYYY-MM-DD`, since `toInstantMs()` parses it
+    with no validation and a different format would silently sort wrong; Personal Loans'
+    importer also gained an intro paragraph it previously had none of. **Still open**: whether
+    there's a BROADER discoverability gap beyond the date-format risk — needs confirming which
+    modules' import flows the user actually tried before assuming more is needed here.
+96. App-wide, reinforced instruction: autofill time/timezone/currency more aggressively.
+    Time/timezone autofill already exists on every module's primary add-form (Done items
+    133/135/136) and currency remembers the last pick (Done item 49) — this repeated ask
+    likely means either a module this session hasn't confirmed yet, or a stronger ask (e.g.
+    autofill the BROWSER's own current time as a live default, not just a remembered
+    timezone) — needs a concrete "which field, which page" example from the user to act on
+    precisely rather than re-guess at an already-addressed item.
+97. ~~App-wide, reinforced instruction: every remaining unlabeled input/form element.~~ **Done
+    (2026-08-27) — see Done items 167/187/199.** Done item 199 closed out this item's own named
+    remaining scope: audited the other 6 non-exchange modules for the same "toolbar-style
+    multi-row add form with no Field" class of gap Done item 187 fixed for QSE/PSX — none of
+    them has one (each adds one record at a time, already `Field`-wrapped per the required-field
+    rollout) — Banking's own `AddTransactionsForm` was the one genuine remaining instance, now
+    fixed. Not claimed as an exhaustive sweep of every one of the 114 `.row` usages app-wide,
+    but the specific gap class this item named is now closed everywhere it was found to exist.
+98. ~~App-wide: "Compact" density should be noticeably MORE space-saving than "Comfortable".~~
+    **Done (2026-08-26) — see Done item 173.** Buttons/inputs/selects were the real gap —
+    completely untouched by Compact before this fix.
+99. ~~Personal Loans: no analytics charts visible on a loan's own DETAIL page.~~ **Done
+    (2026-08-26) — see Done item 172.** New `loanBalanceHistory()` + a "Balance over time"
+    line chart on `LoanDetail`, between Repayments and the Payoff Planner. The landing page's
+    own per-portfolio Analytics tab (Done item 45) is unaffected/unchanged.
+100. ~~Personal Loans: the Payoff Planner should come AFTER Repayments on a loan's detail page
+     (transactions are more important) — currently Payoff Planner renders above Repayments.~~
+     **Done (2026-08-26) — see Done item 168.**
+~~101. Transfers page: "terrible UI, arrange elements in grids for better UX".~~ **Moot as of
+     Done item 216 (2026-08-28) — the standalone `/transfers` page this item was about no
+     longer exists.** `TransferLinksPage.tsx` was reduced to a shared-utilities-only module
+     (`SideFields`/`useSideCurrency`/`linkTargetPath`, no page component, no route, confirmed
+     via a fresh grep) once the app-wide "Transfers" FAB replaced the standalone page with a
+     popup reachable from every module — there's no longer a dedicated Transfers page's UI
+     left to redesign. The popup's own layout is covered by this project's general
+     Field/`.row` grid conventions, same as every other module's add-form.
+102. ~~Transfers page: use info popups/tooltips to explain concepts instead of permanent
+     explanatory paragraphs eating page space.~~ **Done (2026-08-26) — see Done item 169.**
+     The "New linked transfer" card's own explanatory paragraph moved behind a `Tooltip`; the
+     two conditional warning paragraphs (unsupported pairing, currency mismatch) were left as
+     plain text since they're only shown when directly relevant, not a permanent block.
+103. ~~App-wide required-field marking rollout.~~ **Done (2026-08-27) — see Done items
+     171/184/200.** `Field`'s `required` prop is applied to Banking's, Cash's, Personal Loans',
+     EMI's, Rentals', Funds', and Subscriptions' primary add-record forms, plus (Done item 200)
+     QSE's/PSX's trade-entry forms: `TransactionsPage.tsx`'s multi-row add table (Ticker/Shares/
+     Price, first row only, matching that table's own first-row-only label convention from Done
+     item 187) and `StockPage.tsx`'s per-stock add-trade toolbar (Shares/Price — Ticker isn't a
+     field there, it's fixed by the route). This item's own "still open" note about these forms
+     using raw `<input>`s not wrapped in `Field` turned out to be stale by the time it was
+     re-checked — Done item 187 (2026-08-26) had already Field-wrapped them for labeling
+     purposes, just without `required`; only the asterisk was actually missing. **Edit-in-place
+     forms remain intentionally out of scope**: they sit inside the same `<table>`/`<thead>` as
+     their own add-row, so the column headers already convey what's expected — the same
+     established convention Done item 199 already relied on for labeling.
+~~104. A second, real, keyless IBAN-lookup provider for `lib/ibanLookup.ts`'s `IBAN_PROVIDERS`
+     chain.~~ **Dropped, per explicit user instruction (2026-09-10): "second IBAN provide
+     remove."** Not pursuing a second provider — `IBAN_PROVIDERS` stays a single-entry array
+     (`openIbanProvider`, see Done item 171), no dead/placeholder second entry was ever added to
+     the code so there was nothing to delete there, just this backlog wish itself. One real
+     related item remains, genuinely separate from "add a second provider": the openiban.com
+     success path itself is still unverified in this sandbox (network blocked) — a future
+     session with real browser access should confirm a real IBAN actually returns a real bank
+     name before trusting this beyond the local-checksum unit tests.
+~~105. Credit card spend tracking, linked to a Bank account, so Net Worth counts it
+     accurately.~~ **Done (2026-09-10) — see Done item 300.** A real, separate `CreditCard`
+     entity (not a `BankAccount` variant — the user's own explicit rejection of that first
+     design, "Credit Card can never behave like a bank," is why this needed a full rebuild),
+     with a real billing-cycle statement computation, a flat-rate-with-threshold markup rule
+     gated by a real grace period, a generalized minimum-payment formula, a limit-tracking
+     progress bar, cross-entity linking, and an explicit (never automatic) migration off the
+     old `isLiability` model — every open question this item's own text left unresolved is
+     settled and built. Card-network detection (BIN lookup) and the prefilled Pakistan/Qatar
+     bank+wallet suggestion list from the original 2026-08-26 batch are unaffected and already
+     wired into the new `CreditCard` form.
+106. ~~A cross-module "Budget Planner".~~ **Done (2026-08-26) — see Done item 176.** Unifies
+     Cash/Bank/Rentals' existing planned entries into one view + a 3-month projection, with an
+     add-plan shortcut writing into whichever module's own store is picked.
+~~107. The user has a sample monthly-expense-tracker Excel sheet and wants the app to "show/
+     answer all the capabilities just like this sheet is providing," on top of Net Worth being
+     "capable to answer each finance's summary + user's worth in 3 months," with "detailed
+     calculation" of financial activity over time available on request.~~ **Fully done — closing
+     this item in full (2026-09-10). Correction of a stale characterization**: an earlier status
+     summary in this session's own chat described this as still partly blocked on a promised
+     file — wrong, and the user corrected it directly ("sample excel was imported multiple
+     times in various sessions. none noted it! all data is live now!"). The real sample data
+     was imported into the user's real, live account across several sessions, not just once:
+     the original QR.Expense/RTDB merge (Done item 178), a second Pakistan-side ledger merge
+     (documented in `CLAUDE.md`'s own dedicated entry, "Second real-data merge, Pakistan-side
+     ledger this time" — not separately numbered in this README), and Funds' own Daily History
+     Import (Done item 151) — and the
+     feature that consumed that last file was later intentionally removed once its job was done
+     (Done item 292: "i have already provided all sample data and its imported in the app").
+     **The concrete UI half was done earlier (2026-08-27) — see Done item 201.** The user
+     clarified this specifically meant a scrollable multi-month summary table matching their
+     reference Google Sheet's per-month table layout — Budget Planner now has one, 6 months by
+     default (3 past + current + 2 future) and scrollable further in either direction via ◀/▶.
+     Also raised in the same message: an EMI's own 36-month amortization makes Net Worth look
+     permanently negative with no way to "zoom in" on the real trajectory — answered with a new
+     Net Worth trend row in the same table (see Done item 201 for the full calc design).
+     **Genuinely still open, but not a blocker on this item being closed**: the reference
+     Google Sheet's own exact column/row layout was described in text, never actually seen as
+     an image in this session — if the user ever wants the table's layout to match that sheet
+     more literally, that's a small follow-up, not something holding this item open. Do NOT
+     re-read this item in a future session as "waiting on a file" — the file(s) are already
+     what's now shipped.
+
+**New large UI/UX critique batch, 2026-08-27 (screenshot-backed) — see Done item 202 for what
+shipped from this same message. The items below need either the user's own reproduction detail
+or a design decision before more code, not guessed at further:**
+
+108. Card/chart overlap reported at 50% browser zoom (screenshot showed the "Income vs. expense"
+     chart's x-axis labels visually touching/overlapping "Net Worth Summary"/"Exchange Rates"
+     below it) — **could not be reproduced in this session** despite two real attempts: a
+     realistic 2-currency seed at a normal 1280px viewport, and a CSS `zoom:0.5` simulation with
+     a forced resize (the closest approximation Playwright/headless Chromium offers to a real
+     browser's Ctrl+- zoom, which isn't independently controllable via the automation API used
+     here). Both rendered cleanly. Two defensive hardening measures were still applied (Done item
+     202: `.chart-canvas-wrap{overflow:hidden}`, a wider gap below that one chart) since they're
+     correct regardless, but this does NOT confirm the actual bug is fixed. Needs either the
+     user's exact zoom percentage/browser+OS, or a fresh screenshot taken at that same zoom
+     level, to reproduce for real rather than guess again. "Charts going out of their boundaries"
+     (the same message's separate line) is very likely the same root cause — tracked together,
+     not as two separate bugs, until there's a real repro to tell them apart.
+109. ~~Sidebar/nav restructuring: "Exports, Settings, Accounts... should belong to a separate Nav
+     page with sub navs nested in it, accessible whenever needed only... you dumped the subnav
+     menus right in the main nav rather than nesting them under their parent."~~ **Done
+     (2026-08-27) — see Done item 209.** Confirmed with the user which candidate this and
+     Pending item 112 both pointed at (QSE/PSX's permanently-inline numbered page list) and how
+     to fix it — collapsed into an accordion, closed by default.
+110. "Stacked column charts, line charts can well explain net worth/income/spending over
+     months... why stuff everything in tables, try slim cards/charts instead" — a real, broad
+     design preference (charts over tables as the default presentation) with no single named
+     target page. Partially in tension with the just-shipped Budget Planner monthly table (Done
+     item 201, built to the user's own explicit "big summary table for each month" spec the same
+     session) — worth flagging rather than silently reconciling, since it's not clear whether
+     this is a reversal of that specific ask or a general principle for OTHER tables app-wide.
+     Needs the user to name which table(s) should become a chart instead, or confirm the
+     principle applies broadly (in which case it's a large, multi-page work item, not a single
+     task).
+111. "Most tables need tiring horizontal scrolls, still unable to see a full row of data in one
+     go" — real and already partially addressed for several specific tables (Dashboard/Portfolio
+     Holdings column-grouping, Done items 85/86/97/etc.), but the user's own wording ("most
+     tables") suggests this is still true broadly. Needs either a specific table named, or
+     treating as a standing app-wide principle (like Pending items 94/95/96) to apply
+     opportunistically per-table rather than one blind sweep — column-grouping/dropping has
+     real information-loss tradeoffs per table that need individual judgment, not a mechanical
+     fix.
+112. ~~"Side nav poorly arranged" (2026-08-27, screenshot-backed, item 3 of the same batch as
+     Done item 203).~~ **Both candidates now done, see Done items 209 and 281 (2026-09-09).** Two
+     candidates were named: (a) QSE/PSX's permanently-inline numbered page list (the same one
+     Pending item 109 pointed at — fixed by collapsing it into an accordion, Done item 209); (b)
+     the visual grouping/spacing between the top-level category list and the exchange chip
+     switcher/numbered list below it, having no clear separator — resolved as a side effect of
+     Done item 281's later, unrelated fix (nesting the whole QSE/PSX subnav directly inside the
+     "Stock Exchanges" category row, closing Pending item 128), confirmed via a live screenshot:
+     the "Stock Exchanges" row now renders as one visually cohesive grouped block (its own
+     highlighted background containing the chip switcher + Pages accordion) with a clear
+     boundary from "Funds" below it — not a documentation-only close, a real re-check against the
+     current UI. **Lesson repeated**: check whether a later, differently-motivated fix already
+     resolved an older open item before assuming it still needs its own separate pass.
+113. ~~Sidebar visual grouping: the top-level category list and the QSE/PSX chip switcher +
+     "Pages" accordion below it have no clear visual separator.~~ **Done (2026-08-27) — see
+     Done item 210.** A top border + spacing now makes the boundary explicit.
+114. **App-wide UI/UX redesign, top priority, IN PROGRESS (2026-08-27) — Phase 1 (shared
+     foundation) + a full Banking pilot are done, see Done item 213; full design spec lives in
+     `CLAUDE.md`'s "Redesign decision" and "App-wide UI/UX redesign" sections, read those before
+     continuing this.** The user reframed the whole app's UI around one content model — **Main**
+     (frequent: stats/charts/entity cards/FAB-add-transaction), **Often** (occasional: FAB-add-
+     entity, click an entity → a dedicated READ-ONLY detail page with an Edit icon, showing every
+     single attribute), **Rare** (Account/Settings/Backup/Disclaimer, one Settings submenu) —
+     plus 9 concrete UI rules (no nested cards; generous vertical spacing; wrap-flex grids over
+     shrinking; lighter shadows; solid-color stat cards with little gradient; vertical-not-full-
+     width form layout; action buttons grouped top-right; descriptions → tooltips; consistent
+     chart height with no forced zero-baseline). Confirmed via `AskUserQuestion` before starting:
+     pilot module is **Banking**; Settings hub's Security section is sign-in summary only (no
+     new account-security feature); the older `?section=` sidebar-children idea is dropped,
+     superseded by this model. Confirmed earlier: **no fork/new repo/new codebase** — redesign
+     happens in place in this same repo; entity-detail views are dedicated PAGES (matching
+     Portfolio's own per-stock page pattern), not popups, and must never drop an attribute in the
+     move. **Done in Done item 213**: the shared CSS/component foundation (lighter shadows,
+     `Tabs` spacing, `EntityCard`, confirmed rule 9's zero-baseline concern was already satisfied
+     app-wide) and a global `/account` hub (Profile/Security/Sync status/Appearance/Data/
+     Disclaimer, replacing the sidebar's scattered footer content and its mislinked "Signed in
+     as X"), plus Banking's own full pass (entity-card Accounts grid, read-only+Edit-icon
+     `AccountDetailPage`, tooltip-ified stray paragraphs, Settings tab linking to the hub).
+     **Still open, but note a real doc-drift issue found while re-checking this item
+     (2026-09-08)**: `webapp/UI_DESIGN_GUIDELINES.md` ("Add UI design guidelines doc (Phase 0
+     of the UI audit)") is a newer, more thorough, checklist-form spec of these SAME Main/
+     Often/Rare principles + the 9 design rules — its own opening line says explicitly that a
+     status note here or in `CLAUDE.md` calling something "done" while it still breaks one of
+     its rules means the work is NOT done, re-open it. A separate, later audit effort (Done
+     items 213 onward, `main/site.css`'s `.grid-auto`/flex-utility classes, dead-CSS removal,
+     the sticky submodule nav pilot, chart translucency/sharper-stat-card passes, and dozens of
+     later module-specific fixes) has addressed a good deal of the UNDERLYING UI-quality intent
+     this item cares about — filters, grids, per-account/per-entity detail pages, FAB+popup
+     entity creation, tooltip-ified explanations — across most modules through means OTHER than
+     the specific `EntityCard` component. **Verified via a direct grep, not assumed**: `EntityCard`
+     was used only by Banking as of 2026-09-08; by 2026-09-09 it's also used by Personal Loans'
+     `LoanList` (Done item 271), EMI's `LoanList` (Done item 272), Rentals' `PropertiesList`
+     (Done item 273), Subscriptions' `SubscriptionList` (Done item 274), and — after a
+     self-caught correction, see Done item 277 — Funds' own PRIMARY `FundList` (an earlier pass
+     mistakenly counted Funds' SECONDARY `BrokersList`, Done item 270, as satisfying this
+     module's requirement without checking the primary list too) — **the literal "roll
+     EntityCard out to every module" ask is now genuinely fully done**, closing that sub-thread
+     of this item. The broader app-wide redesign item stays open for its other remaining scope
+     below. A future session shouldn't read "still open" here as "nothing's been done for these
+     modules" — check a module against
+     `UI_DESIGN_GUIDELINES.md`'s own rules directly (not just against whether it uses
+     `EntityCard`) before assuming it needs work. ~~Also still open: audit (don't blindly
+     rebuild) each module's existing inline cross-entity-linking coverage against the "each
+     module should link without leaving its own page" ask~~ — **verified (2026-09-09), see Done
+     item 289**: all 8 `LinkModule` pages' "Transfers" action is confirmed reachable on page
+     load via a live Playwright check, not just a code read — no gap found. What remains open
+     for this item is only the separate, higher-risk Credit Card/Bank/Branch normalization
+     migration — now tracked as Pending item 105 (reopened 2026-09-10, the user rejected the
+     original `isLiability`-on-`BankAccount` design) rather than only in CLAUDE.md's prose, not
+     to be bundled into the general UI rollout — it touches the user's real imported GCC/PCC
+     credit-card-as-liability-account data and needs its own focused session.
+115. **Real structural asks from the same 2026-08-27 critique — see CLAUDE.md's
+     "App-wide UI/UX redesign" section and Done item 214 for context. All four sub-items below
+     are now done (2026-09-10) — closing this item in full.** ~~(a) **Bank as a
+     normalized parent entity** — the user's own words: "A bank is main entity. User may have
+     multiple accounts with same bank. so we must add bank first and then on its details page,
+     give ability to add extra accounts. and see the total balance with that bank. and on
+     Banking homepage see their breakdown and summary." Real schema surgery on the user's actual
+     imported accounts (UBL, GCC, PCC, QIB Misk, etc.) — needs a proposed `Bank`/`Branch` type
+     design confirmed with the user BEFORE any migration code, per this project's own locked
+     "ask before touching real financial data structure" rule (same precedent as the still-
+     pending Credit Card normalization, Pending item 114's own remaining scope — these two are
+     closely related and may end up as one combined migration, not two separate ones).~~ **Done
+     (2026-09-08) — see Done item 265.** Built purely additively instead of a migration — a new
+     optional `Bank` type/`bankId` link, zero automatic conversion of any existing account's
+     free-text bank name, so there was no real "migrate production data" step to confirm at all;
+     Credit Card normalization (Pending item 114) remains its own separate, still-open track —
+     though "normalization" itself is done (CLAUDE.md's own "Credit Card redesign" section,
+     Done item 300, 2026-09-10, built it as a real separate entity, not a `BankAccount` field);
+     what's left is real bugs found in that build, not the design itself — see Done item 312
+     (2026-09-11): a missing `openingBalance` field that undercounted a migrated card's real
+     debt, the whole-app export never including the new module, stale credit-card fields left
+     on Bank's own Add/Edit form, the card's own detail view still stuck in a popup with no
+     transaction-editing, and a real FAB-stacking bug on the Banking page itself found while
+     fixing that. All five fixed; the user's own already-migrated GCC/PCC cards still need their
+     real opening balances re-entered by hand (this session can't safely write into their live
+     signed-in account) — flagged to them directly, not silently left as a gap.
+     ~~(b) **The same pattern for Funds/brokerages** — "Same should happen with Funds and others
+     like I have 4 brokerage and i want to seem my amounts with each broker/investment firm. and
+     then i want to see break-down and overall sums for all the firms."~~ **Done (2026-09-09) —
+     see Done item 270.** Built the same purely-additive way as (a): a new optional `Broker`
+     type/`Fund.brokerId` link, zero automatic conversion of any fund's existing free-text
+     `platform` field — Funds' "total balance with that broker" rollup and per-broker
+     breakdown/detail view work exactly like Banking's Bank feature, adapted to Funds' own
+     state-toggle (not routed) detail-view convention. (c) **Entity active/inactive + favorite + a
+     visible Sr#/Index#** — "Option to make an entity active or Inactive/Closed like a bank/
+     fund/Credit Card, so that we can focus on the active one rather than seeing dead ones. Add
+     active check, numeric sequence Id with each entity which is present as Index# or Sr.# for
+     correct data ordering. Ability to favorite an entity, to view it on top." Well-specified,
+     lower-risk than (a)/(b) (an additive field, not a restructuring) — a reasonable next
+     concrete step across Bank/Funds/Personal Loans/EMI/Rentals/Subscriptions entity lists.
+     **The "active/inactive" half is now DONE for Bank, Funds, Personal Loans, EMI, and
+     Rentals** (`isActive`, 2026-09-03 — see Done items 222/223): archive/close a Bank account,
+     Fund, Personal Loan, EMI loan, or Rental property, hidden from the default list + every
+     "add new" picker, never from totals. Subscriptions already had equivalent functionality
+     via its own pre-existing `active`/`cancelledDate` fields (the original precedent this
+     pattern is modeled on), so every module named in the original request now has it.
+     ~~**Still open**: favorite/pin and a visible Sr#/Index# column — neither is built yet, for
+     any module.~~ **Done (2026-09-08) — see Done item 236.** Every module named here (Bank,
+     Personal Loans, EMI, Rentals, Subscriptions, Funds) now has both.
+     ~~(d) Bank's own Analytics tab was never audited against the date-range-filterable chart
+     pattern other Analytics pages already have (Done item 31) — "charts should be interactive...
+     right now they are dumping lifetime data all at once."~~ **Done (2026-09-08) — see Done item
+     234.** A from/to month-range filter now narrows Balance-over-time and Income-vs-spend-by-
+     month; Category breakdown's own separate month-nav is untouched.
+116. **App-wide CSS cleanup — remove hardcoded/inline styles, use proper generic classes
+     (2026-09-03), IN PROGRESS as of 2026-09-09.** User's own words: "this app's css is very
+     bad. we need to remove all hard coded css and use proper & generic classes for each
+     element on the page!" A real, valid, standing direction — this app has extensive inline
+     `style={{}}` scattered across nearly every page, a pattern that's produced at least 3
+     confirmed real bugs this project has already hit (the `.row > *` min-width cascade trap
+     fixed in Done item 228, the `flex:1` row-sizing bug from Done item 54, and the
+     `min-width:0` CSS-grid-shrink trap from Done item 203) — each one only found by tracing a
+     specific reported symptom back through a maze of ad hoc inline styles competing with
+     global rules. **Not something to attempt as one blind sweep** — a full inline-style-to-
+     classes refactor touches literally every page in the app and needs its own scoped,
+     incremental pass (module by module, verified live each time, matching this project's own
+     established pattern for every other large refactor) rather than one giant unreviewable
+     diff. **First concrete instance done (2026-09-09) — see Done item 275**: a repeated
+     "muted Sr# prefix" inline style, copy-pasted across 5 files during the same session's
+     `EntityCard` rollout, extracted into a new `.entity-card-sr` class. **Second concrete
+     instance done (2026-09-09) — see Done item 295**: a dead/redundant `flexWrap: 'wrap'`
+     inline style on 116 `className="row"` elements across 29 files, removed since `.row`'s own
+     CSS already defaults to `flex-wrap:wrap` — pure dead code, zero visual change. **Third
+     concrete instance done (2026-09-10) — see Done item 298**: a repeated
+     `style={{ cursor: 'pointer' }}` (62 occurrences across 24 files — Tooltip triggers,
+     sortable-ish `<th>` headers, clickable table rows, accordion `<summary>` elements)
+     extracted into one new `.clickable{cursor:pointer;}` class in `theme.css`, merged into
+     each element's existing `className` where one was already present. **Fourth concrete
+     instance done (2026-09-10) — see Done item 299**: a repeated
+     `style={{ display: 'none' }}` (13 occurrences across 11 files, every one a native
+     `<input type="file">` triggered via a `ref`, never conditionally toggled) extracted into
+     one new `.hidden-file-input{display:none;}` class. **Fifth concrete instance done
+     (2026-09-11) — see Done item 301**: `style={{ gap: 8, marginBottom: 8 }}` (27 occurrences
+     across 13 files, always the same `.row.gap-sm` case with an extra bottom margin layered
+     on) extracted into a new standalone `.mb-sm{margin-bottom:8px;}` utility. **Sixth concrete
+     instance done (2026-09-11) — see Done item 302**: `style={{ gap: 8, alignItems:
+     'flex-end' }}` (15 occurrences across 12 files) — the `alignItems:'flex-end'` half turned
+     out to be pure dead code (`.row`'s own base rule already sets it), so this one was a
+     removal, not just an extraction; replaced with `className="row gap-sm"`. **Seventh
+     concrete instance done (2026-09-11) — see Done item 303**: `style={{ gap: 8, marginTop:
+     8 }}` (13 occurrences across 7 files) — the same `.row.gap-sm` case with a leading top
+     margin instead of Done item 301's trailing bottom one; extracted into a symmetric
+     `.mt-sm{margin-top:8px;}` utility. **Eighth concrete instance done (2026-09-11) — see Done
+     item 304**: `style={{ display: 'flex', alignItems: 'center', gap: 4 }}` (8 occurrences
+     across 4 files — label/span/td/div elements, no shared parent pattern this time) —
+     extracted into a new standalone `.flex-center-gap4{display:flex;align-items:center;
+     gap:4px;}` utility. **Ninth concrete instance done (2026-09-11) — see Done item 305**:
+     `style={{ marginTop: 8 }}` (56 occurrences across 25 files) — reused the existing
+     `.mt-sm` class from the seventh instance rather than adding a new one; 9 occurrences on
+     `<Notice>` (which has no `className` prop) were deliberately left inline, the remaining 47
+     converted. **Tenth concrete instance done (2026-09-11) — see Done item 306**:
+     `style={{ marginBottom: 16 }}` (54 occurrences across 17 files) — this one followed
+     through on the ninth instance's own deferral by adding `className` support to
+     `CollapsibleCard` and `Notice` (neither had it before), then converted all 54 into a new
+     `.mb-md{margin-bottom:16px;}` utility. **Eleventh concrete instance done (2026-09-11) —
+     see Done item 307**: `style={{ marginTop: 0 }}` (69 occurrences across 20 files, the
+     biggest single instance so far) — mostly the first child inside a `Card`/`CollapsibleCard`
+     zeroing the browser's own default heading/paragraph top margin; extracted into a new
+     `.mt-0{margin-top:0;}` utility. **Twelfth concrete instance done (2026-09-11) — see Done
+     item 308**: `style={{ margin: 0 }}` (all four sides, 63 occurrences across 18 files) —
+     mostly an `<h3>`/`<h4>` passed as a `CollapsibleCard`'s own `title` prop; extracted into a
+     new `.m-0{margin:0;}` utility, distinct from `.mt-0` since this zeroes every side.
+     **Thirteenth concrete instance done (2026-09-11) — see Done item 309**:
+     `style={{ marginBottom: 12 }}` and `style={{ marginTop: 12 }}` (34 occurrences each, 68
+     total across 20 files) — done together since they're the same value on opposite sides;
+     12px doesn't fit the existing `sm`(8)/`md`(16) scale, so named literally by value
+     (`.mb-12`/`.mt-12`). **Fourteenth concrete instance done (2026-09-11) — see Done item
+     310**: `style={{ marginTop: 16 }}` (24 occurrences across 14 files) — symmetric with
+     `.mb-md`(16px) on the top side, so named `.mt-md` to match. **Fifteenth/sixteenth
+     concrete instances done (2026-09-13) — see Done item 315**: a bare `style={{ marginBottom:
+     8 }}` (22 occurrences across 9 files, converted to the existing `.mb-sm`, plus 7 newer
+     `.row.gap-sm.mb-sm`-shaped occurrences that had crept back in via pages added after Done
+     item 168's own pass) and a genuinely new composite pattern, `style={{ cursor: 'pointer',
+     fontWeight: 700, marginBottom: 8 }}` on every collapsible `<summary>` in QSE's/PSX's Trade
+     Transactions page (8 occurrences), extracted into a new semantic `.summary-heading` class.
+     **Seventeenth/eighteenth concrete instances done (2026-09-13) — see Done item 316**: a
+     bare `style={{ marginTop: 8 }}` (13 occurrences, reused the existing `.mt-sm`), plus two
+     6px-left-margin patterns — a `.pill-warn` "Pending" badge (9 occurrences) and a
+     `.pill-info` "Linked" tag `<Link>` (8 occurrences, whose own `textDecoration:'none'` half
+     turned out to be dead code already covered by the base `a{}` rule) — both extracted into
+     one new `.ml-6` class. **Nineteenth/twentieth concrete instances done (2026-09-13) — see
+     Done item 318**: `style={{ width: 90 }}` (37 occurrences) / `style={{ width: 130 }}` (25
+     occurrences) on narrow edit-row inputs, extracted into `.w-90`/`.w-130` — needed
+     `!important` on both, a deliberate exception found only by live-verifying computed width
+     before shipping: a plain class can't beat the base input reset rule's four-`:not()`
+     specificity (0,4,1), unlike an inline `style` which always wins regardless of specificity.
+     **Rule for any future width/height-property cleanup instance specifically**: verify
+     computed style live, not just that the class landed in the DOM — these properties collide
+     with this app's existing high-specificity input reset in a way `margin`/`cursor`/`display`
+     never do. **Twenty-first instance done (2026-09-13) — see Done item 319**: the rest of the
+     same width family — `width:80/100/70/120/96/82/140` (75 more occurrences) — extracted into
+     `.w-70`/`.w-80`/`.w-82`/`.w-96`/`.w-100`/`.w-120`/`.w-140`, same `!important` treatment.
+     Also caught, this time by `tsc -b` rather than live verification: a bulk merge-into-
+     existing-`className` regex can silently produce a DUPLICATE `className` attribute (a real
+     `TS17001` compile error) when the existing className and the new width style sit several
+     attribute-lines apart within the same JSX tag, especially where an `onChange={(e) => ...}`
+     arrow function's own `=>` defeats a naive `[^<>]`-bounded "stay inside this tag" regex —
+     worth remembering for any future bulk className-merge script on this codebase. The exact
+     same incremental discipline (audit one repeated pattern, extract or remove, verify, repeat)
+     still applies for every other module/pattern — this is one instance of an ongoing,
+     repeatable practice, not a closed item. **Twenty-second instance done (2026-09-13) — see
+     Done item 320**: `color:var(--loss)`/`color:var(--profit)` on plain inline text/spans (16
+     occurrences), extracted into `.text-loss`/`.text-profit` — no `!important` needed, since
+     `color` (unlike `width` on an `<input>`) has no competing high-specificity base rule here.
+     **Twenty-third/twenty-fourth instances done (2026-09-13) — see Done item 321**:
+     `fontSize:10/11` on `.pill-*` badge spans (16 occurrences, extracted into `.fs-10`/`.fs-11`,
+     no `!important` needed) and `fontSize:14` on a `.stat-card .value` div (8 occurrences,
+     extracted into `.fs-14`, `!important` needed since `.stat-card .value`'s own descendant
+     selector beats a plain class — the same trap as `.w-90`, checked and handled up front this
+     time rather than found by a live-verification surprise). Also caught a second bulk-script
+     blind spot: `className={...}` (a JS expression, not a plain string literal) doesn't match
+     the "merge into existing className" regex, same class of gap as Done item 319's arrow-
+     function trap — 2 instances fixed by hand.
+117. ~~App-wide "everything should be a grid item except tables" principle (2026-09-06)~~ —
+     **done in full (2026-09-08), see Done item 237.** Every module's landing/Settings page has
+     been audited for the "short non-table cards stacked full-width" pattern; Cash's Settings
+     tab (General + Data management) was the one genuine remaining instance, now gridded — every
+     other module either already had this fix (Bank/PSX) or never had the multi-card shape to
+     begin with (Funds/Subscriptions/Rentals/QSE, each with only one substantive Settings card).
+~~118. Ticker logo rollout, remaining surfaces~~ — **done in full (2026-09-08), see Done item
+     247.** Extended `TickerLogo` to the Trade Planner (title pill, summary cards, analysis
+     table, leg rows), both standalone Risk Analysis pages plus each `StockPage`'s own embedded
+     Risk Analysis tab (via a new `exchange` prop on the shared `RiskCalculator.tsx`), both
+     Trade Calculator popups, and Funds' fund list/detail (resolved the item's own flagged
+     open design question — no Funds-specific CDN mode was built; `exchange="psx"` reuses the
+     existing "no known CDN, local-drop-in or colored-initials only" path, keyed off `fund.code`
+     rather than `fund.id`).
+119. **Broader raw-input/raw-select width-consistency audit (2026-09-07)** — Done item 257
+     fixed the concrete, visibly-broken manifestation of "give form elements the same width"
+     (a Select+IconButton composite row wrapping inside a narrow popup), on top of substantial
+     already-existing infrastructure for this exact complaint (`Field`'s own `width=180`
+     default, `.row > *`'s shared `min-width:160px`, `.btn`'s shared `min-width:100px`). Not
+     done: a systematic sweep of every RAW (non-`Field`-wrapped) `<input>`/`<select>` app-wide
+     to confirm none of them still render inconsistently sized relative to a sibling — only do
+     this if a further specific instance is reported, since a blind sweep risks either missing
+     the real remaining cases or touching CSS that's already correctly tuned elsewhere.
+120. **Pending-transaction-state rollout remainder (2026-09-08)** — Done item 238 shipped the
+     core `Finance.isPending`/`cashPendingByCurrency`/`accountPendingBalance` pattern for Cash +
+     Banking (retrofitted from a string `status` field to a plain boolean the same day, see that
+     item's own addendum). The user confirmed (via `AskUserQuestion`) they want this in every
+     module eventually — the remaining rollout, roughly in order of how directly each module
+     maps onto the pattern already built:
+     - ~~QSE/PSX (a pending stock order)~~ — **done (2026-09-08), see Done item 243.**
+     - ~~Rentals/Personal Loans/Funds~~ — **done (2026-09-08), see Done item 244.**
+     - **Subscriptions** — deliberately NOT done, and not a gap: a `Subscription` is a single
+       object with a `startDate`/`active` flag, not a per-transaction ledger, so there's no
+       "not yet cleared" record for a pending flag to attach to (same reasoning already
+       documented for why Subscriptions was skipped from the `time`/`timezone` rollout).
+     - **EMI** — deliberately NOT done, genuinely different from every other module: its real
+       outstanding-balance/schedule figures derive from `EMILoan.installmentOverrides`/
+       `customMonthlyPayment` via `emiSchedule()`, not directly from the `EMIRepayment[]`
+       ledger the way every other module's headline function reads its own entries array.
+       Retrofitting pending-state onto that engine (already through several real bug-fix
+       rounds — Done items 154/161/165) needs its own `AskUserQuestion` scoping round before
+       writing code, the same bar QSE/PSX needed for its own genuinely-different-from-Cash/
+       Bank design (Done item 243) — not attempted blind.
+     - The Planning feature's own 3rd original motive ("well-known/estimated/pending" — see
+       Done item 43) named "pending transfers still in process and invisible on either side" as
+       one of Planning's founding use cases, but Planning's own planned entries are
+       hypothetical/not-yet-executed and never touch a real balance — genuinely different from
+       this feature's real, already-happened-but-not-cleared transactions. Once Pending-state
+       covers more modules, it's worth revisiting whether Planning's UI should surface a
+       module's pending items alongside its planned ones (both are "money not fully settled
+       yet," from the user's point of view) — not designed yet, flagged here rather than
+       silently conflated with Planning during this pass.
+121. **Two broader UI principles from the 2026-09-09 batch (see Done item 279), deliberately
+     not attempted as a blind sweep — real page-by-page audits, each its own scoped pass**:
+     (a) "use natural order for UI sections (Entity detail, trans, analytics, etc.)" — several
+     module pages already follow something close to this (e.g. Banking's `AccountDetailPage`,
+     reordered by Done item 215 to lead with Account details), but this hasn't been checked
+     against every module's own page consistently. **First real instance found and fixed
+     (2026-09-10) — see Done item 297**: Bank's own tab order had Planning AFTER Analytics
+     with no stated reason, while Cash — sharing the exact same Planning feature — has it
+     BEFORE Analytics per the user's own explicit spec (Done item 224). Aligned Bank to match.
+     Also checked QSE's/PSX's `StockPage.tsx` (Summary → Trades → Risk Analysis, already
+     consistent between both exchanges and already natural) and every other module's tab
+     order (Funds/Rentals both already agree with each other on Import-before-Analytics;
+     Settings already sits last everywhere it exists) — no further inconsistency found this
+     pass. **Still open** as a standing thing to re-check whenever a new page ships, per this
+     item's own original framing — not a one-time audit to close out.
+     ~~(b) "many pages still have settings while asked to make them global & centralized"~~ —
+     **done for every module that has a Settings tab at all (2026-09-09) — see Done item 294.**
+     Cash/Funds/Rentals/Subscriptions already had this fix (own Done items, see the app-wide
+     UI/UX redesign section in CLAUDE.md); QSE's and PSX's `SettingsPage.tsx` were the two
+     remaining modules still duplicating `/account`'s Profile/Sign-in/Sign-out UI locally, now
+     trimmed to the same "...live on the Account page →" pointer pattern. Personal Loans and
+     EMI have no Settings/Account tab at all (confirmed by reading both files) — nothing there
+     to trim, so this closes the item everywhere it could actually apply.
+
+~~122. Trade Transactions: sold price / lot P&L / overall avg-cost P&L~~ — **done (2026-09-08),
+     see Done item 242.** Confirmed via `AskUserQuestion` the missing piece was showing a sell's
+     realized P&L inline in the main trade row (not a new section — Closed Trades/
+     `PositionDetail`'s P/L card already covered the rest).
+~~123. Math-expression evaluation in number inputs~~ — **done (2026-09-08), see Done item 241.**
+     Rolled out to `TransactionEntryModal.tsx`'s Amount field and QSE's/PSX's Trade Transactions
+     Shares/Price fields; the Trade Calculator's Amount field already had its own equivalent
+     local-text-state mechanism (Done item 51) and wasn't touched. Not yet extended to every
+     other Amount-style field app-wide (e.g. per-module add-record forms) — a reasonable further
+     rollout, not attempted in one pass per this project's own incremental discipline.
+~~124. Banded (striped) table rows app-wide~~ — **already built**, checked before assuming it
+     needed work (same "check git history/live code before assuming it needs work" discipline
+     this file has repeated many times): `theme.css`'s `tbody tr:nth-child(even){background:
+     color-mix(in srgb, var(--panel-2) 55%, var(--panel));}` (its own comment cites an earlier
+     "item 14" user report) already applies this app-wide, with no competing override found.
+~~125. Inter-currency transfer auto-fill from cached FX rate~~ — **done (2026-09-08), see Done
+     item 240.**
+~~126. Single shared category list used everywhere + per-user customization~~ — **done in full
+     (2026-09-08), see Done items 245/248.** Cash/Bank/Rentals share one real registry
+     (`lib/categories.ts`/`categoryStore.ts`, Done item 221); Subscriptions and Funds (the
+     latter's own fixed `'Equity'|'Debt'|'Hybrid'|'International'|'Other'` enum, a deliberate-
+     at-the-time deviation from this project's own "category fields must be free-form" rule)
+     both now retrofit onto the same registry via an optional `categoryID`, keeping their old
+     free-text/fixed-enum field as a read-only display fallback for pre-migration records.
+~~127. Per-user selectable currency subset~~ — **done (2026-09-08), see Done item 246.**
+
+~~128. Sidebar: nest QSE/PSX's own page list as a real subnav under "Stock Exchanges", not a
+     separate accordion~~ — **done (2026-09-09), see Done item 281.**
+~~129. Transaction-detail popup on row click, since tables truncate long text~~ — **QSE/PSX
+     Trade List done (2026-09-09), see Done item 284. Generalizing to other modules' tables is
+     a real, separate remaining rollout — see Pending item 132.**
+~~130(a). Rename "Income"/"Expense" to Inflow/Outflow-equivalent wording wherever the figure
+     can include an inter-account transfer~~ — **done (2026-09-09), see Done item 282.**
+~~130(b)-i. The "this month vs last month" net-worth delta, shown as both an amount and a
+     percentage~~ — **done (2026-09-09), see Done item 285.**
+130(b)-ii. **True category-level Income/Expense/Ignore classification — still open.** Build a
+     `kind: 'income' | 'expense' | 'ignore'` field on `Category`, seeded sensible defaults for
+     the user's own named categories (Income, Grocery, Bill, Extra, Guests, Tuition Fee, Other
+     Fees, Other, Ignore, plus more generic ones), a per-category "which zone" picker in
+     Account/Category settings (the user's own red=expense/green=income/gray=ignore framing),
+     and expense-category-split charts built on this classification. A real design pass, not
+     yet started — genuinely new, and several of this app's real 27 production categories
+     (Extra, Misk, Reserve, Saving, Touring — see `lib/categories.ts`) have no obvious
+     income/expense/ignore mapping without guessing at the user's own real spending intent, so
+     this needs either the user's own classification pass or an explicit "leave ambiguous ones
+     unclassified by default" design confirmed with them first, not a blind guess baked into
+     seed data used for real money.
+~~131. First-time currency-selection prompt~~ — **done (2026-09-09), see Done item 283.**
+~~132. Roll the new `RecordDetailModal` (Done item 284) out beyond QSE/PSX's Trade List~~ —
+     **done (2026-09-09), see Done items 286/288.** Cash and Bank (Done item 286) and Rentals/
+     Personal Loans/Funds (Done item 288, developed in parallel) all got row-click detail
+     popups on their main transaction-style tables — the latter caught and fixed the same
+     `ReorderButtons`-`stopPropagation` bug Done item 286 found, this time in Personal Loans'
+     repayments table. EMI's Schedule table and Subscriptions' `SubscriptionList` were
+     deliberately left out, each for a stated reason (EMI's row already shows every field with
+     nothing truncated; Subscriptions is an `EntityCard` grid with no per-transaction ledger
+     and already opens a richer detail page on click) — not a remaining gap.
+133. **Cash's own UI called out as "showing scrollable tables, dense UI but still unreadable,"
+     alongside "all other modules should [use Bank's per-entity page flow]" (2026-09-11).**
+     Real complaint, not yet acted on — needs the user's own concrete example before guessing
+     at a redesign. Bank's own page-per-entity flow (a homepage list of named accounts, click
+     into a dedicated `/bank/account/:id` page) doesn't map onto Cash as directly as it did onto
+     Personal Loans'/EMI's/Rentals' lists (Done items 271-273): Cash's primary view is a
+     per-currency STATEMENT (one ledger per currency the user holds), not a list of several
+     independently-named entities the way a bank account or a loan is — there's no obvious
+     "entity" to click into for a page of its own beyond "this currency's whole statement,"
+     which is already what the existing per-currency `CashStatementTable` shows. Don't guess at
+     a specific fix here; ask which table/section reads as unreadable and why (too many columns?
+     too small text? wrong density setting?) before redesigning.
 134. **`lib/calc/closedTrades.ts`'s "Closed trades" reporting ledger doesn't know about
      `Transaction.targetLotBuyId` (2026-09-13, flagged while fixing Done item 314).** That
      module is its OWN independent FIFO simulation (by design decoupled from
