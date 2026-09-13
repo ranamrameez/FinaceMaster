@@ -8718,6 +8718,35 @@ FinanceManager live link:
   .value` on the same page correctly still showing `17px` — zero console errors. `npx tsc -b`
   / `npm run test` (682 tests, unchanged) / `npm run build` all clean.
 
+- **322. Repair pass for already-migrated Credit Cards missing their opening balance
+  (2026-09-13) — a real bug found while re-diagnosing PR #181's own report, which GitHub shows
+  merged but whose actual code was never present on `main`'s tip when this session started
+  (unclear why — possibly a later reset; the important part is `main` was genuinely missing the
+  fix, which is exactly why the user was still seeing the same wrong figures).** Re-applied
+  PR #181's original `CreditCard.openingBalance` fix unchanged, then investigated the user's
+  fresh backup + two new screenshots showing the SAME wrong balance plus a confusing second page
+  for the same real card. Root cause: their GCC card was migrated by an OLDER version of
+  `migrate()` — from before `openingBalance` carryover existed at all, and from before this
+  code even set `isActive: false` on the source `BankAccount` — so the resulting `CreditCard`
+  is permanently missing `openingBalance`, and the old `BankAccount` is still active, showing
+  up as its own separate, fully-editable duplicate of the same real card (confirmed exactly by
+  reconstructing the reported numbers from the attached backup: without `openingBalance`, the
+  card's own "Owed" figure clamps to 0 via `Math.max(0, balance)`, matching the screenshot's
+  "Used: 0.00 QAR"). New `RepairStaleMigrations` banner (`CreditCardsSection.tsx`): detects any
+  already-migrated account still missing this backfill and, on one sign-in-gated click, fixes
+  both — backfills the card's `openingBalance` from the source account (never overwriting a
+  value already set) and closes the stale duplicate account. General and idempotent, not a
+  one-off script for this user's data — protects against the same staleness recurring for any
+  future migration-logic fix. Also: `BankDetailPage`'s linked-accounts list now excludes
+  migrated accounts (they were still listed under their bank as a normal account), and
+  `AccountDetailPage` shows a redirect notice + link to the real Credit Card page if a migrated
+  account is reached directly. Verified live via Playwright, seeding the exact reported
+  scenario: the repair banner correctly detects the stale account and lists it, the card's own
+  "Owed" stat reads 0 QAR before repair (reproducing the bug), "Repair now" hits the real
+  sign-in gate, Bank's own detail page no longer lists the migrated account, and a direct link
+  to the stale account page shows the new redirect notice — zero console errors. `npx tsc -b` /
+  `npm run test` (682 tests, unchanged) / `npm run build` all clean.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`

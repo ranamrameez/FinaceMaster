@@ -6816,6 +6816,45 @@ touched those.
   pattern as directly as Personal Loans'/EMI's/Rentals' lists already did — needs the user's
   own concrete example of what reads as unreadable before guessing at a redesign.
 
+- **Repair pass for already-migrated Credit Cards missing their opening balance
+  (2026-09-13) — see README Done item 322.** PR #181's own report resurfaced: GitHub shows it
+  merged, but its code was never actually present on `main`'s tip at the start of this session
+  (grepped `origin/main`'s own `CreditCardsSection.tsx` for the fix and found nothing) —
+  unclear why, possibly a later reset, but the practical upshot is the openingBalance fix never
+  actually reached the user's live app, which is exactly why they reported the same wrong
+  figures again with a fresh backup. Re-applied that original fix, then investigated the fresh
+  report: their GCC card was migrated by an OLDER version of `migrate()` (from before
+  `openingBalance` carryover existed at all, and from before this code even set
+  `isActive: false` on the source `BankAccount`) — so the resulting `CreditCard` is
+  permanently missing `openingBalance`, and the old `BankAccount` is still active, showing up
+  as its own separate, fully-editable duplicate of the same real card. New
+  `RepairStaleMigrations` banner detects this and, on one sign-in-gated click, backfills the
+  card's `openingBalance` from the source account (never overwriting anything already set) and
+  closes the stale duplicate — general and idempotent, not a one-off fix for this user's data.
+  Also excluded migrated accounts from `BankDetailPage`'s linked-accounts list and added a
+  redirect notice on `AccountDetailPage` for a migrated account reached directly. This session
+  also hit a real git-history mystery worth remembering: this designated branch's OWN prior PR
+  (#181) reported as merged via the GitHub API, yet its content was absent from `main` — always
+  verify a "merged" PR's actual diff is live in the branch you're building on, don't just trust
+  the API's `merged: true` flag, especially after a long gap between sessions. Separately, a
+  large amount of concurrent work landed on `main` while this fix was being built (a full
+  "Trade Strategy" redesign, an app-wide fixed top bar, PSX fee-mode redesign, and 3+ rounds of
+  app-wide CSS cleanup) — merging that in produced two real conflicts in `CreditCardsSection.tsx`
+  (pure cosmetic — the concurrent CSS-cleanup PRs had converted the same `style={{width:...}}`
+  inline styles this session's own diff touched into `.w-90`/`.w-130`/`.w-140` classes; resolved
+  by taking the newer class-based versions) and, more seriously, a self-inflicted `README.md`
+  merge-resolution bug: a first-pass regex-based conflict resolver correctly resolved BOTH
+  conflict hunks in isolation, but the net result somehow dropped roughly 1,400 lines of
+  `origin/main`'s own Done-item history that should have survived — caught by diffing the
+  merged branch against `origin/main` directly (`git diff origin/main -- webapp/README.md`)
+  and finding zero unique additions on this branch's side, meaning every difference was a pure,
+  accidental deletion. Fixed by discarding the botched resolution and taking `origin/main`'s
+  `README.md` wholesale (safe, since there was nothing unique to preserve), then re-adding this
+  session's own new Done item on top. **Lesson for any future large doc-conflict merge**: after
+  resolving, always diff the merged result against the OTHER side directly, not just check for
+  leftover conflict markers — a resolver can silently drop content while still producing a
+  clean, marker-free file that LOOKS correctly merged.
+
 ## Live URLs
 
 - **https://ranamrameez.github.io/FinaceMaster/** — the React app (QSE + PSX,
