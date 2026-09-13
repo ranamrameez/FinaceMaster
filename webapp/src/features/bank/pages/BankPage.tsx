@@ -1404,10 +1404,10 @@ function TransactionsList({ account }: { account: BankAccount }) {
                 <td className="cell-clip" title={tx.description} onClick={(e) => e.stopPropagation()}>
                   {tx.description}
                   {tx.isPending && (
-                    <span className="pill-warn" style={{ marginLeft: 6 }} title="Not yet cleared — excluded from Current balance above until marked cleared.">Pending</span>
+                    <span className="pill-warn ml-6" title="Not yet cleared — excluded from Current balance above until marked cleared.">Pending</span>
                   )}
                   {link && (
-                    <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
+                    <Link to={linkTargetPath(otherSide!)} className="pill-info ml-6" title="Linked — go to the other side">
                       🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
                     </Link>
                   )}
@@ -1821,7 +1821,7 @@ function AccountSection({
   return (
     <div>
       {cloudEmpty && (
-        <Notice tone="warning" style={{ marginTop: 8 }}>
+        <Notice tone="warning" className="mt-sm">
           <p className="mt-0">
             No data found in the cloud for this account's Banking workbook. This won't upload automatically.
           </p>
