@@ -8607,6 +8607,29 @@ FinanceManager live link:
   `Transaction.targetLotBuyId` (Pending item 134, unrelated to this feature — that's about a
   SPECIFIC lot a user explicitly targeted via "Sell this lot," this is about re-sorting ALL
   open lots by price for comparison).
+  **Same-day follow-up, user-prompted ("one feature rolled out should be reflected in all
+  related views"): the toggle above was missing from two other views showing the exact same
+  per-sell realized-P&L figure.** Audited every consumer of `computeClosedTrades`/
+  `closedPLBySellTxId` on the page rather than trusting the toggle's own scope — found
+  `sellPLById` (the inline "P/L" pill shown on each SELL row in the main Trade List table, and
+  the same figure surfacing as "Realized P/L" in that row's click-to-open `RecordDetailModal`
+  popup, Done item 284) was still hardcoded to `computeClosedTrades(transactions, calcFee)`
+  with no third argument — always FIFO, regardless of what the Closed Trades table right below
+  it was set to. This meant the SAME sell's realized P&L could show two contradicting numbers
+  on one page: the row's own pill in FIFO, the Closed Trades table's row in cheapest-lot-first.
+  Fixed by threading `ctMatchOrder` into `sellPLById`'s computation in both QSE's and PSX's
+  `TransactionsPage.tsx`, and updated the "P/L" column header's tooltip (previously worded
+  "matched FIFO," now says the figure follows whichever Match order is picked below) so the
+  copy doesn't go stale the moment a user picks the other view. **Lesson worth repeating**:
+  when a toggle is added to one view of a number, grep for every OTHER place that same number
+  (or the function that computes it) surfaces before calling the rollout done — a toggle that
+  only reaches the headline table while a same-page pill/popup keeps showing the old fixed
+  view is a real, confusing inconsistency, not a cosmetic gap. Verified live via Playwright
+  with the same seeded scenario as the original feature: the inline row pill and the popup's
+  "Realized P/L" both read −3.59 QAR under FIFO and both flipped to +2.59 QAR the moment the
+  Closed Trades toggle was switched to Cheapest-lot-first — same number, same toggle, every
+  view. `npx tsc -b` / `npm run test` (682 tests, unchanged — pure wiring, no new calc logic) /
+  `npm run build` all clean.
 - **App-wide CSS cleanup, nineteenth/twentieth concrete instances — a real regression caught
   by live verification BEFORE shipping, not after — see Done item 318 (2026-09-13).**
   Continuing the same practice onto the two most-repeated width values: a bare
