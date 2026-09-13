@@ -5813,6 +5813,44 @@ app, not developer notes) continuously as features ship.
   'fifo'`: only the cheap lot showed "Sell this lot," clicking it pre-filled the popup
   correctly, and submitting hit the real sign-in gate — zero console errors. `npx tsc -b` /
   `npm run test` (678 tests, 7 new) / `npm run build` all clean.
+- **User uploaded a real full-app backup and asked for a per-share sell-price/P&L study of
+  their MARK (QSE) trades (2026-09-13) — answered directly in chat, no code needed.**
+  Replicated the app's own real calc functions (`sortTransactionsChronological`,
+  `makeQSEFeeCalculator`, `computeClosedTrades`, `computePositions`) against the uploaded data
+  in a throwaway script: every one of MARK's 11 FIFO lot-matches was a loss (total realized
+  -36.07 QAR across 749 shares), with the 2026-09-08 sells draining the OLDEST (priciest) June
+  lots under FIFO while a cheaper Aug 10 lot sat untouched and was, at that same price, already
+  above its own break-even — a live real-world instance of exactly the pattern Partial Trade
+  Strategy (Done item 301) exists to catch. Cross-verified FIFO vs. weighted-average
+  (realized+unrealized both reconciled to the identical -51.02 QAR total), confirming the
+  cost-basis method only changes the realized/unrealized split, never the true total.
+- **Closed Trades reporting ledger gains a "Cheapest lot first" alternative view alongside
+  FIFO, same day (2026-09-13) — see README Done item 315.** Direct follow-up to the MARK
+  analysis above: the user then asked "FIFO maybe correct for PSX but QSE behaves different.
+  WHY? bcz shares are charged fix fee 0.275 for each buy/sell. so buy order doesn't matter,
+  just the price is important. so, we can try to sell to most cheaper to most expensive ones" —
+  confirmed correct by reading the actual fee code, and, checking further, found the same
+  invariance also holds for PSX's own same-day netting (it operates at the whole-transaction
+  level, never per-lot) — so for BOTH exchanges, which lot `computeClosedTrades` credits a sale
+  to never changes any real fee/cost/proceeds, only the story this REPORTING ledger tells.
+  Asked via `AskUserQuestion`; user picked **"Add a second view, keep FIFO default
+  (Recommended)."** `computeClosedTrades()` gained a `matchOrder: 'fifo' | 'lowestCostFirst' =
+  'fifo'` parameter — `'lowestCostFirst'` matches each sale against the cheapest still-open lot
+  instead of oldest-first, falling through to the next-cheapest once one is exhausted.
+  **Deliberately does NOT touch `computeFIFOPositions`'s own real "Open trades" table** — that
+  stays genuine FIFO regardless, since it feeds PSX's actual opt-in cost-basis mode, not just a
+  report; verified live that toggling the Closed Trades view leaves it unchanged. **A real
+  subtlety caught while writing tests, not assumed**: total realized P/L across the two match
+  orders is identical ONLY once every bought share is sold — with shares still open, the two
+  methods leave genuinely different residual lots behind, so a partial close's realized-so-far
+  totals legitimately differ between them (tested explicitly, both the differing-partial and
+  converging-full cases). Wired into both `TransactionsPage.tsx` files as a chip-toggle row
+  above the Closed Trades table with exchange-specific explanatory tooltips. Verified live via
+  Playwright with a seeded old-expensive-lot (50@10.40) + newer-cheap-lot (14@9.96) + one
+  14-share sell at 10.20: FIFO showed the 10.40 lot (netPL -3.59), Cheapest-lot-first showed
+  the 9.96 lot (netPL +2.59, strictly better), round-trip back to FIFO matched exactly, and the
+  Open trades table (14@9.960 + 36@10.40) stayed identical regardless of the toggle — zero
+  console errors. `npx tsc -b` / `npm run test` (682 tests, 4 new) / `npm run build` all clean.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

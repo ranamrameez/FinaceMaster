@@ -13,7 +13,7 @@ import { useSortableRows } from '../../../hooks/useSortableRows';
 import { usePageFabActions } from '../../../hooks/usePageFabActions';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { confirmAndDeleteLinkable, propagateLinkedEdit, resolveLinkedEdit } from '../../../lib/linkCascade';
-import { closedPLBySellTxId, computeClosedTrades } from '../../../lib/calc/closedTrades';
+import { closedPLBySellTxId, computeClosedTrades, type LotMatchOrder } from '../../../lib/calc/closedTrades';
 import { computeFIFOPositions, type FIFOLot } from '../../../lib/calc/fifoPositions';
 import { isNettedLeg } from '../../../lib/calc/psxFees';
 import { transferRunningBalance } from '../../../lib/calc/transferBalance';
@@ -261,6 +261,13 @@ function TransactionList() {
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editRow, setEditRow] = useState<Transaction | null>(null);
   const [detailTx, setDetailTx] = useState<Transaction | null>(null);
+  // User-reported (2026-09-13): PSX's own same-day netting decides a whole
+  // TRANSACTION's fee from that day's total buy vs. sell quantity, never
+  // from which lot a sale is later attributed to here — so FIFO's "oldest
+  // lot first" is a pure reporting convention in this ledger too, not a
+  // real constraint. Offer cheapest-lot-first as a second, explicitly
+  // comparison-only view (see `closedTrades.ts`'s `LotMatchOrder` comment).
+  const [ctMatchOrder, setCtMatchOrder] = useState<LotMatchOrder>('fifo');
 
   const indexed = workbook.transactions.map((tx, i) => ({ tx, i }));
   const tickers = useMemo(() => [...new Set(workbook.transactions.map((t) => t.ticker))].sort(), [workbook.transactions]);
@@ -321,8 +328,9 @@ function TransactionList() {
       computeClosedTrades(
         filterTicker === 'ALL' ? workbook.transactions : workbook.transactions.filter((t) => t.ticker === filterTicker),
         calcFee,
+        ctMatchOrder,
       ),
-    [workbook.transactions, calcFee, filterTicker],
+    [workbook.transactions, calcFee, filterTicker, ctMatchOrder],
   );
   type CTCol = 'ticker' | 'buyDate' | 'buyPrice' | 'sellDate' | 'sellPrice' | 'shares' | 'buyFee' | 'sellFee' | 'netPL' | 'holdingDays';
   const ctSortValue = (t: (typeof closedTrades)[number], col: CTCol): number | string => {
@@ -633,11 +641,22 @@ function TransactionList() {
 
       <details open className="mt-md">
         <summary className="summary-heading">
-          <Tooltip text="Each fully or partially closed round-trip, matched buy-to-sell via FIFO, with its own buy price, sell price, fees on both legs, and net P/L — so a closed trade's own numbers stay separate from whatever the currently-open position shows.">
+          <Tooltip text="Each fully or partially closed round-trip, matched buy-to-sell, with its own buy price, sell price, fees on both legs, and net P/L — so a closed trade's own numbers stay separate from whatever the currently-open position shows.">
             Closed trades (realized round-trips)
           </Tooltip>{' '}
           — {sortedClosedTrades.length}
         </summary>
+        <div className="row gap-sm mb-sm" style={{ alignItems: 'center' }}>
+          <Tooltip text="Same-day netting decides a whole transaction's fee from that day's total buy vs. sell quantity — never from which lot a sale is later credited to here, so this is purely which STORY this table tells, not a real amount. FIFO (oldest lot first) is what most brokers default to. Cheapest-lot-first re-tells the same sales against your lowest-cost lots instead, for comparison — it never changes your real position, fees, or the Open lots table above.">
+            Match order
+          </Tooltip>
+          <button type="button" className={`chip${ctMatchOrder === 'fifo' ? ' active' : ''}`} onClick={() => setCtMatchOrder('fifo')}>
+            {ctMatchOrder === 'fifo' && <CheckIcon size={11} />}FIFO (oldest first)
+          </button>
+          <button type="button" className={`chip${ctMatchOrder === 'lowestCostFirst' ? ' active' : ''}`} onClick={() => setCtMatchOrder('lowestCostFirst')}>
+            {ctMatchOrder === 'lowestCostFirst' && <CheckIcon size={11} />}Cheapest lot first
+          </button>
+        </div>
         <div className="table-scroll">
           <table>
             <thead>

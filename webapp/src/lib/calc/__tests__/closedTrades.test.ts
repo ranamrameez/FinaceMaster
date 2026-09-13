@@ -149,4 +149,78 @@ describe('closedPLBySellTxId', () => {
     );
     expect(Object.keys(closedPLBySellTxId(trades))).toHaveLength(0);
   });
+
+  describe('matchOrder (user-reported 2026-09-13: neither exchange\'s fee depends on which lot a sale is attributed to)', () => {
+    // The real shape this exists for: an older, EXPENSIVE lot and a newer,
+    // CHEAP lot both open when a sell happens at a price above the cheap
+    // lot's cost but below the expensive lot's — FIFO (default) locks in a
+    // loss against the expensive lot while the cheap lot sits untouched;
+    // 'lowestCostFirst' instead credits the sale to the cheap lot, showing
+    // a gain, and leaves the expensive lot open instead.
+    const lots: Transaction[] = [
+      tx({ id: 'buy-old-expensive', date: '2026-01-01', action: 'BUY', shares: 50, price: 10.40 }),
+      tx({ id: 'buy-new-cheap', date: '2026-01-15', action: 'BUY', shares: 14, price: 9.96 }),
+    ];
+
+    it('defaults to FIFO (oldest lot first), unchanged from before this parameter existed', () => {
+      const trades = computeClosedTrades([...lots, tx({ date: '2026-02-01', action: 'SELL', shares: 14, price: 10.20 })], flatFee);
+      expect(trades).toHaveLength(1);
+      expect(trades[0].buyPrice).toBe(10.40);
+    });
+
+    it('lowestCostFirst matches the cheaper lot instead, even though it was bought later', () => {
+      const trades = computeClosedTrades(
+        [...lots, tx({ date: '2026-02-01', action: 'SELL', shares: 14, price: 10.20 })],
+        flatFee,
+        'lowestCostFirst',
+      );
+      expect(trades).toHaveLength(1);
+      expect(trades[0].buyPrice).toBe(9.96);
+      // Same sale, cheaper cost basis credited -> strictly more favorable P/L than FIFO's.
+      const fifoTrades = computeClosedTrades([...lots, tx({ date: '2026-02-01', action: 'SELL', shares: 14, price: 10.20 })], flatFee);
+      expect(trades[0].netPL).toBeGreaterThan(fifoTrades[0].netPL);
+    });
+
+    it('falls through to the next-cheapest lot once the cheapest is exhausted', () => {
+      const trades = computeClosedTrades(
+        [...lots, tx({ date: '2026-02-01', action: 'SELL', shares: 20, price: 10.20 })],
+        flatFee,
+        'lowestCostFirst',
+      );
+      expect(trades).toHaveLength(2);
+      expect(trades[0].buyPrice).toBe(9.96);
+      expect(trades[0].shares).toBe(14);
+      expect(trades[1].buyPrice).toBe(10.40);
+      expect(trades[1].shares).toBe(6);
+    });
+
+    it('total realized P/L is identical between match orders ONLY once every share is sold — with shares still open, the two methods leave a genuinely different remainder behind, so their realized totals differ on purpose', () => {
+      // Partial close (44 of 64 shares) — the two methods leave DIFFERENT
+      // shares open (FIFO: a mix of both lots; lowestCostFirst: only the
+      // expensive lot), so their realized-so-far totals are NOT expected
+      // to match — this is the real, intentional tradeoff being tested,
+      // not a bug.
+      const partial: Transaction[] = [
+        ...lots,
+        tx({ date: '2026-02-01', action: 'SELL', shares: 14, price: 10.20 }),
+        tx({ date: '2026-03-01', action: 'SELL', shares: 30, price: 10.05 }),
+      ];
+      const fifoPartial = computeClosedTrades(partial, flatFee).reduce((s, t) => s + t.netPL, 0);
+      const lcfPartial = computeClosedTrades(partial, flatFee, 'lowestCostFirst').reduce((s, t) => s + t.netPL, 0);
+      expect(lcfPartial).not.toBeCloseTo(fifoPartial, 1);
+
+      // Fully closed (all 64 shares sold) — now there's no remainder left
+      // for the two methods to attribute differently, so the total must
+      // match exactly: it's just (total sell proceeds) - (total buy cost),
+      // independent of which lot each sale was said to close.
+      const full: Transaction[] = [
+        ...lots,
+        tx({ date: '2026-02-01', action: 'SELL', shares: 14, price: 10.20 }),
+        tx({ date: '2026-03-01', action: 'SELL', shares: 50, price: 10.05 }),
+      ];
+      const fifoFull = computeClosedTrades(full, flatFee).reduce((s, t) => s + t.netPL, 0);
+      const lcfFull = computeClosedTrades(full, flatFee, 'lowestCostFirst').reduce((s, t) => s + t.netPL, 0);
+      expect(lcfFull).toBeCloseTo(fifoFull, 5);
+    });
+  });
 });
