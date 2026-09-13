@@ -8747,6 +8747,53 @@ FinanceManager live link:
   to the stale account page shows the new redirect notice — zero console errors. `npx tsc -b` /
   `npm run test` (682 tests, unchanged) / `npm run build` all clean.
 
+- **323. CRITICAL, user-reported real financial loss (2026-09-13).** User's own
+  words: "APP SOLD highest price lots resulting a suggestion to sell the remaining ones. which
+  caused in real loss by selling the expensive ones," with a real screenshot of their IQCD
+  position (Partial Trade Strategy suggesting "Sell" on all 3 remaining lots) and their real
+  production QSE backup attached. Root cause, confirmed by hand-tracing their exact real
+  transaction history: `computeFIFOPositions` always drains the OLDEST open lot first
+  (chronological FIFO) — correct and unchanged for PSX's real, user-opted-in
+  `costBasisMethod: 'fifo'` cost basis, but wrong for the Partial Trade Strategy advisory
+  feature, whose own tooltip explicitly promises it "concentrates your remaining position in
+  your worst-performing lots." Chronological FIFO only does that by coincidence (when price has
+  trended one direction since the oldest buy); for the real IQCD case — 50 sh bought first at
+  10.40 (expensive), 14 sh bought LATER at 9.962 (cheap) — oldest-first FIFO fully drained the
+  EXPENSIVE lot across a real series of sells, leaving the two CHEAP lots as the "still open,
+  already profitable at the 10.20 market price" remainder — the exact opposite of the feature's
+  promise, and exactly what produced the wrong "sell the cheap ones" advice that led the user to
+  sell at a real loss while the true loser sat untouched.
+  **Fix**: `computeFIFOPositions` (`lib/calc/fifoPositions.ts`) gained a new
+  `matchOrder: LotMatchOrder = 'fifo'` parameter (type moved here from `closedTrades.ts`, which
+  now re-exports it — one canonical doc comment covering both consumers). `'fifo'` (the default,
+  unchanged) is what PSX's real cost-basis call site (`usePSXDerived.ts`) keeps using, completely
+  untouched — no real user's displayed Avg Cost/BE changes silently, per this project's own
+  locked cost-basis-method rule. `'lowestCostFirst'` (same lowest-`buyPrice`-first selection
+  `closedTrades.ts`'s own `LotMatchOrder` already used for its reporting ledger) is now passed
+  by every advisory consumer: `partialTradeStrategy.ts`'s `scanPortfolioForOpportunities` (the
+  Partial Trade Alerts popup scan), and both QSE's and PSX's `TradeStrategyPage.tsx` (the
+  per-ticker Partial Trade Advisor). Also fixed a real, related consistency gap: QSE's/PSX's
+  Trade Transactions page had a "Match order" toggle (FIFO / Cheapest lot first) that already
+  drove the separate "Closed trades" reporting table, but its own tooltip explicitly claimed it
+  "never changes... the Open lots table above" — the "Open trades" table (README item 5's other
+  half) was still hardcoded to oldest-first FIFO regardless of the toggle, so switching it could
+  make the two tables silently stop adding up to the same true picture. Wired the same
+  `ctMatchOrder` state into the Open trades table's own `computeFIFOPositions` call and moved the
+  toggle to sit ABOVE both tables (a shared control, not nested inside just one of them), with
+  both tooltips corrected. **Live-verified the exact real reported scenario**, not just unit
+  tests: seeded the user's own real IQCD transaction sequence and confirmed on the Trade
+  Transactions page that the Open trades table shows `[1@10.08, 1@10.08, 11@9.962]` under FIFO
+  (reproducing the bug) and `[13@10.40]` under Cheapest lot first (the fix) — and on the Trade
+  Strategy page, the Partial Trade Advisor now shows NOTHING for this ticker post-fix (correct:
+  once the fix collapses the remainder to a single lot, there's no multi-lot comparison left to
+  advise on — a `lots.length < 2` guard the component already had, not new logic), instead of
+  wrongly suggesting "sell all 13 shares" as it did pre-fix. New tests:
+  `fifoPositions.test.ts` gained a `matchOrder: 'lowestCostFirst'` describe block (4 cases,
+  including the exact real IQCD transaction sequence as a named regression test);
+  `partialTradeStrategy.test.ts` gained an end-to-end regression using the same real sequence,
+  confirming `scanPortfolioForOpportunities` no longer flags the position at all post-fix. `npx
+  tsc -b` / `npm run test` (687 tests, 5 new) / `npm run build` all clean.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`

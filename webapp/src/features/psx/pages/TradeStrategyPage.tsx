@@ -176,7 +176,13 @@ function PartialTradeAdvisor({ ticker, onSellLot }: { ticker: string; onSellLot:
   const currency = workbook.settings.currency;
   const { feePct, tick } = workbook.settings;
 
-  const { lotsByTicker } = useMemo(() => computeFIFOPositions(workbook.transactions, calcFee), [workbook.transactions, calcFee]);
+  // 'lowestCostFirst' (2026-09-13): this page's own advice is meant to
+  // concentrate the remaining position in the worst-performing lots —
+  // oldest-first FIFO only does that by coincidence, and got it backwards
+  // for a real reported case (see `LotMatchOrder`'s own doc comment). PSX's
+  // real opt-in `costBasisMethod: 'fifo'` cost-basis display (usePSXDerived)
+  // is a completely separate call site, untouched by this.
+  const { lotsByTicker } = useMemo(() => computeFIFOPositions(workbook.transactions, calcFee, 'lowestCostFirst'), [workbook.transactions, calcFee]);
   const lots = lotsByTicker[ticker.toUpperCase()] || [];
   const row = rows.find((r) => r.ticker === ticker.toUpperCase());
   const currentPrice = row?.marketPrice || 0;

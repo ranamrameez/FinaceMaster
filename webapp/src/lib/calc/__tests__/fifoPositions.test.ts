@@ -5,6 +5,7 @@ import type { Transaction } from '../../../types/workbook';
 import { computeFIFOPositions } from '../fifoPositions';
 import { computePositions } from '../positions';
 import { makePSXFeeCalculator } from '../psxFees';
+import { makeQSEFeeCalculator } from '../fees';
 
 // README item 8: FIFO lot matching should attribute cost basis to specific
 // buy lots (oldest first) instead of blending every buy into one running
@@ -182,6 +183,95 @@ describe('computeFIFOPositions', () => {
         expect.objectContaining({ buyId: 'buy-old', remainingShares: 36 }),
         expect.objectContaining({ buyId: 'buy-cheap', remainingShares: 14 }),
       ]);
+    });
+  });
+
+  describe("matchOrder: 'lowestCostFirst' (2026-09-13, real user-reported bug fix)", () => {
+    it("with matchOrder omitted (default), a sell still drains the oldest lot first even when it's more expensive — unchanged behavior, protects PSX's real opt-in FIFO cost basis", () => {
+      const txs: Transaction[] = [
+        { date: '2026-01-01', ticker: 'TEST', action: 'BUY', shares: 50, price: 10.4 },
+        { date: '2026-02-01', ticker: 'TEST', action: 'BUY', shares: 14, price: 9.962 },
+        { date: '2026-03-01', ticker: 'TEST', action: 'SELL', shares: 20, price: 10.2 },
+      ];
+      const { lotsByTicker } = computeFIFOPositions(txs, noFee);
+      // Old, expensive lot is the one drained — the cheap lot is untouched.
+      expect(lotsByTicker.TEST).toEqual([
+        expect.objectContaining({ buyPrice: 10.4, remainingShares: 30 }),
+        expect.objectContaining({ buyPrice: 9.962, remainingShares: 14 }),
+      ]);
+    });
+
+    it("with matchOrder: 'lowestCostFirst', a sell drains the cheapest available lot first regardless of buy date", () => {
+      const txs: Transaction[] = [
+        { date: '2026-01-01', ticker: 'TEST', action: 'BUY', shares: 50, price: 10.4 },
+        { date: '2026-02-01', ticker: 'TEST', action: 'BUY', shares: 14, price: 9.962 },
+        { date: '2026-03-01', ticker: 'TEST', action: 'SELL', shares: 20, price: 10.2 },
+      ];
+      const { lotsByTicker } = computeFIFOPositions(txs, noFee, 'lowestCostFirst');
+      // Cheap lot (9.962) is fully drained first (14 sh), remaining 6 sh fall
+      // through to the only lot left (10.4) — leaving the EXPENSIVE lot open.
+      expect(lotsByTicker.TEST).toEqual([expect.objectContaining({ buyPrice: 10.4, remainingShares: 44 })]);
+    });
+
+    it('reproduces the real reported IQCD bug: FIFO wrongly leaves cheap lots open (triggering a wrong "sell the cheap ones" suggestion); lowestCostFirst correctly leaves the losing expensive lot open instead', () => {
+      // Real transaction sequence from the user's own uploaded QSE backup
+      // (2026-09-13) that produced the reported wrong "13 of 13 shares
+      // already profitable, sell them" advice — the app had drained the
+      // 50 sh @10.40 (expensive, bought first) lot down to nothing across
+      // the real sells, leaving the two cheap lots (9.962, 10.08) as the
+      // "still open, already profitable at mkt 10.20" remainder, exactly
+      // backwards from what actually happened: the user sold shares at a
+      // real loss while the truly loss-making expensive lot sat untouched.
+      const calcFee = makeQSEFeeCalculator({ feePct: 0.275, minFee: 0 });
+      const txs: Transaction[] = [
+        { date: '2026-08-10', ticker: 'IQCD', action: 'BUY', shares: 50, price: 10.4 },
+        { date: '2026-09-01', ticker: 'IQCD', action: 'BUY', shares: 14, price: 9.962 },
+        { date: '2026-09-07', ticker: 'IQCD', action: 'SELL', shares: 20, price: 10.02 },
+        { date: '2026-09-08', ticker: 'IQCD', action: 'SELL', shares: 5, price: 10.37 },
+        { date: '2026-09-08', ticker: 'IQCD', action: 'SELL', shares: 2, price: 10.37 },
+        { date: '2026-09-08', ticker: 'IQCD', action: 'SELL', shares: 1, price: 10.37 },
+        { date: '2026-09-09', ticker: 'IQCD', action: 'BUY', shares: 1, price: 10.08 },
+        { date: '2026-09-09', ticker: 'IQCD', action: 'BUY', shares: 1, price: 10.08 },
+        { date: '2026-09-13', ticker: 'IQCD', action: 'SELL', shares: 6, price: 10.25 },
+        { date: '2026-09-13', ticker: 'IQCD', action: 'SELL', shares: 10, price: 10.25 },
+        { date: '2026-09-13', ticker: 'IQCD', action: 'SELL', shares: 6, price: 10.26 },
+        { date: '2026-09-13', ticker: 'IQCD', action: 'SELL', shares: 3, price: 10.26 },
+      ];
+
+      // The bug: default (oldest-first) FIFO leaves the two CHEAP lots open
+      // (13 sh total, split 11@9.962 + 1@10.08 + 1@10.08) — every one of
+      // them clears its own break-even at the real 10.20 market price,
+      // which is exactly what produced the wrong "sell all 13, they're
+      // profitable" suggestion.
+      const buggy = computeFIFOPositions(txs, calcFee);
+      const buggyLots = buggy.lotsByTicker.IQCD;
+      expect(buggyLots.reduce((s, l) => s + l.remainingShares, 0)).toBe(13);
+      expect(buggyLots.some((l) => l.buyPrice === 10.4)).toBe(false);
+      expect(buggyLots.every((l) => l.buyPrice < 10.2)).toBe(true);
+
+      // The fix: 'lowestCostFirst' correctly leaves the single EXPENSIVE
+      // lot (13 sh @10.40) open instead — a real loss at the 10.20 market
+      // price, correctly suggesting "hold," not "sell."
+      const fixed = computeFIFOPositions(txs, calcFee, 'lowestCostFirst');
+      const fixedLots = fixed.lotsByTicker.IQCD;
+      expect(fixedLots).toHaveLength(1);
+      expect(fixedLots[0]).toMatchObject({ buyPrice: 10.4, remainingShares: 13 });
+    });
+
+    it('still lets targetLotBuyId take priority over lowestCostFirst, with any remainder falling through to lowest-cost among what is left', () => {
+      const txs: Transaction[] = [
+        { id: 'buy-old', date: '2026-01-01', ticker: 'TEST', action: 'BUY', shares: 10, price: 5 },
+        { id: 'buy-mid', date: '2026-02-01', ticker: 'TEST', action: 'BUY', shares: 10, price: 8 },
+        {
+          date: '2026-03-01', ticker: 'TEST', action: 'SELL', shares: 15, price: 20,
+          targetLotBuyId: 'buy-mid',
+        } as Transaction,
+      ];
+      const { lotsByTicker } = computeFIFOPositions(txs, noFee, 'lowestCostFirst');
+      // Targeted lot (buy-mid, 10 sh @8) is fully drained first; the
+      // remaining 5 sh fall through to whatever's left (buy-old @5), NOT
+      // reselected by price since there's only one lot remaining anyway.
+      expect(lotsByTicker.TEST).toEqual([expect.objectContaining({ buyId: 'buy-old', remainingShares: 5 })]);
     });
   });
 

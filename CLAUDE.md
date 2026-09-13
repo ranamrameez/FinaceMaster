@@ -6854,6 +6854,66 @@ touched those.
   resolving, always diff the merged result against the OTHER side directly, not just check for
   leftover conflict markers — a resolver can silently drop content while still producing a
   clean, marker-free file that LOOKS correctly merged.
+- **CRITICAL, user-reported real financial loss (2026-09-13) — see README Done item 323.** The
+  user posted a real screenshot of the Partial Trade Strategy page suggesting "Sell" on all 3
+  remaining lots of their real IQCD position, plus their real production QSE backup, and stated
+  outright: "APP SOLD highest price lots resulting a suggestion to sell the remaining ones.
+  which caused in real loss by selling the expensive ones." Also gave a specific correctness
+  spec for how lot matching should work: "Sort by date, then Buy then Sell transactions. consume
+  the lots with least price first. then recalculate the Avg Buy/BE and other stats for the
+  remaining stocks." **Root-caused by hand-tracing the user's own exact real transaction
+  history** (their real IQCD buys/sells from 2026-08-10 through 2026-09-13) before writing any
+  code: `computeFIFOPositions` (`webapp/src/lib/calc/fifoPositions.ts`) always drains the OLDEST
+  open lot first — correct, and load-bearing, for PSX's real user-opted-in `costBasisMethod:
+  'fifo'` cost-basis display, but wrong for the Partial Trade Strategy advisory feature (used by
+  both exchanges), whose own tooltip explicitly promises it "concentrates your remaining
+  position in your worst-performing lots." Chronological FIFO only delivers that by coincidence
+  (when price trends consistently since the oldest buy) — for IQCD, a 50-share lot bought FIRST
+  at 10.40 (expensive) sat next to a 14-share lot bought LATER at 9.962 (cheap); oldest-first
+  FIFO fully drained the expensive lot across the user's real sells, leaving the two CHEAP lots
+  as the "still open, already profitable at market" remainder — the exact opposite of the
+  feature's own promise, and exactly what produced the wrong "sell the cheap ones, keep the
+  loser" advice that led to a real loss.
+  **Fix**: `computeFIFOPositions` gained a `matchOrder: LotMatchOrder = 'fifo'` parameter (the
+  `LotMatchOrder` type — `'fifo' | 'lowestCostFirst'` — moved here from `closedTrades.ts`, which
+  now re-exports it, so both the real Open-lots view and the existing Closed-trades reporting
+  ledger share one canonical doc comment). The default (`'fifo'`) is completely unchanged and is
+  the ONLY thing PSX's real cost-basis call site (`usePSXDerived.ts`) ever uses — no real user's
+  displayed Avg Cost/Break-even changes silently, per this file's own long-standing locked
+  cost-basis-method rule. `'lowestCostFirst'` (the same lowest-`buyPrice`-first lot selection
+  `closedTrades.ts`'s own `LotMatchOrder` already used) is now passed explicitly by every
+  advisory consumer: `partialTradeStrategy.ts`'s `scanPortfolioForOpportunities` (the Partial
+  Trade Alerts popup scan) and both QSE's and PSX's `TradeStrategyPage.tsx` (the per-ticker
+  Partial Trade Advisor). **A second, related bug found and fixed in the same pass, not just the
+  headline one**: QSE's/PSX's Trade Transactions page already had a "Match order" toggle (FIFO /
+  Cheapest lot first) driving the separate "Closed trades" reporting table — but its own tooltip
+  explicitly claimed switching it "never changes... the Open lots table above," while the "Open
+  trades" table (this project's own README item 5, "two tables for opened lots & closed lots")
+  was still hardcoded to oldest-first FIFO regardless of the toggle — meaning the two tables
+  could silently stop adding up to the same true picture the moment a user switched the toggle.
+  Wired the same `ctMatchOrder` state into the Open trades table's own `computeFIFOPositions`
+  call and relocated the toggle to sit ABOVE both tables as one shared control (was nested inside
+  just the Closed trades section), with both tooltips corrected to describe the real, now-linked
+  behavior. **Live-verified the exact real reported scenario, not just unit tests** — seeded the
+  user's own real IQCD transaction sequence into a fresh dev server via Playwright and confirmed
+  on the Trade Transactions page that the Open trades table shows `[1@10.08, 1@10.08, 11@9.962]`
+  under FIFO (reproducing the bug byte-for-byte) and `[13@10.40]` under Cheapest lot first (the
+  fix); and on the Trade Strategy page, the Partial Trade Advisor now shows NOTHING for this
+  ticker post-fix — not a wrong "sell all 13 shares," but genuinely nothing, because the fix
+  collapses the remainder down to a single lot and the component's own pre-existing
+  `lots.length < 2` guard correctly recognizes there's no multi-lot comparison left to advise on.
+  New tests: `fifoPositions.test.ts` gained a `matchOrder: 'lowestCostFirst'` describe block (4
+  cases, including the user's exact real transaction sequence as a named regression test);
+  `partialTradeStrategy.test.ts` gained an end-to-end regression proving
+  `scanPortfolioForOpportunities` no longer flags the position at all post-fix. **Session
+  process note**: this session's designated branch had already been merged (per the last
+  CLAUDE.md entry above, PR #192) — restarted the branch fresh from `origin/main`'s latest via
+  `git stash` + `git checkout -B <branch> origin/main` + `git stash pop`, which produced one real
+  conflict in `webapp/README.md` (origin/main had independently claimed Done item numbers 321/
+  322 for unrelated concurrent work) — resolved by renumbering this session's own new entry to
+  323 and keeping origin's entries untouched, verified via a post-resolution grep for leftover
+  conflict markers, matching the exact discipline the entry above this one already established.
+  `npx tsc -b` / `npm run test` (687 tests, 5 new) / `npm run build` all clean throughout.
 
 ## Live URLs
 

@@ -151,6 +151,34 @@ describe('scanPortfolioForOpportunities', () => {
   it('skips a ticker with no known market price', () => {
     expect(scanPortfolioForOpportunities(IQCD_TXS, calcFee, {}, 0.275, 0.01)).toEqual([]);
   });
+
+  it('end-to-end regression (2026-09-13): does NOT flag the real IQCD position as sellable once every cheap lot is actually sold and only the losing expensive lot remains — the real reported bug', () => {
+    // The neighboring `IQCD_TXS` fixture above has no sells at all, so it
+    // never actually exercised which lot gets drained — every existing test
+    // in this file passed unchanged even before this function switched to
+    // 'lowestCostFirst' internally, purely because none of them had a SELL
+    // transaction. This reproduces the user's own real full transaction
+    // sequence (see `fifoPositions.test.ts`'s identical fixture) to prove
+    // the fix end to end, not just inside `computeFIFOPositions` alone.
+    const realTxs: Transaction[] = [
+      { date: '2026-08-10', ticker: 'IQCD', action: 'BUY', shares: 50, price: 10.4 },
+      { date: '2026-09-01', ticker: 'IQCD', action: 'BUY', shares: 14, price: 9.962 },
+      { date: '2026-09-07', ticker: 'IQCD', action: 'SELL', shares: 20, price: 10.02 },
+      { date: '2026-09-08', ticker: 'IQCD', action: 'SELL', shares: 5, price: 10.37 },
+      { date: '2026-09-08', ticker: 'IQCD', action: 'SELL', shares: 2, price: 10.37 },
+      { date: '2026-09-08', ticker: 'IQCD', action: 'SELL', shares: 1, price: 10.37 },
+      { date: '2026-09-09', ticker: 'IQCD', action: 'BUY', shares: 1, price: 10.08 },
+      { date: '2026-09-09', ticker: 'IQCD', action: 'BUY', shares: 1, price: 10.08 },
+      { date: '2026-09-13', ticker: 'IQCD', action: 'SELL', shares: 6, price: 10.25 },
+      { date: '2026-09-13', ticker: 'IQCD', action: 'SELL', shares: 10, price: 10.25 },
+      { date: '2026-09-13', ticker: 'IQCD', action: 'SELL', shares: 6, price: 10.26 },
+      { date: '2026-09-13', ticker: 'IQCD', action: 'SELL', shares: 3, price: 10.26 },
+    ];
+    // Real market price at the time of the report: 10.20 — below the
+    // remaining expensive lot's own break-even, so the correct advice is
+    // "hold," not "sell."
+    expect(scanPortfolioForOpportunities(realTxs, calcFee, { IQCD: 10.2 }, 0.275, 0.01)).toEqual([]);
+  });
 });
 
 describe('perShareCommission', () => {

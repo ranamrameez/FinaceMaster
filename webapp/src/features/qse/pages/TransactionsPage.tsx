@@ -339,16 +339,19 @@ function TransactionList() {
   // it gets difficult to know the sold status and price of a lot." Same
   // FIFO-lot view as `computeClosedTrades` above, just the still-held half
   // of it (`computeFIFOPositions`'s own `lotsByTicker`) — a pure reporting
-  // ledger, independent of QSE's own weighted-average position calc.
+  // ledger, independent of QSE's own weighted-average position calc. Shares
+  // `ctMatchOrder` with Closed trades below (2026-09-13, see
+  // `LotMatchOrder`'s own doc comment) so the two tables always add up to
+  // the same picture of which lots are still open vs. already sold.
   const openLots = useMemo(() => {
     const txs = filterTicker === 'ALL' ? workbook.transactions : workbook.transactions.filter((t) => t.ticker === filterTicker);
-    const { lotsByTicker } = computeFIFOPositions(txs, calcFee);
+    const { lotsByTicker } = computeFIFOPositions(txs, calcFee, ctMatchOrder);
     const flat: (FIFOLot & { ticker: string })[] = [];
     for (const [ticker, lots] of Object.entries(lotsByTicker)) {
       for (const lot of lots) flat.push({ ticker, ...lot });
     }
     return flat;
-  }, [workbook.transactions, calcFee, filterTicker]);
+  }, [workbook.transactions, calcFee, filterTicker, ctMatchOrder]);
   type OLCol = 'ticker' | 'buyDate' | 'buyPrice' | 'shares' | 'invested' | 'buyFeeTotal';
   const olSortValue = (l: (typeof openLots)[number], col: OLCol): number | string => {
     switch (col) {
@@ -543,9 +546,21 @@ function TransactionList() {
         {renderTable(closedGroups, 'No transactions for a fully closed position yet.')}
       </details>
 
-      <details open className="mt-md">
+      <div className="row gap-sm mb-sm mt-md" style={{ alignItems: 'center' }}>
+        <Tooltip text="QSE's fee is a flat % of trade value — it never depends on which lot a sale is credited to, so this is purely which STORY the Open trades and Closed trades sections below tell, not a real amount. FIFO (oldest lot first) is what most brokers default to. Cheapest-lot-first re-tells the same history against your lowest-cost lots instead — it never changes your real position, fees, or total P/L, only which lots count as still open vs. already sold.">
+          Match order
+        </Tooltip>
+        <button type="button" className={`chip${ctMatchOrder === 'fifo' ? ' active' : ''}`} onClick={() => setCtMatchOrder('fifo')}>
+          {ctMatchOrder === 'fifo' && <CheckIcon size={11} />}FIFO (oldest first)
+        </button>
+        <button type="button" className={`chip${ctMatchOrder === 'lowestCostFirst' ? ' active' : ''}`} onClick={() => setCtMatchOrder('lowestCostFirst')}>
+          {ctMatchOrder === 'lowestCostFirst' && <CheckIcon size={11} />}Cheapest lot first
+        </button>
+      </div>
+
+      <details open>
         <summary className="summary-heading">
-          <Tooltip text="Each buy lot that hasn't been fully sold yet, FIFO-matched against your real sells — the mirror image of Closed trades below, so it's always clear which shares are still open vs. already sold.">
+          <Tooltip text="Each buy lot that hasn't been fully sold yet, matched against your real sells per the Match order picked above — the mirror image of Closed trades below, so it's always clear which shares are still open vs. already sold.">
             Open trades (not yet sold)
           </Tooltip>{' '}
           — {sortedOpenLots.length}
@@ -590,17 +605,6 @@ function TransactionList() {
           </Tooltip>{' '}
           — {sortedClosedTrades.length}
         </summary>
-        <div className="row gap-sm mb-sm" style={{ alignItems: 'center' }}>
-          <Tooltip text="QSE's fee is a flat % of trade value — it never depends on which lot a sale is credited to, so this is purely which STORY this table tells, not a real amount. FIFO (oldest lot first) is what most brokers default to. Cheapest-lot-first re-tells the same sales against your lowest-cost lots instead, for comparison — it never changes your real position, fees, or the Open lots table above.">
-            Match order
-          </Tooltip>
-          <button type="button" className={`chip${ctMatchOrder === 'fifo' ? ' active' : ''}`} onClick={() => setCtMatchOrder('fifo')}>
-            {ctMatchOrder === 'fifo' && <CheckIcon size={11} />}FIFO (oldest first)
-          </button>
-          <button type="button" className={`chip${ctMatchOrder === 'lowestCostFirst' ? ' active' : ''}`} onClick={() => setCtMatchOrder('lowestCostFirst')}>
-            {ctMatchOrder === 'lowestCostFirst' && <CheckIcon size={11} />}Cheapest lot first
-          </button>
-        </div>
         <div className="table-scroll">
           <table>
             <thead>
