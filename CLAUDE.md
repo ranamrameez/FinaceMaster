@@ -6934,6 +6934,36 @@ touched those.
   round-trip correctly complement each other and their share counts sum back to the original
   buy total, on both QSE and PSX. `npx tsc -b` / `npm run test` (687 tests, unchanged) / `npm
   run build` all clean.
+- **Round-trip cost popup on Dashboard/Portfolio + two more Partial Trade follow-up bugs,
+  same 2026-09-13 report — see README Done item 325.** User first asked for a per-share sell-
+  price/P&L study of their real MARK trades (answered directly in chat, root-caused against
+  their real uploaded backup — every one of MARK's 11 FIFO lot-matches was a loss, -36.07 QAR
+  total, same "cheap profitable lot sits untouched while FIFO forces a loss on the expensive
+  one" pattern Done item 323 exists to catch — no code needed for that part), then, via
+  `AskUserQuestion`, asked for it to become permanent: "visible on dashboard for opened stocks
+  so that I can quickly decide if today's fluctuation is worth trying... show a popup to
+  actually see this round trip total cost per current price." New shared
+  `components/RoundTripCostModal.tsx` reuses the already-built `perShareCommission()` (buy+sell
+  commission for 1 share at the live price, no new calc) — a "RT {total}" clickable line now
+  sits under the Current Price cell on all four Holdings tables (QSE + PSX, Dashboard +
+  Portfolio — Portfolio extended too for consistency even though the user's exact wording only
+  named Dashboard, since it's the same table shape and was in their original ask). Also fixed,
+  same message: (a) `PartialTradeAdvisor`'s `lots.length < 2` guard (Done item 323's own
+  deliberate choice, reasoning a single lot has "nothing to compare against") turned out wrong
+  once the user actually hit it live — a real open position (IQCD, 13 shares) that the 323 fix
+  legitimately collapsed into one lot rendered a totally blank page instead of that lot's own
+  status; fixed to `!lots.length`, with the multi-lot-only "concentrates your remaining
+  position" Notice now conditional on `lots.length > 1` — the rest of the render already
+  handled one row correctly. (b) "topbar missing. move selector to th topbar" — the Partial
+  Trade ticker `<select>` moved from the page body into the app's fixed `TopBar` via
+  `usePageTopBarRightSlot()`, the exact mechanism `NetWorthPage.tsx`'s currency picker already
+  established. Applied identically to both exchanges' `TradeStrategyPage.tsx`. Verified live
+  via Playwright on both exchanges with a scenario reproducing the real IQCD shape (expensive
+  old lot + cheap newer lot, sell draining the cheap lot first, leaving one 13-share lot):
+  RT line + popup showed correct buy/sell/total/percentage; the TopBar selector now renders
+  (inline body selector confirmed gone) and the page shows the single remaining lot's Hold/Sell
+  status instead of blank. Zero console errors. `npx tsc -b` / `npm run test` (687 tests,
+  unchanged) / `npm run build` all clean.
 
 ## Live URLs
 

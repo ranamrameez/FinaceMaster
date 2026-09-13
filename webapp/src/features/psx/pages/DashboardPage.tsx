@@ -4,9 +4,11 @@ import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { CollapsibleCard, StatCard } from '../../../components/Card';
 import { Sparkline } from '../../../components/Sparkline';
 import { TickerLogo } from '../../../components/TickerLogo';
+import { RoundTripCostModal } from '../../../components/RoundTripCostModal';
 import { toast } from '../../../components/Toast';
 import { breakEvenPrice, getDailyPriceHistory } from '../../../lib/calc';
 import { pendingShareDeltaByTicker } from '../../../lib/calc/positions';
+import { perShareCommission } from '../../../lib/calc/partialTradeStrategy';
 import { dimColor, dlBarV, dlDoughnut, dlLine, profitColor } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
@@ -47,6 +49,7 @@ function HoldingsCard() {
           const be = breakEvenPrice(p.invested, p.shares, feePct, tick, calcFee);
           const target = (pct: number) => breakEvenPrice(p.invested * (1 + pct / 100), p.shares, feePct, tick, calcFee);
           const sparkData = getDailyPriceHistory(p.ticker, workbook.priceHistory).map((pt) => pt.price);
+          const rt = mp > 0 ? perShareCommission(mp, calcFee) : null;
 
           // Item 1 of a 2026-08-26 feedback batch: see the identical comment
           // in QSE's DashboardPage.tsx.
@@ -64,7 +67,7 @@ function HoldingsCard() {
           }
 
           return {
-            ticker: p.ticker, shares: p.shares, avgCost, mp, value, invested: p.invested, profit, profitPct, be, sparkData,
+            ticker: p.ticker, shares: p.shares, avgCost, mp, value, invested: p.invested, profit, profitPct, be, sparkData, rt,
             t1: target(1), t2: target(2), t3: target(5), statusRank, statusLabel, statusClass,
           };
         }),
@@ -89,6 +92,8 @@ function HoldingsCard() {
   // User-requested (2026-09-08): "Also show a pending share-count delta" —
   // see QSE's DashboardPage.tsx's identical comment.
   const pendingDelta = useMemo(() => pendingShareDeltaByTicker(workbook.transactions), [workbook.transactions]);
+  const [rtTicker, setRtTicker] = useState<string | null>(null);
+  const rtRow = rtTicker ? held.find((r) => r.ticker === rtTicker) : undefined;
 
   return (
     <CollapsibleCard
@@ -155,6 +160,15 @@ function HoldingsCard() {
                         }
                       }}
                     />
+                    {r.rt && (
+                      <div
+                        className="text-muted clickable"
+                        onClick={() => setRtTicker(r.ticker)}
+                        title="Round-trip commission cost at the current price — click for the full breakdown."
+                      >
+                        RT {fmtMoney(r.rt.buy + r.rt.sell, currency)}
+                      </div>
+                    )}
                   </td>
                   <td onClick={() => navigate(`/psx/stock/${r.ticker}`)}>
                     <div>{r.mp > 0 ? fmtMoney(r.value, currency) : '—'}</div>
@@ -178,6 +192,16 @@ function HoldingsCard() {
         </div>
       ) : (
         <p className="text-muted">No open positions yet.</p>
+      )}
+      {rtRow && rtRow.rt && (
+        <RoundTripCostModal
+          ticker={rtRow.ticker}
+          currency={currency}
+          currentPrice={rtRow.mp}
+          buyFee={rtRow.rt.buy}
+          sellFee={rtRow.rt.sell}
+          onClose={() => setRtTicker(null)}
+        />
       )}
     </CollapsibleCard>
   );

@@ -8840,6 +8840,47 @@ FinanceManager live link:
   errors throughout (only the documented sandbox FX/font network-block messages). `npx tsc -b`
   / `npm run test` (687 tests, unchanged — pure UI, reuses already-tested calc functions) /
   `npm run build` all clean.
+- **325. Round-trip cost popup on Dashboard/Portfolio + two more Partial Trade follow-up bugs
+  from the same 2026-09-13 IQCD report (2026-09-13).** The user asked (with a real screenshot)
+  for a per-share sell-price/P&L study of their own MARK trades first — answered directly in
+  chat (root-caused against a real uploaded backup by replicating `sortTransactionsChronological`/
+  `makeQSEFeeCalculator`/`computeClosedTrades`/`computePositions` in a throwaway script: every
+  one of MARK's 11 FIFO lot-matches was a loss, -36.07 QAR total, because the 2026-09-08 sells'
+  own real recorded TIME (not entry order) drained the oldest/priciest June lots while a cheaper
+  Aug 10 lot sat untouched and already profitable — the same pattern Done item 323 exists to
+  catch), no code needed for that part. Asked via `AskUserQuestion` whether to build this into a
+  permanent feature; the user's answer named three concrete things: "visible on dashboard for
+  opened stocks so that I can quickly decide if today's fluctuation is worth trying. we can show
+  a popup to actually see this round trip total cost per current price." New shared
+  `components/RoundTripCostModal.tsx` (buy/sell/total commission for 1 share at the current
+  price + as a % of price, reusing the already-built `perShareCommission()` — no new calc). A
+  "RT {total}" clickable line was added under the Current Price cell on all four Holdings
+  tables (QSE + PSX, Dashboard + Portfolio — Portfolio wasn't in the user's exact wording but
+  was in their original ask and is the same table shape, so extended there too for consistency).
+  Two more real bugs from the same message's numbered list were fixed in the same pass: (2)
+  "IQCD has no view in Partial Trade now while shares 13, still exist" — `PartialTradeAdvisor`'s
+  `if (lots.length < 2 ...) return null;` guard (deliberately added by Done item 323 on the
+  reasoning that a single collapsed lot has nothing to compare against) turned out to be wrong
+  once the user actually hit it live: a ticker with real open shares in exactly one lot — which
+  the 323 fix can legitimately produce — showed a totally blank page instead of that lot's own
+  status. Fixed by changing the guard to `!lots.length` and making the multi-lot-only
+  "concentrates your remaining position" `Notice` conditional on `lots.length > 1`; the rest of
+  the render (the advice table, `computeLotAdvice`, etc.) already handled a single row correctly
+  with zero other changes needed. (3) "topbar missing. move selector to th topbar" — the
+  Partial Trade ticker `<select>` was rendered inline in the page body; moved into the app's
+  fixed `TopBar` via `usePageTopBarRightSlot()` (the exact mechanism `NetWorthPage.tsx`'s own
+  currency picker already established), which also makes the TopBar itself appear on this page
+  for the first time (it renders nothing when no page has registered chips/a right-slot).
+  Applied identically to both QSE's and PSX's `TradeStrategyPage.tsx`. **Verified live via
+  Playwright on both exchanges** with a scenario reproducing the real IQCD shape (an expensive
+  old lot + a cheap newer lot, a sell that drains the cheap lot first and leaves one 13-share
+  lot of the expensive one): Dashboard/Portfolio both showed "RT 0.06 QAR" / "RT 0.84 PKR" with
+  a popup breaking down buy/sell/total/percentage correctly; the Trade Strategy page's TopBar
+  now shows the ticker selector (inline body selector confirmed gone) and the page correctly
+  shows the single remaining lot's Hold/Sell status instead of rendering blank, with the
+  multi-lot-only warning correctly absent. Zero real console errors on either exchange. `npx
+  tsc -b` / `npm run test` (687 tests, unchanged — new UI wiring onto already-tested calc
+  functions) / `npm run build` all clean.
 
 ## Pending
 

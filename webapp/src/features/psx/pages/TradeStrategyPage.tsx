@@ -10,6 +10,7 @@ import { Tooltip } from '../../../components/Tooltip';
 import { Notice } from '../../../components/Notice';
 import { Modal } from '../../../components/Modal';
 import { usePageFabActions } from '../../../hooks/usePageFabActions';
+import { usePageTopBarRightSlot } from '../../../hooks/usePageTopBar';
 import { Field, TextInput } from '../../../components/ui/Field';
 import { FeeModeControl, feeModeFor } from '../../../components/ui/FeeModeControl';
 import { IconButton } from '../../../components/ui/IconButton';
@@ -187,7 +188,13 @@ function PartialTradeAdvisor({ ticker, onSellLot }: { ticker: string; onSellLot:
   const row = rows.find((r) => r.ticker === ticker.toUpperCase());
   const currentPrice = row?.marketPrice || 0;
 
-  if (lots.length < 2 || currentPrice <= 0) return null;
+  // User-reported (2026-09-13): "IQCD has no view in Partial Trade now
+  // while shares 13, still exist." This guard used to require 2+ lots —
+  // see the identical comment in QSE's TradeStrategyPage.tsx for why a
+  // single remaining lot (which the 2026-09-13 FIFO-matching fix can now
+  // legitimately produce) must still show its own status, not a blank
+  // page.
+  if (!lots.length || currentPrice <= 0) return null;
 
   const advice = computeLotAdvice(lots, calcFee, currentPrice, feePct, tick);
   const { sellable, total } = sellableShareSummary(advice);
@@ -195,10 +202,12 @@ function PartialTradeAdvisor({ ticker, onSellLot }: { ticker: string; onSellLot:
 
   return (
     <div style={{ marginBottom: 16 }}>
-      <Notice tone="warning" className="mb-sm">
-        Partial Trade Strategy concentrates your remaining position in your worst-performing lots — you keep
-        holding whatever doesn't sell. <Link to="/legal">Read more</Link>
-      </Notice>
+      {lots.length > 1 && (
+        <Notice tone="warning" className="mb-sm">
+          Partial Trade Strategy concentrates your remaining position in your worst-performing lots — you keep
+          holding whatever doesn't sell. <Link to="/legal">Read more</Link>
+        </Notice>
+      )}
       {sellable > 0 ? (
         <p className="mb-sm">
           <span className="pill-positive">{fmt(sellable, 0)} of {fmt(total, 0)} shares</span> of {ticker.toUpperCase()} are already profitable at the current price ({fmtPrice(currentPrice)}).
@@ -951,15 +960,22 @@ function StandalonePartialTrade() {
   const [sellLotFor, setSellLotFor] = useState<{ ticker: string; action: 'BUY' | 'SELL'; shares: number; price: number; targetLotBuyId?: string } | null>(null);
   const effective = openTickers.includes(ticker) ? ticker : (openTickers[0] || '');
 
-  if (!openTickers.length) return <p className="text-muted">No open PSX positions yet — Partial Trade needs at least one.</p>;
-
-  return (
-    <div>
-      <Field label="Ticker" width={160}>
+  // User-reported (2026-09-13): "topbar missing. move selector to th
+  // topbar." — see the identical comment in QSE's TradeStrategyPage.tsx.
+  usePageTopBarRightSlot(
+    openTickers.length ? (
+      <Field label="Partial Trade ticker" width={160}>
         <select value={effective} onChange={(e) => setTicker(e.target.value)}>
           {openTickers.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
       </Field>
+    ) : null,
+  );
+
+  if (!openTickers.length) return <p className="text-muted">No open PSX positions yet — Partial Trade needs at least one.</p>;
+
+  return (
+    <div>
       {effective && (
         <PartialTradeAdvisor
           ticker={effective}
