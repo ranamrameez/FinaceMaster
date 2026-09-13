@@ -1381,7 +1381,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                     {t.date}
                     {t.isPending && (
                       <Tooltip text="Order placed but not yet settled — excluded from units/value until cleared.">
-                        <span className="pill-warn" style={{ marginLeft: 6 }}>Pending</span>
+                        <span className="pill-warn ml-6">Pending</span>
                       </Tooltip>
                     )}
                   </td>
@@ -1662,7 +1662,7 @@ function FundsTransfersSection() {
                   <td>
                     {t.type}
                     {link && (
-                      <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
+                      <Link to={linkTargetPath(otherSide!)} className="pill-info ml-6" title="Linked — go to the other side">
                         🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
                       </Link>
                     )}
@@ -1803,7 +1803,7 @@ function AccountSection({
   return (
     <Card className="mb-md">
       {cloudEmpty && (
-        <Notice tone="warning" style={{ marginTop: 8 }}>
+        <Notice tone="warning" className="mt-sm">
           <p className="mt-0">No data found in the cloud for this account's Funds workbook. This won't upload automatically.</p>
           <button
             className="btn secondary"

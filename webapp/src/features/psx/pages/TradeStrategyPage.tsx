@@ -222,7 +222,7 @@ function PartialTradeAdvisor({ ticker, onSellLot }: { ticker: string; onSellLot:
         </table>
       </div>
       {missed && (
-        <p className="text-muted" style={{ marginTop: 8 }}>
+        <p className="text-muted mt-sm">
           In the last 30 days, price reached {fmtPrice(missed.peakPrice)} on {missed.peakDate} —{' '}
           {missed.lots.map((l, i) => (
             <span key={i}>{i > 0 && '; '}the lot bought {l.buyDate} @ {fmtPrice(l.buyPrice)} would have profited {fmtMoney(l.wouldHaveProfited, currency)}</span>

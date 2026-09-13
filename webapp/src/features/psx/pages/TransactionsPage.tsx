@@ -492,7 +492,7 @@ function TransactionList() {
                       <TickerLogo ticker={tx.ticker} size="sm" exchange="psx" /><Link to={`/psx/stock/${tx.ticker}`}>{tx.ticker}</Link>
                       {tx.isPending && (
                         <Tooltip text="Order placed but not yet filled — excluded from your shares/cash balance until cleared.">
-                          <span className="pill-warn" style={{ marginLeft: 6 }}>Pending</span>
+                          <span className="pill-warn ml-6">Pending</span>
                         </Tooltip>
                       )}
                     </td>
@@ -839,7 +839,7 @@ function TransfersSection() {
                   <td>
                     {t.type}
                     {link && (
-                      <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
+                      <Link to={linkTargetPath(otherSide!)} className="pill-info ml-6" title="Linked — go to the other side">
                         🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
                       </Link>
                     )}

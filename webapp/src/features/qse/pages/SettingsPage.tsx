@@ -31,7 +31,7 @@ function AccountSection({
 
   if (!firebaseReady || !cloudEmpty) return null;
   return (
-    <Notice tone="warning" style={{ marginTop: 8 }}>
+    <Notice tone="warning" className="mt-sm">
       <p className="mt-0">
         No data found in the cloud for this account's QSE workbook. This app will <strong>not</strong> upload
         anything automatically — if you expected existing data here and don't see it, stop and investigate
