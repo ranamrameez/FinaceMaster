@@ -8793,6 +8793,53 @@ FinanceManager live link:
   `partialTradeStrategy.test.ts` gained an end-to-end regression using the same real sequence,
   confirming `scanPortfolioForOpportunities` no longer flags the position at all post-fix. `npx
   tsc -b` / `npm run test` (687 tests, 5 new) / `npm run build` all clean.
+- **324. The other 4 items from the same 2026-09-13 IQCD report (items 1/2/3/5 of the user's own
+  numbered list).** Item 4 (the actual algorithmic bug) is Done item 323 above; these are the
+  data-model/UI asks from the same message. (3) **"Realized vs unrealized PL should be
+  mentioned well"**: audited every bare "P/L" column/label across Dashboard, Portfolio, and
+  PositionDetail (both exchanges) and found the real ambiguity the user flagged — Dashboard's/
+  Portfolio's Holdings table and PositionDetail's own "Current position" stat card all just said
+  "P/L" for what is genuinely UNREALIZED (mark-to-market against the live price, nothing sold),
+  while Portfolio's separate History/Closed-positions table already correctly showed a REALIZED
+  figure under the same bare label. Renamed to "Unrealized P/L" (Dashboard/Portfolio Holdings,
+  PositionDetail's Current-position card) and "Realized P/L" (Portfolio's History table),
+  adding an explanatory `Tooltip` on Portfolio's two table headers and PositionDetail's stat
+  card explaining the distinction in plain language — the Trade Transactions page's own inline
+  per-sell "P/L" pill was left as-is, since its existing tooltip already spells out "Realized
+  profit/loss for a SELL row..." explicitly. (1+2) **"Each stock should be saved with this
+  metadata: Buy Price + Date, Fee, BE, Total Buy Amount, Selling Price + Date, Total Sale
+  Amount, PL/share + Net Profit" for sold shares, skipping Selling data for open positions**:
+  new "Closed round-trips" `CollapsibleCard` on both QSE's and PSX's `PositionDetail.tsx`
+  (the per-stock page, the most natural "each stock" home for this), reusing
+  `computeClosedTrades` (already this app's one reporting ledger for per-round-trip buy/sell
+  detail, Done item 206) scoped to just that ticker — BE (via the existing `breakEvenPrice`
+  solver applied to that lot's own cost basis), Total buy/Total sale amount, and PL/share are
+  simple one-line derivations from `ClosedTrade`'s existing fields, not new calc logic. Renders
+  nothing at all for a ticker with no sells yet, which is exactly how "skip Selling data for
+  open positions" falls out naturally rather than needing a separate branch. (5) **"there
+  should be two tables for opened lots & closed lots... on portfolio page and others"**: the
+  Trade Transactions page already had this exact pair (Done item 206, and the "Open trades"
+  half just fixed in item 323 above) — the gap was PositionDetail (the per-stock "and others"
+  page), which had Closed round-trips (just added) but no complementary Open-lots view for
+  most cases. QSE gained a new pure-reporting "Open lots" table (`computeFIFOPositions`,
+  default match order, scoped to the ticker — explicitly a REPORTING view independent of QSE's
+  real weighted-average position calc, same "never feeds back into the real numbers" precedent
+  `computeClosedTrades` itself already established). PSX already had a real "Open lots (FIFO)"
+  section, but ONLY when that workbook's own `costBasisMethod` is set to `'fifo'` — the
+  DEFAULT `'average'` mode had no open-lots view at all; added the identical QSE-style
+  reporting-only fallback, gated to fire only when NOT already using the real FIFO section, so
+  the two can never both render for the same ticker. **Verified live via Playwright, not just
+  described**: seeded a real partial-close scenario (two buys at different prices, one sell
+  fully closing the cheaper/older lot) on both exchanges — Open lots correctly showed only the
+  remaining, more expensive lot; Closed round-trips correctly showed only the closed, cheaper
+  lot; the two tables' share counts summed back to the full original buy total on both
+  exchanges, with PSX's own itemized fee model producing correct numbers in the reporting
+  fallback too. Also re-verified the labeling fix with a fully-closed ticker (no shares left,
+  "Unrealized P/L" correctly absent since "Current position" only renders `isOpen`) and a
+  fully-open ticker (no sells yet, "Closed round-trips" correctly absent) — zero real console
+  errors throughout (only the documented sandbox FX/font network-block messages). `npx tsc -b`
+  / `npm run test` (687 tests, unchanged — pure UI, reuses already-tested calc functions) /
+  `npm run build` all clean.
 
 ## Pending
 

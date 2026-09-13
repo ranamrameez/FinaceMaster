@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
 import { CollapsibleCard } from '../../../components/Card';
 import { confirmDialog } from '../../../components/ConfirmDialog';
@@ -8,6 +8,8 @@ import { Sparkline } from '../../../components/Sparkline';
 import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
 import { breakEvenPrice, computePriceStats, getMarketPrice } from '../../../lib/calc';
+import { computeClosedTrades } from '../../../lib/calc/closedTrades';
+import { computeFIFOPositions } from '../../../lib/calc/fifoPositions';
 import { getDailyPriceHistory } from '../../../lib/calc/priceHistory';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { toCSV } from '../../../lib/csv';
@@ -84,6 +86,37 @@ export function PositionDetail({ ticker }: { ticker: string }) {
   const holdingDays = position
     ? Math.max(0, Math.round((new Date(position.lastDate).getTime() - new Date(position.firstDate).getTime()) / 86400000))
     : 0;
+
+  // User's own ask (2026-09-13): "Each stock should be saved with this
+  // metadata: Buy Price + Date, Fee, BE, Total Buy Amount, Selling Price +
+  // Date, Total Sale Amount, PL/share + Net Profit" for sold shares, and
+  // "for open positions we can skip Selling data on UI." Reuses
+  // `computeClosedTrades` (already the app's one reporting ledger for
+  // per-round-trip buy/sell detail, see the Trade Transactions page's own
+  // "Closed trades" table) scoped to just this ticker — BE/Total buy/Total
+  // sale/PL-per-share are simple derivations from its existing fields, not
+  // new calc logic. Empty for a ticker with no sells yet, which naturally
+  // satisfies "skip Selling data" for a still-fully-open position.
+  const closedTrades = useMemo(
+    () => computeClosedTrades(workbook.transactions.filter((t) => t.ticker === ticker), calcFee),
+    [workbook.transactions, ticker, calcFee],
+  );
+  type CTCol = 'buyDate' | 'sellDate' | 'shares' | 'netPL' | 'holdingDays';
+  const ctSortValue = (t: (typeof closedTrades)[number], col: CTCol): number | string =>
+    col === 'shares' ? t.shares : col === 'netPL' ? t.netPL : col === 'holdingDays' ? t.holdingDays : col === 'sellDate' ? t.sellDate : t.buyDate;
+  const { sorted: sortedClosedTrades, Th: CTTh } = useSortableRows(closedTrades, ctSortValue, 'sellDate', 'desc');
+
+  // Item 5 of the same 2026-09-13 batch: "there should be two tables for
+  // opened lots & closed lots." QSE's REAL position calc is always
+  // weighted-average, never per-lot (a locked design decision — see this
+  // file's own doc history) — this is a pure REPORTING view alongside
+  // Closed round-trips above, mirroring exactly what the Trade Transactions
+  // page's own "Open trades" table already shows, just scoped to this one
+  // ticker. Never feeds back into `avg`/`be`/`invested` above.
+  const openLots = useMemo(
+    () => computeFIFOPositions(workbook.transactions.filter((t) => t.ticker === ticker), calcFee).lotsByTicker[ticker] || [],
+    [workbook.transactions, ticker, calcFee],
+  );
 
   const stats = computePriceStats(ticker, workbook.priceHistory);
   // README item 2 of a 2026-08-27 feedback batch: the Dashboard/Portfolio
@@ -198,7 +231,9 @@ export function PositionDetail({ ticker }: { ticker: string }) {
               <div className="value">{mp > 0 ? fmtMoney(value, currency) : '—'}</div>
             </div>
             <div className="stat-card card" style={hueStyle(Number.isFinite(profit) ? (profit >= 0 ? 'var(--profit)' : 'var(--loss)') : HUES[7])}>
-              <div className="label">P/L</div>
+              <Tooltip text="Unrealized — what you'd gain or lose if you sold everything you still hold right now at the current market price. See All-time stats below for what's already been realized (locked in) from past sells.">
+                <div className="label clickable">Unrealized P/L</div>
+              </Tooltip>
               <div className="value">{Number.isFinite(profit) ? fmtMoney(profit, currency) : '—'}</div>
               <div className="sub">{Number.isFinite(profit) && invested > 0 ? `${((profit / invested) * 100).toFixed(1)}%` : ''}</div>
             </div>
@@ -249,6 +284,80 @@ export function PositionDetail({ ticker }: { ticker: string }) {
               <div className="sub">to {position.lastDate}</div>
             </div>
             {!isOpen && <div className="stat-card card" style={hueStyle(HUES[6])}><div className="label">Held</div><div className="value">{holdingDays}d</div></div>}
+          </div>
+        </CollapsibleCard>
+      )}
+
+      {/* Open lots — the still-held half of the same reporting ledger, see
+          the doc comment on `openLots` above. */}
+      {openLots.length > 0 && (
+        <CollapsibleCard title={<h4 className="m-0">Open lots</h4>} className="mb-12">
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr><th>Buy date</th><th>Buy price</th><th>Shares</th><th>Invested</th><th>Buy fee</th></tr>
+              </thead>
+              <tbody>
+                {openLots.map((l, i) => (
+                  <tr key={i}>
+                    <td>{l.buyDate}</td>
+                    <td>{fmtPrice(l.buyPrice)}</td>
+                    <td>{fmt(l.remainingShares, 0)}</td>
+                    <td>{fmtMoney(l.remainingShares * l.buyPrice, currency)}</td>
+                    <td>{fmtMoney(l.buyFeeTotal, currency)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CollapsibleCard>
+      )}
+
+      {/* User's own ask (2026-09-13): per-round-trip buy/sell detail for
+          SOLD shares of this stock — Buy price+date, Fee, BE, Total buy
+          amount, Sell price+date, Total sale amount, PL/share, Net profit.
+          Naturally absent for a still-fully-open position (nothing sold
+          yet to show), matching the "skip Selling data" half of the ask. */}
+      {sortedClosedTrades.length > 0 && (
+        <CollapsibleCard title={<h4 className="m-0">Closed round-trips</h4>} className="mb-12">
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <CTTh col="buyDate">Buy</CTTh>
+                  <CTTh col="sellDate">Sell</CTTh>
+                  <CTTh col="shares">Shares</CTTh>
+                  <th>Break-even</th>
+                  <CTTh col="netPL">
+                    <Tooltip text="Realized — already locked in from this specific closed round-trip, independent of the current market price.">
+                      Net P/L
+                    </Tooltip>
+                  </CTTh>
+                  <CTTh col="holdingDays">Held</CTTh>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedClosedTrades.map((t, i) => {
+                  const totalBuy = t.shares * t.buyPrice;
+                  const totalSale = t.shares * t.sellPrice;
+                  const costBasis = totalBuy + t.buyFee;
+                  const be = breakEvenPrice(costBasis, t.shares, workbook.settings.feePct, workbook.settings.tick, calcFee);
+                  return (
+                    <tr key={i}>
+                      <td>{t.buyDate}<br /><span className="text-muted">{fmtPrice(t.buyPrice)} · {fmtMoney(totalBuy, currency)}</span><br /><span className="text-muted">fee {fmtMoney(t.buyFee, currency)}</span></td>
+                      <td>{t.sellDate}<br /><span className="text-muted">{fmtPrice(t.sellPrice)} · {fmtMoney(totalSale, currency)}</span><br /><span className="text-muted">fee {fmtMoney(t.sellFee, currency)}</span></td>
+                      <td>{fmt(t.shares, 0)}</td>
+                      <td>{fmtPrice(be)}</td>
+                      <td className={t.netPL >= 0 ? 'text-profit' : 'text-loss'}>
+                        {fmtMoney(t.netPL, currency)}
+                        <br /><span className="text-muted">{fmtMoney(t.netPL / t.shares, currency)}/sh</span>
+                      </td>
+                      <td>{t.holdingDays}d</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </CollapsibleCard>
       )}

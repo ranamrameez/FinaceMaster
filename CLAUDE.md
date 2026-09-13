@@ -6914,6 +6914,26 @@ touched those.
   323 and keeping origin's entries untouched, verified via a post-resolution grep for leftover
   conflict markers, matching the exact discipline the entry above this one already established.
   `npx tsc -b` / `npm run test` (687 tests, 5 new) / `npm run build` all clean throughout.
+- **Same day, same 2026-09-13 report — the other 4 items, see README Done item 324.** The
+  headline algorithmic bug (item 4 of the user's numbered list) was item 323 above; this covers
+  items 1/2/3/5. (3) Renamed every genuinely ambiguous bare "P/L" label to "Unrealized P/L"
+  (Dashboard/Portfolio Holdings tables, PositionDetail's "Current position" card) or "Realized
+  P/L" (Portfolio's History table) — with a `Tooltip` explaining the distinction — leaving the
+  Trade Transactions page's own inline P/L pill alone, since its existing tooltip already says
+  "Realized profit/loss..." explicitly. (1+2) New "Closed round-trips" section on both
+  exchanges' `PositionDetail.tsx`, reusing `computeClosedTrades` scoped to one ticker, with BE/
+  Total buy/Total sale/PL-per-share computed as simple derivations from its already-tested
+  fields — renders nothing for a ticker with no sells, naturally satisfying "skip Selling data
+  for open positions." (5) The Trade Transactions page already had an Open-lots/Closed-trades
+  pair; PositionDetail didn't have a complementary Open-lots view for most cases, so QSE gained
+  a pure-reporting one (`computeFIFOPositions`, default order, explicitly independent of QSE's
+  real weighted-average calc) and PSX gained the same as a fallback for its non-FIFO
+  `costBasisMethod` (its real "Open lots (FIFO)" section already existed for the opt-in FIFO
+  case — the fallback is gated to never render alongside it). Verified live via Playwright with
+  a real partial-close scenario on both exchanges: the remaining open lot and the closed
+  round-trip correctly complement each other and their share counts sum back to the original
+  buy total, on both QSE and PSX. `npx tsc -b` / `npm run test` (687 tests, unchanged) / `npm
+  run build` all clean.
 
 ## Live URLs
 
