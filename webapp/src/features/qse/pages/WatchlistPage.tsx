@@ -34,7 +34,7 @@ export function WatchlistPage() {
           value={w.ticker}
           onChange={(e) => setW({ ...w, ticker: e.target.value.toUpperCase() })}
           list={QSE_TICKER_DATALIST_ID}
-          style={{ width: 90 }}
+          className="w-90"
         />
         <input
           type="number"

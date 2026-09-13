@@ -752,6 +752,28 @@
      same 6px left-margin, which doesn't fit the existing 8px `sm`/16px
      `md` scale, so named literally by value like `.mb-12`/`.mt-12`. */
   .ml-6{margin-left:6px;}
+  /* Same cleanup, nineteenth/twentieth instances (2026-09-13): a bare
+     `style={{ width: 90 }}` / `style={{ width: 130 }}` on a narrow inline
+     `<input>`/`TextInput` inside a table's edit-row (a Date input is
+     consistently 130px, a Shares/Price/Amount/short-text input consistently
+     90px, across every module's own edit-row markup — the two most
+     repeated of a family of similar fixed-width inline styles). All 37 (90)
+     and 25 (130) occurrences were bare, with no existing `className` to
+     merge into, so this is a plain 1:1 className swap.
+     `!important` is required here, unlike every other utility above:
+     verified live via Playwright BEFORE shipping (caught the regression,
+     not shipped blind) that a plain `.w-90{width:90px}` never actually
+     applied — the base `input:not(...):not(...):not(...):not(...){
+     width:100%}` reset rule a few lines below has specificity (0,4,1),
+     which beats a single class (0,1,0) regardless of source order. An
+     inline `style` (what these all used to be) always wins over any
+     selector-based rule no matter its specificity, which is exactly why
+     converting to a plain class silently broke every one of these fields
+     back to full-width — only caught because this cleanup's own live
+     verification step checked computed width, not just that the class
+     name landed in the DOM. */
+  .w-90{width:90px!important;}
+  .w-130{width:130px!important;}
   /* User-reported (2026-08-27): "Input sizes still inconsistent and taking
      whole 100% width." Root cause: `flex:1` (flex-basis:0%) ignores each
      field's own explicit `width` prop entirely and instead divides the

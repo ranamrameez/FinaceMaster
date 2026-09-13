@@ -935,7 +935,7 @@ function PlanCurrencyTable({
                       type="date"
                       value={editRow.date}
                       onChange={(e) => setEditRow({ ...editRow, date: e.target.value, recurrence: editRow.recurrence ? { ...editRow.recurrence, startDate: e.target.value } : undefined })}
-                      style={{ width: 130 }}
+                      className="w-130"
                     />
                   </td>
                   <td>
@@ -945,7 +945,7 @@ function PlanCurrencyTable({
                     </select>
                   </td>
                   <td>
-                    <input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 90 }} />{' '}
+                    <input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} className="w-90" />{' '}
                     <select value={editRow.currencyCode} onChange={(e) => setEditRow({ ...editRow, currencyCode: e.target.value })} style={{ width: 80 }}>
                       {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
                     </select>

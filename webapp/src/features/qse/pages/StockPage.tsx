@@ -106,10 +106,10 @@ function TickerTransactions({ ticker }: { ticker: string }) {
           />
         </Field>
         <Field label="Shares" required>
-          <input type="number" placeholder="Shares" value={sharesInput} onChange={(e) => setSharesInput(e.target.value)} style={{ width: 90 }} />
+          <input type="number" placeholder="Shares" value={sharesInput} onChange={(e) => setSharesInput(e.target.value)} className="w-90" />
         </Field>
         <Field label="Price" required>
-          <input type="number" step="0.001" placeholder="Price" value={priceInput} onChange={(e) => setPriceInput(e.target.value)} style={{ width: 90 }} />
+          <input type="number" step="0.001" placeholder="Price" value={priceInput} onChange={(e) => setPriceInput(e.target.value)} className="w-90" />
         </Field>
         <TimeZoneFields
           time={time}
@@ -136,7 +136,7 @@ function TickerTransactions({ ticker }: { ticker: string }) {
             {rows.map(({ tx, i }) =>
               editIndex === i && editRow ? (
                 <tr key={i}>
-                  <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
+                  <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} className="w-130" /></td>
                   <td>
                     <select value={editRow.action} onChange={(e) => setEditRow({ ...editRow, action: e.target.value as 'BUY' | 'SELL' })}>
                       <option value="BUY">BUY</option>
