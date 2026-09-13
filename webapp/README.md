@@ -8523,6 +8523,47 @@ FinanceManager live link:
   showed "Sell this lot," clicking it opened the Add Trade popup pre-filled with the correct
   ticker/shares/break-even price, and submitting correctly hit the real sign-in gate — zero
   console errors. `npx tsc -b` / `npm run test` (678 tests, 7 new) / `npm run build` all clean.
+- **Closed Trades reporting ledger gains a "Cheapest lot first" alternative view alongside
+  FIFO, user-requested (2026-09-13) — see Done item 315.** First analyzed the user's own real
+  MARK (QSE) trade history against an uploaded full-app backup and reported the full FIFO
+  ledger + weighted-average comparison + reconciliation in chat (no code change needed for
+  that half). User then observed: "FIFO maybe correct for PSX but QSE behaves different. WHY?
+  bcz shares are charged fix fee 0.275 for each buy/sell. so buy order doesn't matter, just the
+  price is important. so, we can try to sell to most cheaper to most expensive ones" — correct,
+  confirmed by reading the actual fee code: QSE's fee is a flat % of trade value with no
+  per-lot term, and PSX's own same-day netting operates at the whole-TRANSACTION level (that
+  day's total buy vs. sell quantity), never at the individual-lot level `computeClosedTrades`
+  matches within — so for BOTH exchanges, which lot a sale is credited to in this REPORTING
+  table never changes any real fee, buy cost, sell proceeds, or the true total
+  (realized+unrealized) P/L; it only changes which story the itemized ledger tells. Asked via
+  `AskUserQuestion` whether to replace FIFO outright, add a second view, or leave it — the user
+  picked **"Add a second view, keep FIFO default (Recommended)."** `computeClosedTrades()`
+  (`lib/calc/closedTrades.ts`) gained a third parameter, `matchOrder: 'fifo' | 'lowestCostFirst'
+  = 'fifo'` — `'lowestCostFirst'` picks the open lot with the lowest `buyPrice` for each match
+  instead of always `lots[0]`, falling through to the next-cheapest lot once one is exhausted.
+  **Explicitly does NOT touch `computeFIFOPositions`'s own real "Open trades" (open lots)
+  table** — that stays genuine oldest-first FIFO regardless of this toggle, since it feeds
+  PSX's actual opt-in cost-basis mode, not just a report; verified live that toggling the
+  Closed Trades view leaves the Open trades table completely unchanged. A real correctness
+  subtlety was caught while writing tests, not assumed: total realized P/L across the two match
+  orders is identical ONLY once every bought share has been sold — with shares still open, the
+  two methods leave genuinely DIFFERENT residual lots behind (FIFO: a mix; lowestCostFirst:
+  only the priciest lot), so their realized-so-far totals legitimately differ on a partial
+  close; a dedicated test proves both halves (a partial-close case where the totals differ, and
+  a fully-closed case where they converge to the cent). Wired into both `TransactionsPage.tsx`
+  files (QSE and PSX) as a chip-toggle row ("FIFO (oldest first)" / "Cheapest lot first") right
+  above the Closed Trades table, each with its own exchange-specific `Tooltip` explaining why
+  the toggle exists and that it never changes real fees/positions. Verified live via Playwright
+  with a seeded old-expensive-lot (50@10.40) + newer-cheap-lot (14@9.96) + one 14-share sell at
+  10.20: FIFO showed the 10.40 lot (netPL −3.59), Cheapest-lot-first showed the 9.96 lot (netPL
+  +2.59, strictly better as the test predicts), switching back to FIFO reproduced the original
+  row exactly, and the Open trades table (14@9.960 untouched + 36@10.40 leftover) stayed
+  identical regardless of which Closed Trades view was active — zero console errors. New tests:
+  `closedTrades.test.ts` gained 4 cases. `npx tsc -b` / `npm run test` (682 tests, 4 new) / `npm
+  run build` all clean. **Deliberately not done**: `closedTrades.ts` still doesn't honor
+  `Transaction.targetLotBuyId` (Pending item 134, unrelated to this feature — that's about a
+  SPECIFIC lot a user explicitly targeted via "Sell this lot," this is about re-sorting ALL
+  open lots by price for comparison).
 
 ## Pending
 

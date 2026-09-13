@@ -37,16 +37,45 @@ interface OpenLot {
 
 const EPSILON = 1e-7;
 
+/** Which still-open lot a sale gets matched against first. User's own
+ * observation (2026-09-13), confirmed correct by reading the fee code
+ * directly: neither exchange's fee ever depends on which lot a sale is
+ * later attributed to here — QSE's fee is a flat % of trade value with no
+ * per-share/per-lot terms at all, and PSX's same-day netting decides a
+ * whole TRANSACTION's fee by comparing that day's total buy vs. sell
+ * quantity, never by which specific lot a portion later gets matched to.
+ * So this choice never changes any real fee, buy cost, sell proceeds, or
+ * total realized+unrealized P/L (that total is invariant to match order by
+ * construction — only the SPLIT between "already realized" and "still on
+ * paper" moves) — it only changes which buy price gets credited for which
+ * sale in this REPORTING ledger.
+ *
+ * `'fifo'` (the default, unchanged from before this type existed) matches
+ * oldest lot first — the convention most real brokers/CDS systems use by
+ * default absent an explicit specific-lot election at trade time, so it's
+ * the one most likely to match what a real statement shows.
+ * `'lowestCostFirst'` matches the cheapest open lot first instead — the
+ * most OPTIMISTIC re-telling of the same history (it deterministically
+ * maximizes total reported gain / minimizes total reported loss for a
+ * fixed set of sales, since crediting the lowest-cost lot to a sale always
+ * gives that portion the largest possible gain). Offered as a second,
+ * explicitly comparison-only view alongside FIFO (not a replacement) —
+ * this does NOT change what `computeFIFOPositions`'s own "Open lots" table
+ * shows as still held (that stays real FIFO, since it feeds PSX's actual
+ * opt-in cost-basis mode, not just a report) — a caller offering both
+ * views should say so, so the two don't read as contradicting each other. */
+export type LotMatchOrder = 'fifo' | 'lowestCostFirst';
+
 /**
- * Reconstructs a per-trade closed ledger via FIFO matching: every sold share
- * is matched against the oldest still-open buy lot for that ticker, and each
- * match becomes its own record carrying that specific buy price/sell price/
- * fees/net P&L. A sell that drains more than one buy lot produces one
- * ClosedTrade per lot it touches (a partial fill against an older lot and a
- * partial fill against a newer one are two separate, individually-priced
- * records, not blended into one average); a buy lot split across multiple
- * sells produces one ClosedTrade per sell that touched it, each carrying its
- * own prorated share of that buy's fee.
+ * Reconstructs a per-trade closed ledger via lot matching (`matchOrder`,
+ * default FIFO — oldest still-open lot for that ticker): every sold share
+ * is matched against a lot, and each match becomes its own record carrying
+ * that specific buy price/sell price/fees/net P&L. A sell that drains more
+ * than one buy lot produces one ClosedTrade per lot it touches (a partial
+ * fill against an older lot and a partial fill against a newer one are two
+ * separate, individually-priced records, not blended into one average); a
+ * buy lot split across multiple sells produces one ClosedTrade per sell
+ * that touched it, each carrying its own prorated share of that buy's fee.
  *
  * This is a REPORTING ledger only — independent of and never feeding back
  * into `computePositions`'s weighted-average rollup or the opt-in
@@ -57,7 +86,7 @@ const EPSILON = 1e-7;
  * makes explicit that a closed trade's numbers are separate from whatever
  * the currently-open position's own average cost/break-even shows.
  */
-export function computeClosedTrades(transactions: Transaction[], calcFee: FeeCalculator): ClosedTrade[] {
+export function computeClosedTrades(transactions: Transaction[], calcFee: FeeCalculator, matchOrder: LotMatchOrder = 'fifo'): ClosedTrade[] {
   const lotsByTicker: Record<string, OpenLot[]> = {};
   const trades: ClosedTrade[] = [];
   // Excludes pending transactions (Pending-transaction-state, 2026-09-08) —
@@ -80,7 +109,10 @@ export function computeClosedTrades(transactions: Transaction[], calcFee: FeeCal
     let toSell = tx.shares;
     const sellFeePerShare = tx.shares > 0 ? fee / tx.shares : 0;
     while (toSell > EPSILON && lots.length) {
-      const lot = lots[0];
+      const lotIndex = matchOrder === 'fifo'
+        ? 0
+        : lots.reduce((bestIdx, l, i) => (l.buyPrice < lots[bestIdx].buyPrice ? i : bestIdx), 0);
+      const lot = lots[lotIndex];
       const take = Math.min(toSell, lot.remainingShares);
       const buyFeeShare = (take / lot.originalShares) * lot.buyFeeTotal;
       const sellFeeShare = take * sellFeePerShare;
@@ -103,7 +135,7 @@ export function computeClosedTrades(transactions: Transaction[], calcFee: FeeCal
       });
       lot.remainingShares -= take;
       toSell -= take;
-      if (lot.remainingShares <= EPSILON) lots.shift();
+      if (lot.remainingShares <= EPSILON) lots.splice(lotIndex, 1);
     }
   }
 
