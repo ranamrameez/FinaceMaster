@@ -50,6 +50,40 @@ describe('computeLotAdvice — real IQCD scenario', () => {
   });
 });
 
+describe('computeLotAdvice buyId passthrough + end-to-end "Sell this lot"', () => {
+  const IQCD_TXS_WITH_IDS: Transaction[] = [
+    { id: 'buy-old', date: '2026-08-10', ticker: 'IQCD', action: 'BUY', shares: 50, price: 10.4 },
+    { id: 'buy-cheap', date: '2026-09-01', ticker: 'IQCD', action: 'BUY', shares: 14, price: 9.962 },
+  ];
+
+  it('exposes each lot\'s originating buy id, so a "Sell this lot" click can target it', () => {
+    const { lotsByTicker } = computeFIFOPositions(IQCD_TXS_WITH_IDS, calcFee);
+    const advice = computeLotAdvice(lotsByTicker.IQCD, calcFee, 10.37, 0.275, 0.01);
+    expect(advice.map((a) => a.buyId)).toEqual(['buy-old', 'buy-cheap']);
+  });
+
+  it('selling the cheap lot via its buyId leaves the expensive lot\'s own avg cost/break-even untouched — the real bug this exists to prevent', () => {
+    const cheapLotAdvice = computeLotAdvice(computeFIFOPositions(IQCD_TXS_WITH_IDS, calcFee).lotsByTicker.IQCD, calcFee, 10.37, 0.275, 0.01)[1];
+    const sellTx: Transaction = {
+      date: '2026-09-15',
+      ticker: 'IQCD',
+      action: 'SELL',
+      shares: cheapLotAdvice.remainingShares,
+      price: 10.37,
+      targetLotBuyId: cheapLotAdvice.buyId,
+    };
+    const { positions } = computeFIFOPositions([...IQCD_TXS_WITH_IDS, sellTx], calcFee);
+    const p = positions.find((x) => x.ticker === 'IQCD')!;
+    // 50 shares remain, entirely from the expensive lot — average cost for
+    // what's left must be driven purely by the 50@10.40 lot's own
+    // fee-inclusive cost per share, never a blended or misattributed figure
+    // pulled in from the now fully-closed-out cheap lot.
+    const oldLotFee = calcFee(50 * 10.4, true, { shares: 50 });
+    expect(p.shares).toBe(50);
+    expect(p.invested / p.shares).toBeCloseTo(10.4 + oldLotFee / 50, 5);
+  });
+});
+
 describe('sellableShareSummary', () => {
   it('reports the cheap lot only as sellable at the real 10.37 peak', () => {
     const { lotsByTicker } = computeFIFOPositions(IQCD_TXS, calcFee);

@@ -5780,6 +5780,40 @@ app, not developer notes) continuously as features ship.
   at every phase; each part verified live via Playwright, including reproducing the user's
   exact real IQCD numbers (Hold/-4.36 vs Sell/+4.93 at the real 10.37 peak price).
 
+- **Critical, user-reported (2026-09-13): "Sell this lot" (Partial Trade Strategy) could
+  misattribute a sale under PSX's opt-in FIFO cost-basis mode — see `webapp/README.md`'s Done
+  item 314 for the full writeup.** The user's own words: "after selling the cheaper shares,
+  avg buy price and break even etc. are calculated according to the remaining share's prices.
+  We cannot let avg and break even prices misleading due to the partial cheaper lots selling."
+  Root cause: `computeFIFOPositions` always drains the OLDEST open lot first — correct for a
+  normal sell, but wrong for the entire point of "Sell this lot" (close a cheap NON-oldest lot
+  while holding an expensive older one, the real IQCD case Done item 301 was built for), which
+  would silently drain the wrong lot instead and leave a misleading post-sale average cost.
+  **Confirmed scoped to PSX's opt-in `costBasisMethod: 'fifo'` only** — QSE always uses
+  weighted-average (`computePositions`), which is mathematically invariant to which lot
+  "sold," so this class of bug can't occur there or under PSX's own default `'average'` mode.
+  Fixed with real specific-lot identification: new `Transaction.targetLotBuyId?: string`
+  (references a specific BUY's own `id`) — `computeFIFOPositions` drains that lot first when
+  set, falling through to normal oldest-first FIFO otherwise (fully backward-compatible, every
+  existing transaction unaffected). `FIFOLot`/`LotAdvice` both gained a `buyId` so both
+  exchanges' Trade Strategy pages' "Sell this lot" button passes `targetLotBuyId: lot.buyId`
+  into the pre-filled Add Trade popup. **A second, real reliability gap found while wiring
+  this**: `addTransaction`/`addTransactions` never assigned a new transaction's `id`
+  immediately — only `normalize()` (load/cloud-sync time) backfilled it — so a lot bought
+  moments earlier in the SAME session had no id to target yet, silently defeating the fix for
+  the exact live-trading scenario it exists for. Fixed by assigning `id: crypto.randomUUID()`
+  immediately in both actions, matching the pattern `seq`/`timestamp`/`executeTradePlanLeg`
+  already use. **Deliberately not extended to `lib/calc/closedTrades.ts`** — that "Closed
+  trades" reporting ledger is its own independent, by-design-decoupled FIFO simulation that
+  doesn't drive Avg Cost/Break-even, so teaching it about `targetLotBuyId` too is tracked as
+  its own separate follow-up (new README Pending item 134), not bundled into this fix. New
+  tests across `fifoPositions.test.ts` (4 cases, incl. the real IQCD numbers with/without
+  targeting), `partialTradeStrategy.test.ts` (2 cases), `createWorkbookStore.test.ts` (1 case).
+  Verified live via Playwright with the real IQCD scenario seeded under `costBasisMethod:
+  'fifo'`: only the cheap lot showed "Sell this lot," clicking it pre-filled the popup
+  correctly, and submitting hit the real sign-in gate — zero console errors. `npx tsc -b` /
+  `npm run test` (678 tests, 7 new) / `npm run build` all clean.
+
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 
 **Locked, final decision — read this before touching anything below.** The user floated a

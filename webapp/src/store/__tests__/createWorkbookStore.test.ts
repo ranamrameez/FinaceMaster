@@ -124,6 +124,21 @@ describe('createWorkbookStore normalize', () => {
     expect(second.seq).toBe((first.seq as number) + 1);
   });
 
+  it('addTransaction/addTransactions assign an id immediately, not deferred to normalize()', () => {
+    // A same-session "Sell this lot" (Partial Trade Strategy) needs a
+    // just-added BUY's own id right away to target it via
+    // `targetLotBuyId` — before this fix, `id` was only backfilled by
+    // `normalize()` on the next load/setWorkbook, so a lot bought moments
+    // earlier in the same session had no id to reference yet.
+    const useStore = createWorkbookStore(STORAGE_KEY, createEmptyTestWorkbook);
+    useStore.getState().addTransaction({ date: '2026-08-01', ticker: 'QGTS', action: 'BUY', shares: 1, price: 10 });
+    useStore.getState().addTransactions([{ date: '2026-08-02', ticker: 'QGTS', action: 'BUY', shares: 1, price: 11 }]);
+    const [first, second] = useStore.getState().workbook.transactions;
+    expect(first.id).toBeTruthy();
+    expect(second.id).toBeTruthy();
+    expect(first.id).not.toBe(second.id);
+  });
+
   it('executeTradePlanLeg links the leg to the transaction it creates, so a later edit stays visible from the plan', () => {
     const useStore = createWorkbookStore(STORAGE_KEY, createEmptyTestWorkbook);
     const leg = { date: '2026-08-01', ticker: 'QGTS', action: 'BUY' as const, shares: 100, price: 10 };

@@ -51,6 +51,22 @@ export interface Transaction {
    * too. `undefined` means "use the computed fee" (the normal case);
    * unlike `manualSameDay` this is shared/meaningful for both exchanges. */
   feeOverride?: number;
+  /** For a SELL, an optional reference to a specific BUY transaction's own
+   * `id` this sell should close out FIRST — "specific lot identification,"
+   * a real recognized cost-basis convention (distinct from FIFO/average).
+   * Set by the Trade Strategy page's "Sell this lot" action (Partial Trade
+   * Strategy) so selling a cheaper, non-oldest lot is correctly attributed
+   * to THAT lot rather than `computeFIFOPositions`' default oldest-first
+   * draw — without this, selling a cheap lot's own share count would
+   * silently drain the oldest (often more expensive) lot instead, leaving
+   * a misleading average cost / break-even for what's actually still held.
+   * Only consulted by `computeFIFOPositions` (PSX's opt-in FIFO cost-basis
+   * mode, and the FIFO lot advisory view both exchanges show regardless of
+   * their real costBasisMethod); `undefined` means normal oldest-first
+   * FIFO, unchanged for every pre-existing transaction. Meaningless under
+   * the weighted-average method, which has no lot concept — average cost
+   * of what remains is already invariant to which shares were "sold." */
+  targetLotBuyId?: string;
   /** Audit metadata: the real wall-clock instant this record was actually
    * entered into the app — NOT the same thing as `date`/`time` above (the
    * transaction's own user-entered effective date). Same field name/

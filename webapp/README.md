@@ -8481,6 +8481,48 @@ FinanceManager live link:
   text — `FabPanel`'s secondary actions are icon-only with a hover `Tooltip`, not a text label)
   correctly opens the "New trade plan" modal on both pages, zero real console errors. `npx tsc
   -b` / `npm run test` (671 tests, unchanged) / `npm run build` all clean.
+- **Critical, user-reported (2026-09-13): Partial Trade Strategy's "Sell this lot" could
+  misattribute a sale under PSX's opt-in FIFO cost-basis mode — see Done item 314.** User's own
+  framing: "after selling the cheaper shares, avg buy price and break even etc. are calculated
+  according to the remaining share's prices. We cannot let avg and break even prices misleading
+  due to the partial cheaper lots selling." Root-caused, not guessed at: `computeFIFOPositions`
+  always drains the OLDEST open lot first (standard FIFO) — correct for a normal sell, but the
+  whole point of "Sell this lot" (the real IQCD case this feature exists for: hold the
+  expensive 50@10.40 lot, sell the cheap 14@9.962 lot once IT clears its own break-even) is to
+  close a NON-oldest lot. Selling that lot's own share count under strict FIFO would silently
+  drain the OLD lot instead, leaving a wrong post-sale lot composition and a misleading average
+  cost/break-even for what's actually left. **Confirmed the bug is scoped to PSX's opt-in
+  `costBasisMethod: 'fifo'` only** — QSE always uses `computePositions` (weighted average),
+  where remaining-share average cost is mathematically invariant to which lot conceptually
+  sold, so this class of bug cannot occur there; PSX's own default `'average'` mode is equally
+  unaffected. Fixed with real specific-lot identification (a recognized cost-basis convention,
+  distinct from FIFO/average): new `Transaction.targetLotBuyId?: string` references a specific
+  BUY's own `id`; `computeFIFOPositions` drains that lot FIRST when set (falling through to
+  normal oldest-first FIFO for any shares beyond what it holds, or when unset — fully
+  backward-compatible, zero change for every existing transaction). `FIFOLot`/`LotAdvice` both
+  gained a `buyId` field so the Trade Strategy page's "Sell this lot" button (both QSE and PSX,
+  for consistency of the FIFO lot ADVISORY view both exchanges show regardless of their real
+  `costBasisMethod`) can pass `targetLotBuyId: lot.buyId` straight through into the pre-filled
+  Add Trade popup. **A second, real reliability gap found while wiring this, not introduced by
+  it**: `addTransaction`/`addTransactions` never assigned a new transaction's `id` immediately
+  — only `normalize()` (load/cloud-sync-pull time) backfilled it — so a lot bought moments
+  earlier in the SAME session (no reload/cloud round-trip yet) would have had no id to target,
+  silently defeating the whole fix for the exact live-trading scenario it's meant for. Fixed by
+  assigning `id: crypto.randomUUID()` immediately in both actions, mirroring the same pattern
+  `seq`/`timestamp` and `executeTradePlanLeg` already use. **Deliberately not extended to
+  `lib/calc/closedTrades.ts`** — that "Closed trades" reporting ledger is explicitly documented
+  as its own independent FIFO simulation, by design decoupled from `computeFIFOPositions`/
+  `costBasisMethod` for every ticker regardless of exchange; teaching it about
+  `targetLotBuyId` too is a real, separate follow-up (tracked as a new Pending item below), not
+  bundled into this fix since it doesn't drive the Avg Cost/Break-even figures the user
+  actually flagged. New tests: `fifoPositions.test.ts` (4 cases, incl. the real IQCD numbers
+  both with and without targeting, a partial-lot-overflow case, and an unmatched-id fallback),
+  `partialTradeStrategy.test.ts` (2 cases, `buyId` passthrough + an end-to-end sell), and
+  `createWorkbookStore.test.ts` (1 case, immediate id assignment). Verified live via Playwright
+  with the real IQCD-shaped scenario seeded under `costBasisMethod: 'fifo'`: only the cheap lot
+  showed "Sell this lot," clicking it opened the Add Trade popup pre-filled with the correct
+  ticker/shares/break-even price, and submitting correctly hit the real sign-in gate — zero
+  console errors. `npx tsc -b` / `npm run test` (678 tests, 7 new) / `npm run build` all clean.
 
 ## Pending
 
@@ -9543,6 +9585,17 @@ or a design decision before more code, not guessed at further:**
      which is already what the existing per-currency `CashStatementTable` shows. Don't guess at
      a specific fix here; ask which table/section reads as unreadable and why (too many columns?
      too small text? wrong density setting?) before redesigning.
+134. **`lib/calc/closedTrades.ts`'s "Closed trades" reporting ledger doesn't know about
+     `Transaction.targetLotBuyId` (2026-09-13, flagged while fixing Done item 314).** That
+     module is its OWN independent FIFO simulation (by design decoupled from
+     `computeFIFOPositions`/`costBasisMethod`, for both exchanges), so a real "Sell this lot"
+     against a non-oldest lot (now correctly attributed in `computeFIFOPositions` and the
+     position's own Avg Cost/Break-even, per Done item 314) still gets matched oldest-first in
+     THIS separate reporting table — meaning the itemized "which lot did this sell close"
+     narrative shown there can disagree with what actually happened to the real position. Real,
+     but lower-stakes than Done item 314's fix (this table doesn't drive Avg Cost/Break-even,
+     only its own per-row itemization) — teach it to honor `targetLotBuyId` the same way, using
+     its own local `OpenLot` shape.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

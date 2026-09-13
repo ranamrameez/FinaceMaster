@@ -399,7 +399,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
   const [editLeg, setEditLeg] = useState<TradePlanLeg | null>(null);
   const [addingLeg, setAddingLeg] = useState<Omit<TradePlanLeg, 'ticker'> | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
-  const [sellLotFor, setSellLotFor] = useState<{ ticker: string; action: 'BUY' | 'SELL'; shares: number; price: number } | null>(null);
+  const [sellLotFor, setSellLotFor] = useState<{ ticker: string; action: 'BUY' | 'SELL'; shares: number; price: number; targetLotBuyId?: string } | null>(null);
 
   const addLeg = () => {
     if (!addingLeg || !addingLeg.shares || !addingLeg.price) return toast('Fill in shares and price first.');
@@ -530,7 +530,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
       {(plan.defaultTicker || plan.legs[0]?.ticker) && (
         <PartialTradeAdvisor
           ticker={plan.defaultTicker || plan.legs[0]?.ticker || ''}
-          onSellLot={(lot) => setSellLotFor({ ticker: plan.defaultTicker || plan.legs[0]?.ticker || '', action: 'SELL', shares: lot.remainingShares, price: lot.breakEven })}
+          onSellLot={(lot) => setSellLotFor({ ticker: plan.defaultTicker || plan.legs[0]?.ticker || '', action: 'SELL', shares: lot.remainingShares, price: lot.breakEven, targetLotBuyId: lot.buyId })}
         />
       )}
 
@@ -790,7 +790,7 @@ function StandalonePartialTrade() {
   const { rows } = useQSEDerived();
   const openTickers = rows.filter((r) => r.shares > 0).map((r) => r.ticker).sort();
   const [ticker, setTicker] = useState('');
-  const [sellLotFor, setSellLotFor] = useState<{ ticker: string; action: 'BUY' | 'SELL'; shares: number; price: number } | null>(null);
+  const [sellLotFor, setSellLotFor] = useState<{ ticker: string; action: 'BUY' | 'SELL'; shares: number; price: number; targetLotBuyId?: string } | null>(null);
   const effective = openTickers.includes(ticker) ? ticker : (openTickers[0] || '');
 
   if (!openTickers.length) return <p className="text-muted">No open QSE positions yet — Partial Trade needs at least one.</p>;
@@ -805,7 +805,7 @@ function StandalonePartialTrade() {
       {effective && (
         <PartialTradeAdvisor
           ticker={effective}
-          onSellLot={(lot) => setSellLotFor({ ticker: effective, action: 'SELL', shares: lot.remainingShares, price: lot.breakEven })}
+          onSellLot={(lot) => setSellLotFor({ ticker: effective, action: 'SELL', shares: lot.remainingShares, price: lot.breakEven, targetLotBuyId: lot.buyId })}
         />
       )}
       {sellLotFor && (
