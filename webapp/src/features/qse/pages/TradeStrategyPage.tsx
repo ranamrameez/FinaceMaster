@@ -315,8 +315,8 @@ function NewPlanFab() {
                 <option value="BUY">BUY</option>
                 <option value="SELL">SELL</option>
               </select>
-              <input type="number" placeholder="Shares" value={l.shares || ''} onChange={(e) => update(i, { shares: Number(e.target.value) })} style={{ width: 90 }} />
-              <input type="number" step="0.01" placeholder="Price" value={l.price || ''} onChange={(e) => update(i, { price: Number(e.target.value) })} style={{ width: 90 }} />
+              <input type="number" placeholder="Shares" value={l.shares || ''} onChange={(e) => update(i, { shares: Number(e.target.value) })} className="w-90" />
+              <input type="number" step="0.01" placeholder="Price" value={l.price || ''} onChange={(e) => update(i, { price: Number(e.target.value) })} className="w-90" />
               <button className="btn secondary small" onClick={() => setLegs((rs) => rs.filter((_, idx) => idx !== i))}>
                 <TrashIcon size={12} />Remove
               </button>
@@ -605,7 +605,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
             {sortedLegRows.map(({ leg, originalIndex: i }) => {
               if (editLegIndex === i && editLeg) return (
                 <tr key={i}>
-                  <td><input type="date" value={editLeg.date} onChange={(e) => setEditLeg({ ...editLeg, date: e.target.value })} style={{ width: 130 }} /></td>
+                  <td><input type="date" value={editLeg.date} onChange={(e) => setEditLeg({ ...editLeg, date: e.target.value })} className="w-130" /></td>
                   <td>{editLeg.ticker}</td>
                   <td>
                     <select value={editLeg.action} onChange={(e) => setEditLeg({ ...editLeg, action: e.target.value as 'BUY' | 'SELL' })}>
@@ -637,7 +637,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
 
               if (editingTxLegIndex === i && editTxRow) return (
                 <tr key={i}>
-                  <td><input type="date" value={editTxRow.date} onChange={(e) => setEditTxRow({ ...editTxRow, date: e.target.value })} style={{ width: 130 }} /></td>
+                  <td><input type="date" value={editTxRow.date} onChange={(e) => setEditTxRow({ ...editTxRow, date: e.target.value })} className="w-130" /></td>
                   <td>{editTxRow.ticker}</td>
                   <td>
                     <select value={editTxRow.action} onChange={(e) => setEditTxRow({ ...editTxRow, action: e.target.value as 'BUY' | 'SELL' })}>
@@ -714,7 +714,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
             {!plan.legs.length && (<tr><td colSpan={9} className="text-muted">No legs left in this plan.</td></tr>)}
             {addingLeg && (
               <tr>
-                <td><input type="date" value={addingLeg.date} onChange={(e) => setAddingLeg({ ...addingLeg, date: e.target.value })} style={{ width: 130 }} /></td>
+                <td><input type="date" value={addingLeg.date} onChange={(e) => setAddingLeg({ ...addingLeg, date: e.target.value })} className="w-130" /></td>
                 <td>{plan.defaultTicker || planTicker}</td>
                 <td>
                   <select value={addingLeg.action} onChange={(e) => setAddingLeg({ ...addingLeg, action: e.target.value as 'BUY' | 'SELL' })}>

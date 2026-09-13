@@ -8607,6 +8607,34 @@ FinanceManager live link:
   `Transaction.targetLotBuyId` (Pending item 134, unrelated to this feature — that's about a
   SPECIFIC lot a user explicitly targeted via "Sell this lot," this is about re-sorting ALL
   open lots by price for comparison).
+- **App-wide CSS cleanup, nineteenth/twentieth concrete instances — a real regression caught
+  by live verification BEFORE shipping, not after — see Done item 318 (2026-09-13).**
+  Continuing the same practice onto the two most-repeated width values: a bare
+  `style={{ width: 90 }}` (37 occurrences — Shares/Price/Amount/short-text inputs across
+  every module's edit-rows) and `style={{ width: 130 }}` (25 occurrences — Date inputs,
+  same context), both consistently the same field type wherever they appear. **First attempt
+  used a plain `.w-90{width:90px}`/`.w-130{width:130px}` class — live Playwright verification
+  caught it not actually applying**: computed width came back 180px/full-width instead of
+  90px/130px. Root cause: the base `input:not([type=checkbox]):not([type=radio]):not([type=
+  file]):not([type=range]), select, textarea{width:100%; ...}` reset rule has specificity
+  (0,4,1) from its four `:not()` clauses — a single class selector (0,1,0) can never beat
+  that regardless of source order, whereas the inline `style` these fields used to carry
+  always wins over ANY selector-based rule no matter its specificity, which is exactly why
+  the original inline styles worked and a naive class-based swap silently didn't. **Lesson
+  for any future `width`/`height`-style CSS-cleanup instance specifically**: these properties
+  are much more likely to collide with an existing high-specificity reset rule than
+  `margin`/`cursor`/`display` ever are (nothing in this app's base ruleset sets a default
+  margin or cursor on every input) — verify computed style live before considering a
+  width/height extraction done, not just that the className landed in the DOM. Fixed by
+  adding `!important` to both classes, with the reasoning documented directly in `theme.css`
+  — a deliberate, narrow exception to this app's general "compound selectors beat `!important`"
+  practice, since matching the base rule's own four-`:not()` selector would be fragile (tied to
+  wording that could change silently) for a two-line utility class whose only job is to
+  override that exact reset. Verified live via Playwright after the fix: a real Dividends-form
+  `.w-90` input (QSE) computed exactly `90px`, and a real Trade-Transactions edit-row `.w-130`
+  date input computed exactly `130px` — both confirmed broken before the `!important` fix and
+  correct after, not assumed. Zero real console errors. `npx tsc -b` / `npm run test` (678
+  tests, unchanged) / `npm run build` all clean.
 
 ## Pending
 
@@ -9532,9 +9560,18 @@ or a design decision before more code, not guessed at further:**
      6px-left-margin patterns — a `.pill-warn` "Pending" badge (9 occurrences) and a
      `.pill-info` "Linked" tag `<Link>` (8 occurrences, whose own `textDecoration:'none'` half
      turned out to be dead code already covered by the base `a{}` rule) — both extracted into
-     one new `.ml-6` class. The exact same incremental discipline (audit one repeated pattern,
-     extract or remove, verify, repeat) still applies for every other module/pattern — this is
-     one instance of an ongoing, repeatable practice, not a closed item.
+     one new `.ml-6` class. **Nineteenth/twentieth concrete instances done (2026-09-13) — see
+     Done item 318**: `style={{ width: 90 }}` (37 occurrences) / `style={{ width: 130 }}` (25
+     occurrences) on narrow edit-row inputs, extracted into `.w-90`/`.w-130` — needed
+     `!important` on both, a deliberate exception found only by live-verifying computed width
+     before shipping: a plain class can't beat the base input reset rule's four-`:not()`
+     specificity (0,4,1), unlike an inline `style` which always wins regardless of specificity.
+     **Rule for any future width/height-property cleanup instance specifically**: verify
+     computed style live, not just that the class landed in the DOM — these properties collide
+     with this app's existing high-specificity input reset in a way `margin`/`cursor`/`display`
+     never do. The exact same incremental discipline (audit one repeated pattern, extract or
+     remove, verify, repeat) still applies for every other module/pattern — this is one instance
+     of an ongoing, repeatable practice, not a closed item.
 117. ~~App-wide "everything should be a grid item except tables" principle (2026-09-06)~~ —
      **done in full (2026-09-08), see Done item 237.** Every module's landing/Settings page has
      been audited for the "short non-table cards stacked full-width" pattern; Cash's Settings

@@ -416,8 +416,8 @@ export function PositionDetail({ ticker }: { ticker: string }) {
                     const rawIndex = rawHistory.indexOf(p);
                     return editPriceIndex === rawIndex && editPriceRow ? (
                       <tr key={rawIndex}>
-                        <td><input type="date" value={editPriceRow.date} onChange={(e) => setEditPriceRow({ ...editPriceRow, date: e.target.value })} style={{ width: 130 }} /></td>
-                        <td><input type="number" step="0.01" value={editPriceRow.price} onChange={(e) => setEditPriceRow({ ...editPriceRow, price: Number(e.target.value) })} style={{ width: 90 }} /></td>
+                        <td><input type="date" value={editPriceRow.date} onChange={(e) => setEditPriceRow({ ...editPriceRow, date: e.target.value })} className="w-130" /></td>
+                        <td><input type="number" step="0.01" value={editPriceRow.price} onChange={(e) => setEditPriceRow({ ...editPriceRow, price: Number(e.target.value) })} className="w-90" /></td>
                         <td>
                           <IconButton label="Save" icon={<SaveIcon size={12} />} onClick={saveEditPrice} />
                           <IconButton label="Cancel" icon={<XIcon size={12} />} onClick={cancelEditPrice} />

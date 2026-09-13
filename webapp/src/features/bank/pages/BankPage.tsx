@@ -2060,7 +2060,7 @@ function BankPlanList({ account }: { account: BankAccount }) {
                       type="date"
                       value={editRow.date}
                       onChange={(e) => setEditRow({ ...editRow, date: e.target.value, recurrence: editRow.recurrence ? { ...editRow.recurrence, startDate: e.target.value } : undefined })}
-                      style={{ width: 130 }}
+                      className="w-130"
                     />
                   </td>
                   <td><input value={editRow.description} onChange={(e) => setEditRow({ ...editRow, description: e.target.value })} /></td>
