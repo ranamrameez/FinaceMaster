@@ -863,6 +863,13 @@
      occurrences across 11 files) - never conditionally toggled, so a
      static class is a safe 1:1 swap for the repeated inline style. */
   .hidden-file-input{display:none;}
+  /* Same cleanup, fifteenth instance: `style={{ cursor: 'pointer',
+     fontWeight: 700, marginBottom: 8 }}` was hand-repeated on every
+     collapsible-section `<summary>` in QSE's/PSX's Trade Transactions page
+     (8 occurrences across 2 files, byte-identical) - a real semantic
+     pattern (a clickable accordion-section header), not just a coincidental
+     value match, so named for what it is rather than a literal-value class. */
+  .summary-heading{cursor:pointer;font-weight:700;margin-bottom:8px;}
   /* Required-field marker (components/ui/Field.tsx) - a single ::after rule
      so the label text and its asterisk are one indivisible inline box, with
      no separate DOM node for a line break to land between. \00a0 is a real

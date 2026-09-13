@@ -79,7 +79,7 @@ function usePagesOpen() {
 function ExchangeSwitcher({ exchange }: { exchange: 'qse' | 'psx' }) {
   const navigate = useNavigate();
   return (
-    <div className="chip-tabs" style={{ marginBottom: 8 }}>
+    <div className="chip-tabs mb-sm">
       <button type="button" className={`chip${exchange === 'qse' ? ' active' : ''}`} onClick={() => navigate('/')}>
         QSE
       </button>

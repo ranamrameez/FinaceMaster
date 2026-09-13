@@ -1439,7 +1439,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
         {balanceRows.length > 0 && (
           <>
             {balanceRows.length > 8 && (
-              <button className="btn secondary small" style={{ marginBottom: 8 }} onClick={() => setShowAllUpdates((v) => !v)}>
+              <button className="btn secondary small mb-sm" onClick={() => setShowAllUpdates((v) => !v)}>
                 {showAllUpdates ? 'Show recent 8 only' : `Show all ${balanceRows.length} updates`}
               </button>
             )}
