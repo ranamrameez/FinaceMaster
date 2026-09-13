@@ -159,7 +159,7 @@ function HoldingsCard() {
                   <td onClick={() => navigate(`/psx/stock/${r.ticker}`)}>
                     <div>{r.mp > 0 ? fmtMoney(r.value, currency) : '—'}</div>
                     <div className="text-muted">
-                      {r.mp > 0 && (r.value >= r.invested ? <span style={{ color: 'var(--profit)' }}>▲</span> : <span style={{ color: 'var(--loss)' }}>▼</span>)}
+                      {r.mp > 0 && (r.value >= r.invested ? <span className="text-profit">▲</span> : <span className="text-loss">▼</span>)}
                       {' '}Inv {fmtMoney(r.invested, currency)}
                     </div>
                   </td>

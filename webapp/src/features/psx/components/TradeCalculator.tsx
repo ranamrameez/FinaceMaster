@@ -290,7 +290,7 @@ export function TradeCalculator({ initialTicker }: { initialTicker?: string } = 
               <TextInput type="number" step="0.01" value={targetProfit || ''} onChange={(e) => setTargetProfit(Number(e.target.value))} />
             </Field>
           </div>
-          {overCap && <p className="text-muted" style={{ color: 'var(--loss)' }}>Capped at {shares} shares held.</p>}
+          {overCap && <p className="text-muted text-loss">Capped at {shares} shares held.</p>}
           {solvedSellPriceForProfit !== null && (
             <p className="text-muted">
               Sell price needed for {fmtMoney(targetProfit, currency)} profit: {fmtPrice(solvedSellPriceForProfit)}{' '}

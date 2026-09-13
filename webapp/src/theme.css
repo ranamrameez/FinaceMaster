@@ -786,6 +786,17 @@
   .w-100{width:100px!important;}
   .w-120{width:120px!important;}
   .w-140{width:140px!important;}
+  /* Same cleanup, twenty-second instance (2026-09-13): `style={{ color:
+     'var(--loss)' }}`/`style={{ color: 'var(--profit)' }}` on plain inline
+     text/spans (a required-field `*`, a ▲/▼ direction arrow, a "Used:"/
+     "Available:" credit-limit label) — distinct from `hueStyle()`/
+     `.pill-positive`/`.pill-negative`, which color a whole card/badge; this
+     is for plain inline colored TEXT with no background. No competing
+     `color` rule exists on a bare `<span>`/`<p>`, unlike `width` on an
+     `<input>` (see `.w-90` above) — a plain class is safe here, no
+     `!important` needed. */
+  .text-loss{color:var(--loss);}
+  .text-profit{color:var(--profit);}
   /* User-reported (2026-08-27): "Input sizes still inconsistent and taking
      whole 100% width." Root cause: `flex:1` (flex-basis:0%) ignores each
      field's own explicit `width` prop entirely and instead divides the
