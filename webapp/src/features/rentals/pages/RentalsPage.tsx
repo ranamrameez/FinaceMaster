@@ -213,7 +213,7 @@ function PropertiesList() {
   return (
     <div>
       {archivedCount > 0 && (
-        <button className="btn secondary small" style={{ marginBottom: 8 }} onClick={() => setShowArchived((v) => !v)}>
+        <button className="btn secondary small mb-sm" onClick={() => setShowArchived((v) => !v)}>
           {showArchived ? 'Hide' : 'Show'} closed ({archivedCount})
         </button>
       )}
@@ -538,7 +538,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
           <h4 style={{ margin: '0 0 6px' }}>Rent collection</h4>
           {proposal ? (
             <>
-              <p className="text-muted" style={{ marginBottom: 8 }}>
+              <p className="text-muted mb-sm">
                 {proposal.isDue ? 'Due for collection' : 'Next collection'} — approve to log it, or adjust the date/amount first
                 (e.g. a partial payment).
                 {(property.pendingRentBalance ?? 0) > 0 && (

@@ -8523,8 +8523,35 @@ FinanceManager live link:
   showed "Sell this lot," clicking it opened the Add Trade popup pre-filled with the correct
   ticker/shares/break-even price, and submitting correctly hit the real sign-in gate — zero
   console errors. `npx tsc -b` / `npm run test` (678 tests, 7 new) / `npm run build` all clean.
+- **App-wide CSS cleanup, fifteenth/sixteenth concrete instances — see Done item 315
+  (2026-09-13).** Continuing README Pending item 116's ongoing incremental practice, resumed
+  after syncing with `origin/main` and confirming its build/test/lint health first (`tsc -b` /
+  678 tests / `npm run build` all clean on the synced tip before touching anything). Two more
+  repeated inline-style patterns found via a fresh grep of every `style={{...}}` literal
+  app-wide: (1) a bare `style={{ marginBottom: 8 }}` with no `gap`/`.row` involved — 22
+  occurrences across 9 files (Sidebar's chip-tabs row, several "Show archived/closed" toggle
+  buttons, several `Notice`/`<p>`/`<div>` intro blocks) — converted to the already-existing
+  `.mb-sm` utility (Done item 301), merging into each element's existing `className` where
+  present. This also caught 7 NEW occurrences of the already-established `className="row"
+  style={{ gap: 8, marginBottom: 8 }}` → `.row.gap-sm.mb-sm` pattern (Done item 168) that had
+  crept back in via pages added after that cleanup ran (mostly `TradeStrategyPage.tsx`, which
+  didn't exist yet at the time) — converted the same way. (2) A genuinely new composite pattern,
+  not a coincidental value match: `style={{ cursor: 'pointer', fontWeight: 700, marginBottom: 8
+  }}` on every collapsible-section `<summary>` in QSE's/PSX's Trade Transactions page (8
+  occurrences across 2 files, byte-identical) — extracted into a new semantically-named
+  `.summary-heading{cursor:pointer;font-weight:700;margin-bottom:8px;}` class rather than a
+  literal-value name, since every instance is the same real UI role (a clickable accordion-
+  section header). Verified live via Playwright: the `.summary-heading` elements are collapsed
+  by default inside `Tabs`-driven `CollapsibleCard` sections (the same "collapsed content
+  genuinely unmounts" fact this file has documented many times before — an initial count came
+  back 0 until clicking the page's own "All" chip to force-open every section), and once
+  visible, `getComputedStyle` confirmed `cursor:pointer`/`font-weight:700`/`margin-bottom:8px`
+  all render correctly; the `.row.gap-sm.mb-sm` conversions on Trade Strategy rendered
+  identically to before. Zero real console errors (the one `ERR_CONNECTION_RESET` is this
+  sandbox's own documented network-block artifact, unrelated to this change). `npx tsc -b` /
+  `npm run test` (678 tests, unchanged — pure CSS extraction) / `npm run build` all clean.
 - **Closed Trades reporting ledger gains a "Cheapest lot first" alternative view alongside
-  FIFO, user-requested (2026-09-13) — see Done item 315.** First analyzed the user's own real
+  FIFO, user-requested (2026-09-13) — see Done item 316.** First analyzed the user's own real
   MARK (QSE) trade history against an uploaded full-app backup and reported the full FIFO
   ledger + weighted-average comparison + reconciliation in chat (no code change needed for
   that half). User then observed: "FIFO maybe correct for PSX but QSE behaves different. WHY?
@@ -9477,10 +9504,16 @@ or a design decision before more code, not guessed at further:**
      12px doesn't fit the existing `sm`(8)/`md`(16) scale, so named literally by value
      (`.mb-12`/`.mt-12`). **Fourteenth concrete instance done (2026-09-11) — see Done item
      310**: `style={{ marginTop: 16 }}` (24 occurrences across 14 files) — symmetric with
-     `.mb-md`(16px) on the top side, so named `.mt-md` to match. The exact same incremental
-     discipline (audit one repeated pattern, extract or remove, verify, repeat) still applies
-     for every other module/pattern — this is one instance of an ongoing, repeatable practice,
-     not a closed item.
+     `.mb-md`(16px) on the top side, so named `.mt-md` to match. **Fifteenth/sixteenth
+     concrete instances done (2026-09-13) — see Done item 315**: a bare `style={{ marginBottom:
+     8 }}` (22 occurrences across 9 files, converted to the existing `.mb-sm`, plus 7 newer
+     `.row.gap-sm.mb-sm`-shaped occurrences that had crept back in via pages added after Done
+     item 168's own pass) and a genuinely new composite pattern, `style={{ cursor: 'pointer',
+     fontWeight: 700, marginBottom: 8 }}` on every collapsible `<summary>` in QSE's/PSX's Trade
+     Transactions page (8 occurrences), extracted into a new semantic `.summary-heading` class.
+     The exact same incremental discipline (audit one repeated pattern, extract or remove,
+     verify, repeat) still applies for every other module/pattern — this is one instance of an
+     ongoing, repeatable practice, not a closed item.
 117. ~~App-wide "everything should be a grid item except tables" principle (2026-09-06)~~ —
      **done in full (2026-09-08), see Done item 237.** Every module's landing/Settings page has
      been audited for the "short non-table cards stacked full-width" pattern; Cash's Settings

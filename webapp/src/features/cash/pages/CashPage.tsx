@@ -1053,7 +1053,7 @@ function PlanList() {
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row gap-sm mb-sm">
         <Field label="Status" width={120}>
           <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as 'all' | 'planned' | 'done')}>
             <option value="all">All</option>

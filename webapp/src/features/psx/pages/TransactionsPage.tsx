@@ -586,21 +586,21 @@ function TransactionList() {
       </div>
 
       <details open className="mb-md">
-        <summary style={{ cursor: 'pointer', fontWeight: 700, marginBottom: 8 }}>
+        <summary className="summary-heading">
           Open positions — {openSorted.length} txns
         </summary>
         {renderTable(openGroups, 'No transactions for a currently open position.')}
       </details>
 
       <details open>
-        <summary style={{ cursor: 'pointer', fontWeight: 700, marginBottom: 8 }}>
+        <summary className="summary-heading">
           Closed positions — {closedSorted.length} txns
         </summary>
         {renderTable(closedGroups, 'No transactions for a fully closed position yet.')}
       </details>
 
       <details open className="mt-md">
-        <summary style={{ cursor: 'pointer', fontWeight: 700, marginBottom: 8 }}>
+        <summary className="summary-heading">
           <Tooltip text="Each buy lot that hasn't been fully sold yet, FIFO-matched against your real sells — the mirror image of Closed trades below, so it's always clear which shares are still open vs. already sold.">
             Open trades (not yet sold)
           </Tooltip>{' '}
@@ -640,7 +640,7 @@ function TransactionList() {
       </details>
 
       <details open className="mt-md">
-        <summary style={{ cursor: 'pointer', fontWeight: 700, marginBottom: 8 }}>
+        <summary className="summary-heading">
           <Tooltip text="Each fully or partially closed round-trip, matched buy-to-sell, with its own buy price, sell price, fees on both legs, and net P/L — so a closed trade's own numbers stay separate from whatever the currently-open position shows.">
             Closed trades (realized round-trips)
           </Tooltip>{' '}

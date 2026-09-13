@@ -774,11 +774,11 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
             <div>
               <h4 style={{ margin: '0 0 4px' }}>Link to bank</h4>
               {linkedAccount ? (
-                <p className="text-muted" style={{ marginBottom: 8 }}>
+                <p className="text-muted mb-sm">
                   Linked to <strong>{linkedAccount.name}</strong> — remaining installments are planned in its Planning tab.
                 </p>
               ) : (
-                <p className="text-muted" style={{ marginBottom: 8 }}>
+                <p className="text-muted mb-sm">
                   Not linked yet. Linking generates a planned (not-yet-done) entry for every remaining installment in
                   the chosen account's Planning tab, dated on this loan's own schedule.
                 </p>
@@ -1196,7 +1196,7 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: EMILoan) => void; onE
   return (
     <div>
       {archivedCount > 0 && (
-        <button className="btn secondary small" style={{ marginBottom: 8 }} onClick={() => setShowArchived((v) => !v)}>
+        <button className="btn secondary small mb-sm" onClick={() => setShowArchived((v) => !v)}>
           {showArchived ? 'Hide' : 'Show'} closed ({archivedCount})
         </button>
       )}

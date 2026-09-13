@@ -535,11 +535,11 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
       <Card className="mb-md">
         <h4 style={{ margin: '0 0 8px' }}>Link to a paying account</h4>
         {linkedLabel ? (
-          <p className="text-muted" style={{ marginBottom: 8 }}>
+          <p className="text-muted mb-sm">
             Paid via <strong>{linkedLabel}</strong> — upcoming renewals are planned in its Planning tab.
           </p>
         ) : (
-          <p className="text-muted" style={{ marginBottom: 8 }}>
+          <p className="text-muted mb-sm">
             Not linked yet. Linking generates a planned (not-yet-done) entry for every renewal in the next 12
             months in the chosen account's Planning tab.
           </p>
