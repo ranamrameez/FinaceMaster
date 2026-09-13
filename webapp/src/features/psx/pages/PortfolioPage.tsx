@@ -1,12 +1,14 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sparkline } from '../../../components/Sparkline';
 import { Tabs } from '../../../components/Tabs';
 import { TickerLogo } from '../../../components/TickerLogo';
+import { RoundTripCostModal } from '../../../components/RoundTripCostModal';
 import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { breakEvenPrice, getDailyPriceHistory, getMarketPrice } from '../../../lib/calc';
+import { perShareCommission } from '../../../lib/calc/partialTradeStrategy';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { shortenCompanyName } from '../../../lib/shortenName';
@@ -39,6 +41,7 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
           const be = breakEvenPrice(p.invested, p.shares, feePct, tick, calcFee);
           const target = (pct: number) => breakEvenPrice(p.invested * (1 + pct / 100), p.shares, feePct, tick, calcFee);
           const sparkData = getDailyPriceHistory(p.ticker, workbook.priceHistory).map((pt) => pt.price);
+          const rt = hasMarket ? perShareCommission(mp, calcFee) : null;
 
           let statusRank: number;
           let statusLabel: string;
@@ -55,7 +58,7 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
 
           return {
             ticker: p.ticker, shares: p.shares, invested: p.invested, avgCost, mp, hasMarket, sparkData, value: gross,
-            be, net, netPct, t1: target(1), t2: target(2), t3: target(5),
+            be, net, netPct, rt, t1: target(1), t2: target(2), t3: target(5),
             statusRank, statusLabel, statusClass,
           };
         }),
@@ -74,6 +77,8 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
     }
   };
   const { sorted, Th } = useSortableRows(rows, sortValue, 'status', 'desc');
+  const [rtTicker, setRtTicker] = useState<string | null>(null);
+  const rtRow = rtTicker ? sorted.find((r) => r.ticker === rtTicker) : undefined;
 
   if (!sorted.length) return <p className="text-muted">No open positions.</p>;
 
@@ -140,6 +145,15 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
                     }
                   }}
                 />
+                {r.rt && (
+                  <div
+                    className="text-muted clickable"
+                    onClick={() => setRtTicker(r.ticker)}
+                    title="Round-trip commission cost at the current price — click for the full breakdown."
+                  >
+                    RT {fmtMoney(r.rt.buy + r.rt.sell, currency)}
+                  </div>
+                )}
               </td>
               <td onClick={() => onSelect(r.ticker)}>
                 <div>{r.hasMarket ? fmtMoney(r.value, currency) : '—'}</div>
@@ -160,6 +174,16 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
           ))}
         </tbody>
       </table>
+      {rtRow && rtRow.rt && (
+        <RoundTripCostModal
+          ticker={rtRow.ticker}
+          currency={currency}
+          currentPrice={rtRow.mp}
+          buyFee={rtRow.rt.buy}
+          sellFee={rtRow.rt.sell}
+          onClose={() => setRtTicker(null)}
+        />
+      )}
     </div>
   );
 }
