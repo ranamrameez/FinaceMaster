@@ -8663,6 +8663,16 @@ FinanceManager live link:
   and Watchlist's `.w-90`/`.w-120` (merged `.price-input.w-120`) computed `90px`/`120px`
   respectively — zero real console errors. `npx tsc -b` / `npm run test` (682 tests, unchanged)
   / `npm run build` all clean.
+- **App-wide CSS cleanup, twenty-second concrete instance — see Done item 320 (2026-09-13).**
+  `style={{ color: 'var(--loss)' }}`/`style={{ color: 'var(--profit)' }}` on plain inline text/
+  spans — a required-field `*`, a ▲/▼ direction arrow, a "Used:"/"Available:" credit-limit
+  label (16 occurrences total across 9 files) — extracted into `.text-loss`/`.text-profit`.
+  Distinct from `hueStyle()`/`.pill-positive`/`.pill-negative`, which color a whole card/badge
+  background — this is for plain colored TEXT with no background. No `!important` needed this
+  time: unlike `width` on an `<input>` (Done items 318/319), nothing in this app's base
+  ruleset sets a competing `color` on a bare `<span>`/`<p>`. Verified live via Playwright with
+  a seeded QSE position: `.text-loss` computed `rgb(200, 48, 47)` exactly, zero console
+  errors. `npx tsc -b` / `npm run test` (682 tests, unchanged) / `npm run build` all clean.
 
 ## Pending
 
@@ -9608,7 +9618,10 @@ or a design decision before more code, not guessed at further:**
      worth remembering for any future bulk className-merge script on this codebase. The exact
      same incremental discipline (audit one repeated pattern, extract or remove, verify, repeat)
      still applies for every other module/pattern — this is one instance of an ongoing,
-     repeatable practice, not a closed item.
+     repeatable practice, not a closed item. **Twenty-second instance done (2026-09-13) — see
+     Done item 320**: `color:var(--loss)`/`color:var(--profit)` on plain inline text/spans (16
+     occurrences), extracted into `.text-loss`/`.text-profit` — no `!important` needed, since
+     `color` (unlike `width` on an `<input>`) has no competing high-specificity base rule here.
 117. ~~App-wide "everything should be a grid item except tables" principle (2026-09-06)~~ —
      **done in full (2026-09-08), see Done item 237.** Every module's landing/Settings page has
      been audited for the "short non-table cards stacked full-width" pattern; Cash's Settings

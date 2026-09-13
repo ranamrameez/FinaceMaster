@@ -433,7 +433,7 @@ export function AddAccountForm({ onSaved, initialCurrency, initialBankId }: { on
       <button className="btn mt-12" onClick={submit}>
         <PlusIcon />Add account
       </button>
-      <p className="text-muted mt-sm"><span style={{ color: 'var(--loss)' }}>*</span> Required. Everything else on this form is optional.</p>
+      <p className="text-muted mt-sm"><span className="text-loss">*</span> Required. Everything else on this form is optional.</p>
     </div>
   );
 }
@@ -795,8 +795,8 @@ function CreditUsageBar({ used, limit, currency }: { used: number; limit: number
         <div style={{ width: `${usedPct}%`, background: 'var(--loss)' }} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 12 }}>
-        <span style={{ color: 'var(--loss)' }}>Used: {fmtMoney(used, currency)}</span>
-        <span style={{ color: 'var(--profit)' }}>Available: {fmtMoney(Math.max(0, limit - used), currency)} of {fmtMoney(limit, currency)}</span>
+        <span className="text-loss">Used: {fmtMoney(used, currency)}</span>
+        <span className="text-profit">Available: {fmtMoney(Math.max(0, limit - used), currency)} of {fmtMoney(limit, currency)}</span>
       </div>
     </div>
   );

@@ -139,7 +139,7 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
               <td onClick={() => onSelect(r.ticker)}>
                 <div>{r.hasMarket ? fmtMoney(r.value, currency) : '—'}</div>
                 <div className="text-muted">
-                  {r.hasMarket && (r.value >= r.invested ? <span style={{ color: 'var(--profit)' }}>▲</span> : <span style={{ color: 'var(--loss)' }}>▼</span>)}
+                  {r.hasMarket && (r.value >= r.invested ? <span className="text-profit">▲</span> : <span className="text-loss">▼</span>)}
                   {' '}Inv {fmtMoney(r.invested, currency)}
                 </div>
               </td>

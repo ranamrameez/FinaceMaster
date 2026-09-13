@@ -113,8 +113,8 @@ function CreditUsageBar({ used, limit, currency }: { used: number; limit: number
         <div style={{ width: `${usedPct}%`, background: 'var(--loss)' }} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 12 }}>
-        <span style={{ color: 'var(--loss)' }}>Used: {fmtMoney(used, currency)}</span>
-        <span style={{ color: 'var(--profit)' }}>Available: {fmtMoney(availableCredit({ id: '', name: '', currencyCode: currency, creditLimit: limit }, used), currency)} of {fmtMoney(limit, currency)}</span>
+        <span className="text-loss">Used: {fmtMoney(used, currency)}</span>
+        <span className="text-profit">Available: {fmtMoney(availableCredit({ id: '', name: '', currencyCode: currency, creditLimit: limit }, used), currency)} of {fmtMoney(limit, currency)}</span>
       </div>
     </div>
   );
