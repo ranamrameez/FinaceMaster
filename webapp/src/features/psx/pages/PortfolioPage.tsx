@@ -4,6 +4,7 @@ import { Sparkline } from '../../../components/Sparkline';
 import { Tabs } from '../../../components/Tabs';
 import { TickerLogo } from '../../../components/TickerLogo';
 import { toast } from '../../../components/Toast';
+import { Tooltip } from '../../../components/Tooltip';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { breakEvenPrice, getDailyPriceHistory, getMarketPrice } from '../../../lib/calc';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
@@ -87,7 +88,11 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
             <Th col="avgCost">Cost</Th>
             <Th col="market">Market Price</Th>
             <Th col="value">Value</Th>
-            <Th col="net">P/L</Th>
+            <Th col="net">
+              <Tooltip text="Unrealized — what you'd gain or lose if you sold this open position right now at the current market price. Nothing here has actually been sold yet.">
+                Unrealized P/L
+              </Tooltip>
+            </Th>
             <th>Exit targets</th>
             <Th col="status">Status</Th>
           </tr>
@@ -183,7 +188,11 @@ function ClosedPositionsTable({ onSelect }: { onSelect: (ticker: string) => void
           <tr>
             <Th col="ticker">Stock</Th>
             <Th col="bought">Bought / Sold</Th>
-            <Th col="realized">P/L</Th>
+            <Th col="realized">
+              <Tooltip text="Realized — the actual profit or loss already locked in from selling this ticker's shares, independent of any market price. This position is fully closed.">
+                Realized P/L
+              </Tooltip>
+            </Th>
             <Th col="last">Trade dates</Th>
           </tr>
         </thead>
