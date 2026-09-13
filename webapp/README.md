@@ -8635,6 +8635,34 @@ FinanceManager live link:
   date input computed exactly `130px` — both confirmed broken before the `!important` fix and
   correct after, not assumed. Zero real console errors. `npx tsc -b` / `npm run test` (678
   tests, unchanged) / `npm run build` all clean.
+- **App-wide CSS cleanup, remaining width-value instances from the same family — see Done item
+  319 (2026-09-13).** Finished the width family Done item 318 started: `width:80` (19),
+  `width:100` (19), `width:70` (17), `width:120` (7), `width:96` (5), `width:82` (4),
+  `width:140` (4) — 75 more occurrences, extracted into `.w-70`/`.w-80`/`.w-82`/`.w-96`/
+  `.w-100`/`.w-120`/`.w-140` (same `!important` treatment as `.w-90`/`.w-130`, same reasoning).
+  **A real mechanical-conversion bug caught by `tsc -b`, not shipped blind**: the bulk regex
+  script correctly merged a width class into an element's EXISTING `className` only when the
+  two attributes sat adjacent with nothing but whitespace between them — several elements had
+  `className="price-input"` several attribute-lines away from `style={{width:...}}` within the
+  same JSX tag (a `value`/`onChange`/`placeholder` in between), so the script's "no existing
+  className" fallback fired anyway, producing a SECOND `className` attribute on the same
+  element — a real `TS17001: JSX elements cannot have multiple attributes with the same name`
+  compile error, not a runtime bug, caught immediately by `tsc -b` before ever reaching a test
+  or build step. Fixed a first batch (5 files) with a smarter merge regex; QSE's and PSX's
+  `WatchlistPage.tsx` needed manual fixes instead (8 occurrences total) — the JSX in question
+  contains `onChange={(e) => ...}` arrow functions, whose own `=>` embeds a literal `>`
+  character that broke a `[^<>]`-based "stay inside this tag" regex, a trap worth remembering
+  for any future JSX-aware regex on this codebase's own arrow-function-heavy event handlers.
+  **Lesson for any future bulk find/merge-into-className script**: verify with `tsc -b`
+  immediately after running it, before assuming a clean count of "matched N occurrences" means
+  the merge itself was correct — a script that successfully finds every occurrence of the OLD
+  pattern can still silently produce two DIFFERENT kinds of wrong output (a class that never
+  applies, per Done item 318; a duplicate attribute, per this one) depending on what shape the
+  surrounding JSX happens to take. Verified live via Playwright after all fixes: a Dashboard
+  `.w-70` Sparkline cell computed `70px`, a merged `.price-input.w-96` input computed `96px`,
+  and Watchlist's `.w-90`/`.w-120` (merged `.price-input.w-120`) computed `90px`/`120px`
+  respectively — zero real console errors. `npx tsc -b` / `npm run test` (682 tests, unchanged)
+  / `npm run build` all clean.
 
 ## Pending
 
@@ -9569,9 +9597,18 @@ or a design decision before more code, not guessed at further:**
      **Rule for any future width/height-property cleanup instance specifically**: verify
      computed style live, not just that the class landed in the DOM — these properties collide
      with this app's existing high-specificity input reset in a way `margin`/`cursor`/`display`
-     never do. The exact same incremental discipline (audit one repeated pattern, extract or
-     remove, verify, repeat) still applies for every other module/pattern — this is one instance
-     of an ongoing, repeatable practice, not a closed item.
+     never do. **Twenty-first instance done (2026-09-13) — see Done item 319**: the rest of the
+     same width family — `width:80/100/70/120/96/82/140` (75 more occurrences) — extracted into
+     `.w-70`/`.w-80`/`.w-82`/`.w-96`/`.w-100`/`.w-120`/`.w-140`, same `!important` treatment.
+     Also caught, this time by `tsc -b` rather than live verification: a bulk merge-into-
+     existing-`className` regex can silently produce a DUPLICATE `className` attribute (a real
+     `TS17001` compile error) when the existing className and the new width style sit several
+     attribute-lines apart within the same JSX tag, especially where an `onChange={(e) => ...}`
+     arrow function's own `=>` defeats a naive `[^<>]`-bounded "stay inside this tag" regex —
+     worth remembering for any future bulk className-merge script on this codebase. The exact
+     same incremental discipline (audit one repeated pattern, extract or remove, verify, repeat)
+     still applies for every other module/pattern — this is one instance of an ongoing,
+     repeatable practice, not a closed item.
 117. ~~App-wide "everything should be a grid item except tables" principle (2026-09-06)~~ —
      **done in full (2026-09-08), see Done item 237.** Every module's landing/Settings page has
      been audited for the "short non-table cards stacked full-width" pattern; Cash's Settings

@@ -208,7 +208,7 @@ function AdjustmentForm() {
           placeholder="Amount"
           value={a.amount || ''}
           onChange={(e) => setA({ ...a, amount: Number(e.target.value) })}
-          style={{ width: 100 }}
+          className="w-100"
         />
       </Field>
       <Field label="Note">
@@ -457,15 +457,15 @@ function TransactionList() {
                 editIndex === i && editRow ? (
                   <tr key={i}>
                     <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} className="w-130" /></td>
-                    <td><input value={editRow.ticker} onChange={(e) => setEditRow({ ...editRow, ticker: e.target.value.toUpperCase() })} style={{ width: 70 }} /></td>
+                    <td><input value={editRow.ticker} onChange={(e) => setEditRow({ ...editRow, ticker: e.target.value.toUpperCase() })} className="w-70" /></td>
                     <td>
                       <select value={editRow.action} onChange={(e) => setEditRow({ ...editRow, action: e.target.value as 'BUY' | 'SELL' })}>
                         <option value="BUY">BUY</option>
                         <option value="SELL">SELL</option>
                       </select>
                     </td>
-                    <td><input type="number" value={editRow.shares} onChange={(e) => setEditRow({ ...editRow, shares: Number(e.target.value) })} style={{ width: 70 }} /></td>
-                    <td><input type="number" step="0.01" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })} style={{ width: 80 }} /></td>
+                    <td><input type="number" value={editRow.shares} onChange={(e) => setEditRow({ ...editRow, shares: Number(e.target.value) })} className="w-70" /></td>
+                    <td><input type="number" step="0.01" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })} className="w-80" /></td>
                     <td>{fmtMoney(editRow.shares * editRow.price, currency)}</td>
                     <td>
                       <FeeModeControl
@@ -835,7 +835,7 @@ function TransfersSection() {
                     </select>
                   </td>
                   <td><input type="number" value={editRow.gross} onChange={(e) => setEditRow({ ...editRow, gross: Number(e.target.value) })} className="w-90" /></td>
-                  <td><input type="number" value={editRow.fee} onChange={(e) => setEditRow({ ...editRow, fee: Number(e.target.value) })} style={{ width: 70 }} /></td>
+                  <td><input type="number" value={editRow.fee} onChange={(e) => setEditRow({ ...editRow, fee: Number(e.target.value) })} className="w-70" /></td>
                   <td></td>
                   <td>
                     <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}

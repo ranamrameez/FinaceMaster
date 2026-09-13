@@ -63,7 +63,7 @@ export function FeeModeControl({
     <div className="row" style={{ gap: 6, alignItems: 'flex-end', flex: '0 0 auto' }}>
       <Field label="Fee mode" width={100}>
         <Tooltip text="Auto: fee fully computed from Settings, same-day netting auto-detected. Semi: you decide whether this leg is the same-day-netted one, amount still computed. Manual: type the exact fee from your statement.">
-          <select value={mode} onChange={(e) => onModeChange(e.target.value as FeeMode)} style={{ width: 100 }}>
+          <select value={mode} onChange={(e) => onModeChange(e.target.value as FeeMode)} className="w-100">
             <option value="auto">Auto</option>
             <option value="semi">Semi</option>
             <option value="manual">Manual</option>

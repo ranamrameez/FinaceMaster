@@ -826,7 +826,7 @@ function SnapshotImportSection() {
               <tbody>
                 {plan.map((p, i) => (
                   <tr key={i}>
-                    <td><TextInput value={p.row.bank} onChange={(e) => editRow(i, { bank: e.target.value })} style={{ width: 140 }} /></td>
+                    <td><TextInput value={p.row.bank} onChange={(e) => editRow(i, { bank: e.target.value })} className="w-140" /></td>
                     <td><TextInput value={p.row.code} onChange={(e) => editRow(i, { code: e.target.value.toUpperCase() })} className="w-90" /></td>
                     <td><TextInput value={p.row.name} onChange={(e) => editRow(i, { name: e.target.value })} style={{ width: 200 }} /></td>
                     <td>{fmtMoney(p.row.totalInvested, currencyCode)}</td>
@@ -1255,7 +1255,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
               setTxNav(nav);
               if (txUnits) setTxAmountInput(nav > 0 ? (txUnits * nav).toFixed(2) : '');
             }}
-            style={{ width: 100 }}
+            className="w-100"
           />
         </Field>
         <Field label="Units">
@@ -1267,7 +1267,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
               setTxUnits(u);
               setTxAmountInput(txNav > 0 && u ? (u * txNav).toFixed(2) : '');
             }}
-            style={{ width: 100 }}
+            className="w-100"
           />
         </Field>
         <Field label="or Amount" title="Only know the amount, not the units? Enter it here — units are computed automatically from the NAV above (pre-filled with this fund's last known NAV, editable if today's is different).">
@@ -1639,7 +1639,7 @@ function FundsTransfersSection() {
                     </select>
                   </td>
                   <td><input type="number" value={editRow.gross} onChange={(e) => setEditRow({ ...editRow, gross: Number(e.target.value) })} className="w-90" /></td>
-                  <td><input type="number" value={editRow.fee} onChange={(e) => setEditRow({ ...editRow, fee: Number(e.target.value) })} style={{ width: 70 }} /></td>
+                  <td><input type="number" value={editRow.fee} onChange={(e) => setEditRow({ ...editRow, fee: Number(e.target.value) })} className="w-70" /></td>
                   <td></td>
                   <td>
                     <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}

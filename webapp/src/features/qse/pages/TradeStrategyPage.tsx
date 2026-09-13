@@ -477,7 +477,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
     <div className="row" style={{ gap: 8 }} onClick={(e) => e.stopPropagation()}>
       <TextInput value={name} onChange={(e) => setName(e.target.value)} />
       <TextInput value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes" />
-      <TextInput value={planTicker} onChange={(e) => setPlanTicker(e.target.value.toUpperCase())} list={QSE_TICKER_DATALIST_ID} placeholder="Ticker" style={{ width: 100 }} />
+      <TextInput value={planTicker} onChange={(e) => setPlanTicker(e.target.value.toUpperCase())} list={QSE_TICKER_DATALIST_ID} placeholder="Ticker" className="w-100" />
       <button className="btn secondary small" onClick={saveMeta}><SaveIcon size={12} />Save</button>
       <button className="btn secondary small" onClick={() => setEditingMeta(false)}>Cancel</button>
     </div>
@@ -613,8 +613,8 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                       <option value="SELL">SELL</option>
                     </select>
                   </td>
-                  <td><input type="number" value={editLeg.shares} onChange={(e) => setEditLeg({ ...editLeg, shares: Number(e.target.value) })} style={{ width: 70 }} /></td>
-                  <td><input type="number" step="0.01" value={editLeg.price} onChange={(e) => setEditLeg({ ...editLeg, price: Number(e.target.value) })} style={{ width: 80 }} /></td>
+                  <td><input type="number" value={editLeg.shares} onChange={(e) => setEditLeg({ ...editLeg, shares: Number(e.target.value) })} className="w-70" /></td>
+                  <td><input type="number" step="0.01" value={editLeg.price} onChange={(e) => setEditLeg({ ...editLeg, price: Number(e.target.value) })} className="w-80" /></td>
                   <td>{fmtMoney(editLeg.shares * editLeg.price, currency)}</td>
                   <td>
                     <input
@@ -645,8 +645,8 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                       <option value="SELL">SELL</option>
                     </select>
                   </td>
-                  <td><input type="number" value={editTxRow.shares} onChange={(e) => setEditTxRow({ ...editTxRow, shares: Number(e.target.value) })} style={{ width: 70 }} /></td>
-                  <td><input type="number" step="0.01" value={editTxRow.price} onChange={(e) => setEditTxRow({ ...editTxRow, price: Number(e.target.value) })} style={{ width: 80 }} /></td>
+                  <td><input type="number" value={editTxRow.shares} onChange={(e) => setEditTxRow({ ...editTxRow, shares: Number(e.target.value) })} className="w-70" /></td>
+                  <td><input type="number" step="0.01" value={editTxRow.price} onChange={(e) => setEditTxRow({ ...editTxRow, price: Number(e.target.value) })} className="w-80" /></td>
                   <td>{fmtMoney(editTxRow.shares * editTxRow.price, currency)}</td>
                   <td>{fmtMoney(calcFee(editTxRow.shares * editTxRow.price, editTxRow.action === 'BUY', { shares: editTxRow.shares, tx: editTxRow }), currency)}</td>
                   <td><span className="pill-positive">Executed</span></td>
@@ -722,8 +722,8 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                     <option value="SELL">SELL</option>
                   </select>
                 </td>
-                <td><input type="number" placeholder="Shares" value={addingLeg.shares || ''} onChange={(e) => setAddingLeg({ ...addingLeg, shares: Number(e.target.value) })} style={{ width: 70 }} /></td>
-                <td><input type="number" step="0.01" placeholder="Price" value={addingLeg.price || ''} onChange={(e) => setAddingLeg({ ...addingLeg, price: Number(e.target.value) })} style={{ width: 80 }} /></td>
+                <td><input type="number" placeholder="Shares" value={addingLeg.shares || ''} onChange={(e) => setAddingLeg({ ...addingLeg, shares: Number(e.target.value) })} className="w-70" /></td>
+                <td><input type="number" step="0.01" placeholder="Price" value={addingLeg.price || ''} onChange={(e) => setAddingLeg({ ...addingLeg, price: Number(e.target.value) })} className="w-80" /></td>
                 <td>{fmtMoney(addingLeg.shares * addingLeg.price, currency)}</td>
                 <td>
                   <input

@@ -143,8 +143,8 @@ function TickerTransactions({ ticker }: { ticker: string }) {
                       <option value="SELL">SELL</option>
                     </select>
                   </td>
-                  <td><input type="number" value={editRow.shares} onChange={(e) => setEditRow({ ...editRow, shares: Number(e.target.value) })} style={{ width: 70 }} /></td>
-                  <td><input type="number" step="0.001" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })} style={{ width: 80 }} /></td>
+                  <td><input type="number" value={editRow.shares} onChange={(e) => setEditRow({ ...editRow, shares: Number(e.target.value) })} className="w-70" /></td>
+                  <td><input type="number" step="0.001" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })} className="w-80" /></td>
                   <td>{fmtMoney(editRow.shares * editRow.price, currency)}</td>
                   <td>
                     <PendingToggle
