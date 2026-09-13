@@ -106,7 +106,7 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
                   </div>
                 </div>
               </td>
-              <td onClick={(e) => e.stopPropagation()} style={{ width: 82 }}><Sparkline data={r.sparkData} formatValue={fmtPrice} /></td>
+              <td onClick={(e) => e.stopPropagation()} className="w-82"><Sparkline data={r.sparkData} formatValue={fmtPrice} /></td>
               <td onClick={() => onSelect(r.ticker)}>{fmt(r.shares, 0)}</td>
               <td onClick={() => onSelect(r.ticker)}>
                 <div>{fmtPrice(r.avgCost)}</div>
@@ -119,10 +119,10 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
                   key={r.mp}
                   type="number"
                   step="0.01"
-                  className="price-input"
+                  className="price-input w-96"
                   defaultValue={r.mp || ''}
                   placeholder="—"
-                  style={{ width: 96 }}
+                  
                   onKeyDown={async (e) => {
                     if (e.key === 'Enter') {
                       const target = e.target as HTMLInputElement;

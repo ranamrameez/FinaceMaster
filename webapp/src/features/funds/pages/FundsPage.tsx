@@ -826,8 +826,8 @@ function SnapshotImportSection() {
               <tbody>
                 {plan.map((p, i) => (
                   <tr key={i}>
-                    <td><TextInput value={p.row.bank} onChange={(e) => editRow(i, { bank: e.target.value })} style={{ width: 140 }} /></td>
-                    <td><TextInput value={p.row.code} onChange={(e) => editRow(i, { code: e.target.value.toUpperCase() })} style={{ width: 90 }} /></td>
+                    <td><TextInput value={p.row.bank} onChange={(e) => editRow(i, { bank: e.target.value })} className="w-140" /></td>
+                    <td><TextInput value={p.row.code} onChange={(e) => editRow(i, { code: e.target.value.toUpperCase() })} className="w-90" /></td>
                     <td><TextInput value={p.row.name} onChange={(e) => editRow(i, { name: e.target.value })} style={{ width: 200 }} /></td>
                     <td>{fmtMoney(p.row.totalInvested, currencyCode)}</td>
                     <td>{fmtMoney(p.row.withdrawn, currencyCode)}</td>
@@ -1255,7 +1255,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
               setTxNav(nav);
               if (txUnits) setTxAmountInput(nav > 0 ? (txUnits * nav).toFixed(2) : '');
             }}
-            style={{ width: 100 }}
+            className="w-100"
           />
         </Field>
         <Field label="Units">
@@ -1267,7 +1267,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
               setTxUnits(u);
               setTxAmountInput(txNav > 0 && u ? (u * txNav).toFixed(2) : '');
             }}
-            style={{ width: 100 }}
+            className="w-100"
           />
         </Field>
         <Field label="or Amount" title="Only know the amount, not the units? Enter it here — units are computed automatically from the NAV above (pre-filled with this fund's last known NAV, editable if today's is different).">
@@ -1355,15 +1355,15 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
             {txs.map(({ t, i }) =>
               editIndex === i && editRow ? (
                 <tr key={i}>
-                  <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
+                  <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} className="w-130" /></td>
                   <td>
                     <select value={editRow.action} onChange={(e) => setEditRow({ ...editRow, action: e.target.value as 'BUY' | 'SELL' })}>
                       <option value="BUY">Invest</option>
                       <option value="SELL">Withdraw</option>
                     </select>
                   </td>
-                  <td><input type="number" value={editRow.shares} onChange={(e) => setEditRow({ ...editRow, shares: Number(e.target.value) })} style={{ width: 90 }} /></td>
-                  <td><input type="number" step="0.0001" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })} style={{ width: 90 }} /></td>
+                  <td><input type="number" value={editRow.shares} onChange={(e) => setEditRow({ ...editRow, shares: Number(e.target.value) })} className="w-90" /></td>
+                  <td><input type="number" step="0.0001" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })} className="w-90" /></td>
                   <td>{fmtMoney(editRow.shares * editRow.price, fund.currencyCode)}</td>
                   <td>
                     <PendingToggle
@@ -1456,11 +1456,11 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                     return editUpdateIndex === rawIndex && editUpdateRow ? (
                       <tr key={rawIndex}>
                         <td className="text-muted">{r.index}</td>
-                        <td><input type="date" value={editUpdateRow.date} onChange={(e) => setEditUpdateRow({ ...editUpdateRow, date: e.target.value })} style={{ width: 130 }} /></td>
+                        <td><input type="date" value={editUpdateRow.date} onChange={(e) => setEditUpdateRow({ ...editUpdateRow, date: e.target.value })} className="w-130" /></td>
                         <td>{fmtMoney(r.prevBalance, fund.currencyCode)}</td>
                         <td>{fmtPrice(r.prevNav)}</td>
                         <td className="text-muted">—</td>
-                        <td><input type="number" step="0.0001" value={editUpdateRow.price} onChange={(e) => setEditUpdateRow({ ...editUpdateRow, price: Number(e.target.value) })} style={{ width: 90 }} /></td>
+                        <td><input type="number" step="0.0001" value={editUpdateRow.price} onChange={(e) => setEditUpdateRow({ ...editUpdateRow, price: Number(e.target.value) })} className="w-90" /></td>
                         <td className="text-muted">—</td>
                         <td className="text-muted">—</td>
                         <td>
@@ -1631,15 +1631,15 @@ function FundsTransfersSection() {
               const otherSide = link ? (link.from.module === 'funds' && link.fromRecordId === t.id ? link.to : link.from) : undefined;
               return editId === t.id && editRow ? (
                 <tr key={t.id}>
-                  <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
+                  <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} className="w-130" /></td>
                   <td>
                     <select value={editRow.type} onChange={(e) => setEditRow({ ...editRow, type: e.target.value as Transfer['type'] })}>
                       <option value="DEPOSIT">Deposit</option>
                       <option value="WITHDRAWAL">Withdrawal</option>
                     </select>
                   </td>
-                  <td><input type="number" value={editRow.gross} onChange={(e) => setEditRow({ ...editRow, gross: Number(e.target.value) })} style={{ width: 90 }} /></td>
-                  <td><input type="number" value={editRow.fee} onChange={(e) => setEditRow({ ...editRow, fee: Number(e.target.value) })} style={{ width: 70 }} /></td>
+                  <td><input type="number" value={editRow.gross} onChange={(e) => setEditRow({ ...editRow, gross: Number(e.target.value) })} className="w-90" /></td>
+                  <td><input type="number" value={editRow.fee} onChange={(e) => setEditRow({ ...editRow, fee: Number(e.target.value) })} className="w-70" /></td>
                   <td></td>
                   <td>
                     <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}

@@ -484,7 +484,7 @@ export function NetWorthPage({
                 </Select>
               </Field>
               <Field label="equals">
-                <TextInput type="number" step="0.0001" placeholder="Rate" value={crossRateValue} onChange={(e) => setCrossRateValue(e.target.value)} style={{ width: 100 }} />
+                <TextInput type="number" step="0.0001" placeholder="Rate" value={crossRateValue} onChange={(e) => setCrossRateValue(e.target.value)} className="w-100" />
               </Field>
               <Field label="of">
                 <Select value={rateTo} onChange={(e) => onRateToChange(e.target.value)} width={110}>

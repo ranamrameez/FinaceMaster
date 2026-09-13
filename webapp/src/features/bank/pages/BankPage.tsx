@@ -2060,12 +2060,12 @@ function BankPlanList({ account }: { account: BankAccount }) {
                       type="date"
                       value={editRow.date}
                       onChange={(e) => setEditRow({ ...editRow, date: e.target.value, recurrence: editRow.recurrence ? { ...editRow.recurrence, startDate: e.target.value } : undefined })}
-                      style={{ width: 130 }}
+                      className="w-130"
                     />
                   </td>
                   <td><input value={editRow.description} onChange={(e) => setEditRow({ ...editRow, description: e.target.value })} /></td>
-                  <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 100 }} /></td>
-                  <td><input value={editRow.category ?? ''} onChange={(e) => setEditRow({ ...editRow, category: e.target.value })} style={{ width: 100 }} /></td>
+                  <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} className="w-100" /></td>
+                  <td><input value={editRow.category ?? ''} onChange={(e) => setEditRow({ ...editRow, category: e.target.value })} className="w-100" /></td>
                   <td>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'flex-end' }}>
                       <RecurrenceFields
@@ -2259,10 +2259,10 @@ function AnalyticsTab() {
                         <input
                           type="number"
                           step="0.01"
-                          className="price-input"
+                          className="price-input w-96"
                           defaultValue={r.budget || ''}
                           placeholder="—"
-                          style={{ width: 96 }}
+                          
                           onKeyDown={async (e) => {
                             if (e.key === 'Enter') {
                               const val = parseFloat((e.target as HTMLInputElement).value) || 0;
@@ -2283,14 +2283,14 @@ function AnalyticsTab() {
               </table>
             </div>
             <div className="row gap-sm mt-sm">
-              <TextInput placeholder="New category" value={newBudgetCategory} onChange={(e) => setNewBudgetCategory(e.target.value)} style={{ width: 140 }} />
+              <TextInput placeholder="New category" value={newBudgetCategory} onChange={(e) => setNewBudgetCategory(e.target.value)} className="w-140" />
               <input
                 type="number"
                 step="0.01"
                 placeholder="Monthly target"
                 value={newBudgetAmount || ''}
                 onChange={(e) => setNewBudgetAmount(Number(e.target.value))}
-                style={{ width: 120 }}
+                className="w-120"
               />
               <button
                 className="btn secondary small"

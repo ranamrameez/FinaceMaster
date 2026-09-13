@@ -208,10 +208,10 @@ export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: strin
         {bigEmiEnabled && (
           <div className="row gap-sm">
             <Field label="Every N months">
-              <TextInput type="number" min={1} value={bigEmiInterval || ''} onChange={(e) => setBigEmiInterval(Number(e.target.value))} style={{ width: 90 }} />
+              <TextInput type="number" min={1} value={bigEmiInterval || ''} onChange={(e) => setBigEmiInterval(Number(e.target.value))} className="w-90" />
             </Field>
             <Field label="Amount" title="Either the whole payment for that month, or an extra amount stacked on top of the regular installment — pick which below.">
-              <TextInput type="number" step="0.01" value={bigEmiAmount || ''} onChange={(e) => setBigEmiAmount(Number(e.target.value))} style={{ width: 120 }} />
+              <TextInput type="number" step="0.01" value={bigEmiAmount || ''} onChange={(e) => setBigEmiAmount(Number(e.target.value))} className="w-120" />
             </Field>
             <Field label="How the amount applies">
               <Select value={bigEmiMode} onChange={(e) => setBigEmiMode(e.target.value as 'majorOnly' | 'regularPlusMajor')}>
@@ -220,7 +220,7 @@ export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: strin
               </Select>
             </Field>
             <Field label="Start from month #" title="1 covers the whole loan from its own start. A later month number only applies from there onward.">
-              <TextInput type="number" min={1} value={bigEmiStartMonth || ''} onChange={(e) => setBigEmiStartMonth(Math.max(1, Number(e.target.value)))} style={{ width: 90 }} />
+              <TextInput type="number" min={1} value={bigEmiStartMonth || ''} onChange={(e) => setBigEmiStartMonth(Math.max(1, Number(e.target.value)))} className="w-90" />
             </Field>
           </div>
         )}
@@ -745,10 +745,10 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
               </p>
               <div className="row gap-sm">
                 <Field label="Every N months">
-                  <TextInput type="number" min={1} value={bigEmiInterval || ''} onChange={(e) => setBigEmiInterval(Number(e.target.value))} style={{ width: 90 }} />
+                  <TextInput type="number" min={1} value={bigEmiInterval || ''} onChange={(e) => setBigEmiInterval(Number(e.target.value))} className="w-90" />
                 </Field>
                 <Field label="Amount" title="Either the whole payment for that month, or an extra amount stacked on top of the regular installment — pick which below.">
-                  <TextInput type="number" step="0.01" value={bigEmiAmount || ''} onChange={(e) => setBigEmiAmount(Number(e.target.value))} style={{ width: 120 }} />
+                  <TextInput type="number" step="0.01" value={bigEmiAmount || ''} onChange={(e) => setBigEmiAmount(Number(e.target.value))} className="w-120" />
                 </Field>
                 <Field label="How the amount applies">
                   <Select value={bigEmiMode} onChange={(e) => setBigEmiMode(e.target.value as 'majorOnly' | 'regularPlusMajor')}>
@@ -760,7 +760,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                   label="Start from month #"
                   title="1 backfills the whole loan from its own start (fixes an older loan that never got its historical majors recorded). A later month number only applies going forward from there, leaving earlier months untouched."
                 >
-                  <TextInput type="number" min={1} value={bigEmiStartMonth || ''} onChange={(e) => setBigEmiStartMonth(Math.max(1, Number(e.target.value)))} style={{ width: 90 }} />
+                  <TextInput type="number" min={1} value={bigEmiStartMonth || ''} onChange={(e) => setBigEmiStartMonth(Math.max(1, Number(e.target.value)))} className="w-90" />
                 </Field>
                 <button className="btn secondary" onClick={() => applyBigEmi({ intervalMonths: bigEmiInterval, amount: bigEmiAmount, mode: bigEmiMode, reconcileLastMonth: bigEmiReconcile })}>
                   Generate
@@ -876,10 +876,10 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                         <TextInput type="number" step="0.01" value={overrideValue || ''} onChange={(e) => setOverrideValue(Number(e.target.value))} style={{ width: 110 }} />
                       </Field>
                       <Field label="Due date">
-                        <TextInput type="date" value={overrideDate} onChange={(e) => setOverrideDate(e.target.value)} style={{ width: 140 }} />
+                        <TextInput type="date" value={overrideDate} onChange={(e) => setOverrideDate(e.target.value)} className="w-140" />
                       </Field>
                       <Field label="Fine (optional)" title="A late fee/penalty paid alongside this month's installment — tracked separately and shown alongside the payment, but never counted against the loan's own balance.">
-                        <TextInput type="number" step="0.01" value={overrideFine || ''} onChange={(e) => setOverrideFine(Number(e.target.value))} style={{ width: 100 }} />
+                        <TextInput type="number" step="0.01" value={overrideFine || ''} onChange={(e) => setOverrideFine(Number(e.target.value))} className="w-100" />
                       </Field>
                       {overrideLinkMode ? (
                         <LinkedEMIRepaymentFields
@@ -1098,7 +1098,7 @@ function RepaymentLog({ loan, repayments }: { loan: EMILoan; repayments: EMIRepa
                 <td>{installmentDueDate(loan, r.month)}</td>
                 <td>
                   {editId === r.id ? (
-                    <TextInput type="number" step="0.01" value={editAmount || ''} onChange={(e) => setEditAmount(Number(e.target.value))} style={{ width: 100 }} />
+                    <TextInput type="number" step="0.01" value={editAmount || ''} onChange={(e) => setEditAmount(Number(e.target.value))} className="w-100" />
                   ) : (
                     <>
                       {fmtMoney(r.amount, loan.currencyCode)}
