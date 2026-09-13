@@ -171,18 +171,28 @@ export function createWorkbookStore<TWorkbook extends BaseWorkbook<unknown>>(
         mutate((wb) => {
           const seq = tx.seq !== undefined ? tx.seq : nextSeqForEntity(wb.transactions, (t) => t.ticker, tx.ticker);
           const timestamp = tx.timestamp ?? new Date().toISOString();
-          return { ...wb, transactions: [...wb.transactions, { ...tx, seq, timestamp }] };
+          const id = tx.id ?? crypto.randomUUID();
+          return { ...wb, transactions: [...wb.transactions, { ...tx, id, seq, timestamp }] };
         }),
 
       // A batch can span multiple tickers (e.g. a statement import) — each
       // ticker's own new rows are numbered independently (see
       // `assignSeqForEntities`'s own doc comment).
+      //
+      // `id` is assigned immediately here (not left for `normalize()`'s own
+      // backfill, which only runs on load/setWorkbook) so a same-session
+      // "Sell this lot" (Partial Trade Strategy) can reference a BUY's `id`
+      // via `targetLotBuyId` right away — without this, a lot bought moments
+      // earlier in the same session would have no id to target until the
+      // next reload or cloud-sync echo, silently falling back to plain
+      // oldest-first FIFO and defeating the whole point of specific-lot
+      // selling. See `Transaction.targetLotBuyId`'s own doc comment.
       addTransactions: (txs) =>
         mutate((wb) => {
           const now = new Date().toISOString();
           const withSeq = assignSeqForEntities(wb.transactions, txs, (t) => t.ticker);
-          const withTimestamp = withSeq.map((t) => ({ ...t, timestamp: t.timestamp ?? now }));
-          return { ...wb, transactions: [...wb.transactions, ...withTimestamp] };
+          const withIdAndTimestamp = withSeq.map((t) => ({ ...t, id: t.id ?? crypto.randomUUID(), timestamp: t.timestamp ?? now }));
+          return { ...wb, transactions: [...wb.transactions, ...withIdAndTimestamp] };
         }),
 
       updateTransaction: (index, patch) =>

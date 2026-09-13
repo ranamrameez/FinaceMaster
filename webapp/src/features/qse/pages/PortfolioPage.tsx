@@ -110,7 +110,7 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
                   </div>
                 </div>
               </td>
-              <td onClick={(e) => e.stopPropagation()} style={{ width: 82 }}><Sparkline data={r.sparkData} formatValue={fmtPrice} /></td>
+              <td onClick={(e) => e.stopPropagation()} className="w-82"><Sparkline data={r.sparkData} formatValue={fmtPrice} /></td>
               <td onClick={() => onSelect(r.ticker)}>{fmt(r.shares, 0)}</td>
               <td onClick={() => onSelect(r.ticker)}>
                 <div>{fmtPrice(r.avgCost)}</div>
@@ -123,10 +123,10 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
                   key={r.mp}
                   type="number"
                   step="0.001"
-                  className="price-input"
+                  className="price-input w-96"
                   defaultValue={r.mp || ''}
                   placeholder="—"
-                  style={{ width: 96 }}
+                  
                   onKeyDown={async (e) => {
                     if (e.key === 'Enter') {
                       const target = e.target as HTMLInputElement;
@@ -143,7 +143,7 @@ function OpenPositionsTable({ onSelect }: { onSelect: (ticker: string) => void }
               <td onClick={() => onSelect(r.ticker)}>
                 <div>{r.hasMarket ? fmtMoney(r.value, currency) : '—'}</div>
                 <div className="text-muted">
-                  {r.hasMarket && (r.value >= r.invested ? <span style={{ color: 'var(--profit)' }}>▲</span> : <span style={{ color: 'var(--loss)' }}>▼</span>)}
+                  {r.hasMarket && (r.value >= r.invested ? <span className="text-profit">▲</span> : <span className="text-loss">▼</span>)}
                   {' '}Inv {fmtMoney(r.invested, currency)}
                 </div>
               </td>

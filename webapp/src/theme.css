@@ -743,6 +743,81 @@
      a fourth spacing class. Confirmed no competing bare `margin-top:16px`
      rule in `theme.css`. */
   .mt-md{margin-top:16px;}
+  /* Same cleanup, seventeenth instance (2026-09-13): `style={{ marginLeft: 6
+     }}` on a "Pending" `.pill-warn` badge placed after some text (9
+     occurrences), and `style={{ marginLeft: 6, textDecoration: 'none' }}`
+     on the "🔗 Linked" `.pill-info` tag `<Link>` (8 occurrences) — the
+     latter's `textDecoration:'none'` is dead code, since the base `a{}`
+     rule above already zeroes link underlines app-wide; both share the
+     same 6px left-margin, which doesn't fit the existing 8px `sm`/16px
+     `md` scale, so named literally by value like `.mb-12`/`.mt-12`. */
+  .ml-6{margin-left:6px;}
+  /* Same cleanup, nineteenth/twentieth instances (2026-09-13): a bare
+     `style={{ width: 90 }}` / `style={{ width: 130 }}` on a narrow inline
+     `<input>`/`TextInput` inside a table's edit-row (a Date input is
+     consistently 130px, a Shares/Price/Amount/short-text input consistently
+     90px, across every module's own edit-row markup — the two most
+     repeated of a family of similar fixed-width inline styles). All 37 (90)
+     and 25 (130) occurrences were bare, with no existing `className` to
+     merge into, so this is a plain 1:1 className swap.
+     `!important` is required here, unlike every other utility above:
+     verified live via Playwright BEFORE shipping (caught the regression,
+     not shipped blind) that a plain `.w-90{width:90px}` never actually
+     applied — the base `input:not(...):not(...):not(...):not(...){
+     width:100%}` reset rule a few lines below has specificity (0,4,1),
+     which beats a single class (0,1,0) regardless of source order. An
+     inline `style` (what these all used to be) always wins over any
+     selector-based rule no matter its specificity, which is exactly why
+     converting to a plain class silently broke every one of these fields
+     back to full-width — only caught because this cleanup's own live
+     verification step checked computed width, not just that the class
+     name landed in the DOM. */
+  .w-90{width:90px!important;}
+  .w-130{width:130px!important;}
+  /* Same cleanup, remaining width-value instances from the same family
+     (2026-09-13) — same reasoning/`!important` requirement as `.w-90`/
+     `.w-130` above, all bare with no existing `className` to merge into:
+     `width:80` (19), `width:100` (19), `width:70` (17), `width:120` (7),
+     `width:96` (5), `width:82` (4), `width:140` (4) — 75 occurrences. */
+  .w-70{width:70px!important;}
+  .w-80{width:80px!important;}
+  .w-82{width:82px!important;}
+  .w-96{width:96px!important;}
+  .w-100{width:100px!important;}
+  .w-120{width:120px!important;}
+  .w-140{width:140px!important;}
+  /* Same cleanup, twenty-second instance (2026-09-13): `style={{ color:
+     'var(--loss)' }}`/`style={{ color: 'var(--profit)' }}` on plain inline
+     text/spans (a required-field `*`, a ▲/▼ direction arrow, a "Used:"/
+     "Available:" credit-limit label) — distinct from `hueStyle()`/
+     `.pill-positive`/`.pill-negative`, which color a whole card/badge; this
+     is for plain inline colored TEXT with no background. No competing
+     `color` rule exists on a bare `<span>`/`<p>`, unlike `width` on an
+     `<input>` (see `.w-90` above) — a plain class is safe here, no
+     `!important` needed. */
+  .text-loss{color:var(--loss);}
+  .text-profit{color:var(--profit);}
+  /* Same cleanup, twenty-third instance (2026-09-13): `style={{ fontSize:
+     10 }}`/`style={{ fontSize: 11 }}` on small "Closed"/"Credit card"
+     badge `<span>`s that use ONLY `.pill-warn`/`.pill-negative`/etc (not
+     the base `.pill` class, so they don't inherit `.pill`'s own
+     `font-size:11.5px` — this class only overrides the size, nothing
+     else). Checked `.pill-warn`/`.pill-info` themselves for a competing
+     `font-size` first — neither sets one — and confirmed no global
+     `span{}` rule exists either, so a plain class (no `!important`) is
+     safe here, unlike `.fs-14` just below. */
+  .fs-10{font-size:10px;}
+  .fs-11{font-size:11px;}
+  /* Same cleanup, twenty-fourth instance (2026-09-13): `style={{ fontSize:
+     14 }}` on a `<div className="value">` nested inside a `.stat-card`
+     container (a smaller-text stat value, e.g. a status label/date rather
+     than a big number) — all 8 occurrences sit inside `.stat-card .value`,
+     whose own base rule (`font-size:17px`) has specificity (0,2,0), which
+     beats a plain `.fs-14` class (0,1,0) regardless of source order —
+     the same class of trap as `.w-90` above, just via a descendant
+     selector instead of a `:not()` chain. `!important` needed for the
+     same reason. */
+  .fs-14{font-size:14px!important;}
   /* User-reported (2026-08-27): "Input sizes still inconsistent and taking
      whole 100% width." Root cause: `flex:1` (flex-basis:0%) ignores each
      field's own explicit `width` prop entirely and instead divides the
@@ -863,6 +938,13 @@
      occurrences across 11 files) - never conditionally toggled, so a
      static class is a safe 1:1 swap for the repeated inline style. */
   .hidden-file-input{display:none;}
+  /* Same cleanup, fifteenth instance: `style={{ cursor: 'pointer',
+     fontWeight: 700, marginBottom: 8 }}` was hand-repeated on every
+     collapsible-section `<summary>` in QSE's/PSX's Trade Transactions page
+     (8 occurrences across 2 files, byte-identical) - a real semantic
+     pattern (a clickable accordion-section header), not just a coincidental
+     value match, so named for what it is rather than a literal-value class. */
+  .summary-heading{cursor:pointer;font-weight:700;margin-bottom:8px;}
   /* Required-field marker (components/ui/Field.tsx) - a single ::after rule
      so the label text and its asterisk are one indivisible inline box, with
      no separate DOM node for a line break to land between. \00a0 is a real
@@ -1069,37 +1151,29 @@
 
   /* ---------- Collapsible sections ---------- */
 
-  /* ---------- Sub-nav chip row (reuses .chip-tabs / .chip) ----------
-     `.subnav` is only ever paired with `.chip-tabs` (see Tabs.tsx) — a
-     standalone `.subnav{margin-bottom:20px; margin-top:-6px;}` rule used
-     to live here, but the `.chip-tabs.subnav` rule below always wins
-     (higher specificity, same element) and sets its own full margin
-     shorthand, so the standalone rule was dead code. Removed rather than
-     left as a second, contradicting definition for the next session to
-     trip over. Always visible while scrolling a page — sticks to the
-     viewport instead of scrolling away with the content above it, so the
-     jump-to-section chips stay reachable no matter how far down the page
-     you are. Solid page-matching background so content scrolling
-     underneath doesn't show through, plus a hairline + shadow once it's
-     actually pinned so it doesn't blend invisibly into the page. */
-.chip-tabs.subnav {
-	/* User-reported (item 1): this bar's own negative top margin used to
-	   pull it up 14px from its normal position right after a page's
-	   <h1 class="pagetitle">, which visually clipped into the title text
-	   itself — confirmed by measuring the real rects (`h1.bottom` at 59px,
-	   `.subnav.top` at 49px, a genuine 10px overlap, not a rendering
-	   artifact). Every real page using `Tabs` puts this bar directly under
-	   an `<h1>`, so the negative offset never had a legitimate case to
-	   compensate for; a small positive gap instead. */
+  /* ---------- App-wide fixed top bar (TopBar.tsx) ----------
+     Reused verbatim from the old `.chip-tabs.subnav` rule this replaces
+     (README item 1's own tuned padding/shadow/positive-gap fix still
+     applies) — see TopBar.tsx's own doc comment for why rendering it as
+     `.main`'s first child, ahead of the page's own <h1>, is what actually
+     makes it "visible immediately on load" rather than only once scrolled
+     to; `position:sticky` here is unchanged, just relocated. Wraps the
+     `.chip-tabs` chip row (no longer rendered by Tabs.tsx itself) plus an
+     optional right-side slot (e.g. Net Worth's currency switcher), so it's
+     a flex row rather than being `.chip-tabs` directly. */
+  .page-topbar {
 	position: sticky;
 	top: 0;
 	z-index: 30;
 	background: var(--bg);
-	padding: 14px 0 12px 12px;
+	padding: 14px 12px 12px 12px;
 	margin: 8px -5px 20px -5px;
 	border-bottom: 1px solid var(--border);
 	box-shadow: 0 4px 10px rgba(0,0,0,.06);
-}
+	display: flex;
+	align-items: center;
+	gap: 12px;
+  }
     /* Final Material palette guard: ensures component backgrounds/text follow
      the selected Material palette instead of the generic root palette. */
   html[data-color^="material-"] body{background:var(--bg);color:var(--text);}
@@ -1354,6 +1428,8 @@ html[data-color^="material-"][data-theme="dark"] select{
    picking a module is one click instead of two. */
 .category-list{margin-bottom:6px; padding-bottom:6px; border-bottom:1px solid var(--border);}
 .category-item.active{background:var(--accent-soft); color:var(--on-accent-soft); font-weight:600;}
+/* One small icon per module (2026-09-11, design reference: wealth_tracker_template/). */
+.category-item-icon{display:flex; flex-shrink:0; opacity:.8;}
 /* User-corrected (2026-09-09): "I asked to include individual stock Exchs.
    as subnavs of the SE main nav, but you placed it below as a stand-alone
    menu using ugly lines." Was a separate bordered block below the whole

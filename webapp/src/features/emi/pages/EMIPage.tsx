@@ -208,10 +208,10 @@ export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: strin
         {bigEmiEnabled && (
           <div className="row gap-sm">
             <Field label="Every N months">
-              <TextInput type="number" min={1} value={bigEmiInterval || ''} onChange={(e) => setBigEmiInterval(Number(e.target.value))} style={{ width: 90 }} />
+              <TextInput type="number" min={1} value={bigEmiInterval || ''} onChange={(e) => setBigEmiInterval(Number(e.target.value))} className="w-90" />
             </Field>
             <Field label="Amount" title="Either the whole payment for that month, or an extra amount stacked on top of the regular installment — pick which below.">
-              <TextInput type="number" step="0.01" value={bigEmiAmount || ''} onChange={(e) => setBigEmiAmount(Number(e.target.value))} style={{ width: 120 }} />
+              <TextInput type="number" step="0.01" value={bigEmiAmount || ''} onChange={(e) => setBigEmiAmount(Number(e.target.value))} className="w-120" />
             </Field>
             <Field label="How the amount applies">
               <Select value={bigEmiMode} onChange={(e) => setBigEmiMode(e.target.value as 'majorOnly' | 'regularPlusMajor')}>
@@ -220,7 +220,7 @@ export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: strin
               </Select>
             </Field>
             <Field label="Start from month #" title="1 covers the whole loan from its own start. A later month number only applies from there onward.">
-              <TextInput type="number" min={1} value={bigEmiStartMonth || ''} onChange={(e) => setBigEmiStartMonth(Math.max(1, Number(e.target.value)))} style={{ width: 90 }} />
+              <TextInput type="number" min={1} value={bigEmiStartMonth || ''} onChange={(e) => setBigEmiStartMonth(Math.max(1, Number(e.target.value)))} className="w-90" />
             </Field>
           </div>
         )}
@@ -615,7 +615,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
             <div>
               <div style={{ fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 {loan.name}
-                {loan.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Closed</span>}
+                {loan.isActive === false && <span className="pill-warn fs-11">Closed</span>}
               </div>
               <div className="text-muted" style={{ fontWeight: 400 }}>
                 {loan.lender} · {loan.currencyCode} · {loan.repaymentMode === 'fixedTotal' ? 'Fixed total (no interest)' : `${loan.annualRatePct}% p.a.`} · {loan.tenureMonths} months
@@ -745,10 +745,10 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
               </p>
               <div className="row gap-sm">
                 <Field label="Every N months">
-                  <TextInput type="number" min={1} value={bigEmiInterval || ''} onChange={(e) => setBigEmiInterval(Number(e.target.value))} style={{ width: 90 }} />
+                  <TextInput type="number" min={1} value={bigEmiInterval || ''} onChange={(e) => setBigEmiInterval(Number(e.target.value))} className="w-90" />
                 </Field>
                 <Field label="Amount" title="Either the whole payment for that month, or an extra amount stacked on top of the regular installment — pick which below.">
-                  <TextInput type="number" step="0.01" value={bigEmiAmount || ''} onChange={(e) => setBigEmiAmount(Number(e.target.value))} style={{ width: 120 }} />
+                  <TextInput type="number" step="0.01" value={bigEmiAmount || ''} onChange={(e) => setBigEmiAmount(Number(e.target.value))} className="w-120" />
                 </Field>
                 <Field label="How the amount applies">
                   <Select value={bigEmiMode} onChange={(e) => setBigEmiMode(e.target.value as 'majorOnly' | 'regularPlusMajor')}>
@@ -760,7 +760,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                   label="Start from month #"
                   title="1 backfills the whole loan from its own start (fixes an older loan that never got its historical majors recorded). A later month number only applies going forward from there, leaving earlier months untouched."
                 >
-                  <TextInput type="number" min={1} value={bigEmiStartMonth || ''} onChange={(e) => setBigEmiStartMonth(Math.max(1, Number(e.target.value)))} style={{ width: 90 }} />
+                  <TextInput type="number" min={1} value={bigEmiStartMonth || ''} onChange={(e) => setBigEmiStartMonth(Math.max(1, Number(e.target.value)))} className="w-90" />
                 </Field>
                 <button className="btn secondary" onClick={() => applyBigEmi({ intervalMonths: bigEmiInterval, amount: bigEmiAmount, mode: bigEmiMode, reconcileLastMonth: bigEmiReconcile })}>
                   Generate
@@ -774,11 +774,11 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
             <div>
               <h4 style={{ margin: '0 0 4px' }}>Link to bank</h4>
               {linkedAccount ? (
-                <p className="text-muted" style={{ marginBottom: 8 }}>
+                <p className="text-muted mb-sm">
                   Linked to <strong>{linkedAccount.name}</strong> — remaining installments are planned in its Planning tab.
                 </p>
               ) : (
-                <p className="text-muted" style={{ marginBottom: 8 }}>
+                <p className="text-muted mb-sm">
                   Not linked yet. Linking generates a planned (not-yet-done) entry for every remaining installment in
                   the chosen account's Planning tab, dated on this loan's own schedule.
                 </p>
@@ -876,10 +876,10 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
                         <TextInput type="number" step="0.01" value={overrideValue || ''} onChange={(e) => setOverrideValue(Number(e.target.value))} style={{ width: 110 }} />
                       </Field>
                       <Field label="Due date">
-                        <TextInput type="date" value={overrideDate} onChange={(e) => setOverrideDate(e.target.value)} style={{ width: 140 }} />
+                        <TextInput type="date" value={overrideDate} onChange={(e) => setOverrideDate(e.target.value)} className="w-140" />
                       </Field>
                       <Field label="Fine (optional)" title="A late fee/penalty paid alongside this month's installment — tracked separately and shown alongside the payment, but never counted against the loan's own balance.">
-                        <TextInput type="number" step="0.01" value={overrideFine || ''} onChange={(e) => setOverrideFine(Number(e.target.value))} style={{ width: 100 }} />
+                        <TextInput type="number" step="0.01" value={overrideFine || ''} onChange={(e) => setOverrideFine(Number(e.target.value))} className="w-100" />
                       </Field>
                       {overrideLinkMode ? (
                         <LinkedEMIRepaymentFields
@@ -1020,7 +1020,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: EMILoan; onBack: 
         {extraPayment > 0 && (
           <div className="grid-auto" style={{ ...gridAutoStyle(130, 8), marginTop: 12 }}>
             <div className="stat-card card" style={hueStyle(HUES[0])}><div className="label">New months</div><div className="value">{whatIf.months}</div><div className="sub">{whatIf.monthsSaved} sooner</div></div>
-            <div className="stat-card card" style={hueStyle(HUES[7])}><div className="label">New end date</div><div className="value" style={{ fontSize: 14 }}>{whatIf.newEndDate}</div></div>
+            <div className="stat-card card" style={hueStyle(HUES[7])}><div className="label">New end date</div><div className="value fs-14">{whatIf.newEndDate}</div></div>
             <div className="stat-card card" style={hueStyle('var(--profit)')}>
               <div className="label">{loan.repaymentMode === 'fixedTotal' ? 'Markup' : 'Interest'} saved</div>
               <MoneyValue n={whatIf.interestSaved} currency={loan.currencyCode} />
@@ -1098,12 +1098,12 @@ function RepaymentLog({ loan, repayments }: { loan: EMILoan; repayments: EMIRepa
                 <td>{installmentDueDate(loan, r.month)}</td>
                 <td>
                   {editId === r.id ? (
-                    <TextInput type="number" step="0.01" value={editAmount || ''} onChange={(e) => setEditAmount(Number(e.target.value))} style={{ width: 100 }} />
+                    <TextInput type="number" step="0.01" value={editAmount || ''} onChange={(e) => setEditAmount(Number(e.target.value))} className="w-100" />
                   ) : (
                     <>
                       {fmtMoney(r.amount, loan.currencyCode)}
                       {link && (
-                        <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
+                        <Link to={linkTargetPath(otherSide!)} className="pill-info ml-6" title="Linked — go to the other side">
                           🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
                         </Link>
                       )}
@@ -1196,7 +1196,7 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: EMILoan) => void; onE
   return (
     <div>
       {archivedCount > 0 && (
-        <button className="btn secondary small" style={{ marginBottom: 8 }} onClick={() => setShowArchived((v) => !v)}>
+        <button className="btn secondary small mb-sm" onClick={() => setShowArchived((v) => !v)}>
           {showArchived ? 'Hide' : 'Show'} closed ({archivedCount})
         </button>
       )}
@@ -1213,7 +1213,7 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: EMILoan) => void; onE
                 key={l.id}
                 title={<><span className="text-muted entity-card-sr">#{srNumOf.get(l.id)}</span>{l.name}</>}
                 subtitle={`${l.lender}${l.repaymentMode === 'fixedTotal' ? ' · no-interest' : ''}`}
-                badge={l.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Closed</span> : undefined}
+                badge={l.isActive === false ? <span className="pill-warn fs-10">Closed</span> : undefined}
                 statLabel="Outstanding"
                 stat={<MoneyValue n={sum.outstanding} currency={l.currencyCode} />}
                 hue="var(--loss)"
@@ -1256,7 +1256,7 @@ function AccountSection({
   return (
     <Card className="mt-md">
       {cloudEmpty && (
-        <Notice tone="warning" style={{ marginTop: 8 }}>
+        <Notice tone="warning" className="mt-sm">
           <p className="mt-0">No data found in the cloud for this account's EMI/Loans workbook. This won't upload automatically.</p>
           <button
             className="btn secondary"

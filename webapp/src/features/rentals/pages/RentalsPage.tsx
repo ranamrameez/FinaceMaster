@@ -213,7 +213,7 @@ function PropertiesList() {
   return (
     <div>
       {archivedCount > 0 && (
-        <button className="btn secondary small" style={{ marginBottom: 8 }} onClick={() => setShowArchived((v) => !v)}>
+        <button className="btn secondary small mb-sm" onClick={() => setShowArchived((v) => !v)}>
           {showArchived ? 'Hide' : 'Show'} closed ({archivedCount})
         </button>
       )}
@@ -230,7 +230,7 @@ function PropertiesList() {
                 key={p.id}
                 title={<><span className="text-muted entity-card-sr">#{srNumOf.get(p.id)}</span>{p.name}</>}
                 subtitle={<>{p.currencyCode}{p.purchasePrice ? ` · Purchase price: ${fmtMoney(p.purchasePrice, p.currencyCode)}` : ''}</>}
-                badge={p.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Closed</span> : undefined}
+                badge={p.isActive === false ? <span className="pill-warn fs-10">Closed</span> : undefined}
                 statLabel="Net income (all time)"
                 stat={<MoneyValue n={netIncome} currency={p.currencyCode} />}
                 hue={netIncome >= 0 ? 'var(--profit)' : 'var(--loss)'}
@@ -538,7 +538,7 @@ function PropertyDetailModal({ property, onClose }: { property: Property; onClos
           <h4 style={{ margin: '0 0 6px' }}>Rent collection</h4>
           {proposal ? (
             <>
-              <p className="text-muted" style={{ marginBottom: 8 }}>
+              <p className="text-muted mb-sm">
                 {proposal.isDue ? 'Due for collection' : 'Next collection'} — approve to log it, or adjust the date/amount first
                 (e.g. a partial payment).
                 {(property.pendingRentBalance ?? 0) > 0 && (
@@ -926,10 +926,10 @@ function EntriesList({ property }: { property: Property }) {
                 <td className="cell-clip" title={e.note}>
                   {e.note}
                   {e.isPending && (
-                    <span className="pill-warn" style={{ marginLeft: 6 }} title="Not yet cleared — excluded from Net income above until marked cleared.">Pending</span>
+                    <span className="pill-warn ml-6" title="Not yet cleared — excluded from Net income above until marked cleared.">Pending</span>
                   )}
                   {link && (
-                    <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side" onClick={(ev) => ev.stopPropagation()}>
+                    <Link to={linkTargetPath(otherSide!)} className="pill-info ml-6" title="Linked — go to the other side" onClick={(ev) => ev.stopPropagation()}>
                       🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
                     </Link>
                   )}
@@ -1260,7 +1260,7 @@ function AccountSection({
   return (
     <Card className="mb-md">
       {cloudEmpty && (
-        <Notice tone="warning" style={{ marginTop: 8 }}>
+        <Notice tone="warning" className="mt-sm">
           <p className="mt-0">No data found in the cloud for this account's Rentals workbook. This won't upload automatically.</p>
           <button
             className="btn secondary"

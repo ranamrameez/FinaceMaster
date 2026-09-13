@@ -51,6 +51,22 @@ export interface Transaction {
    * too. `undefined` means "use the computed fee" (the normal case);
    * unlike `manualSameDay` this is shared/meaningful for both exchanges. */
   feeOverride?: number;
+  /** For a SELL, an optional reference to a specific BUY transaction's own
+   * `id` this sell should close out FIRST — "specific lot identification,"
+   * a real recognized cost-basis convention (distinct from FIFO/average).
+   * Set by the Trade Strategy page's "Sell this lot" action (Partial Trade
+   * Strategy) so selling a cheaper, non-oldest lot is correctly attributed
+   * to THAT lot rather than `computeFIFOPositions`' default oldest-first
+   * draw — without this, selling a cheap lot's own share count would
+   * silently drain the oldest (often more expensive) lot instead, leaving
+   * a misleading average cost / break-even for what's actually still held.
+   * Only consulted by `computeFIFOPositions` (PSX's opt-in FIFO cost-basis
+   * mode, and the FIFO lot advisory view both exchanges show regardless of
+   * their real costBasisMethod); `undefined` means normal oldest-first
+   * FIFO, unchanged for every pre-existing transaction. Meaningless under
+   * the weighted-average method, which has no lot concept — average cost
+   * of what remains is already invariant to which shares were "sold." */
+  targetLotBuyId?: string;
   /** Audit metadata: the real wall-clock instant this record was actually
    * entered into the app — NOT the same thing as `date`/`time` above (the
    * transaction's own user-entered effective date). Same field name/
@@ -150,6 +166,18 @@ export interface TradePlanLeg {
    * was later deleted — the UI falls back to the leg's own snapshot in
    * either case. */
   executedTransactionId?: string;
+  /** User-reported (2026-09-11): "make sure fee apply UI is available at
+   * all places (Trade Planner lost worth bcz it silently applied the
+   * commission on the same day buys as well...)" — a pending leg's fee
+   * used to be entirely automatic (`calcLegFee` in the planner page) with
+   * no way to see or override which fee mode applied to it, unlike every
+   * other transaction-entry surface (`Transaction.manualSameDay`/
+   * `feeOverride`, wired through `FeeModeControl`). Same two optional
+   * fields, same meaning, so a leg's fee mode can be inspected/overridden
+   * exactly like a real transaction's, and `feeModeFor()` works unchanged
+   * on either type. */
+  manualSameDay?: boolean;
+  feeOverride?: number;
 }
 
 /** README item 9: a saved, multi-leg trade sketch — plan several buys/sells
@@ -211,6 +239,11 @@ export interface QSESettings {
    * (true) when absent. Checked from the Dashboard's "Include in Net
    * Worth" panel. */
   includeInNetWorth?: boolean;
+  /** User-requested (2026-09-11): "it should be configurable in settings,
+   * if user like to opt this risky strategy" — Partial Trade Alerts (a
+   * portfolio-wide popup listing every ticker with a sell-the-cheap-lot
+   * opportunity) is opt-in, off by default. */
+  partialTradeAlertsEnabled?: boolean;
 }
 
 export interface Appearance {
@@ -226,6 +259,14 @@ export interface Appearance {
    * appearance JSON without this field still parses; `undefined` is treated
    * as `'compact'` (today's unchanged default) wherever it's read. */
   numberDisplay?: 'compact' | 'raw';
+  /** User-requested (2026-09-11): "FAB panel collapsing state should be
+   * configurable in settings... I always need it to be open." `FabPanel`
+   * (`components/ui/Fab.tsx`) normally starts collapsed and expands on
+   * click; this lets a user who frequently reaches for its actions (the
+   * Trade Calculator, Add Trade, Transfers, ...) skip that extra click by
+   * always rendering it expanded. Optional, `undefined`/false keeps
+   * today's default (collapsed-until-clicked). */
+  fabAlwaysOpen?: boolean;
 }
 
 export interface Workbook {

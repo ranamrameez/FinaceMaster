@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Tooltip } from '../Tooltip';
 import { MenuIcon, XIcon } from '../icons';
+import { useAppearanceStore } from '../../store/appearanceStore';
 
 /** The floating "+" action button every module uses for its "Often" tier
  * add-entity flow (Done items 82/166/170/202) — was 9 byte-identical
@@ -39,7 +40,8 @@ export interface FabAction {
  * there) renders exactly like the plain `FabButton` always did, with no
  * pointless expand step for a single choice. */
 export function FabPanel({ actions }: { actions: FabAction[] }) {
-  const [open, setOpen] = useState(false);
+  const fabAlwaysOpen = useAppearanceStore((s) => !!s.appearance.fabAlwaysOpen);
+  const [open, setOpen] = useState(fabAlwaysOpen);
   if (!actions.length) return null;
   if (actions.length === 1) {
     return <FabButton label={actions[0].label} onClick={actions[0].onClick}>{actions[0].icon}</FabButton>;
@@ -53,7 +55,11 @@ export function FabPanel({ actions }: { actions: FabAction[] }) {
               className="btn fab-btn fab-btn-secondary"
               onClick={() => {
                 a.onClick();
-                setOpen(false);
+                // "I always need it to be open" (2026-09-11) — a user with
+                // this preference is taking quick, repeated actions, so
+                // don't auto-collapse after each one; the main toggle
+                // below is still there if they want to close it manually.
+                if (!fabAlwaysOpen) setOpen(false);
               }}
               aria-label={a.label}
             >

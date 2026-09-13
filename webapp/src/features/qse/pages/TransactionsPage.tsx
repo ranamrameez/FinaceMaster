@@ -12,7 +12,7 @@ import { RecordDetailModal } from '../../../components/RecordDetailModal';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { usePageFabActions } from '../../../hooks/usePageFabActions';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
-import { closedPLBySellTxId, computeClosedTrades } from '../../../lib/calc/closedTrades';
+import { closedPLBySellTxId, computeClosedTrades, type LotMatchOrder } from '../../../lib/calc/closedTrades';
 import { computeFIFOPositions, type FIFOLot } from '../../../lib/calc/fifoPositions';
 import { confirmAndDeleteLinkable, propagateLinkedEdit, resolveLinkedEdit } from '../../../lib/linkCascade';
 import { transferRunningBalance } from '../../../lib/calc/transferBalance';
@@ -39,10 +39,12 @@ function emptyRow(): Transaction {
   return { date: today(), ticker: '', action: 'BUY', shares: 0, price: 0, time: nowTime(defaultTimezoneForMarket('QSE')), timezone: defaultTimezoneForMarket('QSE') };
 }
 
-export function TransactionRows() {
+export function TransactionRows({ initial }: { initial?: Partial<Transaction> } = {}) {
   const addTransactions = useWorkbookStore((s) => s.addTransactions);
   const ensureSignedIn = useEnsureSignedIn();
-  const [rows, setRows] = useState<Transaction[]>([emptyRow()]);
+  // Partial Trade's "Sell this lot" pre-fills ticker/action/shares/price
+  // via this optional prop, mirroring PSX's TransactionRows.
+  const [rows, setRows] = useState<Transaction[]>([{ ...emptyRow(), ...initial }]);
   // Tracks, per queued row, whether the user has actually edited Time
   // themselves — see `defaultTimeForDate()`'s own doc comment. Index-
   // aligned with `rows`; rows are only ever appended/removed, never
@@ -182,7 +184,7 @@ function AdjustmentForm() {
           placeholder="Amount"
           value={a.amount || ''}
           onChange={(e) => setA({ ...a, amount: Number(e.target.value) })}
-          style={{ width: 100 }}
+          className="w-100"
         />
       </Field>
       <Field label="Note">
@@ -235,6 +237,12 @@ function TransactionList() {
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editRow, setEditRow] = useState<Transaction | null>(null);
   const [detailTx, setDetailTx] = useState<Transaction | null>(null);
+  // User-reported (2026-09-13): the flat 0.275% fee never depends on which
+  // lot a sale is later attributed to, so FIFO's "oldest lot first" is a
+  // pure reporting convention here, not a real constraint — offer the
+  // cheapest-lot-first alternative as a second, explicitly comparison-only
+  // view (see `closedTrades.ts`'s own `LotMatchOrder` doc comment).
+  const [ctMatchOrder, setCtMatchOrder] = useState<LotMatchOrder>('fifo');
 
   const indexed = workbook.transactions.map((tx, i) => ({ tx, i }));
   const tickers = useMemo(() => [...new Set(workbook.transactions.map((t) => t.ticker))].sort(), [workbook.transactions]);
@@ -292,8 +300,9 @@ function TransactionList() {
       computeClosedTrades(
         filterTicker === 'ALL' ? workbook.transactions : workbook.transactions.filter((t) => t.ticker === filterTicker),
         calcFee,
+        ctMatchOrder,
       ),
-    [workbook.transactions, calcFee, filterTicker],
+    [workbook.transactions, calcFee, filterTicker, ctMatchOrder],
   );
   type CTCol = 'ticker' | 'buyDate' | 'buyPrice' | 'sellDate' | 'sellPrice' | 'shares' | 'buyFee' | 'sellFee' | 'netPL' | 'holdingDays';
   const ctSortValue = (t: (typeof closedTrades)[number], col: CTCol): number | string => {
@@ -316,10 +325,14 @@ function TransactionList() {
   // lot's buy price... inline in the main trade row." Computed from the
   // WHOLE workbook (not `filterTicker`-scoped like `closedTrades` above) so
   // a row's own P&L figure never changes just because the ticker filter is
-  // narrowed to something else.
+  // narrowed to something else. Shares `ctMatchOrder` with the Closed Trades
+  // table above (2026-09-13) — a feature rolled out to one view of a sell's
+  // realized P&L must stay consistent with every other view of the same
+  // number, or this row's own pill and the table below could show two
+  // contradicting figures for the identical sell.
   const sellPLById = useMemo(
-    () => closedPLBySellTxId(computeClosedTrades(workbook.transactions, calcFee)),
-    [workbook.transactions, calcFee],
+    () => closedPLBySellTxId(computeClosedTrades(workbook.transactions, calcFee, ctMatchOrder)),
+    [workbook.transactions, calcFee, ctMatchOrder],
   );
 
   // User's own words: "make separate sections for open and closed trades...
@@ -394,7 +407,7 @@ function TransactionList() {
             <Th col="price">Price</Th>
             <Th col="amount">Amount</Th>
             <th>
-              <Tooltip text="Realized profit/loss for a SELL row, matched FIFO against your oldest still-open buy lot(s) for this ticker — the same figure as the Closed trades section below, shown per-row here. Blank on a BUY row (nothing realized yet).">
+              <Tooltip text="Realized profit/loss for a SELL row, matched against your still-open buy lot(s) for this ticker — follows whichever Match order (FIFO or cheapest-lot-first) is picked in the Closed trades section below, since it's the same figure shown per-row here. Blank on a BUY row (nothing realized yet).">
                 P/L
               </Tooltip>
             </th>
@@ -418,16 +431,16 @@ function TransactionList() {
               {g.rows.map(({ tx, i }) =>
                 editIndex === i && editRow ? (
                   <tr key={i}>
-                    <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
-                    <td><input value={editRow.ticker} onChange={(e) => setEditRow({ ...editRow, ticker: e.target.value.toUpperCase() })} style={{ width: 70 }} /></td>
+                    <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} className="w-130" /></td>
+                    <td><input value={editRow.ticker} onChange={(e) => setEditRow({ ...editRow, ticker: e.target.value.toUpperCase() })} className="w-70" /></td>
                     <td>
                       <select value={editRow.action} onChange={(e) => setEditRow({ ...editRow, action: e.target.value as 'BUY' | 'SELL' })}>
                         <option value="BUY">BUY</option>
                         <option value="SELL">SELL</option>
                       </select>
                     </td>
-                    <td><input type="number" value={editRow.shares} onChange={(e) => setEditRow({ ...editRow, shares: Number(e.target.value) })} style={{ width: 70 }} /></td>
-                    <td><input type="number" step="0.001" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })} style={{ width: 80 }} /></td>
+                    <td><input type="number" value={editRow.shares} onChange={(e) => setEditRow({ ...editRow, shares: Number(e.target.value) })} className="w-70" /></td>
+                    <td><input type="number" step="0.001" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })} className="w-80" /></td>
                     <td>{fmtMoney(editRow.shares * editRow.price, currency)}</td>
                     <td></td>
                     <td>
@@ -447,7 +460,7 @@ function TransactionList() {
                       <TickerLogo ticker={tx.ticker} size="sm" exchange="qse" /><Link to={`/stock/${tx.ticker}`}>{tx.ticker}</Link>
                       {tx.isPending && (
                         <Tooltip text="Order placed but not yet filled — excluded from your shares/cash balance until cleared.">
-                          <span className="pill-warn" style={{ marginLeft: 6 }}>Pending</span>
+                          <span className="pill-warn ml-6">Pending</span>
                         </Tooltip>
                       )}
                     </td>
@@ -517,21 +530,21 @@ function TransactionList() {
       </div>
 
       <details open className="mb-md">
-        <summary style={{ cursor: 'pointer', fontWeight: 700, marginBottom: 8 }}>
+        <summary className="summary-heading">
           Open positions — {openSorted.length} txns
         </summary>
         {renderTable(openGroups, 'No transactions for a currently open position.')}
       </details>
 
       <details open>
-        <summary style={{ cursor: 'pointer', fontWeight: 700, marginBottom: 8 }}>
+        <summary className="summary-heading">
           Closed positions — {closedSorted.length} txns
         </summary>
         {renderTable(closedGroups, 'No transactions for a fully closed position yet.')}
       </details>
 
       <details open className="mt-md">
-        <summary style={{ cursor: 'pointer', fontWeight: 700, marginBottom: 8 }}>
+        <summary className="summary-heading">
           <Tooltip text="Each buy lot that hasn't been fully sold yet, FIFO-matched against your real sells — the mirror image of Closed trades below, so it's always clear which shares are still open vs. already sold.">
             Open trades (not yet sold)
           </Tooltip>{' '}
@@ -571,12 +584,23 @@ function TransactionList() {
       </details>
 
       <details open className="mt-md">
-        <summary style={{ cursor: 'pointer', fontWeight: 700, marginBottom: 8 }}>
-          <Tooltip text="Each fully or partially closed round-trip, matched buy-to-sell via FIFO, with its own buy price, sell price, fees on both legs, and net P/L — so a closed trade's own numbers stay separate from whatever the currently-open position shows.">
+        <summary className="summary-heading">
+          <Tooltip text="Each fully or partially closed round-trip, matched buy-to-sell, with its own buy price, sell price, fees on both legs, and net P/L — so a closed trade's own numbers stay separate from whatever the currently-open position shows.">
             Closed trades (realized round-trips)
           </Tooltip>{' '}
           — {sortedClosedTrades.length}
         </summary>
+        <div className="row gap-sm mb-sm" style={{ alignItems: 'center' }}>
+          <Tooltip text="QSE's fee is a flat % of trade value — it never depends on which lot a sale is credited to, so this is purely which STORY this table tells, not a real amount. FIFO (oldest lot first) is what most brokers default to. Cheapest-lot-first re-tells the same sales against your lowest-cost lots instead, for comparison — it never changes your real position, fees, or the Open lots table above.">
+            Match order
+          </Tooltip>
+          <button type="button" className={`chip${ctMatchOrder === 'fifo' ? ' active' : ''}`} onClick={() => setCtMatchOrder('fifo')}>
+            {ctMatchOrder === 'fifo' && <CheckIcon size={11} />}FIFO (oldest first)
+          </button>
+          <button type="button" className={`chip${ctMatchOrder === 'lowestCostFirst' ? ' active' : ''}`} onClick={() => setCtMatchOrder('lowestCostFirst')}>
+            {ctMatchOrder === 'lowestCostFirst' && <CheckIcon size={11} />}Cheapest lot first
+          </button>
+        </div>
         <div className="table-scroll">
           <table>
             <thead>
@@ -741,15 +765,15 @@ function TransfersSection() {
               const otherSide = link ? (link.from.module === 'qse' && link.fromRecordId === t.id ? link.to : link.from) : undefined;
               return editId === t.id && editRow ? (
                 <tr key={t.id}>
-                  <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
+                  <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} className="w-130" /></td>
                   <td>
                     <select value={editRow.type} onChange={(e) => setEditRow({ ...editRow, type: e.target.value as Transfer['type'] })}>
                       <option value="DEPOSIT">Deposit</option>
                       <option value="WITHDRAWAL">Withdrawal</option>
                     </select>
                   </td>
-                  <td><input type="number" value={editRow.gross} onChange={(e) => setEditRow({ ...editRow, gross: Number(e.target.value) })} style={{ width: 90 }} /></td>
-                  <td><input type="number" value={editRow.fee} onChange={(e) => setEditRow({ ...editRow, fee: Number(e.target.value) })} style={{ width: 70 }} /></td>
+                  <td><input type="number" value={editRow.gross} onChange={(e) => setEditRow({ ...editRow, gross: Number(e.target.value) })} className="w-90" /></td>
+                  <td><input type="number" value={editRow.fee} onChange={(e) => setEditRow({ ...editRow, fee: Number(e.target.value) })} className="w-70" /></td>
                   <td></td>
                   <td>
                     <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
@@ -772,7 +796,7 @@ function TransfersSection() {
                   <td>
                     {t.type}
                     {link && (
-                      <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
+                      <Link to={linkTargetPath(otherSide!)} className="pill-info ml-6" title="Linked — go to the other side">
                         🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
                       </Link>
                     )}
@@ -844,8 +868,8 @@ function AdjustmentsSection() {
             {sorted.map(({ a, i }) =>
               editIndex === i && editRow ? (
                 <tr key={i}>
-                  <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
-                  <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 90 }} /></td>
+                  <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} className="w-130" /></td>
+                  <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} className="w-90" /></td>
                   <td><input value={editRow.note ?? ''} onChange={(e) => setEditRow({ ...editRow, note: e.target.value })} /></td>
                   <td>
                     <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}

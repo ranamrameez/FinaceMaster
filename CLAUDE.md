@@ -5750,6 +5750,127 @@ app, not developer notes) continuously as features ship.
   `display: none` and Playwright's own `isVisible()` correctly reads `false` post-change. `npx
   tsc -b` / `npm run test` (623 tests, unchanged) / `npm run build` all clean.
 
+- **Trade Strategy: merged Buy/Sell+Avg Down and Trade Planner+Partial Trade (new
+  strategy), PSX fee-mode redesign, an app-wide fixed top bar (2026-09-11) — see
+  `webapp/README.md`'s Done item 301 for the full writeup, this is a pointer.** Triggered by
+  the user's own real QSE IQCD position (50 sh @10.40 + 14 sh @9.962) showing that a blended
+  break-even can hide an individually-profitable cheap lot — new
+  `lib/calc/partialTradeStrategy.ts` gives per-lot break-even/P&L/sell-or-hold advice, a
+  30-day "missed opportunity" retrospective, and a per-share-commission "should I dive into
+  the dip" helper. New `features/{qse,psx}/pages/TradeStrategyPage.tsx` (QSE had none before;
+  `/psx/trade-planner` now redirects) merges Simple Buy/Sell + Avg Down into one calculator
+  with a toggle, and folds Partial Trade INTO the Trade Planner (not a sibling) — its lot
+  table renders above the legs table (summary-first, a real reported layout bug), works
+  standalone without a plan, and "Sell this lot" opens the existing Add-trade flow pre-filled.
+  Separately redesigned PSX's Auto fee mode (`psxFees.ts`'s `isProvisionalSameDayBuy()`): a
+  lone same-day BUY with no matching SELL yet now prices at a live, derived $0 (never a
+  persisted flag — self-corrects once a SELL appears or the day passes), replacing the old
+  behavior that "silently applied commission on same-day buys" per the user's own report.
+  **App-wide**: `Tabs.tsx`'s sub-nav chip row moved into a new `TopBar.tsx` (rendered by
+  `AppShell.tsx` as `.main`'s first child, via new `pageTopBarStore`/`usePageTopBar` — same
+  shape as the existing FAB-grouping mechanism) so it's visible immediately on load instead of
+  only once scrolled to — reaches every module page at once since `Tabs` is the one shared
+  component ~25+ pages already render through. Design reference: `wealth_tracker_template/`
+  (a "WealthPro" PRD + mockups) added to the repo root this session. Also in the same pass:
+  sidebar module icons, a "keep quick-actions panel always open" setting, an opt-in
+  portfolio-wide "Partial Trade Alerts" popup, Dashboard reordered summary-first with
+  Exchange rates demoted to collapsed and the currency picker moved into the new top bar's
+  right slot, and Cash's Plan list split per-currency (same bug class already fixed once for
+  the main ledger). `npx tsc -b` / `npm run test` (663 tests, 18 new) / `npm run build` clean
+  at every phase; each part verified live via Playwright, including reproducing the user's
+  exact real IQCD numbers (Hold/-4.36 vs Sell/+4.93 at the real 10.37 peak price).
+
+- **Critical, user-reported (2026-09-13): "Sell this lot" (Partial Trade Strategy) could
+  misattribute a sale under PSX's opt-in FIFO cost-basis mode — see `webapp/README.md`'s Done
+  item 314 for the full writeup.** The user's own words: "after selling the cheaper shares,
+  avg buy price and break even etc. are calculated according to the remaining share's prices.
+  We cannot let avg and break even prices misleading due to the partial cheaper lots selling."
+  Root cause: `computeFIFOPositions` always drains the OLDEST open lot first — correct for a
+  normal sell, but wrong for the entire point of "Sell this lot" (close a cheap NON-oldest lot
+  while holding an expensive older one, the real IQCD case Done item 301 was built for), which
+  would silently drain the wrong lot instead and leave a misleading post-sale average cost.
+  **Confirmed scoped to PSX's opt-in `costBasisMethod: 'fifo'` only** — QSE always uses
+  weighted-average (`computePositions`), which is mathematically invariant to which lot
+  "sold," so this class of bug can't occur there or under PSX's own default `'average'` mode.
+  Fixed with real specific-lot identification: new `Transaction.targetLotBuyId?: string`
+  (references a specific BUY's own `id`) — `computeFIFOPositions` drains that lot first when
+  set, falling through to normal oldest-first FIFO otherwise (fully backward-compatible, every
+  existing transaction unaffected). `FIFOLot`/`LotAdvice` both gained a `buyId` so both
+  exchanges' Trade Strategy pages' "Sell this lot" button passes `targetLotBuyId: lot.buyId`
+  into the pre-filled Add Trade popup. **A second, real reliability gap found while wiring
+  this**: `addTransaction`/`addTransactions` never assigned a new transaction's `id`
+  immediately — only `normalize()` (load/cloud-sync time) backfilled it — so a lot bought
+  moments earlier in the SAME session had no id to target yet, silently defeating the fix for
+  the exact live-trading scenario it exists for. Fixed by assigning `id: crypto.randomUUID()`
+  immediately in both actions, matching the pattern `seq`/`timestamp`/`executeTradePlanLeg`
+  already use. **Deliberately not extended to `lib/calc/closedTrades.ts`** — that "Closed
+  trades" reporting ledger is its own independent, by-design-decoupled FIFO simulation that
+  doesn't drive Avg Cost/Break-even, so teaching it about `targetLotBuyId` too is tracked as
+  its own separate follow-up (new README Pending item 134), not bundled into this fix. New
+  tests across `fifoPositions.test.ts` (4 cases, incl. the real IQCD numbers with/without
+  targeting), `partialTradeStrategy.test.ts` (2 cases), `createWorkbookStore.test.ts` (1 case).
+  Verified live via Playwright with the real IQCD scenario seeded under `costBasisMethod:
+  'fifo'`: only the cheap lot showed "Sell this lot," clicking it pre-filled the popup
+  correctly, and submitting hit the real sign-in gate — zero console errors. `npx tsc -b` /
+  `npm run test` (678 tests, 7 new) / `npm run build` all clean.
+- **User uploaded a real full-app backup and asked for a per-share sell-price/P&L study of
+  their MARK (QSE) trades (2026-09-13) — answered directly in chat, no code needed.**
+  Replicated the app's own real calc functions (`sortTransactionsChronological`,
+  `makeQSEFeeCalculator`, `computeClosedTrades`, `computePositions`) against the uploaded data
+  in a throwaway script: every one of MARK's 11 FIFO lot-matches was a loss (total realized
+  -36.07 QAR across 749 shares), with the 2026-09-08 sells draining the OLDEST (priciest) June
+  lots under FIFO while a cheaper Aug 10 lot sat untouched and was, at that same price, already
+  above its own break-even — a live real-world instance of exactly the pattern Partial Trade
+  Strategy (Done item 301) exists to catch. Cross-verified FIFO vs. weighted-average
+  (realized+unrealized both reconciled to the identical -51.02 QAR total), confirming the
+  cost-basis method only changes the realized/unrealized split, never the true total.
+- **Closed Trades reporting ledger gains a "Cheapest lot first" alternative view alongside
+  FIFO, same day (2026-09-13) — see README Done item 315.** Direct follow-up to the MARK
+  analysis above: the user then asked "FIFO maybe correct for PSX but QSE behaves different.
+  WHY? bcz shares are charged fix fee 0.275 for each buy/sell. so buy order doesn't matter,
+  just the price is important. so, we can try to sell to most cheaper to most expensive ones" —
+  confirmed correct by reading the actual fee code, and, checking further, found the same
+  invariance also holds for PSX's own same-day netting (it operates at the whole-transaction
+  level, never per-lot) — so for BOTH exchanges, which lot `computeClosedTrades` credits a sale
+  to never changes any real fee/cost/proceeds, only the story this REPORTING ledger tells.
+  Asked via `AskUserQuestion`; user picked **"Add a second view, keep FIFO default
+  (Recommended)."** `computeClosedTrades()` gained a `matchOrder: 'fifo' | 'lowestCostFirst' =
+  'fifo'` parameter — `'lowestCostFirst'` matches each sale against the cheapest still-open lot
+  instead of oldest-first, falling through to the next-cheapest once one is exhausted.
+  **Deliberately does NOT touch `computeFIFOPositions`'s own real "Open trades" table** — that
+  stays genuine FIFO regardless, since it feeds PSX's actual opt-in cost-basis mode, not just a
+  report; verified live that toggling the Closed Trades view leaves it unchanged. **A real
+  subtlety caught while writing tests, not assumed**: total realized P/L across the two match
+  orders is identical ONLY once every bought share is sold — with shares still open, the two
+  methods leave genuinely different residual lots behind, so a partial close's realized-so-far
+  totals legitimately differ between them (tested explicitly, both the differing-partial and
+  converging-full cases). Wired into both `TransactionsPage.tsx` files as a chip-toggle row
+  above the Closed Trades table with exchange-specific explanatory tooltips. Verified live via
+  Playwright with a seeded old-expensive-lot (50@10.40) + newer-cheap-lot (14@9.96) + one
+  14-share sell at 10.20: FIFO showed the 10.40 lot (netPL -3.59), Cheapest-lot-first showed
+  the 9.96 lot (netPL +2.59, strictly better), round-trip back to FIFO matched exactly, and the
+  Open trades table (14@9.960 + 36@10.40) stayed identical regardless of the toggle — zero
+  console errors. `npx tsc -b` / `npm run test` (682 tests, 4 new) / `npm run build` all clean.
+- **Same-day follow-up, user-prompted ("one feature rolled out should be reflected in all
+  related views") — a real consistency gap found and fixed in the feature just above.** The
+  new match-order toggle only reached the Closed Trades table itself; `sellPLById` — the SAME
+  per-sell realized-P&L figure, also shown as an inline pill on each SELL row in the main
+  Trade List table and as "Realized P/L" in that row's click-to-open `RecordDetailModal`
+  popup (Done item 284) — was still hardcoded to `computeClosedTrades(transactions, calcFee)`
+  with no `matchOrder` argument, so it stayed FIFO-only no matter what the table below was set
+  to. This let the exact same sell show two contradicting P&L figures on one page. Fixed by
+  threading `ctMatchOrder` into `sellPLById` in both QSE's and PSX's `TransactionsPage.tsx`,
+  and updating the "P/L" column tooltip (previously said "matched FIFO," now says it follows
+  whichever Match order is picked below) so the copy can't go stale the moment a user switches
+  views. **Lesson worth repeating for any future toggle added to one view of a computed
+  number**: grep for every OTHER consumer of that same function/value before calling the
+  rollout done — a toggle that reaches the headline table but not a same-page pill/popup
+  showing the identical figure is a real, confusing inconsistency, not a cosmetic gap.
+  Verified live via Playwright with the same seeded scenario: the inline row pill and the
+  popup's "Realized P/L" both read −3.59 QAR under FIFO and both flipped to +2.59 QAR the
+  moment the table's own toggle switched to Cheapest-lot-first — one toggle, every view in
+  sync. `npx tsc -b` / `npm run test` (682 tests, unchanged) / `npm run build` all clean.
+
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 
 **Locked, final decision — read this before touching anything below.** The user floated a

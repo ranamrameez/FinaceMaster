@@ -70,10 +70,10 @@ function AddDividendForm() {
         />
       </Field>
       <Field label="Ticker">
-        <input placeholder="Ticker" value={ticker} onChange={(e) => onTickerChange(e.target.value)} list={PSX_TICKER_DATALIST_ID} style={{ width: 90 }} />
+        <input placeholder="Ticker" value={ticker} onChange={(e) => onTickerChange(e.target.value)} list={PSX_TICKER_DATALIST_ID} className="w-90" />
       </Field>
       <Field label="Per share">
-        <input type="number" step="0.01" placeholder="Per share" value={perShare || ''} onChange={(e) => setPerShare(Number(e.target.value))} style={{ width: 90 }} />
+        <input type="number" step="0.01" placeholder="Per share" value={perShare || ''} onChange={(e) => setPerShare(Number(e.target.value))} className="w-90" />
       </Field>
       <Field label="Shares">
         <input
@@ -84,11 +84,11 @@ function AddDividendForm() {
             setShares(Number(e.target.value));
             setSharesTouched(true);
           }}
-          style={{ width: 90 }}
+          className="w-90"
         />
       </Field>
       <Field label="Total received">
-        <input type="number" step="0.01" placeholder={preview ? preview.toFixed(2) : 'Total received'} value={amount || ''} onChange={(e) => setAmount(Number(e.target.value))} style={{ width: 100 }} />
+        <input type="number" step="0.01" placeholder={preview ? preview.toFixed(2) : 'Total received'} value={amount || ''} onChange={(e) => setAmount(Number(e.target.value))} className="w-100" />
       </Field>
       <TimeZoneFields
         time={time}
@@ -193,11 +193,11 @@ export function DividendsSection() {
             {rows.map((d) =>
               editIndex === d.i && editRow ? (
                 <tr key={d.i}>
-                  <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
-                  <td><input value={editRow.ticker} onChange={(e) => setEditRow({ ...editRow, ticker: e.target.value.toUpperCase() })} style={{ width: 80 }} /></td>
-                  <td><input type="number" step="0.01" value={editRow.perShare} onChange={(e) => setEditRow({ ...editRow, perShare: Number(e.target.value) })} style={{ width: 80 }} /></td>
-                  <td><input type="number" value={editRow.shares} onChange={(e) => setEditRow({ ...editRow, shares: Number(e.target.value) })} style={{ width: 80 }} /></td>
-                  <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 90 }} /></td>
+                  <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} className="w-130" /></td>
+                  <td><input value={editRow.ticker} onChange={(e) => setEditRow({ ...editRow, ticker: e.target.value.toUpperCase() })} className="w-80" /></td>
+                  <td><input type="number" step="0.01" value={editRow.perShare} onChange={(e) => setEditRow({ ...editRow, perShare: Number(e.target.value) })} className="w-80" /></td>
+                  <td><input type="number" value={editRow.shares} onChange={(e) => setEditRow({ ...editRow, shares: Number(e.target.value) })} className="w-80" /></td>
+                  <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} className="w-90" /></td>
                   <td>
                     <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
                     <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditIndex(null)} />
@@ -249,7 +249,7 @@ export function DividendsSection() {
                         step="0.01"
                         value={estimates[p.ticker] || ''}
                         onChange={(e) => setDividendEstimate(p.ticker, Number(e.target.value))}
-                        style={{ width: 80 }}
+                        className="w-80"
                       />
                     </td>
                     <td>{fmtMoney((estimates[p.ticker] || 0) * p.shares, currency)}</td>

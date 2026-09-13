@@ -406,8 +406,8 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                 const otherSide = link ? (link.from.module === 'personalLoans' && link.fromRecordId === r.id ? link.to : link.from) : undefined;
                 return editId === r.id && editRow ? (
                   <tr key={r.id}>
-                    <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
-                    <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 90 }} /></td>
+                    <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} className="w-130" /></td>
+                    <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} className="w-90" /></td>
                     <td></td>
                     <td className="text-muted cell-clip">{r.source === 'statement-import' ? `Import${r.statementRef ? ` (${r.statementRef})` : ''}` : 'Manual'}</td>
                     <td>
@@ -439,11 +439,11 @@ function RepaymentsSection({ loan }: { loan: PersonalLoan }) {
                       {fmtMoney(r.amount, loan.currencyCode)}
                       {r.isPending && (
                         <Tooltip text="Not yet cleared — excluded from Outstanding above until marked cleared.">
-                          <span className="pill-warn" style={{ marginLeft: 6 }}>Pending</span>
+                          <span className="pill-warn ml-6">Pending</span>
                         </Tooltip>
                       )}
                       {link && (
-                        <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side" onClick={(e) => e.stopPropagation()}>
+                        <Link to={linkTargetPath(otherSide!)} className="pill-info ml-6" title="Linked — go to the other side" onClick={(e) => e.stopPropagation()}>
                           🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
                         </Link>
                       )}
@@ -774,7 +774,7 @@ function LoanDetail({ loan, onBack, startInEditMode }: { loan: PersonalLoan; onB
             <div>
               <div style={{ fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 {loan.person}
-                {loan.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Closed</span>}
+                {loan.isActive === false && <span className="pill-warn fs-11">Closed</span>}
               </div>
               <div className="text-muted">
                 {loan.direction === 'owed_to_me' ? 'Money lent out' : 'Money I owe'} · {loan.currencyCode} · since {loan.date}
@@ -892,7 +892,7 @@ function LoanList({ onSelect, onEdit }: { onSelect: (loan: PersonalLoan) => void
                 key={l.id}
                 title={<><span className="text-muted entity-card-sr">#{srNumOf.get(l.id)}</span>{l.person}</>}
                 subtitle={l.direction === 'owed_to_me' ? 'Lent out' : 'I owe'}
-                badge={l.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Closed</span> : undefined}
+                badge={l.isActive === false ? <span className="pill-warn fs-10">Closed</span> : undefined}
                 statLabel="Outstanding"
                 stat={<MoneyValue n={outstanding} currency={l.currencyCode} />}
                 hue={l.direction === 'owed_to_me' ? 'var(--profit)' : 'var(--loss)'}
@@ -935,7 +935,7 @@ function AccountSection({
   return (
     <Card>
       {cloudEmpty && (
-        <Notice tone="warning" style={{ marginTop: 8 }}>
+        <Notice tone="warning" className="mt-sm">
           <p className="mt-0">
             No data found in the cloud for this account's Personal Loans workbook. This won't upload automatically.
           </p>

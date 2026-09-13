@@ -163,7 +163,7 @@ function BrokersList({ onSelect }: { onSelect: (broker: Broker) => void }) {
               key={b.id}
               title={b.name}
               subtitle={`${fundCount} fund${fundCount === 1 ? '' : 's'}`}
-              badge={b.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Closed</span> : undefined}
+              badge={b.isActive === false ? <span className="pill-warn fs-10">Closed</span> : undefined}
               statLabel={currencies.length > 1 ? 'Total (by currency)' : 'Total'}
               stat={
                 currencies.length ? (
@@ -657,7 +657,7 @@ function FundList({ onSelect }: { onSelect: (fund: Fund) => void }) {
                   {r.xirrPct !== null && <> · XIRR {r.xirrPct.toFixed(1)}%</>}
                 </>
               }
-              badge={r.fund.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Closed</span> : undefined}
+              badge={r.fund.isActive === false ? <span className="pill-warn fs-10">Closed</span> : undefined}
               statLabel="Value"
               stat={
                 <>
@@ -826,8 +826,8 @@ function SnapshotImportSection() {
               <tbody>
                 {plan.map((p, i) => (
                   <tr key={i}>
-                    <td><TextInput value={p.row.bank} onChange={(e) => editRow(i, { bank: e.target.value })} style={{ width: 140 }} /></td>
-                    <td><TextInput value={p.row.code} onChange={(e) => editRow(i, { code: e.target.value.toUpperCase() })} style={{ width: 90 }} /></td>
+                    <td><TextInput value={p.row.bank} onChange={(e) => editRow(i, { bank: e.target.value })} className="w-140" /></td>
+                    <td><TextInput value={p.row.code} onChange={(e) => editRow(i, { code: e.target.value.toUpperCase() })} className="w-90" /></td>
                     <td><TextInput value={p.row.name} onChange={(e) => editRow(i, { name: e.target.value })} style={{ width: 200 }} /></td>
                     <td>{fmtMoney(p.row.totalInvested, currencyCode)}</td>
                     <td>{fmtMoney(p.row.withdrawn, currencyCode)}</td>
@@ -1148,7 +1148,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                   <div style={{ fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                     <TickerLogo ticker={fund.code} exchange="psx" size="lg" />
                     {fund.name}
-                    {fund.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Closed</span>}
+                    {fund.isActive === false && <span className="pill-warn fs-11">Closed</span>}
                   </div>
                   <div className="text-muted">{fund.code} · {fund.platform} · {fundCategoryLabel(fund, categoryRegistry)} · {fund.currencyCode}</div>
                 </div>
@@ -1255,7 +1255,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
               setTxNav(nav);
               if (txUnits) setTxAmountInput(nav > 0 ? (txUnits * nav).toFixed(2) : '');
             }}
-            style={{ width: 100 }}
+            className="w-100"
           />
         </Field>
         <Field label="Units">
@@ -1267,7 +1267,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
               setTxUnits(u);
               setTxAmountInput(txNav > 0 && u ? (u * txNav).toFixed(2) : '');
             }}
-            style={{ width: 100 }}
+            className="w-100"
           />
         </Field>
         <Field label="or Amount" title="Only know the amount, not the units? Enter it here — units are computed automatically from the NAV above (pre-filled with this fund's last known NAV, editable if today's is different).">
@@ -1355,15 +1355,15 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
             {txs.map(({ t, i }) =>
               editIndex === i && editRow ? (
                 <tr key={i}>
-                  <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
+                  <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} className="w-130" /></td>
                   <td>
                     <select value={editRow.action} onChange={(e) => setEditRow({ ...editRow, action: e.target.value as 'BUY' | 'SELL' })}>
                       <option value="BUY">Invest</option>
                       <option value="SELL">Withdraw</option>
                     </select>
                   </td>
-                  <td><input type="number" value={editRow.shares} onChange={(e) => setEditRow({ ...editRow, shares: Number(e.target.value) })} style={{ width: 90 }} /></td>
-                  <td><input type="number" step="0.0001" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })} style={{ width: 90 }} /></td>
+                  <td><input type="number" value={editRow.shares} onChange={(e) => setEditRow({ ...editRow, shares: Number(e.target.value) })} className="w-90" /></td>
+                  <td><input type="number" step="0.0001" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })} className="w-90" /></td>
                   <td>{fmtMoney(editRow.shares * editRow.price, fund.currencyCode)}</td>
                   <td>
                     <PendingToggle
@@ -1381,7 +1381,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                     {t.date}
                     {t.isPending && (
                       <Tooltip text="Order placed but not yet settled — excluded from units/value until cleared.">
-                        <span className="pill-warn" style={{ marginLeft: 6 }}>Pending</span>
+                        <span className="pill-warn ml-6">Pending</span>
                       </Tooltip>
                     )}
                   </td>
@@ -1439,7 +1439,7 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
         {balanceRows.length > 0 && (
           <>
             {balanceRows.length > 8 && (
-              <button className="btn secondary small" style={{ marginBottom: 8 }} onClick={() => setShowAllUpdates((v) => !v)}>
+              <button className="btn secondary small mb-sm" onClick={() => setShowAllUpdates((v) => !v)}>
                 {showAllUpdates ? 'Show recent 8 only' : `Show all ${balanceRows.length} updates`}
               </button>
             )}
@@ -1456,11 +1456,11 @@ function FundDetail({ fund, onBack }: { fund: Fund; onBack: () => void }) {
                     return editUpdateIndex === rawIndex && editUpdateRow ? (
                       <tr key={rawIndex}>
                         <td className="text-muted">{r.index}</td>
-                        <td><input type="date" value={editUpdateRow.date} onChange={(e) => setEditUpdateRow({ ...editUpdateRow, date: e.target.value })} style={{ width: 130 }} /></td>
+                        <td><input type="date" value={editUpdateRow.date} onChange={(e) => setEditUpdateRow({ ...editUpdateRow, date: e.target.value })} className="w-130" /></td>
                         <td>{fmtMoney(r.prevBalance, fund.currencyCode)}</td>
                         <td>{fmtPrice(r.prevNav)}</td>
                         <td className="text-muted">—</td>
-                        <td><input type="number" step="0.0001" value={editUpdateRow.price} onChange={(e) => setEditUpdateRow({ ...editUpdateRow, price: Number(e.target.value) })} style={{ width: 90 }} /></td>
+                        <td><input type="number" step="0.0001" value={editUpdateRow.price} onChange={(e) => setEditUpdateRow({ ...editUpdateRow, price: Number(e.target.value) })} className="w-90" /></td>
                         <td className="text-muted">—</td>
                         <td className="text-muted">—</td>
                         <td>
@@ -1631,15 +1631,15 @@ function FundsTransfersSection() {
               const otherSide = link ? (link.from.module === 'funds' && link.fromRecordId === t.id ? link.to : link.from) : undefined;
               return editId === t.id && editRow ? (
                 <tr key={t.id}>
-                  <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
+                  <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} className="w-130" /></td>
                   <td>
                     <select value={editRow.type} onChange={(e) => setEditRow({ ...editRow, type: e.target.value as Transfer['type'] })}>
                       <option value="DEPOSIT">Deposit</option>
                       <option value="WITHDRAWAL">Withdrawal</option>
                     </select>
                   </td>
-                  <td><input type="number" value={editRow.gross} onChange={(e) => setEditRow({ ...editRow, gross: Number(e.target.value) })} style={{ width: 90 }} /></td>
-                  <td><input type="number" value={editRow.fee} onChange={(e) => setEditRow({ ...editRow, fee: Number(e.target.value) })} style={{ width: 70 }} /></td>
+                  <td><input type="number" value={editRow.gross} onChange={(e) => setEditRow({ ...editRow, gross: Number(e.target.value) })} className="w-90" /></td>
+                  <td><input type="number" value={editRow.fee} onChange={(e) => setEditRow({ ...editRow, fee: Number(e.target.value) })} className="w-70" /></td>
                   <td></td>
                   <td>
                     <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
@@ -1662,7 +1662,7 @@ function FundsTransfersSection() {
                   <td>
                     {t.type}
                     {link && (
-                      <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
+                      <Link to={linkTargetPath(otherSide!)} className="pill-info ml-6" title="Linked — go to the other side">
                         🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
                       </Link>
                     )}
@@ -1803,7 +1803,7 @@ function AccountSection({
   return (
     <Card className="mb-md">
       {cloudEmpty && (
-        <Notice tone="warning" style={{ marginTop: 8 }}>
+        <Notice tone="warning" className="mt-sm">
           <p className="mt-0">No data found in the cloud for this account's Funds workbook. This won't upload automatically.</p>
           <button
             className="btn secondary"

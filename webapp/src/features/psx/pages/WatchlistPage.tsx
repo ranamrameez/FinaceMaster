@@ -35,25 +35,23 @@ export function WatchlistPage() {
           value={w.ticker}
           onChange={(e) => setW({ ...w, ticker: e.target.value.toUpperCase() })}
           list={PSX_TICKER_DATALIST_ID}
-          style={{ width: 90 }}
+          className="w-90"
         />
         <input
           type="number"
           step="0.01"
-          className="price-input"
+          className="price-input w-120"
           placeholder="Target price"
           value={w.target || ''}
           onChange={(e) => setW({ ...w, target: Number(e.target.value) })}
-          style={{ width: 120 }}
         />
         <input
           type="number"
           step="0.01"
-          className="price-input"
+          className="price-input w-120"
           placeholder="Current price"
           value={w.current || ''}
           onChange={(e) => setW({ ...w, current: Number(e.target.value) })}
-          style={{ width: 120 }}
         />
         <button
           className="btn"
@@ -122,15 +120,14 @@ function WatchlistTable({
             <tr key={item.ticker}>
               <td><TickerLogo ticker={item.ticker} size="sm" exchange="psx" /><Link to={`/psx/stock/${item.ticker}`}>{item.ticker}</Link></td>
               <td style={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>{tickerNames[item.ticker] ? shortenCompanyName(tickerNames[item.ticker]) : ''}</td>
-              <td style={{ width: 82 }}><Sparkline data={sparkData} formatValue={fmtPrice} /></td>
+              <td className="w-82"><Sparkline data={sparkData} formatValue={fmtPrice} /></td>
               <td>
                 <input
                   type="number"
                   step="0.01"
-                  className="price-input"
+                  className="price-input w-100"
                   value={item.target || ''}
                   onChange={(e) => updateWatchlistItem(item.ticker, { target: Number(e.target.value) })}
-                  style={{ width: 100 }}
                   title="Edit target price"
                 />
               </td>
@@ -138,10 +135,9 @@ function WatchlistTable({
                 <input
                   type="number"
                   step="0.01"
-                  className="price-input"
+                  className="price-input w-100"
                   value={item.current || ''}
                   onChange={(e) => updateWatchlistItem(item.ticker, { current: Number(e.target.value) })}
-                  style={{ width: 100 }}
                   title="Edit current price"
                 />
               </td>

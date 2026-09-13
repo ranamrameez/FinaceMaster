@@ -212,7 +212,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
               <Tooltip text="PSX nets commission when you buy and sell the same ticker on the same day — the smaller-quantity leg (ties go to the buy) pays no commission or SST, only government levies. 'Same-day' assumes this sell nets against a same-day buy; 'Other day' assumes the full commission applies, same as a regular trade.">
                 <div className="label clickable">BE: same-day vs. other day</div>
               </Tooltip>
-              <div className="value" style={{ fontSize: 14 }}>{fmtPrice(beSameDay)}</div>
+              <div className="value fs-14">{fmtPrice(beSameDay)}</div>
               <div className="sub">same-day · other day {fmtPrice(be)}</div>
             </div>
             <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Invested</div><div className="value">{fmtMoney(invested, currency)}</div></div>
@@ -242,7 +242,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
             </div>
             <div className="stat-card card" style={hueStyle(statusHue || HUES[7])}>
               <div className="label">Status</div>
-              <div className="value" style={{ fontSize: 14 }}>{statusLabel}</div>
+              <div className="value fs-14">{statusLabel}</div>
             </div>
           </div>
         </CollapsibleCard>
@@ -295,7 +295,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
             <div className="stat-card card" style={hueStyle(HUES[4])}><div className="label">Fees paid</div><div className="value">{fmtMoney(position.buyFees + position.sellFees, currency)}</div></div>
             <div className="stat-card card" style={hueStyle(HUES[3])}>
               <div className="label">Trade dates</div>
-              <div className="value" style={{ fontSize: 14 }}>{position.firstDate}</div>
+              <div className="value fs-14">{position.firstDate}</div>
               <div className="sub">to {position.lastDate}</div>
             </div>
             {!isOpen && <div className="stat-card card" style={hueStyle(HUES[6])}><div className="label">Held</div><div className="value">{holdingDays}d</div></div>}
@@ -416,8 +416,8 @@ export function PositionDetail({ ticker }: { ticker: string }) {
                     const rawIndex = rawHistory.indexOf(p);
                     return editPriceIndex === rawIndex && editPriceRow ? (
                       <tr key={rawIndex}>
-                        <td><input type="date" value={editPriceRow.date} onChange={(e) => setEditPriceRow({ ...editPriceRow, date: e.target.value })} style={{ width: 130 }} /></td>
-                        <td><input type="number" step="0.01" value={editPriceRow.price} onChange={(e) => setEditPriceRow({ ...editPriceRow, price: Number(e.target.value) })} style={{ width: 90 }} /></td>
+                        <td><input type="date" value={editPriceRow.date} onChange={(e) => setEditPriceRow({ ...editPriceRow, date: e.target.value })} className="w-130" /></td>
+                        <td><input type="number" step="0.01" value={editPriceRow.price} onChange={(e) => setEditPriceRow({ ...editPriceRow, price: Number(e.target.value) })} className="w-90" /></td>
                         <td>
                           <IconButton label="Save" icon={<SaveIcon size={12} />} onClick={saveEditPrice} />
                           <IconButton label="Cancel" icon={<XIcon size={12} />} onClick={cancelEditPrice} />

@@ -123,6 +123,68 @@ describe('computeFIFOPositions', () => {
     expect(p.realized).toBeCloseTo(669 - 661, 5);
   });
 
+  describe('targetLotBuyId (specific lot identification, Partial Trade Strategy "Sell this lot")', () => {
+    // The real IQCD case this exists for: 50 sh @10.40 (older, expensive) +
+    // 14 sh @9.962 (newer, cheap) — a normal FIFO sell always drains the
+    // OLDEST lot first, so selling exactly the cheap lot's 14 shares would
+    // otherwise silently reduce the expensive lot instead, leaving a
+    // misleading average cost/break-even for what's actually still held.
+    const lots: Transaction[] = [
+      { id: 'buy-old', date: '2026-01-01', ticker: 'IQCD', action: 'BUY', shares: 50, price: 10.4 },
+      { id: 'buy-cheap', date: '2026-01-15', ticker: 'IQCD', action: 'BUY', shares: 14, price: 9.962 },
+    ];
+
+    it('without targetLotBuyId, a sell still drains the oldest lot first (unchanged default)', () => {
+      const txs = [...lots, { date: '2026-02-01', ticker: 'IQCD', action: 'SELL', shares: 14, price: 10.37 } as Transaction];
+      const { lotsByTicker } = computeFIFOPositions(txs, noFee);
+      // The expensive lot lost 14 shares (36 left); the cheap lot is untouched.
+      expect(lotsByTicker.IQCD).toEqual([
+        expect.objectContaining({ buyId: 'buy-old', buyPrice: 10.4, remainingShares: 36 }),
+        expect.objectContaining({ buyId: 'buy-cheap', buyPrice: 9.962, remainingShares: 14 }),
+      ]);
+    });
+
+    it('with targetLotBuyId set, a sell closes that specific (non-oldest) lot instead, leaving the oldest lot untouched', () => {
+      const txs = [
+        ...lots,
+        { date: '2026-02-01', ticker: 'IQCD', action: 'SELL', shares: 14, price: 10.37, targetLotBuyId: 'buy-cheap' } as Transaction,
+      ];
+      const { positions, lotsByTicker } = computeFIFOPositions(txs, noFee);
+      const p = positions.find((x) => x.ticker === 'IQCD')!;
+
+      // The cheap lot is fully closed; only the expensive lot remains —
+      // so avg cost / break-even for what's left is driven purely by the
+      // 50-share @10.40 lot, not a blended or misattributed figure.
+      expect(lotsByTicker.IQCD).toHaveLength(1);
+      expect(lotsByTicker.IQCD[0]).toMatchObject({ buyId: 'buy-old', buyPrice: 10.4, remainingShares: 50 });
+      expect(p.shares).toBe(50);
+      expect(p.invested).toBeCloseTo(50 * 10.4, 5);
+      // Realized P/L is priced off the CHEAP lot's own cost, not the old lot's.
+      expect(p.realized).toBeCloseTo(14 * 10.37 - 14 * 9.962, 5);
+    });
+
+    it('falls through to normal oldest-first FIFO for shares beyond what the targeted lot holds', () => {
+      const txs = [
+        ...lots,
+        // Sells 20 shares targeting the 14-share cheap lot — the cheap lot
+        // covers 14 of them, the remaining 6 fall through to the next
+        // oldest lot in the normal queue (the expensive lot).
+        { date: '2026-02-01', ticker: 'IQCD', action: 'SELL', shares: 20, price: 10.37, targetLotBuyId: 'buy-cheap' } as Transaction,
+      ];
+      const { lotsByTicker } = computeFIFOPositions(txs, noFee);
+      expect(lotsByTicker.IQCD).toEqual([expect.objectContaining({ buyId: 'buy-old', remainingShares: 44 })]);
+    });
+
+    it('ignores an unmatched targetLotBuyId and falls back to normal oldest-first FIFO', () => {
+      const txs = [...lots, { date: '2026-02-01', ticker: 'IQCD', action: 'SELL', shares: 14, price: 10.37, targetLotBuyId: 'no-such-lot' } as Transaction];
+      const { lotsByTicker } = computeFIFOPositions(txs, noFee);
+      expect(lotsByTicker.IQCD).toEqual([
+        expect.objectContaining({ buyId: 'buy-old', remainingShares: 36 }),
+        expect.objectContaining({ buyId: 'buy-cheap', remainingShares: 14 }),
+      ]);
+    });
+  });
+
   it('runs clean over the real PSX backup fixture and produces finite numbers', () => {
     const transactions = fixture.transactions as Transaction[];
     const calcFee = makePSXFeeCalculator(NO_FEE_SETTINGS, transactions);

@@ -60,7 +60,7 @@ export function analyzeTradePlanByTicker(
    * calculation (matches the old behavior); callers that want same-day
    * buy/sell legs within a plan to net against each other (PSX's
    * commission-netting rule) should pass a calculator that's aware of the
-   * plan's *other* legs — see `TradePlannerPage.tsx`'s `calcLegFee`. Without
+   * plan's *other* legs — see `TradeStrategyPage.tsx`'s `calcLegFee`. Without
    * this, a plan with a same-day buy AND sell of the same ticker silently
    * over-estimates fees by charging full commission on both legs instead of
    * netting the smaller side, per README item 5's "buy & sell aren't

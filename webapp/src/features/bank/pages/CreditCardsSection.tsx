@@ -113,8 +113,8 @@ function CreditUsageBar({ used, limit, currency }: { used: number; limit: number
         <div style={{ width: `${usedPct}%`, background: 'var(--loss)' }} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 12 }}>
-        <span style={{ color: 'var(--loss)' }}>Used: {fmtMoney(used, currency)}</span>
-        <span style={{ color: 'var(--profit)' }}>Available: {fmtMoney(availableCredit({ id: '', name: '', currencyCode: currency, creditLimit: limit }, used), currency)} of {fmtMoney(limit, currency)}</span>
+        <span className="text-loss">Used: {fmtMoney(used, currency)}</span>
+        <span className="text-profit">Available: {fmtMoney(availableCredit({ id: '', name: '', currencyCode: currency, creditLimit: limit }, used), currency)} of {fmtMoney(limit, currency)}</span>
       </div>
     </div>
   );
@@ -275,15 +275,15 @@ function TransactionsTable({ card }: { card: CreditCard }) {
           {cardTxs.map((t) => (
             editId === t.id && editRow ? (
               <tr key={t.id}>
-                <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
+                <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} className="w-130" /></td>
                 <td>
                   <select value={editRow.kind} onChange={(e) => setEditRow({ ...editRow, kind: e.target.value as CreditCardTransactionKind })}>
                     {(Object.keys(KIND_LABELS) as CreditCardTransactionKind[]).map((k) => <option key={k} value={k}>{KIND_LABELS[k]}</option>)}
                   </select>
                 </td>
-                <td><input value={editRow.description} onChange={(e) => setEditRow({ ...editRow, description: e.target.value })} style={{ width: 140 }} /></td>
+                <td><input value={editRow.description} onChange={(e) => setEditRow({ ...editRow, description: e.target.value })} className="w-140" /></td>
                 <td><CategorySelect value={editRow.categoryID ?? UNCATEGORIZED_ID} onChange={(categoryID) => setEditRow({ ...editRow, categoryID })} /></td>
-                <td><input type="number" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 90 }} /></td>
+                <td><input type="number" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} className="w-90" /></td>
                 <td onClick={(e) => e.stopPropagation()}>
                   <IconButton label="Save" icon={<SaveIcon size={12} />} align="right" onClick={saveEdit} />
                   <IconButton label="Cancel" icon={<XIcon size={12} />} align="right" onClick={() => { setEditId(null); setEditRow(null); }} />
@@ -438,7 +438,7 @@ export function CreditCardDetailPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
         <h1 className="pagetitle" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
           {card.name}
-          {card.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Closed</span>}
+          {card.isActive === false && <span className="pill-warn fs-11">Closed</span>}
         </h1>
         <div style={{ display: 'flex', gap: 6 }}>
           <IconButton label={card.isFavorite ? 'Unfavorite' : 'Favorite'} icon={<StarIcon size={13} filled={card.isFavorite} />} align="right" onClick={toggleFavorite} />
@@ -639,7 +639,7 @@ function CreditCardsList() {
   return (
     <div>
       {archivedCount > 0 && (
-        <button className="btn secondary small" style={{ marginBottom: 8 }} onClick={() => setShowArchived((v) => !v)}>
+        <button className="btn secondary small mb-sm" onClick={() => setShowArchived((v) => !v)}>
           {showArchived ? 'Hide' : 'Show'} closed ({archivedCount})
         </button>
       )}
@@ -656,7 +656,7 @@ function CreditCardsList() {
                 key={c.id}
                 title={<><span className="text-muted entity-card-sr">#{srNumOf.get(c.id)}</span>{c.name}</>}
                 subtitle={<>{c.currencyCode}{c.cardNetwork ? ` · ${c.cardNetwork}` : ''}{c.creditLimit ? ` · Limit ${fmtMoney(c.creditLimit, c.currencyCode)}` : ''}</>}
-                badge={c.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Closed</span> : undefined}
+                badge={c.isActive === false ? <span className="pill-warn fs-10">Closed</span> : undefined}
                 statLabel="Owed"
                 stat={<MoneyValue n={balance} currency={c.currencyCode} />}
                 hue={balance > 0 ? 'var(--loss)' : 'var(--profit)'}

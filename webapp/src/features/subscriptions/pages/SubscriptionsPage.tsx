@@ -255,7 +255,7 @@ function SubscriptionList({ onSelect }: { onSelect: (sub: Subscription) => void 
                     {next && <> · Next: {next}</>}
                   </>
                 }
-                badge={<span className={s.active ? 'pill-positive' : 'pill-negative'} style={{ fontSize: 10 }}>{s.active ? 'Active' : 'Cancelled'}</span>}
+                badge={<span className={`${s.active ? 'pill-positive' : 'pill-negative'} fs-10`}>{s.active ? 'Active' : 'Cancelled'}</span>}
                 statLabel="Monthly equiv."
                 stat={<MoneyValue n={monthly} currency={s.currencyCode} />}
                 onClick={() => onSelect(s)}
@@ -527,19 +527,19 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
             </Tooltip>
             <MoneyValue n={monthlyEquivalent(sub) * 12} currency={sub.currencyCode} />
           </div>
-          <div className="stat-card card" style={hueStyle(HUES[0])}><div className="label">Next renewal</div><div className="value" style={{ fontSize: 14 }}>{sub.active ? nextBillingDate(sub) : '—'}</div></div>
-          <div className="stat-card card" style={hueStyle(sub.active ? 'var(--profit)' : 'var(--loss)')}><div className="label">Status</div><div className="value" style={{ fontSize: 14 }}>{sub.active ? 'Active' : 'Cancelled'}</div></div>
+          <div className="stat-card card" style={hueStyle(HUES[0])}><div className="label">Next renewal</div><div className="value fs-14">{sub.active ? nextBillingDate(sub) : '—'}</div></div>
+          <div className="stat-card card" style={hueStyle(sub.active ? 'var(--profit)' : 'var(--loss)')}><div className="label">Status</div><div className="value fs-14">{sub.active ? 'Active' : 'Cancelled'}</div></div>
         </div>
       </Card>
 
       <Card className="mb-md">
         <h4 style={{ margin: '0 0 8px' }}>Link to a paying account</h4>
         {linkedLabel ? (
-          <p className="text-muted" style={{ marginBottom: 8 }}>
+          <p className="text-muted mb-sm">
             Paid via <strong>{linkedLabel}</strong> — upcoming renewals are planned in its Planning tab.
           </p>
         ) : (
-          <p className="text-muted" style={{ marginBottom: 8 }}>
+          <p className="text-muted mb-sm">
             Not linked yet. Linking generates a planned (not-yet-done) entry for every renewal in the next 12
             months in the chosen account's Planning tab.
           </p>
@@ -687,7 +687,7 @@ function AccountSection({
   return (
     <Card className="mb-md">
       {cloudEmpty && (
-        <Notice tone="warning" style={{ marginTop: 8 }}>
+        <Notice tone="warning" className="mt-sm">
           <p className="mt-0">No data found in the cloud for this account's Subscriptions workbook. This won't upload automatically.</p>
           <button
             className="btn secondary"

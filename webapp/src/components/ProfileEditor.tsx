@@ -58,7 +58,7 @@ export function ProfileEditor({ user }: { user: User }) {
         value={avatarEmoji}
         maxLength={4}
         onChange={(e) => { setAvatarEmoji(e.target.value); setDirty(true); }}
-        style={{ width: 90 }}
+        className="w-90"
         title="Pick one or two emoji as your avatar"
       />
       <button className="btn secondary small" disabled={busy || !dirty} onClick={save}>

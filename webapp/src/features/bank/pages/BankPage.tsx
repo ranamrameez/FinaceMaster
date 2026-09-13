@@ -433,7 +433,7 @@ export function AddAccountForm({ onSaved, initialCurrency, initialBankId }: { on
       <button className="btn mt-12" onClick={submit}>
         <PlusIcon />Add account
       </button>
-      <p className="text-muted mt-sm"><span style={{ color: 'var(--loss)' }}>*</span> Required. Everything else on this form is optional.</p>
+      <p className="text-muted mt-sm"><span className="text-loss">*</span> Required. Everything else on this form is optional.</p>
     </div>
   );
 }
@@ -489,7 +489,7 @@ function BanksList() {
               key={b.id}
               title={b.name}
               subtitle={`${accountCount} account${accountCount === 1 ? '' : 's'}`}
-              badge={b.isActive === false ? <span className="pill-warn" style={{ fontSize: 10 }}>Closed</span> : undefined}
+              badge={b.isActive === false ? <span className="pill-warn fs-10">Closed</span> : undefined}
               statLabel={currencies.length > 1 ? 'Total (by currency)' : 'Total'}
               stat={
                 currencies.length ? (
@@ -732,7 +732,7 @@ function AccountsList() {
             <span className="text-muted" style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: 11, letterSpacing: '.04em' }}>
               {currency}
             </span>
-            <span className={`pill-info`} style={{ fontSize: 11 }}>{num(groupSum)} {currency}</span>
+            <span className="pill-info fs-11">{num(groupSum)} {currency}</span>
           </div>
           <div className="entity-card-grid">
             {group.map((a) => (
@@ -743,8 +743,8 @@ function AccountsList() {
                 badge={
                   a.isLiability || a.isActive === false ? (
                     <span style={{ display: 'flex', gap: 4 }}>
-                      {a.isLiability && <span className="pill-negative" style={{ fontSize: 10 }}>Credit card</span>}
-                      {a.isActive === false && <span className="pill-warn" style={{ fontSize: 10 }}>Closed</span>}
+                      {a.isLiability && <span className="pill-negative fs-10">Credit card</span>}
+                      {a.isActive === false && <span className="pill-warn fs-10">Closed</span>}
                     </span>
                   ) : undefined
                 }
@@ -801,8 +801,8 @@ function CreditUsageBar({ used, limit, currency }: { used: number; limit: number
         <div style={{ width: `${usedPct}%`, background: 'var(--loss)' }} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 12 }}>
-        <span style={{ color: 'var(--loss)' }}>Used: {fmtMoney(used, currency)}</span>
-        <span style={{ color: 'var(--profit)' }}>Available: {fmtMoney(Math.max(0, limit - used), currency)} of {fmtMoney(limit, currency)}</span>
+        <span className="text-loss">Used: {fmtMoney(used, currency)}</span>
+        <span className="text-profit">Available: {fmtMoney(Math.max(0, limit - used), currency)} of {fmtMoney(limit, currency)}</span>
       </div>
     </div>
   );
@@ -958,7 +958,7 @@ export function AccountDetailPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
         <h1 className="pagetitle" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
           {account.name}
-          {account.isActive === false && <span className="pill-warn" style={{ fontSize: 11 }}>Closed</span>}
+          {account.isActive === false && <span className="pill-warn fs-11">Closed</span>}
         </h1>
         {/* User-requested (2026-08-27): "Delete and Edit are rare operations
            they should [be] on details page only... with delete as a red
@@ -1421,10 +1421,10 @@ function TransactionsList({ account }: { account: BankAccount }) {
                 <td className="cell-clip" title={tx.description} onClick={(e) => e.stopPropagation()}>
                   {tx.description}
                   {tx.isPending && (
-                    <span className="pill-warn" style={{ marginLeft: 6 }} title="Not yet cleared — excluded from Current balance above until marked cleared.">Pending</span>
+                    <span className="pill-warn ml-6" title="Not yet cleared — excluded from Current balance above until marked cleared.">Pending</span>
                   )}
                   {link && (
-                    <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
+                    <Link to={linkTargetPath(otherSide!)} className="pill-info ml-6" title="Linked — go to the other side">
                       🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
                     </Link>
                   )}
@@ -1838,7 +1838,7 @@ function AccountSection({
   return (
     <div>
       {cloudEmpty && (
-        <Notice tone="warning" style={{ marginTop: 8 }}>
+        <Notice tone="warning" className="mt-sm">
           <p className="mt-0">
             No data found in the cloud for this account's Banking workbook. This won't upload automatically.
           </p>
@@ -2077,12 +2077,12 @@ function BankPlanList({ account }: { account: BankAccount }) {
                       type="date"
                       value={editRow.date}
                       onChange={(e) => setEditRow({ ...editRow, date: e.target.value, recurrence: editRow.recurrence ? { ...editRow.recurrence, startDate: e.target.value } : undefined })}
-                      style={{ width: 130 }}
+                      className="w-130"
                     />
                   </td>
                   <td><input value={editRow.description} onChange={(e) => setEditRow({ ...editRow, description: e.target.value })} /></td>
-                  <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} style={{ width: 100 }} /></td>
-                  <td><input value={editRow.category ?? ''} onChange={(e) => setEditRow({ ...editRow, category: e.target.value })} style={{ width: 100 }} /></td>
+                  <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} className="w-100" /></td>
+                  <td><input value={editRow.category ?? ''} onChange={(e) => setEditRow({ ...editRow, category: e.target.value })} className="w-100" /></td>
                   <td>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'flex-end' }}>
                       <RecurrenceFields
@@ -2276,10 +2276,10 @@ function AnalyticsTab() {
                         <input
                           type="number"
                           step="0.01"
-                          className="price-input"
+                          className="price-input w-96"
                           defaultValue={r.budget || ''}
                           placeholder="—"
-                          style={{ width: 96 }}
+                          
                           onKeyDown={async (e) => {
                             if (e.key === 'Enter') {
                               const val = parseFloat((e.target as HTMLInputElement).value) || 0;
@@ -2300,14 +2300,14 @@ function AnalyticsTab() {
               </table>
             </div>
             <div className="row gap-sm mt-sm">
-              <TextInput placeholder="New category" value={newBudgetCategory} onChange={(e) => setNewBudgetCategory(e.target.value)} style={{ width: 140 }} />
+              <TextInput placeholder="New category" value={newBudgetCategory} onChange={(e) => setNewBudgetCategory(e.target.value)} className="w-140" />
               <input
                 type="number"
                 step="0.01"
                 placeholder="Monthly target"
                 value={newBudgetAmount || ''}
                 onChange={(e) => setNewBudgetAmount(Number(e.target.value))}
-                style={{ width: 120 }}
+                className="w-120"
               />
               <button
                 className="btn secondary small"

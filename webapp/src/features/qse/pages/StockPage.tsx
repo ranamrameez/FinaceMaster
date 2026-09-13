@@ -106,10 +106,10 @@ function TickerTransactions({ ticker }: { ticker: string }) {
           />
         </Field>
         <Field label="Shares" required>
-          <input type="number" placeholder="Shares" value={sharesInput} onChange={(e) => setSharesInput(e.target.value)} style={{ width: 90 }} />
+          <input type="number" placeholder="Shares" value={sharesInput} onChange={(e) => setSharesInput(e.target.value)} className="w-90" />
         </Field>
         <Field label="Price" required>
-          <input type="number" step="0.001" placeholder="Price" value={priceInput} onChange={(e) => setPriceInput(e.target.value)} style={{ width: 90 }} />
+          <input type="number" step="0.001" placeholder="Price" value={priceInput} onChange={(e) => setPriceInput(e.target.value)} className="w-90" />
         </Field>
         <TimeZoneFields
           time={time}
@@ -136,15 +136,15 @@ function TickerTransactions({ ticker }: { ticker: string }) {
             {rows.map(({ tx, i }) =>
               editIndex === i && editRow ? (
                 <tr key={i}>
-                  <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} style={{ width: 130 }} /></td>
+                  <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} className="w-130" /></td>
                   <td>
                     <select value={editRow.action} onChange={(e) => setEditRow({ ...editRow, action: e.target.value as 'BUY' | 'SELL' })}>
                       <option value="BUY">BUY</option>
                       <option value="SELL">SELL</option>
                     </select>
                   </td>
-                  <td><input type="number" value={editRow.shares} onChange={(e) => setEditRow({ ...editRow, shares: Number(e.target.value) })} style={{ width: 70 }} /></td>
-                  <td><input type="number" step="0.001" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })} style={{ width: 80 }} /></td>
+                  <td><input type="number" value={editRow.shares} onChange={(e) => setEditRow({ ...editRow, shares: Number(e.target.value) })} className="w-70" /></td>
+                  <td><input type="number" step="0.001" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })} className="w-80" /></td>
                   <td>{fmtMoney(editRow.shares * editRow.price, currency)}</td>
                   <td>
                     <PendingToggle
@@ -162,7 +162,7 @@ function TickerTransactions({ ticker }: { ticker: string }) {
                     {tx.date}
                     {tx.isPending && (
                       <Tooltip text="Order placed but not yet filled — excluded from your shares/cash balance until cleared.">
-                        <span className="pill-warn" style={{ marginLeft: 6 }}>Pending</span>
+                        <span className="pill-warn ml-6">Pending</span>
                       </Tooltip>
                     )}
                   </td>
