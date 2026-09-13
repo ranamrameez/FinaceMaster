@@ -18,6 +18,12 @@ import { getMarketPrice } from './priceHistory';
  * `PSXSettings.costBasisMethod`'s own locked warning). */
 
 export interface LotAdvice {
+  /** The originating buy's stable id, when it has one — pass this back as
+   * `Transaction.targetLotBuyId` on a "Sell this lot" action so the real
+   * FIFO engine attributes the sale to THIS lot specifically, instead of
+   * silently draining whichever lot happens to be oldest (see that field's
+   * own doc comment for why that matters). */
+  buyId?: string;
   buyDate: string;
   buyPrice: number;
   /** Fee-inclusive cost per share — same formula as `PositionDetail.tsx`'s
@@ -50,6 +56,7 @@ export function computeLotAdvice(
     const breakEven = lot.remainingShares > 0 ? breakEvenPrice(costBasis, lot.remainingShares, feePct, tick, calcFee) : 0;
     const unrealizedPL = currentPrice > 0 ? whatIfExit(lot.remainingShares, costPerShare, currentPrice, calcFee).pl : 0;
     return {
+      buyId: lot.buyId,
       buyDate: lot.buyDate,
       buyPrice: lot.buyPrice,
       costPerShare,

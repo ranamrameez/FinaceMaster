@@ -11,6 +11,10 @@ export interface FIFOLot {
   buyFeeTotal: number;
   originalShares: number;
   remainingShares: number;
+  /** The originating BUY transaction's own `id`, when it has one — lets a
+   * later SELL's `Transaction.targetLotBuyId` reference this exact lot
+   * (see that field's own doc comment). Undefined for id-less legacy data. */
+  buyId?: string;
 }
 
 interface TickerState {
@@ -80,13 +84,33 @@ export function computeFIFOPositions(transactions: Transaction[], calcFee: FeeCa
     const fee = calcFee(amount, isBuy, { shares: tx.shares, tx });
 
     if (isBuy) {
-      state.lots.push({ buyDate: tx.date, buyPrice: tx.price, buyFeeTotal: fee, originalShares: tx.shares, remainingShares: tx.shares });
+      state.lots.push({ buyDate: tx.date, buyPrice: tx.price, buyFeeTotal: fee, originalShares: tx.shares, remainingShares: tx.shares, buyId: tx.id });
       state.buyFees += fee;
       state.totalBoughtShares += tx.shares;
       state.buyCount += 1;
     } else {
       let toSell = tx.shares;
       let costRemoved = 0;
+
+      // Specific lot identification (see `Transaction.targetLotBuyId`'s own
+      // doc comment): drain the referenced lot FIRST, wherever it sits in
+      // the queue, so selling a cheaper non-oldest lot doesn't silently
+      // fall through to the default oldest-first draw below and misattribute
+      // the sale to a lot the user specifically meant to keep. Any shares
+      // beyond what the targeted lot holds fall through to normal FIFO.
+      if (tx.targetLotBuyId) {
+        const idx = state.lots.findIndex((l) => l.buyId === tx.targetLotBuyId);
+        if (idx !== -1) {
+          const lot = state.lots[idx];
+          const take = Math.min(toSell, lot.remainingShares);
+          const costPerShare = lot.buyPrice + lot.buyFeeTotal / lot.originalShares;
+          costRemoved += take * costPerShare;
+          lot.remainingShares -= take;
+          toSell -= take;
+          if (lot.remainingShares <= EPSILON) state.lots.splice(idx, 1);
+        }
+      }
+
       while (toSell > EPSILON && state.lots.length) {
         const lot = state.lots[0];
         const take = Math.min(toSell, lot.remainingShares);
