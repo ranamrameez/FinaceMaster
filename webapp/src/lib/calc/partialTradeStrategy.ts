@@ -139,7 +139,11 @@ export function scanPortfolioForOpportunities(
   feePct: number,
   tick: number,
 ): PartialTradeOpportunity[] {
-  const { lotsByTicker } = computeFIFOPositions(transactions, calcFee);
+  // 'lowestCostFirst': this scan's whole job is finding a cheap lot that's
+  // already profitable while an expensive lot isn't — oldest-first FIFO can
+  // silently hide exactly that (see `LotMatchOrder`'s own doc comment for
+  // the real, financially-consequential bug this fixed).
+  const { lotsByTicker } = computeFIFOPositions(transactions, calcFee, 'lowestCostFirst');
   const results: PartialTradeOpportunity[] = [];
   for (const [ticker, lots] of Object.entries(lotsByTicker)) {
     const currentPrice = getMarketPrice(ticker, marketPrices, transactions);

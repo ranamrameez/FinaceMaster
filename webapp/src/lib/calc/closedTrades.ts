@@ -1,5 +1,8 @@
 import type { FeeCalculator, Transaction } from '../../types/workbook';
 import { sortTransactionsChronological } from './sortTransactions';
+import type { LotMatchOrder } from './fifoPositions';
+
+export type { LotMatchOrder };
 
 export interface ClosedTrade {
   ticker: string;
@@ -37,9 +40,18 @@ interface OpenLot {
 
 const EPSILON = 1e-7;
 
-/** Which still-open lot a sale gets matched against first. User's own
- * observation (2026-09-13), confirmed correct by reading the fee code
- * directly: neither exchange's fee ever depends on which lot a sale is
+/** Which still-open lot a sale gets matched against first — re-exported
+ * from `fifoPositions.ts`, which owns the canonical doc comment (this type
+ * is now shared by both this REPORTING ledger and `computeFIFOPositions`'s
+ * real "Open lots" decomposition, see that file's own `LotMatchOrder`
+ * comment for the full reasoning, including the 2026-09-13 fix that made
+ * `'lowestCostFirst'` also drive Open lots — a caller passing the SAME
+ * `matchOrder` to both this function and `computeFIFOPositions` gets two
+ * tables that always add up to the same true picture, per the user's own
+ * "there should be two tables for opened lots & closed lots" request).
+ *
+ * User's own observation (2026-09-13), confirmed correct by reading the fee
+ * code directly: neither exchange's fee ever depends on which lot a sale is
  * later attributed to here — QSE's fee is a flat % of trade value with no
  * per-share/per-lot terms at all, and PSX's same-day netting decides a
  * whole TRANSACTION's fee by comparing that day's total buy vs. sell
@@ -48,23 +60,8 @@ const EPSILON = 1e-7;
  * total realized+unrealized P/L (that total is invariant to match order by
  * construction — only the SPLIT between "already realized" and "still on
  * paper" moves) — it only changes which buy price gets credited for which
- * sale in this REPORTING ledger.
- *
- * `'fifo'` (the default, unchanged from before this type existed) matches
- * oldest lot first — the convention most real brokers/CDS systems use by
- * default absent an explicit specific-lot election at trade time, so it's
- * the one most likely to match what a real statement shows.
- * `'lowestCostFirst'` matches the cheapest open lot first instead — the
- * most OPTIMISTIC re-telling of the same history (it deterministically
- * maximizes total reported gain / minimizes total reported loss for a
- * fixed set of sales, since crediting the lowest-cost lot to a sale always
- * gives that portion the largest possible gain). Offered as a second,
- * explicitly comparison-only view alongside FIFO (not a replacement) —
- * this does NOT change what `computeFIFOPositions`'s own "Open lots" table
- * shows as still held (that stays real FIFO, since it feeds PSX's actual
- * opt-in cost-basis mode, not just a report) — a caller offering both
- * views should say so, so the two don't read as contradicting each other. */
-export type LotMatchOrder = 'fifo' | 'lowestCostFirst';
+ * sale, and which lot(s) still count as open, in whichever REPORTING view
+ * a caller builds from it. */
 
 /**
  * Reconstructs a per-trade closed ledger via lot matching (`matchOrder`,
