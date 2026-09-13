@@ -527,7 +527,13 @@ export function BankDetailPage() {
   const ensureSignedIn = useEnsureSignedIn();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({ name: bank?.name ?? '', notes: bank?.notes ?? '', color: bank?.color ?? '' });
-  const linkedAccounts = useMemo(() => accounts.filter((a) => a.bankId === id), [accounts, id]);
+  // Excludes migrated accounts (see `BankAccount.migratedToCreditCardId`) —
+  // once converted to a real `CreditCard` record, the old account is a
+  // closed duplicate of the same real card, not a second account under
+  // this bank (real bug, user-reported 2026-09-13: a migrated account was
+  // still showing up here, clickable into its own separate, fully-editable
+  // page — see `RepairStaleMigrations` in `CreditCardsSection.tsx`).
+  const linkedAccounts = useMemo(() => accounts.filter((a) => a.bankId === id && !a.migratedToCreditCardId), [accounts, id]);
   const totals = useMemo(() => (bank ? bankTotalsByCurrency(bank.id, accounts, transactions) : {}), [bank, accounts, transactions]);
   const [addOpen, setAddOpen] = useState(false);
 
@@ -969,6 +975,17 @@ export function AccountDetailPage() {
           </button>
         </div>
       </div>
+      {/* Defense-in-depth for a stale bookmark/back-button reaching this
+         page directly — migrated accounts are already hidden from every
+         list (see `RepairStaleMigrations`), so this should be rare, but a
+         direct link should still point somewhere useful rather than
+         showing this account as if it were still a real, editable one. */}
+      {account.migratedToCreditCardId && (
+        <Notice tone="info" className="mb-md">
+          This account was migrated to a real Credit Card record — its transactions and balance now live there.{' '}
+          <Link to={`/bank/card/${account.migratedToCreditCardId}`}>View the Credit Card →</Link>
+        </Notice>
+      )}
       <p className="text-muted mb-md">
         {account.isLiability ? 'Amount owed:' : 'Current balance:'}{' '}
         <strong title={fmtMoney(account.isLiability ? Math.max(0, -accountBalance(account, transactions)) : accountBalance(account, transactions), account.currencyCode)}>

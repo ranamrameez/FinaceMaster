@@ -678,10 +678,83 @@ function CreditCardsList() {
 export function CreditCardsTab() {
   return (
     <div>
+      <RepairStaleMigrations />
       <MigrateLegacyCreditCards />
       <CreditCardsList />
       <CreditCardsFab />
     </div>
+  );
+}
+
+/** Real bug, user-reported (2026-09-13, with a real attached backup):
+ * "converted GCC and PCC from Bank to CC upon clicking app alert but it
+ * created wrong figures." Root cause traced against that backup: this
+ * user's GCC card was migrated by an OLDER version of `migrate()` below —
+ * from BEFORE `openingBalance` carryover existed on `CreditCard` at all
+ * (README Done item 312) and, going further back, from before this
+ * function even set `isActive: false` on the source account — so the
+ * resulting `CreditCard` record is permanently missing its
+ * `openingBalance` (making its balance read as if ~7,553 QAR of real,
+ * pre-tracked debt simply doesn't exist — the exact wrong-figure report),
+ * and the old `BankAccount` it came from is STILL `isActive: true`,
+ * so it keeps showing up as its own separate, fully-editable, clickable
+ * account (Banking's own homepage list, its Bank's linked-accounts list,
+ * and a direct `/bank/account/:id` link) — a confusing duplicate of the
+ * same real card, exactly what the user's second screenshot showed.
+ *
+ * This is a real, permanent gap that could recur for ANY future migration
+ * fix, not a one-off patch for this one user — so it's a general repair
+ * pass, not a hand-typed correction. It only ever fills in what a FRESH
+ * migration (see `migrate()` below) would already have set, and only
+ * when that value is still genuinely missing — it can never clobber a
+ * value the user has since entered by hand, and running it twice is a
+ * safe no-op. */
+function RepairStaleMigrations() {
+  const bankAccounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
+  const updateBankAccount = useBankWorkbookStore((s) => s.updateAccount);
+  const cards = useCreditCardWorkbookStore((s) => s.workbook.cards);
+  const updateCard = useCreditCardWorkbookStore((s) => s.updateCard);
+  const ensureSignedIn = useEnsureSignedIn();
+
+  const stale = bankAccounts
+    .filter((a) => a.migratedToCreditCardId)
+    .map((a) => ({ account: a, card: cards.find((c) => c.id === a.migratedToCreditCardId) }))
+    .filter(
+      ({ account, card }) =>
+        card &&
+        ((account.isActive !== false) || (card.openingBalance === undefined && account.openingBalance)),
+    );
+  if (!stale.length) return null;
+
+  const repair = async () => {
+    if (!(await ensureSignedIn('Sign in to repair these migrated cards.'))) return;
+    stale.forEach(({ account, card }) => {
+      if (!card) return;
+      if (card.openingBalance === undefined && account.openingBalance) {
+        updateCard(card.id, { openingBalance: -account.openingBalance });
+      }
+      if (account.isActive !== false) {
+        updateBankAccount(account.id, { isActive: false });
+      }
+    });
+    toast(`Repaired ${stale.length} migrated card${stale.length > 1 ? 's' : ''}.`);
+  };
+
+  return (
+    <Notice tone="warning" className="mb-md">
+      <p style={{ margin: '0 0 8px' }}>
+        {stale.length} credit card{stale.length > 1 ? 's were' : ' was'} migrated from a Bank account before a data
+        fix landed — {stale.length > 1 ? 'their' : 'its'} real opening balance may be missing and the original
+        account is still showing up as its own separate entry. One click backfills the opening balance from the
+        original account (never overwriting anything you've already entered) and closes the old duplicate:
+      </p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {stale.map(({ account }) => (
+          <span key={account.id} className="pill">{account.name}</span>
+        ))}
+      </div>
+      <button className="btn secondary small mt-sm" onClick={repair}>Repair now</button>
+    </Notice>
   );
 }
 
