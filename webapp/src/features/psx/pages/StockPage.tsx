@@ -211,7 +211,7 @@ function TickerTransactions({ ticker }: { ticker: string }) {
                     {tx.date}
                     {tx.isPending && (
                       <Tooltip text="Order placed but not yet filled — excluded from your shares/cash balance until cleared.">
-                        <span className="pill-warn" style={{ marginLeft: 6 }}>Pending</span>
+                        <span className="pill-warn ml-6">Pending</span>
                       </Tooltip>
                     )}
                   </td>

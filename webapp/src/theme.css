@@ -743,6 +743,15 @@
      a fourth spacing class. Confirmed no competing bare `margin-top:16px`
      rule in `theme.css`. */
   .mt-md{margin-top:16px;}
+  /* Same cleanup, seventeenth instance (2026-09-13): `style={{ marginLeft: 6
+     }}` on a "Pending" `.pill-warn` badge placed after some text (9
+     occurrences), and `style={{ marginLeft: 6, textDecoration: 'none' }}`
+     on the "🔗 Linked" `.pill-info` tag `<Link>` (8 occurrences) — the
+     latter's `textDecoration:'none'` is dead code, since the base `a{}`
+     rule above already zeroes link underlines app-wide; both share the
+     same 6px left-margin, which doesn't fit the existing 8px `sm`/16px
+     `md` scale, so named literally by value like `.mb-12`/`.mt-12`. */
+  .ml-6{margin-left:6px;}
   /* User-reported (2026-08-27): "Input sizes still inconsistent and taking
      whole 100% width." Root cause: `flex:1` (flex-basis:0%) ignores each
      field's own explicit `width` prop entirely and instead divides the

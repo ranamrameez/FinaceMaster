@@ -391,10 +391,10 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
                   <td className="cell-clip" title={entry.note} onClick={(e) => e.stopPropagation()}>
                     {entry.note}
                     {entry.isPending && (
-                      <span className="pill-warn" style={{ marginLeft: 6 }} title="Not yet cleared — excluded from the Balance stat above until marked cleared.">Pending</span>
+                      <span className="pill-warn ml-6" title="Not yet cleared — excluded from the Balance stat above until marked cleared.">Pending</span>
                     )}
                     {link && (
-                      <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
+                      <Link to={linkTargetPath(otherSide!)} className="pill-info ml-6" title="Linked — go to the other side">
                         🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
                       </Link>
                     )}
@@ -1248,7 +1248,7 @@ function AccountSection({
   return (
     <Card className="mb-md">
       {cloudEmpty && (
-        <Notice tone="warning" style={{ marginTop: 8 }}>
+        <Notice tone="warning" className="mt-sm">
           <p className="mt-0">
             No data found in the cloud for this account's Cash workbook. This app will <strong>not</strong> upload
             anything automatically — if you expected existing data here and don't see it, stop and investigate

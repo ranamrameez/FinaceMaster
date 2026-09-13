@@ -926,10 +926,10 @@ function EntriesList({ property }: { property: Property }) {
                 <td className="cell-clip" title={e.note}>
                   {e.note}
                   {e.isPending && (
-                    <span className="pill-warn" style={{ marginLeft: 6 }} title="Not yet cleared — excluded from Net income above until marked cleared.">Pending</span>
+                    <span className="pill-warn ml-6" title="Not yet cleared — excluded from Net income above until marked cleared.">Pending</span>
                   )}
                   {link && (
-                    <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side" onClick={(ev) => ev.stopPropagation()}>
+                    <Link to={linkTargetPath(otherSide!)} className="pill-info ml-6" title="Linked — go to the other side" onClick={(ev) => ev.stopPropagation()}>
                       🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
                     </Link>
                   )}
@@ -1260,7 +1260,7 @@ function AccountSection({
   return (
     <Card className="mb-md">
       {cloudEmpty && (
-        <Notice tone="warning" style={{ marginTop: 8 }}>
+        <Notice tone="warning" className="mt-sm">
           <p className="mt-0">No data found in the cloud for this account's Rentals workbook. This won't upload automatically.</p>
           <button
             className="btn secondary"

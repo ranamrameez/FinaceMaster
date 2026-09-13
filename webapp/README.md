@@ -8550,8 +8550,24 @@ FinanceManager live link:
   identically to before. Zero real console errors (the one `ERR_CONNECTION_RESET` is this
   sandbox's own documented network-block artifact, unrelated to this change). `npx tsc -b` /
   `npm run test` (678 tests, unchanged — pure CSS extraction) / `npm run build` all clean.
+- **App-wide CSS cleanup, seventeenth/eighteenth concrete instances — see Done item 316
+  (2026-09-13).** Continuing the same incremental practice. `style={{ marginTop: 8 }}` (bare, no
+  `.row`/`gap` involved — 13 occurrences across 11 files, mostly a cloud-sync-empty `Notice`)
+  reused the existing `.mt-sm` utility. Separately, two more repeated patterns sharing the same
+  6px left-margin: `style={{ marginLeft: 6 }}` on a "Pending" `.pill-warn` badge placed after
+  some text (9 occurrences) and `style={{ marginLeft: 6, textDecoration: 'none' }}` on the
+  "🔗 Linked" `.pill-info` tag `<Link>` (8 occurrences) — checking `theme.css` first found the
+  Link's own `textDecoration:'none'` half is dead code, since the base `a{color:inherit;
+  text-decoration:none;}` rule (from Done item 103's earlier fix) already zeroes link
+  underlines app-wide, so this was a removal as well as an extraction, same as the earlier
+  `alignItems:'flex-end'` dead-code find (Done item 302). Both share the identical 6px value,
+  which doesn't fit the existing 8px `sm`/16px `md` scale, so extracted into one literal-value
+  `.ml-6{margin-left:6px;}` class (matching the `.mb-12`/`.mt-12` naming precedent) rather than
+  two separate classes. Verified live via Playwright: a seeded pending Cash entry's `.pill-warn
+  .ml-6` badge computed `margin-left: 6px` exactly, zero real console errors. `npx tsc -b` /
+  `npm run test` (678 tests, unchanged) / `npm run build` all clean.
 - **Closed Trades reporting ledger gains a "Cheapest lot first" alternative view alongside
-  FIFO, user-requested (2026-09-13) — see Done item 316.** First analyzed the user's own real
+  FIFO, user-requested (2026-09-13) — see Done item 317.** First analyzed the user's own real
   MARK (QSE) trade history against an uploaded full-app backup and reported the full FIFO
   ledger + weighted-average comparison + reconciliation in chat (no code change needed for
   that half). User then observed: "FIFO maybe correct for PSX but QSE behaves different. WHY?
@@ -9511,9 +9527,14 @@ or a design decision before more code, not guessed at further:**
      item 168's own pass) and a genuinely new composite pattern, `style={{ cursor: 'pointer',
      fontWeight: 700, marginBottom: 8 }}` on every collapsible `<summary>` in QSE's/PSX's Trade
      Transactions page (8 occurrences), extracted into a new semantic `.summary-heading` class.
-     The exact same incremental discipline (audit one repeated pattern, extract or remove,
-     verify, repeat) still applies for every other module/pattern — this is one instance of an
-     ongoing, repeatable practice, not a closed item.
+     **Seventeenth/eighteenth concrete instances done (2026-09-13) — see Done item 316**: a
+     bare `style={{ marginTop: 8 }}` (13 occurrences, reused the existing `.mt-sm`), plus two
+     6px-left-margin patterns — a `.pill-warn` "Pending" badge (9 occurrences) and a
+     `.pill-info` "Linked" tag `<Link>` (8 occurrences, whose own `textDecoration:'none'` half
+     turned out to be dead code already covered by the base `a{}` rule) — both extracted into
+     one new `.ml-6` class. The exact same incremental discipline (audit one repeated pattern,
+     extract or remove, verify, repeat) still applies for every other module/pattern — this is
+     one instance of an ongoing, repeatable practice, not a closed item.
 117. ~~App-wide "everything should be a grid item except tables" principle (2026-09-06)~~ —
      **done in full (2026-09-08), see Done item 237.** Every module's landing/Settings page has
      been audited for the "short non-table cards stacked full-width" pattern; Cash's Settings

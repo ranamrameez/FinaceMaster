@@ -1103,7 +1103,7 @@ function RepaymentLog({ loan, repayments }: { loan: EMILoan; repayments: EMIRepa
                     <>
                       {fmtMoney(r.amount, loan.currencyCode)}
                       {link && (
-                        <Link to={linkTargetPath(otherSide!)} className="pill-info" style={{ marginLeft: 6, textDecoration: 'none' }} title="Linked — go to the other side">
+                        <Link to={linkTargetPath(otherSide!)} className="pill-info ml-6" title="Linked — go to the other side">
                           🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
                         </Link>
                       )}
@@ -1256,7 +1256,7 @@ function AccountSection({
   return (
     <Card className="mt-md">
       {cloudEmpty && (
-        <Notice tone="warning" style={{ marginTop: 8 }}>
+        <Notice tone="warning" className="mt-sm">
           <p className="mt-0">No data found in the cloud for this account's EMI/Loans workbook. This won't upload automatically.</p>
           <button
             className="btn secondary"
