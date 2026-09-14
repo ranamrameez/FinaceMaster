@@ -207,6 +207,8 @@ export function PositionDetail({ ticker }: { ticker: string }) {
     // — see theme.css's .position-split comment for the mobile-order
     // tradeoff (left-column content shows first when collapsed to one
     // column, not the original top-to-bottom order).
+    <div>
+
     <div className="position-split">
     <div className="position-split-left">
 
@@ -313,54 +315,6 @@ export function PositionDetail({ ticker }: { ticker: string }) {
         </CollapsibleCard>
       )}
 
-      {/* User's own ask (2026-09-13): per-round-trip buy/sell detail for
-          SOLD shares of this stock — Buy price+date, Fee, BE, Total buy
-          amount, Sell price+date, Total sale amount, PL/share, Net profit.
-          Naturally absent for a still-fully-open position (nothing sold
-          yet to show), matching the "skip Selling data" half of the ask. */}
-      {sortedClosedTrades.length > 0 && (
-        <CollapsibleCard title={<h4 className="m-0">Closed round-trips</h4>} className="mb-12">
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <CTTh col="buyDate">Buy</CTTh>
-                  <CTTh col="sellDate">Sell</CTTh>
-                  <CTTh col="shares">Shares</CTTh>
-                  <th>Break-even</th>
-                  <CTTh col="netPL">
-                    <Tooltip text="Realized — already locked in from this specific closed round-trip, independent of the current market price.">
-                      Net P/L
-                    </Tooltip>
-                  </CTTh>
-                  <CTTh col="holdingDays">Held</CTTh>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedClosedTrades.map((t, i) => {
-                  const totalBuy = t.shares * t.buyPrice;
-                  const totalSale = t.shares * t.sellPrice;
-                  const costBasis = totalBuy + t.buyFee;
-                  const be = breakEvenPrice(costBasis, t.shares, workbook.settings.feePct, workbook.settings.tick, calcFee);
-                  return (
-                    <tr key={i}>
-                      <td>{t.buyDate}<br /><span className="text-muted">{fmtPrice(t.buyPrice)} · {fmtMoney(totalBuy, currency)}</span><br /><span className="text-muted">fee {fmtMoney(t.buyFee, currency)}</span></td>
-                      <td>{t.sellDate}<br /><span className="text-muted">{fmtPrice(t.sellPrice)} · {fmtMoney(totalSale, currency)}</span><br /><span className="text-muted">fee {fmtMoney(t.sellFee, currency)}</span></td>
-                      <td>{fmt(t.shares, 0)}</td>
-                      <td>{fmtPrice(be)}</td>
-                      <td className={t.netPL >= 0 ? 'text-profit' : 'text-loss'}>
-                        {fmtMoney(t.netPL, currency)}
-                        <br /><span className="text-muted">{fmtMoney(t.netPL / t.shares, currency)}/sh</span>
-                      </td>
-                      <td>{t.holdingDays}d</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </CollapsibleCard>
-      )}
 
     </div>
     <div className="position-split-right">
@@ -504,6 +458,57 @@ export function PositionDetail({ ticker }: { ticker: string }) {
       )}
 
     </div>
+    </div>
+
+      {/* User's own ask (2026-09-13): per-round-trip buy/sell detail for
+          SOLD shares of this stock — Buy price+date, Fee, BE, Total buy
+          amount, Sell price+date, Total sale amount, PL/share, Net profit.
+          Naturally absent for a still-fully-open position (nothing sold
+          yet to show), matching the "skip Selling data" half of the ask. */}
+      {sortedClosedTrades.length > 0 && (
+        <CollapsibleCard title={<h4 className="m-0">Closed round-trips</h4>} className="mb-12">
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <CTTh col="buyDate">Buy</CTTh>
+                  <CTTh col="sellDate">Sell</CTTh>
+                  <CTTh col="shares">Shares</CTTh>
+                  <th>Break-even</th>
+                  <CTTh col="netPL">
+                    <Tooltip text="Realized — already locked in from this specific closed round-trip, independent of the current market price.">
+                      Net P/L
+                    </Tooltip>
+                  </CTTh>
+                  <CTTh col="holdingDays">Held</CTTh>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedClosedTrades.map((t, i) => {
+                  const totalBuy = t.shares * t.buyPrice;
+                  const totalSale = t.shares * t.sellPrice;
+                  const costBasis = totalBuy + t.buyFee;
+                  const be = breakEvenPrice(costBasis, t.shares, workbook.settings.feePct, workbook.settings.tick, calcFee);
+                  return (
+                    <tr key={i}>
+                      <td>{t.buyDate}<br /><span className="text-muted">{fmtPrice(t.buyPrice)} · {fmtMoney(totalBuy, currency)}</span><br /><span className="text-muted">fee {fmtMoney(t.buyFee, currency)}</span></td>
+                      <td>{t.sellDate}<br /><span className="text-muted">{fmtPrice(t.sellPrice)} · {fmtMoney(totalSale, currency)}</span><br /><span className="text-muted">fee {fmtMoney(t.sellFee, currency)}</span></td>
+                      <td>{fmt(t.shares, 0)}</td>
+                      <td>{fmtPrice(be)}</td>
+                      <td className={t.netPL >= 0 ? 'text-profit' : 'text-loss'}>
+                        {fmtMoney(t.netPL, currency)}
+                        <br /><span className="text-muted">{fmtMoney(t.netPL / t.shares, currency)}/sh</span>
+                      </td>
+                      <td>{t.holdingDays}d</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </CollapsibleCard>
+      )}
+      
     </div>
   );
 }

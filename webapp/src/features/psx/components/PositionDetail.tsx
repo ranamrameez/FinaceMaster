@@ -221,332 +221,335 @@ export function PositionDetail({ ticker }: { ticker: string }) {
     // — see theme.css's .position-split comment for the mobile-order
     // tradeoff (left-column content shows first when collapsed to one
     // column, not the original top-to-bottom order).
-    <div className="position-split">
-    <div className="position-split-left">
+    <>
+      <div className="position-split">
+      <div className="position-split-left">
 
-      {isOpen && (
-        <CollapsibleCard title={<h4 className="m-0">Current position</h4>} className="mb-12">
-          <div className="grid-auto" style={gridAutoStyle(100, 8)}>
-            <div className="stat-card card" style={hueStyle(HUES[2])}>
-              <div className="label">Trend</div>
-              <div className="value"><Sparkline data={sparkData} formatValue={fmtPrice} /></div>
-            </div>
-            <div className="stat-card card" style={hueStyle(HUES[0])}><div className="label">Shares</div><div className="value">{fmt(shares, 0)}</div></div>
-            <div className="stat-card card" style={hueStyle(HUES[1])}>
-              <Tooltip text="Cost: what you paid per share on average. BE (break-even): the price you'd need to sell at to get your money back, including fees.">
-                <div className="label clickable">Cost</div>
-              </Tooltip>
-              <div className="value">{fmtPrice(avg)}</div>
-              <div className="sub" style={{ color: mp > 0 ? (mp >= be ? 'var(--profit)' : 'var(--loss)') : undefined }}>BE {fmtPrice(be)}</div>
-            </div>
-            <div className="stat-card card" style={hueStyle(HUES[1])}>
-              <Tooltip text="PSX nets commission when you buy and sell the same ticker on the same day — the smaller-quantity leg (ties go to the buy) pays no commission or SST, only government levies. 'Same-day' assumes this sell nets against a same-day buy; 'Other day' assumes the full commission applies, same as a regular trade.">
-                <div className="label clickable">BE: same-day vs. other day</div>
-              </Tooltip>
-              <div className="value fs-14">{fmtPrice(beSameDay)}</div>
-              <div className="sub">same-day · other day {fmtPrice(be)}</div>
-            </div>
-            <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Invested</div><div className="value">{fmtMoney(invested, currency)}</div></div>
-            <div className="stat-card card" style={hueStyle(HUES[4])}>
-              <div className="label">Value</div>
-              <div className="value">{mp > 0 ? fmtMoney(grossValue, currency) : '—'}</div>
-            </div>
-            <div className="stat-card card" style={hueStyle(Number.isFinite(netProfit) ? (netProfit >= 0 ? 'var(--profit)' : 'var(--loss)') : HUES[7])}>
-              <Tooltip text="Unrealized — what you'd gain or lose if you sold everything you still hold right now at the current market price. See All-time stats below for what's already been realized (locked in) from past sells.">
-                <div className="label clickable">Unrealized P/L</div>
-              </Tooltip>
-              <div className="value">{Number.isFinite(netProfit) ? fmtMoney(netProfit, currency) : '—'}</div>
-              <div className="sub">{Number.isFinite(netProfit) && invested > 0 ? `${((netProfit / invested) * 100).toFixed(1)}%` : ''}</div>
-            </div>
-            {grossValue > 0 && (
-              <div className="stat-card card" style={hueStyle(HUES[5])}>
-                <Tooltip text="CGT = Capital Gains Tax, a government tax on profit from selling stock. This is only an estimate of what you'd owe if you sold at today's price — it's not withheld automatically.">
-                  <div className="label clickable">Est. CGT if sold now</div>
+        {isOpen && (
+          <CollapsibleCard title={<h4 className="m-0">Current position</h4>} className="mb-12">
+            <div className="grid-auto" style={gridAutoStyle(100, 8)}>
+              <div className="stat-card card" style={hueStyle(HUES[2])}>
+                <div className="label">Trend</div>
+                <div className="value"><Sparkline data={sparkData} formatValue={fmtPrice} /></div>
+              </div>
+              <div className="stat-card card" style={hueStyle(HUES[0])}><div className="label">Shares</div><div className="value">{fmt(shares, 0)}</div></div>
+              <div className="stat-card card" style={hueStyle(HUES[1])}>
+                <Tooltip text="Cost: what you paid per share on average. BE (break-even): the price you'd need to sell at to get your money back, including fees.">
+                  <div className="label clickable">Cost</div>
                 </Tooltip>
-                <div className="value">{fmtMoney(estCGT, currency)}</div>
-                <div className="sub">{workbook.settings.filerStatus === 'filer' ? `${workbook.settings.cgtFilerPct}% filer rate` : `${workbook.settings.cgtNonFilerPct}% non-filer rate`}</div>
+                <div className="value">{fmtPrice(avg)}</div>
+                <div className="sub" style={{ color: mp > 0 ? (mp >= be ? 'var(--profit)' : 'var(--loss)') : undefined }}>BE {fmtPrice(be)}</div>
               </div>
-            )}
-            <div className="stat-card card" style={hueStyle(HUES[6])}>
-              <div className="label">Exit targets</div>
-              <div className="value" style={{ fontSize: 13 }}>
-                +1% {fmtPrice(exitTarget(1))}<br />+2% {fmtPrice(exitTarget(2))}<br />+5% {fmtPrice(exitTarget(5))}
-              </div>
-            </div>
-            <div className="stat-card card" style={hueStyle(statusHue || HUES[7])}>
-              <div className="label">Status</div>
-              <div className="value fs-14">{statusLabel}</div>
-            </div>
-          </div>
-        </CollapsibleCard>
-      )}
-
-      {lotRows.length ? (
-        <CollapsibleCard title={<h4 className="m-0">Open lots (FIFO)</h4>} className="mb-12">
-          <div className="table-scroll">
-            <table>
-              <thead><tr><LotTh col="buyDate">Buy date</LotTh><LotTh col="buyPrice">Buy price</LotTh><LotTh col="remainingShares">Remaining</LotTh><LotTh col="costPerShare">Cost/share</LotTh></tr></thead>
-              <tbody>
-                {sortedLots.map((lot, i) => (
-                  <tr key={i}>
-                    <td>{lot.buyDate}</td>
-                    <td>{fmtPrice(lot.buyPrice)}</td>
-                    <td>{fmt(lot.remainingShares, 0)}</td>
-                    <td>{fmtPrice(lot.buyPrice + lot.buyFeeTotal / lot.originalShares)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="text-muted" style={{ marginTop: 4 }}>
-            A future sell of {ticker} will consume the oldest lot first (FIFO cost basis).
-          </p>
-        </CollapsibleCard>
-      ) : null}
-
-      {position && (position.buyCount > 0 || position.sellCount > 0) && (
-        <CollapsibleCard title={<h4 className="m-0">All-time stats</h4>} className="mb-12">
-          <div className="grid-auto" style={gridAutoStyle(100, 8)}>
-            <div className="stat-card card" style={hueStyle(HUES[0])}>
-              <div className="label">Bought / Sold</div>
-              <div className="value">{fmt(position.totalBoughtShares, 0)} / {fmt(position.totalSoldShares, 0)}</div>
-              <div className="sub">{position.buyCount} buys · {position.sellCount} sells</div>
-            </div>
-            {position.sellCount > 0 && (
-              <div className="stat-card card" style={hueStyle(HUES[7])}>
-                <div className="label">Sell price</div>
-                <Tooltip text="Weighted average, and most recent, sell price for this ticker.">
-                  <div className="value">{fmtPrice(avgSellPrice)}</div>
+              <div className="stat-card card" style={hueStyle(HUES[1])}>
+                <Tooltip text="PSX nets commission when you buy and sell the same ticker on the same day — the smaller-quantity leg (ties go to the buy) pays no commission or SST, only government levies. 'Same-day' assumes this sell nets against a same-day buy; 'Other day' assumes the full commission applies, same as a regular trade.">
+                  <div className="label clickable">BE: same-day vs. other day</div>
                 </Tooltip>
-                <div className="sub">avg · last {fmtPrice(lastSellPrice)}</div>
+                <div className="value fs-14">{fmtPrice(beSameDay)}</div>
+                <div className="sub">same-day · other day {fmtPrice(be)}</div>
               </div>
-            )}
-            <div className="stat-card card" style={hueStyle(position.realized >= 0 ? 'var(--profit)' : 'var(--loss)')}>
-              <div className="label">Realized P/L</div>
-              <div className="value">{fmtMoney(position.realized, currency)}</div>
+              <div className="stat-card card" style={hueStyle(HUES[3])}><div className="label">Invested</div><div className="value">{fmtMoney(invested, currency)}</div></div>
+              <div className="stat-card card" style={hueStyle(HUES[4])}>
+                <div className="label">Value</div>
+                <div className="value">{mp > 0 ? fmtMoney(grossValue, currency) : '—'}</div>
+              </div>
+              <div className="stat-card card" style={hueStyle(Number.isFinite(netProfit) ? (netProfit >= 0 ? 'var(--profit)' : 'var(--loss)') : HUES[7])}>
+                <Tooltip text="Unrealized — what you'd gain or lose if you sold everything you still hold right now at the current market price. See All-time stats below for what's already been realized (locked in) from past sells.">
+                  <div className="label clickable">Unrealized P/L</div>
+                </Tooltip>
+                <div className="value">{Number.isFinite(netProfit) ? fmtMoney(netProfit, currency) : '—'}</div>
+                <div className="sub">{Number.isFinite(netProfit) && invested > 0 ? `${((netProfit / invested) * 100).toFixed(1)}%` : ''}</div>
+              </div>
+              {grossValue > 0 && (
+                <div className="stat-card card" style={hueStyle(HUES[5])}>
+                  <Tooltip text="CGT = Capital Gains Tax, a government tax on profit from selling stock. This is only an estimate of what you'd owe if you sold at today's price — it's not withheld automatically.">
+                    <div className="label clickable">Est. CGT if sold now</div>
+                  </Tooltip>
+                  <div className="value">{fmtMoney(estCGT, currency)}</div>
+                  <div className="sub">{workbook.settings.filerStatus === 'filer' ? `${workbook.settings.cgtFilerPct}% filer rate` : `${workbook.settings.cgtNonFilerPct}% non-filer rate`}</div>
+                </div>
+              )}
+              <div className="stat-card card" style={hueStyle(HUES[6])}>
+                <div className="label">Exit targets</div>
+                <div className="value" style={{ fontSize: 13 }}>
+                  +1% {fmtPrice(exitTarget(1))}<br />+2% {fmtPrice(exitTarget(2))}<br />+5% {fmtPrice(exitTarget(5))}
+                </div>
+              </div>
+              <div className="stat-card card" style={hueStyle(statusHue || HUES[7])}>
+                <div className="label">Status</div>
+                <div className="value fs-14">{statusLabel}</div>
+              </div>
             </div>
-            <div className="stat-card card" style={hueStyle(HUES[4])}><div className="label">Fees paid</div><div className="value">{fmtMoney(position.buyFees + position.sellFees, currency)}</div></div>
-            <div className="stat-card card" style={hueStyle(HUES[3])}>
-              <div className="label">Trade dates</div>
-              <div className="value fs-14">{position.firstDate}</div>
-              <div className="sub">to {position.lastDate}</div>
-            </div>
-            {!isOpen && <div className="stat-card card" style={hueStyle(HUES[6])}><div className="label">Held</div><div className="value">{holdingDays}d</div></div>}
-          </div>
-        </CollapsibleCard>
-      )}
+          </CollapsibleCard>
+        )}
 
-      {reportOpenLots.length > 0 && (
-        <CollapsibleCard title={<h4 className="m-0">Open lots</h4>} className="mb-12">
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr><th>Buy date</th><th>Buy price</th><th>Shares</th><th>Invested</th><th>Buy fee</th></tr>
-              </thead>
-              <tbody>
-                {reportOpenLots.map((l, i) => (
-                  <tr key={i}>
-                    <td>{l.buyDate}</td>
-                    <td>{fmtPrice(l.buyPrice)}</td>
-                    <td>{fmt(l.remainingShares, 0)}</td>
-                    <td>{fmtMoney(l.remainingShares * l.buyPrice, currency)}</td>
-                    <td>{fmtMoney(l.buyFeeTotal, currency)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CollapsibleCard>
-      )}
-
-      {/* User's own ask (2026-09-13): per-round-trip buy/sell detail for
-          SOLD shares of this stock — Buy price+date, Fee, BE, Total buy
-          amount, Sell price+date, Total sale amount, PL/share, Net profit.
-          Naturally absent for a still-fully-open position. */}
-      {sortedClosedTrades.length > 0 && (
-        <CollapsibleCard title={<h4 className="m-0">Closed round-trips</h4>} className="mb-12">
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <CTTh col="buyDate">Buy</CTTh>
-                  <CTTh col="sellDate">Sell</CTTh>
-                  <CTTh col="shares">Shares</CTTh>
-                  <th>Break-even</th>
-                  <CTTh col="netPL">
-                    <Tooltip text="Realized — already locked in from this specific closed round-trip, independent of the current market price.">
-                      Net P/L
-                    </Tooltip>
-                  </CTTh>
-                  <CTTh col="holdingDays">Held</CTTh>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedClosedTrades.map((t, i) => {
-                  const totalBuy = t.shares * t.buyPrice;
-                  const totalSale = t.shares * t.sellPrice;
-                  const costBasis = totalBuy + t.buyFee;
-                  const be = breakEvenPrice(costBasis, t.shares, workbook.settings.feePct, workbook.settings.tick, calcFee);
-                  return (
+        {lotRows.length ? (
+          <CollapsibleCard title={<h4 className="m-0">Open lots (FIFO)</h4>} className="mb-12">
+            <div className="table-scroll">
+              <table>
+                <thead><tr><LotTh col="buyDate">Buy date</LotTh><LotTh col="buyPrice">Buy price</LotTh><LotTh col="remainingShares">Remaining</LotTh><LotTh col="costPerShare">Cost/share</LotTh></tr></thead>
+                <tbody>
+                  {sortedLots.map((lot, i) => (
                     <tr key={i}>
-                      <td>{t.buyDate}<br /><span className="text-muted">{fmtPrice(t.buyPrice)} · {fmtMoney(totalBuy, currency)}</span><br /><span className="text-muted">fee {fmtMoney(t.buyFee, currency)}</span></td>
-                      <td>{t.sellDate}<br /><span className="text-muted">{fmtPrice(t.sellPrice)} · {fmtMoney(totalSale, currency)}</span><br /><span className="text-muted">fee {fmtMoney(t.sellFee, currency)}</span></td>
-                      <td>{fmt(t.shares, 0)}</td>
-                      <td>{fmtPrice(be)}</td>
-                      <td className={t.netPL >= 0 ? 'text-profit' : 'text-loss'}>
-                        {fmtMoney(t.netPL, currency)}
-                        <br /><span className="text-muted">{fmtMoney(t.netPL / t.shares, currency)}/sh</span>
-                      </td>
-                      <td>{t.holdingDays}d</td>
+                      <td>{lot.buyDate}</td>
+                      <td>{fmtPrice(lot.buyPrice)}</td>
+                      <td>{fmt(lot.remainingShares, 0)}</td>
+                      <td>{fmtPrice(lot.buyPrice + lot.buyFeeTotal / lot.originalShares)}</td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </CollapsibleCard>
-      )}
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-muted" style={{ marginTop: 4 }}>
+              A future sell of {ticker} will consume the oldest lot first (FIFO cost basis).
+            </p>
+          </CollapsibleCard>
+        ) : null}
 
-    </div>
-    <div className="position-split-right">
+        {position && (position.buyCount > 0 || position.sellCount > 0) && (
+          <CollapsibleCard title={<h4 className="m-0">All-time stats</h4>} className="mb-12">
+            <div className="grid-auto" style={gridAutoStyle(100, 8)}>
+              <div className="stat-card card" style={hueStyle(HUES[0])}>
+                <div className="label">Bought / Sold</div>
+                <div className="value">{fmt(position.totalBoughtShares, 0)} / {fmt(position.totalSoldShares, 0)}</div>
+                <div className="sub">{position.buyCount} buys · {position.sellCount} sells</div>
+              </div>
+              {position.sellCount > 0 && (
+                <div className="stat-card card" style={hueStyle(HUES[7])}>
+                  <div className="label">Sell price</div>
+                  <Tooltip text="Weighted average, and most recent, sell price for this ticker.">
+                    <div className="value">{fmtPrice(avgSellPrice)}</div>
+                  </Tooltip>
+                  <div className="sub">avg · last {fmtPrice(lastSellPrice)}</div>
+                </div>
+              )}
+              <div className="stat-card card" style={hueStyle(position.realized >= 0 ? 'var(--profit)' : 'var(--loss)')}>
+                <div className="label">Realized P/L</div>
+                <div className="value">{fmtMoney(position.realized, currency)}</div>
+              </div>
+              <div className="stat-card card" style={hueStyle(HUES[4])}><div className="label">Fees paid</div><div className="value">{fmtMoney(position.buyFees + position.sellFees, currency)}</div></div>
+              <div className="stat-card card" style={hueStyle(HUES[3])}>
+                <div className="label">Trade dates</div>
+                <div className="value fs-14">{position.firstDate}</div>
+                <div className="sub">to {position.lastDate}</div>
+              </div>
+              {!isOpen && <div className="stat-card card" style={hueStyle(HUES[6])}><div className="label">Held</div><div className="value">{holdingDays}d</div></div>}
+            </div>
+          </CollapsibleCard>
+        )}
 
-      <CollapsibleCard title={<h4 className="m-0">Daily price</h4>} className="mb-12">
-      {stats ? (
-        <CompactChart height={130}>
-          <Line
-            data={{
-              labels: stats.chronological.map((p) => p.date),
-              datasets: [
-                {
-                  label: 'Price',
-                  data: stats.chronological.map((p) => p.price),
-                  borderColor: '#c9a35a',
-                  backgroundColor: 'rgba(201,163,90,0.12)',
-                  fill: true,
-                  tension: 0.25,
-                  // A single day of price history has no line to draw and
-                  // pointRadius:0 hides the dot too — the chart looked
-                  // completely blank (a real user-reported "not working"
-                  // bug) with exactly one data point, which is the common
-                  // case for a ticker whose price was only just set today.
-                  pointRadius: stats.chronological.length > 1 ? 0 : 3,
-                  borderWidth: 1.75,
-                },
-              ],
-            }}
-            options={{
-              maintainAspectRatio: false,
-              plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
-              scales: { x: { display: false }, y: { display: false } },
-            }}
-          />
-        </CompactChart>
-      ) : (
-        <p className="text-muted">No price history recorded for {ticker} yet.</p>
-      )}
-      <div className="row gap-sm mt-sm">
-        <input
-          type="number"
-          step="0.01"
-          className="price-input"
-          placeholder="Update price"
-          value={priceInput}
-          onChange={(e) => setPriceInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && commitPrice()}
-          style={{ width: 150 }}
-        />
-        <button className="btn secondary small" onClick={commitPrice}><SaveIcon size={12} />Save price</button>
+        {reportOpenLots.length > 0 && (
+          <CollapsibleCard title={<h4 className="m-0">Open lots</h4>} className="mb-12">
+            <div className="table-scroll">
+              <table>
+                <thead>
+                  <tr><th>Buy date</th><th>Buy price</th><th>Shares</th><th>Invested</th><th>Buy fee</th></tr>
+                </thead>
+                <tbody>
+                  {reportOpenLots.map((l, i) => (
+                    <tr key={i}>
+                      <td>{l.buyDate}</td>
+                      <td>{fmtPrice(l.buyPrice)}</td>
+                      <td>{fmt(l.remainingShares, 0)}</td>
+                      <td>{fmtMoney(l.remainingShares * l.buyPrice, currency)}</td>
+                      <td>{fmtMoney(l.buyFeeTotal, currency)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CollapsibleCard>
+        )}
+
       </div>
-      </CollapsibleCard>
+      <div className="position-split-right">
 
-      {isOpen && (
-        <CollapsibleCard title={<h4 className="m-0">Buy vs. current vs. break-even</h4>} className="mb-12">
-          <CompactChart height={lastSellPrice > 0 ? 150 : 115}>
-            <Bar
+        <CollapsibleCard title={<h4 className="m-0">Daily price</h4>} className="mb-12">
+        {stats ? (
+          <CompactChart height={130}>
+            <Line
               data={{
-                labels: lastSellPrice > 0 ? ['Buy', 'Sold', 'Current', 'Break-even'] : ['Buy', 'Current', 'Break-even'],
+                labels: stats.chronological.map((p) => p.date),
                 datasets: [
                   {
-                    data: lastSellPrice > 0 ? [lastBuyPrice, lastSellPrice, mp, be] : [lastBuyPrice, mp, be],
-                    backgroundColor: lastSellPrice > 0
-                      ? ['#8f5ac9', '#3b6bd6', mp >= be ? '#3ecf8e' : '#e5484d', '#c9a35a']
-                      : ['#8f5ac9', mp >= be ? '#3ecf8e' : '#e5484d', '#c9a35a'],
-                    maxBarThickness: 20,
+                    label: 'Price',
+                    data: stats.chronological.map((p) => p.price),
+                    borderColor: '#c9a35a',
+                    backgroundColor: 'rgba(201,163,90,0.12)',
+                    fill: true,
+                    tension: 0.25,
+                    // A single day of price history has no line to draw and
+                    // pointRadius:0 hides the dot too — the chart looked
+                    // completely blank (a real user-reported "not working"
+                    // bug) with exactly one data point, which is the common
+                    // case for a ticker whose price was only just set today.
+                    pointRadius: stats.chronological.length > 1 ? 0 : 3,
+                    borderWidth: 1.75,
                   },
                 ],
               }}
               options={{
                 maintainAspectRatio: false,
-                indexAxis: 'y',
-                plugins: { legend: { display: false } },
-                // Done item 138: Chart.js's autoSkip was silently dropping
-                // "Sold"/"Break-even" labels from this 4-row category axis.
-                scales: { y: { ticks: { autoSkip: false } } },
+                plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+                scales: { x: { display: false }, y: { display: false } },
               }}
             />
           </CompactChart>
+        ) : (
+          <p className="text-muted">No price history recorded for {ticker} yet.</p>
+        )}
+        <div className="row gap-sm mt-sm">
+          <input
+            type="number"
+            step="0.01"
+            className="price-input"
+            placeholder="Update price"
+            value={priceInput}
+            onChange={(e) => setPriceInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && commitPrice()}
+            style={{ width: 150 }}
+          />
+          <button className="btn secondary small" onClick={commitPrice}><SaveIcon size={12} />Save price</button>
+        </div>
         </CollapsibleCard>
-      )}
 
-      {stats && (
-        <CollapsibleCard title={<h4 className="m-0">Price range</h4>}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 8 }}>
-            <div className="stat-card card" style={hueStyle(HUES[5])}><div className="label">Lowest</div><div className="value">{fmtPrice(stats.min)}</div><div className="sub">{stats.minDate}</div></div>
-            <div className="stat-card card" style={hueStyle(HUES[1])}>
-              <div className="label">Median (fair value)</div>
-              <Tooltip text="A simple fair-value estimate: the middle price across every update you've recorded for this ticker.">
-                <div className="value">{fmtPrice(stats.median)}</div>
-              </Tooltip>
+        {isOpen && (
+          <CollapsibleCard title={<h4 className="m-0">Buy vs. current vs. break-even</h4>} className="mb-12">
+            <CompactChart height={lastSellPrice > 0 ? 150 : 115}>
+              <Bar
+                data={{
+                  labels: lastSellPrice > 0 ? ['Buy', 'Sold', 'Current', 'Break-even'] : ['Buy', 'Current', 'Break-even'],
+                  datasets: [
+                    {
+                      data: lastSellPrice > 0 ? [lastBuyPrice, lastSellPrice, mp, be] : [lastBuyPrice, mp, be],
+                      backgroundColor: lastSellPrice > 0
+                        ? ['#8f5ac9', '#3b6bd6', mp >= be ? '#3ecf8e' : '#e5484d', '#c9a35a']
+                        : ['#8f5ac9', mp >= be ? '#3ecf8e' : '#e5484d', '#c9a35a'],
+                      maxBarThickness: 20,
+                    },
+                  ],
+                }}
+                options={{
+                  maintainAspectRatio: false,
+                  indexAxis: 'y',
+                  plugins: { legend: { display: false } },
+                  // Done item 138: Chart.js's autoSkip was silently dropping
+                  // "Sold"/"Break-even" labels from this 4-row category axis.
+                  scales: { y: { ticks: { autoSkip: false } } },
+                }}
+              />
+            </CompactChart>
+          </CollapsibleCard>
+        )}
+
+        {stats && (
+          <CollapsibleCard title={<h4 className="m-0">Price range</h4>}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 8 }}>
+              <div className="stat-card card" style={hueStyle(HUES[5])}><div className="label">Lowest</div><div className="value">{fmtPrice(stats.min)}</div><div className="sub">{stats.minDate}</div></div>
+              <div className="stat-card card" style={hueStyle(HUES[1])}>
+                <div className="label">Median (fair value)</div>
+                <Tooltip text="A simple fair-value estimate: the middle price across every update you've recorded for this ticker.">
+                  <div className="value">{fmtPrice(stats.median)}</div>
+                </Tooltip>
+              </div>
+              <div className="stat-card card" style={hueStyle(HUES[2])}><div className="label">Highest</div><div className="value">{fmtPrice(stats.max)}</div><div className="sub">{stats.maxDate}</div></div>
             </div>
-            <div className="stat-card card" style={hueStyle(HUES[2])}><div className="label">Highest</div><div className="value">{fmtPrice(stats.max)}</div><div className="sub">{stats.maxDate}</div></div>
-          </div>
-          <details>
-            <summary className="text-muted clickable">
-              {showAllPrices ? `All updates (${stats.totalUpdates})` : `Recent updates (${stats.recent.length} of ${stats.totalUpdates})`}
-            </summary>
-            {stats.totalUpdates > stats.recent.length && (
-              <button
-                className="btn secondary small mt-sm"
-                onClick={() => setShowAllPrices((v) => !v)}
-              >
-                {showAllPrices ? 'Show recent 8 only' : `Show all ${stats.totalUpdates} updates`}
-              </button>
-            )}
-            <div className="table-scroll mt-sm">
+            <details>
+              <summary className="text-muted clickable">
+                {showAllPrices ? `All updates (${stats.totalUpdates})` : `Recent updates (${stats.recent.length} of ${stats.totalUpdates})`}
+              </summary>
+              {stats.totalUpdates > stats.recent.length && (
+                <button
+                  className="btn secondary small mt-sm"
+                  onClick={() => setShowAllPrices((v) => !v)}
+                >
+                  {showAllPrices ? 'Show recent 8 only' : `Show all ${stats.totalUpdates} updates`}
+                </button>
+              )}
+              <div className="table-scroll mt-sm">
+                <table>
+                  <thead><tr><RecentTh col="when">When</RecentTh><RecentTh col="price">Price</RecentTh><th></th></tr></thead>
+                  <tbody>
+                    {sortedRecent.map((p) => {
+                      const rawIndex = rawHistory.indexOf(p);
+                      return editPriceIndex === rawIndex && editPriceRow ? (
+                        <tr key={rawIndex}>
+                          <td><input type="date" value={editPriceRow.date} onChange={(e) => setEditPriceRow({ ...editPriceRow, date: e.target.value })} className="w-130" /></td>
+                          <td><input type="number" step="0.01" value={editPriceRow.price} onChange={(e) => setEditPriceRow({ ...editPriceRow, price: Number(e.target.value) })} className="w-90" /></td>
+                          <td>
+                            <IconButton label="Save" icon={<SaveIcon size={12} />} onClick={saveEditPrice} />
+                            <IconButton label="Cancel" icon={<XIcon size={12} />} onClick={cancelEditPrice} />
+                          </td>
+                        </tr>
+                      ) : (
+                        <tr key={rawIndex}>
+                          <td>{p.time ? new Date(p.time).toLocaleString() : p.date}</td>
+                          <td>{fmtPrice(p.price)}</td>
+                          <td>
+                            <IconButton label="Edit" icon={<EditIcon size={12} />} onClick={() => startEditPrice(rawIndex, p)} />
+                            <IconButton label="Delete" icon={<TrashIcon size={12} />} onClick={() => removePricePoint(rawIndex)} />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <button className="btn secondary small mt-sm" onClick={exportPriceHistory}>Export price history CSV</button>
+            </details>
+          </CollapsibleCard>
+        )}
+
+      </div>
+      </div>
+            {/* User's own ask (2026-09-13): per-round-trip buy/sell detail for
+            SOLD shares of this stock — Buy price+date, Fee, BE, Total buy
+            amount, Sell price+date, Total sale amount, PL/share, Net profit.
+            Naturally absent for a still-fully-open position. */}
+        {sortedClosedTrades.length > 0 && (
+          <CollapsibleCard title={<h4 className="m-0">Closed round-trips</h4>} className="mb-12">
+            <div className="table-scroll">
               <table>
-                <thead><tr><RecentTh col="when">When</RecentTh><RecentTh col="price">Price</RecentTh><th></th></tr></thead>
+                <thead>
+                  <tr>
+                    <CTTh col="buyDate">Buy</CTTh>
+                    <CTTh col="sellDate">Sell</CTTh>
+                    <CTTh col="shares">Shares</CTTh>
+                    <th>Break-even</th>
+                    <CTTh col="netPL">
+                      <Tooltip text="Realized — already locked in from this specific closed round-trip, independent of the current market price.">
+                        Net P/L
+                      </Tooltip>
+                    </CTTh>
+                    <CTTh col="holdingDays">Held</CTTh>
+                  </tr>
+                </thead>
                 <tbody>
-                  {sortedRecent.map((p) => {
-                    const rawIndex = rawHistory.indexOf(p);
-                    return editPriceIndex === rawIndex && editPriceRow ? (
-                      <tr key={rawIndex}>
-                        <td><input type="date" value={editPriceRow.date} onChange={(e) => setEditPriceRow({ ...editPriceRow, date: e.target.value })} className="w-130" /></td>
-                        <td><input type="number" step="0.01" value={editPriceRow.price} onChange={(e) => setEditPriceRow({ ...editPriceRow, price: Number(e.target.value) })} className="w-90" /></td>
-                        <td>
-                          <IconButton label="Save" icon={<SaveIcon size={12} />} onClick={saveEditPrice} />
-                          <IconButton label="Cancel" icon={<XIcon size={12} />} onClick={cancelEditPrice} />
+                  {sortedClosedTrades.map((t, i) => {
+                    const totalBuy = t.shares * t.buyPrice;
+                    const totalSale = t.shares * t.sellPrice;
+                    const costBasis = totalBuy + t.buyFee;
+                    const be = breakEvenPrice(costBasis, t.shares, workbook.settings.feePct, workbook.settings.tick, calcFee);
+                    return (
+                      <tr key={i}>
+                        <td>{t.buyDate}<br /><span className="text-muted">{fmtPrice(t.buyPrice)} · {fmtMoney(totalBuy, currency)}</span><br /><span className="text-muted">fee {fmtMoney(t.buyFee, currency)}</span></td>
+                        <td>{t.sellDate}<br /><span className="text-muted">{fmtPrice(t.sellPrice)} · {fmtMoney(totalSale, currency)}</span><br /><span className="text-muted">fee {fmtMoney(t.sellFee, currency)}</span></td>
+                        <td>{fmt(t.shares, 0)}</td>
+                        <td>{fmtPrice(be)}</td>
+                        <td className={t.netPL >= 0 ? 'text-profit' : 'text-loss'}>
+                          {fmtMoney(t.netPL, currency)}
+                          <br /><span className="text-muted">{fmtMoney(t.netPL / t.shares, currency)}/sh</span>
                         </td>
-                      </tr>
-                    ) : (
-                      <tr key={rawIndex}>
-                        <td>{p.time ? new Date(p.time).toLocaleString() : p.date}</td>
-                        <td>{fmtPrice(p.price)}</td>
-                        <td>
-                          <IconButton label="Edit" icon={<EditIcon size={12} />} onClick={() => startEditPrice(rawIndex, p)} />
-                          <IconButton label="Delete" icon={<TrashIcon size={12} />} onClick={() => removePricePoint(rawIndex)} />
-                        </td>
+                        <td>{t.holdingDays}d</td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
             </div>
-            <button className="btn secondary small mt-sm" onClick={exportPriceHistory}>Export price history CSV</button>
-          </details>
-        </CollapsibleCard>
-      )}
+          </CollapsibleCard>
+        )}
 
-    </div>
-    </div>
+    </>
+
   );
 }
