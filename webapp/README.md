@@ -8965,6 +8965,64 @@ FinanceManager live link:
   data directly"), not a single-table bug; scoping and rolling it out needs its own pass, not
   a guess bundled into this fix.
 
+- **Credit Card: real billing-cycle bug + 3-date setup + stat-card redesign + a 6-month
+  overview, user-reported with an exact worked example (2026-09-14) — see README Done item
+  325.** User's own report, verbatim: "Cycle 2026-07-17 → 2026-08-17 · Due 2026-09-05 is
+  wrong. today is 14-09-2026. so the cycle is: Cycle 2026-08-17 → 2026-09-17 · Min Due
+  2026-09-25 (5%[my default] of the owed amount)) * Due 2026-10-05." **Root cause, confirmed
+  by hand-tracing `currentStatement()`'s own real cutoff math against the user's exact
+  numbers**: `mostRecentCutoff(asOfDate)` correctly finds the most recent PAST cutoff (Aug 17,
+  since Sep 17 hadn't happened yet relative to today Sep 14), but the function then used that
+  as `cycleEnd` (treating it as "the last COMPLETED statement") with `cycleStart` one cycle
+  further back (Jul 17) — so the whole page showed the cycle BEFORE the one actually containing
+  today, with a due date (Sep 5) that had already passed. **Fix**: `mostRecentCutoff`'s result
+  is now `cycleStart` instead, and a new `oneCutoffForward()` computes `cycleEnd` as the NEXT
+  cutoff (often a future date, mid-cycle) — the cycle a user checking their card RIGHT NOW is
+  genuinely in. Verified this reproduces the user's own exact numbers: seeded their real
+  statementDate(17)/paymentDueDate(5)/a new `minDueDate`(25)/`minPaymentMethod:
+  'percentOfBalance'`/`minPaymentPct: 5` with real Aug/Sep transactions and confirmed live via
+  Playwright — `Cycle 2026-08-17 → 2026-09-17`, `Min due 55 QAR / Due: 2026-09-25`, `Total due
+  1,100 QAR (shown compact as "1.1k") / Due: 2026-10-05` — matching every one of the user's own
+  reported figures exactly. **The other 3 asks in the same message, all built together**:
+  (a) "Charges is broad term... use like Spent instead" — the internal `chargesThisCycle` field
+  name is unchanged (still exactly what it always summed — charge+fee+markup+cashAdvance), only
+  its UI label became "Spent this cycle," since renaming the underlying field would be a bigger,
+  unnecessary churn for a pure wording fix. (b) "let user choose these 3 dates in card setup" —
+  new `CreditCard.minDueDate?: number` (optional, zero migration — `undefined` falls back to
+  `paymentDueDate` in `proposeMinPayment`, so an existing card that only ever set one date keeps
+  working) added alongside the existing `statementDate`/`paymentDueDate`, all three now shown as
+  separate fields on both the Add-card and Edit-card forms plus the read-only `AttributeList`.
+  **A second, related real bug found while wiring this in, not just a new field**:
+  `proposeMinPayment()` (the semi-automated "Approve & log" min-payment flow) was hardcoded to
+  schedule the minimum payment against the FULL amount's due date — genuinely wrong once a card
+  has its own separate, earlier minimum-due date; fixed to prefer `statement.minDueDate`,
+  falling back to `statement.dueDate` only when the card hasn't set one. (c) "CC stat cards
+  should answer: total owed this month + paid, Consumed/spent this cycle + paid, min due + due
+  date, total due + due date" — the 4-card "Current statement" grid was rebuilt to exactly this
+  shape: "Owed this month" (a plain CALENDAR-month figure, deliberately distinct from the card's
+  own BILLING cycle — matches how every other module in the app already reports monthly) + a
+  `.sub` "Paid: X" line, "Spent this cycle" (billing-cycle scoped, the renamed former "Charges
+  this cycle") + its own "Paid: X" sub-line, "Min due" + a `.sub` "Due: {minDueDate}" line,
+  "Total due" + a `.sub` "Due: {dueDate}" line — the existing conditional "Markup this cycle"
+  card is unchanged. (d) "Previous balance is irrelevant or unexplained. We can show 6 months
+  past to forecast overviews just like currencies on the main dashboard" — the "Previous
+  balance" stat card is gone from the UI entirely (the underlying `statement.previousBalance`
+  field is kept, undocumented-to-the-user, since `markupThisCycle`'s own grace-period check
+  still needs it internally); replaced with a new `creditCardMonthlyHistory()` function (plain
+  CALENDAR-month buckets, deliberately NOT cycle-based — same "just like currencies" precedent
+  the user named, Net Worth's own per-currency monthly window from Done item 229) surfaced as a
+  new, collapsed-by-default "Last 6 months" table (Month / Spent / Paid / Balance) on the card's
+  detail page. Its own "this month" entry is reused directly for stat card (c)'s "Owed this
+  month" figure, so there's one source of truth for calendar-month numbers, not two. New tests:
+  `creditCardModule.test.ts`'s `currentStatement`/`markupThisCycle`/`proposeMinPayment` describe
+  blocks were rewritten around the new cycle semantics (every hand-derived expected date/amount
+  recomputed by hand against the new definition, not just patched), plus new dedicated
+  regression tests for the exact user-reported scenario and the `minDueDate`-vs-`dueDate`
+  distinction, plus a new `creditCardMonthlyHistory` describe block (6 new tests total). Verified
+  live via Playwright: the exact worked example above, the 6-month table rendering 6 real
+  month buckets oldest-first, and the edit form showing all 3 distinct date fields — zero
+  console errors. `npx tsc -b` / `npm run test` (692 tests, 6 new) / `npm run build` all clean.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`

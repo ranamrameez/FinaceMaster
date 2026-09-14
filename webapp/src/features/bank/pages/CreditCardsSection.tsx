@@ -25,6 +25,7 @@ import { categoryName, UNCATEGORIZED_ID } from '../../../lib/categories';
 import { useCategoryStore } from '../../../store/categoryStore';
 import {
   availableCredit,
+  creditCardMonthlyHistory,
   currentStatement,
   markupThisCycle,
   nextPendingMinDue,
@@ -403,6 +404,14 @@ export function CreditCardDetailPage() {
   const statement = card ? currentStatement(card, transactions) : null;
   const markup = statement && card ? markupThisCycle(card, statement) : 0;
   const proposal = statement ? proposeMinPayment(card!, statement) : null;
+  // User-reported (2026-09-14): "Previous balance is irrelevant or
+  // unexplained... show 6 months past to forecast overviews just like
+  // currencies on the main dashboard." A plain CALENDAR-month view
+  // (deliberately separate from the card's own billing cycle above —
+  // see `creditCardMonthlyHistory`'s own doc comment), matching Net
+  // Worth's per-currency monthly window.
+  const monthlyHistory = useMemo(() => (card ? creditCardMonthlyHistory(card, transactions, 6) : []), [card, transactions]);
+  const thisMonth = monthlyHistory[monthlyHistory.length - 1] ?? { month: '', spent: 0, paid: 0, balanceEnd: 0 };
   const [collectAmount, setCollectAmount] = useState(proposal?.amount ?? 0);
   const [collectDate, setCollectDate] = useState(proposal?.dueDate ?? today());
   const [linkMode, setLinkMode] = useState(false);
@@ -501,10 +510,13 @@ export function CreditCardDetailPage() {
               </Field>
             </div>
             <div className="row gap-sm mt-sm">
-              <Field label="Statement date (day of month)" title="The day of the month your billing cycle closes and a new statement generates.">
+              <Field label="Cycle start date (day of month)" title="The day of the month your billing cycle closes and a new one starts.">
                 <TextInput type="number" min={1} max={31} value={draft.statementDate ?? ''} onChange={(e) => setDraft({ ...draft, statementDate: e.target.value === '' ? undefined : Number(e.target.value) })} />
               </Field>
-              <Field label="Payment due date (day of month)">
+              <Field label="Min due date (day of month)" title="When the minimum payment is due — a different date from the full amount's due date on a real card.">
+                <TextInput type="number" min={1} max={31} value={draft.minDueDate ?? ''} onChange={(e) => setDraft({ ...draft, minDueDate: e.target.value === '' ? undefined : Number(e.target.value) })} />
+              </Field>
+              <Field label="Full amount due date (day of month)">
                 <TextInput type="number" min={1} max={31} value={draft.paymentDueDate ?? ''} onChange={(e) => setDraft({ ...draft, paymentDueDate: e.target.value === '' ? undefined : Number(e.target.value) })} />
               </Field>
               <Field label="Late fee after due"><TextInput type="number" step="0.01" value={draft.lateFeeAfterDue ?? ''} onChange={(e) => setDraft({ ...draft, lateFeeAfterDue: e.target.value === '' ? undefined : Number(e.target.value) })} /></Field>
@@ -544,8 +556,9 @@ export function CreditCardDetailPage() {
               { label: 'Credit limit', value: card.creditLimit ? fmtMoney(card.creditLimit, card.currencyCode) : undefined },
               { label: 'Network', value: card.cardNetwork },
               { label: 'BIN', value: card.cardBin },
-              { label: 'Statement date', value: card.statementDate ? `Day ${card.statementDate}` : undefined },
-              { label: 'Payment due date', value: card.paymentDueDate ? `Day ${card.paymentDueDate}` : undefined },
+              { label: 'Cycle start date', value: card.statementDate ? `Day ${card.statementDate}` : undefined },
+              { label: 'Min due date', value: card.minDueDate ? `Day ${card.minDueDate}` : undefined },
+              { label: 'Full amount due date', value: card.paymentDueDate ? `Day ${card.paymentDueDate}` : undefined },
               { label: 'Late fee after due', value: card.lateFeeAfterDue ? fmtMoney(card.lateFeeAfterDue, card.currencyCode) : undefined },
               { label: 'Annual fee', value: card.annualFee ? fmtMoney(card.annualFee, card.currencyCode) : undefined },
               { label: 'Minimum payment', value: card.minPaymentMethod === 'percentOfBalance' ? `${card.minPaymentPct ?? 0}% of balance` : card.minPaymentMethod === 'greaterOfFixedOrPercent' ? `Greater of ${fmtMoney(card.minPaymentAmount ?? 0, card.currencyCode)} or ${card.minPaymentPct ?? 0}%` : card.minPaymentAmount ? fmtMoney(card.minPaymentAmount, card.currencyCode) : undefined },
@@ -558,24 +571,35 @@ export function CreditCardDetailPage() {
 
       {statement && (
         <CollapsibleCard title={<h3 className="m-0">Current statement</h3>} className="mb-md">
-          <div className="grid-auto" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 10 }}>
-            <div className="stat-card card" style={hueStyle('var(--accent)')}>
-              <div className="label">Previous balance</div>
-              <MoneyValue n={statement.previousBalance} currency={card.currencyCode} />
+          <p className="text-muted" style={{ marginTop: 0, marginBottom: 10 }}>
+            Cycle {statement.cycleStart} → {statement.cycleEnd}
+          </p>
+          <div className="grid-auto" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 10 }}>
+            <div className="stat-card card" style={hueStyle('var(--loss)')}>
+              <Tooltip text="Everything added to this card's balance so far this CALENDAR month — same time window every other module in the app reports by.">
+                <div className="label clickable">Owed this month</div>
+              </Tooltip>
+              <MoneyValue n={thisMonth.spent} currency={card.currencyCode} />
+              <div className="sub">Paid: {fmtMoney(thisMonth.paid, card.currencyCode)}</div>
             </div>
             <div className="stat-card card" style={hueStyle('var(--loss)')}>
-              <div className="label">Charges this cycle</div>
+              <Tooltip text="Everything added to this card's balance so far in the current BILLING cycle (not the calendar month) — a purchase, fee, markup, or cash advance.">
+                <div className="label clickable">Spent this cycle</div>
+              </Tooltip>
               <MoneyValue n={statement.chargesThisCycle} currency={card.currencyCode} />
+              <div className="sub">Paid: {fmtMoney(statement.paymentsThisCycle, card.currencyCode)}</div>
             </div>
-            <div className="stat-card card" style={hueStyle('var(--profit)')}>
-              <div className="label">Payments this cycle</div>
-              <MoneyValue n={statement.paymentsThisCycle} currency={card.currencyCode} />
+            <div className="stat-card card" style={hueStyle('var(--accent)')}>
+              <div className="label">Min due</div>
+              <MoneyValue n={statement.minimumDue} currency={card.currencyCode} />
+              <div className="sub">{statement.minDueDate ? `Due: ${statement.minDueDate}` : 'No min-due date set'}</div>
             </div>
             <div className="stat-card card" style={hueStyle(statement.statementBalance > 0 ? 'var(--loss)' : 'var(--profit)')}>
               <Tooltip text="Your bill for this cycle — the full amount due, not just the minimum.">
-                <div className="label clickable">Statement balance</div>
+                <div className="label clickable">Total due</div>
               </Tooltip>
               <MoneyValue n={statement.statementBalance} currency={card.currencyCode} />
+              <div className="sub">{statement.dueDate ? `Due: ${statement.dueDate}` : 'No due date set'}</div>
             </div>
             {markup > 0 && (
               <div className="stat-card card" style={hueStyle('var(--loss)')}>
@@ -586,10 +610,6 @@ export function CreditCardDetailPage() {
               </div>
             )}
           </div>
-          <p className="text-muted" style={{ marginTop: 8, marginBottom: 0 }}>
-            Cycle {statement.cycleStart} → {statement.cycleEnd}
-            {statement.dueDate && <> · Due {statement.dueDate}</>}
-          </p>
           {markup > 0 && (
             <button className="btn secondary small mt-sm" onClick={logMarkup}>Log markup for this cycle</button>
           )}
@@ -615,6 +635,26 @@ export function CreditCardDetailPage() {
           )}
         </CollapsibleCard>
       )}
+
+      <CollapsibleCard title={<h3 className="m-0">Last 6 months</h3>} defaultOpen={false} className="mb-md">
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr><th>Month</th><th>Spent</th><th>Paid</th><th>Balance</th></tr>
+            </thead>
+            <tbody>
+              {monthlyHistory.map((m) => (
+                <tr key={m.month}>
+                  <td>{m.month}</td>
+                  <td>{fmtMoney(m.spent, card.currencyCode)}</td>
+                  <td>{fmtMoney(m.paid, card.currencyCode)}</td>
+                  <td>{fmtMoney(m.balanceEnd, card.currencyCode)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </CollapsibleCard>
 
       <CollapsibleCard title={<h3 className="m-0">Transactions</h3>}>
         <TransactionsTable card={card} />
