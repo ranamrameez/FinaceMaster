@@ -1,3 +1,5 @@
+import { ToggleChip } from './ToggleChip';
+
 /** A small chip-style toggle for a record's `isPending` flag ("placed but
  * not yet cleared/filled"). User-reported (2026-09-09): "the Pending
  * checkbox's clickable area is too big. i clicked on white space at my
@@ -9,11 +11,10 @@
  * with no width constraint — a block-level flex `<label>` stretches to
  * fill its container (a `Field`'s full column width inside a popup, or
  * the whole form's width when placed directly in a block layout), so the
- * ENTIRE stretched box became clickable, not just the checkbox+text. This
- * one shared control (a `.chip`/`.chip.active` button — the same
- * shrink-to-fit toggle pattern `ChartFilterBar` already uses, so it can
- * never grow past its own text) fixes the click-area bug and gives every
- * `isPending` control across the app the same look, in one place. */
+ * ENTIRE stretched box became clickable, not just the checkbox+text. Now
+ * a thin wrapper around the generic `ToggleChip` (2026-09-14) — kept as
+ * its own component since every existing call site imports it by this
+ * name with a `label`-defaults-to-'Pending' shape. */
 export function PendingToggle({
   checked,
   onChange,
@@ -25,16 +26,5 @@ export function PendingToggle({
   label?: string;
   title?: string;
 }) {
-  return (
-    <button
-      type="button"
-      className={`chip${checked ? ' active' : ''}`}
-      onClick={() => onChange(!checked)}
-      aria-pressed={checked}
-      title={title}
-      style={{ alignSelf: 'flex-start' }}
-    >
-      {label}
-    </button>
-  );
+  return <ToggleChip checked={checked} onChange={onChange} label={label} title={title} />;
 }

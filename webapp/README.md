@@ -9080,6 +9080,79 @@ FinanceManager live link:
   sign-in-gated write in this project) rather than silently defaulting to USD. `npx tsc -b` /
   `npm run test` (692 tests, unchanged) / `npm run build` all clean.
 
+- **Credit Cards listed inside All Accounts by currency; currency preference now a real
+  cross-device account setting; timezone-based primary-currency default; Transfers' Currency
+  pickers respect it and use chips (2026-09-14) — see Done item 327.** User's report,
+  verbatim: "CC should be listed in All accounts under its currency, separated by a divider.
+  NOTE: A user may have only one currency or he may deal in like 5! so the the app must be
+  capable to handle all cases. Also, I ASKED TO LET THE USER CHOOSE HIS CURRENCIES ON SIGNUP:
+  the app asks the user on every new device, which is wrong. UI SHOULD RESPECT THE SELECTED
+  CURRENY(IES). ONE PRIMARY CURRENCY DEFAULT BASED ON USE TIMEZONE/ Location, on secondary and
+  the other currencies. in all app currency selectors (start with Transfers) only the user
+  prefered currencies should be listed (use chips instead of drop downs). Use chips/ switch
+  for radio & checkboxes."
+  **(1) CC in All Accounts**: `AccountsList` (`BankPage.tsx`) now pulls `useCreditCardWorkbookStore`
+  alongside plain accounts and groups BOTH by currency — a currency group can exist from a
+  card alone (no plain account in that currency yet), an account alone, or both, handling the
+  user's own explicit "1 currency or 5" requirement; a real `<hr>` divider only renders
+  between the two sub-grids when a group genuinely has both. Verified live with a real
+  5-currency scenario (4 currencies via accounts, a 5th — AED — existing ONLY via a card): all
+  5 currency headers rendered, the card-only currency showed no divider/no balance-sum pill
+  (nothing to sum), the mixed currency showed both sub-grids separated by the new `<hr>`.
+  **(2) Cross-device currency preference — the actual bug**: `enabledCurrenciesStore`/
+  `currencyOnboardingStore` were deliberately built localStorage-only (their own doc comments
+  said so explicitly) — a real per-BROWSER, not per-ACCOUNT, preference, so a returning user
+  on a new device saw the onboarding prompt again with nothing configured, exactly as
+  reported. New `UserProfile.enabledCurrencies`/`currencyOnboardingSeen` fields
+  (`lib/firebase/profile.ts`) plus a new `useSyncCurrencyPreference.ts` hook (mounted once in
+  `App.tsx`, same pattern as every module's own `use<Module>FirebaseSync()`) mirror both
+  stores into the account's real cloud profile: on sign-in, adopt the cloud's own value if it
+  has one (a genuine cross-device sync), else seed the cloud from whatever's already
+  configured locally; on any later local change while signed in, push it to the cloud.
+  `saveProfile()` switched from a clobbering `set()` to a merging `update()` — a real
+  near-miss caught before shipping: `ProfileEditor`'s existing save only ever passes
+  `{displayName, avatarEmoji}`, and a plain `set()` at that path would have silently ERASED
+  `enabledCurrencies`/`currencyOnboardingSeen` the next time someone saved their display name.
+  A second real race was designed around explicitly, not just hoped past: the "push local
+  change to cloud" effect is guarded by a ref that's cleared SYNCHRONOUSLY, before any async
+  work, on every `user` transition (including account switches) — this is what makes it safe
+  for `resetAllLocalWorkbooks()` (which now also resets these two stores, closing the same
+  "audit every per-account local store" gap that function's own doc comment calls for) to
+  blank them out on sign-out without that blank value ever getting raced into overwriting a
+  DIFFERENT, real, already-configured cloud preference. New `reset()` method added to
+  `currencyOnboardingStore` for this. **(3) Timezone-based primary-currency default**: new
+  `detectPrimaryCurrency()` (`lib/currencies.ts`, a small `Intl.DateTimeFormat`-based
+  timezone→currency reverse lookup, falling back to USD) replaces the onboarding modal's old
+  default of "every one of the 11 currencies pre-checked" — which was never actually a useful
+  default for the "not all users are multi-currency" case this whole feature exists for — with
+  exactly ONE detected currency pre-checked, tagged "Primary" in the UI; the user adds any
+  secondary/other currency on top via the same chips. Verified live across two spoofed
+  timezones (Playwright's `timezoneId` context option): `Asia/Karachi` → PKR pre-checked,
+  `America/New_York` → USD pre-checked, in both cases exactly one chip active. **(4) Currency
+  selectors respect the enabled subset + use chips, starting with Transfers**: `SideFields`'s
+  two Currency pickers (the ref-picker modules' one, and the standalone Cash one) used to
+  render every one of the 11 raw `CURRENCIES` regardless of what the account had configured —
+  a real, direct violation of the "UI SHOULD RESPECT THE SELECTED CURRENCIES" ask, now fixed
+  by a new shared `CurrencyChips` component built on the existing `useEnabledCurrencies()`
+  hook (already used correctly elsewhere, just not here) rendered as `.chip`/`.chip.active`
+  buttons instead of a `<select>`. Verified live with a seeded 2-of-5 configured subset
+  (PKR+USD, against 5 real currencies' worth of actual account data): both Currency pickers in
+  the Transfers popup showed only PKR/USD chips, while the "All Accounts" tab itself still
+  correctly showed every one of the real 5 currencies' data unfiltered (the enabled-subset
+  filter only ever applies to NEW-entry pickers, never to hiding real existing data — the same
+  rule `useEnabledCurrencies`'s own doc comment already established). **(5) Chips/switches for
+  checkboxes**: new generic `ToggleChip` component (`PendingToggle` now a thin wrapper around
+  it, unchanged API) replaces the Transfers popup's one remaining raw
+  `<input type="checkbox">` ("Link to another finance") — the exact same oversized-click-area
+  structural bug `PendingToggle`'s own doc comment already diagnosed once, reproduced here
+  independently since this checkbox predated that fix and was never itself converted.
+  **Deliberately scoped to Transfers only, not a blind app-wide sweep** — see new Pending item
+  136 for the broader currency-selector and checkbox/radio-to-chip rollout across every other
+  module, tracked explicitly rather than attempted all at once. New tests:
+  `lib/__tests__/currencies.test.ts` (new file, 3 cases for `detectPrimaryCurrency`),
+  `currencyOnboardingStore.test.ts` gained a `reset()` case. `npx tsc -b` / `npm run test`
+  (696 tests, 4 new) / `npm run build` all clean.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`
@@ -10212,6 +10285,23 @@ or a design decision before more code, not guessed at further:**
      `useSortableRows`/`ReorderButtons` same-day-tie mechanics on a table like Bank's/Cash's own
      statement (a same-day reorder needs its two tied rows visible on the same page, which a
      naive page break could split apart) all need deciding first.
+
+136. **New standing rule (2026-09-14, user-stated: "Use chips/ switch for radio & checkboxes"
+     + "in all app currency selectors... only the user prefered currencies should be listed
+     (use chips instead of drop downs)").** Done item 327 built both mechanisms
+     (`CurrencyChips`, `ToggleChip`) and applied them to the Transfers popup specifically, per
+     the user's own "start with Transfers" — but every OTHER currency `<select>` across the
+     app (Cash/Bank/Funds/EMI/Personal Loans/Rentals/Subscriptions' own add-forms and Import
+     tabs, PSX Settings, Account > Currencies itself, etc.) and every remaining raw
+     `<input type="checkbox">`/`<input type="radio">` elsewhere in the app are still
+     unconverted. **Not yet scoped or started beyond Transfers** — same "pick one page as a
+     working vertical slice, verify live, then repeat incrementally" discipline as every other
+     broad app-wide principle in this file (the `EntityCard`/`IconButton`/`Tooltip` rollouts),
+     not a single blind pass. A future session picking this up should grep for
+     `CURRENCIES.map` (raw, unfiltered currency selects) and `type="checkbox"`/
+     `type="radio"` (unconverted toggles) to find the concrete remaining call sites, and
+     reuse `CurrencyChips`/`ToggleChip` (both already built and exported) rather than
+     re-inventing either.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

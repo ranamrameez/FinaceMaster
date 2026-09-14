@@ -5,6 +5,14 @@ const STORAGE_KEY = 'financerecorder_currency_onboarding_seen_v1';
 interface CurrencyOnboardingState {
   seen: boolean;
   dismiss: () => void;
+  /** Clears the local flag back to "never shown" — used on sign-out/
+   * account-switch (`resetAllLocalWorkbooks()`) so a DIFFERENT account on
+   * the same browser doesn't inherit the previous one's dismissal; the
+   * cloud-sync hook (`useSyncCurrencyPreference.ts`) re-applies the new
+   * account's own real value right after, so this is only ever the
+   * brief in-between state, same as every other store this function
+   * resets. */
+  reset: () => void;
 }
 
 function loadSeen(): boolean {
@@ -35,5 +43,13 @@ export const useCurrencyOnboardingStore = create<CurrencyOnboardingState>((set) 
       console.warn('Failed to persist currency-onboarding dismissal', e);
     }
     set({ seen: true });
+  },
+  reset: () => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (e) {
+      console.warn('Failed to clear currency-onboarding dismissal', e);
+    }
+    set({ seen: false });
   },
 }));

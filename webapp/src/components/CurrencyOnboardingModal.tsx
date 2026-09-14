@@ -1,6 +1,7 @@
+import { useEffect } from 'react';
 import { Modal } from './Modal';
 import { toast } from './Toast';
-import { CURRENCIES } from '../lib/currencies';
+import { CURRENCIES, detectPrimaryCurrency } from '../lib/currencies';
 import { useCurrencyOnboardingStore } from '../store/currencyOnboardingStore';
 import { useEnabledCurrenciesStore } from '../store/enabledCurrenciesStore';
 import { useTermsStore } from '../store/termsStore';
@@ -14,24 +15,53 @@ import { useTermsStore } from '../store/termsStore';
  *
  * Deliberately dismissible (a real `X`/click-outside close, unlike
  * `TermsGateModal`'s hard block) — this is a UI convenience nudge, not a
- * legal requirement, so skipping it is completely fine and leaves
- * `enabledCodes` at its safe `null` default ("not configured, show all"),
- * exactly the same as if this prompt never existed. */
+ * legal requirement.
+ *
+ * User-requested (2026-09-14): "ONE PRIMARY CURRENCY DEFAULT BASED ON USER
+ * TIMEZONE/LOCATION, on[e] secondary and the other currencies" — the old
+ * default (`enabledCodes === null`, shown here as "every chip checked")
+ * was the wrong default for the exact case this whole feature exists for
+ * ("this app supports multiple currencies but not all users are
+ * multi-currency"): 11 pre-checked chips isn't a narrowed-down default at
+ * all. The moment this modal is about to actually show (not before —
+ * dismissing the Terms gate itself must never write anything), it seeds
+ * the store with just the ONE currency `detectPrimaryCurrency()` guesses
+ * from the browser's own timezone — the user adds any secondary/other
+ * currency on top of it via the same chips, or removes it if the guess is
+ * wrong. Skipping the modal (X / click-outside) without touching
+ * anything simply leaves that one detected currency as the account's own
+ * chosen set — a real, reversible default (Account &gt; Currencies), not a
+ * silent "show everything" fallback that no longer means much once most
+ * users only ever see one currency pre-checked here. */
 export function CurrencyOnboardingModal() {
   const termsAccepted = useTermsStore((s) => s.accepted);
   const seen = useCurrencyOnboardingStore((s) => s.seen);
   const dismiss = useCurrencyOnboardingStore((s) => s.dismiss);
   const enabledCodes = useEnabledCurrenciesStore((s) => s.enabledCodes);
+  const setEnabledCodes = useEnabledCurrenciesStore((s) => s.setEnabledCodes);
   const toggle = useEnabledCurrenciesStore((s) => s.toggle);
-  const isEnabled = (code: string) => enabledCodes === null || enabledCodes.includes(code);
 
-  if (!termsAccepted || seen) return null;
+  const shouldShow = termsAccepted && !seen;
+  useEffect(() => {
+    if (shouldShow && enabledCodes === null) setEnabledCodes([detectPrimaryCurrency()]);
+  }, [shouldShow, enabledCodes, setEnabledCodes]);
+
+  if (!shouldShow) return null;
+
+  // Matches what the effect above is about to commit, so the FIRST paint
+  // (before that effect has actually run) already shows the right chip
+  // checked instead of a one-frame flash of "nothing checked".
+  const effectiveCodes = enabledCodes ?? [detectPrimaryCurrency()];
+  const isEnabled = (code: string) => effectiveCodes.includes(code);
+  const primary = effectiveCodes[0];
 
   return (
     <Modal title="Which currencies do you use?" onClose={dismiss}>
       <p className="text-muted mt-0">
         Pick which currencies show up in a currency picker across the app — most people only
-        ever use one or two. You can change this any time from Account &gt; Currencies.
+        ever use one or two. We've pre-picked one based on your timezone; add any others you
+        deal in, or remove it if we guessed wrong. You can change this any time from Account
+        &gt; Currencies.
       </p>
       <div className="row" style={{ gap: 6 }}>
         {CURRENCIES.map((c) => (
@@ -42,7 +72,7 @@ export function CurrencyOnboardingModal() {
               if (!toggle(c.code)) toast('Keep at least one currency checked.');
             }}
           >
-            {c.code}
+            {c.code}{c.code === primary && <span className="text-muted"> · Primary</span>}
           </button>
         ))}
       </div>

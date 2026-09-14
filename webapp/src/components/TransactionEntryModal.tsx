@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Modal } from './Modal';
 import { toast } from './Toast';
-import { Tooltip } from './Tooltip';
 import { PlusIcon, SaveIcon, TrashIcon } from './icons';
 import { Field, TextInput } from './ui/Field';
 import { AmountInput } from './ui/AmountInput';
 import { DirectionChips } from './ui/DirectionChips';
 import { TimeZoneFields } from './ui/TimeZoneFields';
 import { PendingToggle } from './ui/PendingToggle';
+import { ToggleChip } from './ui/ToggleChip';
 import { SideFields, useSideCurrency, nextUnpaidEmiMonth } from '../features/transfers/pages/TransferLinksPage';
 import { getLastTransferSource, rememberTransferSource } from '../hooks/useLastTransferSource';
 import { CategorySelect } from './CategorySelect';
@@ -246,26 +246,19 @@ function TxRowFields({
           onTimezoneChange={(timezone) => onChange({ ...row, timezone })}
         />
       </div>
-      <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
-        <input
-          type="checkbox"
+      <div className="mt-sm">
+        <ToggleChip
           checked={row.linked}
-          onChange={(e) => {
-            const linked = e.target.checked;
+          onChange={(linked) => {
             // Same "remember the last used source" convenience every other
             // linking entry point already has — prefills, never forces.
             const remembered = linked ? getLastTransferSource(row.finance) : undefined;
             onChange({ ...row, linked, other: remembered ?? row.other, toAmount: undefined, toAmountTouched: false });
           }}
+          label="Link to another finance (a transfer between two accounts)"
+          title={HAS_CATEGORY.includes(row.finance.module) ? 'A linked transfer is always categorized as Transfer on this side — the Category picker above is hidden while this is checked, not silently ignored.' : undefined}
         />
-        {HAS_CATEGORY.includes(row.finance.module) ? (
-          <Tooltip text="A linked transfer is always categorized as Transfer on this side — the Category picker above is hidden while this is checked, not silently ignored.">
-            <span>Link to another finance (a transfer between two accounts)</span>
-          </Tooltip>
-        ) : (
-          'Link to another finance (a transfer between two accounts)'
-        )}
-      </label>
+      </div>
       {!row.linked && HAS_PENDING.includes(row.finance.module) && (
         <div className="mt-sm">
           <PendingToggle

@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { Modal } from '../../../components/Modal';
 import { PlusIcon } from '../../../components/icons';
 import { Field, Select } from '../../../components/ui/Field';
+import { CurrencyChips } from '../../../components/ui/CurrencyChips';
 import { IconButton } from '../../../components/ui/IconButton';
 import { emiSummary } from '../../../lib/calc/emiModule';
-import { CURRENCIES } from '../../../lib/currencies';
 import { AddAccountForm } from '../../bank/pages/BankPage';
 import { AddCreditCardForm } from '../../bank/pages/CreditCardsSection';
 import { AddLoanForm as AddEMILoanForm } from '../../emi/pages/EMIPage';
@@ -270,7 +270,7 @@ export function SideFields({ label, cfg, onChange, preferredCurrency }: { label:
       {hasRefPicker && (
         <>
           <Field label="Currency">
-            <Select
+            <CurrencyChips
               // User-reported (2026-09-07): restoring a remembered account
               // (which sets `cfg.ref` directly, without going through this
               // component's own module-change handler) left `cfg.currencyCode`
@@ -280,14 +280,11 @@ export function SideFields({ label, cfg, onChange, preferredCurrency }: { label:
               // prefer THAT entity's own real currency over the first one in
               // the list.
               value={cfg.currencyCode ?? entities.find((en) => en.id === cfg.ref)?.currencyCode ?? entities[0]?.currencyCode ?? 'USD'}
-              onChange={(e) => {
-                const code = e.target.value;
+              onChange={(code) => {
                 const match = entities.find((en) => en.currencyCode === code);
                 onChange({ ...cfg, currencyCode: code, ref: match?.id });
               }}
-            >
-              {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
-            </Select>
+            />
           </Field>
           {/* User-reported (app-wide audit): "+ of add account in popups...
              moving in next line" — this ref-picker Select sits inside a
@@ -340,9 +337,7 @@ export function SideFields({ label, cfg, onChange, preferredCurrency }: { label:
          'USD' (see that function's own comment). */}
       {cfg.module === 'cash' && (
         <Field label="Currency">
-          <Select value={cfg.currencyCode ?? cashCurrency} onChange={(e) => onChange({ ...cfg, currencyCode: e.target.value })}>
-            {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
-          </Select>
+          <CurrencyChips value={cfg.currencyCode ?? cashCurrency} onChange={(code) => onChange({ ...cfg, currencyCode: code })} />
         </Field>
       )}
       {currency && !hasRefPicker && cfg.module !== 'cash' && <span className="text-muted">{currency}</span>}

@@ -19,6 +19,8 @@ import { createEmptyRentalsWorkbook } from '../store/defaultRentalsWorkbook';
 import { createEmptySubscriptionsWorkbook } from '../store/defaultSubscriptionsWorkbook';
 import { createEmptyWorkbook } from '../store/defaultWorkbook';
 import { clearCachedFxRates } from './fx';
+import { useCurrencyOnboardingStore } from '../store/currencyOnboardingStore';
+import { useEnabledCurrenciesStore } from '../store/enabledCurrenciesStore';
 import { useEMIWorkbookStore } from '../store/emiWorkbookStore';
 import { useFundsWorkbookStore } from '../store/fundsWorkbookStore';
 import { useInterEntityTransfersStore } from '../store/interEntityTransfersStore';
@@ -79,4 +81,11 @@ export function resetAllLocalWorkbooks() {
   // across accounts on a shared browser, same reasoning as everything else
   // in this function.
   clearCachedFxRates();
+  // User-reported (2026-09-14): the enabled-currencies picker/onboarding
+  // dismissal are account-specific preference too (now cloud-synced via
+  // `useSyncCurrencyPreference.ts`) — same leak-prevention reasoning as
+  // the FX cache above. `useSyncCurrencyPreference` re-applies the NEW
+  // account's own real cloud value right after this reset fires.
+  useEnabledCurrenciesStore.getState().setEnabledCodes(null);
+  useCurrencyOnboardingStore.getState().reset();
 }
