@@ -15,6 +15,7 @@ import { Toast } from './components/Toast';
 import { useFirebaseSync } from './lib/firebase/useFirebaseSync';
 import { usePSXFirebaseSync } from './lib/firebase/usePSXFirebaseSync';
 import { useCategoryFirebaseSync } from './lib/firebase/useCategoryFirebaseSync';
+import { useSyncCurrencyPreference } from './lib/firebase/useSyncCurrencyPreference';
 import { useAppearanceStore } from './store/appearanceStore';
 import { AnalyticsPage } from './features/qse/pages/AnalyticsPage';
 import { DashboardPage } from './features/qse/pages/DashboardPage';
@@ -118,6 +119,11 @@ function App() {
   // skip the manual upload-if-empty affordance" treatment as Rentals'
   // Planning feature just above.
   const categorySync = useCategoryFirebaseSync();
+  // User-reported (2026-09-14): "the app asks the user on every new device,
+  // which is wrong" — mirrors the enabled-currencies/onboarding-seen
+  // preference into the account's real cloud profile so it follows the
+  // account, not the browser. See that hook's own doc comment.
+  useSyncCurrencyPreference(user);
 
   // README Pending item 76: one worst-of-N sync-status indicator in the
   // Sidebar instead of each module's own status buried in its own

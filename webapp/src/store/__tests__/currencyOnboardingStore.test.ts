@@ -21,4 +21,12 @@ describe('useCurrencyOnboardingStore', () => {
     useCurrencyOnboardingStore.getState().dismiss();
     expect(localStorage.getItem('financerecorder_currency_onboarding_seen_v1')).toBe('true');
   });
+
+  it('reset() clears seen back to false and removes the persisted flag (account switch)', () => {
+    useCurrencyOnboardingStore.getState().dismiss();
+    expect(useCurrencyOnboardingStore.getState().seen).toBe(true);
+    useCurrencyOnboardingStore.getState().reset();
+    expect(useCurrencyOnboardingStore.getState().seen).toBe(false);
+    expect(localStorage.getItem('financerecorder_currency_onboarding_seen_v1')).toBeNull();
+  });
 });
