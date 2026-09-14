@@ -53,6 +53,21 @@ const uid = () => crypto.randomUUID();
  * "use radio/chips ... instead of positive & negative entries" — replaces
  * the sign-based entry convention with the same explicit control every
  * other module here already had. */
+/** User-reported (2026-09-14): "Blunder on CC page transfer, no choice of
+ * expense or payment, description and category selection" — a real,
+ * confirmed gap, not by design for the PLAIN (non-linked) case: a credit
+ * card row here previously had NO direction control at all (see the old
+ * comment on `submit()`'s `creditCard` case, now corrected below), so
+ * every non-linked row silently logged as a `'payment'` no matter what —
+ * there was no way to log a plain `'charge'` (a purchase) through this
+ * popup at all, only via the card's own separate dedicated add-transaction
+ * form. `{ in: 'Payment', out: 'Charge' }` matches `CreditCardTransactionKind`'s
+ * own real terminology. Deliberately still hidden while LINKED (see the
+ * `showDirection` computed value in `TxRowFields` below) — a linked
+ * transfer FROM a real bank/cash account can only ever mean "pay this card
+ * down," never "log a purchase," per `interEntityLink.ts`'s own
+ * already-correct, fixed semantic for that case; offering a Charge/Payment
+ * choice there would be a nonsensical, misleading option. */
 const DIRECTION_LABELS: Partial<Record<LinkModule, { in: string; out: string }>> = {
   bank: { in: 'Deposit', out: 'Withdrawal' },
   cash: { in: 'Cash in', out: 'Cash out' },
@@ -60,8 +75,9 @@ const DIRECTION_LABELS: Partial<Record<LinkModule, { in: string; out: string }>>
   qse: { in: 'Deposit', out: 'Withdrawal' },
   psx: { in: 'Deposit', out: 'Withdrawal' },
   funds: { in: 'Deposit', out: 'Withdrawal' },
+  creditCard: { in: 'Payment', out: 'Charge' },
 };
-const HAS_CATEGORY: LinkModule[] = ['bank', 'cash', 'rentals'];
+const HAS_CATEGORY: LinkModule[] = ['bank', 'cash', 'rentals', 'creditCard'];
 const HAS_NOTE: LinkModule[] = ['cash', 'rentals'];
 /** Bank has no `Finance.title` — its own pre-existing `description` field
  * already fills that role (see `types/finance.ts`'s file-level comment) —
@@ -69,8 +85,13 @@ const HAS_NOTE: LinkModule[] = ['cash', 'rentals'];
  * here. Real bug fix (user-reported): before this, a Bank row had NO title/
  * description input at all in this popup, so `description` silently fell
  * back to the category text or the literal string "Transaction" — the app
- * substituting a value instead of taking real user input. */
-const HAS_DESCRIPTION: LinkModule[] = ['bank'];
+ * substituting a value instead of taking real user input.
+ *
+ * `creditCard` added 2026-09-14, same reasoning (part of the same
+ * "Blunder on CC page transfer" report above) — `CreditCardTransaction`
+ * has its own `description` field (see `types/creditCard.ts`), and this
+ * popup silently defaulted it to "Payment" with no way to type a real one. */
+const HAS_DESCRIPTION: LinkModule[] = ['bank', 'creditCard'];
 /** User-requested (2026-09-08): a "Pending" state — a real transaction the
  * user already knows is happening but hasn't cleared yet (a sent transfer
  * not yet reflected, a stock order not yet filled). Shipped first for
@@ -172,6 +193,11 @@ function TxRowFields({
   const financeCurrency = useSideCurrency(row.finance);
   const currencyMismatch = row.linked && !!otherCurrency && !!financeCurrency && otherCurrency !== financeCurrency;
   const direction = DIRECTION_LABELS[row.finance.module];
+  // See `DIRECTION_LABELS`'s own doc comment on `creditCard` — a linked
+  // transfer from a real bank/cash account can only ever mean "pay this
+  // card down," so the Charge/Payment choice only makes sense (and is only
+  // shown) for a plain, non-linked card row.
+  const showDirection = direction && !(row.finance.module === 'creditCard' && row.linked);
   const sameEntity = row.linked && row.finance.module === row.other.module && !!row.finance.ref && row.finance.ref === row.other.ref;
   const pairSupported = !row.linked || (isSupportedLinkPair(row.finance.module, row.other.module) && isSupportedLinkPair(row.other.module, row.finance.module));
 
@@ -216,17 +242,27 @@ function TxRowFields({
             }}
           />
         </Field>
-        {direction && (
+        {showDirection && (
           <Field label="Direction">
-            <DirectionChips value={row.direction} onChange={(d) => onChange({ ...row, direction: d })} labels={direction} />
+            <DirectionChips value={row.direction} onChange={(d) => onChange({ ...row, direction: d })} labels={direction!} />
           </Field>
         )}
-        <Field label="Amount" required title={!direction ? 'A repayment is always entered as a positive amount, regardless of which way the debt runs.' : 'You can type a math expression here too, e.g. 10.5+5 — it evaluates once you leave the field.'}>
+        <Field label="Amount" required title={!showDirection ? 'A repayment is always entered as a positive amount, regardless of which way the debt runs.' : 'You can type a math expression here too, e.g. 10.5+5 — it evaluates once you leave the field.'}>
           <AmountInput value={row.amount} onChange={(amount) => onChange({ ...row, amount })} />
         </Field>
         {HAS_DESCRIPTION.includes(row.finance.module) && (
-          <Field label="Description" required>
-            <TextInput value={row.description} onChange={(e) => onChange({ ...row, description: e.target.value })} placeholder="e.g. Rent, Grocery run" />
+          // Bank's own `submit()` case actually enforces this (toasts if
+          // left blank) — a credit card row doesn't (it defaults to
+          // "Charge"/"Payment" instead, same as before this field existed
+          // for it), so only Bank shows it as `required` — the asterisk
+          // should never claim a stronger constraint than `submit()` really
+          // checks.
+          <Field label="Description" required={row.finance.module === 'bank'}>
+            <TextInput
+              value={row.description}
+              onChange={(e) => onChange({ ...row, description: e.target.value })}
+              placeholder={row.finance.module === 'creditCard' ? 'e.g. Grocery run (optional — defaults to Charge/Payment)' : 'e.g. Rent, Grocery run'}
+            />
           </Field>
         )}
         {HAS_CATEGORY.includes(row.finance.module) && !row.linked && (
@@ -497,16 +533,26 @@ export function TransactionEntryModal({ defaultFinance, onClose }: { defaultFina
         case 'funds':
           addFundsTransfer({ id: uid(), date: r.date, time: r.time, timezone: r.timezone, type: r.direction === 'in' ? 'DEPOSIT' : 'WITHDRAWAL', gross: Math.abs(r.amount), fee: 0 });
           break;
-        case 'creditCard':
-          // No direction control (see DIRECTION_LABELS — same "always one
-          // fixed effect" precedent as personalLoans/emi): using this
-          // generic popup for a card always means logging a payment
-          // toward it, matching interEntityLink.ts's own `creditCard` case.
-          // A charge/fee/markup still goes through the card's own dedicated
-          // "Add a transaction" form, which has a real kind picker.
+        case 'creditCard': {
+          // User-reported (2026-09-14): "no choice of expense or payment,
+          // description and category selection" — the direction chip
+          // (`DIRECTION_LABELS.creditCard`) now decides `kind` for the
+          // plain (non-linked) case: 'out' (Charge) logs a purchase, 'in'
+          // (Payment) logs a payment toward the card. A markup/fee/cash
+          // advance still goes through the card's own dedicated "Add a
+          // transaction" form (`AddCardTransactionForm`), which has the
+          // full 5-way kind picker this generic popup deliberately doesn't
+          // replicate.
           if (!r.finance.ref) { toast('Pick a credit card first.'); continue; }
-          addCreditCardTransaction({ id: uid(), cardId: r.finance.ref, date: r.date, time: r.time, timezone: r.timezone, kind: 'payment', amount: Math.abs(r.amount), description: r.description.trim() || 'Payment', source: 'manual' });
+          const kind = r.direction === 'out' ? 'charge' : 'payment';
+          addCreditCardTransaction({
+            id: uid(), cardId: r.finance.ref, date: r.date, time: r.time, timezone: r.timezone,
+            kind, amount: Math.abs(r.amount),
+            description: r.description.trim() || (kind === 'charge' ? 'Charge' : 'Payment'),
+            categoryID: r.categoryID, source: 'manual',
+          });
           break;
+        }
       }
       plainCount++;
     }

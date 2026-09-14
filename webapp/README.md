@@ -9153,6 +9153,40 @@ FinanceManager live link:
   `currencyOnboardingStore.test.ts` gained a `reset()` case. `npx tsc -b` / `npm run test`
   (696 tests, 4 new) / `npm run build` all clean.
 
+- **Credit Card's own "Transfers" popup had no Charge/Payment choice, Description, or
+  Category (2026-09-14) — see Done item 328.** User's report, verbatim: "Blunder on CC page
+  transfer, no choice of expense or payment, description and category selection."
+  Root-caused, not guessed: for a plain (non-linked) credit card row, `TransactionEntryModal`'s
+  `submit()` always hardcoded `kind: 'payment'`, and `creditCard` was missing from both
+  `HAS_CATEGORY`/`HAS_DESCRIPTION`, so those fields never rendered at all — the ONLY thing this
+  popup could log against a card was a payment, with description silently defaulting to the
+  literal string "Payment" and no category. This was deliberate for the LINKED case (a linked
+  transfer FROM a real bank/cash account can only ever mean "pay this card down," per
+  `interEntityLink.ts`'s own already-correct fixed semantic — offering a Charge choice there
+  would be nonsensical, since a charge is a card-only event with nothing on the other side of
+  a link), but the PLAIN case had no such excuse — there was simply no way to log an ordinary
+  card purchase through this popup at all, only a payment, even though `CreditCardTransaction`
+  itself has always supported a `'charge'` kind (via the card's own separate, fuller
+  `AddCardTransactionForm`, which this popup was never meant to fully replace). Fixed:
+  `DIRECTION_LABELS.creditCard = { in: 'Payment', out: 'Charge' }` (matching
+  `CreditCardTransactionKind`'s own real terminology), rendered via a new `showDirection`
+  check that hides it specifically for a LINKED credit card row (preserving the existing
+  correct link semantic unchanged) while showing it for every plain row; `creditCard` added to
+  `HAS_CATEGORY`/`HAS_DESCRIPTION`; `submit()`'s `creditCard` case now derives `kind` from
+  `r.direction` and passes through the real typed `description`/`categoryID` instead of a
+  hardcoded default. Description is marked `required` only for `bank` (the one module whose
+  own `submit()` case actually enforces it) — credit card's own asterisk would have overclaimed
+  a constraint `submit()` doesn't check, since it still sensibly defaults to "Charge"/"Payment"
+  when left blank, same as before this fix. Verified live via Playwright: a plain row now shows
+  real Direction (Payment/Charge) chips, a Description field, and a Category picker;
+  submitting a "Charge" with a typed description correctly reached the real sign-in gate
+  (same verification depth as every other gated write in this project); a LINKED row correctly
+  still hides Direction and Category (the fixed "always payment, always Transfer-categorized"
+  semantics for a link are untouched) while still showing Description (feeds the link's own
+  `note` field, a pre-existing behavior already shared with Bank). `npx tsc -b` / `npm run
+  test` (696 tests, unchanged — UI wiring on an already-tested store action) / `npm run build`
+  all clean.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`
