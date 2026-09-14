@@ -4,6 +4,7 @@ import {
   availableCredit,
   computeMinimumDue,
   creditCardLiabilityByCurrency,
+  creditCardMonthlyHistory,
   currentStatement,
   markupThisCycle,
   nextPendingMinDue,
@@ -67,16 +68,30 @@ describe('currentStatement', () => {
     expect(currentStatement(card({ statementDate: undefined }), [], '2026-02-10')).toBeNull();
   });
 
-  it('splits at the two most recent statementDate cutoffs bracketing asOfDate', () => {
-    // Cutoffs on the 5th: Dec 5 -> Jan 5 -> Feb 5. asOfDate 2026-02-10 is
-    // past Feb 5, so the closed cycle is (Jan 5, Feb 5].
+  // Real bug, user-reported (2026-09-14): with statementDate=17 and
+  // today=2026-09-14, this used to return the LAST COMPLETED cycle
+  // (2026-07-17 -> 2026-08-17, due 2026-09-05 — a date already in the
+  // PAST relative to today) instead of the cycle actually containing
+  // today (2026-08-17 -> 2026-09-17, due 2026-10-05). Reproduces the
+  // user's own exact numbers.
+  it("returns the cycle CONTAINING asOfDate, not the last completed one — the user's own exact reported scenario", () => {
+    const s = currentStatement(card({ statementDate: 17, paymentDueDate: 5, minDueDate: 25 }), [], '2026-09-14');
+    expect(s!.cycleStart).toBe('2026-08-17');
+    expect(s!.cycleEnd).toBe('2026-09-17'); // a FUTURE date — the cycle hasn't closed yet
+    expect(s!.minDueDate).toBe('2026-09-25'); // same month as cycleEnd, since 25 >= 17
+    expect(s!.dueDate).toBe('2026-10-05'); // next month, since 5 < 17
+  });
+
+  it('splits at the two most recent statementDate cutoffs bracketing asOfDate, mid-cycle', () => {
+    // Cutoffs on the 5th: Dec 5 -> Jan 5 -> Feb 5. asOfDate 2026-01-20
+    // falls WITHIN the (Jan 5, Feb 5] cycle — that's the one returned.
     const txs = [
-      tx({ date: '2025-12-20', kind: 'charge', amount: 1000 }), // prior cycle (Dec5,Jan5]
-      tx({ date: '2026-01-10', kind: 'charge', amount: 300 }), // this cycle
-      tx({ date: '2026-01-20', kind: 'payment', amount: 400 }), // this cycle
-      tx({ date: '2026-02-06', kind: 'charge', amount: 999 }), // future cycle — excluded
+      tx({ date: '2025-12-20', kind: 'charge', amount: 1000 }), // before cycleStart -> previousBalance
+      tx({ date: '2026-01-10', kind: 'charge', amount: 300 }), // this cycle, before asOfDate
+      tx({ date: '2026-01-20', kind: 'payment', amount: 400 }), // this cycle, on asOfDate
+      tx({ date: '2026-01-25', kind: 'charge', amount: 999 }), // in-cycle but AFTER asOfDate — excluded
     ];
-    const s = currentStatement(card(), txs, '2026-02-10');
+    const s = currentStatement(card(), txs, '2026-01-20');
     expect(s).not.toBeNull();
     expect(s!.cycleStart).toBe('2026-01-05');
     expect(s!.cycleEnd).toBe('2026-02-05');
@@ -84,30 +99,33 @@ describe('currentStatement', () => {
     expect(s!.chargesThisCycle).toBe(300);
     expect(s!.paymentsThisCycle).toBe(400);
     expect(s!.statementBalance).toBe(900); // 1000 + 300 - 400
-    expect(s!.dueDate).toBe('2026-02-25'); // same month, since 25 >= 5
+    expect(s!.dueDate).toBe('2026-02-25'); // same month as cycleEnd, since 25 >= 5
   });
 
   it('carries card.openingBalance into previousBalance and statementBalance', () => {
     const txs = [tx({ date: '2026-01-10', kind: 'charge', amount: 300 }), tx({ date: '2026-01-20', kind: 'payment', amount: 400 })];
-    const s = currentStatement(card({ openingBalance: 1000 }), txs, '2026-02-10');
+    const s = currentStatement(card({ openingBalance: 1000 }), txs, '2026-01-20');
     expect(s!.previousBalance).toBe(1000); // no prior-cycle txs, so this IS the opening balance
     expect(s!.statementBalance).toBe(900); // 1000 + 300 - 400
   });
 
   it('due date rolls into the following month when paymentDueDate < statementDate', () => {
     const s = currentStatement(card({ statementDate: 28, paymentDueDate: 10 }), [], '2026-03-01');
-    // Most recent cutoff <= 2026-03-01 with statementDate=28 is 2026-02-28.
-    expect(s!.cycleEnd).toBe('2026-02-28');
-    expect(s!.dueDate).toBe('2026-03-10');
+    // Most recent PAST cutoff <= 2026-03-01 is 2026-02-28; the cycle it
+    // opens closes one month later, in March.
+    expect(s!.cycleStart).toBe('2026-02-28');
+    expect(s!.cycleEnd).toBe('2026-03-28');
+    expect(s!.dueDate).toBe('2026-04-10');
   });
 
-  it('clamps a statementDate past a short month to its real last day', () => {
-    const s = currentStatement(card({ statementDate: 31 }), [], '2026-03-01');
-    expect(s!.cycleEnd).toBe('2026-02-28');
+  it('clamps the forward cutoff to a short month’s real last day', () => {
+    const s = currentStatement(card({ statementDate: 31 }), [], '2026-04-01');
+    expect(s!.cycleStart).toBe('2026-03-31');
+    expect(s!.cycleEnd).toBe('2026-04-30'); // April has 30 days
   });
 
   it('has previousBalance 0 for the very first statement (no real history that far back)', () => {
-    const s = currentStatement(card(), [tx({ date: '2026-01-03', kind: 'charge', amount: 50 })], '2026-01-20');
+    const s = currentStatement(card(), [tx({ date: '2026-01-10', kind: 'charge', amount: 50 })], '2026-01-20');
     expect(s!.previousBalance).toBe(0);
     expect(s!.statementBalance).toBe(50);
   });
@@ -138,41 +156,53 @@ describe('computeMinimumDue', () => {
 describe('markupThisCycle — the grace-period gate + flat-rate-on-carried-balance model', () => {
   const flat = (over: Partial<CreditCard> = {}) => card({ markupMethod: 'flatOnCarried', markupRatePct: 1, markupThresholdAmount: 100, ...over });
 
-  // With statementDate=5, asOfDate 2026-01-06 gives cycleStart=2025-12-05/
-  // cycleEnd=2026-01-05 — a charge dated on/before Dec 5 lands in
-  // `previousBalance`; a transaction dated in (Dec 5, Jan 5] lands in
-  // "this cycle".
+  // With statementDate=5, asOfDate 2026-01-15, cycleStart=2026-01-05 —
+  // a charge dated BEFORE Jan 5 lands in `previousBalance`; a payment
+  // dated in (Jan 5, asOfDate] lands in "this cycle"'s own payments.
   it('is 0 when the prior balance is fully paid off this cycle (grace period holds)', () => {
-    const s = currentStatement(flat(), [tx({ date: '2025-11-20', kind: 'charge', amount: 500 }), tx({ date: '2025-12-10', kind: 'payment', amount: 500 })], '2026-01-06');
+    const s = currentStatement(flat(), [tx({ date: '2025-12-20', kind: 'charge', amount: 500 }), tx({ date: '2026-01-10', kind: 'payment', amount: 500 })], '2026-01-15');
     expect(markupThisCycle(flat(), s!)).toBe(0);
   });
 
   it("charges the user's own real example: 1% on an unsettled amount >= 100", () => {
     // 500 carried in, only 100 paid this cycle -> 400 unpaid, >= threshold.
-    const s = currentStatement(flat(), [tx({ date: '2025-11-20', kind: 'charge', amount: 500 }), tx({ date: '2025-12-10', kind: 'payment', amount: 100 })], '2026-01-06');
+    const s = currentStatement(flat(), [tx({ date: '2025-12-20', kind: 'charge', amount: 500 }), tx({ date: '2026-01-10', kind: 'payment', amount: 100 })], '2026-01-15');
     expect(s!.previousBalance).toBe(500);
     expect(markupThisCycle(flat(), s!)).toBe(4); // 1% of 400
   });
 
   it('is 0 below the threshold even with an unpaid amount', () => {
-    const s = currentStatement(flat(), [tx({ date: '2025-11-20', kind: 'charge', amount: 50 })], '2026-01-06');
+    const s = currentStatement(flat(), [tx({ date: '2025-12-20', kind: 'charge', amount: 50 })], '2026-01-15');
     expect(s!.previousBalance).toBe(50);
     expect(markupThisCycle(flat(), s!)).toBe(0); // 50 < 100 threshold
   });
 
   it('is always 0 when markupMethod is unset (no interest concept at all)', () => {
-    const s = currentStatement(card(), [tx({ date: '2025-11-20', kind: 'charge', amount: 500 })], '2026-01-06');
+    const s = currentStatement(card(), [tx({ date: '2025-12-20', kind: 'charge', amount: 500 })], '2026-01-15');
     expect(markupThisCycle(card(), s!)).toBe(0);
   });
 });
 
 describe('proposeMinPayment / nextPendingMinDue', () => {
-  it('proposes the statement minimum plus any carried-forward pendingMinDue', () => {
+  it('falls back to the full-amount dueDate when the card has no minDueDate of its own', () => {
     const c = card({ minPaymentMethod: 'fixed', minPaymentAmount: 40, pendingMinDue: 15 });
-    const s = currentStatement(c, [tx({ date: '2025-12-10', kind: 'charge', amount: 500 })], '2026-01-06')!;
+    const s = currentStatement(c, [tx({ date: '2025-12-20', kind: 'charge', amount: 500 })], '2026-01-06')!;
     const proposal = proposeMinPayment(c, s);
     expect(proposal!.amount).toBe(55); // 40 + 15
-    expect(proposal!.dueDate).toBe('2026-01-25');
+    expect(proposal!.dueDate).toBe(s.dueDate);
+  });
+
+  // Real bug fix (2026-09-14): the minimum payment must be scheduled
+  // against its OWN due date, not the full amount's — the two are
+  // genuinely different dates once a card sets both.
+  it("schedules against the card's own minDueDate, distinct from the full dueDate", () => {
+    const c = card({ statementDate: 17, minDueDate: 25, paymentDueDate: 5, minPaymentMethod: 'fixed', minPaymentAmount: 40 });
+    const s = currentStatement(c, [tx({ date: '2026-08-20', kind: 'charge', amount: 500 })], '2026-09-14')!;
+    expect(s.minDueDate).toBe('2026-09-25');
+    expect(s.dueDate).toBe('2026-10-05');
+    const proposal = proposeMinPayment(c, s);
+    expect(proposal!.dueDate).toBe('2026-09-25');
+    expect(proposal!.dueDate).not.toBe(s.dueDate);
   });
 
   it('returns null when nothing is owed', () => {
@@ -183,6 +213,26 @@ describe('proposeMinPayment / nextPendingMinDue', () => {
   it('carries forward exactly the shortfall of a partial payment, never negative', () => {
     expect(nextPendingMinDue(55, 30)).toBe(25);
     expect(nextPendingMinDue(55, 100)).toBe(0); // overpayment clears, doesn't credit
+  });
+});
+
+describe('creditCardMonthlyHistory', () => {
+  it("buckets spend/paid by CALENDAR month, distinct from the card's own billing cycle", () => {
+    const txs = [
+      tx({ date: '2026-01-15', kind: 'charge', amount: 200 }),
+      tx({ date: '2026-01-20', kind: 'payment', amount: 50 }),
+      tx({ date: '2026-02-05', kind: 'charge', amount: 100 }),
+    ];
+    const hist = creditCardMonthlyHistory(card(), txs, 3, '2026-02-10');
+    expect(hist.map((h) => h.month)).toEqual(['2025-12', '2026-01', '2026-02']);
+    expect(hist[1]).toMatchObject({ spent: 200, paid: 50, balanceEnd: 150 });
+    expect(hist[2]).toMatchObject({ spent: 100, paid: 0, balanceEnd: 250 });
+  });
+
+  it("caps the current (in-progress) month's window at asOfDate, not the month's real end", () => {
+    const txs = [tx({ date: '2026-02-05', kind: 'charge', amount: 100 }), tx({ date: '2026-02-25', kind: 'charge', amount: 999 })];
+    const hist = creditCardMonthlyHistory(card(), txs, 1, '2026-02-10');
+    expect(hist[0].spent).toBe(100); // the Feb 25 charge is after asOfDate — excluded
   });
 });
 

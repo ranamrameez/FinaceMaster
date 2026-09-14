@@ -35,39 +35,37 @@ function mostRecentCutoff(card: CreditCard, asOfDate: string): string | null {
   return cutoffDate(prevYear, prevMonth0, card.statementDate);
 }
 
-/** The cutoff one full cycle before `cutoff` — found by stepping back one
- * calendar day (still pure UTC integer arithmetic, never a local-timezone
- * method) and asking `mostRecentCutoff` for whichever cutoff that lands
- * on or before. Always resolves to a real calendar date once `cutoff`
- * itself did (this is pure date math, with no notion of "the card didn't
- * exist yet") — a card with no real transaction history that far back
- * simply gets a `previousBalance` of 0 from `balanceAsOf`, rather than
- * this function trying to detect "the first cycle" itself. */
-function oneCutoffBack(card: CreditCard, cutoff: string): string {
-  const [y, m1, d] = cutoff.split('-').map(Number);
-  const asUtcDays = Math.floor(Date.UTC(y, m1 - 1, d) / 86400000) - 1;
-  const dayBefore = new Date(asUtcDays * 86400000);
-  const dayBeforeStr = `${dayBefore.getUTCFullYear()}-${String(dayBefore.getUTCMonth() + 1).padStart(2, '0')}-${String(dayBefore.getUTCDate()).padStart(2, '0')}`;
-  // Non-null assertion is safe: `mostRecentCutoff` only returns null when
-  // `card.statementDate` is unset, and `cutoff` (our caller) only exists
-  // because that was already set.
-  return mostRecentCutoff(card, dayBeforeStr)!;
-}
-
-/** A statement's own due date, resolved relative to `statementDate`: the
- * SAME month as the cutoff when `paymentDueDate >= statementDate` (the
- * common case — a real gap within one month), the month AFTER otherwise
- * (a due date that rolls into the next billing month). `null` when
- * `paymentDueDate` isn't set. */
-function dueDateForCutoff(card: CreditCard, cutoff: string): string | null {
-  if (!card.paymentDueDate) return null;
+/** The cutoff one full cycle AFTER `cutoff` — the boundary the CURRENTLY
+ * OPEN cycle will close on. `cutoff` is always a real calendar date whose
+ * own day-of-month is `card.statementDate` (every caller only ever passes
+ * a value that came from `mostRecentCutoff`/this function itself), so
+ * stepping to the next calendar month and re-applying the same
+ * day-of-month (with the same short-month clamp `cutoffDate` already
+ * does) is safe pure integer arithmetic — no local/UTC `Date`-mixing. */
+function oneCutoffForward(card: CreditCard, cutoff: string): string {
   const [y, m1] = cutoff.split('-').map(Number);
-  const sameMonth = card.paymentDueDate >= (card.statementDate ?? card.paymentDueDate);
-  if (sameMonth) return cutoffDate(y, m1 - 1, card.paymentDueDate);
   const nextMonth0raw = m1; // (m1 - 1) + 1
   const nextYear = y + Math.floor(nextMonth0raw / 12);
   const nextMonth0 = ((nextMonth0raw % 12) + 12) % 12;
-  return cutoffDate(nextYear, nextMonth0, card.paymentDueDate);
+  return cutoffDate(nextYear, nextMonth0, card.statementDate!);
+}
+
+/** A due date resolved relative to `cycleEnd`: the SAME month as the
+ * cycle's own close when `day >= statementDate` (the common case — a real
+ * gap within one month), the month AFTER otherwise (a due date that rolls
+ * into the next billing month). `null` when `day` isn't set. Shared by
+ * both the minimum-due date and the full-amount-due date — see
+ * `CreditCard.minDueDate`'s own doc comment for why they're two separate
+ * fields now, not one. */
+function dueDateForDay(card: CreditCard, cycleEnd: string, day: number | undefined): string | null {
+  if (!day) return null;
+  const [y, m1] = cycleEnd.split('-').map(Number);
+  const sameMonth = day >= (card.statementDate ?? day);
+  if (sameMonth) return cutoffDate(y, m1 - 1, day);
+  const nextMonth0raw = m1; // (m1 - 1) + 1
+  const nextYear = y + Math.floor(nextMonth0raw / 12);
+  const nextMonth0 = ((nextMonth0raw % 12) + 12) % 12;
+  return cutoffDate(nextYear, nextMonth0, day);
 }
 
 /** This card's real running balance as of (and including) `asOfDate` — the
@@ -91,39 +89,70 @@ export function outstandingBalanceByCard(card: CreditCard, transactions: CreditC
 }
 
 export interface CreditCardStatement {
-  /** Exclusive lower bound of this cycle's own transactions — always a
-   * real calendar date (see `oneCutoffBack`'s own doc comment); a card
-   * with no real history that far back just gets a `previousBalance` of
-   * 0, rather than this being `null`. */
+  /** Exclusive lower bound of THIS CYCLE — the one containing `asOfDate`,
+   * whether or not it has actually closed yet (see `currentStatement`'s
+   * own doc comment for the real bug this fixes: this used to be the
+   * LAST COMPLETED cycle, one billing period behind what a user checking
+   * mid-cycle actually expects). Always a real calendar date (see
+   * `oneCutoffBack`'s own doc comment); a card with no real history that
+   * far back just gets a `previousBalance` of 0, rather than this being
+   * `null`. */
   cycleStart: string;
-  /** Inclusive upper bound — the cutoff this statement was generated at. */
+  /** Inclusive upper bound — the cutoff THIS cycle will close on. Often a
+   * FUTURE date (mid-cycle) — that's intentional, see `currentStatement`. */
   cycleEnd: string;
+  /** The balance carried INTO this cycle from before `cycleStart` — used
+   * internally by `markupThisCycle`'s grace-period check. Not shown
+   * directly to the user (their own report: "irrelevant or unexplained")
+   * — see `creditCardMonthlyHistory` for the user-facing 6-month view
+   * instead. */
   previousBalance: number;
+  /** Spent this cycle so far — everything that adds to the balance
+   * (charge/fee/markup/cashAdvance). Named `charges` internally for
+   * historical reasons; the UI shows this as "Spent," per the user's own
+   * "Charges is broad term... use like Spent instead." */
   chargesThisCycle: number;
   paymentsThisCycle: number;
-  /** The user's own "100% amount to be charged this month" — the real
-   * bill: `previousBalance + chargesThisCycle − paymentsThisCycle`. */
+  /** The running total this cycle: `previousBalance + chargesThisCycle −
+   * paymentsThisCycle` — while the cycle is still open (the common case,
+   * see `currentStatement`), this equals the card's own current
+   * outstanding balance; once real activity stops for the cycle, it's
+   * the actual bill. */
   statementBalance: number;
   minimumDue: number;
+  /** When the MINIMUM payment is due, from `card.minDueDate` — `null`
+   * when that field isn't set (falls back to `dueDate` in
+   * `proposeMinPayment`, so an older card that only ever set
+   * `paymentDueDate` keeps working). */
+  minDueDate: string | null;
+  /** When the FULL amount is due, from `card.paymentDueDate`. */
   dueDate: string | null;
 }
 
 /** The user's own "save bill cut-off date - the 100% amount to be charged
  * this month, min amount & date, due bill and date" requirement, computed
- * (not eyeballed off a running total). Splits this card's transactions at
- * the two most recent `statementDate` cutoffs bracketing `asOfDate`.
- * Returns `null` only when the card has no `statementDate` set at all. */
+ * (not eyeballed off a running total).
+ *
+ * User-reported real bug (2026-09-14, with an exact worked example): with
+ * `statementDate=17` and `asOfDate='2026-09-14'`, this used to return the
+ * LAST COMPLETED cycle (`2026-07-17 → 2026-08-17`, due `2026-09-05` — a
+ * date that had ALREADY PASSED relative to `asOfDate`) instead of the
+ * cycle actually containing today (`2026-08-17 → 2026-09-17`). Fixed by
+ * making `cycleStart` the most recent PAST cutoff and `cycleEnd` the NEXT
+ * one forward (`oneCutoffForward`, possibly a future date, mid-cycle) —
+ * the cycle a user checking their card RIGHT NOW is actually in, with due
+ * dates resolved relative to when it will next close. */
 export function currentStatement(
   card: CreditCard,
   transactions: CreditCardTransaction[],
   asOfDate: string = new Date().toISOString().slice(0, 10),
 ): CreditCardStatement | null {
-  const cycleEnd = mostRecentCutoff(card, asOfDate);
-  if (!cycleEnd) return null;
-  const cycleStart = oneCutoffBack(card, cycleEnd);
+  const cycleStart = mostRecentCutoff(card, asOfDate);
+  if (!cycleStart) return null;
+  const cycleEnd = oneCutoffForward(card, cycleStart);
   const cardTxs = transactions.filter((t) => t.cardId === card.id);
   const previousBalance = balanceAsOf(card, cardTxs, cycleStart);
-  const cycleTxs = cardTxs.filter((t) => t.date > cycleStart && t.date <= cycleEnd);
+  const cycleTxs = cardTxs.filter((t) => t.date > cycleStart && t.date <= cycleEnd && t.date <= asOfDate);
   const chargesThisCycle = round2(cycleTxs.filter((t) => t.kind !== 'payment').reduce((s, t) => s + t.amount, 0));
   const paymentsThisCycle = round2(cycleTxs.filter((t) => t.kind === 'payment').reduce((s, t) => s + t.amount, 0));
   const statementBalance = round2(previousBalance + chargesThisCycle - paymentsThisCycle);
@@ -135,7 +164,8 @@ export function currentStatement(
     paymentsThisCycle,
     statementBalance,
     minimumDue: computeMinimumDue(card, statementBalance),
-    dueDate: dueDateForCutoff(card, cycleEnd),
+    minDueDate: dueDateForDay(card, cycleEnd, card.minDueDate),
+    dueDate: dueDateForDay(card, cycleEnd, card.paymentDueDate),
   };
 }
 
@@ -181,14 +211,20 @@ export interface MinPaymentProposal {
 /** Semi-automated minimum-payment collection (mirrors Rentals'
  * `proposeRentCollection` exactly — same "propose, never silently apply"
  * shape) — this app has no real bank-API access and can never actually
- * pull money on its own. `null` when there's no statement due date or
- * nothing owed at all. */
+ * pull money on its own. Uses `statement.minDueDate` (the minimum
+ * payment's OWN due date) when the card has one set, falling back to the
+ * full-amount `dueDate` for a card that hasn't configured `minDueDate`
+ * yet — real bug fix (2026-09-14): this used to always schedule the
+ * minimum payment against the FULL amount's due date, which is wrong once
+ * a card has its own separate, earlier minimum-due date. `null` when
+ * there's no due date to propose against or nothing owed at all. */
 export function proposeMinPayment(card: CreditCard, statement: CreditCardStatement): MinPaymentProposal | null {
-  if (!statement.dueDate) return null;
+  const dueDate = statement.minDueDate ?? statement.dueDate;
+  if (!dueDate) return null;
   const amount = round2(statement.minimumDue + (card.pendingMinDue ?? 0));
   if (amount <= 0) return null;
   const todayStr = new Date().toISOString().slice(0, 10);
-  return { dueDate: statement.dueDate, amount, isDue: statement.dueDate <= todayStr };
+  return { dueDate, amount, isDue: dueDate <= todayStr };
 }
 
 /** After logging a payment of `amountPaid` against a proposal that
@@ -198,6 +234,52 @@ export function proposeMinPayment(card: CreditCard, statement: CreditCardStateme
  * `nextPendingBalance`. */
 export function nextPendingMinDue(expectedAmount: number, amountPaid: number): number {
   return Math.max(0, round2(expectedAmount - amountPaid));
+}
+
+export interface CreditCardMonthActivity {
+  /** `'YYYY-MM'`. */
+  month: string;
+  /** Everything that increases the balance (charge/fee/markup/
+   * cashAdvance), dated within this CALENDAR month. */
+  spent: number;
+  /** Payments dated within this calendar month. */
+  paid: number;
+  /** Running outstanding balance as of the end of this month — or as of
+   * `asOfDate` itself, for the current, still-in-progress month. */
+  balanceEnd: number;
+}
+
+/** The "6 months past" overview the user asked for — "just like
+ * currencies on the main dashboard" (Net Worth's own per-currency monthly
+ * window, README Done item 229) — a plain CALENDAR-month view,
+ * deliberately separate from `currentStatement`'s own BILLING cycle
+ * (which rarely aligns with a calendar month): the user wants both a
+ * cross-app-consistent calendar-month read and the card-specific cycle
+ * one, not one replacing the other. `months` oldest-first. */
+export function creditCardMonthlyHistory(
+  card: CreditCard,
+  transactions: CreditCardTransaction[],
+  months = 6,
+  asOfDate: string = new Date().toISOString().slice(0, 10),
+): CreditCardMonthActivity[] {
+  const cardTxs = transactions.filter((t) => t.cardId === card.id);
+  const [asOfY, asOfM1] = asOfDate.split('-').map(Number);
+  const out: CreditCardMonthActivity[] = [];
+  for (let i = months - 1; i >= 0; i--) {
+    const raw = asOfM1 - 1 - i;
+    const year = asOfY + Math.floor(raw / 12);
+    const month0 = ((raw % 12) + 12) % 12;
+    const monthStr = `${year}-${String(month0 + 1).padStart(2, '0')}`;
+    const monthStart = `${monthStr}-01`;
+    const lastDay = daysInMonth(year, month0);
+    const monthEnd = i === 0 ? asOfDate : `${monthStr}-${String(lastDay).padStart(2, '0')}`;
+    const monthTxs = cardTxs.filter((t) => t.date >= monthStart && t.date <= monthEnd);
+    const spent = round2(monthTxs.filter((t) => t.kind !== 'payment').reduce((s, t) => s + t.amount, 0));
+    const paid = round2(monthTxs.filter((t) => t.kind === 'payment').reduce((s, t) => s + t.amount, 0));
+    const balanceEnd = round2(balanceAsOf(card, cardTxs, monthEnd));
+    out.push({ month: monthStr, spent, paid, balanceEnd });
+  }
+  return out;
 }
 
 /** How much is owed across every credit card, grouped by currency —

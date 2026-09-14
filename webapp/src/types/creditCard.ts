@@ -51,10 +51,19 @@ export interface CreditCard {
   /** Day of month (1-31, clamped to the actual month length) the billing
    * cycle closes / statement generates. */
   statementDate?: number;
-  /** Day of month (1-31, clamped) payment is due — resolved relative to
-   * `statementDate`: same month if `paymentDueDate >= statementDate`, the
-   * month after otherwise (same day-of-month clamping convention already
-   * used by EMI's `installmentDueDate`). */
+  /** Day of month (1-31, clamped) the MINIMUM payment is due — resolved
+   * relative to `statementDate` the same way `paymentDueDate` is (same
+   * month if `minDueDate >= statementDate`, the month after otherwise).
+   * User-requested (2026-09-14): a real card's minimum-due date and its
+   * full-amount-due date are genuinely different dates, not the same one
+   * — `paymentDueDate` alone can't represent both. `undefined` falls back
+   * to `paymentDueDate` in `proposeMinPayment`, so an existing card that
+   * only ever set one date keeps working unchanged. */
+  minDueDate?: number;
+  /** Day of month (1-31, clamped) the FULL amount is due — resolved
+   * relative to `statementDate`: same month if `paymentDueDate >=
+   * statementDate`, the month after otherwise (same day-of-month clamping
+   * convention already used by EMI's `installmentDueDate`). */
   paymentDueDate?: number;
   minPaymentMethod?: MinPaymentMethod;
   /** The fixed floor (used by `'fixed'` and the floor half of
