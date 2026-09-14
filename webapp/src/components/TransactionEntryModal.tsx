@@ -358,6 +358,7 @@ export function TransactionEntryModal({ defaultFinance, onClose }: { defaultFina
   const ensureSignedIn = useEnsureSignedIn();
   const addBankTransactions = useBankWorkbookStore((s) => s.addTransactions);
   const addCashEntry = useCashWorkbookStore((s) => s.addEntry);
+  const cashDefaultCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
   const addRentalEntry = useRentalsWorkbookStore((s) => s.addEntry);
   const addPersonalLoanRepayment = usePersonalLoansWorkbookStore((s) => s.addRepayment);
   const addEMIRepayment = useEMIWorkbookStore((s) => s.addRepayment);
@@ -367,13 +368,31 @@ export function TransactionEntryModal({ defaultFinance, onClose }: { defaultFina
   const addFundsTransfer = useFundsWorkbookStore((s) => s.addTransfer);
   const addCreditCardTransaction = useCreditCardWorkbookStore((s) => s.addTransaction);
 
-  const [rows, setRows] = useState<TxRow[]>(() => [emptyRow(0, defaultFinance ?? { module: 'cash' }, defaultFinance?.currencyCode)]);
+  // User-reported (2026-09-14): "Cash Statements/tables are under wrong
+  // currencies" — root cause: a caller opening this modal with NO
+  // `defaultFinance` at all (Banking's own "Transfers" action, EMI's) fell
+  // through to `{ module: 'cash' }` with no `currencyCode` set on it.
+  // `SideFields`' own Currency <Select> then DISPLAYED the workbook's real
+  // default currency (via its own `cfg.currencyCode ?? cashCurrency`
+  // fallback) without the user ever needing to touch it — but the
+  // UNDERLYING `cfg.currencyCode` stayed genuinely unset unless the select
+  // was actually changed, so a row a user never touched that dropdown on
+  // silently submitted with `submit()`'s OWN separate `|| 'USD'` fallback
+  // below — landing real PKR/QAR entries in the USD statement table with
+  // no visible sign anything was wrong. Fixed at the source: a `cash`
+  // finance side always starts with a REAL currency (the workbook's own
+  // default), matching what the dropdown already visibly showed.
+  const resolvedDefaultFinance: LinkSideConfig = defaultFinance
+    ? (defaultFinance.module === 'cash' && !defaultFinance.currencyCode ? { ...defaultFinance, currencyCode: cashDefaultCurrency } : defaultFinance)
+    : { module: 'cash', currencyCode: cashDefaultCurrency };
+
+  const [rows, setRows] = useState<TxRow[]>(() => [emptyRow(0, resolvedDefaultFinance, resolvedDefaultFinance.currencyCode)]);
   const [nextKey, setNextKey] = useState(1);
 
   const updateRow = (key: number, patch: TxRow) => setRows((rs) => rs.map((r) => (r.key === key ? patch : r)));
   const removeRow = (key: number) => setRows((rs) => rs.filter((r) => r.key !== key));
   const addRow = () => {
-    setRows((rs) => [...rs, emptyRow(nextKey, defaultFinance ?? { module: 'cash' }, defaultFinance?.currencyCode)]);
+    setRows((rs) => [...rs, emptyRow(nextKey, resolvedDefaultFinance, resolvedDefaultFinance.currencyCode)]);
     setNextKey((k) => k + 1);
   };
 
@@ -445,7 +464,10 @@ export function TransactionEntryModal({ defaultFinance, onClose }: { defaultFina
           addCashEntry({
             id: uid(), date: r.date, time: r.time, timezone: r.timezone,
             isDeposit: r.direction === 'in', amount: Math.abs(r.amount),
-            currencyCode: r.finance.currencyCode || 'USD',
+            // Defensive only, same reasoning as `interEntityLink.ts`'s own
+            // `buildSideRecord` fallback — `resolvedDefaultFinance` above
+            // already guarantees a real currency by the time a row exists.
+            currencyCode: r.finance.currencyCode || cashDefaultCurrency,
             categoryID: r.categoryID, note: r.note.trim() || undefined, source: 'manual',
             isPending: r.pending || undefined,
           });

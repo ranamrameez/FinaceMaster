@@ -466,7 +466,16 @@ function CashStatementTable({ code, rows: allRows }: { code: string; rows: CashL
  * (`cashRunningLedger` already tracks a separate running balance per
  * currency) but read as nonsense side by side, since two unrelated
  * currencies' balances don't belong in the same column. Split into one
- * table per currency, arranged in a responsive `.detail-grid`. */
+ * table per currency.
+ *
+ * User-reported again (2026-09-14): the initial fix arranged those tables
+ * in a responsive `.detail-grid`, which on a wide viewport put e.g. PKR
+ * and QAR's own statement tables side by side, each squeezed to a
+ * ~320px-wide sliver — a real statement table (7 columns) is too dense
+ * for that, unlike the short stat-card-style content `.detail-grid` is
+ * meant for. Switched to `.stack-lg` — each currency's table is now its
+ * own full-width, stacked block, matching `AccountsList`'s own
+ * per-currency layout ("make sections like Bank Accounts"). */
 function CashStatementGrid() {
   const entries = useCashWorkbookStore((s) => s.workbook.entries);
   const ledger = useMemo(() => cashRunningLedger(entries), [entries]);
@@ -483,7 +492,7 @@ function CashStatementGrid() {
   if (!byCurrency.length) return <p className="text-muted">No cash entries yet — use the + button below to add one.</p>;
 
   return (
-    <div className="detail-grid">
+    <div className="stack-lg">
       {byCurrency.map(([code, rows]) => <CashStatementTable key={code} code={code} rows={rows} />)}
     </div>
   );
@@ -1070,7 +1079,11 @@ function PlanList() {
         </Field>
       </div>
       {byCurrency.length ? (
-        <div className="detail-grid">
+        // User-reported (2026-09-14): "Plans also look messy bcz of this
+        // complicated ui cluttering" — same root cause as the Cash
+        // statement fix above (a wide table squeezed into `.detail-grid`'s
+        // narrow columns); `.stack-lg` fixes both.
+        <div className="stack-lg">
           {byCurrency.map(([code, currencyPlans]) => (
             <PlanCurrencyTable key={code} code={code} plans={currencyPlans} updatePlan={updatePlan} deletePlan={deletePlan} markDone={markDone} />
           ))}
