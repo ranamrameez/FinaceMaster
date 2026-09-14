@@ -1251,7 +1251,6 @@
   html[data-color^="material-"][data-theme="dark"] .card,
   html[data-color^="material-"][data-theme="light"] .modal,
   html[data-color^="material-"][data-theme="dark"] .modal,
-  html[data-color^="material-"][data-theme="light"] .table-wrap,
   html[data-color^="material-"][data-theme="light"] input[type=text],
   html[data-color^="material-"][data-theme="dark"] input[type=text],
   html[data-color^="material-"][data-theme="light"] input[type=number],

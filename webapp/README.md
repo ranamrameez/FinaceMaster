@@ -8916,6 +8916,55 @@ FinanceManager live link:
   zero-rounded) per-leg commission — zero console errors. `npx tsc -b` / `npm run test` (688
   tests, 1 new) / `npm run build` all clean.
 
+- **Credit Card detail page: no FAB, and its Transactions table wasn't responsive/didn't
+  clip long text — three real, user-reported bugs, all confirmed against the live code before
+  fixing (2026-09-14) — see Done item 324.** User's report, verbatim: "CC UI is definitely
+  violating the UI Rules. No FAB capable of multiple enteries at a time. Transactions table:
+  Not responsive. max column width not applied." Root-caused each rather than guessing:
+  (1) `CreditCardDetailPage` had a permanently-visible "Add a transaction" `CollapsibleCard`
+  with NO `FabPanel` anywhere on the page at all — the exact "Often tier" anti-pattern every
+  OTHER per-entity detail page (`AccountDetailPage`'s `AccountTransfersFab`) had already moved
+  off of; and the one add-form it did have could only submit ONE transaction per click (add,
+  form resets, sign-in-gate re-runs), unlike the app's own "Main tier: FAB(+) + popups for
+  adding a single OR A BATCH of new transactions" design rule (CLAUDE.md) and unlike
+  `TransactionEntryModal`'s own multi-row `rows` state, which every other module's add-flow
+  already gets for free — Credit Card can't fully use that shared modal since its `creditCard`
+  case is hardcoded to `kind:'payment'` (a deliberate simplification for the cross-entity-link
+  case, documented in that file's own comment), so it genuinely needs its own kind-aware
+  (charge/payment/fee/markup/cashAdvance) form. (2) `TransactionsTable`'s wrapper used
+  `className="table-wrap"` — a class with **zero base CSS definition anywhere in `theme.css`**
+  (only a since-removed per-theme Material-light override that assumed it existed), unlike the
+  real, app-wide `.table-scroll` class (`overflow-x:auto;max-height:480px;overflow-y:auto`)
+  every OTHER module's main transaction table already uses — confirmed via a whole-codebase
+  grep that `.table-wrap` had exactly one usage in the entire app (this file) before the fix.
+  (3) The Description column had no `.cell-clip` (the app's own established
+  `max-width:220px;text-overflow:ellipsis` pattern, already used by Bank/Cash/Rentals/Personal
+  Loans' equivalent columns) — a long description could stretch the whole table.
+  **Fixes**: rewrote `AddCardTransactionForm` into a real multi-row batch form (queue several
+  rows via "+ Add another row," one "Save N transactions" submit calling the already-existing
+  bulk `addCreditCardTransactions` once — no new store action needed); moved it behind a new
+  `CreditCardDetailFab` with 2 actions ("Add a transaction" for the kind-aware batch form,
+  "Transfers" for a real linked payment via `TransactionEntryModal`, distinct from the
+  "Approve & log" minimum-payment flow which is specifically about the proposed minimum) —
+  `CreditCardDetailPage` is its own standalone route (`/bank/card/:id`, not sharing a mount
+  with `BankPage`'s tabs), so this renders its own `FabPanel` directly, the same pattern
+  `AccountTransfersFab` already uses, with no risk of the keyed-registry FAB-stacking bug Done
+  item 312 fixed elsewhere on Banking's own tabbed page; swapped `table-wrap`→`table-scroll`
+  and removed the now-dead Material-theme override selector referencing it; added
+  `className="cell-clip" title={t.description}` to the Description cell. Verified live via
+  Playwright at a narrow (390px) viewport: the FAB toggle opens to reveal both "Add a
+  transaction" and "Transfers" as separate buttons; the permanent card is confirmed gone;
+  `.table-scroll` computes `overflow-x:auto`; the Description cell computes `max-width:220px`
+  and its real box width matches. Separately verified the batch-submit flow end to end at a
+  wide viewport: queued 2 rows via "Add another row," clicked "Save 2 transactions," and
+  confirmed the real sign-in gate fired (not a silent single-row save) — zero console errors
+  throughout. `npx tsc -b` / `npm run test` (688 tests, unchanged — UI-only) / `npm run build`
+  all clean. **Not attempted in this pass, tracked as a new standing rule — Pending item
+  135** — the user's separate "NOTE RULE: use pagination in all tables with filters" is a
+  broad, app-wide standing principle (their own words: "currently many tables are dumping
+  data directly"), not a single-table bug; scoping and rolling it out needs its own pass, not
+  a guess bundled into this fix.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`
@@ -10029,6 +10078,25 @@ or a design decision before more code, not guessed at further:**
      but lower-stakes than Done item 314's fix (this table doesn't drive Avg Cost/Break-even,
      only its own per-row itemization) — teach it to honor `targetLotBuyId` the same way, using
      its own local `OpenLot` shape.
+135. **New standing rule (2026-09-14, user-stated: "NOTE RULE: use pagination in all tables
+     with filters. currently many tables are dumping data directly").** A whole-app design
+     principle to apply going forward — not a single-table bug (see Done item 324, which fixed
+     three concrete Credit Card bugs from the same message but explicitly did NOT roll out
+     pagination). The scope is real and broad: the app's own filter rollout (Done items 224/225)
+     already put a `Field`/`Select` filter row on nearly every module's main transaction/record
+     table (Cash's per-currency statement, Bank's account/card transactions, QSE/PSX's Trade
+     Transactions, Personal Loans' repayments, EMI's schedule, Rentals' entries,
+     Subscriptions' list, Funds' fund-detail transactions, Budget Planner's activity table), so
+     per the new rule essentially all of those are candidates. **Not yet scoped or started** —
+     needs a concrete design pass before a rollout, matching this project's own established
+     "pick one table as a working vertical slice, verify live, then repeat" discipline (the same
+     approach the `EntityCard` rollout, the CSS-cleanup pass, and the Tooltip/plain-language
+     sweeps all used) rather than a single blind big-bang change across every table at once:
+     what pagination mechanism (page-number controls vs. "load more" vs. a fixed row cap with a
+     "show all" toggle), what page size, and whether it interacts with the existing
+     `useSortableRows`/`ReorderButtons` same-day-tie mechanics on a table like Bank's/Cash's own
+     statement (a same-day reorder needs its two tied rows visible on the same page, which a
+     naive page break could split apart) all need deciding first.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank
