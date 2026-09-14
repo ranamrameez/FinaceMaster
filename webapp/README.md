@@ -8881,6 +8881,40 @@ FinanceManager live link:
   multi-lot-only warning correctly absent. Zero real console errors on either exchange. `npx
   tsc -b` / `npm run test` (687 tests, unchanged — new UI wiring onto already-tested calc
   functions) / `npm run build` all clean.
+- **326. Round-trip indicator refined through 4 quick follow-up rounds, same day
+  (2026-09-14).** (a) "RT should tell total amount as well, not just commission" — the RT
+  line's wording changed from a bare commission figure to `CP {price} → RT +{commission} :
+  {price + commission}` so the TOTAL cost of a round trip (not just the fee) is visible at a
+  glance; the popup gained a matching "Current price + round-trip cost" stat card. (b)
+  **Real bug found and fixed**: a cheap stock (1.068 QAR) showed "RT 0" — QSE's/PSX's real fee
+  calculators round the whole computed fee to the nearest CENT (correct for what a real
+  transaction actually gets billed), so a genuinely tiny 1-share fee (0.275% of ~1 QAR ≈
+  0.003) rounded straight down to 0.00. `perShareCommission()` (`lib/calc/
+  partialTradeStrategy.ts`) now scales to a hypothetical 1000-share trade and divides the
+  result back down — recovers real sub-cent precision from the exact same cent-rounding
+  step, with zero change to what a real transaction anywhere else in the app gets billed
+  (PSX's own per-share price tiering is provably unaffected, since `calcFeeBreakdown`
+  re-derives `price = amount / shares` internally, unchanged by a uniform scale). The
+  `RoundTripCostModal` popup's own Buy/Sell/Total commission cards were also switched from
+  `fmtMoney` (fixed 2dp — would have silently re-introduced the identical "0.00" bug inside
+  the popup itself) to `fmtPrice` (the app's existing variable-precision formatter). (c) Per
+  the user's own follow-up layout request, the single combined line was split in two: "RT
+  {total}" now sits under the Cost cell (next to Avg Cost/BE, so it's directly comparable to
+  what you already paid), and "RTC +{commission}" sits under the Current Price input (right
+  where the price itself is being looked at) — both still open the same popup on click. (d)
+  Two more small requests in the same batch: the Shares column is now a small colored
+  rectangle badge (new `.shares-box` CSS, deliberately NOT the rounded `.pill` shape already
+  used elsewhere, per the user's own explicit "rectangle" wording), and all four Holdings
+  tables' default sort changed from Unrealized P/L to Value, descending (`useSortableRows`'s
+  default column/direction argument, matching the user's "default sorting by highest value"
+  ask). New test: `partialTradeStrategy.test.ts` gained a regression case reproducing the
+  exact 1.068-QAR scenario and asserting a real nonzero result. Verified live via Playwright
+  on all four Holdings tables (QSE + PSX, Dashboard + Portfolio) with a deliberately adversarial
+  seed (a cheap high-share-count position next to a pricier low-share-count one): row order is
+  correctly value-descending, the Shares badge renders, RT/RTC render as two separate lines in
+  their new cells with correct hand-checked figures, and the popup shows the true (not
+  zero-rounded) per-leg commission — zero console errors. `npx tsc -b` / `npm run test` (688
+  tests, 1 new) / `npm run build` all clean.
 
 ## Pending
 

@@ -6964,6 +6964,26 @@ touched those.
   (inline body selector confirmed gone) and the page shows the single remaining lot's Hold/Sell
   status instead of blank. Zero console errors. `npx tsc -b` / `npm run test` (687 tests,
   unchanged) / `npm run build` all clean.
+- **RT indicator refined through 4 quick follow-up rounds, same day (2026-09-14) — see README
+  Done item 326.** (a) RT wording changed to show the TOTAL round-trip amount, not just the
+  commission: `CP {price} → RT +{commission} : {price+commission}`. (b) Real bug found: a cheap
+  stock (1.068 QAR) showed "RT 0" — QSE's/PSX's real fee calculators round the whole fee to the
+  nearest CENT (correct for a real billed transaction), so a genuinely tiny 1-share fee rounded
+  straight to 0.00. Fixed in `perShareCommission()` (`lib/calc/partialTradeStrategy.ts`) by
+  scaling to a hypothetical 1000-share trade and dividing back down — recovers real sub-cent
+  precision from the same rounding step, with zero change to any real transaction's actual
+  billed fee anywhere else (PSX's per-share tiering is provably unaffected, since
+  `calcFeeBreakdown` re-derives `price = amount/shares` internally). The popup's own stat cards
+  also switched from `fmtMoney` (fixed 2dp — would silently re-hide the same "0.00" bug inside
+  the popup) to `fmtPrice` (variable precision). (c) Per the user's own layout request, split
+  the single line in two: "RT {total}" now sits under the Cost cell, "RTC +{commission}" sits
+  under the Current Price input. (d) Two more asks: Shares is now a small colored rectangle
+  badge (new `.shares-box` CSS, deliberately not the rounded `.pill` shape), and all four
+  Holdings tables' default sort changed from Unrealized P/L to Value descending. Verified live
+  via Playwright on all four Holdings tables (QSE+PSX, Dashboard+Portfolio) with an adversarial
+  seed — correct value-descending order, badge renders, RT/RTC show correctly in their new
+  cells, popup shows true nonzero per-leg commission — zero console errors. `npx tsc -b` / `npm
+  run test` (688 tests, 1 new) / `npm run build` all clean.
 
 ## Live URLs
 

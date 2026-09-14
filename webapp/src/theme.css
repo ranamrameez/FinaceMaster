@@ -609,6 +609,11 @@
   .pill-warn{background:color-mix(in srgb, var(--warn) 18%, var(--panel)); color:var(--warn);}
   .pill-info{background:color-mix(in srgb, var(--info) 16%, var(--panel)); color:var(--info);}
 
+  /* Rectangle (not pill-rounded) colored share-count badge, user-requested
+     (2026-09-14) — a Holdings table's Shares column called out for its own
+     distinct look rather than plain text. */
+  .shares-box{display:inline-block; padding:2px 8px; border-radius:4px; font-size:12.5px; font-family:var(--mono); font-weight:700; background:color-mix(in srgb, var(--accent) 16%, var(--panel)); color:var(--accent);}
+
   label{display:block; font-size:12.5px; color:var(--muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:.03em;}
   /* Found while verifying item 53's row-alignment fix: this uppercase rule
      is meant for a small caption label sitting ABOVE its control (e.g.

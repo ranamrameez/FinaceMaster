@@ -184,9 +184,22 @@ describe('scanPortfolioForOpportunities', () => {
 describe('perShareCommission', () => {
   it('computes buy and sell commission for exactly one share at the given price', () => {
     const { buy, sell } = perShareCommission(100, calcFee);
-    // makeQSEFeeCalculator rounds to 2dp: 100 * 0.275% = 0.275 -> 0.28.
-    expect(buy).toBe(0.28);
-    expect(sell).toBe(0.28);
+    // Scaled to 1000 shares internally (see the function's own doc comment):
+    // 100,000 * 0.275% = 275.00 exactly, divided back down = 0.275/share —
+    // the true rate, not QSE's real per-transaction 2dp-cent rounding.
+    expect(buy).toBe(0.275);
+    expect(sell).toBe(0.275);
+  });
+
+  // User-reported (2026-09-14): a cheap stock (1.068 QAR) showed "0" RT —
+  // a lone 1-share fee (0.275% of ~1 QAR ≈ 0.003) rounds straight down to
+  // 0.00 under QSE's real cents-rounding. The scaled computation recovers
+  // a real, nonzero per-share estimate instead.
+  it('does not round a genuinely tiny per-share fee down to zero', () => {
+    const { buy, sell } = perShareCommission(1.068, calcFee);
+    expect(buy).toBeGreaterThan(0);
+    expect(sell).toBeGreaterThan(0);
+    expect(buy).toBeCloseTo(1.068 * 0.00275, 5);
   });
 
   it('returns zero for a non-positive price', () => {
