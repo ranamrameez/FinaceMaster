@@ -6,6 +6,7 @@ import { Tooltip } from '../../../components/Tooltip';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { ArchiveIcon, EditIcon, PlusIcon, RestoreIcon, SaveIcon, StarIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Modal } from '../../../components/Modal';
+import { FabPanel } from '../../../components/ui/Fab';
 import { RecordDetailModal } from '../../../components/RecordDetailModal';
 import { toast } from '../../../components/Toast';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
@@ -191,46 +192,75 @@ function emptyTx(cardId: string, currencyCode: string): Omit<CreditCardTransacti
   };
 }
 
-function AddCardTransactionForm({ card }: { card: CreditCard }) {
-  const addTransaction = useCreditCardWorkbookStore((s) => s.addTransaction);
+/** User-reported (2026-09-14): "No FAB capable of multiple enteries at a
+ * time" — this used to add exactly one transaction per submit (add, form
+ * resets, sign-in-gate re-runs) with no way to queue several from one
+ * real statement in a single sitting, unlike the app-wide `Main` tier's
+ * own "FAB(+) + popups for adding a single OR A BATCH of new
+ * transactions" rule (CLAUDE.md) — every other kind-picker-needing add
+ * flow either already batches (Bank's own CSV import,
+ * `TransactionEntryModal`'s multi-row `rows` state) or doesn't need to
+ * (a plain deposit/withdrawal covered by `TransactionEntryModal` itself,
+ * which a credit card can't fully use since it hardcodes `kind:'payment'`
+ * — see that file's own comment). Rewritten onto the same
+ * queue-a-row/remove-a-row/submit-all-at-once shape, backed by the
+ * already-existing bulk `addCreditCardTransactions`. */
+function AddCardTransactionForm({ card, onDone }: { card: CreditCard; onDone?: () => void }) {
   const ensureSignedIn = useEnsureSignedIn();
-  const [row, setRow] = useState<Omit<CreditCardTransaction, 'id'>>(() => emptyTx(card.id, card.currencyCode));
+  const [nextKey, setNextKey] = useState(1);
+  const [rows, setRows] = useState<(Omit<CreditCardTransaction, 'id'> & { key: number })[]>(() => [{ ...emptyTx(card.id, card.currencyCode), key: 0 }]);
+
+  const updateRow = (key: number, patch: Partial<CreditCardTransaction>) =>
+    setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+  const addRow = () => {
+    setRows((rs) => [...rs, { ...emptyTx(card.id, card.currencyCode), key: nextKey }]);
+    setNextKey((k) => k + 1);
+  };
+  const removeRow = (key: number) => setRows((rs) => (rs.length > 1 ? rs.filter((r) => r.key !== key) : rs));
 
   const submit = async () => {
-    if (!(row.amount > 0)) return toast('Enter an amount greater than zero.');
-    if (!row.description.trim()) return toast('Enter a description.');
+    const valid = rows.filter((r) => r.amount > 0 && r.description.trim());
+    if (!valid.length) return toast('Enter an amount and description on at least one row.');
     if (!(await ensureSignedIn('Sign in to save transactions.'))) return;
-    addTransaction({ ...row, id: uid(), description: row.description.trim() });
-    toast('Transaction saved.');
-    setRow(emptyTx(card.id, card.currencyCode));
+    addCreditCardTransactions(valid.map((r) => ({ ...r, id: uid(), description: r.description.trim() })));
+    toast(valid.length > 1 ? `${valid.length} transactions saved.` : 'Transaction saved.');
+    onDone?.();
   };
 
   return (
-    <div className="row gap-sm" style={{ alignItems: 'flex-end' }}>
-      <Field label="Type" width={190} required>
-        <Select value={row.kind} onChange={(e) => setRow({ ...row, kind: e.target.value as CreditCardTransactionKind })}>
-          {(Object.keys(KIND_LABELS) as CreditCardTransactionKind[]).map((k) => <option key={k} value={k}>{KIND_LABELS[k]}</option>)}
-        </Select>
-      </Field>
-      <Field label="Date" width={140}>
-        <TextInput type="date" value={row.date} onChange={(e) => setRow({ ...row, date: e.target.value })} />
-      </Field>
-      <Field label="Amount" required>
-        <AmountInput value={row.amount} onChange={(amount) => setRow({ ...row, amount })} />
-      </Field>
-      <Field label="Description" required width={200}>
-        <TextInput value={row.description} onChange={(e) => setRow({ ...row, description: e.target.value })} placeholder="e.g. Groceries, Fuel" />
-      </Field>
-      <Field label="Category">
-        <CategorySelect value={row.categoryID ?? UNCATEGORIZED_ID} onChange={(categoryID) => setRow({ ...row, categoryID })} />
-      </Field>
-      <TimeZoneFields
-        time={row.time}
-        timezone={row.timezone}
-        onTimeChange={(time) => setRow({ ...row, time })}
-        onTimezoneChange={(timezone) => setRow({ ...row, timezone })}
-      />
-      <button className="btn" onClick={submit}><PlusIcon size={12} />Add</button>
+    <div>
+      {rows.map((row, i) => (
+        <div key={row.key} className="row gap-sm mb-sm" style={{ alignItems: 'flex-end' }}>
+          <Field label="Type" width={190} required={i === 0}>
+            <Select value={row.kind} onChange={(e) => updateRow(row.key, { kind: e.target.value as CreditCardTransactionKind })}>
+              {(Object.keys(KIND_LABELS) as CreditCardTransactionKind[]).map((k) => <option key={k} value={k}>{KIND_LABELS[k]}</option>)}
+            </Select>
+          </Field>
+          <Field label="Date" width={140}>
+            <TextInput type="date" value={row.date} onChange={(e) => updateRow(row.key, { date: e.target.value })} />
+          </Field>
+          <Field label="Amount" required={i === 0}>
+            <AmountInput value={row.amount} onChange={(amount) => updateRow(row.key, { amount })} />
+          </Field>
+          <Field label="Description" required={i === 0} width={200}>
+            <TextInput value={row.description} onChange={(e) => updateRow(row.key, { description: e.target.value })} placeholder="e.g. Groceries, Fuel" />
+          </Field>
+          <Field label="Category">
+            <CategorySelect value={row.categoryID ?? UNCATEGORIZED_ID} onChange={(categoryID) => updateRow(row.key, { categoryID })} />
+          </Field>
+          <TimeZoneFields
+            time={row.time}
+            timezone={row.timezone}
+            onTimeChange={(time) => updateRow(row.key, { time })}
+            onTimezoneChange={(timezone) => updateRow(row.key, { timezone })}
+          />
+          <IconButton label="Remove row" icon={<TrashIcon size={12} />} align="right" onClick={() => removeRow(row.key)} />
+        </div>
+      ))}
+      <div className="row gap-sm">
+        <button className="btn secondary small" onClick={addRow}><PlusIcon size={12} />Add another row</button>
+        <button className="btn" onClick={submit}><SaveIcon size={12} />Save {rows.length > 1 ? `${rows.length} transactions` : 'transaction'}</button>
+      </div>
     </div>
   );
 }
@@ -266,7 +296,7 @@ function TransactionsTable({ card }: { card: CreditCard }) {
 
   if (!cardTxs.length) return <p className="text-muted m-0">No transactions yet.</p>;
   return (
-    <div className="table-wrap">
+    <div className="table-scroll">
       <table>
         <thead>
           <tr><th>Date</th><th>Type</th><th>Description</th><th>Category</th><th>Amount</th><th></th></tr>
@@ -293,7 +323,7 @@ function TransactionsTable({ card }: { card: CreditCard }) {
               <tr key={t.id} className="clickable" onClick={() => setDetail(t)}>
                 <td>{t.date}</td>
                 <td className={t.kind === 'payment' ? 'pill pill-buy' : 'pill pill-sell'} style={{ display: 'inline-block' }}>{KIND_LABELS[t.kind]}</td>
-                <td>{t.description}</td>
+                <td className="cell-clip" title={t.description}>{t.description}</td>
                 <td>{categoryName(t.categoryID, categories)}</td>
                 <td>{fmtMoney(t.amount, card.currencyCode)}</td>
                 <td onClick={(e) => e.stopPropagation()}>
@@ -586,14 +616,45 @@ export function CreditCardDetailPage() {
         </CollapsibleCard>
       )}
 
-      <CollapsibleCard title={<h3 className="m-0">Add a transaction</h3>} className="mb-md">
-        <AddCardTransactionForm card={card} />
-      </CollapsibleCard>
-
       <CollapsibleCard title={<h3 className="m-0">Transactions</h3>}>
         <TransactionsTable card={card} />
       </CollapsibleCard>
+
+      <CreditCardDetailFab card={card} />
     </div>
+  );
+}
+
+/** User-reported (2026-09-14): "CC UI is definitely violating the UI
+ * Rules... No FAB capable of multiple enteries at a time" — this detail
+ * page used to have NO FAB at all; "Add a transaction" sat as a
+ * permanently-visible card, unlike every other per-entity detail page
+ * (`AccountDetailPage`'s `AccountTransfersFab`), which is exactly the
+ * "Often tier" pattern this app's Main/Often/Rare model calls for. Gives
+ * this page a real 2-action panel: the kind-aware batch add form (charges/
+ * fees/markup/cashAdvance — `TransactionEntryModal` can't do these, see
+ * its own comment) and "Transfers" (a real linked payment from a Bank/Cash
+ * account, distinct from the "Approve & log" minimum-payment flow above,
+ * which is about the proposed minimum specifically). */
+function CreditCardDetailFab({ card }: { card: CreditCard }) {
+  const [open, setOpen] = useState<'add' | 'transfer' | null>(null);
+  return (
+    <>
+      <FabPanel
+        actions={[
+          { label: 'Add a transaction', icon: <PlusIcon />, onClick: () => setOpen('add') },
+          { label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen('transfer') },
+        ]}
+      />
+      {open === 'add' && (
+        <Modal title="Add a transaction" onClose={() => setOpen(null)}>
+          <AddCardTransactionForm card={card} onDone={() => setOpen(null)} />
+        </Modal>
+      )}
+      {open === 'transfer' && (
+        <TransactionEntryModal defaultFinance={{ module: 'creditCard', ref: card.id, currencyCode: card.currencyCode }} onClose={() => setOpen(null)} />
+      )}
+    </>
   );
 }
 
