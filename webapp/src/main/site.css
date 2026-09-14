@@ -63,3 +63,21 @@
   padding: 10px 12px;
   margin-bottom: 10px;
 }
+
+/* User-reported (2026-09-14): "AS PER THE UI RULE, tables should 100%
+ * width. right now, pkr and qar tables are side by side" - `.detail-grid`
+ * (theme.css) is `auto-fit, minmax(320px,1fr)`, correct for short
+ * stat-card-like content (Bank's own "By category"/"Upcoming plans" pair,
+ * which the user separately asked to keep side by side) but wrong for a
+ * genuinely WIDE, dense table (many columns) - a 320px+ column squeezes a
+ * real statement table down to an unreadable sliver and, on a wide enough
+ * viewport, sits it right next to an unrelated currency's own table
+ * (rule 3: "wrap flex grids instead of shrinking UI to fit"; rule 6:
+ * "arrange... vertically rather than spreading across the full page
+ * width"). Each item is instead a full-width block, stacked - same
+ * layout shape `AccountsList`'s own per-currency sections already use. */
+.stack-lg {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}

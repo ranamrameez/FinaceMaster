@@ -35,6 +35,7 @@ import { hueStyle } from '../../../lib/statCardHues';
 import { categoryName, UNCATEGORIZED_ID } from '../../../lib/categories';
 import { useCategoryStore } from '../../../store/categoryStore';
 import { accountBalance, accountBalanceAsOfMonth, accountByCategory, accountPendingBalance, accountRunningLedger, bankMonthlyFlow, bankTotalsByCurrency, budgetVsActual, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
+import { outstandingBalanceByCard } from '../../../lib/calc/creditCardModule';
 import { monthRange } from '../../../lib/calc/budgetPlanner';
 import { plannedBankProjection } from '../../../lib/calc/plannedBalance';
 import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
@@ -51,6 +52,7 @@ import { firebaseReady } from '../../../lib/firebase/client';
 import { useAppearanceStore } from '../../../store/appearanceStore';
 import { createEmptyBankWorkbook } from '../../../store/defaultBankWorkbook';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
+import { useCreditCardWorkbookStore } from '../../../store/creditCardWorkbookStore';
 import { usePlannedBankWorkbookStore } from '../../../store/plannedBankWorkbookStore';
 import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
 import { linkTargetPath, useLinkSideLabel } from '../../transfers/pages/TransferLinksPage';
@@ -456,10 +458,19 @@ export function AddAccountForm({ onSaved, initialCurrency, initialBankId }: { on
 /** Pending item 115(a): "add bank first and then on its details page, give
  * ability to add extra accounts. and see the total balance with that
  * bank. and on Banking homepage see their breakdown and summary." A
- * collapsed-by-default `CollapsibleCard` above the plain `AccountsList`
- * below (rule 1: additive, doesn't restructure that already-tested view)
- * — a Bank is purely optional grouping, so most workbooks (no banks
- * created yet) show nothing extra here at all. */
+ * collapsed-by-default `CollapsibleCard` — a Bank is purely optional
+ * grouping, so most workbooks (no banks created yet) show nothing extra
+ * here at all.
+ *
+ * User-reported (2026-09-14): "In the Accounts card, Parent Banks have a
+ * separate card (which should be extracted on top, collapsed by
+ * default)." It already WAS its own separate, collapsed-by-default card —
+ * the real remaining problem was WHERE: nested inside the "Accounts" tab's
+ * own content, sandwiched between the currency stat cards and the account
+ * list, which read as buried rather than "extracted." Moved to render at
+ * the PAGE level (see `BankPage`, above the whole `Tabs` component) — the
+ * first thing on the page after the title, not nested one level down
+ * inside a specific tab. */
 function BanksList() {
   const banks = useBankWorkbookStore((s) => s.workbook.settings.banks ?? []);
   const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
@@ -536,6 +547,15 @@ export function BankDetailPage() {
   const linkedAccounts = useMemo(() => accounts.filter((a) => a.bankId === id && !a.migratedToCreditCardId), [accounts, id]);
   const totals = useMemo(() => (bank ? bankTotalsByCurrency(bank.id, accounts, transactions) : {}), [bank, accounts, transactions]);
   const [addOpen, setAddOpen] = useState(false);
+  // User-requested (2026-09-14): "CCs should be listed in all banks. we
+  // can seperate it using <hr> after the accounts listing" — a card is a
+  // structurally distinct entity from a `BankAccount` (see
+  // `types/creditCard.ts`'s own file-level comment) but still belongs to
+  // this same real institution, so it's surfaced here too, not just under
+  // the module-wide "Credit Cards" tab.
+  const allCards = useCreditCardWorkbookStore((s) => s.workbook.cards);
+  const cardTransactions = useCreditCardWorkbookStore((s) => s.workbook.transactions);
+  const linkedCards = useMemo(() => allCards.filter((c) => c.bankId === id), [allCards, id]);
 
   const startEdit = () => {
     if (!bank) return;
@@ -641,6 +661,29 @@ export function BankDetailPage() {
         </div>
         {!linkedAccounts.length && <p className="text-muted">No accounts linked to this bank yet.</p>}
       </div>
+      {linkedCards.length > 0 && (
+        <>
+          <hr className="mt-md mb-md" />
+          <h3 className="mt-0 mb-sm">Credit cards</h3>
+          <div className="entity-card-grid">
+            {linkedCards.map((c) => {
+              const balance = Math.max(0, outstandingBalanceByCard(c, cardTransactions));
+              return (
+                <EntityCard
+                  key={c.id}
+                  title={c.name}
+                  subtitle={<>{c.currencyCode}{c.cardNetwork ? ` · ${c.cardNetwork}` : ''}{c.creditLimit ? ` · Limit ${fmtMoney(c.creditLimit, c.currencyCode)}` : ''}</>}
+                  badge={c.isActive === false ? <span className="pill-warn fs-10">Closed</span> : undefined}
+                  statLabel="Owed"
+                  stat={<MoneyValue n={balance} currency={c.currencyCode} />}
+                  hue={balance > 0 ? 'var(--loss)' : 'var(--profit)'}
+                  onClick={() => navigate(`/bank/card/${c.id}`)}
+                />
+              );
+            })}
+          </div>
+        </>
+      )}
       <FabButton label="Add account" onClick={() => setAddOpen(true)}>
         <PlusIcon />
       </FabButton>
@@ -1165,7 +1208,6 @@ function AccountsTab() {
   return (
     <div>
       <TotalBalances />
-      <BanksList />
       <AccountsList />
       <AccountsFab />
     </div>
@@ -2457,9 +2499,13 @@ export function BankPage({
         <h1 className="pagetitle m-0">Banking</h1>
         <Tooltip text="Bank account balances and transaction history, entered manually or imported from a CSV statement — no live bank connection (see Disclaimer & Privacy for why)." />
       </div>
+      {/* User-requested (2026-09-14): Parent Banks "extracted on top,
+         collapsed by default" — a page-level section, above the whole
+         tabbed area, not nested inside the "Accounts" tab's own content. */}
+      <BanksList />
       <Tabs
         tabs={[
-          { key: 'accounts', label: 'Accounts', content: <AccountsTab /> },
+          { key: 'accounts', label: 'All Accounts', content: <AccountsTab /> },
           { key: 'creditCards', label: 'Credit Cards', content: <CreditCardsTab /> },
           {
             // Placed before Analytics to match Cash's own explicit tab order

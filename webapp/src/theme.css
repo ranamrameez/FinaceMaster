@@ -423,6 +423,11 @@
      first letter of each word, so an already-uppercase ticker inside a
      heading (rare, but possible) is unaffected. */
   .card h3, .card h4{text-transform:capitalize;}
+  /* No base `hr` rule existed before — a plain browser-default one used
+     3D-inset styling that clashed with this app's flat design (added
+     2026-09-14, first real usage: separating a Bank's accounts from its
+     credit cards). */
+  hr{border:none; border-top:1px solid var(--border);}
   /* Left-border accent removed (user-reported item 10: "left borders don't
      look good") — the colored gradient background + StatCard's own `hue`
      prop already carry the per-card color identity; a thin bar on top of

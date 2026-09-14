@@ -9023,6 +9023,63 @@ FinanceManager live link:
   month buckets oldest-first, and the edit form showing all 3 distinct date fields — zero
   console errors. `npx tsc -b` / `npm run test` (692 tests, 6 new) / `npm run build` all clean.
 
+- **Six real bugs fixed, all root-caused against the live code before touching anything
+  (2026-09-14) — see Done item 326.** User's report, verbatim: "Cash: Cash Staments/ stables
+  are under wrong currencies. AND AS PER THE UI RULE, tables should 100% width. right now, pkr
+  and qar tables are side by side. make sections like Bank Accounts. Plans also look messy bcz
+  of this complicated ui cluttering. Banking homepage: Bank item cards by currency are
+  excellent. It has a UI arrangement problem. In the Accounts card, Parent Banks have a
+  separate card (which should be extracted on top, collapsed by default). And Accounts should
+  be rename to All Accounts. CCs should be listed in all banks. we can seperate it using
+  `<hr>` after the accounts listing."
+  **(1) The real "wrong currencies" bug, found by tracing every `<TransactionEntryModal>` call
+  site**: two real pages (Banking's own "Transfers" FAB action, EMI's) open the shared
+  Transfers popup with NO `defaultFinance` prop at all, falling through to `{ module: 'cash' }`
+  with no `currencyCode` set. `SideFields`' own Currency `<Select>` still DISPLAYED the correct
+  workbook default (via its own `cfg.currencyCode ?? cashCurrency` fallback) with no visible
+  sign anything was wrong — but the underlying `cfg.currencyCode` stayed genuinely unset unless
+  the dropdown was actually touched, and `submit()`'s own SEPARATE fallback for the plain
+  (non-linked) cash case was `|| 'USD'`, not the workbook's real default — so a row nobody
+  touched that dropdown on silently landed in the USD statement table regardless of what
+  currency was shown. Fixed at the source in `TransactionEntryModal.tsx`: a `cash` finance side
+  now always starts with a REAL currency (the Cash workbook's own default), matching what the
+  dropdown already visibly showed, plus the same fix on `submit()`'s own defensive fallback.
+  **(2)/(3) Cash statement + Plans "side by side"/"messy" — same root cause, one fix**:
+  `CashStatementGrid` and `PlanList`'s per-currency tables both used `.detail-grid`
+  (`auto-fit, minmax(320px,1fr)`) — correct for short stat-card-like content but wrong for a
+  genuinely wide, dense table (7-8 columns), which on a wide viewport sat two unrelated
+  currencies' own tables side by side, each squeezed into an unreadable 320px sliver (rule 3:
+  "wrap flex grids instead of shrinking UI to fit"; rule 6: "arrange... vertically"). New
+  `.stack-lg` class (`main/site.css`) replaces `.detail-grid` at both call sites — each
+  currency's table is now its own full-width, stacked block, matching `AccountsList`'s own
+  per-currency layout ("make sections like Bank Accounts") — which also directly resolves the
+  Plans "cluttering" complaint, since a wide Plans table squeezed into a narrow grid column was
+  the same underlying bug. `CategoryBreakdown`'s own `.detail-grid` usage (a short 2-column
+  category/amount table) was deliberately left alone — structurally the same short-table
+  side-by-side pattern the user's own earlier request approved for Banking's "By category"/
+  "Upcoming plans" pair, not the wide-statement-table violation being fixed here.
+  **(4) Parent Banks "extracted on top, collapsed by default"**: it already WAS its own
+  separate, collapsed-by-default `CollapsibleCard` — the real remaining problem was WHERE:
+  nested inside the "Accounts" tab's own content, sandwiched between the currency stat cards
+  and the account list, reading as buried rather than "extracted." Moved `<BanksList />` to
+  render at the PAGE level in `BankPage`, above the whole `Tabs` component — the first thing on
+  the page after the title, not nested one level down inside a specific tab.
+  **(5)** The "Accounts" tab label is now "All Accounts."
+  **(6)** `BankDetailPage` now lists that Bank's own linked Credit Cards (reusing
+  `outstandingBalanceByCard` + the same `EntityCard` shape `CreditCardsList` already uses,
+  filtered by `bankId`) below its linked accounts, separated by a real `<hr>` — theme.css
+  gained a base `hr{border:none;border-top:1px solid var(--border)}` rule since none existed
+  before (a plain browser-default `<hr>` would have looked like a 3D-inset line, clashing with
+  this app's flat design). Verified live via Playwright throughout: a seeded multi-bank/
+  multi-currency scenario confirmed the stacked (not side-by-side) Cash tables and Plans
+  tables via real bounding-box measurements, the Banks section rendering above the tab bar,
+  the "All Accounts" label, the Bank detail page's accounts→`<hr>`→credit-cards layout, and —
+  the deepest check — opening Banking's own "Transfers" FAB with a Cash workbook whose default
+  currency is QAR: the Currency `<Select>` correctly showed QAR with nothing touched, and
+  submitting correctly reached the real sign-in gate (same verification depth as every other
+  sign-in-gated write in this project) rather than silently defaulting to USD. `npx tsc -b` /
+  `npm run test` (692 tests, unchanged) / `npm run build` all clean.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`
