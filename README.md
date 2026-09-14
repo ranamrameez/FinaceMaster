@@ -22,6 +22,10 @@ There is no Android or iOS app in this repo today.
 
 <https://ranamrameez.github.io/FinaceMaster/>
 
+Scan the QR code below to open the live app:
+
+![Live FinanceMaster](adobe-express-qr-code.png)
+
 ## For AI coding sessions
 
 Read `CLAUDE.md` (at this repo root) first — it has full project continuity notes and
