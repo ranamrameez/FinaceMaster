@@ -90,7 +90,7 @@ function HoldingsCard() {
     if (col === 'status') return r.statusRank;
     return r[col];
   };
-  const { sorted: held, Th } = useSortableRows(heldRaw, sortValue, 'profit', 'desc');
+  const { sorted: held, Th } = useSortableRows(heldRaw, sortValue, 'value', 'desc');
 
   // User-requested (2026-09-08): "Also show a pending share-count delta" —
   // a placed-but-not-yet-filled order shouldn't move the real Shares figure
@@ -128,7 +128,7 @@ function HoldingsCard() {
                   </td>
                   <td className="w-70"><Sparkline data={r.sparkData} formatValue={fmtPrice} width={56} height={20} /></td>
                   <td onClick={() => navigate(`/stock/${r.ticker}`)}>
-                    {fmt(r.shares, 0)}
+                    <span className="shares-box">{fmt(r.shares, 0)}</span>
                     {!!pendingDelta[r.ticker] && (
                       <div className="text-muted" title="Placed but not yet filled orders for this ticker — shares will change by this much once they clear.">
                         {pendingDelta[r.ticker] > 0 ? '+' : ''}{fmt(pendingDelta[r.ticker], 0)} pending
@@ -143,6 +143,15 @@ function HoldingsCard() {
                     >
                       BE {fmtPrice(r.be)}
                     </div>
+                    {r.rt && (
+                      <div
+                        className="text-muted clickable"
+                        onClick={(e) => { e.stopPropagation(); setRtTicker(r.ticker); }}
+                        title="Total to trade a round trip right now: current price + round-trip commission — click for the full breakdown."
+                      >
+                        RT {fmtMoney(r.mp + r.rt.buy + r.rt.sell, currency)}
+                      </div>
+                    )}
                   </td>
                   <td onClick={(e) => e.stopPropagation()}>
                     <input
@@ -152,7 +161,7 @@ function HoldingsCard() {
                       className="price-input w-96"
                       defaultValue={r.mp || ''}
                       placeholder="—"
-                      
+
                       onKeyDown={async (e) => {
                         if (e.key === 'Enter') {
                           const target = e.target as HTMLInputElement;
@@ -169,9 +178,9 @@ function HoldingsCard() {
                       <div
                         className="text-muted clickable"
                         onClick={() => setRtTicker(r.ticker)}
-                        title="Round-trip commission cost at the current price — click for the full breakdown."
+                        title="Round-trip commission cost (buy + sell) at the current price — click for the full breakdown."
                       >
-                        RT {fmtMoney(r.rt.buy + r.rt.sell, currency)}
+                        RTC +{fmtPrice(r.rt.buy + r.rt.sell)}
                       </div>
                     )}
                   </td>

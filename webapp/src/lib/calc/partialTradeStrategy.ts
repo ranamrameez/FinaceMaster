@@ -160,11 +160,24 @@ export function scanPortfolioForOpportunities(
 /** User's own ask: "show the buy & sell commission/1 share if traded at
  * current price for a quick decision if the user should dive in the dip."
  * Commission for exactly 1 share at the live price — a fast, size-
- * independent sanity check before committing real capital. */
+ * independent sanity check before committing real capital.
+ *
+ * User-reported (2026-09-14): a cheap stock (e.g. 1.068 QAR) showed "0" RT
+ * — QSE's/PSX's real fee calculators round the whole computed fee to the
+ * nearest CENT (correct for a real billed transaction), so a genuinely tiny
+ * 1-share fee (0.275% of ~1 QAR ≈ 0.003) rounds straight down to 0.00.
+ * Fixed by scaling to a larger hypothetical share count and dividing back
+ * down — this recovers several extra decimal digits of precision from the
+ * same cent-rounding step without touching the real fee engine (no change
+ * to what an actual transaction gets billed anywhere else in the app).
+ * Safe for PSX's own per-share price tiering too: `calcFeeBreakdown`
+ * derives `price = amount / shares` internally, which a uniform scale of
+ * both `amount` and `shares` leaves unchanged. */
 export function perShareCommission(currentPrice: number, calcFee: FeeCalculator): { buy: number; sell: number } {
   if (currentPrice <= 0) return { buy: 0, sell: 0 };
+  const N = 1000;
   return {
-    buy: calcFee(currentPrice, true, { shares: 1 }),
-    sell: calcFee(currentPrice, false, { shares: 1 }),
+    buy: calcFee(currentPrice * N, true, { shares: N }) / N,
+    sell: calcFee(currentPrice * N, false, { shares: N }) / N,
   };
 }

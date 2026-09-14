@@ -37,9 +37,16 @@ export function RoundTripCostModal({
         this, a round trip on it likely isn't worth the fees.
       </p>
       <div className="grid-auto" style={gridAutoStyle(140, 12)}>
-        <StatCard label="Buy commission (1 share)" value={fmtMoney(buyFee, currency)} />
-        <StatCard label="Sell commission (1 share)" value={fmtMoney(sellFee, currency)} />
-        <StatCard label="Total round-trip cost" value={fmtMoney(total, currency)} hue="var(--loss)" />
+        {/* fmtPrice, not fmtMoney: a cheap stock's true per-share commission
+            can be a fraction of a cent (see perShareCommission()'s own doc
+            comment) — fmtMoney's fixed 2dp would round it right back down
+            to "0.00", re-creating the exact bug this feature exists to
+            surface, so these three use the same variable-precision
+            formatter the RT/RTC table lines already do. */}
+        <StatCard label="Buy commission (1 share)" value={`${fmtPrice(buyFee)} ${currency}`} />
+        <StatCard label="Sell commission (1 share)" value={`${fmtPrice(sellFee)} ${currency}`} />
+        <StatCard label="Total round-trip cost" value={`${fmtPrice(total)} ${currency}`} hue="var(--loss)" />
+        <StatCard label="Current price + round-trip cost" value={fmtMoney(currentPrice + total, currency)} />
         <StatCard label="As % of current price" value={`${pct.toFixed(2)}%`} />
       </div>
     </Modal>
