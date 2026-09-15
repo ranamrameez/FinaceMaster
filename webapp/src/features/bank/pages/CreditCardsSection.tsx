@@ -323,7 +323,14 @@ function TransactionsTable({ card }: { card: CreditCard }) {
             ) : (
               <tr key={t.id} className="clickable" onClick={() => setDetail(t)}>
                 <td>{t.date}</td>
-                <td className={t.kind === 'payment' ? 'pill pill-buy' : 'pill pill-sell'} style={{ display: 'inline-block' }}>{KIND_LABELS[t.kind]}</td>
+                {/* A payment reduces debt / a charge (or fee/markup/cash
+                   advance) increases it — a real profit/loss-like outcome,
+                   not a Buy/Sell trade action, so this stays on the
+                   green/red `.pill-positive`/`.pill-negative` convention;
+                   see `.pill-buy`/`.pill-sell`'s own doc comment in
+                   theme.css for why those two are reserved for an actual
+                   trade action now. */}
+                <td className={t.kind === 'payment' ? 'pill pill-positive' : 'pill pill-negative'} style={{ display: 'inline-block' }}>{KIND_LABELS[t.kind]}</td>
                 <td className="cell-clip" title={t.description}>{t.description}</td>
                 <td>{categoryName(t.categoryID, categories)}</td>
                 <td>{fmtMoney(t.amount, card.currencyCode)}</td>

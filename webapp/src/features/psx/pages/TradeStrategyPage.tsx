@@ -800,7 +800,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                       <TickerLogo ticker={display.ticker} exchange="psx" size="sm" />
                       {display.ticker}
                     </td>
-                    <td className={display.action === 'BUY' ? 'pill-positive' : 'pill-negative'}>{display.action}</td>
+                    <td className={display.action === 'BUY' ? 'pill-buy' : 'pill-sell'}>{display.action}</td>
                     <td>{fmt(display.shares, 0)}</td>
                     <td>{fmtPrice(display.price)}</td>
                     <td>{fmtMoney(display.shares * display.price, currency)}</td>

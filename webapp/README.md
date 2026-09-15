@@ -9187,6 +9187,54 @@ FinanceManager live link:
   test` (696 tests, unchanged — UI wiring on an already-tested store action) / `npm run build`
   all clean.
 
+- **Buy/Sell action badges gained their own real gradient color system, separate from
+  Profit/Loss (2026-09-15) — see Done item 329.** User's report, verbatim: "I need this type
+  of gradients. Buy and sell are different from PL, so they should be treated so," supplying a
+  real trading platform's own Buy (blue gradient)/Sell (gold gradient) button CSS as reference.
+  Confirmed a real, app-wide bug before touching anything: every QSE/PSX BUY/SELL action badge
+  (Trade Transactions, per-stock StockPage, Trade Planner/Strategy) reused `.pill-positive`/
+  `.pill-negative` — the SAME green/red convention as an outcome's profit/loss sign. That's
+  genuinely misleading, not just a missed opportunity: a SELL closing a profitable position
+  still showed a RED "Sell" badge sitting right next to a GREEN profit figure, and a losing BUY
+  still showed GREEN — the badge was answering "buy or sell," not "did this make money," but
+  visually read as the latter. Separately found `.pill-buy`/`.pill-sell` class NAMES already
+  existed in the codebase (one call site, `CreditCardsSection.tsx`'s payment/charge badge) but
+  had **no CSS definition at all** — a real dead/broken reference, not a working pattern to
+  extend. Fixed: real `.pill-buy`/`.pill-sell` CSS added to `theme.css`, using the user's own
+  supplied gradient palette exactly (Buy: `#98D6F9`→`#5ab0e2`, text `#2e6c91`; Sell:
+  `#FBDFBA`→`#f2b563`, text `#8b5214`) — **deliberately fixed colors, not tied to any
+  `--profit`/`--loss`/theme token**, same reasoning already established for `LogoMark`/
+  `GoogleIcon`: a universally-recognized trading action signal should read the same regardless
+  of the viewer's own chosen app theme. Applied to the 6 real BUY/SELL action-badge call sites
+  (QSE's and PSX's `TransactionsPage.tsx`/`StockPage.tsx`/`TradeStrategyPage.tsx`) — every
+  OTHER `.pill-positive`/`.pill-negative` usage in those same files (netPL/unrealizedPL/
+  realizedPL/amount columns) was checked and correctly left untouched, since those genuinely
+  ARE profit/loss outcomes. The one pre-existing `.pill-buy`/`.pill-sell` usage
+  (Credit Card payment/charge) was moved BACK to `.pill-positive`/`.pill-negative` — a payment
+  reducing debt vs. a charge increasing it is a real P/L-like outcome, not a Buy/Sell trade
+  action, so it belongs on the green/red convention, not the new blue/gold one; this also
+  fixes a second real bug in passing (that badge was rendering with NO color at all before,
+  since the classes it referenced didn't exist). Funds' own `Invested`/`Withdrew` badges
+  (reusing the same underlying `BUY`/`SELL` field, differently labeled) were deliberately left
+  on `.pill-positive`/`.pill-negative` — a conscious prior choice to frame that module's own
+  transactions as cash-flow direction, not a raw trading action, unlike QSE/PSX's own literal
+  "BUY"/"SELL" display. **Deliberately NOT extended to the various Action `<select>` dropdowns**
+  used when ADDING/editing a trade (~20+ `<option value="BUY">` call sites across add-forms and
+  inline edit-rows) — the reference screenshot's own Buy/Sell BUTTONS suggest those could
+  reasonably become a chip-based picker too (matching this project's existing `DirectionChips`
+  pattern), but that's a materially larger, riskier UI change across many heavily-used forms;
+  flagged as new README Pending item 137 rather than attempted blind in the same pass. Verified
+  live via Playwright with a real seeded BUY+SELL pair: a BUY cell's computed
+  `background-image` was confirmed pixel-exact to the user's own reference gradient
+  (`linear-gradient(#98D6F9, #5ab0e2)`), the SELL cell to its own
+  (`linear-gradient(#FBDFBA, #f2b563)`), both text colors matched exactly, and — the real
+  before/after comparison — the same page's P/L column stayed on its own unrelated green/red
+  the whole time, now visibly distinct from the Buy/Sell badges instead of coincidentally
+  sharing their palette; separately confirmed the Credit Card's Payment/Charge badges still
+  render as real green/red pills post-fix, with zero stray `.pill-buy`/`.pill-sell` left on
+  that page. `npx tsc -b` / `npm run test` (696 tests, unchanged — a CSS/classname change, no
+  calc logic touched) / `npm run build` all clean.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`
@@ -10336,6 +10384,20 @@ or a design decision before more code, not guessed at further:**
      `type="radio"` (unconverted toggles) to find the concrete remaining call sites, and
      reuse `CurrencyChips`/`ToggleChip` (both already built and exported) rather than
      re-inventing either.
+
+137. **New standing idea (2026-09-15), NOT yet started.** Done item 329 fixed the color
+     DISPLAY of Buy/Sell (a real `.pill-buy`/`.pill-sell` gradient system) but deliberately
+     left every Action `<select>` dropdown (used when ADDING or editing a trade — QSE's/PSX's
+     `TransactionsPage.tsx`/`StockPage.tsx`/`TradeStrategyPage.tsx`, ~20+ `<option
+     value="BUY">` call sites) untouched. The user's own reference screenshot showed real
+     clickable Buy/Sell BUTTONS, not a dropdown — converting the Action picker itself into a
+     two-chip toggle using the same `.pill-buy`/`.pill-sell` gradient (mirroring the existing
+     `DirectionChips` pattern already used for other binary in/out-shaped choices app-wide)
+     would be a more complete, literal match to that reference. **Not attempted here** — a
+     materially larger and riskier change (many heavily-used add/edit forms across both
+     exchanges) than the display-only fix, needing its own scoped pass; same "ship the
+     narrower, high-confidence slice, flag the rest" discipline as every other broad UI
+     rollout in this file.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank
