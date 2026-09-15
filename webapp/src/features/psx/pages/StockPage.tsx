@@ -215,7 +215,7 @@ function TickerTransactions({ ticker }: { ticker: string }) {
                       </Tooltip>
                     )}
                   </td>
-                  <td className={tx.action === 'BUY' ? 'pill-positive' : 'pill-negative'}>{tx.action}</td>
+                  <td className={tx.action === 'BUY' ? 'pill-buy' : 'pill-sell'}>{tx.action}</td>
                   <td>{fmt(tx.shares, 0)}</td>
                   <td>{fmtPrice(tx.price)}</td>
                   <td>{fmtMoney(tx.shares * tx.price, currency)}</td>

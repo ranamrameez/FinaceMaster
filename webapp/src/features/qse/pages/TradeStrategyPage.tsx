@@ -680,7 +680,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                   <tr>
                     <td>{display.date}{stale && <span style={{ color: 'var(--warn)' }} title="No linked transaction found — showing the plan's original snapshot."> ⚠</span>}</td>
                     <td style={{ display: 'flex', alignItems: 'center', gap: 4 }}><TickerLogo ticker={display.ticker} exchange="qse" size="sm" />{display.ticker}</td>
-                    <td className={display.action === 'BUY' ? 'pill-positive' : 'pill-negative'}>{display.action}</td>
+                    <td className={display.action === 'BUY' ? 'pill-buy' : 'pill-sell'}>{display.action}</td>
                     <td>{fmt(display.shares, 0)}</td>
                     <td>{fmtPrice(display.price)}</td>
                     <td>{fmtMoney(display.shares * display.price, currency)}</td>

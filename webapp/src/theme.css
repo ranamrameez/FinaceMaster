@@ -613,6 +613,32 @@
   .pill-negative{background:color-mix(in srgb, var(--loss) 16%, var(--panel)); color:var(--loss);}
   .pill-warn{background:color-mix(in srgb, var(--warn) 18%, var(--panel)); color:var(--warn);}
   .pill-info{background:color-mix(in srgb, var(--info) 16%, var(--panel)); color:var(--info);}
+  /* User-requested (2026-09-15): "Buy and sell are different from PL, so
+     they should be treated so" — every real trade's BUY/SELL action badge
+     across the app (QSE/PSX's Trade Transactions/StockPage/Trade Planner)
+     was reusing `.pill-positive`/`.pill-negative`, the SAME green/red
+     convention as an outcome's profit/loss sign. That's genuinely
+     misleading: a SELL that closes a big profitable position still showed
+     a red "Sell" badge right next to a green profit figure, and a losing
+     BUY still showed a green badge — the color was answering "is this a
+     buy or a sell," not "did this make money," but visually read as the
+     latter. `.pill-buy`/`.pill-sell` are a real, separate, second color
+     system for that — the exact gradient palette the user supplied from a
+     real trading platform's own Buy/Sell buttons (light-to-dark, light at
+     the top per that reference's own gradient direction). Deliberately
+     FIXED colors, not tied to `--profit`/`--loss`/any theme token — same
+     reasoning already established for `LogoMark`/`GoogleIcon`: a
+     universally-recognized trading action signal should read the same
+     regardless of the viewer's own chosen app theme, the same way a real
+     exchange's own Buy/Sell buttons never restyle themselves per user
+     preference. `.pill-buy`/`.pill-sell` were previously used (Credit
+     Card payment/charge) for an unrelated, genuinely outcome-based
+     distinction — moved back to `.pill-positive`/`.pill-negative` there
+     (a payment reducing debt vs. a charge increasing it IS a real
+     P/L-like signal, correctly green/red) so these two names stay
+     unambiguous going forward. */
+  .pill-buy{background:linear-gradient(to bottom, #98D6F9, #5ab0e2); color:#2e6c91;}
+  .pill-sell{background:linear-gradient(to bottom, #FBDFBA, #f2b563); color:#8b5214;}
 
   /* Rectangle (not pill-rounded) colored share-count badge, user-requested
      (2026-09-14) — a Holdings table's Shares column called out for its own
