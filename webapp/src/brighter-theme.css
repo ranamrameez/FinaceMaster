@@ -1,0 +1,105 @@
+/*
+ * Bright Ledger theme
+ *
+ * A deliberately brighter surface theme inspired by the app's Buy/Sell
+ * action badges: clear, filled surfaces instead of the current grey-on-grey
+ * treatment. Trade action colors themselves remain fixed in theme.css.
+ */
+html[data-color="bright"] {
+  --bg: #f4f7fa;
+  --panel: #ffffff;
+  --panel-2: #eef4f8;
+  --border: #d7e1e8;
+  --text: #17232d;
+  --muted: #60717d;
+  --accent: #2f7ea8;
+  --accent-soft: #e3f3fb;
+  --gold: #a86c10;
+  --gold-rgb: 168,108,16;
+  --info: #2d83b8;
+  --info-rgb: 45,131,184;
+  --profit: #168653;
+  --loss: #c93636;
+  --warn: #a86c10;
+  --on-accent-soft: #173f55;
+  --shadow-card: 0 1px 2px rgba(36, 62, 78, .05), 0 4px 14px rgba(36, 62, 78, .08);
+  --shadow-lg: 0 10px 24px rgba(36, 62, 78, .14);
+}
+
+html[data-color="bright"][data-theme="dark"] {
+  --bg: #171c21;
+  --panel: #222a31;
+  --panel-2: #2d3740;
+  --border: #3e4b55;
+  --text: #eef4f7;
+  --muted: #aab9c3;
+  --accent: #72c4ec;
+  --accent-soft: #243f4e;
+  --gold: #f0bd68;
+  --gold-rgb: 240,189,104;
+  --info: #72c4ec;
+  --info-rgb: 114,196,236;
+  --profit: #55d394;
+  --loss: #f07a7a;
+  --warn: #f0bd68;
+  --on-accent-soft: #dff3ff;
+  --shadow-card: 0 1px 2px rgba(0,0,0,.16), 0 5px 16px rgba(0,0,0,.20);
+  --shadow-lg: 0 10px 26px rgba(0,0,0,.28);
+}
+
+/* Bright theme uses the same filled/tonal philosophy as the Buy/Sell badges:
+   surfaces carry a visible tint while text stays strongly contrasted. */
+html[data-color="bright"] .card,
+html[data-color="bright"] .stat-card,
+html[data-color="bright"] .chart-card {
+  background: var(--panel);
+  border-color: transparent;
+  box-shadow: var(--shadow-card);
+}
+
+html[data-color="bright"] .btn.secondary,
+html[data-color="bright"] .chip:not(.active) {
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: var(--accent);
+}
+
+html[data-color="bright"] .btn.secondary:hover,
+html[data-color="bright"] .chip:not(.active):hover {
+  filter: brightness(.97);
+}
+
+html[data-color="bright"] .navbtn.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  box-shadow: none;
+}
+
+html[data-color="bright"] thead th {
+  color: var(--accent);
+  border-bottom-color: var(--border);
+}
+
+html[data-color="bright"] tbody tr:hover {
+  background: var(--accent-soft);
+}
+
+html[data-color="bright"] input[type="text"],
+html[data-color="bright"] input[type="number"],
+html[data-color="bright"] input[type="date"],
+html[data-color="bright"] select {
+  background: var(--panel-2);
+  border-color: var(--border);
+}
+
+html[data-color="bright"] input:focus,
+html[data-color="bright"] select:focus {
+  border-color: var(--accent);
+  outline: 3px solid color-mix(in srgb, var(--accent-soft) 78%, transparent);
+}
+
+html[data-color="bright"] .notice,
+html[data-color="bright"] .empty,
+html[data-color="bright"] .table-wrap {
+  background: var(--panel-2);
+}
