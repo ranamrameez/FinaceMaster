@@ -150,6 +150,23 @@ export function SettingsIcon({ size = 14 }: IconProps) {
   );
 }
 
+/** A checklist glyph (checkbox + line, ×3) — distinct from both `SettingsIcon`
+ * (reserved for the real Account/App-Settings link, per that icon's own
+ * "this opens account settings" comment in `Sidebar.tsx`) and `ListIcon`
+ * (a plain bulleted list, used for "view this entity's transactions").
+ * User-reported (2026-09-16): "Settings icon is confusing with App
+ * settings" — the Dashboard's "Include in Net Worth" toggle-panel FAB
+ * reused the exact same gear glyph the sidebar's real Account link uses,
+ * so a user glancing at it could reasonably expect it opens app settings
+ * rather than a page-local checklist of what counts toward the total. */
+export function ChecklistIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base} aria-hidden>
+      <path d="M4 6.5 5.5 8 8 5.2M11 6h9M4 12.5 5.5 14 8 11.2M11 12h9M4 18.5 5.5 20 8 17.2M11 18h9" />
+    </svg>
+  );
+}
+
 /** Google's official "G" mark — fixed brand colors (not currentColor, since
  * this one is genuinely 4-color), used only on the "Sign in with Google"
  * button. Everything else in this file is a stroke icon that inherits the

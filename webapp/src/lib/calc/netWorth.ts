@@ -144,7 +144,15 @@ export function flowByCurrency(
  * inputs). Sorted oldest-first, same reading order as every other
  * statement table in this app. */
 export interface FlowActivityItem {
-  module: 'Cash' | 'Bank';
+  /** `flowActivity()` itself only ever produces 'Cash'/'Bank' (its own
+   * scope, see the doc comment above). Widened from that 2-value literal
+   * union to `string` (2026-09-16) so `NetWorthPage.tsx`'s Monthly summary
+   * table can reuse this same `Drilldown['flow']` shape for its Inflow/
+   * Outflow cells, which are Cash+Bank+Rentals (via `BudgetActivity`, a
+   * third module this type was never meant to exclude by name) — purely
+   * a display string here, nothing downstream narrows on the literal
+   * value, so widening it is safe. */
+  module: string;
   date: string;
   description: string;
   /** Signed — positive = inflow, negative = outflow, same convention as

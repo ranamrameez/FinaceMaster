@@ -9493,6 +9493,45 @@ FinanceManager live link:
   new file (4 cases, tested directly per this project's own "test the component when a real
   signed-in round-trip isn't available" precedent). `npx tsc -b` / `npm run test` (705 tests, 6
   new) / `npm run build` all clean.
+- **A confusing shared icon fixed, and the Monthly summary table's own td's wired up to the
+  click-to-drill-down pattern Done item 333 built (2026-09-16) — see Done item 334.** Two
+  follow-up reports, same day, right after 333 shipped. (1) **"Settings icon is confusing with
+  App settings."** Root cause: the Dashboard's "Include in Net Worth" FAB reused the exact same
+  gear `SettingsIcon` glyph the sidebar's real Account/App-Settings link uses (`Sidebar.tsx`'s
+  own "this opens account settings" comment) — a user glancing at the FAB could reasonably
+  expect it opens app settings rather than a page-local checklist of what counts toward the
+  total. New `ChecklistIcon` (`components/icons.tsx`, a checkbox+line ×3 glyph) — considered
+  reusing the existing `ListIcon` first and rejected it, since its own doc comment reserves it
+  for "view this entity's transactions" quick-links, which would just trade one confusion for
+  another. `SettingsIcon` is now used exclusively by the real Account link (confirmed via grep).
+  (2) **"6-month summary table td are not showing their related transactions."** A real,
+  confirmed gap, not a repeat of the earlier "6-month summary is missing" report (that one was
+  a misreading on this session's part — the user's actual point, clarified via
+  `AskUserQuestion`, was "dashboard is having only 1 analysis chart," tracked separately, see
+  Pending item 142's own note) — `MonthlySummaryTable`'s Inflow/Outflow/Net flow/Net worth `td`s
+  had never been wired into 333's own new `Drilldown` mechanism at all, unlike every other
+  calculated stat on the page. Reused the exact same `Drilldown` shapes rather than inventing a
+  fourth: `kind: 'flow'` for Inflow/Outflow/Net flow (a new `monthlyFlowItems()` helper maps
+  `BudgetActivity` — Cash+Bank+Rentals, already excluding linked-transfer legs — onto the shared
+  item shape; deliberately does NOT reuse the existing Cash+Bank-only `flowActivity()`, since
+  that would silently under-list a month with real Rentals activity even though the cell's own
+  total already includes it, breaking the "the popup always reconciles with the number it was
+  opened from" guarantee every other drilldown on this page keeps), `kind: 'breakdown'` for Net
+  worth (a new `netWorthBreakdownForMonth()` mirrors exactly what `projectedNetWorthTrend()`
+  itself reads for that month — a completed/current month's real per-module breakdown via
+  `netWorthAsOfDate()`/`currentRows`, or, for a genuinely future/projected month with no real
+  per-module breakdown to show, a synthetic 2-row Assets/Liabilities split from the same figures
+  the chart itself plots, with the explanation text saying plainly that it's a projection, not
+  an itemized module list). `FlowActivityItem.module` widened from a 2-value `'Cash'|'Bank'`
+  literal union to `string` (display-only, nothing downstream narrows on it) so the same shape
+  covers Rentals too. Verified live via Playwright with a seeded 4-month Cash+Bank scenario:
+  clicking an Inflow cell (July) showed the real +1,200 Cash entry and +300 Bank transaction
+  that make up that month's total; clicking the Net worth cell for the current month showed a
+  real Cash 3.3k / Bank 250 breakdown summing to the exact 3,550 USD the cell and the Assets
+  card above both display — a real screenshot confirmed the popup renders correctly, not just
+  structurally present; the new `ChecklistIcon` was also screenshot-confirmed as a genuinely
+  different, non-gear shape. `npx tsc -b` / `npm run test` (705 tests, unchanged — UI wiring
+  onto already-tested calc functions) / `npm run build` all clean.
 
 ## Pending
 
