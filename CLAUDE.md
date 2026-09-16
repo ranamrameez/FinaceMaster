@@ -7149,6 +7149,36 @@ touched those.
   exact spot raised), the delta table's Cash +460/Bank −50 = 410 USD total matched the seeded
   data exactly by hand. `npx tsc -b` / `npm run test` (705 tests, 6 new) / `npm run build` all
   clean.
+- **A confused shared icon fixed + the Monthly summary table's own cells wired into the
+  click-to-drill-down pattern — see README Done item 334 for the full writeup, this is a
+  pointer (2026-09-16).** Two follow-up reports right after Done item 333 shipped. (1) The
+  Dashboard's "Include in Net Worth" FAB reused the exact same gear `SettingsIcon` reserved for
+  the real Account/App-Settings link in `Sidebar.tsx` — a genuine reuse bug, not a taste call.
+  New `ChecklistIcon` (`components/icons.tsx`) fixes it; `SettingsIcon` is now exclusively used
+  by the real Account link. (2) `MonthlySummaryTable`'s own Inflow/Outflow/Net flow/Net worth
+  `td`s had never been wired into Done item 333's own `Drilldown` mechanism — reused the
+  existing `flow`/`breakdown` shapes rather than inventing a new one: `monthlyFlowItems()`
+  maps `BudgetActivity` (Cash+Bank+Rentals, deliberately NOT the narrower Cash+Bank-only
+  `flowActivity()`, which would under-list a month with real Rentals activity even though the
+  cell's own total already counts it) onto the shared item shape for Inflow/Outflow/Net flow;
+  `netWorthBreakdownForMonth()` mirrors exactly what `projectedNetWorthTrend()` itself reads for
+  a given month (a real per-module breakdown for a completed/current month, or a synthetic
+  2-row Assets/Liabilities split for a genuinely projected future month, since there's no real
+  per-module figure to show there) for the Net worth row. **Note on this session's earlier
+  "6-month summary is missing" investigation**: that report turned out to be a misreading on
+  this session's part — a live Playwright check found the section rendering correctly, and the
+  user's own follow-up clarified they meant "only 1 analysis chart" (tracked as its own Pending
+  item, not this fix) — but a LATER, more specific follow-up ("table td are not showing their
+  related transactions") was real and distinct, and is what this Done item actually fixes.
+  **Lesson worth repeating**: a vague-sounding complaint that doesn't reproduce on first
+  investigation can still have a real, more specific version arrive later — don't treat "I
+  couldn't reproduce the first phrasing" as closing the topic; wait for or ask for the more
+  precise report before assuming there's nothing there. Verified live via Playwright + real
+  screenshots: an Inflow cell click showed the real Cash+Bank entries that sum to that month's
+  total; a Net worth cell click showed a real Cash+Bank breakdown summing to the exact figure
+  shown in the cell and the Assets card above; the new icon's shape was screenshot-confirmed,
+  not just checked for presence. `npx tsc -b` / `npm run test` (705 tests, unchanged) / `npm
+  run build` all clean.
 
 ## Live URLs
 

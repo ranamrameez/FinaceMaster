@@ -8,11 +8,11 @@ import { Notice } from '../../../components/Notice';
 import { Tooltip } from '../../../components/Tooltip';
 import { Field, Select, TextInput } from '../../../components/ui/Field';
 import { FabButton } from '../../../components/ui/Fab';
-import { CheckIcon, SettingsIcon } from '../../../components/icons';
+import { CheckIcon, ChecklistIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { ChartCard } from '../../qse/components/ChartCard';
 import { netIncomeByCurrency as rentalsNetIncomeByCurrency } from '../../../lib/calc/rentalsModule';
-import { flowActivity, flowByCurrency, type FlowActivityItem, type NetWorthBreakdownEntry } from '../../../lib/calc/netWorth';
+import { flowActivity, flowByCurrency, type CurrencyNetWorth, type FlowActivityItem, type NetWorthBreakdownEntry } from '../../../lib/calc/netWorth';
 import { collectBudgetActivities, monthlyIncomeExpense, monthRange, monthsBetween, currentMonth as currentMonthOf, type MonthlyIncomeExpense, type BudgetActivity } from '../../../lib/calc/budgetPlanner';
 import { endOfMonthAsOf, projectedNetWorthTrend, type MonthlyNetWorthPoint } from '../../../lib/calc/netWorthTrend';
 import { earliestActivityDate, netWorthAsOfDate, type NetWorthAsOfInputs } from '../../../lib/calc/netWorthAsOf';
@@ -106,7 +106,7 @@ function NetWorthDrilldownModal({ drilldown, onClose }: { drilldown: Drilldown; 
         <>
           <div className="text-muted mb-sm">{drilldown.from === drilldown.to ? drilldown.from : `${drilldown.from} → ${drilldown.to}`}, in {drilldown.currency}</div>
           {drilldown.items.length === 0 ? (
-            <div className="text-muted">No Cash/Bank activity in this window.</div>
+            <div className="text-muted">No activity in this window.</div>
           ) : (
             <table>
               <thead><tr><th>Date</th><th>Source</th><th>Description</th><th style={{ textAlign: 'right' }}>Amount</th></tr></thead>
@@ -851,6 +851,7 @@ export function NetWorthPage({
         currentRows={rows}
         netWorthAsOfInputs={netWorthAsOfInputs}
         todayISODate={todayISO}
+        setDrilldown={setDrilldown}
       />
 
       {/* Item 4: "add charts to view capital split per currency" —
@@ -958,7 +959,7 @@ function IncludeInNetWorthFab({
 
   return (
     <>
-      <FabButton label="Include in Net Worth" onClick={() => setOpen(true)}><SettingsIcon size={18} /></FabButton>
+      <FabButton label="Include in Net Worth" onClick={() => setOpen(true)}><ChecklistIcon size={18} /></FabButton>
       {open && (
         <Modal title="Include in Net Worth" onClose={() => setOpen(false)}>
           <p className="text-muted mt-0">
@@ -1053,6 +1054,7 @@ function NetWorthMonthlySection({
   currentRows,
   netWorthAsOfInputs,
   todayISODate,
+  setDrilldown,
 }: {
   ownCurrencies: string[];
   activities: ReturnType<typeof collectBudgetActivities>;
@@ -1060,6 +1062,7 @@ function NetWorthMonthlySection({
   currentRows: Parameters<typeof projectedNetWorthTrend>[0]['currentRows'];
   netWorthAsOfInputs: NetWorthAsOfInputs;
   todayISODate: string;
+  setDrilldown: (d: Drilldown) => void;
 }) {
   const nowMonth = useMemo(() => currentMonthOf(), []);
   // User-reported (2026-09-06): "monthly widgets are moving without a check
@@ -1115,7 +1118,18 @@ function NetWorthMonthlySection({
          doesn't fit. */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {ownCurrencies.map((currency) => (
-          <MonthlySummaryTable key={currency} currency={currency} months={months} nowMonth={nowMonth} monthly={monthly} trend={trend} />
+          <MonthlySummaryTable
+            key={currency}
+            currency={currency}
+            months={months}
+            nowMonth={nowMonth}
+            monthly={monthly}
+            trend={trend}
+            activities={activities}
+            currentRows={currentRows}
+            netWorthAsOfInputs={netWorthAsOfInputs}
+            setDrilldown={setDrilldown}
+          />
         ))}
       </div>
     </div>
@@ -1187,10 +1201,68 @@ function NetWorthComboChart({ currency, months, trend }: { currency: string; mon
 /** The scrollable multi-month summary table, moved from Budget Planner
  * (README item 107's original design, user-requested 2026-08-27) — now
  * rendered once per currency instead of behind a currency picker. */
+const BUDGET_MODULE_LABEL: Record<string, string> = { cash: 'Cash', bank: 'Bank', rentals: 'Rentals' };
+
+/** The Inflow/Outflow cells' itemized drill-down — every `BudgetActivity`
+ * (real + planned, Cash+Bank+Rentals, already excluding linked-transfer
+ * legs, per `collectBudgetActivities`'s own doc comment) in this exact
+ * month+currency, mapped onto the shared `Drilldown['flow']` item shape so
+ * the same `NetWorthDrilldownModal` rendering (already used by the Today's/
+ * This month's flow pills above) covers this too, no new UI needed. This
+ * deliberately does NOT reuse `flowActivity()` — that helper is Cash+Bank
+ * ONLY (see its own doc comment), which would silently under-list a month
+ * with real Rentals activity even though the cell's own total (from
+ * `monthlyIncomeExpense`, built on the same `activities` array) already
+ * includes it — the itemized popup must always reconcile with the number
+ * it was opened from. */
+function monthlyFlowItems(activities: BudgetActivity[], month: string, currency: string): FlowActivityItem[] {
+  return activities
+    .filter((a) => a.date.slice(0, 7) === month && a.currencyCode === currency)
+    .map((a) => ({
+      module: BUDGET_MODULE_LABEL[a.module] ?? a.module,
+      date: a.date,
+      description: a.description,
+      amount: a.amount,
+      accountName: a.sourceLabel,
+    }));
+}
+
+/** The Net worth row's per-module drill-down for one month — reuses
+ * exactly the same source `projectedNetWorthTrend` itself reads for that
+ * month (see that function's own doc comment for the past/current/future
+ * split), so the popup's own numbers always match the figure it was
+ * opened from: a completed month's `netWorthAsOfDate` breakdown, the
+ * current month's already-known live breakdown, or (a future/projected
+ * month, which has no real per-module breakdown to show — the projection
+ * only ever tracks two combined totals, see `MonthlyNetWorthPoint`) a
+ * synthetic 2-row Assets/Liabilities split built from the same numbers the
+ * chart/table cell itself renders. */
+function netWorthBreakdownForMonth(
+  month: string, currency: string, nowMonth: string,
+  netWorthAsOfInputs: NetWorthAsOfInputs, currentRows: CurrencyNetWorth[], trendRow: MonthlyNetWorthPoint | undefined,
+): { rows: NetWorthBreakdownEntry[]; isProjected: boolean } {
+  if (month < nowMonth) {
+    const rows = netWorthAsOfDate(endOfMonthAsOf(month), netWorthAsOfInputs);
+    return { rows: rows.find((r) => r.currency === currency)?.breakdown ?? [], isProjected: false };
+  }
+  if (month === nowMonth) {
+    return { rows: currentRows.find((r) => r.currency === currency)?.breakdown ?? [], isProjected: false };
+  }
+  const assets = trendRow?.assetsByCurrency[currency];
+  const liabilities = trendRow?.liabilitiesByCurrency[currency];
+  if (assets === undefined && liabilities === undefined) return { rows: [], isProjected: true };
+  const rows: NetWorthBreakdownEntry[] = [];
+  if (assets) rows.push({ module: 'Assets (projected)', amount: assets });
+  if (liabilities) rows.push({ module: 'Liabilities (projected)', amount: -liabilities });
+  return { rows, isProjected: true };
+}
+
 function MonthlySummaryTable({
-  currency, months, nowMonth, monthly, trend,
+  currency, months, nowMonth, monthly, trend, activities, currentRows, netWorthAsOfInputs, setDrilldown,
 }: {
   currency: string; months: string[]; nowMonth: string; monthly: MonthlyIncomeExpense[]; trend: MonthlyNetWorthPoint[];
+  activities: BudgetActivity[]; currentRows: CurrencyNetWorth[]; netWorthAsOfInputs: NetWorthAsOfInputs;
+  setDrilldown: (d: Drilldown) => void;
 }) {
   const monthlyByMonth = new Map(monthly.map((m) => [m.month, m]));
   const trendByMonth = new Map(trend.map((m) => [m.month, m]));
@@ -1218,23 +1290,61 @@ function MonthlySummaryTable({
           <tbody>
             <tr>
               <td>
-                <Tooltip text="Everything that added money in this month — real transactions and planned entries combined, EXCLUDING any linked inter-account transfer (moving your own money between your own accounts isn't real income).">
+                <Tooltip text="Everything that added money in this month — real transactions and planned entries combined, EXCLUDING any linked inter-account transfer (moving your own money between your own accounts isn't real income). Click a month to see the real entries.">
                   Inflow
                 </Tooltip>
               </td>
-              {months.map((m) => <td key={m}>{fmtMoney(monthlyByMonth.get(m)?.income[currency] ?? 0, currency)}</td>)}
+              {months.map((m) => {
+                const value = monthlyByMonth.get(m)?.income[currency] ?? 0;
+                return (
+                  <td
+                    key={m}
+                    className="clickable"
+                    onClick={() => setDrilldown({
+                      kind: 'flow',
+                      title: `Inflow — ${monthLabel(m)}, ${currency}`,
+                      explanation: 'Every real and planned entry that added money this month, in this currency — Cash/Bank/Rentals combined, excluding any linked inter-account transfer.',
+                      currency,
+                      from: `${m}-01`,
+                      to: endOfMonthAsOf(m),
+                      items: monthlyFlowItems(activities, m, currency).filter((it) => it.amount >= 0),
+                    })}
+                  >
+                    {fmtMoney(value, currency)}
+                  </td>
+                );
+              })}
             </tr>
             <tr>
               <td>
-                <Tooltip text="Everything that took money out this month — real transactions and planned entries combined, EXCLUDING any linked inter-account transfer (moving your own money between your own accounts isn't a real expense).">
+                <Tooltip text="Everything that took money out this month — real transactions and planned entries combined, EXCLUDING any linked inter-account transfer (moving your own money between your own accounts isn't a real expense). Click a month to see the real entries.">
                   Outflow
                 </Tooltip>
               </td>
-              {months.map((m) => <td key={m}>{fmtMoney(monthlyByMonth.get(m)?.expense[currency] ?? 0, currency)}</td>)}
+              {months.map((m) => {
+                const value = monthlyByMonth.get(m)?.expense[currency] ?? 0;
+                return (
+                  <td
+                    key={m}
+                    className="clickable"
+                    onClick={() => setDrilldown({
+                      kind: 'flow',
+                      title: `Outflow — ${monthLabel(m)}, ${currency}`,
+                      explanation: 'Every real and planned entry that took money out this month, in this currency — Cash/Bank/Rentals combined, excluding any linked inter-account transfer.',
+                      currency,
+                      from: `${m}-01`,
+                      to: endOfMonthAsOf(m),
+                      items: monthlyFlowItems(activities, m, currency).filter((it) => it.amount < 0),
+                    })}
+                  >
+                    {fmtMoney(value, currency)}
+                  </td>
+                );
+              })}
             </tr>
             <tr>
               <td>
-                <Tooltip text="Inflow minus outflow for this month — real transactions and planned entries combined, EXCLUDING any linked inter-account transfer (which is neither an inflow nor an outflow).">
+                <Tooltip text="Inflow minus outflow for this month — real transactions and planned entries combined, EXCLUDING any linked inter-account transfer (which is neither an inflow nor an outflow). Click a month to see every entry that made up this figure.">
                   Net flow
                 </Tooltip>
               </td>
@@ -1242,7 +1352,19 @@ function MonthlySummaryTable({
                 const row = monthlyByMonth.get(m);
                 const net = (row?.income[currency] ?? 0) - (row?.expense[currency] ?? 0);
                 return (
-                  <td key={m}>
+                  <td
+                    key={m}
+                    className="clickable"
+                    onClick={() => setDrilldown({
+                      kind: 'flow',
+                      title: `Net flow — ${monthLabel(m)}, ${currency}`,
+                      explanation: 'Every real and planned entry this month, in this currency, that makes up Inflow minus Outflow — Cash/Bank/Rentals combined, excluding any linked inter-account transfer.',
+                      currency,
+                      from: `${m}-01`,
+                      to: endOfMonthAsOf(m),
+                      items: monthlyFlowItems(activities, m, currency),
+                    })}
+                  >
                     <span className={`pill ${net >= 0 ? 'pill-positive' : 'pill-negative'}`}>{fmtMoney(net, currency)}</span>
                   </td>
                 );
@@ -1250,19 +1372,34 @@ function MonthlySummaryTable({
             </tr>
             <tr>
               <td>
-                <Tooltip text="The real sum of every account as of that month's last day (Assets minus Liabilities) — a completed past month is computed directly from your actual transaction history, not a projection. The current month uses today's real figure. Future months are projected from today plus planned income/expense and each EMI loan's amortization schedule.">
+                <Tooltip text="The real sum of every account as of that month's last day (Assets minus Liabilities) — a completed past month is computed directly from your actual transaction history, not a projection. The current month uses today's real figure. Future months are projected from today plus planned income/expense and each EMI loan's amortization schedule. Click a month for a module-by-module breakdown.">
                   Net worth
                 </Tooltip>
               </td>
               {months.map((m) => {
                 const value = trendByMonth.get(m)?.byCurrency[currency];
+                if (value === undefined) {
+                  return <td key={m}><span className="text-muted">—</span></td>;
+                }
                 return (
-                  <td key={m}>
-                    {value === undefined ? (
-                      <span className="text-muted">—</span>
-                    ) : (
-                      <span className={`pill ${value >= 0 ? 'pill-positive' : 'pill-negative'}`}>{fmtMoney(value, currency)}</span>
-                    )}
+                  <td
+                    key={m}
+                    className="clickable"
+                    onClick={() => {
+                      const { rows: breakdownRows, isProjected } = netWorthBreakdownForMonth(
+                        m, currency, nowMonth, netWorthAsOfInputs, currentRows, trendByMonth.get(m),
+                      );
+                      setDrilldown({
+                        kind: 'breakdown',
+                        title: `Net worth — ${monthLabel(m)}, ${currency}, by module`,
+                        explanation: isProjected
+                          ? 'This month hasn\'t happened yet — Assets and Liabilities here are PROJECTED from today\'s real figures plus planned income/expense and each EMI loan\'s amortization schedule, not itemized per module the way a completed month is.'
+                          : `Every module's own real contribution as of ${monthLabel(m)}'s last day — a positive row adds to net worth, a negative row (EMI/credit cards/net owed) subtracts from it.`,
+                        rows: breakdownRows.map((b) => ({ label: b.module, currency, amount: b.amount })),
+                      });
+                    }}
+                  >
+                    <span className={`pill ${value >= 0 ? 'pill-positive' : 'pill-negative'}`}>{fmtMoney(value, currency)}</span>
                   </td>
                 );
               })}
