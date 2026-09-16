@@ -3,27 +3,20 @@ import { createPortal } from 'react-dom';
 import { useAppearanceStore } from '../store/appearanceStore';
 
 const COLOR_THEMES = [
-  { group: 'Classic themes', options: [
+  { group: 'Classic theme', options: [
     ['wine', 'Classic (Graphite & Gold)'],
-    ['ocean', 'Ocean Blue'],
-    ['forest', 'Forest Green'],
-    ['violet', 'Violet'],
-    ['sunset', 'Sunset Amber'],
-    ['bright', 'Bright Ledger'],
   ] },
-  { group: 'Modern themes', options: [
-    ['aurora', 'Aurora (Indigo + Cyan)'],
-    ['sage', 'Sage (Jade + Neutral)'],
+  { group: 'Modern finance themes', options: [
+    ['aurora', 'Aurora (Indigo)'],
+    ['cobalt', 'Cobalt (Finance Blue)'],
     ['teal', 'Teal (Blue-Green)'],
+    ['copper', 'Copper (Market Orange)'],
+    ['rose', 'Rose (Ruby)'],
+    ['gold', 'Gold (Wealth)'],
   ] },
-  { group: 'Material Design themes', options: [
-    ['material-blue', 'Material Purple / Blue'],
-    ['material-green', 'Material Green'],
-    ['material-purple', 'Material Rose'],
+  { group: 'Material themes', options: [
     ['material-teal', 'Material Teal'],
-    ['material-amber', 'Material Amber'],
-    ['material-crimson', 'Material Crimson'],
-    ['material-slate', 'Material Slate'],
+    ['material-purple', 'Material Rose'],
   ] },
 ];
 
@@ -99,24 +92,9 @@ interface Pos {
 
 const PANEL_WIDTH = 255;
 
-/** User-reported (2026-09-06): "Appearnce card is cutting!" Root-caused,
- * not guessed at: the sidebar has an active (non-`none`) CSS `transform`
- * on any viewport ≤860px — `translateX(-100%)` when closed, `translateX(0)`
- * when open (theme.css's mobile drawer rules) — and a `transform` on an
- * ancestor makes it the CONTAINING BLOCK for any `position:fixed`
- * descendant per the CSS spec, so this popover's own `position:fixed`
- * stopped being relative to the viewport and became relative to the
- * (comparatively small) sidebar box instead, clipping it — the exact same
- * bug class already found and fixed for `Tooltip.tsx` (see that file's own
- * doc comment: `.entity-card:hover{transform:...}` did the identical thing
- * to a hovered tooltip). Fixed the same way: portal the panel straight to
- * `document.body`, so it's never a DOM descendant of anything that might
- * apply a transform, plus a real two-pass position measurement (mount
- * hidden, measure actual height, flip to open ABOVE the trigger if opening
- * below would run off the bottom of the viewport — this trigger sits in the
- * sidebar's own footer, near the bottom of the screen on a typical
- * viewport, so "always open below" was a second, independent way to clip
- * it even before the transform/containing-block issue is considered). */
+/** The panel is portaled to body so fixed positioning is not affected by the
+ * sidebar's mobile transform/containing block. It is measured first, then
+ * flipped above the trigger when there is not enough room below it. */
 function useAnchoredPosition(open: boolean, triggerRef: React.RefObject<HTMLElement | null>, panelRef: React.RefObject<HTMLElement | null>) {
   const [pos, setPos] = useState<Pos | null>(null);
   const [measured, setMeasured] = useState(false);
@@ -132,8 +110,7 @@ function useAnchoredPosition(open: boolean, triggerRef: React.RefObject<HTMLElem
       top: rect.bottom + 6,
       left: Math.min(rect.left, window.innerWidth - PANEL_WIDTH - 8),
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, triggerRef]);
 
   useLayoutEffect(() => {
     if (!open || measured || !pos || !triggerRef.current || !panelRef.current) return;
@@ -144,18 +121,11 @@ function useAnchoredPosition(open: boolean, triggerRef: React.RefObject<HTMLElem
       setPos({ ...pos, top: Math.max(8, rect.top - 6 - panelHeight) });
     }
     setMeasured(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, measured, pos]);
+  }, [open, measured, pos, triggerRef, panelRef]);
 
   return { pos, measured };
 }
 
-/** Closes the popover on an outside click or Escape. The panel is portaled
- * to `document.body` (see `useAnchoredPosition`'s own doc comment for why),
- * so it's no longer a DOM descendant of `containerRef` — a click inside it
- * has to be checked against `panelRef` separately, or it would wrongly
- * count as "outside" and close itself on every interaction with its own
- * `<select>`s. */
 function useClosePopoverOnOutsideClick(
   open: boolean,
   setOpen: (v: boolean) => void,
