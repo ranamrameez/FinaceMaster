@@ -9,6 +9,7 @@ const COLOR_THEMES = [
     ['forest', 'Forest Green'],
     ['violet', 'Violet'],
     ['sunset', 'Sunset Amber'],
+    ['bright', 'Bright Ledger'],
   ] },
   { group: 'Material Design themes', options: [
     ['material-blue', 'Material Purple / Blue'],
@@ -107,8 +108,8 @@ const PANEL_WIDTH = 255;
  * `document.body`, so it's never a DOM descendant of anything that might
  * apply a transform, plus a real two-pass position measurement (mount
  * hidden, measure actual height, flip to open ABOVE the trigger if opening
- * below would run off the bottom of the viewport — this trigger sits in
- * the sidebar's own footer, near the bottom of the screen on a typical
+ * below would run off the bottom of the viewport — this trigger sits in the
+ * sidebar's own footer, near the bottom of the screen on a typical
  * viewport, so "always open below" was a second, independent way to clip
  * it even before the transform/containing-block issue is considered). */
 function useAnchoredPosition(open: boolean, triggerRef: React.RefObject<HTMLElement | null>, panelRef: React.RefObject<HTMLElement | null>) {
