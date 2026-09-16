@@ -1,0 +1,279 @@
+/*
+ * Modern theme family
+ *
+ * Two intentionally simple product themes. Both share the same component
+ * language: neutral surfaces, one accent family, semantic P/L colors,
+ * restrained elevation, and consistent 10px controls. The theme changes
+ * the visual identity without changing component geometry.
+ */
+
+/* ---------- Shared modern component language --------------------------- */
+html[data-color="aurora"],
+html[data-color="sage"] {
+  --radius:10px;
+  --radius-lg:14px;
+}
+
+html[data-color="aurora"] .card,
+html[data-color="sage"] .card {
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  background:var(--panel);
+  box-shadow:var(--shadow-card);
+}
+
+html[data-color="aurora"] .btn,
+html[data-color="sage"] .btn {
+  border-radius:10px;
+  border:1px solid var(--border);
+  box-shadow:none;
+  transition:background .12s ease, border-color .12s ease, color .12s ease,
+              transform .12s ease, box-shadow .12s ease;
+}
+
+html[data-color="aurora"] .btn:hover,
+html[data-color="sage"] .btn:hover {
+  transform:translateY(-1px);
+  box-shadow:0 3px 9px rgba(20,30,40,.10);
+}
+
+html[data-color="aurora"] .btn.primary,
+html[data-color="sage"] .btn.primary {
+  background:var(--accent);
+  border-color:var(--accent);
+  color:var(--on-accent);
+}
+
+html[data-color="aurora"] .btn.secondary,
+html[data-color="sage"] .btn.secondary {
+  background:var(--accent-soft);
+  border-color:transparent;
+  color:var(--accent);
+}
+
+html[data-color="aurora"] .btn.ghost,
+html[data-color="sage"] .btn.ghost {
+  background:transparent;
+  border-color:transparent;
+  color:var(--accent);
+}
+
+html[data-color="aurora"] .chip,
+html[data-color="sage"] .chip {
+  border-radius:10px;
+  border:1px solid transparent;
+  box-shadow:none;
+}
+
+html[data-color="aurora"] .chip:not(.active),
+html[data-color="sage"] .chip:not(.active) {
+  background:var(--panel-2);
+  color:var(--muted);
+}
+
+html[data-color="aurora"] .chip:hover,
+html[data-color="sage"] .chip:hover {
+  background:var(--accent-soft);
+  color:var(--accent);
+}
+
+html[data-color="aurora"] .chip.active,
+html[data-color="sage"] .chip.active {
+  background:var(--accent);
+  border-color:var(--accent);
+  color:var(--on-accent);
+  box-shadow:none;
+}
+
+html[data-color="aurora"] .navbtn.active,
+html[data-color="sage"] .navbtn.active {
+  background:var(--accent-soft);
+  color:var(--accent);
+  box-shadow:inset 3px 0 0 var(--accent);
+}
+
+html[data-color="aurora"] .page-topbar,
+html[data-color="sage"] .page-topbar {
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-card);
+  padding:5px;
+}
+
+html[data-color="aurora"] .page-topbar .chip,
+html[data-color="sage"] .page-topbar .chip {
+  background:transparent;
+  color:var(--muted);
+}
+
+html[data-color="aurora"] .page-topbar .chip.active,
+html[data-color="sage"] .page-topbar .chip.active {
+  background:var(--accent-soft);
+  border-color:transparent;
+  color:var(--accent);
+}
+
+html[data-color="aurora"] .stat-card,
+html[data-color="sage"] .stat-card {
+  border:1px solid color-mix(in srgb, var(--card-hue, var(--accent)) 22%, var(--border));
+  background:color-mix(in srgb, var(--card-hue, var(--accent)) 12%, var(--panel));
+  box-shadow:var(--shadow-card);
+}
+
+html[data-color="aurora"] .stat-card .label,
+html[data-color="sage"] .stat-card .label {
+  color:color-mix(in srgb, var(--card-hue, var(--accent)) 65%, var(--muted));
+  font-weight:700;
+}
+
+html[data-color="aurora"] .stat-card .value,
+html[data-color="sage"] .stat-card .value {
+  color:var(--text);
+  font-weight:800;
+}
+
+html[data-color="aurora"] input[type="text"],
+html[data-color="aurora"] input[type="number"],
+html[data-color="aurora"] input[type="date"],
+html[data-color="aurora"] select,
+html[data-color="sage"] input[type="text"],
+html[data-color="sage"] input[type="number"],
+html[data-color="sage"] input[type="date"],
+html[data-color="sage"] select {
+  background:var(--panel-2);
+  border:1px solid var(--border);
+  border-radius:10px;
+  box-shadow:none;
+}
+
+html[data-color="aurora"] input:focus,
+html[data-color="aurora"] select:focus,
+html[data-color="sage"] input:focus,
+html[data-color="sage"] select:focus {
+  border-color:var(--accent);
+  outline:3px solid color-mix(in srgb, var(--accent-soft) 78%, transparent);
+}
+
+html[data-color="aurora"] thead th,
+html[data-color="sage"] thead th {
+  color:var(--accent);
+  border-bottom-color:var(--border);
+}
+
+html[data-color="aurora"] tbody tr:hover,
+html[data-color="sage"] tbody tr:hover {
+  background:color-mix(in srgb, var(--accent-soft) 55%, var(--panel));
+}
+
+html[data-color="aurora"] .notice,
+html[data-color="aurora"] .empty,
+html[data-color="aurora"] .table-wrap,
+html[data-color="sage"] .notice,
+html[data-color="sage"] .empty,
+html[data-color="sage"] .table-wrap {
+  background:var(--panel-2);
+  border-color:var(--border);
+}
+
+/* FABs keep their intentional circular geometry; only their palette changes. */
+html[data-color="aurora"] .btn.fab-btn,
+html[data-color="sage"] .btn.fab-btn {
+  background:var(--accent);
+  border-color:var(--accent);
+  color:var(--on-accent);
+  box-shadow:0 5px 18px color-mix(in srgb, var(--accent) 32%, transparent);
+}
+
+html[data-color="aurora"] .btn.fab-btn-secondary,
+html[data-color="sage"] .btn.fab-btn-secondary {
+  background:var(--panel);
+  border-color:var(--border);
+  color:var(--accent);
+}
+
+/* ---------- Aurora: indigo + cyan, crisp and technology-forward -------- */
+html[data-color="aurora"] {
+  --bg:#f5f7fb;
+  --panel:#ffffff;
+  --panel-2:#eef2f7;
+  --border:#d8dee8;
+  --text:#17202a;
+  --muted:#667384;
+  --accent:#635bdb;
+  --accent-soft:#ebe9ff;
+  --on-accent:#ffffff;
+  --gold:#b7791f;
+  --gold-rgb:183,121,31;
+  --info:#168aad;
+  --info-rgb:22,138,173;
+  --profit:#18865b;
+  --loss:#c83b4b;
+  --warn:#b7791f;
+  --shadow-card:0 1px 2px rgba(25,35,50,.04), 0 5px 16px rgba(25,35,50,.07);
+  --shadow-lg:0 10px 26px rgba(25,35,50,.12);
+}
+
+html[data-color="aurora"][data-theme="dark"] {
+  --bg:#10131a;
+  --panel:#191d27;
+  --panel-2:#232936;
+  --border:#343c4d;
+  --text:#eef1f7;
+  --muted:#9da8ba;
+  --accent:#a79cff;
+  --accent-soft:#302c55;
+  --on-accent:#17152c;
+  --gold:#f0bd68;
+  --gold-rgb:240,189,104;
+  --info:#5cc7e6;
+  --info-rgb:92,199,230;
+  --profit:#55d394;
+  --loss:#f17b88;
+  --warn:#f0bd68;
+  --shadow-card:0 1px 2px rgba(0,0,0,.20), 0 6px 18px rgba(0,0,0,.22);
+  --shadow-lg:0 12px 30px rgba(0,0,0,.32);
+}
+
+/* ---------- Sage: muted jade + warm neutrals, calmer for long sessions -- */
+html[data-color="sage"] {
+  --bg:#f5f7f4;
+  --panel:#ffffff;
+  --panel-2:#edf2ed;
+  --border:#d6dfd8;
+  --text:#18231e;
+  --muted:#66756d;
+  --accent:#2d7a68;
+  --accent-soft:#e0f0eb;
+  --on-accent:#ffffff;
+  --gold:#a36b16;
+  --gold-rgb:163,107,22;
+  --info:#3478a8;
+  --info-rgb:52,120,168;
+  --profit:#178357;
+  --loss:#c84646;
+  --warn:#a36b16;
+  --shadow-card:0 1px 2px rgba(24,45,35,.04), 0 5px 16px rgba(24,45,35,.07);
+  --shadow-lg:0 10px 26px rgba(24,45,35,.12);
+}
+
+html[data-color="sage"][data-theme="dark"] {
+  --bg:#101614;
+  --panel:#19201d;
+  --panel-2:#232c28;
+  --border:#35413c;
+  --text:#eef4f0;
+  --muted:#a2b1aa;
+  --accent:#72d1b3;
+  --accent-soft:#203f35;
+  --on-accent:#10251e;
+  --gold:#f0bd68;
+  --gold-rgb:240,189,104;
+  --info:#71b7df;
+  --info-rgb:113,183,223;
+  --profit:#63d9a1;
+  --loss:#f27f7f;
+  --warn:#f0bd68;
+  --shadow-card:0 1px 2px rgba(0,0,0,.20), 0 6px 18px rgba(0,0,0,.22);
+  --shadow-lg:0 12px 30px rgba(0,0,0,.32);
+}
