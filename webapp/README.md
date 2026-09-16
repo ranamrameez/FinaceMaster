@@ -9235,6 +9235,92 @@ FinanceManager live link:
   that page. `npx tsc -b` / `npm run test` (696 tests, unchanged — a CSS/classname change, no
   calc logic touched) / `npm run build` all clean.
 
+- **Trade Strategy / Partial Trade overhaul, both exchanges (2026-09-16) — see Done item
+  330.** User's own two-round critique of the merged Trade Strategy page, verbatim on the key
+  points: "Sell this lot itself is having bugs... doesn't autofill the data," "Trade Planner
+  shows stats of all times instead of the planned trades making numbers always red even after
+  green selling," the missed-opportunity text was "a large dump instead of using smarter alert
+  style text-rendering," a PSX same-day fee note was widening the legs table into horizontal
+  scroll, full-screen/Edit buttons had no icons, planned vs. executed rows were hard to tell
+  apart, Risk Analysis/Avg Down's "new shares" figure needed a breakdown ("330 (224 + 6)"),
+  and — the real underlying bug — "I typed OGDC for adding a new plan. plan was created but no
+  lots populated. this happened bcz a duplicate entry was added as OGDC," plus a proposal to
+  drop the separate "Partial Trade" section as redundant with a plan's own lots table, and to
+  auto-create/hold a plan per open position instead of requiring one to be created by hand.
+  Fixed in 4 phases, both `features/{qse,psx}/pages/TradeStrategyPage.tsx`:
+  **Phase 1**: `onSellLot`'s price prefill switched from `lot.breakEven` (nets to ~zero P/L by
+  definition, the real "doesn't autofill usefully" bug) to the ticker's live market price;
+  `findMissedOpportunity`'s output moved from one run-on sentence into a real `Notice` + `<ul>`
+  list; PSX's per-leg same-day-fee note (previously a permanent second text line inside the Fee
+  `<td>`, the actual cause of the horizontal-scroll complaint) collapsed into a small `InfoIcon`
+  + `Tooltip`; "Full screen"/"Edit" converted from plain text buttons to `IconButton` (reusing
+  the already-existing `ExpandIcon`/`CollapseIcon`); an executed leg's row gets a
+  `border-left: var(--profit)` accent (planned stays transparent) for a real visual distinction
+  beyond the Status column text; `AveragingScenario`'s already-computed `extraShares` (it always
+  had this field, just never displayed alongside `newShares`) now renders as
+  `"{total} ({existing} + {new})"` in both `RiskCalculator.tsx`'s scenario table and both
+  exchanges' Buy/Sell & Avg Down calculator; the per-ticker plan-analysis stat card gained a
+  live "Shares held now" figure and a real editable "Current price" input (same `price-input`/
+  `key={marketPrice}`/`setMarketPrice` pattern Dashboard's Holdings table already uses), and
+  `WhatIfExitCalculator`'s per-ticker price field now defaults to that same live price instead
+  of blank/0. **Phase 2**: `TradePlanLeg` gained `targetLotBuyId?: string` (mirrors
+  `Transaction.targetLotBuyId` from Done item 314) threaded through `executeTradePlanLeg`
+  (`createWorkbookStore.ts`) onto the real transaction it creates, so a "Mark done" on a
+  lot-targeted leg still attributes correctly; `onSellLot` no longer opens the shared "Add a
+  trade" modal at all — it calls `updateTradePlan` directly, appending a not-yet-executed SELL
+  leg (ticker/shares/live price/`targetLotBuyId`) to the CURRENT plan in one click, no manual
+  typing. **Phase 3**: a new effect in `TradeStrategyPage()` ensures every ticker with open
+  shares has at least one plan, auto-creating an empty one (`{ticker} Plan`) when missing —
+  gated on already being signed in (never prompts sign-in itself; browsing stays free) and
+  idempotent by construction; "Delete plan" is now `disabled` (with an explanatory `title`)
+  whenever that plan's ticker still has open shares, while "Clear plan" (remove every leg)
+  stays available regardless — this made the old standalone "Partial Trade" section (a ticker
+  picker reachable without a plan) genuinely redundant, since every open ticker's own plan card
+  already shows the identical `PartialTradeAdvisor` table now, so it and its page-level
+  `usePageTopBarRightSlot` ticker selector were deleted outright. **Phase 4** (the real root
+  cause of "no lots populated"): investigated the PSX ticker seed data first rather than
+  guessing — confirmed exactly one real plain "OGDC" entry (plus 4 distinct real futures
+  contracts, `OGDC-CAUG`/`CNOV`/`COCT`/`CSEP`, not duplicates) and that every ticker-save path
+  already normalizes via `.trim().toUpperCase()` consistently, so the most likely explanation
+  is the user's own real, already-stored transaction history having an OGDC ticker string that
+  doesn't byte-for-byte match a freshly-typed clean one (a legacy whitespace/casing import
+  artifact) — `lotsByTicker[ticker.toUpperCase()]` then silently found zero lots with **no
+  warning at all**, exactly matching "plan created but nothing populated." Fixed the
+  immediately-actionable half of this: `PartialTradeAdvisor` now shows a clear "No transactions
+  found for X yet — check the ticker is spelled exactly like your real trades" `Notice` when a
+  plan's ticker has literally zero matching transactions (distinct from the normal, silent "0
+  open shares" case for a real, fully-closed position); and a new shared `isKnownTicker()`
+  helper (checks against the same ticker-name/transaction-history universe the ticker datalist
+  itself is already built from) rejects on save — with a toast, not a silent accept — any
+  ticker typed into `NewPlanFab` or a plan's own edit-meta ticker field that isn't an exact
+  match, so a fresh typo/mismatch can no longer create a new one to begin with. **One real,
+  previously-latent bug found and fixed while wiring Phase 1's new stat card**:
+  `analyzeTradePlanByTicker` (`lib/calc/tradePlanAnalysis.ts`) derived its whole ticker list
+  purely from `legs.map(l => l.ticker)` — a plan with zero legs (exactly what Phase 3's
+  auto-created plans start as) produced an EMPTY ticker list, so the entire per-ticker analysis
+  section — including the brand-new "current price"/"shares held now" stats this same session
+  was adding — silently failed to render for exactly the plans Phase 3 exists to create. Fixed
+  by adding an optional `extraTicker` parameter (the plan's own `defaultTicker`, always passed
+  by both call sites) folded into the ticker `Set` even with zero legs — additive, backward
+  compatible, no existing caller/test needed updating. Deliberately **not built**, per this
+  project's own "ship the narrow slice, flag the rest" practice: the fuller historical-data
+  root cause (auditing/fixing already-mismatched ticker strings in existing transaction
+  history) and a Settings-page popup to Search/Add/Edit the whole ticker list (see new Pending
+  item 138) — both bigger, separate follow-ups. Verified live via Playwright on both exchanges
+  with the project's own established real repro scenario (50 sh @10.40 + 14 sh @9.962, current
+  price 10.37): full-screen/Edit render as real icon buttons; the per-ticker card shows "64 sh
+  held now" and a live editable "Current price: 10.37"; the missed-opportunity note renders as
+  a real bulleted list; clicking "Sell this lot" on the profitable cheap lot added a real
+  `Planned` SELL leg at the live 10.37 price with **zero modal** (confirmed via a real toast,
+  "Added SELL 14 QIBK @ 10.37 to this plan"); "Delete plan" was confirmed `disabled` while
+  QIBK's 64 shares stayed open; a seeded plan for a ticker with zero real transactions showed
+  the new "No transactions found for ZZZZ" notice; typing an unrecognized ticker into "New
+  trade plan" was rejected with a toast and the modal stayed open, not silently saved; and on
+  PSX specifically, the same-day fee note's permanent second text line was confirmed gone from
+  the DOM (replaced by a real info-icon tooltip) and the Avg Down calculator's "New shares"
+  stat rendered "120 (100 + 20)" exactly. `npx tsc -b` / `npm run test` (696 tests, unchanged —
+  UI/interaction wiring plus one additive optional calc parameter) / `npm run build` all clean.
+
 ## Pending
 
 1. QSE: H1 EPS/fundamentals data is still hard-coded in `webapp/src/lib/stockData/qseSeed.ts`
@@ -10398,6 +10484,43 @@ or a design decision before more code, not guessed at further:**
      exchanges) than the display-only fix, needing its own scoped pass; same "ship the
      narrower, high-confidence slice, flag the rest" discipline as every other broad UI
      rollout in this file.
+138. **Ticker-list management popup, NOT yet started (2026-09-16, flagged while fixing Done
+     item 330's "duplicate OGDC ticker" bug).** Done item 330 stopped an unrecognized ticker
+     from being typed into a NEW Trade Plan, but the user's own fuller ask was: "as we have the
+     complete stock list now, we should remove free entry. instead we should show a popup in
+     settings to manage (Search, Add, Edit) stocks list." That's two separate, larger pieces
+     not attempted here: (a) a Settings-page popup letting a user search/add/edit the bundled
+     ticker list itself (for a real ticker missing from the seed data — QSE's own list or PSX's
+     854-symbol JSON), and (b) rolling the same "must be an exact match, no free entry" rule out
+     to every OTHER ticker-accepting field app-wide (StockPage, the main Add-trade flows, the
+     Buy/Sell & Avg Down calculator's own ticker field, etc.) — Done item 330 only touched Trade
+     Plan creation/edit-meta, the two spots that actually caused the reported bug. Also
+     unresolved: whether an ALREADY-mismatched ticker string sitting in a user's real historical
+     transactions (the most likely actual root cause of the original OGDC report, per Done item
+     330's own investigation) needs some kind of audit/repair tool, or is left as a one-off the
+     user corrects by hand once found.
+139. **App-wide fixed top bar + "declutter into separate views" standing UI rule, NOT yet
+     started (2026-09-16).** User's own words, verbatim: "we should add a proper fixed topbar in
+     addition to our sidenav. the sticky top handles the first time collapsing and scrolling to
+     a view, it looks good but makes the UI to bulky and complicated," plus a standing rule:
+     "WE MUST DECLUTTER AND DIVIDE ITEMS INTO DIFFERENT VIEWS FOR BETTER VISUALS." Pointed at a
+     real design reference already in this repo: `wealth_tracker_template/
+     trade_risk_workstation_manual_entry_optimized/screen.png` — a genuinely ALWAYS-VISIBLE top
+     bar (Global View/Analytics/Reports tabs + a currency picker/notifications/search/account
+     icon cluster) sitting above the page content, alongside the sidebar — structurally
+     different from today's `TopBar.tsx` (`position: sticky`, only ever shows one page's own
+     `Tabs`-driven chip row, pinned from scroll-position-0 rather than being a real persistent
+     app-chrome element). This is a genuinely large, cross-cutting change (touches `Tabs.tsx`
+     and its ~20+ callers app-wide, `AppShell.tsx`, `Sidebar.tsx`) — deliberately NOT folded
+     into the same session as Done item 330's Trade Strategy fixes, and not started here. Also
+     unresolved: the "declutter into separate views" rule reads as wanting genuine view-
+     switching (hide inactive views, not just collapse them) — a real reversal of `Tabs.tsx`'s
+     own current, deliberate design (Done item 103's own doc comment: every section stays
+     present, just collapsed, specifically because an EARLIER hide-inactive-tabs version drew a
+     "keep pressing chips just to view a small piece of info" complaint). Needs a real design
+     pass (own plan, own approval) before any code — don't guess at reconciling these two
+     stated preferences from the same user, since guessing wrong here costs real rework across
+     many pages.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

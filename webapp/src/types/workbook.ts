@@ -178,6 +178,14 @@ export interface TradePlanLeg {
    * on either type. */
   manualSameDay?: boolean;
   feeOverride?: number;
+  /** Set when this leg was added via the Partial Trade Advisor's "Sell this
+   * lot" action — the specific open BUY lot (its own `Transaction.id`) this
+   * SELL is meant to close, same field/meaning as `Transaction.targetLotBuyId`.
+   * Carried through onto the real Transaction "Mark done" creates
+   * (`executeTradePlanLeg`), so the eventual sale attributes correctly to
+   * this exact lot instead of falling back to whichever lot a plain FIFO
+   * match would pick. */
+  targetLotBuyId?: string;
 }
 
 /** README item 9: a saved, multi-leg trade sketch — plan several buys/sells

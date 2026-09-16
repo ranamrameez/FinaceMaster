@@ -319,6 +319,7 @@ export function createWorkbookStore<TWorkbook extends BaseWorkbook<unknown>>(
             action: leg.action,
             shares: leg.shares,
             price: leg.price,
+            targetLotBuyId: leg.targetLotBuyId,
           };
           return {
             ...wb,
