@@ -21,6 +21,7 @@ import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { useAmountFormat } from '../../../hooks/useAmountFormat';
 import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
+import { usePrimaryCurrency } from '../../../hooks/usePrimaryCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { ReorderButtons } from '../../../components/ui/ReorderButtons';
 import { RecurrenceFields } from '../../../components/ui/RecurrenceFields';
@@ -47,7 +48,7 @@ import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
 import { usePlannedCashWorkbookStore } from '../../../store/plannedCashWorkbookStore';
 import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
 import { linkTargetPath, useLinkSideLabel } from '../../transfers/pages/TransferLinksPage';
-import type { CashEntry, CashWorkbook } from '../../../types/cashWorkbook';
+import type { CashEntry } from '../../../types/cashWorkbook';
 import type { PlannedCashEntry } from '../../../types/plannedCash';
 import { gridAutoStyle } from '../../../lib/gridStyle';
 
@@ -70,7 +71,9 @@ const today = () => new Date().toISOString().slice(0, 10);
 function CashPageFab() {
   const [transferOpen, setTransferOpen] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
-  const defaultCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
+  const primaryCurrency = usePrimaryCurrency();
+  const workbookDefaultCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
+  const defaultCurrency = primaryCurrency ?? workbookDefaultCurrency;
   return (
     <>
       <FabPanel
@@ -596,7 +599,9 @@ function AnalyticsTab() {
  * `amount` is always the absolute value. */
 function ImportTab() {
   const addEntries = useCashWorkbookStore((s) => s.addEntries);
-  const defaultCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
+  const primaryCurrency = usePrimaryCurrency();
+  const workbookDefaultCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
+  const defaultCurrency = primaryCurrency ?? workbookDefaultCurrency;
   const ensureSignedIn = useEnsureSignedIn();
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -824,7 +829,9 @@ function AddPlanFab() {
 
 function AddPlanForm({ onSaved }: { onSaved?: () => void }) {
   const addPlan = usePlannedCashWorkbookStore((s) => s.addEntry);
-  const defaultCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
+  const primaryCurrency = usePrimaryCurrency();
+  const workbookDefaultCurrency = useCashWorkbookStore((s) => s.workbook.settings.defaultCurrency);
+  const defaultCurrency = primaryCurrency ?? workbookDefaultCurrency;
   const [lastCurrency, setLastCurrency] = useLastCurrency('cash', defaultCurrency);
   const ensureSignedIn = useEnsureSignedIn();
   const [p, setP] = useState<PlannedCashEntry>(() => emptyPlan(lastCurrency));
@@ -1169,36 +1176,16 @@ export function PlanningTab({
   );
 }
 
+// User-requested (2026-09-16): "we are not working on stand-alone html
+// pages! this is single app... No need of settings in individual modules!"
+// — Default currency and JSON export/import were per-module settings
+// duplicating two already-unified hubs: currency is now driven app-wide by
+// the Account page's Primary/Secondary/Other ranking (`usePrimaryCurrency`),
+// and export/import lives at `/app-data` (Done item 177, all 14 stores in
+// one file). Only "Clear all data" stays here — a real, destructive,
+// module-scoped action `/app-data` has no equivalent for.
 function DataManagement() {
-  const workbook = useCashWorkbookStore((s) => s.workbook);
   const setWorkbook = useCashWorkbookStore((s) => s.setWorkbook);
-  const updateSettings = useCashWorkbookStore((s) => s.updateSettings);
-  const currencyOptions = useEnabledCurrencies(workbook.settings.defaultCurrency);
-  const fileInput = useRef<HTMLInputElement>(null);
-
-  const exportJSON = () => {
-    const blob = new Blob([JSON.stringify(workbook, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `cash-workbook-backup-${today()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const importJSON = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const parsed = JSON.parse(String(reader.result)) as Partial<CashWorkbook>;
-        setWorkbook({ ...createEmptyCashWorkbook(), ...parsed });
-        toast('Workbook imported.');
-      } catch {
-        toast('That file is not valid workbook JSON.');
-      }
-    };
-    reader.readAsText(file);
-  };
 
   const clearAll = async () => {
     const ok = await confirmDialog('This cannot be undone (export a backup first if unsure).', 'Clear all cash entries?');
@@ -1208,39 +1195,14 @@ function DataManagement() {
   };
 
   return (
-    // Pending item 117: "everything should be a grid item except tables" —
-    // these two short, non-table cards used to stack full-width for no
-    // reason; side by side in a responsive grid, same `AccountPage.tsx`
-    // precedent (`grid-auto` + `gridAutoStyle`).
-    <div className="grid-auto" style={{ ...gridAutoStyle(280, 16), alignItems: 'start' }}>
-      <Card>
-        <h3 className="mt-0">General</h3>
-        <Field label="Default currency (pre-fills new entries only)" width={140}>
-          <Select value={workbook.settings.defaultCurrency} onChange={(e) => updateSettings({ defaultCurrency: e.target.value })}>
-            {currencyOptions.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
-          </Select>
-        </Field>
-      </Card>
-      <Card>
-        <h3 className="mt-0">Data management</h3>
-        <div className="row gap-sm">
-          <button className="btn secondary" onClick={exportJSON}>Export JSON</button>
-          <button className="btn secondary" onClick={() => fileInput.current?.click()}>Import JSON</button>
-          <input
-            ref={fileInput}
-            type="file"
-            accept="application/json"
-            className="hidden-file-input"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) importJSON(file);
-              e.target.value = '';
-            }}
-          />
-          <button className="btn secondary" onClick={clearAll}><TrashIcon size={12} />Clear all data</button>
-        </div>
-      </Card>
-    </div>
+    <Card>
+      <h3 className="mt-0">Data management</h3>
+      <p className="text-muted" style={{ marginTop: 0 }}>
+        Currency preferences live on the <Link to="/account">Account page</Link>; whole-app JSON
+        export/import lives on the <Link to="/app-data">Data page</Link>.
+      </p>
+      <button className="btn secondary" onClick={clearAll}><TrashIcon size={12} />Clear all data</button>
+    </Card>
   );
 }
 

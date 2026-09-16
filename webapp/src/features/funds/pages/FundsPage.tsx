@@ -22,6 +22,7 @@ import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { defaultTimeForDate, defaultTimezoneForCurrency, nowTime } from '../../../lib/datetime';
 import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
+import { usePrimaryCurrency } from '../../../hooks/usePrimaryCurrency';
 import { getMarketPrice } from '../../../lib/calc';
 import { pendingShareDeltaByTicker } from '../../../lib/calc/positions';
 import { allocationByCategory, balanceUpdateHistory, brokerTotalsByCurrency, contributionVsValueSeries, expectedPLRate, fundCategoryLabel, fundNetProfit, projectInvestmentReturn } from '../../../lib/calc/fundsModule';
@@ -53,7 +54,7 @@ import { createEmptyFundsWorkbook } from '../../../store/defaultFundsWorkbook';
 import { useFundsWorkbookStore } from '../../../store/fundsWorkbookStore';
 import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
 import { linkTargetPath, useLinkSideLabel } from '../../transfers/pages/TransferLinksPage';
-import type { Broker, Fund, FundsWorkbook } from '../../../types/fundsWorkbook';
+import type { Broker, Fund } from '../../../types/fundsWorkbook';
 import type { Transaction, Transfer } from '../../../types/workbook';
 import { useFundsDerived } from '../hooks/useFundsDerived';
 import { ChartCard } from '../../qse/components/ChartCard';
@@ -82,7 +83,9 @@ function emptyFund(defaultCurrency: string, brokerId?: string): Fund {
  * modal. */
 function AddFundFab() {
   const [open, setOpen] = useState<'fund' | 'transfer' | 'helper' | 'broker' | null>(null);
-  const defaultCurrency = useFundsWorkbookStore((s) => s.workbook.settings.defaultCurrency);
+  const primaryCurrency = usePrimaryCurrency();
+  const workbookDefaultCurrency = useFundsWorkbookStore((s) => s.workbook.settings.defaultCurrency);
+  const defaultCurrency = primaryCurrency ?? workbookDefaultCurrency;
   const workbook = useFundsWorkbookStore((s) => s.workbook);
   const setWorkbook = useFundsWorkbookStore((s) => s.setWorkbook);
   const ensureSignedIn = useEnsureSignedIn();
@@ -413,7 +416,8 @@ function AddFundForm({ onSaved, initialBrokerId }: { onSaved?: () => void; initi
   const workbook = useFundsWorkbookStore((s) => s.workbook);
   const setWorkbook = useFundsWorkbookStore((s) => s.setWorkbook);
   const addTransaction = useFundsWorkbookStore((s) => s.addTransaction);
-  const [lastCurrency, setLastCurrency] = useLastCurrency('funds', 'USD');
+  const primaryCurrency = usePrimaryCurrency();
+  const [lastCurrency, setLastCurrency] = useLastCurrency('funds', primaryCurrency ?? 'USD');
   const ensureSignedIn = useEnsureSignedIn();
   const [f, setF] = useState<Fund>(() => emptyFund(lastCurrency, initialBrokerId));
   const currencyOptions = useEnabledCurrencies(f.currencyCode);
@@ -704,7 +708,8 @@ function SnapshotImportSection() {
   const addTransactions = useFundsWorkbookStore((s) => s.addTransactions);
   const setMarketPrice = useFundsWorkbookStore((s) => s.setMarketPrice);
   const ensureSignedIn = useEnsureSignedIn();
-  const [lastCurrency, setLastCurrency] = useLastCurrency('funds', 'USD');
+  const primaryCurrency = usePrimaryCurrency();
+  const [lastCurrency, setLastCurrency] = useLastCurrency('funds', primaryCurrency ?? 'USD');
   const fileInput = useRef<HTMLInputElement>(null);
 
   const [rows, setRows] = useState<FundSnapshotRow[] | null>(null);
@@ -1832,34 +1837,15 @@ function AccountSection({
   );
 }
 
+// User-requested (2026-09-16): "No need of settings in individual modules!"
+// — Default currency and JSON export/import were per-module settings
+// duplicating two already-unified hubs: currency is now driven app-wide by
+// the Account page's Primary/Secondary/Other ranking (`usePrimaryCurrency`),
+// and export/import lives at `/app-data` (Done item 177). Only "Clear all
+// data" stays here — a real, destructive, module-scoped action `/app-data`
+// has no equivalent for.
 function DataManagement() {
-  const workbook = useFundsWorkbookStore((s) => s.workbook);
   const setWorkbook = useFundsWorkbookStore((s) => s.setWorkbook);
-  const fileInput = useRef<HTMLInputElement>(null);
-
-  const exportJSON = () => {
-    const blob = new Blob([JSON.stringify(workbook, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `funds-workbook-backup-${today()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const importJSON = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const parsed = JSON.parse(String(reader.result)) as Partial<FundsWorkbook>;
-        setWorkbook({ ...createEmptyFundsWorkbook(), ...parsed });
-        toast('Workbook imported.');
-      } catch {
-        toast('That file is not valid workbook JSON.');
-      }
-    };
-    reader.readAsText(file);
-  };
 
   const clearAll = async () => {
     const ok = await confirmDialog('This cannot be undone (export a backup first if unsure).', 'Clear all funds data?');
@@ -1871,20 +1857,11 @@ function DataManagement() {
   return (
     <Card>
       <h3 className="mt-0">Data management</h3>
+      <p className="text-muted" style={{ marginTop: 0 }}>
+        Currency preferences live on the <Link to="/account">Account page</Link>; whole-app JSON
+        export/import lives on the <Link to="/app-data">Data page</Link>.
+      </p>
       <div className="row gap-sm">
-        <button className="btn secondary" onClick={exportJSON}>Export JSON</button>
-        <button className="btn secondary" onClick={() => fileInput.current?.click()}>Import JSON</button>
-        <input
-          ref={fileInput}
-          type="file"
-          accept="application/json"
-          className="hidden-file-input"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) importJSON(file);
-            e.target.value = '';
-          }}
-        />
         <button className="btn secondary" onClick={clearAll}><TrashIcon size={12} />Clear all data</button>
       </div>
     </Card>

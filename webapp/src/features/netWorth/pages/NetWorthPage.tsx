@@ -35,6 +35,8 @@ import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { useAppearanceStore } from '../../../store/appearanceStore';
 import { useCategoryStore } from '../../../store/categoryStore';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
+import { usePrimaryCurrency } from '../../../hooks/usePrimaryCurrency';
+import { useCurrencyRankComparator } from '../../../hooks/useCurrencyRank';
 import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
 import { usePlannedCashWorkbookStore } from '../../../store/plannedCashWorkbookStore';
@@ -138,7 +140,11 @@ export function NetWorthPage({
   // a much more likely "the one they care about" than an arbitrary global
   // default — falling back to 'USD' only when there's no data yet to judge by.
   const { rows, biggestExposureCurrency } = useNetWorthSummary();
-  const [preferredCurrency, setPreferredCurrency] = useLastCurrency('net-worth-preferred', biggestExposureCurrency);
+  const currencyRank = useCurrencyRankComparator();
+  const primaryCurrency = usePrimaryCurrency();
+  // Explicit user preference (Primary currency, set on the Account page)
+  // beats the inferred biggest-exposure heuristic when both are available.
+  const [preferredCurrency, setPreferredCurrency] = useLastCurrency('net-worth-preferred', primaryCurrency ?? biggestExposureCurrency);
   // User-reported (2026-09-09): "Dashboard Net Worth Summary still lists
   // global currencies rather than user's." The "Show total in" picker used
   // to map over the whole `CURRENCIES` catalog (~25 currencies) instead of
@@ -341,7 +347,9 @@ export function NetWorthPage({
     .map((r) => ({ currency: r.currency, converted: convertAmount(r.net, r.currency, preferredCurrency, rates) }))
     .filter((r): r is { currency: string; converted: number } => r.converted !== null && r.converted > 0);
 
-  const ownCurrencies = [...new Set(rows.map((r) => r.currency))].sort();
+  // Ordered by the user's own Primary/Secondary/Other ranking (2026-09-16),
+  // not alphabetically — see `useCurrencyRankComparator`'s own doc comment.
+  const ownCurrencies = [...new Set(rows.map((r) => r.currency))].sort(currencyRank);
 
   // README Pending item 64: an on-demand snapshot (see
   // types/netWorthSnapshot.ts's own doc comment for the locked design
@@ -498,8 +506,14 @@ export function NetWorthPage({
           {ownCurrencies.length > 1 && (
             <div style={{ marginTop: 14 }}>
               <div className="text-muted" style={{ marginBottom: 4 }}>Rates between your own currencies</div>
-              {ownCurrencies.flatMap((a) =>
-                ownCurrencies.filter((b) => b > a).map((b) => {
+              {/* Index-based pairing (not `b > a`) — `ownCurrencies` is now
+                  ordered by the user's own currency ranking, not
+                  alphabetically, so a string comparison would either skip
+                  or duplicate a pair depending on rank vs. alphabetical
+                  order. Pairing by array position still visits each
+                  unordered pair exactly once regardless of sort order. */}
+              {ownCurrencies.flatMap((a, i) =>
+                ownCurrencies.slice(i + 1).map((b) => {
                   const rAB = effectiveRate(a, b, rates);
                   const rBA = effectiveRate(b, a, rates);
                   return (
@@ -577,7 +591,7 @@ export function NetWorthPage({
           2026-09-04) — a responsive grid lets 2-3 currency sections sit
           side by side on a wide viewport instead of stacking. */}
       <div className="grid-auto" style={{ ...gridAutoStyle(360, 12), marginBottom: 16 }}>
-        {rows.map((r) => {
+        {[...rows].sort((a, b) => currencyRank(a.currency, b.currency)).map((r) => {
           const converted = convertAmount(r.net, r.currency, preferredCurrency, rates);
           const todayFlowC = todayFlow[r.currency] ?? 0;
           const monthFlowC = monthFlow[r.currency] ?? 0;

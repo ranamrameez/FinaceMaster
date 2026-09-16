@@ -18,6 +18,7 @@ import { CategorySelect } from '../../../components/CategorySelect';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
+import { usePrimaryCurrency } from '../../../hooks/usePrimaryCurrency';
 import { usePageFabActions } from '../../../hooks/usePageFabActions';
 import { getLastTransferSource, rememberTransferSource } from '../../../hooks/useLastTransferSource';
 import { hueStyle } from '../../../lib/statCardHues';
@@ -63,7 +64,8 @@ const KIND_LABELS: Record<CreditCardTransactionKind, string> = {
  * this exact form. */
 export function AddCreditCardForm({ onSaved, initialCurrency }: { onSaved?: (id: string) => void; initialCurrency?: string } = {}) {
   const addCard = useCreditCardWorkbookStore((s) => s.addCard);
-  const [lastCurrency, setLastCurrency] = useLastCurrency('creditCard', 'USD');
+  const primaryCurrency = usePrimaryCurrency();
+  const [lastCurrency, setLastCurrency] = useLastCurrency('creditCard', primaryCurrency ?? 'USD');
   const ensureSignedIn = useEnsureSignedIn();
   const [c, setC] = useState<Omit<CreditCard, 'id'>>(() => emptyCard(initialCurrency ?? lastCurrency));
   const currencyOptions = useEnabledCurrencies(c.currencyCode);

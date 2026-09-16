@@ -9364,6 +9364,66 @@ FinanceManager live link:
   per-ticker analysis unchanged — both views render real, internally-consistent numbers, neither
   contradicting the other now that each is clearly labeled which one it is. `npx tsc -b` /
   `npm run test` (696 tests, unchanged) / `npm run build` all clean.
+- **Primary/Secondary/Other currency tiering built, closing Pending item 141 in full
+  (2026-09-16) — see Done item 332.** User provided three concrete real-world use cases: a UK
+  user needing only one currency; a Philippines migrant in the UAE needing two; a Pakistani
+  national in KSA trading US stocks needing SAR (local), PKR (home assets), and USD (trading)
+  all at once, each with a different priority depending on what they're doing. Design proposed
+  and confirmed via `AskUserQuestion`: **the already-ordered `enabledCodes` array's own
+  insertion order IS the ranking** — index 0 = Primary, index 1 = Secondary, everything else =
+  Other — no new schema field, since a user already expresses rank by the order they pick/
+  reorder currencies in. User confirmed all three proposed controls: default currency in
+  new-record forms, ordering in currency-grouped displays, and prominence in currency pickers
+  app-wide. `useEnabledCurrencies()` (`hooks/useEnabledCurrencies.ts`) now preserves
+  `enabledCodes`' order exactly instead of re-sorting the enabled subset back into `CURRENCIES`'
+  fixed catalog order (which silently discarded the ranking). New `hooks/usePrimaryCurrency.ts`
+  exposes `enabledCodes?.[0]` (`undefined` when unconfigured, so every caller keeps its own
+  zero-migration fallback). **Mid-implementation, a second, much bigger correction arrived**,
+  verbatim: "we are not working on stand-alone html pages! this is single app, thus should
+  behave like this. I REPEATED MULTIPLE TIMES but you ignore. No need of settings in individual
+  modules! this is creating unnnecessary confusion and UI states! including currency and account
+  status, json import & export etc. settings." Per-module `DataManagement()` sections (Cash,
+  Bank, Funds, QSE Settings, PSX Settings, Rentals, Subscriptions) all had their Export JSON/
+  Import JSON buttons and file-input handling removed entirely — those already fully duplicated
+  `/app-data` (Done item 177, all 14 stores in one place); only "Clear all data" stays (a real,
+  destructive, module-scoped action `/app-data` has no equivalent for), with a short note
+  pointing to `/account` and `/app-data` for the removed functionality. Every module's own
+  `defaultCurrency` fallback (`useLastCurrency`'s seed value) now prefers `usePrimaryCurrency()`
+  first, falling back to the module's still-present (but no longer user-facing-as-a-"setting")
+  `workbook.settings.defaultCurrency` only when the user hasn't ranked a Primary currency yet —
+  applied to Bank, CreditCardsSection, Rentals, Funds (2 call sites), NetWorthPage, Cash (3 call
+  sites), Personal Loans, and EMI. **A real Rules-of-Hooks bug caught before shipping, not
+  after**: the first draft of this pattern was `usePrimaryCurrency() ?? useXWorkbookStore(...)`
+  — since `??`'s right side only evaluates when the left side is nullish, this CONDITIONALLY
+  called a Zustand store hook (itself built on `useSyncExternalStore`) depending on whether a
+  Primary currency happened to be set on that render, a genuine "hook call order changes between
+  renders" violation that would eventually throw "Rendered fewer hooks than expected." Fixed
+  everywhere by always calling both hooks unconditionally into separate variables, combining
+  with `??` only afterward — the correct, safe version of the same pattern. Every AccountSection
+  ("account status") across all 9 modules was re-audited and confirmed already correctly
+  minimal (just the module-specific cloud-empty-upload safety prompt, never duplicated Profile/
+  Sign-in content — already trimmed in earlier sessions per Done items 213/214), so no further
+  change was needed there. **New app-wide controls, per the three confirmed use cases**: (1) a
+  ranked reorder UI on `/account`'s Currencies section (`CurrencyRanking`, up/down `IconButton`s
+  swapping adjacent entries in `enabledCodes` via `setEnabledCodes`, since `toggle()` only ever
+  appends a newly-enabled currency to the end); (2) `components/ui/CurrencyChips.tsx` now always
+  shows the Primary+Secondary tier, collapsing anything ranked below that ("Other") behind a
+  "+N more" chip that auto-expands if the field's own current value happens to be one of the
+  collapsed ones — only kicks in once more than 2 currencies are ranked, so a single/dual-
+  currency user (the UK/UAE-migrant cases) sees no collapsing at all; (3) new
+  `hooks/useCurrencyRank.ts`'s `useCurrencyRankComparator()` orders Net Worth's per-currency
+  card grid and its "Rates between your own currencies" pairwise table by rank instead of
+  alphabetically — the pairwise table's own pairing loop had to switch from a `b > a` string
+  comparison (which relied on alphabetical order to avoid duplicate pairs) to index-based
+  pairing (`ownCurrencies.flatMap((a, i) => ownCurrencies.slice(i + 1).map((b) => ...)))`, which
+  visits every unordered pair exactly once regardless of sort order. Verified live via
+  Playwright: seeded 5 ranked currencies (USD, PKR, QAR, GBP, EUR) — the Account page's ranking
+  UI rendered correct Primary/Secondary/Other pills, and clicking "Move up" on the 2nd row
+  correctly swapped PKR ahead of USD in `localStorage`; `CurrencyChips` (via Cash's Transfers
+  popup) correctly showed only USD/PKR plus a "+3 more" chip, expanding to all 5 on click; all
+  7 modules' Settings tabs confirmed Export/Import JSON gone, "Clear all data" present, and real
+  links to `/account`/`/app-data` — zero console errors throughout. `npx tsc -b` / `npm run
+  test` (696 tests, unchanged) / `npm run build` all clean.
 
 ## Pending
 
@@ -10593,31 +10653,10 @@ or a design decision before more code, not guessed at further:**
      standing policy), so this diagnosis is from code-reading plus a synthetic repro, not the
      user's actual data. Needs the user's confirmation (or a fresh screenshot/exact page name)
      before writing any fix.
-141. **"Primary, secondary and other currencies" — confirmed as a real, unmet request, NOT yet
-     built (2026-09-16).** User: "You also mismanaged the currencies. i expicitly asked primary,
-     secondary and other currenicies. settings do not tell any difference." Confirmed by reading
-     `store/enabledCurrenciesStore.ts` directly: `enabledCodes` is a flat, UNORDERED set — a
-     currency is either in it or not, with genuinely no concept of rank/priority anywhere in the
-     type, the store, or the Account page's own Currencies UI. `lib/currencies.ts`'s
-     `detectPrimaryCurrency()` only ever guesses a ONE-TIME default from the browser's timezone
-     for the first-run onboarding prompt (Done item 283) — it's not a stored, user-editable
-     ranking, and nothing reads it again after that first prompt. Every place in the app that
-     needs "the" default/primary currency (Net Worth's own picker, `useLastCurrency`, Transfers'
-     `LIKELY_OTHER_MODULE` default, etc.) uses its own separate, ad hoc heuristic (e.g. "whichever
-     currency has the biggest absolute exposure") rather than a real user-set Primary. So the
-     user's complaint is accurate, not a misunderstanding of an existing feature — there is no
-     Primary/Secondary/Other distinction to "tell a difference" from. **Not built here** — this
-     touches ~10+ files that already read `useEnabledCurrencies()` (Cash/Bank/Funds/EMI/Personal
-     Loans/Rentals/Subscriptions/NetWorth/CreditCardsSection/the sync hook), so the concrete
-     shape needs deciding before writing code: most likely direction is making the ALREADY-
-     ordered-by-insertion `enabledCodes` array's own order meaningful (index 0 = Primary, index 1
-     = Secondary, the rest = Other) rather than adding new fields, with the Account page's picker
-     gaining real up/down reordering (or a "set as primary" action per chip) and every current ad
-     hoc "pick a default currency" heuristic across those ~10 files switched to read
-     `enabledCodes[0]` instead — but this needs the user's own confirmation on what Primary/
-     Secondary/Other should actually CONTROL (a currency's default position in pickers? its sort
-     order in a currency-grouped table? both?) before implementing, per this project's own
-     standing plan-and-propose rule for a change with this much surface area.
+~~141. "Primary, secondary and other currencies."~~ **Done (2026-09-16) — see README Done item
+     332.** `enabledCodes`' own array order is now the ranking (index 0 = Primary, index 1 =
+     Secondary, the rest Other); every module's default-currency fallback, the Account page's
+     new reorder UI, and `CurrencyChips`' prominent-vs-collapsed tiers all read it.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

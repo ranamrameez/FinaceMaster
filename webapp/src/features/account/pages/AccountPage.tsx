@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
 import { AppearanceFields } from '../../../components/AppearancePanel';
 import { Card, CollapsibleCard } from '../../../components/Card';
-import { LogInIcon } from '../../../components/icons';
+import { ArrowDownIcon, ArrowUpIcon, LogInIcon } from '../../../components/icons';
+import { IconButton } from '../../../components/ui/IconButton';
 import { Notice } from '../../../components/Notice';
 import { ProfileEditor } from '../../../components/ProfileEditor';
 import { requireSignIn } from '../../../components/SignInModal';
@@ -12,6 +13,56 @@ import { signOutUser } from '../../../lib/firebase/auth';
 import { useAuthState } from '../../../lib/firebase/useAuthState';
 import { gridAutoStyle } from '../../../lib/gridStyle';
 import { useEnabledCurrenciesStore } from '../../../store/enabledCurrenciesStore';
+
+/** Index 0 = Primary, index 1 = Secondary, everything else = Other — see
+ * `useEnabledCurrencies`'s own doc comment for the full tier design. */
+function tierLabel(index: number): string {
+  if (index === 0) return 'Primary';
+  if (index === 1) return 'Secondary';
+  return 'Other';
+}
+
+/** User-requested (2026-09-16, "ordering in currency-grouped displays" /
+ * "let the user reorder"): the ranking itself is just `enabledCodes`' own
+ * array order (see `useEnabledCurrencies`'s doc comment) — this is the one
+ * place a user can actually change that order, since `toggle()` only ever
+ * APPENDS a newly-enabled currency to the end. Only rendered once there's
+ * more than one currency to rank (a single-currency user has nothing to
+ * reorder, per the "single currency user doesn't need complexity"
+ * instruction). */
+function CurrencyRanking() {
+  const enabledCodes = useEnabledCurrenciesStore((s) => s.enabledCodes);
+  const setEnabledCodes = useEnabledCurrenciesStore((s) => s.setEnabledCodes);
+  if (!enabledCodes || enabledCodes.length < 2) return null;
+
+  const move = (index: number, dir: 'up' | 'down') => {
+    const target = dir === 'up' ? index - 1 : index + 1;
+    if (target < 0 || target >= enabledCodes.length) return;
+    const next = [...enabledCodes];
+    [next[index], next[target]] = [next[target], next[index]];
+    setEnabledCodes(next);
+  };
+
+  return (
+    <div className="mt-sm">
+      <p className="text-muted" style={{ marginTop: 0, marginBottom: 6 }}>
+        Rank your currencies — the top one (Primary) becomes the default in new-record forms and
+        currency pickers app-wide; the rest fill in after it in this same order.
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {enabledCodes.map((code, i) => (
+          <div key={code} className="row" style={{ alignItems: 'center', gap: 8 }}>
+            <span className="pill pill-info" style={{ minWidth: 70, textAlign: 'center' }}>{tierLabel(i)}</span>
+            <span style={{ fontWeight: 600 }}>{code}</span>
+            <span style={{ flex: 1 }} />
+            <IconButton label="Move up" icon={<ArrowUpIcon size={12} />} disabled={i === 0} onClick={() => move(i, 'up')} />
+            <IconButton label="Move down" icon={<ArrowDownIcon size={12} />} disabled={i === enabledCodes.length - 1} onClick={() => move(i, 'down')} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /** Firebase provider ids -> what a non-technical user actually recognizes.
  * Only the two methods this app actually offers (see SignInModal.tsx) need
@@ -56,6 +107,7 @@ function CurrenciesSection() {
           </button>
         ))}
       </div>
+      <CurrencyRanking />
       {enabledCodes !== null && (
         <button className="btn secondary small mt-sm" onClick={() => setEnabledCodes(null)}>
           Reset to all currencies

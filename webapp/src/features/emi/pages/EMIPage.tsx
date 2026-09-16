@@ -17,6 +17,7 @@ import { FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
 import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
+import { usePrimaryCurrency } from '../../../hooks/usePrimaryCurrency';
 import { emiSchedule, emiSummary, expectedEndDate, generateBigEmiOverrides, installmentDueDate, markupPercentage, markupRateEquivalents, resolvedDueDate, totalsByCurrency, whatIfExtraPayment, type EMISummary } from '../../../lib/calc/emiModule';
 import { dlBarV, dlLine, withAlpha } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
@@ -92,7 +93,9 @@ function AddLoanFab({ onLoanCreated }: { onLoanCreated: (id: string) => void }) 
  * `SideFields` reuses this exact form from `TransactionEntryModal`. */
 export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: string) => void; initialCurrency?: string }) {
   const addEntry = useEMIWorkbookStore((s) => s.addEntry);
-  const defaultCurrency = useEMIWorkbookStore((s) => s.workbook.settings.defaultCurrency);
+  const primaryCurrency = usePrimaryCurrency();
+  const workbookDefaultCurrency = useEMIWorkbookStore((s) => s.workbook.settings.defaultCurrency);
+  const defaultCurrency = primaryCurrency ?? workbookDefaultCurrency;
   const [lastCurrency, setLastCurrency] = useLastCurrency('emi', defaultCurrency);
   const ensureSignedIn = useEnsureSignedIn();
   const [l, setL] = useState<EMILoan>(() => emptyLoan(initialCurrency ?? lastCurrency));
