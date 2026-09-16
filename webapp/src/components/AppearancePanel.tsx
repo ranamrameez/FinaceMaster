@@ -11,6 +11,10 @@ const COLOR_THEMES = [
     ['sunset', 'Sunset Amber'],
     ['bright', 'Bright Ledger'],
   ] },
+  { group: 'Modern themes', options: [
+    ['aurora', 'Aurora (Indigo + Cyan)'],
+    ['sage', 'Sage (Jade + Neutral)'],
+  ] },
   { group: 'Material Design themes', options: [
     ['material-blue', 'Material Purple / Blue'],
     ['material-green', 'Material Green'],
