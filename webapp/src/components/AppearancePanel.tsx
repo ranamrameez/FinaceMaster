@@ -17,7 +17,6 @@ const COLOR_THEMES = [
   ] },
   { group: 'Material themes', options: [
     ['material-teal', 'Material Teal'],
-    ['material-purple', 'Material Rose'],
   ] },
 ];
 
