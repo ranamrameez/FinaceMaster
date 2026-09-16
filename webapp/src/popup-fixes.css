@@ -1,0 +1,67 @@
+/* Popup/modal surface and scrolling rules.
+ * Keep the modal shell fixed while only its body scrolls, so long forms do
+ * not move the title/close/fullscreen controls off-screen. */
+.modal-overlay.show {
+  overflow:hidden;
+}
+
+.modal-box {
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  max-height:92vh;
+  overflow:hidden;
+  background:var(--panel);
+  background-image:none;
+}
+
+.modal-header {
+  flex:0 0 auto;
+  min-height:28px;
+  padding-bottom:12px;
+  border-bottom:1px solid var(--border);
+}
+
+.modal-body {
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+  padding-top:12px;
+  overscroll-behavior:contain;
+}
+
+.modal-box.fullscreen {
+  height:96vh;
+  max-height:96vh;
+}
+
+/* Cards rendered inside a popup should read as solid surfaces. The app's
+ * general card treatment can remain expressive on pages, but stacked cards
+ * inside a constrained dialog become visually noisy when they carry their
+ * own gradients. */
+.modal-box .card,
+.modal-box .stat-card,
+.modal-box .entity-card {
+  background:var(--panel);
+  background-image:none;
+}
+
+/* The portaled Appearance popover is also a popup surface: keep it solid and
+ * allow its controls to scroll on short screens without moving the trigger. */
+.appearance-panel {
+  background:var(--panel);
+  background-image:none;
+  max-height:calc(100vh - 16px);
+  overflow-y:auto;
+}
+
+@media(max-width:700px){
+  .modal-box {
+    max-height:92vh;
+  }
+  .modal-box.fullscreen {
+    height:100vh;
+    max-height:100vh;
+  }
+}
