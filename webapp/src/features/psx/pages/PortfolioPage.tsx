@@ -4,6 +4,7 @@ import { Sparkline } from '../../../components/Sparkline';
 import { Tabs } from '../../../components/Tabs';
 import { TickerLogo } from '../../../components/TickerLogo';
 import { RoundTripCostModal } from '../../../components/RoundTripCostModal';
+import { StatSourceBadge } from '../../../components/StatSourceBadge';
 import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
 import { useSortableRows } from '../../../hooks/useSortableRows';
@@ -275,8 +276,8 @@ export function PortfolioPage() {
       <p className="pagesub">Open positions and closed trade history.</p>
       <Tabs
         tabs={[
-          { key: 'open', label: 'Holdings', content: <OpenPositionsTable onSelect={goToStock} /> },
-          { key: 'closed', label: 'History', content: <ClosedPositionsTable onSelect={goToStock} /> },
+          { key: 'open', label: 'Holdings', content: <OpenPositionsTable onSelect={goToStock} />, headerExtra: <StatSourceBadge source="official" /> },
+          { key: 'closed', label: 'History', content: <ClosedPositionsTable onSelect={goToStock} />, headerExtra: <StatSourceBadge source="official" /> },
         ]}
       />
     </div>

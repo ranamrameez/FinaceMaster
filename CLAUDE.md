@@ -7046,6 +7046,53 @@ touched those.
   section stays present, just collapsed — Done item 103's own reasoning, itself a response to
   an earlier "hide inactive tabs" complaint) — genuinely needs its own scoped design pass and
   approval before any code, not a guess folded into an unrelated session.
+- **Trust-restoration: app-wide Official/Strategic-Advisory/Trade-history labeling + the
+  Trade Strategy 2-view split, restored (2026-09-16) — see README Done item 331.** Right after
+  the Trade Strategy overhaul above merged, the user directly blamed my own earlier "superseded,
+  do not build" call on the original 2-tab idea: "I don't have confidence in Exchanges now...
+  as you DELIBRAETLY dropped the tab based dual point of view of data, everything seems
+  compromised and unreliable now. I dont know how your calculating and displaying the stats."
+  Explained precisely how QSE's/PSX's real calc engine works (unchanged, correct — the trust gap
+  was PRESENTATION, three coexisting calc layers with nothing on screen distinguishing them, not
+  a calculation bug) and asked via `AskUserQuestion` whether to (A) label everything, (B) rebuild
+  the split, or (C) both — **the user picked "Both of the above."** Built new shared
+  `components/StatSourceBadge.tsx` (official/advisory/history, `Tooltip`-backed) applied to
+  Dashboard's Holdings card, Portfolio's Holdings/History tabs, `PositionDetail.tsx`'s
+  "Current position"/"All-time stats"/"Open lots (FIFO)" (official) and "Open lots"/"Closed
+  round-trips" (history — pure reporting views), and the Trade Transactions page's "Open
+  trades"/"Closed trades" sections, both exchanges. Rebuilt each `PlanCard`'s stats section as a
+  real "Compare: Broker Style / Strategic Trades" chip toggle (defaults to Broker Style): a new
+  `BrokerStyleView` component shows the ticker's REAL `computePositions()`/`usePSXDerived()`-
+  sourced Shares/Avg cost/Break-even/Current price/Unrealized P&L (identical to Dashboard,
+  completely independent of the plan), while Strategic Trades keeps everything the page already
+  had (`PartialTradeAdvisor`, the blended per-ticker analysis, `WhatIfExitCalculator`) — the legs
+  table (plan management) stays outside the toggle, always visible either way. Verified live via
+  Playwright with the same 50 sh @10.40 + 14 sh @9.962 scenario: Broker Style showed 64 shares /
+  Avg 10.32 / BE 10.34 / -23.85 QAR (hand-checked), Strategic Trades showed both lots' individual
+  advice unchanged — both internally correct, now each clearly labeled which is which. `npx tsc
+  -b` / `npm run test` (696 tests, unchanged) / `npm run build` all clean.
+- **Two new user-reported issues, NOT yet fixed, investigated and documented for a future
+  session (2026-09-16) — see README Pending items 140/141.** Arrived mid-turn while verifying
+  the trust-restoration work above: (1) "counting lifetime bought shares is insane" with a real
+  QFLS BUY-14/SELL-14 example — read `computePositions()` directly and confirmed the calc engine
+  itself correctly accumulates lifetime totals per ticker without resetting on a full close; the
+  likely real culprit (not yet confirmed against the user's own real data — this sandbox can't
+  sign into the test account) is Portfolio's "History" tab merging every discrete round-trip for
+  a repeatedly-closed-and-reopened ticker into ONE row, unlike the already-built
+  `computeClosedTrades()` reporting ledger (Done item 206) which correctly gives each round trip
+  its own row — flagged as a real design decision (replace History's shape entirely, or add a
+  toggle?) needing the user's confirmation, not guessed at. (2) "primary, secondary and other
+  currencies... settings do not tell any difference" — confirmed via `enabledCodes`
+  (`store/enabledCurrenciesStore.ts`) being a flat, unordered set with genuinely no
+  Primary/Secondary/Other ranking concept anywhere, while ~10 files each use their own separate
+  ad hoc "guess a default currency" heuristic — a real, accurate complaint, not a misunderstanding
+  — likely fix is making the already-ordered `enabledCodes` array's own order meaningful
+  (index 0 = Primary) and pointing every one of those heuristics at it, but needs the user's own
+  confirmation on what Primary/Secondary/Other should actually control before touching ~10 files.
+  **The test account `ranamotorsjallo@gmail.com` still cannot be signed into from this sandbox**
+  (Firebase/Google domains are network-policy-blocked here, same limitation documented earlier
+  in this file) — both diagnoses are from code-reading plus synthetic repros, not the user's
+  real data; say so plainly if a future session revisits either without a real sign-in.
 
 ## Live URLs
 

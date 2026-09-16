@@ -5,6 +5,7 @@ import { TickerLogo } from '../../../components/TickerLogo';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { CheckIcon, EditIcon, ExportIcon, PlusIcon, SaveIcon, TrashIcon, TransferIcon, XIcon } from '../../../components/icons';
 import { Tabs } from '../../../components/Tabs';
+import { StatSourceBadge } from '../../../components/StatSourceBadge';
 import { Tooltip } from '../../../components/Tooltip';
 import { toast } from '../../../components/Toast';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
@@ -624,6 +625,7 @@ function TransactionList() {
             Open trades (not yet sold)
           </Tooltip>{' '}
           — {sortedOpenLots.length}
+          <StatSourceBadge source="history" />
         </summary>
         <div className="table-scroll">
           <table>
@@ -664,6 +666,7 @@ function TransactionList() {
             Closed trades (realized round-trips)
           </Tooltip>{' '}
           — {sortedClosedTrades.length}
+          <StatSourceBadge source="history" />
         </summary>
         <div className="table-scroll">
           <table>

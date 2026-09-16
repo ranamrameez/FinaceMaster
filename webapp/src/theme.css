@@ -613,6 +613,9 @@
   .pill-negative{background:color-mix(in srgb, var(--loss) 16%, var(--panel)); color:var(--loss);}
   .pill-warn{background:color-mix(in srgb, var(--warn) 18%, var(--panel)); color:var(--warn);}
   .pill-info{background:color-mix(in srgb, var(--info) 16%, var(--panel)); color:var(--info);}
+  /* Neutral tone for a badge that isn't positive/negative/warning — e.g.
+     StatSourceBadge's "Trade history" label (2026-09-16). */
+  .pill-neutral{background:color-mix(in srgb, var(--muted) 16%, var(--panel)); color:var(--muted);}
   /* User-requested (2026-09-15): "Buy and sell are different from PL, so
      they should be treated so" — every real trade's BUY/SELL action badge
      across the app (QSE/PSX's Trade Transactions/StockPage/Trade Planner)
