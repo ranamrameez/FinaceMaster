@@ -1,73 +1,37 @@
 import type { PersonalLoan, PersonalLoanRepayment } from '../../types/personalLoansWorkbook';
 import { dateOnlyMs } from '../datetime';
 
-/** Excludes any repayment with `isPending` set (Pending-transaction-state,
- * 2026-09-08) — a repayment the user's logged but that hasn't actually
- * cleared yet shouldn't reduce the loan's real outstanding balance until it
- * does. Every other Personal Loans outstanding/net-position figure in the
- * app derives from this one function, so excluding pending here is a "fix
- * once" change — see `loanPendingImpact` below for the companion figure. */
 export function loanOutstanding(loan: PersonalLoan, repayments: PersonalLoanRepayment[]): number {
   const repaid = repayments.filter((r) => r.loanId === loan.id && !r.isPending).reduce((s, r) => s + r.amount, 0);
   return Math.max(0, loan.principal - repaid);
 }
 
-/** The sum of pending repayments against one loan — the companion figure to
- * `loanOutstanding` above, so the UI can show "Outstanding: X" and "-Y
- * pending" side by side rather than the pending amount just vanishing. */
 export function loanPendingImpact(loan: PersonalLoan, repayments: PersonalLoanRepayment[]): number {
   return repayments.filter((r) => r.loanId === loan.id && r.isPending).reduce((s, r) => s + r.amount, 0);
 }
 
-/** Running "remaining outstanding" after each repayment to this loan, in
- * calendar-date order (same-date ties broken by `seq`, see
- * `dateOnlyMs`'s own doc comment — Done item 235, extended 2026-09-08) —
- * user-reported gap: no running balance column on the repayments list,
- * only the loan's current total (`loanOutstanding`).
- * Returns a map keyed by `PersonalLoanRepayment.id` so the caller can look
- * up a value regardless of what order the table is currently sorted in
- * (same pattern as `transferRunningBalance`). Clamped at 0 per-row like
- * `loanOutstanding` itself — an overpayment shows the loan as settled, not
- * negative. */
 export function repaymentRunningOutstanding(loan: PersonalLoan, repayments: PersonalLoanRepayment[]): Map<string, number> {
-  const forLoan = repayments
-    .filter((r) => r.loanId === loan.id)
-    .sort((a, b) => dateOnlyMs(a.date) - dateOnlyMs(b.date) || (a.seq ?? 0) - (b.seq ?? 0))
-    .map((r) => ({ r }));
+  const forLoan = repayments.filter((r) => r.loanId === loan.id && !r.isPending).sort((a, b) => dateOnlyMs(a.date) - dateOnlyMs(b.date) || (a.seq ?? 0) - (b.seq ?? 0));
   const out = new Map<string, number>();
   let remaining = loan.principal;
-  for (const { r } of forLoan) {
+  for (const r of forLoan) {
     remaining = Math.max(0, remaining - r.amount);
     out.set(r.id, remaining);
   }
   return out;
 }
 
-/** README item 99 (2026-08-26 feedback): a loan's own detail page had no
- * chart at all — the per-portfolio "Outstanding by loan"/"Repayments by
- * month" charts (Done item 45) only live on the LANDING page's Analytics
- * tab, scoped across every loan, not this one loan's own history. Returns
- * one point per date something happened to THIS loan (the loan's own
- * start, then each repayment in order) so a line chart can show the
- * balance actually stepping down over time, not just a single before/
- * after number. */
 export function loanBalanceHistory(loan: PersonalLoan, repayments: PersonalLoanRepayment[]): { date: string; balance: number }[] {
-  const forLoan = repayments
-    .filter((r) => r.loanId === loan.id)
-    .sort((a, b) => dateOnlyMs(a.date) - dateOnlyMs(b.date) || (a.seq ?? 0) - (b.seq ?? 0))
-    .map((r) => ({ r }));
+  const forLoan = repayments.filter((r) => r.loanId === loan.id && !r.isPending).sort((a, b) => dateOnlyMs(a.date) - dateOnlyMs(b.date) || (a.seq ?? 0) - (b.seq ?? 0));
   const points: { date: string; balance: number }[] = [{ date: loan.date, balance: loan.principal }];
   let remaining = loan.principal;
-  for (const { r } of forLoan) {
+  for (const r of forLoan) {
     remaining = Math.max(0, remaining - r.amount);
     points.push({ date: r.date, balance: remaining });
   }
   return points;
 }
 
-/** Net position per currency: positive means net owed *to* you, negative
- * means you owe net overall, in that currency. Never blended across
- * currencies — no live FX-rate source (see MODULES_PLAN.md). */
 export function netPositionByCurrency(loans: PersonalLoan[], repayments: PersonalLoanRepayment[]): Record<string, number> {
   const out: Record<string, number> = {};
   loans.forEach((loan) => {
@@ -78,11 +42,6 @@ export function netPositionByCurrency(loans: PersonalLoan[], repayments: Persona
   return out;
 }
 
-/** Portfolio-wide pending repayment impact, grouped by currency — the
- * companion figure to `netPositionByCurrency` above. A pending repayment
- * reduces outstanding once cleared, so its impact on NET POSITION carries
- * the opposite sign convention from `loanOutstanding` itself (paying down a
- * debt you owe moves your net position UP, toward zero or positive). */
 export function netPendingByCurrency(loans: PersonalLoan[], repayments: PersonalLoanRepayment[]): Record<string, number> {
   const out: Record<string, number> = {};
   loans.forEach((loan) => {
@@ -93,58 +52,39 @@ export function netPendingByCurrency(loans: PersonalLoan[], repayments: Personal
   return out;
 }
 
-export interface LoanOutstandingRow {
-  loanId: string;
-  person: string;
-  direction: PersonalLoan['direction'];
-  outstanding: number;
-}
+export interface LoanOutstandingRow { loanId: string; person: string; direction: PersonalLoan['direction']; outstanding: number; }
 
-/** One row per loan (not netted per person) in the requested currency —
- * feeds the Analytics tab's outstanding-by-person chart. Kept per-loan
- * rather than aggregated, since netting two loans with the same person
- * but opposite directions into one bar would hide which is which. */
 export function outstandingByLoan(loans: PersonalLoan[], repayments: PersonalLoanRepayment[], currencyCode: string): LoanOutstandingRow[] {
-  return loans
-    .filter((l) => l.currencyCode === currencyCode)
-    .map((l) => ({ loanId: l.id, person: l.person, direction: l.direction, outstanding: loanOutstanding(l, repayments) }));
+  return loans.filter((l) => l.currencyCode === currencyCode).map((l) => ({ loanId: l.id, person: l.person, direction: l.direction, outstanding: loanOutstanding(l, repayments) }));
 }
 
-export interface MonthlyRepayment {
-  month: string; // YYYY-MM
-  amount: number;
-}
+export interface MonthlyRepayment { month: string; amount: number; }
 
-/** Total repayments logged per calendar month, for loans in one currency —
- * feeds the Analytics tab's repayment timeline. */
 export function repaymentsByMonth(loans: PersonalLoan[], repayments: PersonalLoanRepayment[], currencyCode: string): MonthlyRepayment[] {
   const loanCurrency = new Map(loans.map((l) => [l.id, l.currencyCode]));
   const byMonth: Record<string, number> = {};
-  repayments.forEach((r) => {
+  repayments.filter((r) => !r.isPending).forEach((r) => {
     if (loanCurrency.get(r.loanId) !== currencyCode) return;
     const month = r.date.slice(0, 7);
     byMonth[month] = (byMonth[month] || 0) + r.amount;
   });
-  return Object.keys(byMonth)
-    .sort()
-    .map((month) => ({ month, amount: byMonth[month] }));
+  return Object.keys(byMonth).sort().map((month) => ({ month, amount: byMonth[month] }));
 }
 
-export interface PayoffProjection {
-  months: number;
-  payoffDate: string; // YYYY-MM-DD
-}
+export interface PayoffProjection { months: number; payoffDate: string; }
 
-/** Simple linear payoff projection — no interest/compounding concept for
- * an informal personal loan (unlike EMI/Loans), just "how many months of
- * this repayment rate clears the remaining outstanding balance." Returns
- * `null` when the rate can't clear it (a non-positive monthly repayment
- * with a still-outstanding balance) rather than an infinite/NaN result. */
+/** Uses UTC calendar arithmetic so a YYYY-MM-DD input never shifts by one
+ * day when the browser's local timezone differs from UTC. */
 export function projectPayoff(outstanding: number, monthlyRepayment: number, fromDate: string): PayoffProjection | null {
   if (outstanding <= 0) return { months: 0, payoffDate: fromDate };
   if (monthlyRepayment <= 0) return null;
   const months = Math.ceil(outstanding / monthlyRepayment);
-  const d = new Date(fromDate);
-  d.setMonth(d.getMonth() + months);
-  return { months, payoffDate: d.toISOString().slice(0, 10) };
+  const [y, m, d] = fromDate.split('-').map(Number);
+  const rawMonth = (m - 1) + months;
+  const year = y + Math.floor(rawMonth / 12);
+  const month0 = ((rawMonth % 12) + 12) % 12;
+  const lastDay = new Date(Date.UTC(year, month0 + 1, 0)).getUTCDate();
+  const day = Math.min(d, lastDay);
+  const payoffDate = `${year}-${String(month0 + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  return { months, payoffDate };
 }

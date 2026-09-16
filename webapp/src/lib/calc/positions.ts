@@ -1,18 +1,12 @@
 import type { FeeCalculator, Position, Transaction } from '../../types/workbook';
 import { sortTransactionsChronological } from './sortTransactions';
 
-/** Weighted-average-cost position rollup per ticker. Ported 1:1 from the
- * legacy `computePositions()` in index.html. Does not track individual buy
- * lots (a sell reduces the ticker's average cost proportionally) — this
- * matches today's behavior; FIFO lot-matching is a separate future change
- * (README item 8, PSX-focused, deferred to Phase 2).
- *
- * Excludes any transaction with `isPending` set (Pending-transaction-state,
- * 2026-09-08) — a real order that hasn't filled yet shouldn't move shares/
- * invested/realized until it does. Every other position/P&L figure in the
- * app derives from this one function, so excluding pending here is a "fix
- * once" change; see `pendingShareDeltaByTicker` below for the companion
- * figure that shows what a pending order WOULD change once filled. */
+const EPSILON = 1e-7;
+
+/** Weighted-average-cost position rollup per ticker. Pending and invalid
+ * oversell transactions are excluded from accounting; this app does not
+ * model short positions, so a SELL larger than the currently-held quantity
+ * cannot legitimately create zero-cost profit. */
 export function computePositions(transactions: Transaction[], calcFee: FeeCalculator): Position[] {
   const byTicker: Record<string, Position> = {};
   const sorted = sortTransactionsChronological(transactions.filter((t) => !t.isPending));
@@ -20,27 +14,22 @@ export function computePositions(transactions: Transaction[], calcFee: FeeCalcul
   for (const tx of sorted) {
     const t = tx.ticker;
     if (!byTicker[t]) {
-      byTicker[t] = {
-        ticker: t,
-        shares: 0,
-        invested: 0,
-        buyFees: 0,
-        sellFees: 0,
-        realized: 0,
-        totalBoughtShares: 0,
-        totalSoldShares: 0,
-        buyCount: 0,
-        sellCount: 0,
-        firstDate: tx.date,
-        lastDate: tx.date,
-      };
+      byTicker[t] = { ticker: t, shares: 0, invested: 0, buyFees: 0, sellFees: 0, realized: 0, totalBoughtShares: 0, totalSoldShares: 0, buyCount: 0, sellCount: 0, firstDate: tx.date, lastDate: tx.date };
     }
     const p = byTicker[t];
+    if (tx.date < p.firstDate) p.firstDate = tx.date;
+    if (tx.date > p.lastDate) p.lastDate = tx.date;
+
+    if (tx.action === 'SELL' && tx.shares > p.shares + EPSILON) {
+      // Short accounting is not supported. Never convert unmatched shares
+      // into fictitious realized profit or cash; the invalid transaction is
+      // ignored consistently by the other accounting ledgers.
+      continue;
+    }
+
     const amount = tx.shares * tx.price;
     const isBuy = tx.action === 'BUY';
     const fee = calcFee(amount, isBuy, { shares: tx.shares, tx });
-    if (tx.date < p.firstDate) p.firstDate = tx.date;
-    if (tx.date > p.lastDate) p.lastDate = tx.date;
 
     if (isBuy) {
       p.invested += amount + fee;
@@ -50,15 +39,14 @@ export function computePositions(transactions: Transaction[], calcFee: FeeCalcul
       p.buyCount += 1;
     } else {
       const avg = p.shares > 0 ? p.invested / p.shares : 0;
-      const costRemoved = avg * Math.min(tx.shares, p.shares);
-      const proceeds = amount - fee;
-      p.realized += proceeds - costRemoved;
+      const costRemoved = avg * tx.shares;
+      p.realized += amount - fee - costRemoved;
       p.invested -= costRemoved;
       p.shares -= tx.shares;
       p.sellFees += fee;
       p.totalSoldShares += tx.shares;
       p.sellCount += 1;
-      if (p.shares < 0.0000001) p.shares = 0;
+      if (p.shares < EPSILON) p.shares = 0;
       if (p.shares === 0) p.invested = 0;
     }
   }
@@ -66,14 +54,6 @@ export function computePositions(transactions: Transaction[], calcFee: FeeCalcul
   return Object.values(byTicker);
 }
 
-/** Net pending share delta per ticker — a pending BUY contributes +shares,
- * a pending SELL contributes -shares, so the figure reads as "this many
- * shares will be added/removed once every pending order for this ticker
- * fills." The companion figure to `computePositions` excluding pending
- * entirely: lets the UI show "120 shares (+10 pending)" rather than the
- * pending order just silently not affecting anything visible. Tickers with
- * no pending activity are simply absent from the result, not zero-valued
- * entries. */
 export function pendingShareDeltaByTicker(transactions: Transaction[]): Record<string, number> {
   const out: Record<string, number> = {};
   transactions.forEach((tx) => {

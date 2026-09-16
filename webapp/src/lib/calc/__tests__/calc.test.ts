@@ -7,10 +7,6 @@ import { computeRealizedPLTimeSeries } from '../realizedPL';
 import { buildCashLedger, totalTransferFees } from '../cashLedger';
 import { cashSummary } from '../cashSummary';
 
-// Fixture is a real backup export from the legacy app (qse-workbook-backup.json).
-// Expected values below were hand-traced from the same weighted-average-cost
-// algorithm to confirm the TypeScript port matches the legacy JS exactly.
-
 const transactions = fixture.transactions as Transaction[];
 const transfers = fixture.transfers as Transfer[];
 const adjustments = fixture.adjustments as Adjustment[];
@@ -19,21 +15,16 @@ const calcFee = makeQSEFeeCalculator(settings);
 
 describe('makeQSEFeeCalculator', () => {
   it('matches the legacy calcFee formula (pct of amount, floored at minFee)', () => {
-    // 9 shares * 1.214 = 10.926; 10.926 * 0.275% = 0.0300465 -> rounds to 0.03
     expect(calcFee(9 * 1.214, true)).toBeCloseTo(0.03, 2);
   });
-
   it('returns 0 for non-positive amounts', () => {
     expect(calcFee(0, true)).toBe(0);
     expect(calcFee(-5, true)).toBe(0);
   });
-
-  it('README item 11: tx.feeOverride wins outright, bypassing the normal formula', () => {
+  it('feeOverride wins outright, including an explicit zero', () => {
     const tx: Transaction = { date: '2026-08-23', ticker: 'TEST', action: 'BUY', shares: 9, price: 1.214, feeOverride: 1.23 };
     expect(calcFee(9 * 1.214, true, { shares: 9, tx })).toBe(1.23);
-    // Even an override of exactly 0 should win — it's a real value, not "unset".
-    const zeroTx: Transaction = { ...tx, feeOverride: 0 };
-    expect(calcFee(9 * 1.214, true, { shares: 9, tx: zeroTx })).toBe(0);
+    expect(calcFee(9 * 1.214, true, { shares: 9, tx: { ...tx, feeOverride: 0 } })).toBe(0);
   });
 });
 
@@ -45,13 +36,15 @@ describe('roundTick', () => {
 });
 
 describe('breakEvenPrice', () => {
-  it('produces a price whose net proceeds cover the cost basis', () => {
+  it('produces a tick price whose net proceeds cover the cost basis', () => {
     const costBasis = 695.494;
     const shares = 634;
     const price = breakEvenPrice(costBasis, shares, settings.feePct, settings.tick, calcFee);
-    const amount = price * shares;
-    const net = amount - calcFee(amount, false);
-    expect(net).toBeGreaterThanOrEqual(costBasis - 1); // within ~1 unit given tick rounding
+    const net = price * shares - calcFee(price * shares, false);
+    expect(net).toBeGreaterThanOrEqual(costBasis);
+    const lowerTick = roundTick(price - settings.tick, settings.tick);
+    const lowerNet = lowerTick * shares - calcFee(lowerTick * shares, false);
+    expect(lowerNet).toBeLessThan(costBasis);
   });
 });
 
@@ -76,44 +69,71 @@ describe('computePositions (weighted-average cost)', () => {
   });
 
   it('zeroes out invested cost once a ticker is fully sold', () => {
-    // QIBK: single buy then single full sell of the same 6 shares.
     const qibk = byTicker.QIBK;
     expect(qibk.shares).toBe(0);
     expect(qibk.invested).toBe(0);
   });
 
-  it('closes a same-day round trip correctly even when the SELL is entered before the matching BUY', () => {
-    // User-reported bug: a same-day buy+sell of equal quantity should net
-    // to a fully closed position (0 shares) regardless of which order the
-    // two rows happen to sit in the underlying array — `Transaction` has
-    // no time-of-day, so a stable sort on date alone would otherwise
-    // process the SELL first (against a not-yet-existent position),
-    // driving shares negative and silently clamping them to 0, then the
-    // BUY re-opens a position that should have already been closed.
+  it('closes a same-day round trip correctly even when SELL is entered before BUY in legacy data', () => {
     const sameDay: Transaction[] = [
       { date: '2026-08-24', ticker: 'ROUNDTRIP', action: 'SELL', shares: 2, price: 334.5 },
       { date: '2026-08-24', ticker: 'ROUNDTRIP', action: 'BUY', shares: 2, price: 330.5 },
     ];
-    const noFee = () => 0;
-    const [pos] = computePositions(sameDay, noFee);
+    const [pos] = computePositions(sameDay, () => 0);
     expect(pos.shares).toBe(0);
     expect(pos.invested).toBe(0);
-    // Real cost basis (2 * 330.5 = 661) subtracted from proceeds (2 * 334.5
-    // = 669), not the full 669 treated as cost-free profit.
-    expect(pos.realized).toBeCloseTo(669 - 661, 5);
+    expect(pos.realized).toBeCloseTo(8, 5);
+  });
+
+  it('honors persisted sequence for same-instant SELL then BUY when an existing position was open', () => {
+    const sameInstant: Transaction[] = [
+      { date: '2026-08-24', ticker: 'SEQ', action: 'BUY', shares: 10, price: 10, seq: 1 },
+      { date: '2026-08-25', ticker: 'SEQ', action: 'SELL', shares: 5, price: 12, seq: 2 },
+      { date: '2026-08-25', ticker: 'SEQ', action: 'BUY', shares: 5, price: 8, seq: 3 },
+    ];
+    const [pos] = computePositions(sameInstant, () => 0);
+    expect(pos.shares).toBe(10);
+    expect(pos.invested).toBe(90);
+    expect(pos.realized).toBe(10);
+  });
+
+  it('does not manufacture profit from an oversell', () => {
+    const oversell: Transaction[] = [
+      { date: '2026-08-24', ticker: 'OVER', action: 'BUY', shares: 10, price: 10, seq: 1 },
+      { date: '2026-08-25', ticker: 'OVER', action: 'SELL', shares: 15, price: 10, seq: 2 },
+    ];
+    const [pos] = computePositions(oversell, () => 0);
+    expect(pos.shares).toBe(10);
+    expect(pos.invested).toBe(100);
+    expect(pos.realized).toBe(0);
+    expect(pos.totalSoldShares).toBe(0);
+  });
+
+  it('excludes pending trades from positions', () => {
+    const pending: Transaction[] = [
+      { date: '2026-08-24', ticker: 'PENDING', action: 'BUY', shares: 10, price: 10, isPending: true },
+    ];
+    expect(computePositions(pending, () => 0)).toEqual([]);
   });
 });
 
 describe('computeRealizedPLTimeSeries', () => {
-  it('attributes the correct cost basis to a same-day round trip even when the SELL is entered before the matching BUY', () => {
+  it('attributes the correct cost basis to a legacy same-day round trip', () => {
     const sameDay: Transaction[] = [
       { date: '2026-08-24', ticker: 'ROUNDTRIP', action: 'SELL', shares: 2, price: 334.5 },
       { date: '2026-08-24', ticker: 'ROUNDTRIP', action: 'BUY', shares: 2, price: 330.5 },
     ];
-    const noFee = () => 0;
-    const points = computeRealizedPLTimeSeries(sameDay, noFee);
+    const points = computeRealizedPLTimeSeries(sameDay, () => 0);
     expect(points).toHaveLength(1);
-    expect(points[0].value).toBeCloseTo(669 - 661, 5);
+    expect(points[0].value).toBeCloseTo(8, 5);
+  });
+
+  it('ignores an oversell instead of making the running P/L jump by zero-cost proceeds', () => {
+    const oversell: Transaction[] = [
+      { date: '2026-08-24', ticker: 'OVER', action: 'BUY', shares: 10, price: 10, seq: 1 },
+      { date: '2026-08-25', ticker: 'OVER', action: 'SELL', shares: 15, price: 10, seq: 2 },
+    ];
+    expect(computeRealizedPLTimeSeries(oversell, () => 0)).toHaveLength(0);
   });
 });
 
@@ -122,11 +142,20 @@ describe('totalTransferFees / buildCashLedger', () => {
     expect(totalTransferFees(transfers)).toBeCloseTo(40, 5);
   });
 
-  it('produces a running balance ending at a finite number with one event per input row', () => {
+  it('produces a running balance ending at a finite number with one event per valid input row', () => {
     const ledger = buildCashLedger(transactions, transfers, adjustments, calcFee);
     expect(ledger).toHaveLength(transactions.length + transfers.length + adjustments.length);
-    const last = ledger[ledger.length - 1];
-    expect(Number.isFinite(last.balance)).toBe(true);
+    expect(Number.isFinite(ledger[ledger.length - 1].balance)).toBe(true);
+  });
+
+  it('excludes pending trades from the actual cash ledger', () => {
+    const pending: Transaction[] = [
+      { date: '2026-08-24', ticker: 'PENDING', action: 'BUY', shares: 10, price: 10, isPending: true },
+      { date: '2026-08-24', ticker: 'DONE', action: 'BUY', shares: 2, price: 10 },
+    ];
+    const ledger = buildCashLedger(pending, [], [], () => 0);
+    expect(ledger).toHaveLength(1);
+    expect(ledger[0].amount).toBe(-20);
   });
 });
 
