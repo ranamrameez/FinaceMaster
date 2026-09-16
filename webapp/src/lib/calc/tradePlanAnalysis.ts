@@ -66,8 +66,15 @@ export function analyzeTradePlanByTicker(
    * netting the smaller side, per README item 5's "buy & sell aren't
    * linked" bug report. */
   calcLegFee: (leg: TradePlanLeg) => number = (l) => calcFee(l.shares * l.price, l.action === 'BUY', { shares: l.shares }),
+  /** The plan's own ticker (`TradePlan.defaultTicker`), included even when
+   * `legs` is empty — otherwise a freshly auto-created plan for an open
+   * position (Phase 3, README item: "auto-create... planning for open
+   * shares") shows NOTHING in the per-ticker analysis (current price, avg
+   * cost, break-even, shares held) until its first leg is added, defeating
+   * the point of surfacing that status right away. */
+  extraTicker?: string,
 ): TradePlanTickerSummary[] {
-  const tickers = [...new Set(legs.map((l) => l.ticker))];
+  const tickers = [...new Set([...legs.map((l) => l.ticker), ...(extraTicker ? [extraTicker] : [])])];
   return tickers.map((ticker) => {
     const real = realHoldings.find((r) => r.ticker === ticker);
     const tickerLegs = legs.filter((l) => l.ticker === ticker);

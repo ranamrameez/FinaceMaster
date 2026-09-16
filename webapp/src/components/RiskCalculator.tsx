@@ -306,7 +306,7 @@ export function RiskCalculator({
                     return (
                       <tr key={s.add} style={isBest ? { fontWeight: 700 } : undefined}>
                         <td>{fmtMoney(s.add, currency)}</td>
-                        <td>{fmt(s.newShares, 0)}</td>
+                        <td>{fmt(s.newShares, 0)} ({fmt(s.newShares - s.extraShares, 0)} + {fmt(s.extraShares, 0)})</td>
                         <td>{fmtPrice(s.newAvg)}</td>
                         <td>{fmtPrice(s.breakEven)}</td>
                         <td>{fmt(s.recoveryNeededPct, 2)}%</td>

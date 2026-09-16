@@ -1,16 +1,15 @@
-import { Fragment, useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { CollapsibleCard } from '../../../components/Card';
 import { TickerLogo } from '../../../components/TickerLogo';
 import { PSX_TICKER_DATALIST_ID } from '../../../components/PSXTickerDatalist';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { CheckIcon, EditIcon, PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
+import { CheckIcon, CollapseIcon, EditIcon, ExpandIcon, InfoIcon, PlusIcon, SaveIcon, TrashIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
 import { Notice } from '../../../components/Notice';
 import { Modal } from '../../../components/Modal';
 import { usePageFabActions } from '../../../hooks/usePageFabActions';
-import { usePageTopBarRightSlot } from '../../../hooks/usePageTopBar';
 import { Field, TextInput } from '../../../components/ui/Field';
 import { FeeModeControl, feeModeFor } from '../../../components/ui/FeeModeControl';
 import { IconButton } from '../../../components/ui/IconButton';
@@ -30,13 +29,20 @@ import {
 } from '../../../lib/calc/partialTradeStrategy';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
+import { useAuthState } from '../../../lib/firebase/useAuthState';
 import { usePSXWorkbookStore } from '../../../store/psxWorkbookStore';
 import type { Transaction, TradePlan, TradePlanLeg } from '../../../types/workbook';
 import { usePSXDerived } from '../hooks/usePSXDerived';
+import { usePSXStockData } from '../hooks/usePSXStockData';
 import { gridAutoStyle } from '../../../lib/gridStyle';
-import { TransactionRows } from './TransactionsPage';
 
 const today = () => new Date().toISOString().slice(0, 10);
+
+/** User-reported (2026-09-16): "a duplicate entry was added as OGDC" — see
+ * the identical helper/comment in QSE's TradeStrategyPage.tsx. */
+function isKnownTicker(ticker: string, tickerNames: Record<string, string>, transactions: Transaction[]): boolean {
+  return ticker in tickerNames || transactions.some((t) => t.ticker === ticker);
+}
 
 /** Section 1 — "Buy/Sell & Avg Down," one calculator instead of two
  * strategies on two different pages (user's own confirmed merge:
@@ -150,7 +156,7 @@ function BuySellAvgDownCalculator() {
 
       {avgDown && scenario && (
         <div className="grid-auto" style={gridAutoStyle(160, 8)}>
-          <div className="card stat-card"><div className="label">New shares</div><div className="value">{fmt(scenario.newShares, 0)}</div></div>
+          <div className="card stat-card"><div className="label">New shares</div><div className="value">{fmt(scenario.newShares, 0)} ({fmt(scenario.newShares - scenario.extraShares, 0)} + {fmt(scenario.extraShares, 0)})</div></div>
           <div className="card stat-card"><div className="label">New avg cost</div><div className="value">{fmtPrice(scenario.newAvg)}</div></div>
           <div className="card stat-card"><div className="label">New break-even</div><div className="value">{fmtPrice(scenario.breakEven)}</div></div>
           <div className="card stat-card"><div className="label">Recovery needed</div><div className="value">{scenario.recoveryNeededPct.toFixed(2)}%</div></div>
@@ -187,6 +193,20 @@ function PartialTradeAdvisor({ ticker, onSellLot }: { ticker: string; onSellLot:
   const lots = lotsByTicker[ticker.toUpperCase()] || [];
   const row = rows.find((r) => r.ticker === ticker.toUpperCase());
   const currentPrice = row?.marketPrice || 0;
+
+  // User-reported (2026-09-16): a plan's ticker with zero matching
+  // transactions at all (e.g. a mismatched/mistyped ticker string) used to
+  // render nothing here, with no explanation — see the identical comment
+  // in QSE's TradeStrategyPage.tsx.
+  const hasAnyTx = workbook.transactions.some((t) => t.ticker === ticker.toUpperCase());
+  if (!hasAnyTx) {
+    return (
+      <Notice tone="warning" className="mb-sm">
+        No transactions found for {ticker.toUpperCase()} yet — check the ticker is spelled exactly like your real
+        trades (e.g. a stray space or different casing would cause this).
+      </Notice>
+    );
+  }
 
   // User-reported (2026-09-13): "IQCD has no view in Partial Trade now
   // while shares 13, still exist." This guard used to require 2+ lots —
@@ -237,12 +257,14 @@ function PartialTradeAdvisor({ ticker, onSellLot }: { ticker: string; onSellLot:
         </table>
       </div>
       {missed && (
-        <p className="text-muted mt-sm">
-          In the last 30 days, price reached {fmtPrice(missed.peakPrice)} on {missed.peakDate} —{' '}
-          {missed.lots.map((l, i) => (
-            <span key={i}>{i > 0 && '; '}the lot bought {l.buyDate} @ {fmtPrice(l.buyPrice)} would have profited {fmtMoney(l.wouldHaveProfited, currency)}</span>
-          ))}.
-        </p>
+        <Notice tone="info" className="mt-sm">
+          <div>In the last 30 days, price reached {fmtPrice(missed.peakPrice)} on {missed.peakDate}:</div>
+          <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
+            {missed.lots.map((l, i) => (
+              <li key={i}>Lot bought {l.buyDate} @ {fmtPrice(l.buyPrice)} would have profited {fmtMoney(l.wouldHaveProfited, currency)}</li>
+            ))}
+          </ul>
+        </Notice>
       )}
     </div>
   );
@@ -255,20 +277,22 @@ function WhatIfExitCalculator({
   tickerAnalysis,
   calcFee,
   currency,
+  currentPrices,
 }: {
   tickerAnalysis: TradePlanTickerSummary[];
   calcFee: (amount: number, isBuy: boolean, context?: { shares?: number }) => number;
   currency: string;
+  currentPrices: Record<string, number>;
 }) {
   const [prices, setPrices] = useState<Record<string, number>>({});
 
   return (
     <div style={{ marginTop: 10 }}>
       <div className="text-muted" style={{ marginBottom: 4 }}>
-        What if? Test a hypothetical exit price per ticker.
+        What if? Test a hypothetical exit price per ticker — defaults to the current price above.
       </div>
       {tickerAnalysis.map((t) => {
-        const price = prices[t.ticker] || 0;
+        const price = prices[t.ticker] ?? currentPrices[t.ticker] ?? 0;
         const fullShares = t.effectiveShares + t.plannedSold;
         const remaining = whatIfExit(t.effectiveShares, t.avgCost, price, calcFee);
         const full = whatIfExit(fullShares, t.avgCost, price, calcFee);
@@ -308,6 +332,8 @@ function WhatIfExitCalculator({
  * 166/170/196). */
 function NewPlanFab() {
   const addTradePlan = usePSXWorkbookStore((s) => s.addTradePlan);
+  const transactions = usePSXWorkbookStore((s) => s.workbook.transactions);
+  const { tickerNames } = usePSXStockData();
   const ensureSignedIn = useEnsureSignedIn();
   const [open, setOpen] = useState(false);
   // Registers into the same grouped FabPanel CalculatorLauncher already
@@ -336,8 +362,11 @@ function NewPlanFab() {
     if (!name.trim()) return toast('Give this plan a name.');
     if (!ticker.trim()) return toast('Pick a ticker for this plan.');
     if (!valid.length) return toast('Add at least one complete leg (shares, price).');
-    if (!(await ensureSignedIn('Sign in to save trade plans.'))) return;
     const tickerUpper = ticker.trim().toUpperCase();
+    if (!isKnownTicker(tickerUpper, tickerNames, transactions)) {
+      return toast(`"${tickerUpper}" isn't a recognized ticker — pick one from the suggestion list.`);
+    }
+    if (!(await ensureSignedIn('Sign in to save trade plans.'))) return;
     const plan: TradePlan = {
       id: crypto.randomUUID(),
       name: name.trim(),
@@ -399,9 +428,21 @@ function PlanCard({ plan }: { plan: TradePlan }) {
   const updateTradePlan = usePSXWorkbookStore((s) => s.updateTradePlan);
   const deleteTradePlan = usePSXWorkbookStore((s) => s.deleteTradePlan);
   const executeTradePlanLeg = usePSXWorkbookStore((s) => s.executeTradePlanLeg);
+  const setMarketPrice = usePSXWorkbookStore((s) => s.setMarketPrice);
   const ensureSignedIn = useEnsureSignedIn();
   const { workbook, calcFee, rows } = usePSXDerived();
+  const { tickerNames } = usePSXStockData();
   const currency = workbook.settings.currency;
+
+  // Phase 3 delete-guard: a plan for a ticker you still hold shares of
+  // can't be deleted outright — it's the home for that ticker's own
+  // Partial Trade advice and any not-yet-executed "Sell this lot" legs.
+  // "Clear plan" (remove every leg) stays available regardless. Also the
+  // ticker passed to `analyzeTradePlanByTicker` as `extraTicker` so a
+  // freshly auto-created, still-empty plan shows its own current-status
+  // stats right away instead of only once a leg exists.
+  const guardTicker = plan.defaultTicker || plan.legs[0]?.ticker || '';
+  const hasOpenShares = (rows.find((r) => r.ticker === guardTicker)?.shares || 0) > 0;
 
   // Fee estimates for legs still pending need to know about this plan's
   // OTHER pending legs (and any real same-day transaction) to apply PSX's
@@ -473,7 +514,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
     setEditTxRow(null);
   };
 
-  const tickerAnalysis = analyzeTradePlanByTicker(plan.legs, rows, calcFee, workbook.settings.feePct, workbook.settings.tick, calcLegFee);
+  const tickerAnalysis = analyzeTradePlanByTicker(plan.legs, rows, calcFee, workbook.settings.feePct, workbook.settings.tick, calcLegFee, guardTicker || undefined);
   type AnalysisCol = 'ticker' | 'avgCost' | 'breakEven' | 'effectiveShares' | 'realizedPL';
   const analysisSortValue = (t: (typeof tickerAnalysis)[number], col: AnalysisCol): number | string =>
     col === 'ticker' ? t.ticker : t[col];
@@ -487,7 +528,6 @@ function PlanCard({ plan }: { plan: TradePlan }) {
   const [editLeg, setEditLeg] = useState<TradePlanLeg | null>(null);
   const [addingLeg, setAddingLeg] = useState<Omit<TradePlanLeg, 'ticker'> | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
-  const [sellLotFor, setSellLotFor] = useState<{ ticker: string; action: 'BUY' | 'SELL'; shares: number; price: number; targetLotBuyId?: string } | null>(null);
 
   const addLeg = () => {
     if (!addingLeg || !addingLeg.shares || !addingLeg.price) {
@@ -501,6 +541,9 @@ function PlanCard({ plan }: { plan: TradePlan }) {
   const saveMeta = () => {
     const tickerUpper = planTicker.trim().toUpperCase();
     if (!tickerUpper) return toast('This plan needs a ticker.');
+    if (!isKnownTicker(tickerUpper, tickerNames, workbook.transactions)) {
+      return toast(`"${tickerUpper}" isn't a recognized ticker — pick one from the suggestion list.`);
+    }
     updateTradePlan(plan.id, {
       name: name.trim() || plan.name,
       notes: notes.trim() || undefined,
@@ -597,21 +640,26 @@ function PlanCard({ plan }: { plan: TradePlan }) {
     </div>
   );
 
-  const actionButtons = (onFullScreenClick: () => void, fullScreenLabel: string): ReactNode => (
+  const actionButtons = (onFullScreenClick: () => void, isFullscreen: boolean): ReactNode => (
     <div className="row" style={{ gap: 8, justifyContent: 'flex-end' }}>
-      <button className="btn secondary small" onClick={onFullScreenClick}>{fullScreenLabel}</button>
+      <IconButton
+        label={isFullscreen ? 'Exit full screen' : 'Full screen'}
+        icon={isFullscreen ? <CollapseIcon size={13} /> : <ExpandIcon size={13} />}
+        align="right"
+        onClick={onFullScreenClick}
+      />
       {!editingMeta && (
-        <button
-          className="btn secondary small"
+        <IconButton
+          label="Edit"
+          icon={<EditIcon size={13} />}
+          align="right"
           onClick={() => {
             setName(plan.name);
             setNotes(plan.notes || '');
             setPlanTicker(plan.defaultTicker || plan.legs[0]?.ticker || '');
             setEditingMeta(true);
           }}
-        >
-          Edit
-        </button>
+        />
       )}
       {plan.legs.length > 0 && (
         <button
@@ -630,6 +678,8 @@ function PlanCard({ plan }: { plan: TradePlan }) {
       )}
       <button
         className="btn secondary small"
+        disabled={hasOpenShares}
+        title={hasOpenShares ? `This ticker still has open shares — close the position first.` : undefined}
         onClick={async () => {
           const ok = await confirmDialog('This deletes the plan itself, not any transactions already logged from it.', `Delete plan "${plan.name}"?`);
           if (ok) deleteTradePlan(plan.id);
@@ -644,14 +694,18 @@ function PlanCard({ plan }: { plan: TradePlan }) {
   // Partial Trade advice and the plan's own per-ticker blended analysis
   // now render BEFORE the (potentially long, horizontally-scrolling) legs
   // table, not buried underneath it.
+  const addLotToPlan = (lot: LotAdvice) => {
+    const row = rows.find((r) => r.ticker === guardTicker);
+    const price = row?.marketPrice || lot.breakEven;
+    updateTradePlan(plan.id, {
+      legs: [...plan.legs, { date: today(), action: 'SELL', ticker: guardTicker, shares: lot.remainingShares, price, targetLotBuyId: lot.buyId }],
+    });
+    toast(`Added SELL ${fmt(lot.remainingShares, 0)} ${guardTicker} @ ${fmtPrice(price)} to this plan.`);
+  };
+
   const bodyContent = (
     <>
-      {(plan.defaultTicker || plan.legs[0]?.ticker) && (
-        <PartialTradeAdvisor
-          ticker={plan.defaultTicker || plan.legs[0]?.ticker || ''}
-          onSellLot={(lot) => setSellLotFor({ ticker: plan.defaultTicker || plan.legs[0]?.ticker || '', action: 'SELL', shares: lot.remainingShares, price: lot.breakEven, targetLotBuyId: lot.buyId })}
-        />
-      )}
+      {guardTicker && <PartialTradeAdvisor ticker={guardTicker} onSellLot={addLotToPlan} />}
 
       {tickerAnalysis.length > 0 && (
         <div style={{ marginBottom: 16 }}>
@@ -660,21 +714,46 @@ function PlanCard({ plan }: { plan: TradePlan }) {
             hold; already-executed legs are shown separately and never double-counted into it.
           </div>
           <div className="grid-auto" style={{ ...gridAutoStyle(200, 8), marginBottom: 12 }}>
-            {sortedTickerAnalysis.map((t, idx) => (
-              <div key={t.ticker} className="card stat-card" style={hueStyle(HUES[idx % HUES.length])}>
-                <div className="label" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <TickerLogo ticker={t.ticker} exchange="psx" size="sm" />
-                  {t.ticker}
+            {sortedTickerAnalysis.map((t, idx) => {
+              const row = rows.find((r) => r.ticker === t.ticker);
+              return (
+                <div key={t.ticker} className="card stat-card" style={hueStyle(HUES[idx % HUES.length])}>
+                  <div className="label" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <TickerLogo ticker={t.ticker} exchange="psx" size="sm" />
+                    {t.ticker}
+                  </div>
+                  <div className="value" style={{ fontSize: 15 }}>{t.avgCost > 0 ? `Avg ${fmtPrice(t.avgCost)}` : 'No avg cost'}</div>
+                  <div className="sub">
+                    BE {t.breakEven > 0 ? fmtPrice(t.breakEven) : '—'} · {fmt(row?.shares || 0, 0)} sh held now
+                    {t.plannedSold > 0 && (
+                      <> · <span className={t.realizedPL >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(t.realizedPL, currency)} P/L</span></>
+                    )}
+                  </div>
+                  <div className="sub" onClick={(e) => e.stopPropagation()}>
+                    Current price:{' '}
+                    <input
+                      key={row?.marketPrice}
+                      type="number"
+                      step="0.001"
+                      className="price-input w-96"
+                      defaultValue={row?.marketPrice || ''}
+                      placeholder="—"
+                      onKeyDown={async (e) => {
+                        if (e.key === 'Enter') {
+                          const target = e.target as HTMLInputElement;
+                          const val = parseFloat(target.value) || 0;
+                          if (val > 0 && (await ensureSignedIn('Sign in to save price updates.'))) {
+                            setMarketPrice(t.ticker, val);
+                            toast(`${t.ticker} price saved: ${fmtPrice(val)}`);
+                          }
+                          target.blur();
+                        }
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="value" style={{ fontSize: 15 }}>{t.avgCost > 0 ? `Avg ${fmtPrice(t.avgCost)}` : 'No avg cost'}</div>
-                <div className="sub">
-                  BE {t.breakEven > 0 ? fmtPrice(t.breakEven) : '—'} · {fmt(t.effectiveShares, 0)} sh after plan
-                  {t.plannedSold > 0 && (
-                    <> · <span className={t.realizedPL >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(t.realizedPL, currency)} P/L</span></>
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <div className="table-scroll">
             <table>
@@ -711,7 +790,12 @@ function PlanCard({ plan }: { plan: TradePlan }) {
               </tbody>
             </table>
           </div>
-          <WhatIfExitCalculator tickerAnalysis={tickerAnalysis} calcFee={calcFee} currency={currency} />
+          <WhatIfExitCalculator
+            tickerAnalysis={tickerAnalysis}
+            calcFee={calcFee}
+            currency={currency}
+            currentPrices={Object.fromEntries(rows.map((r) => [r.ticker, r.marketPrice]))}
+          />
         </div>
       )}
 
@@ -790,7 +874,7 @@ function PlanCard({ plan }: { plan: TradePlan }) {
               const scenarios = !leg.executed ? legFeeScenarios(leg) : null;
               return (
                 <Fragment key={i}>
-                  <tr>
+                  <tr style={leg.executed ? { borderLeft: '3px solid var(--profit)' } : { borderLeft: '3px solid transparent' }}>
                     <td>{display.date}{stale && (
                       <Tooltip text="No linked transaction found — showing the plan's original snapshot from when this was marked done. Use Link below to fix this.">
                         <span style={{ cursor: 'pointer', color: 'var(--warn)' }}> ⚠</span>
@@ -807,10 +891,10 @@ function PlanCard({ plan }: { plan: TradePlan }) {
                     <td>
                       {fmtMoney(legFee(leg), currency)}
                       {scenarios && (
-                        <Tooltip text="Shown regardless of what else is in this plan — a lone leg is priced at full commission unless it actually pairs with an opposite same-day trade.">
-                          <div className="text-muted clickable">
-                            Full {fmtMoney(scenarios.full, currency)} · Same-day netted {fmtMoney(scenarios.netted, currency)}
-                          </div>
+                        <Tooltip
+                          text={`Full ${fmtMoney(scenarios.full, currency)} · Same-day netted ${fmtMoney(scenarios.netted, currency)} — shown regardless of what else is in this plan; a lone leg is priced at full commission unless it actually pairs with an opposite same-day trade.`}
+                        >
+                          <span className="text-muted clickable" style={{ marginLeft: 4 }}><InfoIcon size={11} /></span>
                         </Tooltip>
                       )}
                     </td>
@@ -919,12 +1003,6 @@ function PlanCard({ plan }: { plan: TradePlan }) {
           <> · Total planned P/L {fmtMoney(tickerAnalysis.reduce((s, t) => s + t.realizedPL, 0), currency)}</>
         )}
       </p>
-
-      {sellLotFor && (
-        <Modal title="Add a trade" onClose={() => setSellLotFor(null)}>
-          <TransactionRows initial={sellLotFor} />
-        </Modal>
-      )}
     </>
   );
 
@@ -935,12 +1013,12 @@ function PlanCard({ plan }: { plan: TradePlan }) {
         <div className="card" style={{ position: 'fixed', inset: 12, zIndex: 1000, overflow: 'auto', padding: 16, boxShadow: '0 8px 40px rgba(0,0,0,.4)' }}>
           <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
             {titleBlock}
-            {actionButtons(() => setFullscreen(false), 'Exit full screen')}
+            {actionButtons(() => setFullscreen(false), true)}
           </div>
           {bodyContent}
         </div>
       ) : (
-        <CollapsibleCard title={titleBlock} headerExtra={actionButtons(() => setFullscreen(true), 'Full screen')} defaultOpen={false} style={{ marginBottom: 28, padding: 12 }}>
+        <CollapsibleCard title={titleBlock} headerExtra={actionButtons(() => setFullscreen(true), false)} defaultOpen={false} style={{ marginBottom: 28, padding: 12 }}>
           {bodyContent}
         </CollapsibleCard>
       )}
@@ -948,61 +1026,38 @@ function PlanCard({ plan }: { plan: TradePlan }) {
   );
 }
 
-/** Standalone Partial Trade section (user's own confirmed design: "not
- * gated behind having a plan") — a ticker picker over every open PSX
- * position, so this strategy is reachable without first creating a plan.
- * The same `PartialTradeAdvisor` also renders inside each `PlanCard` for
- * that plan's own ticker (the "one integrated tool" decision). */
-function StandalonePartialTrade() {
-  const { rows } = usePSXDerived();
-  const openTickers = rows.filter((r) => r.shares > 0).map((r) => r.ticker).sort();
-  const [ticker, setTicker] = useState('');
-  const [sellLotFor, setSellLotFor] = useState<{ ticker: string; action: 'BUY' | 'SELL'; shares: number; price: number; targetLotBuyId?: string } | null>(null);
-  const effective = openTickers.includes(ticker) ? ticker : (openTickers[0] || '');
-
-  // User-reported (2026-09-13): "topbar missing. move selector to th
-  // topbar." — see the identical comment in QSE's TradeStrategyPage.tsx.
-  usePageTopBarRightSlot(
-    openTickers.length ? (
-      <Field label="Partial Trade ticker" width={160}>
-        <select value={effective} onChange={(e) => setTicker(e.target.value)}>
-          {openTickers.map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
-      </Field>
-    ) : null,
-  );
-
-  if (!openTickers.length) return <p className="text-muted">No open PSX positions yet — Partial Trade needs at least one.</p>;
-
-  return (
-    <div>
-      {effective && (
-        <PartialTradeAdvisor
-          ticker={effective}
-          onSellLot={(lot) => setSellLotFor({ ticker: effective, action: 'SELL', shares: lot.remainingShares, price: lot.breakEven, targetLotBuyId: lot.buyId })}
-        />
-      )}
-      {sellLotFor && (
-        <Modal title="Add a trade" onClose={() => setSellLotFor(null)}>
-          <TransactionRows initial={sellLotFor} />
-        </Modal>
-      )}
-    </div>
-  );
-}
-
 export function TradeStrategyPage() {
   const tradePlans = usePSXWorkbookStore((s) => s.workbook.tradePlans);
+  const addTradePlan = usePSXWorkbookStore((s) => s.addTradePlan);
   const sorted = [...tradePlans].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const alertsEnabled = usePSXWorkbookStore((s) => !!s.workbook.settings.partialTradeAlertsEnabled);
   const updateSettings = usePSXWorkbookStore((s) => s.updateSettings);
+  const { rows } = usePSXDerived();
+  const { user } = useAuthState();
+
+  // Phase 3: every open position always has its own plan to host that
+  // ticker's Partial Trade advice and any "Sell this lot" legs — no need to
+  // create one by hand first (the old standalone "Partial Trade" section,
+  // reachable without a plan, is gone — this makes it redundant). Never
+  // fires signed out: browsing stays free, this never prompts a sign-in
+  // modal on its own. Idempotent — only creates a plan genuinely missing.
+  useEffect(() => {
+    if (!user) return;
+    const openTickers = rows.filter((r) => r.shares > 0).map((r) => r.ticker);
+    for (const ticker of openTickers) {
+      const hasPlan = tradePlans.some((p) => (p.defaultTicker || p.legs[0]?.ticker) === ticker);
+      if (!hasPlan) {
+        addTradePlan({ id: crypto.randomUUID(), name: `${ticker} Plan`, createdAt: today(), legs: [], defaultTicker: ticker });
+      }
+    }
+  }, [user, rows, tradePlans, addTradePlan]);
 
   return (
     <div>
       <h1 className="pagetitle">PSX Trade Strategy</h1>
       <p className="text-muted mb-12">
         Buy/Sell &amp; Avg Down, and Trade Planner &amp; Partial Trade — sketch out trades ahead of time, or get
-        advice on lots you already hold.
+        advice on lots you already hold. Every open position gets its own plan automatically.
       </p>
       <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, fontSize: 13 }} title="A popup on app load listing every ticker with a Partial Trade opportunity, across both exchanges — off by default since this is an opt-in, riskier strategy.">
         <input type="checkbox" checked={alertsEnabled} onChange={(e) => updateSettings({ partialTradeAlertsEnabled: e.target.checked })} />
@@ -1010,9 +1065,6 @@ export function TradeStrategyPage() {
       </label>
 
       <BuySellAvgDownCalculator />
-
-      <h2 style={{ marginTop: 8, marginBottom: 8, fontSize: 16 }}>Partial Trade</h2>
-      <StandalonePartialTrade />
 
       <h2 style={{ marginTop: 20, marginBottom: 8, fontSize: 16 }}>Trade Planner</h2>
       <NewPlanFab />

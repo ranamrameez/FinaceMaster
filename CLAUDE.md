@@ -6984,6 +6984,68 @@ touched those.
   seed — correct value-descending order, badge renders, RT/RTC show correctly in their new
   cells, popup shows true nonzero per-leg commission — zero console errors. `npx tsc -b` / `npm
   run test` (688 tests, 1 new) / `npm run build` all clean.
+- **Dedicated live-testing account (2026-09-16, user-provided)**: `ranamotorsjallo@gmail.com` —
+  the user keeps this account's real data up to date specifically so a future session can sign
+  in via email/password (not Google — see the sign-in note right below) and verify a
+  sign-in-gated write end-to-end instead of stopping at "hits the gate." **The password is
+  deliberately NOT recorded here or anywhere else in this repo** — this repo is public, and even
+  a lightly-encoded password in a git-tracked file offers no real protection once the encoding
+  scheme is itself public; ask the user for the password each session it's actually needed.
+- **Google sign-in "not working," re-investigated after user pushback (2026-09-16) — no code
+  regression found.** The user pushed back on an earlier "it's CORS/authDomain-mismatch, always
+  been the case" answer with "it was working on this same GitHub Pages site, then broke after
+  some account-related code changes." Checked git history for every commit touching `lib/
+  firebase/auth.ts`/`useAuthState.ts`/`client.ts`/`SignInModal.tsx`: none of the recent
+  account-related work (currency-preference-sync #200, Credit Card #166/#181, the Trade
+  Strategy/top-bar mega-commit) touches the OAuth mechanism, the sign-in modal, or its render
+  path — `auth.ts`/`useAuthState.ts` haven't changed since 2026-09-06, before all of those.
+  `client.ts`'s Firebase config itself has never changed since the file was created. Also
+  reconfirmed live that this sandbox's network policy still blocks `qse-app.firebaseapp.com`
+  (403), so the redirect round-trip can't be reproduced here either way. **Conclusion reported
+  to the user, not silently assumed**: no regression found in the sign-in mechanism itself:
+  either the user's "it was working" memory predates the much-earlier popup→redirect switch
+  (see the "Google Sign-in" entry below, from before this file's own visible history), or it's
+  a platform/browser-level change (e.g. third-party-cookie deprecation) coinciding in time, not
+  a code regression — genuinely can't tell which from here. A future session revisiting this
+  should get the EXACT current symptom first (does it redirect to Google at all? a toast on
+  return, or silence? any console error?) rather than re-asserting either explanation.
+- **Trade Strategy / Partial Trade overhaul, both exchanges (2026-09-16) — full detail in
+  `webapp/README.md`'s Done item 330, this is a pointer.** User's own two-round, very specific
+  critique (quoted in full in the README entry) named several real bugs — "Sell this lot"
+  prefilling a useless break-even price instead of the live market price; the per-ticker
+  analysis stats using the whole-history blended average instead of scoping to the actual
+  plan/lot, "making numbers always red even after green selling"; a run-on-sentence missed-
+  opportunity text dump; a PSX same-day-fee note widening the legs table into horizontal
+  scroll; full-screen/Edit buttons with no icons; and the real underlying bug behind "plan was
+  created but no lots populated" for a freshly-typed "OGDC" — plus a design proposal to drop
+  the redundant standalone "Partial Trade" section and auto-create/hold a plan per open
+  position instead. Fixed in 4 phases (mechanical fixes; redundancy removal + "Sell this lot"
+  now adds a plan leg directly instead of opening a transaction modal, carrying a new
+  `TradePlanLeg.targetLotBuyId` through to the eventual real transaction; auto-create + a
+  delete-guard for a plan whose ticker still has open shares; a "no transactions found for this
+  ticker" warning plus strict ticker validation on Trade Plan creation). **One real, previously-
+  latent bug found and fixed along the way**: `analyzeTradePlanByTicker` derived its whole
+  ticker list purely from `legs`, so a plan with zero legs (exactly what an auto-created plan
+  starts as) rendered NOTHING in the per-ticker stats section this same pass was adding — fixed
+  with a new optional `extraTicker` parameter, additive and backward compatible. Deliberately
+  NOT built: the fuller Settings-page ticker-list-management popup, and rolling strict ticker
+  validation out to every other ticker-accepting field app-wide — both flagged as new README
+  Pending item 138, not guessed at in the same pass. Verified live via Playwright on both
+  exchanges against the project's own established real repro scenario (50 sh @10.40 + 14 sh
+  @9.962). `npx tsc -b` / `npm run test` (696 tests, unchanged) / `npm run build` all clean.
+- **New standing follow-up flagged, NOT started (2026-09-16) — full detail in `webapp/
+  README.md`'s new Pending item 139.** Mid-turn, the user redirected on the earlier "2-tab
+  Exchange/Broker-Style-vs-Strategic-Trades" idea for Trade Strategy (already superseded by the
+  more specific fixes above before this arrived) with a bigger, app-wide ask: a real, always-
+  visible fixed top bar (distinct from today's scroll-triggered sticky `TopBar.tsx`) alongside
+  the sidebar, pointing at a real design reference already in this repo
+  (`wealth_tracker_template/trade_risk_workstation_manual_entry_optimized/screen.png`), plus a
+  standing rule to "declutter and divide items into different views for better visuals." This
+  is a genuinely large, cross-cutting change (`Tabs.tsx` and its ~20+ callers, `AppShell.tsx`,
+  `Sidebar.tsx`) that also appears to reverse `Tabs.tsx`'s own deliberate current design (every
+  section stays present, just collapsed — Done item 103's own reasoning, itself a response to
+  an earlier "hide inactive tabs" complaint) — genuinely needs its own scoped design pass and
+  approval before any code, not a guess folded into an unrelated session.
 
 ## Live URLs
 
