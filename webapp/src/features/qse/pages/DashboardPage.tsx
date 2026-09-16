@@ -5,6 +5,7 @@ import { CollapsibleCard, StatCard } from '../../../components/Card';
 import { Sparkline } from '../../../components/Sparkline';
 import { TickerLogo } from '../../../components/TickerLogo';
 import { RoundTripCostModal } from '../../../components/RoundTripCostModal';
+import { StatSourceBadge } from '../../../components/StatSourceBadge';
 import { toast } from '../../../components/Toast';
 import { breakEvenPrice, getDailyPriceHistory } from '../../../lib/calc';
 import { pendingShareDeltaByTicker } from '../../../lib/calc/positions';
@@ -103,7 +104,7 @@ function HoldingsCard() {
   return (
     <CollapsibleCard
       style={{ marginBottom: 16, paddingBottom: 12 }}
-      title={<h3 className="m-0">Holdings</h3>}
+      title={<h3 className="m-0">Holdings <StatSourceBadge source="official" /></h3>}
       headerExtra={<Link to="/portfolio" className="text-muted">Full portfolio →</Link>}
     >
       {held.length ? (

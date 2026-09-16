@@ -9,6 +9,7 @@ import { toast } from '../../../components/Toast';
 import { Tooltip } from '../../../components/Tooltip';
 import { Notice } from '../../../components/Notice';
 import { Modal } from '../../../components/Modal';
+import { StatSourceBadge } from '../../../components/StatSourceBadge';
 import { usePageFabActions } from '../../../hooks/usePageFabActions';
 import { Field, TextInput } from '../../../components/ui/Field';
 import { FeeModeControl, feeModeFor } from '../../../components/ui/FeeModeControl';
@@ -17,6 +18,7 @@ import { useSortableRows } from '../../../hooks/useSortableRows';
 import { HUES, hueStyle } from '../../../lib/statCardHues';
 import { analyzeTradePlanByTicker, whatIfExit, type TradePlanTickerSummary } from '../../../lib/calc/tradePlanAnalysis';
 import { breakEvenPrice } from '../../../lib/calc/fees';
+import { getMarketPrice } from '../../../lib/calc/priceHistory';
 import { feeScenarios, makePSXFeeCalculator } from '../../../lib/calc/psxFees';
 import { computeFIFOPositions } from '../../../lib/calc/fifoPositions';
 import { computeAveragingScenario } from '../../../lib/calc/riskAnalysis';
@@ -424,6 +426,50 @@ function NewPlanFab() {
   );
 }
 
+/** "Broker Style" view (2026-09-16 trust-restoration) — PSX's mirror of
+ * QSE's own version, same reasoning: a real, always-in-sync-with-Dashboard
+ * snapshot of this ticker's OFFICIAL position, so it can sit directly next
+ * to Strategic Trades' advisory numbers for comparison. `positions` here
+ * already reflects whichever `costBasisMethod` (weighted-average or FIFO)
+ * this workbook is set to — same source Dashboard/Portfolio/PositionDetail
+ * read — so this never disagrees with those pages. */
+function BrokerStyleView({ ticker }: { ticker: string }) {
+  const { workbook, calcFee, positions } = usePSXDerived();
+  const currency = workbook.settings.currency;
+  const position = positions.find((p) => p.ticker === ticker);
+  const shares = position?.shares || 0;
+
+  if (!position || shares <= 0) {
+    return (
+      <p className="text-muted mb-sm">
+        No open shares of {ticker} right now — there's nothing for a broker statement to show until you hold some.
+      </p>
+    );
+  }
+
+  const avgCost = position.invested / shares;
+  const be = breakEvenPrice(position.invested, shares, workbook.settings.feePct, workbook.settings.tick, calcFee);
+  const mp = getMarketPrice(ticker, workbook.marketPrices, workbook.transactions);
+  const value = shares * mp;
+  const sellFee = mp > 0 ? calcFee(value, false) : 0;
+  const profit = mp > 0 ? value - sellFee - position.invested : NaN;
+
+  return (
+    <div className="grid-auto" style={gridAutoStyle(150, 8)}>
+      <div className="card stat-card"><div className="label">Shares held</div><div className="value">{fmt(shares, 0)}</div></div>
+      <div className="card stat-card"><div className="label">Avg cost</div><div className="value">{fmtPrice(avgCost)}</div></div>
+      <div className="card stat-card"><div className="label">Break-even</div><div className="value">{fmtPrice(be)}</div></div>
+      <div className="card stat-card"><div className="label">Current price</div><div className="value">{mp > 0 ? fmtPrice(mp) : '—'}</div></div>
+      {Number.isFinite(profit) && (
+        <div className="card stat-card">
+          <div className="label">Unrealized P/L</div>
+          <div className={`value ${profit >= 0 ? 'pill-positive' : 'pill-negative'}`}>{fmtMoney(profit, currency)}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PlanCard({ plan }: { plan: TradePlan }) {
   const updateTradePlan = usePSXWorkbookStore((s) => s.updateTradePlan);
   const deleteTradePlan = usePSXWorkbookStore((s) => s.deleteTradePlan);
@@ -528,6 +574,9 @@ function PlanCard({ plan }: { plan: TradePlan }) {
   const [editLeg, setEditLeg] = useState<TradePlanLeg | null>(null);
   const [addingLeg, setAddingLeg] = useState<Omit<TradePlanLeg, 'ticker'> | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  // Trust-restoration (2026-09-16) — see the identical state in QSE's
+  // TradeStrategyPage.tsx for the full reasoning.
+  const [statsView, setStatsView] = useState<'broker' | 'strategic'>('broker');
 
   const addLeg = () => {
     if (!addingLeg || !addingLeg.shares || !addingLeg.price) {
@@ -705,6 +754,30 @@ function PlanCard({ plan }: { plan: TradePlan }) {
 
   const bodyContent = (
     <>
+      <div className="row gap-sm mb-sm" style={{ alignItems: 'center' }}>
+        <span className="text-muted">Compare:</span>
+        <button type="button" className={`chip${statsView === 'broker' ? ' active' : ''}`} onClick={() => setStatsView('broker')}>
+          {statsView === 'broker' && <CheckIcon size={11} />}Broker Style
+        </button>
+        <button type="button" className={`chip${statsView === 'strategic' ? ' active' : ''}`} onClick={() => setStatsView('strategic')}>
+          {statsView === 'strategic' && <CheckIcon size={11} />}Strategic Trades
+        </button>
+        <StatSourceBadge source={statsView === 'broker' ? 'official' : 'advisory'} />
+      </div>
+
+      {statsView === 'broker' && guardTicker && (
+        <div style={{ marginBottom: 16 }}>
+          <div className="text-muted" style={{ marginBottom: 4 }}>
+            Exactly what your broker/statement would show for {guardTicker} right now — unaffected by anything
+            in this plan or Strategic Trades below.
+          </div>
+          <BrokerStyleView ticker={guardTicker} />
+        </div>
+      )}
+
+      {statsView === 'strategic' && (
+        <>
+
       {guardTicker && <PartialTradeAdvisor ticker={guardTicker} onSellLot={addLotToPlan} />}
 
       {tickerAnalysis.length > 0 && (
@@ -797,6 +870,8 @@ function PlanCard({ plan }: { plan: TradePlan }) {
             currentPrices={Object.fromEntries(rows.map((r) => [r.ticker, r.marketPrice]))}
           />
         </div>
+      )}
+        </>
       )}
 
       <div className="table-scroll">

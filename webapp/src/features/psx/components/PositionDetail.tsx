@@ -6,6 +6,7 @@ import { Tooltip } from '../../../components/Tooltip';
 import { EditIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { IconButton } from '../../../components/ui/IconButton';
 import { Sparkline } from '../../../components/Sparkline';
+import { StatSourceBadge } from '../../../components/StatSourceBadge';
 import { toast } from '../../../components/Toast';
 import { breakEvenPrice, computePriceStats, getMarketPrice } from '../../../lib/calc';
 import { computeClosedTrades } from '../../../lib/calc/closedTrades';
@@ -226,7 +227,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
       <div className="position-split-left">
 
         {isOpen && (
-          <CollapsibleCard title={<h4 className="m-0">Current position</h4>} className="mb-12">
+          <CollapsibleCard title={<h4 className="m-0">Current position <StatSourceBadge source="official" /></h4>} className="mb-12">
             <div className="grid-auto" style={gridAutoStyle(100, 8)}>
               <div className="stat-card card" style={hueStyle(HUES[2])}>
                 <div className="label">Trend</div>
@@ -283,7 +284,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
         )}
 
         {lotRows.length ? (
-          <CollapsibleCard title={<h4 className="m-0">Open lots (FIFO)</h4>} className="mb-12">
+          <CollapsibleCard title={<h4 className="m-0">Open lots (FIFO) <StatSourceBadge source="official" /></h4>} className="mb-12">
             <div className="table-scroll">
               <table>
                 <thead><tr><LotTh col="buyDate">Buy date</LotTh><LotTh col="buyPrice">Buy price</LotTh><LotTh col="remainingShares">Remaining</LotTh><LotTh col="costPerShare">Cost/share</LotTh></tr></thead>
@@ -306,7 +307,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
         ) : null}
 
         {position && (position.buyCount > 0 || position.sellCount > 0) && (
-          <CollapsibleCard title={<h4 className="m-0">All-time stats</h4>} className="mb-12">
+          <CollapsibleCard title={<h4 className="m-0">All-time stats <StatSourceBadge source="official" /></h4>} className="mb-12">
             <div className="grid-auto" style={gridAutoStyle(100, 8)}>
               <div className="stat-card card" style={hueStyle(HUES[0])}>
                 <div className="label">Bought / Sold</div>
@@ -338,7 +339,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
         )}
 
         {reportOpenLots.length > 0 && (
-          <CollapsibleCard title={<h4 className="m-0">Open lots</h4>} className="mb-12">
+          <CollapsibleCard title={<h4 className="m-0">Open lots <StatSourceBadge source="history" /></h4>} className="mb-12">
             <div className="table-scroll">
               <table>
                 <thead>
@@ -506,7 +507,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
             amount, Sell price+date, Total sale amount, PL/share, Net profit.
             Naturally absent for a still-fully-open position. */}
         {sortedClosedTrades.length > 0 && (
-          <CollapsibleCard title={<h4 className="m-0">Closed round-trips</h4>} className="mb-12">
+          <CollapsibleCard title={<h4 className="m-0">Closed round-trips <StatSourceBadge source="history" /></h4>} className="mb-12">
             <div className="table-scroll">
               <table>
                 <thead>

@@ -9320,6 +9320,50 @@ FinanceManager live link:
   the DOM (replaced by a real info-icon tooltip) and the Avg Down calculator's "New shares"
   stat rendered "120 (100 + 20)" exactly. `npx tsc -b` / `npm run test` (696 tests, unchanged —
   UI/interaction wiring plus one additive optional calc parameter) / `npm run build` all clean.
+- **Trust-restoration: app-wide Official/Strategic-Advisory/Trade-history labeling + the
+  Trade Strategy page's Broker Style vs. Strategic Trades split, restored (2026-09-16) — see
+  Done item 331.** Right after Done item 330 merged, the user pushed back hard: "I don't have
+  confidence in Exchanges now... as you DELIBRAETLY dropped the tab based dual point of view of
+  data, everything seems compromised and unreliable now. I dont know how your calculating and
+  displaying the stats" — pointing directly at the "superseded, do not build" note this session
+  had itself written into the Done item 330 plan for the ORIGINAL "2 tabs: Exchange/Broker Style
+  vs Strategic Trades" idea, in favor of the narrower Phase 1-4 fixes that actually shipped.
+  Responded with a full explanation of how the calc engine genuinely works (QSE's
+  `useQSEDerived.ts` always uses `computePositions()`, pure weighted-average, never affected by
+  anything on the Trade Strategy page; PSX's `usePSXDerived.ts` is the same unless the user
+  explicitly opts into FIFO under Settings) plus an honest acknowledgment that dropping the dual
+  view WAS the wrong call — the app was never wrong, but nothing on screen ever distinguished
+  the three calculation layers that coexist on the same pages (the REAL "Official" position; the
+  Trade Strategy page's ADVISORY what-if numbers; and the Trade Transactions page's Closed/Open
+  trades reporting ledger with its own independent Match order toggle) — asked via
+  `AskUserQuestion` how to fix it: label everything, rebuild the split, or both. The user chose
+  **both**. New shared `components/StatSourceBadge.tsx` (`official`/`advisory`/`history`, each a
+  small `Tooltip`-wrapped `.pill` explaining exactly what that number is and — critically — what
+  it does NOT affect) applied to every real surface where this ambiguity exists for both
+  exchanges: Dashboard's Holdings card, Portfolio's Holdings/History tabs (via `Tabs`'
+  `headerExtra` slot), `PositionDetail.tsx`'s "Current position"/"All-time stats" (`official`)
+  and "Open lots"/"Closed round-trips" (`history` — pure reporting views, PSX's real opt-in-FIFO
+  "Open lots (FIFO)" section correctly stays `official` since it IS the real position there), and
+  the Trade Transactions page's "Open trades"/"Closed trades" sections. New `.pill-neutral` CSS
+  variant added for the `history` tone (the existing `.pill-info`/`.pill-warn`/`.pill-positive`/
+  `.pill-negative` didn't have a plain neutral option). The bigger piece: each `PlanCard`'s stats
+  section gained a real "Compare: Broker Style / Strategic Trades" chip toggle (defaults to
+  Broker Style — the real, trustworthy number first) — "Broker Style" renders a new
+  `BrokerStyleView` component showing this ticker's REAL, `computePositions()`/`usePSXDerived()`-
+  sourced Shares held/Avg cost/Break-even/Current price/Unrealized P&L (exactly what Dashboard
+  shows, completely independent of `plan`/`tickerAnalysis` — reads nothing from either), while
+  "Strategic Trades" holds everything the page already had (`PartialTradeAdvisor`, the blended
+  `tickerAnalysis` stat cards/table, `WhatIfExitCalculator`). The legs table (plan management —
+  add/edit/mark-done) deliberately stays OUTSIDE the toggle, always visible regardless of which
+  stats view is picked, since managing a plan's legs isn't itself a "which number is real"
+  question. Verified live via Playwright with the same established repro scenario (50 sh @10.40
+  + 14 sh @9.962): Broker Style correctly showed 64 shares / Avg 10.32 / BE 10.34 / Unrealized
+  P/L -23.85 QAR (hand-verified against the real weighted-average math including buy fees);
+  switching to Strategic Trades correctly showed the existing PartialTradeAdvisor table (both
+  lots individually priced, still "Hold" at the seeded below-cost current price) and the blended
+  per-ticker analysis unchanged — both views render real, internally-consistent numbers, neither
+  contradicting the other now that each is clearly labeled which one it is. `npx tsc -b` /
+  `npm run test` (696 tests, unchanged) / `npm run build` all clean.
 
 ## Pending
 
@@ -10521,6 +10565,59 @@ or a design decision before more code, not guessed at further:**
      pass (own plan, own approval) before any code — don't guess at reconciling these two
      stated preferences from the same user, since guessing wrong here costs real rework across
      many pages.
+140. **"Counting lifetime bought shares is insane," NOT yet fixed, flagged for the user's own
+     confirmation before any code (2026-09-16).** User's own words, with a real example: "Proof:
+     QFLS Trades [2026-06-22 BUY 14 14.11 197.54 QAR, 2026-06-23 SELL 14 14.16] made the
+     starting point again 0. A fresh start! my portfolio has many examples like this." Read
+     `computePositions()` (`lib/calc/positions.ts`) directly rather than guessing: it correctly
+     accumulates `totalBoughtShares`/`totalSoldShares`/`realized`/`buyCount`/`sellCount`/
+     `firstDate`/`lastDate` across a ticker's ENTIRE history in one running object, never
+     resetting on a full close except zeroing `invested` (correct — $0 is genuinely invested
+     once every share is sold) — so the underlying calc engine is NOT silently discarding
+     history on a close/reopen cycle. **Most likely actual culprit, not yet confirmed against
+     real data**: Portfolio's "History" tab (`ClosedPositionsTable`, both exchanges) shows ONE
+     row per ticker sourced straight from `positions.filter(p => p.shares === 0)` — for a ticker
+     that has round-tripped MULTIPLE times (bought/sold, then bought/sold again), this shows a
+     single row with `totalBoughtShares`/`totalSoldShares`/`realized` MERGED across every
+     distinct round trip, reading like one lifetime blob rather than the "many examples" of
+     discrete closed positions the user is actually describing — exactly the problem
+     `computeClosedTrades()` (`lib/calc/closedTrades.ts`, already built and used on the Trade
+     Transactions page's own "Closed trades (realized round-trips)" section, README Done item
+     206) was purpose-built to solve, by giving each matched buy-to-sell round trip its OWN row.
+     **Not fixed here** because this is a real design decision, not a guess: does "History" on
+     Portfolio get REPLACED with `computeClosedTrades()`'s per-round-trip granularity (a bigger,
+     more useful change, but alters an established page's shape), or does it gain a second toggle
+     next to the existing sort options, or something else? Also could not verify against the
+     user's own real account — this sandbox's network policy blocks Firebase/the test account's
+     sign-in flow (`ranamotorsjallo@gmail.com`, no password recorded per this repo's own
+     standing policy), so this diagnosis is from code-reading plus a synthetic repro, not the
+     user's actual data. Needs the user's confirmation (or a fresh screenshot/exact page name)
+     before writing any fix.
+141. **"Primary, secondary and other currencies" — confirmed as a real, unmet request, NOT yet
+     built (2026-09-16).** User: "You also mismanaged the currencies. i expicitly asked primary,
+     secondary and other currenicies. settings do not tell any difference." Confirmed by reading
+     `store/enabledCurrenciesStore.ts` directly: `enabledCodes` is a flat, UNORDERED set — a
+     currency is either in it or not, with genuinely no concept of rank/priority anywhere in the
+     type, the store, or the Account page's own Currencies UI. `lib/currencies.ts`'s
+     `detectPrimaryCurrency()` only ever guesses a ONE-TIME default from the browser's timezone
+     for the first-run onboarding prompt (Done item 283) — it's not a stored, user-editable
+     ranking, and nothing reads it again after that first prompt. Every place in the app that
+     needs "the" default/primary currency (Net Worth's own picker, `useLastCurrency`, Transfers'
+     `LIKELY_OTHER_MODULE` default, etc.) uses its own separate, ad hoc heuristic (e.g. "whichever
+     currency has the biggest absolute exposure") rather than a real user-set Primary. So the
+     user's complaint is accurate, not a misunderstanding of an existing feature — there is no
+     Primary/Secondary/Other distinction to "tell a difference" from. **Not built here** — this
+     touches ~10+ files that already read `useEnabledCurrencies()` (Cash/Bank/Funds/EMI/Personal
+     Loans/Rentals/Subscriptions/NetWorth/CreditCardsSection/the sync hook), so the concrete
+     shape needs deciding before writing code: most likely direction is making the ALREADY-
+     ordered-by-insertion `enabledCodes` array's own order meaningful (index 0 = Primary, index 1
+     = Secondary, the rest = Other) rather than adding new fields, with the Account page's picker
+     gaining real up/down reordering (or a "set as primary" action per chip) and every current ad
+     hoc "pick a default currency" heuristic across those ~10 files switched to read
+     `enabledCodes[0]` instead — but this needs the user's own confirmation on what Primary/
+     Secondary/Other should actually CONTROL (a currency's default position in pickers? its sort
+     order in a currency-grouped table? both?) before implementing, per this project's own
+     standing plan-and-propose rule for a change with this much surface area.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank
