@@ -7120,6 +7120,35 @@ touched those.
   chip, expanding correctly; all 7 modules confirmed Export/Import JSON gone and `/account`/
   `/app-data` links present — zero console errors. `npx tsc -b` / `npm run test` (696 tests,
   unchanged) / `npm run build` all clean.
+- **"Reset to all currencies" replaced with a real add/remove picker + Net Worth click-to-
+  drill-down popups on every calculated stat (2026-09-16) — see README Done item 333 for the
+  full writeup, this is a pointer.** Two requests, the second backed by the user's own real
+  full-app backup. (1) `CURRENCIES` grew 11→~50 real world currencies (each now with a `name`
+  for search), new shared `components/CurrencyQuickAdd.tsx` (a type-ahead input that also
+  accepts any plausible 3-letter code typed directly — "let the user type his currency(ies),"
+  the user's own preferred option), and the illogical "Reset to all currencies" button (which
+  literally checked every currency) is gone from `AccountPage.tsx`'s `CurrenciesSection` in
+  favor of removable chips for only what's actually enabled — the SAME redesign was applied to
+  `CurrencyOnboardingModal.tsx` too, since the just-expanded ~50-currency list would have made
+  its original "dump every currency as a permanent chip row" design the exact same complaint
+  one release early. (2) Investigated the "Funds income isn't counted anywhere" report against
+  the user's real uploaded backup (a disposable Vitest harness importing the real calc
+  functions, this project's own established technique) BEFORE writing any UI — confirmed Funds'
+  real PKR value already correctly flows into Assets/Net (`fundsValueByCurrency`/
+  `computeNetWorthByCurrency`, never actually dropped); the real gap is that `flowByCurrency`'s
+  "Today's/this month's net flow" cards are Cash+Bank-only BY DESIGN (a stock/Fund NAV change
+  isn't a "deposit/withdrawal from your own pocket"), so Funds' performance genuinely never
+  shows in a FLOW card — very plausibly what read as "not counted." Built new `flowActivity()`
+  (the itemized twin of `flowByCurrency`, reconciliation-tested against it), a new optional
+  `onClick` on `StatCard` (fully backward-compatible), and a new `NetWorthDrilldownModal` with
+  three popup shapes (`breakdown`/`flow`/`delta`) wired onto every top-level summary card, every
+  per-currency Assets/Liabilities/Net card, and every Today/This month/Δ pill — each popup's own
+  copy explains what the number does and doesn't include, directly answering "explain me how
+  you're calculating these" inline. Verified live via Playwright with a seeded Cash+Bank+Funds
+  scenario: the Assets breakdown popup correctly lists "Funds" (answering complaint (2) at the
+  exact spot raised), the delta table's Cash +460/Bank −50 = 410 USD total matched the seeded
+  data exactly by hand. `npx tsc -b` / `npm run test` (705 tests, 6 new) / `npm run build` all
+  clean.
 
 ## Live URLs
 

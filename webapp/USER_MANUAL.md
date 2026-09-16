@@ -800,9 +800,17 @@ to, so adding it again here would count it twice.
 
 - **Net worth summary card**: pick a currency in "Show total in", and every section with a
   known exchange rate gets converted and added into one grand total, shown alongside **Total
-  debts**, **Today's net flow**, and **This month's net flow** (money moved in/out of Cash
-  and Banking) — all converted sums alongside the real per-currency figures, never a
-  replacement for them.
+  debts**, **Today's net flow**, **This month's net flow** (money moved in/out of Cash and
+  Banking), and **This month's change** (your real net worth right now vs. the end of last
+  month, across every module — a stock's price moving or an EMI loan being paid down counts
+  here even though it's never "flow") — all converted sums alongside the real per-currency
+  figures, never a replacement for them.
+- **Click any number to see what's behind it.** Every stat card and every "Today"/"This
+  month"/"Δ vs. last month" chip throughout this page opens a small pop-up: the summary cards
+  and the per-currency Assets/Liabilities/Net cards show a per-currency breakdown; a Today/This
+  month chip lists the real Cash entries and Bank transactions that make up that figure; a Δ
+  chip shows a module-by-module table of what changed since last month. Each pop-up also
+  explains in plain words what the number does and doesn't include.
 - **Exchange rates card**: rates come from a free exchange-rate service, refreshed
   automatically at most once a day (never on every page load) and cached — click **Refresh
   rates** to force an update. If the automatic fetch ever fails (no internet, the service

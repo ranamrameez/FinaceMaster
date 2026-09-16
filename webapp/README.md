@@ -9424,6 +9424,75 @@ FinanceManager live link:
   7 modules' Settings tabs confirmed Export/Import JSON gone, "Clear all data" present, and real
   links to `/account`/`/app-data` — zero console errors throughout. `npx tsc -b` / `npm run
   test` (696 tests, unchanged) / `npm run build` all clean.
+- **"Reset to all currencies" replaced with a real add/remove picker, plus a Net Worth
+  click-to-drill-down feature on every calculated stat (2026-09-16) — see Done item 333.**
+  Two real requests from the user, backed by a real full-app-backup file for the second one.
+  (1) **"'Reset to all currencies' button is illogical. no one is going to work only these
+  currencies. in DB save a list of all currencies and let the user choose for his currency or
+  more simply let the user type his currency(ies)."** Both halves acted on, not just one:
+  `lib/currencies.ts`'s `CURRENCIES` grew from the original 11 (US/EU/GCC/Pakistan/India-only)
+  to ~50 real, common world currencies (JPY, CNY, AUD, CAD, CHF, BRL, ZAR, and more — a genuine
+  broadened reference list, not the literal ~180-code ISO-4217 catalog, consistent with this
+  app's own locked "bundle a static reference, no live third-party API" design), each now also
+  carrying a `name` field for search. New shared `components/CurrencyQuickAdd.tsx` — a type-
+  ahead input (a native `<datalist>` sourced from `CURRENCIES`, so typing "yen" or "JPY" both
+  surface it) that ALSO accepts any plausible 3-letter code typed directly, satisfying "let the
+  user type his currency(ies)" — the user's own preferred, simpler option — without needing the
+  bundled list to be exhaustive; `useEnabledCurrencies()` already had a "never hide a currency
+  the user's own real data uses, even outside CURRENCIES" fallback, so this needed zero changes
+  there. `AccountPage.tsx`'s `CurrenciesSection` was rebuilt around it: the illogical "Reset to
+  all currencies" button (which literally checked all ~50 currencies) is gone; only the
+  currencies actually enabled render as removable chips, with `CurrencyQuickAdd` beneath to add
+  more. **A real footgun avoided while wiring this up**: `useEnabledCurrenciesStore.toggle()`
+  flips membership, so blindly calling it from "Add a currency" on an ALREADY-enabled code would
+  silently REMOVE it instead of no-op — `addCode()` checks `enabledCodes.includes(code)` first
+  and toasts "already added" instead. A second, separate case needed its own branch: `enabledCodes
+  === null` (the zero-migration default, meaning "every currency implicitly enabled") has no
+  real subset for `toggle()`'s own "base = every CURRENCIES code, then flip one" logic to add
+  onto without silently EXCLUDING the typed currency from an otherwise-full base — `addCode()`
+  calls `setEnabledCodes([code])` directly in that case instead, starting a real one-currency
+  subset from scratch (shown as a plain "every currency is available — add what you use" message
+  rather than dumping all ~50 as chips). `CurrencyOnboardingModal.tsx` (the first-run picker,
+  Done item 169) got the identical redesign for the same reason — dumping ~50 chips at first
+  run would have been the exact same "illogical wall of options" complaint, one release early.
+  (2) **"Net worth summary: Funds income isn't counted anywhere! for every calculated number, it
+  should be supported by a clickable pop-up view to display the related transactions... You need
+  to explain me how are you calculating all these numbers."** Investigated against the user's own
+  real uploaded backup (a disposable Vitest harness importing the real calc functions, this
+  project's own established technique) before writing any UI: `fundsValueByCurrency`/
+  `computeNetWorthByCurrency` DO correctly count Funds' real PKR value (6,129,845.31 PKR) into
+  both Assets and Net — Funds was never actually dropped from the total. The real gap is that
+  `flowByCurrency`'s "Today's/this month's net flow" cards are BY DESIGN Cash+Bank-only (a stock
+  trade or a Fund's NAV update isn't a "deposit/withdrawal from your own pocket" the same way —
+  see that function's own pre-existing doc comment) — Funds' performance genuinely never shows up
+  in a FLOW card, only in the static Assets/Net totals, which is very plausibly what read as
+  "isn't counted anywhere." Built the second half of the ask directly on top of this finding: new
+  `flowActivity()` (`lib/calc/netWorth.ts`) is the itemized twin of `flowByCurrency` — same exact
+  filtering, but returns the real underlying Cash/Bank records instead of just their sum, proven
+  to reconcile exactly with `flowByCurrency`'s own total via a dedicated test. `StatCard` gained
+  an optional, fully backward-compatible `onClick` prop (every existing call site across the app
+  renders unchanged). New `NetWorthDrilldownModal` (`NetWorthPage.tsx`) renders one of three
+  popup shapes depending on what was clicked: a per-currency `breakdown` table (for the 3
+  top-level converted summary cards AND the per-currency Assets/Liabilities/Net cards — reusing
+  the same `NetWorthBreakdownEntry[]`/`netWorthAsOfDate()` data those already compute, nothing
+  new to calculate); a `flow` table of real itemized transactions (for the Today/This month
+  pills, via the new `flowActivity()`); and a `delta` last-month-vs-now module comparison table
+  (for the "This month's change" card and each currency's own "Δ vs. last month" pill). Every
+  popup's own explanation text states plainly what the number does and does NOT include (e.g. the
+  flow popup's copy explicitly says a stock/Fund/EMI change is "not flow"), directly answering the
+  user's "explain me how you're calculating these" ask inline, not just in a chat reply. Verified
+  live via Playwright with a seeded Cash+Bank+Funds scenario (a USD Cash/Bank pair with a
+  last-month vs. today split, plus a PKR Fund position) — every popup opened with real,
+  hand-verified numbers: the Assets breakdown popup correctly listed "Funds" (directly answering
+  complaint (2) at the exact spot it was raised); the delta table showed Cash +460.00/Bank
+  -50.00 = 410.00 USD total, matching the seeded data exactly by hand; zero real console errors
+  (only this sandbox's own documented FX-fetch network-block noise). New tests: `netWorth.test.ts`
+  gained a `flowActivity` describe block (3 cases, including the reconciliation-with-
+  `flowByCurrency` guarantee), `currencies.test.ts` gained a `CURRENCIES` regression guard (2
+  cases) and an updated `detectPrimaryCurrency` timezone table, `CurrencyQuickAdd.test.tsx` is a
+  new file (4 cases, tested directly per this project's own "test the component when a real
+  signed-in round-trip isn't available" precedent). `npx tsc -b` / `npm run test` (705 tests, 6
+  new) / `npm run build` all clean.
 
 ## Pending
 
@@ -10657,6 +10726,17 @@ or a design decision before more code, not guessed at further:**
      332.** `enabledCodes`' own array order is now the ranking (index 0 = Primary, index 1 =
      Secondary, the rest Other); every module's default-currency fallback, the Account page's
      new reorder UI, and `CurrencyChips`' prominent-vs-collapsed tiers all read it.
+142. **Extend the click-to-drill-down popup pattern beyond Net Worth, NOT yet started
+     (2026-09-16).** Done item 333 built `StatCard`'s new `onClick` prop + the `breakdown`/
+     `flow`/`delta` popup shapes specifically for the Net Worth Dashboard, per the user's own
+     ask ("for every calculated number... a clickable pop-up view"). That ask was scoped to Net
+     Worth in the user's own message — this item tracks the natural, not-yet-requested follow-up
+     of rolling the same "click a stat card, see the real underlying records" pattern out to
+     other stat-heavy pages (QSE/PSX Dashboard, Bank/Cash statements' own summary cards, etc.),
+     the same "ship the narrow slice, flag the rest for later" precedent already used for Done
+     items 134→137 (Dashboard drill-down → Analytics drill-down). `StatCard.onClick` is already
+     a generic, reusable mechanism — the remaining work per page is deciding what a "related
+     transactions" popup means for that specific stat, not new infrastructure.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

@@ -132,3 +132,46 @@ export function flowByCurrency(
   });
   return out;
 }
+
+/** User-requested (2026-09-16): "For every calculated number, it should be
+ * supported by a clickable pop-up view to display the related
+ * transactions." The itemized twin of `flowByCurrency` above — same exact
+ * filtering (date range + currency), but returns the real underlying
+ * Cash/Bank records instead of just their sum, so a drill-down popup's own
+ * total always reconciles exactly with whatever headline figure it was
+ * opened from (verified by a dedicated test that sums this function's
+ * output and compares it to `flowByCurrency`'s number for the identical
+ * inputs). Sorted oldest-first, same reading order as every other
+ * statement table in this app. */
+export interface FlowActivityItem {
+  module: 'Cash' | 'Bank';
+  date: string;
+  description: string;
+  /** Signed — positive = inflow, negative = outflow, same convention as
+   * `flowByCurrency`'s own per-currency totals. */
+  amount: number;
+  accountName?: string;
+}
+
+export function flowActivity(
+  cashEntries: { date: string; isDeposit: boolean; amount: number; currencyCode: string; title?: string }[],
+  bankAccounts: { id: string; name: string; currencyCode: string }[],
+  bankTransactions: { accountId: string; date: string; amount: number; description: string }[],
+  currency: string,
+  fromDate: string,
+  toDate: string,
+): FlowActivityItem[] {
+  const items: FlowActivityItem[] = [];
+  cashEntries.forEach((e) => {
+    if (e.date < fromDate || e.date > toDate || e.currencyCode !== currency) return;
+    items.push({ module: 'Cash', date: e.date, description: e.title || 'Cash entry', amount: e.isDeposit ? e.amount : -e.amount });
+  });
+  const accountsInCurrency = new Map(bankAccounts.filter((a) => a.currencyCode === currency).map((a) => [a.id, a.name]));
+  bankTransactions.forEach((t) => {
+    if (t.date < fromDate || t.date > toDate) return;
+    const accountName = accountsInCurrency.get(t.accountId);
+    if (!accountName) return;
+    items.push({ module: 'Bank', date: t.date, description: t.description, amount: t.amount, accountName });
+  });
+  return items.sort((a, b) => a.date.localeCompare(b.date));
+}

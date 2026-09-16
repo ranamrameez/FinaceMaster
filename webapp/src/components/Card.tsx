@@ -111,6 +111,7 @@ export function StatCard({
   title,
   labelTitle,
   hue,
+  onClick,
 }: {
   label: string;
   value: string;
@@ -124,9 +125,21 @@ export function StatCard({
    * value" and shouldn't suddenly render as a label explanation). */
   labelTitle?: string;
   hue?: string;
+  /** User-requested (2026-09-16): "For every calculated number, it should
+   * be supported by a clickable pop-up view to display the related
+   * transactions." Optional and additive — every existing call site keeps
+   * rendering exactly as before; a caller that passes this gets the shared
+   * `.clickable` cursor + real button semantics for free. */
+  onClick?: () => void;
 }) {
   return (
-    <div className="card stat-card" style={hue ? ({ '--card-hue': hue } as CSSProperties) : undefined}>
+    <div
+      className={`card stat-card${onClick ? ' clickable' : ''}`}
+      style={hue ? ({ '--card-hue': hue } as CSSProperties) : undefined}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+    >
       {labelTitle ? (
         <Tooltip text={labelTitle}>
           <div className="label clickable">{label}</div>

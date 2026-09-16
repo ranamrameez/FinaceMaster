@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeNetWorthByCurrency, flowByCurrency } from '../netWorth';
+import { computeNetWorthByCurrency, flowActivity, flowByCurrency } from '../netWorth';
 
 describe('computeNetWorthByCurrency', () => {
   it('sums assets across modules per currency', () => {
@@ -169,5 +169,38 @@ describe('flowByCurrency', () => {
   it('ignores a bank transaction whose account is unknown', () => {
     const out = flowByCurrency([], [], [{ accountId: 'missing', date: '2026-08-15', amount: 100 }], '2026-08-15', '2026-08-15');
     expect(out).toEqual({});
+  });
+});
+
+describe('flowActivity', () => {
+  const cashEntries = [
+    { date: '2026-08-01', isDeposit: true, amount: 500, currencyCode: 'USD', title: 'Salary' },
+    { date: '2026-08-15', isDeposit: false, amount: 100, currencyCode: 'USD' },
+    { date: '2026-08-15', isDeposit: true, amount: 1000, currencyCode: 'PKR' },
+  ];
+  const bankAccounts = [{ id: 'a1', name: 'Checking', currencyCode: 'USD' }];
+  const bankTransactions = [
+    { accountId: 'a1', date: '2026-08-15', amount: -50, description: 'Groceries' },
+    { accountId: 'a1', date: '2026-07-31', amount: 999, description: 'out of range' },
+  ];
+
+  it('returns itemized records whose sum reconciles exactly with flowByCurrency for the same inputs', () => {
+    const items = flowActivity(cashEntries, bankAccounts, bankTransactions, 'USD', '2026-08-01', '2026-08-15');
+    const total = items.reduce((s, i) => s + i.amount, 0);
+    const totals = flowByCurrency(cashEntries, bankAccounts, bankTransactions, '2026-08-01', '2026-08-15');
+    expect(total).toBe(totals.USD);
+    expect(items).toHaveLength(3);
+    expect(items[0]).toMatchObject({ module: 'Cash', date: '2026-08-01', description: 'Salary', amount: 500 });
+    expect(items.find((i) => i.module === 'Bank')).toMatchObject({ accountName: 'Checking', amount: -50, description: 'Groceries' });
+  });
+
+  it('falls back to a generic label when a Cash entry has no title', () => {
+    const items = flowActivity(cashEntries, [], [], 'USD', '2026-08-15', '2026-08-15');
+    expect(items[0].description).toBe('Cash entry');
+  });
+
+  it('is scoped to one currency, ignoring accounts/entries in another', () => {
+    const items = flowActivity(cashEntries, bankAccounts, bankTransactions, 'PKR', '2026-08-15', '2026-08-15');
+    expect(items).toEqual([{ module: 'Cash', date: '2026-08-15', description: 'Cash entry', amount: 1000 }]);
   });
 });
