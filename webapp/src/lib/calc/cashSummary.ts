@@ -3,92 +3,45 @@ import { buildCashLedger, totalTransferFees } from './cashLedger';
 import { computePositions } from './positions';
 import { getMarketPrice } from './priceHistory';
 
-/** The single all-in summary: what actually happened to your money, trading
- * gains/losses and every fee included. Ported 1:1 from the legacy
- * `cashSummary()` in index.html.
- *
- * `positions` is optional and defaults to the weighted-average
- * `computePositions` (QSE's only option, and PSX's default) — pass PSX's
- * FIFO-computed positions instead when `costBasisMethod` is 'fifo' (README
- * item 8), so this function stays agnostic to *how* cost basis was tracked
- * and callers don't need two near-duplicate cashSummary variants. */
+/** Single all-in summary: actual cash, trading gains/losses and fees. Pending
+ * and invalid oversell trades are excluded from actual cash/position ledgers. */
 export function cashSummary(
   transactions: Transaction[],
   transfers: Transfer[],
   adjustments: Adjustment[],
   marketPrices: Record<string, number>,
   calcFee: FeeCalculator,
-  positions: Position[] = computePositions(transactions, calcFee), // includes closed tickers, needed for lifetime realized P/L
+  positions: Position[] = computePositions(transactions, calcFee),
 ): CashSummary {
   const totalInward = transfers.filter((t) => t.type === 'DEPOSIT').reduce((s, t) => s + t.gross, 0);
   const totalOutward = transfers.filter((t) => t.type === 'WITHDRAWAL').reduce((s, t) => s + t.gross, 0);
   const transferFees = totalTransferFees(transfers);
   const totalRewards = (adjustments || []).reduce((s, a) => s + a.amount, 0);
-
   const tradingFees = positions.reduce((s, p) => s + p.buyFees + p.sellFees, 0);
   const realizedPL = positions.reduce((s, p) => s + p.realized, 0);
 
   let unrealizedPL = 0;
   let portfolioValue = 0;
-  positions
-    .filter((p) => p.shares > 0)
-    .forEach((p) => {
-      const mp = getMarketPrice(p.ticker, marketPrices, transactions);
-      const grossValue = p.shares * mp;
-      const estSellFee = mp > 0 ? calcFee(grossValue, false, { shares: p.shares }) : 0;
-      const netValue = grossValue - estSellFee;
-      unrealizedPL += netValue - p.invested;
-      portfolioValue += netValue;
-    });
+  positions.filter((p) => p.shares > 0).forEach((p) => {
+    const mp = getMarketPrice(p.ticker, marketPrices, transactions);
+    const grossValue = p.shares * mp;
+    const estSellFee = mp > 0 ? calcFee(grossValue, false, { shares: p.shares }) : 0;
+    const netValue = grossValue - estSellFee;
+    unrealizedPL += netValue - p.invested;
+    portfolioValue += netValue;
+  });
 
-  // Excludes pending transactions from the headline cash balance (Pending-
-  // transaction-state, 2026-09-08) — a not-yet-filled BUY/SELL order hasn't
-  // actually moved cash yet, same "locks real balances" rule already
-  // applied to Cash/Bank. The caller's own separately-computed `ledger`
-  // (built directly from `buildCashLedger`, not through here) keeps
-  // showing every event including pending ones, tagged, for the full
-  // statement view — only THIS headline figure excludes them.
-  const ledger = buildCashLedger(
-    transactions.filter((t) => !t.isPending),
-    transfers,
-    adjustments,
-    calcFee,
-  );
+  const ledger = buildCashLedger(transactions, transfers, adjustments, calcFee);
   const cashBalance = ledger.length ? ledger[ledger.length - 1].balance : 0;
   const netWorth = cashBalance + portfolioValue;
   const totalCharges = transferFees + tradingFees;
-  // buy/sell commissions are already inside realized/unrealized; transfer fees
-  // aren't, so subtract them here; broker rewards are found money, so add them.
   const netPL = realizedPL + unrealizedPL - transferFees + totalRewards;
 
-  // The companion figure to excluding pending above: what cash WOULD move
-  // by if every currently-pending order filled right now, at today's
-  // computed fee — a pending BUY locks cash (negative), a pending SELL
-  // would add it (positive). Never silently hidden from the user, per
-  // their own "rather than giving user a heart attack by excluding pending
-  // amounts and not showing them" instruction.
-  const pendingCashImpact = transactions
-    .filter((t) => t.isPending)
-    .reduce((sum, t) => {
-      const amount = t.shares * t.price;
-      const fee = calcFee(amount, t.action === 'BUY', { shares: t.shares, tx: t });
-      return sum + (t.action === 'BUY' ? -(amount + fee) : amount - fee);
-    }, 0);
+  const pendingCashImpact = transactions.filter((t) => t.isPending).reduce((sum, t) => {
+    const amount = t.shares * t.price;
+    const fee = calcFee(amount, t.action === 'BUY', { shares: t.shares, tx: t });
+    return sum + (t.action === 'BUY' ? -(amount + fee) : amount - fee);
+  }, 0);
 
-  return {
-    totalInward,
-    totalOutward,
-    transferFees,
-    tradingFees,
-    totalCharges,
-    totalRewards,
-    realizedPL,
-    unrealizedPL,
-    netPL,
-    cashBalance,
-    portfolioValue,
-    netWorth,
-    ledger,
-    pendingCashImpact,
-  };
+  return { totalInward, totalOutward, transferFees, tradingFees, totalCharges, totalRewards, realizedPL, unrealizedPL, netPL, cashBalance, portfolioValue, netWorth, ledger, pendingCashImpact };
 }
