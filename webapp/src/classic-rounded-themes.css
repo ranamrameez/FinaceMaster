@@ -1,0 +1,186 @@
+/* Classic Rounded finance themes
+ *
+ * The legacy Ocean / Forest / Violet / Sunset palettes are preserved, but
+ * their component language is modernized: rounded buttons, chips and cards,
+ * neutral surfaces, and the original theme accent colors. This stylesheet
+ * intentionally loads after theme.css + modern/popup overrides so the legacy
+ * palettes do not get swallowed by the generic non-wine rules.
+ */
+
+html[data-color="ocean"],
+html[data-color="forest"],
+html[data-color="violet"],
+html[data-color="sunset"] {
+  --radius:12px;
+  --radius-lg:16px;
+}
+
+html[data-color="ocean"] .card,
+html[data-color="forest"] .card,
+html[data-color="violet"] .card,
+html[data-color="sunset"] .card {
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  background:var(--panel);
+  box-shadow:var(--shadow-card);
+}
+
+html[data-color="ocean"] .btn,
+html[data-color="forest"] .btn,
+html[data-color="violet"] .btn,
+html[data-color="sunset"] .btn {
+  border-radius:999px;
+  border:1px solid var(--border);
+  box-shadow:none;
+  transition:transform .12s ease, box-shadow .12s ease, filter .12s ease;
+}
+
+html[data-color="ocean"] .btn:hover,
+html[data-color="forest"] .btn:hover,
+html[data-color="violet"] .btn:hover,
+html[data-color="sunset"] .btn:hover {
+  transform:translateY(-1px);
+  box-shadow:0 3px 10px rgba(20,30,40,.14);
+}
+
+html[data-color="ocean"] .btn.primary,
+html[data-color="forest"] .btn.primary,
+html[data-color="violet"] .btn.primary,
+html[data-color="sunset"] .btn.primary {
+  background:var(--accent);
+  border-color:var(--accent);
+  color:var(--on-accent,#fff);
+}
+
+html[data-color="ocean"] .btn.secondary,
+html[data-color="forest"] .btn.secondary,
+html[data-color="violet"] .btn.secondary,
+html[data-color="sunset"] .btn.secondary {
+  background:var(--accent-soft);
+  border-color:transparent;
+  color:var(--accent);
+}
+
+html[data-color="ocean"] .btn.ghost,
+html[data-color="forest"] .btn.ghost,
+html[data-color="violet"] .btn.ghost,
+html[data-color="sunset"] .btn.ghost {
+  background:transparent;
+  border-color:transparent;
+  color:var(--accent);
+}
+
+html[data-color="ocean"] .chip,
+html[data-color="forest"] .chip,
+html[data-color="violet"] .chip,
+html[data-color="sunset"] .chip {
+  border-radius:999px;
+  border:1px solid var(--border);
+  box-shadow:none;
+}
+
+html[data-color="ocean"] .chip:not(.active),
+html[data-color="forest"] .chip:not(.active),
+html[data-color="violet"] .chip:not(.active),
+html[data-color="sunset"] .chip:not(.active) {
+  background:var(--accent-soft);
+  color:var(--accent);
+}
+
+html[data-color="ocean"] .chip.active,
+html[data-color="forest"] .chip.active,
+html[data-color="violet"] .chip.active,
+html[data-color="sunset"] .chip.active {
+  background:var(--accent);
+  border-color:var(--accent);
+  color:var(--on-accent,#fff);
+}
+
+html[data-color="ocean"] .navbtn.active,
+html[data-color="forest"] .navbtn.active,
+html[data-color="violet"] .navbtn.active,
+html[data-color="sunset"] .navbtn.active {
+  background:var(--accent-soft);
+  color:var(--accent);
+  border-radius:12px;
+  box-shadow:inset 3px 0 0 var(--accent);
+}
+
+html[data-color="ocean"] .page-topbar,
+html[data-color="forest"] .page-topbar,
+html[data-color="violet"] .page-topbar,
+html[data-color="sunset"] .page-topbar {
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-card);
+  padding:5px;
+}
+
+html[data-color="ocean"] .stat-card,
+html[data-color="forest"] .stat-card,
+html[data-color="violet"] .stat-card,
+html[data-color="sunset"] .stat-card {
+  border:1px solid color-mix(in srgb,var(--card-hue,var(--accent)) 48%,var(--border));
+  background:color-mix(in srgb,var(--card-hue,var(--accent)) 28%,var(--panel));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 2px 10px rgba(20,30,40,.10);
+}
+
+html[data-color="ocean"] input,
+html[data-color="forest"] input,
+html[data-color="violet"] input,
+html[data-color="sunset"] input,
+html[data-color="ocean"] select,
+html[data-color="forest"] select,
+html[data-color="violet"] select,
+html[data-color="sunset"] select {
+  background:var(--panel-2);
+  border-color:var(--border);
+  border-radius:12px;
+}
+
+html[data-color="ocean"] input:focus,
+html[data-color="forest"] input:focus,
+html[data-color="violet"] input:focus,
+html[data-color="sunset"] input:focus,
+html[data-color="ocean"] select:focus,
+html[data-color="forest"] select:focus,
+html[data-color="violet"] select:focus,
+html[data-color="sunset"] select:focus {
+  border-color:var(--accent);
+  outline:3px solid color-mix(in srgb,var(--accent-soft) 78%,transparent);
+}
+
+html[data-color="ocean"] thead th,
+html[data-color="forest"] thead th,
+html[data-color="violet"] thead th,
+html[data-color="sunset"] thead th {
+  color:var(--accent);
+}
+
+html[data-color="ocean"] tbody tr:hover,
+html[data-color="forest"] tbody tr:hover,
+html[data-color="violet"] tbody tr:hover,
+html[data-color="sunset"] tbody tr:hover {
+  background:color-mix(in srgb,var(--accent-soft) 55%,var(--panel));
+}
+
+html[data-color="ocean"] .btn.fab-btn,
+html[data-color="forest"] .btn.fab-btn,
+html[data-color="violet"] .btn.fab-btn,
+html[data-color="sunset"] .btn.fab-btn {
+  background:var(--accent);
+  border-color:var(--accent);
+  color:var(--on-accent,#fff);
+  box-shadow:0 5px 18px color-mix(in srgb,var(--accent) 32%,transparent);
+}
+
+/* Restore the original legacy accent colors in both light and dark modes. */
+html[data-color="ocean"] { --accent:#1f6fb2; --accent-soft:#173044; --on-accent:#fff; }
+html[data-color="ocean"][data-theme="light"] { --accent-soft:#e2eefb; --on-accent:#fff; }
+html[data-color="forest"] { --accent:#1f8a5c; --accent-soft:#123423; --on-accent:#fff; }
+html[data-color="forest"][data-theme="light"] { --accent-soft:#e1f3ea; --on-accent:#fff; }
+html[data-color="violet"] { --accent:#6d4fc9; --accent-soft:#241b3f; --on-accent:#fff; }
+html[data-color="violet"][data-theme="light"] { --accent-soft:#ece6fa; --on-accent:#fff; }
+html[data-color="sunset"] { --accent:#c9611f; --accent-soft:#3a2312; --on-accent:#fff; }
+html[data-color="sunset"][data-theme="light"] { --accent-soft:#fbe9db; --on-accent:#fff; }
