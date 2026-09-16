@@ -14,6 +14,7 @@ const COLOR_THEMES = [
   { group: 'Modern themes', options: [
     ['aurora', 'Aurora (Indigo + Cyan)'],
     ['sage', 'Sage (Jade + Neutral)'],
+    ['teal', 'Teal (Blue-Green)'],
   ] },
   { group: 'Material Design themes', options: [
     ['material-blue', 'Material Purple / Blue'],
