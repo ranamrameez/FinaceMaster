@@ -15,6 +15,7 @@ import { Toast } from './components/Toast';
 import { useFirebaseSync } from './lib/firebase/useFirebaseSync';
 import { usePSXFirebaseSync } from './lib/firebase/usePSXFirebaseSync';
 import { useCategoryFirebaseSync } from './lib/firebase/useCategoryFirebaseSync';
+import { useCategoryGroupFirebaseSync } from './lib/firebase/useCategoryGroupFirebaseSync';
 import { useSyncCurrencyPreference } from './lib/firebase/useSyncCurrencyPreference';
 import { useAppearanceStore } from './store/appearanceStore';
 import { AnalyticsPage } from './features/qse/pages/AnalyticsPage';
@@ -119,6 +120,9 @@ function App() {
   // skip the manual upload-if-empty affordance" treatment as Rentals'
   // Planning feature just above.
   const categorySync = useCategoryFirebaseSync();
+  // Category groups (the "bird's-eye view" — README Pending item 5) — same
+  // no-dedicated-status-UI treatment as the Category registry itself.
+  useCategoryGroupFirebaseSync();
   // User-reported (2026-09-14): "the app asks the user on every new device,
   // which is wrong" — mirrors the enabled-currencies/onboarding-seen
   // preference into the account's real cloud profile so it follows the

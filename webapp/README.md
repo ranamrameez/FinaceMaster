@@ -9532,6 +9532,86 @@ FinanceManager live link:
   structurally present; the new `ChecklistIcon` was also screenshot-confirmed as a genuinely
   different, non-gear shape. `npx tsc -b` / `npm run test` (705 tests, unchanged — UI wiring
   onto already-tested calc functions) / `npm run build` all clean.
+- **Category merge (Ignore/IgnoreCount) + many-to-many category groups + a new Dashboard
+  "By category group" analysis section (2026-09-16) — see Done item 335, the remainder of the
+  same feedback batch as Done item 334.** User's own words: "for my data merge Ignore &
+  IgnoreCount into 1. we need to work on category utilisation... We can let user group
+  categories to configure the bird's-eye view... in my excel sheets before this app, i was
+  flagging transactions using categs and then configuring some of the categs to find my
+  monthly expense (Expense -> Travel + Grocery + Extra++), and income (Income + rent income +
+  extra income++)." Confirmed via `AskUserQuestion` before building: the two default
+  categories should be merged outright ("Same thing — just merge"), a category can belong to
+  several groups at once ("A category can join several groups"), and the new group-based
+  analysis belongs as a new Dashboard section.
+  **Merge**: new `lib/categoryMerge.ts`'s `mergeCategoriesEverywhere(fromId, toId)` — a plain
+  exported function (not a hook), reads/writes every relevant store via `.getState()` directly
+  so it can run from a single button click with no component wiring. Real records are remapped
+  by `categoryID` (Cash, Bank, Rentals, Funds, Subscriptions, Credit Card transactions — a
+  broader set than `types/finance.ts`'s own stale doc comment claimed; also fixed that comment,
+  which wrongly said the Planned* types use `categoryID` too — they use a legacy free-text
+  `category?: string` field instead, confirmed by reading `budgetPlanner.ts`'s own correct
+  normalizer comments), Planned entries by matching the resolved category NAME (their only
+  field). After remapping every store, the merged-away category is removed from the registry
+  via a direct `useCategoryStore` `setWorkbook` call — a deliberate, one-off bypass of the
+  `scope:'app'` delete-protection guard (Done item 293) for this single hardcoded operation
+  only, not a general loophole. Surfaced on `/account`'s new "Categories" section as a
+  `Notice` + "Merge them" button, shown only while `cat_ignore_count` still exists in the
+  registry (so it disappears once actually merged, per the same "the button vanishes once its
+  job is done" discipline this project uses elsewhere) — gated behind `confirmDialog()`
+  (explaining exactly what gets retagged and where) and `ensureSignedIn()`, per this project's
+  standing sign-in-gate rule for any write touching real financial category data.
+  **Groups — deliberate design decision, not confirmed via a further AskUserQuestion, flagged
+  here as a judgment call**: no separate `Category.type` field was added. Group MEMBERSHIP
+  itself is the classification — an ungrouped category simply contributes to no group's own
+  total, which is functionally equivalent to a hypothetical "type: Ignore" at zero schema/
+  migration cost. Documented explicitly in the new `CategoryGroup` type's own doc comment
+  (`types/finance.ts`) as a call worth revisiting if it turns out wrong — cheap to add a real
+  type field later if the group-membership-only model doesn't hold up. New
+  `CategoryGroup { id, serialNumber, name, categoryIds: string[] }` /
+  `CategoryGroupsWorkbook { groups: CategoryGroup[] }`, a new hand-written
+  `store/categoryGroupStore.ts` (mirrors `categoryStore.ts`'s own shape exactly — own
+  localStorage key, `normalize()` backfills `serialNumber`), its own Firebase sync path
+  (`useCategoryGroupFirebaseSync.ts`, wired into `App.tsx` alongside every other module's sync
+  hook), and wired into `resetLocalData.ts`'s per-account reset (a real gap class this project
+  has hit before with a NEW per-account store — see this file's own repeated "wire it into
+  `resetAllLocalWorkbooks()` at creation time" lesson) and `AppDataPage.tsx`'s whole-app
+  export/import (all 5 spots: `CLOUD_PATH_SUFFIX`, `CREATE_EMPTY`, the hook call, the `stores`
+  spread, `moduleLabels`).
+  New pure `lib/calc/categoryGroups.ts`: `groupCategoryNames` (resolves a group's member
+  category ids to their display names, since `BudgetActivity.category` is already a resolved
+  name for both real and planned entries — matching by name, not id, is what lets one function
+  work uniformly across both), `activitiesForGroup` (filters a `BudgetActivity[]` to just a
+  group's own members), `groupMonthlyTotals` (nets the signed amount per month per currency) —
+  4 hand-traced test cases including a shared-category-independence check (a category
+  belonging to two groups contributes to each group's own total independently, never combined
+  or double-counted).
+  **UI**: `/account`'s new `CategoriesSection` (a `CollapsibleCard`) houses both the merge
+  offer and the group-builder — "My categories" (rename/delete custom categories, app
+  categories shown read-only per Done item 293's own scope split) plus "Groups — bird's-eye
+  view": each `CategoryGroupRow` is expandable into a checklist of every category in the
+  registry (checking one adds/removes it from that group) — deliberately a plain checklist
+  over a multi-select dropdown, since the user's own described workflow ("flagging
+  transactions... then configuring some of the categs") reads better as a visible checklist
+  than a picker hiding everything not currently selected. New `CategoryGroupsSection` on the
+  Dashboard (`NetWorthPage.tsx`, right after the existing Monthly Summary section) renders
+  nothing until at least one group exists (an empty state here would be one more thing to
+  explain on an already-dense page; the "how do I make one" answer lives on `/account`,
+  linked from this section's own intro line) — otherwise a `grid-auto` of per-group cards,
+  each showing THIS MONTH's own net total per currency as a clickable colored pill (reusing
+  the exact same `Drilldown`/`NetWorthDrilldownModal` mechanism Done item 333 already built,
+  not a new popup type) that opens the real underlying activities.
+  Verified live via Playwright with a seeded 3-entry Cash scenario (Travel -100, Grocery -50,
+  IgnoreCount -25 USD): the Categories section's merge button/confirm-dialog wording/sign-in
+  gate all fire correctly; add-category and add-group both correctly hit the sign-in gate;
+  seeding a real "Expense" group (Travel+Grocery) and reloading showed the Dashboard's new
+  section rendering a "-150.00 USD" pill exactly matching the hand-calculated total, and
+  clicking it opened a drilldown listing both underlying entries summing to that exact figure
+  — zero real console errors (only this sandbox's own documented FX-fetch network-block
+  noise). One real test-script lesson repeated from this project's own history: a hash-only
+  `page.goto()` navigation doesn't force a fresh module load, so a Zustand store already
+  initialized before a `localStorage` write via `page.evaluate()` won't pick up that write —
+  a `page.reload()` was needed after seeding to see the new group render. `npx tsc -b` /
+  `npm run test` (711 tests, 6 new) / `npm run build` all clean.
 
 ## Pending
 

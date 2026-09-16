@@ -1,18 +1,26 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AppearanceFields } from '../../../components/AppearancePanel';
 import { Card, CollapsibleCard } from '../../../components/Card';
-import { ArrowDownIcon, ArrowUpIcon, LogInIcon, XIcon } from '../../../components/icons';
+import { ArrowDownIcon, ArrowUpIcon, EditIcon, LogInIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { IconButton } from '../../../components/ui/IconButton';
+import { Field, TextInput } from '../../../components/ui/Field';
 import { CurrencyQuickAdd } from '../../../components/CurrencyQuickAdd';
 import { Notice } from '../../../components/Notice';
 import { ProfileEditor } from '../../../components/ProfileEditor';
+import { confirmDialog } from '../../../components/ConfirmDialog';
 import { requireSignIn } from '../../../components/SignInModal';
 import { SyncStatusIndicator, type ModuleSyncStatus } from '../../../components/SyncStatusIndicator';
 import { toast } from '../../../components/Toast';
 import { signOutUser } from '../../../lib/firebase/auth';
 import { useAuthState } from '../../../lib/firebase/useAuthState';
+import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { gridAutoStyle } from '../../../lib/gridStyle';
+import { mergeCategoriesEverywhere } from '../../../lib/categoryMerge';
 import { useEnabledCurrenciesStore } from '../../../store/enabledCurrenciesStore';
+import { useCategoryStore } from '../../../store/categoryStore';
+import { useCategoryGroupStore } from '../../../store/categoryGroupStore';
+import type { CategoryGroup } from '../../../types/finance';
 
 /** Index 0 = Primary, index 1 = Secondary, everything else = Other — see
  * `useEnabledCurrencies`'s own doc comment for the full tier design. */
@@ -151,6 +159,236 @@ function CurrenciesSection() {
   );
 }
 
+/** One category group's own row — its name, member count, an expandable
+ * checklist of every category (checking one adds/removes it from this
+ * group), and rename/delete. Deliberately plain checkboxes over every
+ * category rather than a multi-select dropdown — the "bird's-eye view"
+ * the user described (grouping several categories at once, checking their
+ * own work as they go) reads better as a visible checklist than a
+ * picker that hides everything not currently selected. */
+function CategoryGroupRow({ group }: { group: CategoryGroup }) {
+  const categories = useCategoryStore((s) => s.workbook.categories);
+  const renameGroup = useCategoryGroupStore((s) => s.renameGroup);
+  const deleteGroup = useCategoryGroupStore((s) => s.deleteGroup);
+  const setGroupCategories = useCategoryGroupStore((s) => s.setGroupCategories);
+  const ensureSignedIn = useEnsureSignedIn();
+  const [open, setOpen] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [name, setName] = useState(group.name);
+  const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name);
+
+  const toggleCategory = async (id: string) => {
+    if (!(await ensureSignedIn('Sign in to save this group.'))) return;
+    const next = group.categoryIds.includes(id) ? group.categoryIds.filter((c) => c !== id) : [...group.categoryIds, id];
+    setGroupCategories(group.id, next);
+  };
+
+  const saveName = async () => {
+    const trimmed = name.trim();
+    if (!trimmed) return toast('Group name cannot be empty.');
+    if (!(await ensureSignedIn('Sign in to save this group.'))) return;
+    renameGroup(group.id, trimmed);
+    setEditingName(false);
+  };
+
+  const remove = async () => {
+    if (!(await confirmDialog(`Delete the "${group.name}" group? The categories in it are untouched — only this grouping goes away.`, 'Delete group'))) return;
+    if (!(await ensureSignedIn('Sign in to delete this group.'))) return;
+    deleteGroup(group.id);
+  };
+
+  return (
+    <div className="card mt-sm" style={{ padding: 10 }}>
+      <div className="row" style={{ alignItems: 'center', gap: 8 }}>
+        <button
+          type="button" className="btn secondary small" onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+        >
+          {open ? '▾' : '▸'} {editingName ? '' : group.name}
+        </button>
+        {editingName ? (
+          <>
+            <TextInput value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && saveName()} width={160} />
+            <IconButton label="Save" icon={<SaveIcon size={12} />} onClick={saveName} />
+          </>
+        ) : (
+          <button type="button" className="btn-link" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setEditingName(true)}>
+            rename
+          </button>
+        )}
+        <span className="text-muted" style={{ fontSize: 12 }}>{group.categoryIds.length} categor{group.categoryIds.length === 1 ? 'y' : 'ies'}</span>
+        <span style={{ flex: 1 }} />
+        <IconButton label="Delete group" icon={<TrashIcon size={12} />} onClick={remove} />
+      </div>
+      {open && (
+        <div className="mt-sm" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {[...categories].sort(byName).map((c) => (
+            <button
+              key={c.id} type="button"
+              className={`chip${group.categoryIds.includes(c.id) ? ' active' : ''}`}
+              onClick={() => toggleCategory(c.id)}
+            >
+              {c.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** User-requested (2026-09-16): "we need to work on category utilisation.
+ * we can show analysis based on categs. We can let user group categories
+ * to configure the bird's-eye view" — mirrors the user's own pre-app Excel
+ * workflow ("flagging transactions using categs and then configuring some
+ * of the categs to find my monthly expense: Expense -> Travel + Grocery +
+ * Extra++"). See `CategoryGroup`'s own doc comment in `types/finance.ts`
+ * for why there is deliberately no separate `Category.type` field — group
+ * membership itself is the classification; an ungrouped category simply
+ * doesn't contribute to any group's own total. The new Dashboard "By
+ * category group" section (`NetWorthPage.tsx`) is what actually surfaces
+ * these totals; this is where a user builds/edits the groups themselves.
+ *
+ * Also houses the one-off "merge Ignore + IgnoreCount" action
+ * (user-confirmed via AskUserQuestion: "Same thing — just merge") — only
+ * rendered while `cat_ignore_count` still exists in the registry, so the
+ * button disappears once it's actually been merged rather than staying as
+ * a dead, always-clickable action. */
+function CategoriesSection() {
+  const categories = useCategoryStore((s) => s.workbook.categories);
+  const addCategory = useCategoryStore((s) => s.addCategory);
+  const renameCategory = useCategoryStore((s) => s.renameCategory);
+  const deleteCategory = useCategoryStore((s) => s.deleteCategory);
+  const groups = useCategoryGroupStore((s) => s.workbook.groups);
+  const addGroup = useCategoryGroupStore((s) => s.addGroup);
+  const ensureSignedIn = useEnsureSignedIn();
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newGroupName, setNewGroupName] = useState('');
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editingCategoryName, setEditingCategoryName] = useState('');
+
+  const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name);
+  const customCategories = [...categories.filter((c) => c.scope !== 'app')].sort(byName);
+  const appCategories = [...categories.filter((c) => c.scope === 'app')].sort(byName);
+  const ignoreCount = categories.find((c) => c.id === 'cat_ignore_count');
+
+  const addNewCategory = async () => {
+    const trimmed = newCategoryName.trim();
+    if (!trimmed) return toast('Enter a category name.');
+    if (!(await ensureSignedIn('Sign in to add a category.'))) return;
+    addCategory(trimmed);
+    setNewCategoryName('');
+  };
+
+  const startRename = (id: string, name: string) => {
+    setEditingCategoryId(id);
+    setEditingCategoryName(name);
+  };
+
+  const saveRename = async () => {
+    const trimmed = editingCategoryName.trim();
+    if (!trimmed) return toast('Category name cannot be empty.');
+    if (!(await ensureSignedIn('Sign in to rename this category.'))) return;
+    renameCategory(editingCategoryId!, trimmed);
+    setEditingCategoryId(null);
+  };
+
+  const removeCategory = async (id: string, name: string) => {
+    if (!(await confirmDialog(`Delete the "${name}" category? Anything using it falls back to "Uncategorized" — it isn't reassigned.`, 'Delete category'))) return;
+    if (!(await ensureSignedIn('Sign in to delete this category.'))) return;
+    deleteCategory(id);
+  };
+
+  const doMergeIgnore = async () => {
+    if (!(await confirmDialog(
+      '"IgnoreCount" will be folded into "Ignore" everywhere — every real and planned transaction currently tagged "IgnoreCount" (Cash, Bank, Rentals, Funds, Subscriptions, Credit Cards) is retagged "Ignore," and "IgnoreCount" is then removed from the category list. This can\'t be undone from here.',
+      'Merge Ignore + IgnoreCount',
+    ))) return;
+    if (!(await ensureSignedIn('Sign in to merge these categories.'))) return;
+    const touched = mergeCategoriesEverywhere('cat_ignore_count', 'cat_ignore');
+    toast(touched > 0 ? `Merged — ${touched} record${touched === 1 ? '' : 's'} retagged "Ignore."` : 'Merged — nothing was tagged "IgnoreCount."');
+  };
+
+  const addNewGroup = async () => {
+    const trimmed = newGroupName.trim();
+    if (!trimmed) return toast('Enter a group name.');
+    if (!(await ensureSignedIn('Sign in to add a group.'))) return;
+    addGroup(trimmed);
+    setNewGroupName('');
+  };
+
+  return (
+    <CollapsibleCard title={<h3 className="m-0">Categories</h3>}>
+      {ignoreCount && (
+        <Notice tone="info" className="mb-sm">
+          <p className="m-0">
+            "Ignore" and "IgnoreCount" mean the same thing in your data.{' '}
+            <button className="btn secondary small" onClick={doMergeIgnore} style={{ marginLeft: 4 }}>
+              Merge them
+            </button>
+          </p>
+        </Notice>
+      )}
+
+      <h4 className="mt-0">My categories</h4>
+      <p className="text-muted" style={{ marginTop: 0, marginBottom: 8 }}>
+        App categories ({appCategories.length}) are shared reference data and can't be renamed or
+        deleted here — only categories you've added yourself.
+      </p>
+      {customCategories.length === 0 ? (
+        <div className="text-muted mb-sm">No custom categories yet.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8 }}>
+          {customCategories.map((c) => (
+            <div key={c.id} className="row" style={{ alignItems: 'center', gap: 6 }}>
+              {editingCategoryId === c.id ? (
+                <>
+                  <TextInput value={editingCategoryName} onChange={(e) => setEditingCategoryName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && saveRename()} width={180} />
+                  <IconButton label="Save" icon={<SaveIcon size={12} />} onClick={saveRename} />
+                  <IconButton label="Cancel" icon={<XIcon size={12} />} onClick={() => setEditingCategoryId(null)} />
+                </>
+              ) : (
+                <>
+                  <span>{c.name}</span>
+                  <span style={{ flex: 1 }} />
+                  <IconButton label="Rename" icon={<EditIcon size={12} />} onClick={() => startRename(c.id, c.name)} />
+                  <IconButton label="Delete" icon={<TrashIcon size={12} />} onClick={() => removeCategory(c.id, c.name)} />
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="row" style={{ gap: 6, alignItems: 'center' }}>
+        <Field label="Add a category" width={200}>
+          <TextInput value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addNewCategory()} />
+        </Field>
+        <button className="btn secondary small" onClick={addNewCategory} style={{ marginTop: 20 }}>
+          <PlusIcon size={12} />Add
+        </button>
+      </div>
+
+      <h4>Groups — bird's-eye view</h4>
+      <p className="text-muted" style={{ marginTop: 0, marginBottom: 8 }}>
+        Bundle categories into a named group (e.g. "Expense" = Travel + Grocery + ..., "Income" =
+        Income + Rent income + ...) to see that group's own monthly total on the Dashboard. A
+        category can belong to several groups at once. A category not yet in any group simply
+        doesn't count toward any group's total — nothing about your existing transactions changes.
+      </p>
+      {groups.length === 0 && <div className="text-muted mb-sm">No groups yet.</div>}
+      {groups.map((g) => <CategoryGroupRow key={g.id} group={g} />)}
+      <div className="row mt-sm" style={{ gap: 6, alignItems: 'center' }}>
+        <Field label="Add a group" width={200}>
+          <TextInput value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addNewGroup()} />
+        </Field>
+        <button className="btn secondary small" onClick={addNewGroup} style={{ marginTop: 20 }}>
+          <PlusIcon size={12} />Add group
+        </button>
+      </div>
+    </CollapsibleCard>
+  );
+}
+
 /** The global "Rare" tier hub (2026-08-27 redesign, Main/Often/Rare model —
  * see CLAUDE.md's "App-wide UI/UX redesign" section for the full plan).
  * Consolidates what used to be scattered across the sidebar footer
@@ -245,6 +483,13 @@ export function AccountPage({ syncStatuses }: { syncStatuses: ModuleSyncStatus[]
           </p>
           <Link to="/app-data" className="btn secondary">Backup / restore all data →</Link>
         </CollapsibleCard>
+      </div>
+
+      {/* Its own full-width section, not squeezed into the grid above — a
+         group's expandable category checklist needs more room than a
+         narrow ~300px card. */}
+      <div className="mb-md">
+        <CategoriesSection />
       </div>
 
       <Notice tone="info" className="mb-md">

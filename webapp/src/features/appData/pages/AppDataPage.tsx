@@ -24,6 +24,7 @@ import { usePlannedRentalsWorkbookStore } from '../../../store/plannedRentalsWor
 import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
 import { useNetWorthSnapshotsWorkbookStore } from '../../../store/netWorthSnapshotsWorkbookStore';
 import { useCategoryStore } from '../../../store/categoryStore';
+import { useCategoryGroupStore } from '../../../store/categoryGroupStore';
 import { createEmptyWorkbook } from '../../../store/defaultWorkbook';
 import { createEmptyPSXWorkbook } from '../../../store/defaultPsxWorkbook';
 import { createEmptyBankWorkbook } from '../../../store/defaultBankWorkbook';
@@ -40,6 +41,7 @@ import { createEmptyPlannedRentalsWorkbook } from '../../../store/defaultPlanned
 import { createEmptyInterEntityWorkbook } from '../../../store/defaultInterEntityWorkbook';
 import { createEmptyNetWorthSnapshotsWorkbook } from '../../../store/defaultNetWorthSnapshotsWorkbook';
 import { createEmptyCategoriesWorkbook } from '../../../store/defaultCategoriesWorkbook';
+import { createEmptyCategoryGroupsWorkbook } from '../../../store/defaultCategoryGroupsWorkbook';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -75,7 +77,7 @@ const CLOUD_PATH_SUFFIX = {
   funds: 'funds', personalLoans: 'personalLoans', rentals: 'rentals', subscriptions: 'subscriptions',
   plannedBank: 'plannedBank', plannedCash: 'plannedCash', plannedRentals: 'plannedRentals',
   interEntityTransfers: 'interEntityTransfers', netWorthSnapshots: 'netWorthSnapshots',
-  categories: 'categories',
+  categories: 'categories', categoryGroups: 'categoryGroups',
 } as const;
 
 /** Every module's own `createEmpty*Workbook()` — a real bug found via a
@@ -105,7 +107,7 @@ const CREATE_EMPTY = {
   subscriptions: createEmptySubscriptionsWorkbook, plannedBank: createEmptyPlannedBankWorkbook,
   plannedCash: createEmptyPlannedCashWorkbook, plannedRentals: createEmptyPlannedRentalsWorkbook,
   interEntityTransfers: createEmptyInterEntityWorkbook, netWorthSnapshots: createEmptyNetWorthSnapshotsWorkbook,
-  categories: createEmptyCategoriesWorkbook,
+  categories: createEmptyCategoriesWorkbook, categoryGroups: createEmptyCategoryGroupsWorkbook,
 } as const;
 
 export function AppDataPage() {
@@ -130,10 +132,11 @@ export function AppDataPage() {
   const interEntityTransfers = useInterEntityTransfersStore();
   const netWorthSnapshots = useNetWorthSnapshotsWorkbookStore();
   const categories = useCategoryStore();
+  const categoryGroups = useCategoryGroupStore();
 
   const stores = {
     qse, psx, bank, creditCards, cash, emiLoans, funds, personalLoans, rentals, subscriptions,
-    plannedBank, plannedCash, plannedRentals, interEntityTransfers, netWorthSnapshots, categories,
+    plannedBank, plannedCash, plannedRentals, interEntityTransfers, netWorthSnapshots, categories, categoryGroups,
   } as const;
   type ModuleKey = keyof typeof stores;
   const moduleLabels: Record<ModuleKey, string> = {
@@ -141,6 +144,7 @@ export function AppDataPage() {
     funds: 'Funds', personalLoans: 'Personal Loans', rentals: 'Rentals', subscriptions: 'Subscriptions',
     plannedBank: 'Bank Planning', plannedCash: 'Cash Planning', plannedRentals: 'Rentals Planning',
     interEntityTransfers: 'Transfers', netWorthSnapshots: 'Net Worth history', categories: 'Categories',
+    categoryGroups: 'Category groups',
   };
 
   const exportAll = () => {

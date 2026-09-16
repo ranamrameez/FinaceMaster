@@ -7179,6 +7179,35 @@ touched those.
   shown in the cell and the Assets card above; the new icon's shape was screenshot-confirmed,
   not just checked for presence. `npx tsc -b` / `npm run test` (705 tests, unchanged) / `npm
   run build` all clean.
+- **Category merge (Ignore/IgnoreCount) + many-to-many category groups + a new Dashboard "By
+  category group" section (2026-09-16) — see README Done item 335 for the full writeup, this
+  is a pointer.** Same feedback batch as the entry above. Confirmed via `AskUserQuestion`
+  first: merge the two default categories outright; a category can join several groups; the
+  new group analysis belongs on the Dashboard, not `/account`. New `lib/categoryMerge.ts`'s
+  `mergeCategoriesEverywhere()` remaps every real/planned record across 9 store slices
+  (Cash/Bank/Rentals/Funds/Subscriptions/CreditCard + their Planned counterparts) then removes
+  the merged-away category from the registry — a deliberate, one-off bypass of the
+  `scope:'app'` delete guard for this single hardcoded operation. **Deliberate design call,
+  flagged not confirmed**: no separate `Category.type` field — group MEMBERSHIP is the
+  classification (an ungrouped category contributes to no group's total), documented as a
+  judgment call in `CategoryGroup`'s own doc comment, cheap to reverse later. New
+  `store/categoryGroupStore.ts` (mirrors `categoryStore.ts`), `lib/calc/categoryGroups.ts`
+  (pure, matches by resolved category NAME against `BudgetActivity.category` since that's
+  already resolved for both real and planned entries), wired into `resetLocalData.ts` and
+  `AppDataPage.tsx`'s whole-app export/import. Also fixed a stale doc comment on `Finance`
+  (`types/finance.ts`) that wrongly claimed the Planned* types use `categoryID` — they use a
+  legacy free-text `category?: string` field instead. UI: `/account`'s new `CategoriesSection`
+  (merge offer + custom-category CRUD + an expandable per-group category checklist) and the
+  Dashboard's new `CategoryGroupsSection` (per-group cards, clickable pills reusing the
+  existing `Drilldown`/`NetWorthDrilldownModal` mechanism from README Done item 333). Verified
+  live via Playwright with a seeded 3-entry Cash scenario: merge/add-category/add-group all
+  correctly hit their sign-in gates; a seeded "Expense" group (Travel+Grocery) rendered a
+  "-150.00 USD" pill matching the hand-calculated total exactly, and clicking it opened a
+  drilldown listing both underlying entries. **Test-script lesson, repeated from this
+  project's own history**: a hash-only `page.goto()` doesn't force a fresh module load, so a
+  Zustand store already initialized before a `localStorage` write via `page.evaluate()` won't
+  pick it up — needed `page.reload()` after seeding. `npx tsc -b` / `npm run test` (711 tests,
+  6 new) / `npm run build` all clean.
 
 ## Live URLs
 
