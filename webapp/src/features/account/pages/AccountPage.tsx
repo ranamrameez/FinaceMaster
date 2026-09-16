@@ -1,14 +1,14 @@
 import { Link } from 'react-router-dom';
 import { AppearanceFields } from '../../../components/AppearancePanel';
 import { Card, CollapsibleCard } from '../../../components/Card';
-import { ArrowDownIcon, ArrowUpIcon, LogInIcon } from '../../../components/icons';
+import { ArrowDownIcon, ArrowUpIcon, LogInIcon, XIcon } from '../../../components/icons';
 import { IconButton } from '../../../components/ui/IconButton';
+import { CurrencyQuickAdd } from '../../../components/CurrencyQuickAdd';
 import { Notice } from '../../../components/Notice';
 import { ProfileEditor } from '../../../components/ProfileEditor';
 import { requireSignIn } from '../../../components/SignInModal';
 import { SyncStatusIndicator, type ModuleSyncStatus } from '../../../components/SyncStatusIndicator';
 import { toast } from '../../../components/Toast';
-import { CURRENCIES } from '../../../lib/currencies';
 import { signOutUser } from '../../../lib/firebase/auth';
 import { useAuthState } from '../../../lib/firebase/useAuthState';
 import { gridAutoStyle } from '../../../lib/gridStyle';
@@ -76,43 +76,77 @@ const PROVIDER_LABEL: Record<string, string> = {
  * currencies... show checkbox/chips rather [than] scrolling through a
  * list... this app supports multiple currencies but not all users are
  * multi-currency!" A global preference (not per-module — same shape as
- * Appearance), so it lives on this same hub. Unchecking the last remaining
- * currency is a no-op with an explanatory toast rather than letting the
- * subset empty out (`useEnabledCurrenciesStore.toggle` itself refuses this,
- * see its own doc comment) — a picker with nothing checked would hide every
- * currency selector in the app, including the one needed to check a box
- * back on. */
+ * Appearance), so it lives on this same hub.
+ *
+ * Redesigned 2026-09-16 after a direct user complaint: "'Reset to all
+ * currencies' button is illogical. no one is going to work only these
+ * currencies. in DB save a list of all currencies and let the user choose
+ * for his currency or more simply let the user type his currency(ies)."
+ * The old design showed EVERY bundled currency as a permanent chip grid
+ * (fine at 11, unwieldy once `CURRENCIES` grew to ~50 the same day to
+ * genuinely answer "save a list of all currencies" — see that file's own
+ * doc comment) with a "Reset to all" button that checked literally every
+ * one of them, which is exactly the nonsensical default the user flagged.
+ * Now: a compact removable-chip row for only the currencies actually
+ * enabled, plus `CurrencyQuickAdd`'s type-ahead input to add more — "let
+ * the user type his currency(ies)," the user's own preferred, simpler
+ * option. Unchecking/removing the last remaining currency is still a no-op
+ * with an explanatory toast (`useEnabledCurrenciesStore.toggle` itself
+ * refuses this) — a picker with nothing enabled would hide every currency
+ * selector in the app, including the one needed to add one back. */
 function CurrenciesSection() {
   const enabledCodes = useEnabledCurrenciesStore((s) => s.enabledCodes);
   const toggle = useEnabledCurrenciesStore((s) => s.toggle);
   const setEnabledCodes = useEnabledCurrenciesStore((s) => s.setEnabledCodes);
-  const isEnabled = (code: string) => enabledCodes === null || enabledCodes.includes(code);
+
+  // `null` means "not configured, every currency is available everywhere"
+  // (see `useEnabledCurrenciesStore`'s own doc comment) — starting a real
+  // subset from scratch here, rather than reusing `toggle()`'s own
+  // "base = every CURRENCIES code, then flip one" behavior, avoids
+  // rendering all ~50 bundled currencies as removable chips just to add
+  // the first one (and avoids the footgun of `toggle()` on an
+  // already-implicitly-enabled code silently EXCLUDING it instead of
+  // being a no-op).
+  const addCode = (code: string) => {
+    if (enabledCodes === null) {
+      setEnabledCodes([code]);
+      return;
+    }
+    if (enabledCodes.includes(code)) {
+      toast(`${code} is already added.`);
+      return;
+    }
+    toggle(code);
+  };
+
+  const removeCode = (code: string) => {
+    if (!toggle(code)) toast('Keep at least one currency.');
+  };
 
   return (
     <CollapsibleCard title={<h3 className="m-0">Currencies</h3>}>
       <p className="text-muted" style={{ marginTop: 0, marginBottom: 8 }}>
-        Pick which currencies show up in a currency picker across the app. A currency your own
-        data already uses always stays available, even if unchecked here.
+        Which currencies show up in a currency picker across the app. A currency your own data
+        already uses always stays available, even if not added here.
       </p>
-      <div className="row" style={{ gap: 6 }}>
-        {CURRENCIES.map((c) => (
-          <button
-            key={c.code}
-            className={`chip${isEnabled(c.code) ? ' active' : ''}`}
-            onClick={() => {
-              if (!toggle(c.code)) toast('Keep at least one currency checked.');
-            }}
-          >
-            {c.code}
-          </button>
-        ))}
+      {enabledCodes === null ? (
+        <div className="text-muted" style={{ marginBottom: 8 }}>
+          Every currency is currently available everywhere — add the one(s) you actually use
+          below to narrow the pickers down to just those.
+        </div>
+      ) : (
+        <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+          {enabledCodes.map((code) => (
+            <button key={code} className="chip active" title="Remove" onClick={() => removeCode(code)}>
+              {code} <XIcon size={10} />
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="mt-sm">
+        <CurrencyQuickAdd excludeCodes={enabledCodes ?? []} onAdd={addCode} />
       </div>
       <CurrencyRanking />
-      {enabledCodes !== null && (
-        <button className="btn secondary small mt-sm" onClick={() => setEnabledCodes(null)}>
-          Reset to all currencies
-        </button>
-      )}
     </CollapsibleCard>
   );
 }

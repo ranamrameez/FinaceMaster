@@ -1,7 +1,9 @@
 import { useEffect } from 'react';
+import { CurrencyQuickAdd } from './CurrencyQuickAdd';
+import { XIcon } from './icons';
 import { Modal } from './Modal';
 import { toast } from './Toast';
-import { CURRENCIES, detectPrimaryCurrency } from '../lib/currencies';
+import { detectPrimaryCurrency } from '../lib/currencies';
 import { useCurrencyOnboardingStore } from '../store/currencyOnboardingStore';
 import { useEnabledCurrenciesStore } from '../store/enabledCurrenciesStore';
 import { useTermsStore } from '../store/termsStore';
@@ -32,7 +34,17 @@ import { useTermsStore } from '../store/termsStore';
  * anything simply leaves that one detected currency as the account's own
  * chosen set — a real, reversible default (Account &gt; Currencies), not a
  * silent "show everything" fallback that no longer means much once most
- * users only ever see one currency pre-checked here. */
+ * users only ever see one currency pre-checked here.
+ *
+ * Redesigned 2026-09-16 alongside the Account page's own Currencies
+ * section (see that file's `CurrenciesSection` doc comment for the full
+ * story) — `CURRENCIES` grew from 11 to ~50 the same day, so dumping every
+ * one as a permanent chip row (this modal's original design) would have
+ * turned a quick first-run nudge into a wall of ~50 buttons. Now shows
+ * only the currently-effective (detected + added) currencies as removable
+ * chips, plus `CurrencyQuickAdd`'s type-ahead input to add more — the same
+ * shared component and pattern the Account page uses, so there's one
+ * "add a currency" UX in the app, not two. */
 export function CurrencyOnboardingModal() {
   const termsAccepted = useTermsStore((s) => s.accepted);
   const seen = useCurrencyOnboardingStore((s) => s.seen);
@@ -52,8 +64,15 @@ export function CurrencyOnboardingModal() {
   // (before that effect has actually run) already shows the right chip
   // checked instead of a one-frame flash of "nothing checked".
   const effectiveCodes = enabledCodes ?? [detectPrimaryCurrency()];
-  const isEnabled = (code: string) => effectiveCodes.includes(code);
   const primary = effectiveCodes[0];
+
+  const addCode = (code: string) => {
+    if (effectiveCodes.includes(code)) {
+      toast(`${code} is already added.`);
+      return;
+    }
+    toggle(code);
+  };
 
   return (
     <Modal title="Which currencies do you use?" onClose={dismiss}>
@@ -63,18 +82,23 @@ export function CurrencyOnboardingModal() {
         deal in, or remove it if we guessed wrong. You can change this any time from Account
         &gt; Currencies.
       </p>
-      <div className="row" style={{ gap: 6 }}>
-        {CURRENCIES.map((c) => (
+      <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+        {effectiveCodes.map((code) => (
           <button
-            key={c.code}
-            className={`chip${isEnabled(c.code) ? ' active' : ''}`}
+            key={code}
+            className="chip active"
+            title="Remove"
             onClick={() => {
-              if (!toggle(c.code)) toast('Keep at least one currency checked.');
+              if (!toggle(code)) toast('Keep at least one currency.');
             }}
           >
-            {c.code}{c.code === primary && <span className="text-muted"> · Primary</span>}
+            {code}
+            {code === primary && <span className="text-muted"> · Primary</span>} <XIcon size={10} />
           </button>
         ))}
+      </div>
+      <div className="mt-sm">
+        <CurrencyQuickAdd excludeCodes={effectiveCodes} onAdd={addCode} />
       </div>
       <button className="btn mt-md" onClick={dismiss}>
         Done

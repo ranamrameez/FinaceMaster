@@ -12,7 +12,7 @@ import { CheckIcon, SettingsIcon } from '../../../components/icons';
 import { toast } from '../../../components/Toast';
 import { ChartCard } from '../../qse/components/ChartCard';
 import { netIncomeByCurrency as rentalsNetIncomeByCurrency } from '../../../lib/calc/rentalsModule';
-import { flowByCurrency } from '../../../lib/calc/netWorth';
+import { flowActivity, flowByCurrency, type FlowActivityItem, type NetWorthBreakdownEntry } from '../../../lib/calc/netWorth';
 import { collectBudgetActivities, monthlyIncomeExpense, monthRange, monthsBetween, currentMonth as currentMonthOf, type MonthlyIncomeExpense, type BudgetActivity } from '../../../lib/calc/budgetPlanner';
 import { endOfMonthAsOf, projectedNetWorthTrend, type MonthlyNetWorthPoint } from '../../../lib/calc/netWorthTrend';
 import { earliestActivityDate, netWorthAsOfDate, type NetWorthAsOfInputs } from '../../../lib/calc/netWorthAsOf';
@@ -63,6 +63,98 @@ import { gridAutoStyle } from '../../../lib/gridStyle';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const monthLabel = (m: string) => new Date(`${m}-01`).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+
+/** User-requested (2026-09-16): "For every calculated number, it should be
+ * supported by a clickable pop-up view to display the related
+ * transactions." Three kinds, matching what's actually computable for each
+ * stat: `breakdown` (Assets/Liabilities/Net — the per-module figures that
+ * already make up the total, real for every module including QSE/PSX/Funds/
+ * EMI/Personal Loans, which have no day-by-day transaction log to itemize
+ * further); `flow` (Today's/This month's net flow — the real, itemized
+ * Cash+Bank transactions behind the sum, via `flowActivity()`, which is
+ * deliberately built to reconcile exactly with `flowByCurrency()`'s own
+ * number); `delta` (this month vs. last month — a two-column breakdown
+ * comparison, since "what changed" isn't a flat transaction list once a
+ * stock price move or an EMI paydown is part of the answer). */
+type Drilldown =
+  | { kind: 'breakdown'; title: string; explanation: string; rows: { label: string; currency: string; amount: number }[] }
+  | { kind: 'flow'; title: string; explanation: string; currency: string; from: string; to: string; items: FlowActivityItem[] }
+  | { kind: 'delta'; title: string; explanation: string; currency: string; current: NetWorthBreakdownEntry[]; previous: NetWorthBreakdownEntry[] };
+
+function NetWorthDrilldownModal({ drilldown, onClose }: { drilldown: Drilldown; onClose: () => void }) {
+  return (
+    <Modal title={drilldown.title} onClose={onClose}>
+      <p className="text-muted mt-0">{drilldown.explanation}</p>
+      {drilldown.kind === 'breakdown' && (
+        drilldown.rows.length === 0 ? (
+          <div className="text-muted">Nothing contributes to this figure yet.</div>
+        ) : (
+          <table>
+            <thead><tr><th>Module</th><th style={{ textAlign: 'right' }}>Amount</th></tr></thead>
+            <tbody>
+              {drilldown.rows.map((r, i) => (
+                <tr key={i}>
+                  <td>{r.label}</td>
+                  <td style={{ textAlign: 'right' }}><MoneyValue n={r.amount} currency={r.currency} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )
+      )}
+      {drilldown.kind === 'flow' && (
+        <>
+          <div className="text-muted mb-sm">{drilldown.from === drilldown.to ? drilldown.from : `${drilldown.from} → ${drilldown.to}`}, in {drilldown.currency}</div>
+          {drilldown.items.length === 0 ? (
+            <div className="text-muted">No Cash/Bank activity in this window.</div>
+          ) : (
+            <table>
+              <thead><tr><th>Date</th><th>Source</th><th>Description</th><th style={{ textAlign: 'right' }}>Amount</th></tr></thead>
+              <tbody>
+                {drilldown.items.map((it, i) => (
+                  <tr key={i}>
+                    <td>{it.date}</td>
+                    <td>{it.module}{it.accountName ? ` (${it.accountName})` : ''}</td>
+                    <td>{it.description}</td>
+                    <td style={{ textAlign: 'right', color: it.amount >= 0 ? 'var(--profit)' : 'var(--loss)' }}>
+                      {it.amount >= 0 ? '+' : ''}{fmtMoney(it.amount, drilldown.currency)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </>
+      )}
+      {drilldown.kind === 'delta' && (() => {
+        const modules = [...new Set([...drilldown.previous.map((b) => b.module), ...drilldown.current.map((b) => b.module)])];
+        if (!modules.length) return <div className="text-muted">Neither month has any contribution yet.</div>;
+        return (
+          <table>
+            <thead><tr><th>Module</th><th style={{ textAlign: 'right' }}>Last month</th><th style={{ textAlign: 'right' }}>Now</th><th style={{ textAlign: 'right' }}>Δ</th></tr></thead>
+            <tbody>
+              {modules.map((m) => {
+                const prev = drilldown.previous.find((b) => b.module === m)?.amount ?? 0;
+                const now = drilldown.current.find((b) => b.module === m)?.amount ?? 0;
+                const delta = now - prev;
+                return (
+                  <tr key={m}>
+                    <td>{m}</td>
+                    <td style={{ textAlign: 'right' }}><MoneyValue n={prev} currency={drilldown.currency} /></td>
+                    <td style={{ textAlign: 'right' }}><MoneyValue n={now} currency={drilldown.currency} /></td>
+                    <td style={{ textAlign: 'right', color: delta >= 0 ? 'var(--profit)' : 'var(--loss)' }}>
+                      {delta >= 0 ? '+' : ''}{fmtMoney(delta, drilldown.currency)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        );
+      })()}
+    </Modal>
+  );
+}
 
 /** Cross-module net worth summary (README item 39 / MODULES_PLAN.md §16),
  * renamed "Dashboard" in the nav/heading (user-requested 2026-09-04) — the
@@ -194,6 +286,10 @@ export function NetWorthPage({
   const [rates, setRates] = useState<FxRates | null>(() => loadCachedFxRates());
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [fetching, setFetching] = useState(false);
+  // User-requested (2026-09-16): "For every calculated number, it should be
+  // supported by a clickable pop-up view to display the related
+  // transactions... explain me how are you calculating all these numbers."
+  const [drilldown, setDrilldown] = useState<Drilldown | null>(null);
 
   // Item 3: FX entry used to be locked to "1 USD = X" — the internal rate
   // table stays USD-anchored (unchanged, and correct — see setCrossRate's
@@ -323,11 +419,16 @@ export function NetWorthPage({
   // section (below) never got them, unlike Assets/Liabilities/Net which
   // already show there in real, unconverted terms.
   const lastMonthByCurrency: Record<string, number> = {};
+  // The full per-module breakdown for last month, not just the net figure
+  // — feeds the "This month's change" drill-down popup's Then/Now/Δ table
+  // (2026-09-16, see `Drilldown`'s own doc comment).
+  const lastMonthBreakdownByCurrency: Record<string, NetWorthBreakdownEntry[]> = {};
   let lastMonthTotal = 0;
   let lastMonthUnconverted = false;
   if (hasLastMonthData) {
     netWorthAsOfDate(lastMonthEndDate, netWorthAsOfInputs).forEach((r) => {
       lastMonthByCurrency[r.currency] = r.net;
+      lastMonthBreakdownByCurrency[r.currency] = r.breakdown;
       const converted = convertAmount(r.net, r.currency, preferredCurrency, rates);
       if (converted === null) lastMonthUnconverted = true;
       else lastMonthTotal += converted;
@@ -430,6 +531,12 @@ export function NetWorthPage({
               hue={todayFlowTotal.total >= 0 ? 'var(--profit)' : 'var(--loss)'}
               title={todayFlowTotal.anyUnconverted ? 'Some currencies excluded — no rate available.' : undefined}
               labelTitle="Net money moved in/out of Cash and Bank today, converted to the preferred currency."
+              onClick={() => setDrilldown({
+                kind: 'breakdown',
+                title: "Today's net flow, by currency",
+                explanation: `Each currency's own real (unconverted) net Cash+Bank movement on ${todayISO}, converted above to ${preferredCurrency} for the headline figure. Click that currency's own card further down the page for the real itemized transactions.`,
+                rows: Object.entries(todayFlow).map(([code, amount]) => ({ label: code, currency: code, amount })),
+              })}
             />
             <StatCard
               label="This month's net flow"
@@ -437,6 +544,12 @@ export function NetWorthPage({
               hue={monthFlowTotal.total >= 0 ? 'var(--profit)' : 'var(--loss)'}
               title={monthFlowTotal.anyUnconverted ? 'Some currencies excluded — no rate available.' : undefined}
               labelTitle="Net money moved in/out of Cash and Bank since the 1st of this month, converted to the preferred currency."
+              onClick={() => setDrilldown({
+                kind: 'breakdown',
+                title: "This month's net flow, by currency",
+                explanation: `Each currency's own real (unconverted) net Cash+Bank movement from ${monthStart} through ${todayISO}, converted above to ${preferredCurrency} for the headline figure. Click that currency's own card further down the page for the real itemized transactions.`,
+                rows: Object.entries(monthFlow).map(([code, amount]) => ({ label: code, currency: code, amount })),
+              })}
             />
             {netWorthDelta !== null ? (
               <StatCard
@@ -446,6 +559,12 @@ export function NetWorthPage({
                 hue={netWorthDelta >= 0 ? 'var(--profit)' : 'var(--loss)'}
                 title={lastMonthUnconverted ? 'Some currencies excluded from last month\'s total — no rate available.' : undefined}
                 labelTitle="Your real net worth right now minus your real net worth at the end of last month — the whole picture (assets and liabilities across every module), not just cash moved."
+                onClick={() => setDrilldown({
+                  kind: 'breakdown',
+                  title: "This month's change, by currency",
+                  explanation: `Each currency's own real net worth right now vs. its own real net worth at the end of last month, converted above to ${preferredCurrency}. Click that currency's own "Δ vs. last month" chip further down for a module-by-module breakdown of what changed.`,
+                  rows: rows.map((r) => ({ label: r.currency, currency: r.currency, amount: r.net - (lastMonthByCurrency[r.currency] ?? r.net) })),
+                })}
               />
             ) : (
               <StatCard
@@ -609,9 +728,36 @@ export function NetWorthPage({
                 )}
               </summary>
               <div className="row" style={{ gap: 12, marginTop: 12 }}>
-                <div className="stat-card card" style={hueStyle(r.assets >= 0 ? 'var(--profit)' : 'var(--loss)')}><div className="label">Assets</div><MoneyValue n={r.assets} currency={r.currency} /></div>
-                <div className="stat-card card" style={hueStyle('var(--loss)')}><div className="label">Liabilities</div><MoneyValue n={r.liabilities} currency={r.currency} /></div>
-                <div className="stat-card card" style={hueStyle(r.net >= 0 ? 'var(--profit)' : 'var(--loss)')}><div className="label">Net</div><MoneyValue n={r.net} currency={r.currency} /></div>
+                <div
+                  className="stat-card card clickable"
+                  style={hueStyle(r.assets >= 0 ? 'var(--profit)' : 'var(--loss)')}
+                  onClick={() => setDrilldown({
+                    kind: 'breakdown',
+                    title: `${r.currency} assets, by module`,
+                    explanation: `Every module that currently holds a positive balance in ${r.currency} — Cash/Bank's own real balance, QSE/PSX's cash+portfolio value, Funds' current NAV × units held, or money others owe you (Personal Loans).`,
+                    rows: r.breakdown.filter((b) => b.amount > 0).map((b) => ({ label: b.module, currency: r.currency, amount: b.amount })),
+                  })}
+                ><div className="label">Assets</div><MoneyValue n={r.assets} currency={r.currency} /></div>
+                <div
+                  className="stat-card card clickable"
+                  style={hueStyle('var(--loss)')}
+                  onClick={() => setDrilldown({
+                    kind: 'breakdown',
+                    title: `${r.currency} liabilities, by module`,
+                    explanation: `Every module that currently reduces your ${r.currency} net worth — EMI/Loans' outstanding balance, a credit card's owed amount, or net money you owe (Personal Loans). Shown as negative, the same signed convention used everywhere else in this breakdown.`,
+                    rows: r.breakdown.filter((b) => b.amount < 0).map((b) => ({ label: b.module, currency: r.currency, amount: b.amount })),
+                  })}
+                ><div className="label">Liabilities</div><MoneyValue n={r.liabilities} currency={r.currency} /></div>
+                <div
+                  className="stat-card card clickable"
+                  style={hueStyle(r.net >= 0 ? 'var(--profit)' : 'var(--loss)')}
+                  onClick={() => setDrilldown({
+                    kind: 'breakdown',
+                    title: `${r.currency} net worth, by module`,
+                    explanation: `Assets minus liabilities in ${r.currency}, every module that contributed anything — a positive row adds to net worth, a negative row (EMI/credit cards/net owed) subtracts from it.`,
+                    rows: r.breakdown.map((b) => ({ label: b.module, currency: r.currency, amount: b.amount })),
+                  })}
+                ><div className="label">Net</div><MoneyValue n={r.net} currency={r.currency} /></div>
               </div>
               {/* User-reported (2026-09-09): "Per currency stats are
                  missing like Today's net flow, This month's net flow,
@@ -622,19 +768,51 @@ export function NetWorthPage({
                  in the Net worth summary card, but in this currency's own
                  real, unconverted terms. */}
               <div className="row" style={{ gap: 6, marginTop: 10, alignItems: 'center' }}>
-                <Tooltip text="Net money moved in/out of Cash and Bank today, in this currency.">
-                  <span className={`pill ${todayFlowC >= 0 ? 'pill-positive' : 'pill-negative'}`}>
+                <Tooltip text="Net money moved in/out of Cash and Bank today, in this currency. Click for the real transactions.">
+                  <span
+                    className={`pill clickable ${todayFlowC >= 0 ? 'pill-positive' : 'pill-negative'}`}
+                    onClick={() => setDrilldown({
+                      kind: 'flow',
+                      title: `Today's ${r.currency} Cash+Bank activity`,
+                      explanation: 'Every real Cash entry and Bank transaction dated today, in this currency — Cash counts a deposit as +, a withdrawal as −; Bank uses its own already-signed amount (a debit is negative).',
+                      currency: r.currency,
+                      from: todayISO,
+                      to: todayISO,
+                      items: flowActivity(cashEntries, bank.settings.accounts, bank.transactions, r.currency, todayISO, todayISO),
+                    })}
+                  >
                     Today {todayFlowC >= 0 ? '+' : ''}{fmtMoney(todayFlowC, r.currency)}
                   </span>
                 </Tooltip>
-                <Tooltip text="Net money moved in/out of Cash and Bank since the 1st of this month, in this currency.">
-                  <span className={`pill ${monthFlowC >= 0 ? 'pill-positive' : 'pill-negative'}`}>
+                <Tooltip text="Net money moved in/out of Cash and Bank since the 1st of this month, in this currency. Click for the real transactions.">
+                  <span
+                    className={`pill clickable ${monthFlowC >= 0 ? 'pill-positive' : 'pill-negative'}`}
+                    onClick={() => setDrilldown({
+                      kind: 'flow',
+                      title: `This month's ${r.currency} Cash+Bank activity`,
+                      explanation: 'Every real Cash entry and Bank transaction from the 1st of this month through today, in this currency.',
+                      currency: r.currency,
+                      from: monthStart,
+                      to: todayISO,
+                      items: flowActivity(cashEntries, bank.settings.accounts, bank.transactions, r.currency, monthStart, todayISO),
+                    })}
+                  >
                     This month {monthFlowC >= 0 ? '+' : ''}{fmtMoney(monthFlowC, r.currency)}
                   </span>
                 </Tooltip>
                 {deltaC !== null ? (
-                  <Tooltip text="This currency's real net worth right now minus its real net worth at the end of last month.">
-                    <span className={`pill ${deltaC >= 0 ? 'pill-positive' : 'pill-negative'}`}>
+                  <Tooltip text="This currency's real net worth right now minus its real net worth at the end of last month. Click for a module-by-module breakdown of what changed.">
+                    <span
+                      className={`pill clickable ${deltaC >= 0 ? 'pill-positive' : 'pill-negative'}`}
+                      onClick={() => setDrilldown({
+                        kind: 'delta',
+                        title: `${r.currency}: last month vs. now, by module`,
+                        explanation: 'Every module\'s own real contribution at the end of last month vs. right now — this can move from a Cash/Bank deposit or withdrawal, but also a stock price change, an EMI paydown, or a Fund\'s NAV moving, none of which are "flow."',
+                        currency: r.currency,
+                        current: r.breakdown,
+                        previous: lastMonthBreakdownByCurrency[r.currency] ?? [],
+                      })}
+                    >
                       Δ vs. last month {deltaC >= 0 ? '+' : ''}{fmtMoney(deltaC, r.currency)}
                       {deltaPctC !== null ? ` (${deltaPctC >= 0 ? '+' : ''}${deltaPctC.toFixed(1)}%)` : ''}
                     </span>
@@ -728,6 +906,7 @@ export function NetWorthPage({
           </button>
         </Notice>
       )}
+      {drilldown && <NetWorthDrilldownModal drilldown={drilldown} onClose={() => setDrilldown(null)} />}
     </div>
   );
 }
