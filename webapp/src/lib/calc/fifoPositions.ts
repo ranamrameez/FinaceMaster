@@ -6,19 +6,14 @@ const EPSILON = 1e-7;
 export interface FIFOLot {
   buyDate: string;
   buyPrice: number;
-  /** Total fee paid on the original buy, kept whole (not per-share) so it
-   * can be re-divided by whatever `originalShares` still applies. */
   buyFeeTotal: number;
   originalShares: number;
   remainingShares: number;
-  /** The originating BUY transaction's own `id`, when it has one — lets a
-   * later SELL's `Transaction.targetLotBuyId` reference this exact lot
-   * (see that field's own doc comment). Undefined for id-less legacy data. */
   buyId?: string;
 }
 
 interface TickerState {
-  lots: FIFOLot[]; // open lots, oldest first (queue)
+  lots: FIFOLot[];
   realized: number;
   buyFees: number;
   sellFees: number;
@@ -33,83 +28,31 @@ interface TickerState {
 export interface FIFOResult {
   positions: Position[];
   realizedSeries: RealizedPLPoint[];
-  /** ticker -> still-open lots, oldest first — the per-lot view README item
-   * 8 asks for ("each buy should have its own sell peer"), for display and
-   * (via each lot's own buy transaction) manual reconciliation. */
   lotsByTicker: Record<string, FIFOLot[]>;
 }
 
-/** Which still-open lot a sale (without its own `targetLotBuyId`) drains
- * first. `'fifo'` (the default, unchanged from before this parameter
- * existed) matches the oldest lot — the real, literal behavior PSX's own
- * opt-in `costBasisMethod: 'fifo'` cost-basis display depends on, and must
- * never change silently (see that setting's own locked warning).
- *
- * `'lowestCostFirst'` — added 2026-09-13 after a real, financially-
- * consequential bug report: the Partial Trade Strategy advisory feature's
- * own tooltip promises it "concentrates your remaining position in your
- * worst-performing lots," but chronological FIFO only coincidentally does
- * that when price has trended consistently in one direction since the
- * oldest buy — for a ticker bought cheaper LATER than an earlier, pricier
- * lot (a real reported case: 50 sh @10.40 bought first, 14 sh @9.962 bought
- * later), oldest-first FIFO fully drains the EXPENSIVE lot first, leaving
- * the cheap lot as the "still held, already profitable" remainder — the
- * exact opposite of the feature's own promise, and the user's own report
- * that this produced a real "sell the cheap, keep the expensive" suggestion
- * that caused real financial loss. `'lowestCostFirst'` fixes this at the
- * source: an advisory-feature caller that wants "open = whatever's still
- * losing, closed = whatever's already been sold at the best price" passes
- * this explicitly; PSX's real cost-basis call site (`usePSXDerived.ts`)
- * never passes it, so nothing about a real user's displayed Avg Cost/BE
- * changes unless they explicitly opt in some other way. Same reduce-to-
- * lowest-`buyPrice` selection `closedTrades.ts`'s own `LotMatchOrder`
- * already uses, kept identical on purpose — a caller sharing one match
- * order between this function's "Open lots" and `computeClosedTrades`'s
- * "Closed trades" gets two tables that always add up to the same story. */
 export type LotMatchOrder = 'fifo' | 'lowestCostFirst';
 
-/** README item 8: FIFO lot matching — each buy is tracked as its own lot;
- * a sell consumes the oldest (or, with `matchOrder: 'lowestCostFirst'`,
- * cheapest) open lot(s) first instead of blending into one running average
- * cost (`computePositions`'s weighted-average convention). This gives
- * lot-accurate realized P/L, at the cost of being a genuinely different
- * number than the weighted-average result once a ticker has been bought at
- * different prices across multiple lots — that's the point, not a bug, but
- * it's exactly why the default ('fifo') is opt-in for PSX's real displayed
- * cost basis (`PSXSettings.costBasisMethod`) rather than silently replacing
- * the default for existing users' history — see `LotMatchOrder`'s own doc
- * comment for when a caller should pass `'lowestCostFirst'` instead.
- *
- * Selling more shares than are held (a data-entry error, not a real
- * scenario) drains all open lots and treats any remaining oversold shares
- * as zero-cost-basis, same as `computePositions`' epsilon-clamp-to-zero. */
+/** FIFO/specific-lot accounting. Pending orders are excluded. Since this app
+ * does not model short positions, an oversize SELL is invalid and is ignored
+ * rather than allowing unmatched shares to become zero-cost realized profit. */
 export function computeFIFOPositions(transactions: Transaction[], calcFee: FeeCalculator, matchOrder: LotMatchOrder = 'fifo'): FIFOResult {
   const byTicker: Record<string, TickerState> = {};
-  // Excludes pending transactions, same reasoning/rule as computePositions'
-  // own doc comment — a not-yet-filled order shouldn't open or drain a lot.
   const sorted = sortTransactionsChronological(transactions.filter((t) => !t.isPending));
   const realizedSeries: RealizedPLPoint[] = [];
   let runningRealized = 0;
 
   for (const tx of sorted) {
     const t = tx.ticker;
-    if (!byTicker[t]) {
-      byTicker[t] = {
-        lots: [],
-        realized: 0,
-        buyFees: 0,
-        sellFees: 0,
-        totalBoughtShares: 0,
-        totalSoldShares: 0,
-        buyCount: 0,
-        sellCount: 0,
-        firstDate: tx.date,
-        lastDate: tx.date,
-      };
-    }
+    if (!byTicker[t]) byTicker[t] = { lots: [], realized: 0, buyFees: 0, sellFees: 0, totalBoughtShares: 0, totalSoldShares: 0, buyCount: 0, sellCount: 0, firstDate: tx.date, lastDate: tx.date };
     const state = byTicker[t];
     if (tx.date < state.firstDate) state.firstDate = tx.date;
     if (tx.date > state.lastDate) state.lastDate = tx.date;
+
+    if (tx.action === 'SELL') {
+      const available = state.lots.reduce((sum, lot) => sum + lot.remainingShares, 0);
+      if (tx.shares > available + EPSILON) continue;
+    }
 
     const amount = tx.shares * tx.price;
     const isBuy = tx.action === 'BUY';
@@ -123,13 +66,6 @@ export function computeFIFOPositions(transactions: Transaction[], calcFee: FeeCa
     } else {
       let toSell = tx.shares;
       let costRemoved = 0;
-
-      // Specific lot identification (see `Transaction.targetLotBuyId`'s own
-      // doc comment): drain the referenced lot FIRST, wherever it sits in
-      // the queue, so selling a cheaper non-oldest lot doesn't silently
-      // fall through to the default oldest-first draw below and misattribute
-      // the sale to a lot the user specifically meant to keep. Any shares
-      // beyond what the targeted lot holds fall through to normal FIFO.
       if (tx.targetLotBuyId) {
         const idx = state.lots.findIndex((l) => l.buyId === tx.targetLotBuyId);
         if (idx !== -1) {
@@ -142,11 +78,8 @@ export function computeFIFOPositions(transactions: Transaction[], calcFee: FeeCa
           if (lot.remainingShares <= EPSILON) state.lots.splice(idx, 1);
         }
       }
-
       while (toSell > EPSILON && state.lots.length) {
-        const lotIndex = matchOrder === 'fifo'
-          ? 0
-          : state.lots.reduce((bestIdx, l, i) => (l.buyPrice < state.lots[bestIdx].buyPrice ? i : bestIdx), 0);
+        const lotIndex = matchOrder === 'fifo' ? 0 : state.lots.reduce((bestIdx, l, i) => (l.buyPrice < state.lots[bestIdx].buyPrice ? i : bestIdx), 0);
         const lot = state.lots[lotIndex];
         const take = Math.min(toSell, lot.remainingShares);
         const costPerShare = lot.buyPrice + lot.buyFeeTotal / lot.originalShares;
@@ -155,8 +88,7 @@ export function computeFIFOPositions(transactions: Transaction[], calcFee: FeeCa
         toSell -= take;
         if (lot.remainingShares <= EPSILON) state.lots.splice(lotIndex, 1);
       }
-      const proceeds = amount - fee;
-      const realizedDelta = proceeds - costRemoved;
+      const realizedDelta = amount - fee - costRemoved;
       state.realized += realizedDelta;
       state.sellFees += fee;
       state.totalSoldShares += tx.shares;
@@ -169,26 +101,10 @@ export function computeFIFOPositions(transactions: Transaction[], calcFee: FeeCa
   const positions: Position[] = Object.entries(byTicker).map(([ticker, state]) => {
     const shares = state.lots.reduce((s, l) => s + l.remainingShares, 0);
     const invested = state.lots.reduce((s, l) => s + l.remainingShares * (l.buyPrice + l.buyFeeTotal / l.originalShares), 0);
-    return {
-      ticker,
-      shares,
-      invested,
-      buyFees: state.buyFees,
-      sellFees: state.sellFees,
-      realized: state.realized,
-      totalBoughtShares: state.totalBoughtShares,
-      totalSoldShares: state.totalSoldShares,
-      buyCount: state.buyCount,
-      sellCount: state.sellCount,
-      firstDate: state.firstDate,
-      lastDate: state.lastDate,
-    };
+    return { ticker, shares, invested, buyFees: state.buyFees, sellFees: state.sellFees, realized: state.realized, totalBoughtShares: state.totalBoughtShares, totalSoldShares: state.totalSoldShares, buyCount: state.buyCount, sellCount: state.sellCount, firstDate: state.firstDate, lastDate: state.lastDate };
   });
 
   const lotsByTicker: Record<string, FIFOLot[]> = {};
-  Object.entries(byTicker).forEach(([ticker, state]) => {
-    if (state.lots.length) lotsByTicker[ticker] = state.lots;
-  });
-
+  Object.entries(byTicker).forEach(([ticker, state]) => { if (state.lots.length) lotsByTicker[ticker] = state.lots; });
   return { positions, realizedSeries, lotsByTicker };
 }
