@@ -1,78 +1,117 @@
-/* Bright Ledger card + topbar treatment.
-   The active color id is `bright` (not `bright-ledger`). Keep this scoped so
-   the rest of the app/themes are untouched. */
+/* Bright Ledger — crisp, coherent surfaces.
+   One visual language: blue family for navigation/actions, strong semantic
+   fills for summary cards, no gradients or faux-3D effects. */
+
+/* ---------- Summary cards ------------------------------------------------ */
 html[data-color="bright"] .stat-card,
 html[data-color="bright"] .entity-card {
-  border: 0;
-  background: radial-gradient(circle at 50% 18%, rgba(255,255,255,.55) 0%, rgba(255,255,255,0) 52%), color-mix(in srgb, var(--card-hue, var(--accent)) 42%, var(--panel));
-  box-shadow: 0 2px 4px rgba(36,62,78,.08), 0 7px 18px rgba(36,62,78,.10);
+  border: 1px solid color-mix(in srgb, var(--card-hue, var(--accent)) 22%, #ffffff);
+  background: color-mix(in srgb, var(--card-hue, var(--accent)) 22%, #ffffff);
+  box-shadow: 0 2px 8px rgba(35,70,90,.10);
+}
+
+html[data-color="bright"] .stat-card[style*="--card-hue"],
+html[data-color="bright"] .entity-card[style*="--card-hue"] {
+  background: color-mix(in srgb, var(--card-hue) 27%, #ffffff);
+  border-color: color-mix(in srgb, var(--card-hue) 34%, #ffffff);
 }
 
 html[data-color="bright"] .stat-card .label,
 html[data-color="bright"] .entity-card .label {
-  color: color-mix(in srgb, var(--text) 76%, var(--card-hue, var(--accent)));
-  font-weight: 650;
+  color: color-mix(in srgb, var(--card-hue, var(--accent)) 72%, var(--text));
+  font-weight: 700;
 }
 
 html[data-color="bright"] .stat-card .value {
   color: var(--text);
-  font-weight: 750;
+  font-weight: 800;
+  letter-spacing: -.015em;
 }
 
-/* Dark bright theme: keep the same saturated card identity without making
-   surfaces muddy or gray. */
+html[data-color="bright"] .stat-card .sub,
+html[data-color="bright"] .entity-card .text-muted {
+  color: color-mix(in srgb, var(--muted) 82%, var(--card-hue, var(--accent)));
+}
+
+/* Dark mode keeps the same semantic color system rather than reverting to gray. */
 html[data-color="bright"][data-theme="dark"] .stat-card,
 html[data-color="bright"][data-theme="dark"] .entity-card {
-  background: radial-gradient(circle at 50% 18%, rgba(255,255,255,.20) 0%, rgba(255,255,255,0) 52%), color-mix(in srgb, var(--card-hue, var(--accent)) 38%, var(--panel));
-  box-shadow: 0 3px 7px rgba(0,0,0,.24), 0 8px 20px rgba(0,0,0,.20);
+  background: color-mix(in srgb, var(--card-hue, var(--accent)) 34%, #20272d);
+  border-color: color-mix(in srgb, var(--card-hue, var(--accent)) 45%, #3c4650);
+  box-shadow: 0 3px 10px rgba(0,0,0,.28);
 }
 
-/* Topbar is a visible branded surface, not transparent/gray. */
+html[data-color="bright"][data-theme="dark"] .stat-card[style*="--card-hue"],
+html[data-color="bright"][data-theme="dark"] .entity-card[style*="--card-hue"] {
+  background: color-mix(in srgb, var(--card-hue) 38%, #20272d);
+}
+
+/* ---------- Topbar -------------------------------------------------------
+   Flat, modern, and from the same blue palette as the Bright theme.
+   No gradients, transparent chips, or unrelated gray button colors. */
 html[data-color="bright"] .page-topbar {
-  background: linear-gradient(180deg, #ffffff 0%, #e9f6fc 100%);
-  border: 1px solid #c8e4f1;
-  border-radius: 14px;
-  box-shadow: 0 3px 12px rgba(47,126,168,.12);
-  padding: 6px;
+  background: #ffffff;
+  border: 1px solid #cfe0ea;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(35,70,90,.08);
+  padding: 5px;
 }
 
-html[data-color="bright"] .page-topbar .chip-tabs { gap: 5px; }
+html[data-color="bright"] .page-topbar .chip-tabs { gap: 4px; }
 
 html[data-color="bright"] .page-topbar .chip {
-  background: transparent;
-  border: 0;
-  color: #527080;
-  border-radius: 9px;
+  background: #e3f3fb;
+  border: 1px solid transparent;
+  color: #23698d;
+  border-radius: 8px;
+  font-weight: 650;
+  box-shadow: none;
 }
 
 html[data-color="bright"] .page-topbar .chip:hover {
-  background: #dff1f9;
-  color: #245c78;
+  background: #cfeaf7;
+  color: #185574;
 }
 
 html[data-color="bright"] .page-topbar .chip.active {
-  background: linear-gradient(180deg, #9bdcff 0%, #55b5e8 100%);
-  color: #164d69;
-  box-shadow: 0 2px 5px rgba(47,126,168,.24);
-  font-weight: 700;
+  background: #2f7ea8;
+  color: #ffffff;
+  border-color: #2f7ea8;
+  box-shadow: none;
+  font-weight: 750;
+}
+
+html[data-color="bright"] .page-topbar .btn.secondary,
+html[data-color="bright"] .page-topbar .btn.ghost {
+  background: #e3f3fb;
+  color: #23698d;
+  border-color: transparent;
 }
 
 html[data-color="bright"][data-theme="dark"] .page-topbar {
-  background: linear-gradient(180deg, #293d48 0%, #20323c 100%);
-  border-color: #3d5d6c;
-  box-shadow: 0 4px 14px rgba(0,0,0,.28);
+  background: #20272d;
+  border-color: #3a5361;
+  box-shadow: 0 3px 10px rgba(0,0,0,.28);
 }
 
 html[data-color="bright"][data-theme="dark"] .page-topbar .chip {
-  color: #b8d0dc;
+  background: #263f4c;
+  color: #9bd9f5;
 }
 
 html[data-color="bright"][data-theme="dark"] .page-topbar .chip:hover {
-  background: #31505f;
-  color: #eef8fc;
+  background: #315365;
+  color: #d9f2ff;
 }
 
 html[data-color="bright"][data-theme="dark"] .page-topbar .chip.active {
-  background: linear-gradient(180deg, #91d9fa 0%, #4daedc 100%);
-  color: #123f55;
+  background: #55aeda;
+  color: #102f40;
+  border-color: #55aeda;
+}
+
+html[data-color="bright"][data-theme="dark"] .page-topbar .btn.secondary,
+html[data-color="bright"][data-theme="dark"] .page-topbar .btn.ghost {
+  background: #263f4c;
+  color: #9bd9f5;
 }
