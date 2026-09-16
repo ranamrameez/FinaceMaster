@@ -1,23 +1,78 @@
-/* Bright card treatment: stronger solid hue surfaces inspired by Buy/Sell. */
-html[data-color="bright-ledger"] .stat-card,
-html[data-color="bright-ledger"] .entity-card {
+/* Bright Ledger card + topbar treatment.
+   The active color id is `bright` (not `bright-ledger`). Keep this scoped so
+   the rest of the app/themes are untouched. */
+html[data-color="bright"] .stat-card,
+html[data-color="bright"] .entity-card {
   border: 0;
-  background: radial-gradient(circle at 50% 18%, rgba(255,255,255,.38) 0%, rgba(255,255,255,0) 52%), color-mix(in srgb, var(--card-hue, var(--accent)) 34%, var(--panel));
-  box-shadow: 0 1px 2px rgba(20,30,40,.08), 0 4px 12px rgba(20,30,40,.08);
+  background: radial-gradient(circle at 50% 18%, rgba(255,255,255,.55) 0%, rgba(255,255,255,0) 52%), color-mix(in srgb, var(--card-hue, var(--accent)) 42%, var(--panel));
+  box-shadow: 0 2px 4px rgba(36,62,78,.08), 0 7px 18px rgba(36,62,78,.10);
 }
-html[data-color="bright-ledger"] .stat-card .label,
-html[data-color="bright-ledger"] .entity-card .label { color: color-mix(in srgb, var(--text) 72%, var(--card-hue, var(--accent))); font-weight: 600; }
-html[data-color="bright-ledger"] .stat-card .value { color: var(--text); font-weight: 750; }
-html[data-color="bright-ledger"][data-theme="dark"] .stat-card,
-html[data-color="bright-ledger"][data-theme="dark"] .entity-card {
-  background: radial-gradient(circle at 50% 18%, rgba(255,255,255,.16) 0%, rgba(255,255,255,0) 52%), color-mix(in srgb, var(--card-hue, var(--accent)) 30%, var(--panel));
-  box-shadow: 0 2px 5px rgba(0,0,0,.22), 0 6px 16px rgba(0,0,0,.18);
+
+html[data-color="bright"] .stat-card .label,
+html[data-color="bright"] .entity-card .label {
+  color: color-mix(in srgb, var(--text) 76%, var(--card-hue, var(--accent)));
+  font-weight: 650;
 }
-/* Clean neutral topbar; active tab carries the Buy blue treatment. */
-html[data-color="bright-ledger"] .page-topbar { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 2px 8px rgba(20,30,40,.07); padding: 6px; }
-html[data-color="bright-ledger"] .page-topbar .chip-tabs { gap: 5px; }
-html[data-color="bright-ledger"] .page-topbar .chip { background: transparent; border: 0; color: var(--muted); border-radius: 9px; }
-html[data-color="bright-ledger"] .page-topbar .chip:hover { background: var(--panel-2); color: var(--text); }
-html[data-color="bright-ledger"] .page-topbar .chip.active { background: linear-gradient(to bottom, #98D6F9, #5ab0e2); color: #2e6c91; box-shadow: 0 1px 3px rgba(46,108,145,.18); }
-html[data-color="bright-ledger"][data-theme="dark"] .page-topbar { box-shadow: 0 2px 10px rgba(0,0,0,.24); }
-html[data-color="bright-ledger"][data-theme="dark"] .page-topbar .chip.active { color: #214e68; }
+
+html[data-color="bright"] .stat-card .value {
+  color: var(--text);
+  font-weight: 750;
+}
+
+/* Dark bright theme: keep the same saturated card identity without making
+   surfaces muddy or gray. */
+html[data-color="bright"][data-theme="dark"] .stat-card,
+html[data-color="bright"][data-theme="dark"] .entity-card {
+  background: radial-gradient(circle at 50% 18%, rgba(255,255,255,.20) 0%, rgba(255,255,255,0) 52%), color-mix(in srgb, var(--card-hue, var(--accent)) 38%, var(--panel));
+  box-shadow: 0 3px 7px rgba(0,0,0,.24), 0 8px 20px rgba(0,0,0,.20);
+}
+
+/* Topbar is a visible branded surface, not transparent/gray. */
+html[data-color="bright"] .page-topbar {
+  background: linear-gradient(180deg, #ffffff 0%, #e9f6fc 100%);
+  border: 1px solid #c8e4f1;
+  border-radius: 14px;
+  box-shadow: 0 3px 12px rgba(47,126,168,.12);
+  padding: 6px;
+}
+
+html[data-color="bright"] .page-topbar .chip-tabs { gap: 5px; }
+
+html[data-color="bright"] .page-topbar .chip {
+  background: transparent;
+  border: 0;
+  color: #527080;
+  border-radius: 9px;
+}
+
+html[data-color="bright"] .page-topbar .chip:hover {
+  background: #dff1f9;
+  color: #245c78;
+}
+
+html[data-color="bright"] .page-topbar .chip.active {
+  background: linear-gradient(180deg, #9bdcff 0%, #55b5e8 100%);
+  color: #164d69;
+  box-shadow: 0 2px 5px rgba(47,126,168,.24);
+  font-weight: 700;
+}
+
+html[data-color="bright"][data-theme="dark"] .page-topbar {
+  background: linear-gradient(180deg, #293d48 0%, #20323c 100%);
+  border-color: #3d5d6c;
+  box-shadow: 0 4px 14px rgba(0,0,0,.28);
+}
+
+html[data-color="bright"][data-theme="dark"] .page-topbar .chip {
+  color: #b8d0dc;
+}
+
+html[data-color="bright"][data-theme="dark"] .page-topbar .chip:hover {
+  background: #31505f;
+  color: #eef8fc;
+}
+
+html[data-color="bright"][data-theme="dark"] .page-topbar .chip.active {
+  background: linear-gradient(180deg, #91d9fa 0%, #4daedc 100%);
+  color: #123f55;
+}
