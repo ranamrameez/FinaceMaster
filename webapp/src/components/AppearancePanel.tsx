@@ -3,21 +3,16 @@ import { createPortal } from 'react-dom';
 import { useAppearanceStore } from '../store/appearanceStore';
 
 const COLOR_THEMES = [
-  { group: 'Classic theme', options: [
-    ['wine', 'Classic (Graphite & Gold)'],
-  ] },
   { group: 'Classic rounded themes', options: [
     ['ocean', 'Ocean (Finance Blue)'],
     ['forest', 'Forest (Finance Green)'],
     ['violet', 'Violet (Market Purple)'],
-    ['sunset', 'Sunset (Market Orange)'],
   ] },
   { group: 'Modern finance themes', options: [
     ['aurora', 'Aurora (Indigo)'],
     ['cobalt', 'Cobalt (Finance Blue)'],
     ['teal', 'Teal (Blue-Green)'],
     ['copper', 'Copper (Market Orange)'],
-    ['rose', 'Rose (Ruby)'],
     ['gold', 'Gold (Wealth)'],
   ] },
   { group: 'Material themes', options: [
