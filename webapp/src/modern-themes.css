@@ -1,21 +1,27 @@
-/*
- * Modern theme family
+/* Modern finance theme family
  *
- * Shared component language with intentionally distinct visual identities.
- * Neutral surfaces, one accent family, semantic P/L colors, restrained
- * elevation, and consistent control geometry.
+ * Strong, distinct brand accents on neutral surfaces. Profit/loss semantics
+ * remain independent from the selected theme. No surface-wide gradients.
  */
 
 html[data-color="aurora"],
-html[data-color="sage"],
-html[data-color="teal"] {
+html[data-color="cobalt"],
+html[data-color="teal"],
+html[data-color="copper"],
+html[data-color="rose"],
+html[data-color="gold"],
+html[data-color="sage"] { /* sage kept as a compatibility alias */
   --radius:10px;
   --radius-lg:14px;
 }
 
 html[data-color="aurora"] .card,
-html[data-color="sage"] .card,
-html[data-color="teal"] .card {
+html[data-color="cobalt"] .card,
+html[data-color="teal"] .card,
+html[data-color="copper"] .card,
+html[data-color="rose"] .card,
+html[data-color="gold"] .card,
+html[data-color="sage"] .card {
   border:1px solid var(--border);
   border-radius:var(--radius-lg);
   background:var(--panel);
@@ -23,100 +29,209 @@ html[data-color="teal"] .card {
 }
 
 html[data-color="aurora"] .btn,
-html[data-color="sage"] .btn,
-html[data-color="teal"] .btn {
+html[data-color="cobalt"] .btn,
+html[data-color="teal"] .btn,
+html[data-color="copper"] .btn,
+html[data-color="rose"] .btn,
+html[data-color="gold"] .btn,
+html[data-color="sage"] .btn {
   border-radius:10px;
   border:1px solid var(--border);
   box-shadow:none;
-  transition:background .12s ease, border-color .12s ease, color .12s ease,
-              transform .12s ease, box-shadow .12s ease;
+  transition:background .12s ease, border-color .12s ease, color .12s ease, transform .12s ease, box-shadow .12s ease;
 }
 
 html[data-color="aurora"] .btn:hover,
-html[data-color="sage"] .btn:hover,
-html[data-color="teal"] .btn:hover {
+html[data-color="cobalt"] .btn:hover,
+html[data-color="teal"] .btn:hover,
+html[data-color="copper"] .btn:hover,
+html[data-color="rose"] .btn:hover,
+html[data-color="gold"] .btn:hover,
+html[data-color="sage"] .btn:hover {
   transform:translateY(-1px);
-  box-shadow:0 3px 9px rgba(20,30,40,.10);
+  box-shadow:0 3px 9px rgba(20,30,40,.12);
 }
 
 html[data-color="aurora"] .btn.primary,
-html[data-color="sage"] .btn.primary,
-html[data-color="teal"] .btn.primary { background:var(--accent); border-color:var(--accent); color:var(--on-accent); }
+html[data-color="cobalt"] .btn.primary,
+html[data-color="teal"] .btn.primary,
+html[data-color="copper"] .btn.primary,
+html[data-color="rose"] .btn.primary,
+html[data-color="gold"] .btn.primary,
+html[data-color="sage"] .btn.primary { background:var(--accent); border-color:var(--accent); color:var(--on-accent); }
+
 html[data-color="aurora"] .btn.secondary,
-html[data-color="sage"] .btn.secondary,
-html[data-color="teal"] .btn.secondary { background:var(--accent-soft); border-color:transparent; color:var(--accent); }
+html[data-color="cobalt"] .btn.secondary,
+html[data-color="teal"] .btn.secondary,
+html[data-color="copper"] .btn.secondary,
+html[data-color="rose"] .btn.secondary,
+html[data-color="gold"] .btn.secondary,
+html[data-color="sage"] .btn.secondary { background:var(--accent-soft); border-color:transparent; color:var(--accent); }
+
 html[data-color="aurora"] .btn.ghost,
-html[data-color="sage"] .btn.ghost,
-html[data-color="teal"] .btn.ghost { background:transparent; border-color:transparent; color:var(--accent); }
+html[data-color="cobalt"] .btn.ghost,
+html[data-color="teal"] .btn.ghost,
+html[data-color="copper"] .btn.ghost,
+html[data-color="rose"] .btn.ghost,
+html[data-color="gold"] .btn.ghost,
+html[data-color="sage"] .btn.ghost { background:transparent; border-color:transparent; color:var(--accent); }
 
 html[data-color="aurora"] .chip,
-html[data-color="sage"] .chip,
-html[data-color="teal"] .chip { border-radius:10px; border:1px solid transparent; box-shadow:none; }
+html[data-color="cobalt"] .chip,
+html[data-color="teal"] .chip,
+html[data-color="copper"] .chip,
+html[data-color="rose"] .chip,
+html[data-color="gold"] .chip,
+html[data-color="sage"] .chip { border-radius:10px; border:1px solid transparent; box-shadow:none; }
+
 html[data-color="aurora"] .chip:not(.active),
-html[data-color="sage"] .chip:not(.active),
-html[data-color="teal"] .chip:not(.active) { background:var(--panel-2); color:var(--muted); }
+html[data-color="cobalt"] .chip:not(.active),
+html[data-color="teal"] .chip:not(.active),
+html[data-color="copper"] .chip:not(.active),
+html[data-color="rose"] .chip:not(.active),
+html[data-color="gold"] .chip:not(.active),
+html[data-color="sage"] .chip:not(.active) { background:var(--panel-2); color:var(--muted); }
+
 html[data-color="aurora"] .chip:hover,
-html[data-color="sage"] .chip:hover,
-html[data-color="teal"] .chip:hover { background:var(--accent-soft); color:var(--accent); }
+html[data-color="cobalt"] .chip:hover,
+html[data-color="teal"] .chip:hover,
+html[data-color="copper"] .chip:hover,
+html[data-color="rose"] .chip:hover,
+html[data-color="gold"] .chip:hover,
+html[data-color="sage"] .chip:hover { background:var(--accent-soft); color:var(--accent); }
+
 html[data-color="aurora"] .chip.active,
-html[data-color="sage"] .chip.active,
-html[data-color="teal"] .chip.active { background:var(--accent); border-color:var(--accent); color:var(--on-accent); box-shadow:none; }
+html[data-color="cobalt"] .chip.active,
+html[data-color="teal"] .chip.active,
+html[data-color="copper"] .chip.active,
+html[data-color="rose"] .chip.active,
+html[data-color="gold"] .chip.active,
+html[data-color="sage"] .chip.active { background:var(--accent); border-color:var(--accent); color:var(--on-accent); box-shadow:none; }
 
 html[data-color="aurora"] .navbtn.active,
-html[data-color="sage"] .navbtn.active,
-html[data-color="teal"] .navbtn.active { background:var(--accent-soft); color:var(--accent); box-shadow:inset 3px 0 0 var(--accent); }
+html[data-color="cobalt"] .navbtn.active,
+html[data-color="teal"] .navbtn.active,
+html[data-color="copper"] .navbtn.active,
+html[data-color="rose"] .navbtn.active,
+html[data-color="gold"] .navbtn.active,
+html[data-color="sage"] .navbtn.active { background:var(--accent-soft); color:var(--accent); box-shadow:inset 3px 0 0 var(--accent); }
 
 html[data-color="aurora"] .page-topbar,
-html[data-color="sage"] .page-topbar,
-html[data-color="teal"] .page-topbar { background:var(--panel); border:1px solid var(--border); border-radius:var(--radius-lg); box-shadow:var(--shadow-card); padding:5px; }
-html[data-color="aurora"] .page-topbar .chip,
-html[data-color="sage"] .page-topbar .chip,
-html[data-color="teal"] .page-topbar .chip { background:transparent; color:var(--muted); }
-html[data-color="aurora"] .page-topbar .chip.active,
-html[data-color="sage"] .page-topbar .chip.active,
-html[data-color="teal"] .page-topbar .chip.active { background:var(--accent-soft); border-color:transparent; color:var(--accent); }
+html[data-color="cobalt"] .page-topbar,
+html[data-color="teal"] .page-topbar,
+html[data-color="copper"] .page-topbar,
+html[data-color="rose"] .page-topbar,
+html[data-color="gold"] .page-topbar,
+html[data-color="sage"] .page-topbar { background:var(--panel); border:1px solid var(--border); border-radius:var(--radius-lg); box-shadow:var(--shadow-card); padding:5px; }
 
+html[data-color="aurora"] .page-topbar .chip,
+html[data-color="cobalt"] .page-topbar .chip,
+html[data-color="teal"] .page-topbar .chip,
+html[data-color="copper"] .page-topbar .chip,
+html[data-color="rose"] .page-topbar .chip,
+html[data-color="gold"] .page-topbar .chip,
+html[data-color="sage"] .page-topbar .chip { background:transparent; color:var(--muted); }
+
+html[data-color="aurora"] .page-topbar .chip.active,
+html[data-color="cobalt"] .page-topbar .chip.active,
+html[data-color="teal"] .page-topbar .chip.active,
+html[data-color="copper"] .page-topbar .chip.active,
+html[data-color="rose"] .page-topbar .chip.active,
+html[data-color="gold"] .page-topbar .chip.active,
+html[data-color="sage"] .page-topbar .chip.active { background:var(--accent-soft); border-color:transparent; color:var(--accent); }
+
+/* Stronger stat cards: solid, saturated semantic tints rather than the old
+ * washed-out 12–22% mix. The hue still comes from Card.tsx's --card-hue,
+ * so each financial KPI keeps its own identity, while the selected theme
+ * controls the overall visual language. */
 html[data-color="aurora"] .stat-card,
-html[data-color="sage"] .stat-card,
-html[data-color="teal"] .stat-card { border:1px solid color-mix(in srgb, var(--card-hue, var(--accent)) 22%, var(--border)); background:color-mix(in srgb, var(--card-hue, var(--accent)) 12%, var(--panel)); box-shadow:var(--shadow-card); }
+html[data-color="cobalt"] .stat-card,
+html[data-color="teal"] .stat-card,
+html[data-color="copper"] .stat-card,
+html[data-color="rose"] .stat-card,
+html[data-color="gold"] .stat-card,
+html[data-color="sage"] .stat-card {
+  border:1px solid color-mix(in srgb, var(--card-hue, var(--accent)) 48%, var(--border));
+  background:color-mix(in srgb, var(--card-hue, var(--accent)) 32%, var(--panel));
+  box-shadow:inset 0 1px 0 color-mix(in srgb, white 18%, transparent), 0 2px 10px rgba(20,30,40,.10);
+}
 html[data-color="aurora"] .stat-card .label,
-html[data-color="sage"] .stat-card .label,
-html[data-color="teal"] .stat-card .label { color:color-mix(in srgb, var(--card-hue, var(--accent)) 65%, var(--muted)); font-weight:700; }
+html[data-color="cobalt"] .stat-card .label,
+html[data-color="teal"] .stat-card .label,
+html[data-color="copper"] .stat-card .label,
+html[data-color="rose"] .stat-card .label,
+html[data-color="gold"] .stat-card .label,
+html[data-color="sage"] .stat-card .label { color:var(--card-hue, var(--accent)); font-weight:800; }
 html[data-color="aurora"] .stat-card .value,
-html[data-color="sage"] .stat-card .value,
-html[data-color="teal"] .stat-card .value { color:var(--text); font-weight:800; }
+html[data-color="cobalt"] .stat-card .value,
+html[data-color="teal"] .stat-card .value,
+html[data-color="copper"] .stat-card .value,
+html[data-color="rose"] .stat-card .value,
+html[data-color="gold"] .stat-card .value,
+html[data-color="sage"] .stat-card .value { color:var(--text); font-weight:800; }
 
 html[data-color="aurora"] input[type="text"], html[data-color="aurora"] input[type="number"], html[data-color="aurora"] input[type="date"], html[data-color="aurora"] select,
-html[data-color="sage"] input[type="text"], html[data-color="sage"] input[type="number"], html[data-color="sage"] input[type="date"], html[data-color="sage"] select,
-html[data-color="teal"] input[type="text"], html[data-color="teal"] input[type="number"], html[data-color="teal"] input[type="date"], html[data-color="teal"] select { background:var(--panel-2); border:1px solid var(--border); border-radius:10px; box-shadow:none; }
+html[data-color="cobalt"] input[type="text"], html[data-color="cobalt"] input[type="number"], html[data-color="cobalt"] input[type="date"], html[data-color="cobalt"] select,
+html[data-color="teal"] input[type="text"], html[data-color="teal"] input[type="number"], html[data-color="teal"] input[type="date"], html[data-color="teal"] select,
+html[data-color="copper"] input[type="text"], html[data-color="copper"] input[type="number"], html[data-color="copper"] input[type="date"], html[data-color="copper"] select,
+html[data-color="rose"] input[type="text"], html[data-color="rose"] input[type="number"], html[data-color="rose"] input[type="date"], html[data-color="rose"] select,
+html[data-color="gold"] input[type="text"], html[data-color="gold"] input[type="number"], html[data-color="gold"] input[type="date"], html[data-color="gold"] select,
+html[data-color="sage"] input[type="text"], html[data-color="sage"] input[type="number"], html[data-color="sage"] input[type="date"], html[data-color="sage"] select { background:var(--panel-2); border:1px solid var(--border); border-radius:10px; box-shadow:none; }
 
 html[data-color="aurora"] input:focus, html[data-color="aurora"] select:focus,
-html[data-color="sage"] input:focus, html[data-color="sage"] select:focus,
-html[data-color="teal"] input:focus, html[data-color="teal"] select:focus { border-color:var(--accent); outline:3px solid color-mix(in srgb, var(--accent-soft) 78%, transparent); }
+html[data-color="cobalt"] input:focus, html[data-color="cobalt"] select:focus,
+html[data-color="teal"] input:focus, html[data-color="teal"] select:focus,
+html[data-color="copper"] input:focus, html[data-color="copper"] select:focus,
+html[data-color="rose"] input:focus, html[data-color="rose"] select:focus,
+html[data-color="gold"] input:focus, html[data-color="gold"] select:focus,
+html[data-color="sage"] input:focus, html[data-color="sage"] select:focus { border-color:var(--accent); outline:3px solid color-mix(in srgb, var(--accent-soft) 78%, transparent); }
 
-html[data-color="aurora"] thead th, html[data-color="sage"] thead th, html[data-color="teal"] thead th { color:var(--accent); border-bottom-color:var(--border); }
-html[data-color="aurora"] tbody tr:hover, html[data-color="sage"] tbody tr:hover, html[data-color="teal"] tbody tr:hover { background:color-mix(in srgb, var(--accent-soft) 55%, var(--panel)); }
+html[data-color="aurora"] thead th, html[data-color="cobalt"] thead th, html[data-color="teal"] thead th,
+html[data-color="copper"] thead th, html[data-color="rose"] thead th, html[data-color="gold"] thead th,
+html[data-color="sage"] thead th { color:var(--accent); border-bottom-color:var(--border); }
+html[data-color="aurora"] tbody tr:hover, html[data-color="cobalt"] tbody tr:hover, html[data-color="teal"] tbody tr:hover,
+html[data-color="copper"] tbody tr:hover, html[data-color="rose"] tbody tr:hover, html[data-color="gold"] tbody tr:hover,
+html[data-color="sage"] tbody tr:hover { background:color-mix(in srgb, var(--accent-soft) 55%, var(--panel)); }
+
 html[data-color="aurora"] .notice, html[data-color="aurora"] .empty, html[data-color="aurora"] .table-wrap,
-html[data-color="sage"] .notice, html[data-color="sage"] .empty, html[data-color="sage"] .table-wrap,
-html[data-color="teal"] .notice, html[data-color="teal"] .empty, html[data-color="teal"] .table-wrap { background:var(--panel-2); border-color:var(--border); }
+html[data-color="cobalt"] .notice, html[data-color="cobalt"] .empty, html[data-color="cobalt"] .table-wrap,
+html[data-color="teal"] .notice, html[data-color="teal"] .empty, html[data-color="teal"] .table-wrap,
+html[data-color="copper"] .notice, html[data-color="copper"] .empty, html[data-color="copper"] .table-wrap,
+html[data-color="rose"] .notice, html[data-color="rose"] .empty, html[data-color="rose"] .table-wrap,
+html[data-color="gold"] .notice, html[data-color="gold"] .empty, html[data-color="gold"] .table-wrap,
+html[data-color="sage"] .notice, html[data-color="sage"] .empty, html[data-color="sage"] .table-wrap { background:var(--panel-2); border-color:var(--border); }
 
-html[data-color="aurora"] .btn.fab-btn, html[data-color="sage"] .btn.fab-btn, html[data-color="teal"] .btn.fab-btn { background:var(--accent); border-color:var(--accent); color:var(--on-accent); box-shadow:0 5px 18px color-mix(in srgb, var(--accent) 32%, transparent); }
-html[data-color="aurora"] .btn.fab-btn-secondary, html[data-color="sage"] .btn.fab-btn-secondary, html[data-color="teal"] .btn.fab-btn-secondary { background:var(--panel); border-color:var(--border); color:var(--accent); }
+html[data-color="aurora"] .btn.fab-btn, html[data-color="cobalt"] .btn.fab-btn, html[data-color="teal"] .btn.fab-btn,
+html[data-color="copper"] .btn.fab-btn, html[data-color="rose"] .btn.fab-btn, html[data-color="gold"] .btn.fab-btn,
+html[data-color="sage"] .btn.fab-btn { background:var(--accent); border-color:var(--accent); color:var(--on-accent); box-shadow:0 5px 18px color-mix(in srgb, var(--accent) 32%, transparent); }
+html[data-color="aurora"] .btn.fab-btn-secondary, html[data-color="cobalt"] .btn.fab-btn-secondary, html[data-color="teal"] .btn.fab-btn-secondary,
+html[data-color="copper"] .btn.fab-btn-secondary, html[data-color="rose"] .btn.fab-btn-secondary, html[data-color="gold"] .btn.fab-btn-secondary,
+html[data-color="sage"] .btn.fab-btn-secondary { background:var(--panel); border-color:var(--border); color:var(--accent); }
 
-/* Aurora — indigo */
-/*
- * IMPORTANT: theme.css defines the light palette on :root[data-theme="light"],
- * whose specificity is higher than html[data-color="..."] alone. These
- * light selectors intentionally include data-theme so the modern palette
- * wins in light mode as well as dark mode.
- */
-html[data-theme="light"][data-color="aurora"] { --bg:#f5f7fb; --panel:#fff; --panel-2:#eef2f7; --border:#d8dee8; --text:#17202a; --muted:#667384; --accent:#635bdb; --accent-soft:#ebe9ff; --on-accent:#fff; --gold:#b7791f; --gold-rgb:183,121,31; --info:#168aad; --info-rgb:22,138,173; --profit:#18865b; --loss:#c83b4b; --warn:#b7791f; --shadow-card:0 1px 2px rgba(25,35,50,.04),0 5px 16px rgba(25,35,50,.07); --shadow-lg:0 10px 26px rgba(25,35,50,.12); }
-html[data-color="aurora"][data-theme="dark"] { --bg:#10131a; --panel:#191d27; --panel-2:#232936; --border:#343c4d; --text:#eef1f7; --muted:#9da8ba; --accent:#a79cff; --accent-soft:#302c55; --on-accent:#17152c; --gold:#f0bd68; --gold-rgb:240,189,104; --info:#5cc7e6; --info-rgb:92,199,230; --profit:#55d394; --loss:#f17b88; --warn:#f0bd68; --shadow-card:0 1px 2px rgba(0,0,0,.2),0 6px 18px rgba(0,0,0,.22); --shadow-lg:0 12px 30px rgba(0,0,0,.32); }
+/* Aurora — premium indigo */
+html[data-theme="light"][data-color="aurora"] { --bg:#f5f7fb; --panel:#fff; --panel-2:#eef2f7; --border:#d7deea; --text:#17202a; --muted:#667384; --accent:#5b50d6; --accent-soft:#e6e3ff; --on-accent:#fff; --gold:#a96500; --gold-rgb:169,101,0; --info:#147ca0; --info-rgb:20,124,160; --profit:#168454; --loss:#c73548; --warn:#a96500; --shadow-card:0 1px 2px rgba(25,35,50,.05),0 5px 16px rgba(25,35,50,.08); --shadow-lg:0 10px 26px rgba(25,35,50,.12); }
+html[data-color="aurora"][data-theme="dark"] { --bg:#10131a; --panel:#191d27; --panel-2:#232936; --border:#343c4d; --text:#eef1f7; --muted:#9da8ba; --accent:#aaa0ff; --accent-soft:#302c55; --on-accent:#17152c; --gold:#f0bd68; --gold-rgb:240,189,104; --info:#63c9e8; --info-rgb:99,201,232; --profit:#5bdd98; --loss:#f17b88; --warn:#f0bd68; --shadow-card:0 1px 2px rgba(0,0,0,.2),0 6px 18px rgba(0,0,0,.22); --shadow-lg:0 12px 30px rgba(0,0,0,.32); }
 
-/* Sage — jade */
-html[data-theme="light"][data-color="sage"] { --bg:#f5f7f4; --panel:#fff; --panel-2:#edf2ed; --border:#d6dfd8; --text:#18231e; --muted:#66756d; --accent:#2d7a68; --accent-soft:#e0f0eb; --on-accent:#fff; --gold:#a36b16; --gold-rgb:163,107,22; --info:#3478a8; --info-rgb:52,120,168; --profit:#178357; --loss:#c84646; --warn:#a36b16; --shadow-card:0 1px 2px rgba(24,45,35,.04),0 5px 16px rgba(24,45,35,.07); --shadow-lg:0 10px 26px rgba(24,45,35,.12); }
-html[data-color="sage"][data-theme="dark"] { --bg:#101614; --panel:#19201d; --panel-2:#232c28; --border:#35413c; --text:#eef4f0; --muted:#a2b1aa; --accent:#72d1b3; --accent-soft:#203f35; --on-accent:#10251e; --gold:#f0bd68; --gold-rgb:240,189,104; --info:#71b7df; --info-rgb:113,183,223; --profit:#63d9a1; --loss:#f27f7f; --warn:#f0bd68; --shadow-card:0 1px 2px rgba(0,0,0,.2),0 6px 18px rgba(0,0,0,.22); --shadow-lg:0 12px 30px rgba(0,0,0,.32); }
+/* Cobalt — institutional finance blue. `sage` is an old saved preference
+ * alias so an existing browser does not fall back to the root palette. */
+html[data-theme="light"][data-color="cobalt"], html[data-theme="light"][data-color="sage"] { --bg:#f4f7fb; --panel:#fff; --panel-2:#edf2f8; --border:#d3dce8; --text:#15202b; --muted:#627181; --accent:#1457b8; --accent-soft:#dce9fb; --on-accent:#fff; --gold:#a86a00; --gold-rgb:168,106,0; --info:#176fa8; --info-rgb:23,111,168; --profit:#168454; --loss:#c73548; --warn:#a86a00; --shadow-card:0 1px 2px rgba(25,45,70,.05),0 5px 16px rgba(25,45,70,.08); --shadow-lg:0 10px 26px rgba(25,45,70,.12); }
+html[data-color="cobalt"][data-theme="dark"], html[data-color="sage"][data-theme="dark"] { --bg:#0d141d; --panel:#151e2a; --panel-2:#202b39; --border:#334355; --text:#edf4fb; --muted:#9aabbd; --accent:#62a5ff; --accent-soft:#193d68; --on-accent:#081b32; --gold:#f3bf66; --gold-rgb:243,191,102; --info:#72c4ef; --info-rgb:114,196,239; --profit:#61d69a; --loss:#f37b87; --warn:#f3bf66; --shadow-card:0 1px 2px rgba(0,0,0,.22),0 6px 18px rgba(0,0,0,.24); --shadow-lg:0 12px 30px rgba(0,0,0,.34); }
 
-/* Teal — fresh blue-green, deliberately distinct from Aurora and Sage */
-html[data-theme="light"][data-color="teal"] { --bg:#f3f8f8; --panel:#fff; --panel-2:#e9f2f2; --border:#d0dfdf; --text:#172526; --muted:#637576; --accent:#087f8c; --accent-soft:#d9f0f1; --on-accent:#fff; --gold:#a46b18; --gold-rgb:164,107,24; --info:#2878a0; --info-rgb:40,120,160; --profit:#16845f; --loss:#c8444f; --warn:#a46b18; --shadow-card:0 1px 2px rgba(20,45,47,.04),0 5px 16px rgba(20,45,47,.07); --shadow-lg:0 10px 26px rgba(20,45,47,.12); }
-html[data-color="teal"][data-theme="dark"] { --bg:#0e1718; --panel:#172223; --panel-2:#202f30; --border:#334344; --text:#edf6f5; --muted:#9eb1b1; --accent:#4fc5c7; --accent-soft:#173f41; --on-accent:#082426; --gold:#f0bd68; --gold-rgb:240,189,104; --info:#6eb9df; --info-rgb:110,185,223; --profit:#5ed6a2; --loss:#f27f83; --warn:#f0bd68; --shadow-card:0 1px 2px rgba(0,0,0,.2),0 6px 18px rgba(0,0,0,.22); --shadow-lg:0 12px 30px rgba(0,0,0,.32); }
+/* Teal — clean market-terminal blue-green */
+html[data-theme="light"][data-color="teal"] { --bg:#f3f8fa; --panel:#fff; --panel-2:#e7f1f4; --border:#cedde3; --text:#142328; --muted:#5f7279; --accent:#007d91; --accent-soft:#d7eef2; --on-accent:#fff; --gold:#a56500; --gold-rgb:165,101,0; --info:#2477a0; --info-rgb:36,119,160; --profit:#168454; --loss:#c73548; --warn:#a56500; --shadow-card:0 1px 2px rgba(20,45,55,.05),0 5px 16px rgba(20,45,55,.08); --shadow-lg:0 10px 26px rgba(20,45,55,.12); }
+html[data-color="teal"][data-theme="dark"] { --bg:#0d171a; --panel:#152226; --panel-2:#203136; --border:#33464b; --text:#edf7f8; --muted:#9db2b6; --accent:#42c6cc; --accent-soft:#15464a; --on-accent:#062427; --gold:#f0bd68; --gold-rgb:240,189,104; --info:#70c0e6; --info-rgb:112,192,230; --profit:#5ddd9c; --loss:#f37d88; --warn:#f0bd68; --shadow-card:0 1px 2px rgba(0,0,0,.22),0 6px 18px rgba(0,0,0,.24); --shadow-lg:0 12px 30px rgba(0,0,0,.34); }
+
+/* Copper — warm market/trading accent */
+html[data-theme="light"][data-color="copper"] { --bg:#faf6f2; --panel:#fff; --panel-2:#f4ebe4; --border:#e1d3c8; --text:#2a211c; --muted:#786b63; --accent:#b85c1b; --accent-soft:#f8e1d1; --on-accent:#fff; --gold:#9b6200; --gold-rgb:155,98,0; --info:#39769a; --info-rgb:57,118,154; --profit:#168454; --loss:#c73548; --warn:#9b6200; --shadow-card:0 1px 2px rgba(70,40,20,.05),0 5px 16px rgba(70,40,20,.08); --shadow-lg:0 10px 26px rgba(70,40,20,.12); }
+html[data-color="copper"][data-theme="dark"] { --bg:#17110d; --panel:#211915; --panel-2:#30231d; --border:#4b382e; --text:#f8eee8; --muted:#bca99d; --accent:#ff9b5b; --accent-soft:#5a301d; --on-accent:#2a1206; --gold:#f5c56e; --gold-rgb:245,197,110; --info:#79b9d9; --info-rgb:121,185,217; --profit:#63dc9e; --loss:#f6818b; --warn:#f5c56e; --shadow-card:0 1px 2px rgba(0,0,0,.22),0 6px 18px rgba(0,0,0,.25); --shadow-lg:0 12px 30px rgba(0,0,0,.34); }
+
+/* Rose — equity/ruby red, deliberately separate from semantic loss red */
+html[data-theme="light"][data-color="rose"] { --bg:#faf5f7; --panel:#fff; --panel-2:#f4e9ee; --border:#e2d1da; --text:#2a1b22; --muted:#776773; --accent:#b52f68; --accent-soft:#f7dbe7; --on-accent:#fff; --gold:#9c6500; --gold-rgb:156,101,0; --info:#39779c; --info-rgb:57,119,156; --profit:#168454; --loss:#c73548; --warn:#9c6500; --shadow-card:0 1px 2px rgba(75,25,50,.05),0 5px 16px rgba(75,25,50,.08); --shadow-lg:0 10px 26px rgba(75,25,50,.12); }
+html[data-color="rose"][data-theme="dark"] { --bg:#170f14; --panel:#21151d; --panel-2:#30202a; --border:#4c3440; --text:#f9edf3; --muted:#bda5b1; --accent:#ff77ae; --accent-soft:#5a213e; --on-accent:#2b0b1b; --gold:#f5c56e; --gold-rgb:245,197,110; --info:#7bbad8; --info-rgb:123,186,216; --profit:#63dc9e; --loss:#f6818b; --warn:#f5c56e; --shadow-card:0 1px 2px rgba(0,0,0,.22),0 6px 18px rgba(0,0,0,.25); --shadow-lg:0 12px 30px rgba(0,0,0,.34); }
+
+/* Gold — wealth/premium finance accent without turning every surface yellow */
+html[data-theme="light"][data-color="gold"] { --bg:#faf8f2; --panel:#fff; --panel-2:#f3efe2; --border:#dfd6bf; --text:#29251b; --muted:#756d5d; --accent:#9a6a00; --accent-soft:#f4e7bb; --on-accent:#fff; --gold:#8f6100; --gold-rgb:143,97,0; --info:#39769a; --info-rgb:57,118,154; --profit:#168454; --loss:#c73548; --warn:#8f6100; --shadow-card:0 1px 2px rgba(70,55,15,.05),0 5px 16px rgba(70,55,15,.08); --shadow-lg:0 10px 26px rgba(70,55,15,.12); }
+html[data-color="gold"][data-theme="dark"] { --bg:#16130b; --panel:#211d13; --panel-2:#302a1b; --border:#4b422d; --text:#faf4df; --muted:#bcb29a; --accent:#f1c453; --accent-soft:#594a1f; --on-accent:#2a2107; --gold:#ffd66d; --gold-rgb:255,214,109; --info:#79b9d9; --info-rgb:121,185,217; --profit:#63dc9e; --loss:#f6818b; --warn:#ffd66d; --shadow-card:0 1px 2px rgba(0,0,0,.22),0 6px 18px rgba(0,0,0,.25); --shadow-lg:0 12px 30px rgba(0,0,0,.34); }
+
+/* Compatibility for an old persisted theme name: Sage now follows Cobalt
+ * rather than presenting another green finance palette. */
