@@ -1,9 +1,11 @@
 import { useBankWorkbookStore } from '../store/bankWorkbookStore';
 import { useCashWorkbookStore } from '../store/cashWorkbookStore';
 import { useCategoryStore } from '../store/categoryStore';
+import { useCategoryGroupStore } from '../store/categoryGroupStore';
 import { useCreditCardWorkbookStore } from '../store/creditCardWorkbookStore';
 import { createEmptyBankWorkbook } from '../store/defaultBankWorkbook';
 import { createEmptyCategoriesWorkbook } from '../store/defaultCategoriesWorkbook';
+import { createEmptyCategoryGroupsWorkbook } from '../store/defaultCategoryGroupsWorkbook';
 import { createEmptyCashWorkbook } from '../store/defaultCashWorkbook';
 import { createEmptyCreditCardWorkbook } from '../store/defaultCreditCardWorkbook';
 import { createEmptyEMIWorkbook } from '../store/defaultEmiWorkbook';
@@ -75,6 +77,7 @@ export function resetAllLocalWorkbooks() {
   usePlannedRentalsWorkbookStore.getState().setWorkbook(createEmptyPlannedRentalsWorkbook());
   useNetWorthSnapshotsWorkbookStore.getState().setWorkbook(createEmptyNetWorthSnapshotsWorkbook());
   useCategoryStore.getState().setWorkbook(createEmptyCategoriesWorkbook());
+  useCategoryGroupStore.getState().setWorkbook(createEmptyCategoryGroupsWorkbook());
   // User-reported (2026-09-09): "saving currency rates should belong that
   // user only" — the FX rate cache (lib/fx.ts) isn't a per-account
   // workbook, but it's still personal preference data that must not leak

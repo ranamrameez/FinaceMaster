@@ -14,6 +14,8 @@ import { ChartCard } from '../../qse/components/ChartCard';
 import { netIncomeByCurrency as rentalsNetIncomeByCurrency } from '../../../lib/calc/rentalsModule';
 import { flowActivity, flowByCurrency, type CurrencyNetWorth, type FlowActivityItem, type NetWorthBreakdownEntry } from '../../../lib/calc/netWorth';
 import { collectBudgetActivities, monthlyIncomeExpense, monthRange, monthsBetween, currentMonth as currentMonthOf, type MonthlyIncomeExpense, type BudgetActivity } from '../../../lib/calc/budgetPlanner';
+import { activitiesForGroup } from '../../../lib/calc/categoryGroups';
+import { useCategoryGroupStore } from '../../../store/categoryGroupStore';
 import { endOfMonthAsOf, projectedNetWorthTrend, type MonthlyNetWorthPoint } from '../../../lib/calc/netWorthTrend';
 import { earliestActivityDate, netWorthAsOfDate, type NetWorthAsOfInputs } from '../../../lib/calc/netWorthAsOf';
 import { upcomingRenewals } from '../../../lib/calc/subscriptionsModule';
@@ -256,6 +258,7 @@ export function NetWorthPage({
   );
 
   const categories = useCategoryStore((s) => s.workbook.categories);
+  const categoryGroups = useCategoryGroupStore((s) => s.workbook.groups);
   // User-reported (2026-09-04): "Inter-account transfers are counting as
   // income; bad idea" — `links` excludes both sides of any cross-entity
   // linked transfer from the flow calculation entirely (see
@@ -854,6 +857,15 @@ export function NetWorthPage({
         setDrilldown={setDrilldown}
       />
 
+      <CategoryGroupsSection
+        ownCurrencies={ownCurrencies}
+        activities={activities}
+        categories={categories}
+        groups={categoryGroups}
+        nowMonth={currentMonthOf()}
+        setDrilldown={setDrilldown}
+      />
+
       {/* Item 4: "add charts to view capital split per currency" —
           supplementary content, not part of the requested reordering. */}
       {splitData.length > 1 && (
@@ -1154,6 +1166,78 @@ function NetWorthMonthlySection({
  * own draw order between a mixed bar/line dataset pair; the line itself
  * also got a slightly heavier `borderWidth` so it reads clearly as the
  * foreground series. */
+/** User-requested (2026-09-16): "we can show analysis based on categs. We
+ * can let user group categories to configure the bird's-eye view" — the
+ * Dashboard-side half of the category-groups feature (the other half,
+ * building/editing groups themselves, lives on `/account` — see
+ * `CategoriesSection` there). Shows THIS MONTH's own net total per group,
+ * per currency, since that's the shape the user's own Excel workflow
+ * described ("find my monthly expense/income/accommodation"). Only
+ * renders once at least one group exists — an empty state here would just
+ * be one more thing to explain on a page that's already dense; the "how
+ * do I make one" answer lives on `/account` instead, linked from the
+ * section's own intro line. */
+function CategoryGroupsSection({
+  ownCurrencies, activities, categories, groups, nowMonth, setDrilldown,
+}: {
+  ownCurrencies: string[]; activities: BudgetActivity[]; categories: ReturnType<typeof useCategoryStore.getState>['workbook']['categories'];
+  groups: ReturnType<typeof useCategoryGroupStore.getState>['workbook']['groups']; nowMonth: string;
+  setDrilldown: (d: Drilldown) => void;
+}) {
+  if (!groups.length) return null;
+
+  return (
+    <div className="mb-md">
+      <h3>By category group</h3>
+      <p className="text-muted" style={{ marginTop: 0, marginBottom: 12 }}>
+        {monthLabel(nowMonth)}'s net total for each group you've configured — a positive number
+        means that group's own activity added money this month, negative means it took money out.
+        Manage which categories belong to a group on the{' '}
+        <Link to="/account">Account page</Link>.
+      </p>
+      <div className="grid-auto" style={{ ...gridAutoStyle(260, 12) }}>
+        {groups.map((g) => {
+          const items = activitiesForGroup(activities, g, categories).filter((a) => a.date.slice(0, 7) === nowMonth);
+          const byCurrency: Record<string, number> = {};
+          items.forEach((a) => { byCurrency[a.currencyCode] = (byCurrency[a.currencyCode] ?? 0) + a.amount; });
+          const currenciesHere = ownCurrencies.filter((c) => byCurrency[c] !== undefined);
+          return (
+            <Card key={g.id}>
+              <div className="label mb-sm">{g.name}</div>
+              {currenciesHere.length === 0 ? (
+                <div className="text-muted">No activity this month.</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {currenciesHere.map((c) => (
+                    <span
+                      key={c}
+                      className={`pill clickable ${byCurrency[c] >= 0 ? 'pill-positive' : 'pill-negative'}`}
+                      onClick={() => setDrilldown({
+                        kind: 'flow',
+                        title: `${g.name} — ${monthLabel(nowMonth)}, ${c}`,
+                        explanation: `Every real and planned entry this month whose category is in the "${g.name}" group.`,
+                        currency: c,
+                        from: `${nowMonth}-01`,
+                        to: nowMonth,
+                        items: items.filter((a) => a.currencyCode === c).map((a) => ({
+                          module: a.module.charAt(0).toUpperCase() + a.module.slice(1),
+                          date: a.date, description: a.description, amount: a.amount, accountName: a.sourceLabel,
+                        })),
+                      })}
+                    >
+                      {byCurrency[c] >= 0 ? '+' : ''}{fmtMoney(byCurrency[c], c)}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function NetWorthComboChart({ currency, months, trend }: { currency: string; months: string[]; trend: MonthlyNetWorthPoint[] }) {
   const byMonth = new Map(trend.map((t) => [t.month, t]));
   return (

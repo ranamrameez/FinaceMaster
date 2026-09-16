@@ -1,12 +1,25 @@
 /** Shared base for every "ledger-style money movement" record in the app —
  * user-requested (2026-09-03): "create 1 base model (Finance) and inherit
  * all others from it... use categ ids, instead of texts." Scope, confirmed
- * with the user before building: CashEntry/BankTransaction/RentalEntry (+
- * their Planned* counterparts) — the only record types that already had
- * free-text categories. QSE/PSX/Funds trades, EMI, and Personal Loans stay
- * on their own existing shapes (explicitly out of scope — "fundamentally
- * different," and forcing amount+isDeposit onto a stock trade or an
- * amortization schedule would gut the calc engines those depend on).
+ * with the user before building: CashEntry/BankTransaction/RentalEntry —
+ * the only record types that already had free-text categories. QSE/PSX/
+ * Funds trades, EMI, and Personal Loans stay on their own existing shapes
+ * (explicitly out of scope — "fundamentally different," and forcing
+ * amount+isDeposit onto a stock trade or an amortization schedule would
+ * gut the calc engines those depend on).
+ *
+ * **Correction (2026-09-16)**: this comment used to also claim "+ their
+ * Planned* counterparts" — checked while building the category-merge
+ * feature and found that's stale/never true. `PlannedCashEntry`/
+ * `PlannedBankTransaction`/`PlannedRentalEntry` never extended `Finance`
+ * and still carry the OLD free-text `category?: string` field, not
+ * `categoryID` — `lib/calc/budgetPlanner.ts`'s own normalizers already
+ * documented this correctly ("the 2026-09-03 Finance/Category restructure
+ * was deliberately scoped to the 3 primary record types, not their
+ * Planned* counterparts"); this file's comment just never got updated to
+ * match. `lib/categoryMerge.ts` has to handle both shapes (an id-based
+ * remap for real records, a name-based one for planned records) because
+ * of this real, ongoing asymmetry — see its own doc comment.
  *
  * This is a TypeScript `interface`, not a runtime class — `extends` here is
  * structural inheritance (the same idiom this codebase already uses
@@ -144,4 +157,42 @@ export interface Category {
 
 export interface CategoriesWorkbook {
   categories: Category[];
+}
+
+/** A user-configurable "bird's-eye view" bucket over the Category registry
+ * — user-requested (2026-09-16): "we can let user group categories to
+ * configure the bird's-eye view... i was flagging transactions using
+ * categs and then configuring some of the categs to find my monthly
+ * expense (Expense -> Travel + Grocery + Extra++), income (Income + rent
+ * income + extra income++), Accomodation (Utility Bills + Rent
+ * Payment++)." A category can belong to SEVERAL groups at once
+ * (user-confirmed via AskUserQuestion: "A category can join several
+ * groups," not a strict one-group-per-category partition) — e.g. "Travel"
+ * could plausibly sit in both an "Expense" group and a "Pakistan" group
+ * without conflict, since a group's own total is always computed by
+ * summing WITHIN that one group, never blending two groups' totals
+ * together (see `lib/calc/categoryGroups.ts`).
+ *
+ * Deliberately has NO separate `Category.type`/`kind` field alongside
+ * this — re-reading the user's own message closely, "set the default
+ * categ type to Ignore/IgnoreCount to easily exclude it as inflow/
+ * outflow" reads as describing the natural CONSEQUENCE of this group
+ * mechanism, not a second, independent field to add: a category that
+ * hasn't been assigned to any group simply doesn't contribute to any
+ * group's total — the exact same effect as an explicit "Ignore" type,
+ * with no new field, no migration, and "existing stays intact" (nothing
+ * about how a transaction's own categoryID/category name works changes
+ * at all — groups are a purely additive analysis layer on top). If this
+ * reading turns out wrong, a real `Category.type` field is still cheap to
+ * add later; this was a judgment call while building, flagged here rather
+ * than silently assumed correct. */
+export interface CategoryGroup {
+  id: string;
+  serialNumber: number;
+  name: string;
+  categoryIds: string[];
+}
+
+export interface CategoryGroupsWorkbook {
+  groups: CategoryGroup[];
 }

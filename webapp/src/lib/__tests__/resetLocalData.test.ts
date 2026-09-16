@@ -3,6 +3,7 @@ import { resetAllLocalWorkbooks } from '../resetLocalData';
 import { useBankWorkbookStore } from '../../store/bankWorkbookStore';
 import { useCashWorkbookStore } from '../../store/cashWorkbookStore';
 import { useCategoryStore } from '../../store/categoryStore';
+import { useCategoryGroupStore } from '../../store/categoryGroupStore';
 import { useEMIWorkbookStore } from '../../store/emiWorkbookStore';
 import { useFundsWorkbookStore } from '../../store/fundsWorkbookStore';
 import { useInterEntityTransfersStore } from '../../store/interEntityTransfersStore';
@@ -52,6 +53,9 @@ describe('resetAllLocalWorkbooks', () => {
     // wired into the reset" check as the four stores above.
     const seededCategoryCount = useCategoryStore.getState().workbook.categories.length;
     useCategoryStore.getState().addCategory('A Custom Category');
+    // Category groups (2026-09-16) — same check as the category registry
+    // right above it.
+    useCategoryGroupStore.getState().addGroup('Expense');
 
     expect(useWorkbookStore.getState().workbook.transfers).toHaveLength(1);
     expect(usePSXWorkbookStore.getState().workbook.transfers).toHaveLength(1);
@@ -68,6 +72,7 @@ describe('resetAllLocalWorkbooks', () => {
     expect(usePlannedRentalsWorkbookStore.getState().workbook.entries).toHaveLength(1);
     expect(useNetWorthSnapshotsWorkbookStore.getState().workbook.entries).toHaveLength(1);
     expect(useCategoryStore.getState().workbook.categories).toHaveLength(seededCategoryCount + 1);
+    expect(useCategoryGroupStore.getState().workbook.groups).toHaveLength(1);
 
     resetAllLocalWorkbooks();
 
@@ -87,6 +92,7 @@ describe('resetAllLocalWorkbooks', () => {
     expect(useNetWorthSnapshotsWorkbookStore.getState().workbook.entries).toHaveLength(0);
     // Resets back to the bundled defaults, discarding the custom category.
     expect(useCategoryStore.getState().workbook.categories).toHaveLength(seededCategoryCount);
+    expect(useCategoryGroupStore.getState().workbook.groups).toHaveLength(0);
 
     // Persisted to localStorage too, not just in-memory — a page reload
     // right after logout must not bring the old data back.
