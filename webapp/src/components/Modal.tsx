@@ -11,26 +11,9 @@ export function Modal({
   title: string;
   onClose: () => void;
   children: ReactNode;
-  /** Overrides the shared `.modal-overlay`'s default z-index:100 — needed
-   * for `ConfirmDialogHost`/`SignInModalHost`, which are mounted once near
-   * the app root (before the routed page content in the DOM) but must
-   * still render on top of whatever page-level Modal (e.g. Bank's
-   * AccountDetailModal, Rentals' PropertyDetailModal) called
-   * confirmDialog()/ensureSignedIn() from inside itself — without this,
-   * two same-z-index `.modal-overlay`s stack by DOM order, and the
-   * page-level one (mounted later, deeper in the tree) would paint on top,
-   * burying the confirm/sign-in dialog's buttons underneath it and making
-   * them unclickable. Same reasoning TermsGateModal already used its own
-   * inline z-index:1000 for (see that component's own comment) — this
-   * just gives every other `Modal` caller the same escape hatch. */
+  /** Overrides the shared `.modal-overlay`'s default z-index. */
   zIndex?: number;
-  /** Overrides `.modal-box`'s default width cap (UI_DESIGN_GUIDELINES.md:
-   * popups open at no more than ~50% of the viewport by default). A whole
-   * app-wide audit (2026-09-07) found every real `<Modal>` usage is a form
-   * or entity-detail popup, never a table/wide-workspace — so this is an
-   * escape hatch for a genuinely wide future case, not something any
-   * current caller needs. Pass a CSS width value (e.g. a `clamp()`); the
-   * user can still widen any modal via the full-screen toggle regardless. */
+  /** Overrides `.modal-box`'s default width cap. */
   width?: string;
 }) {
   const [fullScreen, setFullScreen] = useState(false);
@@ -41,7 +24,7 @@ export function Modal({
         style={!fullScreen && width ? { maxWidth: width } : undefined}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="d-flex justify-between align-center">
+        <div className="modal-header d-flex justify-between align-center">
           <h3 className="m-0">{title}</h3>
           <div className="d-flex align-center" style={{ gap: 4 }}>
             <button
@@ -57,7 +40,7 @@ export function Modal({
             </button>
           </div>
         </div>
-        <div className="mt-12">{children}</div>
+        <div className="modal-body">{children}</div>
       </div>
     </div>
   );
