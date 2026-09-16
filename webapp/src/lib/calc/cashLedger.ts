@@ -1,10 +1,11 @@
 import type { Adjustment, CashLedgerEvent, FeeCalculator, Transaction, Transfer } from '../../types/workbook';
 import { fmt } from '../format';
 import { toInstantMs } from '../datetime';
+import { sortTransactionsChronological } from './sortTransactions';
 
-/** Merges every completed buy, sell, deposit, and withdrawal into one chronological
- * cash ledger with a running balance. Pending trades are deliberately excluded:
- * an unfilled order has not moved broker cash yet. */
+/** Merges completed valid trades, transfers and adjustments into one
+ * chronological cash ledger. Pending orders and unmatched sells are not cash
+ * events because this app does not model short positions. */
 export function buildCashLedger(
   transactions: Transaction[],
   transfers: Transfer[],
@@ -12,51 +13,26 @@ export function buildCashLedger(
   calcFee: FeeCalculator,
 ): CashLedgerEvent[] {
   const events: Omit<CashLedgerEvent, 'balance'>[] = [];
+  const heldByTicker: Record<string, number> = {};
 
-  transactions.filter((tx) => !tx.isPending).forEach((tx) => {
+  sortTransactionsChronological(transactions.filter((tx) => !tx.isPending)).forEach((tx) => {
+    const isBuy = tx.action === 'BUY';
+    if (!isBuy && tx.shares > (heldByTicker[tx.ticker] || 0) + 1e-7) return;
+
     const amount = tx.shares * tx.price;
-    const fee = calcFee(amount, tx.action === 'BUY', { shares: tx.shares, tx });
-    const cashDelta = tx.action === 'BUY' ? -(amount + fee) : amount - fee;
-    events.push({
-      date: tx.date,
-      time: tx.time,
-      timezone: tx.timezone,
-      seq: tx.seq,
-      kind: 'trade',
-      action: tx.action,
-      label: `${tx.action} ${fmt(tx.shares, 0)} ${tx.ticker} @ ${fmt(tx.price, 3)}`,
-      amount: cashDelta,
-      fee,
-    });
+    const fee = calcFee(amount, isBuy, { shares: tx.shares, tx });
+    const cashDelta = isBuy ? -(amount + fee) : amount - fee;
+    events.push({ date: tx.date, time: tx.time, timezone: tx.timezone, seq: tx.seq, kind: 'trade', action: tx.action, label: `${tx.action} ${fmt(tx.shares, 0)} ${tx.ticker} @ ${fmt(tx.price, 3)}`, amount: cashDelta, fee });
+    heldByTicker[tx.ticker] = (heldByTicker[tx.ticker] || 0) + (isBuy ? tx.shares : -tx.shares);
   });
 
   transfers.forEach((t) => {
     const cashDelta = t.type === 'DEPOSIT' ? t.gross - t.fee : -(t.gross + t.fee);
-    events.push({
-      date: t.date,
-      time: t.time,
-      timezone: t.timezone,
-      seq: t.seq,
-      kind: 'transfer',
-      action: t.type,
-      label: t.type === 'DEPOSIT' ? 'Deposit' : 'Withdrawal',
-      amount: cashDelta,
-      fee: t.fee,
-    });
+    events.push({ date: t.date, time: t.time, timezone: t.timezone, seq: t.seq, kind: 'transfer', action: t.type, label: t.type === 'DEPOSIT' ? 'Deposit' : 'Withdrawal', amount: cashDelta, fee: t.fee });
   });
 
   (adjustments || []).forEach((a) => {
-    events.push({
-      date: a.date,
-      time: a.time,
-      timezone: a.timezone,
-      seq: a.seq,
-      kind: 'adjustment',
-      action: a.amount >= 0 ? 'REWARD' : 'CORRECTION',
-      label: a.note || (a.amount >= 0 ? 'Trading reward' : 'Adjustment'),
-      amount: a.amount,
-      fee: 0,
-    });
+    events.push({ date: a.date, time: a.time, timezone: a.timezone, seq: a.seq, kind: 'adjustment', action: a.amount >= 0 ? 'REWARD' : 'CORRECTION', label: a.note || (a.amount >= 0 ? 'Trading reward' : 'Adjustment'), amount: a.amount, fee: 0 });
   });
 
   events.sort((a, b) => {
