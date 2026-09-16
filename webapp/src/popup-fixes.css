@@ -38,8 +38,6 @@
   background-image:none;
 }
 
-/* The portaled Appearance popover is also a popup surface: keep it solid and
- * allow its controls to scroll on short screens without moving the trigger. */
 .appearance-panel {
   background:var(--panel);
   background-image:none;
@@ -47,22 +45,33 @@
   overflow-y:auto;
 }
 
-/* Material Teal + Material Rose: stronger finance accents and correct
- * foreground contrast in both light and dark modes. These overrides are
- * loaded after theme.css and modern-themes.css, so they also repair any
- * older Material component rules that washed the colors out. */
+/* Material Teal + Material Rose: explicit neutral surfaces prevent older
+ * theme rules from tinting or gradienting the topbar/cards. The accent is
+ * reserved for controls and active states. */
 html[data-theme="light"][data-color="material-teal"] { --accent:#006a6a; --accent-soft:#c7e7e7; --panel:#fff; --panel-2:#f0f7f7; --border:#cbdede; --text:#172526; --muted:#607576; }
 html[data-theme="dark"][data-color="material-teal"] { --accent:#55dfe0; --accent-soft:#075052; --panel:#181b1d; --panel-2:#24282a; --border:#3a4547; --text:#edf7f7; --muted:#a4b7b7; }
 html[data-theme="light"][data-color="material-purple"] { --accent:#a51f52; --accent-soft:#f5d2df; --panel:#fff; --panel-2:#faf1f5; --border:#e2d0d8; --text:#291b21; --muted:#78666e; }
 html[data-theme="dark"][data-color="material-purple"] { --accent:#ff86ae; --accent-soft:#5e2038; --panel:#1c1519; --panel-2:#2a2025; --border:#47343d; --text:#faedf2; --muted:#bca6b0; }
-html[data-color="material-teal"] .btn.primary,
-html[data-color="material-purple"] .btn.primary { background:var(--accent); color:var(--panel); border-color:var(--accent); }
-html[data-color="material-teal"] .btn.secondary,
-html[data-color="material-purple"] .btn.secondary { background:var(--accent-soft); color:var(--accent); }
-html[data-color="material-teal"] .navbtn.active,
-html[data-color="material-purple"] .navbtn.active { background:var(--accent-soft); color:var(--accent); }
-html[data-color="material-teal"] .page-topbar .chip.active,
-html[data-color="material-purple"] .page-topbar .chip.active { background:var(--accent-soft); color:var(--accent); }
+
+html[data-color="material-teal"] .card,
+html[data-color="material-teal"] .stat-card,
+html[data-color="material-teal"] .entity-card,
+html[data-color="material-teal"] .page-topbar {
+  background:var(--panel) !important;
+  background-image:none !important;
+  border-color:var(--border);
+}
+html[data-color="material-teal"] .page-topbar { box-shadow:var(--shadow-card); }
+html[data-color="material-teal"] .card.stat-card { background:var(--panel) !important; }
+
+html[data-color="material-purple"] .btn.primary,
+html[data-color="material-teal"] .btn.primary { background:var(--accent); color:var(--panel); border-color:var(--accent); }
+html[data-color="material-purple"] .btn.secondary,
+html[data-color="material-teal"] .btn.secondary { background:var(--accent-soft); color:var(--accent); }
+html[data-color="material-purple"] .navbtn.active,
+html[data-color="material-teal"] .navbtn.active { background:var(--accent-soft); color:var(--accent); }
+html[data-color="material-purple"] .page-topbar .chip.active,
+html[data-color="material-teal"] .page-topbar .chip.active { background:var(--accent-soft); color:var(--accent); }
 
 @media(max-width:700px){
   .modal-box { max-height:92vh; }
