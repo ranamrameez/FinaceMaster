@@ -6,6 +6,7 @@ import './brighter-theme.css'
 import './theme-bright-card-overrides.css'
 import './modern-themes.css'
 import './popup-fixes.css'
+import './classic-rounded-themes.css'
 import App from './App.tsx'
 
 createRoot(document.getElementById('root')!).render(
