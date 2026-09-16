@@ -7,7 +7,6 @@ import './theme-bright-card-overrides.css'
 import './modern-themes.css'
 import './popup-fixes.css'
 import App from './App.tsx'
-import './index.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
