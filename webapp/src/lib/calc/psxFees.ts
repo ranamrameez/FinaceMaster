@@ -15,27 +15,13 @@ export interface PSXFeeBreakdown {
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-/** Full itemized PSX fee breakdown for one hypothetical leg — ported 1:1
- * from the legacy `calcFeeBreakdown()`. Commission is tiered: a flat
- * PKR/share rate at/under a low-price threshold, else a percentage of
- * trade value. CVT is buy-side only. Everything defaults to 0 except
- * commission/SST, which were checked against a real broker statement —
- * PSX/NCCPL/SECP/CDC/CVT rates vary by broker and aren't guessed at. */
 export function calcFeeBreakdown(amount: number, isBuy: boolean, shares: number, settings: PSXSettings): PSXFeeBreakdown {
   const zero: PSXFeeBreakdown = { commission: 0, taxOnCommission: 0, psxFee: 0, nccplFee: 0, secpLevy: 0, cdc: 0, cvt: 0, total: 0 };
   if (amount <= 0) return zero;
-
-  // Simple/flat fee mode (see PSXSettings.feeMode's own doc comment): one
-  // all-in % instead of the itemized breakdown below. Put the whole
-  // charge in `commission` (for a consistent return shape) and leave
-  // everything else 0 — which also makes a NETTED leg automatically pay
-  // nothing extra, since `makePSXFeeCalculator`'s netted-side figure is
-  // exactly "everything except commission/SST" from this same breakdown.
   if (settings.feeMode === 'simple') {
     const total = Math.max(round2(amount * ((settings.allInFeePct ?? 0) / 100)), settings.minFee || 0);
     return { ...zero, commission: total, total };
   }
-
   let commission: number;
   if (shares > 0) {
     const price = amount / shares;
@@ -48,116 +34,41 @@ export function calcFeeBreakdown(amount: number, isBuy: boolean, shares: number,
   const nccplFee = amount * (settings.nccplFeePct / 100);
   const secpLevy = amount * (settings.secpLevyPct / 100);
   const cdc = shares > 0 ? shares * settings.cdcPerShare : 0;
-  const cvt = isBuy ? amount * (settings.cvtPct / 100) : 0; // historically a buy-side stamp duty
-
+  const cvt = isBuy ? amount * (settings.cvtPct / 100) : 0;
   const rawTotal = commission + taxOnCommission + psxFee + nccplFee + secpLevy + cdc + cvt;
   const total = Math.max(round2(rawTotal), settings.minFee || 0);
-
-  return {
-    commission: round2(commission),
-    taxOnCommission: round2(taxOnCommission),
-    psxFee: round2(psxFee),
-    nccplFee: round2(nccplFee),
-    secpLevy: round2(secpLevy),
-    cdc: round2(cdc),
-    cvt: round2(cvt),
-    total,
-  };
+  return { commission: round2(commission), taxOnCommission: round2(taxOnCommission), psxFee: round2(psxFee), nccplFee: round2(nccplFee), secpLevy: round2(secpLevy), cdc: round2(cdc), cvt: round2(cvt), total };
 }
 
-/** README item 5: JS Bank (and most brokers) charge ~30% CGT for
- * non-filers vs 15% for filers — the legacy app hardcoded both to 15%.
- * This reads the two rates from settings and picks by `filerStatus`,
- * defaulting non-filer to 30% (see PSX_DEFAULT_SETTINGS). Positive gains
- * only — a loss generates neither a charge nor a rebate here. */
 export function calcCGT(gain: number, settings: PSXSettings): number {
   if (!(gain > 0)) return 0;
   const rate = settings.filerStatus === 'nonfiler' ? settings.cgtNonFilerPct : settings.cgtFilerPct;
   return gain * (rate / 100);
 }
 
-/** README items 6/7: same-day (intraday) round-trips should only pay full
- * commission+SST on the LARGER side (buy qty vs sell qty for that ticker
- * on that date) — the smaller side nets against it and pays only the
- * government levies, not double commission. Ties go to BUY. Returns null
- * when there's no same-day pairing (normal both-sides commission). */
+/** Only filled/completed transactions participate in actual fee pairing.
+ * Pending orders are hypothetical and must never change the fee of a filled
+ * transaction merely by being present in the workbook. */
 export function sameDayChargedSide(transactions: Transaction[], ticker: string, date: string): 'BUY' | 'SELL' | null {
-  const dayTxs = transactions.filter((t) => t.ticker === ticker && t.date === date);
+  const dayTxs = transactions.filter((t) => !t.isPending && t.ticker === ticker && t.date === date);
   const buyQty = dayTxs.filter((t) => t.action === 'BUY').reduce((s, t) => s + t.shares, 0);
   const sellQty = dayTxs.filter((t) => t.action === 'SELL').reduce((s, t) => s + t.shares, 0);
   if (buyQty <= 0 || sellQty <= 0) return null;
   return sellQty > buyQty ? 'SELL' : 'BUY';
 }
 
-/** README item 7: is this transaction's leg netted (government levies only,
- * no commission/SST)? True either when the user has manually flagged it
- * (`manualSameDay`, for when the recorded date doesn't line up with the
- * real trade day) or when the date-based auto-detection pairs it with an
- * opposite-side same-day trade. */
 export function isNettedLeg(transactions: Transaction[], tx: Transaction): boolean {
   if (tx.manualSameDay) return true;
   const charged = sameDayChargedSide(transactions, tx.ticker, tx.date);
   return charged !== null && tx.action !== charged;
 }
 
-/** User-reported (2026-09-11): Auto mode "silently applied commission on
- * same-day buys... making final price far higher than the benefit." The
- * root cause: a lone BUY dated today, with no matching SELL logged *yet*,
- * only ever had two outcomes to pick from — full commission (nothing to
- * net against) or netted (a real pair exists) — so it always priced at
- * full commission while the trading day was still open, even though it
- * might close same-day within the hour.
- *
- * This is a genuine THIRD outcome, not a variant of either: **provisional
- * zero**, live-derived from comparing the transaction's own date against
- * PSX's real current calendar date (`defaultTimezoneForMarket('PSX')` —
- * never the browser's raw local date, the same class of bug already fixed
- * once for `installmentDueDate`). It only ever applies to
- * - a BUY (not a SELL — the user's own spec: "commission 0 for all buys
- *   where date is today"),
- * - dated exactly today in PSX's own timezone,
- * - with no matching same-day SELL yet (`sameDayChargedSide` returns
- *   `null` — the moment a SELL appears, this stops applying and the
- *   normal charged/netted split below takes over instead).
- *
- * Once the calendar date moves past "today" with the BUY still unpaired,
- * this predicate goes false on its own (the date comparison itself
- * changes, nothing is stored) and `makePSXFeeCalculator` falls through to
- * its existing full-fee default — the same behavior an unpaired
- * historical transaction has always had. This is what makes the
- * provisional zero self-correcting rather than a permanent stale flag:
- * unlike the earlier, reverted `manualSameDay` pre-check default (see
- * `CLAUDE.md`'s Done items 67/127), nothing is ever *written* here — it's
- * a live comparison re-evaluated on every read, so it can never go stale
- * the way a persisted flag did. `tx.manualSameDay` (an explicit user
- * override) is checked first in `makePSXFeeCalculator` and always wins
- * over this, same as it already wins over everything else. */
 export function isProvisionalSameDayBuy(transactions: Transaction[], tx: Transaction): boolean {
   if (tx.action !== 'BUY') return false;
   if (tx.date !== todayISODate(defaultTimezoneForMarket('PSX'))) return false;
   return sameDayChargedSide(transactions, tx.ticker, tx.date) === null;
 }
 
-/** Builds a same-day-aware fee calculator over a fixed transaction list.
- * README item 11: `tx.feeOverride`, when set, wins outright before anything
- * else runs — a manual correction for reconciling against the real account
- * statement, bypassing same-day netting too. Otherwise, when called with a
- * real transaction (`context.tx`), it looks up whether that transaction's
- * side is the one "charged" full commission for that ticker+date, or the
- * netted side (levies only) — see `isNettedLeg`. When called without a
- * `tx` (e.g. break-even/target-price what-ifs, where there's no real
- * same-day context yet), it falls back to modeling a single hypothetical
- * leg — matching the legacy calcFee()/calcFeeBreakdown() split between
- * "forward-looking calculators" and "actual recorded transactions". */
-/** Both possible fee outcomes for a not-yet-executed leg — user-reported: the
- * Trade Planner always priced a leg under one guessed scenario (full
- * commission, unless another leg already in the plan happened to pair with
- * it same-day), which hid the cheaper same-day-netted price from view while
- * still planning, exactly when seeing it could change whether the user times
- * the trade as a same-day round trip. Pure and stateless — doesn't care what
- * else is in the plan or the real transaction log, unlike `calcLegFee` in
- * `TradeStrategyPage.tsx`, which still remains the "best automatic guess"
- * fee shown for an already-paired leg. */
 export function feeScenarios(amount: number, isBuy: boolean, shares: number, settings: PSXSettings): { full: number; netted: number } {
   const fb = calcFeeBreakdown(amount, isBuy, shares, settings);
   return { full: fb.total, netted: round2(fb.psxFee + fb.nccplFee + fb.secpLevy + fb.cdc + fb.cvt) };
@@ -169,17 +80,8 @@ export function makePSXFeeCalculator(settings: PSXSettings, allTransactions: Tra
     const tx = context?.tx;
     if (tx?.feeOverride !== undefined) return tx.feeOverride;
     if (!tx) return calcFeeBreakdown(amount, isBuy, shares, settings).total;
-
-    // An explicit manual override always wins outright, same as it already
-    // does for every other case — checked here (not just inside
-    // isNettedLeg) so it's the one deliberate exception to the provisional-
-    // zero case right below it.
     if (!tx.manualSameDay && isProvisionalSameDayBuy(allTransactions, tx)) return 0;
-
-    if (!isNettedLeg(allTransactions, tx)) {
-      return calcFeeBreakdown(amount, isBuy, shares, settings).total;
-    }
-    // Netted side: government levies only, no commission or SST.
+    if (!isNettedLeg(allTransactions, tx)) return calcFeeBreakdown(amount, isBuy, shares, settings).total;
     const fb = calcFeeBreakdown(amount, isBuy, shares, settings);
     return round2(fb.psxFee + fb.nccplFee + fb.secpLevy + fb.cdc + fb.cvt);
   };
