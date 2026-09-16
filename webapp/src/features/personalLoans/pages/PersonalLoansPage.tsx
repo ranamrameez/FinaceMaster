@@ -19,6 +19,7 @@ import { TransactionEntryModal } from '../../../components/TransactionEntryModal
 import { RecordDetailModal } from '../../../components/RecordDetailModal';
 import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
+import { usePrimaryCurrency } from '../../../hooks/usePrimaryCurrency';
 import { ReorderButtons } from '../../../components/ui/ReorderButtons';
 import { dateOnlyMs } from '../../../lib/datetime';
 import { parseCSV, toCSV } from '../../../lib/csv';
@@ -195,7 +196,9 @@ function AddLoanFab() {
  * `SideFields` reuses this exact form from `TransactionEntryModal`. */
 export function AddLoanForm({ onSaved, initialCurrency }: { onSaved?: (id: string) => void; initialCurrency?: string } = {}) {
   const addLoan = usePersonalLoansWorkbookStore((s) => s.addLoan);
-  const defaultCurrency = usePersonalLoansWorkbookStore((s) => s.workbook.settings.defaultCurrency);
+  const primaryCurrency = usePrimaryCurrency();
+  const workbookDefaultCurrency = usePersonalLoansWorkbookStore((s) => s.workbook.settings.defaultCurrency);
+  const defaultCurrency = primaryCurrency ?? workbookDefaultCurrency;
   const [lastCurrency, setLastCurrency] = useLastCurrency('personalLoans', defaultCurrency);
   const ensureSignedIn = useEnsureSignedIn();
   const [l, setL] = useState<PersonalLoan>(() => emptyLoan(initialCurrency ?? lastCurrency));

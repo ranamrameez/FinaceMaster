@@ -21,6 +21,7 @@ import { FinanceEditModal } from '../../../components/FinanceEditModal';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
+import { usePrimaryCurrency } from '../../../hooks/usePrimaryCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { categoryName, RENT_CATEGORY_ID, UNCATEGORIZED_ID } from '../../../lib/categories';
 import { useCategoryStore } from '../../../store/categoryStore';
@@ -44,11 +45,9 @@ import { useRentalsWorkbookStore } from '../../../store/rentalsWorkbookStore';
 import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
 import { linkTargetPath, useLinkSideLabel } from '../../transfers/pages/TransferLinksPage';
 import { usePlannedRentalsWorkbookStore } from '../../../store/plannedRentalsWorkbookStore';
-import type { Property, RentalEntry, RentalsWorkbook } from '../../../types/rentalsWorkbook';
+import type { Property, RentalEntry } from '../../../types/rentalsWorkbook';
 import { ChartCard } from '../../qse/components/ChartCard';
 import { gridAutoStyle } from '../../../lib/gridStyle';
-
-const today = () => new Date().toISOString().slice(0, 10);
 const uid = () => crypto.randomUUID();
 
 function emptyProperty(defaultCurrency: string): Property {
@@ -126,7 +125,8 @@ function AddPropertyFab() {
  * `SideFields` reuses this exact form from `TransactionEntryModal`. */
 export function AddPropertyForm({ onSaved, initialCurrency }: { onSaved?: (id: string) => void; initialCurrency?: string } = {}) {
   const addProperty = useRentalsWorkbookStore((s) => s.addProperty);
-  const [lastCurrency, setLastCurrency] = useLastCurrency('rentals', 'USD');
+  const primaryCurrency = usePrimaryCurrency();
+  const [lastCurrency, setLastCurrency] = useLastCurrency('rentals', primaryCurrency ?? 'USD');
   const ensureSignedIn = useEnsureSignedIn();
   const [p, setP] = useState(() => emptyProperty(initialCurrency ?? lastCurrency));
   const currencyOptions = useEnabledCurrencies(p.currencyCode);
@@ -1289,34 +1289,15 @@ function AccountSection({
   );
 }
 
+// User-requested (2026-09-16): "No need of settings in individual modules!"
+// — Default currency and JSON export/import were per-module settings
+// duplicating two already-unified hubs: currency is now driven app-wide by
+// the Account page's Primary/Secondary/Other ranking (`usePrimaryCurrency`),
+// and export/import lives at `/app-data` (Done item 177). Only "Clear all
+// data" stays here — a real, destructive, module-scoped action `/app-data`
+// has no equivalent for.
 function DataManagement() {
-  const workbook = useRentalsWorkbookStore((s) => s.workbook);
   const setWorkbook = useRentalsWorkbookStore((s) => s.setWorkbook);
-  const fileInput = useRef<HTMLInputElement>(null);
-
-  const exportJSON = () => {
-    const blob = new Blob([JSON.stringify(workbook, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `rentals-workbook-backup-${today()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const importJSON = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const parsed = JSON.parse(String(reader.result)) as Partial<RentalsWorkbook>;
-        setWorkbook({ ...createEmptyRentalsWorkbook(), ...parsed });
-        toast('Workbook imported.');
-      } catch {
-        toast('That file is not valid workbook JSON.');
-      }
-    };
-    reader.readAsText(file);
-  };
 
   const clearAll = async () => {
     const ok = await confirmDialog('This cannot be undone (export a backup first if unsure).', 'Clear all rentals data?');
@@ -1328,20 +1309,11 @@ function DataManagement() {
   return (
     <Card>
       <h3 className="mt-0">Data management</h3>
+      <p className="text-muted" style={{ marginTop: 0 }}>
+        Currency preferences live on the <Link to="/account">Account page</Link>; whole-app JSON
+        export/import lives on the <Link to="/app-data">Data page</Link>.
+      </p>
       <div className="row gap-sm">
-        <button className="btn secondary" onClick={exportJSON}>Export JSON</button>
-        <button className="btn secondary" onClick={() => fileInput.current?.click()}>Import JSON</button>
-        <input
-          ref={fileInput}
-          type="file"
-          accept="application/json"
-          className="hidden-file-input"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) importJSON(file);
-            e.target.value = '';
-          }}
-        />
         <button className="btn secondary" onClick={clearAll}><TrashIcon size={12} />Clear all data</button>
       </div>
     </Card>

@@ -7093,6 +7093,33 @@ touched those.
   (Firebase/Google domains are network-policy-blocked here, same limitation documented earlier
   in this file) — both diagnoses are from code-reading plus synthetic repros, not the user's
   real data; say so plainly if a future session revisits either without a real sign-in.
+- **Primary/Secondary/Other currency tiering built (2026-09-16), closing the "currencies"
+  complaint just above — see README Done item 332 for the full writeup.** `enabledCodes`' own
+  array insertion order is now the ranking (index 0 = Primary, 1 = Secondary, rest Other) — no
+  new schema field. New `hooks/usePrimaryCurrency.ts` and `hooks/useCurrencyRank.ts`; a real
+  reorder UI on `/account`'s Currencies section; `CurrencyChips` now collapses anything past
+  Secondary behind a "+N more" chip (auto-expands if the current value is one of them); Net
+  Worth's per-currency cards and pairwise exchange-rate table sort by rank instead of
+  alphabetically. **Mid-build, a much bigger correction arrived, verbatim**: "we are not working
+  on stand-alone html pages! this is single app... No need of settings in individual modules!
+  ... including currency and account status, json import & export etc." Every module's own
+  `DataManagement()` Export/Import-JSON UI (Cash/Bank/Funds/QSE/PSX/Rentals/Subscriptions) was
+  removed outright — it fully duplicated `/app-data` (Done item 177) — keeping only "Clear all
+  data" plus a pointer to `/account`/`/app-data`. Every module's `useLastCurrency` seed now
+  prefers `usePrimaryCurrency()` before falling back to its own (no-longer-user-facing)
+  `workbook.settings.defaultCurrency`. **A real Rules-of-Hooks bug was caught and fixed before
+  shipping**: the first draft used `usePrimaryCurrency() ?? useXWorkbookStore(...)` — since `??`
+  only evaluates its right side when the left is nullish, this conditionally skipped a Zustand
+  store hook depending on render-to-render state, a genuine hook-order violation. Fixed
+  everywhere by calling both hooks unconditionally into separate variables first, combining with
+  `??` only after. Every module's `AccountSection` ("account status") was re-audited and
+  confirmed already minimal (just the cloud-empty-upload safety prompt, per Done items 213/214)
+  — no further change needed there. Verified live via Playwright with 5 seeded ranked
+  currencies: the Account page's reorder buttons correctly swap ranks in `localStorage`;
+  `CurrencyChips` (via Cash's Transfers popup) showed exactly Primary+Secondary plus a "+3 more"
+  chip, expanding correctly; all 7 modules confirmed Export/Import JSON gone and `/account`/
+  `/app-data` links present — zero console errors. `npx tsc -b` / `npm run test` (696 tests,
+  unchanged) / `npm run build` all clean.
 
 ## Live URLs
 

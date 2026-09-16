@@ -25,6 +25,7 @@ import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { useAmountFormat } from '../../../hooks/useAmountFormat';
 import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
+import { usePrimaryCurrency } from '../../../hooks/usePrimaryCurrency';
 import { usePageFabActions } from '../../../hooks/usePageFabActions';
 import { allExtraActions, useFabActionsStore } from '../../../store/fabActionsStore';
 import { ReorderButtons } from '../../../components/ui/ReorderButtons';
@@ -57,7 +58,7 @@ import { usePlannedBankWorkbookStore } from '../../../store/plannedBankWorkbookS
 import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
 import { linkTargetPath, useLinkSideLabel } from '../../transfers/pages/TransferLinksPage';
 import { CreditCardsTab } from './CreditCardsSection';
-import type { BankAccount, BankTransaction, BankWorkbook } from '../../../types/bankWorkbook';
+import type { BankAccount, BankTransaction } from '../../../types/bankWorkbook';
 import type { CreditCard } from '../../../types/creditCard';
 import type { PlannedBankTransaction } from '../../../types/plannedBank';
 import { gridAutoStyle } from '../../../lib/gridStyle';
@@ -409,7 +410,8 @@ function AccountFormFields({
  * modal) so that same picker can auto-select the new account immediately. */
 export function AddAccountForm({ onSaved, initialCurrency, initialBankId }: { onSaved?: (id: string) => void; initialCurrency?: string; initialBankId?: string }) {
   const addAccount = useBankWorkbookStore((s) => s.addAccount);
-  const [lastCurrency, setLastCurrency] = useLastCurrency('bank-account', 'USD');
+  const primaryCurrency = usePrimaryCurrency();
+  const [lastCurrency, setLastCurrency] = useLastCurrency('bank-account', primaryCurrency ?? 'USD');
   const ensureSignedIn = useEnsureSignedIn();
   const [a, setA] = useState(() => emptyAccount(initialCurrency ?? lastCurrency, initialBankId));
 
@@ -2458,34 +2460,15 @@ export function PlanningTab({
   );
 }
 
+// User-requested (2026-09-16): "No need of settings in individual modules!"
+// — Default currency and JSON export/import were per-module settings
+// duplicating two already-unified hubs: currency is now driven app-wide by
+// the Account page's Primary/Secondary/Other ranking (`usePrimaryCurrency`),
+// and export/import lives at `/app-data` (Done item 177). Only "Clear all
+// data" stays here — a real, destructive, module-scoped action `/app-data`
+// has no equivalent for.
 function DataManagement() {
-  const workbook = useBankWorkbookStore((s) => s.workbook);
   const setWorkbook = useBankWorkbookStore((s) => s.setWorkbook);
-  const fileInput = useRef<HTMLInputElement>(null);
-
-  const exportJSON = () => {
-    const blob = new Blob([JSON.stringify(workbook, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `bank-workbook-backup-${today()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const importJSON = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const parsed = JSON.parse(String(reader.result)) as Partial<BankWorkbook>;
-        setWorkbook({ ...createEmptyBankWorkbook(), ...parsed });
-        toast('Workbook imported.');
-      } catch {
-        toast('That file is not valid workbook JSON.');
-      }
-    };
-    reader.readAsText(file);
-  };
 
   const clearAll = async () => {
     const ok = await confirmDialog('This cannot be undone (export a backup first if unsure).', 'Clear all banking data?');
@@ -2499,20 +2482,11 @@ function DataManagement() {
       <div className="text-muted" style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: 11, letterSpacing: '.04em', marginBottom: 8 }}>
         Data management
       </div>
+      <p className="text-muted" style={{ marginTop: 0 }}>
+        Currency preferences live on the <Link to="/account">Account page</Link>; whole-app JSON
+        export/import lives on the <Link to="/app-data">Data page</Link>.
+      </p>
       <div className="row gap-sm">
-        <button className="btn secondary" onClick={exportJSON}>Export JSON</button>
-        <button className="btn secondary" onClick={() => fileInput.current?.click()}>Import JSON</button>
-        <input
-          ref={fileInput}
-          type="file"
-          accept="application/json"
-          className="hidden-file-input"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) importJSON(file);
-            e.target.value = '';
-          }}
-        />
         <button className="btn danger" onClick={clearAll}><TrashIcon size={12} />Clear all data</button>
       </div>
     </div>
