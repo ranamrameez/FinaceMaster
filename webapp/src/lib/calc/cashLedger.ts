@@ -2,18 +2,9 @@ import type { Adjustment, CashLedgerEvent, FeeCalculator, Transaction, Transfer 
 import { fmt } from '../format';
 import { toInstantMs } from '../datetime';
 
-/** Merges every buy, sell, deposit, and withdrawal into one chronological cash
- * ledger with a running balance — same shape as a broker statement's
- * "Balance" column. Sorted by real instant (Pending item 41's optional
- * `time`/`timezone` on each record, see `lib/datetime.ts`); on an exact
- * tie (the common case for untimed records, which all default to the same
- * noon-UTC placeholder) transfers still go before trades, since that's how
- * money usually has to arrive before you can spend it — a domain rule, not
- * an ordering preference, so it's checked first. When that rule doesn't
- * disambiguate (two events of the SAME kind at the same instant), `seq`
- * (carried through from whichever record produced the event — see
- * `Transaction.seq`'s doc comment) decides real entry order.
- * Ported 1:1 from the legacy `buildCashLedger()` in index.html. */
+/** Merges every completed buy, sell, deposit, and withdrawal into one chronological
+ * cash ledger with a running balance. Pending trades are deliberately excluded:
+ * an unfilled order has not moved broker cash yet. */
 export function buildCashLedger(
   transactions: Transaction[],
   transfers: Transfer[],
@@ -22,7 +13,7 @@ export function buildCashLedger(
 ): CashLedgerEvent[] {
   const events: Omit<CashLedgerEvent, 'balance'>[] = [];
 
-  transactions.forEach((tx) => {
+  transactions.filter((tx) => !tx.isPending).forEach((tx) => {
     const amount = tx.shares * tx.price;
     const fee = calcFee(amount, tx.action === 'BUY', { shares: tx.shares, tx });
     const cashDelta = tx.action === 'BUY' ? -(amount + fee) : amount - fee;
