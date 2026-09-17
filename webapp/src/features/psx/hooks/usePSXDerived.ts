@@ -25,22 +25,23 @@ export interface PSXRow {
  *
  * README item 8: `positions`/`realizedSeries` come from FIFO lot matching
  * instead of the weighted-average default when `settings.costBasisMethod`
- * is 'fifo' — an explicit user opt-in (see PSXSettings), not the default,
- * since it changes real computed P/L numbers. `lots` exposes each open
- * ticker's remaining FIFO lots for display; it's empty under the
- * weighted-average method, which has no discrete lots to show. */
+ * is 'fifo' or 'lowestCostFirst' — an explicit user opt-in (see
+ * PSXSettings), not the default, since it changes real computed P/L
+ * numbers. `lots` exposes each open ticker's remaining lots for display;
+ * it's empty under the weighted-average method, which has no discrete lots
+ * to show. */
 export function usePSXDerived() {
   const workbook = usePSXWorkbookStore((s) => s.workbook);
 
   return useMemo(() => {
     const calcFee = makePSXFeeCalculator(workbook.settings, workbook.transactions);
-    const useFIFO = workbook.settings.costBasisMethod === 'fifo';
+    const method = workbook.settings.costBasisMethod;
 
     let positions;
     let realizedSeries;
     let lots: Record<string, FIFOLot[]> = {};
-    if (useFIFO) {
-      const fifo = computeFIFOPositions(workbook.transactions, calcFee);
+    if (method === 'fifo' || method === 'lowestCostFirst') {
+      const fifo = computeFIFOPositions(workbook.transactions, calcFee, method);
       positions = fifo.positions;
       realizedSeries = fifo.realizedSeries;
       lots = fifo.lotsByTicker;

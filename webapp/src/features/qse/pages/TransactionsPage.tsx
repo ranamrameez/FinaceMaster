@@ -340,7 +340,10 @@ function TransactionList() {
   // it gets difficult to know the sold status and price of a lot." Same
   // FIFO-lot view as `computeClosedTrades` above, just the still-held half
   // of it (`computeFIFOPositions`'s own `lotsByTicker`) — a pure reporting
-  // ledger, independent of QSE's own weighted-average position calc. Shares
+  // ledger, deliberately independent of QSE's own OFFICIAL position calc
+  // (`QSESettings.costBasisMethod`, whether that's weighted-average or one
+  // of the lot-based methods) so this page's own reporting view never
+  // silently changes shape depending on that setting. Shares
   // `ctMatchOrder` with Closed trades below (2026-09-13, see
   // `LotMatchOrder`'s own doc comment) so the two tables always add up to
   // the same picture of which lots are still open vs. already sold.

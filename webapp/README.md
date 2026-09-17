@@ -9612,6 +9612,61 @@ FinanceManager live link:
   initialized before a `localStorage` write via `page.evaluate()` won't pick up that write —
   a `page.reload()` was needed after seeding to see the new group render. `npx tsc -b` /
   `npm run test` (711 tests, 6 new) / `npm run build` all clean.
+- **CRITICAL, user-reported real financial-loss risk (2026-09-17): QSE (and PSX's default
+  mode) silently ignored `targetLotBuyId`, understating a real remaining loss as a small
+  profit — see Done item 336.** User attached a real broker screenshot showing IQCD's Buy
+  Average (10.22) far above the app's shown Cost (10.10), with the app's own Unrealized P/L
+  reading a small +0.55 QAR profit while the broker showed a real -1 PKR loss on the same
+  position — flatly rejecting an earlier answer that attributed the whole gap to commission.
+  Traced it by reading `computePositions()` directly: QSE had NO cost-basis toggle at all —
+  every SELL always reduced the running blended (shares, invested) pair proportionally,
+  completely ignoring `Transaction.targetLotBuyId` (the field "Sell this lot" on the Trade
+  Strategy page sets to close a SPECIFIC lot — see Done item 301/314). Once the user started
+  deliberately closing cheap lots first to protect an underwater expensive one (their own
+  explicit, repeated instruction: "sell the cheaper first, protect the underwater expensive
+  ones"), the blended weighted-average spread that reduction across the WHOLE position
+  instead of really removing the cheap lot's own cost — silently understating the true
+  remaining cost basis of what's left. Verified the mechanism, not just asserted it: replayed
+  the user's real IQCD transaction history (from their earlier full-app backup) through both
+  weighted-average and `computeFIFOPositions('lowestCostFirst')` in a throwaway script —
+  weighted-average landed at 10.10 (matches the app), lowest-cost-first landed at 10.2465,
+  within 0.03 of the broker's real 10.22 despite the backup being a few days stale, vs. plain
+  oldest-first FIFO landing at 10.00 (far off) — strong evidence the broker's own real
+  remaining-lot accounting is much closer to "cheapest lot first" than either weighted-average
+  or classic FIFO.
+  **Fix**: `QSESettings.costBasisMethod?: 'average' | 'fifo' | 'lowestCostFirst'` — QSE gained
+  the identical opt-in field PSX already had (`PSXSettings.costBasisMethod`, itself widened
+  from a 2-value union to include the new `'lowestCostFirst'` too, since the exact same
+  understating-a-real-loss bug applies to PSX's own default 'average' mode). Optional/
+  undefined behaves as 'average', so no existing workbook (QSE or PSX) is silently
+  recalculated — this is purely opt-in, per this project's own locked "never silently
+  retroactively recompute a user's historical P/L" rule. `useQSEDerived()` now branches
+  exactly like `usePSXDerived()` already did: `computeFIFOPositions(transactions, calcFee,
+  method)` when lot-based, `computePositions()` unchanged when 'average' — `computeFIFOPositions`
+  already fully supported `'lowestCostFirst'` and `targetLotBuyId` (built for the Trade
+  Strategy advisory view, Done item 314), so this needed zero new calc-engine code, only
+  wiring the SAME already-tested engine into the real official numbers too. Both exchanges'
+  `PositionDetail.tsx` "Open lots" section now shows the real official lots (badge flips
+  History → Official) once a lot-based method is active, instead of always independently
+  recomputing a pure-reporting fallback. New "Cost basis method" card added to QSE's Settings
+  page (mirroring PSX's existing one, with QSE-specific wording — QSE's flat % fee means the
+  fee itself doesn't change between methods, only which lot's cost gets attributed to a sell).
+  **Verified live via Playwright on both exchanges**, not just unit tests: seeded the exact
+  minimal repro (50 sh bought @10.40, 14 sh bought @9.962, the 14-share lot explicitly sold via
+  `targetLotBuyId`, current price 10.16) — QSE's Dashboard Cost went from 10.33 (weighted-
+  average, understating the loss at -10.02 QAR) to 10.43 (Lowest-cost-first, the true
+  remaining-lot cost, -14.83 QAR) after switching the setting; the stock page's "Open lots"
+  section correctly showed only the one remaining expensive lot with the correct per-share
+  cost, badge correctly reading Official; "Closed round-trips" (the separate, always-
+  independent reporting ledger) correctly kept showing the cheap lot's own real trade
+  unaffected. Reproduced identically on PSX (Cost 10.36 → 10.46, loss -13.09 → -17.88 PKR) —
+  same fix, same mechanism, both exchanges. Zero new console errors on either. `npx tsc -b` /
+  `npm run test` (716 tests, unchanged — this fix reuses an already-tested engine, no new calc
+  logic) / `npm run build` all clean. **Not done in this pass, deliberately**: this doesn't
+  auto-migrate the user's own real account to the new setting (an opt-in, per the locked
+  cost-basis-change rule) — they need to switch it themselves in Settings once this ships, and
+  should expect their real historical Unrealized P/L for any ticker with lot-targeted sells to
+  become more negative (more honest) once they do.
 
 ## Pending
 

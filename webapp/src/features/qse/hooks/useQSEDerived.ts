@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { buildCashLedger, cashSummary, computePositions, computeRealizedPLTimeSeries, getMarketPrice, makeQSEFeeCalculator } from '../../../lib/calc';
+import { computeFIFOPositions, type FIFOLot } from '../../../lib/calc/fifoPositions';
 import { useWorkbookStore } from '../../../store/workbookStore';
 
 export interface QSERow {
@@ -14,20 +15,39 @@ export interface QSERow {
   roiPct: number;
 }
 
+/** Added 2026-09-17: see `QSESettings.costBasisMethod`'s own doc comment
+ * for why QSE (which used to hardcode weighted-average with no toggle at
+ * all) needed the same opt-in lot-based methods PSX already had — this
+ * mirrors `usePSXDerived`'s own branch exactly. Default ('average' /
+ * undefined) is byte-for-byte unchanged from before this existed. */
 export function useQSEDerived() {
   const workbook = useWorkbookStore((s) => s.workbook);
 
   return useMemo(() => {
     const calcFee = makeQSEFeeCalculator(workbook.settings);
-    const positions = computePositions(workbook.transactions, calcFee);
+    const method = workbook.settings.costBasisMethod ?? 'average';
+
+    let positions;
+    let realizedSeries;
+    let lots: Record<string, FIFOLot[]> = {};
+    if (method === 'average') {
+      positions = computePositions(workbook.transactions, calcFee);
+      realizedSeries = computeRealizedPLTimeSeries(workbook.transactions, calcFee);
+    } else {
+      const fifo = computeFIFOPositions(workbook.transactions, calcFee, method);
+      positions = fifo.positions;
+      realizedSeries = fifo.realizedSeries;
+      lots = fifo.lotsByTicker;
+    }
+
     const summary = cashSummary(
       workbook.transactions,
       workbook.transfers,
       workbook.adjustments,
       workbook.marketPrices,
       calcFee,
+      positions,
     );
-    const realizedSeries = computeRealizedPLTimeSeries(workbook.transactions, calcFee);
     const ledger = buildCashLedger(workbook.transactions, workbook.transfers, workbook.adjustments, calcFee);
 
     // Shared per-open-position rollup (mirrors the legacy dashboard's
@@ -43,6 +63,6 @@ export function useQSEDerived() {
         return { ticker: p.ticker, shares: p.shares, invested: p.invested, marketPrice, value, sellFee, profit, roiPct };
       });
 
-    return { workbook, calcFee, positions, summary, realizedSeries, ledger, rows };
+    return { workbook, calcFee, positions, summary, realizedSeries, ledger, rows, lots };
   }, [workbook]);
 }

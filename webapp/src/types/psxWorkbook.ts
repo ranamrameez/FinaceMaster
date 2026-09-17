@@ -23,10 +23,20 @@ export interface PSXSettings {
    * buy blends into one running average cost, so a sell can't be tied to a
    * specific lot. 'fifo' tracks each buy as its own lot ("each buy should
    * have its own sell peer") and consumes the oldest open lot first on a
-   * sell, giving lot-accurate realized P/L. Opt-in, not the default,
-   * because switching it changes a real user's computed historical P/L
-   * numbers — never flip this silently. */
-  costBasisMethod: 'average' | 'fifo';
+   * sell, giving lot-accurate realized P/L. 'lowestCostFirst' (added
+   * 2026-09-17, real financial-loss bug report — see `targetLotBuyId`'s own
+   * comment and `computeFIFOPositions`) is the same lot tracking but
+   * consumes the CHEAPEST open lot first on an untargeted sell — the
+   * user's own explicit rule ("sell the cheaper first, protect the
+   * underwater expensive ones"), and empirically the closest match to a
+   * real broker statement's own Avg Buy Price whenever the account has done
+   * any deliberate cheap-lot-first selling (weighted-average silently blends
+   * the reduction across the whole position instead of really removing the
+   * cheap lot, which understates the true remaining cost basis of what's
+   * left — i.e. it can make a real loss look like a profit). All three
+   * options are opt-in, not the default, because switching changes a real
+   * user's computed historical P/L numbers — never flip this silently. */
+  costBasisMethod: 'average' | 'fifo' | 'lowestCostFirst';
   /** User-requested 2026-08-27 ("I need automation... auto check the
    * commission + manual entry (%age or lump sum), not itemized fields I
    * have to reconcile myself"): an alternative to the itemized commission+

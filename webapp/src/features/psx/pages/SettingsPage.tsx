@@ -231,16 +231,21 @@ function CostBasisSettings() {
       <h3 className="mt-0">Cost basis method</h3>
       <p className="text-muted" style={{ marginTop: -4 }}>
         Average cost blends every buy into one running average, so a sell can't be tied to a
-        specific lot. FIFO tracks each buy as its own lot and sells the oldest one first — more
-        accurate, but everything (realized P/L, invested amount, CGT) is recalculated from your
-        <em> entire</em> transaction history on every load, not stored per-entry — so switching
-        this immediately recomputes your whole historical P/L under the new method, not just
-        future trades.
+        specific lot — this can make a real remaining loss look smaller (or even profitable) once
+        you've deliberately closed out cheap lots, since the reduction gets spread across the
+        whole blended position instead of really coming off the lot you sold. FIFO and Lowest cost
+        first both track each buy as its own lot instead; FIFO sells the oldest lot first, Lowest
+        cost first sells the cheapest lot first (matching "Sell this lot" on the Trade Strategy
+        page, and usually the closest match to a real broker statement's own Avg Buy Price).
+        Switching any of these immediately recomputes your whole historical P/L (realized P/L,
+        invested amount, CGT) from your <em>entire</em> transaction history, not stored per-entry
+        — not just future trades.
       </p>
       <Field label="Method" width={220}>
-        <Select value={settings.costBasisMethod} onChange={(e) => updateSettings({ costBasisMethod: e.target.value as 'average' | 'fifo' })}>
+        <Select value={settings.costBasisMethod} onChange={(e) => updateSettings({ costBasisMethod: e.target.value as 'average' | 'fifo' | 'lowestCostFirst' })}>
           <option value="average">Average cost (default)</option>
-          <option value="fifo">FIFO lots</option>
+          <option value="fifo">FIFO lots (oldest first)</option>
+          <option value="lowestCostFirst">Lowest cost first</option>
         </Select>
       </Field>
     </Card>

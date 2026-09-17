@@ -15,7 +15,9 @@ import { getMarketPrice } from './priceHistory';
  * regardless of a workbook's real `costBasisMethod` setting — it must
  * never be read as implying that setting should change, since that
  * retroactively recomputes a user's real historical P/L (see
- * `PSXSettings.costBasisMethod`'s own locked warning). */
+ * `PSXSettings.costBasisMethod`'s own doc comment — QSE gained the
+ * identical `QSESettings.costBasisMethod` field 2026-09-17, same warning
+ * applies there too). */
 
 export interface LotAdvice {
   /** The originating buy's stable id, when it has one — pass this back as

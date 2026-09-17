@@ -1,11 +1,13 @@
 import type { User } from 'firebase/auth';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Card } from '../../../components/Card';
 import { Notice } from '../../../components/Notice';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
-import { Field, TextInput } from '../../../components/ui/Field';
+import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 import { firebaseReady } from '../../../lib/firebase/client';
 import { createEmptyWorkbook } from '../../../store/defaultWorkbook';
 import { useWorkbookStore } from '../../../store/workbookStore';
@@ -94,27 +96,72 @@ function DataManagement() {
   );
 }
 
+// Added 2026-09-17, real financial-loss bug report — see
+// `QSESettings.costBasisMethod`'s own doc comment. Mirrors PSX's identical
+// card (`features/psx/pages/SettingsPage.tsx`'s `CostBasisSettings`)
+// word-for-word except for the QSE-specific fee-model framing (QSE has no
+// per-share fee tiering PSX has to worry about, hence "FIFO doesn't matter
+// for fees here" — but it still matters for which lot's cost gets
+// attributed to a sell, which is the actual bug).
+function CostBasisSettings() {
+  const settings = useWorkbookStore((s) => s.workbook.settings);
+  const updateSettings = useWorkbookStore((s) => s.updateSettings);
+  const method = settings.costBasisMethod ?? 'average';
+
+  return (
+    <Card>
+      <h3 className="mt-0">Cost basis method</h3>
+      <p className="text-muted" style={{ marginTop: -4 }}>
+        Average cost (the default, unchanged) blends every buy into one running average, so a sell
+        can't be tied to a specific lot — this can make a real remaining loss look smaller (or
+        even profitable) once you've deliberately closed out cheap lots, since the reduction gets
+        spread across the whole blended position instead of really coming off the lot you sold.
+        FIFO and Lowest cost first both track each buy as its own lot instead; FIFO sells the
+        oldest lot first, Lowest cost first sells the cheapest lot first (matching "Sell this lot"
+        on the Trade Strategy page, and usually the closest match to a real broker statement's own
+        Avg Buy Price). QSE's flat % fee means the fee itself is the same either way — the
+        difference is purely which lot's cost gets attributed to a sell. Switching any of these
+        immediately recomputes your whole historical P/L (realized P/L, invested amount) from your
+        <em> entire</em> transaction history, not stored per-entry — not just future trades.
+      </p>
+      <Field label="Method" width={220}>
+        <Select value={method} onChange={(e) => updateSettings({ costBasisMethod: e.target.value as 'average' | 'fifo' | 'lowestCostFirst' })}>
+          <option value="average">Average cost (default)</option>
+          <option value="fifo">FIFO lots (oldest first)</option>
+          <option value="lowestCostFirst">Lowest cost first</option>
+        </Select>
+      </Field>
+    </Card>
+  );
+}
+
 function AmountSettings() {
   const settings = useWorkbookStore((s) => s.workbook.settings);
   const updateSettings = useWorkbookStore((s) => s.updateSettings);
 
   return (
-    <div className="row" style={{ gap: 12 }}>
-      <Field label="Fee %" width={90}>
-        <TextInput type="number" step="0.001" value={settings.feePct} onChange={(e) => updateSettings({ feePct: Number(e.target.value) })} />
-      </Field>
-      <Field label="Min fee" width={90}>
-        <TextInput type="number" step="0.01" value={settings.minFee} onChange={(e) => updateSettings({ minFee: Number(e.target.value) })} />
-      </Field>
-      <Field label="Tick size" width={90}>
-        <TextInput type="number" step="0.001" value={settings.tick} onChange={(e) => updateSettings({ tick: Number(e.target.value) })} />
-      </Field>
-      <Field label="Currency" width={70}>
-        <TextInput value={settings.currency} onChange={(e) => updateSettings({ currency: e.target.value })} />
-      </Field>
-      <Field label="Default deposit fee" width={90}>
-        <TextInput type="number" step="0.01" value={settings.depositFee} onChange={(e) => updateSettings({ depositFee: Number(e.target.value) })} />
-      </Field>
+    <div className="grid-auto" style={{ ...gridAutoStyle(320, 16), alignItems: 'start' }}>
+      <Card>
+        <h3 className="mt-0">General</h3>
+        <div className="row" style={{ gap: 12 }}>
+          <Field label="Fee %" width={90}>
+            <TextInput type="number" step="0.001" value={settings.feePct} onChange={(e) => updateSettings({ feePct: Number(e.target.value) })} />
+          </Field>
+          <Field label="Min fee" width={90}>
+            <TextInput type="number" step="0.01" value={settings.minFee} onChange={(e) => updateSettings({ minFee: Number(e.target.value) })} />
+          </Field>
+          <Field label="Tick size" width={90}>
+            <TextInput type="number" step="0.001" value={settings.tick} onChange={(e) => updateSettings({ tick: Number(e.target.value) })} />
+          </Field>
+          <Field label="Currency" width={70}>
+            <TextInput value={settings.currency} onChange={(e) => updateSettings({ currency: e.target.value })} />
+          </Field>
+          <Field label="Default deposit fee" width={90}>
+            <TextInput type="number" step="0.01" value={settings.depositFee} onChange={(e) => updateSettings({ depositFee: Number(e.target.value) })} />
+          </Field>
+        </div>
+      </Card>
+      <CostBasisSettings />
     </div>
   );
 }
