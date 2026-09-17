@@ -93,18 +93,20 @@ export function PositionDetail({ ticker }: { ticker: string }) {
     col === 'shares' ? t.shares : col === 'netPL' ? t.netPL : col === 'holdingDays' ? t.holdingDays : col === 'sellDate' ? t.sellDate : t.buyDate;
   const { sorted: sortedClosedTrades, Th: CTTh } = useSortableRows(closedTrades, ctSortValue, 'sellDate', 'desc');
 
-  // Item 5 of the same batch: this workbook's own "Open lots (FIFO)" section
-  // below already shows the real thing when costBasisMethod is 'fifo' — for
-  // the DEFAULT 'average' method there was no open-lots view at all
-  // alongside the new Closed round-trips report above, unlike QSE (which
-  // always shows a pure-reporting one, see that file's own comment). Same
-  // pure-reporting fallback here, only for the non-FIFO case so it never
-  // duplicates the real cost-basis section just below.
+  // Item 5 of the same batch: this workbook's own "Open lots" section below
+  // already shows the real thing when costBasisMethod is 'fifo' or (added
+  // 2026-09-17) 'lowestCostFirst' — for the DEFAULT 'average' method there
+  // was no open-lots view at all alongside the new Closed round-trips
+  // report above, unlike QSE (which always shows a pure-reporting one, see
+  // that file's own comment). Same pure-reporting fallback here, only for
+  // the weighted-average case so it never duplicates the real cost-basis
+  // section just below.
+  const usingLots = workbook.settings.costBasisMethod === 'fifo' || workbook.settings.costBasisMethod === 'lowestCostFirst';
   const reportOpenLots = useMemo(
-    () => (workbook.settings.costBasisMethod === 'fifo'
+    () => (usingLots
       ? []
       : computeFIFOPositions(workbook.transactions.filter((t) => t.ticker === ticker), calcFee).lotsByTicker[ticker] || []),
-    [workbook.transactions, ticker, calcFee, workbook.settings.costBasisMethod],
+    [workbook.transactions, ticker, calcFee, usingLots],
   );
 
   const stats = computePriceStats(ticker, workbook.priceHistory);
@@ -284,7 +286,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
         )}
 
         {lotRows.length ? (
-          <CollapsibleCard title={<h4 className="m-0">Open lots (FIFO) <StatSourceBadge source="official" /></h4>} className="mb-12">
+          <CollapsibleCard title={<h4 className="m-0">Open lots <StatSourceBadge source="official" /></h4>} className="mb-12">
             <div className="table-scroll">
               <table>
                 <thead><tr><LotTh col="buyDate">Buy date</LotTh><LotTh col="buyPrice">Buy price</LotTh><LotTh col="remainingShares">Remaining</LotTh><LotTh col="costPerShare">Cost/share</LotTh></tr></thead>
@@ -301,7 +303,7 @@ export function PositionDetail({ ticker }: { ticker: string }) {
               </table>
             </div>
             <p className="text-muted" style={{ marginTop: 4 }}>
-              A future sell of {ticker} will consume the oldest lot first (FIFO cost basis).
+              A future sell of {ticker} will consume {workbook.settings.costBasisMethod === 'fifo' ? 'the oldest lot first (FIFO)' : 'the cheapest lot first'}, unless it targets a specific lot via "Sell this lot."
             </p>
           </CollapsibleCard>
         ) : null}

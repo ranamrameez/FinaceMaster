@@ -38,7 +38,7 @@ function CompactChart({ height, children }: { height: number; children: React.Re
  * price range. Shared between the quick popup (PositionModal) and the full
  * dedicated stock page (StockPage) so they never drift apart. */
 export function PositionDetail({ ticker }: { ticker: string }) {
-  const { workbook, positions, calcFee } = useQSEDerived();
+  const { workbook, positions, calcFee, lots } = useQSEDerived();
   const setMarketPrice = useWorkbookStore((s) => s.setMarketPrice);
   const updatePricePoint = useWorkbookStore((s) => s.updatePricePoint);
   const deletePricePoint = useWorkbookStore((s) => s.deletePricePoint);
@@ -107,16 +107,28 @@ export function PositionDetail({ ticker }: { ticker: string }) {
     col === 'shares' ? t.shares : col === 'netPL' ? t.netPL : col === 'holdingDays' ? t.holdingDays : col === 'sellDate' ? t.sellDate : t.buyDate;
   const { sorted: sortedClosedTrades, Th: CTTh } = useSortableRows(closedTrades, ctSortValue, 'sellDate', 'desc');
 
-  // Item 5 of the same 2026-09-13 batch: "there should be two tables for
-  // opened lots & closed lots." QSE's REAL position calc is always
-  // weighted-average, never per-lot (a locked design decision — see this
-  // file's own doc history) — this is a pure REPORTING view alongside
-  // Closed round-trips above, mirroring exactly what the Trade Transactions
-  // page's own "Open trades" table already shows, just scoped to this one
-  // ticker. Never feeds back into `avg`/`be`/`invested` above.
-  const openLots = useMemo(
-    () => computeFIFOPositions(workbook.transactions.filter((t) => t.ticker === ticker), calcFee).lotsByTicker[ticker] || [],
-    [workbook.transactions, ticker, calcFee],
+  // Item 5 of the 2026-09-13 batch: "there should be two tables for opened
+  // lots & closed lots." Originally QSE's REAL position calc was ALWAYS
+  // weighted-average with no lot concept at all — this was a pure
+  // REPORTING view, mirroring the Trade Transactions page's own "Open
+  // trades" table, that never fed back into `avg`/`be`/`invested` above.
+  // 2026-09-17: `QSESettings.costBasisMethod` now lets a user opt into
+  // real lot-based accounting (see that field's own doc comment for the
+  // real financial-loss bug that prompted it) — when it's set to 'fifo'/
+  // 'lowestCostFirst', `lots` (from `useQSEDerived`) IS the official
+  // remainder, same engine driving `avg`/`be` above, so this section
+  // switches to that and drops the redundant independent recompute.
+  // Weighted-average (the unchanged default) keeps the old pure-reporting
+  // fallback, exactly as before.
+  const usingLots = (workbook.settings.costBasisMethod ?? 'average') !== 'average';
+  const officialLots = lots[ticker] ?? [];
+  type LotCol = 'buyDate' | 'buyPrice' | 'remainingShares' | 'costPerShare';
+  const lotSortValue = (lot: (typeof officialLots)[number], col: LotCol): number | string =>
+    col === 'costPerShare' ? lot.buyPrice + lot.buyFeeTotal / lot.originalShares : lot[col];
+  const { sorted: sortedOfficialLots, Th: LotTh } = useSortableRows(officialLots, lotSortValue, 'buyDate', 'asc');
+  const reportOpenLots = useMemo(
+    () => (usingLots ? [] : computeFIFOPositions(workbook.transactions.filter((t) => t.ticker === ticker), calcFee).lotsByTicker[ticker] || []),
+    [workbook.transactions, ticker, calcFee, usingLots],
   );
 
   const stats = computePriceStats(ticker, workbook.priceHistory);
@@ -291,29 +303,56 @@ export function PositionDetail({ ticker }: { ticker: string }) {
         </CollapsibleCard>
       )}
 
-      {/* Open lots — the still-held half of the same reporting ledger, see
-          the doc comment on `openLots` above. */}
-      {openLots.length > 0 && (
-        <CollapsibleCard title={<h4 className="m-0">Open lots <StatSourceBadge source="history" /></h4>} className="mb-12">
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr><th>Buy date</th><th>Buy price</th><th>Shares</th><th>Invested</th><th>Buy fee</th></tr>
-              </thead>
-              <tbody>
-                {openLots.map((l, i) => (
-                  <tr key={i}>
-                    <td>{l.buyDate}</td>
-                    <td>{fmtPrice(l.buyPrice)}</td>
-                    <td>{fmt(l.remainingShares, 0)}</td>
-                    <td>{fmtMoney(l.remainingShares * l.buyPrice, currency)}</td>
-                    <td>{fmtMoney(l.buyFeeTotal, currency)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CollapsibleCard>
+      {/* Open lots — official (this workbook's own real remaining lots,
+          same engine as avg/BE above) when costBasisMethod is lot-based,
+          else the independent pure-reporting fallback. See `usingLots`'
+          own doc comment. */}
+      {usingLots ? (
+        sortedOfficialLots.length > 0 && (
+          <CollapsibleCard title={<h4 className="m-0">Open lots <StatSourceBadge source="official" /></h4>} className="mb-12">
+            <div className="table-scroll">
+              <table>
+                <thead><tr><LotTh col="buyDate">Buy date</LotTh><LotTh col="buyPrice">Buy price</LotTh><LotTh col="remainingShares">Remaining</LotTh><LotTh col="costPerShare">Cost/share</LotTh></tr></thead>
+                <tbody>
+                  {sortedOfficialLots.map((lot, i) => (
+                    <tr key={i}>
+                      <td>{lot.buyDate}</td>
+                      <td>{fmtPrice(lot.buyPrice)}</td>
+                      <td>{fmt(lot.remainingShares, 0)}</td>
+                      <td>{fmtPrice(lot.buyPrice + lot.buyFeeTotal / lot.originalShares)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-muted" style={{ marginTop: 4 }}>
+              A future sell of {ticker} will consume {workbook.settings.costBasisMethod === 'fifo' ? 'the oldest lot first (FIFO)' : 'the cheapest lot first'}, unless it targets a specific lot via "Sell this lot."
+            </p>
+          </CollapsibleCard>
+        )
+      ) : (
+        reportOpenLots.length > 0 && (
+          <CollapsibleCard title={<h4 className="m-0">Open lots <StatSourceBadge source="history" /></h4>} className="mb-12">
+            <div className="table-scroll">
+              <table>
+                <thead>
+                  <tr><th>Buy date</th><th>Buy price</th><th>Shares</th><th>Invested</th><th>Buy fee</th></tr>
+                </thead>
+                <tbody>
+                  {reportOpenLots.map((l, i) => (
+                    <tr key={i}>
+                      <td>{l.buyDate}</td>
+                      <td>{fmtPrice(l.buyPrice)}</td>
+                      <td>{fmt(l.remainingShares, 0)}</td>
+                      <td>{fmtMoney(l.remainingShares * l.buyPrice, currency)}</td>
+                      <td>{fmtMoney(l.buyFeeTotal, currency)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CollapsibleCard>
+        )
       )}
 
 

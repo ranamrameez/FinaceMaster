@@ -5870,6 +5870,52 @@ app, not developer notes) continuously as features ship.
   popup's "Realized P/L" both read −3.59 QAR under FIFO and both flipped to +2.59 QAR the
   moment the table's own toggle switched to Cheapest-lot-first — one toggle, every view in
   sync. `npx tsc -b` / `npm run test` (682 tests, unchanged) / `npm run build` all clean.
+- **Note: this file's own detailed per-session narrative wasn't kept fully in lockstep for
+  2026-09-13 through 2026-09-16 — `webapp/README.md`'s Done items 315 through 335 (Trade
+  Strategy/Partial Trade overhaul, an app-wide fixed top bar, PSX Simple fee mode, the Google
+  sign-in redirect fix, real broker-statement extraction/calibration, closed-trades match-
+  order toggle, price-history editing, currency Primary/Secondary/Other tiering, a full
+  currency add/remove picker, Net Worth click-to-drill-down popups on every stat, and
+  many-to-many category groups) landed in that window without a matching entry here — see
+  that file directly for the full detail on any of it, don't assume this file's own "current
+  status" narrative is complete through that date.**
+- **CRITICAL, user-reported real financial-loss risk (2026-09-17) — see README Done item 336
+  for the full writeup, this is a pointer.** User's own real broker screenshot showed IQCD's
+  Buy Average (10.22) far above the app's Cost (10.10), with the app showing a small +0.55 QAR
+  profit while the broker showed a real -1 loss on the same position — and flatly rejected an
+  earlier answer attributing the gap to commission alone. Root cause, confirmed by reading
+  `computePositions()` directly: QSE had **no cost-basis toggle at all** — every SELL always
+  reduced the blended (shares, invested) pair proportionally, completely ignoring
+  `Transaction.targetLotBuyId` (the field "Sell this lot" on the Trade Strategy page sets to
+  close a SPECIFIC lot, see Done item 301/314). Once the user deliberately started closing
+  cheap lots first to protect an underwater expensive one (their own explicit, repeated
+  instruction), weighted-average silently understated the true remaining cost basis of what's
+  left. Verified the mechanism quantitatively (not just asserted) by replaying the user's real
+  IQCD history through both weighted-average (10.10, matches the app) and
+  `computeFIFOPositions('lowestCostFirst')` (10.2465, within 0.03 of the broker's real 10.22
+  despite stale backup data) vs. classic oldest-first FIFO (10.00, far off) — strong evidence
+  the real broker accounting is much closer to cheapest-lot-first than either alternative.
+  **Fix**: `QSESettings` gained the identical opt-in `costBasisMethod?: 'average' | 'fifo' |
+  'lowestCostFirst'` field PSX already had (PSX's own field widened to add the new
+  `'lowestCostFirst'` value too, since the identical bug applies to PSX's default 'average'
+  mode). Optional/undefined behaves as 'average' — no existing workbook (QSE or PSX) is
+  silently recalculated, per this file's own locked "never silently retroactively recompute a
+  user's historical P/L" rule. `useQSEDerived()` now branches exactly like `usePSXDerived()`
+  already did, reusing `computeFIFOPositions` (already fully built and tested for
+  `'lowestCostFirst'`/`targetLotBuyId` via the Trade Strategy advisory view, Done item 314) —
+  zero new calc-engine code, only wiring the same engine into the REAL official numbers too.
+  Both exchanges' `PositionDetail.tsx` "Open lots" section now shows the real official lots
+  (badge flips History → Official) once a lot-based method is active. New "Cost basis method"
+  settings card added to QSE (mirroring PSX's existing one). **Verified live via Playwright on
+  BOTH exchanges** with the exact minimal repro (50 sh @10.40 expensive lot + 14 sh @9.962
+  cheap lot, cheap lot explicitly sold via `targetLotBuyId`, price 10.16): QSE's Cost went
+  10.33 → 10.43 (loss -10.02 → -14.83 QAR) after switching the setting; PSX's went 10.36 →
+  10.46 (loss -13.09 → -17.88 PKR) — same fix, same mechanism, both exchanges, zero new
+  console errors either side. `npx tsc -b` / `npm run test` (716 tests, unchanged — reuses an
+  already-tested engine) / `npm run build` all clean. **This does NOT auto-migrate the user's
+  real account** — they need to switch the new setting themselves in Settings; their real
+  historical Unrealized P/L for any ticker with lot-targeted sells will correctly become more
+  negative (more honest) once they do.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

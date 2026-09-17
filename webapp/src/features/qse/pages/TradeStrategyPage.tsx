@@ -390,13 +390,15 @@ function NewPlanFab() {
 
 /** "Broker Style" view (2026-09-16 trust-restoration): the user's own
  * original ask, restored — a real, always-in-sync-with-Dashboard snapshot
- * of this ticker's OFFICIAL position (weighted-average Avg Cost/Break-even/
- * P&L, the same `computePositions()`-derived numbers Dashboard/Portfolio
- * show), rendered right next to Strategic Trades' advisory numbers so a
- * user can directly compare "what my broker/statement would show" against
- * "what a hypothetical Strategic Trades plan projects" without leaving this
- * page or guessing which of the two is which. Never reads anything from
- * `plan`/`tickerAnalysis` — completely independent of the Strategic side. */
+ * of this ticker's OFFICIAL position (whatever `QSESettings.costBasisMethod`
+ * is set to — weighted-average by default, or the same lot-based numbers
+ * `useQSEDerived()` feeds Dashboard/Portfolio once switched, see that
+ * field's own doc comment), rendered right next to Strategic Trades'
+ * advisory numbers so a user can directly compare "what my broker/
+ * statement would show" against "what a hypothetical Strategic Trades plan
+ * projects" without leaving this page or guessing which of the two is
+ * which. Never reads anything from `plan`/`tickerAnalysis` — completely
+ * independent of the Strategic side. */
 function BrokerStyleView({ ticker }: { ticker: string }) {
   const { workbook, calcFee, positions } = useQSEDerived();
   const currency = workbook.settings.currency;
