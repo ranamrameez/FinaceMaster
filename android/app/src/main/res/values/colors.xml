@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Roughly matches the webapp's own default "wine" accent theme, for a consistent brand
+         feel between the native shell chrome (status bar, splash) and the page it loads. -->
+    <color name="brand_wine">#7A2E3A</color>
+    <color name="brand_wine_dark">#4A1A22</color>
+    <color name="background_light">#F5F3F1</color>
+    <color name="background_dark">#181414</color>
+    <color name="surface_light">#FFFFFF</color>
+    <color name="surface_dark">#241C1D</color>
+</resources>

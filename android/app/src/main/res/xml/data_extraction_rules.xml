@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  allowBackup is false (see AndroidManifest.xml) — this app holds no financial data of its
+  own to back up (everything lives in the webapp's own Firebase-synced storage inside the
+  WebView), only transient local SMS-review drafts, which aren't worth restoring onto a new
+  device. This file exists only to satisfy the android:dataExtractionRules manifest attribute
+  Android 12+ expects; it excludes everything.
+-->
+<data-extraction-rules>
+    <cloud-backup disableIfNoEncryptionCapability="true">
+        <exclude domain="root" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+    </device-transfer>
+</data-extraction-rules>
