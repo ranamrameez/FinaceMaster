@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { confirmDialog } from '../../../components/ConfirmDialog';
 import { CheckIcon, EditIcon, SaveIcon, TrashIcon, XIcon } from '../../../components/icons';
@@ -11,10 +11,12 @@ import { Field, TextInput } from '../../../components/ui/Field';
 import { IconButton } from '../../../components/ui/IconButton';
 import { PendingToggle } from '../../../components/ui/PendingToggle';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
+import { LotAllocationFields, type LotAllocations } from '../../../components/ui/LotAllocationFields';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { defaultTimeForDate, defaultTimezoneForMarket, nowTime } from '../../../lib/datetime';
 import { toCSV } from '../../../lib/csv';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
+import { computeFIFOPositions } from '../../../lib/calc/fifoPositions';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { shortenCompanyName } from '../../../lib/shortenName';
 import { useWorkbookStore } from '../../../store/workbookStore';
@@ -26,7 +28,7 @@ import { useQSEStockData } from '../hooks/useQSEStockData';
 const today = () => new Date().toISOString().slice(0, 10);
 
 function TickerTransactions({ ticker }: { ticker: string }) {
-  const { workbook } = useQSEDerived();
+  const { workbook, calcFee } = useQSEDerived();
   const updateTransaction = useWorkbookStore((s) => s.updateTransaction);
   const deleteTransaction = useWorkbookStore((s) => s.deleteTransaction);
   const addTransaction = useWorkbookStore((s) => s.addTransaction);
@@ -41,8 +43,24 @@ function TickerTransactions({ ticker }: { ticker: string }) {
   const [timezone, setTimezone] = useState<string | undefined>(defaultTimezoneForMarket('QSE'));
   const [timeTouched, setTimeTouched] = useState(false);
   const [isPending, setIsPending] = useState(false);
+  const [lotAllocations, setLotAllocations] = useState<LotAllocations | undefined>(undefined);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editRow, setEditRow] = useState<Transaction | null>(null);
+
+  // Pending item 143 (closed 2026-09-19): manual multi-lot Specific
+  // Identification, mirroring the identical gate/pattern already wired
+  // into TransactionsPage.tsx's own add/edit SELL forms.
+  const method = workbook.settings.costBasisMethod;
+  const showLotAllocation = method === 'fifo' || method === 'lowestCostFirst';
+  const openLots = useMemo(
+    () => (showLotAllocation ? computeFIFOPositions(workbook.transactions, calcFee, method!).lotsByTicker[ticker] || [] : []),
+    [showLotAllocation, workbook.transactions, calcFee, method, ticker],
+  );
+  const editLots = useMemo(() => {
+    if (!showLotAllocation || editIndex === null || !editRow || editRow.action !== 'SELL') return [];
+    const others = workbook.transactions.filter((_, idx) => idx !== editIndex);
+    return computeFIFOPositions(others, calcFee, method!).lotsByTicker[ticker] || [];
+  }, [showLotAllocation, editIndex, editRow, workbook.transactions, calcFee, method, ticker]);
 
   // Keep the original index into workbook.transactions so edit/delete hit
   // the right row — the displayed list is filtered to this ticker only.
@@ -67,11 +85,12 @@ function TickerTransactions({ ticker }: { ticker: string }) {
     const price = Number(priceInput);
     if (!shares || !price) return toast('Enter shares and price.');
     if (!(await ensureSignedIn('Sign in to save this transaction.'))) return;
-    addTransaction({ date, ticker, action, shares, price, time, timezone, isPending: isPending || undefined });
+    addTransaction({ date, ticker, action, shares, price, time, timezone, isPending: isPending || undefined, lotAllocations });
     toast(`${action} ${shares} ${ticker} @ ${fmtPrice(price)} logged.`);
     setSharesInput('');
     setPriceInput('');
     setIsPending(false);
+    setLotAllocations(undefined);
   };
 
   const startEdit = (i: number, tx: Transaction) => {
@@ -126,6 +145,14 @@ function TickerTransactions({ ticker }: { ticker: string }) {
         </Field>
         <button className="btn" onClick={submit}>Add {action === 'BUY' ? 'buy' : 'sell'}</button>
       </div>
+      {action === 'SELL' && showLotAllocation && (
+        <LotAllocationFields
+          lots={openLots}
+          totalShares={Number(sharesInput) || 0}
+          value={lotAllocations}
+          onChange={setLotAllocations}
+        />
+      )}
 
       <div className="table-scroll">
         <table>
@@ -135,7 +162,8 @@ function TickerTransactions({ ticker }: { ticker: string }) {
           <tbody>
             {rows.map(({ tx, i }) =>
               editIndex === i && editRow ? (
-                <tr key={i}>
+                <Fragment key={i}>
+                <tr>
                   <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} className="w-130" /></td>
                   <td>
                     <select value={editRow.action} onChange={(e) => setEditRow({ ...editRow, action: e.target.value as 'BUY' | 'SELL' })}>
@@ -156,6 +184,19 @@ function TickerTransactions({ ticker }: { ticker: string }) {
                     <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditIndex(null)} />
                   </td>
                 </tr>
+                {editRow.action === 'SELL' && showLotAllocation && (
+                  <tr>
+                    <td colSpan={6}>
+                      <LotAllocationFields
+                        lots={editLots}
+                        totalShares={editRow.shares}
+                        value={editRow.lotAllocations}
+                        onChange={(next) => setEditRow({ ...editRow, lotAllocations: next })}
+                      />
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               ) : (
                 <tr key={i}>
                   <td>
