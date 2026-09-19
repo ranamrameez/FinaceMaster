@@ -75,6 +75,36 @@ export interface Transaction {
    * actually take effect on the official numbers, not just the advisory
    * view. */
   targetLotBuyId?: string;
+  /** For a SELL, an optional EXACT multi-lot breakdown — "these N shares:
+   * X from this buy, Y from that buy" — real Specific Identification
+   * (the same recognized cost-basis mechanism `targetLotBuyId` above
+   * implements for a single lot), generalized to an arbitrary composition
+   * across several lots at once. User's own words (2026-09-18): "I am not
+   * bound to use 'Sell This Lot'. I may sell in bulk completely different
+   * figures from the lot system" — a real trade can draw shares from
+   * several lots in a split that doesn't match any single guessing rule
+   * (not oldest-first, not cheapest-first), and the engine must be able to
+   * represent that real composition exactly rather than approximate it.
+   *
+   * Attribution priority in `computeFIFOPositions`/`computeClosedTrades`
+   * (both exchanges, only takes effect under a lot-based `costBasisMethod`
+   * — silently ignored under `'average'`, same as `targetLotBuyId`):
+   *   1. `lotAllocations`, consumed in array order — each entry clamped to
+   *      that lot's real `remainingShares` at that point in the
+   *      chronological walk; a `buyId` that doesn't resolve to a currently
+   *      open lot (already fully closed, or unknown) silently contributes
+   *      0 rather than throwing or ever reconsidering a closed lot.
+   *   2. `targetLotBuyId`, for any remainder not covered by (1) — kept
+   *      byte-for-byte unchanged so every already-stored real transaction
+   *      and the Trade Strategy page's existing single-lot "Sell this lot"
+   *      keep working exactly as before.
+   *   3. Any further remainder falls through to the mode's own ordinary
+   *      match-order loop (open lots only) — see `LotMatchOrder`'s own
+   *      doc comment in `fifoPositions.ts` for why the DEFAULT there is
+   *      true chronological FIFO, not lowest-cost-first.
+   * `undefined`/empty means "nothing manually allocated," unchanged for
+   * every pre-existing transaction — this field is purely additive. */
+  lotAllocations?: { buyId: string; shares: number }[];
   /** Audit metadata: the real wall-clock instant this record was actually
    * entered into the app — NOT the same thing as `date`/`time` above (the
    * transaction's own user-entered effective date). Same field name/
@@ -272,8 +302,13 @@ export interface QSESettings {
    * the reported average silently understated the true remaining cost
    * basis of what's left, making a real loss look like a small profit.
    * Mirrors `PSXSettings.costBasisMethod` exactly (see that field's own
-   * doc comment for what each value means) — optional/undefined behaves
-   * as 'average' so no existing QSE workbook is silently recalculated. */
+   * doc comment — including the 2026-09-18 real-world research correction:
+   * 'fifo' is the recommended official value, matching global broker
+   * convention and, for PSX specifically, NCCPL's own mandatory FIFO CGT
+   * computation; 'lowestCostFirst' is a deliberate second "Trader
+   * Strategy" view, not the recommendation) for what each value means —
+   * optional/undefined behaves as 'average' so no existing QSE workbook is
+   * silently recalculated. */
   costBasisMethod?: 'average' | 'fifo' | 'lowestCostFirst';
 }
 

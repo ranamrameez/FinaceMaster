@@ -1,6 +1,6 @@
 import type { FeeCalculator, Transaction } from '../../types/workbook';
 import { sortTransactionsChronological } from './sortTransactions';
-import type { LotMatchOrder } from './fifoPositions';
+import { consumeLotsForSell, type LotMatchOrder } from './fifoPositions';
 
 export type { LotMatchOrder };
 
@@ -36,9 +36,8 @@ interface OpenLot {
   buyFeeTotal: number;
   originalShares: number;
   remainingShares: number;
+  buyId?: string;
 }
-
-const EPSILON = 1e-7;
 
 /** Which still-open lot a sale gets matched against first — re-exported
  * from `fifoPositions.ts`, which owns the canonical doc comment (this type
@@ -82,6 +81,13 @@ const EPSILON = 1e-7;
  * ruin the calcs" — giving each closed round-trip its own itemized record
  * makes explicit that a closed trade's numbers are separate from whatever
  * the currently-open position's own average cost/break-even shows.
+ *
+ * As of 2026-09-18 this also honors `Transaction.lotAllocations`/
+ * `targetLotBuyId` (via the shared `consumeLotsForSell` in
+ * `fifoPositions.ts`) — previously a known gap (README Pending item 134):
+ * this ledger and the official Open-lots numbers could disagree about
+ * which lot(s) a sale actually drew from. Now both go through the exact
+ * same attribution-priority walk, so they can't drift apart.
  */
 export function computeClosedTrades(transactions: Transaction[], calcFee: FeeCalculator, matchOrder: LotMatchOrder = 'fifo'): ClosedTrade[] {
   const lotsByTicker: Record<string, OpenLot[]> = {};
@@ -99,18 +105,13 @@ export function computeClosedTrades(transactions: Transaction[], calcFee: FeeCal
     const fee = calcFee(amount, isBuy, { shares: tx.shares, tx });
 
     if (isBuy) {
-      lots.push({ buyDate: tx.date, buyPrice: tx.price, buyFeeTotal: fee, originalShares: tx.shares, remainingShares: tx.shares });
+      lots.push({ buyDate: tx.date, buyPrice: tx.price, buyFeeTotal: fee, originalShares: tx.shares, remainingShares: tx.shares, buyId: tx.id });
       continue;
     }
 
-    let toSell = tx.shares;
     const sellFeePerShare = tx.shares > 0 ? fee / tx.shares : 0;
-    while (toSell > EPSILON && lots.length) {
-      const lotIndex = matchOrder === 'fifo'
-        ? 0
-        : lots.reduce((bestIdx, l, i) => (l.buyPrice < lots[bestIdx].buyPrice ? i : bestIdx), 0);
-      const lot = lots[lotIndex];
-      const take = Math.min(toSell, lot.remainingShares);
+    const consumed = consumeLotsForSell(lots, tx.shares, matchOrder, tx.lotAllocations, tx.targetLotBuyId);
+    for (const { lot, take } of consumed) {
       const buyFeeShare = (take / lot.originalShares) * lot.buyFeeTotal;
       const sellFeeShare = take * sellFeePerShare;
       const netPL = take * tx.price - sellFeeShare - (take * lot.buyPrice + buyFeeShare);
@@ -130,9 +131,6 @@ export function computeClosedTrades(transactions: Transaction[], calcFee: FeeCal
         netPL,
         holdingDays,
       });
-      lot.remainingShares -= take;
-      toSell -= take;
-      if (lot.remainingShares <= EPSILON) lots.splice(lotIndex, 1);
     }
   }
 

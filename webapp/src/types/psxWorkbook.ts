@@ -21,21 +21,36 @@ export interface PSXSettings {
   /** README item 8: cost-basis method for realized/unrealized P/L and CGT.
    * 'average' (default) is the original weighted-average behavior — every
    * buy blends into one running average cost, so a sell can't be tied to a
-   * specific lot. 'fifo' tracks each buy as its own lot ("each buy should
-   * have its own sell peer") and consumes the oldest open lot first on a
-   * sell, giving lot-accurate realized P/L. 'lowestCostFirst' (added
-   * 2026-09-17, real financial-loss bug report — see `targetLotBuyId`'s own
-   * comment and `computeFIFOPositions`) is the same lot tracking but
-   * consumes the CHEAPEST open lot first on an untargeted sell — the
-   * user's own explicit rule ("sell the cheaper first, protect the
-   * underwater expensive ones"), and empirically the closest match to a
-   * real broker statement's own Avg Buy Price whenever the account has done
-   * any deliberate cheap-lot-first selling (weighted-average silently blends
-   * the reduction across the whole position instead of really removing the
-   * cheap lot, which understates the true remaining cost basis of what's
-   * left — i.e. it can make a real loss look like a profit). All three
-   * options are opt-in, not the default, because switching changes a real
-   * user's computed historical P/L numbers — never flip this silently. */
+   * specific lot; this can make a real loss look like a profit once the
+   * account has done any deliberate cheap-lot-first selling (the reduction
+   * gets spread across the whole position instead of really coming off the
+   * lot sold). 'fifo' and 'lowestCostFirst' both track each buy as its own
+   * lot instead — 'fifo' consumes the oldest open lot first on an
+   * untargeted sell, 'lowestCostFirst' consumes the cheapest.
+   *
+   * **Recommended: 'fifo'.** Real-world research (2026-09-18, prompted by
+   * the user directly asking "please study how exchanges handle the
+   * trades"): NCCPL, mandated by Pakistan's FBR under Section 37A of the
+   * Income Tax Ordinance 2001, computes every investor's real Capital
+   * Gains Tax using MANDATORY chronological FIFO, tracked per-lot through
+   * CDC — a real PSX broker's own "Buy Average"/CGT figure is genuine
+   * FIFO, not lowest-cost-first (an earlier version of this comment
+   * claimed the opposite; that was an unverified guess, corrected once
+   * actually researched — see webapp/README.md's "Cost-basis worked
+   * examples" section for the full citations and the IQCD case this
+   * reasoning was checked against). 'lowestCostFirst' is kept as a
+   * deliberate, real, opt-in second view — the "Trader Strategy" style the
+   * Trade Strategy page's Partial Trade Advisor always uses regardless of
+   * this setting (see `partialTradeStrategy.ts`) — not the recommended
+   * default for the OFFICIAL numbers.
+   *
+   * Either lot-based mode still needs `Transaction.targetLotBuyId`/
+   * `lotAllocations` for the common real case of a deliberate,
+   * non-chronological, non-cheapest sale (e.g. protecting one specific
+   * expensive lot) — see those fields' own doc comments for the full
+   * attribution priority. All three options are opt-in, not the default,
+   * because switching changes a real user's computed historical P/L
+   * numbers — never flip this silently. */
   costBasisMethod: 'average' | 'fifo' | 'lowestCostFirst';
   /** User-requested 2026-08-27 ("I need automation... auto check the
    * commission + manual entry (%age or lump sum), not itemized fields I

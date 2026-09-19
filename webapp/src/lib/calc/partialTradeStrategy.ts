@@ -17,7 +17,12 @@ import { getMarketPrice } from './priceHistory';
  * retroactively recomputes a user's real historical P/L (see
  * `PSXSettings.costBasisMethod`'s own doc comment — QSE gained the
  * identical `QSESettings.costBasisMethod` field 2026-09-17, same warning
- * applies there too). */
+ * applies there too).
+ *
+ * As of 2026-09-18 this is the deliberate, permanent "Trader Strategy"
+ * view (`'lowestCostFirst'`) paired against the "Official" view's own
+ * recommended `'fifo'` default — see `LotMatchOrder`'s own doc comment in
+ * `fifoPositions.ts` for the real-world research behind that pairing. */
 
 export interface LotAdvice {
   /** The originating buy's stable id, when it has one — pass this back as

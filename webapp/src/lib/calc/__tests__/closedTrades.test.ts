@@ -70,6 +70,46 @@ describe('computeClosedTrades', () => {
     expect(first.shares + second.shares).toBe(8);
   });
 
+  it('honors lotAllocations/targetLotBuyId, matching the official Open-lots numbers exactly (closes README Pending item 134)', () => {
+    // Before 2026-09-18, this reporting ledger always matched oldest-first/
+    // cheapest-first regardless of a real manual allocation — meaning it
+    // could disagree with the official computeFIFOPositions numbers about
+    // which lot(s) a sale actually drew from. Both now go through the same
+    // shared `consumeLotsForSell` priority walk.
+    const lotA = tx({ id: 'lot-a', date: '2026-01-01', action: 'BUY', shares: 10, price: 100 });
+    const lotB = tx({ id: 'lot-b', date: '2026-02-01', action: 'BUY', shares: 10, price: 110 });
+    const sell = tx({
+      date: '2026-03-01', action: 'SELL', shares: 10, price: 130,
+      targetLotBuyId: 'lot-b', // targets the NON-oldest lot deliberately
+    });
+    const trades = computeClosedTrades([lotA, lotB, sell], flatFee, 'fifo');
+    // Split, never merged: one record, priced off the TARGETED lot (110),
+    // not the oldest (100) that plain FIFO would otherwise have picked.
+    expect(trades).toHaveLength(1);
+    expect(trades[0].buyDate).toBe('2026-02-01');
+    expect(trades[0].buyPrice).toBe(110);
+    expect(trades[0].shares).toBe(10);
+  });
+
+  it('honors lotAllocations for a genuinely split (never merged) multi-lot sell', () => {
+    const lotA = tx({ id: 'lot-a', date: '2026-01-01', action: 'BUY', shares: 10, price: 100 });
+    const lotB = tx({ id: 'lot-b', date: '2026-02-01', action: 'BUY', shares: 10, price: 110 });
+    const lotC = tx({ id: 'lot-c', date: '2026-03-01', action: 'BUY', shares: 10, price: 120 });
+    const sell = tx({
+      date: '2026-04-01', action: 'SELL', shares: 15, price: 200,
+      lotAllocations: [{ buyId: 'lot-c', shares: 10 }, { buyId: 'lot-a', shares: 5 }],
+    });
+    const trades = computeClosedTrades([lotA, lotB, lotC, sell], flatFee, 'fifo');
+    // Two individually-priced records (lot A and lot C) — never a single
+    // blended-average record — and lot B (never allocated) doesn't appear
+    // at all, matching what the shared lot-consumption walk actually did.
+    expect(trades).toHaveLength(2);
+    const byBuyPrice = Object.fromEntries(trades.map((t) => [t.buyPrice, t]));
+    expect(byBuyPrice[120].shares).toBe(10);
+    expect(byBuyPrice[100].shares).toBe(5);
+    expect(byBuyPrice[110]).toBeUndefined();
+  });
+
   it('keeps different tickers fully independent', () => {
     const trades = computeClosedTrades(
       [

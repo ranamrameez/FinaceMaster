@@ -103,6 +103,12 @@ function DataManagement() {
 // per-share fee tiering PSX has to worry about, hence "FIFO doesn't matter
 // for fees here" — but it still matters for which lot's cost gets
 // attributed to a sell, which is the actual bug).
+//
+// Copy corrected 2026-09-18: real-world research (prompted by the user's
+// own "please study how exchanges handle the trades") found FIFO, not
+// lowest-cost-first, is what matches a real broker statement — see
+// webapp/README.md's "Cost-basis worked examples" section for the full
+// citations, including PSX's own NCCPL-mandated FIFO CGT computation.
 function CostBasisSettings() {
   const settings = useWorkbookStore((s) => s.workbook.settings);
   const updateSettings = useWorkbookStore((s) => s.updateSettings);
@@ -116,10 +122,15 @@ function CostBasisSettings() {
         can't be tied to a specific lot — this can make a real remaining loss look smaller (or
         even profitable) once you've deliberately closed out cheap lots, since the reduction gets
         spread across the whole blended position instead of really coming off the lot you sold.
-        FIFO and Lowest cost first both track each buy as its own lot instead; FIFO sells the
-        oldest lot first, Lowest cost first sells the cheapest lot first (matching "Sell this lot"
-        on the Trade Strategy page, and usually the closest match to a real broker statement's own
-        Avg Buy Price). QSE's flat % fee means the fee itself is the same either way — the
+        FIFO and Lowest cost first both track each buy as its own lot instead. <strong>Recommended:
+        FIFO</strong> — it sells the oldest lot first, matching the global broker-standard
+        convention (the same default the US IRS and major brokers use) and usually the closest
+        match to a real broker statement's own Avg Buy Price. Lowest cost first sells the cheapest
+        lot first instead — a deliberate "Trader Strategy" view (the same one the Trade Strategy
+        page's Partial Trade Advisor always shows, regardless of this setting), not the recommended
+        choice for your official numbers. Either mode still needs a manual "Sell this lot"/specific
+        allocation for the common case of deliberately protecting one particular lot — see the
+        Trade Strategy page. QSE's flat % fee means the fee itself is the same either way — the
         difference is purely which lot's cost gets attributed to a sell. Switching any of these
         immediately recomputes your whole historical P/L (realized P/L, invested amount) from your
         <em> entire</em> transaction history, not stored per-entry — not just future trades.
@@ -127,8 +138,8 @@ function CostBasisSettings() {
       <Field label="Method" width={220}>
         <Select value={method} onChange={(e) => updateSettings({ costBasisMethod: e.target.value as 'average' | 'fifo' | 'lowestCostFirst' })}>
           <option value="average">Average cost (default)</option>
-          <option value="fifo">FIFO lots (oldest first)</option>
-          <option value="lowestCostFirst">Lowest cost first</option>
+          <option value="fifo">FIFO lots (oldest first, recommended)</option>
+          <option value="lowestCostFirst">Lowest cost first (Trader Strategy)</option>
         </Select>
       </Field>
     </Card>
