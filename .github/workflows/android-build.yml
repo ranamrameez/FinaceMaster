@@ -1,0 +1,121 @@
+# Builds the native Android app (android/) and publishes a downloadable debug APK.
+#
+# Deliberately separate from static.yml (which only builds/deploys webapp/) — this
+# workflow only runs when an android/ change actually lands on main/master, via the
+# `paths: android/**` filter below, so an ordinary webapp-only push never triggers an
+# Android build, and the build-output commit this workflow makes back into
+# builds/android/ (see the last step) never re-triggers ITSELF, since that path isn't
+# under android/. It carries an explicit [skip ci] in that commit message anyway, so it
+# also doesn't cause static.yml's own unfiltered `push: branches: [main]` to needlessly
+# rebuild/redeploy the webapp for a binary-only commit.
+name: Build Android APK
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "android/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  APK_FILE_NAME: financerecorder-debug.apk
+  ARTIFACT_NAME: financerecorder-debug-apk
+  BUILD_DIR: builds/android
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Passing an explicit branch name (not a bare `ref`-less checkout) keeps the
+          # working tree on a real local branch instead of actions/checkout's usual
+          # detached-HEAD-at-github.sha state — the "commit the built APK back" step
+          # below needs a real branch to push to.
+          ref: ${{ github.ref_name }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Locate built APK
+        id: locate
+        run: |
+          apk=$(find android/app/build/outputs/apk/debug -name '*.apk' | head -n1)
+          if [ -z "$apk" ]; then
+            echo "No APK found under android/app/build/outputs/apk/debug" >&2
+            exit 1
+          fi
+          echo "Built: $apk"
+          echo "apk_path=$apk" >> "$GITHUB_OUTPUT"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ steps.locate.outputs.apk_path }}
+          if-no-files-found: error
+
+      - name: Stage the published copy + build info
+        run: |
+          mkdir -p "$BUILD_DIR"
+          cp "${{ steps.locate.outputs.apk_path }}" "$BUILD_DIR/$APK_FILE_NAME"
+          cat > "$BUILD_DIR/build-info.txt" <<EOF
+          Run:      #${{ github.run_number }} (${{ github.run_id }})
+          Commit:   ${{ github.sha }}
+          Branch:   ${{ github.ref_name }}
+          Built at: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          Workflow: ${{ github.workflow }}
+          EOF
+
+      - name: Set up Python (QR code generation)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Generate the download QR code
+        run: |
+          pip install --quiet "qrcode[pil]"
+          python3 - <<'PY'
+          import os
+          import qrcode
+
+          repo = os.environ["GITHUB_REPOSITORY"]
+          branch = os.environ["GITHUB_REF_NAME"]
+          url = f"https://raw.githubusercontent.com/{repo}/{branch}/builds/android/financerecorder-debug.apk"
+          qrcode.make(url, box_size=10, border=2).save("builds/android/download-qr.png")
+          print(f"QR points to: {url}")
+          PY
+
+      - name: Commit and push the published build
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$BUILD_DIR"
+          if git diff --cached --quiet; then
+            echo "Built APK is byte-identical to what's already published — nothing to commit."
+            exit 0
+          fi
+          git commit -m "chore(android): publish built APK (run #${{ github.run_number }}, ${GITHUB_SHA::7}) [skip ci]"
+          git pull --rebase origin "${{ github.ref_name }}"
+          git push origin "HEAD:${{ github.ref_name }}"
