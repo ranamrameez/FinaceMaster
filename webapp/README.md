@@ -9951,6 +9951,29 @@ from the lot system."*
   real sign-in gate — zero console errors. `npx tsc -b` / `npm run test` (733 tests, unchanged
   — only the pre-existing, unrelated `breakEvenPrice` test still fails) / `npm run build` all
   clean.
+- **`breakEvenPrice` tick-rounding precision bug fixed, closes Pending item 146 (2026-09-19).**
+  Root cause: `breakEvenPrice()` (`lib/calc/fees.ts`) solves for the sell price P whose net
+  proceeds exactly clear a cost basis, then rounded P to the *nearest* tradeable tick via the
+  shared `roundTick()` helper — but nearest-tick rounding can land ONE TICK BELOW the true
+  continuous solution whenever the exact P sits just above a tick boundary, silently returning
+  a price whose real (cents-rounded) net proceeds fall short of the cost basis it was supposed
+  to guarantee — exactly the pre-existing `calc.test.ts` failure found and left unfixed while
+  verifying Done item 337 (695.48 net vs. a 695.494 cost basis, confirmed pre-existing on
+  `origin/main` via a stashed-baseline run before that session touched anything). Fixed by
+  rounding UP (`Math.ceil(P / tick) * tick`) instead of to nearest, then a small self-
+  correcting loop (up to 5 iterations) that bumps the candidate up one more tick at a time in
+  the rare case fee cents-rounding still undershoots even at the ceiling tick — this preserves
+  the function's real contract ("the minimum tick price that actually clears cost basis"),
+  which the test's own second assertion already encodes (one tick below the returned price
+  must net LESS than cost basis). Every downstream consumer (PositionDetail's Break-even stat,
+  Dashboard/Portfolio's BE column, Trade Calculator, Risk Analysis, Trade Strategy) reads this
+  one function, so the fix applies everywhere at once with no other file touched. Verified live
+  via Playwright, not just the unit test: seeded the exact same cost-basis/share-count shape
+  from the failing test (634 shares, ~697.09 QAR invested) into a real stock page — BE rendered
+  1.103, hand-confirmed as the minimum tick that clears cost basis (1.103×634 nets 697.382 ≥
+  697.09; one tick lower, 1.102, nets 696.748 < 697.09) — zero console errors. `npx tsc -b` /
+  `npm run test` (733 tests, all passing — this was the only failure) / `npm run build` all
+  clean.
 
 ## Pending
 
@@ -11223,16 +11246,10 @@ or a design decision before more code, not guessed at further:**
      Low urgency: transactions entered going forward almost always carry a real `time` (Pending
      item 41 shipped `nowTime()` auto-fill on most add-forms), so this tie scenario should
      become increasingly rare for new data.
-146. **A pre-existing, unrelated `breakEvenPrice` tick-rounding precision edge case, found while
-     verifying Done item 337 but NOT fixed there (2026-09-18).**
-     `calc.test.ts > breakEvenPrice > produces a tick price whose net proceeds cover the cost
-     basis` fails against the real QSE backup fixture (costBasis 695.494, 634 shares): the
-     solver's returned tick price nets 695.48, just under the cost basis it's meant to clear.
-     Confirmed pre-existing on `origin/main` before this session touched anything (via a
-     stashed-baseline test run), and confirmed unrelated to the lot-matching work in Done item
-     337 — a different function (`lib/calc/fees.ts`'s `breakEvenPrice`), likely a floating-
-     point edge case right at a tick boundary. Deserves its own dedicated investigation rather
-     than a rushed fix appended to an unrelated PR.
+~~146. A pre-existing, unrelated `breakEvenPrice` tick-rounding precision edge case, found while
+     verifying Done item 337 but NOT fixed there.~~ **Done (2026-09-19) — see Done item 340.**
+     Root cause was nearest-tick rounding landing one tick below the true continuous solution;
+     fixed by rounding up to the ceiling tick with a small self-correcting bump-up loop.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

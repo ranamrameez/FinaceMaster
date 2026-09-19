@@ -6051,6 +6051,31 @@ app, not developer notes) continuously as features ship.
   5+10 of 15 shares zeroed the unallocated counter, submitting hit the real sign-in gate — zero
   console errors. `npx tsc -b` / `npm run test` (733 tests, unchanged) / `npm run build` all
   clean.
+- **`breakEvenPrice` tick-rounding precision bug fixed, closes README Pending item 146
+  (2026-09-19).** Same "continue down the Pending list" pass, picked as the next well-scoped,
+  low-risk item since it was already fully diagnosed and had a permanent failing regression
+  test pinpointing it (`calc.test.ts`'s `breakEvenPrice` describe block), unlike most of the
+  other open Pending items which are blocked on a genuine design fork or the user's own
+  confirmation. Root cause: `breakEvenPrice()` (`lib/calc/fees.ts`) solves for the exact
+  continuous sell price P whose net proceeds clear a cost basis, then rounded P to the
+  *nearest* tick via the shared `roundTick()` helper — but nearest-tick rounding can land ONE
+  TICK BELOW the true solution whenever P sits just above a tick boundary, silently returning a
+  price whose real (cents-rounded) net proceeds fall short of the cost basis the function is
+  supposed to guarantee — exactly what the pre-existing test caught (695.48 net vs. a 695.494
+  cost basis). Fixed by rounding UP to the ceiling tick (`Math.ceil(P / tick) * tick`) instead
+  of to nearest, then a small self-correcting loop (up to 5 iterations) bumping the candidate up
+  one more tick at a time for the rare case fee cents-rounding still undershoots even at the
+  ceiling — this preserves the function's real contract (the MINIMUM tick that actually clears
+  cost basis), which the test's own second assertion already encodes (one tick below the
+  returned price must net strictly less). Every downstream consumer (PositionDetail's
+  Break-even stat, Dashboard/Portfolio's BE column, Trade Calculator, Risk Analysis, Trade
+  Strategy) reads this one shared function, so the fix applies everywhere at once with no other
+  file touched. Verified live via Playwright, not just the unit test: seeded the exact same
+  cost-basis/share-count shape as the failing test (634 shares, ~697.09 QAR invested) into a
+  real stock page — BE rendered 1.103, hand-confirmed as the minimum tick that clears cost
+  basis (1.103×634 nets 697.382 ≥ 697.09; one tick lower, 1.102, nets 696.748 < 697.09) — zero
+  console errors. `npx tsc -b` / `npm run test` (733 tests, all passing — this was the only
+  failure in the suite) / `npm run build` all clean.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

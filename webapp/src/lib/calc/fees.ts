@@ -18,7 +18,13 @@ export function roundTick(price: number, tick: number): number {
   return Math.round(price / t) * t;
 }
 
-/** Solves the SELL price P such that net proceeds (P*shares - fee) == costBasis. */
+/** Solves the SELL price P such that net proceeds (P*shares - fee) >= costBasis,
+ * returning the minimum valid tick price. Rounding to the *nearest* tick (as
+ * `roundTick` does elsewhere) is wrong here: the true continuous solution can sit
+ * just above a tick boundary, and nearest-tick rounding then lands one tick below
+ * it — a price that looks right but actually nets less than costBasis once the
+ * fee's own cents-rounding is applied. Round up to the ceiling tick instead, then
+ * verify/bump in the rare case fee rounding still undershoots there. */
 export function breakEvenPrice(
   costBasis: number,
   shares: number,
@@ -38,7 +44,15 @@ export function breakEvenPrice(
     P = P - diff / shares;
     if (P < 0) P = 0;
   }
-  return roundTick(P, tick);
+  const t = tick || 0.001;
+  let candidate = Math.ceil(P / t) * t;
+  for (let i = 0; i < 5; i++) {
+    const amount = candidate * shares;
+    const net = amount - calcFee(amount, false, { shares });
+    if (net >= costBasis - 1e-9) break;
+    candidate += t;
+  }
+  return roundTick(candidate, tick);
 }
 
 /** Solves the sell price P such that net proceeds - costBasis == targetProfit. */
