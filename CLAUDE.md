@@ -6036,6 +6036,21 @@ app, not developer notes) continuously as features ship.
   allocating 5+10 of 15 shares zeroed the unallocated counter, and submitting hit the real
   sign-in gate. `npx tsc -b` / `npm run test` (733 tests, 9 new — only the pre-existing,
   unrelated `breakEvenPrice` test fails) / `npm run build` all clean.
+- **Manual `lotAllocations` UI, PSX fast-follow — closes README Pending item 143 in full
+  (2026-09-19).** Picked up right after the QSE PR merged, per the "QSE first, PSX as a
+  fast-follow" answer already recorded above. Pure port of the QSE wiring onto
+  `features/psx/pages/TransactionsPage.tsx` (`TransactionRows` add form + inline edit-row) and
+  `features/psx/pages/StockPage.tsx` (per-stock add-trade toolbar + edit-row) — the shared
+  `LotAllocationFields` component itself needed zero changes. Two small per-file differences
+  from copying, not new design: PSX's Trade Transactions table has a dedicated Fee column QSE
+  doesn't, so its `colSpan` for the extra lot-allocation row is 9, not 8; PSX's per-stock table
+  is 7 columns wide (has its own Fee column too), so that `colSpan` is 7. No new tests — the
+  component itself is already fully covered by the QSE PR's own isolated tests; this is purely
+  wiring onto something already tested. Verified live via Playwright with the identical
+  3-synthetic-open-lot scenario used for QSE: all 3 lots listed correctly on expand, allocating
+  5+10 of 15 shares zeroed the unallocated counter, submitting hit the real sign-in gate — zero
+  console errors. `npx tsc -b` / `npm run test` (733 tests, unchanged) / `npm run build` all
+  clean.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

@@ -10,6 +10,7 @@ import { Tooltip } from '../../../components/Tooltip';
 import { toast } from '../../../components/Toast';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
 import { RecordDetailModal } from '../../../components/RecordDetailModal';
+import { LotAllocationFields } from '../../../components/ui/LotAllocationFields';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { usePageFabActions } from '../../../hooks/usePageFabActions';
 import { fmt, fmtMoney, fmtPrice } from '../../../lib/format';
@@ -44,6 +45,8 @@ function emptyRow(): Transaction {
 
 export function TransactionRows({ initial }: { initial?: Partial<Transaction> } = {}) {
   const addTransactions = usePSXWorkbookStore((s) => s.addTransactions);
+  const workbook = usePSXWorkbookStore((s) => s.workbook);
+  const { calcFee } = usePSXDerived();
   const ensureSignedIn = useEnsureSignedIn();
   // Partial Trade's "Sell this lot" (one click into this same Add-trade
   // flow, per the confirmed design) pre-fills ticker/action/shares/price
@@ -51,6 +54,16 @@ export function TransactionRows({ initial }: { initial?: Partial<Transaction> } 
   // page's own toolbar) omits it and gets the same blank row as before.
   const [rows, setRows] = useState<Transaction[]>([{ ...emptyRow(), ...initial }]);
   const [timeTouched, setTimeTouched] = useState<boolean[]>([false]);
+
+  // README Pending item 143's PSX fast-follow (2026-09-19): manual multi-lot
+  // Specific Identification, mirroring QSE's identical `TransactionsPage.tsx`
+  // wiring — see `LotAllocationFields`'s own doc comment for the full design.
+  const method = workbook.settings.costBasisMethod;
+  const showLotAllocation = method === 'fifo' || method === 'lowestCostFirst';
+  const lotsByTicker = useMemo(
+    () => (showLotAllocation ? computeFIFOPositions(workbook.transactions, calcFee, method!).lotsByTicker : {}),
+    [showLotAllocation, workbook.transactions, calcFee, method],
+  );
 
   const update = (i: number, patch: Partial<Transaction>) =>
     setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
@@ -74,7 +87,8 @@ export function TransactionRows({ initial }: { initial?: Partial<Transaction> } 
   return (
     <div>
       {rows.map((r, i) => (
-        <div key={i} className="row entry-row gap-sm">
+        <div key={i}>
+        <div className="row entry-row gap-sm">
           <Field label={i === 0 ? 'Date' : undefined}>
             <input
               type="date"
@@ -140,6 +154,15 @@ export function TransactionRows({ initial }: { initial?: Partial<Transaction> } 
           >
             <TrashIcon size={12} />Remove
           </button>
+        </div>
+        {r.action === 'SELL' && showLotAllocation && r.ticker && (
+          <LotAllocationFields
+            lots={lotsByTicker[r.ticker.toUpperCase()] || []}
+            totalShares={r.shares}
+            value={r.lotAllocations}
+            onChange={(next) => update(i, { lotAllocations: next })}
+          />
+        )}
         </div>
       ))}
       <div className="row gap-sm">
@@ -269,6 +292,19 @@ function TransactionList() {
   // real constraint. Offer cheapest-lot-first as a second, explicitly
   // comparison-only view (see `closedTrades.ts`'s `LotMatchOrder` comment).
   const [ctMatchOrder, setCtMatchOrder] = useState<LotMatchOrder>('fifo');
+
+  // Pending item 143 PSX fast-follow: manual lot allocation for the inline
+  // edit-row SELL form — same gate/derivation as QSE's identical file. Lots
+  // are computed excluding the transaction currently being edited (as if
+  // this specific sell hadn't happened yet), same documented simplification
+  // as the existing `targetLotBuyId`/"Sell this lot" flow already uses.
+  const editMethod = workbook.settings.costBasisMethod;
+  const showEditLotAllocation = editMethod === 'fifo' || editMethod === 'lowestCostFirst';
+  const editLots = useMemo(() => {
+    if (!showEditLotAllocation || editIndex === null || !editRow || editRow.action !== 'SELL' || !editRow.ticker) return [];
+    const others = workbook.transactions.filter((_, idx) => idx !== editIndex);
+    return computeFIFOPositions(others, calcFee, editMethod!).lotsByTicker[editRow.ticker.toUpperCase()] || [];
+  }, [showEditLotAllocation, editIndex, editRow, workbook.transactions, calcFee, editMethod]);
 
   const indexed = workbook.transactions.map((tx, i) => ({ tx, i }));
   const tickers = useMemo(() => [...new Set(workbook.transactions.map((t) => t.ticker))].sort(), [workbook.transactions]);
@@ -463,7 +499,8 @@ function TransactionList() {
               )}
               {g.rows.map(({ tx, i }) =>
                 editIndex === i && editRow ? (
-                  <tr key={i}>
+                  <Fragment key={i}>
+                  <tr>
                     <td><input type="date" value={editRow.date} onChange={(e) => setEditRow({ ...editRow, date: e.target.value })} className="w-130" /></td>
                     <td><input value={editRow.ticker} onChange={(e) => setEditRow({ ...editRow, ticker: e.target.value.toUpperCase() })} className="w-70" /></td>
                     <td>
@@ -501,6 +538,19 @@ function TransactionList() {
                       <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditIndex(null)} />
                     </td>
                   </tr>
+                  {editRow.action === 'SELL' && showEditLotAllocation && (
+                    <tr>
+                      <td colSpan={9}>
+                        <LotAllocationFields
+                          lots={editLots}
+                          totalShares={editRow.shares}
+                          value={editRow.lotAllocations}
+                          onChange={(next) => setEditRow({ ...editRow, lotAllocations: next })}
+                        />
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 ) : (
                   <tr key={i} onClick={() => setDetailTx(tx)} className="clickable">
                     <td>{tx.date}</td>
