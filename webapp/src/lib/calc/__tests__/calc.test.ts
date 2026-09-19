@@ -85,16 +85,31 @@ describe('computePositions (weighted-average cost)', () => {
     expect(pos.realized).toBeCloseTo(8, 5);
   });
 
-  it('honors persisted sequence for same-instant SELL then BUY when an existing position was open', () => {
+  it('puts BUY before SELL on a same-instant tie even when an existing position was already open', () => {
+    // Corrected 2026-09-18: a 2026-09-16 commit had made `sortTransactionsChronological`
+    // honor `seq` even when it meant a same-instant SELL sorted BEFORE a
+    // BUY — safe-looking here (there's already an open position, so the
+    // sell wouldn't literally oversell), but the rule lives in a generic,
+    // ticker-agnostic sort comparator that has no way to tell THIS safe
+    // case apart from the original, genuinely dangerous one (a same-day
+    // round trip starting from zero — see the test above) purely from two
+    // records' own fields. `seq` is honored for the cases it CAN safely
+    // decide (two same-action records on a tie — see
+    // `sortTransactions.test.ts`); BUY-before-SELL always wins when the
+    // actions differ. A ticker-and-running-quantity-aware reorder that
+    // could restore "honor real recorded order when it's provably safe"
+    // for this specific in-position case is a real, separately-scoped
+    // future refinement (see README Pending item 135), not attempted here.
     const sameInstant: Transaction[] = [
       { date: '2026-08-24', ticker: 'SEQ', action: 'BUY', shares: 10, price: 10, seq: 1 },
       { date: '2026-08-25', ticker: 'SEQ', action: 'SELL', shares: 5, price: 12, seq: 2 },
       { date: '2026-08-25', ticker: 'SEQ', action: 'BUY', shares: 5, price: 8, seq: 3 },
     ];
     const [pos] = computePositions(sameInstant, () => 0);
+    // Order actually processed: BUY10 -> BUY5 (avg cost 140/15) -> SELL5.
     expect(pos.shares).toBe(10);
-    expect(pos.invested).toBe(90);
-    expect(pos.realized).toBe(10);
+    expect(pos.invested).toBeCloseTo(280 / 3, 5);
+    expect(pos.realized).toBeCloseTo(40 / 3, 5);
   });
 
   it('does not manufacture profit from an oversell', () => {

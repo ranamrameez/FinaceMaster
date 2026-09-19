@@ -31,6 +31,93 @@ export interface FIFOResult {
   lotsByTicker: Record<string, FIFOLot[]>;
 }
 
+export interface LotConsumption<T> {
+  lot: T;
+  take: number;
+}
+
+/** Shared attribution-priority walk for a SELL's shares against a ticker's
+ * currently-open lots — used by both `computeFIFOPositions` below (drives
+ * the OFFICIAL numbers) and `closedTrades.ts`'s `computeClosedTrades` (a
+ * REPORTING ledger), so the two can never disagree about which lots a real
+ * sale drew from (closes README Pending item 134, which flagged the two
+ * as previously out of sync on this exact point).
+ *
+ * Priority order (see `Transaction.lotAllocations`/`targetLotBuyId` for the
+ * full reasoning): (1) `lotAllocations` in array order, each entry clamped
+ * to that lot's real `remainingShares` at that point — a `buyId` that
+ * doesn't resolve to a currently-open lot (already fully closed, or
+ * unknown) silently contributes 0, never reconsidering a closed lot; (2)
+ * `targetLotBuyId` for any remainder not covered by (1); (3) the ordinary
+ * `matchOrder` loop over whatever's still open.
+ *
+ * Mutates each consumed lot's `remainingShares` in place and removes a
+ * fully-drained lot from `lots` — callers should NOT also decrement
+ * `remainingShares` themselves for what this returns; they should only use
+ * the returned `{lot, take}` pairs to compute their own per-portion figures
+ * (cost removed, prorated fees, a ClosedTrade record, etc.). */
+export function consumeLotsForSell<T extends { remainingShares: number; buyPrice: number; buyId?: string }>(
+  lots: T[],
+  shares: number,
+  matchOrder: LotMatchOrder,
+  lotAllocations?: { buyId: string; shares: number }[],
+  targetLotBuyId?: string,
+): LotConsumption<T>[] {
+  const out: LotConsumption<T>[] = [];
+  let toSell = shares;
+
+  const takeFrom = (idx: number, want: number) => {
+    if (idx === -1 || want <= EPSILON) return;
+    const lot = lots[idx];
+    const take = Math.min(want, lot.remainingShares);
+    if (take <= EPSILON) return;
+    lot.remainingShares -= take;
+    toSell -= take;
+    out.push({ lot, take });
+    if (lot.remainingShares <= EPSILON) lots.splice(idx, 1);
+  };
+
+  if (lotAllocations) {
+    for (const alloc of lotAllocations) {
+      if (toSell <= EPSILON) break;
+      takeFrom(lots.findIndex((l) => l.buyId === alloc.buyId), Math.min(alloc.shares, toSell));
+    }
+  }
+
+  if (toSell > EPSILON && targetLotBuyId) {
+    takeFrom(lots.findIndex((l) => l.buyId === targetLotBuyId), toSell);
+  }
+
+  while (toSell > EPSILON && lots.length) {
+    const idx = matchOrder === 'fifo' ? 0 : lots.reduce((bestIdx, l, i) => (l.buyPrice < lots[bestIdx].buyPrice ? i : bestIdx), 0);
+    takeFrom(idx, toSell);
+  }
+
+  return out;
+}
+
+/** Fallback match order used for whatever portion of a SELL isn't covered by
+ * `Transaction.lotAllocations`/`targetLotBuyId` (see those fields' own doc
+ * comments for the full attribution priority) — i.e. what the engine
+ * assumes when nothing more specific is known about which lot(s) a sale
+ * drew from. Both options only ever draw from currently-OPEN lots; a fully
+ * closed (zero-remaining) lot is spliced out of the array the moment it
+ * closes and can never be reconsidered.
+ *
+ * `'fifo'` (the default, and the recommended "official" choice — see
+ * `QSESettings`/`PSXSettings.costBasisMethod`'s own doc comments) consumes
+ * the oldest open lot first: this is the global IRS/major-broker default,
+ * and for PSX specifically it's the same method NCCPL uses to compute
+ * every investor's real, government-mandated Capital Gains Tax through CDC
+ * — real-world research done 2026-09-18 at the user's own request ("please
+ * study how exchanges handle the trades"), see webapp/README.md's
+ * "Cost-basis worked examples" section for the full citations.
+ *
+ * `'lowestCostFirst'` consumes the cheapest open lot first — kept as a
+ * deliberate, permanent second view (the "Trader Strategy" style;
+ * `partialTradeStrategy.ts`'s Partial Trade Advisor always uses this one
+ * regardless of a workbook's real `costBasisMethod` setting), never the
+ * recommended default for the official numbers. */
 export type LotMatchOrder = 'fifo' | 'lowestCostFirst';
 
 /** FIFO/specific-lot accounting. Pending orders are excluded. Since this app
@@ -64,30 +151,8 @@ export function computeFIFOPositions(transactions: Transaction[], calcFee: FeeCa
       state.totalBoughtShares += tx.shares;
       state.buyCount += 1;
     } else {
-      let toSell = tx.shares;
-      let costRemoved = 0;
-      if (tx.targetLotBuyId) {
-        const idx = state.lots.findIndex((l) => l.buyId === tx.targetLotBuyId);
-        if (idx !== -1) {
-          const lot = state.lots[idx];
-          const take = Math.min(toSell, lot.remainingShares);
-          const costPerShare = lot.buyPrice + lot.buyFeeTotal / lot.originalShares;
-          costRemoved += take * costPerShare;
-          lot.remainingShares -= take;
-          toSell -= take;
-          if (lot.remainingShares <= EPSILON) state.lots.splice(idx, 1);
-        }
-      }
-      while (toSell > EPSILON && state.lots.length) {
-        const lotIndex = matchOrder === 'fifo' ? 0 : state.lots.reduce((bestIdx, l, i) => (l.buyPrice < state.lots[bestIdx].buyPrice ? i : bestIdx), 0);
-        const lot = state.lots[lotIndex];
-        const take = Math.min(toSell, lot.remainingShares);
-        const costPerShare = lot.buyPrice + lot.buyFeeTotal / lot.originalShares;
-        costRemoved += take * costPerShare;
-        lot.remainingShares -= take;
-        toSell -= take;
-        if (lot.remainingShares <= EPSILON) state.lots.splice(lotIndex, 1);
-      }
+      const consumed = consumeLotsForSell(state.lots, tx.shares, matchOrder, tx.lotAllocations, tx.targetLotBuyId);
+      const costRemoved = consumed.reduce((sum, { lot, take }) => sum + take * (lot.buyPrice + lot.buyFeeTotal / lot.originalShares), 0);
       const realizedDelta = amount - fee - costRemoved;
       state.realized += realizedDelta;
       state.sellFees += fee;

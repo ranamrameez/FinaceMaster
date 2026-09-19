@@ -95,16 +95,27 @@ describe('computeFIFOPositions', () => {
     expect(p.realized).toBeCloseTo(40 * 30 - 40 * 10.5, 5);
   });
 
-  it('treats oversold shares (more sold than held) as zero-cost-basis for the excess, matching computePositions', () => {
+  it('rejects an oversell (more sold than held) entirely, matching computePositions — never manufactures zero-cost profit for the excess', () => {
+    // Both `computeFIFOPositions` and `computePositions` skip an invalid
+    // oversell transaction wholesale (see each function's own oversell
+    // guard/doc comment: "this app does not model short positions, so a
+    // SELL larger than the currently-held quantity cannot legitimately
+    // create zero-cost profit") — NOT a partial fill with the excess
+    // treated as zero-cost, which an earlier version of this test wrongly
+    // asserted (a stale expectation neither engine has ever actually
+    // implemented; corrected 2026-09-18 while verifying an unrelated
+    // change, matching `positions.ts`'s own passing "does not manufacture
+    // profit from an oversell" test for the identical scenario).
     const txs: Transaction[] = [
       { date: '2026-01-01', ticker: 'TEST', action: 'BUY', shares: 10, price: 10 },
       { date: '2026-02-01', ticker: 'TEST', action: 'SELL', shares: 15, price: 20 },
     ];
     const { positions } = computeFIFOPositions(txs, noFee);
     const p = positions.find((x) => x.ticker === 'TEST')!;
-    expect(p.shares).toBe(0);
-    // Cost removed = 10*10 (only lot available) — the other 5 oversold shares have no cost basis.
-    expect(p.realized).toBeCloseTo(15 * 20 - 10 * 10, 5);
+    expect(p.shares).toBe(10);
+    expect(p.invested).toBe(100);
+    expect(p.realized).toBe(0);
+    expect(p.totalSoldShares).toBe(0);
   });
 
   it('closes a same-day round trip correctly even when the SELL is entered before the matching BUY', () => {
@@ -272,6 +283,173 @@ describe('computeFIFOPositions', () => {
       // remaining 5 sh fall through to whatever's left (buy-old @5), NOT
       // reselected by price since there's only one lot remaining anyway.
       expect(lotsByTicker.TEST).toEqual([expect.objectContaining({ buyId: 'buy-old', remainingShares: 5 })]);
+    });
+  });
+
+  describe('canonical worked examples (2026-09-18, documented in webapp/README.md — keep these in sync)', () => {
+    // The user's own repeated ask, verbatim: "I have already given examples
+    // multiple times but maybe you didn't documented it. document examples
+    // from now onwards as well as test cases." These 5 scenarios are the
+    // permanent regression coverage for that documentation — see
+    // webapp/README.md's "Cost-basis worked examples" section for the full
+    // write-up and citations for why FIFO is now the recommended default
+    // (real-world research: NCCPL mandates FIFO for PSX's own government
+    // CGT computation; FIFO is also the global IRS/major-broker default).
+
+    it('toy example (user\'s own words): buy 2@10.1, 2@10.15, 3@10.18, 1@10.4; sell all 8@10.18 -> FIFO consumes in buy order', () => {
+      // Dates/prices happen to rise together here, so this example alone
+      // does NOT distinguish FIFO from lowestCostFirst (both produce the
+      // identical result) — paired with the next test, which does.
+      const txs: Transaction[] = [
+        { date: '2026-01-01', ticker: 'TOY', action: 'BUY', shares: 2, price: 10.1 },
+        { date: '2026-01-02', ticker: 'TOY', action: 'BUY', shares: 2, price: 10.15 },
+        { date: '2026-01-03', ticker: 'TOY', action: 'BUY', shares: 3, price: 10.18 },
+        { date: '2026-01-04', ticker: 'TOY', action: 'BUY', shares: 1, price: 10.4 },
+        { date: '2026-01-05', ticker: 'TOY', action: 'SELL', shares: 8, price: 10.18 },
+      ];
+      const fifo = computeFIFOPositions(txs, noFee, 'fifo').positions.find((p) => p.ticker === 'TOY')!;
+      const lowest = computeFIFOPositions(txs, noFee, 'lowestCostFirst').positions.find((p) => p.ticker === 'TOY')!;
+      const costRemoved = 2 * 10.1 + 2 * 10.15 + 3 * 10.18 + 1 * 10.4;
+      expect(fifo.realized).toBeCloseTo(8 * 10.18 - costRemoved, 5);
+      expect(lowest.realized).toBeCloseTo(fifo.realized, 5);
+      expect(fifo.shares).toBe(0);
+    });
+
+    it('minimal FIFO-vs-lowestCostFirst distinguishing example: a later BUY that is cheaper than an earlier one', () => {
+      const txs: Transaction[] = [
+        { date: '2026-01-01', ticker: 'DIST', action: 'BUY', shares: 5, price: 12.0 }, // day 1, pricier
+        { date: '2026-01-02', ticker: 'DIST', action: 'BUY', shares: 5, price: 10.0 }, // day 2, cheaper but later
+        { date: '2026-01-03', ticker: 'DIST', action: 'SELL', shares: 5, price: 11.0 },
+      ];
+      const fifo = computeFIFOPositions(txs, noFee, 'fifo');
+      const lowest = computeFIFOPositions(txs, noFee, 'lowestCostFirst');
+      // FIFO takes the OLDER (day-1, pricier) lot -> the cheaper day-2 lot survives untouched.
+      expect(fifo.lotsByTicker.DIST).toEqual([expect.objectContaining({ buyPrice: 10.0, remainingShares: 5 })]);
+      // lowestCostFirst takes the CHEAPER (day-2) lot -> the pricier day-1 lot survives untouched.
+      expect(lowest.lotsByTicker.DIST).toEqual([expect.objectContaining({ buyPrice: 12.0, remainingShares: 5 })]);
+    });
+
+    it('real IQCD example under FIFO-as-official with no manual targeting: FIFO alone drains the EXPENSIVE lot, the opposite of what "Sell this lot" achieves', () => {
+      // Reframes the existing targetLotBuyId IQCD scenario above under the
+      // new recommended default: proves manual targeting still matters
+      // even with FIFO as the honest default, since FIFO alone would
+      // "protect" the cheap lot by accident, not the expensive one the
+      // user actually wants to protect.
+      const txs: Transaction[] = [
+        { id: 'buy-old', date: '2026-01-01', ticker: 'IQCD', action: 'BUY', shares: 50, price: 10.4 },
+        { id: 'buy-cheap', date: '2026-01-15', ticker: 'IQCD', action: 'BUY', shares: 14, price: 9.962 },
+        { date: '2026-02-01', ticker: 'IQCD', action: 'SELL', shares: 14, price: 10.37 },
+      ];
+      const { lotsByTicker } = computeFIFOPositions(txs, noFee, 'fifo');
+      expect(lotsByTicker.IQCD).toEqual([
+        expect.objectContaining({ buyId: 'buy-old', remainingShares: 36 }),
+        expect.objectContaining({ buyId: 'buy-cheap', remainingShares: 14 }),
+      ]);
+    });
+
+    it('real QFLS example (user\'s own full transaction table): an exactly-matched round trip closes cleanly and cannot leak, regardless of match order', () => {
+      // Verbatim from the user's real trade history (dates/shares/prices),
+      // sorted chronologically ascending here for readability — the app
+      // itself sorts internally, so entry order doesn't matter.
+      const txs: Transaction[] = [
+        { date: '2026-06-22', ticker: 'QFLS', action: 'BUY', shares: 14, price: 14.11 },
+        { date: '2026-06-23', ticker: 'QFLS', action: 'SELL', shares: 14, price: 14.16 },
+        { date: '2026-08-06', ticker: 'QFLS', action: 'BUY', shares: 25, price: 13.66 },
+        { date: '2026-08-06', ticker: 'QFLS', action: 'BUY', shares: 50, price: 13.80 },
+        { date: '2026-08-09', ticker: 'QFLS', action: 'BUY', shares: 49, price: 13.52 },
+        { date: '2026-08-10', ticker: 'QFLS', action: 'BUY', shares: 100, price: 13.50 },
+        { date: '2026-09-08', ticker: 'QFLS', action: 'BUY', shares: 16, price: 12.46 },
+        { date: '2026-09-08', ticker: 'QFLS', action: 'BUY', shares: 5, price: 12.46 },
+        { date: '2026-09-13', ticker: 'QFLS', action: 'BUY', shares: 10, price: 12.42 },
+        { date: '2026-09-14', ticker: 'QFLS', action: 'SELL', shares: 10, price: 12.53 },
+        { date: '2026-09-14', ticker: 'QFLS', action: 'SELL', shares: 21, price: 12.53 },
+      ];
+
+      for (const matchOrder of ['fifo', 'lowestCostFirst'] as const) {
+        const { lotsByTicker } = computeFIFOPositions(txs, noFee, matchOrder);
+        // The 06-22/06-23 round trip is an EXACT match (buy 14, sell 14) —
+        // it fully closes and is spliced out before any later activity
+        // even starts, so it cannot leak into anything below under either
+        // match order: no lot at 14.11 survives, ever.
+        expect(lotsByTicker.QFLS.some((l) => l.buyPrice === 14.11)).toBe(false);
+      }
+
+      // Official view (FIFO): the two 09-14 sells (31 sh total) drain the
+      // OLDEST lots first (the 08-06 pair, 75 sh combined, more than
+      // enough) — every lot from 08-09 onward is completely untouched.
+      const fifo = computeFIFOPositions(txs, noFee, 'fifo').lotsByTicker.QFLS;
+      const fifoAug06Remaining = fifo.filter((l) => l.buyDate === '2026-08-06').reduce((s, l) => s + l.remainingShares, 0);
+      expect(fifoAug06Remaining).toBe(75 - 31); // 44 sh left, split across the two 08-06 lots
+      expect(fifo).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ buyPrice: 13.52, remainingShares: 49 }),
+          expect.objectContaining({ buyPrice: 13.5, remainingShares: 100 }),
+          expect.objectContaining({ buyPrice: 12.46, remainingShares: 16 }),
+          expect.objectContaining({ buyPrice: 12.46, remainingShares: 5 }),
+          expect.objectContaining({ buyPrice: 12.42, remainingShares: 10 }),
+        ]),
+      );
+
+      // Trader Strategy view (lowestCostFirst): the same two sells (31 sh)
+      // instead drain the NEWEST/cheapest lots first — 09-13 (10 sh @12.42)
+      // fully, then BOTH 09-08 lots (5 + 16 = 21 sh, exactly the remaining
+      // need either way the two tie) — leaving every 08-06/08-09/08-10 lot
+      // (the 4 priciest, 225 sh) completely untouched.
+      const lowest = computeFIFOPositions(txs, noFee, 'lowestCostFirst').lotsByTicker.QFLS;
+      expect(lowest).toHaveLength(4);
+      expect(lowest).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ buyPrice: 13.66, remainingShares: 25 }),
+          expect.objectContaining({ buyPrice: 13.8, remainingShares: 50 }),
+          expect.objectContaining({ buyPrice: 13.52, remainingShares: 49 }),
+          expect.objectContaining({ buyPrice: 13.5, remainingShares: 100 }),
+        ]),
+      );
+      expect(lowest.some((l) => l.buyPrice === 12.46 || l.buyPrice === 12.42)).toBe(false);
+    });
+
+    it('new synthetic lotAllocations example: an arbitrary split matching neither FIFO nor lowestCostFirst', () => {
+      // 3 lots, deliberately NOT ordered by date-equals-price: A is both
+      // oldest AND cheapest (so both presets would pick it first), but the
+      // user explicitly allocates the sale to skip it entirely — proving
+      // the mechanism represents a truly arbitrary real composition, per
+      // the user's own words: "I may sell in bulk completely different
+      // figures from the lot system."
+      const txs: Transaction[] = [
+        { id: 'lot-a', date: '2026-01-01', ticker: 'ALLOC', action: 'BUY', shares: 10, price: 10 },
+        { id: 'lot-b', date: '2026-02-01', ticker: 'ALLOC', action: 'BUY', shares: 10, price: 11 },
+        { id: 'lot-c', date: '2026-03-01', ticker: 'ALLOC', action: 'BUY', shares: 10, price: 12 },
+        {
+          date: '2026-04-01', ticker: 'ALLOC', action: 'SELL', shares: 15, price: 20,
+          lotAllocations: [{ buyId: 'lot-b', shares: 5 }, { buyId: 'lot-c', shares: 10 }],
+        } as Transaction,
+      ];
+      const { lotsByTicker, positions } = computeFIFOPositions(txs, noFee, 'fifo');
+      // Lot A (cheapest AND oldest) is untouched; B is partially drained; C is fully drained.
+      expect(lotsByTicker.ALLOC).toEqual([
+        expect.objectContaining({ buyId: 'lot-a', remainingShares: 10 }),
+        expect.objectContaining({ buyId: 'lot-b', remainingShares: 5 }),
+      ]);
+      const p = positions.find((x) => x.ticker === 'ALLOC')!;
+      // Realized = proceeds - (5 sh @11 + 10 sh @12), NOT the lowest-cost
+      // 15 shares (which would have been all of A + 5 of B, a completely
+      // different, wrong figure if lotAllocations weren't honored.
+      expect(p.realized).toBeCloseTo(15 * 20 - (5 * 11 + 10 * 12), 5);
+    });
+
+    it('lotAllocations gracefully skips a stale/unknown buyId (already-closed or never-existed) and falls through to the default match order for it', () => {
+      const txs: Transaction[] = [
+        { id: 'lot-a', date: '2026-01-01', ticker: 'GRACE', action: 'BUY', shares: 10, price: 10 },
+        {
+          date: '2026-02-01', ticker: 'GRACE', action: 'SELL', shares: 6, price: 20,
+          lotAllocations: [{ buyId: 'no-such-lot', shares: 4 }, { buyId: 'lot-a', shares: 2 }],
+        } as Transaction,
+      ];
+      const { lotsByTicker } = computeFIFOPositions(txs, noFee, 'fifo');
+      // The bogus allocation contributes 0; the real 2-share allocation to
+      // lot-a is honored; the remaining 4 shares (6 - 2) fall through to
+      // the default match order, draining the only lot left (lot-a again).
+      expect(lotsByTicker.GRACE).toEqual([expect.objectContaining({ buyId: 'lot-a', remainingShares: 4 })]);
     });
   });
 

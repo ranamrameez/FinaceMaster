@@ -5916,6 +5916,100 @@ app, not developer notes) continuously as features ship.
   real account** — they need to switch the new setting themselves in Settings; their real
   historical Unrealized P/L for any ticker with lot-targeted sells will correctly become more
   negative (more honest) once they do.
+- **True multi-lot cost-basis engine + a real pre-existing chronological-sort regression fixed
+  + FIFO promoted to the recommended official default, real-world research-backed (2026-09-18)
+  — see README Done item 337, and README's own new "Cost-basis worked examples" section
+  (right after its intro, before its "## Done") for the full worked-out examples this entry
+  only summarizes.** Direct follow-up to the entry immediately above, same day: the user gave
+  a real full transaction table (QFLS) and said, verbatim, "I am not bound to use 'Sell This
+  Lot'. I may sell in bulk completely different figures from the lot system... App need to
+  make the real calc engine to respect buy and sell dates," then escalated further ("app
+  really need to work on split and merge to make the real buy/sell reality of each single
+  share") and directly flagged, twice, that past sessions hadn't durably documented worked
+  examples despite being given several — "you are not keeping the docs updated. i already
+  explained, how can we handle the stock trading." **Lesson worth internalizing for any
+  future session that gets this same complaint**: when a user says a worked example wasn't
+  documented, the fix isn't a commit-message mention or a buried inline comment — it needs
+  its own clearly-titled, easy-to-find section (this file added one to `webapp/README.md`,
+  right after the intro) AND a permanent Vitest test reproducing the exact numbers, not just
+  a design decision described in prose.
+  **New `Transaction.lotAllocations?: {buyId, shares}[]`** generalizes the existing single-lot
+  `targetLotBuyId` into a real, exact, arbitrary multi-lot breakdown for one SELL — true
+  Specific Identification. New shared `consumeLotsForSell()` (`lib/calc/fifoPositions.ts`) is
+  now the ONE place the attribution priority lives (`lotAllocations` → `targetLotBuyId` →
+  default match order over open lots only, a stale/closed `buyId` silently contributing 0,
+  never reconsidering a closed lot) — used by BOTH `computeFIFOPositions` (official numbers)
+  and `computeClosedTrades` (the reporting ledger), so the two can never disagree about which
+  lots a sale drew from again (closes the previously-tracked README Pending item 134 as a
+  direct consequence). Per the user's own explicit instruction, a sell spanning multiple lots
+  is always SPLIT into one record per lot, never merged into one blended-average figure.
+  **Real-world research** (the user's own request, in these exact words: "i maybe wrong.
+  please study how exchanges handle the trades!") found NCCPL — Pakistan's National Clearing
+  Company, mandated by the FBR under Section 37A of the Income Tax Ordinance 2001 — computes
+  every investor's real Capital Gains Tax using MANDATORY chronological FIFO through CDC, so a
+  real PSX broker's own "Buy Average"/CGT figure is genuine FIFO, not lowest-cost-first; FIFO
+  is also the general US IRS/major-broker default. This reverses an earlier, unverified claim
+  (made without actually checking) that lowest-cost-first was "the closest match to a real
+  broker statement" — `LotMatchOrder`'s default flipped from `'lowestCostFirst'` to `'fifo'`,
+  and both exchanges' Settings copy was corrected to recommend FIFO explicitly (citing NCCPL
+  for PSX). Lowest-cost-first is kept as a deliberate, permanent second "Trader Strategy" view
+  — exactly what `partialTradeStrategy.ts`'s Partial Trade Advisor already always used
+  regardless of the real setting, now explicitly framed as an intentional pairing rather than
+  an implementation detail, per the user's own words: "So FIFO becomes the official. While
+  FIFO + Cheapest first becomes the Traders Strategy View."
+  **A real, separate, previously-undiscovered regression found and fixed while verifying this
+  work, not caused by it — worth remembering the shape of for any future "why does this old
+  test suddenly fail" moment**: `sortTransactionsChronological()` — the single ordering
+  function every position/FIFO/cash-ledger calculation depends on — had its `seq`-tiebreak
+  check accidentally placed ABOVE its own pre-existing BUY-before-SELL financial-correctness
+  rule by a 2026-09-16 commit ("honor persisted transaction sequence for exact-time ties"),
+  silently letting a same-day SELL sort before its matching BUY whenever their `seq` values
+  differed — which is true almost always, for two records entered at different times. This is
+  exactly the class of bug this rule was originally added to prevent (see this file's own
+  Done item 128 entry: "same-day buy+sell of equal quantity showed spurious open shares").
+  **Confirmed via a stashed-baseline test run (not assumed) that `origin/main` already had 5
+  pre-existing test failures before this session touched anything** — this project's own
+  "measure before fixing" discipline, applied to test-suite health itself, not just app
+  behavior. Fixed by restoring BUY-before-SELL as the check that runs first, with `seq` only
+  breaking a tie BUY-before-SELL can't resolve (two same-action records at the exact same
+  instant). One test (`calc.test.ts`'s "honors persisted sequence for same-instant SELL then
+  BUY when an existing position was open") had actually been written to validate the buggy
+  behavior as intended — updated to assert the corrected, safe default instead, with a note
+  that a properly ticker-and-running-quantity-aware reorder (which COULD safely honor real
+  recorded order for the narrower case where an existing open position makes it provably
+  safe) is a real, separately-scoped future refinement (README Pending item 145), not
+  attempted here — a generic pairwise sort comparator structurally can't distinguish that safe
+  case from the dangerous one it exists to prevent. Two more small pre-existing test bugs
+  fixed in the same pass (both genuinely unrelated to ordering logic, confirmed via the same
+  stashed-baseline technique): `cashLedger.test.ts`'s two tie-breaking tests each constructed
+  a lone SELL with zero shares ever bought, which `buildCashLedger`'s own correct oversell
+  guard rejects regardless of order; `fifoPositions.test.ts`'s oversell test asserted a
+  "partial fill, zero-cost for the excess" behavior neither `computeFIFOPositions` nor
+  `computePositions` has ever actually implemented (both correctly reject an invalid oversell
+  transaction wholesale — confirmed by reading `positions.ts`'s own matching, passing test for
+  the identical scenario). **Deliberately NOT fixed, flagged instead** (README Pending item
+  146): a genuinely unrelated pre-existing `breakEvenPrice` tick-rounding precision edge case,
+  also confirmed pre-existing via the same stashed-baseline run — a different function/domain
+  entirely, deserving its own dedicated investigation.
+  9 new permanent worked-example tests hand-trace every example in README's new "Cost-basis
+  worked examples" section, across `fifoPositions.test.ts` (7) and `closedTrades.test.ts` (2)
+  — including the toy example, a minimal FIFO-vs-lowest-cost-first distinguishing case (the
+  toy example alone doesn't distinguish them, since its dates and prices happen to rise
+  together), the real IQCD and QFLS cases, and a synthetic `lotAllocations` case. **Verified
+  live via Playwright, not just unit tests**: seeded the exact real QFLS transaction table
+  into the QSE stock page — Open Lots (Official/FIFO) showed exactly 44 shares remaining
+  across the two 08-06 lots (75 total minus the 31 sold), every 08-09/08-10/09-08/09-13 lot
+  completely untouched, the 06-22/06-23 round trip correctly absent from Open Lots and instead
+  showing as its own itemized Closed Round-Trip record — zero console errors, numbers matching
+  the hand-traced README documentation exactly. `npx tsc -b` / `npm run test` (724 tests, 9
+  new — only the pre-existing, unrelated `breakEvenPrice` precision test still fails) / `npm
+  run build` all clean. **Deliberately scoped down, tracked as new README Pending items rather
+  than guessed at**: the manual `lotAllocations` UI itself (item 143 — the engine fully
+  supports it, nothing in the UI sets it yet) and a genuinely persistent top nav bar with an
+  Official/Trader-Strategy tab switcher for QSE's Stock-Exchange pages (item 144 — the user's
+  own direct follow-up ask, ties into the already-tracked, broader item 139). PSX gets the
+  shared engine fix automatically (already exercises `targetLotBuyId` via its own "Sell this
+  lot") but no new UI this pass, per the user's own "QSE first, PSX as a fast-follow" answer.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

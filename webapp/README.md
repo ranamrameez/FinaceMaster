@@ -19,6 +19,164 @@ FinanceManager live link:
 > for per-step confirmation** — both by explicit user instruction. See `USER_MANUAL.md` for
 > end-user-facing docs (kept up to date alongside this file).
 
+## Cost-basis worked examples (canonical — keep in sync with tests)
+
+**Why this section exists.** The user gave several real worked examples across multiple
+sessions asking for the stock cost-basis engine (`lib/calc/fifoPositions.ts`,
+`lib/calc/closedTrades.ts`) to get lot attribution right, and directly called out
+(2026-09-18) that past sessions hadn't durably documented them: *"I have already given
+examples multiple times but maybe you didn't documented it. document examples from now
+onwards as well as test cases."* Every example below is a permanent Vitest regression case
+(see `lib/calc/__tests__/fifoPositions.test.ts`'s and `closedTrades.test.ts`'s own
+`describe('canonical worked examples ...')`/matching blocks) — if you change the lot-matching
+engine, re-run these first, and if a worked example here and its own test ever disagree,
+the test is the ground truth (this prose can drift; the test can't).
+
+### Two deliberately separate, both-correct views
+
+As of 2026-09-18 this app shows TWO different, both-correct cost-basis views for the same
+position, never blended into one number:
+
+- **Official** (`costBasisMethod: 'fifo'`, the recommended choice in Settings — Dashboard,
+  Portfolio, PositionDetail's real Open lots, Trade Transactions' Open/Closed trades):
+  consumes the OLDEST open lot first on an untargeted sell. This matches a real broker
+  statement — see "Why FIFO, not lowest-cost-first" below.
+- **Trader Strategy** (`lib/calc/partialTradeStrategy.ts`'s Partial Trade Advisor, the Trade
+  Strategy page): always uses `'lowestCostFirst'` (consumes the CHEAPEST open lot first)
+  regardless of the real `costBasisMethod` setting — a deliberate, permanent second view for
+  deciding which lot to sell next, not the official number.
+
+Both views can legitimately show different numbers for the identical position at the
+identical moment — that's the point, and every surface that could show either is labeled
+(`StatSourceBadge`: official / advisory / history) so it's never ambiguous which one you're
+looking at.
+
+**Manual, exact lot targeting always wins over either view's own default guess.** A sell can
+name exactly which lot(s) it drew from — `Transaction.targetLotBuyId` (one lot, set by the
+Trade Strategy page's "Sell this lot") or `Transaction.lotAllocations` (an arbitrary
+multi-lot split — "these N shares: X from this lot, Y from that lot," real Specific
+Identification, added 2026-09-18 per the user's own words: *"I am not bound to use 'Sell
+This Lot'. I may sell in bulk completely different figures from the lot system."*). Priority
+order in both `computeFIFOPositions` and `computeClosedTrades` (shared via
+`consumeLotsForSell` in `fifoPositions.ts`, so the two can never disagree — this also closed
+a previously-tracked gap, see the old Pending item 134): (1) `lotAllocations` in array order,
+each entry clamped to that lot's real remaining shares — a stale/unknown `buyId` silently
+contributes 0, **never reconsidering an already-closed lot**; (2) `targetLotBuyId` for any
+remainder; (3) the view's own default match order (FIFO or lowest-cost-first) over whatever's
+still open.
+
+**Split, never merged.** `computeClosedTrades()` already gives a sell that drew from more
+than one lot ONE reporting record PER LOT touched — each with its own real buy price/date/
+fees/net P&L — never one blended-average record, per the user's own explicit instruction
+(2026-09-18): *"merging a sale into one should be avoided. instead both Buy sell should be
+splitted. bcz buy price may differ for multiple stocks sold on a single price."*
+
+### Why FIFO, not lowest-cost-first, is the recommended official default
+
+Real-world research done 2026-09-18, at the user's own request (*"i maybe wrong. please
+study how exchanges handle the trades!"*), after an earlier session had (wrongly, without
+checking) recommended lowest-cost-first as "the closest match to a real broker statement":
+
+- **PSX (Pakistan) — a real regulatory mandate, not just convention.** NCCPL (National
+  Clearing Company of Pakistan), mandated by the Federal Board of Revenue under Section 37A
+  of the Income Tax Ordinance 2001, computes every investor's real Capital Gains Tax using
+  **mandatory chronological FIFO**, tracked per-lot through CDC — "holding period... is
+  calculated per lot, not per stock." A real PSX broker's own "Buy Average"/CGT figure is
+  genuine FIFO. [NCCPL — Capital Gain Tax (CGT)](https://www.nccpl.com.pk/cgt),
+  [NCCPL CGT regime (PDF)](https://www.nccpl.com.pk/storage/sections/files/01KAGRFYGNZJBV4XSSCB57MVBA.pdf),
+  [Chase Securities — Tax on Stock Market Gains in Pakistan](https://chasesecurities.com/tax-on-stock-market-gains-in-pakistan/)
+- **General/international brokerage practice.** The US IRS's own default cost-basis method
+  for stocks is FIFO unless a taxpayer elects otherwise; major brokers (Fidelity, Schwab,
+  E\*TRADE) default to FIFO too. "Specific Identification" is the real, recognized mechanism
+  for a trader to deliberately name which lot a sale drew from — matching this app's own
+  `targetLotBuyId`/`lotAllocations` design. [Cost basis methods – Bogleheads](https://www.bogleheads.org/wiki/Cost_basis_methods),
+  [Schwab — Know Your Cost Basis](https://www.schwab.com/learn/story/save-on-taxes-know-your-cost-basis)
+- **QSE (Qatar).** Individual capital gains on QSE-listed shares are tax-exempt for
+  residents — no local regulatory mandate exists, so FIFO is recommended via the same
+  general/international convention above. [Qatar — Individual — Income determination (PwC)](https://taxsummaries.pwc.com/qatar/individual/income-determination)
+- **Reconciling with an earlier finding** (the original 2026-09-17 IQCD investigation, see
+  Done item 336 below): `'lowestCostFirst'` landed numerically closer to the user's real
+  broker figure than plain oldest-first FIFO in that one case. This is NOT evidence
+  lowest-cost-first is "correct" — it's much more likely the user's own real broker trades
+  already used real-world Specific-ID-style targeting at the time of sale (a standard
+  brokerage feature), which only `targetLotBuyId`/`lotAllocations` (fed with the user's real
+  intent) can reconstruct — no single blanket guessing rule can. **The fix is capturing real
+  per-trade specific-lot data; the default fallback rule only matters for whatever's left
+  unspecified.**
+
+### Worked example 1 — the toy example (user's own words)
+
+> "buy 2 @10.1 2@10.15 3@10.18 1@10.4 sell all@10.18"
+
+Buy 2@10.10, 2@10.15, 3@10.18, 1@10.40 (in that chronological order); sell all 8 shares
+@10.18. Under FIFO, shares are consumed in buy order — 2, then 2, then 3, then 1 — because
+dates and prices happen to rise together here. **This example alone does not distinguish
+FIFO from lowest-cost-first** (both produce the identical result) — see worked example 2 for
+one that does.
+
+### Worked example 2 — minimal FIFO-vs-lowest-cost-first distinguishing case
+
+Buy 5 shares @12.00 on day 1 (pricier), buy 5 shares @10.00 on day 2 (cheaper but later),
+sell 5 shares. FIFO takes the day-1 lot (@12.00) since it's the oldest, leaving the cheaper
+day-2 lot (@10.00) open. Lowest-cost-first takes the day-2 lot (@10.00) instead, leaving the
+pricier day-1 lot (@12.00) open. Same real data, two internally-consistent, differently-
+purposed results — proving the two views genuinely diverge.
+
+### Worked example 3 — real IQCD (the original 2026-09-17 financial-loss report)
+
+50 shares bought @10.40 (older, expensive) + 14 shares bought @9.962 (newer, cheap). Under
+FIFO-as-official with NO manual targeting, FIFO alone drains the EXPENSIVE (oldest) lot
+first — the OPPOSITE of what "Sell this lot" (`targetLotBuyId`) is meant to achieve. This is
+why manual targeting still matters even with FIFO as the honest default: FIFO alone would
+"protect" the cheap lot by accident, not the expensive one a user actually wants to protect.
+
+### Worked example 4 — real QFLS (user's own full transaction table, verbatim)
+
+> "My earliest buy and sell should not impact other trades since i evenly bought and sold 14
+> shares."
+
+| Date | Action | Shares | Price | Amount |
+|---|---|---:|---:|---:|
+| 2026-06-22 | BUY | 14 | 14.11 | 197.54 QAR |
+| 2026-06-23 | SELL | 14 | 14.16 | 198.24 QAR |
+| 2026-08-06 | BUY | 25 | 13.66 | 341.50 QAR |
+| 2026-08-06 | BUY | 50 | 13.80 | 690.00 QAR |
+| 2026-08-09 | BUY | 49 | 13.52 | 662.48 QAR |
+| 2026-08-10 | BUY | 100 | 13.50 | 1,350.00 QAR |
+| 2026-09-08 | BUY | 16 | 12.46 | 199.36 QAR |
+| 2026-09-08 | BUY | 5 | 12.46 | 62.30 QAR |
+| 2026-09-13 | BUY | 10 | 12.42 | 124.20 QAR |
+| 2026-09-14 | SELL | 10 | 12.53 | 125.30 QAR |
+| 2026-09-14 | SELL | 21 | 12.53 | 263.13 QAR |
+
+The 06-22/06-23 round trip is an EXACT match (buy 14, sell 14) — it fully closes and is
+removed from the open-lot list before any later activity even starts, so it **cannot leak
+into anything below under any match order**, provably (this holds for FIFO, lowest-cost-
+first, or any real specific allocation — a fully-closed lot is gone from the array, period).
+
+The two 09-14 sells (31 shares total, once the round trip is closed) show the two views
+genuinely diverging on the SAME real data:
+
+- **Official (FIFO)**: consumes the OLDEST lots first — the two 08-06 lots (75 shares
+  combined, more than enough for 31) — so every lot from 08-09 onward (49@13.52, 100@13.50,
+  16@12.46, 5@12.46, 10@12.42) is completely untouched. (The exact split between the two
+  08-06 lots depends on which was entered first on that date — not disambiguated by the
+  table alone — but the aggregate 44 shares remaining across both, and every OTHER lot's
+  exact untouched count, hold regardless.)
+- **Trader Strategy (lowest-cost-first)**: consumes the NEWEST/cheapest lots first instead —
+  09-13's 10@12.42 fully, then both 09-08 lots (5+16=21 shares, exactly the remaining need
+  either way they tie) — leaving every 08-06/08-09/08-10 lot (the 4 priciest, 225 shares)
+  completely untouched.
+
+### Worked example 5 — synthetic `lotAllocations` (arbitrary split, matches neither preset)
+
+3 lots: A=10@10 (oldest AND cheapest), B=10@11, C=10@12. Sell 15 shares with an explicit
+`lotAllocations` of 5 from B + 10 from C — deliberately skipping A entirely, even though
+BOTH presets (FIFO and lowest-cost-first) would have picked A first. This proves the
+mechanism represents a genuinely arbitrary real composition, not just automating a smarter
+guess — matching the user's own words: *"I may sell in bulk completely different figures
+from the lot system."*
+
 ## Done
 
 3. QSE numbers in calculation are 4 digits (2.155, 21.55) — prices now display at 4
@@ -9667,6 +9825,85 @@ FinanceManager live link:
   cost-basis-change rule) — they need to switch it themselves in Settings once this ships, and
   should expect their real historical Unrealized P/L for any ticker with lot-targeted sells to
   become more negative (more honest) once they do.
+- **True multi-lot cost-basis engine + a real pre-existing chronological-sort regression fixed
+  + FIFO promoted to the recommended official default, real-world research-backed
+  (2026-09-18) — see Done item 337.** Direct follow-up to Done item 336, same day: the user
+  gave a real full transaction table (QFLS) and said, verbatim, "I am not bound to use 'Sell
+  This Lot'. I may sell in bulk completely different figures from the lot system... App need
+  to make the real calc engine to respect buy and sell dates," then escalated further ("app
+  really need to work on split and merge to make the real buy/sell reality of each single
+  share") and directly flagged that past sessions hadn't durably documented worked examples
+  despite being given several. See this file's own new "Cost-basis worked examples" section
+  (right after the intro, above "## Done") for the full worked-out examples (a toy case, a
+  minimal FIFO-vs-lowest-cost-first distinguisher, the real IQCD and QFLS cases, and a
+  synthetic `lotAllocations` case) and citations — this Done item is a pointer, not a
+  duplicate of that content.
+  **New `Transaction.lotAllocations?: {buyId, shares}[]`** — an exact, arbitrary multi-lot
+  breakdown for a SELL (real Specific Identification, generalized beyond the existing
+  single-lot `targetLotBuyId`). New shared `consumeLotsForSell()` (`lib/calc/fifoPositions.ts`)
+  is the one place the attribution priority (`lotAllocations` → `targetLotBuyId` → default
+  match order, open lots only, a stale/closed `buyId` silently contributing 0) lives — used by
+  BOTH `computeFIFOPositions` (the official numbers) and `computeClosedTrades` (the reporting
+  ledger), so the two can never disagree about which lots a sale drew from again. This closes
+  the previously-tracked Pending item 134 (`closedTrades.ts` never honored `targetLotBuyId`)
+  as a direct consequence, not extra scope.
+  **Real-world research** (the user's own request: "please study how exchanges handle the
+  trades") found NCCPL mandates FIFO for PSX's own government Capital Gains Tax computation,
+  and FIFO is also the global IRS/major-broker default — reversing an earlier session's
+  unverified claim that lowest-cost-first was "the closest match to a real broker statement."
+  `LotMatchOrder`'s default flipped from `'lowestCostFirst'` to `'fifo'`; both exchanges'
+  Settings copy corrected to recommend FIFO explicitly (citing NCCPL for PSX). Lowest-cost-
+  first is kept as a deliberate, permanent second "Trader Strategy" view — exactly what
+  `partialTradeStrategy.ts`'s Partial Trade Advisor already always used regardless of the real
+  setting, now explicitly framed that way rather than an implementation detail.
+  **A real, separate, previously-undiscovered regression found and fixed while verifying this
+  work, not caused by it**: `sortTransactionsChronological()` — the single ordering function
+  every position/FIFO/cash-ledger calc depends on — had its `seq`-tiebreak check accidentally
+  placed ABOVE its own pre-existing BUY-before-SELL financial-correctness rule by a 2026-09-16
+  commit ("honor persisted transaction sequence for exact-time ties"), silently letting a
+  same-day SELL sort before its matching BUY whenever their `seq` values differed (i.e. almost
+  always, for two records entered at different times) — exactly the class of bug this rule was
+  originally added to prevent (README's own earlier "same-day buy+sell showed spurious open
+  shares" incident). Caught by this file's own pre-existing test suite, which had been silently
+  failing since that commit (`npm run test` on `origin/main` already showed 5 pre-existing
+  failures before this session touched anything — confirmed via a stashed baseline run, not
+  assumed). Fixed by restoring BUY-before-SELL as the check that runs first, with `seq` only
+  breaking a tie BUY-before-SELL can't resolve (two same-action records). **One test
+  (`calc.test.ts`'s "honors persisted sequence for same-instant SELL then BUY when an existing
+  position was open") had been written to validate the buggy behavior as intended** — updated
+  to assert the corrected, safe default instead, with a note that a properly ticker-and-
+  running-quantity-aware reorder (which COULD safely honor real recorded order for the narrower
+  case where an existing position makes it provably safe) is a real, separately-scoped future
+  refinement, not attempted here (see Pending item 145) — a generic pairwise sort comparator
+  structurally can't distinguish that safe case from the dangerous one it exists to prevent.
+  Two more small pre-existing test bugs fixed in the same pass, both unrelated to ordering
+  logic (confirmed via the same stashed-baseline technique): `cashLedger.test.ts`'s two tie-
+  breaking tests each constructed a lone SELL with zero shares ever bought, which
+  `buildCashLedger`'s own (correct) oversell guard rejects regardless of order — fixed by
+  giving each a preceding BUY; `fifoPositions.test.ts`'s oversell test asserted a "partial fill,
+  zero-cost for the excess" behavior neither `computeFIFOPositions` nor `computePositions` has
+  ever actually implemented (both correctly reject an invalid oversell transaction wholesale,
+  confirmed by reading `positions.ts`'s own matching, passing test for the identical scenario)
+  — corrected to match. **Deliberately NOT fixed in this pass, flagged instead**: a genuinely
+  unrelated pre-existing `breakEvenPrice` tick-rounding precision edge case
+  (`calc.test.ts > produces a tick price whose net proceeds cover the cost basis`), also
+  confirmed pre-existing via the same stashed-baseline run — a different function/domain,
+  deserving its own dedicated investigation rather than a rushed fix appended here.
+  New shared `LotConsumption<T>`/`consumeLotsForSell()` exported from `fifoPositions.ts`;
+  `closedTrades.ts`'s own `OpenLot` gained a `buyId` field so it can participate in the same
+  priority walk. 9 new permanent worked-example tests across `fifoPositions.test.ts` (7) and
+  `closedTrades.test.ts` (2) hand-trace every example in this file's new "Cost-basis worked
+  examples" section. `npx tsc -b` / `npm run test` (724 tests, 9 new — only the pre-existing,
+  unrelated `breakEvenPrice` precision test still fails) / `npm run build` all clean.
+  **Deliberately scoped down, tracked as new Pending items rather than guessed at**: the manual
+  `lotAllocations` UI (an "allocate to specific lots" control on the ordinary Add/Edit SELL
+  forms and an extended Trade Strategy "Sell this lot" flow — the engine fully supports it,
+  nothing in the UI sets it yet, see Pending item 143) and a genuinely persistent (not just
+  scroll-triggered) top nav bar with an Official/Trader-Strategy tab switcher for QSE's Stock-
+  Exchange pages (the user's own follow-up ask, ties into the already-tracked Pending item 139
+  — see Pending item 144). PSX gets the shared engine fix automatically (already exercises
+  `targetLotBuyId` via its own "Sell this lot") but no new UI this pass, per the user's own
+  "QSE first, PSX as a fast-follow" answer.
 
 ## Pending
 
@@ -10770,17 +11007,10 @@ or a design decision before more code, not guessed at further:**
      which is already what the existing per-currency `CashStatementTable` shows. Don't guess at
      a specific fix here; ask which table/section reads as unreadable and why (too many columns?
      too small text? wrong density setting?) before redesigning.
-134. **`lib/calc/closedTrades.ts`'s "Closed trades" reporting ledger doesn't know about
-     `Transaction.targetLotBuyId` (2026-09-13, flagged while fixing Done item 314).** That
-     module is its OWN independent FIFO simulation (by design decoupled from
-     `computeFIFOPositions`/`costBasisMethod`, for both exchanges), so a real "Sell this lot"
-     against a non-oldest lot (now correctly attributed in `computeFIFOPositions` and the
-     position's own Avg Cost/Break-even, per Done item 314) still gets matched oldest-first in
-     THIS separate reporting table — meaning the itemized "which lot did this sell close"
-     narrative shown there can disagree with what actually happened to the real position. Real,
-     but lower-stakes than Done item 314's fix (this table doesn't drive Avg Cost/Break-even,
-     only its own per-row itemization) — teach it to honor `targetLotBuyId` the same way, using
-     its own local `OpenLot` shape.
+~~134. `lib/calc/closedTrades.ts`'s "Closed trades" reporting ledger doesn't know about
+     `Transaction.targetLotBuyId`.~~ **Done (2026-09-18) — see README Done item 337.** Both
+     `computeFIFOPositions` and `computeClosedTrades` now share one `consumeLotsForSell()`
+     attribution-priority walk, so they can never disagree about which lots a sale drew from.
 135. **New standing rule (2026-09-14, user-stated: "NOTE RULE: use pagination in all tables
      with filters. currently many tables are dumping data directly").** A whole-app design
      principle to apply going forward — not a single-table bug (see Done item 324, which fixed
@@ -10911,6 +11141,55 @@ or a design decision before more code, not guessed at further:**
      items 134→137 (Dashboard drill-down → Analytics drill-down). `StatCard.onClick` is already
      a generic, reusable mechanism — the remaining work per page is deciding what a "related
      transactions" popup means for that specific stat, not new infrastructure.
+143. **Manual `lotAllocations` UI — the engine fully supports it (Done item 337), nothing in the
+     UI sets it yet (2026-09-18).** Per the user's own confirmed answer ("Both"): a shared
+     "allocate to specific lots" control is needed in two places — (a) QSE's ordinary Add/Edit
+     SELL forms (`TransactionsPage.tsx`'s add-row + edit-row, `StockPage.tsx`'s per-stock
+     add-trade + edit-row), letting a real trade be entered with an exact multi-lot breakdown
+     up front, not just via the Trade Strategy page's existing single-lot "Sell this lot"; (b)
+     Trade Strategy's own "Sell this lot" flow extended to optionally pull additional shares
+     from more than one lot before appending the plan leg. Should be gated to only appear/
+     matter once `costBasisMethod` is `'fifo'`/`'lowestCostFirst'` (mirrors `targetLotBuyId`'s
+     existing gate), with a clear `Notice`/`Tooltip` explaining it's inert under `'average'`.
+     PSX explicitly deferred (user's own answer: "QSE first, PSX as a fast-follow").
+144. **A genuinely persistent (not just scroll-triggered) top nav bar with an Official/Trader-
+     Strategy tab switcher, scoped to QSE's Stock-Exchange pages (2026-09-18).** The user's own
+     follow-up, tied directly to Done item 337's two-view design: "we must introduce the fixed
+     topnav bar with tabs and dropdowns to handle the UI now." Ties into the already-tracked,
+     broader Pending item 139 (a real, always-visible top bar distinct from today's scroll-
+     triggered `TopBar.tsx`/`pageTopBarStore`, referencing a design mockup at
+     `wealth_tracker_template/trade_risk_workstation_manual_entry_optimized/screen.png`) — this
+     item is the narrower slice actually needed for Done item 337's own Official/Trader
+     Strategy pairing (Dashboard/Portfolio/PositionDetail vs. the Trade Strategy page), reusing
+     the existing `TopBar.tsx`/`pageTopBarStore` machinery rather than new infrastructure, plus
+     a ticker-picker dropdown to jump straight to any stock's PositionDetail. A full app-wide
+     rollout to every other module remains item 139's own separate, broader scope.
+145. **`sortTransactionsChronological`'s BUY-before-SELL-on-a-tie rule could, in principle, be
+     relaxed for the narrow case where doing so is provably safe (2026-09-18).** Fixed as part
+     of Done item 337: a 2026-09-16 commit had let `seq` silently override BUY-before-SELL
+     whenever the two differed, breaking the original oversell-prevention safeguard — reverted
+     to the safe default (BUY always wins a same-instant tie against a SELL). The REAL
+     refinement this gave up, not yet attempted: when an existing OPEN position already covers
+     a same-day SELL without needing that day's own BUY at all, honoring the real recorded
+     `seq` order (which may be SELL-then-BUY) is provably safe and could be more accurate to
+     what actually happened — but that determination depends on the running share quantity for
+     that specific ticker BEFORE the tied group, which a generic, ticker-agnostic pairwise sort
+     comparator has no way to see. Would need a genuinely different mechanism — most likely a
+     ticker-and-running-quantity-aware post-sort reorder pass in the calling function
+     (`computePositions`/`computeFIFOPositions`), not a change to the shared comparator itself.
+     Low urgency: transactions entered going forward almost always carry a real `time` (Pending
+     item 41 shipped `nowTime()` auto-fill on most add-forms), so this tie scenario should
+     become increasingly rare for new data.
+146. **A pre-existing, unrelated `breakEvenPrice` tick-rounding precision edge case, found while
+     verifying Done item 337 but NOT fixed there (2026-09-18).**
+     `calc.test.ts > breakEvenPrice > produces a tick price whose net proceeds cover the cost
+     basis` fails against the real QSE backup fixture (costBasis 695.494, 634 shares): the
+     solver's returned tick price nets 695.48, just under the cost basis it's meant to clear.
+     Confirmed pre-existing on `origin/main` before this session touched anything (via a
+     stashed-baseline test run), and confirmed unrelated to the lot-matching work in Done item
+     337 — a different function (`lib/calc/fees.ts`'s `breakEvenPrice`), likely a floating-
+     point edge case right at a tick boundary. Deserves its own dedicated investigation rather
+     than a rushed fix appended to an unrelated PR.
 
 **Also locked in 2026-08-23**: no bank account API / open-banking integration for now (SBP/
 QCB both require regulator licensing — a compliance process, not a coding task). When bank

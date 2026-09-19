@@ -222,6 +222,15 @@ function CGTSettings() {
   );
 }
 
+// Copy corrected 2026-09-18: real-world research (prompted by the user's
+// own "please study how exchanges handle the trades") found FIFO, not
+// lowest-cost-first, is what actually matches a real PSX broker statement
+// — NCCPL, mandated by Pakistan's FBR, computes every investor's real
+// Capital Gains Tax using mandatory chronological FIFO through CDC. See
+// webapp/README.md's "Cost-basis worked examples" section for the full
+// citations. An earlier version of this comment/copy claimed the opposite
+// (lowest-cost-first as the closest broker match); that was an unverified
+// guess, corrected once actually researched.
 function CostBasisSettings() {
   const settings = usePSXWorkbookStore((s) => s.workbook.settings);
   const updateSettings = usePSXWorkbookStore((s) => s.updateSettings);
@@ -234,18 +243,23 @@ function CostBasisSettings() {
         specific lot — this can make a real remaining loss look smaller (or even profitable) once
         you've deliberately closed out cheap lots, since the reduction gets spread across the
         whole blended position instead of really coming off the lot you sold. FIFO and Lowest cost
-        first both track each buy as its own lot instead; FIFO sells the oldest lot first, Lowest
-        cost first sells the cheapest lot first (matching "Sell this lot" on the Trade Strategy
-        page, and usually the closest match to a real broker statement's own Avg Buy Price).
-        Switching any of these immediately recomputes your whole historical P/L (realized P/L,
-        invested amount, CGT) from your <em>entire</em> transaction history, not stored per-entry
-        — not just future trades.
+        first both track each buy as its own lot instead. <strong>Recommended: FIFO</strong> — it
+        sells the oldest lot first, matching NCCPL's own government-mandated FIFO Capital Gains Tax
+        computation, so it's the closest match to your real broker statement's own Avg Buy Price.
+        Lowest cost first sells the cheapest lot first instead — a deliberate "Trader Strategy"
+        view (the same one the Trade Strategy page's Partial Trade Advisor always shows,
+        regardless of this setting), not the recommended choice for your official numbers. Either
+        mode still needs a manual "Sell this lot"/specific allocation for the common case of
+        deliberately protecting one particular lot — see the Trade Strategy page. Switching any of
+        these immediately recomputes your whole historical P/L (realized P/L, invested amount,
+        CGT) from your <em>entire</em> transaction history, not stored per-entry — not just future
+        trades.
       </p>
       <Field label="Method" width={220}>
         <Select value={settings.costBasisMethod} onChange={(e) => updateSettings({ costBasisMethod: e.target.value as 'average' | 'fifo' | 'lowestCostFirst' })}>
           <option value="average">Average cost (default)</option>
-          <option value="fifo">FIFO lots (oldest first)</option>
-          <option value="lowestCostFirst">Lowest cost first</option>
+          <option value="fifo">FIFO lots (oldest first, recommended)</option>
+          <option value="lowestCostFirst">Lowest cost first (Trader Strategy)</option>
         </Select>
       </Field>
     </Card>
