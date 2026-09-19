@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- WebView needs the network; nothing else in this app talks to the internet directly -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Android 13+ requires this to post the "N transactions ready to review" notification -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--
+      Deliberately NOT requesting READ_SMS / RECEIVE_SMS here. Google Play restricts those to
+      an app that is the user's default SMS/Assistant handler, which a finance app can't
+      qualify for — see android/README.md. Bank SMS are instead read via the
+      NotificationListenerService below, which is a completely separate, much less
+      restricted permission bucket the user grants explicitly in system Settings.
+    -->
+
+    <application
+        android:name=".FinanceRecorderApp"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.FinanceRecorder"
+        android:usesCleartextTraffic="false">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.FinanceRecorder"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+          Notification-access listener: reads notifications the phone's own Messages app
+          posts for incoming SMS, filters them against known bank sender IDs (pushed in from
+          the webapp's own Bank account settings via the JS bridge), and turns a match into a
+          draft transaction awaiting the user's review. The user grants this explicitly via
+          Settings > Notification access — it is not a "dangerous permission" the manifest can
+          request at runtime, and it sits outside Play's SMS/Call Log permission group.
+        -->
+        <service
+            android:name=".sms.SmsListenerService"
+            android:exported="false"
+            android:label="@string/notification_listener_label"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+    </application>
+
+</manifest>

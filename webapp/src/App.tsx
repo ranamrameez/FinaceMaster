@@ -17,6 +17,7 @@ import { usePSXFirebaseSync } from './lib/firebase/usePSXFirebaseSync';
 import { useCategoryFirebaseSync } from './lib/firebase/useCategoryFirebaseSync';
 import { useCategoryGroupFirebaseSync } from './lib/firebase/useCategoryGroupFirebaseSync';
 import { useSyncCurrencyPreference } from './lib/firebase/useSyncCurrencyPreference';
+import { useNativeBridgeSync } from './lib/nativeBridge';
 import { useAppearanceStore } from './store/appearanceStore';
 import { AnalyticsPage } from './features/qse/pages/AnalyticsPage';
 import { DashboardPage } from './features/qse/pages/DashboardPage';
@@ -128,6 +129,10 @@ function App() {
   // preference into the account's real cloud profile so it follows the
   // account, not the browser. See that hook's own doc comment.
   useSyncCurrencyPreference(user);
+  // Keeps the native Android app's SMS-detection feature in sync with which Bank accounts
+  // have an smsSenderId/smsSenderNumber configured — see lib/nativeBridge.ts. A no-op outside
+  // the Android app's own WebView (window.AndroidBridge never exists in a normal browser).
+  useNativeBridgeSync();
 
   // README Pending item 76: one worst-of-N sync-status indicator in the
   // Sidebar instead of each module's own status buried in its own

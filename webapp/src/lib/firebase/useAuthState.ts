@@ -71,3 +71,12 @@ export function useAuthState(): AuthState {
   }
   return useAuthStore();
 }
+
+/** Non-hook read of the current user, for code that isn't a React component and can't call
+ * useAuthState()/useEnsureSignedIn() — currently just the native-app JS bridge (see
+ * lib/nativeBridge.ts), which runs as a plain async function invoked from Kotlin, not as
+ * part of any component's render. Mirrors useAuthState()'s own `user` field exactly; this
+ * file already owns useAuthStore, so this is just a plain read of it. */
+export function getCurrentUser(): User | null {
+  return useAuthStore.getState().user;
+}
