@@ -9904,6 +9904,36 @@ from the lot system."*
   — see Pending item 144). PSX gets the shared engine fix automatically (already exercises
   `targetLotBuyId` via its own "Sell this lot") but no new UI this pass, per the user's own
   "QSE first, PSX as a fast-follow" answer.
+- **Manual `lotAllocations` UI, part (a) of Pending item 143 (2026-09-19).** New shared
+  `components/ui/LotAllocationFields.tsx`: collapsed by default behind a plain "Specify exact
+  lots (optional)" button (a `Notice`-free design — the empty-state text itself already says
+  "falls back to your Settings' default match order," so a separate permanent explainer felt
+  redundant); once expanded, one row per currently-open lot with a share-count input, a live
+  "unallocated" counter, and a warning if the entered total exceeds the sale's own shares. Only
+  renders at all once `costBasisMethod` is `'fifo'`/`'lowestCostFirst'` (the same gate
+  `targetLotBuyId` already used) — inert and hidden under the unchanged `'average'` default, so
+  this is zero-risk for the vast majority of real, untouched workbooks. Wired into QSE's
+  ordinary Add/Edit SELL forms exactly as Pending item 143(a) named:
+  `TransactionsPage.tsx`'s multi-row add form (`TransactionRows`) and its inline edit-row, plus
+  `StockPage.tsx`'s per-stock add-trade toolbar and its own edit-row. For an EDIT row, the open
+  lots offered are computed from every OTHER transaction (i.e. as if this specific sell hadn't
+  happened) — a documented simplification, not true point-in-time historical state as of that
+  row's own date, matching the same "just pick from whatever's currently open" precedent the
+  existing `targetLotBuyId`/"Sell this lot" flow already set. **Part (b) — extending Trade
+  Strategy's "Sell this lot" for a combined multi-lot leg — was deliberately NOT built this
+  pass**: that flow already appends one plan leg PER LOT clicked (each individually
+  `targetLotBuyId`'d), which already covers "sell several whole lots" without a new UI; a
+  genuinely combined single-leg multi-lot allocation from that specific flow is a narrower,
+  optional refinement, not the core ask — left open, see the updated Pending item 143. New
+  tests: `components/ui/__tests__/LotAllocationFields.test.tsx` (9 cases, this project's first
+  isolated-component test for a form with no store/auth dependency — same precedent as
+  `CurrencyQuickAdd.test.tsx`). Verified live via Playwright with 3 synthetic open lots
+  (deliberately not date-price-ordered, mirroring Done item 337's own synthetic
+  `lotAllocations` test): expanding the control listed all 3 lots with correct dates/prices/
+  open shares; allocating 5+10 of 15 shares correctly zeroed the "unallocated" counter;
+  submitting correctly hit the real sign-in gate. `npx tsc -b` / `npm run test` (733 tests, 9
+  new — only the pre-existing, unrelated `breakEvenPrice` test still fails) / `npm run build`
+  all clean.
 
 ## Pending
 
@@ -11141,17 +11171,14 @@ or a design decision before more code, not guessed at further:**
      items 134→137 (Dashboard drill-down → Analytics drill-down). `StatCard.onClick` is already
      a generic, reusable mechanism — the remaining work per page is deciding what a "related
      transactions" popup means for that specific stat, not new infrastructure.
-143. **Manual `lotAllocations` UI — the engine fully supports it (Done item 337), nothing in the
-     UI sets it yet (2026-09-18).** Per the user's own confirmed answer ("Both"): a shared
-     "allocate to specific lots" control is needed in two places — (a) QSE's ordinary Add/Edit
-     SELL forms (`TransactionsPage.tsx`'s add-row + edit-row, `StockPage.tsx`'s per-stock
-     add-trade + edit-row), letting a real trade be entered with an exact multi-lot breakdown
-     up front, not just via the Trade Strategy page's existing single-lot "Sell this lot"; (b)
-     Trade Strategy's own "Sell this lot" flow extended to optionally pull additional shares
-     from more than one lot before appending the plan leg. Should be gated to only appear/
-     matter once `costBasisMethod` is `'fifo'`/`'lowestCostFirst'` (mirrors `targetLotBuyId`'s
-     existing gate), with a clear `Notice`/`Tooltip` explaining it's inert under `'average'`.
-     PSX explicitly deferred (user's own answer: "QSE first, PSX as a fast-follow").
+143. ~~Manual `lotAllocations` UI — the engine fully supports it (Done item 337), nothing in the
+     UI sets it yet (2026-09-18).~~ **Done (2026-09-19) — see README Done item 338, part (a)
+     only.** Per the user's own confirmed answer ("Both"): a shared "allocate to specific lots"
+     control was needed in two places — (a) QSE's ordinary Add/Edit SELL forms shipped; (b)
+     Trade Strategy's own "Sell this lot" flow was deliberately left as single-lot targeting
+     (see Done item 338 for the reasoning) — still genuinely open if a future session wants a
+     combined multi-lot leg from that specific flow. PSX still deferred (user's own answer:
+     "QSE first, PSX as a fast-follow").
 144. **A genuinely persistent (not just scroll-triggered) top nav bar with an Official/Trader-
      Strategy tab switcher, scoped to QSE's Stock-Exchange pages (2026-09-18).** The user's own
      follow-up, tied directly to Done item 337's two-view design: "we must introduce the fixed

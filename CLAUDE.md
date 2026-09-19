@@ -6010,6 +6010,32 @@ app, not developer notes) continuously as features ship.
   own direct follow-up ask, ties into the already-tracked, broader item 139). PSX gets the
   shared engine fix automatically (already exercises `targetLotBuyId` via its own "Sell this
   lot") but no new UI this pass, per the user's own "QSE first, PSX as a fast-follow" answer.
+- **Manual `lotAllocations` UI shipped, part (a) of README Pending item 143 (2026-09-19).**
+  PR #213 merged the same session this continued from; picked up the next item off the
+  Pending list per the standing "continue working until all pending items are completed"
+  instruction. New shared `components/ui/LotAllocationFields.tsx` — collapsed by default
+  (a plain button, no permanent explainer paragraph — the empty-state copy already says where
+  an unallocated remainder goes), expands into one row per currently-open lot with a share
+  input, a live unallocated-remainder count, and an over-allocation warning. Gated on
+  `costBasisMethod` being `'fifo'`/`'lowestCostFirst'` — completely inert/hidden under the
+  unchanged `'average'` default. Wired into QSE's `TransactionsPage.tsx` (multi-row add form +
+  inline edit-row) and `StockPage.tsx` (per-stock add-trade + edit-row) — exactly the two files
+  the plan named. For an edit row, lots are computed from every OTHER transaction (as if this
+  sell didn't exist yet) — a documented simplification, not true point-in-time reconstruction,
+  matching the precedent the existing `targetLotBuyId` flow already set. **Part (b) — extending
+  Trade Strategy's "Sell this lot" for a combined multi-lot leg — deliberately NOT built**:
+  that flow already lets a user click "Sell this lot" on several different lots to produce
+  several separate `targetLotBuyId`'d legs, which already covers the common "close multiple
+  whole lots" case; a single COMBINED leg with an arbitrary multi-lot split is a narrower
+  future refinement, left open in the updated Pending item 143. New tests:
+  `LotAllocationFields.test.tsx` (9 cases) — this project's Vitest setup has no jest-dom
+  matcher registration (confirmed via grep before writing), so assertions stick to plain
+  DOM/query-result checks like `container.innerHTML === ''`/`toBeTruthy()`, matching the
+  existing `CurrencyQuickAdd.test.tsx` convention. Verified live via Playwright with 3
+  synthetic open lots (deliberately not date-price-ordered): all 3 listed correctly on expand,
+  allocating 5+10 of 15 shares zeroed the unallocated counter, and submitting hit the real
+  sign-in gate. `npx tsc -b` / `npm run test` (733 tests, 9 new — only the pre-existing,
+  unrelated `breakEvenPrice` test fails) / `npm run build` all clean.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 
