@@ -9934,6 +9934,23 @@ from the lot system."*
   submitting correctly hit the real sign-in gate. `npx tsc -b` / `npm run test` (733 tests, 9
   new — only the pre-existing, unrelated `breakEvenPrice` test still fails) / `npm run build`
   all clean.
+- **Manual `lotAllocations` UI, PSX fast-follow — closes Pending item 143 in full (2026-09-19).**
+  Per the user's own "QSE first, PSX as a fast-follow" answer, this ports Done item 338's
+  `LotAllocationFields` wiring onto PSX's mirror files with zero changes to the shared
+  component itself: `features/psx/pages/TransactionsPage.tsx` (the multi-row add form's
+  `TransactionRows` + the inline edit-row, `colSpan={9}` for PSX's own 9-column table, one
+  more than QSE's 8 since PSX has a dedicated Fee column) and `features/psx/pages/
+  StockPage.tsx` (the per-stock add-trade toolbar + edit-row, `colSpan={7}` for PSX's 7-column
+  per-stock table). Same gate (`costBasisMethod` `'fifo'`/`'lowestCostFirst'` only — inert
+  under the unchanged `'average'` default), same "edit lots computed from every OTHER
+  transaction" simplification for the edit-row case. No new tests needed — `LotAllocationFields`
+  itself is already fully covered by Done item 338's own isolated component tests, and this is
+  purely wiring onto an already-tested component. Verified live via Playwright on PSX's stock
+  page with the identical 3-synthetic-open-lot scenario Done item 338 used: all 3 lots listed
+  correctly, allocating 5+10 of 15 shares zeroed the unallocated counter, submitting hit the
+  real sign-in gate — zero console errors. `npx tsc -b` / `npm run test` (733 tests, unchanged
+  — only the pre-existing, unrelated `breakEvenPrice` test still fails) / `npm run build` all
+  clean.
 
 ## Pending
 
@@ -11172,13 +11189,12 @@ or a design decision before more code, not guessed at further:**
      a generic, reusable mechanism — the remaining work per page is deciding what a "related
      transactions" popup means for that specific stat, not new infrastructure.
 143. ~~Manual `lotAllocations` UI — the engine fully supports it (Done item 337), nothing in the
-     UI sets it yet (2026-09-18).~~ **Done (2026-09-19) — see README Done item 338, part (a)
-     only.** Per the user's own confirmed answer ("Both"): a shared "allocate to specific lots"
-     control was needed in two places — (a) QSE's ordinary Add/Edit SELL forms shipped; (b)
-     Trade Strategy's own "Sell this lot" flow was deliberately left as single-lot targeting
-     (see Done item 338 for the reasoning) — still genuinely open if a future session wants a
-     combined multi-lot leg from that specific flow. PSX still deferred (user's own answer:
-     "QSE first, PSX as a fast-follow").
+     UI sets it yet (2026-09-18).~~ **Done (2026-09-19) — see README Done items 338 (QSE) and
+     339 (PSX fast-follow).** Per the user's own confirmed answer ("Both"): a shared "allocate
+     to specific lots" control was needed in two places — (a) QSE's, then PSX's, ordinary
+     Add/Edit SELL forms both now have it; (b) Trade Strategy's own "Sell this lot" flow was
+     deliberately left as single-lot targeting (see Done item 338 for the reasoning) — still
+     genuinely open if a future session wants a combined multi-lot leg from that specific flow.
 144. **A genuinely persistent (not just scroll-triggered) top nav bar with an Official/Trader-
      Strategy tab switcher, scoped to QSE's Stock-Exchange pages (2026-09-18).** The user's own
      follow-up, tied directly to Done item 337's two-view design: "we must introduce the fixed
