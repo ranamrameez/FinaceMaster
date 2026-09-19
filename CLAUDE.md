@@ -7484,17 +7484,18 @@ general files... platform specific info should stay inside its directory").** Th
 root now holds only genuinely general/cross-platform things: this file (kept at the root
 so it keeps auto-loading for future sessions — see the note below), a short general
 `README.md`, `.github/`, `functions/`+`firebase.json`+`.firebaserc` (the one Firebase
-project every platform in this repo shares), and three qualified top-level folders —
+project every platform in this repo shares), and four qualified top-level folders —
 `webapp/` (the web app, with all of ITS OWN detailed docs now living inside it),
-`chrome-extension/` (renamed from `thegroup-price-sync/`), and `sample/` (real QSE/PSX
-data snapshots, moved out of the root and out of a bare unlabeled `psx/` folder). There
-is no Android/iOS app in this repo today — those names only came up as examples of the
-qualified-naming pattern to follow if one is ever added, not a placeholder to create now.
+`android/` (the native Android app, added 2026-09-19 — see its own README.md for the
+full architecture/reasoning), `chrome-extension/` (renamed from `thegroup-price-sync/`),
+and `sample/` (real QSE/PSX data snapshots, moved out of the root and out of a bare
+unlabeled `psx/` folder). There is no iOS app in this repo today.
 
 ```
 functions/                                                          Cloud Function scaffold (FX-rate fetch) — unused by the shipped feature, kept as real infra, see "Repo root cleanup" above
 chrome-extension/                                                   Chrome extension feeding the shared stockData/QSE Firebase node (renamed from thegroup-price-sync/) — see its own README, not sample data
 sample/qse-workbook-backup.json, sample/psx/psx-workbook-backup.json, sample/psx/trades/  real QSE/PSX data snapshots + the crystallized PSX statement doc (see Data safety below) — moved out of the repo root into their own qualified folder
+android/                                                             native Kotlin + Jetpack Compose Android app (2026-09-19) — a WebView shell around the deployed webapp plus a NotificationListenerService that detects bank SMS and files a draft Bank transaction through the webapp's own store via a JS bridge (webapp/src/lib/nativeBridge.ts). See android/README.md for the full architecture, the Play Store SMS-permission reasoning, and what could/couldn't be verified in this sandbox (dl.google.com is network-blocked here, same as Firebase/Google Fonts elsewhere in this file).
 webapp/                                                              the web app — all new web-platform work happens here; also now holds README.md/MODULES_PLAN.md/USER_MANUAL.md/UI_DESIGN_GUIDELINES.md, since all four are entirely about this one platform
   src/lib/calc/            pure calc engine (fees, positions, cash ledger, P/L) — exchange-agnostic,
                             parametrized by a FeeCalculator; psxFees.ts has the PSX-specific one

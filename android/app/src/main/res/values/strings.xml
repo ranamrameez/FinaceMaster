@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FinanceRecorder</string>
+    <string name="notification_listener_label">Bank SMS detection</string>
+
+    <string name="review_channel_name">Transactions to review</string>
+    <string name="review_channel_description">Alerts when a bank SMS was detected and is waiting for your review</string>
+    <string name="review_notification_title">Transactions ready to review</string>
+    <string name="review_notification_body_one">1 detected transaction is waiting for you to review</string>
+    <string name="review_notification_body_many">%1$d detected transactions are waiting for you to review</string>
+
+    <string name="review_screen_title">Review detected transactions</string>
+    <string name="review_empty_title">No detected transactions</string>
+    <string name="review_empty_body">When a bank SMS arrives and matches an account you\'ve set up, it\'ll show up here for you to review before it\'s saved.</string>
+    <string name="review_approve">Approve</string>
+    <string name="review_discard">Discard</string>
+    <string name="review_edit">Edit</string>
+    <string name="review_save">Save</string>
+    <string name="review_cancel">Cancel</string>
+    <string name="review_amount_label">Amount</string>
+    <string name="review_description_label">Description</string>
+    <string name="review_direction_deposit">Money in</string>
+    <string name="review_direction_withdrawal">Money out</string>
+    <string name="review_account_label">Account</string>
+    <string name="review_account_unmatched">No account matched — pick one</string>
+    <string name="review_source_label">From SMS</string>
+    <string name="review_open_webview">Open FinanceRecorder</string>
+
+    <string name="permission_notification_access_title">Bank SMS detection needs Notification access</string>
+    <string name="permission_notification_access_body">FinanceRecorder reads the notification your Messages app already shows for an incoming SMS — never the SMS itself — so it can spot bank alerts. It only looks at notifications from your messaging app, and only when the sender matches an account you\'ve set up.</string>
+    <string name="permission_notification_access_grant">Grant in Settings</string>
+    <string name="permission_notification_access_skip">Not now</string>
+
+    <string name="webview_error_title">Couldn\'t load FinanceRecorder</string>
+    <string name="webview_error_body">Check your internet connection and try again.</string>
+    <string name="webview_retry">Retry</string>
+</resources>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Three ascending bars — the same growth-chart motif as the webapp's own LogoMark
+     (webapp/src/components/icons.tsx), so the app icon reads as the same brand. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M30,58 h12 v16 h-12 z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M48,46 h12 v28 h-12 z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M66,32 h12 v42 h-12 z" />
+</vector>
