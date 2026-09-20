@@ -6076,6 +6076,65 @@ app, not developer notes) continuously as features ship.
   basis (1.103×634 nets 697.382 ≥ 697.09; one tick lower, 1.102, nets 696.748 < 697.09) — zero
   console errors. `npx tsc -b` / `npm run test` (733 tests, all passing — this was the only
   failure in the suite) / `npm run build` all clean.
+- **Dashboard "Broker Style" / "Strategic Trades" tabs, QSE + PSX (2026-09-20) — see README
+  Done item 341.** Same-session follow-up: the user said they don't see anything in the app
+  after PR #216/#217 merged — investigated via GitHub Actions and confirmed the deploy
+  pipeline itself was healthy (both PRs' workflow runs show `conclusion: success`, most recent
+  run at the time), so the real explanation was that both changes are narrow/gated (the manual
+  lot-allocation UI only renders under a non-default Settings toggle; the break-even fix only
+  changes the number in specific tick-boundary edge cases) — no general visible UI change.
+  Reported this back, and the user's actual follow-up ask was: "i asked to give me separate tab
+  views [like Dashboard: tabs -> Broker | Strategic]" — reviving the "2 tabs: Broker Style vs
+  Strategic Trades" idea from the 2026-09-16 trust-restoration episode, which had only ever
+  shipped as a chip toggle inside one ticker's `PlanCard` on the Trade Strategy page, never as
+  real tabs on Dashboard itself.
+  Went through full Plan Mode (Explore → Plan agent → written plan file → `ExitPlanMode`)
+  before implementing, since this touches real page structure on both exchanges' primary
+  landing page. Used the app's standard `Tabs` component (both tabs' content stays mounted,
+  just collapsed — the established, locked convention) rather than the `PlanCard`-style
+  mutually-exclusive toggle, which would have fragmented the app's tab UX further.
+  **Verified, not guessed, exactly which of Dashboard's original 13 stat cards are actually
+  cost-basis-method-dependent** by reading `cashSummary()`/`computePositions()`/
+  `computeFIFOPositions()` directly: match order never changes total remaining shares,
+  per-transaction fees, cash balance, or net worth — it only changes invested cost basis and
+  realized P/L. So only 4 cards (Realized P/L, Unrealized P/L, Net P/L, Portfolio ROI) plus the
+  Holdings table and its 3 ticker-indexed charts are genuinely method-dependent; those moved
+  into a new `DashboardPositionsView` (defined inline per exchange, replacing the old
+  `HoldingsCard`, rendered once per tab). The other 9 cards are identical either way and stay
+  in one unified grid above the tabs, not duplicated — a real correction to the Plan agent's
+  own first-pass guess, which had wrongly assumed 6 cards were method-dependent before the
+  actual calc functions were checked.
+  New sibling hooks `useQSEStrategicDerived.ts`/`usePSXStrategicDerived.ts` (mirroring
+  `useQSEDerived`/`usePSXDerived` exactly) always compute `computeFIFOPositions(...,
+  'lowestCostFirst')`, independent of the stored `costBasisMethod` setting — the same pattern
+  `partialTradeStrategy.ts`'s `PartialTradeAdvisor` already uses on Trade Strategy.
+  `useQSEDerived`/`usePSXDerived` themselves are completely untouched — still the single
+  source of truth for every other page that reads them (StockPage, PositionDetail, Portfolio,
+  Analytics, Transactions). Fully additive: no changes to `fifoPositions.ts`, `cashSummary.ts`,
+  `positions.ts`, or `Tabs.tsx` itself. Each tab's `headerExtra` carries the existing
+  `StatSourceBadge` (`official`/`advisory`), matching `PortfolioPage.tsx`'s own established
+  Holdings/History tab precedent for that exact slot.
+  **Verified live via Playwright on both exchanges**, with a fresh production build served via
+  `vite preview` and a real localStorage seed (learned mid-verification, again, that a
+  hash-only `page.goto` doesn't force a fresh Zustand module load under HashRouter — needed an
+  explicit `page.reload()` after setting the hash, the same gotcha this file has documented
+  several times before): seeded an IQCD-style scenario (an older, pricier lot + a newer,
+  cheaper lot, then an un-targeted partial SELL) on QSE and an equivalent OGDC scenario on PSX.
+  The unified 9-card grid read identically regardless of which tab was open; Broker Style
+  (default-open) matched the pre-change numbers exactly; clicking the "Strategic Trades"
+  topbar chip force-opened it alongside Broker Style — both stayed mounted, confirming `Tabs`'
+  own convention held — and showed genuinely different, hand-verified Cost/Break-even figures
+  (QSE: 10.62 → 10.60; PSX: 98.05 → 100.24 — both directions independently reconciled by hand
+  against the seeded fee/price inputs, including working out why QSE's own direction was
+  counter-intuitive: a synthetic flat minFee of 10 in the test data dominated the smaller
+  14-share lot's per-share cost enough to flip which lot actually reads "cheaper" once fees are
+  included — a real, if fee-setup-specific, artifact, not a bug). The "All" chip still opened
+  both; both badges rendered correctly; a full-page screenshot of the empty/fresh state (Terms
+  gate visible, both tab sections rendering their correct empty-state copy underneath) also
+  confirmed the layout holds with zero data. Zero new console errors on either exchange beyond
+  this sandbox's own long-documented benign network-block noise. `npx tsc -b` / `npm run test`
+  (740 tests, unchanged — pure UI/hook wiring around already-tested calc functions) / `npm run
+  build` all clean.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

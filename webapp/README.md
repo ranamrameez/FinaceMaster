@@ -9974,6 +9974,45 @@ from the lot system."*
   697.09; one tick lower, 1.102, nets 696.748 < 697.09) — zero console errors. `npx tsc -b` /
   `npm run test` (733 tests, all passing — this was the only failure) / `npm run build` all
   clean.
+- **Dashboard "Broker Style" / "Strategic Trades" tabs, QSE + PSX (2026-09-20) — Done item
+  341.** User's own words: "give me separate tab views [like Dashboard: tabs -> Broker |
+  Strategic]" — picks back up the "2 tabs: Broker Style vs Strategic Trades" idea from the
+  2026-09-16 trust-restoration episode (Done item 330-area), which had only ever shipped as a
+  chip toggle inside one ticker's `PlanCard` on the Trade Strategy page, never as real tabs on
+  Dashboard itself. Uses the app's standard `Tabs` component (both tabs' content stays mounted,
+  just collapsed — the established convention, NOT the `PlanCard`-style mutually-exclusive
+  toggle) rather than inventing a second, contradicting pattern.
+  Verified directly (not guessed) which of Dashboard's original 13 stat cards actually change
+  between the two cost-basis views by reading `cashSummary()`/`computePositions()`/
+  `computeFIFOPositions()`: match order never changes total remaining shares, per-transaction
+  fees, cash balance, or net worth — only invested cost basis and realized P/L do. So only 4
+  cards (Realized P/L, Unrealized P/L, Net P/L, Portfolio ROI) plus the Holdings table and its
+  3 ticker-indexed charts (Allocation, P/L by ticker, Realized P/L over time) are genuinely
+  method-dependent and moved into a new `DashboardPositionsView` (defined inline per exchange,
+  same convention as the `HoldingsCard` it replaces), rendered once per tab. The other 9 cards
+  (Net Worth, Cash Balance, Total Deposits/Withdrawals, Current Deposit, Deposits vs. Net
+  Worth, Total Fees, Rewards, Open Positions) are identical either way and stay in a single
+  unified grid above the tabs, not duplicated.
+  New sibling hooks `useQSEStrategicDerived`/`usePSXStrategicDerived` (mirroring
+  `useQSEDerived`/`usePSXDerived` exactly) always compute `computeFIFOPositions(...,
+  'lowestCostFirst')`, completely independent of the stored `costBasisMethod` setting — the
+  same pattern `partialTradeStrategy.ts`'s `PartialTradeAdvisor` already uses on Trade
+  Strategy. `useQSEDerived`/`usePSXDerived` themselves are untouched — still the single source
+  of truth for every other page (StockPage, PositionDetail, Portfolio, Analytics,
+  Transactions). Each tab's `headerExtra` carries the existing `StatSourceBadge`
+  (`official`/`advisory`), matching `PortfolioPage.tsx`'s own established Holdings/History tab
+  precedent for that slot.
+  Verified live via Playwright on both exchanges with the project's own IQCD-style repro
+  scenario (an older, pricier lot + a newer, cheaper lot, then an un-targeted partial sell):
+  the unified 9-card grid read identically regardless of which tab was open; Broker Style
+  (default-open) showed the real weighted-average numbers unchanged from before this change;
+  clicking the "Strategic Trades" topbar chip force-opened it alongside Broker Style (both
+  stayed mounted, confirming `Tabs`' convention held) and showed genuinely different, hand-
+  verified Cost/Break-even figures (QSE: 10.62 → 10.60; PSX: 98.05 → 100.24, both directions
+  explained and reconciled by hand against the seeded fee/price inputs); the "All" chip still
+  opened both; both badges rendered correctly; zero new console errors on either exchange. `npx
+  tsc -b` / `npm run test` (740 tests, unchanged — pure UI/hook wiring around already-tested
+  calc functions) / `npm run build` all clean.
 
 ## Pending
 
