@@ -109,11 +109,20 @@ credential material there at all.
 
 ## Tuning the scraper
 
-The bundled heuristic (`content.js`) scans every `<table>` for a row containing one
-ticker-like cell (`[A-Z][A-Z0-9]{1,5}`) followed by a plain numeric cell, and takes that as
-the price; it also guesses the company name from whichever cell sits immediately after the
-ticker cell, if that text isn't itself ticker-like or numeric. It's a reasonable starting
-guess, but a real page's actual markup should be captured properly:
+The bundled heuristic (`content.js`) tries, in order: every real `<table>`'s rows; any
+`<tr>`/`[role="row"]` elements (for ARIA-grid widgets that skip `<table>` but still mark
+rows semantically); and, only if both of those find nothing, a **div-grid fallback** — it
+looks for the single most-repeated `tag+class` element on the page (grouping every element
+by its own tag name and sorted classlist) and tries each candidate group, most-repeated
+first, treating each element's direct children as its "cells." This covers market-watch
+widgets built as a plain CSS grid/flexbox of `<div>`s with no semantic row markup at all,
+which is what "no data scraped" on a real page usually turns out to be. Whichever tier
+matches, a "row" is scanned left-to-right for one ticker-like cell (`[A-Z][A-Z0-9]{1,5}`)
+followed by a plain numeric cell, taken as the price; the company name is guessed from
+whichever cell sits immediately after the ticker cell, if that text isn't itself ticker-like
+or numeric. It's a reasonable starting guess, but a real page's actual markup can always be
+captured explicitly instead (more reliable than any heuristic, and immune to a future layout
+change breaking the guess):
 
 1. Open the market-watch page, right-click the price table → **Inspect**.
 2. Find a CSS selector that matches every stock row (e.g. `table.market-watch tbody tr`)
