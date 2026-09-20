@@ -30,6 +30,8 @@ import { useNetWorthSnapshotsWorkbookStore } from '../store/netWorthSnapshotsWor
 import { usePersonalLoansWorkbookStore } from '../store/personalLoansWorkbookStore';
 import { usePlannedBankWorkbookStore } from '../store/plannedBankWorkbookStore';
 import { usePlannedCashWorkbookStore } from '../store/plannedCashWorkbookStore';
+import { createEmptyPlannedCreditCardWorkbook } from '../store/defaultPlannedCreditCardWorkbook';
+import { usePlannedCreditCardWorkbookStore } from '../store/plannedCreditCardWorkbookStore';
 import { usePlannedRentalsWorkbookStore } from '../store/plannedRentalsWorkbookStore';
 import { usePSXWorkbookStore } from '../store/psxWorkbookStore';
 import { useRentalsWorkbookStore } from '../store/rentalsWorkbookStore';
@@ -74,6 +76,7 @@ export function resetAllLocalWorkbooks() {
   useSubscriptionsWorkbookStore.getState().setWorkbook(createEmptySubscriptionsWorkbook());
   usePlannedCashWorkbookStore.getState().setWorkbook(createEmptyPlannedCashWorkbook());
   usePlannedBankWorkbookStore.getState().setWorkbook(createEmptyPlannedBankWorkbook());
+  usePlannedCreditCardWorkbookStore.getState().setWorkbook(createEmptyPlannedCreditCardWorkbook());
   usePlannedRentalsWorkbookStore.getState().setWorkbook(createEmptyPlannedRentalsWorkbook());
   useNetWorthSnapshotsWorkbookStore.getState().setWorkbook(createEmptyNetWorthSnapshotsWorkbook());
   useCategoryStore.getState().setWorkbook(createEmptyCategoriesWorkbook());

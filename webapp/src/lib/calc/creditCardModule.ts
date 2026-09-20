@@ -307,3 +307,18 @@ export function availableCredit(card: CreditCard, balance: number): number {
   if (!card.creditLimit) return 0;
   return Math.max(0, round2(card.creditLimit - Math.max(0, balance)));
 }
+
+/** Plain "how much do I owe on each currency of my credit cards" total —
+ * unlike `creditCardLiabilityByCurrency` (Net Worth's own reading of this
+ * data), this does NOT filter by `includeInNetWorth`, does NOT clamp a
+ * negative balance to 0, and does NOT skip a card that currently owes
+ * nothing — it's a generic per-currency sum for `plannedBalance.ts`'s
+ * `plannedCreditCardProjection`, not a Net-Worth-specific figure. */
+export function totalOwedByCurrency(cards: CreditCard[], transactions: CreditCardTransaction[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  cards.forEach((c) => {
+    const owed = outstandingBalanceByCard(c, transactions);
+    out[c.currencyCode] = round2((out[c.currencyCode] || 0) + owed);
+  });
+  return out;
+}

@@ -2498,6 +2498,8 @@ export function BankPage({
   uploadLocalToCloud,
   plannedCloudEmpty,
   uploadPlannedLocalToCloud,
+  plannedCreditCardCloudEmpty,
+  uploadPlannedCreditCardLocalToCloud,
 }: {
   user: User | null;
   syncStatus: string;
@@ -2506,6 +2508,8 @@ export function BankPage({
   plannedSyncStatus: string;
   plannedCloudEmpty: boolean;
   uploadPlannedLocalToCloud: () => Promise<void>;
+  plannedCreditCardCloudEmpty: boolean;
+  uploadPlannedCreditCardLocalToCloud: () => Promise<void>;
 }) {
   // Real bug, user-reported (2026-09-11): `Tabs.tsx`'s own "a chip click
   // force-opens a section without closing the others" design means this
@@ -2533,7 +2537,16 @@ export function BankPage({
       <Tabs
         tabs={[
           { key: 'accounts', label: 'All Accounts', content: <AccountsTab /> },
-          { key: 'creditCards', label: 'Credit Cards', content: <CreditCardsTab /> },
+          {
+            key: 'creditCards',
+            label: 'Credit Cards',
+            content: (
+              <CreditCardsTab
+                plannedCreditCardCloudEmpty={plannedCreditCardCloudEmpty}
+                uploadPlannedCreditCardLocalToCloud={uploadPlannedCreditCardLocalToCloud}
+              />
+            ),
+          },
           {
             // Placed before Analytics to match Cash's own explicit tab order
             // for this exact same Planning feature (README Done item 224:

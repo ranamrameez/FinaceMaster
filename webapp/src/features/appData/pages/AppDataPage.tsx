@@ -20,6 +20,7 @@ import { useRentalsWorkbookStore } from '../../../store/rentalsWorkbookStore';
 import { useSubscriptionsWorkbookStore } from '../../../store/subscriptionsWorkbookStore';
 import { usePlannedBankWorkbookStore } from '../../../store/plannedBankWorkbookStore';
 import { usePlannedCashWorkbookStore } from '../../../store/plannedCashWorkbookStore';
+import { usePlannedCreditCardWorkbookStore } from '../../../store/plannedCreditCardWorkbookStore';
 import { usePlannedRentalsWorkbookStore } from '../../../store/plannedRentalsWorkbookStore';
 import { useInterEntityTransfersStore } from '../../../store/interEntityTransfersStore';
 import { useNetWorthSnapshotsWorkbookStore } from '../../../store/netWorthSnapshotsWorkbookStore';
@@ -37,6 +38,7 @@ import { createEmptyRentalsWorkbook } from '../../../store/defaultRentalsWorkboo
 import { createEmptySubscriptionsWorkbook } from '../../../store/defaultSubscriptionsWorkbook';
 import { createEmptyPlannedBankWorkbook } from '../../../store/defaultPlannedBankWorkbook';
 import { createEmptyPlannedCashWorkbook } from '../../../store/defaultPlannedCashWorkbook';
+import { createEmptyPlannedCreditCardWorkbook } from '../../../store/defaultPlannedCreditCardWorkbook';
 import { createEmptyPlannedRentalsWorkbook } from '../../../store/defaultPlannedRentalsWorkbook';
 import { createEmptyInterEntityWorkbook } from '../../../store/defaultInterEntityWorkbook';
 import { createEmptyNetWorthSnapshotsWorkbook } from '../../../store/defaultNetWorthSnapshotsWorkbook';
@@ -75,7 +77,8 @@ const today = () => new Date().toISOString().slice(0, 10);
 const CLOUD_PATH_SUFFIX = {
   qse: 'workbook', psx: 'psx', bank: 'bank', creditCards: 'creditCards', cash: 'cash', emiLoans: 'emiLoans',
   funds: 'funds', personalLoans: 'personalLoans', rentals: 'rentals', subscriptions: 'subscriptions',
-  plannedBank: 'plannedBank', plannedCash: 'plannedCash', plannedRentals: 'plannedRentals',
+  plannedBank: 'plannedBank', plannedCash: 'plannedCash', plannedCreditCard: 'plannedCreditCard',
+  plannedRentals: 'plannedRentals',
   interEntityTransfers: 'interEntityTransfers', netWorthSnapshots: 'netWorthSnapshots',
   categories: 'categories', categoryGroups: 'categoryGroups',
 } as const;
@@ -105,7 +108,8 @@ const CREATE_EMPTY = {
   cash: createEmptyCashWorkbook, emiLoans: createEmptyEMIWorkbook, funds: createEmptyFundsWorkbook,
   personalLoans: createEmptyPersonalLoansWorkbook, rentals: createEmptyRentalsWorkbook,
   subscriptions: createEmptySubscriptionsWorkbook, plannedBank: createEmptyPlannedBankWorkbook,
-  plannedCash: createEmptyPlannedCashWorkbook, plannedRentals: createEmptyPlannedRentalsWorkbook,
+  plannedCash: createEmptyPlannedCashWorkbook, plannedCreditCard: createEmptyPlannedCreditCardWorkbook,
+  plannedRentals: createEmptyPlannedRentalsWorkbook,
   interEntityTransfers: createEmptyInterEntityWorkbook, netWorthSnapshots: createEmptyNetWorthSnapshotsWorkbook,
   categories: createEmptyCategoriesWorkbook, categoryGroups: createEmptyCategoryGroupsWorkbook,
 } as const;
@@ -128,6 +132,7 @@ export function AppDataPage() {
   const subscriptions = useSubscriptionsWorkbookStore();
   const plannedBank = usePlannedBankWorkbookStore();
   const plannedCash = usePlannedCashWorkbookStore();
+  const plannedCreditCard = usePlannedCreditCardWorkbookStore();
   const plannedRentals = usePlannedRentalsWorkbookStore();
   const interEntityTransfers = useInterEntityTransfersStore();
   const netWorthSnapshots = useNetWorthSnapshotsWorkbookStore();
@@ -136,13 +141,14 @@ export function AppDataPage() {
 
   const stores = {
     qse, psx, bank, creditCards, cash, emiLoans, funds, personalLoans, rentals, subscriptions,
-    plannedBank, plannedCash, plannedRentals, interEntityTransfers, netWorthSnapshots, categories, categoryGroups,
+    plannedBank, plannedCash, plannedCreditCard, plannedRentals, interEntityTransfers, netWorthSnapshots, categories, categoryGroups,
   } as const;
   type ModuleKey = keyof typeof stores;
   const moduleLabels: Record<ModuleKey, string> = {
     qse: 'QSE stocks', psx: 'PSX stocks', bank: 'Banking', creditCards: 'Credit Cards', cash: 'Cash', emiLoans: 'EMI/Loans',
     funds: 'Funds', personalLoans: 'Personal Loans', rentals: 'Rentals', subscriptions: 'Subscriptions',
-    plannedBank: 'Bank Planning', plannedCash: 'Cash Planning', plannedRentals: 'Rentals Planning',
+    plannedBank: 'Bank Planning', plannedCash: 'Cash Planning', plannedCreditCard: 'Credit Card Planning',
+    plannedRentals: 'Rentals Planning',
     interEntityTransfers: 'Transfers', netWorthSnapshots: 'Net Worth history', categories: 'Categories',
     categoryGroups: 'Category groups',
   };

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Modal } from './Modal';
 import { toast } from './Toast';
 import { PlusIcon, SaveIcon, TrashIcon } from './icons';
-import { Field, TextInput } from './ui/Field';
+import { Field, Select, TextInput } from './ui/Field';
 import { AmountInput } from './ui/AmountInput';
 import { DirectionChips } from './ui/DirectionChips';
 import { TimeZoneFields } from './ui/TimeZoneFields';
@@ -25,6 +25,7 @@ import { useFundsWorkbookStore } from '../store/fundsWorkbookStore';
 import { usePersonalLoansWorkbookStore } from '../store/personalLoansWorkbookStore';
 import { usePSXWorkbookStore } from '../store/psxWorkbookStore';
 import { useRentalsWorkbookStore } from '../store/rentalsWorkbookStore';
+import { useSubscriptionsWorkbookStore } from '../store/subscriptionsWorkbookStore';
 import { useWorkbookStore } from '../store/workbookStore';
 import type { LinkModule, LinkSideConfig } from '../types/interEntityTransfer';
 
@@ -103,6 +104,30 @@ const HAS_DESCRIPTION: LinkModule[] = ['bank', 'creditCard'];
  * for a link needs its own design (does one side clear independently of
  * the other?) not attempted here. */
 const HAS_PENDING: LinkModule[] = ['cash', 'bank', 'rentals', 'personalLoans'];
+/** User-requested (2026-09-20): "list the subscriptions in the transfer
+ * features. and update their date according to the transaction." Only
+ * offered for a PLAIN (non-linked) row on the three modules that can
+ * realistically pay a subscription — Bank, Cash, Credit Card — since a
+ * linked row already means "move money between two of my own accounts,"
+ * a different question from "what was this specific charge for."
+ * Deliberately NOT wired into the general `LinkModule`/`InterEntityTransfer`
+ * system (Subscriptions has no per-payment ledger of its own — a
+ * `Subscription` is a single record with a `startDate`/`billingCycle`, not
+ * an array of transactions — so it can't participate in that system's
+ * add/update/delete-by-id, rollback, and `findLinkForRecord` machinery the
+ * way Bank/Cash/Rentals/Personal Loans/EMI/Funds/Credit Card all do). This
+ * is a lighter one-directional annotation instead: picking a subscription
+ * just updates that subscription's own `startDate` to the transaction's
+ * date once the transaction saves — `nextBillingDate()`'s recurrence engine
+ * already walks forward from `startDate` regardless of how stale it is, so
+ * this is purely about keeping the cycle's day-of-month anchor aligned with
+ * when you actually paid, not something the app was silently getting wrong
+ * before. Subscriptions' own separate "Link to a paying account" feature
+ * (its Planning-tab-based "Generate renewal plans") is unaffected — this is
+ * an additional, independent way to log one REAL payment right now, the
+ * same "both a Planning-based path and a direct Transfers-linking path"
+ * pattern EMI/Rentals already have for their own entities. */
+const HAS_SUBSCRIPTION: LinkModule[] = ['bank', 'cash', 'creditCard'];
 
 interface TxRow {
   key: number;
@@ -141,6 +166,10 @@ interface TxRow {
   description: string;
   note: string;
   pending: boolean;
+  /** See `HAS_SUBSCRIPTION`'s own doc comment — set when this real
+   * transaction pays a specific subscription; not part of `LinkSideConfig`/
+   * the `linked` two-sided mechanism at all. */
+  subscriptionId: string;
 }
 
 /** User-reported (2026-09-08): "try to choose the same/logical module by
@@ -169,6 +198,7 @@ function emptyRow(key: number, finance: LinkSideConfig, currencyCode?: string): 
     description: '',
     note: '',
     pending: false,
+    subscriptionId: '',
     toAmountTouched: false,
     rateSource: '',
   };
@@ -191,6 +221,9 @@ function TxRowFields({
 }) {
   const otherCurrency = useSideCurrency(row.other);
   const financeCurrency = useSideCurrency(row.finance);
+  const subscriptions = useSubscriptionsWorkbookStore((s) => s.workbook.entries);
+  const activeSubscriptions = subscriptions.filter((s) => s.active).sort((a, b) => a.name.localeCompare(b.name));
+  const showSubscriptionPicker = !row.linked && HAS_SUBSCRIPTION.includes(row.finance.module) && activeSubscriptions.length > 0;
   const currencyMismatch = row.linked && !!otherCurrency && !!financeCurrency && otherCurrency !== financeCurrency;
   const direction = DIRECTION_LABELS[row.finance.module];
   // See `DIRECTION_LABELS`'s own doc comment on `creditCard` — a linked
@@ -268,6 +301,14 @@ function TxRowFields({
         {HAS_CATEGORY.includes(row.finance.module) && !row.linked && (
           <Field label="Category">
             <CategorySelect value={row.categoryID} onChange={(categoryID) => onChange({ ...row, categoryID })} />
+          </Field>
+        )}
+        {showSubscriptionPicker && (
+          <Field label="Subscription (optional)" title="Marks this as paying a specific subscription — moves that subscription's own billing anchor to this transaction's date once saved.">
+            <Select value={row.subscriptionId} onChange={(e) => onChange({ ...row, subscriptionId: e.target.value })}>
+              <option value="">— None —</option>
+              {activeSubscriptions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </Select>
           </Field>
         )}
         {HAS_NOTE.includes(row.finance.module) && (
@@ -396,6 +437,7 @@ export function TransactionEntryModal({ defaultFinance, onClose }: { defaultFina
   const addPSXTransfer = usePSXWorkbookStore((s) => s.addTransfer);
   const addFundsTransfer = useFundsWorkbookStore((s) => s.addTransfer);
   const addCreditCardTransaction = useCreditCardWorkbookStore((s) => s.addTransaction);
+  const updateSubscription = useSubscriptionsWorkbookStore((s) => s.updateEntry);
 
   // User-reported (2026-09-14): "Cash Statements/tables are under wrong
   // currencies" — root cause: a caller opening this modal with NO
@@ -555,6 +597,13 @@ export function TransactionEntryModal({ defaultFinance, onClose }: { defaultFina
         }
       }
       plainCount++;
+      // See `HAS_SUBSCRIPTION`'s own doc comment — this transaction just
+      // saved successfully (we only get here past every case's own
+      // validation `continue`), so it's safe to move the subscription's
+      // billing anchor to match.
+      if (r.subscriptionId && HAS_SUBSCRIPTION.includes(r.finance.module)) {
+        updateSubscription(r.subscriptionId, { startDate: r.date });
+      }
     }
     const parts = [plainCount && `${plainCount} transaction${plainCount > 1 ? 's' : ''}`, linkedCount && `${linkedCount} linked transfer${linkedCount > 1 ? 's' : ''}`].filter(Boolean);
     if (parts.length) toast(`Saved ${parts.join(' + ')}.`);

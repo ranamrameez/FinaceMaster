@@ -16,6 +16,7 @@ import { AttributeList } from '../../../components/ui/AttributeList';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
 import { CategorySelect } from '../../../components/CategorySelect';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
+import { RecurrenceFields } from '../../../components/ui/RecurrenceFields';
 import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { usePrimaryCurrency } from '../../../hooks/usePrimaryCurrency';
@@ -23,6 +24,10 @@ import { usePageFabActions } from '../../../hooks/usePageFabActions';
 import { getLastTransferSource, rememberTransferSource } from '../../../hooks/useLastTransferSource';
 import { hueStyle } from '../../../lib/statCardHues';
 import { categoryName, UNCATEGORIZED_ID } from '../../../lib/categories';
+import { gridAutoStyle } from '../../../lib/gridStyle';
+import { nextRecurrenceOccurrence } from '../../../lib/calc/recurrence';
+import { recurrenceLabel } from '../../../lib/recurrenceLabel';
+import { plannedCreditCardProjection } from '../../../lib/calc/plannedBalance';
 import { useCategoryStore } from '../../../store/categoryStore';
 import {
   availableCredit,
@@ -36,12 +41,15 @@ import {
 import { fmtMoney } from '../../../lib/format';
 import { createLinkedTransfer } from '../../../lib/linkCascade';
 import { defaultTimezoneForCurrency, nowTime } from '../../../lib/datetime';
+import { firebaseReady } from '../../../lib/firebase/client';
 import { useEnsureSignedIn } from '../../../lib/firebase/useEnsureSignedIn';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
 import { useCashWorkbookStore } from '../../../store/cashWorkbookStore';
 import { addCreditCardTransactions, useCreditCardWorkbookStore } from '../../../store/creditCardWorkbookStore';
+import { usePlannedCreditCardWorkbookStore } from '../../../store/plannedCreditCardWorkbookStore';
 import type { LinkSideConfig } from '../../../types/interEntityTransfer';
 import type { CreditCard, CreditCardTransaction, CreditCardTransactionKind } from '../../../types/creditCard';
+import type { PlannedCreditCardTransaction } from '../../../types/plannedCreditCard';
 import type { BankAccount } from '../../../types/bankWorkbook';
 
 const uid = () => crypto.randomUUID();
@@ -645,6 +653,9 @@ export function CreditCardDetailPage() {
         </CollapsibleCard>
       )}
 
+      <CardBalanceProjection card={card} />
+      <CardPlanList card={card} />
+
       <CollapsibleCard title={<h3 className="m-0">Last 6 months</h3>} defaultOpen={false} className="mb-md">
         <div className="table-scroll">
           <table>
@@ -686,13 +697,14 @@ export function CreditCardDetailPage() {
  * account, distinct from the "Approve & log" minimum-payment flow above,
  * which is about the proposed minimum specifically). */
 function CreditCardDetailFab({ card }: { card: CreditCard }) {
-  const [open, setOpen] = useState<'add' | 'transfer' | null>(null);
+  const [open, setOpen] = useState<'add' | 'transfer' | 'plan' | null>(null);
   return (
     <>
       <FabPanel
         actions={[
           { label: 'Add a transaction', icon: <PlusIcon />, onClick: () => setOpen('add') },
           { label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen('transfer') },
+          { label: 'Add a plan', icon: <PlusIcon />, onClick: () => setOpen('plan') },
         ]}
       />
       {open === 'add' && (
@@ -703,7 +715,224 @@ function CreditCardDetailFab({ card }: { card: CreditCard }) {
       {open === 'transfer' && (
         <TransactionEntryModal defaultFinance={{ module: 'creditCard', ref: card.id, currencyCode: card.currencyCode }} onClose={() => setOpen(null)} />
       )}
+      {open === 'plan' && (
+        <Modal title="Add a planned charge or payment" onClose={() => setOpen(null)}>
+          <AddCardPlanForm cardId={card.id} onSaved={() => setOpen(null)} />
+        </Modal>
+      )}
     </>
+  );
+}
+
+function emptyCardPlan(cardId: string): PlannedCreditCardTransaction {
+  return { id: '', cardId, date: today(), description: '', amount: 0, kind: 'charge' };
+}
+
+/** Real vs. planned "what's owed" for this ONE card — same idea as Bank's
+ * own `BalanceProjectionSummary`, scoped to a single card instead of the
+ * whole module, since `PlannedCreditCardTransaction`s are always logged
+ * against one specific card, the same way this page itself is already
+ * scoped. A HIGHER number is worse here (money owed), the opposite
+ * intuition from Bank's own real/planned figures — see
+ * `plannedCreditCardProjection`'s own doc comment. */
+function CardBalanceProjection({ card }: { card: CreditCard }) {
+  const cards = useCreditCardWorkbookStore((s) => s.workbook.cards);
+  const transactions = useCreditCardWorkbookStore((s) => s.workbook.transactions);
+  const plannedEntries = usePlannedCreditCardWorkbookStore((s) => s.workbook.entries);
+  const settings = usePlannedCreditCardWorkbookStore((s) => s.workbook.settings);
+  const updateSettings = usePlannedCreditCardWorkbookStore((s) => s.updateSettings);
+  const projection = useMemo(
+    () => plannedCreditCardProjection(cards, transactions, plannedEntries),
+    [cards, transactions, plannedEntries],
+  );
+  const p = projection[card.currencyCode] ?? { real: 0, planned: 0 };
+
+  return (
+    <CollapsibleCard
+      title={
+        <Tooltip text="See what you'd owe on this card if every plan below actually happened — a reality check before you spend.">
+          <h3 style={{ margin: 0, cursor: 'pointer' }}>Balance projection</h3>
+        </Tooltip>
+      }
+      defaultOpen={false}
+      className="mb-md"
+    >
+      <div className="row" style={{ gap: 16, marginBottom: 12 }}>
+        <label className="text-muted flex-center-gap4">
+          <input type="checkbox" checked={settings.showRealBalance} onChange={(e) => updateSettings({ showRealBalance: e.target.checked })} />
+          Real owed
+        </label>
+        <label className="text-muted flex-center-gap4">
+          <input type="checkbox" checked={settings.showPlannedBalance} onChange={(e) => updateSettings({ showPlannedBalance: e.target.checked })} />
+          Planned owed
+        </label>
+      </div>
+      <div className="grid-auto" style={gridAutoStyle(180, 8)}>
+        <div className="stat-card card">
+          <div className="label">{card.currencyCode}</div>
+          {settings.showRealBalance && (
+            <div className={p.real <= 0 ? 'pill-positive' : 'pill-negative'}>Real: {fmtMoney(p.real, card.currencyCode)}</div>
+          )}
+          {settings.showPlannedBalance && (
+            <div className={p.planned <= 0 ? 'pill-positive' : 'pill-negative'}>Planned: {fmtMoney(p.planned, card.currencyCode)}</div>
+          )}
+        </div>
+      </div>
+    </CollapsibleCard>
+  );
+}
+
+function AddCardPlanForm({ cardId, onSaved }: { cardId: string; onSaved?: () => void }) {
+  const addPlan = usePlannedCreditCardWorkbookStore((s) => s.addEntry);
+  const ensureSignedIn = useEnsureSignedIn();
+  const [p, setP] = useState<PlannedCreditCardTransaction>(() => emptyCardPlan(cardId));
+
+  const submit = async () => {
+    if (!p.amount || !p.description.trim()) return toast('Enter a description and a non-zero amount.');
+    if (!(await ensureSignedIn('Sign in to save plans.'))) return;
+    addPlan({ ...p, id: crypto.randomUUID(), cardId, description: p.description.trim() });
+    toast('Plan added.');
+    setP(emptyCardPlan(cardId));
+    onSaved?.();
+  };
+
+  return (
+    <div>
+      <div className="row gap-sm">
+        <Field label="Type" width={190}>
+          <Select value={p.kind} onChange={(e) => setP({ ...p, kind: e.target.value as CreditCardTransactionKind })}>
+            {(Object.keys(KIND_LABELS) as CreditCardTransactionKind[]).map((k) => <option key={k} value={k}>{KIND_LABELS[k]}</option>)}
+          </Select>
+        </Field>
+        <Field label="Expected date">
+          <TextInput
+            type="date"
+            value={p.date}
+            onChange={(e) => setP({ ...p, date: e.target.value, recurrence: p.recurrence ? { ...p.recurrence, startDate: e.target.value } : undefined })}
+          />
+        </Field>
+        <Field label="Description" width={180}>
+          <TextInput value={p.description} onChange={(e) => setP({ ...p, description: e.target.value })} placeholder="e.g. Subscription renewal" />
+        </Field>
+        <Field label="Amount" width={110}>
+          <AmountInput value={p.amount} onChange={(amount) => setP({ ...p, amount })} />
+        </Field>
+        <RecurrenceFields startDate={p.date} value={p.recurrence} onChange={(recurrence) => setP({ ...p, recurrence })} />
+      </div>
+      <button className="btn mt-12" onClick={submit}>
+        <PlusIcon />Add plan
+      </button>
+    </div>
+  );
+}
+
+function CardPlanList({ card }: { card: CreditCard }) {
+  const allPlans = usePlannedCreditCardWorkbookStore((s) => s.workbook.entries);
+  const updatePlan = usePlannedCreditCardWorkbookStore((s) => s.updateEntry);
+  const deletePlan = usePlannedCreditCardWorkbookStore((s) => s.deleteEntry);
+  const addTransaction = useCreditCardWorkbookStore((s) => s.addTransaction);
+  const ensureSignedIn = useEnsureSignedIn();
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editRow, setEditRow] = useState<PlannedCreditCardTransaction | null>(null);
+
+  const plans = useMemo(() => allPlans.filter((p) => p.cardId === card.id), [allPlans, card.id]);
+  const sorted = useMemo(() => [...plans].sort((a, b) => a.date.localeCompare(b.date)), [plans]);
+
+  const startEdit = (p: PlannedCreditCardTransaction) => { setEditId(p.id); setEditRow({ ...p }); };
+  const saveEdit = () => {
+    if (!editId || !editRow) return;
+    updatePlan(editId, editRow);
+    toast('Plan updated.');
+    setEditId(null);
+    setEditRow(null);
+  };
+
+  const markDone = async (p: PlannedCreditCardTransaction) => {
+    const occurrenceDate = p.recurrence ? nextRecurrenceOccurrence(p.recurrence)?.toISOString().slice(0, 10) : p.date;
+    if (!occurrenceDate) return toast('This plan has no more occurrences left (past its end date).');
+    if (!(await ensureSignedIn('Sign in to save credit card transactions.'))) return;
+    addTransaction({
+      id: crypto.randomUUID(), cardId: p.cardId, date: occurrenceDate, kind: p.kind,
+      description: p.description, amount: p.amount, source: 'manual',
+    });
+    if (p.recurrence) {
+      updatePlan(p.id, { executedThrough: occurrenceDate });
+      toast(`Marked ${occurrenceDate} as done — added to this card's transactions. This plan keeps recurring.`);
+    } else {
+      updatePlan(p.id, { executed: true });
+      toast('Marked as done — added to this card\'s transactions.');
+    }
+  };
+
+  return (
+    <CollapsibleCard title={<h3 className="m-0">Planned charges &amp; payments</h3>} defaultOpen={false} className="mb-md">
+      <div className="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Date</th><th>Type</th><th>Description</th><th>Amount</th><th>Repeats / status</th><th></th></tr>
+          </thead>
+          <tbody>
+            {sorted.map((p) =>
+              editId === p.id && editRow ? (
+                <tr key={p.id}>
+                  <td>
+                    <input
+                      type="date"
+                      value={editRow.date}
+                      onChange={(e) => setEditRow({ ...editRow, date: e.target.value, recurrence: editRow.recurrence ? { ...editRow.recurrence, startDate: e.target.value } : undefined })}
+                      className="w-130"
+                    />
+                  </td>
+                  <td>
+                    <select value={editRow.kind} onChange={(e) => setEditRow({ ...editRow, kind: e.target.value as CreditCardTransactionKind })}>
+                      {(Object.keys(KIND_LABELS) as CreditCardTransactionKind[]).map((k) => <option key={k} value={k}>{KIND_LABELS[k]}</option>)}
+                    </select>
+                  </td>
+                  <td><input value={editRow.description} onChange={(e) => setEditRow({ ...editRow, description: e.target.value })} className="w-140" /></td>
+                  <td><input type="number" step="0.01" value={editRow.amount} onChange={(e) => setEditRow({ ...editRow, amount: Number(e.target.value) })} className="w-100" /></td>
+                  <td>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                      <RecurrenceFields
+                        startDate={editRow.date}
+                        value={editRow.recurrence}
+                        onChange={(recurrence) => setEditRow({ ...editRow, recurrence })}
+                      />
+                    </div>
+                  </td>
+                  <td>
+                    <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={saveEdit} />{' '}
+                    <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={() => setEditId(null)} />
+                  </td>
+                </tr>
+              ) : (
+                <tr key={p.id}>
+                  <td>{p.date}</td>
+                  <td className={p.kind === 'payment' ? 'pill pill-positive' : 'pill pill-negative'} style={{ display: 'inline-block' }}>{KIND_LABELS[p.kind]}</td>
+                  <td className="cell-clip" title={p.description}>{p.description}</td>
+                  <td>{fmtMoney(p.amount, card.currencyCode)}</td>
+                  <td className="text-muted">{p.recurrence ? recurrenceLabel(p.recurrence) : p.executed ? 'Done' : 'Planned'}</td>
+                  <td>
+                    {(p.recurrence || !p.executed) && (
+                      <button className="btn secondary small" onClick={() => markDone(p)}>Mark as done</button>
+                    )}{' '}
+                    <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => startEdit(p)} />{' '}
+                    <IconButton
+                      label="Delete"
+                      icon={<TrashIcon size={13} />}
+                      align="right"
+                      onClick={async () => {
+                        if (await confirmDialog('This cannot be undone.', 'Delete this plan?')) deletePlan(p.id);
+                      }}
+                    />
+                  </td>
+                </tr>
+              ),
+            )}
+            {!sorted.length && <tr><td colSpan={6} className="text-muted">No planned charges or payments for this card yet.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </CollapsibleCard>
   );
 }
 
@@ -785,14 +1014,65 @@ function CreditCardsList() {
  * placement recommendation: still squarely the "banking" domain even
  * though a card is a structurally distinct entity from a checking/
  * savings `BankAccount`). */
-export function CreditCardsTab() {
+export function CreditCardsTab({
+  plannedCreditCardCloudEmpty,
+  uploadPlannedCreditCardLocalToCloud,
+}: {
+  plannedCreditCardCloudEmpty: boolean;
+  uploadPlannedCreditCardLocalToCloud: () => Promise<void>;
+}) {
   return (
     <div>
       <RepairStaleMigrations />
       <MigrateLegacyCreditCards />
       <CreditCardsList />
+      <CardPlanningCloudNotice cloudEmpty={plannedCreditCardCloudEmpty} uploadLocalToCloud={uploadPlannedCreditCardLocalToCloud} />
       <CreditCardsFab />
     </div>
+  );
+}
+
+/** Same "renders nothing unless the cloud genuinely looks empty" pattern as
+ * Bank's own `PlanningAccountSection` — see that component's doc comment.
+ * Lives here (not per-card on `CreditCardDetailPage`) since it's about the
+ * WHOLE `plannedCreditCard` store, not any one card — same reasoning as why
+ * `AccountDetailPage`/`CreditCardDetailPage` themselves have no such
+ * section of their own either. */
+function CardPlanningCloudNotice({
+  cloudEmpty,
+  uploadLocalToCloud,
+}: {
+  cloudEmpty: boolean;
+  uploadLocalToCloud: () => Promise<void>;
+}) {
+  const plans = usePlannedCreditCardWorkbookStore((s) => s.workbook.entries);
+  const [busy, setBusy] = useState(false);
+
+  if (!firebaseReady || !cloudEmpty) return null;
+  return (
+    <Notice tone="warning" className="mt-md">
+      <p className="mt-0">No data found in the cloud for planned credit card charges. This won't upload automatically.</p>
+      <button
+        className="btn secondary"
+        disabled={busy}
+        onClick={async () => {
+          const ok = await confirmDialog(
+            'This will overwrite anything currently in the cloud for planned credit card charges (there is nothing there now, but confirming since this can\'t be undone).',
+            `Upload ${plans.length} local plan${plans.length === 1 ? '' : 's'} to the cloud?`,
+          );
+          if (!ok) return;
+          setBusy(true);
+          try {
+            await uploadLocalToCloud();
+            toast('Uploaded to the cloud.');
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        Upload {plans.length} local plan{plans.length === 1 ? '' : 's'} to the cloud
+      </button>
+    </Notice>
   );
 }
 

@@ -1,10 +1,13 @@
 import type { BankAccount, BankTransaction } from '../../types/bankWorkbook';
 import type { CashEntry } from '../../types/cashWorkbook';
+import type { CreditCard, CreditCardTransaction } from '../../types/creditCard';
 import type { PlannedBankTransaction } from '../../types/plannedBank';
 import type { PlannedCashEntry } from '../../types/plannedCash';
+import type { PlannedCreditCardTransaction } from '../../types/plannedCreditCard';
 import type { RecurrenceRule } from '../../types/recurrence';
 import { totalBalanceByCurrency } from './bankModule';
 import { cashBalanceByCurrency } from './cashModule';
+import { totalOwedByCurrency } from './creditCardModule';
 import { nextRecurrenceOccurrence } from './recurrence';
 
 export interface BalanceProjection {
@@ -75,6 +78,38 @@ export function plannedBankProjection(
       if (!code) return;
       if (!out[code]) out[code] = { real: real[code] ?? 0, planned: real[code] ?? 0 };
       out[code].planned += p.amount;
+    });
+  return out;
+}
+
+/** Real vs. planned Credit Card balance, per currency — unlike Cash/Bank's
+ * own "planned" line, this figure is money OWED, not money held: a HIGHER
+ * "planned" number is the worse outcome, the opposite intuition from
+ * `plannedCashProjection`/`plannedBankProjection`. A plan referencing a
+ * since-deleted card is skipped, same as `plannedBankProjection` does for
+ * a deleted account. `kind` decides a planned entry's effect on what's
+ * owed — mirrors `CreditCardTransaction`'s own doc comment ("kind decides
+ * the effect, not the sign"): a charge/fee/markup/cashAdvance ADDS to the
+ * balance, a payment SUBTRACTS from it. */
+export function plannedCreditCardProjection(
+  cards: CreditCard[],
+  transactions: CreditCardTransaction[],
+  planned: PlannedCreditCardTransaction[],
+  asOf: Date = new Date(),
+): Record<string, BalanceProjection> {
+  const real = totalOwedByCurrency(cards, transactions);
+  const out: Record<string, BalanceProjection> = {};
+  Object.keys(real).forEach((code) => {
+    out[code] = { real: real[code], planned: real[code] };
+  });
+  const currencyByCard = new Map(cards.map((c) => [c.id, c.currencyCode]));
+  planned
+    .filter((p) => isPlanDue(p, asOf))
+    .forEach((p) => {
+      const code = currencyByCard.get(p.cardId);
+      if (!code) return;
+      if (!out[code]) out[code] = { real: real[code] ?? 0, planned: real[code] ?? 0 };
+      out[code].planned += p.kind === 'payment' ? -p.amount : p.amount;
     });
   return out;
 }

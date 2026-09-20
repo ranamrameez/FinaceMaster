@@ -36,14 +36,17 @@ import { firebaseReady } from '../../../lib/firebase/client';
 import { useAppearanceStore } from '../../../store/appearanceStore';
 import { useBankWorkbookStore } from '../../../store/bankWorkbookStore';
 import { useCategoryStore } from '../../../store/categoryStore';
+import { useCreditCardWorkbookStore } from '../../../store/creditCardWorkbookStore';
 import { createEmptySubscriptionsWorkbook } from '../../../store/defaultSubscriptionsWorkbook';
 import { usePlannedBankWorkbookStore } from '../../../store/plannedBankWorkbookStore';
 import { usePlannedCashWorkbookStore } from '../../../store/plannedCashWorkbookStore';
+import { usePlannedCreditCardWorkbookStore } from '../../../store/plannedCreditCardWorkbookStore';
 import { useSubscriptionsWorkbookStore } from '../../../store/subscriptionsWorkbookStore';
 import type { Subscription, SubscriptionAlert } from '../../../types/subscriptionsWorkbook';
 import type { Category } from '../../../types/finance';
 import type { PlannedBankTransaction } from '../../../types/plannedBank';
 import type { PlannedCashEntry } from '../../../types/plannedCash';
+import type { PlannedCreditCardTransaction } from '../../../types/plannedCreditCard';
 import { ChartCard } from '../../qse/components/ChartCard';
 import { gridAutoStyle } from '../../../lib/gridStyle';
 
@@ -379,21 +382,32 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
   // the "pick where to generate NEW plans" picker below — same rule as
   // `AccountsList`'s own filter; see `BankAccount.isActive`'s doc comment.
   const activeAccounts = accounts.filter((a) => a.isActive !== false);
+  const cards = useCreditCardWorkbookStore((s) => s.workbook.cards);
+  const activeCards = cards.filter((c) => c.isActive !== false);
   const plannedBankEntries = usePlannedBankWorkbookStore((s) => s.workbook.entries);
   const addPlannedBankEntries = usePlannedBankWorkbookStore((s) => s.addEntries);
   const deletePlannedBankEntry = usePlannedBankWorkbookStore((s) => s.deleteEntry);
   const plannedCashEntries = usePlannedCashWorkbookStore((s) => s.workbook.entries);
   const addPlannedCashEntries = usePlannedCashWorkbookStore((s) => s.addEntries);
   const deletePlannedCashEntry = usePlannedCashWorkbookStore((s) => s.deleteEntry);
+  const plannedCreditCardEntries = usePlannedCreditCardWorkbookStore((s) => s.workbook.entries);
+  const addPlannedCreditCardEntries = usePlannedCreditCardWorkbookStore((s) => s.addEntries);
+  const deletePlannedCreditCardEntry = usePlannedCreditCardWorkbookStore((s) => s.deleteEntry);
 
-  const [linkModule, setLinkModule] = useState<'bank' | 'cash'>(sub.paidVia?.module ?? 'bank');
-  const [linkAccountId, setLinkAccountId] = useState(sub.paidVia?.module === 'bank' ? sub.paidVia.ref || activeAccounts[0]?.id || '' : activeAccounts[0]?.id || '');
+  const [linkModule, setLinkModule] = useState<'bank' | 'cash' | 'creditCard'>(sub.paidVia?.module ?? 'bank');
+  const [linkRefId, setLinkRefId] = useState(
+    sub.paidVia?.module === 'bank' ? sub.paidVia.ref || activeAccounts[0]?.id || ''
+      : sub.paidVia?.module === 'creditCard' ? sub.paidVia.ref || activeCards[0]?.id || ''
+      : activeAccounts[0]?.id || '',
+  );
 
   const occurrences = generateRenewalOccurrences(sub);
   const linkedLabel = sub.paidVia
     ? sub.paidVia.module === 'cash'
       ? 'Cash'
-      : accounts.find((a) => a.id === sub.paidVia?.ref)?.name || 'a removed account'
+      : sub.paidVia.module === 'creditCard'
+        ? cards.find((c) => c.id === sub.paidVia?.ref)?.name || 'a removed card'
+        : accounts.find((a) => a.id === sub.paidVia?.ref)?.name || 'a removed account'
     : null;
 
   const saveEdit = () => {
@@ -420,9 +434,10 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
       if (!ok) return;
       plannedBankEntries.filter((p) => p.sourceSubscriptionId === sub.id && !p.executed).forEach((p) => deletePlannedBankEntry(p.id));
       plannedCashEntries.filter((p) => p.sourceSubscriptionId === sub.id && !p.executed).forEach((p) => deletePlannedCashEntry(p.id));
+      plannedCreditCardEntries.filter((p) => p.sourceSubscriptionId === sub.id && !p.executed).forEach((p) => deletePlannedCreditCardEntry(p.id));
     }
     if (linkModule === 'bank') {
-      const account = accounts.find((a) => a.id === linkAccountId);
+      const account = accounts.find((a) => a.id === linkRefId);
       if (!account) return toast('Pick a bank account first.');
       const newPlans: PlannedBankTransaction[] = occurrences.map((o) => ({
         id: crypto.randomUUID(), accountId: account.id, date: o.date,
@@ -431,6 +446,16 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
       addPlannedBankEntries(newPlans);
       updateEntry(sub.id, { paidVia: { module: 'bank', ref: account.id } });
       toast(`${newPlans.length} planned renewal${newPlans.length > 1 ? 's' : ''} added to ${account.name}'s Planning tab.`);
+    } else if (linkModule === 'creditCard') {
+      const card = cards.find((c) => c.id === linkRefId);
+      if (!card) return toast('Pick a credit card first.');
+      const newPlans: PlannedCreditCardTransaction[] = occurrences.map((o) => ({
+        id: crypto.randomUUID(), cardId: card.id, date: o.date, kind: 'charge',
+        description: `Subscription: ${sub.name}`, amount: o.amount, executed: false, sourceSubscriptionId: sub.id,
+      }));
+      addPlannedCreditCardEntries(newPlans);
+      updateEntry(sub.id, { paidVia: { module: 'creditCard', ref: card.id } });
+      toast(`${newPlans.length} planned renewal${newPlans.length > 1 ? 's' : ''} added to ${card.name}'s Planning section.`);
     } else {
       // A generated plan's own `category` is free text (Planning predates the
       // shared registry) — only pass a real category name through, not the
@@ -536,25 +561,26 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
         <h4 style={{ margin: '0 0 8px' }}>Link to a paying account</h4>
         {linkedLabel ? (
           <p className="text-muted mb-sm">
-            Paid via <strong>{linkedLabel}</strong> — upcoming renewals are planned in its Planning tab.
+            Paid via <strong>{linkedLabel}</strong> — upcoming renewals are planned in its own Planning section.
           </p>
         ) : (
           <p className="text-muted mb-sm">
             Not linked yet. Linking generates a planned (not-yet-done) entry for every renewal in the next 12
-            months in the chosen account's Planning tab.
+            months in the chosen payer's own Planning section.
           </p>
         )}
         <div className="row gap-sm">
           <Field label="Pays via">
-            <Select value={linkModule} onChange={(e) => setLinkModule(e.target.value as 'bank' | 'cash')}>
+            <Select value={linkModule} onChange={(e) => { const m = e.target.value as 'bank' | 'cash' | 'creditCard'; setLinkModule(m); setLinkRefId(m === 'creditCard' ? activeCards[0]?.id || '' : activeAccounts[0]?.id || ''); }}>
               <option value="bank">Bank account</option>
               <option value="cash">Cash</option>
+              <option value="creditCard">Credit card</option>
             </Select>
           </Field>
           {linkModule === 'bank' && (
             activeAccounts.length ? (
               <Field label="Bank account">
-                <Select value={linkAccountId} onChange={(e) => setLinkAccountId(e.target.value)}>
+                <Select value={linkRefId} onChange={(e) => setLinkRefId(e.target.value)}>
                   {activeAccounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.currencyCode})</option>)}
                 </Select>
               </Field>
@@ -562,7 +588,22 @@ function SubscriptionDetail({ sub, onBack }: { sub: Subscription; onBack: () => 
               <p className="text-muted">No active bank accounts — add one or reopen a closed one on the Banking page first.</p>
             )
           )}
-          <button className="btn" onClick={generatePlans} disabled={linkModule === 'bank' && !activeAccounts.length}>
+          {linkModule === 'creditCard' && (
+            activeCards.length ? (
+              <Field label="Credit card">
+                <Select value={linkRefId} onChange={(e) => setLinkRefId(e.target.value)}>
+                  {activeCards.map((c) => <option key={c.id} value={c.id}>{c.name} ({c.currencyCode})</option>)}
+                </Select>
+              </Field>
+            ) : (
+              <p className="text-muted">No active credit cards — add one or reopen a closed one on the Banking page first.</p>
+            )
+          )}
+          <button
+            className="btn"
+            onClick={generatePlans}
+            disabled={(linkModule === 'bank' && !activeAccounts.length) || (linkModule === 'creditCard' && !activeCards.length)}
+          >
             {linkedLabel ? 'Re-link / regenerate plans' : 'Generate renewal plans'}
           </button>
         </div>
@@ -604,14 +645,21 @@ function AnalyticsTab() {
   const renewals = useMemo(() => upcomingRenewals(subs, 30), [subs]);
 
   const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
+  const cards = useCreditCardWorkbookStore((s) => s.workbook.cards);
   const byAccount = useMemo(() => {
     const out: Record<string, number> = {};
     subs.filter((s) => s.active && s.currencyCode === effectiveCurrency).forEach((s) => {
-      const label = !s.paidVia ? 'Not linked' : s.paidVia.module === 'cash' ? 'Cash' : accounts.find((a) => a.id === s.paidVia?.ref)?.name || 'Removed account';
+      const label = !s.paidVia
+        ? 'Not linked'
+        : s.paidVia.module === 'cash'
+          ? 'Cash'
+          : s.paidVia.module === 'creditCard'
+            ? cards.find((c) => c.id === s.paidVia?.ref)?.name || 'Removed card'
+            : accounts.find((a) => a.id === s.paidVia?.ref)?.name || 'Removed account';
       out[label] = (out[label] || 0) + monthlyEquivalent(s);
     });
     return out;
-  }, [subs, effectiveCurrency, accounts]);
+  }, [subs, effectiveCurrency, accounts, cards]);
   const accountLabels = Object.keys(byAccount);
 
   if (!subs.length) {
