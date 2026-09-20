@@ -155,6 +155,63 @@ function findRepeatedElementGroups() {
     .sort((a, b) => b.length - a.length);
 }
 
+/** Finds the first cell in `row` whose `col-id` attribute matches one of
+ * `colIds`, tried in order — used by `scrapeAgGrid()` below to look up a
+ * named column (e.g. "the real Last Price cell") regardless of where it
+ * sits in the row's own DOM/column order. */
+function firstMatchingCell(row, colIds) {
+  for (const id of colIds) {
+    const el = row.querySelector(`[col-id="${id}"]`);
+    if (el) return el;
+  }
+  return null;
+}
+
+/** AG Grid tier: a widely-used JS data-grid library that renders each row as
+ * `<div role="row" row-id="TICKER">` with per-column
+ * `<div role="gridcell" col-id="...">` children — real, stable structural
+ * identifiers AG Grid itself guarantees, not a guess. Confirmed against a
+ * real live market-watch page built on AG Grid: its own column order put
+ * `col-id="askVolume"` BEFORE `col-id="lastPrice"`, which is exactly why the
+ * older positional "first numeric cell after the ticker" heuristic
+ * (`extractRows`, used by the `<table>`/ARIA-row/div-grid tiers below)
+ * silently grabbed Ask Volume instead of the real price — column order can
+ * even be user-customized in a real AG Grid instance, so no positional
+ * heuristic can ever be made reliable here. Looking a column up BY NAME
+ * sidesteps that entirely. Tried before every other tier since it's the
+ * most specific, reliable signal when it applies; when the page isn't AG
+ * Grid (no `col-id` attributes anywhere), it naturally returns nothing and
+ * the older tiers run unchanged. The ticker comes from the row's own
+ * `row-id` attribute (AG Grid's own real data-binding key), not a text-cell
+ * regex match — also more reliable, and sidesteps the `col-id="symbol"`
+ * cell's own text entirely (kept only as a fallback for a blank `row-id`). */
+function scrapeAgGrid() {
+  const rows = document.querySelectorAll('[role="row"][row-id]');
+  const out = [];
+  const seen = new Set();
+  for (const row of rows) {
+    let ticker = (row.getAttribute('row-id') || '').trim().toUpperCase();
+    if (!ticker) {
+      const symbolEl = firstMatchingCell(row, ['symbol']);
+      ticker = cellText(symbolEl).toUpperCase();
+    }
+    if (!ticker || seen.has(ticker)) continue;
+    const priceEl = firstMatchingCell(row, ['lastPrice', 'last', 'price', 'ltp']);
+    const price = parseNumber(cellText(priceEl));
+    if (price === null) continue;
+    const nameEl = firstMatchingCell(row, ['name', 'companyName', 'securityName']);
+    const changeEl = firstMatchingCell(row, ['changePercent', 'change', 'changePct']);
+    seen.add(ticker);
+    out.push({
+      ticker,
+      price,
+      changePct: changeEl ? parseNumber(cellText(changeEl)) : null,
+      name: nameEl ? cellText(nameEl) : null,
+    });
+  }
+  return out;
+}
+
 /** Div-grid fallback: some market-watch widgets render each stock as a
  * `<div>` "row" of sibling `<div>` "cells" with no `<table>`, `<tr>`, or
  * `role="row"` anywhere — real layouts seen in the wild for exactly this
@@ -184,8 +241,13 @@ function scrapeHeuristic() {
       out.push(r);
     }
   };
-  for (const table of document.querySelectorAll('table')) {
-    addAll(extractRows(table.querySelectorAll('tbody tr, tr'), (row) => Array.from(row.querySelectorAll('td, th'))));
+  // AG Grid tier first — most specific/reliable signal when it applies (see
+  // scrapeAgGrid()'s own doc comment), naturally empty on a non-AG-Grid page.
+  addAll(scrapeAgGrid());
+  if (!out.length) {
+    for (const table of document.querySelectorAll('table')) {
+      addAll(extractRows(table.querySelectorAll('tbody tr, tr'), (row) => Array.from(row.querySelectorAll('td, th'))));
+    }
   }
   if (!out.length) {
     // Some market-watch widgets use ARIA grid roles instead of a real <table>.

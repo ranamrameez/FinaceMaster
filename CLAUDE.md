@@ -6161,6 +6161,29 @@ app, not developer notes) continuously as features ship.
   the heuristic in a way this synthetic test didn't anticipate (e.g. cells wrapping their
   text in nested spans that add stray whitespace to `textContent`, breaking the exact
   ticker-regex match). Manifest bumped to 0.1.1.
+- **Chrome extension: real wrong-scraped-prices bug found and fixed via an AG Grid-aware
+  tier (2026-09-20) — see README Done item 343.** After the div-grid fix above, the user ran
+  the extension's own Options "Test scrape" against the real live page and pasted the JSON
+  back — 57 rows scraped with correct tickers/names but every price wrong (IQCD showed 21952
+  instead of ~9-10 QAR). Asked for one row's raw HTML instead of guessing further; the user's
+  pasted HTML revealed the page is built on **AG Grid** — rows are
+  `<div role="row" row-id="TICKER">`, cells are `<div role="gridcell" col-id="...">`, real
+  library-guaranteed identifiers. Root cause: this page's own real column order puts
+  `col-id="askVolume"`/`"askPrice"` BEFORE `col-id="lastPrice"` — the old tiers' positional
+  "first numeric cell after the ticker" heuristic grabbed Ask Volume. AG Grid column order can
+  be user-customized, so no positional fix can ever be reliable — the real fix is a named
+  `col-id` lookup, immune to ordering. New `scrapeAgGrid()` tier (tried FIRST, before
+  `<table>`/ARIA-row/div-grid): reads the ticker from the row's own `row-id` attribute (not a
+  text-cell regex match), looks up price/name/change by a `col-id` name-preference list
+  (`lastPrice`/`last`/`price`/`ltp`, etc.) — naturally empty and harmless on a non-AG-Grid
+  page. **Verified with a jsdom simulation built from the user's own real pasted HTML**,
+  reproducing the exact real column order — confirmed the fix returns the true `lastPrice`
+  values, not the decoy `askVolume`/`askPrice` numbers; re-ran the two prior jsdom tests
+  unchanged (zero regression to the table/div-grid tiers). Manifest bumped to 0.1.2. **Lesson
+  worth repeating**: when a scraping heuristic returns plausible-shaped-but-wrong numbers,
+  don't keep tuning the heuristic blind — get one real row's raw HTML and read the actual
+  library/structure it's built on; a positional guess can never out-compete a library's own
+  stable, named attributes once they're known.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

@@ -109,20 +109,39 @@ credential material there at all.
 
 ## Tuning the scraper
 
-The bundled heuristic (`content.js`) tries, in order: every real `<table>`'s rows; any
-`<tr>`/`[role="row"]` elements (for ARIA-grid widgets that skip `<table>` but still mark
-rows semantically); and, only if both of those find nothing, a **div-grid fallback** — it
-looks for the single most-repeated `tag+class` element on the page (grouping every element
-by its own tag name and sorted classlist) and tries each candidate group, most-repeated
-first, treating each element's direct children as its "cells." This covers market-watch
-widgets built as a plain CSS grid/flexbox of `<div>`s with no semantic row markup at all,
-which is what "no data scraped" on a real page usually turns out to be. Whichever tier
-matches, a "row" is scanned left-to-right for one ticker-like cell (`[A-Z][A-Z0-9]{1,5}`)
-followed by a plain numeric cell, taken as the price; the company name is guessed from
-whichever cell sits immediately after the ticker cell, if that text isn't itself ticker-like
-or numeric. It's a reasonable starting guess, but a real page's actual markup can always be
-captured explicitly instead (more reliable than any heuristic, and immune to a future layout
-change breaking the guess):
+The bundled heuristic (`content.js`) tries, in order:
+
+1. **AG Grid** — a very common JS data-grid library, and what The Group's own market-watch
+   page (webd.thegroup.com.qa) actually turns out to be built on, confirmed by inspecting its
+   real HTML. AG Grid renders each row as `<div role="row" row-id="TICKER">` with per-column
+   `<div role="gridcell" col-id="...">` children — real, stable identifiers the library itself
+   guarantees. This tier reads the ticker straight from the row's own `row-id` attribute (not
+   a text-cell guess) and looks up the price/name/change cells BY NAME (`col-id="lastPrice"`,
+   `"name"`, `"changePercent"`, with a couple of common alternate names tried too) rather than
+   by position. **This matters because column order is not reliable**: on the real page, the
+   confirmed column order puts `col-id="askVolume"` and `col-id="askPrice"` BEFORE
+   `col-id="lastPrice"` — a positional "first numeric cell after the ticker" heuristic (which
+   is exactly what tiers 2-4 below use) silently grabbed Ask Volume as if it were the price.
+   Naturally finds nothing (and falls through to the tiers below) on a page that isn't AG Grid.
+2. every real `<table>`'s rows;
+3. any `<tr>`/`[role="row"]` elements (for ARIA-grid widgets that skip `<table>` but still mark
+   rows semantically) — note AG Grid rows also carry `role="row"`, so if tier 1 somehow finds
+   nothing on an AG Grid page (e.g. a version with different attribute names), this tier will
+   still see the same rows, just via the same weaker positional heuristic tier 1 exists to
+   avoid;
+4. only if all of those find nothing, a **div-grid fallback** — it looks for the single
+   most-repeated `tag+class` element on the page (grouping every element by its own tag name
+   and sorted classlist) and tries each candidate group, most-repeated first, treating each
+   element's direct children as its "cells." This covers market-watch widgets built as a plain
+   CSS grid/flexbox of `<div>`s with no semantic row markup at all.
+
+For tiers 2-4, a "row" is scanned left-to-right for one ticker-like cell
+(`[A-Z][A-Z0-9]{1,5}`) followed by a plain numeric cell, taken as the price; the company name
+is guessed from whichever cell sits immediately after the ticker cell, if that text isn't
+itself ticker-like or numeric. It's a reasonable starting guess for a page whose real column
+order happens to put price right after the ticker, but a real page's actual markup can always
+be captured explicitly instead (more reliable than any heuristic, and immune to a future
+layout change breaking the guess):
 
 1. Open the market-watch page, right-click the price table → **Inspect**.
 2. Find a CSS selector that matches every stock row (e.g. `table.market-watch tbody tr`)
