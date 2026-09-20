@@ -47,6 +47,7 @@ import { CreditCardDetailPage } from './features/bank/pages/CreditCardsSection';
 import { useBankFirebaseSync } from './lib/firebase/useBankFirebaseSync';
 import { usePlannedBankFirebaseSync } from './lib/firebase/usePlannedBankFirebaseSync';
 import { useCreditCardFirebaseSync } from './lib/firebase/useCreditCardFirebaseSync';
+import { usePlannedCreditCardFirebaseSync } from './lib/firebase/usePlannedCreditCardFirebaseSync';
 import { EMIPage } from './features/emi/pages/EMIPage';
 import { useEMIFirebaseSync } from './lib/firebase/useEMIFirebaseSync';
 import { FundsPage } from './features/funds/pages/FundsPage';
@@ -104,6 +105,7 @@ function App() {
   const bankSync = useBankFirebaseSync();
   const plannedBankSync = usePlannedBankFirebaseSync();
   const creditCardSync = useCreditCardFirebaseSync();
+  const plannedCreditCardSync = usePlannedCreditCardFirebaseSync();
   const emiSync = useEMIFirebaseSync();
   const fundsSync = useFundsFirebaseSync();
   const rentalsSync = useRentalsFirebaseSync();
@@ -243,6 +245,8 @@ function App() {
                     plannedSyncStatus={plannedBankSync.status}
                     plannedCloudEmpty={plannedBankSync.cloudEmpty}
                     uploadPlannedLocalToCloud={plannedBankSync.uploadLocalToCloud}
+                    plannedCreditCardCloudEmpty={plannedCreditCardSync.cloudEmpty}
+                    uploadPlannedCreditCardLocalToCloud={plannedCreditCardSync.uploadLocalToCloud}
                   />
                 }
               />

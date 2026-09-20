@@ -10,6 +10,7 @@ import {
   nextPendingMinDue,
   outstandingBalanceByCard,
   proposeMinPayment,
+  totalOwedByCurrency,
 } from '../creditCardModule';
 
 const card = (over: Partial<CreditCard> = {}): CreditCard => ({
@@ -250,6 +251,20 @@ describe('creditCardLiabilityByCurrency', () => {
     const cards = [card({ includeInNetWorth: false })];
     const txs = [tx({ kind: 'charge', amount: 300 })];
     expect(creditCardLiabilityByCurrency(cards, txs)).toEqual({});
+  });
+});
+
+describe('totalOwedByCurrency — unlike creditCardLiabilityByCurrency, no includeInNetWorth filter and no clamping/skipping', () => {
+  it('sums owed balances per currency across every card, ignoring includeInNetWorth', () => {
+    const cards = [card({ id: 'c1', currencyCode: 'QAR', includeInNetWorth: false }), card({ id: 'c2', currencyCode: 'PKR' })];
+    const txs = [tx({ cardId: 'c1', kind: 'charge', amount: 300 }), tx({ cardId: 'c2', kind: 'charge', amount: 50 })];
+    expect(totalOwedByCurrency(cards, txs)).toEqual({ QAR: 300, PKR: 50 });
+  });
+
+  it('a card in credit contributes a negative amount, not zero', () => {
+    const cards = [card({ id: 'c1', currencyCode: 'QAR' })];
+    const txs = [tx({ cardId: 'c1', kind: 'payment', amount: 80 })];
+    expect(totalOwedByCurrency(cards, txs)).toEqual({ QAR: -80 });
   });
 });
 

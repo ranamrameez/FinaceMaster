@@ -32,11 +32,12 @@ export interface Subscription {
   billingCycle: 'monthly' | 'yearly' | 'weekly' | 'custom';
   customDays?: number; // used when billingCycle === 'custom' — e.g. a 28-day mobile package or a 180-day SIM validity
   startDate: string;
-  /** Which entity actually pays this — a Bank account (by id) or Cash.
+  /** Which entity actually pays this — a Bank account (by id), Cash, or a
+   * Credit Card (by id, added 2026-09-20 — see `types/plannedCreditCard.ts`).
    * Mirrors EMI/Loans' `linkedBankAccountId`/Rentals' lease-plan pattern:
    * once set, "Generate renewal plans" creates planned entries in that
    * entity's Planning tab for upcoming renewals. */
-  paidVia?: { module: 'bank' | 'cash'; ref?: string };
+  paidVia?: { module: 'bank' | 'cash' | 'creditCard'; ref?: string };
   /** Points into the shared cross-module category registry (`lib/categories.ts`),
    * same as Cash/Bank/Rentals — user-requested (2026-09-08): "Single standard
    * list of categories in db and custom per user. Use them everywhere."

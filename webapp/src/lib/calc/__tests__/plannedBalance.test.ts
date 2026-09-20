@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { BankAccount, BankTransaction } from '../../../types/bankWorkbook';
 import type { CashEntry } from '../../../types/cashWorkbook';
+import type { CreditCard, CreditCardTransaction } from '../../../types/creditCard';
 import type { PlannedBankTransaction } from '../../../types/plannedBank';
 import type { PlannedCashEntry } from '../../../types/plannedCash';
-import { plannedBankProjection, plannedCashProjection } from '../plannedBalance';
+import type { PlannedCreditCardTransaction } from '../../../types/plannedCreditCard';
+import { plannedBankProjection, plannedCashProjection, plannedCreditCardProjection } from '../plannedBalance';
 
 describe('plannedCashProjection', () => {
   const entry = (over: Partial<CashEntry>): CashEntry => ({
@@ -168,5 +170,74 @@ describe('plannedBankProjection', () => {
     const result = plannedBankProjection(accounts, transactions, planned);
     // real = 500 + 500 = 1000; planned = 1000 - 200 + 100 = 900
     expect(result.USD).toEqual({ real: 1000, planned: 900 });
+  });
+});
+
+describe('plannedCreditCardProjection', () => {
+  const card = (over: Partial<CreditCard>): CreditCard => ({
+    id: 'card-1',
+    name: 'Sharia Card',
+    currencyCode: 'USD',
+    ...over,
+  });
+  const tx = (over: Partial<CreditCardTransaction>): CreditCardTransaction => ({
+    id: 't1',
+    cardId: 'card-1',
+    date: '2026-01-01',
+    kind: 'charge',
+    amount: 100,
+    description: 'Groceries',
+    source: 'manual',
+    ...over,
+  });
+  const plan = (over: Partial<PlannedCreditCardTransaction>): PlannedCreditCardTransaction => ({
+    id: 'p1',
+    cardId: 'card-1',
+    date: '2026-01-10',
+    description: 'Subscription renewal',
+    amount: 50,
+    kind: 'charge',
+    ...over,
+  });
+
+  it('real equals what is owed and a planned charge adds to it', () => {
+    const cards = [card({})];
+    const transactions = [tx({ amount: 100 })];
+    const planned = [plan({ amount: 50 })];
+    const result = plannedCreditCardProjection(cards, transactions, planned);
+    expect(result.USD).toEqual({ real: 100, planned: 150 });
+  });
+
+  it('a planned payment reduces what is owed, unlike a charge', () => {
+    const cards = [card({})];
+    const transactions = [tx({ amount: 100 })];
+    const planned = [plan({ amount: 40, kind: 'payment' })];
+    const result = plannedCreditCardProjection(cards, transactions, planned);
+    expect(result.USD).toEqual({ real: 100, planned: 60 });
+  });
+
+  it('excludes executed plans (already counted in real)', () => {
+    const cards = [card({})];
+    const transactions = [tx({ amount: 100 })];
+    const planned = [plan({ amount: 50, executed: true })];
+    const result = plannedCreditCardProjection(cards, transactions, planned);
+    expect(result.USD).toEqual({ real: 100, planned: 100 });
+  });
+
+  it('ignores a plan referencing a deleted card instead of guessing its currency', () => {
+    const cards = [card({})];
+    const transactions = [tx({ amount: 100 })];
+    const planned = [plan({ cardId: 'deleted-card', amount: 9999 })];
+    const result = plannedCreditCardProjection(cards, transactions, planned);
+    expect(result.USD).toEqual({ real: 100, planned: 100 });
+  });
+
+  it('keeps currencies separate', () => {
+    const cards = [card({ id: 'c1', currencyCode: 'USD' }), card({ id: 'c2', currencyCode: 'PKR' })];
+    const transactions = [tx({ cardId: 'c1', amount: 100 })];
+    const planned = [plan({ cardId: 'c2', amount: 500 })];
+    const result = plannedCreditCardProjection(cards, transactions, planned);
+    expect(result.USD).toEqual({ real: 100, planned: 100 });
+    expect(result.PKR).toEqual({ real: 0, planned: 500 });
   });
 });
