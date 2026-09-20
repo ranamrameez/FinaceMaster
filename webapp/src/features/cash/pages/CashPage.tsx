@@ -25,6 +25,7 @@ import { usePrimaryCurrency } from '../../../hooks/usePrimaryCurrency';
 import { useSortableRows } from '../../../hooks/useSortableRows';
 import { ReorderButtons } from '../../../components/ui/ReorderButtons';
 import { RecurrenceFields } from '../../../components/ui/RecurrenceFields';
+import { PlanningHorizonField } from '../../../components/ui/PlanningHorizonField';
 import { dateOnlyMs } from '../../../lib/datetime';
 import { nextRecurrenceOccurrence } from '../../../lib/calc/recurrence';
 import { recurrenceLabel } from '../../../lib/recurrenceLabel';
@@ -32,7 +33,7 @@ import { hueStyle } from '../../../lib/statCardHues';
 import { categoryName, UNCATEGORIZED_ID } from '../../../lib/categories';
 import { useCategoryStore } from '../../../store/categoryStore';
 import { cashBalanceByCurrency, cashByCategory, cashMonthlyFlow, cashPendingByCurrency, cashRunningLedger, type CashLedgerRow } from '../../../lib/calc/cashModule';
-import { plannedCashProjection } from '../../../lib/calc/plannedBalance';
+import { isPlanDue, planWithinHorizon, plannedCashProjection, type PlanningHorizonDays } from '../../../lib/calc/plannedBalance';
 import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar, tickerColor } from '../../../lib/cssVar';
@@ -106,11 +107,16 @@ function BalancesSummary() {
   const codes = Object.keys(balances);
   if (!codes.length) return null;
 
-  // Not-yet-executed plans, per currency — surfaced here (not just inside
-  // the Planning tab) so "how much is still hanging over my balance" is
-  // visible at a glance without a click, per a user report that stats
-  // didn't show upcoming/in-process planned payments at all.
-  const upcoming = plannedEntries.filter((p) => !p.executed);
+  // Not-yet-executed, near-term plans, per currency — surfaced here (not
+  // just inside the Planning tab) so "how much is still hanging over my
+  // balance" is visible at a glance without a click, per a user report
+  // that stats didn't show upcoming/in-process planned payments at all.
+  // Fixed 30-day ("This month") horizon, same default as the Planning
+  // tab's own picker (2026-09-20) — a plain `!p.executed` used to pull in
+  // a plan dated years out, mixing it into what's meant to read as "soon";
+  // no picker here on purpose, this is a small at-a-glance indicator, not
+  // the full planning tool (see the Plans tab for that).
+  const upcoming = plannedEntries.filter((p) => isPlanDue(p, new Date(), 30));
 
   return (
     <div className="grid-auto" style={{ ...gridAutoStyle(140, 8), marginBottom: 16 }}>
@@ -763,19 +769,22 @@ function emptyPlan(defaultCurrency: string): PlannedCashEntry {
   return { id: crypto.randomUUID(), date: today(), type: 'OUT', amount: 0, currencyCode: defaultCurrency, category: '', note: '' };
 }
 
-function BalanceProjectionSummary() {
+function BalanceProjectionSummary({ horizonDays }: { horizonDays: PlanningHorizonDays }) {
   const entries = useCashWorkbookStore((s) => s.workbook.entries);
   const plannedEntries = usePlannedCashWorkbookStore((s) => s.workbook.entries);
   const settings = usePlannedCashWorkbookStore((s) => s.workbook.settings);
   const updateSettings = usePlannedCashWorkbookStore((s) => s.updateSettings);
-  const projection = useMemo(() => plannedCashProjection(entries, plannedEntries), [entries, plannedEntries]);
+  const projection = useMemo(
+    () => plannedCashProjection(entries, plannedEntries, new Date(), horizonDays),
+    [entries, plannedEntries, horizonDays],
+  );
   const codes = Object.keys(projection);
 
   return (
     <CollapsibleCard title={<h3 className="m-0">Balance projection</h3>} className="mb-md">
       <p className="text-muted mt-0">
-        See what your balance would look like if every plan below actually happened — a reality check before you
-        spend. Choose what you want to see:
+        See what your balance would look like if every plan due within the chosen time period actually happened —
+        a reality check before you spend. Choose what you want to see:
       </p>
       <div className="row" style={{ gap: 16, marginBottom: 12 }}>
         <label className="text-muted flex-center-gap4">
@@ -1015,7 +1024,7 @@ function PlanCurrencyTable({
   );
 }
 
-function PlanList() {
+function PlanList({ horizonDays }: { horizonDays: PlanningHorizonDays }) {
   const allPlans = usePlannedCashWorkbookStore((s) => s.workbook.entries);
   const updatePlan = usePlannedCashWorkbookStore((s) => s.updateEntry);
   const deletePlan = usePlannedCashWorkbookStore((s) => s.deleteEntry);
@@ -1023,15 +1032,17 @@ function PlanList() {
   const ensureSignedIn = useEnsureSignedIn();
   const [statusFilter, setStatusFilter] = useState<'all' | 'planned' | 'done'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'IN' | 'OUT'>('all');
+  const asOf = useMemo(() => new Date(), []);
 
   const plans = useMemo(
     () => allPlans.filter((p) => {
       if (statusFilter === 'planned' && p.executed) return false;
       if (statusFilter === 'done' && !p.executed) return false;
       if (typeFilter !== 'all' && p.type !== typeFilter) return false;
+      if (!planWithinHorizon(p, asOf, horizonDays)) return false;
       return true;
     }),
-    [allPlans, statusFilter, typeFilter],
+    [allPlans, statusFilter, typeFilter, horizonDays, asOf],
   );
 
   const byCurrency = useMemo(() => {
@@ -1166,10 +1177,15 @@ export function PlanningTab({
    * Transfers fix). */
   showFab?: boolean;
 }) {
+  // Shared by both children below (2026-09-20) — one "Time period" control
+  // for the whole Planning view, not two independently-set pickers that'd
+  // leave the projection and the list disagreeing about what "soon" means.
+  const [horizonDays, setHorizonDays] = useState<PlanningHorizonDays>(30);
   return (
     <div>
-      <BalanceProjectionSummary />
-      <PlanList />
+      <PlanningHorizonField value={horizonDays} onChange={setHorizonDays} />
+      <BalanceProjectionSummary horizonDays={horizonDays} />
+      <PlanList horizonDays={horizonDays} />
       {showFab && <AddPlanFab />}
       <PlanningAccountSection cloudEmpty={plannedCloudEmpty} uploadLocalToCloud={uploadPlannedLocalToCloud} />
     </div>
