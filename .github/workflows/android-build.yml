@@ -1,4 +1,6 @@
-# Builds the native Android app (android/) and publishes a downloadable debug APK.
+# Builds the native Android app (android/) and publishes a downloadable debug APK, plus a
+# real release-signed APK + AAB once release-signing secrets are configured (see the
+# "Release signing" section in android/README.md for what to set and why).
 #
 # Deliberately separate from static.yml (which only builds/deploys webapp/) — this
 # workflow only runs when an android/ change actually lands on main/master, via the
@@ -8,6 +10,14 @@
 # under android/. It carries an explicit [skip ci] in that commit message anyway, so it
 # also doesn't cause static.yml's own unfiltered `push: branches: [main]` to needlessly
 # rebuild/redeploy the webapp for a binary-only commit.
+#
+# Release signing is entirely additive and optional. Without the 3 required secrets below
+# set, only the debug APK is built and published — exactly as this workflow has always
+# behaved. Once they're set, this workflow ALSO builds and publishes a real release-signed
+# APK (a much better story for Google Play Protect's install-time warning than a
+# debug-keystore-signed APK, since it carries a real, permanent signing identity instead
+# of Android's shared generic debug key) and a release AAB (for manual upload to Play
+# Console the first time, to bootstrap Play App Signing).
 name: Build Android APK
 
 on:
@@ -27,6 +37,9 @@ concurrency:
 env:
   APK_FILE_NAME: financerecorder-debug.apk
   ARTIFACT_NAME: financerecorder-debug-apk
+  RELEASE_APK_FILE_NAME: financerecorder-release.apk
+  RELEASE_ARTIFACT_NAME: financerecorder-release-apk
+  RELEASE_AAB_ARTIFACT_NAME: financerecorder-release-aab
   BUILD_DIR: builds/android
 
 jobs:
@@ -54,11 +67,26 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
+      # Secrets can't be read directly in an `if:` conditional (GitHub Actions
+      # limitation), so this step evaluates them in a shell (where they CAN be
+      # substituted, same as any other secret consumption) and exposes a plain
+      # true/false step output that later `if:` conditions key off instead.
+      - name: Check for release signing secrets
+        id: signing_check
+        run: |
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ] && \
+             [ -n "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" ] && \
+             [ -n "${{ secrets.ANDROID_KEY_ALIAS }}" ]; then
+            echo "has_signing=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_signing=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build debug APK
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
 
-      - name: Locate built APK
+      - name: Locate built debug APK
         id: locate
         run: |
           apk=$(find android/app/build/outputs/apk/debug -name '*.apk' | head -n1)
@@ -69,31 +97,108 @@ jobs:
           echo "Built: $apk"
           echo "apk_path=$apk" >> "$GITHUB_OUTPUT"
 
-      - name: Upload build artifact
+      - name: Upload debug build artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ARTIFACT_NAME }}
           path: ${{ steps.locate.outputs.apk_path }}
           if-no-files-found: error
 
-      - name: Stage the published copy + build info
+      - name: Decode release keystore
+        if: steps.signing_check.outputs.has_signing == 'true'
+        id: decode_keystore
+        run: |
+          keystore_path="$RUNNER_TEMP/release.jks"
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$keystore_path"
+          echo "keystore_path=$keystore_path" >> "$GITHUB_OUTPUT"
+
+      - name: Build release APK + AAB
+        if: steps.signing_check.outputs.has_signing == 'true'
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ steps.decode_keystore.outputs.keystore_path }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          # Falls back to ANDROID_KEYSTORE_PASSWORD in build.gradle.kts if this secret
+          # isn't set — real PKCS12 keystores (including this app's) don't support a
+          # separate key password, so this secret is optional.
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease bundleRelease --no-daemon
+
+      - name: Locate built release APK + AAB
+        if: steps.signing_check.outputs.has_signing == 'true'
+        id: locate_release
+        run: |
+          apk=$(find android/app/build/outputs/apk/release -name '*.apk' | head -n1)
+          aab=$(find android/app/build/outputs/bundle/release -name '*.aab' | head -n1)
+          if [ -z "$apk" ]; then
+            echo "No release APK found under android/app/build/outputs/apk/release" >&2
+            exit 1
+          fi
+          if [ -z "$aab" ]; then
+            echo "No release AAB found under android/app/build/outputs/bundle/release" >&2
+            exit 1
+          fi
+          echo "Built: $apk"
+          echo "Built: $aab"
+          echo "apk_path=$apk" >> "$GITHUB_OUTPUT"
+          echo "aab_path=$aab" >> "$GITHUB_OUTPUT"
+
+      - name: Upload release build artifacts
+        if: steps.signing_check.outputs.has_signing == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.RELEASE_ARTIFACT_NAME }}
+          path: ${{ steps.locate_release.outputs.apk_path }}
+          if-no-files-found: error
+
+      - name: Upload release AAB artifact (for manual Play Console upload)
+        if: steps.signing_check.outputs.has_signing == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.RELEASE_AAB_ARTIFACT_NAME }}
+          path: ${{ steps.locate_release.outputs.aab_path }}
+          if-no-files-found: error
+
+      - name: Get signing certificate fingerprint
+        if: steps.signing_check.outputs.has_signing == 'true'
+        id: fingerprint
+        run: |
+          fp=$(keytool -list -v \
+            -keystore "${{ steps.decode_keystore.outputs.keystore_path }}" \
+            -alias "${{ secrets.ANDROID_KEY_ALIAS }}" \
+            -storepass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+            2>/dev/null | grep 'SHA256:' | head -n1 | sed 's/^[[:space:]]*//')
+          echo "sha256=$fp" >> "$GITHUB_OUTPUT"
+
+      - name: Stage the published copies + build info
         run: |
           mkdir -p "$BUILD_DIR"
           cp "${{ steps.locate.outputs.apk_path }}" "$BUILD_DIR/$APK_FILE_NAME"
-          cat > "$BUILD_DIR/build-info.txt" <<EOF
-          Run:      #${{ github.run_number }} (${{ github.run_id }})
-          Commit:   ${{ github.sha }}
-          Branch:   ${{ github.ref_name }}
-          Built at: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          Workflow: ${{ github.workflow }}
-          EOF
+          {
+            echo "Run:      #${{ github.run_number }} (${{ github.run_id }})"
+            echo "Commit:   ${{ github.sha }}"
+            echo "Branch:   ${{ github.ref_name }}"
+            echo "Built at: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+            echo "Workflow: ${{ github.workflow }}"
+            echo ""
+            if [ "${{ steps.signing_check.outputs.has_signing }}" = "true" ]; then
+              echo "Release signing: yes"
+              echo "Signing cert:    ${{ steps.fingerprint.outputs.sha256 }}"
+            else
+              echo "Release signing: no (ANDROID_KEYSTORE_BASE64/ANDROID_KEYSTORE_PASSWORD/ANDROID_KEY_ALIAS secrets not set — see android/README.md)"
+            fi
+          } > "$BUILD_DIR/build-info.txt"
+          if [ "${{ steps.signing_check.outputs.has_signing }}" = "true" ]; then
+            cp "${{ steps.locate_release.outputs.apk_path }}" "$BUILD_DIR/$RELEASE_APK_FILE_NAME"
+          fi
 
       - name: Set up Python (QR code generation)
         uses: actions/setup-python@v5
         with:
           python-version: "3.x"
 
-      - name: Generate the download QR code
+      - name: Generate the download QR codes
         run: |
           pip install --quiet "qrcode[pil]"
           python3 - <<'PY'
@@ -102,10 +207,19 @@ jobs:
 
           repo = os.environ["GITHUB_REPOSITORY"]
           branch = os.environ["GITHUB_REF_NAME"]
-          url = f"https://raw.githubusercontent.com/{repo}/{branch}/builds/android/financerecorder-debug.apk"
-          qrcode.make(url, box_size=10, border=2).save("builds/android/download-qr.png")
-          print(f"QR points to: {url}")
+          has_signing = os.environ["HAS_SIGNING"] == "true"
+
+          debug_url = f"https://raw.githubusercontent.com/{repo}/{branch}/builds/android/financerecorder-debug.apk"
+          qrcode.make(debug_url, box_size=10, border=2).save("builds/android/download-qr.png")
+          print(f"Debug QR points to: {debug_url}")
+
+          if has_signing:
+              release_url = f"https://raw.githubusercontent.com/{repo}/{branch}/builds/android/financerecorder-release.apk"
+              qrcode.make(release_url, box_size=10, border=2).save("builds/android/download-qr-release.png")
+              print(f"Release QR points to: {release_url}")
           PY
+        env:
+          HAS_SIGNING: ${{ steps.signing_check.outputs.has_signing }}
 
       - name: Commit and push the published build
         run: |

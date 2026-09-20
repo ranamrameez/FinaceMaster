@@ -31,7 +31,10 @@ Scan the QR code below to open the live web app:
 
 Native Kotlin + Jetpack Compose — see [`android/README.md`](android/README.md) for the full
 architecture. Built and published automatically by GitHub Actions (see below); no manual
-release step is needed for a debug build.
+release step is needed for a debug build. A real release-signed build (a much better story
+for Google Play Protect's install-time warning than the debug build) is available once
+release-signing secrets are configured — see
+[`android/README.md`'s "Release signing" section](android/README.md#release-signing).
 
 ### GitHub Actions build and published APK
 
@@ -45,7 +48,7 @@ It builds the Android project from `/android` and runs only on a push to `master
 when the pushed changes include `android/**`. A merged pull request produces such a push, so a
 merge containing Android changes triggers the build; opening or updating a PR does not.
 
-After a successful build, CI does two things with the APK:
+After a successful build, CI does two things with the debug APK:
 
 1. Uploads `financerecorder-debug-apk` as the normal GitHub Actions artifact.
 2. Copies/replaces the latest APK in the repository at:
@@ -62,22 +65,35 @@ builds/android/build-info.txt
 
 with the CI run number, source commit, and branch.
 
+Once release-signing secrets are configured in the repository (see
+[`android/README.md`'s "Release signing" section](android/README.md#release-signing)),
+the same run also publishes a real release-signed APK at
+`builds/android/financerecorder-release.apk` — the recommended download once that's
+available, since it doesn't carry Android's shared, reputation-less debug signing key.
+
 ### Download on your phone
 
-The repository also contains a QR code that points to the latest Android APK download:
+If release signing is configured, prefer this QR code — a release-signed APK gives
+Google Play Protect a real, permanent signing identity to trust instead of the generic
+debug key:
 
-![Download the FinanceRecorder Android APK](builds/android/download-qr.png)
+![Download the FinanceRecorder Android APK (release)](builds/android/download-qr-release.png)
 
-Scan it with your phone to open and download the current APK without navigating through
-GitHub Actions. Or download it directly:
-[`builds/android/financerecorder-debug.apk`](builds/android/financerecorder-debug.apk)
+Or the debug build, always available:
 
-*(Both links populate the first time `android-build.yml` runs — i.e. the first merge to
-`main`/`master` that touches `android/**` after this workflow was added. Until then they point
-at a file that doesn't exist yet.)*
+![Download the FinanceRecorder Android APK (debug)](builds/android/download-qr.png)
+
+Scan either with your phone to open and download the current APK without navigating
+through GitHub Actions. Or download directly:
+[release APK](builds/android/financerecorder-release.apk) ·
+[debug APK](builds/android/financerecorder-debug.apk)
+
+*(All four links populate the first time `android-build.yml` runs after being added — the
+release ones only once release-signing secrets are configured. Until then they point at a
+file that doesn't exist yet.)*
 
 The repository copy under `/builds/android` is the canonical latest-build download. This
-README links directly to that APK rather than to the list of GitHub Actions runs.
+README links directly to those APKs rather than to the list of GitHub Actions runs.
 
 The generated `/builds/android` commit does not start another Android build because the
 workflow path filter only watches `android/**`.

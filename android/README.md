@@ -150,9 +150,106 @@ Or open `android/` directly in Android Studio (Koala/2024.1+ recommended for AGP
 run it from there — that's the easier path for a first real build/run/debug cycle.
 
 No `google-services.json`/Firebase Android SDK is needed — see `build.gradle.kts`'s own
-comment on why. No signing config is set up for a release build yet; add one before
-publishing (a debug build installs and runs fine as-is via `adb install`, since AGP always
-self-signs a debug build with a debug keystore automatically).
+comment on why. `./gradlew assembleDebug` installs and runs fine as-is via `adb install`
+(AGP always self-signs a debug build with a debug keystore automatically). For a real,
+release-signed build (`assembleRelease`/`bundleRelease`), see "Release signing" below —
+without it, `release` still builds, just unsigned.
+
+## Release signing
+
+**Why this exists**: a debug-signed APK (Android's shared, reputation-less generic debug
+key) reads to Google Play Protect as more suspicious than a real, permanent signing
+identity — and Notification Listener access (this app's core feature) is exactly the kind
+of permission Play Protect's install-time heuristics watch for on an app installed outside
+Play Store. A real release key doesn't eliminate Play Protect's "not from Play Store"
+warning on a sideloaded install, but it's a real, necessary step toward publishing through
+Play Console (which does eliminate it for users who install from there), and toward Play
+App Signing.
+
+**A real signing keystore already exists for this app** (`financerecorder-release.jks`,
+alias `financerecorder-upload`) — it was generated once and delivered directly to the app
+owner, not committed to this repo (never commit a signing keystore or its passwords to
+git — `android/.gitignore` blocks `*.jks`/`keystore.properties` for exactly this reason).
+If you're picking this up without that file, generate your own:
+
+```bash
+keytool -genkeypair -v -keystore financerecorder-release.jks \
+  -alias financerecorder-upload -keyalg RSA -keysize 2048 -validity 10950
+```
+
+(PKCS12 keystores — `keytool`'s modern default, including this one — don't support a
+separate store vs. key password; whatever you're asked for as the "key password"
+anywhere, use the same value as the store password.)
+
+### Local build
+
+Copy `android/keystore.properties.example` to `android/keystore.properties` (gitignored),
+fill in `storeFile`/`storePassword`/`keyAlias`/`keyPassword`, then:
+
+```bash
+cd android
+./gradlew assembleRelease   # signed release APK
+./gradlew bundleRelease     # signed release AAB (what Play Console wants)
+```
+
+### CI build (GitHub Actions)
+
+Add these as **repository secrets** (Settings → Secrets and variables → Actions →
+"New repository secret") and `.github/workflows/android-build.yml` picks them up
+automatically on the next push that touches `android/**` — no workflow file edit needed:
+
+| Secret name | Value |
+| --- | --- |
+| `ANDROID_KEYSTORE_BASE64` | The `.jks` file, base64-encoded as one line (see below) |
+| `ANDROID_KEYSTORE_PASSWORD` | The keystore's store password |
+| `ANDROID_KEY_ALIAS` | `financerecorder-upload` (or whatever alias you used) |
+| `ANDROID_KEY_PASSWORD` | Optional — omit it; it falls back to the store password (see the PKCS12 note above) |
+
+To base64-encode the keystore file:
+
+```bash
+# macOS / Linux:
+base64 -w0 financerecorder-release.jks
+# Windows PowerShell:
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("financerecorder-release.jks"))
+```
+
+Paste the resulting single-line output as `ANDROID_KEYSTORE_BASE64`'s value.
+
+Once all three required secrets are set, every subsequent CI build (see "GitHub Actions
+build and published APK" below) also produces:
+
+- `builds/android/financerecorder-release.apk` — a real release-signed, installable APK,
+  committed back to the repo the same way the debug APK already is.
+- `builds/android/download-qr-release.png` — a QR code pointing at it.
+- A GitHub Actions artifact named `financerecorder-release-aab` holding the signed `.aab`
+  — this is what you manually upload to Play Console the first time (see below); CI
+  doesn't publish it anywhere else, since it's only needed for that one manual step.
+- `builds/android/build-info.txt` gains a `Release signing: yes` line plus the signing
+  certificate's SHA-256 fingerprint (useful to cross-check against what Play Console shows
+  under App integrity → App signing once you've uploaded).
+
+Without those secrets set, CI behaves exactly as it always has — debug APK only, nothing
+new published, no build step fails or even runs differently.
+
+### Bootstrapping Play App Signing (one-time, manual)
+
+1. Download the `financerecorder-release-aab` artifact from a CI run (or build it locally
+   with `./gradlew bundleRelease`).
+2. In Play Console, create the app listing (if it doesn't exist yet) under the account at
+   https://play.google.com/store/apps/dev?id=4696950301960308735, package name
+   `com.financerecorder.app`.
+3. Upload that `.aab` as the first release (internal testing track is the lowest-friction
+   place to start — it doesn't require a public listing to be reviewed first). Play
+   Console will offer to enroll the app in **Play App Signing** on this first upload —
+   accept it; Google then re-signs the app for distribution with its own key while your
+   upload key (`financerecorder-upload`, in the keystore above) is what you keep using to
+   sign every future upload.
+4. Every later `bundleRelease` (whether built locally or by CI once secrets are added)
+   just needs uploading through Play Console the same way — no further one-time setup.
+
+This last step (the actual Play Console upload) has to happen from the account owner's own
+Play Console session — nothing in this repo or its CI can do it automatically.
 
 ## GitHub Actions build and published APK
 
@@ -169,7 +266,7 @@ was deliberate — a CI runner has normal internet access, unlike this project's
 sandbox, so `./gradlew assembleDebug` actually succeeds there, but there's no reason to spend
 a build on every PR push when only a merge to `main`/`master` ships anything real).
 
-After a successful build, CI does two things with the APK:
+After a successful build, CI does two things with the debug APK:
 
 1. Uploads `financerecorder-debug-apk` as the normal GitHub Actions artifact.
 2. Copies/replaces the latest APK in the repository at:
@@ -184,7 +281,14 @@ It also writes:
 builds/android/build-info.txt
 ```
 
-with the CI run number, source commit, branch, and build timestamp.
+with the CI run number, source commit, branch, build timestamp, and (once release signing
+is configured — see "Release signing" above) whether this run also produced a
+release-signed build and that key's SHA-256 fingerprint.
+
+If the repository has the release-signing secrets configured, the same run additionally
+builds and publishes a real release-signed APK — see "Release signing" above for the exact
+secret names and what gets published once they're set. Nothing here changes for a repo
+without those secrets; the debug-only behavior described above is unaffected.
 
 ### Download on your phone
 
@@ -217,8 +321,12 @@ It also carries `[skip ci]` in its own commit message, so it doesn't needlessly 
 - The manifest deliberately declares neither `READ_SMS` nor `RECEIVE_SMS` — see the
   "Why this architecture" section above for why, and don't add them without re-reading that
   reasoning; it's the difference between this feature being shippable on Play and not.
-- No signing/release config, no Play Console listing, no privacy policy page for the app
-  specifically exist yet — real pre-launch checklist items, not started here.
+- Release signing exists (see "Release signing" above) and a real Play Console account
+  with live apps is already available (https://play.google.com/store/apps/dev?id=4696950301960308735) —
+  what's still needed: creating this specific app's listing there, the one-time AAB upload
+  to bootstrap Play App Signing, and a privacy policy page for the app (Play Console
+  requires a URL for this, and Notification Listener access needs its own declaration in
+  the Permissions Declaration Form — see the bullet above this one).
 
 ## What's deliberately not built yet (v1 scope)
 

@@ -1,9 +1,50 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
 }
+
+// Release signing is optional and additive: if no keystore is configured (no local
+// keystore.properties, no CI secrets), `release` simply builds unsigned, exactly as it
+// always did — `assembleDebug` (what CI has built from day one) is completely unaffected
+// either way. This lets the same build.gradle.kts work for a contributor with no keystore
+// at all, a local dev with one on disk, and CI with one injected via secrets.
+//
+// Local dev: create android/keystore.properties (gitignored, see
+// keystore.properties.example) with storeFile/storePassword/keyAlias/keyPassword.
+// CI: ANDROID_KEYSTORE_BASE64 / ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS env vars
+// (see .github/workflows/android-build.yml, which decodes the base64 secret to a file
+// and passes the rest straight through as env vars — no keystore.properties file exists
+// in CI).
+//
+// Note on passwords: the real keystore this app ships with is PKCS12 (keytool's modern
+// default), which does not support a separate store vs. key password — keytool itself
+// ignores any distinct -keypass value for a PKCS12 store. So keyPassword below always
+// falls back to the same value as storePassword when one isn't explicitly given; don't
+// expect them to ever meaningfully differ for this keystore.
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.inputStream().use { load(it) }
+    }
+}
+
+fun releaseSigningValue(propertyKey: String, envKey: String): String? =
+    keystoreProperties.getProperty(propertyKey) ?: System.getenv(envKey)
+
+val releaseStoreFilePath = releaseSigningValue("storeFile", "ANDROID_KEYSTORE_PATH")
+val releaseStorePassword = releaseSigningValue("storePassword", "ANDROID_KEYSTORE_PASSWORD")
+val releaseKeyAlias = releaseSigningValue("keyAlias", "ANDROID_KEY_ALIAS")
+val releaseKeyPassword =
+    releaseSigningValue("keyPassword", "ANDROID_KEY_PASSWORD") ?: releaseStorePassword
+
+val hasReleaseSigning =
+    !releaseStoreFilePath.isNullOrBlank() &&
+        !releaseStorePassword.isNullOrBlank() &&
+        !releaseKeyAlias.isNullOrBlank()
 
 android {
     namespace = "com.financerecorder.app"
@@ -25,6 +66,17 @@ android {
         }
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(releaseStoreFilePath!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -33,6 +85,14 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+            // With no keystore configured, this build type is left unsigned — Gradle will
+            // still produce app-release-unsigned.apk/.aab, just not installable as-is. That's
+            // fine for a local `./gradlew assembleRelease` sanity check; CI only ever
+            // publishes a release artifact when hasReleaseSigning is true (see
+            // .github/workflows/android-build.yml).
         }
         debug {
             isMinifyEnabled = false
