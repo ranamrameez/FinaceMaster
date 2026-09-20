@@ -214,11 +214,29 @@ async function findTargetTab(targetUrl) {
   return exact || tabs[0];
 }
 
+/** Chrome's own `chrome.runtime.lastError.message` for a tab whose content
+ * script isn't (or is no longer) listening is the literal, developer-facing
+ * string "Could not establish connection. Receiving end does not exist." —
+ * meaningless to a non-technical user and, worse, misleading: it reads like
+ * a one-off glitch, but the two real causes are both persistent until fixed
+ * (a stale content script from before the extension was loaded/reloaded, or
+ * a tab on a URL under the right domain that doesn't match the content
+ * script's own narrower `matches` pattern in manifest.json — reloading that
+ * tab would never help). Recognize it and give the one actionable fix that
+ * covers the common case; anything else passes through unchanged so a real,
+ * different error is never hidden behind a wrong hint. */
+function friendlyScrapeError(rawError) {
+  if (rawError && /Could not establish connection/i.test(rawError)) {
+    return 'Lost the connection to the market page — reload that tab (F5) and try again. If it keeps happening, check the tab is on the exact market-watch URL configured in Options.';
+  }
+  return rawError;
+}
+
 async function scrapeTab(tab, overrideConfig) {
   return new Promise((resolve) => {
     chrome.tabs.sendMessage(tab.id, { type: 'SCRAPE_NOW', config: overrideConfig }, (response) => {
       if (chrome.runtime.lastError) {
-        resolve({ ok: false, error: chrome.runtime.lastError.message });
+        resolve({ ok: false, error: friendlyScrapeError(chrome.runtime.lastError.message) });
         return;
       }
       resolve(response || { ok: false, error: 'No response from page' });
