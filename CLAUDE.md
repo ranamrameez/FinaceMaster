@@ -6205,6 +6205,51 @@ app, not developer notes) continuously as features ship.
   themselves is still outside this session's reach (`git push --delete` is blocked by this
   session's own git proxy, and the available GitHub MCP tools expose no delete-branch
   operation) — flagged to the user to delete via GitHub's own branches page.
+- **User-reported (2026-09-20): "'Partial Trade: 2 tickers sellable' notification triggers on
+  page refresh only rather than on ticker price change. and it should be visible in the Trade
+  Strategy as well for quick view and always available."** Documented here FIRST per the
+  user's own explicit instruction, before writing any fix code. Root cause confirmed by
+  reading `components/PartialTradeAlertsPopup.tsx` directly: its `initial` list of
+  opportunities is a `useMemo(() => {...}, [])` — an empty dependency array, so it's computed
+  exactly ONCE on mount and never recomputed even though the component already subscribes
+  reactively to `qseTx`/`qseMarketPrices`/`psxTx`/`psxMarketPrices` via the Zustand hooks above
+  it. A live price update (Trade Calculator's "Save as market price," a per-stock price-history
+  edit, an imported statement, etc.) changes those store values, but the popup's own snapshot
+  never re-runs `scanPortfolioForOpportunities` to notice — only a full page reload
+  re-mounts the component and recomputes. This was originally a DELIBERATE design choice
+  (the component's own doc comment: "Snapshot once on mount — same 'what's due when you opened
+  the app' spirit as `SubscriptionAlertsPopup`"), copied from a feature where that's correct
+  (a subscription's due date doesn't change while the app is open) — but Partial Trade
+  opportunities are priced-driven, not date-driven, so the same "once per app load" model is
+  wrong for this feature specifically. This is a genuine product-requirements correction, not
+  a regression to silently revert.
+  **Planned fix, not yet built as of this doc entry**: (1) change the opportunity list from a
+  mount-only `useMemo` to one that recomputes whenever its real inputs
+  (`qseSettings`/`qseTx`/`qseMarketPrices`/`psxSettings`/`psxTx`/`psxMarketPrices`) change — a
+  live computation, matching the pattern already used elsewhere on the same page family (e.g.
+  `TradeStrategyPage.tsx`'s own `PartialTradeAdvisor` already recomputes
+  `computeFIFOPositions`/lot-advice live from the store on every render, so this isn't a new
+  performance pattern for this codebase). (2) The existing 12-second auto-hide and the
+  per-row/per-day `dismiss()` (persisted, `exchange:ticker:date` key) both stay — but the
+  popup's own "closed" state (whether from the 12s timeout or the user's own X click) needs to
+  be keyed off the CURRENT set of visible (non-dismissed) opportunity keys, not a one-shot
+  boolean: if the visible set changes (a NEW ticker becomes sellable, or an already-shown one's
+  numbers change) after the popup was closed, it should resurface — closing/auto-hiding
+  today's snapshot must not permanently suppress a genuinely new, later opportunity in the same
+  session. A per-ticker-per-day `dismiss()` still permanently suppresses that one specific
+  ticker for the rest of the day, unchanged.
+  **Trade Strategy quick-view, not yet built**: add a persistent (not dismissible, not
+  auto-hiding) summary directly on `features/{qse,psx}/pages/TradeStrategyPage.tsx` — reusing
+  the same `scanPortfolioForOpportunities` scoped to that one exchange's own
+  `workbook.transactions`/`calcFee`/`marketPrices` (both pages already have `calcFee`/`rows`
+  live via `useQSEDerived()`/`usePSXDerived()`), rendered near the top of the page regardless
+  of the "Show Partial Trade Alerts popup on app load" checkbox's own state — that checkbox
+  only ever controlled the separate auto-hiding, app-root-mounted popup surface; this is a
+  second, independent, always-visible surface on the page itself, per the user's own explicit
+  "always available" wording. Each row should link into that ticker's own auto-created
+  `PlanCard`/stock page, mirroring the popup's own existing link pattern. Will recompute live
+  automatically once built (it's driven straight from the store inside the page's own render,
+  the same as `PartialTradeAdvisor` already is) — no separate mount-once bug to fix there.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 
