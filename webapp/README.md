@@ -10039,6 +10039,33 @@ from the lot system."*
   scrape" tool) rather than assuming this fix covers every possible div-grid shape — a real
   page with cells wrapping their text in nested spans could still add stray whitespace that
   defeats the exact ticker-regex match this heuristic relies on.
+- **Chrome extension: fixed wrong scraped prices by adding an AG Grid-aware tier
+  (2026-09-20) — see Done item 343.** After the div-grid fix above landed, the user ran the
+  extension's own Options-page "Test scrape" tool against the real live page and pasted the
+  JSON back: it found 57 rows with correct tickers/names, but every price was wrong (e.g.
+  IQCD showed 21952 instead of a real ~9-10 QAR price). Asked for the raw HTML of one real row
+  rather than guessing further — the user pasted it, revealing the page is built on **AG
+  Grid**, which renders each row as `<div role="row" row-id="TICKER">` with per-column
+  `<div role="gridcell" col-id="...">` children — real, stable identifiers the library itself
+  guarantees. Root cause, confirmed directly from that HTML: the page's own column order puts
+  `col-id="askVolume"`/`col-id="askPrice"` BEFORE `col-id="lastPrice"` (the real price) — the
+  old tiers' positional "first numeric cell after the ticker" heuristic silently grabbed Ask
+  Volume instead. Column order in AG Grid can even be user-customized, so no positional fix
+  could ever be made reliable — the real fix is a named lookup. New `scrapeAgGrid()` tier
+  (tried first, before `<table>`/ARIA-row/div-grid): reads the ticker from the row's own
+  `row-id` attribute directly (not a text-cell regex match) and looks up price/name/change
+  cells by `col-id` name (`lastPrice`/`last`/`price`/`ltp`, `name`/`companyName`/
+  `securityName`, `changePercent`/`change`/`changePct` — a short preference list, not just the
+  one name confirmed on this real page, so the same tier has a shot at other AG-Grid-based
+  sites too). Naturally returns nothing on a non-AG-Grid page, so tiers 2-4 are completely
+  unaffected. **Verified with a real jsdom simulation built from the user's own real pasted
+  HTML**, not a guess: reproduced the exact reported column order (`symbol`, `name`,
+  `askVolume`, `askPrice`, `lastPrice`, ...) and confirmed `scrapeAgGrid()`/the full
+  `scrapeHeuristic()` pipeline both return the real `lastPrice` values (9.95/13.87/7.10), not
+  the decoy `askVolume`/`askPrice` numbers a positional heuristic would grab; re-ran the two
+  earlier jsdom tests (plain `<table>`, and the generic div-grid case with no `col-id`
+  attributes) unchanged to confirm zero regression. `node --check` clean; manifest bumped to
+  0.1.2.
 
 ## Pending
 
