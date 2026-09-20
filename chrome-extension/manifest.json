@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TheGroup → FinanceRecorder Price Sync",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Scrapes live QSE prices from The Group's market-watch page and syncs them into your FinanceRecorder account.",
   "permissions": ["storage", "alarms", "scripting", "tabs"],
   "host_permissions": [

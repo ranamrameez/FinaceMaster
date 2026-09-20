@@ -6135,6 +6135,32 @@ app, not developer notes) continuously as features ship.
   this sandbox's own long-documented benign network-block noise. `npx tsc -b` / `npm run test`
   (740 tests, unchanged — pure UI/hook wiring around already-tested calc functions) / `npm run
   build` all clean.
+- **Chrome extension: fixed "not scraping data" for div-grid market-watch layouts
+  (2026-09-20) — see README Done item 342.** User report was generic ("extension not
+  scraping data"); root cause: `content.js`'s heuristic fallback only recognized real
+  `<table>` rows and elements literally tagged `<tr>`/`[role="row"]` — a market-watch widget
+  built as a plain CSS grid/flexbox of `<div>`s (no semantic row markup at all, a real,
+  known pattern for modern trading-site widgets) matched neither, silently scraping 0 rows.
+  New `scrapeDivGrid()` tier: groups every element on the page by `tag+sorted-classlist`
+  signature (`signatureOf()`), keeps signatures with 3+ repeats and 2+ children each (a
+  proxy for "this looks like one row per listed stock"), and tries each candidate group —
+  largest first — treating each element's own direct children as its cells, using the same
+  ticker/price/name extraction (`extractRows()`, factored out of the old inline table-row
+  loop so all three tiers — table, ARIA-row, div-grid — share one implementation instead of
+  three near-duplicates). Only engages when both earlier tiers find nothing, so a real
+  `<table>`/`role="row"` page's behavior is completely unchanged. **Verified with a real
+  jsdom simulation, not just read the code**: built a synthetic div-grid market-watch page
+  (header row + 4 data rows, all `<div class="mw-...">`, zero `<tr>`/`role` anywhere),
+  loaded `content.js` in a `vm` context against it, and confirmed `scrapeHeuristic()`
+  correctly extracted all 4 ticker/price/name rows while skipping the header row — plus a
+  second jsdom check confirming the pre-existing `<table>` path is unchanged. This sandbox
+  can't load the real live page directly (network policy blocks the actual site, same
+  limitation as every other live-fetch attempt in this project), so this is verified against
+  a faithful synthetic reproduction of the reported failure mode, not the real page itself —
+  flag it back if the real page still doesn't scrape, since a real page could still defeat
+  the heuristic in a way this synthetic test didn't anticipate (e.g. cells wrapping their
+  text in nested spans that add stray whitespace to `textContent`, breaking the exact
+  ticker-regex match). Manifest bumped to 0.1.1.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

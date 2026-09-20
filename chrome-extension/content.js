@@ -79,47 +79,121 @@ function looksLikeName(text) {
  * real market-watch table's actual column layout should be captured via
  * the Options page's "Test scrape" tool and saved as explicit selectors
  * once the page is seen live. */
+/** Extracts `{ticker, price, name}` rows from a list of "row" elements, given
+ * a way to get that row's own "cells" (children to scan left-to-right for a
+ * ticker-like cell, then a numeric cell after it). Shared by every heuristic
+ * tier below — table rows, ARIA rows, and div-grid rows all reduce to this
+ * same row/cells shape once the caller decides what counts as a row. */
+function extractRows(rows, cellsOf) {
+  const out = [];
+  const seen = new Set();
+  for (const row of rows) {
+    const cells = cellsOf(row);
+    if (cells.length < 2) continue;
+    let ticker = null;
+    let tickerIdx = -1;
+    for (let i = 0; i < cells.length; i++) {
+      const text = cellText(cells[i]);
+      if (TICKER_LIKE.test(text)) {
+        ticker = text;
+        tickerIdx = i;
+        break;
+      }
+    }
+    if (!ticker || seen.has(ticker)) continue;
+    let price = null;
+    for (let i = tickerIdx + 1; i < cells.length; i++) {
+      const n = parseNumber(cellText(cells[i]));
+      if (n !== null && n > 0) {
+        price = n;
+        break;
+      }
+    }
+    if (price === null) continue;
+    seen.add(ticker);
+    const nextText = cellText(cells[tickerIdx + 1]);
+    out.push({ ticker, price, changePct: null, name: looksLikeName(nextText) ? nextText : null });
+  }
+  return out;
+}
+
+/** A tag+classlist "signature" used to find groups of elements that look like
+ * repeated row components even though they're not `<tr>`/`[role=row]` at
+ * all — just plain `<div>`s styled as a grid (a common pattern for modern
+ * market-watch widgets built with CSS grid/flexbox instead of a real
+ * `<table>`). Two elements with the same tag and the same set of classes are
+ * treated as "the same kind of thing." */
+function signatureOf(el) {
+  const cls = typeof el.className === 'string' ? el.className.trim() : '';
+  const classPart = cls
+    ? cls
+        .split(/\s+/)
+        .filter(Boolean)
+        .sort()
+        .join('.')
+    : '';
+  return `${el.tagName}${classPart ? '.' + classPart : ''}`;
+}
+
+/** Finds groups of 3+ elements sharing the same tag+classlist signature and
+ * having at least 2 children each (so a lone wrapper `<div>` doesn't count,
+ * only something that looks like it has "cells" inside it). Returned largest
+ * group first, since the real data-row group is usually the most numerous
+ * repeated element on a market-watch page (one per listed stock). */
+function findRepeatedElementGroups() {
+  const groups = new Map();
+  const all = document.body ? document.body.querySelectorAll('*') : [];
+  for (const el of all) {
+    if (!el.children || el.children.length < 2) continue;
+    const sig = signatureOf(el);
+    if (!sig) continue;
+    if (!groups.has(sig)) groups.set(sig, []);
+    groups.get(sig).push(el);
+  }
+  return Array.from(groups.values())
+    .filter((els) => els.length >= 3)
+    .sort((a, b) => b.length - a.length);
+}
+
+/** Div-grid fallback: some market-watch widgets render each stock as a
+ * `<div>` "row" of sibling `<div>` "cells" with no `<table>`, `<tr>`, or
+ * `role="row"` anywhere — real layouts seen in the wild for exactly this
+ * kind of table replacement. Since there's no semantic markup to key off,
+ * this instead looks for the single most-repeated tag+class element on the
+ * page (grouping by `signatureOf`) — on a market-watch page that's almost
+ * always the one-per-listed-stock row component — and tries each candidate
+ * group (most-repeated first) as a set of rows, using each row's own direct
+ * children as its cells, until one yields real ticker+price data. Capped at
+ * the 30 largest candidate groups so an unusual page can't make this hang. */
+function scrapeDivGrid() {
+  const candidates = findRepeatedElementGroups().slice(0, 30);
+  for (const rows of candidates) {
+    const found = extractRows(rows, (row) => Array.from(row.children));
+    if (found.length >= 3) return found;
+  }
+  return [];
+}
+
 function scrapeHeuristic() {
   const out = [];
   const seen = new Set();
-  const tables = document.querySelectorAll('table');
-  const scanRows = (rows) => {
-    for (const row of rows) {
-      const cells = Array.from(row.querySelectorAll('td, th'));
-      if (cells.length < 2) continue;
-      let ticker = null;
-      let tickerIdx = -1;
-      for (let i = 0; i < cells.length; i++) {
-        const text = cellText(cells[i]);
-        if (TICKER_LIKE.test(text)) {
-          ticker = text;
-          tickerIdx = i;
-          break;
-        }
-      }
-      if (!ticker || seen.has(ticker)) continue;
-      let price = null;
-      for (let i = tickerIdx + 1; i < cells.length; i++) {
-        const n = parseNumber(cellText(cells[i]));
-        if (n !== null && n > 0) {
-          price = n;
-          break;
-        }
-      }
-      if (price === null) continue;
-      seen.add(ticker);
-      const nextText = cellText(cells[tickerIdx + 1]);
-      out.push({ ticker, price, changePct: null, name: looksLikeName(nextText) ? nextText : null });
+  const addAll = (rows) => {
+    for (const r of rows) {
+      if (seen.has(r.ticker)) continue;
+      seen.add(r.ticker);
+      out.push(r);
     }
   };
-  for (const table of tables) {
-    scanRows(table.querySelectorAll('tbody tr, tr'));
+  for (const table of document.querySelectorAll('table')) {
+    addAll(extractRows(table.querySelectorAll('tbody tr, tr'), (row) => Array.from(row.querySelectorAll('td, th'))));
   }
   if (!out.length) {
-    // Some market-watch widgets aren't real <table> markup at all (div grids).
-    // Fall back to scanning every element with children for the same pattern,
-    // one level shallower — best-effort only.
-    scanRows(document.querySelectorAll('tr, [role="row"]'));
+    // Some market-watch widgets use ARIA grid roles instead of a real <table>.
+    addAll(extractRows(document.querySelectorAll('tr, [role="row"]'), (row) => Array.from(row.children)));
+  }
+  if (!out.length) {
+    // Last resort: a plain div-grid with no semantic row markup at all.
+    addAll(scrapeDivGrid());
   }
   return out;
 }

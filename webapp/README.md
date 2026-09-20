@@ -10013,6 +10013,32 @@ from the lot system."*
   opened both; both badges rendered correctly; zero new console errors on either exchange. `npx
   tsc -b` / `npm run test` (740 tests, unchanged — pure UI/hook wiring around already-tested
   calc functions) / `npm run build` all clean.
+- **Chrome extension: fixed "not scraping data" for div-grid market-watch pages
+  (2026-09-20).** User's report was just "extension not scraping data," no further detail.
+  Root cause, found by reading `chrome-extension/content.js`'s scraper end to end: its
+  fallback heuristic (used when no CSS selectors are configured in Options) only recognized
+  real `<table>` rows and elements literally tagged `<tr>`/`[role="row"]` — a market-watch
+  widget rendered as a plain CSS grid/flexbox of `<div>`s, with no semantic row markup at
+  all, matched neither strategy and silently scraped 0 rows, which is exactly what "not
+  scraping data" looks like from the popup's status line. Added a third fallback tier,
+  `scrapeDivGrid()`: groups every element on the page by a `tag+sorted-classlist` signature
+  (`signatureOf()`), keeps signatures repeated 3+ times with 2+ children each (a proxy for
+  "one element per listed stock row"), and tries each candidate group — most-repeated
+  first — using each element's own direct children as its cells, through the same ticker/
+  price/name extraction the table and ARIA-row tiers already used (factored into one shared
+  `extractRows()` helper instead of three near-duplicate loops). Only engages when the
+  `<table>` and `<tr>`/`[role="row"]` tiers both find nothing, so a page that already works
+  is completely unaffected. **Verified with a real jsdom simulation** (this sandbox can't
+  reach the actual live site): built a synthetic div-grid page (a header row plus 4 data
+  rows, all plain `<div class="mw-...">`, zero `<tr>`/`role` markup anywhere) and ran
+  `content.js` against it in a `vm` context — confirmed all 4 ticker/price/name rows were
+  correctly extracted while the header row was correctly skipped; a second jsdom check
+  confirmed the pre-existing `<table>` path is unchanged. `node --check` clean on every
+  extension `.js` file; manifest bumped to 0.1.1. Flagged in CLAUDE.md: if the real page
+  still doesn't scrape after this, it's worth confirming directly (e.g. via Options' "Test
+  scrape" tool) rather than assuming this fix covers every possible div-grid shape — a real
+  page with cells wrapping their text in nested spans could still add stray whitespace that
+  defeats the exact ticker-regex match this heuristic relies on.
 
 ## Pending
 
