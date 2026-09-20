@@ -13,3 +13,8 @@ local.properties
 /app/debug/
 *.keystore
 !debug.keystore
+
+# Real release-signing secrets — see keystore.properties.example for the template.
+# Never commit an actual keystore or its properties file.
+keystore.properties
+*.jks
