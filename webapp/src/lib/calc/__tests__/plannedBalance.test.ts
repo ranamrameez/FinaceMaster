@@ -5,7 +5,7 @@ import type { CreditCard, CreditCardTransaction } from '../../../types/creditCar
 import type { PlannedBankTransaction } from '../../../types/plannedBank';
 import type { PlannedCashEntry } from '../../../types/plannedCash';
 import type { PlannedCreditCardTransaction } from '../../../types/plannedCreditCard';
-import { plannedBankProjection, plannedCashProjection, plannedCreditCardProjection } from '../plannedBalance';
+import { planWithinHorizon, plannedBankProjection, plannedCashProjection, plannedCreditCardProjection } from '../plannedBalance';
 
 describe('plannedCashProjection', () => {
   const entry = (over: Partial<CashEntry>): CashEntry => ({
@@ -239,5 +239,90 @@ describe('plannedCreditCardProjection', () => {
     const result = plannedCreditCardProjection(cards, transactions, planned);
     expect(result.USD).toEqual({ real: 100, planned: 100 });
     expect(result.PKR).toEqual({ real: 0, planned: 500 });
+  });
+});
+
+describe('horizonDays — user-reported "dumping lifetime plans" fix (2026-09-20)', () => {
+  const entry = (over: Partial<CashEntry>): CashEntry => ({
+    id: 'e1', date: '2026-06-01', isDeposit: true, amount: 500, currencyCode: 'USD', source: 'manual', ...over,
+  });
+  const plan = (over: Partial<PlannedCashEntry>): PlannedCashEntry => ({
+    id: 'p1', date: '2026-06-10', type: 'OUT', amount: 100, currencyCode: 'USD', ...over,
+  });
+  const asOf = new Date('2026-06-01T00:00:00Z');
+
+  it('with no horizon (default, unlimited), a far-future one-off plan still counts — the pre-fix behavior, unchanged for a caller that opts out', () => {
+    const result = plannedCashProjection([entry({})], [plan({ date: '2028-01-01', amount: 100 })], asOf);
+    expect(result.USD).toEqual({ real: 500, planned: 400 });
+  });
+
+  it('a 30-day horizon excludes a plan dated well beyond it', () => {
+    const result = plannedCashProjection([entry({})], [plan({ date: '2028-01-01', amount: 100 })], asOf, 30);
+    expect(result.USD).toEqual({ real: 500, planned: 500 });
+  });
+
+  it('a 30-day horizon still includes a plan dated exactly at the boundary', () => {
+    const result = plannedCashProjection([entry({})], [plan({ date: '2026-07-01', amount: 100 })], asOf, 30);
+    expect(result.USD).toEqual({ real: 500, planned: 400 });
+  });
+
+  it('a 30-day horizon excludes a plan one day past the boundary', () => {
+    const result = plannedCashProjection([entry({})], [plan({ date: '2026-07-02', amount: 100 })], asOf, 30);
+    expect(result.USD).toEqual({ real: 500, planned: 500 });
+  });
+
+  it('an overdue (past-dated), not-yet-done plan always counts, regardless of a short horizon — it is the most urgent thing to see, not something a horizon should hide', () => {
+    const result = plannedCashProjection([entry({})], [plan({ date: '2020-01-01', amount: 100 })], asOf, 30);
+    expect(result.USD).toEqual({ real: 500, planned: 400 });
+  });
+
+  it('a recurring plan whose next occurrence falls beyond the horizon is excluded even though it recurs', () => {
+    const result = plannedCashProjection(
+      [entry({})],
+      [plan({ amount: 100, date: '2026-01-28', recurrence: { cycle: 'yearly', startDate: '2026-01-28' } })],
+      asOf,
+      30,
+    );
+    // next yearly occurrence from 2026-06-01 is 2027-01-28 — far beyond a 30-day window
+    expect(result.USD).toEqual({ real: 500, planned: 500 });
+  });
+
+  it('a recurring plan whose next occurrence falls within the horizon still counts', () => {
+    const result = plannedCashProjection(
+      [entry({})],
+      [plan({ amount: 100, date: '2026-01-28', recurrence: { cycle: 'monthly', startDate: '2026-01-28' } })],
+      asOf,
+      30,
+    );
+    // next monthly occurrence from 2026-06-01 is 2026-06-28 — within 30 days
+    expect(result.USD).toEqual({ real: 500, planned: 400 });
+  });
+});
+
+describe('planWithinHorizon', () => {
+  const asOf = new Date('2026-06-01T00:00:00Z');
+
+  it('null horizon always returns true (no limit)', () => {
+    expect(planWithinHorizon({ date: '2099-01-01' }, asOf, null)).toBe(true);
+  });
+
+  it('a one-off plan\'s own date decides it, independent of any executed/status concept (the list filter is a separate dimension)', () => {
+    expect(planWithinHorizon({ date: '2026-06-15' }, asOf, 30)).toBe(true);
+    expect(planWithinHorizon({ date: '2026-12-31' }, asOf, 30)).toBe(false);
+  });
+
+  it('an overdue one-off plan is always within horizon', () => {
+    expect(planWithinHorizon({ date: '2020-01-01' }, asOf, 30)).toBe(true);
+  });
+
+  it('a recurring plan is judged by its own next occurrence', () => {
+    const recurring = { date: '2026-01-28', recurrence: { cycle: 'monthly' as const, startDate: '2026-01-28' } };
+    expect(planWithinHorizon(recurring, asOf, 30)).toBe(true); // next occurrence 2026-06-28
+    expect(planWithinHorizon(recurring, asOf, 10)).toBe(false); // 2026-06-28 is >10 days out
+  });
+
+  it('a recurring plan past its own endDate (no more occurrences) is never hidden by horizon', () => {
+    const finished = { date: '2026-01-01', recurrence: { cycle: 'monthly' as const, startDate: '2026-01-01', endDate: '2026-02-01' } };
+    expect(planWithinHorizon(finished, asOf, 30)).toBe(true);
   });
 });

@@ -17,6 +17,7 @@ import { TransactionEntryModal } from '../../../components/TransactionEntryModal
 import { CategorySelect } from '../../../components/CategorySelect';
 import { TimeZoneFields } from '../../../components/ui/TimeZoneFields';
 import { RecurrenceFields } from '../../../components/ui/RecurrenceFields';
+import { PlanningHorizonField } from '../../../components/ui/PlanningHorizonField';
 import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { usePrimaryCurrency } from '../../../hooks/usePrimaryCurrency';
@@ -27,7 +28,7 @@ import { categoryName, UNCATEGORIZED_ID } from '../../../lib/categories';
 import { gridAutoStyle } from '../../../lib/gridStyle';
 import { nextRecurrenceOccurrence } from '../../../lib/calc/recurrence';
 import { recurrenceLabel } from '../../../lib/recurrenceLabel';
-import { plannedCreditCardProjection } from '../../../lib/calc/plannedBalance';
+import { planWithinHorizon, plannedCreditCardProjection, type PlanningHorizonDays } from '../../../lib/calc/plannedBalance';
 import { useCategoryStore } from '../../../store/categoryStore';
 import {
   availableCredit,
@@ -432,6 +433,10 @@ export function CreditCardDetailPage() {
   const [collectAmount, setCollectAmount] = useState(proposal?.amount ?? 0);
   const [collectDate, setCollectDate] = useState(proposal?.dueDate ?? today());
   const [linkMode, setLinkMode] = useState(false);
+  // Same shared-picker reasoning as Cash's/Bank's own Planning views
+  // (2026-09-20) — one "Time period" control governs both the balance
+  // projection and the plan list below.
+  const [horizonDays, setHorizonDays] = useState<PlanningHorizonDays>(30);
 
   if (!card) {
     return (
@@ -653,8 +658,9 @@ export function CreditCardDetailPage() {
         </CollapsibleCard>
       )}
 
-      <CardBalanceProjection card={card} />
-      <CardPlanList card={card} />
+      <PlanningHorizonField value={horizonDays} onChange={setHorizonDays} />
+      <CardBalanceProjection card={card} horizonDays={horizonDays} />
+      <CardPlanList card={card} horizonDays={horizonDays} />
 
       <CollapsibleCard title={<h3 className="m-0">Last 6 months</h3>} defaultOpen={false} className="mb-md">
         <div className="table-scroll">
@@ -735,22 +741,22 @@ function emptyCardPlan(cardId: string): PlannedCreditCardTransaction {
  * scoped. A HIGHER number is worse here (money owed), the opposite
  * intuition from Bank's own real/planned figures — see
  * `plannedCreditCardProjection`'s own doc comment. */
-function CardBalanceProjection({ card }: { card: CreditCard }) {
+function CardBalanceProjection({ card, horizonDays }: { card: CreditCard; horizonDays: PlanningHorizonDays }) {
   const cards = useCreditCardWorkbookStore((s) => s.workbook.cards);
   const transactions = useCreditCardWorkbookStore((s) => s.workbook.transactions);
   const plannedEntries = usePlannedCreditCardWorkbookStore((s) => s.workbook.entries);
   const settings = usePlannedCreditCardWorkbookStore((s) => s.workbook.settings);
   const updateSettings = usePlannedCreditCardWorkbookStore((s) => s.updateSettings);
   const projection = useMemo(
-    () => plannedCreditCardProjection(cards, transactions, plannedEntries),
-    [cards, transactions, plannedEntries],
+    () => plannedCreditCardProjection(cards, transactions, plannedEntries, new Date(), horizonDays),
+    [cards, transactions, plannedEntries, horizonDays],
   );
   const p = projection[card.currencyCode] ?? { real: 0, planned: 0 };
 
   return (
     <CollapsibleCard
       title={
-        <Tooltip text="See what you'd owe on this card if every plan below actually happened — a reality check before you spend.">
+        <Tooltip text="See what you'd owe on this card if every plan due within the chosen time period actually happened — a reality check before you spend.">
           <h3 style={{ margin: 0, cursor: 'pointer' }}>Balance projection</h3>
         </Tooltip>
       }
@@ -826,7 +832,7 @@ function AddCardPlanForm({ cardId, onSaved }: { cardId: string; onSaved?: () => 
   );
 }
 
-function CardPlanList({ card }: { card: CreditCard }) {
+function CardPlanList({ card, horizonDays }: { card: CreditCard; horizonDays: PlanningHorizonDays }) {
   const allPlans = usePlannedCreditCardWorkbookStore((s) => s.workbook.entries);
   const updatePlan = usePlannedCreditCardWorkbookStore((s) => s.updateEntry);
   const deletePlan = usePlannedCreditCardWorkbookStore((s) => s.deleteEntry);
@@ -834,8 +840,12 @@ function CardPlanList({ card }: { card: CreditCard }) {
   const ensureSignedIn = useEnsureSignedIn();
   const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<PlannedCreditCardTransaction | null>(null);
+  const asOf = useMemo(() => new Date(), []);
 
-  const plans = useMemo(() => allPlans.filter((p) => p.cardId === card.id), [allPlans, card.id]);
+  const plans = useMemo(
+    () => allPlans.filter((p) => p.cardId === card.id && planWithinHorizon(p, asOf, horizonDays)),
+    [allPlans, card.id, horizonDays, asOf],
+  );
   const sorted = useMemo(() => [...plans].sort((a, b) => a.date.localeCompare(b.date)), [plans]);
 
   const startEdit = (p: PlannedCreditCardTransaction) => { setEditId(p.id); setEditRow({ ...p }); };

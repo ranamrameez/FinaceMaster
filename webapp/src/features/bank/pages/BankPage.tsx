@@ -30,6 +30,7 @@ import { usePageFabActions } from '../../../hooks/usePageFabActions';
 import { allExtraActions, useFabActionsStore } from '../../../store/fabActionsStore';
 import { ReorderButtons } from '../../../components/ui/ReorderButtons';
 import { RecurrenceFields } from '../../../components/ui/RecurrenceFields';
+import { PlanningHorizonField } from '../../../components/ui/PlanningHorizonField';
 import { nextRecurrenceOccurrence } from '../../../lib/calc/recurrence';
 import { recurrenceLabel } from '../../../lib/recurrenceLabel';
 import { hueStyle } from '../../../lib/statCardHues';
@@ -38,7 +39,7 @@ import { useCategoryStore } from '../../../store/categoryStore';
 import { accountBalance, accountBalanceAsOfMonth, accountByCategory, accountPendingBalance, accountRunningLedger, bankMonthlyFlow, bankTotalsByCurrency, budgetVsActual, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
 import { outstandingBalanceByCard } from '../../../lib/calc/creditCardModule';
 import { monthRange } from '../../../lib/calc/budgetPlanner';
-import { plannedBankProjection } from '../../../lib/calc/plannedBalance';
+import { isPlanDue, planWithinHorizon, plannedBankProjection, type PlanningHorizonDays } from '../../../lib/calc/plannedBalance';
 import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar, tickerColor } from '../../../lib/cssVar';
@@ -83,12 +84,15 @@ function TotalBalances() {
   const codes = Object.keys(totals);
   if (!codes.length) return null;
 
-  // Not-yet-executed plans, per currency — surfaced here (not just inside
-  // the Planning tab) so "how much is still hanging over my balance" is
-  // visible at a glance without a click, per a user report that stats
-  // didn't show upcoming/in-process planned payments at all.
+  // Not-yet-executed, near-term plans, per currency — surfaced here (not
+  // just inside the Planning tab) so "how much is still hanging over my
+  // balance" is visible at a glance without a click, per a user report
+  // that stats didn't show upcoming/in-process planned payments at all.
+  // Fixed 30-day ("This month") horizon, same default as the Planning
+  // tab's own picker (2026-09-20) — see Cash's identical fix on
+  // `BalancesSummary` for the full reasoning.
   const currencyByAccount = new Map(accounts.map((a) => [a.id, a.currencyCode]));
-  const upcoming = plannedEntries.filter((p) => !p.executed);
+  const upcoming = plannedEntries.filter((p) => isPlanDue(p, new Date(), 30));
 
   return (
     <div className="grid-auto" style={{ ...gridAutoStyle(150, 8), marginBottom: 16 }}>
@@ -1976,22 +1980,22 @@ function emptyBankPlan(accountId: string): PlannedBankTransaction {
   return { id: crypto.randomUUID(), accountId, date: today(), description: '', amount: 0, category: '' };
 }
 
-function BalanceProjectionSummary() {
+function BalanceProjectionSummary({ horizonDays }: { horizonDays: PlanningHorizonDays }) {
   const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
   const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
   const plannedEntries = usePlannedBankWorkbookStore((s) => s.workbook.entries);
   const settings = usePlannedBankWorkbookStore((s) => s.workbook.settings);
   const updateSettings = usePlannedBankWorkbookStore((s) => s.updateSettings);
   const projection = useMemo(
-    () => plannedBankProjection(accounts, transactions, plannedEntries),
-    [accounts, transactions, plannedEntries],
+    () => plannedBankProjection(accounts, transactions, plannedEntries, new Date(), horizonDays),
+    [accounts, transactions, plannedEntries, horizonDays],
   );
   const codes = Object.keys(projection);
 
   return (
     <CollapsibleCard
       title={
-        <Tooltip text="See what your total balance would look like if every plan below actually happened — a reality check before you spend.">
+        <Tooltip text="See what your total balance would look like if every plan due within the chosen time period actually happened — a reality check before you spend.">
           <h3 style={{ margin: 0, cursor: 'pointer' }}>Balance projection</h3>
         </Tooltip>
       }
@@ -2114,7 +2118,7 @@ function AddBankPlanForm({ accountId, onSaved }: { accountId: string; onSaved?: 
   );
 }
 
-function BankPlanList({ account }: { account: BankAccount }) {
+function BankPlanList({ account, horizonDays }: { account: BankAccount; horizonDays: PlanningHorizonDays }) {
   const allPlans = usePlannedBankWorkbookStore((s) => s.workbook.entries);
   const updatePlan = usePlannedBankWorkbookStore((s) => s.updateEntry);
   const deletePlan = usePlannedBankWorkbookStore((s) => s.deleteEntry);
@@ -2122,8 +2126,12 @@ function BankPlanList({ account }: { account: BankAccount }) {
   const ensureSignedIn = useEnsureSignedIn();
   const [editId, setEditId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<PlannedBankTransaction | null>(null);
+  const asOf = useMemo(() => new Date(), []);
 
-  const plans = useMemo(() => allPlans.filter((p) => p.accountId === account.id), [allPlans, account.id]);
+  const plans = useMemo(
+    () => allPlans.filter((p) => p.accountId === account.id && planWithinHorizon(p, asOf, horizonDays)),
+    [allPlans, account.id, horizonDays, asOf],
+  );
   const sorted = useMemo(() => [...plans].sort((a, b) => a.date.localeCompare(b.date)), [plans]);
 
   const startEdit = (p: PlannedBankTransaction) => { setEditId(p.id); setEditRow({ ...p }); };
@@ -2436,6 +2444,11 @@ export function PlanningTab({
   uploadPlannedLocalToCloud: () => Promise<void>;
 }) {
   const { accounts, account, accountId, setAccountId } = useAccountPicker();
+  // Same shared-picker reasoning as Cash's own PlanningTab (2026-09-20) —
+  // one "Time period" control governs both the projection and the list
+  // below. Declared before the early return so this hook always runs
+  // (rules of hooks), regardless of whether there are any accounts yet.
+  const [horizonDays, setHorizonDays] = useState<PlanningHorizonDays>(30);
 
   if (!accounts.length) {
     return <p className="text-muted">Add a bank account first (Accounts tab) before planning transactions.</p>;
@@ -2443,7 +2456,8 @@ export function PlanningTab({
 
   return (
     <div>
-      <BalanceProjectionSummary />
+      <PlanningHorizonField value={horizonDays} onChange={setHorizonDays} />
+      <BalanceProjectionSummary horizonDays={horizonDays} />
       <Field label="Plans for account" width={220}>
         <Select value={accountId} onChange={(e) => setAccountId(e.target.value)}>
           {accounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.currencyCode})</option>)}
@@ -2451,7 +2465,7 @@ export function PlanningTab({
       </Field>
       {account && (
         <div className="mt-12">
-          <BankPlanList account={account} />
+          <BankPlanList account={account} horizonDays={horizonDays} />
           <AddBankPlanFab accountId={account.id} />
         </div>
       )}
