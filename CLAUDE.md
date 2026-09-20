@@ -6184,6 +6184,27 @@ app, not developer notes) continuously as features ship.
   don't keep tuning the heuristic blind — get one real row's raw HTML and read the actual
   library/structure it's built on; a positional guess can never out-compete a library's own
   stable, named attributes once they're known.
+- **Chrome extension: friendlier "Could not establish connection" message (2026-09-20) — see
+  README Done item 344.** The extension's own `scrapeTab()` already caught
+  `chrome.runtime.lastError` gracefully (no crash) but surfaced Chrome's raw developer-facing
+  error text verbatim into the popup's status area — a real, if minor, UX gap, not a bug in the
+  scraping logic itself. New `friendlyScrapeError()` recognizes this one specific message and
+  swaps in an actionable hint; every other error string passes through untouched. One fix site
+  (`scrapeTab()`) covers every entry point (auto cycle, manual popup buttons, Options' Test
+  scrape), since all three already funnel through it. **Repo branch cleanup done the same
+  session, per direct user request ("make sure all branches are merged and repo is clean...
+  delete the pile of stale branches")**: `git branch -r` found 9 non-`main` remote branches.
+  Verified — via distinctive-identifier greps against `origin/main` and, for one branch, a
+  byte-identical file diff pinned to `main`'s own current tip commit — that 7 of the 9 were
+  already fully squash-merged with nothing left to do. The remaining 2 had genuinely still-open
+  PRs (#224, this session's own just-landed AG Grid fix; #220, an Android release-signing PR
+  whose one unchecked test-plan item — a real signed build + Play Console upload — needs the
+  repo owner's own action and doesn't block the code's own mergeability, since it's additive/
+  optional and behavior is unchanged without the signing secrets) — both reviewed and merged
+  this session. All 9 branches' content is now fully in `main`; deleting the stale refs
+  themselves is still outside this session's reach (`git push --delete` is blocked by this
+  session's own git proxy, and the available GitHub MCP tools expose no delete-branch
+  operation) — flagged to the user to delete via GitHub's own branches page.
 
 ## Redesign decision (2026-08-27): staying in this repo, no fork/no new codebase
 

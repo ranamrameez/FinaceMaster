@@ -10066,6 +10066,21 @@ from the lot system."*
   earlier jsdom tests (plain `<table>`, and the generic div-grid case with no `col-id`
   attributes) unchanged to confirm zero regression. `node --check` clean; manifest bumped to
   0.1.2.
+- **Chrome extension: friendlier message for "Could not establish connection" (2026-09-20).**
+  User reported this exact raw Chrome error while testing the extension. Traced it to
+  `background.js`'s `scrapeTab()` — it already caught `chrome.runtime.lastError` and resolved
+  gracefully (no crash) rather than throwing, but surfaced the raw, developer-facing string
+  verbatim into the popup's status area. Two real, both persistent-until-fixed causes: a tab
+  whose content script is stale from before the extension was loaded/reloaded, or a tab whose
+  URL is under the right domain (broad enough to pass `findTargetTab()`'s own origin-only match)
+  but doesn't match the content script's narrower `matches` pattern in `manifest.json` — in
+  either case the raw message reads like a one-off glitch when it isn't. New
+  `friendlyScrapeError()` recognizes this one specific message and returns an actionable hint
+  ("reload that tab... check the tab is on the exact market-watch URL configured in Options");
+  every other error passes through unchanged. Wired into the single `scrapeTab()` call site,
+  which every entry point (the auto collect cycle, the popup's manual Scrape/Push buttons, and
+  Options' "Test scrape") already funnels through via `runCycle()`/`TEST_SCRAPE` — one fix
+  covers all three. `node --check` clean. Manifest bumped to 0.1.3.
 
 ## Pending
 
