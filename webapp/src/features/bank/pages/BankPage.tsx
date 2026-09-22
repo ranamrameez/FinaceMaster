@@ -1,5 +1,5 @@
 import type { User } from 'firebase/auth';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { Card, CollapsibleCard, EntityCard, MoneyValue } from '../../../components/Card';
@@ -17,6 +17,7 @@ import { PendingToggle } from '../../../components/ui/PendingToggle';
 import { DirectionChips } from '../../../components/ui/DirectionChips';
 import { IconButton } from '../../../components/ui/IconButton';
 import { AttributeList } from '../../../components/ui/AttributeList';
+import { FilterFab } from '../../../components/ui/FilterFab';
 import { FabButton, FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
 import { CategorySelect } from '../../../components/CategorySelect';
@@ -1355,6 +1356,8 @@ function TransactionsList({ account }: { account: BankAccount }) {
   // unlike Personal Loans' equivalent repayments table which already had
   // one; added for parity now that free column sorting is gone.
   const [sourceFilter, setSourceFilter] = useState<'all' | 'manual' | 'statement-import'>('all');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   const allLedger = useMemo(() => accountRunningLedger(account, allTransactions), [account, allTransactions]);
 
@@ -1403,6 +1406,23 @@ function TransactionsList({ account }: { account: BankAccount }) {
   // rows genuinely tied on the same real instant — never scramble the
   // table into a different, unrelated order.
   const sorted = useMemo(() => [...ledger].reverse(), [ledger]);
+  const pageCount = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const safePage = Math.min(page, pageCount);
+  const pageRows = useMemo(
+    () => sorted.slice((safePage - 1) * pageSize, safePage * pageSize),
+    [sorted, safePage, pageSize],
+  );
+  const activeFilterCount = [fromDate, toDate, typeFilter !== 'all', categoryFilter !== 'all', sourceFilter !== 'all']
+    .filter(Boolean).length;
+
+  useEffect(() => {
+    setPage(1);
+  }, [fromDate, toDate, typeFilter, categoryFilter, sourceFilter, pageSize]);
+
+  useEffect(() => {
+    if (page > pageCount) setPage(pageCount);
+  }, [page, pageCount]);
+
   const instantOf = (r: (typeof sorted)[number]) => dateOnlyMs(r.tx.date);
   const reorder = async (pair: [{ id: string; order: number }, { id: string; order: number }]) => {
     if (!(await ensureSignedIn('Sign in to reorder transactions.'))) return;
@@ -1424,35 +1444,47 @@ function TransactionsList({ account }: { account: BankAccount }) {
   return (
     <Card className="mb-md" headerExtra={<div className="row gap-sm" style={{ alignItems: 'center', justifyContent: 'flex-end' }}><ImportStatementSection account={account} compact /><button className="btn secondary small" onClick={exportTransactions} disabled={!sorted.length} title="Download exactly the transactions currently shown after applying the table filters."><ExportIcon size={13} />Export</button></div>}>
       <h3 className="mt-0">Transactions</h3>
-      <div className="row gap-sm mb-sm" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
-        <Field label="From" width={135}>
-          <DateInput value={fromDate} max={toDate || undefined} onChange={(e) => setFromDate(e.target.value)} />
-        </Field>
-        <Field label="To" width={135}>
-          <DateInput value={toDate} min={fromDate || undefined} onChange={(e) => setToDate(e.target.value)} />
-        </Field>
-        <Field label="Type" width={120}>
-          <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
-            <option value="all">All</option>
-            <option value="in">Money in</option>
-            <option value="out">Money out</option>
-          </Select>
-        </Field>
-        <Field label="Category" width={170}>
-          <Select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
-            <option value="all">All categories</option>
-            {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
-          </Select>
-        </Field>
-        <Field label="Source" width={130}>
-          <Select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value as typeof sourceFilter)}>
-            <option value="all">All</option>
-            <option value="manual">Manual</option>
-            <option value="statement-import">Imported</option>
-          </Select>
-        </Field>
-
-      </div>
+      <FilterFab
+        pageKey={`bank-transactions-filter-${account.id}`}
+        title={`Filter transactions — ${account.name}`}
+        activeCount={activeFilterCount}
+        onClear={() => {
+          setFromDate('');
+          setToDate('');
+          setTypeFilter('all');
+          setCategoryFilter('all');
+          setSourceFilter('all');
+        }}
+      >
+        <div className="row gap-sm" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <Field label="From" width={135}>
+            <DateInput value={fromDate} max={toDate || undefined} onChange={(e) => setFromDate(e.target.value)} />
+          </Field>
+          <Field label="To" width={135}>
+            <DateInput value={toDate} min={fromDate || undefined} onChange={(e) => setToDate(e.target.value)} />
+          </Field>
+          <Field label="Type" width={120}>
+            <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
+              <option value="all">All</option>
+              <option value="in">Money in</option>
+              <option value="out">Money out</option>
+            </Select>
+          </Field>
+          <Field label="Category" width={170}>
+            <Select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+              <option value="all">All categories</option>
+              {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+            </Select>
+          </Field>
+          <Field label="Source" width={130}>
+            <Select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value as typeof sourceFilter)}>
+              <option value="all">All</option>
+              <option value="manual">Manual</option>
+              <option value="statement-import">Imported</option>
+            </Select>
+          </Field>
+        </div>
+      </FilterFab>
       <div className="table-scroll">
       <table>
         <thead>
@@ -1481,7 +1513,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
           </tr>
         </thead>
         <tbody>
-          {sorted.map(({ tx, balance }, i) => {
+          {pageRows.map(({ tx, balance }, i) => {
             const link = linkByRecordId.get(tx.id);
             const otherSide = link ? (link.from.module === 'bank' && link.fromRecordId === tx.id ? link.to : link.from) : undefined;
             return (
@@ -1491,7 +1523,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
                   <span onClick={(e) => e.stopPropagation()}>
                     <ReorderButtons
                       rows={sorted}
-                      index={i}
+                      index={(safePage - 1) * pageSize + i}
                       instantOf={instantOf}
                       idOf={(r) => r.tx.id}
                       orderOf={(r) => r.tx.serialNumber}
@@ -1550,6 +1582,23 @@ function TransactionsList({ account }: { account: BankAccount }) {
           )}
         </tbody>
       </table>
+      </div>
+      <div className="row gap-sm mt-sm" style={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+        <div className="text-muted" style={{ fontSize: 12 }}>
+          {sorted.length ? `Showing ${(safePage - 1) * pageSize + 1}–${Math.min(safePage * pageSize, sorted.length)} of ${sorted.length}` : 'No rows'}
+        </div>
+        <div className="row gap-sm" style={{ alignItems: 'center' }}>
+          <Field label="Rows" width={78}>
+            <Select value={String(pageSize)} onChange={(e) => setPageSize(Number(e.target.value))}>
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </Select>
+          </Field>
+          <button type="button" className="btn secondary small" disabled={safePage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Previous</button>
+          <span className="text-muted" style={{ fontSize: 12 }}>Page {safePage} of {pageCount}</span>
+          <button type="button" className="btn secondary small" disabled={safePage >= pageCount} onClick={() => setPage((p) => Math.min(pageCount, p + 1))}>Next</button>
+        </div>
       </div>
       {editingTx && <EditTransactionModal tx={editingTx} onClose={() => setEditingTx(null)} />}
       {detailTx && (
