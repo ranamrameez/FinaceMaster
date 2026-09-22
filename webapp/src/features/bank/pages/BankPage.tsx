@@ -1454,7 +1454,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
     <Card className="mb-md">
       <div className="row gap-sm" style={{ alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         <h3 className="mt-0 mb-0">Transactions</h3>
-        <div className="row gap-sm" style={{ alignItems: 'center' }}>
+        <div className="row" style={{ alignItems: 'center', gap: 8 }}>
           <ImportStatementSection account={account} compact />
           <button className="btn secondary small" onClick={exportTransactions} disabled={!sorted.length} title="Download exactly the transactions currently shown after applying the table filters."><ExportIcon size={13} />Export</button>
         </div>
@@ -1602,7 +1602,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
         <div className="text-muted" style={{ fontSize: 12 }}>
           {sorted.length ? `Showing ${(safePage - 1) * pageSize + 1}–${Math.min(safePage * pageSize, sorted.length)} of ${sorted.length}` : 'No rows'}
         </div>
-        <div className="row gap-sm" style={{ alignItems: 'center' }}>
+        <div className="row" style={{ alignItems: 'center', gap: 8 }}>
           <Field label="Rows" width={78}>
             <Select value={String(pageSize)} onChange={(e) => setPageSize(Number(e.target.value))}>
               <option value="25">25</option>
