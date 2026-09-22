@@ -37,7 +37,7 @@ import { recurrenceLabel } from '../../../lib/recurrenceLabel';
 import { hueStyle } from '../../../lib/statCardHues';
 import { categoryName, UNCATEGORIZED_ID } from '../../../lib/categories';
 import { useCategoryStore } from '../../../store/categoryStore';
-import { accountBalance, accountBalanceAsOfMonth, accountByCategory, accountPendingBalance, accountRunningLedger, bankMonthlyFlow, bankTotalsByCurrency, budgetVsActual, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
+import { accountBalance, accountByCategory, accountPendingBalance, accountRunningLedger, bankMonthlyFlow, bankTotalsByCurrency, budgetVsActual, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
 import { outstandingBalanceByCard } from '../../../lib/calc/creditCardModule';
 import { monthRange } from '../../../lib/calc/budgetPlanner';
 import { isPlanDue, planWithinHorizon, plannedBankProjection, type PlanningHorizonDays } from '../../../lib/calc/plannedBalance';
@@ -1442,8 +1442,14 @@ function TransactionsList({ account }: { account: BankAccount }) {
   };
 
   return (
-    <Card className="mb-md" headerExtra={<div className="row gap-sm" style={{ alignItems: 'center', justifyContent: 'flex-end' }}><ImportStatementSection account={account} compact /><button className="btn secondary small" onClick={exportTransactions} disabled={!sorted.length} title="Download exactly the transactions currently shown after applying the table filters."><ExportIcon size={13} />Export</button></div>}>
-      <h3 className="mt-0">Transactions</h3>
+    <Card className="mb-md">
+      <div className="row gap-sm" style={{ alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <h3 className="mt-0 mb-0">Transactions</h3>
+        <div className="row gap-sm" style={{ alignItems: 'center' }}>
+          <ImportStatementSection account={account} compact />
+          <button className="btn secondary small" onClick={exportTransactions} disabled={!sorted.length} title="Download exactly the transactions currently shown after applying the table filters."><ExportIcon size={13} />Export</button>
+        </div>
+      </div>
       <FilterFab
         pageKey={`bank-transactions-filter-${account.id}`}
         title={`Filter transactions — ${account.name}`}
@@ -1989,7 +1995,14 @@ function ImportStatementSection({ account, compact = false }: { account: BankAcc
               <button className="btn" disabled={!validRows.length} onClick={() => doImport('new-only')}><PlusIcon />Import new only</button>
             </Tooltip>
             {duplicateRows.length > 0 && <Tooltip text="Replace matching existing transactions with the CSV version. This requires confirmation because the existing records are overwritten.">
-              <button className="btn danger" onClick={() => confirmDialog(`This will replace ${duplicateRows.length} existing matching transaction${duplicateRows.length === 1 ? '' : 's'} with the CSV version. This cannot be undone.`, 'Confirm overwrite?').then((ok) => ok && doImport('replace'))}>Replace duplicates</button>
+              <button className="btn danger" onClick={() => {
+  void confirmDialog(
+    `This will replace ${duplicateRows.length} existing matching transaction${duplicateRows.length === 1 ? '' : 's'} with the CSV version. This cannot be undone.`,
+    'Confirm overwrite?',
+  ).then((ok) => {
+    if (ok) void doImport('replace');
+  });
+}}>Replace duplicates</button>
             </Tooltip>}
             {duplicateRows.length > 0 && <Tooltip text="Import every valid CSV row, including rows already detected as duplicates. Use this when you want to review and handle duplicates yourself after import.">
               <button className="btn secondary" disabled={!validRows.length} onClick={() => doImport('keep-all')}>Keep all</button>
@@ -2380,7 +2393,7 @@ function AnalyticsTab() {
   const budgets = useBankWorkbookStore((s) => s.workbook.settings.budgets);
   const setBudget = useBankWorkbookStore((s) => s.setBudget);
   const ensureSignedIn = useEnsureSignedIn();
-  useAppearanceStore((s) => s.appearance);
+  const dateFormat = useAppearanceStore((s) => s.appearance.dateFormat ?? 'DD-MMM-YYYY');
   applyChartTheme();
 
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? '');
