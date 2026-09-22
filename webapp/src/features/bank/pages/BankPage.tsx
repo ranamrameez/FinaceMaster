@@ -934,6 +934,8 @@ export function AccountDetailPage() {
   const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
   const account = accounts.find((a) => a.id === id);
   const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
+  const actionsByKey = useFabActionsStore((s) => s.actionsByKey);
+  const fabActions = allExtraActions(actionsByKey);
   const updateAccount = useBankWorkbookStore((s) => s.updateAccount);
   const deleteAccount = useBankWorkbookStore((s) => s.deleteAccount);
   const ensureSignedIn = useEnsureSignedIn();
@@ -1715,7 +1717,7 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
 
   const deposits = monthlyFlow.reduce((s, r) => s + r.income, 0);
   const withdrawals = monthlyFlow.reduce((s, r) => s + r.expense, 0);
-  const netFlow = deposits + withdrawals;
+  const netFlow = deposits - withdrawals;
 
   if (!ledger.length) {
     return <p className="text-muted m-0">No transactions yet — analytics will appear once you log some.</p>;
@@ -1747,21 +1749,24 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
         </Tooltip>
       </div>
 
-      <div className="grid-auto" style={{ ...gridAutoStyle(150, 12), marginBottom: 16 }}>
-        <div className="stat-card card"><div className="label">Deposits</div><MoneyValue n={deposits} currency={account.currencyCode} /></div>
-        <div className="stat-card card"><div className="label">Withdrawals</div><MoneyValue n={Math.abs(withdrawals)} currency={account.currencyCode} /></div>
-        <div className="stat-card card"><div className="label">Net flow</div><MoneyValue n={netFlow} currency={account.currencyCode} /></div>
-        <div className="stat-card card"><div className="label">Transactions</div><div className="value">{rangeTransactions.length}</div></div>
-      </div>
+      <Card className="mb-md">
+        <h3 className="m-0 mb-sm">Summary — {rangeLabel{'}'}</h3>
+        <div className="grid-auto" style={{ ...gridAutoStyle(150, 12) }}>
+          <div className="stat-card"><div className="label">Deposits</div><MoneyValue n={deposits} currency={account.currencyCode} /></div>
+          <div className="stat-card"><div className="label">Withdrawals</div><MoneyValue n={withdrawals} currency={account.currencyCode} /></div>
+          <div className="stat-card"><div className="label">Net flow</div><MoneyValue n={netFlow} currency={account.currencyCode} /></div>
+          <div className="stat-card"><div className="label">Transactions</div><div className="value">{rangeTransactions.length}</div></div>
+        </div>
+      </Card>
 
-      <div className="grid-auto" style={{ ...gridAutoStyle(300, 16), marginBottom: 16 }}>
+      <div className="grid-auto" style={{ ...gridAutoStyle(220, 12), marginBottom: 16 }}>
         <ChartCard flat title={`Balance over time — ${rangeLabel}`} empty={!filteredLedger.length}>
           <Line
             data={{
               labels: filteredLedger.map((r) => formatDate(r.tx.date, dateFormat)),
               datasets: [{ label: 'Balance', data: filteredLedger.map((r) => r.balance), borderColor: '#5aa9c9', backgroundColor: '#5aa9c933', fill: true, tension: 0.2 }],
             }}
-            options={{ plugins: { legend: { display: false }, datalabels: dlLine((v) => fmtMoney(v, account.currencyCode)) } }}
+            options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, datalabels: { display: false } } }}
           />
         </ChartCard>
 
@@ -1771,12 +1776,7 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
               labels: categoryTotals.map(([name]) => name),
               datasets: [{ data: categoryTotals.map(([, amount]) => amount), backgroundColor: categoryTotals.map(([name]) => tickerColor(name)) }],
             }}
-            plugins={[doughnutOutsideLabels((v, i) => categoryTotals[i][0] + ': ' + fmtMoney(v, account.currencyCode))]}
-            options={{
-              cutout: '52%',
-              plugins: { legend: { display: false }, datalabels: { display: false } },
-              layout: { padding: { top: 18, right: 80, bottom: 18, left: 80 } },
-            }}
+            options={{ responsive: true, maintainAspectRatio: false, cutout: '52%', plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 10, padding: 8 } }, datalabels: { display: false } }, layout: { padding: 8 } }}
           />
         </ChartCard>
 
@@ -1794,7 +1794,7 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
                 { label: 'Withdrawals', data: monthlyFlow.map((f) => f.expense), backgroundColor: cssVar('--loss') || '#e5484d' },
               ],
             }}
-            options={{ plugins: { datalabels: dlBarV((v) => fmtMoney(v, account.currencyCode)) } }}
+            options={{ plugins: { datalabels: { display: false } } }}
           />
         </ChartCard>
       </div>
@@ -1812,6 +1812,8 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
           </table>
         </div>
       </CollapsibleCard>
+    </div>
+      <FabPanel actions={fabActions} />
     </div>
   );
 }
@@ -1849,18 +1851,15 @@ function CategoryBreakdownBody({ account }: { account: BankAccount }) {
         </Tooltip>
       </div>
       {!totals.length ? <p className="text-muted m-0">No transactions in this month.</p> : (
-        <Doughnut
-          data={{
-            labels: totals.map(([name]) => name),
-            datasets: [{ data: totals.map(([, amount]) => amount), backgroundColor: totals.map(([name]) => tickerColor(name)) }],
-          }}
-          plugins={[doughnutOutsideLabels((v, i) => totals[i][0] + ': ' + fmtMoney(v, account.currencyCode))]}
-          options={{
-            cutout: '52%',
-            plugins: { legend: { display: false }, datalabels: { display: false } },
-            layout: { padding: { top: 18, right: 80, bottom: 18, left: 80 } },
-          }}
-        />
+        <div style={{ height: 230, width: '100%' }}>
+          <Doughnut
+            data={{
+              labels: totals.map(([name]) => name),
+              datasets: [{ data: totals.map(([, amount]) => amount), backgroundColor: totals.map(([name]) => tickerColor(name)) }],
+            }}
+            options={{ responsive: true, maintainAspectRatio: false, cutout: '52%', plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 10, padding: 8 } }, datalabels: { display: false } }, layout: { padding: 8 } }}
+          />
+        </div>
       )}
     </div>
   );
