@@ -56,27 +56,83 @@ export function fmtPrice(n: number | undefined | null): string {
 }
 
 
-export type DateFormat = 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD' | 'DD Mon YYYY' | 'Mon DD, YYYY';
+export type DateFormat =
+  | 'DD-MMM-YYYY'
+  | 'YYYY-MMM-DD'
+  | 'DD-MM-YYYY'
+  | 'MM-DD-YYYY'
+  | 'DD/MM/YYYY'
+  | 'MM/DD/YYYY'
+  | 'dddd, MMM DD, YYYY'
+  | 'ddd, DD MMM, YYYY';
 
-/**
- * Formats the app's stored ISO calendar date (YYYY-MM-DD) for display.
- * The stored value is never changed; this is presentation only.
- */
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const WEEKDAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const WEEKDAYS_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
 export function formatDate(date: string | undefined | null, format: DateFormat = 'DD/MM/YYYY'): string {
   if (!date) return '—';
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
   if (!match) return date;
   const [, y, m, d] = match;
-  const month = Number(m);
-  const day = Number(d);
+  const month = Number(m), day = Number(d);
   if (month < 1 || month > 12 || day < 1 || day > 31) return date;
-  const monthShort = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][month - 1];
+  const monthShort = MONTHS[month - 1];
   switch (format) {
+    case 'DD-MMM-YYYY': return d + '-' + monthShort + '-' + y;
+    case 'YYYY-MMM-DD': return y + '-' + monthShort + '-' + d;
+    case 'DD-MM-YYYY': return d + '-' + m + '-' + y;
+    case 'MM-DD-YYYY': return m + '-' + d + '-' + y;
+    case 'DD/MM/YYYY': return d + '/' + m + '/' + y;
     case 'MM/DD/YYYY': return m + '/' + d + '/' + y;
-    case 'YYYY-MM-DD': return date;
-    case 'DD Mon YYYY': return d + ' ' + monthShort + ' ' + y;
-    case 'Mon DD, YYYY': return monthShort + ' ' + d + ', ' + y;
-    case 'DD/MM/YYYY':
+    case 'dddd, MMM DD, YYYY': {
+      const weekday = WEEKDAYS[new Date(Date.UTC(month === 0 ? Number(y) : Number(y), month - 1, day)).getUTCDay()];
+      return weekday + ', ' + monthShort + ' ' + d + ', ' + y;
+    }
+    case 'ddd, DD MMM, YYYY': {
+      const weekday = WEEKDAYS_SHORT[new Date(Date.UTC(Number(y), month - 1, day)).getUTCDay()];
+      return weekday + ', ' + d + ' ' + monthShort + ', ' + y;
+    }
     default: return d + '/' + m + '/' + y;
   }
+}
+
+export function dateInputFormat(format: DateFormat): Exclude<DateFormat, 'dddd, MMM DD, YYYY' | 'ddd, DD MMM, YYYY'> {
+  return format === 'dddd, MMM DD, YYYY' || format === 'ddd, DD MMM, YYYY' ? 'DD-MMM-YYYY' : format;
+}
+
+export function parseDateInput(value: string, format: DateFormat): string | null {
+  const v = value.trim();
+  if (!v) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+    const [y,m,d] = v.split('-').map(Number);
+    const dt = new Date(Date.UTC(y,m-1,d));
+    return dt.getUTCFullYear() === y && dt.getUTCMonth() === m-1 && dt.getUTCDate() === d ? v : null;
+  }
+  const patterns: Record<string, RegExp> = {
+    'DD-MMM-YYYY': /^(\d{2})-([A-Za-z]{3})-(\d{4})$/,
+    'YYYY-MMM-DD': /^(\d{4})-([A-Za-z]{3})-(\d{2})$/,
+    'DD-MM-YYYY': /^(\d{2})-(\d{2})-(\d{4})$/,
+    'MM-DD-YYYY': /^(\d{2})-(\d{2})-(\d{4})$/,
+    'DD/MM/YYYY': /^(\d{2})\/(\d{2})\/(\d{4})$/,
+    'MM/DD/YYYY': /^(\d{2})\/(\d{2})\/(\d{4})$/,
+  };
+  const match = patterns[format]?.exec(v);
+  if (!match) return null;
+  let y:number, m:number, d:number;
+  if (format === 'DD-MMM-YYYY') {
+    d = Number(match[1]); m = MONTHS.findIndex(x => x.toLowerCase() === match[2].toLowerCase()) + 1; y = Number(match[3]);
+  } else if (format === 'YYYY-MMM-DD') {
+    y = Number(match[1]); m = MONTHS.findIndex(x => x.toLowerCase() === match[2].toLowerCase()) + 1; d = Number(match[3]);
+  } else {
+    y = Number(match[3]);
+    const a = Number(match[1]), b = Number(match[2]);
+    d = format === 'MM-DD-YYYY' || format === 'MM/DD/YYYY' ? b : a;
+    m = format === 'MM-DD-YYYY' || format === 'MM/DD/YYYY' ? a : b;
+  }
+  if (m < 1 || d < 1 || m > 12 || d > 31) return null;
+  const dt = new Date(Date.UTC(y,m-1,d));
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === m-1 && dt.getUTCDate() === d
+    ? y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0')
+    : null;
 }
