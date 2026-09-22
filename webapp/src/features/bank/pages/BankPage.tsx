@@ -934,8 +934,6 @@ export function AccountDetailPage() {
   const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
   const account = accounts.find((a) => a.id === id);
   const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
-  const actionsByKey = useFabActionsStore((s) => s.actionsByKey);
-  const fabActions = allExtraActions(actionsByKey);
   const updateAccount = useBankWorkbookStore((s) => s.updateAccount);
   const deleteAccount = useBankWorkbookStore((s) => s.deleteAccount);
   const ensureSignedIn = useEnsureSignedIn();
