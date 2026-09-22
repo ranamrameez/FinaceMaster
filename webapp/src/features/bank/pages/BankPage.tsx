@@ -1604,42 +1604,63 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
   useAppearanceStore((s) => s.appearance);
   applyChartTheme();
 
+  type RangePreset = '1' | '3' | '6' | '12' | 'ytd' | 'custom';
+  const [rangePreset, setRangePreset] = useState<RangePreset>('1');
+  const [fromMonth, setFromMonth] = useState(() => today().slice(0, 7));
+  const [toMonth, setToMonth] = useState(() => today().slice(0, 7));
+
+  const rangeStart = useMemo(() => {
+    const now = new Date();
+    const current = new Date(now.getFullYear(), now.getMonth(), 1);
+    if (rangePreset === 'custom') return fromMonth || toMonth || today().slice(0, 7);
+    if (rangePreset === 'ytd') return current.getFullYear() + '-01';
+    const months = Number(rangePreset);
+    const d = new Date(current.getFullYear(), current.getMonth() - (months - 1), 1);
+    return d.toISOString().slice(0, 7);
+  }, [rangePreset, fromMonth, toMonth]);
+
+  const rangeEnd = rangePreset === 'custom' ? (toMonth || fromMonth || today().slice(0, 7)) : today().slice(0, 7);
+
+  const inRange = (date: string) => {
+    const month = date.slice(0, 7);
+    return month >= rangeStart && month <= rangeEnd;
+  };
+
+  const rangeTransactions = useMemo(
+    () => transactions.filter((t) => t.accountId === account.id && inRange(t.date)),
+    [transactions, account.id, rangeStart, rangeEnd],
+  );
+
   const ledger = useMemo(() => accountRunningLedger(account, transactions), [account, transactions]);
-  const monthlyFlow = useMemo(() => bankMonthlyFlow(transactions, [account.id]), [transactions, account.id]);
-
-  // Pending item 115(d): "charts should be interactive... right now they are
-  // dumping lifetime data all at once" — a from/to month range narrows the
-  // two full-history charts (Balance over time, Deposits vs. withdrawals by month).
-  // Deliberately a local `<input type="month">` pair rather than reusing
-  // QSE/PSX's `ChartFilterBar`/`ChartFilter` (lib/calc/chartFilters.ts) —
-  // that type's `tickers` field has no meaning for a bank account, and the
-  // shapes here (a running ledger, a `{month,income,expense}[]` series)
-  // don't match its `{months,values}` helpers either. The Category
-  // breakdown card + its own ◀/▶ month nav below is a separate, more
-  // specific tool (one exact month at a time) and is left untouched.
-  const [fromMonth, setFromMonth] = useState('');
-  const [toMonth, setToMonth] = useState('');
   const filteredLedger = useMemo(
-    () => ledger.filter((r) => (!fromMonth || r.tx.date.slice(0, 7) >= fromMonth) && (!toMonth || r.tx.date.slice(0, 7) <= toMonth)),
-    [ledger, fromMonth, toMonth],
+    () => ledger.filter((r) => inRange(r.tx.date)),
+    [ledger, rangeStart, rangeEnd],
   );
-  const filteredMonthlyFlow = useMemo(
-    () => monthlyFlow.filter((f) => (!fromMonth || f.month >= fromMonth) && (!toMonth || f.month <= toMonth)),
-    [monthlyFlow, fromMonth, toMonth],
+  const monthlyFlow = useMemo(
+    () => bankMonthlyFlow(transactions, [account.id]).filter((f) => f.month >= rangeStart && f.month <= rangeEnd),
+    [transactions, account.id, rangeStart, rangeEnd],
   );
 
-  const [monthOffset, setMonthOffset] = useState(0);
-  const selectedMonth = monthRange(monthOffset, monthOffset)[0];
-  const selectedMonthLabel = new Date(`${selectedMonth}-01`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  // Unlike the old net-per-category view, this counts every transaction amount
+  // by category. Salary/income and groceries/expenses therefore both appear,
+  // even when a category contains transactions in both directions.
+  const categoryTotals = useMemo(() => {
+    const totals: Record<string, number> = {};
+    for (const tx of rangeTransactions) {
+      const name = categoryName(tx.categoryID, categories);
+      totals[name] = (totals[name] ?? 0) + Math.abs(tx.amount);
+    }
+    return Object.entries(totals).sort((a, b) => b[1] - a[1]);
+  }, [rangeTransactions, categories]);
 
-  const monthTxs = useMemo(
-    () => transactions.filter((t) => t.accountId === account.id && t.date.slice(0, 7) === selectedMonth),
-    [transactions, account.id, selectedMonth],
-  );
-  const byCategoryThisMonth = useMemo(() => accountByCategory(account, monthTxs, categories), [account, monthTxs, categories]);
-  const spendCategories = Object.keys(byCategoryThisMonth).filter((c) => byCategoryThisMonth[c] < 0);
-  const monthFlowRow = monthlyFlow.find((f) => f.month === selectedMonth);
-  const endOfMonthBalance = accountBalanceAsOfMonth(ledger, selectedMonth, account.openingBalance);
+  const rangeLabel = rangePreset === '1' ? 'This month'
+    : rangePreset === 'ytd' ? 'Year to date'
+    : rangePreset === 'custom' ? (rangeStart === rangeEnd ? formatDate(rangeStart + '-01', dateFormat) : formatDate(rangeStart + '-01', dateFormat) + ' → ' + formatDate(rangeEnd + '-01', dateFormat))
+    : `Last ${rangePreset} months`;
+
+  const deposits = monthlyFlow.reduce((s, r) => s + r.income, 0);
+  const withdrawals = monthlyFlow.reduce((s, r) => s + r.expense, 0);
+  const netFlow = deposits + withdrawals;
 
   if (!ledger.length) {
     return <p className="text-muted m-0">No transactions yet — analytics will appear once you log some.</p>;
@@ -1647,18 +1668,39 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, alignItems: 'center', marginBottom: 12 }}>
-        <span className="text-muted">Chart range:</span>
-        <input type="month" value={fromMonth} onChange={(e) => setFromMonth(e.target.value)} aria-label="From month" />
-        <span className="text-muted">to</span>
-        <input type="month" value={toMonth} onChange={(e) => setToMonth(e.target.value)} aria-label="To month" />
-        {(fromMonth || toMonth) && (
-          <button type="button" className="btn secondary small" onClick={() => { setFromMonth(''); setToMonth(''); }}>Clear</button>
+      <div className="row gap-sm mb-sm" style={{ alignItems: 'center', flexWrap: 'wrap' }}>
+        <span className="text-muted">Period:</span>
+        {([
+          ['1', '1M'], ['3', '3M'], ['6', '6M'], ['12', '12M'], ['ytd', 'YTD'], ['custom', 'Custom'],
+        ] as const).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            className={rangePreset === value ? 'btn small' : 'btn secondary small'}
+            onClick={() => setRangePreset(value)}
+          >{label}</button>
+        ))}
+        {rangePreset === 'custom' && (
+          <div className="row gap-sm" style={{ alignItems: 'center' }}>
+            <input type="month" value={fromMonth} onChange={(e) => { setFromMonth(e.target.value); setRangePreset('custom'); }} aria-label="From month" />
+            <span className="text-muted">to</span>
+            <input type="month" value={toMonth} min={fromMonth || undefined} onChange={(e) => { setToMonth(e.target.value); setRangePreset('custom'); }} aria-label="To month" />
+          </div>
         )}
-        <Tooltip text="Narrows the Balance over time and Deposits vs. withdrawals charts below to this window. Doesn't affect Category breakdown, which already has its own month navigation, or any lifetime total shown elsewhere." />
+        <Tooltip text="Analytics defaults to the current month instead of loading lifetime history. Use 3M, 6M, 12M, YTD, or Custom when you want a wider period.">
+          <span className="clickable text-muted">ⓘ</span>
+        </Tooltip>
       </div>
+
+      <div className="grid-auto" style={{ ...gridAutoStyle(150, 12), marginBottom: 16 }}>
+        <div className="stat-card card"><div className="label">Deposits</div><MoneyValue n={deposits} currency={account.currencyCode} /></div>
+        <div className="stat-card card"><div className="label">Withdrawals</div><MoneyValue n={Math.abs(withdrawals)} currency={account.currencyCode} /></div>
+        <div className="stat-card card"><div className="label">Net flow</div><MoneyValue n={netFlow} currency={account.currencyCode} /></div>
+        <div className="stat-card card"><div className="label">Transactions</div><div className="value">{rangeTransactions.length}</div></div>
+      </div>
+
       <div className="grid-auto" style={{ ...gridAutoStyle(300, 16), marginBottom: 16 }}>
-        <ChartCard flat title="Balance over time" empty={!filteredLedger.length}>
+        <ChartCard flat title={`Balance over time — ${rangeLabel}`} empty={!filteredLedger.length}>
           <Line
             data={{
               labels: filteredLedger.map((r) => formatDate(r.tx.date, dateFormat)),
@@ -1667,84 +1709,105 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
             options={{ plugins: { legend: { display: false }, datalabels: dlLine((v) => fmtMoney(v, account.currencyCode)) } }}
           />
         </ChartCard>
+
+        <ChartCard flat title={`Transactions by category — ${rangeLabel}`} empty={!categoryTotals.length}>
+          <Doughnut
+            data={{
+              labels: categoryTotals.map(([name]) => name),
+              datasets: [{ data: categoryTotals.map(([, amount]) => amount), backgroundColor: categoryTotals.map(([name]) => tickerColor(name)) }],
+            }}
+            plugins={[doughnutOutsideLabels((v, i) => categoryTotals[i][0] + ': ' + fmtMoney(v, account.currencyCode))]}
+            options={{
+              cutout: '52%',
+              plugins: { legend: { display: false }, datalabels: { display: false } },
+              layout: { padding: { top: 18, right: 80, bottom: 18, left: 80 } },
+            }}
+          />
+        </ChartCard>
+
         <ChartCard
           flat
-          title="Deposits vs. withdrawals by month"
-          titleTooltip="Every deposit vs. withdrawal for this account, including any inter-account transfer — this is a raw cash-flow view, not a categorized income/expense breakdown."
-          empty={!filteredMonthlyFlow.length}
+          title={`Deposits vs. withdrawals — ${rangeLabel}`}
+          titleTooltip="Shows every deposit and withdrawal for this account in the selected period, including transfers. It is a cash-flow view rather than a categorized income/expense view."
+          empty={!monthlyFlow.length}
         >
           <Bar
             data={{
-              labels: filteredMonthlyFlow.map((f) => f.month),
+              labels: monthlyFlow.map((f) => f.month),
               datasets: [
-                { label: 'Deposits', data: filteredMonthlyFlow.map((f) => f.income), backgroundColor: cssVar('--profit') || '#3ecf8e' },
-                { label: 'Withdrawals', data: filteredMonthlyFlow.map((f) => f.expense), backgroundColor: cssVar('--loss') || '#e5484d' },
+                { label: 'Deposits', data: monthlyFlow.map((f) => f.income), backgroundColor: cssVar('--profit') || '#3ecf8e' },
+                { label: 'Withdrawals', data: monthlyFlow.map((f) => f.expense), backgroundColor: cssVar('--loss') || '#e5484d' },
               ],
             }}
             options={{ plugins: { datalabels: dlBarV((v) => fmtMoney(v, account.currencyCode)) } }}
           />
         </ChartCard>
-        <ChartCard flat title={`Category breakdown (spend) — ${selectedMonthLabel}`} empty={!spendCategories.length}>
-          <Doughnut
-            data={{
-              labels: spendCategories,
-              datasets: [{ data: spendCategories.map((c) => Math.abs(byCategoryThisMonth[c])), backgroundColor: spendCategories.map((c) => tickerColor(c)) }],
-            }}
-            options={{ cutout: '55%', plugins: { datalabels: dlDoughnut((v) => fmtMoney(v, account.currencyCode)) } }}
-          />
-        </ChartCard>
       </div>
 
-      <div className="row gap-sm mb-sm">
-        <button className="btn secondary small" onClick={() => setMonthOffset((o) => o - 1)}>◀ Prev month</button>
-        <button className="btn secondary small" onClick={() => setMonthOffset(0)}>This month</button>
-        <button className="btn secondary small" onClick={() => setMonthOffset((o) => o + 1)}>Next month ▶</button>
-      </div>
-
-      <div className="table-scroll">
-        <table>
-          <thead><tr><th colSpan={2}>{selectedMonthLabel}</th></tr></thead>
-          <tbody>
-            <tr><td>Deposits</td><td>{fmtMoney(monthFlowRow?.income ?? 0, account.currencyCode)}</td></tr>
-            <tr><td>Withdrawals</td><td>{fmtMoney(monthFlowRow?.expense ?? 0, account.currencyCode)}</td></tr>
-            <tr>
-              <td>Net flow</td>
-              <td className={(monthFlowRow?.net ?? 0) >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(monthFlowRow?.net ?? 0, account.currencyCode)}</td>
-            </tr>
-            <tr><td>Balance at month end</td><td>{fmtMoney(endOfMonthBalance, account.currencyCode)}</td></tr>
-            {spendCategories.map((c) => (
-              <tr key={c}><td>{c}</td><td>{fmtMoney(Math.abs(byCategoryThisMonth[c]), account.currencyCode)}</td></tr>
-            ))}
-            {!spendCategories.length && <tr><td colSpan={2} className="text-muted">No spend this month.</td></tr>}
-          </tbody>
-        </table>
-      </div>
+      <CollapsibleCard title={<h3 className="m-0">Summary — {rangeLabel}</h3>} className="mt-md">
+        <div className="table-scroll">
+          <table>
+            <thead><tr><th>Metric</th><th>Amount</th></tr></thead>
+            <tbody>
+              <tr><td>Deposits</td><td>{fmtMoney(deposits, account.currencyCode)}</td></tr>
+              <tr><td>Withdrawals</td><td>{fmtMoney(Math.abs(withdrawals), account.currencyCode)}</td></tr>
+              <tr><td>Net flow</td><td className={netFlow >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(netFlow, account.currencyCode)}</td></tr>
+              <tr><td>Transactions</td><td>{rangeTransactions.length}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </CollapsibleCard>
     </div>
   );
 }
 
+
 function CategoryBreakdownBody({ account }: { account: BankAccount }) {
   const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
   const categories = useCategoryStore((s) => s.workbook.categories);
-  const byCategory = accountByCategory(account, transactions, categories);
-  const spending = Object.entries(byCategory)
-    .filter(([, amount]) => amount < 0)
-    .map(([category, amount]) => ({ category, amount: Math.abs(amount) }))
-    .sort((a, b) => b.amount - a.amount);
-  if (!spending.length) return <p className="text-muted m-0">No spending by category yet.</p>;
+  const [monthOffset, setMonthOffset] = useState(0);
+  const selectedMonth = monthRange(monthOffset, monthOffset)[0];
+  const selectedMonthLabel = new Date(`${selectedMonth}-01`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+
+  const monthTransactions = useMemo(
+    () => transactions.filter((t) => t.accountId === account.id && t.date.slice(0, 7) === selectedMonth),
+    [transactions, account.id, selectedMonth],
+  );
+  const totals = useMemo(() => {
+    const result: Record<string, number> = {};
+    for (const tx of monthTransactions) {
+      const name = categoryName(tx.categoryID, categories);
+      result[name] = (result[name] ?? 0) + Math.abs(tx.amount);
+    }
+    return Object.entries(result).sort((a, b) => b[1] - a[1]);
+  }, [monthTransactions, categories]);
+
   return (
-    <Doughnut
-      data={{
-        labels: spending.map((r) => r.category),
-        datasets: [{ data: spending.map((r) => r.amount), backgroundColor: spending.map((r) => tickerColor(r.category)) }],
-      }}
-      plugins={[doughnutOutsideLabels((v, i) => spending[i].category + ': ' + fmtMoney(v, account.currencyCode))]}
-      options={{
-        cutout: '52%',
-        plugins: { legend: { display: false }, datalabels: { display: false } },
-        layout: { padding: { top: 18, right: 70, bottom: 18, left: 70 } },
-      }}
-    />
+    <div>
+      <div className="row gap-sm mb-sm" style={{ alignItems: 'center', flexWrap: 'wrap' }}>
+        <button className="btn secondary small" onClick={() => setMonthOffset((o) => o - 1)}>◀ Prev</button>
+        <button className="btn secondary small" onClick={() => setMonthOffset(0)}>This month</button>
+        <button className="btn secondary small" onClick={() => setMonthOffset((o) => o + 1)}>Next ▶</button>
+        <span className="text-muted">{selectedMonthLabel}</span>
+        <Tooltip text="Shows all transaction categories for the selected month. Amount is total transaction volume in that category, so inflows such as Salary and outflows such as Groceries can both be represented.">
+          <span className="clickable text-muted">ⓘ</span>
+        </Tooltip>
+      </div>
+      {!totals.length ? <p className="text-muted m-0">No transactions in this month.</p> : (
+        <Doughnut
+          data={{
+            labels: totals.map(([name]) => name),
+            datasets: [{ data: totals.map(([, amount]) => amount), backgroundColor: totals.map(([name]) => tickerColor(name)) }],
+          }}
+          plugins={[doughnutOutsideLabels((v, i) => totals[i][0] + ': ' + fmtMoney(v, account.currencyCode))]}
+          options={{
+            cutout: '52%',
+            plugins: { legend: { display: false }, datalabels: { display: false } },
+            layout: { padding: { top: 18, right: 80, bottom: 18, left: 80 } },
+          }}
+        />
+      )}
+    </div>
   );
 }
 
