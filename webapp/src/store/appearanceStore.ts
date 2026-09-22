@@ -13,10 +13,22 @@ export const DEFAULT_APPEARANCE: Appearance = {
   dateFormat: 'DD-MMM-YYYY',
 };
 
+const DATE_FORMATS = new Set([
+  'DD-MMM-YYYY','YYYY-MMM-DD','DD-MM-YYYY','MM-DD-YYYY',
+  'DD/MM/YYYY','MM/DD/YYYY','dddd, MMM DD, YYYY','ddd, DD MMM, YYYY',
+]);
+
 function load(): Appearance {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return { ...DEFAULT_APPEARANCE, ...JSON.parse(raw) };
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<Appearance>;
+      const legacy = parsed.dateFormat;
+      const dateFormat = typeof legacy === 'string' && DATE_FORMATS.has(legacy)
+        ? legacy
+        : DEFAULT_APPEARANCE.dateFormat;
+      return { ...DEFAULT_APPEARANCE, ...parsed, dateFormat } as Appearance;
+    }
   } catch {
     /* ignore, fall through to defaults */
   }
