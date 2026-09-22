@@ -66,6 +66,17 @@ export function AppearanceFields() {
         <option value="compact">Numbers: shortened (10k)</option>
         <option value="raw">Numbers: full (10,000)</option>
       </select>
+      <select
+        value={appearance.dateFormat ?? 'DD/MM/YYYY'}
+        onChange={(e) => updateAppearance({ dateFormat: e.target.value as 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD' | 'DD Mon YYYY' | 'Mon DD, YYYY' })}
+        title="How calendar dates are displayed throughout the app"
+      >
+        <option value="DD/MM/YYYY">Dates: 22/09/2026</option>
+        <option value="MM/DD/YYYY">Dates: 09/22/2026</option>
+        <option value="YYYY-MM-DD">Dates: 2026-09-22</option>
+        <option value="DD Mon YYYY">Dates: 22 Sep 2026</option>
+        <option value="Mon DD, YYYY">Dates: Sep 22, 2026</option>
+      </select>
       <button
         className="btn secondary small"
         type="button"
