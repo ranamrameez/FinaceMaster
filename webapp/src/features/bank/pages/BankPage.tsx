@@ -990,7 +990,6 @@ export function AccountDetailPage() {
     });
     toast('Account details saved.');
   };
-  const ledger = useMemo(() => (account ? [...accountRunningLedger(account, transactions)].reverse() : []), [account, transactions]);
   const upcoming = useMemo(
     () => (account ? plannedEntries.filter((p) => p.accountId === account.id && !p.executed).sort((a, b) => a.date.localeCompare(b.date)) : []),
     [plannedEntries, account],
@@ -1006,25 +1005,6 @@ export function AccountDetailPage() {
     if (!account) return;
     setMeta(accountToFormValue(account));
     setEditingMeta(false);
-  };
-
-  const exportStatement = () => {
-    if (!account) return;
-    const rows = ledger
-      .filter((r) => (!fromDate || r.tx.date >= fromDate) && (!toDate || r.tx.date <= toDate))
-      .slice()
-      .reverse();
-    const header = ['Date', 'Description', 'Category', 'Amount', 'Balance'];
-    const body = rows.map((r) => [r.tx.date, r.tx.description, r.tx.category || '', r.tx.amount, r.balance]);
-    const blob = new Blob([toCSV([header, ...body])], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const suffix = fromDate || toDate ? `_${fromDate || 'start'}_to_${toDate || 'now'}` : '';
-    a.download = `${account.name.replace(/\s+/g, '_')}_statement${suffix}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast('Statement downloaded.');
   };
 
   if (!account) {
@@ -1244,21 +1224,7 @@ export function AccountDetailPage() {
         <ImportStatementSection account={account} />
       </CollapsibleCard>
 
-      <CollapsibleCard
-        defaultOpen={false}
-        className="mb-md"
-        title={<h3 className="m-0">Download statement</h3>}
-        headerExtra={<button className="btn" onClick={exportStatement}><ExportIcon size={13} />Export CSV</button>}
-      >
-        <div className="row gap-sm">
-          <Field label="From (optional)">
-            <TextInput type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
-          </Field>
-          <Field label="To (optional)">
-            <TextInput type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
-          </Field>
-        </div>
-      </CollapsibleCard>
+
     </div>
   );
 }
