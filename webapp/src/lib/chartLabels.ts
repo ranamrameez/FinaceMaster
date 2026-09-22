@@ -98,6 +98,7 @@ export function doughnutOutsideLabels(formatter: (v: number, index: number) => s
 }
 
 
+export function dlDoughnut(formatter: (v: number) => string) {
   return dlBase(formatter, {
     backgroundColor: 'transparent',
     color: '#fff',
