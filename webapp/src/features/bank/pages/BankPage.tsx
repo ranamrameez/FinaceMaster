@@ -994,8 +994,6 @@ export function AccountDetailPage() {
     () => (account ? plannedEntries.filter((p) => p.accountId === account.id && !p.executed).sort((a, b) => a.date.localeCompare(b.date)) : []),
     [plannedEntries, account],
   );
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
   // Redesign 2026-08-27 (Often tier: "read-only by default, an Edit icon
   // switches into the same form"). Cancelling resets the draft back to the
   // account's own last-saved values, so a discarded edit doesn't leave
