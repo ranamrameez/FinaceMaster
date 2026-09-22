@@ -299,7 +299,7 @@ function WhatIfExitCalculator({
                   onChange={(e) => setPrices((p) => ({ ...p, [t.ticker]: Number(e.target.value) }))}
                 />
               </Field>
-              <Field label="Shares to sell" width={120} title={\`Maximum \${fmt(availableShares, 0)} shares — the position remaining after this plan's pending sells.\`}>
+              <Field label="Shares to sell" width={120} title={`Maximum ${fmt(availableShares, 0)} shares — the position remaining after this plan's pending sells.`}>
                 <TextInput
                   type="number"
                   step="1"
@@ -323,7 +323,7 @@ function WhatIfExitCalculator({
                 </div>
                 <div className="stat-card card">
                   <div className="label">P/L on selected shares</div>
-                  <div className={\`value \${result.pl >= 0 ? 'pill-positive' : 'pill-negative'}\`}>{fmtMoney(result.pl, currency)}</div>
+                  <div className={`value ${result.pl >= 0 ? 'pill-positive' : 'pill-negative'}`}>{fmtMoney(result.pl, currency)}</div>
                 </div>
                 <div className="stat-card card">
                   <div className="label">Shares after simulation</div>
