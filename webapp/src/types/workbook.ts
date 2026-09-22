@@ -333,6 +333,8 @@ export interface Appearance {
    * always rendering it expanded. Optional, `undefined`/false keeps
    * today's default (collapsed-until-clicked). */
   fabAlwaysOpen?: boolean;
+  /** Global date display preference. Stored separately from transaction data so changing it never changes the underlying ISO dates. */
+  dateFormat?: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD' | 'DD Mon YYYY' | 'Mon DD, YYYY';
 }
 
 export interface Workbook {
