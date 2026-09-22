@@ -12,7 +12,7 @@ import { Modal } from '../../../components/Modal';
 import { RecordDetailModal } from '../../../components/RecordDetailModal';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
-import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { DateInput, Field, Select, TextInput } from '../../../components/ui/Field';
 import { PendingToggle } from '../../../components/ui/PendingToggle';
 import { DirectionChips } from '../../../components/ui/DirectionChips';
 import { IconButton } from '../../../components/ui/IconButton';
@@ -927,7 +927,7 @@ function CreditUsageBar({ used, limit, currency }: { used: number; limit: number
  * Loans rollout — same "ship one page first" pattern this project always
  * follows (see e.g. Done item 58's own "v1 for Banking only" precedent). */
 export function AccountDetailPage() {
-  const dateFormat = useAppearanceStore((s) => s.appearance.dateFormat ?? 'DD/MM/YYYY');
+  const dateFormat = useAppearanceStore((s) => s.appearance.dateFormat ?? 'DD-MMM-YYYY');
   const { id } = useParams();
   const navigate = useNavigate();
   const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
@@ -1304,7 +1304,7 @@ function EditTransactionModal({ tx, onClose }: { tx: BankTransaction; onClose: (
     <FinanceEditModal titleText="Edit transaction" onClose={onClose} onSave={save}>
       <div className="row gap-sm">
         <Field label="Date">
-          <TextInput type="date" value={draft.date} onChange={(e) => setDraft({ ...draft, date: e.target.value })} />
+          <DateInput value={draft.date} onChange={(e) => setDraft({ ...draft, date: e.target.value })} />
         </Field>
         <Field label="Description" required>
           <TextInput value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
@@ -1344,7 +1344,7 @@ function EditTransactionModal({ tx, onClose }: { tx: BankTransaction; onClose: (
  * extends the Type/Category filter treatment Cash's statement tables got
  * (README Done item 224) here too. */
 function TransactionsList({ account }: { account: BankAccount }) {
-  const dateFormat = useAppearanceStore((s) => s.appearance.dateFormat ?? 'DD/MM/YYYY');
+  const dateFormat = useAppearanceStore((s) => s.appearance.dateFormat ?? 'DD-MMM-YYYY');
   const allTransactions = useBankWorkbookStore((s) => s.workbook.transactions);
   const updateTransaction = useBankWorkbookStore((s) => s.updateTransaction);
   const deleteTransaction = useBankWorkbookStore((s) => s.deleteTransaction);
@@ -1424,10 +1424,10 @@ function TransactionsList({ account }: { account: BankAccount }) {
     <div>
       <div className="row gap-sm mb-sm" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
         <Field label="From" width={135}>
-          <TextInput type="date" value={fromDate} max={toDate || undefined} onChange={(e) => setFromDate(e.target.value)} />
+          <DateInput value={fromDate} max={toDate || undefined} onChange={(e) => setFromDate(e.target.value)} />
         </Field>
         <Field label="To" width={135}>
-          <TextInput type="date" value={toDate} min={fromDate || undefined} onChange={(e) => setToDate(e.target.value)} />
+          <DateInput value={toDate} min={fromDate || undefined} onChange={(e) => setToDate(e.target.value)} />
         </Field>
         <Field label="Type" width={120}>
           <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
@@ -1624,7 +1624,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
  * category) — a chart's own hover tooltip is the only other way to read
  * an exact number today, and doesn't work at all on a touch device. */
 function AccountAnalyticsSection({ account }: { account: BankAccount }) {
-  const dateFormat = useAppearanceStore((s) => s.appearance.dateFormat ?? 'DD/MM/YYYY');
+  const dateFormat = useAppearanceStore((s) => s.appearance.dateFormat ?? 'DD-MMM-YYYY');
   const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
   const categories = useCategoryStore((s) => s.workbook.categories);
   useAppearanceStore((s) => s.appearance);
@@ -1782,7 +1782,7 @@ function CategoryBreakdownBody({ account }: { account: BankAccount }) {
  * Scoped to the account whose detail page it's embedded in — no picker,
  * since there's nothing to pick, the account is already known. */
 function ImportStatementSection({ account }: { account: BankAccount }) {
-  const dateFormat = useAppearanceStore((s) => s.appearance.dateFormat ?? 'DD/MM/YYYY');
+  const dateFormat = useAppearanceStore((s) => s.appearance.dateFormat ?? 'DD-MMM-YYYY');
   const addTransactions = useBankWorkbookStore((s) => s.addTransactions);
   const ensureSignedIn = useEnsureSignedIn();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -2128,7 +2128,7 @@ function AddBankPlanForm({ accountId, onSaved }: { accountId: string; onSaved?: 
 }
 
 function BankPlanList({ account, horizonDays }: { account: BankAccount; horizonDays: PlanningHorizonDays }) {
-  const dateFormat = useAppearanceStore((s) => s.appearance.dateFormat ?? 'DD/MM/YYYY');
+  const dateFormat = useAppearanceStore((s) => s.appearance.dateFormat ?? 'DD-MMM-YYYY');
   const allPlans = usePlannedBankWorkbookStore((s) => s.workbook.entries);
   const updatePlan = usePlannedBankWorkbookStore((s) => s.updateEntry);
   const deletePlan = usePlannedBankWorkbookStore((s) => s.deleteEntry);
