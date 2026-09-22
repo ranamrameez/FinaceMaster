@@ -2090,8 +2090,7 @@ function AddBankPlanForm({ accountId, onSaved }: { accountId: string; onSaved?: 
     <div>
       <div className="row gap-sm">
         <Field label="Expected date">
-          <TextInput
-            type="date"
+          <DateInput
             value={p.date}
             onChange={(e) => setP({ ...p, date: e.target.value, recurrence: p.recurrence ? { ...p.recurrence, startDate: e.target.value } : undefined })}
           />
@@ -2188,11 +2187,10 @@ function BankPlanList({ account, horizonDays }: { account: BankAccount; horizonD
               editId === p.id && editRow ? (
                 <tr key={p.id}>
                   <td>
-                    <input
-                      type="date"
+                    <DateInput
                       value={editRow.date}
                       onChange={(e) => setEditRow({ ...editRow, date: e.target.value, recurrence: editRow.recurrence ? { ...editRow.recurrence, startDate: e.target.value } : undefined })}
-                      className="w-130"
+                      width={130}
                     />
                   </td>
                   <td><input value={editRow.description} onChange={(e) => setEditRow({ ...editRow, description: e.target.value })} /></td>
