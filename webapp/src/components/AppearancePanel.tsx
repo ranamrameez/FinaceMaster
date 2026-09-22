@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useAppearanceStore } from '../store/appearanceStore';
+import type { DateFormat } from '../lib/format';
 
 const COLOR_THEMES = [
   { group: 'Classic rounded themes', options: [
@@ -68,7 +69,7 @@ export function AppearanceFields() {
       </select>
       <select
         value={appearance.dateFormat ?? 'DD/MM/YYYY'}
-        onChange={(e) => updateAppearance({ dateFormat: e.target.value as any })}
+        onChange={(e) => updateAppearance({ dateFormat: e.target.value as DateFormat })}
         title="How calendar dates are displayed throughout the app"
       >
         <option value="DD-MMM-YYYY">Dates: 22-Sep-2026</option>
