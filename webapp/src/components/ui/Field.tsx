@@ -1,5 +1,7 @@
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react';
 import { Tooltip } from '../Tooltip';
+import { useAppearanceStore } from '../../store/appearanceStore';
+import { dateInputFormat, formatDate, parseDateInput, type DateFormat } from '../../lib/format';
 
 /** Labeled form field wrapper — consistent label+control spacing instead of
  * ad-hoc inline styles scattered per page.
@@ -101,5 +103,36 @@ export function Select({ width, children, ...rest }: SelectHTMLAttributes<HTMLSe
     <select {...rest} style={{ width, ...rest.style }}>
       {children}
     </select>
+  );
+}
+
+
+/** Date field whose visible value follows the global date-format preference.
+ * Display-only formats use the closest input-friendly format (22-Sep-2026). */
+export function DateInput({ value, onChange, width, ...rest }: Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'type'> & {
+  value: string;
+  onChange: (event: { target: { value: string } }) => void;
+  width?: number;
+}) {
+  const configured = useAppearanceStore((s) => s.appearance.dateFormat ?? 'DD-MMM-YYYY') as DateFormat;
+  const inputFormat = dateInputFormat(configured);
+  const displayValue = value ? formatDate(value, inputFormat) : '';
+  return (
+    <input
+      {...rest}
+      type="text"
+      inputMode="numeric"
+      value={displayValue}
+      placeholder={formatDate('2026-09-22', inputFormat)}
+      style={{ width, ...rest.style }}
+      onChange={(e) => {
+        const parsed = parseDateInput(e.target.value, inputFormat);
+        onChange({ target: { value: parsed ?? e.target.value } });
+      }}
+      onBlur={(e) => {
+        const parsed = parseDateInput(e.target.value, inputFormat);
+        if (parsed) onChange({ target: { value: parsed } });
+      }}
+    />
   );
 }
