@@ -44,7 +44,7 @@ import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar, tickerColor } from '../../../lib/cssVar';
 import { parseCSV, toCSV } from '../../../lib/csv';
-import { fmtMoney } from '../../../lib/format';
+import { formatDate, fmtMoney } from '../../../lib/format';
 import { dateOnlyMs } from '../../../lib/datetime';
 import { confirmAndDeleteLinkable, propagateLinkedEdit, resolveLinkedEdit } from '../../../lib/linkCascade';
 import { isValidIbanFormat, lookupIban } from '../../../lib/ibanLookup';
@@ -1163,7 +1163,7 @@ export function AccountDetailPage() {
                 <tbody>
                   {upcoming.map((p) => (
                     <tr key={p.id}>
-                      <td>{p.date}</td>
+                      <td>{formatDate(p.date, dateFormat)}</td>
                       <td>{p.description}</td>
                       <td className={p.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(p.amount, account.currencyCode)}</td>
                     </tr>
@@ -1343,6 +1343,7 @@ function EditTransactionModal({ tx, onClose }: { tx: BankTransaction; onClose: (
  * extends the Type/Category filter treatment Cash's statement tables got
  * (README Done item 224) here too. */
 function TransactionsList({ account }: { account: BankAccount }) {
+  const dateFormat = useAppearanceStore((s) => s.appearance.dateFormat ?? 'DD/MM/YYYY');
   const allTransactions = useBankWorkbookStore((s) => s.workbook.transactions);
   const updateTransaction = useBankWorkbookStore((s) => s.updateTransaction);
   const deleteTransaction = useBankWorkbookStore((s) => s.deleteTransaction);
@@ -1523,7 +1524,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
                     />
                   </span>
                 </td>
-                <td>{tx.date}</td>
+                <td>{formatDate(tx.date, dateFormat)}</td>
                 <td className="cell-clip" title={tx.description} onClick={(e) => e.stopPropagation()}>
                   {tx.description}
                   {tx.isPending && (
@@ -1582,7 +1583,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
           onClose={() => setDetailTx(null)}
           fields={[
             { label: '#', value: detailTx.serialNumber ?? '—' },
-            { label: 'Date', value: detailTx.date },
+            { label: 'Date', value: formatDate(detailTx.date, dateFormat) },
             { label: 'Time', value: detailTx.time ?? '— (defaults to noon)' },
             { label: 'Timezone', value: detailTx.timezone ?? '—' },
             { label: 'Description', value: detailTx.description || '—' },
@@ -1653,7 +1654,7 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
 
   const [monthOffset, setMonthOffset] = useState(0);
   const selectedMonth = monthRange(monthOffset, monthOffset)[0];
-  const selectedMonthLabel = new Date(`${selectedMonth}-01`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  const selectedMonthLabel = formatDate(`${selectedMonth}-01`, dateFormat);
 
   const monthTxs = useMemo(
     () => transactions.filter((t) => t.accountId === account.id && t.date.slice(0, 7) === selectedMonth),
@@ -1684,7 +1685,7 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
         <ChartCard flat title="Balance over time" empty={!filteredLedger.length}>
           <Line
             data={{
-              labels: filteredLedger.map((r) => r.tx.date),
+              labels: filteredLedger.map((r) => formatDate(r.tx.date, dateFormat)),
               datasets: [{ label: 'Balance', data: filteredLedger.map((r) => r.balance), borderColor: '#5aa9c9', backgroundColor: '#5aa9c933', fill: true, tension: 0.2 }],
             }}
             options={{ plugins: { legend: { display: false }, datalabels: dlLine((v) => fmtMoney(v, account.currencyCode)) } }}
@@ -1899,7 +1900,7 @@ function ImportStatementSection({ account }: { account: BankAccount }) {
               <tbody>
                 {mappedPreview.map((r, i) => (
                   <tr key={i}>
-                    <td>{r.date}</td>
+                    <td>{formatDate(r.date, dateFormat)}</td>
                     <td>{r.description}</td>
                     <td className={r.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(r.amount, account.currencyCode)}</td>
                   </tr>
@@ -2209,7 +2210,7 @@ function BankPlanList({ account, horizonDays }: { account: BankAccount; horizonD
                 </tr>
               ) : (
                 <tr key={p.id}>
-                  <td>{p.date}</td>
+                  <td>{formatDate(p.date, dateFormat)}</td>
                   <td>{p.description}</td>
                   <td className={p.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(p.amount, account.currencyCode)}</td>
                   <td>{p.category || '—'}</td>
@@ -2336,7 +2337,7 @@ function AnalyticsTab() {
             <ChartCard flat title="Balance over time" empty={!balanceOverTime.length}>
               <Line
                 data={{
-                  labels: balanceOverTime.map((r) => r.tx.date),
+                  labels: balanceOverTime.map((r) => formatDate(r.tx.date, dateFormat)),
                   datasets: [{ label: 'Balance', data: balanceOverTime.map((r) => r.balance), borderColor: '#5aa9c9', backgroundColor: '#5aa9c933', fill: true, tension: 0.2 }],
                 }}
                 options={{ plugins: { legend: { display: false }, datalabels: dlLine((v) => fmtMoney(v, account.currencyCode)) } }}
