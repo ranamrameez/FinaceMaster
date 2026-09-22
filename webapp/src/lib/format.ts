@@ -54,3 +54,29 @@ export function fmtPrice(n: number | undefined | null): string {
   const decimals = Math.max(2, 4 - magnitude - 1);
   return Number(n).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
+
+
+export type DateFormat = 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD' | 'DD Mon YYYY' | 'Mon DD, YYYY';
+
+/**
+ * Formats the app's stored ISO calendar date (YYYY-MM-DD) for display.
+ * The stored value is never changed; this is presentation only.
+ */
+export function formatDate(date: string | undefined | null, format: DateFormat = 'DD/MM/YYYY'): string {
+  if (!date) return '—';
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!match) return date;
+  const [, y, m, d] = match;
+  const month = Number(m);
+  const day = Number(d);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return date;
+  const monthShort = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][month - 1];
+  switch (format) {
+    case 'MM/DD/YYYY': return m + '/' + d + '/' + y;
+    case 'YYYY-MM-DD': return date;
+    case 'DD Mon YYYY': return d + ' ' + monthShort + ' ' + y;
+    case 'Mon DD, YYYY': return monthShort + ' ' + d + ', ' + y;
+    case 'DD/MM/YYYY':
+    default: return d + '/' + m + '/' + y;
+  }
+}
