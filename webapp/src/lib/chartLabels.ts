@@ -62,7 +62,7 @@ export function dlLine(formatter: (v: number) => string) {
 }
 
 /** Doughnut labels outside the ring with short leader lines. */
-export function doughnutOutsideLabels(formatter: (v: number) => string) {
+export function doughnutOutsideLabels(formatter: (v: number, index: number) => string) {
   return {
     id: 'doughnutOutsideLabels',
     afterDatasetsDraw(chart: ChartJS<'doughnut'>) {
@@ -90,7 +90,7 @@ export function doughnutOutsideLabels(formatter: (v: number) => string) {
         ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(elbowX, elbowY); ctx.lineTo(endX, elbowY); ctx.stroke();
         ctx.fillStyle = cssVar('--text') || '#e8ecef';
         ctx.textAlign = right ? 'left' : 'right';
-        ctx.fillText(formatter(value), right ? endX + 4 : endX - 4, elbowY);
+        ctx.fillText(formatter(value, index), right ? endX + 4 : endX - 4, elbowY);
       });
       ctx.restore();
     },
