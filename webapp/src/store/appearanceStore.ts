@@ -10,7 +10,7 @@ export const DEFAULT_APPEARANCE: Appearance = {
   colorTheme: 'wine',
   density: 'comfortable',
   numberDisplay: 'compact',
-  dateFormat: 'DD/MM/YYYY',
+  dateFormat: 'DD-MMM-YYYY',
 };
 
 function load(): Appearance {
