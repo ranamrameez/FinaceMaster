@@ -44,7 +44,7 @@ import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar, tickerColor } from '../../../lib/cssVar';
 import { parseCSV, toCSV } from '../../../lib/csv';
-import { formatDate, fmtMoney } from '../../../lib/format';
+import { formatDate, fmtMoney, parseDateInput } from '../../../lib/format';
 import { dateOnlyMs } from '../../../lib/datetime';
 import { confirmAndDeleteLinkable, propagateLinkedEdit, resolveLinkedEdit } from '../../../lib/linkCascade';
 import { isValidIbanFormat, lookupIban } from '../../../lib/ibanLookup';
