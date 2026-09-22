@@ -1390,6 +1390,10 @@ function TransactionsList({ account }: { account: BankAccount }) {
   const [detailTx, setDetailTx] = useState<BankTransaction | null>(null);
   const [typeFilter, setTypeFilter] = useState<'all' | 'in' | 'out'>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  // Date filters live with the transaction table so the CSV always mirrors
+  // exactly the rows currently visible.
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   // User-requested (2026-09-06): "although we are removing sorting, we
   // must add all fields as filters in all tables" — a Source filter
   // (Manual/Imported) was the one column here with no matching filter,
@@ -1410,9 +1414,11 @@ function TransactionsList({ account }: { account: BankAccount }) {
       if (typeFilter === 'out' && r.tx.amount >= 0) return false;
       if (categoryFilter !== 'all' && categoryName(r.tx.categoryID, categories) !== categoryFilter) return false;
       if (sourceFilter !== 'all' && (r.tx.source ?? 'manual') !== sourceFilter) return false;
+      if (fromDate && r.tx.date < fromDate) return false;
+      if (toDate && r.tx.date > toDate) return false;
       return true;
     }),
-    [allLedger, typeFilter, categoryFilter, sourceFilter, categories],
+    [allLedger, typeFilter, categoryFilter, sourceFilter, fromDate, toDate, categories],
   );
 
   // User-requested (2026-08-28): "Tag/Mark and also add nav link between the
@@ -1450,7 +1456,13 @@ function TransactionsList({ account }: { account: BankAccount }) {
 
   return (
     <div>
-      <div className="row gap-sm mb-sm">
+      <div className="row gap-sm mb-sm" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
+        <Field label="From" width={135}>
+          <TextInput type="date" value={fromDate} max={toDate || undefined} onChange={(e) => setFromDate(e.target.value)} />
+        </Field>
+        <Field label="To" width={135}>
+          <TextInput type="date" value={toDate} min={fromDate || undefined} onChange={(e) => setToDate(e.target.value)} />
+        </Field>
         <Field label="Type" width={120}>
           <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
             <option value="all">All</option>
@@ -1471,6 +1483,35 @@ function TransactionsList({ account }: { account: BankAccount }) {
             <option value="statement-import">Imported</option>
           </Select>
         </Field>
+        <button
+          className="btn secondary small"
+          onClick={() => {
+            const header = ['#', 'Date', 'Description', 'Category', 'Amount', 'Balance', 'Source'];
+            const body = sorted.map(({ tx, balance }) => [
+              tx.serialNumber ?? '',
+              tx.date,
+              tx.description,
+              categoryName(tx.categoryID, categories),
+              tx.amount,
+              balance,
+              tx.source === 'statement-import'
+                ? 'Imported' + (tx.statementRef ? ' (' + tx.statementRef + ')' : '')
+                : 'Manual',
+            ]);
+            const blob = new Blob([toCSV([header, ...body])], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const suffix = fromDate || toDate ? '_' + (fromDate || 'start') + '_to_' + (toDate || 'now') : '';
+            a.download = account.name.replace(/\s+/g, '_') + '_transactions' + suffix + '.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+            toast(sorted.length + ' transaction' + (sorted.length === 1 ? '' : 's') + ' downloaded.');
+          }}
+          disabled={!sorted.length}
+        >
+          <ExportIcon size={13} />Download CSV
+        </button>
       </div>
       <div className="table-scroll">
       <table>
