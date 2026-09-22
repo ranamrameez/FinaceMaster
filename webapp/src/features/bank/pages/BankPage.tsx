@@ -1799,8 +1799,6 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
         </ChartCard>
       </div>
 
-
-    </div>
       <FabPanel actions={fabActions} />
     </div>
   );
