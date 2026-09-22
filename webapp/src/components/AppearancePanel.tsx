@@ -80,7 +80,7 @@ export function AppearanceFields() {
         <option value="MM/DD/YYYY">Dates: 09/22/2026</option>
         <option value="dddd, MMM DD, YYYY">Dates: Tuesday, Sep 22, 2026 (display only)</option>
         <option value="ddd, DD MMM, YYYY">Dates: Tue, 22 Sep, 2026 (display only)</option>
-      </select>>
+      </select>
       <button
         className="btn secondary small"
         type="button"
