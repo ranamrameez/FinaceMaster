@@ -1152,7 +1152,7 @@ export function AccountDetailPage() {
          Transfers FAB below), this grid holds By category + Upcoming plans
          side by side instead of either claiming the full page width. */}
       <div className="detail-grid mb-md">
-        <CollapsibleCard defaultOpen={false} title={<h3 className="m-0">By category</h3>}>
+        <CollapsibleCard defaultOpen={false} title={<h3 className="m-0">Spending by category</h3>}>
           <CategoryBreakdownBody account={account} />
         </CollapsibleCard>
 
@@ -1738,7 +1738,7 @@ function CategoryBreakdownBody({ account }: { account: BankAccount }) {
         labels: spending.map((r) => r.category),
         datasets: [{ data: spending.map((r) => r.amount), backgroundColor: spending.map((r) => tickerColor(r.category)) }],
       }}
-      plugins={[doughnutOutsideLabels((v) => fmtMoney(v, account.currencyCode))]}
+      plugins={[doughnutOutsideLabels((v, i) => spending[i].category + ': ' + fmtMoney(v, account.currencyCode))]}
       options={{
         cutout: '52%',
         plugins: { legend: { display: false }, datalabels: { display: false } },
