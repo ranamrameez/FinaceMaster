@@ -1806,7 +1806,7 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
         </ChartCard>
       </div>
 
-      <FabPanel actions={fabActions} />
+      <FabPanel actions={allExtraActions(useFabActionsStore.getState().actionsByKey)} />
     </div>
   );
 }
