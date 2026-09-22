@@ -111,6 +111,14 @@ export function LogoMark({ size = 22 }: IconProps) {
   );
 }
 
+export function FilterIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base} aria-hidden>
+      <path d="M4 5h16M7 12h10M10 19h4" />
+    </svg>
+  );
+}
+
 /** "More actions" — `FabPanel`'s own toggle icon when it offers more than
  * one action (user-reported 2026-09-03: "FAB menu: + button is misleading.
  * use menu or more relevant icon"). A plain "+" on that toggle implied "add

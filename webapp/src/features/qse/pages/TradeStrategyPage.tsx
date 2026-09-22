@@ -268,31 +268,70 @@ function WhatIfExitCalculator({
   currentPrices: Record<string, number>;
 }) {
   const [prices, setPrices] = useState<Record<string, number>>({});
+  const [sharesToSell, setSharesToSell] = useState<Record<string, number>>({});
+
   return (
     <div style={{ marginTop: 10 }}>
-      <div className="text-muted" style={{ marginBottom: 4 }}>What if? Test a hypothetical exit price per ticker — defaults to the current price above.</div>
+      <div className="text-muted" style={{ marginBottom: 8 }}>
+        What if? Simulate selling a selected number of shares at a hypothetical exit price. The default shares are the
+        position remaining after this plan's pending sells.
+      </div>
       {tickerAnalysis.map((t) => {
         const price = prices[t.ticker] ?? currentPrices[t.ticker] ?? 0;
-        const fullShares = t.effectiveShares + t.plannedSold;
-        const remaining = whatIfExit(t.effectiveShares, t.avgCost, price, calcFee);
-        const full = whatIfExit(fullShares, t.avgCost, price, calcFee);
+        const availableShares = Math.max(0, t.effectiveShares);
+        const selectedShares = sharesToSell[t.ticker] ?? availableShares;
+        const simulatedShares = Math.max(0, Math.min(selectedShares, availableShares));
+        const result = whatIfExit(simulatedShares, t.avgCost, price, calcFee);
+        const sharesAfter = availableShares - simulatedShares;
+        const prePlanShares = t.effectiveShares + t.plannedSold;
+
         return (
-          <div key={t.ticker} className="row" style={{ gap: 8, alignItems: 'flex-end', marginBottom: 6 }}>
-            <Field label={`${t.ticker} exit price`} width={110}>
-              <TextInput type="number" step="0.01" value={price || ''} onChange={(e) => setPrices((p) => ({ ...p, [t.ticker]: Number(e.target.value) }))} />
-            </Field>
-            {price > 0 && (
-              <div className="text-muted">
-                Remaining ({fmt(t.effectiveShares, 0)} sh): {fmtMoney(remaining.proceeds, currency)} proceeds ·{' '}
-                <span className={remaining.pl >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(remaining.pl, currency)}</span> P/L
-                {t.plannedSold > 0 && (
-                  <>
-                    {' '}· Full position, ignoring planned sells ({fmt(fullShares, 0)} sh):{' '}
-                    {fmtMoney(full.proceeds, currency)} proceeds ·{' '}
-                    <span className={full.pl >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(full.pl, currency)}</span> P/L
-                  </>
-                )}
+          <div key={t.ticker} className="card" style={{ padding: 10, marginBottom: 8 }}>
+            <div className="row" style={{ gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <Field label="Ticker" width={90}>
+                <div style={{ height: 32, display: 'flex', alignItems: 'center', fontWeight: 700 }}>{t.ticker}</div>
+              </Field>
+              <Field label="Exit price" width={110}>
+                <TextInput
+                  type="number"
+                  step="0.01"
+                  value={price || ''}
+                  onChange={(e) => setPrices((p) => ({ ...p, [t.ticker]: Number(e.target.value) }))}
+                />
+              </Field>
+              <Field label="Shares to sell" width={120} title={\`Maximum \${fmt(availableShares, 0)} shares — the position remaining after this plan's pending sells.\`}>
+                <TextInput
+                  type="number"
+                  step="1"
+                  min={0}
+                  max={availableShares}
+                  value={selectedShares || ''}
+                  onChange={(e) => setSharesToSell((shares) => ({ ...shares, [t.ticker]: Math.max(0, Number(e.target.value)) }))}
+                />
+              </Field>
+              <div className="text-muted" style={{ fontSize: 12, paddingBottom: 7 }}>
+                Available after planned sells: <strong>{fmt(availableShares, 0)} sh</strong>
+                {t.plannedSold > 0 && <> · Before planned sells: <strong>{fmt(prePlanShares, 0)} sh</strong> · Planned sells: <strong>{fmt(t.plannedSold, 0)} sh</strong></>}
               </div>
+            </div>
+
+            {price > 0 && simulatedShares > 0 ? (
+              <div className="grid-auto" style={{ ...gridAutoStyle(150, 8), marginTop: 8 }}>
+                <div className="stat-card card">
+                  <div className="label">Sale proceeds</div>
+                  <div className="value">{fmtMoney(result.proceeds, currency)}</div>
+                </div>
+                <div className="stat-card card">
+                  <div className="label">P/L on selected shares</div>
+                  <div className={\`value \${result.pl >= 0 ? 'pill-positive' : 'pill-negative'}\`}>{fmtMoney(result.pl, currency)}</div>
+                </div>
+                <div className="stat-card card">
+                  <div className="label">Shares after simulation</div>
+                  <div className="value">{fmt(sharesAfter, 0)}</div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-muted mb-0 mt-sm">Enter an exit price and shares to see the simulated sale impact.</p>
             )}
           </div>
         );
@@ -300,7 +339,6 @@ function WhatIfExitCalculator({
     </div>
   );
 }
-
 function NewPlanFab() {
   const addTradePlan = useWorkbookStore((s) => s.addTradePlan);
   const transactions = useWorkbookStore((s) => s.workbook.transactions);
