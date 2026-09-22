@@ -1251,9 +1251,16 @@ function useAccountPicker() {
  * other module's own Transfers FAB opens. */
 function AccountTransfersFab({ accountId, currencyCode }: { accountId: string; currencyCode: string }) {
   const [open, setOpen] = useState(false);
+  const actionsByKey = useFabActionsStore((s) => s.actionsByKey);
+  const fabActions = allExtraActions(actionsByKey);
+  const actions = useMemo(
+    () => [{ label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen(true) }],
+    [],
+  );
+  usePageFabActions('bank-account-detail', actions);
   return (
     <>
-      <FabPanel actions={[{ label: 'Transfers', icon: <TransferIcon />, onClick: () => setOpen(true) }]} />
+      <FabPanel actions={fabActions} />
       {open && <TransactionEntryModal defaultFinance={{ module: 'bank', ref: accountId, currencyCode }} onClose={() => setOpen(false)} />}
     </>
   );
