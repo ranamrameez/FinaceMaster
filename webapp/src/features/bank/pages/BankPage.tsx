@@ -40,7 +40,7 @@ import { accountBalance, accountBalanceAsOfMonth, accountByCategory, accountPend
 import { outstandingBalanceByCard } from '../../../lib/calc/creditCardModule';
 import { monthRange } from '../../../lib/calc/budgetPlanner';
 import { isPlanDue, planWithinHorizon, plannedBankProjection, type PlanningHorizonDays } from '../../../lib/calc/plannedBalance';
-import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
+import { dlBarV, dlDoughnut, dlLine, doughnutOutsideLabels } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar, tickerColor } from '../../../lib/cssVar';
 import { parseCSV, toCSV } from '../../../lib/csv';
@@ -1210,18 +1210,7 @@ export function AccountDetailPage() {
          box entirely; the table now just grows with the page (one scroll
          axis: the page itself), with `.table-scroll` still handling
          horizontal overflow on a narrow viewport as it always did. */}
-      <Card className="mb-md">
-        <h3 className="mt-0">Transactions</h3>
-        <TransactionsList account={account} />
-      </Card>
-
-      {/* User-requested (2026-08-27): "Import CSV should belong an account" —
-         moved in from the old standalone tab (see ImportStatementSection's
-         own comment). Collapsed by default — importing a statement is rare
-         once an account's history is caught up. */}
-      <CollapsibleCard defaultOpen={false} className="mb-md" title={<h3 className="m-0">Import statement</h3>}>
-        <ImportStatementSection account={account} />
-      </CollapsibleCard>
+      <TransactionsList account={account} />
 
 
     </div>
@@ -1420,8 +1409,21 @@ function TransactionsList({ account }: { account: BankAccount }) {
     for (const p of pair) updateTransaction(p.id, { serialNumber: p.order });
   };
 
+  const exportTransactions = () => {
+    const header = ['#', 'Date', 'Description', 'Category', 'Amount', 'Balance', 'Source'];
+    const body = sorted.map(({ tx, balance }) => [tx.serialNumber ?? '', tx.date, tx.description, categoryName(tx.categoryID, categories), tx.amount, balance, tx.source === 'statement-import' ? 'Imported' + (tx.statementRef ? ' (' + tx.statementRef + ')' : '') : 'Manual']);
+    const blob = new Blob([toCSV([header, ...body])], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    const suffix = fromDate || toDate ? '_' + (fromDate || 'start') + '_to_' + (toDate || 'now') : '';
+    a.download = account.name.replace(/\s+/g, '_') + '_transactions' + suffix + '.csv';
+    a.click(); URL.revokeObjectURL(url);
+    toast(sorted.length + ' transaction' + (sorted.length === 1 ? '' : 's') + ' downloaded.');
+  };
+
   return (
-    <div>
+    <Card className="mb-md" headerExtra={<div className="row gap-sm" style={{ alignItems: 'center', justifyContent: 'flex-end' }}><ImportStatementSection account={account} compact /><button className="btn secondary small" onClick={exportTransactions} disabled={!sorted.length} title="Download exactly the transactions currently shown after applying the table filters."><ExportIcon size={13} />Export</button></div>}>
+      <h3 className="mt-0">Transactions</h3>
       <div className="row gap-sm mb-sm" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
         <Field label="From" width={135}>
           <DateInput value={fromDate} max={toDate || undefined} onChange={(e) => setFromDate(e.target.value)} />
@@ -1449,35 +1451,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
             <option value="statement-import">Imported</option>
           </Select>
         </Field>
-        <button
-          className="btn secondary small"
-          onClick={() => {
-            const header = ['#', 'Date', 'Description', 'Category', 'Amount', 'Balance', 'Source'];
-            const body = sorted.map(({ tx, balance }) => [
-              tx.serialNumber ?? '',
-              tx.date,
-              tx.description,
-              categoryName(tx.categoryID, categories),
-              tx.amount,
-              balance,
-              tx.source === 'statement-import'
-                ? 'Imported' + (tx.statementRef ? ' (' + tx.statementRef + ')' : '')
-                : 'Manual',
-            ]);
-            const blob = new Blob([toCSV([header, ...body])], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            const suffix = fromDate || toDate ? '_' + (fromDate || 'start') + '_to_' + (toDate || 'now') : '';
-            a.download = account.name.replace(/\s+/g, '_') + '_transactions' + suffix + '.csv';
-            a.click();
-            URL.revokeObjectURL(url);
-            toast(sorted.length + ' transaction' + (sorted.length === 1 ? '' : 's') + ' downloaded.');
-          }}
-          disabled={!sorted.length}
-        >
-          <ExportIcon size={13} />Download CSV
-        </button>
+
       </div>
       <div className="table-scroll">
       <table>
@@ -1600,7 +1574,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
           ]}
         />
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -1753,22 +1727,24 @@ function CategoryBreakdownBody({ account }: { account: BankAccount }) {
   const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
   const categories = useCategoryStore((s) => s.workbook.categories);
   const byCategory = accountByCategory(account, transactions, categories);
-  const cats = Object.keys(byCategory);
-  if (!cats.length) return <p className="text-muted m-0">No categorized transactions yet.</p>;
-
+  const spending = Object.entries(byCategory)
+    .filter(([, amount]) => amount < 0)
+    .map(([category, amount]) => ({ category, amount: Math.abs(amount) }))
+    .sort((a, b) => b.amount - a.amount);
+  if (!spending.length) return <p className="text-muted m-0">No spending by category yet.</p>;
   return (
-      <div className="table-scroll">
-        <table>
-          <tbody>
-            {cats.map((cat) => (
-              <tr key={cat}>
-                <td>{cat}</td>
-                <td className={byCategory[cat] >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(byCategory[cat], account.currencyCode)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+    <Doughnut
+      data={{
+        labels: spending.map((r) => r.category),
+        datasets: [{ data: spending.map((r) => r.amount), backgroundColor: spending.map((r) => tickerColor(r.category)) }],
+      }}
+      plugins={[doughnutOutsideLabels((v) => fmtMoney(v, account.currencyCode))]}
+      options={{
+        cutout: '52%',
+        plugins: { legend: { display: false }, datalabels: { display: false } },
+        layout: { padding: { top: 18, right: 70, bottom: 18, left: 70 } },
+      }}
+    />
   );
 }
 
@@ -1781,7 +1757,7 @@ function CategoryBreakdownBody({ account }: { account: BankAccount }) {
  * selectboxes to alter info" pattern the user separately called out).
  * Scoped to the account whose detail page it's embedded in — no picker,
  * since there's nothing to pick, the account is already known. */
-function ImportStatementSection({ account }: { account: BankAccount }) {
+function ImportStatementSection({ account, compact = false }: { account: BankAccount; compact?: boolean }) {
   const dateFormat = useAppearanceStore((s) => s.appearance.dateFormat ?? 'DD-MMM-YYYY');
   const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
   const addTransactions = useBankWorkbookStore((s) => s.addTransactions);
@@ -1845,25 +1821,30 @@ function ImportStatementSection({ account }: { account: BankAccount }) {
     source: 'statement-import' as const, statementRef: fileName,
   }));
 
-  const doImport = async (replaceDuplicates: boolean) => {
+  const doImport = async (mode: 'new-only' | 'replace' | 'keep-all') => {
     if (!dateCol || !descCol || !amountCol) return toast('Map all three columns before importing.');
     if (!validRows.length) return toast('No valid rows found. Check the date, description and amount mappings.');
     if (!(await ensureSignedIn('Sign in to import transactions.'))) return;
     const duplicateIds = duplicateRows.map((r) => existingByFingerprint.get(fingerprint({ date: r.date, description: r.description, amount: r.amount }))?.id).filter(Boolean) as string[];
-    const rowsToImport = uniqueRows.filter((r) => replaceDuplicates || !existingByFingerprint.has(fingerprint({ date: r.date, description: r.description, amount: r.amount })));
-    if (replaceDuplicates) replaceTransactions(duplicateIds, buildTransactions(rowsToImport)); else addTransactions(buildTransactions(rowsToImport));
+    const rowsToImport = mode === 'keep-all'
+      ? validRows
+      : uniqueRows.filter((r) => mode === 'replace' || !existingByFingerprint.has(fingerprint({ date: r.date, description: r.description, amount: r.amount })));
+    if (mode === 'replace') replaceTransactions(duplicateIds, buildTransactions(rowsToImport));
+    else addTransactions(buildTransactions(rowsToImport));
     const skipped = validRows.length - rowsToImport.length;
-    toast(`${replaceDuplicates ? 'Imported and replaced' : 'Imported'} ${rowsToImport.length} transaction${rowsToImport.length === 1 ? '' : 's'}${skipped ? `; skipped ${skipped} duplicate${skipped === 1 ? '' : 's'}` : ''}.`);
+    toast((mode === 'replace' ? 'Imported and replaced' : 'Imported') + ' ' + rowsToImport.length + ' transaction' + (rowsToImport.length === 1 ? '' : 's') + (skipped ? '; skipped ' + skipped + ' duplicate' + (skipped === 1 ? '' : 's') : '') + '.');
     reset();
   };
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+      {compact && <button className="btn secondary small" onClick={() => fileInput.current?.click()}><PlusIcon size={13} />Import</button>}
+      {!compact && <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
         <span className="text-muted">Import a CSV export from your bank into {account.name}.</span>
         <Tooltip text="Choose a CSV, map its columns, review the import, then confirm. Existing matching transactions are detected by date + description + amount so importing the same statement again does not create duplicates." />
-      </div>
-      <button className="btn secondary" onClick={() => fileInput.current?.click()}>Choose CSV file</button>
+      </div>}
+      {!compact && <button className="btn secondary" onClick={() => fileInput.current?.click()}>Choose CSV file</button>
+      </button>}
       <input ref={fileInput} type="file" accept=".csv,text/csv" className="hidden-file-input" onChange={(e) => { const file = e.target.files?.[0]; if (file) onFile(file); e.target.value = ''; }} />
 
       {open && (
@@ -1891,10 +1872,17 @@ function ImportStatementSection({ account }: { account: BankAccount }) {
           </div>
           {rows.length > 100 && <p className="text-muted">Showing first 100 of {rows.length} rows in the preview.</p>}
           {duplicateRows.length > 0 && <Notice tone="warning" className="mt-md"><strong>{duplicateRows.length} matching transaction{duplicateRows.length === 1 ? '' : 's'} already exist.</strong><div className="text-muted mt-sm">Import new only skips them. Replace duplicates overwrites matching existing transactions and requires confirmation.</div></Notice>}
-          <div className="row gap-sm" style={{ justifyContent: 'flex-end', marginTop: 16 }}>
+          <div className="row gap-sm" style={{ justifyContent: 'flex-end', marginTop: 16, flexWrap: 'wrap' }}>
             <button className="btn secondary" onClick={reset}>Cancel</button>
-            {duplicateRows.length > 0 && <button className="btn danger" onClick={() => confirmDialog(`This will replace ${duplicateRows.length} existing matching transaction${duplicateRows.length === 1 ? '' : 's'} with the CSV version. This cannot be undone.`, 'Confirm overwrite?').then((ok) => ok && doImport(true))}>Replace duplicates</button>}
-            <button className="btn" disabled={!validRows.length} onClick={() => doImport(false)}><PlusIcon />Import new only</button>
+            <Tooltip text="Skip rows that already exist in this account, based on date + description + amount. New rows are imported.">
+              <button className="btn" disabled={!validRows.length} onClick={() => doImport('new-only')}><PlusIcon />Import new only</button>
+            </Tooltip>
+            {duplicateRows.length > 0 && <Tooltip text="Replace matching existing transactions with the CSV version. This requires confirmation because the existing records are overwritten.">
+              <button className="btn danger" onClick={() => confirmDialog(`This will replace ${duplicateRows.length} existing matching transaction${duplicateRows.length === 1 ? '' : 's'} with the CSV version. This cannot be undone.`, 'Confirm overwrite?').then((ok) => ok && doImport('replace'))}>Replace duplicates</button>
+            </Tooltip>}
+            {duplicateRows.length > 0 && <Tooltip text="Import every valid CSV row, including rows already detected as duplicates. Use this when you want to review and handle duplicates yourself after import.">
+              <button className="btn secondary" disabled={!validRows.length} onClick={() => doImport('keep-all')}>Keep all</button>
+            </Tooltip>}
           </div>
         </Modal>
       )}
