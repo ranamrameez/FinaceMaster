@@ -1783,10 +1783,12 @@ function CategoryBreakdownBody({ account }: { account: BankAccount }) {
  * since there's nothing to pick, the account is already known. */
 function ImportStatementSection({ account }: { account: BankAccount }) {
   const dateFormat = useAppearanceStore((s) => s.appearance.dateFormat ?? 'DD-MMM-YYYY');
+  const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
   const addTransactions = useBankWorkbookStore((s) => s.addTransactions);
+  const replaceTransactions = useBankWorkbookStore((s) => s.replaceTransactions);
   const ensureSignedIn = useEnsureSignedIn();
   const fileInput = useRef<HTMLInputElement>(null);
-
+  const [open, setOpen] = useState(false);
   const [fileName, setFileName] = useState('');
   const [headers, setHeaders] = useState<string[]>([]);
   const [rows, setRows] = useState<string[][]>([]);
@@ -1795,133 +1797,110 @@ function ImportStatementSection({ account }: { account: BankAccount }) {
   const [amountCol, setAmountCol] = useState('');
   const [flipSign, setFlipSign] = useState(false);
 
+  const reset = () => { setOpen(false); setFileName(''); setHeaders([]); setRows([]); setDateCol(''); setDescCol(''); setAmountCol(''); setFlipSign(false); };
+
   const onFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = () => {
       const parsed = parseCSV(String(reader.result));
-      if (parsed.length < 2) {
-        toast('Could not find any data rows in that file.');
-        return;
-      }
+      if (parsed.length < 2) return toast('Could not find any data rows in that file.');
       const [head, ...body] = parsed;
-      setFileName(file.name);
-      setHeaders(head);
-      setRows(body);
-      setDateCol(head[0] ?? '');
-      setDescCol(head[1] ?? '');
-      setAmountCol(head[2] ?? '');
+      setFileName(file.name); setHeaders(head); setRows(body);
+      setDateCol(head[0] ?? ''); setDescCol(head[1] ?? ''); setAmountCol(head[2] ?? ''); setOpen(true);
     };
     reader.readAsText(file);
   };
 
   const colIndex = (col: string) => headers.indexOf(col);
-  const mappedPreview = rows.slice(0, 5).map((r) => ({
-    date: r[colIndex(dateCol)] ?? '',
-    description: r[colIndex(descCol)] ?? '',
-    amount: Number(r[colIndex(amountCol)] ?? 0) * (flipSign ? -1 : 1),
+  const parseImportedDate = (raw: string): string | null => {
+    const formats = ['DD-MMM-YYYY','YYYY-MMM-DD','DD-MM-YYYY','MM-DD-YYYY','DD/MM/YYYY','MM/DD/YYYY'] as const;
+    for (const format of formats) { const parsed = parseDateInput(raw, format); if (parsed) return parsed; }
+    return null;
+  };
+
+  const mappedRows = useMemo(() => rows.map((r, index) => {
+    const rawDate = (r[colIndex(dateCol)] ?? '').trim();
+    const date = parseImportedDate(rawDate);
+    const description = (r[colIndex(descCol)] ?? '').trim();
+    const amount = Number(r[colIndex(amountCol)] ?? 0) * (flipSign ? -1 : 1);
+    return { index, rawDate, date, description, amount, valid: Boolean(date && description && !Number.isNaN(amount) && amount !== 0) };
+  }), [rows, dateCol, descCol, amountCol, flipSign]);
+
+  const fingerprint = (t: { date: string; description: string; amount: number }) => t.date + '|' + t.description.trim().toLowerCase().replace(/\s+/g, ' ') + '|' + t.amount.toFixed(8);
+  const existingByFingerprint = useMemo(() => {
+    const map = new Map<string, BankTransaction>();
+    transactions.filter((t) => t.accountId === account.id).forEach((t) => map.set(fingerprint(t), t));
+    return map;
+  }, [transactions, account.id]);
+
+  const validRows = mappedRows.filter((r) => r.valid && r.date) as Array<typeof mappedRows[number] & { date: string }>;
+  const duplicateRows = useMemo(() => validRows.filter((r) => existingByFingerprint.has(fingerprint({ date: r.date, description: r.description, amount: r.amount }))), [validRows, existingByFingerprint]);
+  const uniqueRows = useMemo(() => {
+    const seen = new Set<string>();
+    return validRows.filter((r) => { const key = fingerprint({ date: r.date, description: r.description, amount: r.amount }); if (seen.has(key)) return false; seen.add(key); return true; });
+  }, [validRows]);
+
+  const buildTransactions = (rowsToImport: typeof validRows): BankTransaction[] => rowsToImport.map((r) => ({
+    id: uid(), accountId: account.id, date: r.date, description: r.description, amount: r.amount, isDeposit: r.amount >= 0,
+    source: 'statement-import' as const, statementRef: fileName,
   }));
 
-  const doImport = async () => {
-    if (!dateCol || !descCol || !amountCol) return toast('Map all three columns (date, description, amount).');
+  const doImport = async (replaceDuplicates: boolean) => {
+    if (!dateCol || !descCol || !amountCol) return toast('Map all three columns before importing.');
+    if (!validRows.length) return toast('No valid rows found. Check the date, description and amount mappings.');
     if (!(await ensureSignedIn('Sign in to import transactions.'))) return;
-    const di = colIndex(dateCol);
-    const desci = colIndex(descCol);
-    const ai = colIndex(amountCol);
-    const imported: BankTransaction[] = rows
-      .map((r) => ({
-        id: uid(),
-        accountId: account.id,
-        date: (r[di] ?? '').trim(),
-        description: (r[desci] ?? '').trim(),
-        amount: Number(r[ai]) * (flipSign ? -1 : 1),
-        // Re-derived from `amount`'s own sign by the store anyway (Bank's
-        // amount is the authoritative field — see `types/finance.ts`); set
-        // here only to satisfy the type.
-        isDeposit: Number(r[ai]) * (flipSign ? -1 : 1) >= 0,
-        source: 'statement-import' as const,
-        statementRef: fileName,
-      }))
-      .filter((t) => t.date && t.description && !Number.isNaN(t.amount) && t.amount !== 0);
-    if (!imported.length) return toast('No valid rows to import after mapping — check your column choices.');
-    addTransactions(imported);
-    toast(`Imported ${imported.length} transaction${imported.length > 1 ? 's' : ''} from ${fileName}.`);
-    setHeaders([]);
-    setRows([]);
-    setFileName('');
+    const duplicateIds = duplicateRows.map((r) => existingByFingerprint.get(fingerprint({ date: r.date, description: r.description, amount: r.amount }))?.id).filter(Boolean) as string[];
+    const rowsToImport = uniqueRows.filter((r) => replaceDuplicates || !existingByFingerprint.has(fingerprint({ date: r.date, description: r.description, amount: r.amount })));
+    if (replaceDuplicates) replaceTransactions(duplicateIds, buildTransactions(rowsToImport)); else addTransactions(buildTransactions(rowsToImport));
+    const skipped = validRows.length - rowsToImport.length;
+    toast(`${replaceDuplicates ? 'Imported and replaced' : 'Imported'} ${rowsToImport.length} transaction${rowsToImport.length === 1 ? '' : 's'}${skipped ? `; skipped ${skipped} duplicate${skipped === 1 ? '' : 's'}` : ''}.`);
+    reset();
   };
 
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
         <span className="text-muted">Import a CSV export from your bank into {account.name}.</span>
-        <Tooltip text={'This is a simple "map these columns" tool, not a per-bank-format parser — pick which column is which below, since every bank\'s export looks a little different. Date values must be in YYYY-MM-DD format (e.g. 2026-01-15) — other date formats will sort incorrectly once imported.'} />
+        <Tooltip text="Choose a CSV, map its columns, review the import, then confirm. Existing matching transactions are detected by date + description + amount so importing the same statement again does not create duplicates." />
       </div>
-      <div>
-        <button className="btn secondary" onClick={() => fileInput.current?.click()}>Choose CSV file</button>
-        <input
-          ref={fileInput}
-          type="file"
-          accept=".csv,text/csv"
-          className="hidden-file-input"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) onFile(file);
-            e.target.value = '';
-          }}
-        />
-        {fileName && <span className="text-muted" style={{ marginLeft: 8 }}>{fileName} ({rows.length} rows)</span>}
-      </div>
+      <button className="btn secondary" onClick={() => fileInput.current?.click()}>Choose CSV file</button>
+      <input ref={fileInput} type="file" accept=".csv,text/csv" className="hidden-file-input" onChange={(e) => { const file = e.target.files?.[0]; if (file) onFile(file); e.target.value = ''; }} />
 
-      {headers.length > 0 && (
-        <div className="mt-12">
+      {open && (
+        <Modal title={`Import statement — ${fileName}`} onClose={reset} width="900px">
           <div className="row gap-sm">
-            <Field label="Date column" width={160}>
-              <Select value={dateCol} onChange={(e) => setDateCol(e.target.value)}>
-                {headers.map((h) => <option key={h} value={h}>{h}</option>)}
-              </Select>
-            </Field>
-            <Field label="Description column" width={160}>
-              <Select value={descCol} onChange={(e) => setDescCol(e.target.value)}>
-                {headers.map((h) => <option key={h} value={h}>{h}</option>)}
-              </Select>
-            </Field>
-            <Field label="Amount column" width={160}>
-              <Select value={amountCol} onChange={(e) => setAmountCol(e.target.value)}>
-                {headers.map((h) => <option key={h} value={h}>{h}</option>)}
-              </Select>
-            </Field>
-            <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 20 }} title="Check this if your bank exports spending as positive numbers instead of negative.">
-              <input type="checkbox" checked={flipSign} onChange={(e) => setFlipSign(e.target.checked)} />
-              Flip sign
-            </label>
+            <Field label="Date column" width={180}><Select value={dateCol} onChange={(e) => setDateCol(e.target.value)}>{headers.map((h) => <option key={h} value={h}>{h}</option>)}</Select></Field>
+            <Field label="Description column" width={220}><Select value={descCol} onChange={(e) => setDescCol(e.target.value)}>{headers.map((h) => <option key={h} value={h}>{h}</option>)}</Select></Field>
+            <Field label="Amount column" width={180}><Select value={amountCol} onChange={(e) => setAmountCol(e.target.value)}>{headers.map((h) => <option key={h} value={h}>{h}</option>)}</Select></Field>
+            <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 20 }}><input type="checkbox" checked={flipSign} onChange={(e) => setFlipSign(e.target.checked)} />Flip sign</label>
           </div>
-
-          <h4>Preview (first 5 rows)</h4>
-          <div className="table-scroll">
-            <table>
-              <thead><tr><th>Date</th><th>Description</th><th>Amount</th></tr></thead>
-              <tbody>
-                {mappedPreview.map((r, i) => (
-                  <tr key={i}>
-                    <td>{formatDate(r.date, dateFormat)}</td>
-                    <td>{r.description}</td>
-                    <td className={r.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(r.amount, account.currencyCode)}</td>
-                  </tr>
-                ))}
-              </tbody>
+          <div className="grid-auto mt-md" style={gridAutoStyle(150, 8)}>
+            <div className="stat-card card"><div className="label">CSV rows</div><strong>{rows.length}</strong></div>
+            <div className="stat-card card"><div className="label">Valid rows</div><strong>{validRows.length}</strong></div>
+            <div className="stat-card card"><div className="label">New transactions</div><strong>{uniqueRows.filter((r) => !existingByFingerprint.has(fingerprint({ date: r.date, description: r.description, amount: r.amount }))).length}</strong></div>
+            <div className="stat-card card"><div className="label">Existing duplicates</div><strong className={duplicateRows.length ? 'pill-negative' : 'pill-positive'}>{duplicateRows.length}</strong></div>
+          </div>
+          <h4>Preview</h4>
+          <div className="table-scroll" style={{ maxHeight: 360 }}>
+            <table><thead><tr><th>#</th><th>Date</th><th>Description</th><th>Amount</th><th>Status</th></tr></thead>
+              <tbody>{mappedRows.slice(0, 100).map((r) => {
+                const duplicate = r.valid && r.date ? existingByFingerprint.has(fingerprint({ date: r.date, description: r.description, amount: r.amount })) : false;
+                return <tr key={r.index}><td>{r.index + 1}</td><td>{r.date ? formatDate(r.date, dateFormat) : r.rawDate || '—'}</td><td>{r.description}</td><td className={r.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{Number.isFinite(r.amount) ? fmtMoney(r.amount, account.currencyCode) : 'Invalid'}</td><td className={r.valid ? (duplicate ? 'text-loss' : 'text-profit') : 'text-loss'}>{r.valid ? (duplicate ? 'Duplicate' : 'New') : 'Invalid'}</td></tr>;
+              })}</tbody>
             </table>
           </div>
-          <div className="row" style={{ marginTop: 12, justifyContent: 'flex-end' }}>
-            <button className="btn" onClick={doImport}>
-              <PlusIcon />Import {rows.length} transaction{rows.length > 1 ? 's' : ''}
-            </button>
+          {rows.length > 100 && <p className="text-muted">Showing first 100 of {rows.length} rows in the preview.</p>}
+          {duplicateRows.length > 0 && <Notice tone="warning" className="mt-md"><strong>{duplicateRows.length} matching transaction{duplicateRows.length === 1 ? '' : 's'} already exist.</strong><div className="text-muted mt-sm">Import new only skips them. Replace duplicates overwrites matching existing transactions and requires confirmation.</div></Notice>}
+          <div className="row gap-sm" style={{ justifyContent: 'flex-end', marginTop: 16 }}>
+            <button className="btn secondary" onClick={reset}>Cancel</button>
+            {duplicateRows.length > 0 && <button className="btn danger" onClick={() => confirmDialog(`This will replace ${duplicateRows.length} existing matching transaction${duplicateRows.length === 1 ? '' : 's'} with the CSV version. This cannot be undone.`, 'Confirm overwrite?').then((ok) => ok && doImport(true))}>Replace duplicates</button>}
+            <button className="btn" disabled={!validRows.length} onClick={() => doImport(false)}><PlusIcon />Import new only</button>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );
 }
-
 /* ============================== Settings ============================== */
 
 function AccountSection({
