@@ -41,7 +41,7 @@ import { accountBalance, accountByCategory, accountPendingBalance, accountRunnin
 import { outstandingBalanceByCard } from '../../../lib/calc/creditCardModule';
 import { monthRange } from '../../../lib/calc/budgetPlanner';
 import { isPlanDue, planWithinHorizon, plannedBankProjection, type PlanningHorizonDays } from '../../../lib/calc/plannedBalance';
-import { dlBarV, dlDoughnut, dlLine, doughnutOutsideLabels } from '../../../lib/chartLabels';
+import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar, tickerColor } from '../../../lib/cssVar';
 import { parseCSV, toCSV } from '../../../lib/csv';
@@ -1750,7 +1750,7 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
       </div>
 
       <Card className="mb-md">
-        <h3 className="m-0 mb-sm">Summary — {rangeLabel{'}'}</h3>
+        <h3 className="m-0 mb-sm">Summary — {rangeLabel}</h3>
         <div className="grid-auto" style={{ ...gridAutoStyle(150, 12) }}>
           <div className="stat-card"><div className="label">Deposits</div><MoneyValue n={deposits} currency={account.currencyCode} /></div>
           <div className="stat-card"><div className="label">Withdrawals</div><MoneyValue n={withdrawals} currency={account.currencyCode} /></div>
@@ -1799,19 +1799,7 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
         </ChartCard>
       </div>
 
-      <CollapsibleCard title={<h3 className="m-0">Summary — {rangeLabel}</h3>} className="mt-md">
-        <div className="table-scroll">
-          <table>
-            <thead><tr><th>Metric</th><th>Amount</th></tr></thead>
-            <tbody>
-              <tr><td>Deposits</td><td>{fmtMoney(deposits, account.currencyCode)}</td></tr>
-              <tr><td>Withdrawals</td><td>{fmtMoney(Math.abs(withdrawals), account.currencyCode)}</td></tr>
-              <tr><td>Net flow</td><td className={netFlow >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(netFlow, account.currencyCode)}</td></tr>
-              <tr><td>Transactions</td><td>{rangeTransactions.length}</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </CollapsibleCard>
+
     </div>
       <FabPanel actions={fabActions} />
     </div>
