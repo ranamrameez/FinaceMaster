@@ -69,6 +69,7 @@ interface BankStoreState {
   deleteBank: (id: string) => void;
   addTransaction: (tx: BankTransaction) => void;
   addTransactions: (txs: BankTransaction[]) => void;
+  replaceTransactions: (ids: string[], txs: BankTransaction[]) => void;
   updateTransaction: (id: string, patch: Partial<BankTransaction>) => void;
   deleteTransaction: (id: string) => void;
   setBudget: (category: string, amount: number) => void;
@@ -156,6 +157,15 @@ export const useBankWorkbookStore = create<BankStoreState>((set, get) => {
         const withFields = txs.map(withDerivedFields);
         const withSerial = assignSerialNumbersForEntities(wb.transactions, withFields, (t) => t.accountId);
         return { ...wb, transactions: [...wb.transactions, ...withSerial] };
+      }),
+
+    replaceTransactions: (ids, txs) =>
+      mutate((wb) => {
+        const remove = new Set(ids);
+        const kept = wb.transactions.filter((t) => !remove.has(t.id));
+        const withFields = txs.map(withDerivedFields);
+        const withSerial = assignSerialNumbersForEntities(kept, withFields, (t) => t.accountId);
+        return { ...wb, transactions: [...kept, ...withSerial] };
       }),
 
     updateTransaction: (id, patch) =>

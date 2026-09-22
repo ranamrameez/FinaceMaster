@@ -1,3 +1,4 @@
+import type { Chart as ChartJS } from 'chart.js';
 import { cssVar } from './cssVar';
 
 // On-chart value labels via chartjs-plugin-datalabels. display:'auto' lets
@@ -60,7 +61,43 @@ export function dlLine(formatter: (v: number) => string) {
   return dlBase(formatter, { align: 'top', offset: 6 });
 }
 
-export function dlDoughnut(formatter: (v: number) => string) {
+/** Doughnut labels outside the ring with short leader lines. */
+export function doughnutOutsideLabels(formatter: (v: number, index: number) => string) {
+  return {
+    id: 'doughnutOutsideLabels',
+    afterDatasetsDraw(chart: ChartJS<'doughnut'>) {
+      const meta = chart.getDatasetMeta(0);
+      const dataset = chart.data.datasets[0];
+      const values = (dataset?.data ?? []) as unknown[];
+      if (!meta?.data?.length || !values.length) return;
+      const ctx = chart.ctx;
+      const width = chart.width;
+      ctx.save();
+      ctx.font = '700 11px sans-serif';
+      ctx.textBaseline = 'middle';
+      ctx.lineWidth = 1;
+      meta.data.forEach((arc, index) => {
+        const value = Number(values[index] ?? 0);
+        if (!Number.isFinite(value) || value <= 0) return;
+        const a = arc as unknown as { x: number; y: number; outerRadius: number; startAngle: number; endAngle: number };
+        const angle = (a.startAngle + a.endAngle) / 2;
+        const cos = Math.cos(angle), sin = Math.sin(angle);
+        const startX = a.x + cos * (a.outerRadius + 2), startY = a.y + sin * (a.outerRadius + 2);
+        const elbowX = a.x + cos * (a.outerRadius + 18), elbowY = a.y + sin * (a.outerRadius + 18);
+        const right = cos >= 0;
+        const endX = right ? Math.min(width - 92, elbowX + 38) : Math.max(92, elbowX - 38);
+        ctx.strokeStyle = cssVar('--muted') || '#7d8790';
+        ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(elbowX, elbowY); ctx.lineTo(endX, elbowY); ctx.stroke();
+        ctx.fillStyle = cssVar('--text') || '#e8ecef';
+        ctx.textAlign = right ? 'left' : 'right';
+        ctx.fillText(formatter(value, index), right ? endX + 4 : endX - 4, elbowY);
+      });
+      ctx.restore();
+    },
+  };
+}
+
+
   return dlBase(formatter, {
     backgroundColor: 'transparent',
     color: '#fff',

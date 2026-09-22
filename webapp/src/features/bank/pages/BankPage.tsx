@@ -12,7 +12,7 @@ import { Modal } from '../../../components/Modal';
 import { RecordDetailModal } from '../../../components/RecordDetailModal';
 import { Tabs } from '../../../components/Tabs';
 import { toast } from '../../../components/Toast';
-import { Field, Select, TextInput } from '../../../components/ui/Field';
+import { DateInput, Field, Select, TextInput } from '../../../components/ui/Field';
 import { PendingToggle } from '../../../components/ui/PendingToggle';
 import { DirectionChips } from '../../../components/ui/DirectionChips';
 import { IconButton } from '../../../components/ui/IconButton';
@@ -40,11 +40,11 @@ import { accountBalance, accountBalanceAsOfMonth, accountByCategory, accountPend
 import { outstandingBalanceByCard } from '../../../lib/calc/creditCardModule';
 import { monthRange } from '../../../lib/calc/budgetPlanner';
 import { isPlanDue, planWithinHorizon, plannedBankProjection, type PlanningHorizonDays } from '../../../lib/calc/plannedBalance';
-import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
+import { dlBarV, dlDoughnut, dlLine, doughnutOutsideLabels } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar, tickerColor } from '../../../lib/cssVar';
 import { parseCSV, toCSV } from '../../../lib/csv';
-import { fmtMoney } from '../../../lib/format';
+import { formatDate, fmtMoney, parseDateInput } from '../../../lib/format';
 import { dateOnlyMs } from '../../../lib/datetime';
 import { confirmAndDeleteLinkable, propagateLinkedEdit, resolveLinkedEdit } from '../../../lib/linkCascade';
 import { isValidIbanFormat, lookupIban } from '../../../lib/ibanLookup';
@@ -927,6 +927,7 @@ function CreditUsageBar({ used, limit, currency }: { used: number; limit: number
  * Loans rollout — same "ship one page first" pattern this project always
  * follows (see e.g. Done item 58's own "v1 for Banking only" precedent). */
 export function AccountDetailPage() {
+  const dateFormat = useAppearanceStore((s) => s.appearance.dateFormat ?? 'DD-MMM-YYYY');
   const { id } = useParams();
   const navigate = useNavigate();
   const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
@@ -1151,7 +1152,7 @@ export function AccountDetailPage() {
          Transfers FAB below), this grid holds By category + Upcoming plans
          side by side instead of either claiming the full page width. */}
       <div className="detail-grid mb-md">
-        <CollapsibleCard defaultOpen={false} title={<h3 className="m-0">By category</h3>}>
+        <CollapsibleCard defaultOpen={false} title={<h3 className="m-0">Spending by category</h3>}>
           <CategoryBreakdownBody account={account} />
         </CollapsibleCard>
 
@@ -1163,7 +1164,7 @@ export function AccountDetailPage() {
                 <tbody>
                   {upcoming.map((p) => (
                     <tr key={p.id}>
-                      <td>{p.date}</td>
+                      <td>{formatDate(p.date, dateFormat)}</td>
                       <td>{p.description}</td>
                       <td className={p.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(p.amount, account.currencyCode)}</td>
                     </tr>
@@ -1209,18 +1210,7 @@ export function AccountDetailPage() {
          box entirely; the table now just grows with the page (one scroll
          axis: the page itself), with `.table-scroll` still handling
          horizontal overflow on a narrow viewport as it always did. */}
-      <Card className="mb-md">
-        <h3 className="mt-0">Transactions</h3>
-        <TransactionsList account={account} />
-      </Card>
-
-      {/* User-requested (2026-08-27): "Import CSV should belong an account" —
-         moved in from the old standalone tab (see ImportStatementSection's
-         own comment). Collapsed by default — importing a statement is rare
-         once an account's history is caught up. */}
-      <CollapsibleCard defaultOpen={false} className="mb-md" title={<h3 className="m-0">Import statement</h3>}>
-        <ImportStatementSection account={account} />
-      </CollapsibleCard>
+      <TransactionsList account={account} />
 
 
     </div>
@@ -1303,7 +1293,7 @@ function EditTransactionModal({ tx, onClose }: { tx: BankTransaction; onClose: (
     <FinanceEditModal titleText="Edit transaction" onClose={onClose} onSave={save}>
       <div className="row gap-sm">
         <Field label="Date">
-          <TextInput type="date" value={draft.date} onChange={(e) => setDraft({ ...draft, date: e.target.value })} />
+          <DateInput value={draft.date} onChange={(e) => setDraft({ ...draft, date: e.target.value })} />
         </Field>
         <Field label="Description" required>
           <TextInput value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
@@ -1343,6 +1333,7 @@ function EditTransactionModal({ tx, onClose }: { tx: BankTransaction; onClose: (
  * extends the Type/Category filter treatment Cash's statement tables got
  * (README Done item 224) here too. */
 function TransactionsList({ account }: { account: BankAccount }) {
+  const dateFormat = useAppearanceStore((s) => s.appearance.dateFormat ?? 'DD-MMM-YYYY');
   const allTransactions = useBankWorkbookStore((s) => s.workbook.transactions);
   const updateTransaction = useBankWorkbookStore((s) => s.updateTransaction);
   const deleteTransaction = useBankWorkbookStore((s) => s.deleteTransaction);
@@ -1418,14 +1409,27 @@ function TransactionsList({ account }: { account: BankAccount }) {
     for (const p of pair) updateTransaction(p.id, { serialNumber: p.order });
   };
 
+  const exportTransactions = () => {
+    const header = ['#', 'Date', 'Description', 'Category', 'Amount', 'Balance', 'Source'];
+    const body = sorted.map(({ tx, balance }) => [tx.serialNumber ?? '', tx.date, tx.description, categoryName(tx.categoryID, categories), tx.amount, balance, tx.source === 'statement-import' ? 'Imported' + (tx.statementRef ? ' (' + tx.statementRef + ')' : '') : 'Manual']);
+    const blob = new Blob([toCSV([header, ...body])], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    const suffix = fromDate || toDate ? '_' + (fromDate || 'start') + '_to_' + (toDate || 'now') : '';
+    a.download = account.name.replace(/\s+/g, '_') + '_transactions' + suffix + '.csv';
+    a.click(); URL.revokeObjectURL(url);
+    toast(sorted.length + ' transaction' + (sorted.length === 1 ? '' : 's') + ' downloaded.');
+  };
+
   return (
-    <div>
+    <Card className="mb-md" headerExtra={<div className="row gap-sm" style={{ alignItems: 'center', justifyContent: 'flex-end' }}><ImportStatementSection account={account} compact /><button className="btn secondary small" onClick={exportTransactions} disabled={!sorted.length} title="Download exactly the transactions currently shown after applying the table filters."><ExportIcon size={13} />Export</button></div>}>
+      <h3 className="mt-0">Transactions</h3>
       <div className="row gap-sm mb-sm" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
         <Field label="From" width={135}>
-          <TextInput type="date" value={fromDate} max={toDate || undefined} onChange={(e) => setFromDate(e.target.value)} />
+          <DateInput value={fromDate} max={toDate || undefined} onChange={(e) => setFromDate(e.target.value)} />
         </Field>
         <Field label="To" width={135}>
-          <TextInput type="date" value={toDate} min={fromDate || undefined} onChange={(e) => setToDate(e.target.value)} />
+          <DateInput value={toDate} min={fromDate || undefined} onChange={(e) => setToDate(e.target.value)} />
         </Field>
         <Field label="Type" width={120}>
           <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
@@ -1447,35 +1451,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
             <option value="statement-import">Imported</option>
           </Select>
         </Field>
-        <button
-          className="btn secondary small"
-          onClick={() => {
-            const header = ['#', 'Date', 'Description', 'Category', 'Amount', 'Balance', 'Source'];
-            const body = sorted.map(({ tx, balance }) => [
-              tx.serialNumber ?? '',
-              tx.date,
-              tx.description,
-              categoryName(tx.categoryID, categories),
-              tx.amount,
-              balance,
-              tx.source === 'statement-import'
-                ? 'Imported' + (tx.statementRef ? ' (' + tx.statementRef + ')' : '')
-                : 'Manual',
-            ]);
-            const blob = new Blob([toCSV([header, ...body])], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            const suffix = fromDate || toDate ? '_' + (fromDate || 'start') + '_to_' + (toDate || 'now') : '';
-            a.download = account.name.replace(/\s+/g, '_') + '_transactions' + suffix + '.csv';
-            a.click();
-            URL.revokeObjectURL(url);
-            toast(sorted.length + ' transaction' + (sorted.length === 1 ? '' : 's') + ' downloaded.');
-          }}
-          disabled={!sorted.length}
-        >
-          <ExportIcon size={13} />Download CSV
-        </button>
+
       </div>
       <div className="table-scroll">
       <table>
@@ -1523,7 +1499,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
                     />
                   </span>
                 </td>
-                <td>{tx.date}</td>
+                <td>{formatDate(tx.date, dateFormat)}</td>
                 <td className="cell-clip" title={tx.description} onClick={(e) => e.stopPropagation()}>
                   {tx.description}
                   {tx.isPending && (
@@ -1582,7 +1558,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
           onClose={() => setDetailTx(null)}
           fields={[
             { label: '#', value: detailTx.serialNumber ?? '—' },
-            { label: 'Date', value: detailTx.date },
+            { label: 'Date', value: formatDate(detailTx.date, dateFormat) },
             { label: 'Time', value: detailTx.time ?? '— (defaults to noon)' },
             { label: 'Timezone', value: detailTx.timezone ?? '—' },
             { label: 'Description', value: detailTx.description || '—' },
@@ -1598,7 +1574,7 @@ function TransactionsList({ account }: { account: BankAccount }) {
           ]}
         />
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -1622,47 +1598,69 @@ function TransactionsList({ account }: { account: BankAccount }) {
  * category) — a chart's own hover tooltip is the only other way to read
  * an exact number today, and doesn't work at all on a touch device. */
 function AccountAnalyticsSection({ account }: { account: BankAccount }) {
+  const dateFormat = useAppearanceStore((s) => s.appearance.dateFormat ?? 'DD-MMM-YYYY');
   const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
   const categories = useCategoryStore((s) => s.workbook.categories);
   useAppearanceStore((s) => s.appearance);
   applyChartTheme();
 
+  type RangePreset = '1' | '3' | '6' | '12' | 'ytd' | 'custom';
+  const [rangePreset, setRangePreset] = useState<RangePreset>('1');
+  const [fromMonth, setFromMonth] = useState(() => today().slice(0, 7));
+  const [toMonth, setToMonth] = useState(() => today().slice(0, 7));
+
+  const rangeStart = useMemo(() => {
+    const now = new Date();
+    const current = new Date(now.getFullYear(), now.getMonth(), 1);
+    if (rangePreset === 'custom') return fromMonth || toMonth || today().slice(0, 7);
+    if (rangePreset === 'ytd') return current.getFullYear() + '-01';
+    const months = Number(rangePreset);
+    const d = new Date(current.getFullYear(), current.getMonth() - (months - 1), 1);
+    return d.toISOString().slice(0, 7);
+  }, [rangePreset, fromMonth, toMonth]);
+
+  const rangeEnd = rangePreset === 'custom' ? (toMonth || fromMonth || today().slice(0, 7)) : today().slice(0, 7);
+
+  const inRange = (date: string) => {
+    const month = date.slice(0, 7);
+    return month >= rangeStart && month <= rangeEnd;
+  };
+
+  const rangeTransactions = useMemo(
+    () => transactions.filter((t) => t.accountId === account.id && inRange(t.date)),
+    [transactions, account.id, rangeStart, rangeEnd],
+  );
+
   const ledger = useMemo(() => accountRunningLedger(account, transactions), [account, transactions]);
-  const monthlyFlow = useMemo(() => bankMonthlyFlow(transactions, [account.id]), [transactions, account.id]);
-
-  // Pending item 115(d): "charts should be interactive... right now they are
-  // dumping lifetime data all at once" — a from/to month range narrows the
-  // two full-history charts (Balance over time, Deposits vs. withdrawals by month).
-  // Deliberately a local `<input type="month">` pair rather than reusing
-  // QSE/PSX's `ChartFilterBar`/`ChartFilter` (lib/calc/chartFilters.ts) —
-  // that type's `tickers` field has no meaning for a bank account, and the
-  // shapes here (a running ledger, a `{month,income,expense}[]` series)
-  // don't match its `{months,values}` helpers either. The Category
-  // breakdown card + its own ◀/▶ month nav below is a separate, more
-  // specific tool (one exact month at a time) and is left untouched.
-  const [fromMonth, setFromMonth] = useState('');
-  const [toMonth, setToMonth] = useState('');
   const filteredLedger = useMemo(
-    () => ledger.filter((r) => (!fromMonth || r.tx.date.slice(0, 7) >= fromMonth) && (!toMonth || r.tx.date.slice(0, 7) <= toMonth)),
-    [ledger, fromMonth, toMonth],
+    () => ledger.filter((r) => inRange(r.tx.date)),
+    [ledger, rangeStart, rangeEnd],
   );
-  const filteredMonthlyFlow = useMemo(
-    () => monthlyFlow.filter((f) => (!fromMonth || f.month >= fromMonth) && (!toMonth || f.month <= toMonth)),
-    [monthlyFlow, fromMonth, toMonth],
+  const monthlyFlow = useMemo(
+    () => bankMonthlyFlow(transactions, [account.id]).filter((f) => f.month >= rangeStart && f.month <= rangeEnd),
+    [transactions, account.id, rangeStart, rangeEnd],
   );
 
-  const [monthOffset, setMonthOffset] = useState(0);
-  const selectedMonth = monthRange(monthOffset, monthOffset)[0];
-  const selectedMonthLabel = new Date(`${selectedMonth}-01`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  // Unlike the old net-per-category view, this counts every transaction amount
+  // by category. Salary/income and groceries/expenses therefore both appear,
+  // even when a category contains transactions in both directions.
+  const categoryTotals = useMemo(() => {
+    const totals: Record<string, number> = {};
+    for (const tx of rangeTransactions) {
+      const name = categoryName(tx.categoryID, categories);
+      totals[name] = (totals[name] ?? 0) + Math.abs(tx.amount);
+    }
+    return Object.entries(totals).sort((a, b) => b[1] - a[1]);
+  }, [rangeTransactions, categories]);
 
-  const monthTxs = useMemo(
-    () => transactions.filter((t) => t.accountId === account.id && t.date.slice(0, 7) === selectedMonth),
-    [transactions, account.id, selectedMonth],
-  );
-  const byCategoryThisMonth = useMemo(() => accountByCategory(account, monthTxs, categories), [account, monthTxs, categories]);
-  const spendCategories = Object.keys(byCategoryThisMonth).filter((c) => byCategoryThisMonth[c] < 0);
-  const monthFlowRow = monthlyFlow.find((f) => f.month === selectedMonth);
-  const endOfMonthBalance = accountBalanceAsOfMonth(ledger, selectedMonth, account.openingBalance);
+  const rangeLabel = rangePreset === '1' ? 'This month'
+    : rangePreset === 'ytd' ? 'Year to date'
+    : rangePreset === 'custom' ? (rangeStart === rangeEnd ? formatDate(rangeStart + '-01', dateFormat) : formatDate(rangeStart + '-01', dateFormat) + ' → ' + formatDate(rangeEnd + '-01', dateFormat))
+    : `Last ${rangePreset} months`;
+
+  const deposits = monthlyFlow.reduce((s, r) => s + r.income, 0);
+  const withdrawals = monthlyFlow.reduce((s, r) => s + r.expense, 0);
+  const netFlow = deposits + withdrawals;
 
   if (!ledger.length) {
     return <p className="text-muted m-0">No transactions yet — analytics will appear once you log some.</p>;
@@ -1670,102 +1668,146 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
 
   return (
     <div>
-      <div className="row" style={{ gap: 8, alignItems: 'center', marginBottom: 12 }}>
-        <span className="text-muted">Chart range:</span>
-        <input type="month" value={fromMonth} onChange={(e) => setFromMonth(e.target.value)} aria-label="From month" />
-        <span className="text-muted">to</span>
-        <input type="month" value={toMonth} onChange={(e) => setToMonth(e.target.value)} aria-label="To month" />
-        {(fromMonth || toMonth) && (
-          <button type="button" className="btn secondary small" onClick={() => { setFromMonth(''); setToMonth(''); }}>Clear</button>
+      <div className="row gap-sm mb-sm" style={{ alignItems: 'center', flexWrap: 'wrap' }}>
+        <span className="text-muted">Period:</span>
+        {([
+          ['1', '1M'], ['3', '3M'], ['6', '6M'], ['12', '12M'], ['ytd', 'YTD'], ['custom', 'Custom'],
+        ] as const).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            className={rangePreset === value ? 'btn small' : 'btn secondary small'}
+            onClick={() => setRangePreset(value)}
+          >{label}</button>
+        ))}
+        {rangePreset === 'custom' && (
+          <div className="row gap-sm" style={{ alignItems: 'center' }}>
+            <input type="month" value={fromMonth} onChange={(e) => { setFromMonth(e.target.value); setRangePreset('custom'); }} aria-label="From month" />
+            <span className="text-muted">to</span>
+            <input type="month" value={toMonth} min={fromMonth || undefined} onChange={(e) => { setToMonth(e.target.value); setRangePreset('custom'); }} aria-label="To month" />
+          </div>
         )}
-        <Tooltip text="Narrows the Balance over time and Deposits vs. withdrawals charts below to this window. Doesn't affect Category breakdown, which already has its own month navigation, or any lifetime total shown elsewhere." />
+        <Tooltip text="Analytics defaults to the current month instead of loading lifetime history. Use 3M, 6M, 12M, YTD, or Custom when you want a wider period.">
+          <span className="clickable text-muted">ⓘ</span>
+        </Tooltip>
       </div>
+
+      <div className="grid-auto" style={{ ...gridAutoStyle(150, 12), marginBottom: 16 }}>
+        <div className="stat-card card"><div className="label">Deposits</div><MoneyValue n={deposits} currency={account.currencyCode} /></div>
+        <div className="stat-card card"><div className="label">Withdrawals</div><MoneyValue n={Math.abs(withdrawals)} currency={account.currencyCode} /></div>
+        <div className="stat-card card"><div className="label">Net flow</div><MoneyValue n={netFlow} currency={account.currencyCode} /></div>
+        <div className="stat-card card"><div className="label">Transactions</div><div className="value">{rangeTransactions.length}</div></div>
+      </div>
+
       <div className="grid-auto" style={{ ...gridAutoStyle(300, 16), marginBottom: 16 }}>
-        <ChartCard flat title="Balance over time" empty={!filteredLedger.length}>
+        <ChartCard flat title={`Balance over time — ${rangeLabel}`} empty={!filteredLedger.length}>
           <Line
             data={{
-              labels: filteredLedger.map((r) => r.tx.date),
+              labels: filteredLedger.map((r) => formatDate(r.tx.date, dateFormat)),
               datasets: [{ label: 'Balance', data: filteredLedger.map((r) => r.balance), borderColor: '#5aa9c9', backgroundColor: '#5aa9c933', fill: true, tension: 0.2 }],
             }}
             options={{ plugins: { legend: { display: false }, datalabels: dlLine((v) => fmtMoney(v, account.currencyCode)) } }}
           />
         </ChartCard>
+
+        <ChartCard flat title={`Transactions by category — ${rangeLabel}`} empty={!categoryTotals.length}>
+          <Doughnut
+            data={{
+              labels: categoryTotals.map(([name]) => name),
+              datasets: [{ data: categoryTotals.map(([, amount]) => amount), backgroundColor: categoryTotals.map(([name]) => tickerColor(name)) }],
+            }}
+            plugins={[doughnutOutsideLabels((v, i) => categoryTotals[i][0] + ': ' + fmtMoney(v, account.currencyCode))]}
+            options={{
+              cutout: '52%',
+              plugins: { legend: { display: false }, datalabels: { display: false } },
+              layout: { padding: { top: 18, right: 80, bottom: 18, left: 80 } },
+            }}
+          />
+        </ChartCard>
+
         <ChartCard
           flat
-          title="Deposits vs. withdrawals by month"
-          titleTooltip="Every deposit vs. withdrawal for this account, including any inter-account transfer — this is a raw cash-flow view, not a categorized income/expense breakdown."
-          empty={!filteredMonthlyFlow.length}
+          title={`Deposits vs. withdrawals — ${rangeLabel}`}
+          titleTooltip="Shows every deposit and withdrawal for this account in the selected period, including transfers. It is a cash-flow view rather than a categorized income/expense view."
+          empty={!monthlyFlow.length}
         >
           <Bar
             data={{
-              labels: filteredMonthlyFlow.map((f) => f.month),
+              labels: monthlyFlow.map((f) => f.month),
               datasets: [
-                { label: 'Deposits', data: filteredMonthlyFlow.map((f) => f.income), backgroundColor: cssVar('--profit') || '#3ecf8e' },
-                { label: 'Withdrawals', data: filteredMonthlyFlow.map((f) => f.expense), backgroundColor: cssVar('--loss') || '#e5484d' },
+                { label: 'Deposits', data: monthlyFlow.map((f) => f.income), backgroundColor: cssVar('--profit') || '#3ecf8e' },
+                { label: 'Withdrawals', data: monthlyFlow.map((f) => f.expense), backgroundColor: cssVar('--loss') || '#e5484d' },
               ],
             }}
             options={{ plugins: { datalabels: dlBarV((v) => fmtMoney(v, account.currencyCode)) } }}
           />
         </ChartCard>
-        <ChartCard flat title={`Category breakdown (spend) — ${selectedMonthLabel}`} empty={!spendCategories.length}>
-          <Doughnut
-            data={{
-              labels: spendCategories,
-              datasets: [{ data: spendCategories.map((c) => Math.abs(byCategoryThisMonth[c])), backgroundColor: spendCategories.map((c) => tickerColor(c)) }],
-            }}
-            options={{ cutout: '55%', plugins: { datalabels: dlDoughnut((v) => fmtMoney(v, account.currencyCode)) } }}
-          />
-        </ChartCard>
       </div>
 
-      <div className="row gap-sm mb-sm">
-        <button className="btn secondary small" onClick={() => setMonthOffset((o) => o - 1)}>◀ Prev month</button>
-        <button className="btn secondary small" onClick={() => setMonthOffset(0)}>This month</button>
-        <button className="btn secondary small" onClick={() => setMonthOffset((o) => o + 1)}>Next month ▶</button>
-      </div>
-
-      <div className="table-scroll">
-        <table>
-          <thead><tr><th colSpan={2}>{selectedMonthLabel}</th></tr></thead>
-          <tbody>
-            <tr><td>Deposits</td><td>{fmtMoney(monthFlowRow?.income ?? 0, account.currencyCode)}</td></tr>
-            <tr><td>Withdrawals</td><td>{fmtMoney(monthFlowRow?.expense ?? 0, account.currencyCode)}</td></tr>
-            <tr>
-              <td>Net flow</td>
-              <td className={(monthFlowRow?.net ?? 0) >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(monthFlowRow?.net ?? 0, account.currencyCode)}</td>
-            </tr>
-            <tr><td>Balance at month end</td><td>{fmtMoney(endOfMonthBalance, account.currencyCode)}</td></tr>
-            {spendCategories.map((c) => (
-              <tr key={c}><td>{c}</td><td>{fmtMoney(Math.abs(byCategoryThisMonth[c]), account.currencyCode)}</td></tr>
-            ))}
-            {!spendCategories.length && <tr><td colSpan={2} className="text-muted">No spend this month.</td></tr>}
-          </tbody>
-        </table>
-      </div>
+      <CollapsibleCard title={<h3 className="m-0">Summary — {rangeLabel}</h3>} className="mt-md">
+        <div className="table-scroll">
+          <table>
+            <thead><tr><th>Metric</th><th>Amount</th></tr></thead>
+            <tbody>
+              <tr><td>Deposits</td><td>{fmtMoney(deposits, account.currencyCode)}</td></tr>
+              <tr><td>Withdrawals</td><td>{fmtMoney(Math.abs(withdrawals), account.currencyCode)}</td></tr>
+              <tr><td>Net flow</td><td className={netFlow >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(netFlow, account.currencyCode)}</td></tr>
+              <tr><td>Transactions</td><td>{rangeTransactions.length}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </CollapsibleCard>
     </div>
   );
 }
 
+
 function CategoryBreakdownBody({ account }: { account: BankAccount }) {
   const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
   const categories = useCategoryStore((s) => s.workbook.categories);
-  const byCategory = accountByCategory(account, transactions, categories);
-  const cats = Object.keys(byCategory);
-  if (!cats.length) return <p className="text-muted m-0">No categorized transactions yet.</p>;
+  const [monthOffset, setMonthOffset] = useState(0);
+  const selectedMonth = monthRange(monthOffset, monthOffset)[0];
+  const selectedMonthLabel = new Date(`${selectedMonth}-01`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+
+  const monthTransactions = useMemo(
+    () => transactions.filter((t) => t.accountId === account.id && t.date.slice(0, 7) === selectedMonth),
+    [transactions, account.id, selectedMonth],
+  );
+  const totals = useMemo(() => {
+    const result: Record<string, number> = {};
+    for (const tx of monthTransactions) {
+      const name = categoryName(tx.categoryID, categories);
+      result[name] = (result[name] ?? 0) + Math.abs(tx.amount);
+    }
+    return Object.entries(result).sort((a, b) => b[1] - a[1]);
+  }, [monthTransactions, categories]);
 
   return (
-      <div className="table-scroll">
-        <table>
-          <tbody>
-            {cats.map((cat) => (
-              <tr key={cat}>
-                <td>{cat}</td>
-                <td className={byCategory[cat] >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(byCategory[cat], account.currencyCode)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div>
+      <div className="row gap-sm mb-sm" style={{ alignItems: 'center', flexWrap: 'wrap' }}>
+        <button className="btn secondary small" onClick={() => setMonthOffset((o) => o - 1)}>◀ Prev</button>
+        <button className="btn secondary small" onClick={() => setMonthOffset(0)}>This month</button>
+        <button className="btn secondary small" onClick={() => setMonthOffset((o) => o + 1)}>Next ▶</button>
+        <span className="text-muted">{selectedMonthLabel}</span>
+        <Tooltip text="Shows all transaction categories for the selected month. Amount is total transaction volume in that category, so inflows such as Salary and outflows such as Groceries can both be represented.">
+          <span className="clickable text-muted">ⓘ</span>
+        </Tooltip>
       </div>
+      {!totals.length ? <p className="text-muted m-0">No transactions in this month.</p> : (
+        <Doughnut
+          data={{
+            labels: totals.map(([name]) => name),
+            datasets: [{ data: totals.map(([, amount]) => amount), backgroundColor: totals.map(([name]) => tickerColor(name)) }],
+          }}
+          plugins={[doughnutOutsideLabels((v, i) => totals[i][0] + ': ' + fmtMoney(v, account.currencyCode))]}
+          options={{
+            cutout: '52%',
+            plugins: { legend: { display: false }, datalabels: { display: false } },
+            layout: { padding: { top: 18, right: 80, bottom: 18, left: 80 } },
+          }}
+        />
+      )}
+    </div>
   );
 }
 
@@ -1778,11 +1820,14 @@ function CategoryBreakdownBody({ account }: { account: BankAccount }) {
  * selectboxes to alter info" pattern the user separately called out).
  * Scoped to the account whose detail page it's embedded in — no picker,
  * since there's nothing to pick, the account is already known. */
-function ImportStatementSection({ account }: { account: BankAccount }) {
+function ImportStatementSection({ account, compact = false }: { account: BankAccount; compact?: boolean }) {
+  const dateFormat = useAppearanceStore((s) => s.appearance.dateFormat ?? 'DD-MMM-YYYY');
+  const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
   const addTransactions = useBankWorkbookStore((s) => s.addTransactions);
+  const replaceTransactions = useBankWorkbookStore((s) => s.replaceTransactions);
   const ensureSignedIn = useEnsureSignedIn();
   const fileInput = useRef<HTMLInputElement>(null);
-
+  const [open, setOpen] = useState(false);
   const [fileName, setFileName] = useState('');
   const [headers, setHeaders] = useState<string[]>([]);
   const [rows, setRows] = useState<string[][]>([]);
@@ -1791,133 +1836,122 @@ function ImportStatementSection({ account }: { account: BankAccount }) {
   const [amountCol, setAmountCol] = useState('');
   const [flipSign, setFlipSign] = useState(false);
 
+  const reset = () => { setOpen(false); setFileName(''); setHeaders([]); setRows([]); setDateCol(''); setDescCol(''); setAmountCol(''); setFlipSign(false); };
+
   const onFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = () => {
       const parsed = parseCSV(String(reader.result));
-      if (parsed.length < 2) {
-        toast('Could not find any data rows in that file.');
-        return;
-      }
+      if (parsed.length < 2) return toast('Could not find any data rows in that file.');
       const [head, ...body] = parsed;
-      setFileName(file.name);
-      setHeaders(head);
-      setRows(body);
-      setDateCol(head[0] ?? '');
-      setDescCol(head[1] ?? '');
-      setAmountCol(head[2] ?? '');
+      setFileName(file.name); setHeaders(head); setRows(body);
+      setDateCol(head[0] ?? ''); setDescCol(head[1] ?? ''); setAmountCol(head[2] ?? ''); setOpen(true);
     };
     reader.readAsText(file);
   };
 
   const colIndex = (col: string) => headers.indexOf(col);
-  const mappedPreview = rows.slice(0, 5).map((r) => ({
-    date: r[colIndex(dateCol)] ?? '',
-    description: r[colIndex(descCol)] ?? '',
-    amount: Number(r[colIndex(amountCol)] ?? 0) * (flipSign ? -1 : 1),
+  const parseImportedDate = (raw: string): string | null => {
+    const formats = ['DD-MMM-YYYY','YYYY-MMM-DD','DD-MM-YYYY','MM-DD-YYYY','DD/MM/YYYY','MM/DD/YYYY'] as const;
+    for (const format of formats) { const parsed = parseDateInput(raw, format); if (parsed) return parsed; }
+    return null;
+  };
+
+  const mappedRows = useMemo(() => rows.map((r, index) => {
+    const rawDate = (r[colIndex(dateCol)] ?? '').trim();
+    const date = parseImportedDate(rawDate);
+    const description = (r[colIndex(descCol)] ?? '').trim();
+    const amount = Number(r[colIndex(amountCol)] ?? 0) * (flipSign ? -1 : 1);
+    return { index, rawDate, date, description, amount, valid: Boolean(date && description && !Number.isNaN(amount) && amount !== 0) };
+  }), [rows, dateCol, descCol, amountCol, flipSign]);
+
+  const fingerprint = (t: { date: string; description: string; amount: number }) => t.date + '|' + t.description.trim().toLowerCase().replace(/\s+/g, ' ') + '|' + t.amount.toFixed(8);
+  const existingByFingerprint = useMemo(() => {
+    const map = new Map<string, BankTransaction>();
+    transactions.filter((t) => t.accountId === account.id).forEach((t) => map.set(fingerprint(t), t));
+    return map;
+  }, [transactions, account.id]);
+
+  const validRows = mappedRows.filter((r) => r.valid && r.date) as Array<typeof mappedRows[number] & { date: string }>;
+  const duplicateRows = useMemo(() => validRows.filter((r) => existingByFingerprint.has(fingerprint({ date: r.date, description: r.description, amount: r.amount }))), [validRows, existingByFingerprint]);
+  const uniqueRows = useMemo(() => {
+    const seen = new Set<string>();
+    return validRows.filter((r) => { const key = fingerprint({ date: r.date, description: r.description, amount: r.amount }); if (seen.has(key)) return false; seen.add(key); return true; });
+  }, [validRows]);
+
+  const buildTransactions = (rowsToImport: typeof validRows): BankTransaction[] => rowsToImport.map((r) => ({
+    id: uid(), accountId: account.id, date: r.date, description: r.description, amount: r.amount, isDeposit: r.amount >= 0,
+    source: 'statement-import' as const, statementRef: fileName,
   }));
 
-  const doImport = async () => {
-    if (!dateCol || !descCol || !amountCol) return toast('Map all three columns (date, description, amount).');
+  const doImport = async (mode: 'new-only' | 'replace' | 'keep-all') => {
+    if (!dateCol || !descCol || !amountCol) return toast('Map all three columns before importing.');
+    if (!validRows.length) return toast('No valid rows found. Check the date, description and amount mappings.');
     if (!(await ensureSignedIn('Sign in to import transactions.'))) return;
-    const di = colIndex(dateCol);
-    const desci = colIndex(descCol);
-    const ai = colIndex(amountCol);
-    const imported: BankTransaction[] = rows
-      .map((r) => ({
-        id: uid(),
-        accountId: account.id,
-        date: (r[di] ?? '').trim(),
-        description: (r[desci] ?? '').trim(),
-        amount: Number(r[ai]) * (flipSign ? -1 : 1),
-        // Re-derived from `amount`'s own sign by the store anyway (Bank's
-        // amount is the authoritative field — see `types/finance.ts`); set
-        // here only to satisfy the type.
-        isDeposit: Number(r[ai]) * (flipSign ? -1 : 1) >= 0,
-        source: 'statement-import' as const,
-        statementRef: fileName,
-      }))
-      .filter((t) => t.date && t.description && !Number.isNaN(t.amount) && t.amount !== 0);
-    if (!imported.length) return toast('No valid rows to import after mapping — check your column choices.');
-    addTransactions(imported);
-    toast(`Imported ${imported.length} transaction${imported.length > 1 ? 's' : ''} from ${fileName}.`);
-    setHeaders([]);
-    setRows([]);
-    setFileName('');
+    const duplicateIds = duplicateRows.map((r) => existingByFingerprint.get(fingerprint({ date: r.date, description: r.description, amount: r.amount }))?.id).filter(Boolean) as string[];
+    const rowsToImport = mode === 'keep-all'
+      ? validRows
+      : uniqueRows.filter((r) => mode === 'replace' || !existingByFingerprint.has(fingerprint({ date: r.date, description: r.description, amount: r.amount })));
+    if (mode === 'replace') replaceTransactions(duplicateIds, buildTransactions(rowsToImport));
+    else addTransactions(buildTransactions(rowsToImport));
+    const skipped = validRows.length - rowsToImport.length;
+    toast((mode === 'replace' ? 'Imported and replaced' : 'Imported') + ' ' + rowsToImport.length + ' transaction' + (rowsToImport.length === 1 ? '' : 's') + (skipped ? '; skipped ' + skipped + ' duplicate' + (skipped === 1 ? '' : 's') : '') + '.');
+    reset();
   };
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+      {compact && <button className="btn secondary small" onClick={() => fileInput.current?.click()}><PlusIcon size={13} />Import</button>}
+      {!compact && <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
         <span className="text-muted">Import a CSV export from your bank into {account.name}.</span>
-        <Tooltip text={'This is a simple "map these columns" tool, not a per-bank-format parser — pick which column is which below, since every bank\'s export looks a little different. Date values must be in YYYY-MM-DD format (e.g. 2026-01-15) — other date formats will sort incorrectly once imported.'} />
-      </div>
-      <div>
-        <button className="btn secondary" onClick={() => fileInput.current?.click()}>Choose CSV file</button>
-        <input
-          ref={fileInput}
-          type="file"
-          accept=".csv,text/csv"
-          className="hidden-file-input"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) onFile(file);
-            e.target.value = '';
-          }}
-        />
-        {fileName && <span className="text-muted" style={{ marginLeft: 8 }}>{fileName} ({rows.length} rows)</span>}
-      </div>
+        <Tooltip text="Choose a CSV, map its columns, review the import, then confirm. Existing matching transactions are detected by date + description + amount so importing the same statement again does not create duplicates." />
+      </div>}
+      {!compact && <button className="btn secondary" onClick={() => fileInput.current?.click()}>Choose CSV file</button>
+      </button>}
+      <input ref={fileInput} type="file" accept=".csv,text/csv" className="hidden-file-input" onChange={(e) => { const file = e.target.files?.[0]; if (file) onFile(file); e.target.value = ''; }} />
 
-      {headers.length > 0 && (
-        <div className="mt-12">
+      {open && (
+        <Modal title={`Import statement — ${fileName}`} onClose={reset} width="900px">
           <div className="row gap-sm">
-            <Field label="Date column" width={160}>
-              <Select value={dateCol} onChange={(e) => setDateCol(e.target.value)}>
-                {headers.map((h) => <option key={h} value={h}>{h}</option>)}
-              </Select>
-            </Field>
-            <Field label="Description column" width={160}>
-              <Select value={descCol} onChange={(e) => setDescCol(e.target.value)}>
-                {headers.map((h) => <option key={h} value={h}>{h}</option>)}
-              </Select>
-            </Field>
-            <Field label="Amount column" width={160}>
-              <Select value={amountCol} onChange={(e) => setAmountCol(e.target.value)}>
-                {headers.map((h) => <option key={h} value={h}>{h}</option>)}
-              </Select>
-            </Field>
-            <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 20 }} title="Check this if your bank exports spending as positive numbers instead of negative.">
-              <input type="checkbox" checked={flipSign} onChange={(e) => setFlipSign(e.target.checked)} />
-              Flip sign
-            </label>
+            <Field label="Date column" width={180}><Select value={dateCol} onChange={(e) => setDateCol(e.target.value)}>{headers.map((h) => <option key={h} value={h}>{h}</option>)}</Select></Field>
+            <Field label="Description column" width={220}><Select value={descCol} onChange={(e) => setDescCol(e.target.value)}>{headers.map((h) => <option key={h} value={h}>{h}</option>)}</Select></Field>
+            <Field label="Amount column" width={180}><Select value={amountCol} onChange={(e) => setAmountCol(e.target.value)}>{headers.map((h) => <option key={h} value={h}>{h}</option>)}</Select></Field>
+            <label className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 20 }}><input type="checkbox" checked={flipSign} onChange={(e) => setFlipSign(e.target.checked)} />Flip sign</label>
           </div>
-
-          <h4>Preview (first 5 rows)</h4>
-          <div className="table-scroll">
-            <table>
-              <thead><tr><th>Date</th><th>Description</th><th>Amount</th></tr></thead>
-              <tbody>
-                {mappedPreview.map((r, i) => (
-                  <tr key={i}>
-                    <td>{r.date}</td>
-                    <td>{r.description}</td>
-                    <td className={r.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(r.amount, account.currencyCode)}</td>
-                  </tr>
-                ))}
-              </tbody>
+          <div className="grid-auto mt-md" style={gridAutoStyle(150, 8)}>
+            <div className="stat-card card"><div className="label">CSV rows</div><strong>{rows.length}</strong></div>
+            <div className="stat-card card"><div className="label">Valid rows</div><strong>{validRows.length}</strong></div>
+            <div className="stat-card card"><div className="label">New transactions</div><strong>{uniqueRows.filter((r) => !existingByFingerprint.has(fingerprint({ date: r.date, description: r.description, amount: r.amount }))).length}</strong></div>
+            <div className="stat-card card"><div className="label">Existing duplicates</div><strong className={duplicateRows.length ? 'pill-negative' : 'pill-positive'}>{duplicateRows.length}</strong></div>
+          </div>
+          <h4>Preview</h4>
+          <div className="table-scroll" style={{ maxHeight: 360 }}>
+            <table><thead><tr><th>#</th><th>Date</th><th>Description</th><th>Amount</th><th>Status</th></tr></thead>
+              <tbody>{mappedRows.slice(0, 100).map((r) => {
+                const duplicate = r.valid && r.date ? existingByFingerprint.has(fingerprint({ date: r.date, description: r.description, amount: r.amount })) : false;
+                return <tr key={r.index}><td>{r.index + 1}</td><td>{r.date ? formatDate(r.date, dateFormat) : r.rawDate || '—'}</td><td>{r.description}</td><td className={r.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{Number.isFinite(r.amount) ? fmtMoney(r.amount, account.currencyCode) : 'Invalid'}</td><td className={r.valid ? (duplicate ? 'text-loss' : 'text-profit') : 'text-loss'}>{r.valid ? (duplicate ? 'Duplicate' : 'New') : 'Invalid'}</td></tr>;
+              })}</tbody>
             </table>
           </div>
-          <div className="row" style={{ marginTop: 12, justifyContent: 'flex-end' }}>
-            <button className="btn" onClick={doImport}>
-              <PlusIcon />Import {rows.length} transaction{rows.length > 1 ? 's' : ''}
-            </button>
+          {rows.length > 100 && <p className="text-muted">Showing first 100 of {rows.length} rows in the preview.</p>}
+          {duplicateRows.length > 0 && <Notice tone="warning" className="mt-md"><strong>{duplicateRows.length} matching transaction{duplicateRows.length === 1 ? '' : 's'} already exist.</strong><div className="text-muted mt-sm">Import new only skips them. Replace duplicates overwrites matching existing transactions and requires confirmation.</div></Notice>}
+          <div className="row gap-sm" style={{ justifyContent: 'flex-end', marginTop: 16, flexWrap: 'wrap' }}>
+            <button className="btn secondary" onClick={reset}>Cancel</button>
+            <Tooltip text="Skip rows that already exist in this account, based on date + description + amount. New rows are imported.">
+              <button className="btn" disabled={!validRows.length} onClick={() => doImport('new-only')}><PlusIcon />Import new only</button>
+            </Tooltip>
+            {duplicateRows.length > 0 && <Tooltip text="Replace matching existing transactions with the CSV version. This requires confirmation because the existing records are overwritten.">
+              <button className="btn danger" onClick={() => confirmDialog(`This will replace ${duplicateRows.length} existing matching transaction${duplicateRows.length === 1 ? '' : 's'} with the CSV version. This cannot be undone.`, 'Confirm overwrite?').then((ok) => ok && doImport('replace'))}>Replace duplicates</button>
+            </Tooltip>}
+            {duplicateRows.length > 0 && <Tooltip text="Import every valid CSV row, including rows already detected as duplicates. Use this when you want to review and handle duplicates yourself after import.">
+              <button className="btn secondary" disabled={!validRows.length} onClick={() => doImport('keep-all')}>Keep all</button>
+            </Tooltip>}
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );
 }
-
 /* ============================== Settings ============================== */
 
 function AccountSection({
@@ -2086,8 +2120,7 @@ function AddBankPlanForm({ accountId, onSaved }: { accountId: string; onSaved?: 
     <div>
       <div className="row gap-sm">
         <Field label="Expected date">
-          <TextInput
-            type="date"
+          <DateInput
             value={p.date}
             onChange={(e) => setP({ ...p, date: e.target.value, recurrence: p.recurrence ? { ...p.recurrence, startDate: e.target.value } : undefined })}
           />
@@ -2124,6 +2157,7 @@ function AddBankPlanForm({ accountId, onSaved }: { accountId: string; onSaved?: 
 }
 
 function BankPlanList({ account, horizonDays }: { account: BankAccount; horizonDays: PlanningHorizonDays }) {
+  const dateFormat = useAppearanceStore((s) => s.appearance.dateFormat ?? 'DD-MMM-YYYY');
   const allPlans = usePlannedBankWorkbookStore((s) => s.workbook.entries);
   const updatePlan = usePlannedBankWorkbookStore((s) => s.updateEntry);
   const deletePlan = usePlannedBankWorkbookStore((s) => s.deleteEntry);
@@ -2183,11 +2217,10 @@ function BankPlanList({ account, horizonDays }: { account: BankAccount; horizonD
               editId === p.id && editRow ? (
                 <tr key={p.id}>
                   <td>
-                    <input
-                      type="date"
+                    <DateInput
                       value={editRow.date}
                       onChange={(e) => setEditRow({ ...editRow, date: e.target.value, recurrence: editRow.recurrence ? { ...editRow.recurrence, startDate: e.target.value } : undefined })}
-                      className="w-130"
+                      width={130}
                     />
                   </td>
                   <td><input value={editRow.description} onChange={(e) => setEditRow({ ...editRow, description: e.target.value })} /></td>
@@ -2209,7 +2242,7 @@ function BankPlanList({ account, horizonDays }: { account: BankAccount; horizonD
                 </tr>
               ) : (
                 <tr key={p.id}>
-                  <td>{p.date}</td>
+                  <td>{formatDate(p.date, dateFormat)}</td>
                   <td>{p.description}</td>
                   <td className={p.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(p.amount, account.currencyCode)}</td>
                   <td>{p.category || '—'}</td>
@@ -2336,7 +2369,7 @@ function AnalyticsTab() {
             <ChartCard flat title="Balance over time" empty={!balanceOverTime.length}>
               <Line
                 data={{
-                  labels: balanceOverTime.map((r) => r.tx.date),
+                  labels: balanceOverTime.map((r) => formatDate(r.tx.date, dateFormat)),
                   datasets: [{ label: 'Balance', data: balanceOverTime.map((r) => r.balance), borderColor: '#5aa9c9', backgroundColor: '#5aa9c933', fill: true, tension: 0.2 }],
                 }}
                 options={{ plugins: { legend: { display: false }, datalabels: dlLine((v) => fmtMoney(v, account.currencyCode)) } }}

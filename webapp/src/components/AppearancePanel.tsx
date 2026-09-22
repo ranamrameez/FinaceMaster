@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useAppearanceStore } from '../store/appearanceStore';
+import type { DateFormat } from '../lib/format';
 
 const COLOR_THEMES = [
   { group: 'Classic rounded themes', options: [
@@ -66,6 +67,20 @@ export function AppearanceFields() {
         <option value="compact">Numbers: shortened (10k)</option>
         <option value="raw">Numbers: full (10,000)</option>
       </select>
+      <select
+        value={appearance.dateFormat ?? 'DD/MM/YYYY'}
+        onChange={(e) => updateAppearance({ dateFormat: e.target.value as DateFormat })}
+        title="How calendar dates are displayed throughout the app"
+      >
+        <option value="DD-MMM-YYYY">Dates: 22-Sep-2026</option>
+        <option value="YYYY-MMM-DD">Dates: 2026-Sep-22</option>
+        <option value="DD-MM-YYYY">Dates: 22-09-2026</option>
+        <option value="MM-DD-YYYY">Dates: 09-22-2026</option>
+        <option value="DD/MM/YYYY">Dates: 22/09/2026</option>
+        <option value="MM/DD/YYYY">Dates: 09/22/2026</option>
+        <option value="dddd, MMM DD, YYYY">Dates: Tuesday, Sep 22, 2026 (display only)</option>
+        <option value="ddd, DD MMM, YYYY">Dates: Tue, 22 Sep, 2026 (display only)</option>
+      </select>>
       <button
         className="btn secondary small"
         type="button"
