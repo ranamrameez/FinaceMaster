@@ -1955,8 +1955,7 @@ function ImportStatementSection({ account, compact = false }: { account: BankAcc
         <span className="text-muted">Import a CSV export from your bank into {account.name}.</span>
         <Tooltip text="Choose a CSV, map its columns, review the import, then confirm. Existing matching transactions are detected by date + description + amount so importing the same statement again does not create duplicates." />
       </div>}
-      {!compact && <button className="btn secondary" onClick={() => fileInput.current?.click()}>Choose CSV file</button>
-      </button>}
+      {!compact && <button className="btn secondary" onClick={() => fileInput.current?.click()}>Choose CSV file</button>}
       <input ref={fileInput} type="file" accept=".csv,text/csv" className="hidden-file-input" onChange={(e) => { const file = e.target.files?.[0]; if (file) onFile(file); e.target.value = ''; }} />
 
       {open && (
