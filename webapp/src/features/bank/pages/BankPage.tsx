@@ -1656,7 +1656,7 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
 
   const [monthOffset, setMonthOffset] = useState(0);
   const selectedMonth = monthRange(monthOffset, monthOffset)[0];
-  const selectedMonthLabel = formatDate(`${selectedMonth}-01`, dateFormat);
+  const selectedMonthLabel = new Date(`${selectedMonth}-01`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 
   const monthTxs = useMemo(
     () => transactions.filter((t) => t.accountId === account.id && t.date.slice(0, 7) === selectedMonth),
