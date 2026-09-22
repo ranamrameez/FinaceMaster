@@ -88,9 +88,16 @@ export function sellableShareSummary(advice: LotAdvice[]): { sellable: number; t
 }
 
 export interface MissedOpportunity {
-  peakPrice: number;
-  peakDate: string;
-  lots: { buyDate: string; buyPrice: number; wouldHaveProfited: number }[];
+  /** The recent peak is evaluated separately for each lot, and only using
+   * prices on/after that lot's buy date. A later purchase can never claim a
+   * price that occurred before it existed. */
+  lots: {
+    buyDate: string;
+    buyPrice: number;
+    peakPrice: number;
+    peakDate: string;
+    wouldHaveProfited: number;
+  }[];
 }
 
 /** "Missed opportunity" retrospective — the real IQCD case this whole
@@ -114,17 +121,29 @@ export function findMissedOpportunity(
   const inWindow = priceHistory.filter((p) => p.date >= cutoffISO);
   if (!inWindow.length) return null;
 
-  const peak = inWindow.reduce((max, p) => (p.price > max.price ? p : max), inWindow[0]);
   const opportunities = lots
     .map((lot) => {
+      // Critical temporal guard: only prices from the lot's purchase date
+      // onward are eligible. Otherwise a later buy could be reported as
+      // having profited from a market peak that happened before it existed.
+      const eligible = inWindow.filter((p) => p.date >= lot.buyDate);
+      if (!eligible.length) return null;
+
+      const peak = eligible.reduce((max, p) => (p.price > max.price ? p : max), eligible[0]);
       const costPerShare = lot.buyPrice + lot.buyFeeTotal / lot.originalShares;
       const { pl } = whatIfExit(lot.remainingShares, costPerShare, peak.price, calcFee);
-      return { buyDate: lot.buyDate, buyPrice: lot.buyPrice, wouldHaveProfited: pl };
+      return {
+        buyDate: lot.buyDate,
+        buyPrice: lot.buyPrice,
+        peakPrice: peak.price,
+        peakDate: peak.date,
+        wouldHaveProfited: pl,
+      };
     })
-    .filter((o) => o.wouldHaveProfited > 0);
+    .filter((o): o is NonNullable<typeof o> => o !== null && o.wouldHaveProfited > 0);
   if (!opportunities.length) return null;
 
-  return { peakPrice: peak.price, peakDate: peak.date, lots: opportunities };
+  return { lots: opportunities };
 }
 
 export interface PartialTradeOpportunity {

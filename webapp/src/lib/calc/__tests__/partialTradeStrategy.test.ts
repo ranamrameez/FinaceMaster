@@ -109,9 +109,27 @@ describe('findMissedOpportunity', () => {
     ];
     const result = findMissedOpportunity(priceHistory, lotsByTicker.IQCD, calcFee, 30);
     expect(result).not.toBeNull();
-    expect(result!.peakPrice).toBe(10.37);
     expect(result!.lots).toHaveLength(1);
     expect(result!.lots[0].buyPrice).toBe(9.962);
+    expect(result!.lots[0].peakPrice).toBe(10.37);
+    expect(result!.lots[0].peakDate).toBe(daysAgo(3));
+  });
+
+  it('never attributes a peak from before a lot was purchased', () => {
+    const lots: import('../../../types/workbook').Transaction[] = [
+      { id: 'late-buy', date: daysAgo(2), ticker: 'TEST', action: 'BUY', shares: 10, price: 1.9 },
+    ];
+    const { lotsByTicker } = computeFIFOPositions(lots, calcFee);
+    const priceHistory: PricePoint[] = [
+      { date: daysAgo(5), price: 2.1 }, // higher, but impossible for the later lot
+      { date: daysAgo(1), price: 1.95 }, // first eligible price
+      { date: today(), price: 1.8 },
+    ];
+    const result = findMissedOpportunity(priceHistory, lotsByTicker.TEST, calcFee, 30);
+    expect(result).not.toBeNull();
+    expect(result!.lots).toHaveLength(1);
+    expect(result!.lots[0].peakDate).toBe(daysAgo(1));
+    expect(result!.lots[0].peakPrice).toBe(1.95);
   });
 
   it('returns null when nothing in the window would have profited', () => {
