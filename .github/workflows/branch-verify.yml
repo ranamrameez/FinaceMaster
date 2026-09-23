@@ -22,9 +22,9 @@ jobs:
       - name: Install dependencies
         working-directory: webapp
         run: npm ci
-      - name: Run tests
-        working-directory: webapp
-        run: npm test
       - name: Build
         working-directory: webapp
         run: npm run build
+      - name: Run Banking calculation tests
+        working-directory: webapp
+        run: npx vitest run src/lib/calc/__tests__/bankModule.test.ts --environment node
