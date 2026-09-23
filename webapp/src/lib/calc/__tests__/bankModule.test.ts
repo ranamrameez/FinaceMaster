@@ -246,9 +246,11 @@ describe('accountPeriodAnalytics', () => {
     expect(result.deposits).toBeCloseTo(5110, 2);
     expect(result.withdrawals).toBeCloseTo(15070.87, 2);
     expect(result.netFlow).toBeCloseTo(-9960.87, 2);
-    expect(result.monthlyFlow).toEqual([
-      { month: '2026-09', income: 5110, expense: 15070.87, net: -9960.87 },
-    ]);
+    expect(result.monthlyFlow).toHaveLength(1);
+    expect(result.monthlyFlow[0].month).toBe('2026-09');
+    expect(result.monthlyFlow[0].income).toBeCloseTo(5110, 2);
+    expect(result.monthlyFlow[0].expense).toBeCloseTo(15070.87, 2);
+    expect(result.monthlyFlow[0].net).toBeCloseTo(-9960.87, 2);
   });
 
   it('applies month bounds after account scoping while retaining full running balances', () => {
