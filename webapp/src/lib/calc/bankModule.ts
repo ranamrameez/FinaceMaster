@@ -70,16 +70,74 @@ export function accountByCategory(account: BankAccount, transactions: BankTransa
 
 export interface BankMonthlyFlow { month: string; income: number; expense: number; net: number; }
 
-export function bankMonthlyFlow(transactions: BankTransaction[], accountIds: string[]): BankMonthlyFlow[] {
-  const ids = new Set(accountIds);
+function monthlyFlowForTransactions(transactions: BankTransaction[]): BankMonthlyFlow[] {
   const byMonth: Record<string, { income: number; expense: number }> = {};
-  transactions.filter((t) => ids.has(t.accountId) && !t.isPending).forEach((t) => {
+  transactions.forEach((t) => {
     const month = t.date.slice(0, 7);
     if (!byMonth[month]) byMonth[month] = { income: 0, expense: 0 };
     if (t.amount >= 0) byMonth[month].income += t.amount;
     else byMonth[month].expense += -t.amount;
   });
-  return Object.keys(byMonth).sort().map((month) => ({ month, income: byMonth[month].income, expense: byMonth[month].expense, net: byMonth[month].income - byMonth[month].expense }));
+  return Object.keys(byMonth).sort().map((month) => ({
+    month,
+    income: byMonth[month].income,
+    expense: byMonth[month].expense,
+    net: byMonth[month].income - byMonth[month].expense,
+  }));
+}
+
+export function bankMonthlyFlow(transactions: BankTransaction[], accountIds: string[]): BankMonthlyFlow[] {
+  const ids = new Set(accountIds);
+  return monthlyFlowForTransactions(transactions.filter((t) => ids.has(t.accountId) && !t.isPending));
+}
+
+export interface AccountPeriodAnalytics {
+  /** Full cleared running ledger for exactly one BankAccount. */
+  ledger: BankLedgerRow[];
+  /** Cleared ledger rows inside the optional YYYY-MM month bounds. */
+  periodLedger: BankLedgerRow[];
+  /** Exact transaction population used by every period metric/chart. */
+  transactions: BankTransaction[];
+  monthlyFlow: BankMonthlyFlow[];
+  deposits: number;
+  withdrawals: number;
+  netFlow: number;
+}
+
+/**
+ * Single source of truth for account analytics.
+ *
+ * Bank is only a grouping entity; analytics ownership is ALWAYS the
+ * selected BankAccount.id. This intentionally starts from
+ * accountRunningLedger, which already enforces that ownership and excludes
+ * pending rows, then applies the optional month period once. Summary totals,
+ * transaction count, category consumers and cash-flow charts can therefore
+ * all consume the exact same transaction population.
+ */
+export function accountPeriodAnalytics(
+  account: BankAccount,
+  transactions: BankTransaction[],
+  fromMonth?: string,
+  toMonth?: string,
+): AccountPeriodAnalytics {
+  const ledger = accountRunningLedger(account, transactions);
+  const periodLedger = ledger.filter(({ tx }) => {
+    const month = tx.date.slice(0, 7);
+    return (!fromMonth || month >= fromMonth) && (!toMonth || month <= toMonth);
+  });
+  const periodTransactions = periodLedger.map(({ tx }) => tx);
+  const deposits = periodTransactions.reduce((sum, tx) => sum + (tx.amount > 0 ? tx.amount : 0), 0);
+  const withdrawals = periodTransactions.reduce((sum, tx) => sum + (tx.amount < 0 ? -tx.amount : 0), 0);
+
+  return {
+    ledger,
+    periodLedger,
+    transactions: periodTransactions,
+    monthlyFlow: monthlyFlowForTransactions(periodTransactions),
+    deposits,
+    withdrawals,
+    netFlow: deposits - withdrawals,
+  };
 }
 
 export interface BudgetRow { category: string; budget: number; actual: number; }

@@ -37,7 +37,7 @@ import { recurrenceLabel } from '../../../lib/recurrenceLabel';
 import { hueStyle } from '../../../lib/statCardHues';
 import { categoryName, UNCATEGORIZED_ID } from '../../../lib/categories';
 import { useCategoryStore } from '../../../store/categoryStore';
-import { accountBalance, accountByCategory, accountPendingBalance, accountRunningLedger, bankMonthlyFlow, bankTotalsByCurrency, budgetVsActual, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
+import { accountBalance, accountByCategory, accountPendingBalance, accountPeriodAnalytics, accountRunningLedger, bankMonthlyFlow, bankTotalsByCurrency, budgetVsActual, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
 import { outstandingBalanceByCard } from '../../../lib/calc/creditCardModule';
 import { monthRange } from '../../../lib/calc/budgetPlanner';
 import { isPlanDue, planWithinHorizon, plannedBankProjection, type PlanningHorizonDays } from '../../../lib/calc/plannedBalance';
@@ -1683,29 +1683,22 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
 
   const rangeEnd = rangePreset === 'custom' ? (toMonth || fromMonth || today().slice(0, 7)) : today().slice(0, 7);
 
-  const inRange = (date: string) => {
-    const month = date.slice(0, 7);
-    return month >= rangeStart && month <= rangeEnd;
-  };
-
-  // The account statement is the source of truth for analytics. Build the
-  // selected-period transaction set from the SAME cleared ledger used by the
-  // statement table, rather than maintaining a second transaction population.
-  // This keeps Summary count/flow and the statement in lockstep and excludes
-  // pending rows consistently.
-  const ledger = useMemo(() => accountRunningLedger(account, transactions), [account, transactions]);
-  const filteredLedger = useMemo(
-    () => ledger.filter((r) => inRange(r.tx.date)),
-    [ledger, rangeStart, rangeEnd],
+  // One account + one period = one analytics dataset. Every figure and chart
+  // below is derived from this exact cleared transaction population, so a
+  // second account at the same Bank can never leak into this account's totals.
+  const analytics = useMemo(
+    () => accountPeriodAnalytics(account, transactions, rangeStart, rangeEnd),
+    [account, transactions, rangeStart, rangeEnd],
   );
-  const rangeTransactions = useMemo(
-    () => filteredLedger.map((r) => r.tx),
-    [filteredLedger],
-  );
-  const monthlyFlow = useMemo(
-    () => bankMonthlyFlow(transactions, [account.id]).filter((f) => f.month >= rangeStart && f.month <= rangeEnd),
-    [transactions, account.id, rangeStart, rangeEnd],
-  );
+  const {
+    ledger,
+    periodLedger: filteredLedger,
+    transactions: rangeTransactions,
+    monthlyFlow,
+    deposits,
+    withdrawals,
+    netFlow,
+  } = analytics;
 
   // Unlike the old net-per-category view, this counts every transaction amount
   // by category. Salary/income and groceries/expenses therefore both appear,
@@ -1724,11 +1717,6 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
     : rangePreset === 'custom' ? (rangeStart === rangeEnd ? formatDate(rangeStart + '-01', dateFormat) : formatDate(rangeStart + '-01', dateFormat) + ' → ' + formatDate(rangeEnd + '-01', dateFormat))
     : `Last ${rangePreset} months`;
 
-  // Summary is calculated directly from the exact statement rows in the
-  // selected period. Do not use a separate monthly aggregation here.
-  const deposits = rangeTransactions.reduce((sum, tx) => sum + (tx.amount > 0 ? tx.amount : 0), 0);
-  const withdrawals = rangeTransactions.reduce((sum, tx) => sum + (tx.amount < 0 ? -tx.amount : 0), 0);
-  const netFlow = deposits - withdrawals;
 
   if (!ledger.length) {
     return <p className="text-muted m-0">No transactions yet — analytics will appear once you log some.</p>;
@@ -2398,8 +2386,15 @@ function AnalyticsTab() {
 
   const byCategory = useMemo(() => (account ? accountByCategory(account, transactions, categoryList) : {}), [account, transactions, categoryList]);
   const categories = Object.keys(byCategory).filter((c) => byCategory[c] < 0); // spend categories only — a doughnut of net credit/debit mixed together isn't meaningful
-  const monthlyFlow = useMemo(() => (account ? bankMonthlyFlow(transactions, [account.id]) : []), [account, transactions]);
-  const balanceOverTime = useMemo(() => (account ? accountRunningLedger(account, transactions) : []), [account, transactions]);
+  // Keep the module-level Analytics tab on the same one-account source of
+  // truth as Account Detail. With no period bounds this preserves its current
+  // full-history charts while preventing any parent-Bank aggregation.
+  const analytics = useMemo(
+    () => (account ? accountPeriodAnalytics(account, transactions) : null),
+    [account, transactions],
+  );
+  const monthlyFlow = analytics?.monthlyFlow ?? [];
+  const balanceOverTime = analytics?.ledger ?? [];
 
   const thisMonth = today().slice(0, 7);
   const budgetRows = useMemo(
