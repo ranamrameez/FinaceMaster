@@ -93,38 +93,67 @@ export function bankMonthlyFlow(transactions: BankTransaction[], accountIds: str
 
 export type BankAnalyticsRangePreset = '1' | '3' | '6' | '12' | 'ytd' | 'custom';
 
+function localDateKey(year: number, monthIndex: number, day: number): string {
+  return `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+function firstDayOfMonth(year: number, monthIndex: number): string {
+  return localDateKey(year, monthIndex, 1);
+}
+
+function lastDayOfMonth(year: number, monthIndex: number): string {
+  const lastDay = new Date(year, monthIndex + 1, 0).getDate();
+  return localDateKey(year, monthIndex, lastDay);
+}
+
 /**
- * Resolve the month window used by per-account Banking analytics.
+ * Resolve Banking analytics to explicit inclusive calendar-date bounds.
  *
- * Important: format calendar parts directly instead of constructing a local
- * first-of-month Date and then calling toISOString(). In positive UTC offsets
- * (for example Asia/Qatar), local 2026-09-01 00:00 is still 2026-08-31 UTC,
- * so the old ISO conversion silently widened "This month" to August+September.
+ * Transactions already store canonical YYYY-MM-DD values, so analytics should
+ * compare those dates directly. For example, "This month" on 23-Sep-2026 is
+ * exactly 2026-09-01 through 2026-09-30 — no UTC conversion and no month-key
+ * approximation.
  */
-export function bankAnalyticsMonthRange(
+export function bankAnalyticsDateRange(
   preset: BankAnalyticsRangePreset,
   fromMonth = '',
   toMonth = '',
   asOf: Date = new Date(),
-): { start: string; end: string } {
-  const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-  const currentMonth = monthKey(asOf);
+): { startDate: string; endDate: string } {
+  const year = asOf.getFullYear();
+  const month = asOf.getMonth();
 
   if (preset === 'custom') {
-    const fallback = fromMonth || toMonth || currentMonth;
-    return { start: fromMonth || fallback, end: toMonth || fallback };
+    const fallback = `${year}-${String(month + 1).padStart(2, '0')}`;
+    const startMonth = fromMonth || toMonth || fallback;
+    const endMonth = toMonth || fromMonth || fallback;
+    const [startYear, startMonthNumber] = startMonth.split('-').map(Number);
+    const [endYear, endMonthNumber] = endMonth.split('-').map(Number);
+    return {
+      startDate: firstDayOfMonth(startYear, startMonthNumber - 1),
+      endDate: lastDayOfMonth(endYear, endMonthNumber - 1),
+    };
   }
-  if (preset === 'ytd') return { start: `${asOf.getFullYear()}-01`, end: currentMonth };
+
+  if (preset === 'ytd') {
+    return {
+      startDate: firstDayOfMonth(year, 0),
+      endDate: lastDayOfMonth(year, month),
+    };
+  }
 
   const months = Number(preset);
-  const startDate = new Date(asOf.getFullYear(), asOf.getMonth() - (months - 1), 1);
-  return { start: monthKey(startDate), end: currentMonth };
+  const start = new Date(year, month - (months - 1), 1);
+  return {
+    startDate: firstDayOfMonth(start.getFullYear(), start.getMonth()),
+    endDate: lastDayOfMonth(year, month),
+  };
 }
 
 export interface AccountPeriodAnalytics {
   /** Full cleared running ledger for exactly one BankAccount. */
   ledger: BankLedgerRow[];
-  /** Cleared ledger rows inside the optional YYYY-MM month bounds. */
+  /** Cleared ledger rows inside the optional inclusive YYYY-MM-DD bounds. */
   periodLedger: BankLedgerRow[];
   /** Exact transaction population used by every period metric/chart. */
   transactions: BankTransaction[];
@@ -147,14 +176,13 @@ export interface AccountPeriodAnalytics {
 export function accountPeriodAnalytics(
   account: BankAccount,
   transactions: BankTransaction[],
-  fromMonth?: string,
-  toMonth?: string,
+  fromDate?: string,
+  toDate?: string,
 ): AccountPeriodAnalytics {
   const ledger = accountRunningLedger(account, transactions);
-  const periodLedger = ledger.filter(({ tx }) => {
-    const month = tx.date.slice(0, 7);
-    return (!fromMonth || month >= fromMonth) && (!toMonth || month <= toMonth);
-  });
+  const periodLedger = ledger.filter(({ tx }) =>
+    (!fromDate || tx.date >= fromDate) && (!toDate || tx.date <= toDate),
+  );
   const periodTransactions = periodLedger.map(({ tx }) => tx);
   const deposits = periodTransactions.reduce((sum, tx) => sum + (tx.amount > 0 ? tx.amount : 0), 0);
   const withdrawals = periodTransactions.reduce((sum, tx) => sum + (tx.amount < 0 ? -tx.amount : 0), 0);

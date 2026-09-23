@@ -37,7 +37,7 @@ import { recurrenceLabel } from '../../../lib/recurrenceLabel';
 import { hueStyle } from '../../../lib/statCardHues';
 import { categoryName, UNCATEGORIZED_ID } from '../../../lib/categories';
 import { useCategoryStore } from '../../../store/categoryStore';
-import { accountBalance, accountByCategory, accountPendingBalance, accountPeriodAnalytics, accountRunningLedger, bankAnalyticsMonthRange, bankTotalsByCurrency, budgetVsActual, totalBalanceByCurrency, type BankAnalyticsRangePreset } from '../../../lib/calc/bankModule';
+import { accountBalance, accountByCategory, accountPendingBalance, accountPeriodAnalytics, accountRunningLedger, bankAnalyticsDateRange, bankTotalsByCurrency, budgetVsActual, totalBalanceByCurrency, type BankAnalyticsRangePreset } from '../../../lib/calc/bankModule';
 import { outstandingBalanceByCard } from '../../../lib/calc/creditCardModule';
 import { monthRange } from '../../../lib/calc/budgetPlanner';
 import { isPlanDue, planWithinHorizon, plannedBankProjection, type PlanningHorizonDays } from '../../../lib/calc/plannedBalance';
@@ -1666,13 +1666,13 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
   useAppearanceStore((s) => s.appearance);
   applyChartTheme();
 
-  const initialMonth = useMemo(() => bankAnalyticsMonthRange('1').end, []);
+  const initialMonth = useMemo(() => today().slice(0, 7), []);
   const [rangePreset, setRangePreset] = useState<BankAnalyticsRangePreset>('1');
   const [fromMonth, setFromMonth] = useState(initialMonth);
   const [toMonth, setToMonth] = useState(initialMonth);
 
-  const { start: rangeStart, end: rangeEnd } = useMemo(
-    () => bankAnalyticsMonthRange(rangePreset, fromMonth, toMonth),
+  const { startDate: rangeStart, endDate: rangeEnd } = useMemo(
+    () => bankAnalyticsDateRange(rangePreset, fromMonth, toMonth),
     [rangePreset, fromMonth, toMonth],
   );
 
@@ -1707,7 +1707,7 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
 
   const rangeLabel = rangePreset === '1' ? 'This month'
     : rangePreset === 'ytd' ? 'Year to date'
-    : rangePreset === 'custom' ? (rangeStart === rangeEnd ? formatDate(rangeStart + '-01', dateFormat) : formatDate(rangeStart + '-01', dateFormat) + ' → ' + formatDate(rangeEnd + '-01', dateFormat))
+    : rangePreset === 'custom' ? (rangeStart === rangeEnd ? formatDate(rangeStart, dateFormat) : formatDate(rangeStart, dateFormat) + ' → ' + formatDate(rangeEnd, dateFormat))
     : `Last ${rangePreset} months`;
 
 

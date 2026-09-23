@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { BankAccount, BankTransaction } from '../../../types/bankWorkbook';
 import type { Category } from '../../../types/finance';
-import { accountBalance, accountBalanceAsOfMonth, accountByCategory, accountPendingBalance, accountPeriodAnalytics, accountRunningLedger, assetBalanceByCurrency, bankAnalyticsMonthRange, bankMonthlyFlow, budgetVsActual, creditCardLiabilityByCurrency, totalBalanceByCurrency } from '../bankModule';
+import { accountBalance, accountBalanceAsOfMonth, accountByCategory, accountPendingBalance, accountPeriodAnalytics, accountRunningLedger, assetBalanceByCurrency, bankAnalyticsDateRange, bankMonthlyFlow, budgetVsActual, creditCardLiabilityByCurrency, totalBalanceByCurrency } from '../bankModule';
 
 const TEST_CATEGORIES: Category[] = [
   { id: 'cat_food', serialNumber: 1, name: 'Food' },
@@ -200,22 +200,45 @@ describe('bankMonthlyFlow', () => {
   });
 });
 
-describe('bankAnalyticsMonthRange', () => {
-  it('keeps 1M inside September instead of leaking August in positive UTC offsets', () => {
+describe('bankAnalyticsDateRange', () => {
+  it('defines This month as the first through last calendar day of September', () => {
     const asOf = new Date(2026, 8, 23, 12, 0, 0);
-    expect(bankAnalyticsMonthRange('1', '', '', asOf)).toEqual({ start: '2026-09', end: '2026-09' });
+    expect(bankAnalyticsDateRange('1', '', '', asOf)).toEqual({
+      startDate: '2026-09-01',
+      endDate: '2026-09-30',
+    });
   });
 
-  it('resolves wider presets and YTD as whole calendar months', () => {
+  it('uses explicit first/last dates for wider presets and YTD', () => {
     const asOf = new Date(2026, 8, 23, 12, 0, 0);
-    expect(bankAnalyticsMonthRange('3', '', '', asOf)).toEqual({ start: '2026-07', end: '2026-09' });
-    expect(bankAnalyticsMonthRange('6', '', '', asOf)).toEqual({ start: '2026-04', end: '2026-09' });
-    expect(bankAnalyticsMonthRange('ytd', '', '', asOf)).toEqual({ start: '2026-01', end: '2026-09' });
+    expect(bankAnalyticsDateRange('3', '', '', asOf)).toEqual({
+      startDate: '2026-07-01',
+      endDate: '2026-09-30',
+    });
+    expect(bankAnalyticsDateRange('6', '', '', asOf)).toEqual({
+      startDate: '2026-04-01',
+      endDate: '2026-09-30',
+    });
+    expect(bankAnalyticsDateRange('ytd', '', '', asOf)).toEqual({
+      startDate: '2026-01-01',
+      endDate: '2026-09-30',
+    });
   });
 
-  it('honours explicit custom months without timezone conversion', () => {
+  it('expands custom month selections to inclusive calendar dates', () => {
     const asOf = new Date(2026, 8, 23, 12, 0, 0);
-    expect(bankAnalyticsMonthRange('custom', '2026-08', '2026-09', asOf)).toEqual({ start: '2026-08', end: '2026-09' });
+    expect(bankAnalyticsDateRange('custom', '2026-08', '2026-09', asOf)).toEqual({
+      startDate: '2026-08-01',
+      endDate: '2026-09-30',
+    });
+  });
+
+  it('handles leap-year month ends correctly', () => {
+    const asOf = new Date(2028, 1, 10, 12, 0, 0);
+    expect(bankAnalyticsDateRange('1', '', '', asOf)).toEqual({
+      startDate: '2028-02-01',
+      endDate: '2028-02-29',
+    });
   });
 });
 
@@ -256,8 +279,8 @@ describe('accountPeriodAnalytics', () => {
     const result = accountPeriodAnalytics(
       selected,
       [...selectedRows, ...siblingRows, pending],
-      '2026-09',
-      '2026-09',
+      '2026-09-01',
+      '2026-09-30',
     );
 
     expect(result.transactions).toHaveLength(16);
@@ -281,8 +304,8 @@ describe('accountPeriodAnalytics', () => {
         tx({ id: 'sep', accountId: 'a1', date: '2026-09-01', amount: -50 }),
         tx({ id: 'oct', accountId: 'a1', date: '2026-10-01', amount: 200 }),
       ],
-      '2026-09',
-      '2026-09',
+      '2026-09-01',
+      '2026-09-30',
     );
 
     expect(result.transactions.map((row) => row.id)).toEqual(['sep']);
