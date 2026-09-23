@@ -1,7 +1,7 @@
-import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react';
+import { useEffect, useRef, useState, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
 import { Tooltip } from '../Tooltip';
-import { useAppearanceStore } from '../../store/appearanceStore';
-import { dateInputFormat, formatDate, parseDateInput, type DateFormat } from '../../lib/format';
+import { CalendarIcon } from '../icons';
+import { formatDate, parseDateInput } from '../../lib/format';
 
 /** Labeled form field wrapper — consistent label+control spacing instead of
  * ad-hoc inline styles scattered per page.
@@ -107,32 +107,99 @@ export function Select({ width, children, ...rest }: SelectHTMLAttributes<HTMLSe
 }
 
 
-/** Date field whose visible value follows the global date-format preference.
- * Display-only formats use the closest input-friendly format (22-Sep-2026). */
-export function DateInput({ value, onChange, width, ...rest }: Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'type'> & {
+/** Date input has one app-wide editing format: DD-MMM-YYYY (01-Aug-2026).
+ * Appearance date formats are display-only and never change what users type.
+ *
+ * A native date input is kept visually hidden beside the text field so the
+ * browser's calendar picker remains available. We keep a local text draft and
+ * only emit a canonical YYYY-MM-DD value after it parses successfully; partial
+ * or invalid typing therefore never leaks into application state. */
+export function DateInput({ value, onChange, width, min, max, disabled, ...rest }: Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'type'> & {
   value: string;
   onChange: (event: { target: { value: string } }) => void;
   width?: number;
 }) {
-  const configured = useAppearanceStore((s) => s.appearance.dateFormat ?? 'DD-MMM-YYYY') as DateFormat;
-  const inputFormat = dateInputFormat(configured);
-  const displayValue = value ? formatDate(value, inputFormat) : '';
+  const INPUT_FORMAT = 'DD-MMM-YYYY' as const;
+  const calendarRef = useRef<HTMLInputElement>(null);
+  const canonicalDisplay = value ? formatDate(value, INPUT_FORMAT) : '';
+  const [draft, setDraft] = useState(canonicalDisplay);
+
+  useEffect(() => {
+    setDraft(canonicalDisplay);
+  }, [canonicalDisplay]);
+
+  const withinBounds = (iso: string) => (!min || iso >= String(min)) && (!max || iso <= String(max));
+  const commit = (text: string) => {
+    const parsed = parseDateInput(text, INPUT_FORMAT);
+    if (!parsed || !withinBounds(parsed)) return false;
+    onChange({ target: { value: parsed } });
+    setDraft(formatDate(parsed, INPUT_FORMAT));
+    return true;
+  };
+
+  const openCalendar = () => {
+    const picker = calendarRef.current;
+    if (!picker || disabled) return;
+    try {
+      picker.showPicker();
+    } catch {
+      picker.click();
+    }
+  };
+
   return (
-    <input
-      {...rest}
-      type="text"
-      inputMode="numeric"
-      value={displayValue}
-      placeholder={formatDate('2026-09-22', inputFormat)}
-      style={{ width, ...rest.style }}
-      onChange={(e) => {
-        const parsed = parseDateInput(e.target.value, inputFormat);
-        onChange({ target: { value: parsed ?? e.target.value } });
-      }}
-      onBlur={(e) => {
-        const parsed = parseDateInput(e.target.value, inputFormat);
-        if (parsed) onChange({ target: { value: parsed } });
-      }}
-    />
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4, width }}>
+      <input
+        {...rest}
+        type="text"
+        inputMode="text"
+        autoComplete="off"
+        value={draft}
+        disabled={disabled}
+        placeholder="01-Aug-2026"
+        aria-label={rest['aria-label']}
+        style={{ flex: 1, minWidth: 0, ...rest.style }}
+        onChange={(e) => {
+          const next = e.target.value;
+          setDraft(next);
+          commit(next);
+        }}
+        onBlur={() => {
+          if (!draft.trim()) {
+            onChange({ target: { value: '' } });
+            setDraft('');
+            return;
+          }
+          if (!commit(draft)) setDraft(canonicalDisplay);
+        }}
+      />
+      <button
+        type="button"
+        className="btn secondary small"
+        aria-label="Choose date from calendar"
+        title="Choose date from calendar"
+        disabled={disabled}
+        onClick={openCalendar}
+        style={{ paddingInline: 8, flex: '0 0 auto' }}
+      >
+        <CalendarIcon size={14} />
+      </button>
+      <input
+        ref={calendarRef}
+        type="date"
+        value={value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : ''}
+        min={min}
+        max={max}
+        disabled={disabled}
+        tabIndex={-1}
+        aria-hidden="true"
+        style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
+        onChange={(e) => {
+          if (!e.target.value || !withinBounds(e.target.value)) return;
+          onChange({ target: { value: e.target.value } });
+          setDraft(formatDate(e.target.value, INPUT_FORMAT));
+        }}
+      />
+    </div>
   );
 }
