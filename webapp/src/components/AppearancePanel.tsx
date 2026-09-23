@@ -70,16 +70,16 @@ export function AppearanceFields() {
       <select
         value={appearance.dateFormat ?? 'DD/MM/YYYY'}
         onChange={(e) => updateAppearance({ dateFormat: e.target.value as DateFormat })}
-        title="How calendar dates are displayed throughout the app"
+        title="Display format only. Date entry always uses 01-Aug-2026 and offers a calendar picker."
       >
-        <option value="DD-MMM-YYYY">Dates: 22-Sep-2026</option>
-        <option value="YYYY-MMM-DD">Dates: 2026-Sep-22</option>
-        <option value="DD-MM-YYYY">Dates: 22-09-2026</option>
-        <option value="MM-DD-YYYY">Dates: 09-22-2026</option>
-        <option value="DD/MM/YYYY">Dates: 22/09/2026</option>
-        <option value="MM/DD/YYYY">Dates: 09/22/2026</option>
-        <option value="dddd, MMM DD, YYYY">Dates: Tuesday, Sep 22, 2026 (display only)</option>
-        <option value="ddd, DD MMM, YYYY">Dates: Tue, 22 Sep, 2026 (display only)</option>
+        <option value="DD-MMM-YYYY">Display dates: 22-Sep-2026</option>
+        <option value="YYYY-MMM-DD">Display dates: 2026-Sep-22</option>
+        <option value="DD-MM-YYYY">Display dates: 22-09-2026</option>
+        <option value="MM-DD-YYYY">Display dates: 09-22-2026</option>
+        <option value="DD/MM/YYYY">Display dates: 22/09/2026</option>
+        <option value="MM/DD/YYYY">Display dates: 09/22/2026</option>
+        <option value="dddd, MMM DD, YYYY">Display dates: Tuesday, Sep 22, 2026</option>
+        <option value="ddd, DD MMM, YYYY">Display dates: Tue, 22 Sep, 2026</option>
       </select>
       <button
         className="btn secondary small"
