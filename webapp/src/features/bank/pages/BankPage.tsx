@@ -2,7 +2,7 @@ import type { User } from 'firebase/auth';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
-import { Card, CollapsibleCard, EntityCard, MoneyValue } from '../../../components/Card';
+import { CollapsibleCard, EntityCard, MoneyValue } from '../../../components/Card';
 import { SummaryChip, type StandardCardAction } from '../../../components/StandardCard';
 import { StandardPageSections, type StandardPageSection } from '../../../components/StandardPageSections';
 import { TopBarControls, TopBarSelect } from '../../../components/TopBarControls';
@@ -12,7 +12,7 @@ import { Notice } from '../../../components/Notice';
 import { Tooltip } from '../../../components/Tooltip';
 import { ChartCard } from '../../qse/components/ChartCard';
 import { confirmDialog } from '../../../components/ConfirmDialog';
-import { ArchiveIcon, CheckIcon, EditIcon, ExportIcon, ListIcon, PlusIcon, RestoreIcon, SaveIcon, StarIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
+import { CheckIcon, EditIcon, ListIcon, PlusIcon, SaveIcon, StarIcon, TransferIcon, TrashIcon, XIcon } from '../../../components/icons';
 import { Modal } from '../../../components/Modal';
 import { RecordDetailModal } from '../../../components/RecordDetailModal';
 import { Tabs } from '../../../components/Tabs';
@@ -1125,7 +1125,7 @@ export function AccountDetailPage() {
         <SummaryChip label="Withdrawals" value={fmtMoney(analytics.withdrawals, account.currencyCode)} />
         <SummaryChip label="Net" value={fmtMoney(analytics.netFlow, account.currencyCode)} />
       </>,
-      content: <AccountAnalyticsSection account={account} ledger={filteredLedger} />,
+      content: <AccountAnalyticsSection ledger={filteredLedger} />,
     },
   ];
 
@@ -1144,7 +1144,6 @@ export function AccountDetailPage() {
   );
 }
 
-function AccountsTab()
 function AccountsTab() {
   return (
     <div>
@@ -1367,7 +1366,7 @@ function TransactionsList({ account, ledger, allLedgerCount }: { account: BankAc
  * (Income/Expense/Net flow/Balance at month end, then one row per spend
  * category) — a chart's own hover tooltip is the only other way to read
  * an exact number today, and doesn't work at all on a touch device. */
-function AccountAnalyticsSection({ account, ledger }: { account: BankAccount; ledger: ReturnType<typeof accountRunningLedger> }) {
+function AccountAnalyticsSection({ ledger }: { ledger: ReturnType<typeof accountRunningLedger> }) {
   const dateFormat = useAppearanceStore((state) => state.appearance.dateFormat ?? 'DD-MMM-YYYY');
   const categories = useCategoryStore((state) => state.workbook.categories);
   useAppearanceStore((state) => state.appearance);
