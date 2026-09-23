@@ -89,8 +89,8 @@
 .page-heading-title-row{display:flex;align-items:center;gap:8px;margin-top:6px;}
 .standard-section-stack{display:flex;flex-direction:column;gap:16px;}
 .standard-section-anchor{scroll-margin-top:84px;}
-.standard-card{padding:0;overflow:visible;}
-.standard-card-header{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr) minmax(40px,1fr);align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border);}
+.standard-card{padding: 0 !important;overflow:visible;}
+.standard-card-header{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr) minmax(40px,1fr);align-items:center;gap:12px;padding:12px 14px;border-bottom:0px solid var(--border);}
 .standard-card-toggle{display:flex;align-items:center;gap:8px;min-width:0;border:0;background:transparent;color:var(--text);cursor:pointer;text-align:left;padding:0;}
 .standard-card-arrow{color:var(--muted);transition:transform .15s ease;flex:0 0 auto;}
 .standard-card-arrow.open{transform:rotate(90deg);}
@@ -107,7 +107,7 @@
 .standard-card-menu-item{width:100%;display:flex;align-items:center;padding:8px 10px;border:0;border-radius:6px;background:transparent;color:var(--text);cursor:pointer;text-align:left;font:inherit;}
 .standard-card-menu-item:hover{background:var(--panel-2);}
 .standard-card-menu-item.danger{color:var(--loss);}
-.page-topbar-sections{margin:0;flex:1;min-width:0;}
+.page-topbar-sections{margin:0;/*flex:1*/;min-width:0;}
 .page-topbar-right{flex:0 0 auto;}
 .topbar-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
 .topbar-select-wrap{margin:0;}

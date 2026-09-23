@@ -1,5 +1,5 @@
-:root{
-    /* User-reported ("menu bg and text contrast is still not visual at
+:root {
+	/* User-reported ("menu bg and text contrast is still not visual at
        many places"): every native browser control — a <select>'s own
        opened dropdown list, number/date input spinners, scrollbars — was
        rendering in the browser's default LIGHT appearance regardless of
@@ -12,88 +12,111 @@
        list chief among them). Default here is dark since :root's own
        un-overridden palette above is the dark one; the light override
        right below flips it back. */
-    color-scheme:dark;
-    /* User-reported: dark mode's page background and its panels sat too
+	color-scheme: dark;
+	/* User-reported: dark mode's page background and its panels sat too
        close in lightness to read as separate surfaces ("hard to distinct
        UI components"). Lifted all three a step while keeping the same
        bg < panel < panel-2 ordering, so panels visibly "pop" off the page
        instead of blending into a single near-black field. */
-    --bg:#15181d;
-    --panel:#1c2129;
-    --panel-2:#232a33;
-    --border:#2d3640;
-    --text:#e8ecef;
-    --muted:#8a97a3;
-    --accent:#3d4b58;
-    --accent-soft:#1c242c;
-    --gold:#c9a227;
-    --gold-rgb:201,162,39;
-    --info:#3d8bd6;
-    --info-rgb:61,139,214;
-    --profit:#34c77b;
-    --loss:#e5484d;
-    --warn:#e5a93f;
-    --radius:10px;
-    --radius-lg:16px;
-    /* Single source of truth for "how a card sits above the page" — was
+	--bg: #15181d;
+	--panel: #1c2129;
+	--panel-2: #232a33;
+	--border: #2d3640;
+	--text: #e8ecef;
+	--muted: #8a97a3;
+	--accent: #3d4b58;
+	--accent-soft: #1c242c;
+	--gold: #c9a227;
+	--gold-rgb: 201, 162, 39;
+	--info: #3d8bd6;
+	--info-rgb: 61, 139, 214;
+	--profit: #34c77b;
+	--loss: #e5484d;
+	--warn: #e5a93f;
+	--radius: 10px;
+	--radius-lg: 16px;
+	--radius-full-round: 999px;
+	/* Single source of truth for "how a card sits above the page" — was
        previously ~10 different literal box-shadow values scattered across
        wine/material/light/dark blocks (user-reported item 4, "shadows are
        inconsistent"). Every card-family shadow below now references one
        of these two tokens instead of inventing its own numbers. */
-    /* Lightened 2026-08-27 (redesign rule 4, "lighter shadows to make UI
+	/* Lightened 2026-08-27 (redesign rule 4, "lighter shadows to make UI
        less dense") — roughly half the previous opacity/spread on both
        layers, still enough separation to read as "elevated" without the
        heavier look every card on every page previously had. */
-    --shadow-card:0 1px 1px rgba(0,0,0,.10), 0 2px 8px rgba(0,0,0,.09);
-    --shadow-lg:0 6px 16px rgba(0,0,0,.24);
-    --on-accent-soft:#fff;
-    --mono:'JetBrains Mono',monospace;
-    --disp:'Space Grotesk',sans-serif;
-    --body:'Inter',sans-serif;
-  }
-  :root[data-theme="light"]{
-    color-scheme:light;
-    /* Same reasoning as the dark palette above — a touch greyer than the
+	--shadow-card: 0 1px 1px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.09);
+	--shadow-lg: 0 6px 16px rgba(0, 0, 0, 0.24);
+	--on-accent-soft: #fff;
+	--mono: "JetBrains Mono", monospace;
+	--disp: "Space Grotesk", sans-serif;
+	--body: "Inter", sans-serif;
+}
+:root[data-theme="light"] {
+	color-scheme: light;
+	/* Same reasoning as the dark palette above — a touch greyer than the
        previous near-white page background, so white panels stand out
        more clearly as distinct surfaces. */
-    --bg:#ecece7;
-    --panel:#ffffff;
-    --panel-2:#f4f5f7;
-    --border:#d3d8de;
-    --text:#1b2027;
-    --muted:#667085;
-    --accent:#33414d;
-    --accent-soft:#e7ebee;
-    --gold:#a9790a;
-    --gold-rgb:169,121,10;
-    --info:#1c64c9;
-    --info-rgb:28,100,201;
-    --profit:#18874a;
-    --loss:#c8302f;
-    --warn:#a9790a;
-    --on-accent-soft:var(--accent);
-    --shadow-card:0 1px 1px rgba(20,20,30,.04), 0 2px 8px rgba(20,20,30,.04);
-    --shadow-lg:0 8px 20px rgba(20,20,30,.10);
-  }
-  :root[data-theme="light"] input[type=text],
-  :root[data-theme="light"] input[type=number],
-  :root[data-theme="light"] input[type=date],
-  :root[data-theme="light"] select{ background:#f7f8fa; }
+	--bg: #ecece7;
+	--panel: #ffffff;
+	--panel-2: #f4f5f7;
+	--border: #d3d8de;
+	--text: #1b2027;
+	--muted: #667085;
+	--accent: #33414d;
+	--accent-soft: #e7ebee;
+	--gold: #a9790a;
+	--gold-rgb: 169, 121, 10;
+	--info: #1c64c9;
+	--info-rgb: 28, 100, 201;
+	--profit: #18874a;
+	--loss: #c8302f;
+	--warn: #a9790a;
+	--on-accent-soft: var(--accent);
+	--shadow-card: 0 1px 1px rgba(20, 20, 30, 0.04), 0 2px 8px rgba(20, 20, 30, 0.04);
+	--shadow-lg: 0 8px 20px rgba(20, 20, 30, 0.1);
+}
+:root[data-theme="light"] input[type="text"],
+:root[data-theme="light"] input[type="number"],
+:root[data-theme="light"] input[type="date"],
+:root[data-theme="light"] select {
+	background: #f7f8fa;
+}
 
-  /* ---------- Color themes — only the accent (buttons, active nav, chart
+/* ---------- Color themes — only the accent (buttons, active nav, chart
      bars) changes; gold/blue highlight semantics and profit/loss colors
      stay fixed so "break-even = gold" and "shares = blue" always read the
      same regardless of theme. ---------- */
-  html[data-color="ocean"]{ --accent:#1f6fb2; --accent-soft:#173044; }
-  html[data-color="ocean"][data-theme="light"]{ --accent-soft:#e2eefb; }
-  html[data-color="forest"]{ --accent:#1f8a5c; --accent-soft:#123423; }
-  html[data-color="forest"][data-theme="light"]{ --accent-soft:#e1f3ea; }
-  html[data-color="violet"]{ --accent:#6d4fc9; --accent-soft:#241b3f; }
-  html[data-color="violet"][data-theme="light"]{ --accent-soft:#ece6fa; }
-  html[data-color="sunset"]{ --accent:#c9611f; --accent-soft:#3a2312; }
-  html[data-color="sunset"][data-theme="light"]{ --accent-soft:#fbe9db; }
+html[data-color="ocean"] {
+	--accent: #1f6fb2;
+	--accent-soft: #173044;
+}
+html[data-color="ocean"][data-theme="light"] {
+	--accent-soft: #e2eefb;
+}
+html[data-color="forest"] {
+	--accent: #1f8a5c;
+	--accent-soft: #123423;
+}
+html[data-color="forest"][data-theme="light"] {
+	--accent-soft: #e1f3ea;
+}
+html[data-color="violet"] {
+	--accent: #6d4fc9;
+	--accent-soft: #241b3f;
+}
+html[data-color="violet"][data-theme="light"] {
+	--accent-soft: #ece6fa;
+}
+html[data-color="sunset"] {
+	--accent: #c9611f;
+	--accent-soft: #3a2312;
+}
+html[data-color="sunset"][data-theme="light"] {
+	--accent-soft: #fbe9db;
+}
 
-  /* ---------- Theme reach beyond the nav — Material-style "tonal" look ----------
+/* ---------- Theme reach beyond the nav — Material-style "tonal" look ----------
      Classic (wine — the original look) intentionally stays exactly as
      designed, hard borders and all. Every other color theme instead uses
      soft, filled "tonal" surfaces (a light accent-tinted fill + accent
@@ -106,28 +129,23 @@
      values. Removed rather than left as a red herring for the next
      session reading this file — see the --shadow-card token below for
      the surviving, single source of truth.) */
-  html:not([data-color="wine"]) .btn.secondary{
-    background: var(--accent-soft);
-    border:1px solid transparent;
-    color: var(--accent);
-  }
-  html:not([data-color="wine"]) .btn.ghost{
-    color: var(--accent);
-  }
-  html:not([data-color="wine"]) .btn.ghost:hover{
-    background: var(--accent-soft);
-    color: var(--accent);
-  }
-  html:not([data-color="wine"]) thead th{
-    color: var(--accent);
-  }
-  html:not([data-color="wine"]) .chip:not(.active){
-    background: var(--accent-soft);
-    border-color: transparent;
-    color: var(--accent);
-  }
+html:not([data-color="wine"]) .btn.secondary {
+	background: var(--accent-soft);
+	border: 1px solid transparent;
+	color: var(--accent);
+}
+html:not([data-color="wine"]) .btn.ghost {
+	color: var(--accent);
+}
+html:not([data-color="wine"]) .btn.ghost:hover {
+	background: var(--accent-soft);
+	color: var(--accent);
+}
+html:not([data-color="wine"]) thead th {
+	color: var(--accent);
+}
 
-  /* ---------- Material Design theme family --------------------------------
+/* ---------- Material Design theme family --------------------------------
      Each theme's identity lives in --accent/--accent-soft only. Surfaces
      (bg/panel/panel-2) are shared neutral values, not tinted per theme:
      tinting every surface with the accent hue made things unreadable —
@@ -136,163 +154,273 @@
      Light mode surfaces stay near-white/neutral gray; dark mode surfaces are
      true low-luminance neutrals with a clear step between bg → panel →
      panel-2, so cards actually read as distinct elevated surfaces. */
-  html[data-color^="material-"]{
-    --bg:#FAFAFA; --panel:#FFFFFF; --panel-2:#F1F1F2; --border:#E3E3E5; --text:#1B1B1D; --muted:#6B6B6F;
-  }
-  html[data-color="material-blue"]{ --accent:#6750A4; --accent-soft:#E8DEF8; }
-  html[data-color="material-green"]{ --accent:#386A20; --accent-soft:#D9EAD0; }
-  html[data-color="material-purple"]{ --accent:#7D5260; --accent-soft:#FFD8E4; }
-  html[data-color="material-teal"]{ --accent:#006A6A; --accent-soft:#CDE8E8; }
-  html[data-color="material-amber"]{ --accent:#8A5000; --accent-soft:#FFDCB5; }
-  html[data-color="material-crimson"]{ --accent:#B3261E; --accent-soft:#FFDAD4; }
-  html[data-color="material-slate"]{ --accent:#455A70; --accent-soft:#D6E3F7; }
+html[data-color^="material-"] {
+	--bg: #fafafa;
+	--panel: #ffffff;
+	--panel-2: #f1f1f2;
+	--border: #e3e3e5;
+	--text: #1b1b1d;
+	--muted: #6b6b6f;
+}
+html[data-color="material-blue"] {
+	--accent: #6750a4;
+	--accent-soft: #e8def8;
+}
+html[data-color="material-green"] {
+	--accent: #386a20;
+	--accent-soft: #d9ead0;
+}
+html[data-color="material-purple"] {
+	--accent: #7d5260;
+	--accent-soft: #ffd8e4;
+}
+html[data-color="material-teal"] {
+	--accent: #006a6a;
+	--accent-soft: #cde8e8;
+}
+html[data-color="material-amber"] {
+	--accent: #8a5000;
+	--accent-soft: #ffdcb5;
+}
+html[data-color="material-crimson"] {
+	--accent: #b3261e;
+	--accent-soft: #ffdad4;
+}
+html[data-color="material-slate"] {
+	--accent: #455a70;
+	--accent-soft: #d6e3f7;
+}
 
-  html[data-color^="material-"][data-theme="dark"]{
-    --bg:#0B0C0D; --panel:#18181A; --panel-2:#232325; --border:#333335; --text:#ECECEE; --muted:#A6A6AA;
-  }
-  html[data-color="material-blue"][data-theme="dark"]{ --accent:#D0BCFF; --accent-soft:#4F378B; }
-  html[data-color="material-green"][data-theme="dark"]{ --accent:#B0D49A; --accent-soft:#315724; }
-  html[data-color="material-purple"][data-theme="dark"]{ --accent:#FFB1C6; --accent-soft:#633B49; }
-  html[data-color="material-teal"][data-theme="dark"]{ --accent:#4FDADA; --accent-soft:#004F50; }
-  html[data-color="material-amber"][data-theme="dark"]{ --accent:#FFB96B; --accent-soft:#5F3B00; }
-  html[data-color="material-crimson"][data-theme="dark"]{ --accent:#FFB4A9; --accent-soft:#73342B; }
-  html[data-color="material-slate"][data-theme="dark"]{ --accent:#AAC7E8; --accent-soft:#2C4256; }
+html[data-color^="material-"][data-theme="dark"] {
+	--bg: #0b0c0d;
+	--panel: #18181a;
+	--panel-2: #232325;
+	--border: #333335;
+	--text: #ececee;
+	--muted: #a6a6aa;
+}
+html[data-color="material-blue"][data-theme="dark"] {
+	--accent: #d0bcff;
+	--accent-soft: #4f378b;
+}
+html[data-color="material-green"][data-theme="dark"] {
+	--accent: #b0d49a;
+	--accent-soft: #315724;
+}
+html[data-color="material-purple"][data-theme="dark"] {
+	--accent: #ffb1c6;
+	--accent-soft: #633b49;
+}
+html[data-color="material-teal"][data-theme="dark"] {
+	--accent: #4fdada;
+	--accent-soft: #004f50;
+}
+html[data-color="material-amber"][data-theme="dark"] {
+	--accent: #ffb96b;
+	--accent-soft: #5f3b00;
+}
+html[data-color="material-crimson"][data-theme="dark"] {
+	--accent: #ffb4a9;
+	--accent-soft: #73342b;
+}
+html[data-color="material-slate"][data-theme="dark"] {
+	--accent: #aac7e8;
+	--accent-soft: #2c4256;
+}
 
-  /* Soft, Material-like surfaces for every non-wine theme. The
+/* Soft, Material-like surfaces for every non-wine theme. The
      .card.stat-card/.card.chart-card border-left/background pair that
      used to live here was dead code (a later, same-specificity block
      further down always won instead) — removed rather than left as a
      misleading second definition; see --shadow-card below. */
-  html:not([data-color="wine"]) .card{
-    border:0;
-    box-shadow:var(--shadow-card);
-  }
-  html:not([data-color="wine"]) .btn.secondary,
-  html:not([data-color="wine"]) .btn.ghost{
-    border:0;
-    box-shadow:none;
-  }
-  html:not([data-color="wine"]) .chip{
-    border:0;
-    box-shadow:none;
-  }
+/* html:not([data-color="wine"]) .card {
+	border: 0;
+	box-shadow: var(--shadow-card);
+} */
+html:not([data-color="wine"]) .btn.secondary,
+html:not([data-color="wine"]) .btn.ghost {
+	border: 0;
+	box-shadow: none;
+}
 
-  /* Material Design family: deliberately borderless, tonal and elevated. */
-  html[data-color^="material-"] body{ background:var(--bg); color:var(--text); }
-  html[data-color^="material-"] .card{
-    border-radius:var(--radius-lg);
-    background:var(--panel);
-    box-shadow:var(--shadow-card);
-  }
-  html[data-color^="material-"] .btn{
-    border:0 !important;
-    border-radius:999px;
-    box-shadow:none;
-    transition:transform .12s ease, box-shadow .12s ease, filter .12s ease;
-  }
-  html[data-color^="material-"] .btn.secondary{
-    background:var(--accent-soft);
-    color:var(--accent);
-  }
-  html[data-color^="material-"] .btn.ghost{
-    background:transparent;
-    color:var(--accent);
-  }
-  html[data-color^="material-"] .btn:hover{ filter:none; box-shadow:0 2px 6px rgba(0,0,0,.14); transform:translateY(-1px); }
-  html[data-color^="material-"] .chip{
-    border:0;
-    border-radius:999px;
-  }
-  html[data-color^="material-"] .chip:not(.active){
-    background:var(--accent-soft);
-    color:var(--accent);
-  }
-  a.navbtn{text-decoration: none;}
-  html[data-color^="material-"] .navbtn.active{
-    box-shadow:none;
-    background:var(--accent-soft);
-    color:var(--accent);
-  }
-  html[data-color^="material-"] .navbtn:hover{ background:color-mix(in srgb, var(--accent-soft) 55%, var(--panel-2)); }
-  html[data-color^="material-"] thead th{ border-bottom:0; color:var(--accent); }
-  html[data-color^="material-"] tbody tr:hover{ background:color-mix(in srgb, var(--accent-soft) 32%, var(--panel)); }
-  html[data-color^="material-"] input[type=text],
-  html[data-color^="material-"] input[type=number],
-  html[data-color^="material-"] input[type=date],
-  html[data-color^="material-"] select{
-    border:1px solid color-mix(in srgb, var(--border) 75%, transparent);
-    border-radius:12px;
-    box-shadow:none;
-  }
-  html[data-color^="material-"] input:focus,
-  html[data-color^="material-"] select:focus{
-    border-color:var(--accent);
-    outline:3px solid color-mix(in srgb, var(--accent-soft) 75%, transparent);
-  }
-  html[data-color^="material-"] .pill{ border:0; }
+/* Material Design family: deliberately borderless, tonal and elevated. */
+html[data-color^="material-"] body {
+	background: var(--bg);
+	color: var(--text);
+}
+html[data-color^="material-"] .card {
+	border-radius: var(--radius-lg);
+	background: var(--panel);
+	box-shadow: var(--shadow-card);
+}
+html[data-color^="material-"] .btn {
+	border: 0 !important;
+	border-radius: 999px;
+	box-shadow: none;
+	transition:
+		transform 0.12s ease,
+		box-shadow 0.12s ease,
+		filter 0.12s ease;
+}
+html[data-color^="material-"] .btn.secondary {
+	background: var(--accent-soft);
+	color: var(--accent);
+}
+html[data-color^="material-"] .btn.ghost {
+	background: transparent;
+	color: var(--accent);
+}
+html[data-color^="material-"] .btn:hover {
+	filter: none;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.14);
+	transform: translateY(-1px);
+}
 
-  /* ---------- Font style presets — all typography already routes through
+html[data-color^="material-"] .chip:not(.active) {
+	background: var(--accent-soft);
+	color: var(--accent);
+}
+a.navbtn {
+	text-decoration: none;
+}
+html[data-color^="material-"] .navbtn.active {
+	box-shadow: none;
+	background: var(--accent-soft);
+	color: var(--accent);
+}
+html[data-color^="material-"] .navbtn:hover {
+	background: color-mix(in srgb, var(--accent-soft) 55%, var(--panel-2));
+}
+html[data-color^="material-"] thead th {
+	border-bottom: 0;
+	color: var(--accent);
+}
+html[data-color^="material-"] tbody tr:hover {
+	background: color-mix(in srgb, var(--accent-soft) 32%, var(--panel));
+}
+html[data-color^="material-"] input[type="text"],
+html[data-color^="material-"] input[type="number"],
+html[data-color^="material-"] input[type="date"],
+html[data-color^="material-"] select {
+	border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+	border-radius: 12px;
+	box-shadow: none;
+}
+html[data-color^="material-"] input:focus,
+html[data-color^="material-"] select:focus {
+	border-color: var(--accent);
+	outline: 3px solid color-mix(in srgb, var(--accent-soft) 75%, transparent);
+}
+html[data-color^="material-"] .pill {
+	border: 0;
+}
+
+/* ---------- Font style presets — all typography already routes through
      var(--body)/--disp/--mono, so swapping these three variables re-skins
      the whole app instantly. ---------- */
-  html[data-font="system"]{
-    --body:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-    --disp:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-    --mono:ui-monospace,'SF Mono','Cascadia Code',Consolas,monospace;
-  }
-  html[data-font="legible"]{
-    --body:'Atkinson Hyperlegible',sans-serif;
-    --disp:'Atkinson Hyperlegible',sans-serif;
-    --mono:'JetBrains Mono',monospace;
-  }
-  html[data-font="serif"]{
-    --body:'Source Serif 4',Georgia,serif;
-    --disp:'Source Serif 4',Georgia,serif;
-    --mono:'JetBrains Mono',monospace;
-  }
-  html[data-font="rounded"]{
-    --body:'Lexend',sans-serif;
-    --disp:'Lexend',sans-serif;
-    --mono:'JetBrains Mono',monospace;
-  }
-  html[data-font="arial"]{
-    --body:Arial,Helvetica,sans-serif;
-    --disp:Arial,Helvetica,sans-serif;
-    --mono:'Courier New',Courier,monospace;
-  }
-  html[data-font="arial-narrow"]{
-    --body:'Arial Narrow',Arial,sans-serif;
-    --disp:'Arial Narrow',Arial,sans-serif;
-    --mono:'Courier New',Courier,monospace;
-  }
-  /* ---------- Text size — scales the whole rendered page, including the
+html[data-font="system"] {
+	--body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	--disp: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	--mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+}
+html[data-font="legible"] {
+	--body: "Atkinson Hyperlegible", sans-serif;
+	--disp: "Atkinson Hyperlegible", sans-serif;
+	--mono: "JetBrains Mono", monospace;
+}
+html[data-font="serif"] {
+	--body: "Source Serif 4", Georgia, serif;
+	--disp: "Source Serif 4", Georgia, serif;
+	--mono: "JetBrains Mono", monospace;
+}
+html[data-font="rounded"] {
+	--body: "Lexend", sans-serif;
+	--disp: "Lexend", sans-serif;
+	--mono: "JetBrains Mono", monospace;
+}
+html[data-font="arial"] {
+	--body: Arial, Helvetica, sans-serif;
+	--disp: Arial, Helvetica, sans-serif;
+	--mono: "Courier New", Courier, monospace;
+}
+html[data-font="arial-narrow"] {
+	--body: "Arial Narrow", Arial, sans-serif;
+	--disp: "Arial Narrow", Arial, sans-serif;
+	--mono: "Courier New", Courier, monospace;
+}
+/* ---------- Text size — scales the whole rendered page, including the
      modal, so it isn't a per-selector patchwork. ---------- */
-  html[data-fontsize="small"] body{zoom:0.9;}
-  html[data-fontsize="large"] body{zoom:1.15;}
-  html[data-fontsize="xl"] body{zoom:1.3;}
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--body);font-size:15px;line-height:1.5;overflow-x:clip;}
-  ::-webkit-scrollbar{width:8px;height:8px;}
-  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
-  a{color:inherit; text-decoration:none;}
-  button, input, select{font-family:var(--body);}
-  input:focus-visible, select:focus-visible, button:focus-visible{outline:2px solid var(--gold); outline-offset:1px;}
+html[data-fontsize="small"] body {
+	zoom: 0.9;
+}
+html[data-fontsize="large"] body {
+	zoom: 1.15;
+}
+html[data-fontsize="xl"] body {
+	zoom: 1.3;
+}
+* {
+	box-sizing: border-box;
+}
+html,
+body {
+	margin: 0;
+	padding: 0;
+	background: var(--bg);
+	color: var(--text);
+	font-family: var(--body);
+	font-size: 15px;
+	line-height: 1.5;
+	overflow-x: clip;
+}
+::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+::-webkit-scrollbar-thumb {
+	background: var(--border);
+	border-radius: 4px;
+}
+a {
+	color: inherit;
+	text-decoration: none;
+}
+button,
+input,
+select {
+	font-family: var(--body);
+}
+input:focus-visible,
+select:focus-visible,
+button:focus-visible {
+	outline: 2px solid var(--gold);
+	outline-offset: 1px;
+}
 
-  /* ---------- Shell ---------- */
-  .shell{display:flex; min-height:100vh;}
-  .sidebar{
-    /* User-reported (2026-09): "make sidenavbar a bit wider" — was 220px,
+/* ---------- Shell ---------- */
+.shell {
+	display: flex;
+	min-height: 100vh;
+}
+.sidebar {
+	/* User-reported (2026-09): "make sidenavbar a bit wider" — was 220px,
        genuinely cramped against several nav items' own text (e.g. "Trade
        Transactions", "Personal Loans"). Bumped to 250px; `.main`'s own
        `margin-left` below must match this value exactly, or the two drift
        out of sync and either overlap or leave a gap. */
-    width:250px; flex-shrink:0;
-    position:fixed; top:0; left:0; height:100vh;
-    display:flex; flex-direction:column;
-    background:var(--panel);
-    border-right:1px solid var(--border);
-    padding:18px 10px;
-  }
-  /* User feedback (2026-08-26): the account/backup/disclaimer footer used
+	width: 250px;
+	flex-shrink: 0;
+	position: fixed;
+	top: 0;
+	left: 0;
+	height: 100vh;
+	display: flex;
+	flex-direction: column;
+	background: var(--panel);
+	border-right: 1px solid var(--border);
+	padding: 18px 10px;
+}
+/* User feedback (2026-08-26): the account/backup/disclaimer footer used
      to just be the last thing in the sidebar's own overflow:auto scroll —
      on a page with a long nav list it could end up scrolled out of view
      rather than staying anchored. `.sidebar` is now a flex column instead:
@@ -301,31 +429,77 @@
      child shrink below its content size and scroll instead of pushing the
      footer off-screen), `.sidebar-footer` sits after it and is never part
      of that scroll region, so it's always visible at the bottom. */
-  .sidebar-scroll{flex:1; min-height:0; overflow-y:auto;}
-  .sidebar-footer{flex-shrink:0; padding-top:10px;}
-  nav.navlist{display:flex; flex-direction:column; gap:2px;}
-  .navbtn{
-    display:flex; align-items:center; gap:10px;
-    background:transparent; border:none; color:var(--muted);
-    text-align:left; padding:10px 12px; border-radius:8px;
-    font-size:13.5px; font-weight:500; cursor:pointer; width:100%;
-    transition:background .12s, color .12s;
-  }
-  .navbtn:hover{background:var(--panel-2); color:var(--text);}
-  .navbtn.active{background:var(--accent-soft); color:var(--on-accent-soft); box-shadow:inset 3px 0 0 var(--accent);}
-  .navbtn .num{font-family:var(--mono); color:var(--gold); font-size:11px; width:16px; flex-shrink:0;}
+.sidebar-scroll {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+}
+.sidebar-footer {
+	flex-shrink: 0;
+	padding-top: 10px;
+}
+nav.navlist {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+.navbtn {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	background: transparent;
+	border: none;
+	color: var(--muted);
+	text-align: left;
+	padding: 10px 12px;
+	border-radius: 8px;
+	font-size: 13.5px;
+	font-weight: 500;
+	cursor: pointer;
+	width: 100%;
+	transition:
+		background 0.12s,
+		color 0.12s;
+}
+.navbtn:hover {
+	background: var(--panel-2);
+	color: var(--text);
+}
+.navbtn.active {
+	background: var(--accent-soft);
+	color: var(--on-accent-soft);
+	box-shadow: inset 3px 0 0 var(--accent);
+}
+.navbtn .num {
+	font-family: var(--mono);
+	color: var(--gold);
+	font-size: 11px;
+	width: 16px;
+	flex-shrink: 0;
+}
 
-  /* Pending item 54 ("utilize all page spaces"): 1180px left ~520px of dead
+/* Pending item 54 ("utilize all page spaces"): 1180px left ~520px of dead
      space on a 1920px-wide viewport (measured: sidebar 220px + main 1180px =
      1400px, viewport 1920px) — bumped to 1600px so wide monitors actually
      get more of the auto-fit stat-card/chart grids' extra columns instead of
      unused margin. Not removed entirely: an unbounded main would stretch a
      single stat card or narrow form to an absurd width on an ultrawide
      monitor, which is its own readability problem, not a fix. */
-  .main{flex:1; margin-left:250px; padding:26px 30px 60px 30px; max-width:1600px; min-width:0; transition:margin-left .18s ease;}
-  @media(max-width:700px){ .main{padding:18px 14px 50px 14px;} }
+.main {
+	flex: 1;
+	margin-left: 250px;
+	padding: 26px 30px 60px 30px;
+	max-width: 1600px;
+	min-width: 0;
+	transition: margin-left 0.18s ease;
+}
+@media (max-width: 700px) {
+	.main {
+		padding: 18px 14px 50px 14px;
+	}
+}
 
-  /* ---------- Desktop sidebar collapse ("save space and focus" —
+/* ---------- Desktop sidebar collapse ("save space and focus" —
      user request) — slides the whole sidebar off-screen and reclaims its
      width, distinct from the mobile off-canvas drawer above (that one is
      closed by default and opens on demand below 860px; this one is open
@@ -333,49 +507,116 @@
      tab stays visible either way so there's always a way to toggle it
      back, since a fully-hidden sidebar has no "click outside" affordance
      of its own once its usual open-in-place is gone. ---------- */
-  .sidebar{transition:transform .18s ease;}
-  .sidebar.desktop-collapsed{transform:translateX(-100%);}
-  .main.sidebar-collapsed{margin-left:0;}
-  .sidebar-title-row{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
-  .sidebar-collapse-btn{
-    background:transparent; border:1px solid var(--border); border-radius:6px;
-    width:24px; height:24px; display:flex; align-items:center; justify-content:center;
-    color:var(--muted); cursor:pointer; flex-shrink:0;
-  }
-  .sidebar-collapse-btn:hover{color:var(--text); background:var(--panel-2);}
-  .sidebar-expand-tab{
-    display:none; position:fixed; top:14px; left:14px; z-index:120;
-    width:32px; height:32px; align-items:center; justify-content:center;
-    background:var(--panel); border:1px solid var(--border); border-radius:8px;
-    color:var(--muted); cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,.12);
-  }
-  .sidebar-expand-tab:hover{color:var(--text); background:var(--panel-2);}
-  @media(min-width:861px){ .sidebar-expand-tab.show{display:flex;} }
+.sidebar {
+	transition: transform 0.18s ease;
+}
+.sidebar.desktop-collapsed {
+	transform: translateX(-100%);
+}
+.main.sidebar-collapsed {
+	margin-left: 0;
+}
+.sidebar-title-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 12px;
+}
+.sidebar-collapse-btn {
+	background: transparent;
+	border: 1px solid var(--border);
+	border-radius: 6px;
+	width: 24px;
+	height: 24px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--muted);
+	cursor: pointer;
+	flex-shrink: 0;
+}
+.sidebar-collapse-btn:hover {
+	color: var(--text);
+	background: var(--panel-2);
+}
+.sidebar-expand-tab {
+	display: none;
+	position: fixed;
+	top: 14px;
+	left: 14px;
+	z-index: 120;
+	width: 32px;
+	height: 32px;
+	align-items: center;
+	justify-content: center;
+	background: var(--panel);
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	color: var(--muted);
+	cursor: pointer;
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+.sidebar-expand-tab:hover {
+	color: var(--text);
+	background: var(--panel-2);
+}
+@media (min-width: 861px) {
+	.sidebar-expand-tab.show {
+		display: flex;
+	}
+}
 
-  /* ---------- Mobile: sidebar becomes an off-canvas drawer instead of a
+/* ---------- Mobile: sidebar becomes an off-canvas drawer instead of a
      permanent 250px column stealing width from a 375px viewport. Opened
      via .mobile-menu-btn (rendered only below this breakpoint), closed by
      tapping the backdrop, a nav link, or the same button again. ---------- */
-  .mobile-menu-btn{display:none;}
-  .mobile-backdrop{display:none;}
-  @media(max-width:860px){
-    .sidebar{
-      transform:translateX(-100%); transition:transform .22s ease; z-index:200;
-      box-shadow:0 0 24px rgba(0,0,0,.35);
-    }
-    .sidebar.open{transform:translateX(0);}
-    .main{margin-left:0; max-width:100%;}
-    .mobile-menu-btn{
-      display:flex; align-items:center; gap:8px; position:sticky; top:0; z-index:150;
-      background:var(--panel); border:1px solid var(--border); border-radius:8px;
-      padding:9px 14px; margin-bottom:16px; color:var(--text); font-weight:600; font-size:14px; cursor:pointer;
-    }
-    .mobile-backdrop.open{
-      display:block; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:150;
-    }
-  }
+.mobile-menu-btn {
+	display: none;
+}
+.mobile-backdrop {
+	display: none;
+}
+@media (max-width: 860px) {
+	.sidebar {
+		transform: translateX(-100%);
+		transition: transform 0.22s ease;
+		z-index: 200;
+		box-shadow: 0 0 24px rgba(0, 0, 0, 0.35);
+	}
+	.sidebar.open {
+		transform: translateX(0);
+	}
+	.main {
+		margin-left: 0;
+		max-width: 100%;
+	}
+	.mobile-menu-btn {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		position: sticky;
+		top: 0;
+		z-index: 150;
+		background: var(--panel);
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		padding: 9px 14px;
+		margin-bottom: 16px;
+		color: var(--text);
+		font-weight: 600;
+		font-size: 14px;
+		cursor: pointer;
+	}
+	.mobile-backdrop.open {
+		display: block;
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.45);
+		z-index: 150;
+	}
+}
 
-  /* ---------- Mobile: form inputs/selects and stat cards ----------
+/* ---------- Mobile: form inputs/selects and stat cards ----------
      User-reported: inputs/selects felt cramped and got cut off on phones,
      and stat-card numbers could overflow their card. The `.row` wrap +
      min-width fix that used to live here is now the unconditional base
@@ -386,34 +627,67 @@
      `font-size:16px` on inputs avoids iOS Safari's auto-zoom-on-focus (any
      input font-size under 16px triggers it), which reads as "the input
      behaves oddly" on a phone even though nothing is actually broken. */
-  @media(max-width:640px){
-    .row > *{min-width:140px;}
-    input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]), select, textarea{
-      font-size:16px; padding:12px 12px;
-    }
-    .chip{padding:9px 14px;}
-    .stat-card .value{font-size:15px; overflow-wrap:anywhere;}
-  }
+@media (max-width: 640px) {
+	.row > * {
+		min-width: 140px;
+	}
+	input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+	select,
+	textarea {
+		font-size: 16px;
+		padding: 12px 12px;
+	}
+	.chip {
+		padding: 9px 14px;
+	}
+	.stat-card .value {
+		font-size: 15px;
+		overflow-wrap: anywhere;
+	}
+}
 
-  .page{display:none;}
-  .page.active{display:block; animation:fadein .18s ease;}
-  @keyframes fadein{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;}}
+.page {
+	display: none;
+}
+.page.active {
+	display: block;
+	animation: fadein 0.18s ease;
+}
+@keyframes fadein {
+	from {
+		opacity: 0;
+		transform: translateY(4px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
 
-  h1.pagetitle{
-    font-family:var(--disp); font-size:22px; font-weight:600; margin:0 0 4px 0;
-  }
-  .pagesub{color:var(--muted); font-size:14.5px; margin:0 0 22px 0; line-height:1.5;}
+h1.pagetitle {
+	font-family: var(--disp);
+	font-size: 22px;
+	font-weight: 600;
+	margin: 0 0 4px 0;
+}
+.pagesub {
+	color: var(--muted);
+	font-size: 14.5px;
+	margin: 0 0 22px 0;
+	line-height: 1.5;
+}
 
-  .card{
-    /* A faint accent-tinted gradient instead of a flat panel color — makes
+.card {
+	/* A faint accent-tinted gradient instead of a flat panel color — makes
        switching color themes actually change the room's "temperature",
        not just button color. Subtle enough not to hurt contrast/readability. */
-    background:linear-gradient(165deg, color-mix(in srgb, var(--accent) 5%, var(--panel)) 0%, var(--panel) 65%);
-    border:1px solid var(--border); border-radius:var(--radius);
-    padding:18px;
-    box-shadow:var(--shadow-card);
-  }
-  /* User-reported (item 7): card section headings read as regular
+	background: linear-gradient(165deg, color-mix(in srgb, var(--accent) 5%, var(--panel)) 0%, var(--panel) 65%);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	padding: 12px 14px;
+	box-shadow: var(--shadow-card);
+}
+/* User-reported (item 7): card section headings read as regular
      sentence-case description text instead of titles. Scoped to h3/h4
      specifically (not `.card` text generally) since those are always a
      fixed heading string in this app (e.g. "Current position") — never
@@ -422,13 +696,19 @@
      anyone's real data. text-transform:capitalize only uppercases the
      first letter of each word, so an already-uppercase ticker inside a
      heading (rare, but possible) is unaffected. */
-  .card h3, .card h4{text-transform:capitalize;}
-  /* No base `hr` rule existed before — a plain browser-default one used
+.card h3,
+.card h4 {
+	text-transform: capitalize;
+}
+/* No base `hr` rule existed before — a plain browser-default one used
      3D-inset styling that clashed with this app's flat design (added
      2026-09-14, first real usage: separating a Bank's accounts from its
      credit cards). */
-  hr{border:none; border-top:1px solid var(--border);}
-  /* Left-border accent removed (user-reported item 10: "left borders don't
+hr {
+	border: none;
+	border-top: 1px solid var(--border);
+}
+/* Left-border accent removed (user-reported item 10: "left borders don't
      look good") — the colored gradient background + StatCard's own `hue`
      prop already carry the per-card color identity; a thin bar on top of
      that read as visual clutter, not a second useful signal.
@@ -441,19 +721,50 @@
      saturated diagonal fill. The two `--card-hue` gradient overrides below
      (non-wine, Material) use the same 7%-mix + sheen formula — keep all
      three in sync if this changes again. */
-  /* User-reported (2026-08-27): "gradient is giving perception like cards
+/* User-reported (2026-08-27): "gradient is giving perception like cards
      are going to fade... card colors should be solid, specially border
      (without borders). use minor radial gradient in card's middle." The
      old diagonal fade-to-`--panel` read as unfinished/washed-out at the
      far edge of every card. Now a flat, solid hue-mix fill (no fade to
      panel color anywhere) plus one small, subtle radial highlight
      centered near the top — a "minor" spotlight, not a second fade. */
-  .stat-card{padding:11px 13px; border:0; background:radial-gradient(circle at 50% 30%, color-mix(in srgb, white 12%, transparent) 0%, transparent 55%), color-mix(in srgb, var(--card-hue, var(--accent)) 22%, var(--panel));}
-  .stat-card .label{color:var(--muted); font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; line-height:1.25;}
-  .stat-card .value{font-family:var(--mono); font-size:17px; font-weight:700; line-height:1.2;}
-  .stat-card .sub{font-size:10.5px; margin-top:3px; color:var(--muted); line-height:1.3;}
+.stat-card {
+    padding: 11px 13px;
+    display: flex;
+    /* border: 0; */
+    gap: 1px;
+    background: color-mix(in srgb,var(--card-hue,var(--accent)) 32%,var(--panel));
+    /* background: radial-gradient(circle at 50% 30%, color-mix(in srgb, white 12%, transparent) 0%, transparent 55%),
+		color-mix(in srgb, var(--card-hue, var(--accent)) 22%, var(--panel)); */
+    justify-content: flex-start;
+    align-items: flex-start;
+    align-content: flex-start;
+    flex-wrap: nowrap;
+    flex-direction: column;
+}
 
-  /* ---------- Entity cards (redesign 2026-08-27) — the "Main" tier's
+.stat-card .label {
+	color: var(--muted);
+	font-size: 10.5px;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	margin-bottom: 4px;
+	line-height: 1.25;
+}
+.stat-card .value {
+	font-family: var(--mono);
+	font-size: 17px;
+	font-weight: 700;
+	line-height: 1.2;
+}
+.stat-card .sub {
+	font-size: 10.5px;
+	margin-top: 3px;
+	color: var(--muted);
+	line-height: 1.3;
+}
+
+/* ---------- Entity cards (redesign 2026-08-27) — the "Main" tier's
      replacement for a long entity table (an account, a loan, a property):
      a small clickable summary card, same solid `--card-hue` background
      `StatCard` already uses, laid out in a wrap-flex grid (rule 3) instead
@@ -461,11 +772,30 @@
      `.entity-card` is a `StatCard`-shaped card with a hover lift so it
      reads as clickable, and a title row that leaves room for top-right
      action icons (rule 7) without them ever colliding with long names. ---------- */
-  .entity-card-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(230px,1fr)); gap:12px; margin-bottom:16px;}
-  .entity-card{cursor:pointer; transition:transform .12s ease, box-shadow .12s ease; padding:13px 15px;}
-  .entity-card:hover{transform:translateY(-2px); box-shadow:var(--shadow-lg);}
-  .entity-card-title{font-weight:700; font-size:14px; line-height:1.3; overflow-wrap:anywhere;}
-  /* README Pending item 116's own suggested starting point: extract a
+.entity-card-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+	gap: 12px;
+	margin-bottom: 16px;
+}
+.entity-card {
+	cursor: pointer;
+	transition:
+		transform 0.12s ease,
+		box-shadow 0.12s ease;
+	padding: 13px 15px;
+}
+.entity-card:hover {
+	transform: translateY(-2px);
+	box-shadow: var(--shadow-lg);
+}
+.entity-card-title {
+	font-weight: 700;
+	font-size: 14px;
+	line-height: 1.3;
+	overflow-wrap: anywhere;
+}
+/* README Pending item 116's own suggested starting point: extract a
      repeated inline `style={{}}` pattern into a real class. This exact
      "muted Sr# prefix" style was copy-pasted identically across Bank/
      Personal Loans/EMI/Rentals/Subscriptions' entity-list `title`s
@@ -478,17 +808,26 @@
      in this project — see CLAUDE.md's chip-contrast/checkbox-uppercase/
      stat-card-hue bugs), so this uses a compound `.text-muted.entity-card-sr`
      selector to make the smaller size win deterministically instead. */
-  .text-muted.entity-card-sr{font-weight:400; font-size:11px; margin-right:5px;}
+.text-muted.entity-card-sr {
+	font-weight: 400;
+	font-size: 11px;
+	margin-right: 5px;
+}
 
-  /* User-reported (2026-08-28): "I asked to use grids to utilize space
+/* User-reported (2026-08-28): "I asked to use grids to utilize space
      properly. But you are still obsessed with 100% width cards instead of
      making small side by side cards." A detail page's own narrower
      sections (an attribute list, a short table, a small chart) don't need
      the full page width the way a long table does — wraps them into a
      responsive grid (design rule 3) instead of each stacking full-width. */
-  .detail-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(320px,1fr)); gap:16px; align-items:start;}
+.detail-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+	gap: 16px;
+	align-items: start;
+}
 
-  /* Shared floating "+" action button (components/ui/Fab.tsx) — a real
+/* Shared floating "+" action button (components/ui/Fab.tsx) — a real
      lift+scale on hover/press so the app reads as interactive, not a
      static page (user-reported, 2026-08-27: "Hover animation is
      excellent... UI should be more interactive and animated"). Compound
@@ -500,39 +839,97 @@
      generic rule, silently flattening every floating button back down to
      a small ~40px non-round default shape. Found while adding the
      width-consistency rule below, which hit the exact same trap. */
-  .btn.fab-btn{width:52px; height:52px; min-width:52px; border-radius:50%; padding:0; font-size:22px; box-shadow:0 4px 16px rgba(0,0,0,.25); transition:transform .15s ease, box-shadow .15s ease;}
-  .btn.fab-btn:hover{transform:scale(1.08) translateY(-2px); box-shadow:0 6px 22px rgba(0,0,0,.32);}
-  .btn.fab-btn:active{transform:scale(.94);}
-  /* `FabPanel` (components/ui/Fab.tsx) — the secondary actions that fan out
+.btn.fab-btn {
+	width: 52px;
+	height: 52px;
+	min-width: 52px;
+	border-radius: 50%;
+	padding: 0;
+	font-size: 22px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+	transition:
+		transform 0.15s ease,
+		box-shadow 0.15s ease;
+}
+.btn.fab-btn:hover {
+	transform: scale(1.08) translateY(-2px);
+	box-shadow: 0 6px 22px rgba(0, 0, 0, 0.32);
+}
+.btn.fab-btn:active {
+	transform: scale(0.94);
+}
+/* `FabPanel` (components/ui/Fab.tsx) — the secondary actions that fan out
      above the main toggle on a page with more than one FAB action (a
      module's own "add entity" action plus the new app-wide "Transfers"
      action). Slightly smaller than the main button so the primary toggle
      stays visually dominant, with a small pop-in on appear. */
-  .btn.fab-btn-secondary{width:44px; height:44px; min-width:44px; font-size:18px; animation:fabPop .15s ease;}
-  @keyframes fabPop{from{transform:scale(.4); opacity:0;} to{transform:scale(1); opacity:1;}}
+.btn.fab-btn-secondary {
+	width: 44px;
+	height: 44px;
+	min-width: 44px;
+	font-size: 18px;
+	animation: fabPop 0.15s ease;
+}
+@keyframes fabPop {
+	from {
+		transform: scale(0.4);
+		opacity: 0;
+	}
+	to {
+		transform: scale(1);
+		opacity: 1;
+	}
+}
 
-  /* User-reported (2026-08-28): "Description and Source are making the
+/* User-reported (2026-08-28): "Description and Source are making the
      table too large to read." The base `tbody td{white-space:nowrap}` rule
      lets a long free-text cell (Description/Note/Source) blow the whole
      table out horizontally with no cap — this is the targeted override for
      exactly those columns: still single-line, but capped and truncated
      with an ellipsis, with the full text available as a native `title`
      hover tooltip on the cell itself. */
-  .cell-clip{max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.cell-clip {
+	max-width: 220px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
 
-  /* ---------- Density: Compact — an even tighter pass for people who want
+/* ---------- Density: Compact — an even tighter pass for people who want
      to see as much data as possible with minimal scrolling. Comfortable
      (default) is the sizing above; Compact shrinks it all further. ---------- */
-  html[data-density="compact"] .grid{gap:8px;}
-  html[data-density="compact"] .card{padding:10px 12px;}
-  html[data-density="compact"] .stat-card{padding:8px 10px;}
-  html[data-density="compact"] .stat-card .label{font-size:9px; margin-bottom:2px;}
-  html[data-density="compact"] .stat-card .value{font-size:14px;}
-  html[data-density="compact"] .stat-card .sub{font-size:9px; margin-top:2px;}
-  html[data-density="compact"] .pagesub{margin-bottom:12px;}
-  html[data-density="compact"] table, html[data-density="compact"] thead th, html[data-density="compact"] tbody td{font-size:12.5px;}
-  html[data-density="compact"] tbody td{padding:7px 8px;}
-  /* README item 98 (2026-08-26 feedback): "Compact should be more space
+html[data-density="compact"] .grid {
+	gap: 8px;
+}
+html[data-density="compact"] .card {
+	padding: 10px 12px;
+}
+html[data-density="compact"] .stat-card {
+	padding: 8px 10px;
+}
+html[data-density="compact"] .stat-card .label {
+	font-size: 9px;
+	margin-bottom: 2px;
+}
+html[data-density="compact"] .stat-card .value {
+	font-size: 14px;
+}
+html[data-density="compact"] .stat-card .sub {
+	font-size: 9px;
+	margin-top: 2px;
+}
+html[data-density="compact"] .pagesub {
+	margin-bottom: 12px;
+}
+html[data-density="compact"] table,
+html[data-density="compact"] thead th,
+html[data-density="compact"] tbody td {
+	font-size: 12.5px;
+}
+html[data-density="compact"] tbody td {
+	padding: 7px 8px;
+}
+/* README item 98 (2026-08-26 feedback): "Compact should be more space
      saving" — measured first, per this file's own established discipline
      (see the Console density fix above): Compact shrank cards/tables/
      stat-cards, but never touched `.btn` or form inputs/selects at all —
@@ -541,11 +938,26 @@
      under Compact. That's the real, measurable reason Compact reads as
      "barely different." Sized strictly between Comfortable (38px) and
      Console (26px) so the three tiers stay a genuine decreasing series. */
-  html[data-density="compact"] .btn{padding:6px 10px; font-size:12.5px; min-height:32px; min-width:32px;}
-  html[data-density="compact"] .btn.small{padding:4px 8px; font-size:11.5px; min-height:27px; min-width:27px;}
-  html[data-density="compact"] input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]),
-  html[data-density="compact"] select{padding:7px 9px; font-size:13px; min-height:32px; min-width:64px;}
-  /* ---------- Compact / Terminal layout — a dense, table-driven look
+html[data-density="compact"] .btn {
+	padding: 6px 10px;
+	font-size: 12.5px;
+	min-height: 32px;
+	min-width: 32px;
+}
+html[data-density="compact"] .btn.small {
+	padding: 4px 8px;
+	font-size: 11.5px;
+	min-height: 27px;
+	min-width: 27px;
+}
+html[data-density="compact"] input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+html[data-density="compact"] select {
+	padding: 7px 9px;
+	font-size: 13px;
+	min-height: 32px;
+	min-width: 64px;
+}
+/* ---------- Compact / Terminal layout — a dense, table-driven look
      instead of card tiles, styled after real broker terminals: one thin
      stat bar up top, a plain data table for holdings (qty pill, colored
      price cell, one action button), no card chrome anywhere.
@@ -557,30 +969,89 @@
      little more visual weight than a plain divider — traded deliberately
      for a cleaner wrap. ---------- */
 
-  .holdings-table{width:100%; border-collapse:collapse; font-size:13.5px;}
-  .holdings-table thead th{
-    text-align:left; padding:8px 10px; font-size:10.5px; text-transform:uppercase;
-    letter-spacing:.04em; color:var(--muted); border-bottom:1px solid var(--border);
-  }
-  .holdings-table tbody tr{cursor:pointer; transition:background .1s;}
-  .holdings-table tbody tr:hover{background:var(--panel-2);}
-  .holdings-table tbody td{padding:8px 10px; vertical-align:middle;}
-  .holdings-table .hd-name{display:flex; align-items:center; gap:8px; font-weight:600; max-width:210px; min-width:0;}
-  .holdings-table .hd-name > div{min-width:0;}
-  .holdings-table .hd-name > div > div:first-child{white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  .holdings-table .hd-company{color:var(--muted); font-weight:400; font-size:11.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.holdings-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 13.5px;
+}
+.holdings-table thead th {
+	text-align: left;
+	padding: 8px 10px;
+	font-size: 10.5px;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--muted);
+	border-bottom: 1px solid var(--border);
+}
+.holdings-table tbody tr {
+	cursor: pointer;
+	transition: background 0.1s;
+}
+.holdings-table tbody tr:hover {
+	background: var(--panel-2);
+}
+.holdings-table tbody td {
+	padding: 8px 10px;
+	vertical-align: middle;
+}
+.holdings-table .hd-name {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-weight: 600;
+	max-width: 210px;
+	min-width: 0;
+}
+.holdings-table .hd-name > div {
+	min-width: 0;
+}
+.holdings-table .hd-name > div > div:first-child {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.holdings-table .hd-company {
+	color: var(--muted);
+	font-weight: 400;
+	font-size: 11.5px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
 
-
-  table{width:100%; border-collapse:collapse; font-size:14px;}
-  thead th{
-    text-align:left; color:var(--muted); font-weight:600; text-transform:uppercase;
-    font-size:11.5px; letter-spacing:.04em; padding:10px 10px; border-bottom:1px solid var(--border);
-    position:sticky; top:0; background:var(--panel);
-  }
-  tbody td{padding:11px 10px; font-family:var(--mono); white-space:nowrap; font-size:14px;}
-  .table-compact thead th{padding:6px 8px; font-size:10.5px;}
-  .table-compact tbody td{padding:6px 8px; font-size:12.5px;}
-  /* User-reported (item 14, then reversed 2026-09-09): banded rows were
+table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 14px;
+}
+thead th {
+	text-align: left;
+	color: var(--muted);
+	font-weight: 600;
+	text-transform: uppercase;
+	font-size: 11.5px;
+	letter-spacing: 0.04em;
+	padding: 10px 10px;
+	border-bottom: 1px solid var(--border);
+	position: sticky;
+	top: 0;
+	background: var(--panel);
+}
+tbody td {
+	padding: 11px 10px;
+	font-family: var(--mono);
+	white-space: nowrap;
+	font-size: 14px;
+}
+.table-compact thead th {
+	padding: 6px 8px;
+	font-size: 10.5px;
+}
+.table-compact tbody td {
+	padding: 6px 8px;
+	font-size: 12.5px;
+}
+/* User-reported (item 14, then reversed 2026-09-09): banded rows were
      tried first (a subtle alternating tint reads as "rows" without the
      visual noise of a line under each one), then made more visible after
      a follow-up report that the bands were too close in lightness to
@@ -596,27 +1067,57 @@
      gives the requested "each row has a visible boundary" look without
      the doubled/patchy borders `border` on every side would create once
      it merges with the table's own `border-collapse:collapse`. */
-  tbody tr{border-bottom:1px solid var(--border);}
-  tbody tr:last-child{border-bottom:none;}
-  tbody tr:hover{background:color-mix(in srgb, var(--accent) 10%, var(--panel-2));}
-  /* User-reported (item 4): Edit/Delete/Save/Cancel action buttons sit at
+tbody tr {
+	border-bottom: 1px solid var(--border);
+}
+tbody tr:last-child {
+	border-bottom: none;
+}
+tbody tr:hover {
+	background: color-mix(in srgb, var(--accent) 10%, var(--panel-2));
+}
+/* User-reported (item 4): Edit/Delete/Save/Cancel action buttons sit at
      bad positions in a table row — every such row across the app puts
      those buttons in the row's LAST <td> (confirmed by reading every
      table's JSX, not assumed), so a single `:has()` rule right-aligns
      that one cell wherever it holds a button, without needing a class
      added to dozens of call sites. Doesn't touch any other `:last-child`
      cell (e.g. a plain numeric/text last column with no buttons). */
-  tbody td:last-child:has(button){text-align:right;}
+tbody td:last-child:has(button) {
+	text-align: right;
+}
 
-  .pill{display:inline-block; padding:3px 9px; border-radius:20px; font-size:11.5px; font-family:var(--mono); font-weight:700;}
-  .pill-positive{background:color-mix(in srgb, var(--profit) 16%, var(--panel)); color:var(--profit);}
-  .pill-negative{background:color-mix(in srgb, var(--loss) 16%, var(--panel)); color:var(--loss);}
-  .pill-warn{background:color-mix(in srgb, var(--warn) 18%, var(--panel)); color:var(--warn);}
-  .pill-info{background:color-mix(in srgb, var(--info) 16%, var(--panel)); color:var(--info);}
-  /* Neutral tone for a badge that isn't positive/negative/warning — e.g.
+.pill {
+	display: inline-block;
+	padding: 3px 9px;
+	border-radius: 20px;
+	font-size: 11.5px;
+	font-family: var(--mono);
+	font-weight: 700;
+}
+.pill-positive {
+	background: color-mix(in srgb, var(--profit) 16%, var(--panel));
+	color: var(--profit);
+}
+.pill-negative {
+	background: color-mix(in srgb, var(--loss) 16%, var(--panel));
+	color: var(--loss);
+}
+.pill-warn {
+	background: color-mix(in srgb, var(--warn) 18%, var(--panel));
+	color: var(--warn);
+}
+.pill-info {
+	background: color-mix(in srgb, var(--info) 16%, var(--panel));
+	color: var(--info);
+}
+/* Neutral tone for a badge that isn't positive/negative/warning — e.g.
      StatSourceBadge's "Trade history" label (2026-09-16). */
-  .pill-neutral{background:color-mix(in srgb, var(--muted) 16%, var(--panel)); color:var(--muted);}
-  /* User-requested (2026-09-15): "Buy and sell are different from PL, so
+.pill-neutral {
+	background: color-mix(in srgb, var(--muted) 16%, var(--panel));
+	color: var(--muted);
+}
+/* User-requested (2026-09-15): "Buy and sell are different from PL, so
      they should be treated so" — every real trade's BUY/SELL action badge
      across the app (QSE/PSX's Trade Transactions/StockPage/Trade Planner)
      was reusing `.pill-positive`/`.pill-negative`, the SAME green/red
@@ -640,16 +1141,38 @@
      (a payment reducing debt vs. a charge increasing it IS a real
      P/L-like signal, correctly green/red) so these two names stay
      unambiguous going forward. */
-  .pill-buy{background:linear-gradient(to bottom, #98D6F9, #5ab0e2); color:#2e6c91;}
-  .pill-sell{background:linear-gradient(to bottom, #FBDFBA, #f2b563); color:#8b5214;}
+.pill-buy {
+	background: linear-gradient(to bottom, #98d6f9, #5ab0e2);
+	color: #2e6c91;
+}
+.pill-sell {
+	background: linear-gradient(to bottom, #fbdfba, #f2b563);
+	color: #8b5214;
+}
 
-  /* Rectangle (not pill-rounded) colored share-count badge, user-requested
+/* Rectangle (not pill-rounded) colored share-count badge, user-requested
      (2026-09-14) — a Holdings table's Shares column called out for its own
      distinct look rather than plain text. */
-  .shares-box{display:inline-block; padding:2px 8px; border-radius:4px; font-size:12.5px; font-family:var(--mono); font-weight:700; background:color-mix(in srgb, var(--accent) 16%, var(--panel)); color:var(--accent);}
+.shares-box {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 4px;
+	font-size: 12.5px;
+	font-family: var(--mono);
+	font-weight: 700;
+	background: color-mix(in srgb, var(--accent) 16%, var(--panel));
+	color: var(--accent);
+}
 
-  label{display:block; font-size:12.5px; color:var(--muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:.03em;}
-  /* Found while verifying item 53's row-alignment fix: this uppercase rule
+label {
+	display: block;
+	font-size: 12.5px;
+	color: var(--muted);
+	margin-bottom: 5px;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+}
+/* Found while verifying item 53's row-alignment fix: this uppercase rule
      is meant for a small caption label sitting ABOVE its control (e.g.
      "FEE MODE" in FeeModeControl) — but a `<label>` wrapping a checkbox/
      radio with its own inline description text (e.g. "Netted (levies
@@ -660,8 +1183,14 @@
      unintended-uppercase bug class as item 3's tooltip text. `:has()`
      targets every such label app-wide, present and future, rather than
      patching each call site. */
-  label:has(> input[type=checkbox]), label:has(> input[type=radio]){text-transform:none; font-size:inherit; color:inherit; letter-spacing:normal;}
-  /* Every text-like form control, including bare <input> (no explicit
+label:has(> input[type="checkbox"]),
+label:has(> input[type="radio"]) {
+	text-transform: none;
+	font-size: inherit;
+	color: inherit;
+	letter-spacing: normal;
+}
+/* Every text-like form control, including bare <input> (no explicit
      type= attribute — the common case in the React app's JSX) and
      <textarea>, gets the same treatment as .btn: theme-var colors (so it
      follows light/dark/color-theme automatically, no separate per-theme
@@ -669,24 +1198,57 @@
      ring. Previously this only matched input[type=text|number|date],
      so untyped inputs (most of them) and password/email fields fell
      through to unstyled browser defaults. */
-  input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]), select, textarea{
-    width:100%; background:var(--panel-2); border:1px solid var(--border); color:var(--text);
-    padding:10px 11px; border-radius:7px; font-family:var(--body); font-size:14px;
-    transition:border-color .15s ease, box-shadow .15s ease; min-height:38px; min-width:70px;
-  }
-  select{cursor:pointer;}
-  textarea{font-family:var(--body); resize:vertical;}
-  input::placeholder, textarea::placeholder{color:var(--muted); opacity:.8;}
-  input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):hover,
-  select:hover, textarea:hover{border-color:color-mix(in srgb, var(--accent) 45%, var(--border));}
-  input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):focus,
-  select:focus, textarea:focus{
-    outline:none; border-color:var(--accent);
-    box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
-  }
-  input:disabled, select:disabled, textarea:disabled{opacity:.55; cursor:not-allowed;}
-  .field{margin-bottom:14px;}
-  /* `align-items: flex-end` (not the flexbox default `stretch`) — user-
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+select,
+textarea {
+	width: 100%;
+	background: var(--panel-2);
+	border: 1px solid var(--border);
+	color: var(--text);
+	padding: 10px 11px;
+	border-radius: 7px;
+	font-family: var(--body);
+	font-size: 14px;
+	transition:
+		border-color 0.15s ease,
+		box-shadow 0.15s ease;
+	min-height: 38px;
+	min-width: 70px;
+}
+select {
+	cursor: pointer;
+}
+textarea {
+	font-family: var(--body);
+	resize: vertical;
+}
+input::placeholder,
+textarea::placeholder {
+	color: var(--muted);
+	opacity: 0.8;
+}
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):hover,
+select:hover,
+textarea:hover {
+	border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):focus,
+select:focus,
+textarea:focus {
+	outline: none;
+	border-color: var(--accent);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+input:disabled,
+select:disabled,
+textarea:disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+}
+.field {
+	margin-bottom: 14px;
+}
+/* `align-items: flex-end` (not the flexbox default `stretch`) — user-
      reported (items 2/8): a bare <input>/<select>/<button> sitting in the
      same .row as a `Field`-wrapped control (label text above its input,
      e.g. `FeeModeControl`) used to get stretched by `stretch` to match
@@ -703,7 +1265,7 @@
      already aligns its own inner .row. Confirmed no `.row` in the app
      wraps Card/ChartCard/CollapsibleCard as a direct child, so this can't
      regress any equal-height card-grid layout. */
-  /* User-reported 2026-08-26 ("inputs have no min-width to defend their
+/* User-reported 2026-08-26 ("inputs have no min-width to defend their
      text views... should go the next line if viewport is small rather
      than hiding their data"): the `flex-wrap`+`min-width` pair below used
      to be gated behind `@media(max-width:640px)` only — a `.row` with
@@ -713,58 +1275,79 @@
      however many fields happen to be in it. Now unconditional: any row
      wraps onto additional lines once its fields would otherwise drop
      below a usable width, at any viewport size, not just mobile. */
-  .row{display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;}
-  /* App-wide CSS cleanup (README Pending item 116, 2026-09-10): a tighter
+.row {
+	display: flex;
+	gap: 12px;
+	align-items: flex-end;
+	flex-wrap: wrap;
+}
+/* App-wide CSS cleanup (README Pending item 116, 2026-09-10): a tighter
      8px gap was hand-repeated 56 times as `style={{ gap: 8 }}` on a
      `.row` element — always paired with the `row` class, never used
      alone — extracted into one compound-selector utility class instead.
      `.row.gap-sm` (specificity 0,2,0) beats the base `.row` rule (0,1,0)
      unconditionally regardless of source order, so this is a safe,
      behavior-preserving replacement for the inline override. */
-  .row.gap-sm{gap:8px;}
-  /* Same cleanup, fifth instance (2026-09-11): `style={{ gap: 8, marginBottom: 8 }}`
+.row.gap-sm {
+	gap: 8px;
+}
+/* Same cleanup, fifth instance (2026-09-11): `style={{ gap: 8, marginBottom: 8 }}`
      was hand-repeated 27 times, always the SAME literal pairing `.row.gap-sm`
      with a trailing 8px bottom margin. A standalone `.mb-sm` (not folded into
      `.row.gap-sm` itself) since most `.row.gap-sm` call sites do NOT want the
      margin — coupling them would silently change layout at every other site. */
-  .mb-sm{margin-bottom:8px;}
-  /* Same cleanup, seventh instance (2026-09-11): `style={{ gap: 8,
+.mb-sm {
+	margin-bottom: 8px;
+}
+/* Same cleanup, seventh instance (2026-09-11): `style={{ gap: 8,
      marginTop: 8 }}` was hand-repeated 13 times, the same `.row.gap-sm`
      case with a leading top margin instead of a trailing bottom one —
      symmetric with `.mb-sm` above, same "no existing rule touches
      margin-top on .row" safety check. */
-  .mt-sm{margin-top:8px;}
-  /* Same cleanup, eighth instance (2026-09-11): `style={{ display: 'flex',
+.mt-sm {
+	margin-top: 8px;
+}
+/* Same cleanup, eighth instance (2026-09-11): `style={{ display: 'flex',
      alignItems: 'center', gap: 4 }}` was hand-repeated 8 times across
      label/span/td/div elements — a plain inline-content row with a small
      gap, no existing class covered it (checked theme.css for any
      `display`/`align-items` rule on label/span/td that could compete —
      none found, so a bare class is safe at any specificity). */
-  .flex-center-gap4{display:flex;align-items:center;gap:4px;}
-  /* Same cleanup, tenth instance (2026-09-11): `style={{ marginBottom: 16 }}`
+.flex-center-gap4 {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+/* Same cleanup, tenth instance (2026-09-11): `style={{ marginBottom: 16 }}`
      was hand-repeated 54 times, mostly on `Card`/`CollapsibleCard`/`Notice`.
      `CollapsibleCard`/`Notice` had no `className` prop to merge into before
      this pass — added it to both, following the exact same additive-prop
      pattern already used elsewhere in this codebase (e.g. `Field`'s `as`
      prop). Symmetric with `.mb-sm`/`.mt-sm` above at a 16px value instead
      of 8px. */
-  .mb-md{margin-bottom:16px;}
-  /* Same cleanup, eleventh instance (2026-09-11): `style={{ marginTop: 0 }}`
+.mb-md {
+	margin-bottom: 16px;
+}
+/* Same cleanup, eleventh instance (2026-09-11): `style={{ marginTop: 0 }}`
      was hand-repeated 69 times — almost always the first child inside a
      `Card`/`CollapsibleCard` (an `<h3>`/`<h4>`/`<p>`) zeroing the browser's
      own default top margin, since this app has no global `h1..h6`/`p`
      margin reset in `theme.css`. Only one existing rule touches
      `margin-top:0` (`.notice-body p:first-child`), scoped to inside
      `Notice` and unrelated to this — safe to add a bare class. */
-  .mt-0{margin-top:0;}
-  /* Same cleanup, twelfth instance (2026-09-11): `style={{ margin: 0 }}`
+.mt-0 {
+	margin-top: 0;
+}
+/* Same cleanup, twelfth instance (2026-09-11): `style={{ margin: 0 }}`
      (all four sides, not just top) was hand-repeated 63 times — almost
      always an `<h3>`/`<h4>` passed as a `CollapsibleCard`'s own `title`
      prop, zeroing every side of the browser's default heading margin so
      it sits flush inside the card header row. Confirmed no `margin:0`
      rule already exists in `theme.css` that this could compete with. */
-  .m-0{margin:0;}
-  /* Same cleanup, thirteenth instance (2026-09-11): `style={{ marginBottom:
+.m-0 {
+	margin: 0;
+}
+/* Same cleanup, thirteenth instance (2026-09-11): `style={{ marginBottom:
      12 }}` and `style={{ marginTop: 12 }}` — 34 occurrences each, mostly a
      `<p className="text-muted">` intro paragraph or a `CollapsibleCard`'s
      own `style` prop (now `className`-mergeable per the `.mb-md` instance
@@ -774,15 +1357,21 @@
      `margin-top:12px`/`margin-bottom:12px` rule first — the 3 hits found
      are all scoped to a specific class (`.sidebar-title-row`, `.pagesub`
      under a density attribute, one more), none of them bare/generic. */
-  .mb-12{margin-bottom:12px;}
-  .mt-12{margin-top:12px;}
-  /* Same cleanup, fourteenth instance (2026-09-11): `style={{ marginTop:
+.mb-12 {
+	margin-bottom: 12px;
+}
+.mt-12 {
+	margin-top: 12px;
+}
+/* Same cleanup, fourteenth instance (2026-09-11): `style={{ marginTop:
      16 }}` was hand-repeated 24 times — symmetric with `.mb-md` (16px)
      but on the top side instead, so named to match rather than inventing
      a fourth spacing class. Confirmed no competing bare `margin-top:16px`
      rule in `theme.css`. */
-  .mt-md{margin-top:16px;}
-  /* Same cleanup, seventeenth instance (2026-09-13): `style={{ marginLeft: 6
+.mt-md {
+	margin-top: 16px;
+}
+/* Same cleanup, seventeenth instance (2026-09-13): `style={{ marginLeft: 6
      }}` on a "Pending" `.pill-warn` badge placed after some text (9
      occurrences), and `style={{ marginLeft: 6, textDecoration: 'none' }}`
      on the "🔗 Linked" `.pill-info` tag `<Link>` (8 occurrences) — the
@@ -790,8 +1379,10 @@
      rule above already zeroes link underlines app-wide; both share the
      same 6px left-margin, which doesn't fit the existing 8px `sm`/16px
      `md` scale, so named literally by value like `.mb-12`/`.mt-12`. */
-  .ml-6{margin-left:6px;}
-  /* Same cleanup, nineteenth/twentieth instances (2026-09-13): a bare
+.ml-6 {
+	margin-left: 6px;
+}
+/* Same cleanup, nineteenth/twentieth instances (2026-09-13): a bare
      `style={{ width: 90 }}` / `style={{ width: 130 }}` on a narrow inline
      `<input>`/`TextInput` inside a table's edit-row (a Date input is
      consistently 130px, a Shares/Price/Amount/short-text input consistently
@@ -811,21 +1402,39 @@
      back to full-width — only caught because this cleanup's own live
      verification step checked computed width, not just that the class
      name landed in the DOM. */
-  .w-90{width:90px!important;}
-  .w-130{width:130px!important;}
-  /* Same cleanup, remaining width-value instances from the same family
+.w-90 {
+	width: 90px !important;
+}
+.w-130 {
+	width: 130px !important;
+}
+/* Same cleanup, remaining width-value instances from the same family
      (2026-09-13) — same reasoning/`!important` requirement as `.w-90`/
      `.w-130` above, all bare with no existing `className` to merge into:
      `width:80` (19), `width:100` (19), `width:70` (17), `width:120` (7),
      `width:96` (5), `width:82` (4), `width:140` (4) — 75 occurrences. */
-  .w-70{width:70px!important;}
-  .w-80{width:80px!important;}
-  .w-82{width:82px!important;}
-  .w-96{width:96px!important;}
-  .w-100{width:100px!important;}
-  .w-120{width:120px!important;}
-  .w-140{width:140px!important;}
-  /* Same cleanup, twenty-second instance (2026-09-13): `style={{ color:
+.w-70 {
+	width: 70px !important;
+}
+.w-80 {
+	width: 80px !important;
+}
+.w-82 {
+	width: 82px !important;
+}
+.w-96 {
+	width: 96px !important;
+}
+.w-100 {
+	width: 100px !important;
+}
+.w-120 {
+	width: 120px !important;
+}
+.w-140 {
+	width: 140px !important;
+}
+/* Same cleanup, twenty-second instance (2026-09-13): `style={{ color:
      'var(--loss)' }}`/`style={{ color: 'var(--profit)' }}` on plain inline
      text/spans (a required-field `*`, a ▲/▼ direction arrow, a "Used:"/
      "Available:" credit-limit label) — distinct from `hueStyle()`/
@@ -834,9 +1443,13 @@
      `color` rule exists on a bare `<span>`/`<p>`, unlike `width` on an
      `<input>` (see `.w-90` above) — a plain class is safe here, no
      `!important` needed. */
-  .text-loss{color:var(--loss);}
-  .text-profit{color:var(--profit);}
-  /* Same cleanup, twenty-third instance (2026-09-13): `style={{ fontSize:
+.text-loss {
+	color: var(--loss);
+}
+.text-profit {
+	color: var(--profit);
+}
+/* Same cleanup, twenty-third instance (2026-09-13): `style={{ fontSize:
      10 }}`/`style={{ fontSize: 11 }}` on small "Closed"/"Credit card"
      badge `<span>`s that use ONLY `.pill-warn`/`.pill-negative`/etc (not
      the base `.pill` class, so they don't inherit `.pill`'s own
@@ -845,9 +1458,13 @@
      `font-size` first — neither sets one — and confirmed no global
      `span{}` rule exists either, so a plain class (no `!important`) is
      safe here, unlike `.fs-14` just below. */
-  .fs-10{font-size:10px;}
-  .fs-11{font-size:11px;}
-  /* Same cleanup, twenty-fourth instance (2026-09-13): `style={{ fontSize:
+.fs-10 {
+	font-size: 10px;
+}
+.fs-11 {
+	font-size: 11px;
+}
+/* Same cleanup, twenty-fourth instance (2026-09-13): `style={{ fontSize:
      14 }}` on a `<div className="value">` nested inside a `.stat-card`
      container (a smaller-text stat value, e.g. a status label/date rather
      than a big number) — all 8 occurrences sit inside `.stat-card .value`,
@@ -856,8 +1473,10 @@
      the same class of trap as `.w-90` above, just via a descendant
      selector instead of a `:not()` chain. `!important` needed for the
      same reason. */
-  .fs-14{font-size:14px!important;}
-  /* User-reported (2026-08-27): "Input sizes still inconsistent and taking
+.fs-14 {
+	font-size: 14px !important;
+}
+/* User-reported (2026-08-27): "Input sizes still inconsistent and taking
      whole 100% width." Root cause: `flex:1` (flex-basis:0%) ignores each
      field's own explicit `width` prop entirely and instead divides the
      row's full width evenly among however many children happen to be in
@@ -867,8 +1486,11 @@
      needed. `flex:0 1 auto` uses each child's own width/content as its
      real size (shrinking only if the row is too narrow, per `min-width`
      below), so fields size themselves instead of splitting the row. */
-  .row > *{flex:0 1 auto; min-width:160px;}
-  /* User-reported (2026-09-03): "small buttons but expanding all over the
+.row > * {
+	flex: 0 1 auto;
+	min-width: 160px;
+}
+/* User-reported (2026-09-03): "small buttons but expanding all over the
      page with very large white space." Root cause: an icon-only button
      wrapped in `Tooltip` (the entire card-header Edit/Delete/Save/Cancel
      action-button pattern app-wide) sits inside a `.row` as
@@ -886,8 +1508,10 @@
      real 30px minimum (or a `Field`-wrapped input's own width) takes over
      correctly. Specificity 0,2,0 beats `.row > *`'s 0,1,0, so this wins
      regardless of source order. */
-  .row > .tooltip-trigger{min-width:0;}
-  /* User-reported (2026-09-09): "PP is not rounded in the settings" — the
+.row > .tooltip-trigger {
+	min-width: 0;
+}
+/* User-reported (2026-09-09): "PP is not rounded in the settings" — the
      real bug wasn't the circle CSS (border-radius:50% on .avatar-circle was
      always correct), it was this exact same `.row > *{min-width:160px}`
      trap already fixed above for Tooltip-wrapped buttons: `ProfileEditor`
@@ -895,8 +1519,10 @@
      `.row`, so the 160px floor stretched it into a wide box while its own
      inline `height:40` stayed put — border-radius:50% on a 160x40 box draws
      an oval, not a circle. Same fix, same specificity reasoning. */
-  .row > .avatar-circle{min-width:0;}
-  /* User-reported (2026-08-28): "give same width (maybe 20%) to all form
+.row > .avatar-circle {
+	min-width: 0;
+}
+/* User-reported (2026-08-28): "give same width (maybe 20%) to all form
      elements app wide... Buttons with text (100px maybe with 100% on
      mobiles?) for best UI consistency." `min-width:100px` (was 38px) here
      is a shared minimum so short-label buttons ("Save", "Add row") stop
@@ -914,92 +1540,217 @@
      icon-only utility button (`.btn.small`, `.btn.fab-btn`) correctly
      keeps its own smaller minimum below via higher selector specificity
      (0,2,0 beats this rule's 0,1,0), regardless of source order. */
-  .btn{
-    display:inline-flex; align-items:center; justify-content:center; gap:6px; width:auto; flex:0 0 auto;
-    background:color-mix(in srgb, var(--accent) 65%, #000); color:#fff; border:none; padding:8px 13px; border-radius:7px;
-    font-weight:600; font-size:13px; cursor:pointer; font-family:var(--body); min-height:38px; min-width:100px;
-  }
-  @media(max-width:640px){
-    .btn{width:100%;}
-  }
-  .btn svg{flex-shrink:0;}
-  .btn:hover{filter:brightness(1.1);}
-  .btn.secondary{background:var(--panel-2); border:1px solid var(--border); color:var(--text);}
-  .btn.ghost{background:transparent; border:1px solid var(--border); color:var(--muted);}
-  .btn.small{padding:5px 9px; font-size:12px; min-height:30px; min-width:30px;}
-  .btn.danger{background:color-mix(in srgb, var(--loss) 16%, var(--panel)); color:var(--loss); border:1px solid color-mix(in srgb, var(--loss) 45%, var(--panel));}
+.btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	width: auto;
+	flex: 0 0 auto;
+	background: color-mix(in srgb, var(--accent) 65%, #000);
+	color: #fff;
+	border: none;
+	padding: 8px 13px;
+	border-radius: 7px;
+	font-weight: 600;
+	font-size: 13px;
+	cursor: pointer;
+	font-family: var(--body);
+	min-height: 38px;
+	min-width: 100px;
+}
+@media (max-width: 640px) {
+	.btn {
+		width: 100%;
+	}
+}
+.btn svg {
+	flex-shrink: 0;
+}
+.btn:hover {
+	filter: brightness(1.1);
+}
+.btn.secondary {
+	background: var(--panel-2);
+	border: 1px solid var(--border);
+	color: var(--text);
+}
+.btn.ghost {
+	background: transparent;
+	border: 1px solid var(--border);
+	color: var(--muted);
+}
+.btn.small {
+	padding: 5px 9px;
+	font-size: 12px;
+	min-height: 30px;
+	min-width: 30px;
+}
+.btn.danger {
+	background: color-mix(in srgb, var(--loss) 16%, var(--panel));
+	color: var(--loss);
+	border: 1px solid color-mix(in srgb, var(--loss) 45%, var(--panel));
+}
 
-  .result-line{display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px dashed var(--border); font-family:var(--mono); font-size:14.5px; line-height:1.4;}
-  .result-line:last-child{border-bottom:none;}
-  .result-line .k{color:var(--muted);}
-  .result-line .v{font-weight:700;}
+.result-line {
+	display: flex;
+	justify-content: space-between;
+	padding: 10px 0;
+	border-bottom: 1px dashed var(--border);
+	font-family: var(--mono);
+	font-size: 14.5px;
+	line-height: 1.4;
+}
+.result-line:last-child {
+	border-bottom: none;
+}
+.result-line .k {
+	color: var(--muted);
+}
+.result-line .v {
+	font-weight: 700;
+}
 
+.empty {
+	padding: 40px 20px;
+	text-align: center;
+	color: var(--muted);
+	border: 1px dashed var(--border);
+	border-radius: var(--radius);
+}
+.toolbar {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 14px;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+.toolbar .right {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+	align-items: center;
+}
+th.sortable {
+	cursor: pointer;
+	user-select: none;
+	white-space: nowrap;
+}
+th.sortable:hover {
+	color: var(--text);
+}
+th.sortable .arrow {
+	color: var(--gold);
+	font-size: 10px;
+	margin-left: 3px;
+}
 
-  .empty{
-    padding:40px 20px; text-align:center; color:var(--muted); border:1px dashed var(--border); border-radius:var(--radius);
-  }
-  .toolbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:10px; flex-wrap:wrap;}
-  .toolbar .right{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
-  th.sortable{cursor:pointer; user-select:none; white-space:nowrap;}
-  th.sortable:hover{color:var(--text);}
-  th.sortable .arrow{color:var(--gold); font-size:10px; margin-left:3px;}
+.chip-tabs {
+	display: flex;
+	gap: 2px;
+	margin-bottom: 0px;
+	/* margin-left: 4px; */
+	width: fit-content;
+	background: var(--accent-soft);
+	flex-wrap: wrap;
+	border: 1px solid var(--accent-soft);
+	border-radius: var(--radius-full-round);
+}
 
-  .chip-tabs{display:flex; gap:6px; margin-bottom:18px; margin-left:4px; flex-wrap:wrap;}
-  .chip{
-    display:inline-flex; align-items:center; gap:4px;
-    background:var(--panel-2); border:1px solid var(--border); color:var(--muted);
-    padding:7px 13px; border-radius:20px; font-size:12.5px; cursor:pointer; font-weight:500;
-  }
-  /* A solid fill (same treatment as the primary .btn) rather than the old
+.chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	/* background: var(--panel-2); */
+	background: transparent;
+	border: 1px solid var(--border);
+	color: var(--muted);
+	padding: 7px 13px;
+	border-radius: 20px;
+	font-size: 12.5px;
+	cursor: pointer;
+	font-weight: 500;
+}
+
+.chip:hover {
+	background: color-mix(in srgb, var(--accent) 100%, #000) !important;
+	color: #fff !important;
+}
+
+/* A solid fill (same treatment as the primary .btn) rather than the old
      accent-soft tint — that tint sits so close in lightness to the
      inactive chip's own background/border in several themes (and gets
      entirely overridden by higher-specificity per-theme .chip rules in
      every non-wine color theme, see the :not(.active)/. exclusions added
      to those rules) that active vs. inactive chips read as visually
      identical — a real user-reported "which one is selected?" bug. */
-  .chip.active{
-    background: color-mix(in srgb, var(--accent) 65%, #000);
-    color: #fff;
-    border-color: transparent;
-    font-weight: 700;
-  }
+.chip.active {
+	background: color-mix(in srgb, var(--accent) 90%, #000);
+	color: #fff;
+	border-color: transparent;
+	font-weight: 700;
+}
 
-
-  .text-muted{color:var(--muted); font-size:11.5px;}
-  /* App-wide CSS cleanup (README Pending item 116): `cursor:pointer` was
+.text-muted {
+	color: var(--muted);
+	font-size: 11.5px;
+}
+/* App-wide CSS cleanup (README Pending item 116): `cursor:pointer` was
      repeated as an inline `style={{ cursor: 'pointer' }}` 62 times across
      ~15 files (Tooltip triggers, sortable headers, clickable table rows,
      accordion summaries) with no shared class to converge on — extracted
      into one real utility class rather than one more inline style. */
-  .clickable{cursor:pointer;}
-  /* Same cleanup, fourth instance: every one of these is a hidden native
+.clickable {
+	cursor: pointer;
+}
+/* Same cleanup, fourth instance: every one of these is a hidden native
      `<input type="file">` triggered programmatically via a ref (13
      occurrences across 11 files) - never conditionally toggled, so a
      static class is a safe 1:1 swap for the repeated inline style. */
-  .hidden-file-input{display:none;}
-  /* Same cleanup, fifteenth instance: `style={{ cursor: 'pointer',
+.hidden-file-input {
+	display: none;
+}
+/* Same cleanup, fifteenth instance: `style={{ cursor: 'pointer',
      fontWeight: 700, marginBottom: 8 }}` was hand-repeated on every
      collapsible-section `<summary>` in QSE's/PSX's Trade Transactions page
      (8 occurrences across 2 files, byte-identical) - a real semantic
      pattern (a clickable accordion-section header), not just a coincidental
      value match, so named for what it is rather than a literal-value class. */
-  .summary-heading{cursor:pointer;font-weight:700;margin-bottom:8px;}
-  /* Required-field marker (components/ui/Field.tsx) - a single ::after rule
+.summary-heading {
+	cursor: pointer;
+	font-weight: 700;
+	margin-bottom: 8px;
+}
+/* Required-field marker (components/ui/Field.tsx) - a single ::after rule
      so the label text and its asterisk are one indivisible inline box, with
      no separate DOM node for a line break to land between. \00a0 is a real
      non-breaking space, not an ordinary one. */
-  .field-required::after{content:"\00a0*"; color:var(--loss);}
-  canvas{max-width:100%;}
-  @media(max-width:1100px){.charts-row{grid-template-columns:repeat(2,1fr);}}
-  @media(max-width:640px){.charts-row{grid-template-columns:1fr;}}
+.field-required::after {
+	content: "\00a0*";
+	color: var(--loss);
+}
+canvas {
+	max-width: 100%;
+}
+@media (max-width: 1100px) {
+	.charts-row {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+@media (max-width: 640px) {
+	.charts-row {
+		grid-template-columns: 1fr;
+	}
+}
 
-  /* Pending items 54/56/57: "utilize page space" — per-stock PositionDetail
+/* Pending items 54/56/57: "utilize page space" — per-stock PositionDetail
      puts charts + Price range in a right-hand stack, other stats on the
      left, on wide viewports, instead of one long single-column scroll.
      Collapses back to a single column on narrow viewports (mobile order:
      left-column content first, then right-column — an accepted tradeoff,
      see PositionDetail.tsx's own comment for why). */
-  /* min-width:0 on both children (user-reported 2026-08-27: the right-rail
+/* min-width:0 on both children (user-reported 2026-08-27: the right-rail
      panel's own text was truncated/cut off at the viewport edge on a
      smaller display) — a CSS Grid `1fr` track's implicit min-width is
      `auto` (its content's own intrinsic width), not 0, so a wide child
@@ -1009,10 +1760,21 @@
      its own `.table-scroll`/wrapping the way it would on its own. Applies
      to both children, not just the wide one, since either side can end up
      being the wide one depending on the page. */
-  .position-split{display:grid; grid-template-columns:1fr 380px; gap:16px; align-items:start;}
-  .position-split > *{min-width:0;}
-  @media(max-width:900px){.position-split{grid-template-columns:1fr;}}
-  /* `.rail-split` (the QSE/PSX Dashboard right-rail grid) removed
+.position-split {
+	display: grid;
+	grid-template-columns: 1fr 380px;
+	gap: 16px;
+	align-items: start;
+}
+.position-split > * {
+	min-width: 0;
+}
+@media (max-width: 900px) {
+	.position-split {
+		grid-template-columns: 1fr;
+	}
+}
+/* `.rail-split` (the QSE/PSX Dashboard right-rail grid) removed
      2026-09-09 — user-reported: "Those Rail Cards should actually be in
      main dashboard. They are more relevant here." Its "Upcoming" content
      moved to the main Dashboard/NetWorthPage; its "Net worth" mini-card
@@ -1020,8 +1782,10 @@
      also never actually splitting into two columns — its own
      `grid-template-columns` had been left commented out — so nothing of
      value is lost removing it outright rather than leaving dead CSS. */
-  .chart-card{padding:16px 16px 12px 16px;}
-  /* User-reported (2026-08-26): "No pie charts or other charts take more
+.chart-card {
+	padding: 16px 16px 12px 16px;
+}
+/* User-reported (2026-08-26): "No pie charts or other charts take more
      than 35vh" — ChartCard's charts had no height cap at all, relying on
      Chart.js's own default aspectRatio (2:1), which in a wide column
      could render 500px+ tall. Paired with `ChartJS.defaults.
@@ -1029,26 +1793,44 @@
      fills this container instead of computing its own height from the
      ratio; `height` (not just `max-height`) is required for that fill to
      have something definite to size against. */
-  .chart-canvas-wrap{position:relative; width:100%; height:min(35vh, 340px); overflow:hidden;}
-  /* ---------- Info tooltip — compact "what is this / how is it computed"
+.chart-canvas-wrap {
+	position: relative;
+	width: 100%;
+	height: min(35vh, 340px);
+	overflow: hidden;
+}
+/* ---------- Info tooltip — compact "what is this / how is it computed"
      explainer. Pure CSS (no JS), so it's cheap to sprinkle everywhere a
      paragraph of explanation used to sit permanently under a heading. ---------- */
-  /* The tooltip itself is a single shared element appended directly to
+/* The tooltip itself is a single shared element appended directly to
      <body> and positioned via JS on hover/focus (see initSharedTooltip).
      A per-element CSS ::after popup would get clipped by any ancestor with
      overflow set (e.g. the compact holdings table's scrollable wrapper) —
      same class of bug as the appearance panel, same fix: escape to <body>
      so nothing can clip it, matching the existing pattern in this file. */
-  .shared-tooltip{
-    position:fixed; z-index:2000; width:250px; max-width:64vw;
-    background:var(--panel); color:var(--text);
-    border:1px solid var(--border); border-radius:8px; padding:9px 11px;
-    font-size:11.5px; font-weight:400; line-height:1.45; text-align:left;
-    box-shadow:0 8px 24px rgba(0,0,0,.4);
-    opacity:0; pointer-events:none; transition:opacity .12s ease;
-  }
-  .shared-tooltip.show{opacity:1;}
-  /* User-reported (batch-2 item 1): this used to sit at bottom:20/right:20
+.shared-tooltip {
+	position: fixed;
+	z-index: 2000;
+	width: 250px;
+	max-width: 64vw;
+	background: var(--panel);
+	color: var(--text);
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	padding: 9px 11px;
+	font-size: 11.5px;
+	font-weight: 400;
+	line-height: 1.45;
+	text-align: left;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.12s ease;
+}
+.shared-tooltip.show {
+	opacity: 1;
+}
+/* User-reported (batch-2 item 1): this used to sit at bottom:20/right:20
      — almost exactly the same corner as the floating Calculator button
      (bottom:24/right:24) and the "back to top" button below it — and with
      a much lower z-index than the Calculator button (50 vs 500), it
@@ -1056,7 +1838,7 @@
      Moved above both floating buttons' combined footprint (Calculator is
      52px tall, back-to-top sits below it) instead of only bumping z-index,
      so the toast is never painted OVER a live button either. */
-  /* User-reported (2026-09-09): "Tooltips & toasts are deferred by the
+/* User-reported (2026-09-09): "Tooltips & toasts are deferred by the
      popups" — confirmed for toast specifically: this sat at z-index:50,
      BELOW .modal-overlay's z-index:100, so any toast fired while a Modal
      (e.g. "Add a trade") was open rendered genuinely behind the overlay's
@@ -1067,23 +1849,45 @@
      deliberately-highest blocking layers (TradePlanner fullscreen 999/
      1000, TermsGateModal 1000), which are meant to sit above literally
      everything. */
-  .toast{
-    position:fixed; bottom:92px; right:20px; background:var(--panel); border:1px solid var(--accent);
-    padding:12px 18px; border-radius:8px; font-size:13px; box-shadow:0 6px 24px rgba(0,0,0,.4);
-    opacity:0; transform:translateY(10px); transition:.2s; z-index:650; pointer-events:none;
-  }
-  .toast.show{opacity:1; transform:none;}
+.toast {
+	position: fixed;
+	bottom: 92px;
+	right: 20px;
+	background: var(--panel);
+	border: 1px solid var(--accent);
+	padding: 12px 18px;
+	border-radius: 8px;
+	font-size: 13px;
+	box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+	opacity: 0;
+	transform: translateY(10px);
+	transition: 0.2s;
+	z-index: 650;
+	pointer-events: none;
+}
+.toast.show {
+	opacity: 1;
+	transform: none;
+}
 
-  /* ---------- Back to top ---------- */
+/* ---------- Back to top ---------- */
 
-  /* ---------- Modal ---------- */
-  .modal-overlay{
-    position:fixed; inset:0; background:rgba(0,0,0,.55); display:none;
-    align-items:flex-start; justify-content:center; padding:4vh 16px 40px 16px; z-index:100;
-    overflow-y:auto;
-  }
-  .modal-overlay.show{display:flex;}
-  /* User-reported (2026-08-27): "use similar color for making gradients
+/* ---------- Modal ---------- */
+.modal-overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.55);
+	display: none;
+	align-items: flex-start;
+	justify-content: center;
+	padding: 4vh 16px 40px 16px;
+	z-index: 100;
+	overflow-y: auto;
+}
+.modal-overlay.show {
+	display: flex;
+}
+/* User-reported (2026-08-27): "use similar color for making gradients
      rather than pure white which is fogging it" — `--panel` in the light
      theme IS pure white (#fff), so a modal sitting on a dimmed backdrop
      read as a stark, foggy rectangle. Same accent-tinted diagonal gradient
@@ -1095,26 +1899,74 @@
      usage is a form or entity-detail popup, so this is now the universal
      default rather than a per-caller `width` override. `.fullscreen` is
      the explicit user escape hatch every popup must offer. */
-  .modal-box{
-    background:linear-gradient(165deg, color-mix(in srgb, var(--accent) 6%, var(--panel)) 0%, var(--panel) 55%);
-    border:1px solid var(--border); border-radius:12px;
-    padding:26px 30px; width:100%; max-width:clamp(360px, 50vw, 720px); box-shadow:0 20px 60px rgba(0,0,0,.5);
-    animation:fadein .16s ease; max-height:92vh; overflow-y:auto;
-  }
-  .modal-box.fullscreen{ max-width:96vw; max-height:96vh; width:96vw; height:96vh; }
-  .modal-icon-btn{
-    background:transparent; border:none; color:var(--muted); cursor:pointer;
-    width:28px; height:28px; min-width:28px; display:flex; align-items:center; justify-content:center;
-    border-radius:50%; font-size:18px; line-height:1; flex:0 0 28px; padding:0;
-    transition:background .12s ease, color .12s ease;
-  }
-  .modal-icon-btn:hover{ background:var(--panel-2); color:var(--text); }
-  @media(max-width:700px){ .modal-box{padding:18px;} .modal-box.fullscreen{ width:100vw; height:100vh; max-width:100vw; max-height:100vh; border-radius:0; } }
+.modal-box {
+	background: linear-gradient(165deg, color-mix(in srgb, var(--accent) 6%, var(--panel)) 0%, var(--panel) 55%);
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	padding: 26px 30px;
+	width: 100%;
+	max-width: clamp(360px, 50vw, 720px);
+	box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+	animation: fadein 0.16s ease;
+	max-height: 92vh;
+	overflow-y: auto;
+}
+.modal-box.fullscreen {
+	max-width: 96vw;
+	max-height: 96vh;
+	width: 96vw;
+	height: 96vh;
+}
+.modal-icon-btn {
+	background: transparent;
+	border: none;
+	color: var(--muted);
+	cursor: pointer;
+	width: 28px;
+	height: 28px;
+	min-width: 28px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	font-size: 18px;
+	line-height: 1;
+	flex: 0 0 28px;
+	padding: 0;
+	transition:
+		background 0.12s ease,
+		color 0.12s ease;
+}
+.modal-icon-btn:hover {
+	background: var(--panel-2);
+	color: var(--text);
+}
+@media (max-width: 700px) {
+	.modal-box {
+		padding: 18px;
+	}
+	.modal-box.fullscreen {
+		width: 100vw;
+		height: 100vh;
+		max-width: 100vw;
+		max-height: 100vh;
+		border-radius: 0;
+	}
+}
 
-  /* ---------- Portfolio summary (dashboard) ---------- */
-  .table-scroll{overflow-x:auto; max-height:480px; overflow-y:auto;}
-  .table-scroll table thead th{position:sticky; top:0; background:var(--panel); z-index:1;}
-  /* Narrow editable price inputs (Trade Calculator's "Current price",
+/* ---------- Portfolio summary (dashboard) ---------- */
+.table-scroll {
+	overflow-x: auto;
+	max-height: 480px;
+	overflow-y: auto;
+}
+.table-scroll table thead th {
+	position: sticky;
+	top: 0;
+	background: var(--panel);
+	z-index: 1;
+}
+/* Narrow editable price inputs (Trade Calculator's "Current price",
      every table's inline market-price cell, Watchlist's target/current
      columns) inherit the base input's 10px/11px padding, which combined
      with the browser's native number-spinner arrows left barely any room
@@ -1124,73 +1976,166 @@
      actually read back. Almost-zero padding (only enough on the left to
      clear the input's own border) reclaims that space; the spinner still
      has its native width, so padding-right stays at 0. */
-  input.price-input[type=number]{padding:8px 0 8px 6px; text-align:left; font-family:var(--mono);}
+input.price-input[type="number"] {
+	padding: 8px 0 8px 6px;
+	text-align: left;
+	font-family: var(--mono);
+}
 
-  /* ---------- Notice — a distinct callout for warnings/info, not just
+/* ---------- Notice — a distinct callout for warnings/info, not just
      another card (user-reported items 10/11: a plain card with a thin
      `borderLeft` accent didn't read as visually different from a regular
      card, and the left bar alone looked bad). Full tinted background +
      matching border on every side, plus a leading icon, makes it
      unmistakable at a glance regardless of theme/density. ---------- */
-  .notice{
-    display:flex; gap:10px; align-items:flex-start;
-    border-radius:var(--radius); padding:12px 14px; margin-top:8px;
-    border:1px solid; line-height:1.5; font-size:13.5px;
-  }
-  .notice-icon{flex-shrink:0; font-size:15px; line-height:1.4;}
-  .notice-body{flex:1; min-width:0;}
-  .notice-body p:first-child{margin-top:0;}
-  .notice-body p:last-child{margin-bottom:0;}
-  .notice-info{ background:color-mix(in srgb, var(--info) 12%, var(--panel)); border-color:color-mix(in srgb, var(--info) 40%, var(--border)); }
-  .notice-info .notice-icon{color:var(--info);}
-  .notice-warning{ background:color-mix(in srgb, var(--warn) 14%, var(--panel)); border-color:color-mix(in srgb, var(--warn) 45%, var(--border)); }
-  .notice-warning .notice-icon{color:var(--warn);}
-  .notice-danger{ background:color-mix(in srgb, var(--loss) 12%, var(--panel)); border-color:color-mix(in srgb, var(--loss) 40%, var(--border)); }
-  .notice-danger .notice-icon{color:var(--loss);}
-  .notice-success{ background:color-mix(in srgb, var(--profit) 12%, var(--panel)); border-color:color-mix(in srgb, var(--profit) 40%, var(--border)); }
-  .notice-success .notice-icon{color:var(--profit);}
+.notice {
+	display: flex;
+	gap: 10px;
+	align-items: flex-start;
+	border-radius: var(--radius);
+	padding: 12px 14px;
+	margin-top: 8px;
+	border: 1px solid;
+	line-height: 1.5;
+	font-size: 13.5px;
+}
+.notice-icon {
+	flex-shrink: 0;
+	font-size: 15px;
+	line-height: 1.4;
+}
+.notice-body {
+	flex: 1;
+	min-width: 0;
+}
+.notice-body p:first-child {
+	margin-top: 0;
+}
+.notice-body p:last-child {
+	margin-bottom: 0;
+}
+.notice-info {
+	background: color-mix(in srgb, var(--info) 12%, var(--panel));
+	border-color: color-mix(in srgb, var(--info) 40%, var(--border));
+}
+.notice-info .notice-icon {
+	color: var(--info);
+}
+.notice-warning {
+	background: color-mix(in srgb, var(--warn) 14%, var(--panel));
+	border-color: color-mix(in srgb, var(--warn) 45%, var(--border));
+}
+.notice-warning .notice-icon {
+	color: var(--warn);
+}
+.notice-danger {
+	background: color-mix(in srgb, var(--loss) 12%, var(--panel));
+	border-color: color-mix(in srgb, var(--loss) 40%, var(--border));
+}
+.notice-danger .notice-icon {
+	color: var(--loss);
+}
+.notice-success {
+	background: color-mix(in srgb, var(--profit) 12%, var(--panel));
+	border-color: color-mix(in srgb, var(--profit) 40%, var(--border));
+}
+.notice-success .notice-icon {
+	color: var(--profit);
+}
 
-
-  /* ---------- Dashboard ticker cards ----------
+/* ---------- Dashboard ticker cards ----------
      These are the highest-priority items on the page, so they get a
      noticeably stronger shadow than a regular .card (not just the ambient
      baseline one) plus a hover lift — and tighter internal spacing so more
      of them fit on screen without scrolling. */
-  /* Inline info rows — same figures the old boxed .mcard grid showed, but as
+/* Inline info rows — same figures the old boxed .mcard grid showed, but as
      plain label/value lines (no per-field border/background), so a card
      fits noticeably more information in the same footprint. */
-  .ticker-logo{width:20px; height:20px; border-radius:5px; object-fit:contain; vertical-align:middle; margin-right:7px; background:#fff; padding:2px; flex-shrink:0;}
-  .ticker-logo.lg{width:26px; height:26px; border-radius:6px; padding:3px; margin-right:8px;}
-  .ticker-logo.sm{width:14px; height:14px; border-radius:3px; padding:1px; margin-right:5px;}
-   .ticker-logo-fallback{
-     display:inline-flex; align-items:center; justify-content:center;
-     box-sizing:border-box; overflow:hidden; flex:0 0 auto;
-     background:color-mix(in srgb, var(--ticker-accent) 18%, var(--panel));
-     color:var(--ticker-accent); border:1px solid color-mix(in srgb, var(--ticker-accent) 42%, transparent);
-     font-family:var(--mono); font-size:9px; font-weight:800; letter-spacing:-.2px;
-     line-height:1; user-select:none;
-   }
-   .ticker-logo-fallback.lg{font-size:12px;}
-   .ticker-logo-fallback.sm{font-size:7px;}
-  /* Exit Board's compact/table view: bigger, bolder, more colored than a
+.ticker-logo {
+	width: 20px;
+	height: 20px;
+	border-radius: 5px;
+	object-fit: contain;
+	vertical-align: middle;
+	margin-right: 7px;
+	background: #fff;
+	padding: 2px;
+	flex-shrink: 0;
+}
+.ticker-logo.lg {
+	width: 26px;
+	height: 26px;
+	border-radius: 6px;
+	padding: 3px;
+	margin-right: 8px;
+}
+.ticker-logo.sm {
+	width: 14px;
+	height: 14px;
+	border-radius: 3px;
+	padding: 1px;
+	margin-right: 5px;
+}
+.ticker-logo-fallback {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	overflow: hidden;
+	flex: 0 0 auto;
+	background: color-mix(in srgb, var(--ticker-accent) 18%, var(--panel));
+	color: var(--ticker-accent);
+	border: 1px solid color-mix(in srgb, var(--ticker-accent) 42%, transparent);
+	font-family: var(--mono);
+	font-size: 9px;
+	font-weight: 800;
+	letter-spacing: -0.2px;
+	line-height: 1;
+	user-select: none;
+}
+.ticker-logo-fallback.lg {
+	font-size: 12px;
+}
+.ticker-logo-fallback.sm {
+	font-size: 7px;
+}
+/* Exit Board's compact/table view: bigger, bolder, more colored than a
      standard dense table — this is a "should I act on this" scan, not a
      data dump, so legibility matters more than density here even in
      compact mode. */
-  @media(max-width:800px){ .tc-layout{grid-template-columns:1fr;} }
-  /* Visually separates the "what-if" price slider from the Current position
+@media (max-width: 800px) {
+	.tc-layout {
+		grid-template-columns: 1fr;
+	}
+}
+/* Visually separates the "what-if" price slider from the Current position
      stats above it — it's a scratchpad for exploring any price, not a step
      in the Plan/Result flow, so it gets its own bordered, tinted box rather
      than sitting flush against the grid it's exploring. */
-  @media(max-width:1050px){.trade-cycle-grid{grid-template-columns:repeat(3,minmax(150px,1fr));}}@media(max-width:700px){.trade-cycle-grid{grid-template-columns:repeat(2,minmax(140px,1fr));}.trade-cycle-result{grid-template-columns:repeat(2,minmax(120px,1fr));}}
+@media (max-width: 1050px) {
+	.trade-cycle-grid {
+		grid-template-columns: repeat(3, minmax(150px, 1fr));
+	}
+}
+@media (max-width: 700px) {
+	.trade-cycle-grid {
+		grid-template-columns: repeat(2, minmax(140px, 1fr));
+	}
+	.trade-cycle-result {
+		grid-template-columns: repeat(2, minmax(120px, 1fr));
+	}
+}
 
+@supports not (color: color-mix(in srgb, red 20%, white)) {
+	.ticker-logo-fallback {
+		background: var(--panel-2);
+		border-color: var(--ticker-accent);
+	}
+}
 
-   @supports not (color: color-mix(in srgb, red 20%, white)){
-     .ticker-logo-fallback{background:var(--panel-2); border-color:var(--ticker-accent);}
-   }
+/* ---------- Collapsible sections ---------- */
 
-  /* ---------- Collapsible sections ---------- */
-
-  /* ---------- App-wide fixed top bar (TopBar.tsx) ----------
+/* ---------- App-wide fixed top bar (TopBar.tsx) ----------
      Reused verbatim from the old `.chip-tabs.subnav` rule this replaces
      (README item 1's own tuned padding/shadow/positive-gap fix still
      applies) — see TopBar.tsx's own doc comment for why rendering it as
@@ -1200,33 +2145,46 @@
      `.chip-tabs` chip row (no longer rendered by Tabs.tsx itself) plus an
      optional right-side slot (e.g. Net Worth's currency switcher), so it's
      a flex row rather than being `.chip-tabs` directly. */
-  .page-topbar {
+.page-topbar {
 	position: sticky;
 	top: 0;
 	z-index: 30;
 	background: var(--bg);
 	padding: 14px 12px 12px 12px;
-	margin: 8px -5px 20px -5px;
+	/* margin: 8px -5px 20px -5px; */
+   margin: -20px -14px 20px -14px;
 	border-bottom: 1px solid var(--border);
-	box-shadow: 0 4px 10px rgba(0,0,0,.06);
+	box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
 	display: flex;
 	align-items: center;
 	gap: 12px;
-  }
-    /* Final Material palette guard: ensures component backgrounds/text follow
+}
+/* Final Material palette guard: ensures component backgrounds/text follow
      the selected Material palette instead of the generic root palette. */
-  html[data-color^="material-"] body{background:var(--bg);color:var(--text);}
-  html[data-color^="material-"] .sidebar,
-  html[data-color^="material-"] .card,
-  html[data-color^="material-"] .modal,
-  html[data-color^="material-"] input[type=text],
-  html[data-color^="material-"] input[type=number],
-  html[data-color^="material-"] input[type=date],
-  html[data-color^="material-"] select,
-  html[data-color^="material-"] textarea{background:var(--panel-2);color:var(--text);border-color:var(--border);}
-  html[data-color^="material-"] .navbtn{color:var(--muted);}
-  html[data-color^="material-"] .navbtn.active{background:var(--accent-soft);color:var(--accent);}
-  /* User-reported (item 6/13): active vs. inactive chips look identical on
+html[data-color^="material-"] body {
+	background: var(--bg);
+	color: var(--text);
+}
+html[data-color^="material-"] .sidebar,
+html[data-color^="material-"] .card,
+html[data-color^="material-"] .modal,
+html[data-color^="material-"] input[type="text"],
+html[data-color^="material-"] input[type="number"],
+html[data-color^="material-"] input[type="date"],
+html[data-color^="material-"] select,
+html[data-color^="material-"] textarea {
+	background: var(--panel-2);
+	color: var(--text);
+	border-color: var(--border);
+}
+html[data-color^="material-"] .navbtn {
+	color: var(--muted);
+}
+html[data-color^="material-"] .navbtn.active {
+	background: var(--accent-soft);
+	color: var(--accent);
+}
+/* User-reported (item 6/13): active vs. inactive chips look identical on
      every Material theme. Root cause: this rule (unlike its sibling
      .chip:not(.active) rules just above and at the "FINAL SPECIFICITY FIX"
      section below) never excluded .active — and its extra `html` type
@@ -1234,16 +2192,22 @@
      `.chip.active` rule (a tied class-count is broken by the type-selector
      count), so it silently overrode .chip.active's solid fill back to the
      same soft tint every inactive chip gets, on all 7 material-* themes. */
-  html[data-color^="material-"] .chip:not(.active){background:var(--accent-soft);color:var(--accent);}
-  html[data-color^="material-"] .btn.primary{background:color-mix(in srgb, var(--accent) 65%, #000);color:#fff;}
+html[data-color^="material-"] .chip:not(.active) {
+	background: var(--accent-soft);
+	color: var(--accent);
+}
+html[data-color^="material-"] .btn.primary {
+	background: color-mix(in srgb, var(--accent) 65%, #000);
+	color: #fff;
+}
 
-  /* ================================================================
+/* ================================================================
      MATERIAL PALETTE OVERRIDE — FINAL SPECIFICITY FIX
      The original light-mode rule is :root[data-theme="light"], which
      outranks html[data-color="material-*"]. These selectors intentionally
      include BOTH attributes so the selected Material palette wins.
      ================================================================ */
-  /* ================================================================
+/* ================================================================
      MATERIAL PALETTE OVERRIDE — FINAL SPECIFICITY FIX
      The original light-mode rule is :root[data-theme="light"], which
      outranks html[data-color="material-*"]. These selectors intentionally
@@ -1252,89 +2216,182 @@
      tinting every surface with the theme hue hurt readability) — only
      --accent/--accent-soft vary per theme here.
      ================================================================ */
-  html[data-color^="material-"][data-theme="light"] {
-    --bg:#f9f9f9; --panel:#fff; --panel-2:#fcfcfc; --border:#E3E3E5; --text:#1B1B1D; --muted:#6B6B6F;
-    --accent: var(--material-accent, #6750A4);
-    --accent-soft: var(--material-accent-soft, #E8DEF8);
-  }
-  html[data-color="material-blue"][data-theme="light"] { --material-accent:#6750A4; --material-accent-soft:#E8DEF8; }
-  html[data-color="material-green"][data-theme="light"] { --material-accent:#386A20; --material-accent-soft:#D9EAD0; }
-  html[data-color="material-purple"][data-theme="light"] { --material-accent:#7D5260; --material-accent-soft:#FFD8E4; }
-  html[data-color="material-teal"][data-theme="light"] { --material-accent:#006A6A; --material-accent-soft:#CDE8E8; }
-  html[data-color="material-amber"][data-theme="light"] { --material-accent:#8A5000; --material-accent-soft:#FFDCB5; }
-  html[data-color="material-crimson"][data-theme="light"] { --material-accent:#B3261E; --material-accent-soft:#FFDAD4; }
-  html[data-color="material-slate"][data-theme="light"] { --material-accent:#455A70; --material-accent-soft:#D6E3F7; }
+html[data-color^="material-"][data-theme="light"] {
+	--bg: #f9f9f9;
+	--panel: #fff;
+	--panel-2: #fcfcfc;
+	--border: #e3e3e5;
+	--text: #1b1b1d;
+	--muted: #6b6b6f;
+	--accent: var(--material-accent, #6750a4);
+	--accent-soft: var(--material-accent-soft, #e8def8);
+}
+html[data-color="material-blue"][data-theme="light"] {
+	--material-accent: #6750a4;
+	--material-accent-soft: #e8def8;
+}
+html[data-color="material-green"][data-theme="light"] {
+	--material-accent: #386a20;
+	--material-accent-soft: #d9ead0;
+}
+html[data-color="material-purple"][data-theme="light"] {
+	--material-accent: #7d5260;
+	--material-accent-soft: #ffd8e4;
+}
+html[data-color="material-teal"][data-theme="light"] {
+	--material-accent: #006a6a;
+	--material-accent-soft: #cde8e8;
+}
+html[data-color="material-amber"][data-theme="light"] {
+	--material-accent: #8a5000;
+	--material-accent-soft: #ffdcb5;
+}
+html[data-color="material-crimson"][data-theme="light"] {
+	--material-accent: #b3261e;
+	--material-accent-soft: #ffdad4;
+}
+html[data-color="material-slate"][data-theme="light"] {
+	--material-accent: #455a70;
+	--material-accent-soft: #d6e3f7;
+}
 
-  html[data-color^="material-"][data-theme="dark"] {
-    --bg:#0B0C0D; --panel:#18181A; --panel-2:#232325; --border:#333335; --text:#ECECEE; --muted:#A6A6AA;
-  }
-  html[data-color="material-blue"][data-theme="dark"] { --accent:#D0BCFF; --accent-soft:#4F378B; }
-  html[data-color="material-green"][data-theme="dark"] { --accent:#B0D49A; --accent-soft:#315724; }
-  html[data-color="material-purple"][data-theme="dark"] { --accent:#FFB1C6; --accent-soft:#633B49; }
-  html[data-color="material-teal"][data-theme="dark"] { --accent:#4FDADA; --accent-soft:#004F50; }
-  html[data-color="material-amber"][data-theme="dark"] { --accent:#FFB96B; --accent-soft:#5F3B00; }
-  html[data-color="material-crimson"][data-theme="dark"] { --accent:#FFB4A9; --accent-soft:#73342B; }
-  html[data-color="material-slate"][data-theme="dark"] { --accent:#AAC7E8; --accent-soft:#2C4256; }
+html[data-color^="material-"][data-theme="dark"] {
+	--bg: #0b0c0d;
+	--panel: #18181a;
+	--panel-2: #232325;
+	--border: #333335;
+	--text: #ececee;
+	--muted: #a6a6aa;
+}
+html[data-color="material-blue"][data-theme="dark"] {
+	--accent: #d0bcff;
+	--accent-soft: #4f378b;
+}
+html[data-color="material-green"][data-theme="dark"] {
+	--accent: #b0d49a;
+	--accent-soft: #315724;
+}
+html[data-color="material-purple"][data-theme="dark"] {
+	--accent: #ffb1c6;
+	--accent-soft: #633b49;
+}
+html[data-color="material-teal"][data-theme="dark"] {
+	--accent: #4fdada;
+	--accent-soft: #004f50;
+}
+html[data-color="material-amber"][data-theme="dark"] {
+	--accent: #ffb96b;
+	--accent-soft: #5f3b00;
+}
+html[data-color="material-crimson"][data-theme="dark"] {
+	--accent: #ffb4a9;
+	--accent-soft: #73342b;
+}
+html[data-color="material-slate"][data-theme="dark"] {
+	--accent: #aac7e8;
+	--accent-soft: #2c4256;
+}
 
-  /* Material components must also outrank the original light/dark component rules. */
-  html[data-color^="material-"][data-theme="light"] body,
-  html[data-color^="material-"][data-theme="dark"] body { background:var(--bg); color:var(--text); }
-  html[data-color^="material-"][data-theme="light"] .sidebar,
-  html[data-color^="material-"][data-theme="dark"] .sidebar,
-  html[data-color^="material-"][data-theme="light"] .card,
-  html[data-color^="material-"][data-theme="dark"] .card,
-  html[data-color^="material-"][data-theme="light"] .modal,
-  html[data-color^="material-"][data-theme="dark"] .modal,
-  html[data-color^="material-"][data-theme="light"] input[type=text],
-  html[data-color^="material-"][data-theme="dark"] input[type=text],
-  html[data-color^="material-"][data-theme="light"] input[type=number],
-  html[data-color^="material-"][data-theme="dark"] input[type=number],
-  html[data-color^="material-"][data-theme="light"] input[type=date],
-  html[data-color^="material-"][data-theme="dark"] input[type=date],
-  html[data-color^="material-"][data-theme="light"] input[type=email],
-  html[data-color^="material-"][data-theme="dark"] input[type=email],
-  html[data-color^="material-"][data-theme="light"] input[type=password],
-  html[data-color^="material-"][data-theme="dark"] input[type=password],
-  html[data-color^="material-"][data-theme="light"] input[type=tel],
-  html[data-color^="material-"][data-theme="dark"] input[type=tel],
-  html[data-color^="material-"][data-theme="light"] select,
-  html[data-color^="material-"][data-theme="dark"] select,
-  html[data-color^="material-"][data-theme="light"] textarea,
-  html[data-color^="material-"][data-theme="dark"] textarea {
-    background:var(--panel-2); color:var(--text); border-color:var(--border);
-  }
-  html[data-color^="material-"][data-theme="light"] .navbtn,
-  html[data-color^="material-"][data-theme="dark"] .navbtn { color:var(--muted); }
-  html[data-color^="material-"][data-theme="light"] .navbtn:hover,
-  html[data-color^="material-"][data-theme="dark"] .navbtn:hover { background:var(--panel-2); color:var(--text); }
-  html[data-color^="material-"][data-theme="light"] .navbtn.active,
-  html[data-color^="material-"][data-theme="dark"] .navbtn.active { background:var(--accent-soft); color:var(--accent); box-shadow:none; }
-  html[data-color^="material-"][data-theme="light"] .btn.primary,
-  html[data-color^="material-"][data-theme="dark"] .btn.primary,
-  html[data-color^="material-"][data-theme="light"] .btn:not(.secondary):not(.ghost):not(.danger),
-  html[data-color^="material-"][data-theme="dark"] .btn:not(.secondary):not(.ghost):not(.danger) { background:color-mix(in srgb, var(--accent) 65%, #000); color:#fff; border-color:transparent; }
-  html[data-color^="material-"][data-theme="light"] .btn.secondary,
-  html[data-color^="material-"][data-theme="dark"] .btn.secondary { background:var(--accent-soft); color:var(--accent); border-color:transparent; }
-  html[data-color^="material-"][data-theme="light"] .btn.ghost,
-  html[data-color^="material-"][data-theme="dark"] .btn.ghost { background:transparent; color:var(--accent); border-color:transparent; }
-  html[data-color^="material-"][data-theme="light"] .chip:not(.active),
-  html[data-color^="material-"][data-theme="dark"] .chip:not(.active),
-  html[data-color^="material-"][data-theme="light"] .section-title .tag,
-  html[data-color^="material-"][data-theme="light"] thead th,
-  html[data-color^="material-"][data-theme="dark"] thead th { background:var(--panel); color:var(--accent); border-bottom-color:var(--border); }
-  html[data-color^="material-"][data-theme="light"] tbody td,
-  html[data-color^="material-"][data-theme="dark"] tbody td { color:var(--text); }
-  html[data-color^="material-"][data-theme="light"] tbody tr:hover,
-  html[data-color^="material-"][data-theme="dark"] tbody tr:hover { background:var(--accent-soft); }
-  html[data-color^="material-"][data-theme="light"] .section-title,
-  html[data-color^="material-"][data-theme="light"] .pagetitle,
-  html[data-color^="material-"][data-theme="dark"] .pagetitle { color:var(--text); }
-  html[data-color^="material-"][data-theme="light"] .pagesub,
-  html[data-color^="material-"][data-theme="dark"] .pagesub { color:var(--muted); }
-  html[data-color^="material-"][data-theme="light"] input:focus,
-  html[data-color^="material-"][data-theme="dark"] input:focus,
-  html[data-color^="material-"][data-theme="light"] select:focus,
-  html[data-color^="material-"][data-theme="dark"] select:focus { border-color:var(--accent); outline:3px solid var(--accent-soft); }
+/* Material components must also outrank the original light/dark component rules. */
+html[data-color^="material-"][data-theme="light"] body,
+html[data-color^="material-"][data-theme="dark"] body {
+	background: var(--bg);
+	color: var(--text);
+}
+html[data-color^="material-"][data-theme="light"] .sidebar,
+html[data-color^="material-"][data-theme="dark"] .sidebar,
+html[data-color^="material-"][data-theme="light"] .card,
+html[data-color^="material-"][data-theme="dark"] .card,
+html[data-color^="material-"][data-theme="light"] .modal,
+html[data-color^="material-"][data-theme="dark"] .modal,
+html[data-color^="material-"][data-theme="light"] input[type="text"],
+html[data-color^="material-"][data-theme="dark"] input[type="text"],
+html[data-color^="material-"][data-theme="light"] input[type="number"],
+html[data-color^="material-"][data-theme="dark"] input[type="number"],
+html[data-color^="material-"][data-theme="light"] input[type="date"],
+html[data-color^="material-"][data-theme="dark"] input[type="date"],
+html[data-color^="material-"][data-theme="light"] input[type="email"],
+html[data-color^="material-"][data-theme="dark"] input[type="email"],
+html[data-color^="material-"][data-theme="light"] input[type="password"],
+html[data-color^="material-"][data-theme="dark"] input[type="password"],
+html[data-color^="material-"][data-theme="light"] input[type="tel"],
+html[data-color^="material-"][data-theme="dark"] input[type="tel"],
+html[data-color^="material-"][data-theme="light"] select,
+html[data-color^="material-"][data-theme="dark"] select,
+html[data-color^="material-"][data-theme="light"] textarea,
+html[data-color^="material-"][data-theme="dark"] textarea {
+	background: var(--panel-2);
+	color: var(--text);
+	border-color: var(--border);
+}
+html[data-color^="material-"][data-theme="light"] .navbtn,
+html[data-color^="material-"][data-theme="dark"] .navbtn {
+	color: var(--muted);
+}
+html[data-color^="material-"][data-theme="light"] .navbtn:hover,
+html[data-color^="material-"][data-theme="dark"] .navbtn:hover {
+	background: var(--panel-2);
+	color: var(--text);
+}
+html[data-color^="material-"][data-theme="light"] .navbtn.active,
+html[data-color^="material-"][data-theme="dark"] .navbtn.active {
+	background: var(--accent-soft);
+	color: var(--accent);
+	box-shadow: none;
+}
+html[data-color^="material-"][data-theme="light"] .btn.primary,
+html[data-color^="material-"][data-theme="dark"] .btn.primary,
+html[data-color^="material-"][data-theme="light"] .btn:not(.secondary):not(.ghost):not(.danger),
+html[data-color^="material-"][data-theme="dark"] .btn:not(.secondary):not(.ghost):not(.danger) {
+	background: color-mix(in srgb, var(--accent) 65%, #000);
+	color: #fff;
+	border-color: transparent;
+}
+html[data-color^="material-"][data-theme="light"] .btn.secondary,
+html[data-color^="material-"][data-theme="dark"] .btn.secondary {
+	background: var(--accent-soft);
+	color: var(--accent);
+	border-color: transparent;
+}
+html[data-color^="material-"][data-theme="light"] .btn.ghost,
+html[data-color^="material-"][data-theme="dark"] .btn.ghost {
+	background: transparent;
+	color: var(--accent);
+	border-color: transparent;
+}
+html[data-color^="material-"][data-theme="light"] .chip:not(.active),
+html[data-color^="material-"][data-theme="dark"] .chip:not(.active),
+html[data-color^="material-"][data-theme="light"] .section-title .tag,
+html[data-color^="material-"][data-theme="light"] thead th,
+html[data-color^="material-"][data-theme="dark"] thead th {
+	background: var(--accent-soft);
+	color: var(--accent);
+	border-bottom-color: var(--border);
+}
+html[data-color^="material-"][data-theme="light"] tbody td,
+html[data-color^="material-"][data-theme="dark"] tbody td {
+	color: var(--text);
+}
+html[data-color^="material-"][data-theme="light"] tbody tr:hover,
+html[data-color^="material-"][data-theme="dark"] tbody tr:hover {
+	background: var(--accent-soft);
+}
+html[data-color^="material-"][data-theme="light"] .section-title,
+html[data-color^="material-"][data-theme="light"] .pagetitle,
+html[data-color^="material-"][data-theme="dark"] .pagetitle {
+	color: var(--text);
+}
+html[data-color^="material-"][data-theme="light"] .pagesub,
+html[data-color^="material-"][data-theme="dark"] .pagesub {
+	color: var(--muted);
+}
+html[data-color^="material-"][data-theme="light"] input:focus,
+html[data-color^="material-"][data-theme="dark"] input:focus,
+html[data-color^="material-"][data-theme="light"] select:focus,
+html[data-color^="material-"][data-theme="dark"] select:focus {
+	border-color: var(--accent);
+	outline: 3px solid var(--accent-soft);
+}
 
 /* ---------- Card & field accents — minimal gradient, shadows not borders ---
    1) The gradient on stat/chart cards is now barely-there: the top edge is
@@ -1366,55 +2423,67 @@
    --card-hue-driven gradient formula the base `.stat-card` rule already
    uses, so hue differentiation survives in every color theme, not just
    Classic. */
-html:not([data-color="wine"]) .card.chart-card{
-  border:0;
-  box-shadow:var(--shadow-card);
-  background:linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 8%, var(--panel)), var(--panel) 60px);
+html:not([data-color="wine"]) .card.chart-card {
+	border: 0;
+	box-shadow: var(--shadow-card);
+	background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 8%, var(--panel)), var(--panel) 60px);
 }
-html:not([data-color="wine"]) .card.stat-card{
-  border:0;
-  box-shadow:var(--shadow-card);
-  background:radial-gradient(circle at 50% 30%, color-mix(in srgb, white 12%, transparent) 0%, transparent 55%), color-mix(in srgb, var(--card-hue, var(--accent)) 22%, var(--panel));
-}
+/* html:not([data-color="wine"]) .card.stat-card {
+	border: 0;
+	box-shadow: var(--shadow-card);
+	background:
+		radial-gradient(circle at 50% 30%, color-mix(in srgb, white 12%, transparent) 0%, transparent 55%),
+		color-mix(in srgb, var(--card-hue, var(--accent)) 22%, var(--panel));
+} */
 html[data-color^="material-"][data-theme="light"] .card.chart-card,
-html[data-color^="material-"][data-theme="dark"] .card.chart-card{
-  border:0;
-  box-shadow:var(--shadow-card);
-  background:linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 6%, var(--panel)), var(--panel) 60px);
+html[data-color^="material-"][data-theme="dark"] .card.chart-card {
+	border: 0;
+	box-shadow: var(--shadow-card);
+	background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 6%, var(--panel)), var(--panel) 60px);
 }
 html[data-color^="material-"][data-theme="light"] .card.stat-card,
-html[data-color^="material-"][data-theme="dark"] .card.stat-card{
-  border:0;
-  box-shadow:var(--shadow-card);
-  background:radial-gradient(circle at 50% 30%, color-mix(in srgb, white 12%, transparent) 0%, transparent 55%), color-mix(in srgb, var(--card-hue, var(--accent)) 22%, var(--panel));
+html[data-color^="material-"][data-theme="dark"] .card.stat-card {
+	border: 0;
+	box-shadow: var(--shadow-card);
+	background:
+		radial-gradient(circle at 50% 30%, color-mix(in srgb, white 12%, transparent) 0%, transparent 55%),
+		color-mix(in srgb, var(--card-hue, var(--accent)) 22%, var(--panel));
 }
 
 /* Fields get the same whisper of color the cards get — background only,
    border stays the plain theme border, no accent bleeding into it. */
-html:not([data-color="wine"]) input[type=text],
-html:not([data-color="wine"]) input[type=number],
-html:not([data-color="wine"]) input[type=date],
-html:not([data-color="wine"]) select{
-  background: color-mix(in srgb, var(--accent-soft) 6%, var(--panel-2));
+html:not([data-color="wine"]) input[type="text"],
+html:not([data-color="wine"]) input[type="number"],
+html:not([data-color="wine"]) input[type="date"],
+html:not([data-color="wine"]) select {
+	background: color-mix(in srgb, var(--accent-soft) 6%, var(--panel-2));
 }
-html[data-color^="material-"][data-theme="light"] input[type=text],
-html[data-color^="material-"][data-theme="dark"] input[type=text],
-html[data-color^="material-"][data-theme="light"] input[type=number],
-html[data-color^="material-"][data-theme="dark"] input[type=number],
-html[data-color^="material-"][data-theme="light"] input[type=date],
-html[data-color^="material-"][data-theme="dark"] input[type=date],
+html[data-color^="material-"][data-theme="light"] input[type="text"],
+html[data-color^="material-"][data-theme="dark"] input[type="text"],
+html[data-color^="material-"][data-theme="light"] input[type="number"],
+html[data-color^="material-"][data-theme="dark"] input[type="number"],
+html[data-color^="material-"][data-theme="light"] input[type="date"],
+html[data-color^="material-"][data-theme="dark"] input[type="date"],
 html[data-color^="material-"][data-theme="light"] select,
-html[data-color^="material-"][data-theme="dark"] select{
-  background: color-mix(in srgb, var(--accent-soft) 6%, var(--panel-2));
+html[data-color^="material-"][data-theme="dark"] select {
+	background: color-mix(in srgb, var(--accent-soft) 6%, var(--panel-2));
 }
 
 /* Authentication UI guard: only one state is visible. */
 
 /* FINAL surgical Appearance popover */
-.appearance-popover{position:relative;display:inline-flex;align-items:center; width:100%; margin-top:10px;}
-.appearance-trigger{min-width:108px;}
-.appearance-panel{
-  /* position:fixed (not absolute) on purpose — the sidebar now has its own
+.appearance-popover {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	width: 100%;
+	margin-top: 10px;
+}
+.appearance-trigger {
+	min-width: 108px;
+}
+.appearance-panel {
+	/* position:fixed (not absolute) on purpose — the sidebar now has its own
      overflow-y:auto for the scrollable-nav fix, and an absolutely-positioned
      descendant that flies outside its parent's box gets clipped by that
      overflow. Fixed positioning is placed relative to the viewport instead,
@@ -1432,42 +2501,89 @@ html[data-color^="material-"][data-theme="dark"] select{
      `.sync-status-panel`'s identical, already-working pattern below) —
      nothing else needs to gate visibility once React itself only mounts
      the element while open. */
-  position:fixed; z-index:1000;
-  display:grid; gap:8px; width:255px; padding:10px;
-  background:var(--panel);border:1px solid var(--border);border-radius:10px;
-  box-shadow:var(--shadow-lg);
+	position: fixed;
+	z-index: 1000;
+	display: grid;
+	gap: 8px;
+	width: 255px;
+	padding: 10px;
+	background: var(--panel);
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	box-shadow: var(--shadow-lg);
 }
-.appearance-panel-title{
-  font-family:var(--disp);font-weight:700;font-size:13px;
-  color:var(--text);padding:2px 2px 3px;
+.appearance-panel-title {
+	font-family: var(--disp);
+	font-weight: 700;
+	font-size: 13px;
+	color: var(--text);
+	padding: 2px 2px 3px;
 }
-.appearance-panel select{width:100%;padding:7px 9px;font-size:12px;}
-.appearance-panel .btn{width:100%;padding:7px 10px;font-size:12px;}
-.sidebar-popover .appearance-trigger{width:100%; justify-content:flex-start; text-align:left;}
+.appearance-panel select {
+	width: 100%;
+	padding: 7px 9px;
+	font-size: 12px;
+}
+.appearance-panel .btn {
+	width: 100%;
+	padding: 7px 10px;
+	font-size: 12px;
+}
+.sidebar-popover .appearance-trigger {
+	width: 100%;
+	justify-content: flex-start;
+	text-align: left;
+}
 
 /* App-wide sync-status indicator (README Pending item 76) — same
    position:fixed-with-no-explicit-offsets trick as .appearance-panel,
    kept as its own class pair since it's a third independent trigger/panel,
    not a variant of Appearance's or Category's own popovers. */
-.sync-status-popover{position:relative;width:100%;}
-.sync-status-panel{
-  position:fixed; z-index:1000;
-  display:flex;flex-direction:column;gap:6px;
-  width:255px;padding:10px;
-  background:var(--panel);border:1px solid var(--border);border-radius:10px;
-  box-shadow:var(--shadow-lg);
+.sync-status-popover {
+	position: relative;
+	width: 100%;
 }
-.sync-status-row{display:flex;align-items:center;gap:6px;font-size:12px;}
+.sync-status-panel {
+	position: fixed;
+	z-index: 1000;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	width: 255px;
+	padding: 10px;
+	background: var(--panel);
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	box-shadow: var(--shadow-lg);
+}
+.sync-status-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 12px;
+}
 
 /* Sidebar module list (README item 18, reworked 2026-08-26 per user
    feedback). Originally a dropdown/popover you had to open every time to
    switch modules — "very hectic" per the report — now a plain always-
    visible list, same `.navbtn` styling as every other sidebar nav item, so
    picking a module is one click instead of two. */
-.category-list{margin-bottom:6px; padding-bottom:6px; border-bottom:1px solid var(--border);}
-.category-item.active{background:var(--accent-soft); color:var(--on-accent-soft); font-weight:600;}
+.category-list {
+	margin-bottom: 6px;
+	padding-bottom: 6px;
+	border-bottom: 1px solid var(--border);
+}
+.category-item.active {
+	background: var(--accent-soft);
+	color: var(--on-accent-soft);
+	font-weight: 600;
+}
 /* One small icon per module (2026-09-11, design reference: wealth_tracker_template/). */
-.category-item-icon{display:flex; flex-shrink:0; opacity:.8;}
+.category-item-icon {
+	display: flex;
+	flex-shrink: 0;
+	opacity: 0.8;
+}
 /* User-corrected (2026-09-09): "I asked to include individual stock Exchs.
    as subnavs of the SE main nav, but you placed it below as a stand-alone
    menu using ugly lines." Was a separate bordered block below the whole
@@ -1476,9 +2592,10 @@ html[data-color^="material-"][data-theme="dark"] select{
    CategoryNav.tsx's `stocksSubnav` prop) — a left border + indent reads as
    nested-under-its-parent instead of a competing standalone section, the
    same visual language a nested tree view uses. */
-.category-stocks-subnav{
-  padding:6px 0 4px 10px; margin:2px 0 4px;
-  border-left:2px solid var(--border);
+.category-stocks-subnav {
+	padding: 6px 0 4px 10px;
+	margin: 2px 0 4px;
+	border-left: 2px solid var(--border);
 }
 
 /* Account section (2026-08-26 feedback): the sign-in state used to be a
@@ -1493,11 +2610,19 @@ html[data-color^="material-"][data-theme="dark"] select{
    settings-gear icon pinned to the right as the "this opens account
    settings" affordance — matching the user's own spec ("show user name,
    avatar and settings logo only, with smaller text"). */
-.sidebar-account-group{
-  border:1px solid var(--border); border-radius:8px; padding:2px;
-  margin-top:12px; display:flex; flex-direction:column; gap:1px;
+.sidebar-account-group {
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	padding: 2px;
+	margin-top: 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
 }
-.account-btn{font-size:12.5px; gap:8px;}
+.account-btn {
+	font-size: 12.5px;
+	gap: 8px;
+}
 /* User-reported (2026-09): "Profile Picture not coming from google, not a
    rounded circle as well." Shared by the sidebar's account row and
    ProfileEditor.tsx's bigger avatar (see components/Avatar.tsx) — sizing
@@ -1506,14 +2631,29 @@ html[data-color^="material-"][data-theme="dark"] select{
    `<img>` (a CSS "replaced element"), so a real Google profile photo of
    any aspect ratio still clips to a clean circle, matching the emoji/
    initial fallback's own look exactly. */
-.avatar-circle{
-  flex-shrink:0; border-radius:50%; object-fit:cover;
-  background:var(--accent-soft); color:var(--on-accent-soft);
-  display:flex; align-items:center; justify-content:center;
-  font-weight:700; line-height:1;
+.avatar-circle {
+	flex-shrink: 0;
+	border-radius: 50%;
+	object-fit: cover;
+	background: var(--accent-soft);
+	color: var(--on-accent-soft);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-weight: 700;
+	line-height: 1;
 }
-.account-name{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-.account-btn svg{flex-shrink:0; color:var(--muted);}
+.account-name {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.account-btn svg {
+	flex-shrink: 0;
+	color: var(--muted);
+}
 
 /* Phase 1 addition (README item 14): a super-compact "console" density on
  * top of the existing comfortable/compact tiers — tighter padding, smaller
@@ -1521,21 +2661,50 @@ html[data-color^="material-"][data-theme="dark"] select{
  * The tighter 4px radius here (vs. the base --radius:10px / Material's
  * --radius-lg:16px) is a deliberate part of that "terminal" look — sharper
  * corners read as denser/more utilitarian — not an accidental mismatch. */
-html[data-density="console"] .card{padding:6px 8px; border-radius:4px;}
-html[data-density="console"] .stat-card{padding:5px 7px;}
-html[data-density="console"] .stat-card .label{font-size:8.5px; margin-bottom:1px; letter-spacing:.02em;}
-html[data-density="console"] .stat-card .value{font-size:12.5px; font-family:var(--mono);}
+html[data-density="console"] .card {
+	padding: 6px 8px;
+	border-radius: 4px;
+}
+html[data-density="console"] .stat-card {
+	padding: 5px 7px;
+}
+html[data-density="console"] .stat-card .label {
+	font-size: 8.5px;
+	margin-bottom: 1px;
+	letter-spacing: 0.02em;
+}
+html[data-density="console"] .stat-card .value {
+	font-size: 12.5px;
+	font-family: var(--mono);
+}
 /* Pending item 50: Console was previously just a tighter-padding version of
    the same info — this is one real behavioral difference, not just resizing:
    drop the secondary "sub" line (break-even color hint, avg/last sell price,
    etc.) entirely rather than shrinking it, since Console's whole point is a
    glanceable numbers-only view, not a smaller version of the full one. */
-html[data-density="console"] .stat-card .sub{display:none;}
-html[data-density="console"] .main{padding:14px 16px 40px 16px;}
-html[data-density="console"] h1.pagetitle{font-size:16px; margin-bottom:10px;}
-html[data-density="console"] .btn{padding:4px 8px; font-size:11.5px; min-height:26px; min-width:26px;}
-html[data-density="console"] input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]),
-html[data-density="console"] select{padding:5px 7px; font-size:11.5px; min-height:26px; min-width:56px;}
+html[data-density="console"] .stat-card .sub {
+	display: none;
+}
+html[data-density="console"] .main {
+	padding: 14px 16px 40px 16px;
+}
+html[data-density="console"] h1.pagetitle {
+	font-size: 16px;
+	margin-bottom: 10px;
+}
+html[data-density="console"] .btn {
+	padding: 4px 8px;
+	font-size: 11.5px;
+	min-height: 26px;
+	min-width: 26px;
+}
+html[data-density="console"] input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+html[data-density="console"] select {
+	padding: 5px 7px;
+	font-size: 11.5px;
+	min-height: 26px;
+	min-width: 56px;
+}
 /* User-reported: "No significant difference between UI compress options.
  * Console is even more reverse than its name." Root cause, confirmed via
  * Playwright measurement before this fix: the block above only ever set
@@ -1551,7 +2720,18 @@ html[data-density="console"] select{padding:5px 7px; font-size:11.5px; min-heigh
  * values than Compact everywhere, so each density tier is a strictly
  * decreasing series rather than three unrelated, partially-overlapping
  * rule sets. */
-html[data-density="console"] .grid{gap:6px;}
-html[data-density="console"] .pagesub{margin-bottom:8px;}
-html[data-density="console"] table, html[data-density="console"] thead th, html[data-density="console"] tbody td{font-size:10.5px; font-family:var(--mono);}
-html[data-density="console"] tbody td{padding:5px 6px;}
+html[data-density="console"] .grid {
+	gap: 6px;
+}
+html[data-density="console"] .pagesub {
+	margin-bottom: 8px;
+}
+html[data-density="console"] table,
+html[data-density="console"] thead th,
+html[data-density="console"] tbody td {
+	font-size: 10.5px;
+	font-family: var(--mono);
+}
+html[data-density="console"] tbody td {
+	padding: 5px 6px;
+}
