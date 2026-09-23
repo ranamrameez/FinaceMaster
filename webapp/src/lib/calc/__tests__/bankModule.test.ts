@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { BankAccount, BankTransaction } from '../../../types/bankWorkbook';
 import type { Category } from '../../../types/finance';
-import { accountBalance, accountBalanceAsOfMonth, accountByCategory, accountPendingBalance, accountPeriodAnalytics, accountRunningLedger, assetBalanceByCurrency, bankMonthlyFlow, budgetVsActual, creditCardLiabilityByCurrency, totalBalanceByCurrency } from '../bankModule';
+import { accountBalance, accountBalanceAsOfMonth, accountByCategory, accountEffectiveTransactions, accountPendingBalance, accountPeriodAnalytics, accountRunningLedger, assetBalanceByCurrency, bankMonthlyFlow, budgetVsActual, creditCardLiabilityByCurrency, totalBalanceByCurrency } from '../bankModule';
 
 const TEST_CATEGORIES: Category[] = [
   { id: 'cat_food', serialNumber: 1, name: 'Food' },
@@ -76,6 +76,37 @@ describe('accountPendingBalance', () => {
   it('returns 0 when nothing is pending', () => {
     const a = account({});
     expect(accountPendingBalance(a, [tx({ amount: -50 })])).toBe(0);
+  });
+});
+
+describe('accountEffectiveTransactions', () => {
+  it('prefers manual rows over matching imported copies without deleting either stored record', () => {
+    const a = account({ id: 'a1' });
+    const manual = tx({ id: 'manual', accountId: 'a1', date: '2026-09-01', description: 'CC Payment', amount: -600, source: 'manual' });
+    const imported = tx({ id: 'imported', accountId: 'a1', date: '2026-09-01', description: '  cc   payment ', amount: -600, source: 'statement-import' });
+    const input = [manual, imported];
+
+    const effective = accountEffectiveTransactions(a, input);
+    expect(input).toHaveLength(2);
+    expect(effective.map((row) => row.id)).toEqual(['manual']);
+  });
+
+  it('collapses repeated imported copies when there is no manual row', () => {
+    const a = account({ id: 'a1' });
+    const effective = accountEffectiveTransactions(a, [
+      tx({ id: 'i1', accountId: 'a1', date: '2026-09-02', description: 'ATM', amount: -100, source: 'statement-import' }),
+      tx({ id: 'i2', accountId: 'a1', date: '2026-09-02', description: 'ATM', amount: -100, source: 'statement-import' }),
+    ]);
+    expect(effective.map((row) => row.id)).toEqual(['i1']);
+  });
+
+  it('does not collapse distinct descriptions with the same date and amount', () => {
+    const a = account({ id: 'a1' });
+    const effective = accountEffectiveTransactions(a, [
+      tx({ id: 't1', accountId: 'a1', date: '2026-09-02', description: 'ATM fee', amount: -100, source: 'manual' }),
+      tx({ id: 't2', accountId: 'a1', date: '2026-09-02', description: 'Cash withdrawal', amount: -100, source: 'manual' }),
+    ]);
+    expect(effective).toHaveLength(2);
   });
 });
 
@@ -251,6 +282,31 @@ describe('accountPeriodAnalytics', () => {
     expect(result.monthlyFlow[0].income).toBeCloseTo(5110, 2);
     expect(result.monthlyFlow[0].expense).toBeCloseTo(15070.87, 2);
     expect(result.monthlyFlow[0].net).toBeCloseTo(-9960.87, 2);
+  });
+
+  it('does not double-count 15 historical imported copies of a 16-row manual September statement', () => {
+    const a = account({ id: 'a1', bankId: 'bank-1', currencyCode: 'QAR', openingBalance: 0 });
+    const amounts = [-45.37, 100, -100, 100, 900, -1000, -100, -0.5, 100, -800, -2400, 100, -25, -600, 3810, -10000];
+    const manualRows = amounts.map((amount, i) => tx({
+      id: `m-${i}`,
+      accountId: a.id,
+      date: `2026-09-${String(i + 1).padStart(2, '0')}`,
+      description: `Statement row ${i + 1}`,
+      amount,
+      source: 'manual',
+    }));
+    const importedCopies = manualRows.slice(0, 15).map((row, i) => ({
+      ...row,
+      id: `i-${i}`,
+      source: 'statement-import' as const,
+      statementRef: 'old-import.csv',
+    }));
+
+    const result = accountPeriodAnalytics(a, [...manualRows, ...importedCopies], '2026-09', '2026-09');
+    expect(result.transactions).toHaveLength(16);
+    expect(result.deposits).toBeCloseTo(5110, 2);
+    expect(result.withdrawals).toBeCloseTo(15070.87, 2);
+    expect(result.netFlow).toBeCloseTo(-9960.87, 2);
   });
 
   it('applies month bounds after account scoping while retaining full running balances', () => {

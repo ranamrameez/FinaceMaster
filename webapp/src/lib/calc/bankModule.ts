@@ -5,10 +5,56 @@ import { dateOnlyMs } from '../datetime';
 
 export interface BankLedgerRow { tx: BankTransaction; balance: number; }
 
-/** Running cleared balance for one account. Pending transactions are kept out
- * of the actual ledger; use accountPendingBalance for their separate impact. */
+/**
+ * Stable duplicate key used by both statement import and the read ledger.
+ * The importer has always defined a duplicate as the same account/date/
+ * normalized-description/amount. Keeping that definition here prevents
+ * imported copies from being counted by analytics after the importer has
+ * already told the user they are duplicates.
+ */
+export function bankTransactionFingerprint(t: Pick<BankTransaction, 'date' | 'description' | 'amount'>): string {
+  return t.date + '|' + t.description.trim().toLowerCase().replace(/\s+/g, ' ') + '|' + t.amount.toFixed(8);
+}
+
+/**
+ * Effective cleared transactions for exactly one account.
+ *
+ * Historical versions of statement import could leave imported copies of
+ * transactions that were already entered manually. Those copies must not
+ * double-count balances/analytics. Read-time reconciliation is deliberately
+ * non-destructive:
+ * - pending rows stay excluded, as before;
+ * - if a fingerprint has any manual row(s), all manual rows are preserved
+ *   and matching imported copies are ignored;
+ * - if a fingerprint contains only imported rows, the first import is kept
+ *   and repeated imported copies are ignored.
+ *
+ * Stored records remain untouched, so this can never erase audit history.
+ */
+export function accountEffectiveTransactions(account: BankAccount, transactions: BankTransaction[]): BankTransaction[] {
+  const cleared = transactions.filter((t) => t.accountId === account.id && !t.isPending);
+  const groups = new Map<string, BankTransaction[]>();
+  for (const tx of cleared) {
+    const key = bankTransactionFingerprint(tx);
+    const group = groups.get(key);
+    if (group) group.push(tx);
+    else groups.set(key, [tx]);
+  }
+
+  const effective: BankTransaction[] = [];
+  for (const group of groups.values()) {
+    const manual = group.filter((tx) => (tx.source ?? 'manual') === 'manual');
+    if (manual.length) effective.push(...manual);
+    else effective.push(group[0]);
+  }
+  return effective;
+}
+
+/** Running effective cleared balance for one account. Pending transactions
+ * and historical imported duplicate copies are excluded; use
+ * accountPendingBalance for pending impact. */
 export function accountRunningLedger(account: BankAccount, transactions: BankTransaction[]): BankLedgerRow[] {
-  const accountTxs = transactions.filter((t) => t.accountId === account.id && !t.isPending);
+  const accountTxs = accountEffectiveTransactions(account, transactions);
   const sorted = [...accountTxs].sort((a, b) => {
     const byDate = dateOnlyMs(a.date) - dateOnlyMs(b.date);
     return byDate !== 0 ? byDate : (a.serialNumber ?? 0) - (b.serialNumber ?? 0);
@@ -21,7 +67,7 @@ export function accountRunningLedger(account: BankAccount, transactions: BankTra
 }
 
 export function accountBalance(account: BankAccount, transactions: BankTransaction[]): number {
-  return transactions.filter((t) => t.accountId === account.id && !t.isPending).reduce((sum, t) => sum + t.amount, 0) + account.openingBalance;
+  return accountEffectiveTransactions(account, transactions).reduce((sum, t) => sum + t.amount, 0) + account.openingBalance;
 }
 
 export function accountPendingBalance(account: BankAccount, transactions: BankTransaction[]): number {

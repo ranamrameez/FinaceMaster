@@ -37,7 +37,7 @@ import { recurrenceLabel } from '../../../lib/recurrenceLabel';
 import { hueStyle } from '../../../lib/statCardHues';
 import { categoryName, UNCATEGORIZED_ID } from '../../../lib/categories';
 import { useCategoryStore } from '../../../store/categoryStore';
-import { accountBalance, accountByCategory, accountPendingBalance, accountPeriodAnalytics, accountRunningLedger, bankTotalsByCurrency, budgetVsActual, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
+import { accountBalance, accountByCategory, accountPendingBalance, accountPeriodAnalytics, accountRunningLedger, bankTotalsByCurrency, bankTransactionFingerprint, budgetVsActual, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
 import { outstandingBalanceByCard } from '../../../lib/calc/creditCardModule';
 import { monthRange } from '../../../lib/calc/budgetPlanner';
 import { isPlanDue, planWithinHorizon, plannedBankProjection, type PlanningHorizonDays } from '../../../lib/calc/plannedBalance';
@@ -1904,18 +1904,18 @@ function ImportStatementSection({ account, compact = false }: { account: BankAcc
     return { index, rawDate, date, description, amount, valid: Boolean(date && description && !Number.isNaN(amount) && amount !== 0) };
   }), [rows, dateCol, descCol, amountCol, flipSign]);
 
-  const fingerprint = (t: { date: string; description: string; amount: number }) => t.date + '|' + t.description.trim().toLowerCase().replace(/\s+/g, ' ') + '|' + t.amount.toFixed(8);
+
   const existingByFingerprint = useMemo(() => {
     const map = new Map<string, BankTransaction>();
-    transactions.filter((t) => t.accountId === account.id).forEach((t) => map.set(fingerprint(t), t));
+    transactions.filter((t) => t.accountId === account.id).forEach((t) => map.set(bankTransactionFingerprint(t), t));
     return map;
   }, [transactions, account.id]);
 
   const validRows = mappedRows.filter((r) => r.valid && r.date) as Array<typeof mappedRows[number] & { date: string }>;
-  const duplicateRows = useMemo(() => validRows.filter((r) => existingByFingerprint.has(fingerprint({ date: r.date, description: r.description, amount: r.amount }))), [validRows, existingByFingerprint]);
+  const duplicateRows = useMemo(() => validRows.filter((r) => existingByFingerprint.has(bankTransactionFingerprint({ date: r.date, description: r.description, amount: r.amount }))), [validRows, existingByFingerprint]);
   const uniqueRows = useMemo(() => {
     const seen = new Set<string>();
-    return validRows.filter((r) => { const key = fingerprint({ date: r.date, description: r.description, amount: r.amount }); if (seen.has(key)) return false; seen.add(key); return true; });
+    return validRows.filter((r) => { const key = bankTransactionFingerprint({ date: r.date, description: r.description, amount: r.amount }); if (seen.has(key)) return false; seen.add(key); return true; });
   }, [validRows]);
 
   const buildTransactions = (rowsToImport: typeof validRows): BankTransaction[] => rowsToImport.map((r) => ({
@@ -1927,10 +1927,10 @@ function ImportStatementSection({ account, compact = false }: { account: BankAcc
     if (!dateCol || !descCol || !amountCol) return toast('Map all three columns before importing.');
     if (!validRows.length) return toast('No valid rows found. Check the date, description and amount mappings.');
     if (!(await ensureSignedIn('Sign in to import transactions.'))) return;
-    const duplicateIds = duplicateRows.map((r) => existingByFingerprint.get(fingerprint({ date: r.date, description: r.description, amount: r.amount }))?.id).filter(Boolean) as string[];
+    const duplicateIds = duplicateRows.map((r) => existingByFingerprint.get(bankTransactionFingerprint({ date: r.date, description: r.description, amount: r.amount }))?.id).filter(Boolean) as string[];
     const rowsToImport = mode === 'keep-all'
       ? validRows
-      : uniqueRows.filter((r) => mode === 'replace' || !existingByFingerprint.has(fingerprint({ date: r.date, description: r.description, amount: r.amount })));
+      : uniqueRows.filter((r) => mode === 'replace' || !existingByFingerprint.has(bankTransactionFingerprint({ date: r.date, description: r.description, amount: r.amount })));
     if (mode === 'replace') replaceTransactions(duplicateIds, buildTransactions(rowsToImport));
     else addTransactions(buildTransactions(rowsToImport));
     const skipped = validRows.length - rowsToImport.length;
@@ -1959,14 +1959,14 @@ function ImportStatementSection({ account, compact = false }: { account: BankAcc
           <div className="grid-auto mt-md" style={gridAutoStyle(150, 8)}>
             <div className="stat-card card"><div className="label">CSV rows</div><strong>{rows.length}</strong></div>
             <div className="stat-card card"><div className="label">Valid rows</div><strong>{validRows.length}</strong></div>
-            <div className="stat-card card"><div className="label">New transactions</div><strong>{uniqueRows.filter((r) => !existingByFingerprint.has(fingerprint({ date: r.date, description: r.description, amount: r.amount }))).length}</strong></div>
+            <div className="stat-card card"><div className="label">New transactions</div><strong>{uniqueRows.filter((r) => !existingByFingerprint.has(bankTransactionFingerprint({ date: r.date, description: r.description, amount: r.amount }))).length}</strong></div>
             <div className="stat-card card"><div className="label">Existing duplicates</div><strong className={duplicateRows.length ? 'pill-negative' : 'pill-positive'}>{duplicateRows.length}</strong></div>
           </div>
           <h4>Preview</h4>
           <div className="table-scroll" style={{ maxHeight: 360 }}>
             <table><thead><tr><th>#</th><th>Date</th><th>Description</th><th>Amount</th><th>Status</th></tr></thead>
               <tbody>{mappedRows.slice(0, 100).map((r) => {
-                const duplicate = r.valid && r.date ? existingByFingerprint.has(fingerprint({ date: r.date, description: r.description, amount: r.amount })) : false;
+                const duplicate = r.valid && r.date ? existingByFingerprint.has(bankTransactionFingerprint({ date: r.date, description: r.description, amount: r.amount })) : false;
                 return <tr key={r.index}><td>{r.index + 1}</td><td>{r.date ? formatDate(r.date, dateFormat) : r.rawDate || '—'}</td><td>{r.description}</td><td className={r.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{Number.isFinite(r.amount) ? fmtMoney(r.amount, account.currencyCode) : 'Invalid'}</td><td className={r.valid ? (duplicate ? 'text-loss' : 'text-profit') : 'text-loss'}>{r.valid ? (duplicate ? 'Duplicate' : 'New') : 'Invalid'}</td></tr>;
               })}</tbody>
             </table>
