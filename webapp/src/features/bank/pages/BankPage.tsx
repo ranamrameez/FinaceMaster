@@ -3,6 +3,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { Card, CollapsibleCard, EntityCard, MoneyValue } from '../../../components/Card';
+import { SummaryChip, type StandardCardAction } from '../../../components/StandardCard';
+import { StandardPageSections, type StandardPageSection } from '../../../components/StandardPageSections';
+import { TopBarControls, TopBarSelect } from '../../../components/TopBarControls';
+import { TransactionFilterMenu } from '../../../components/TransactionFilterMenu';
+import { UsageBar } from '../../../components/ui/UsageBar';
 import { Notice } from '../../../components/Notice';
 import { Tooltip } from '../../../components/Tooltip';
 import { ChartCard } from '../../qse/components/ChartCard';
@@ -17,7 +22,6 @@ import { PendingToggle } from '../../../components/ui/PendingToggle';
 import { DirectionChips } from '../../../components/ui/DirectionChips';
 import { IconButton } from '../../../components/ui/IconButton';
 import { AttributeList } from '../../../components/ui/AttributeList';
-import { FilterFab } from '../../../components/ui/FilterFab';
 import { FabButton, FabPanel } from '../../../components/ui/Fab';
 import { TransactionEntryModal } from '../../../components/TransactionEntryModal';
 import { CategorySelect } from '../../../components/CategorySelect';
@@ -28,6 +32,8 @@ import { useEnabledCurrencies } from '../../../hooks/useEnabledCurrencies';
 import { useLastCurrency } from '../../../hooks/useLastCurrency';
 import { usePrimaryCurrency } from '../../../hooks/usePrimaryCurrency';
 import { usePageFabActions } from '../../../hooks/usePageFabActions';
+import { usePageTopBarRightSlot } from '../../../hooks/usePageTopBar';
+import { useUrlTransactionFilters } from '../../../hooks/useUrlTransactionFilters';
 import { allExtraActions, useFabActionsStore } from '../../../store/fabActionsStore';
 import { ReorderButtons } from '../../../components/ui/ReorderButtons';
 import { RecurrenceFields } from '../../../components/ui/RecurrenceFields';
@@ -37,13 +43,12 @@ import { recurrenceLabel } from '../../../lib/recurrenceLabel';
 import { hueStyle } from '../../../lib/statCardHues';
 import { categoryName, UNCATEGORIZED_ID } from '../../../lib/categories';
 import { useCategoryStore } from '../../../store/categoryStore';
-import { accountBalance, accountByCategory, accountPendingBalance, accountPeriodAnalytics, accountRunningLedger, bankTotalsByCurrency, budgetVsActual, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
+import { accountBalance, accountByCategory, accountPendingBalance, accountPeriodAnalytics, accountRunningLedger, bankAnalyticsFromLedger, bankTotalsByCurrency, budgetVsActual, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
 import { outstandingBalanceByCard } from '../../../lib/calc/creditCardModule';
-import { monthRange } from '../../../lib/calc/budgetPlanner';
 import { isPlanDue, planWithinHorizon, plannedBankProjection, type PlanningHorizonDays } from '../../../lib/calc/plannedBalance';
-import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar, tickerColor } from '../../../lib/cssVar';
+import { chartAlpha, chartDepthPlugin } from '../../../lib/chartVisuals';
 import { parseCSV, toCSV } from '../../../lib/csv';
 import { formatDate, fmtMoney, parseDateInput } from '../../../lib/format';
 import { dateOnlyMs } from '../../../lib/datetime';
@@ -63,7 +68,6 @@ import { CreditCardsTab } from './CreditCardsSection';
 import type { BankAccount, BankTransaction } from '../../../types/bankWorkbook';
 import type { CreditCard } from '../../../types/creditCard';
 import type { PlannedBankTransaction } from '../../../types/plannedBank';
-import { gridAutoStyle } from '../../../lib/gridStyle';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const uid = () => crypto.randomUUID();
@@ -897,85 +901,112 @@ function AccountsList() {
  * same red=liability/green=positive convention this module already uses
  * for hues elsewhere (see `AccountsList`'s own `isLiability`-driven hue). */
 function CreditUsageBar({ used, limit, currency }: { used: number; limit: number; currency: string }) {
-  const usedPct = limit > 0 ? Math.min(100, Math.max(0, (used / limit) * 100)) : 0;
   return (
-    <div className="mb-md">
-      <div style={{ display: 'flex', height: 10, borderRadius: 6, overflow: 'hidden', background: 'color-mix(in srgb, var(--profit) 30%, var(--panel-2))' }}>
-        <div style={{ width: `${usedPct}%`, background: 'var(--loss)' }} />
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 12 }}>
-        <span className="text-loss">Used: {fmtMoney(used, currency)}</span>
-        <span className="text-profit">Available: {fmtMoney(Math.max(0, limit - used), currency)} of {fmtMoney(limit, currency)}</span>
-      </div>
-    </div>
+    <UsageBar
+      used={used}
+      total={limit}
+      leftLabel={`Used: ${fmtMoney(used, currency)}`}
+      rightLabel={`Available: ${fmtMoney(Math.max(0, limit - used), currency)} of ${fmtMoney(limit, currency)}`}
+    />
   );
 }
 
-/** README item 19: clicking an account opens a detail view with its
- * in-process (planned) and recent real transactions together, plus a
- * "download a statement for a period" CSV export — the account-detail
- * drill-down shipped first for Banking since "account" maps onto it most
- * directly; the same pattern (a modal fed by that module's own ledger +
- * planned-entries hooks) is the template to extend to other modules'
- * primary record type (a loan, a fund, a property) later. */
-/** README Pending item 83: clicking an account row used to open a modal
- * in place — the user's own wording ("should take the user to its
- * details page") read as wanting a real navigable page, matching the
- * precedent QSE/PSX's `/stock/:ticker` already set, not just the modal's
- * contents reordered (that narrower reading was already done separately,
- * see Done item 183/Pending item 84's own history). Scoped to Banking
- * first, as a working instance to verify before any wider Cash/Personal
- * Loans rollout — same "ship one page first" pattern this project always
- * follows (see e.g. Done item 58's own "v1 for Banking only" precedent). */
 export function AccountDetailPage() {
-  const dateFormat = useAppearanceStore((s) => s.appearance.dateFormat ?? 'DD-MMM-YYYY');
+  const dateFormat = useAppearanceStore((state) => state.appearance.dateFormat ?? 'DD-MMM-YYYY');
   const { id } = useParams();
   const navigate = useNavigate();
-  const accounts = useBankWorkbookStore((s) => s.workbook.settings.accounts);
-  const account = accounts.find((a) => a.id === id);
-  const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
-  const updateAccount = useBankWorkbookStore((s) => s.updateAccount);
-  const deleteAccount = useBankWorkbookStore((s) => s.deleteAccount);
+  const accounts = useBankWorkbookStore((state) => state.workbook.settings.accounts);
+  const banks = useBankWorkbookStore((state) => state.workbook.settings.banks ?? []);
+  const account = accounts.find((item) => item.id === id);
+  const transactions = useBankWorkbookStore((state) => state.workbook.transactions);
+  const updateAccount = useBankWorkbookStore((state) => state.updateAccount);
+  const deleteAccount = useBankWorkbookStore((state) => state.deleteAccount);
   const ensureSignedIn = useEnsureSignedIn();
-  const plannedEntries = usePlannedBankWorkbookStore((s) => s.workbook.entries);
+  const plannedEntries = usePlannedBankWorkbookStore((state) => state.workbook.entries);
+  const categories = useCategoryStore((state) => state.workbook.categories);
   const { num } = useAmountFormat();
-  // Local draft state (same pattern as Rentals' PropertyDetailModal) rather
-  // than editing `account` directly — see the fallback values below: all
-  // hooks must run unconditionally on every render (rules of hooks), so
-  // the "account not found" guard has to come AFTER every hook call, not
-  // before — these `?.` fallbacks just keep the initial render safe for
-  // an id that doesn't resolve, before that guard renders instead.
-  //
-  // Shaped as the FULL `Omit<BankAccount, 'id'>` (matches `AccountFormFields`'
-  // `value` prop exactly) — see that component's own doc comment for why:
-  // a narrower draft shape here is exactly what silently dropped Name/
-  // Currency/Opening-balance editing entirely in an earlier round.
-  const accountToFormValue = (a: BankAccount | undefined): Omit<BankAccount, 'id'> => ({
-    name: a?.name ?? '',
-    currencyCode: a?.currencyCode ?? 'USD',
-    openingBalance: a?.openingBalance ?? 0,
-    accountNumber: a?.accountNumber,
-    smsSenderId: a?.smsSenderId,
-    smsSenderNumber: a?.smsSenderNumber,
-    branch: a?.branch,
-    accountType: a?.accountType,
-    iban: a?.iban,
-    bankName: a?.bankName,
-    bic: a?.bic,
-    isLiability: a?.isLiability,
-    creditLimit: a?.creditLimit,
-    annualFee: a?.annualFee,
-    statementDate: a?.statementDate,
-    paymentDueDate: a?.paymentDueDate,
-    lateFeeAfterDue: a?.lateFeeAfterDue,
-    minPaymentAmount: a?.minPaymentAmount,
-    cardNetwork: a?.cardNetwork,
-    cardBin: a?.cardBin,
-    bankId: a?.bankId,
+  const { filters, setFilters, resetFilters, activeCount } = useUrlTransactionFilters();
+
+  const accountToFormValue = (value: BankAccount | undefined): Omit<BankAccount, 'id'> => ({
+    name: value?.name ?? '',
+    currencyCode: value?.currencyCode ?? 'USD',
+    openingBalance: value?.openingBalance ?? 0,
+    accountNumber: value?.accountNumber,
+    smsSenderId: value?.smsSenderId,
+    smsSenderNumber: value?.smsSenderNumber,
+    branch: value?.branch,
+    accountType: value?.accountType,
+    iban: value?.iban,
+    bankName: value?.bankName,
+    bic: value?.bic,
+    isLiability: value?.isLiability,
+    creditLimit: value?.creditLimit,
+    annualFee: value?.annualFee,
+    statementDate: value?.statementDate,
+    paymentDueDate: value?.paymentDueDate,
+    lateFeeAfterDue: value?.lateFeeAfterDue,
+    minPaymentAmount: value?.minPaymentAmount,
+    cardNetwork: value?.cardNetwork,
+    cardBin: value?.cardBin,
+    bankId: value?.bankId,
   });
   const [meta, setMeta] = useState<Omit<BankAccount, 'id'>>(() => accountToFormValue(account));
+  const [editingMeta, setEditingMeta] = useState(false);
+
+  const allLedger = useMemo(() => account ? accountRunningLedger(account, transactions) : [], [account, transactions]);
+  const categoryOptions = useMemo(
+    () => [...new Set(allLedger.map((row) => categoryName(row.tx.categoryID, categories)))].sort(),
+    [allLedger, categories],
+  );
+  const filteredLedger = useMemo(() => allLedger.filter((row) => {
+    if (row.tx.date < filters.fromDate || row.tx.date > filters.toDate) return false;
+    if (filters.direction === 'in' && row.tx.amount < 0) return false;
+    if (filters.direction === 'out' && row.tx.amount >= 0) return false;
+    if (filters.category !== 'all' && categoryName(row.tx.categoryID, categories) !== filters.category) return false;
+    if (filters.source !== 'all' && (row.tx.source ?? 'manual') !== filters.source) return false;
+    return true;
+  }), [allLedger, filters, categories]);
+  const analytics = useMemo(() => bankAnalyticsFromLedger(filteredLedger), [filteredLedger]);
+  const upcoming = useMemo(
+    () => account
+      ? plannedEntries
+          .filter((plan) => plan.accountId === account.id && !plan.executed)
+          .filter((plan) => plan.date >= filters.fromDate && plan.date <= filters.toDate)
+          .filter((plan) => filters.direction === 'all' || (filters.direction === 'in' ? plan.amount >= 0 : plan.amount < 0))
+          .sort((a, b) => a.date.localeCompare(b.date))
+      : [],
+    [plannedEntries, account, filters.fromDate, filters.toDate, filters.direction],
+  );
+
+  usePageTopBarRightSlot(account ? (
+    <TopBarControls>
+      <TopBarSelect
+        label="Switch bank"
+        value={account.bankId ?? ''}
+        onChange={(event) => {
+          const bankId = event.target.value;
+          navigate(bankId ? `/bank/bank/${bankId}` : '/bank');
+        }}
+        options={[
+          { value: '', label: 'All banks' },
+          ...banks.filter((bank) => bank.isActive !== false).map((bank) => ({ value: bank.id, label: bank.name })),
+        ]}
+      />
+      <TransactionFilterMenu
+        value={filters}
+        categories={categoryOptions}
+        activeCount={activeCount}
+        onChange={setFilters}
+        onClear={resetFilters}
+      />
+    </TopBarControls>
+  ) : null);
+
+  if (!account) {
+    return <div className="standard-page"><Link to="/bank" className="text-muted">← Back to Banking</Link><p className="text-muted mt-12">Account not found.</p></div>;
+  }
+
   const saveMeta = async () => {
-    if (!account) return;
     if (!meta.name.trim()) return toast('Enter an account name.');
     if (!(await ensureSignedIn('Sign in to save account details.'))) return;
     updateAccount(account.id, {
@@ -990,234 +1021,128 @@ export function AccountDetailPage() {
       bankName: meta.bankName?.trim() || undefined,
       bic: meta.bic?.trim() || undefined,
     });
+    setEditingMeta(false);
     toast('Account details saved.');
   };
-  const upcoming = useMemo(
-    () => (account ? plannedEntries.filter((p) => p.accountId === account.id && !p.executed).sort((a, b) => a.date.localeCompare(b.date)) : []),
-    [plannedEntries, account],
-  );
-  // Redesign 2026-08-27 (Often tier: "read-only by default, an Edit icon
-  // switches into the same form"). Cancelling resets the draft back to the
-  // account's own last-saved values, so a discarded edit doesn't leave
-  // stale text sitting in the form the next time it's opened.
-  const [editingMeta, setEditingMeta] = useState(false);
-  const cancelMetaEdit = () => {
-    if (!account) return;
-    setMeta(accountToFormValue(account));
-    setEditingMeta(false);
-  };
-
-  if (!account) {
-    return (
-      <div>
-        <Link to="/bank" className="text-muted">← Back to Banking</Link>
-        <p className="text-muted mt-12">Account not found.</p>
-      </div>
-    );
-  }
-
+  const cancelMetaEdit = () => { setMeta(accountToFormValue(account)); setEditingMeta(false); };
   const deleteThisAccount = async () => {
     if (!(await confirmDialog('This deletes the account and all its transactions — this cannot be undone.', `Delete "${account.name}"?`))) return;
     deleteAccount(account.id);
     toast('Account deleted.');
     navigate('/bank');
   };
-
-  // User-requested (2026-09-03): "isActive flag to archive accounts" — a
-  // safer, reversible alternative to Delete. Archiving only hides the
-  // account from the default list and from pickers for NEW activity; its
-  // balance keeps counting toward every total (see `BankAccount.isActive`'s
-  // own doc comment) — so unlike Delete, this needs no destructive warning.
   const toggleArchived = async () => {
     if (!(await ensureSignedIn(account.isActive === false ? 'Sign in to reopen this account.' : 'Sign in to close this account.'))) return;
     updateAccount(account.id, { isActive: account.isActive === false ? true : false });
     toast(account.isActive === false ? 'Account reopened.' : 'Account closed.');
   };
 
+  const currentBalance = accountBalance(account, transactions);
+  const displayBalance = account.isLiability ? Math.max(0, -currentBalance) : currentBalance;
+  const pendingAmount = accountPendingBalance(account, transactions);
+
+  const exportTransactions = () => {
+    const header = ['#', 'Date', 'Description', 'Category', 'Amount', 'Balance', 'Source'];
+    const body = [...filteredLedger].reverse().map(({ tx, balance }) => [
+      tx.serialNumber ?? '', tx.date, tx.description, categoryName(tx.categoryID, categories), tx.amount, balance,
+      tx.source === 'statement-import' ? `Imported${tx.statementRef ? ` (${tx.statementRef})` : ''}` : 'Manual',
+    ]);
+    const blob = new Blob([toCSV([header, ...body])], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${account.name.replace(/\s+/g, '_')}_transactions_${filters.fromDate}_to_${filters.toDate}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    toast(`${body.length} transaction${body.length === 1 ? '' : 's'} downloaded.`);
+  };
+
+  const detailActions: StandardCardAction[] = editingMeta
+    ? [
+        { label: 'Save', onClick: saveMeta },
+        { label: 'Cancel', onClick: cancelMetaEdit },
+        { label: account.isActive === false ? 'Reopen account' : 'Close account', onClick: toggleArchived },
+        { label: 'Delete account', onClick: deleteThisAccount, tone: 'danger' },
+      ]
+    : [
+        { label: 'Edit', onClick: () => setEditingMeta(true) },
+        { label: account.isActive === false ? 'Reopen account' : 'Close account', onClick: toggleArchived },
+        { label: 'Delete account', onClick: deleteThisAccount, tone: 'danger' },
+      ];
+
+  const sections: StandardPageSection[] = [
+    {
+      key: 'details',
+      label: 'Account details',
+      summary: <>
+        <SummaryChip label={account.isLiability ? 'Owed' : 'Balance'} value={`${num(displayBalance)} ${account.currencyCode}`} />
+        {pendingAmount !== 0 && <SummaryChip label="Pending" value={`${pendingAmount > 0 ? '+' : ''}${num(pendingAmount)} ${account.currencyCode}`} />}
+      </>,
+      actions: detailActions,
+      content: <>
+        {!editingMeta ? (
+          <AttributeList items={[
+            { label: 'Name', value: account.name },
+            { label: 'Currency', value: account.currencyCode },
+            { label: 'Opening balance', value: fmtMoney(account.openingBalance, account.currencyCode) },
+            { label: 'Branch', value: account.branch },
+            { label: 'Account type', value: account.accountType },
+            { label: 'IBAN', value: account.iban },
+            { label: 'Bank name', value: account.bankName },
+            { label: 'BIC', value: account.bic },
+            { label: 'Account number', value: account.accountNumber },
+            { label: 'SMS sender ID', value: account.smsSenderId },
+            { label: 'SMS sender number', value: account.smsSenderNumber },
+          ]} />
+        ) : (
+          <AccountFormFields value={meta} onChange={(patch) => setMeta((current) => ({ ...current, ...patch }))} idSuffix="detail" />
+        )}
+        {account.isLiability && account.creditLimit ? <CreditUsageBar used={Math.max(0, -currentBalance)} limit={account.creditLimit} currency={account.currencyCode} /> : null}
+      </>,
+    },
+    ...(upcoming.length ? [{
+      key: 'plans',
+      label: 'Upcoming plans',
+      summary: <SummaryChip label="Visible" value={upcoming.length} />,
+      content: <div className="table-scroll"><table><thead><tr><th>Date</th><th>Description</th><th>Amount</th></tr></thead><tbody>
+        {upcoming.map((plan) => <tr key={plan.id}><td>{formatDate(plan.date, dateFormat)}</td><td>{plan.description}</td><td className={plan.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(plan.amount, account.currencyCode)}</td></tr>)}
+      </tbody></table></div>,
+    } satisfies StandardPageSection] : []),
+    {
+      key: 'transactions',
+      label: 'Transactions',
+      summary: <SummaryChip label="Filtered" value={filteredLedger.length} />,
+      actions: [{ label: 'Export filtered CSV', onClick: exportTransactions, disabled: !filteredLedger.length }],
+      content: <TransactionsList account={account} ledger={filteredLedger} allLedgerCount={allLedger.length} />,
+    },
+    {
+      key: 'analytics',
+      label: 'Analytics',
+      summary: <>
+        <SummaryChip label="Deposits" value={fmtMoney(analytics.deposits, account.currencyCode)} />
+        <SummaryChip label="Withdrawals" value={fmtMoney(analytics.withdrawals, account.currencyCode)} />
+        <SummaryChip label="Net" value={fmtMoney(analytics.netFlow, account.currencyCode)} />
+      </>,
+      content: <AccountAnalyticsSection account={account} ledger={filteredLedger} />,
+    },
+  ];
+
   return (
-    <div>
-      <Link to="/bank" className="text-muted">← Back to Banking</Link>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
-        <h1 className="pagetitle" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-          {account.name}
-          {account.isActive === false && <span className="pill-warn fs-11">Closed</span>}
-        </h1>
-        {/* User-requested (2026-08-27): "Delete and Edit are rare operations
-           they should [be] on details page only... with delete as a red
-           danger button." Edit already lives on the Account Details card
-           below (its own Edit icon); Delete/Close are the account's own
-           destructive/reversible actions, both moved off the homepage
-           entity card entirely and grouped together here (rule 7). */}
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn secondary small" onClick={toggleArchived}>
-            {account.isActive === false ? <><RestoreIcon size={13} />Reopen account</> : <><ArchiveIcon size={13} />Close account</>}
-          </button>
-          <button className="btn danger small" onClick={deleteThisAccount}>
-            <TrashIcon size={13} />Delete account
-          </button>
+    <div className="standard-page">
+      <div className="page-heading">
+        <div>
+          <Link to="/bank" className="text-muted">← Back to Banking</Link>
+          <div className="page-heading-title-row"><h1 className="pagetitle m-0">{account.name}</h1>{account.isActive === false && <span className="pill-warn fs-11">Closed</span>}</div>
         </div>
       </div>
-      {/* Defense-in-depth for a stale bookmark/back-button reaching this
-         page directly — migrated accounts are already hidden from every
-         list (see `RepairStaleMigrations`), so this should be rare, but a
-         direct link should still point somewhere useful rather than
-         showing this account as if it were still a real, editable one. */}
-      {account.migratedToCreditCardId && (
-        <Notice tone="info" className="mb-md">
-          This account was migrated to a real Credit Card record — its transactions and balance now live there.{' '}
-          <Link to={`/bank/card/${account.migratedToCreditCardId}`}>View the Credit Card →</Link>
-        </Notice>
-      )}
-      <p className="text-muted mb-md">
-        {account.isLiability ? 'Amount owed:' : 'Current balance:'}{' '}
-        <strong title={fmtMoney(account.isLiability ? Math.max(0, -accountBalance(account, transactions)) : accountBalance(account, transactions), account.currencyCode)}>
-          {num(account.isLiability ? Math.max(0, -accountBalance(account, transactions)) : accountBalance(account, transactions))} {account.currencyCode}
-        </strong>
-        {account.isLiability && account.creditLimit ? (
-          <span className="text-muted"> · {num(Math.max(0, account.creditLimit - Math.max(0, -accountBalance(account, transactions))))} {account.currencyCode} available of {num(account.creditLimit)} limit</span>
-        ) : null}
-        {/* User-requested (2026-09-08): show pending money too, not just
-           exclude it silently — the cleared figure above already excludes
-           any `isPending` transaction. */}
-        {(() => {
-          const pendingAmt = accountPendingBalance(account, transactions);
-          if (pendingAmt === 0) return null;
-          const withPending = account.isLiability ? Math.max(0, -(accountBalance(account, transactions) + pendingAmt)) : accountBalance(account, transactions) + pendingAmt;
-          return (
-            <span> · {pendingAmt > 0 ? '+' : ''}{num(pendingAmt)} {account.currencyCode} pending → {num(withPending)} {account.currencyCode} incl. pending</span>
-          );
-        })()}
-      </p>
-
-      {/* User-requested (2026-09-09): "CCs should show a bar (red for
-         consumed and green part for available with max limit and used
-         clearly mentioned at the ends." */}
-      {account.isLiability && account.creditLimit ? (
-        <CreditUsageBar
-          used={Math.max(0, -accountBalance(account, transactions))}
-          limit={account.creditLimit}
-          currency={account.currencyCode}
-        />
-      ) : null}
-
-      {/* User-reported (2026-08-28): "UI ordering still pathetic. Account
-         details buried in middle instead of showing on top" — full-width,
-         alone, ahead of everything else: an entity's own identity/
-         attributes read first. */}
-      <CollapsibleCard
-        defaultOpen={false}
-        className="mb-md"
-        title={<h3 className="m-0">Account details</h3>}
-        headerExtra={
-          editingMeta ? (
-            <>
-              <IconButton label="Save" icon={<SaveIcon size={13} />} align="right" onClick={() => { saveMeta(); setEditingMeta(false); }} />
-              <IconButton label="Cancel" icon={<XIcon size={13} />} align="right" onClick={cancelMetaEdit} />
-            </>
-          ) : (
-            <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => setEditingMeta(true)} />
-          )
-        }
-      >
-        {!editingMeta ? (
-          <AttributeList
-            items={[
-              { label: 'Name', value: account.name },
-              { label: 'Currency', value: account.currencyCode },
-              { label: 'Opening balance', value: fmtMoney(account.openingBalance, account.currencyCode) },
-              { label: 'Branch', value: account.branch },
-              { label: 'Account type', value: account.accountType },
-              { label: 'IBAN', value: account.iban },
-              { label: 'Bank name', value: account.bankName },
-              { label: 'BIC', value: account.bic },
-              { label: 'Credit limit', value: account.creditLimit !== undefined ? fmtMoney(account.creditLimit, account.currencyCode) : undefined },
-              { label: 'Annual fee', value: account.annualFee !== undefined ? fmtMoney(account.annualFee, account.currencyCode) : undefined },
-              { label: 'Statement day of month', value: account.statementDate },
-              { label: 'Payment due day of month', value: account.paymentDueDate },
-              { label: 'Late fee after due date', value: account.lateFeeAfterDue !== undefined ? fmtMoney(account.lateFeeAfterDue, account.currencyCode) : undefined },
-              { label: 'Minimum amount due', value: account.minPaymentAmount !== undefined ? fmtMoney(account.minPaymentAmount, account.currencyCode) : undefined },
-              { label: 'Card network', value: account.cardNetwork },
-              { label: 'Card BIN', value: account.cardBin },
-              { label: 'Account number', value: account.accountNumber },
-              { label: 'SMS sender ID', value: account.smsSenderId },
-              { label: 'SMS sender number', value: account.smsSenderNumber },
-            ]}
-          />
-        ) : (
-          <AccountFormFields value={meta} onChange={(patch) => setMeta((m) => ({ ...m, ...patch }))} idSuffix="detail" />
-        )}
-      </CollapsibleCard>
-
-      {/* User-reported (2026-08-28): "Add Trc & Ctegs should be side by
-         side" — now that "Add a transaction" is gone (replaced by the
-         Transfers FAB below), this grid holds By category + Upcoming plans
-         side by side instead of either claiming the full page width. */}
-      <div className="detail-grid mb-md">
-        <CollapsibleCard defaultOpen={false} title={<h3 className="m-0">Spending by category</h3>}>
-          <CategoryBreakdownBody account={account} />
-        </CollapsibleCard>
-
-        {upcoming.length > 0 && (
-          <CollapsibleCard defaultOpen={false} title={<h3 className="m-0">Upcoming plans ({upcoming.length})</h3>}>
-            <div className="table-scroll">
-              <table>
-                <thead><tr><th>Date</th><th>Description</th><th>Amount</th></tr></thead>
-                <tbody>
-                  {upcoming.map((p) => (
-                    <tr key={p.id}>
-                      <td>{formatDate(p.date, dateFormat)}</td>
-                      <td>{p.description}</td>
-                      <td className={p.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(p.amount, account.currencyCode)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CollapsibleCard>
-        )}
-      </div>
-
-      {/* User-requested (2026-09-06): "Analytics missing on individual bank
-         page: Grid: Balance over time, Deposits vs. withdrawals by month, Category
-         breakdown (spend) monthly with month nav + smart tabular values."
-         The whole-module Analytics tab (`AnalyticsTab` below) already has
-         this exact chart set, but only reachable via its own account
-         picker — this brings the same three charts directly onto the
-         account's own page, pre-scoped to it, plus a month-nav'd exact-
-         numbers table (see `AccountAnalyticsSection`'s own doc comment). */}
-      <CollapsibleCard defaultOpen={false} className="mb-md" title={<h3 className="m-0">Analytics</h3>}>
-        <AccountAnalyticsSection account={account} />
-      </CollapsibleCard>
-
-      {/* User-requested (2026-08-28): "Adding Trc UI can be removed from
-         all, that's why we are doing it one button action" — the
-         per-account "Add a transaction" card (built 2026-08-26, see the
-         history in git blame if needed) is gone; a Transfers FAB reachable
-         from this page, defaulting to THIS account, replaces it. */}
+      {account.migratedToCreditCardId && <Notice tone="info" className="mb-md">This account was migrated to a real Credit Card record — its transactions and balance now live there.{' '}<Link to={`/bank/card/${account.migratedToCreditCardId}`}>View the Credit Card →</Link></Notice>}
+      <StandardPageSections sections={sections} defaultKey="details" />
       <AccountTransfersFab accountId={account.id} currencyCode={account.currencyCode} />
-
-      {/* User-requested (2026-08-26): "Transactions belong to an account so
-         should be on its detail page/popup and editable" — this used to be
-         a read-only 20-row preview; now reuses the same `TransactionsList`
-         the standalone Transactions tab already used (full CRUD: sort,
-         inline edit, delete with the linked-record warning), so editing a
-         transaction no longer requires leaving the account's own page.
-
-         2026-08-27: "Double scroller in transactions view, not good" — a
-         real bug, not a style nitpick: this used to sit inside its own
-         `maxHeight:320, overflowY:'auto'` box ON TOP of `TransactionsList`'s
-         own `.table-scroll` (a horizontal scroll region) — two independent
-         scrollable regions nested inside each other. Dropped the outer
-         box entirely; the table now just grows with the page (one scroll
-         axis: the page itself), with `.table-scroll` still handling
-         horizontal overflow on a narrow viewport as it always did. */}
-      <TransactionsList account={account} />
-
-
     </div>
   );
 }
 
+function AccountsTab()
 function AccountsTab() {
   return (
     <div>
@@ -1340,306 +1265,87 @@ function EditTransactionModal({ tx, onClose }: { tx: BankTransaction; onClose: (
 /** User-requested (2026-09-03): "add filters to other tables as well" —
  * extends the Type/Category filter treatment Cash's statement tables got
  * (README Done item 224) here too. */
-function TransactionsList({ account }: { account: BankAccount }) {
-  const dateFormat = useAppearanceStore((s) => s.appearance.dateFormat ?? 'DD-MMM-YYYY');
-  const allTransactions = useBankWorkbookStore((s) => s.workbook.transactions);
-  const updateTransaction = useBankWorkbookStore((s) => s.updateTransaction);
-  const deleteTransaction = useBankWorkbookStore((s) => s.deleteTransaction);
-  const categories = useCategoryStore((s) => s.workbook.categories);
-  const links = useInterEntityTransfersStore((s) => s.workbook.entries);
+function TransactionsList({ account, ledger, allLedgerCount }: { account: BankAccount; ledger: ReturnType<typeof accountRunningLedger>; allLedgerCount: number }) {
+  const dateFormat = useAppearanceStore((state) => state.appearance.dateFormat ?? 'DD-MMM-YYYY');
+  const updateTransaction = useBankWorkbookStore((state) => state.updateTransaction);
+  const deleteTransaction = useBankWorkbookStore((state) => state.deleteTransaction);
+  const categories = useCategoryStore((state) => state.workbook.categories);
+  const links = useInterEntityTransfersStore((state) => state.workbook.entries);
   const ensureSignedIn = useEnsureSignedIn();
   const sideLabel = useLinkSideLabel();
   const [editingTx, setEditingTx] = useState<BankTransaction | null>(null);
   const [detailTx, setDetailTx] = useState<BankTransaction | null>(null);
-  const [typeFilter, setTypeFilter] = useState<'all' | 'in' | 'out'>('all');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  // Date filters live with the transaction table so the CSV always mirrors
-  // exactly the rows currently visible.
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
-  // User-requested (2026-09-06): "although we are removing sorting, we
-  // must add all fields as filters in all tables" — a Source filter
-  // (Manual/Imported) was the one column here with no matching filter,
-  // unlike Personal Loans' equivalent repayments table which already had
-  // one; added for parity now that free column sorting is gone.
-  const [sourceFilter, setSourceFilter] = useState<'all' | 'manual' | 'statement-import'>('all');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
-  const allLedger = useMemo(() => accountRunningLedger(account, allTransactions), [account, allTransactions]);
+  const sorted = useMemo(() => [...ledger].reverse(), [ledger]);
+  const pageCount = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const safePage = Math.min(page, pageCount);
+  const pageRows = useMemo(() => sorted.slice((safePage - 1) * pageSize, safePage * pageSize), [sorted, safePage, pageSize]);
+  useEffect(() => setPage(1), [ledger, pageSize]);
+  useEffect(() => { if (page > pageCount) setPage(pageCount); }, [page, pageCount]);
 
-  const categoryOptions = useMemo(
-    () => [...new Set(allLedger.map((r) => categoryName(r.tx.categoryID, categories)))].sort(),
-    [allLedger, categories],
-  );
-
-  const ledger = useMemo(
-    () => allLedger.filter((r) => {
-      if (typeFilter === 'in' && r.tx.amount < 0) return false;
-      if (typeFilter === 'out' && r.tx.amount >= 0) return false;
-      if (categoryFilter !== 'all' && categoryName(r.tx.categoryID, categories) !== categoryFilter) return false;
-      if (sourceFilter !== 'all' && (r.tx.source ?? 'manual') !== sourceFilter) return false;
-      if (fromDate && r.tx.date < fromDate) return false;
-      if (toDate && r.tx.date > toDate) return false;
-      return true;
-    }),
-    [allLedger, typeFilter, categoryFilter, sourceFilter, fromDate, toDate, categories],
-  );
-
-  // User-requested (2026-08-28): "Tag/Mark and also add nav link between the
-  // linked trcs" — a recordId -> link map, built once per render (not
-  // re-scanned per row via `findLinkForRecord`'s own O(n) lookup), so a
-  // linked transaction can show a small tag pointing at the other side.
   const linkByRecordId = useMemo(() => {
     const map = new Map<string, (typeof links)[number]>();
-    for (const l of links) {
-      if (l.from.module === 'bank') map.set(l.fromRecordId, l);
-      if (l.to.module === 'bank') map.set(l.toRecordId, l);
+    for (const link of links) {
+      if (link.from.module === 'bank') map.set(link.fromRecordId, link);
+      if (link.to.module === 'bank') map.set(link.toRecordId, link);
     }
     return map;
   }, [links]);
 
-  // User-reported (2026-09-06): "we may stop sorting options for
-  // chronologically important tables (only sequence-aware tables) to
-  // avoid the disordered mess" — a statement table's own Balance column
-  // is only meaningful in real chronological+sequence order; letting the
-  // user click any column (Amount, Category, ...) to resort it produces
-  // exactly the "disordered mess" the earlier same-date sort bug already
-  // demonstrated (Done item 234). Sorting is gone from this table
-  // entirely — `ledger` is always shown newest-first, matching
-  // `accountRunningLedger`'s own real-instant+serialNumber order (just
-  // reversed for display), and the ONLY way to change two rows' relative
-  // order is the `ReorderButtons` below, which can only ever swap two
-  // rows genuinely tied on the same real instant — never scramble the
-  // table into a different, unrelated order.
-  const sorted = useMemo(() => [...ledger].reverse(), [ledger]);
-  const pageCount = Math.max(1, Math.ceil(sorted.length / pageSize));
-  const safePage = Math.min(page, pageCount);
-  const pageRows = useMemo(
-    () => sorted.slice((safePage - 1) * pageSize, safePage * pageSize),
-    [sorted, safePage, pageSize],
-  );
-  const activeFilterCount = [fromDate, toDate, typeFilter !== 'all', categoryFilter !== 'all', sourceFilter !== 'all']
-    .filter(Boolean).length;
-
-  useEffect(() => {
-    setPage(1);
-  }, [fromDate, toDate, typeFilter, categoryFilter, sourceFilter, pageSize]);
-
-  useEffect(() => {
-    if (page > pageCount) setPage(pageCount);
-  }, [page, pageCount]);
-
-  const instantOf = (r: (typeof sorted)[number]) => dateOnlyMs(r.tx.date);
+  const instantOf = (row: (typeof sorted)[number]) => dateOnlyMs(row.tx.date);
   const reorder = async (pair: [{ id: string; order: number }, { id: string; order: number }]) => {
     if (!(await ensureSignedIn('Sign in to reorder transactions.'))) return;
-    for (const p of pair) updateTransaction(p.id, { serialNumber: p.order });
+    for (const item of pair) updateTransaction(item.id, { serialNumber: item.order });
   };
 
-  const exportTransactions = () => {
-    const header = ['#', 'Date', 'Description', 'Category', 'Amount', 'Balance', 'Source'];
-    const body = sorted.map(({ tx, balance }) => [tx.serialNumber ?? '', tx.date, tx.description, categoryName(tx.categoryID, categories), tx.amount, balance, tx.source === 'statement-import' ? 'Imported' + (tx.statementRef ? ' (' + tx.statementRef + ')' : '') : 'Manual']);
-    const blob = new Blob([toCSV([header, ...body])], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url;
-    const suffix = fromDate || toDate ? '_' + (fromDate || 'start') + '_to_' + (toDate || 'now') : '';
-    a.download = account.name.replace(/\s+/g, '_') + '_transactions' + suffix + '.csv';
-    a.click(); URL.revokeObjectURL(url);
-    toast(sorted.length + ' transaction' + (sorted.length === 1 ? '' : 's') + ' downloaded.');
-  };
-
-  return (
-    <Card className="mb-md">
-      <div className="row gap-sm" style={{ alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <h3 className="mt-0 mb-0">Transactions</h3>
-        <div className="row" style={{ alignItems: 'center', gap: 8 }}>
-          <ImportStatementSection account={account} compact />
-          <button className="btn secondary small" onClick={exportTransactions} disabled={!sorted.length} title="Download exactly the transactions currently shown after applying the table filters."><ExportIcon size={13} />Export</button>
-        </div>
+  return <>
+    <div className="section-toolbar"><ImportStatementSection account={account} compact /></div>
+    <div className="table-scroll"><table>
+      <thead><tr><th>#</th><th>Date</th><th>Description</th><th>Category</th><th>Amount</th><th>Balance</th><th>Source</th><th></th></tr></thead>
+      <tbody>
+        {pageRows.map(({ tx, balance }, index) => {
+          const link = linkByRecordId.get(tx.id);
+          const otherSide = link ? (link.from.module === 'bank' && link.fromRecordId === tx.id ? link.to : link.from) : undefined;
+          return <tr key={tx.id} onClick={() => setDetailTx(tx)} className="clickable">
+            <td className="text-muted">{tx.serialNumber ?? '—'}{' '}<span onClick={(event) => event.stopPropagation()}><ReorderButtons rows={sorted} index={(safePage - 1) * pageSize + index} instantOf={instantOf} idOf={(row) => row.tx.id} orderOf={(row) => row.tx.serialNumber} onMove={reorder} /></span></td>
+            <td>{formatDate(tx.date, dateFormat)}</td>
+            <td className="cell-clip" title={tx.description} onClick={(event) => event.stopPropagation()}>{tx.description}{tx.isPending && <span className="pill-warn ml-6">Pending</span>}{link && <Link to={linkTargetPath(otherSide!)} className="pill-info ml-6">🔗 {sideLabel(link.from)} → {sideLabel(link.to)}</Link>}</td>
+            <td><span className="pill-info">{categoryName(tx.categoryID, categories)}</span></td>
+            <td className={tx.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(tx.amount, account.currencyCode)}</td>
+            <td>{fmtMoney(balance, account.currencyCode)}</td>
+            <td className="text-muted cell-clip">{tx.source === 'statement-import' ? `Import${tx.statementRef ? ` (${tx.statementRef})` : ''}` : 'Manual'}</td>
+            <td onClick={(event) => event.stopPropagation()}>
+              {tx.isPending && <IconButton label="Mark cleared" icon={<CheckIcon size={13} />} align="right" onClick={async()=>{if(!(await ensureSignedIn('Sign in to update this transaction.')))return;updateTransaction(tx.id,{isPending:false});toast('Marked cleared.');}} />}{' '}
+              <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => setEditingTx(tx)} />{' '}
+              <IconButton label="Delete" icon={<TrashIcon size={13} />} align="right" onClick={() => confirmAndDeleteLinkable('bank', tx.id, () => deleteTransaction(tx.id))} />
+            </td>
+          </tr>;
+        })}
+        {!sorted.length && <tr><td colSpan={8} className="text-muted">{allLedgerCount ? 'No transactions match the page filters.' : 'No transactions for this account yet.'}</td></tr>}
+      </tbody>
+    </table></div>
+    <div className="pagination-bar">
+      <div className="text-muted">{sorted.length ? `Showing ${(safePage - 1) * pageSize + 1}–${Math.min(safePage * pageSize, sorted.length)} of ${sorted.length}` : 'No rows'}</div>
+      <div className="pagination-actions">
+        <Field label="Rows" width={78}><Select value={String(pageSize)} onChange={(event)=>setPageSize(Number(event.target.value))}><option value="25">25</option><option value="50">50</option><option value="100">100</option></Select></Field>
+        <button type="button" className="btn secondary small" disabled={safePage <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>Previous</button>
+        <span className="text-muted">Page {safePage} of {pageCount}</span>
+        <button type="button" className="btn secondary small" disabled={safePage >= pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))}>Next</button>
       </div>
-      <FilterFab
-        pageKey={`bank-transactions-filter-${account.id}`}
-        title={`Filter transactions — ${account.name}`}
-        activeCount={activeFilterCount}
-        onClear={() => {
-          setFromDate('');
-          setToDate('');
-          setTypeFilter('all');
-          setCategoryFilter('all');
-          setSourceFilter('all');
-        }}
-      >
-        <div className="row gap-sm" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <Field label="From" width={135}>
-            <DateInput value={fromDate} max={toDate || undefined} onChange={(e) => setFromDate(e.target.value)} />
-          </Field>
-          <Field label="To" width={135}>
-            <DateInput value={toDate} min={fromDate || undefined} onChange={(e) => setToDate(e.target.value)} />
-          </Field>
-          <Field label="Type" width={120}>
-            <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
-              <option value="all">All</option>
-              <option value="in">Money in</option>
-              <option value="out">Money out</option>
-            </Select>
-          </Field>
-          <Field label="Category" width={170}>
-            <Select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
-              <option value="all">All categories</option>
-              {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
-            </Select>
-          </Field>
-          <Field label="Source" width={130}>
-            <Select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value as typeof sourceFilter)}>
-              <option value="all">All</option>
-              <option value="manual">Manual</option>
-              <option value="statement-import">Imported</option>
-            </Select>
-          </Field>
-        </div>
-      </FilterFab>
-      <div className="table-scroll">
-      <table>
-        <thead>
-          <tr>
-            {/* User-reported (2026-08-27): "Transaction Id missing, terrible
-               account statement sequence!" — `serialNumber` (Done item 212,
-               renamed under the Finance base 2026-09-03) is already the
-               app-wide stable per-record ordering primitive; surfacing it
-               as a plain "#" column gives a real, stable reference number
-               per transaction, not just a truncated uuid. */}
-            <th title="Sequence number — a stable reference for this transaction, in the order it was actually entered.">#</th>
-            <th>Date</th>
-            {/* User-reported (2026-08-28): "Description and Source are
-               making the table too large to read" + "Credit/Debit and
-               balance should be next to each other. Categories can be
-               marked as labels" — Description/Source clipped with a hover
-               tooltip for the full text; Category rendered as a colored
-               `.pill-info` label instead of plain text; Amount and Balance
-               moved next to each other at the end, ahead of actions. */}
-            <th>Description</th>
-            <th>Category</th>
-            <th>Amount</th>
-            <th>Balance</th>
-            <th>Source</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {pageRows.map(({ tx, balance }, i) => {
-            const link = linkByRecordId.get(tx.id);
-            const otherSide = link ? (link.from.module === 'bank' && link.fromRecordId === tx.id ? link.to : link.from) : undefined;
-            return (
-              <tr key={tx.id} onClick={() => setDetailTx(tx)} className="clickable">
-                <td className="text-muted">
-                  {tx.serialNumber ?? '—'}{' '}
-                  <span onClick={(e) => e.stopPropagation()}>
-                    <ReorderButtons
-                      rows={sorted}
-                      index={(safePage - 1) * pageSize + i}
-                      instantOf={instantOf}
-                      idOf={(r) => r.tx.id}
-                      orderOf={(r) => r.tx.serialNumber}
-                      onMove={reorder}
-                    />
-                  </span>
-                </td>
-                <td>{formatDate(tx.date, dateFormat)}</td>
-                <td className="cell-clip" title={tx.description} onClick={(e) => e.stopPropagation()}>
-                  {tx.description}
-                  {tx.isPending && (
-                    <span className="pill-warn ml-6" title="Not yet cleared — excluded from Current balance above until marked cleared.">Pending</span>
-                  )}
-                  {link && (
-                    <Link to={linkTargetPath(otherSide!)} className="pill-info ml-6" title="Linked — go to the other side">
-                      🔗 {sideLabel(link.from)} → {sideLabel(link.to)}
-                    </Link>
-                  )}
-                </td>
-                <td><span className="pill-info">{categoryName(tx.categoryID, categories)}</span></td>
-                <td className={tx.amount >= 0 ? 'pill-positive' : 'pill-negative'}>{fmtMoney(tx.amount, account.currencyCode)}</td>
-                <td>{fmtMoney(balance, account.currencyCode)}</td>
-                <td className="text-muted cell-clip" title={tx.source === 'statement-import' ? `Import${tx.statementRef ? ` (${tx.statementRef})` : ''}` : 'Manual'}>
-                  {tx.source === 'statement-import' ? `Import${tx.statementRef ? ` (${tx.statementRef})` : ''}` : 'Manual'}
-                </td>
-                <td onClick={(e) => e.stopPropagation()}>
-                  {tx.isPending && (
-                    <IconButton
-                      label="Mark cleared"
-                      icon={<CheckIcon size={13} />}
-                      align="right"
-                      onClick={async () => {
-                        if (!(await ensureSignedIn('Sign in to update this transaction.'))) return;
-                        updateTransaction(tx.id, { isPending: false });
-                        toast('Marked cleared.');
-                      }}
-                    />
-                  )}{' '}
-                  <IconButton label="Edit" icon={<EditIcon size={13} />} align="right" onClick={() => setEditingTx(tx)} />{' '}
-                  <IconButton
-                    label="Delete"
-                    icon={<TrashIcon size={13} />}
-                    align="right"
-                    onClick={() => confirmAndDeleteLinkable('bank', tx.id, () => deleteTransaction(tx.id))}
-                  />
-                </td>
-              </tr>
-            );
-          })}
-          {!sorted.length && (
-            <tr>
-              <td colSpan={7} className="text-muted">
-                {allLedger.length ? 'No transactions match these filters.' : 'No transactions for this account yet.'}
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-      </div>
-      <div className="row gap-sm mt-sm" style={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
-        <div className="text-muted" style={{ fontSize: 12 }}>
-          {sorted.length ? `Showing ${(safePage - 1) * pageSize + 1}–${Math.min(safePage * pageSize, sorted.length)} of ${sorted.length}` : 'No rows'}
-        </div>
-        <div className="row" style={{ alignItems: 'center', gap: 8 }}>
-          <Field label="Rows" width={78}>
-            <Select value={String(pageSize)} onChange={(e) => setPageSize(Number(e.target.value))}>
-              <option value="25">25</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-            </Select>
-          </Field>
-          <button type="button" className="btn secondary small" disabled={safePage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Previous</button>
-          <span className="text-muted" style={{ fontSize: 12 }}>Page {safePage} of {pageCount}</span>
-          <button type="button" className="btn secondary small" disabled={safePage >= pageCount} onClick={() => setPage((p) => Math.min(pageCount, p + 1))}>Next</button>
-        </div>
-      </div>
-      {editingTx && <EditTransactionModal tx={editingTx} onClose={() => setEditingTx(null)} />}
-      {detailTx && (
-        <RecordDetailModal
-          title={detailTx.amount >= 0 ? 'Deposit' : 'Withdrawal'}
-          onClose={() => setDetailTx(null)}
-          fields={[
-            { label: '#', value: detailTx.serialNumber ?? '—' },
-            { label: 'Date', value: formatDate(detailTx.date, dateFormat) },
-            { label: 'Time', value: detailTx.time ?? '— (defaults to noon)' },
-            { label: 'Timezone', value: detailTx.timezone ?? '—' },
-            { label: 'Description', value: detailTx.description || '—' },
-            { label: 'Category', value: categoryName(detailTx.categoryID, categories) },
-            { label: 'Amount', value: fmtMoney(detailTx.amount, account.currencyCode) },
-            {
-              label: 'Source',
-              value: detailTx.source === 'statement-import'
-                ? `Imported${detailTx.statementRef ? ` (${detailTx.statementRef})` : ''}`
-                : 'Manual',
-            },
-            { label: 'Status', value: detailTx.isPending ? 'Pending (not yet cleared)' : 'Cleared' },
-          ]}
-        />
-      )}
-    </Card>
-  );
+    </div>
+    {editingTx && <EditTransactionModal tx={editingTx} onClose={() => setEditingTx(null)} />}
+    {detailTx && <RecordDetailModal title={detailTx.amount >= 0 ? 'Deposit' : 'Withdrawal'} onClose={() => setDetailTx(null)} fields={[
+      { label: '#', value: detailTx.serialNumber ?? '—' }, { label: 'Date', value: formatDate(detailTx.date, dateFormat) }, { label: 'Time', value: detailTx.time ?? '— (defaults to noon)' },
+      { label: 'Timezone', value: detailTx.timezone ?? '—' }, { label: 'Description', value: detailTx.description || '—' }, { label: 'Category', value: categoryName(detailTx.categoryID, categories) },
+      { label: 'Amount', value: fmtMoney(detailTx.amount, account.currencyCode) }, { label: 'Source', value: detailTx.source === 'statement-import' ? `Imported${detailTx.statementRef ? ` (${detailTx.statementRef})` : ''}` : 'Manual' },
+      { label: 'Status', value: detailTx.isPending ? 'Pending (not yet cleared)' : 'Cleared' },
+    ]} />}
+  </>;
 }
 
+/** Renders just the category table
 /** Renders just the category table (no card wrapper of its own) — the
  * caller (`AccountDetailPage`) supplies the `CollapsibleCard` so this
  * never nests a card inside a card (rule 1). */
@@ -1659,195 +1365,32 @@ function TransactionsList({ account }: { account: BankAccount }) {
  * (Income/Expense/Net flow/Balance at month end, then one row per spend
  * category) — a chart's own hover tooltip is the only other way to read
  * an exact number today, and doesn't work at all on a touch device. */
-function AccountAnalyticsSection({ account }: { account: BankAccount }) {
-  const dateFormat = useAppearanceStore((s) => s.appearance.dateFormat ?? 'DD-MMM-YYYY');
-  const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
-  const categories = useCategoryStore((s) => s.workbook.categories);
-  useAppearanceStore((s) => s.appearance);
+function AccountAnalyticsSection({ account, ledger }: { account: BankAccount; ledger: ReturnType<typeof accountRunningLedger> }) {
+  const dateFormat = useAppearanceStore((state) => state.appearance.dateFormat ?? 'DD-MMM-YYYY');
+  const categories = useCategoryStore((state) => state.workbook.categories);
+  useAppearanceStore((state) => state.appearance);
   applyChartTheme();
 
-  type RangePreset = '1' | '3' | '6' | '12' | 'ytd' | 'custom';
-  const [rangePreset, setRangePreset] = useState<RangePreset>('1');
-  const [fromMonth, setFromMonth] = useState(() => today().slice(0, 7));
-  const [toMonth, setToMonth] = useState(() => today().slice(0, 7));
-
-  const rangeStart = useMemo(() => {
-    const now = new Date();
-    const current = new Date(now.getFullYear(), now.getMonth(), 1);
-    if (rangePreset === 'custom') return fromMonth || toMonth || today().slice(0, 7);
-    if (rangePreset === 'ytd') return current.getFullYear() + '-01';
-    const months = Number(rangePreset);
-    const d = new Date(current.getFullYear(), current.getMonth() - (months - 1), 1);
-    return d.toISOString().slice(0, 7);
-  }, [rangePreset, fromMonth, toMonth]);
-
-  const rangeEnd = rangePreset === 'custom' ? (toMonth || fromMonth || today().slice(0, 7)) : today().slice(0, 7);
-
-  // One account + one period = one analytics dataset. Every figure and chart
-  // below is derived from this exact cleared transaction population, so a
-  // second account at the same Bank can never leak into this account's totals.
-  const analytics = useMemo(
-    () => accountPeriodAnalytics(account, transactions, rangeStart, rangeEnd),
-    [account, transactions, rangeStart, rangeEnd],
-  );
-  const {
-    ledger,
-    periodLedger: filteredLedger,
-    transactions: rangeTransactions,
-    monthlyFlow,
-    deposits,
-    withdrawals,
-    netFlow,
-  } = analytics;
-
-  // Unlike the old net-per-category view, this counts every transaction amount
-  // by category. Salary/income and groceries/expenses therefore both appear,
-  // even when a category contains transactions in both directions.
+  const analytics = useMemo(() => bankAnalyticsFromLedger(ledger), [ledger]);
   const categoryTotals = useMemo(() => {
     const totals: Record<string, number> = {};
-    for (const tx of rangeTransactions) {
-      const name = categoryName(tx.categoryID, categories);
-      totals[name] = (totals[name] ?? 0) + Math.abs(tx.amount);
+    for (const row of ledger) {
+      const name = categoryName(row.tx.categoryID, categories);
+      totals[name] = (totals[name] ?? 0) + Math.abs(row.tx.amount);
     }
     return Object.entries(totals).sort((a, b) => b[1] - a[1]);
-  }, [rangeTransactions, categories]);
+  }, [ledger, categories]);
 
-  const rangeLabel = rangePreset === '1' ? 'This month'
-    : rangePreset === 'ytd' ? 'Year to date'
-    : rangePreset === 'custom' ? (rangeStart === rangeEnd ? formatDate(rangeStart + '-01', dateFormat) : formatDate(rangeStart + '-01', dateFormat) + ' → ' + formatDate(rangeEnd + '-01', dateFormat))
-    : `Last ${rangePreset} months`;
+  if (!ledger.length) return <p className="text-muted m-0">No transactions match the page filters.</p>;
 
+  const profit = cssVar('--profit') || '#3ecf8e';
+  const loss = cssVar('--loss') || '#e5484d';
 
-  if (!ledger.length) {
-    return <p className="text-muted m-0">No transactions yet — analytics will appear once you log some.</p>;
-  }
-
-  return (
-    <div>
-      <div className="row gap-sm mb-sm" style={{ alignItems: 'center', flexWrap: 'wrap' }}>
-        <span className="text-muted">Period:</span>
-        {([
-          ['1', '1M'], ['3', '3M'], ['6', '6M'], ['12', '12M'], ['ytd', 'YTD'], ['custom', 'Custom'],
-        ] as const).map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            className={rangePreset === value ? 'btn small' : 'btn secondary small'}
-            onClick={() => setRangePreset(value)}
-          >{label}</button>
-        ))}
-        {rangePreset === 'custom' && (
-          <div className="row gap-sm" style={{ alignItems: 'center' }}>
-            <input type="month" value={fromMonth} onChange={(e) => { setFromMonth(e.target.value); setRangePreset('custom'); }} aria-label="From month" />
-            <span className="text-muted">to</span>
-            <input type="month" value={toMonth} min={fromMonth || undefined} onChange={(e) => { setToMonth(e.target.value); setRangePreset('custom'); }} aria-label="To month" />
-          </div>
-        )}
-        <Tooltip text="Analytics defaults to the current month instead of loading lifetime history. Use 3M, 6M, 12M, YTD, or Custom when you want a wider period.">
-          <span className="clickable text-muted">ⓘ</span>
-        </Tooltip>
-      </div>
-
-      <Card className="mb-md">
-        <h3 className="m-0 mb-sm">Summary — {rangeLabel}</h3>
-        <div className="grid-auto" style={{ ...gridAutoStyle(150, 12) }}>
-          <div className="stat-card"><div className="label">Deposits</div><MoneyValue n={deposits} currency={account.currencyCode} /></div>
-          <div className="stat-card"><div className="label">Withdrawals</div><MoneyValue n={withdrawals} currency={account.currencyCode} /></div>
-          <div className="stat-card"><div className="label">Net flow</div><MoneyValue n={netFlow} currency={account.currencyCode} /></div>
-          <div className="stat-card"><div className="label">Transactions</div><div className="value">{rangeTransactions.length}</div></div>
-        </div>
-      </Card>
-
-      <div className="grid-auto" style={{ ...gridAutoStyle(220, 12), marginBottom: 16 }}>
-        <ChartCard flat title={`Balance over time — ${rangeLabel}`} empty={!filteredLedger.length}>
-          <Line
-            data={{
-              labels: filteredLedger.map((r) => formatDate(r.tx.date, dateFormat)),
-              datasets: [{ label: 'Balance', data: filteredLedger.map((r) => r.balance), borderColor: '#5aa9c9', backgroundColor: '#5aa9c933', fill: true, tension: 0.2 }],
-            }}
-            options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, datalabels: { display: false } } }}
-          />
-        </ChartCard>
-
-        <ChartCard flat title={`Transactions by category — ${rangeLabel}`} empty={!categoryTotals.length}>
-          <Doughnut
-            data={{
-              labels: categoryTotals.map(([name]) => name),
-              datasets: [{ data: categoryTotals.map(([, amount]) => amount), backgroundColor: categoryTotals.map(([name]) => tickerColor(name)) }],
-            }}
-            options={{ responsive: true, maintainAspectRatio: false, cutout: '52%', plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 10, padding: 8 } }, datalabels: { display: false } }, layout: { padding: 8 } }}
-          />
-        </ChartCard>
-
-        <ChartCard
-          flat
-          title={`Deposits vs. withdrawals — ${rangeLabel}`}
-          titleTooltip="Shows every deposit and withdrawal for this account in the selected period, including transfers. It is a cash-flow view rather than a categorized income/expense view."
-          empty={!monthlyFlow.length}
-        >
-          <Bar
-            data={{
-              labels: monthlyFlow.map((f) => f.month),
-              datasets: [
-                { label: 'Deposits', data: monthlyFlow.map((f) => f.income), backgroundColor: cssVar('--profit') || '#3ecf8e' },
-                { label: 'Withdrawals', data: monthlyFlow.map((f) => f.expense), backgroundColor: cssVar('--loss') || '#e5484d' },
-              ],
-            }}
-            options={{ plugins: { datalabels: { display: false } } }}
-          />
-        </ChartCard>
-      </div>
-
-      <FabPanel actions={allExtraActions(useFabActionsStore.getState().actionsByKey)} />
-    </div>
-  );
-}
-
-
-function CategoryBreakdownBody({ account }: { account: BankAccount }) {
-  const transactions = useBankWorkbookStore((s) => s.workbook.transactions);
-  const categories = useCategoryStore((s) => s.workbook.categories);
-  const [monthOffset, setMonthOffset] = useState(0);
-  const selectedMonth = monthRange(monthOffset, monthOffset)[0];
-  const selectedMonthLabel = new Date(`${selectedMonth}-01`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-
-  const monthTransactions = useMemo(
-    () => transactions.filter((t) => t.accountId === account.id && t.date.slice(0, 7) === selectedMonth),
-    [transactions, account.id, selectedMonth],
-  );
-  const totals = useMemo(() => {
-    const result: Record<string, number> = {};
-    for (const tx of monthTransactions) {
-      const name = categoryName(tx.categoryID, categories);
-      result[name] = (result[name] ?? 0) + Math.abs(tx.amount);
-    }
-    return Object.entries(result).sort((a, b) => b[1] - a[1]);
-  }, [monthTransactions, categories]);
-
-  return (
-    <div>
-      <div className="row gap-sm mb-sm" style={{ alignItems: 'center', flexWrap: 'wrap' }}>
-        <button className="btn secondary small" onClick={() => setMonthOffset((o) => o - 1)}>◀ Prev</button>
-        <button className="btn secondary small" onClick={() => setMonthOffset(0)}>This month</button>
-        <button className="btn secondary small" onClick={() => setMonthOffset((o) => o + 1)}>Next ▶</button>
-        <span className="text-muted">{selectedMonthLabel}</span>
-        <Tooltip text="Shows all transaction categories for the selected month. Amount is total transaction volume in that category, so inflows such as Salary and outflows such as Groceries can both be represented.">
-          <span className="clickable text-muted">ⓘ</span>
-        </Tooltip>
-      </div>
-      {!totals.length ? <p className="text-muted m-0">No transactions in this month.</p> : (
-        <div style={{ height: 230, width: '100%' }}>
-          <Doughnut
-            data={{
-              labels: totals.map(([name]) => name),
-              datasets: [{ data: totals.map(([, amount]) => amount), backgroundColor: totals.map(([name]) => tickerColor(name)) }],
-            }}
-            options={{ responsive: true, maintainAspectRatio: false, cutout: '52%', plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 10, padding: 8 } }, datalabels: { display: false } }, layout: { padding: 8 } }}
-          />
-        </div>
-      )}
-    </div>
-  );
+  return <div className="analytics-grid">
+    <div className="analytics-chart"><h4>Balance over time</h4><div className="chart-canvas-wrap"><Line plugins={[chartDepthPlugin]} data={{labels:ledger.map((row)=>formatDate(row.tx.date,dateFormat)),datasets:[{label:'Balance',data:ledger.map((row)=>row.balance),borderColor:chartAlpha('#5aa9c9',.82),backgroundColor:chartAlpha('#5aa9c9',.24),fill:true,tension:.24,pointRadius:2}]}} options={{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false}}}} /></div></div>
+    <div className="analytics-chart"><h4>Transactions by category</h4><div className="chart-canvas-wrap"><Doughnut plugins={[chartDepthPlugin]} data={{labels:categoryTotals.map(([name])=>name),datasets:[{data:categoryTotals.map(([,amount])=>amount),backgroundColor:categoryTotals.map(([name])=>chartAlpha(tickerColor(name),.58)),borderColor:categoryTotals.map(([name])=>chartAlpha(tickerColor(name),.85)),borderWidth:2,hoverOffset:8}]}} options={{responsive:true,maintainAspectRatio:false,cutout:'48%',rotation:-25,plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10,padding:8}},datalabels:{display:false}},layout:{padding:8}}} /></div></div>
+    <div className="analytics-chart"><h4>Deposits vs. withdrawals</h4><div className="chart-canvas-wrap"><Bar plugins={[chartDepthPlugin]} data={{labels:analytics.monthlyFlow.map((flow)=>flow.month),datasets:[{label:'Deposits',data:analytics.monthlyFlow.map((flow)=>flow.income),backgroundColor:chartAlpha(profit,.58),borderColor:chartAlpha(profit,.88),borderWidth:2,borderRadius:6},{label:'Withdrawals',data:analytics.monthlyFlow.map((flow)=>flow.expense),backgroundColor:chartAlpha(loss,.58),borderColor:chartAlpha(loss,.88),borderWidth:2,borderRadius:6}]}} options={{plugins:{datalabels:{display:false}}}} /></div></div>
+  </div>;
 }
 
 /* ============================== Statement import ============================== */
