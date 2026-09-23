@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { BankAccount, BankTransaction } from '../../../types/bankWorkbook';
 import type { Category } from '../../../types/finance';
-import { accountBalance, accountBalanceAsOfMonth, accountByCategory, accountPendingBalance, accountPeriodAnalytics, accountRunningLedger, assetBalanceByCurrency, bankMonthlyFlow, budgetVsActual, creditCardLiabilityByCurrency, totalBalanceByCurrency } from '../bankModule';
+import { accountBalance, accountBalanceAsOfMonth, accountByCategory, accountPendingBalance, accountPeriodAnalytics, accountRunningLedger, assetBalanceByCurrency, bankAnalyticsMonthRange, bankMonthlyFlow, budgetVsActual, creditCardLiabilityByCurrency, totalBalanceByCurrency } from '../bankModule';
 
 const TEST_CATEGORIES: Category[] = [
   { id: 'cat_food', serialNumber: 1, name: 'Food' },
@@ -197,6 +197,25 @@ describe('bankMonthlyFlow', () => {
     const txs: BankTransaction[] = [tx({ accountId: 'a1', amount: -50 }), tx({ id: 't2', accountId: 'a2', amount: -9999 })];
     const flow = bankMonthlyFlow(txs, ['a1']);
     expect(flow[0].expense).toBe(50);
+  });
+});
+
+describe('bankAnalyticsMonthRange', () => {
+  it('keeps 1M inside September instead of leaking August in positive UTC offsets', () => {
+    const asOf = new Date(2026, 8, 23, 12, 0, 0);
+    expect(bankAnalyticsMonthRange('1', '', '', asOf)).toEqual({ start: '2026-09', end: '2026-09' });
+  });
+
+  it('resolves wider presets and YTD as whole calendar months', () => {
+    const asOf = new Date(2026, 8, 23, 12, 0, 0);
+    expect(bankAnalyticsMonthRange('3', '', '', asOf)).toEqual({ start: '2026-07', end: '2026-09' });
+    expect(bankAnalyticsMonthRange('6', '', '', asOf)).toEqual({ start: '2026-04', end: '2026-09' });
+    expect(bankAnalyticsMonthRange('ytd', '', '', asOf)).toEqual({ start: '2026-01', end: '2026-09' });
+  });
+
+  it('honours explicit custom months without timezone conversion', () => {
+    const asOf = new Date(2026, 8, 23, 12, 0, 0);
+    expect(bankAnalyticsMonthRange('custom', '2026-08', '2026-09', asOf)).toEqual({ start: '2026-08', end: '2026-09' });
   });
 });
 

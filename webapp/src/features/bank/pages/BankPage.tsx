@@ -37,7 +37,7 @@ import { recurrenceLabel } from '../../../lib/recurrenceLabel';
 import { hueStyle } from '../../../lib/statCardHues';
 import { categoryName, UNCATEGORIZED_ID } from '../../../lib/categories';
 import { useCategoryStore } from '../../../store/categoryStore';
-import { accountBalance, accountByCategory, accountPendingBalance, accountPeriodAnalytics, accountRunningLedger, bankTotalsByCurrency, budgetVsActual, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
+import { accountBalance, accountByCategory, accountPendingBalance, accountPeriodAnalytics, accountRunningLedger, bankAnalyticsMonthRange, bankTotalsByCurrency, budgetVsActual, totalBalanceByCurrency, type BankAnalyticsRangePreset } from '../../../lib/calc/bankModule';
 import { outstandingBalanceByCard } from '../../../lib/calc/creditCardModule';
 import { monthRange } from '../../../lib/calc/budgetPlanner';
 import { isPlanDue, planWithinHorizon, plannedBankProjection, type PlanningHorizonDays } from '../../../lib/calc/plannedBalance';
@@ -1666,22 +1666,15 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
   useAppearanceStore((s) => s.appearance);
   applyChartTheme();
 
-  type RangePreset = '1' | '3' | '6' | '12' | 'ytd' | 'custom';
-  const [rangePreset, setRangePreset] = useState<RangePreset>('1');
-  const [fromMonth, setFromMonth] = useState(() => today().slice(0, 7));
-  const [toMonth, setToMonth] = useState(() => today().slice(0, 7));
+  const initialMonth = useMemo(() => bankAnalyticsMonthRange('1').end, []);
+  const [rangePreset, setRangePreset] = useState<BankAnalyticsRangePreset>('1');
+  const [fromMonth, setFromMonth] = useState(initialMonth);
+  const [toMonth, setToMonth] = useState(initialMonth);
 
-  const rangeStart = useMemo(() => {
-    const now = new Date();
-    const current = new Date(now.getFullYear(), now.getMonth(), 1);
-    if (rangePreset === 'custom') return fromMonth || toMonth || today().slice(0, 7);
-    if (rangePreset === 'ytd') return current.getFullYear() + '-01';
-    const months = Number(rangePreset);
-    const d = new Date(current.getFullYear(), current.getMonth() - (months - 1), 1);
-    return d.toISOString().slice(0, 7);
-  }, [rangePreset, fromMonth, toMonth]);
-
-  const rangeEnd = rangePreset === 'custom' ? (toMonth || fromMonth || today().slice(0, 7)) : today().slice(0, 7);
+  const { start: rangeStart, end: rangeEnd } = useMemo(
+    () => bankAnalyticsMonthRange(rangePreset, fromMonth, toMonth),
+    [rangePreset, fromMonth, toMonth],
+  );
 
   // One account + one period = one analytics dataset. Every figure and chart
   // below is derived from this exact cleared transaction population, so a

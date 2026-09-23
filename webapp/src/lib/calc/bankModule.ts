@@ -91,6 +91,36 @@ export function bankMonthlyFlow(transactions: BankTransaction[], accountIds: str
   return monthlyFlowForTransactions(transactions.filter((t) => ids.has(t.accountId) && !t.isPending));
 }
 
+export type BankAnalyticsRangePreset = '1' | '3' | '6' | '12' | 'ytd' | 'custom';
+
+/**
+ * Resolve the month window used by per-account Banking analytics.
+ *
+ * Important: format calendar parts directly instead of constructing a local
+ * first-of-month Date and then calling toISOString(). In positive UTC offsets
+ * (for example Asia/Qatar), local 2026-09-01 00:00 is still 2026-08-31 UTC,
+ * so the old ISO conversion silently widened "This month" to August+September.
+ */
+export function bankAnalyticsMonthRange(
+  preset: BankAnalyticsRangePreset,
+  fromMonth = '',
+  toMonth = '',
+  asOf: Date = new Date(),
+): { start: string; end: string } {
+  const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  const currentMonth = monthKey(asOf);
+
+  if (preset === 'custom') {
+    const fallback = fromMonth || toMonth || currentMonth;
+    return { start: fromMonth || fallback, end: toMonth || fallback };
+  }
+  if (preset === 'ytd') return { start: `${asOf.getFullYear()}-01`, end: currentMonth };
+
+  const months = Number(preset);
+  const startDate = new Date(asOf.getFullYear(), asOf.getMonth() - (months - 1), 1);
+  return { start: monthKey(startDate), end: currentMonth };
+}
+
 export interface AccountPeriodAnalytics {
   /** Full cleared running ledger for exactly one BankAccount. */
   ledger: BankLedgerRow[];
