@@ -1688,15 +1688,19 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
     return month >= rangeStart && month <= rangeEnd;
   };
 
-  const rangeTransactions = useMemo(
-    () => transactions.filter((t) => t.accountId === account.id && inRange(t.date)),
-    [transactions, account.id, rangeStart, rangeEnd],
-  );
-
+  // The account statement is the source of truth for analytics. Build the
+  // selected-period transaction set from the SAME cleared ledger used by the
+  // statement table, rather than maintaining a second transaction population.
+  // This keeps Summary count/flow and the statement in lockstep and excludes
+  // pending rows consistently.
   const ledger = useMemo(() => accountRunningLedger(account, transactions), [account, transactions]);
   const filteredLedger = useMemo(
     () => ledger.filter((r) => inRange(r.tx.date)),
     [ledger, rangeStart, rangeEnd],
+  );
+  const rangeTransactions = useMemo(
+    () => filteredLedger.map((r) => r.tx),
+    [filteredLedger],
   );
   const monthlyFlow = useMemo(
     () => bankMonthlyFlow(transactions, [account.id]).filter((f) => f.month >= rangeStart && f.month <= rangeEnd),
@@ -1720,8 +1724,10 @@ function AccountAnalyticsSection({ account }: { account: BankAccount }) {
     : rangePreset === 'custom' ? (rangeStart === rangeEnd ? formatDate(rangeStart + '-01', dateFormat) : formatDate(rangeStart + '-01', dateFormat) + ' → ' + formatDate(rangeEnd + '-01', dateFormat))
     : `Last ${rangePreset} months`;
 
-  const deposits = monthlyFlow.reduce((s, r) => s + r.income, 0);
-  const withdrawals = monthlyFlow.reduce((s, r) => s + r.expense, 0);
+  // Summary is calculated directly from the exact statement rows in the
+  // selected period. Do not use a separate monthly aggregation here.
+  const deposits = rangeTransactions.reduce((sum, tx) => sum + (tx.amount > 0 ? tx.amount : 0), 0);
+  const withdrawals = rangeTransactions.reduce((sum, tx) => sum + (tx.amount < 0 ? -tx.amount : 0), 0);
   const netFlow = deposits - withdrawals;
 
   if (!ledger.length) {
