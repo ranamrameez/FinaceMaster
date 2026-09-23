@@ -23,6 +23,9 @@ jobs:
       - name: Banking tests
         working-directory: webapp
         run: npx vitest run src/lib/calc/__tests__/bankModule.test.ts --environment node
+      - name: Date range tests
+        working-directory: webapp
+        run: npx vitest run src/lib/__tests__/dateRange.test.ts --environment node
       - name: Format tests
         working-directory: webapp
         run: npx vitest run src/lib/__tests__/format.test.ts --environment node
