@@ -33,14 +33,14 @@ export function TopBar() {
 
   return (
     <div className="page-topbar">
-      <div className="chip-tabs" style={{ margin: 0, flex: 1, minWidth: 0 }}>
+      <div className="chip-tabs page-topbar-sections">
         {chips.map((c) => (
           <button key={c.key} type="button" className={`chip${c.active ? ' active' : ''}`} onClick={c.onClick}>
             {c.label}
           </button>
         ))}
       </div>
-      {rightSlot && <div style={{ flexShrink: 0 }}>{rightSlot}</div>}
+      {rightSlot && <div className="page-topbar-right">{rightSlot}</div>}
     </div>
   );
 }
