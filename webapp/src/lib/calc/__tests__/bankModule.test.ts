@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { BankAccount, BankTransaction } from '../../../types/bankWorkbook';
 import type { Category } from '../../../types/finance';
-import { accountBalance, accountBalanceAsOfMonth, accountByCategory, accountPendingBalance, accountPeriodAnalytics, accountRunningLedger, assetBalanceByCurrency, bankMonthlyFlow, budgetVsActual, creditCardLiabilityByCurrency, totalBalanceByCurrency } from '../bankModule';
+import { accountBalance, accountBalanceAsOfMonth, accountByCategory, accountPendingBalance, accountPeriodAnalytics, accountRunningLedger, assetBalanceByCurrency, bankAnalyticsFromLedger, bankMonthlyFlow, budgetVsActual, creditCardLiabilityByCurrency, totalBalanceByCurrency } from '../bankModule';
 
 const TEST_CATEGORIES: Category[] = [
   { id: 'cat_food', serialNumber: 1, name: 'Food' },
@@ -200,6 +200,23 @@ describe('bankMonthlyFlow', () => {
   });
 });
 
+describe('bankAnalyticsFromLedger', () => {
+  it('summarizes exactly the filtered rows it receives', () => {
+    const a = account({ id: 'a1', openingBalance: 0 });
+    const ledger = accountRunningLedger(a, [
+      tx({ id: 'aug', accountId: 'a1', date: '2026-08-31', amount: 999 }),
+      tx({ id: 'sep-in', accountId: 'a1', date: '2026-09-01', amount: 100 }),
+      tx({ id: 'sep-out', accountId: 'a1', date: '2026-09-02', amount: -25 }),
+    ]);
+    const rows = ledger.filter((row) => row.tx.date >= '2026-09-01' && row.tx.date <= '2026-09-30');
+    const summary = bankAnalyticsFromLedger(rows);
+    expect(summary.transactions.map((row) => row.id)).toEqual(['sep-in', 'sep-out']);
+    expect(summary.deposits).toBe(100);
+    expect(summary.withdrawals).toBe(25);
+    expect(summary.netFlow).toBe(75);
+  });
+});
+
 describe('accountPeriodAnalytics', () => {
   it('keeps analytics scoped to one account even when the same Bank has multiple accounts', () => {
     const selected = account({ id: 'a1', bankId: 'bank-1', currencyCode: 'QAR', openingBalance: 0 });
@@ -237,8 +254,8 @@ describe('accountPeriodAnalytics', () => {
     const result = accountPeriodAnalytics(
       selected,
       [...selectedRows, ...siblingRows, pending],
-      '2026-09',
-      '2026-09',
+      '2026-09-01',
+      '2026-09-30',
     );
 
     expect(result.transactions).toHaveLength(16);
@@ -262,8 +279,8 @@ describe('accountPeriodAnalytics', () => {
         tx({ id: 'sep', accountId: 'a1', date: '2026-09-01', amount: -50 }),
         tx({ id: 'oct', accountId: 'a1', date: '2026-10-01', amount: 200 }),
       ],
-      '2026-09',
-      '2026-09',
+      '2026-09-01',
+      '2026-09-30',
     );
 
     expect(result.transactions.map((row) => row.id)).toEqual(['sep']);
