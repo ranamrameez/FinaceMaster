@@ -1,0 +1,31 @@
+name: Branch verify
+
+on:
+  push:
+    branches: ["chatgpt-bank-explicit-date-range-20260923"]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: webapp/package-lock.json
+      - name: Install
+        working-directory: webapp
+        run: npm ci
+      - name: Build
+        working-directory: webapp
+        run: npm run build
+      - name: Banking tests
+        working-directory: webapp
+        run: npx vitest run src/lib/calc/__tests__/bankModule.test.ts --environment node
+      - name: Format tests
+        working-directory: webapp
+        run: npx vitest run src/lib/__tests__/format.test.ts --environment node
