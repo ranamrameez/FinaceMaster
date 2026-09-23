@@ -139,3 +139,17 @@ For every claimed feature or fix:
 One independently verifiable audit fix is one task and one commit. Do not
 bundle unrelated visual cleanup, data-model work, or multiple module fixes in
 the same commit.
+
+
+## Standard page migration rules (2026-09-23)
+
+The user has designated Banking as the reference page for an app-wide template migration. The authoritative implementation/rollout details live in `STANDARD_PAGE_TEMPLATE.md`.
+
+Locked additions:
+- every existing module, not only future modules, will migrate to the standard page template;
+- reusable UI must be shared components/classes, not module-local hard-coded markup/CSS;
+- meaningful section/filter state must be URL-aware;
+- one page-level filter set drives compatible tables, summaries, charts and exports;
+- user instructions that establish standing project rules must be documented.
+
+Data-persistence modernization is tracked separately in `DATA_PERSISTENCE_MIGRATION_PLAN.md`.
