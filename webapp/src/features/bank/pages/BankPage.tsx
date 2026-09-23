@@ -46,6 +46,7 @@ import { useCategoryStore } from '../../../store/categoryStore';
 import { accountBalance, accountByCategory, accountPendingBalance, accountPeriodAnalytics, accountRunningLedger, bankAnalyticsFromLedger, bankTotalsByCurrency, budgetVsActual, totalBalanceByCurrency } from '../../../lib/calc/bankModule';
 import { outstandingBalanceByCard } from '../../../lib/calc/creditCardModule';
 import { isPlanDue, planWithinHorizon, plannedBankProjection, type PlanningHorizonDays } from '../../../lib/calc/plannedBalance';
+import { dlBarV, dlDoughnut, dlLine } from '../../../lib/chartLabels';
 import { applyChartTheme } from '../../../lib/chartSetup';
 import { cssVar, tickerColor } from '../../../lib/cssVar';
 import { chartAlpha, chartDepthPlugin } from '../../../lib/chartVisuals';
@@ -68,6 +69,7 @@ import { CreditCardsTab } from './CreditCardsSection';
 import type { BankAccount, BankTransaction } from '../../../types/bankWorkbook';
 import type { CreditCard } from '../../../types/creditCard';
 import type { PlannedBankTransaction } from '../../../types/plannedBank';
+import { gridAutoStyle } from '../../../lib/gridStyle';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const uid = () => crypto.randomUUID();
