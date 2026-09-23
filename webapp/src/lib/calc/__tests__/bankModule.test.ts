@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { BankAccount, BankTransaction } from '../../../types/bankWorkbook';
 import type { Category } from '../../../types/finance';
-import { accountBalance, accountBalanceAsOfMonth, accountByCategory, accountPendingBalance, accountRunningLedger, assetBalanceByCurrency, bankMonthlyFlow, budgetVsActual, creditCardLiabilityByCurrency, totalBalanceByCurrency } from '../bankModule';
+import { accountBalance, accountBalanceAsOfMonth, accountByCategory, accountPendingBalance, accountPeriodAnalytics, accountRunningLedger, assetBalanceByCurrency, bankMonthlyFlow, budgetVsActual, creditCardLiabilityByCurrency, totalBalanceByCurrency } from '../bankModule';
 
 const TEST_CATEGORIES: Category[] = [
   { id: 'cat_food', serialNumber: 1, name: 'Food' },
@@ -197,6 +197,79 @@ describe('bankMonthlyFlow', () => {
     const txs: BankTransaction[] = [tx({ accountId: 'a1', amount: -50 }), tx({ id: 't2', accountId: 'a2', amount: -9999 })];
     const flow = bankMonthlyFlow(txs, ['a1']);
     expect(flow[0].expense).toBe(50);
+  });
+});
+
+describe('accountPeriodAnalytics', () => {
+  it('keeps analytics scoped to one account even when the same Bank has multiple accounts', () => {
+    const selected = account({ id: 'a1', bankId: 'bank-1', currencyCode: 'QAR', openingBalance: 0 });
+    const sibling = account({ id: 'a2', bankId: 'bank-1', currencyCode: 'QAR', openingBalance: 0 });
+
+    // Exact September statement supplied in the regression report:
+    // 16 cleared rows, 5,110.00 deposits, 15,070.87 withdrawals.
+    const amounts = [-45.37, 100, -100, 100, 900, -1000, -100, -0.5, 100, -800, -2400, 100, -25, -600, 3810, -10000];
+    const selectedRows = amounts.map((amount, i) =>
+      tx({
+        id: `a1-sep-${i + 1}`,
+        accountId: selected.id,
+        date: `2026-09-${String(Math.min(i + 1, 22)).padStart(2, '0')}`,
+        amount,
+      }),
+    );
+
+    // Same parent Bank, same month, deliberately huge values. These must
+    // never affect the selected account's summary or chart.
+    const siblingRows = [
+      tx({ id: 'a2-in', accountId: sibling.id, date: '2026-09-05', amount: 27916.13 }),
+      tx({ id: 'a2-out', accountId: sibling.id, date: '2026-09-06', amount: -29451.58 }),
+    ];
+
+    // Pending activity on the selected account is also excluded, matching
+    // the account statement and current-balance rules.
+    const pending = tx({
+      id: 'a1-pending',
+      accountId: selected.id,
+      date: '2026-09-20',
+      amount: 9999,
+      isPending: true,
+    });
+
+    const result = accountPeriodAnalytics(
+      selected,
+      [...selectedRows, ...siblingRows, pending],
+      '2026-09',
+      '2026-09',
+    );
+
+    expect(result.transactions).toHaveLength(16);
+    expect(result.transactions.every((row) => row.accountId === selected.id)).toBe(true);
+    expect(result.deposits).toBeCloseTo(5110, 2);
+    expect(result.withdrawals).toBeCloseTo(15070.87, 2);
+    expect(result.netFlow).toBeCloseTo(-9960.87, 2);
+    expect(result.monthlyFlow).toHaveLength(1);
+    expect(result.monthlyFlow[0].month).toBe('2026-09');
+    expect(result.monthlyFlow[0].income).toBeCloseTo(5110, 2);
+    expect(result.monthlyFlow[0].expense).toBeCloseTo(15070.87, 2);
+    expect(result.monthlyFlow[0].net).toBeCloseTo(-9960.87, 2);
+  });
+
+  it('applies month bounds after account scoping while retaining full running balances', () => {
+    const a = account({ id: 'a1', openingBalance: 1000 });
+    const result = accountPeriodAnalytics(
+      a,
+      [
+        tx({ id: 'aug', accountId: 'a1', date: '2026-08-31', amount: 100 }),
+        tx({ id: 'sep', accountId: 'a1', date: '2026-09-01', amount: -50 }),
+        tx({ id: 'oct', accountId: 'a1', date: '2026-10-01', amount: 200 }),
+      ],
+      '2026-09',
+      '2026-09',
+    );
+
+    expect(result.transactions.map((row) => row.id)).toEqual(['sep']);
+    expect(result.periodLedger.map((row) => row.balance)).toEqual([1050]);
+    expect(result.deposits).toBe(0);
+    expect(result.withdrawals).toBe(50);
   });
 });
 
