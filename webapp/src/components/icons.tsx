@@ -111,6 +111,15 @@ export function LogoMark({ size = 22 }: IconProps) {
   );
 }
 
+export function CalendarIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base} aria-hidden>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M16 3v4M8 3v4M3 10h18" />
+    </svg>
+  );
+}
+
 export function FilterIcon({ size = 14 }: IconProps) {
   return (
     <svg width={size} height={size} {...base} aria-hidden>

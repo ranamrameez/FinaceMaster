@@ -94,7 +94,7 @@ export function bankMonthlyFlow(transactions: BankTransaction[], accountIds: str
 export interface AccountPeriodAnalytics {
   /** Full cleared running ledger for exactly one BankAccount. */
   ledger: BankLedgerRow[];
-  /** Cleared ledger rows inside the optional YYYY-MM month bounds. */
+  /** Cleared ledger rows inside the optional inclusive YYYY-MM-DD bounds. */
   periodLedger: BankLedgerRow[];
   /** Exact transaction population used by every period metric/chart. */
   transactions: BankTransaction[];
@@ -114,30 +114,30 @@ export interface AccountPeriodAnalytics {
  * transaction count, category consumers and cash-flow charts can therefore
  * all consume the exact same transaction population.
  */
-export function accountPeriodAnalytics(
-  account: BankAccount,
-  transactions: BankTransaction[],
-  fromMonth?: string,
-  toMonth?: string,
-): AccountPeriodAnalytics {
-  const ledger = accountRunningLedger(account, transactions);
-  const periodLedger = ledger.filter(({ tx }) => {
-    const month = tx.date.slice(0, 7);
-    return (!fromMonth || month >= fromMonth) && (!toMonth || month <= toMonth);
-  });
+export function bankAnalyticsFromLedger(periodLedger: BankLedgerRow[]) {
   const periodTransactions = periodLedger.map(({ tx }) => tx);
   const deposits = periodTransactions.reduce((sum, tx) => sum + (tx.amount > 0 ? tx.amount : 0), 0);
   const withdrawals = periodTransactions.reduce((sum, tx) => sum + (tx.amount < 0 ? -tx.amount : 0), 0);
-
   return {
-    ledger,
-    periodLedger,
     transactions: periodTransactions,
     monthlyFlow: monthlyFlowForTransactions(periodTransactions),
     deposits,
     withdrawals,
     netFlow: deposits - withdrawals,
   };
+}
+
+export function accountPeriodAnalytics(
+  account: BankAccount,
+  transactions: BankTransaction[],
+  fromDate?: string,
+  toDate?: string,
+): AccountPeriodAnalytics {
+  const ledger = accountRunningLedger(account, transactions);
+  const periodLedger = ledger.filter(({ tx }) =>
+    (!fromDate || tx.date >= fromDate) && (!toDate || tx.date <= toDate),
+  );
+  return { ledger, periodLedger, ...bankAnalyticsFromLedger(periodLedger) };
 }
 
 export interface BudgetRow { category: string; budget: number; actual: number; }
