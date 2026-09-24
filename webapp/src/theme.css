@@ -729,18 +729,18 @@ hr {
      panel color anywhere) plus one small, subtle radial highlight
      centered near the top — a "minor" spotlight, not a second fade. */
 .stat-card {
-    padding: 11px 13px;
-    display: flex;
-    /* border: 0; */
-    gap: 1px;
-    background: color-mix(in srgb,var(--card-hue,var(--accent)) 32%,var(--panel));
-    /* background: radial-gradient(circle at 50% 30%, color-mix(in srgb, white 12%, transparent) 0%, transparent 55%),
+	padding: 11px 13px;
+	display: flex;
+	/* border: 0; */
+	gap: 1px;
+	background: color-mix(in srgb, var(--card-hue, var(--accent)) 32%, var(--panel));
+	/* background: radial-gradient(circle at 50% 30%, color-mix(in srgb, white 12%, transparent) 0%, transparent 55%),
 		color-mix(in srgb, var(--card-hue, var(--accent)) 22%, var(--panel)); */
-    justify-content: flex-start;
-    align-items: flex-start;
-    align-content: flex-start;
-    flex-wrap: nowrap;
-    flex-direction: column;
+	justify-content: flex-start;
+	align-items: flex-start;
+	align-content: flex-start;
+	flex-wrap: nowrap;
+	flex-direction: column;
 }
 
 .stat-card .label {
@@ -1664,7 +1664,7 @@ th.sortable .arrow {
 	gap: 4px;
 	/* background: var(--panel-2); */
 	background: transparent;
-	border: 1px solid var(--border);
+	border: none;
 	color: var(--muted);
 	padding: 7px 13px;
 	border-radius: 20px;
@@ -2146,18 +2146,25 @@ input.price-input[type="number"] {
      optional right-side slot (e.g. Net Worth's currency switcher), so it's
      a flex row rather than being `.chip-tabs` directly. */
 .page-topbar {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 5px;
 	position: sticky;
 	top: 0;
 	z-index: 30;
 	background: var(--bg);
 	padding: 14px 12px 12px 12px;
-	/* margin: 8px -5px 20px -5px; */
-   margin: -20px -14px 20px -14px;
+	margin: -20px -14px 20px -14px;
+
+	background: var(--panel);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-card);
+	padding: 5px;
+
 	border-bottom: 1px solid var(--border);
 	box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
-	display: flex;
-	align-items: center;
-	gap: 12px;
 }
 /* Final Material palette guard: ensures component backgrounds/text follow
      the selected Material palette instead of the generic root palette. */
@@ -2445,6 +2452,7 @@ html[data-color^="material-"][data-theme="light"] .card.stat-card,
 html[data-color^="material-"][data-theme="dark"] .card.stat-card {
 	border: 0;
 	box-shadow: var(--shadow-card);
+	background: color-mix(in srgb, var(--card-hue, var(--accent)) 32%, var(--panel));
 	background:
 		radial-gradient(circle at 50% 30%, color-mix(in srgb, white 12%, transparent) 0%, transparent 55%),
 		color-mix(in srgb, var(--card-hue, var(--accent)) 22%, var(--panel));

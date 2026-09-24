@@ -64,7 +64,7 @@ html[data-color="ocean"] .chip,
 html[data-color="forest"] .chip,
 html[data-color="violet"] .chip {
   border-radius:999px;
-  border:1px solid var(--border);
+  /* border:1px solid var(--border); */
   box-shadow:none;
 }
 
@@ -92,15 +92,14 @@ html[data-color="violet"] .navbtn.active {
   box-shadow:inset 3px 0 0 var(--accent);
 }
 
-html[data-color="ocean"] .page-topbar,
+/* html[data-color="ocean"] .page-topbar,
 html[data-color="forest"] .page-topbar,
 html[data-color="violet"] .page-topbar {
   background:var(--panel);
   border:1px solid var(--border);
   border-radius:var(--radius-lg);
   box-shadow:var(--shadow-card);
-  padding:5px;
-}
+} */
 
 html[data-color="ocean"] .stat-card,
 html[data-color="forest"] .stat-card,
